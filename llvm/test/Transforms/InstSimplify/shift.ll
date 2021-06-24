@@ -262,11 +262,9 @@ define i32 @poison3(i32 %x) {
   ret i32 %v
 }
 
-; TODO: these should be poison
-
 define i32 @poison4(i32 %x) {
 ; CHECK-LABEL: @poison4(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
   %v = lshr i32 poison, %x
   ret i32 %v
@@ -274,7 +272,7 @@ define i32 @poison4(i32 %x) {
 
 define i32 @poison5(i32 %x) {
 ; CHECK-LABEL: @poison5(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
   %v = ashr i32 poison, %x
   ret i32 %v
@@ -282,7 +280,7 @@ define i32 @poison5(i32 %x) {
 
 define i32 @poison6(i32 %x) {
 ; CHECK-LABEL: @poison6(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
   %v = shl i32 poison, %x
   ret i32 %v

@@ -309,10 +309,11 @@ static LogicalResult copyCallBackFn(OpBuilder &b, Value src, Value dst,
   auto floatType = src.getType().cast<MemRefType>().getElementType();
   if (!floatType.isa<FloatType>())
     return failure();
-  if (!isOutput)
-    b.create<FillOp>(
-        src.getLoc(), dst,
-        b.create<ConstantOp>(src.getLoc(), FloatAttr::get(floatType, 42.0)));
+  if (!isOutput) {
+    Value cst =
+        b.create<ConstantOp>(src.getLoc(), FloatAttr::get(floatType, 42.0));
+    b.create<FillOp>(src.getLoc(), cst, dst);
+  }
   b.create<CopyOp>(src.getLoc(), src, dst);
   return success();
 }

@@ -16,9 +16,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
 
-namespace llvm {
-namespace objcopy {
-namespace macho {
+using namespace llvm;
+using namespace llvm::objcopy::macho;
 
 size_t MachOWriter::headerSize() const {
   return Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
@@ -529,7 +528,3 @@ Error MachOWriter::write() {
   Out.write(Buf->getBufferStart(), Buf->getBufferSize());
   return Error::success();
 }
-
-} // end namespace macho
-} // end namespace objcopy
-} // end namespace llvm

@@ -562,6 +562,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/default_sentinel.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
+#include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>

@@ -289,7 +289,7 @@ define <vscale x 2 x i1> @dupq_neg7() #0 {
 ; CHECK-NEXT: ret
   %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef,
-    <2 x i64> <i64 1, i64 1>, i64 1)
+    <2 x i64> <i64 1, i64 1>, i64 2)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
   %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)

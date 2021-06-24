@@ -69,7 +69,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         # process stopping should stop the thread
         self.expect("process trace stop")
         self.expect("n")
-        self.expect("thread trace dump instructions", substrs=["not traced"])
+        self.expect("thread trace dump instructions", error=True, substrs=["not traced"])
 
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))

@@ -25,9 +25,9 @@ func @main() -> f32 attributes {llvm.emit_c_interface} {
   %A = memref.alloc() : memref<4x16xf32>
   %B = memref.alloc() : memref<16x8xf32>
   %C = memref.alloc() : memref<4x8xf32>
-  linalg.fill(%A, %v1) : memref<4x16xf32>, f32
-  linalg.fill(%B, %v2) : memref<16x8xf32>, f32
-  linalg.fill(%C, %v0) : memref<4x8xf32>, f32
+  linalg.fill(%v1, %A) : f32, memref<4x16xf32>
+  linalg.fill(%v2, %B) : f32, memref<16x8xf32>
+  linalg.fill(%v0, %C) : f32, memref<4x8xf32>
 
   call @matmul_on_buffers(%A, %B, %C) :
     (memref<4x16xf32>, memref<16x8xf32>, memref<4x8xf32>) -> ()

@@ -72,6 +72,14 @@ void ThreadPool::wait() {
   CompletionCondition.wait(LockGuard, [&] { return workCompletedUnlocked(); });
 }
 
+bool ThreadPool::isWorkerThread() const {
+  std::thread::id CurrentThreadId = std::this_thread::get_id();
+  for (const std::thread &Thread : Threads)
+    if (CurrentThreadId == Thread.get_id())
+      return true;
+  return false;
+}
+
 std::shared_future<void> ThreadPool::asyncImpl(TaskTy Task) {
   /// Wrap the Task in a packaged_task to return a future object.
   PackagedTaskTy PackagedTask(std::move(Task));

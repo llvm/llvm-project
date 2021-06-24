@@ -69,9 +69,9 @@ func @main() {
   %cB = memref.alloc() : !column_major_B
   %cC = memref.alloc() : !column_major_C
 
-  linalg.fill(%cA, %f1) : !column_major_A, !elem_type_a
-  linalg.fill(%cB, %f1) : !column_major_B, !elem_type_b
-  linalg.fill(%cC, %f0) : !column_major_C, !elem_type_c
+  linalg.fill(%f1, %cA) : !elem_type_a, !column_major_A
+  linalg.fill(%f1, %cB) : !elem_type_b, !column_major_B
+  linalg.fill(%f0, %cC) : !elem_type_c, !column_major_C
 
   %c0 = constant 0: index
   %c1 = constant 1: index
@@ -87,7 +87,7 @@ func @main() {
     // This is accounts for about 10-15% perf hit on small sizes.
     // Once linalg on tensors is ready, fusing fill at the register level will
     // be easy.
-    linalg.fill(%C, %f0) : !row_major_C, !elem_type_c
+    linalg.fill(%f0, %C) : !elem_type_c, !row_major_C
     call @matmul_column_major_as_row_major(%cA, %cB, %cC, %A, %B, %C) :
       (!column_major_A, !column_major_B, !column_major_C,
        !row_major_A, !row_major_B, !row_major_C) -> ()
@@ -98,7 +98,7 @@ func @main() {
 
   // CHECK: {{^0$}}
   %cC_ref = memref.alloc() : !column_major_C
-  linalg.fill(%cC_ref, %f0) : !column_major_C, !elem_type_c
+  linalg.fill(%f0, %cC_ref) : !elem_type_c, !column_major_C
   linalg.matmul_column_major ins(%cA, %cB : !column_major_A, !column_major_B)
     outs(%cC_ref: !column_major_C)
   %act1 = memref.cast %cC : !column_major_C to memref<*xf32>
@@ -109,7 +109,7 @@ func @main() {
 
   // CHECK: {{^0$}}
   %C_ref = memref.alloc() : !row_major_C
-  linalg.fill(%C_ref, %f0) : !row_major_C, !elem_type_c
+  linalg.fill(%f0, %C_ref) : !elem_type_c, !row_major_C
   linalg.matmul ins(%A, %B : !row_major_A, !row_major_B)
     outs(%C_ref: !row_major_C)
   %act2 = memref.cast %C : !row_major_C to memref<*xf32>

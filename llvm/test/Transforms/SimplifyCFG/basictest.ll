@@ -84,6 +84,7 @@ declare void @foo()
 ; PR5795
 define void @test5(i32 %A) {
 ; CHECK-LABEL: @test5(
+; CHECK-NEXT:  common.ret:
 ; CHECK-NEXT:    ret void
 ;
   switch i32 %A, label %return [

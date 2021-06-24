@@ -97,6 +97,7 @@ namespace std::ranges {
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>
+#include <__ranges/drop_view.h>
 #include <__ranges/empty.h>
 #include <__ranges/empty_view.h>
 #include <__ranges/enable_borrowed_range.h>

@@ -121,12 +121,12 @@ def itertests(test_patterns, parser, script_name, comment_prefix=None, argparse_
                      comment_prefix, argparse_callback)
 
 
-def should_add_line_to_output(input_line, prefix_set, skip_global_checks = False):
+def should_add_line_to_output(input_line, prefix_set, skip_global_checks = False, comment_marker = ';'):
   # Skip any blank comment lines in the IR.
-  if not skip_global_checks and input_line.strip() == ';':
+  if not skip_global_checks and input_line.strip() == comment_marker:
     return False
   # Skip a special double comment line we use as a separator.
-  if input_line.strip() == SEPARATOR:
+  if input_line.strip() == comment_marker + SEPARATOR:
     return False
   # Skip any blank lines in the IR.
   #if input_line.strip() == '':
@@ -204,7 +204,7 @@ SCRUB_LOOP_COMMENT_RE = re.compile(
     r'# =>This Inner Loop Header:.*|# in Loop:.*', flags=re.M)
 SCRUB_TAILING_COMMENT_TOKEN_RE = re.compile(r'(?<=\S)+[ \t]*#$', flags=re.M)
 
-SEPARATOR = ';.'
+SEPARATOR = '.'
 
 def error(msg, test_file=None):
   if test_file:
@@ -794,7 +794,7 @@ def add_global_checks(glob_val_dict, comment_marker, prefix_list, output_lines, 
         if not glob_val_dict[checkprefix][nameless_value.check_prefix]:
           continue
 
-        output_lines.append(SEPARATOR)
+        output_lines.append(comment_marker + SEPARATOR)
 
         global_vars_seen_before = [key for key in global_vars_seen.keys()]
         for line in glob_val_dict[checkprefix][nameless_value.check_prefix]:
@@ -810,7 +810,7 @@ def add_global_checks(glob_val_dict, comment_marker, prefix_list, output_lines, 
         break
 
   if printed_prefixes:
-      output_lines.append(SEPARATOR)
+      output_lines.append(comment_marker + SEPARATOR)
 
 
 def check_prefix(prefix):
@@ -903,7 +903,7 @@ def dump_input_lines(output_lines, test_info, prefix_set, comment_string):
     args = input_line_info.args
     if line.strip() == comment_string:
       continue
-    if line.strip() == SEPARATOR:
+    if line.strip() == comment_string + SEPARATOR:
       continue
     if line.lstrip().startswith(comment_string):
       m = CHECK_RE.match(line)

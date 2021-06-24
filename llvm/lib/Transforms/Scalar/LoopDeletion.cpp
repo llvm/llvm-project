@@ -251,20 +251,28 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   // (non-latch) predecessors.
   auto GetSoleInputOnFirstIteration = [&](PHINode & PN)->Value * {
     BasicBlock *BB = PN.getParent();
+    bool HasLivePreds = false;
+    (void)HasLivePreds;
     if (BB == Header)
       return PN.getIncomingValueForBlock(Predecessor);
     Value *OnlyInput = nullptr;
     for (auto *Pred : predecessors(BB))
       if (LiveEdges.count({ Pred, BB })) {
+        HasLivePreds = true;
         Value *Incoming = PN.getIncomingValueForBlock(Pred);
+        // Skip undefs. If they are present, we can assume they are equal to
+        // the non-undef input.
+        if (isa<UndefValue>(Incoming))
+          continue;
         // Two inputs.
         if (OnlyInput && OnlyInput != Incoming)
           return nullptr;
         OnlyInput = Incoming;
       }
 
-    assert(OnlyInput && "No live predecessors?");
-    return OnlyInput;
+    assert(HasLivePreds && "No live predecessors?");
+    // If all incoming live value were undefs, return undef.
+    return OnlyInput ? OnlyInput : UndefValue::get(PN.getType());
   };
   DenseMap<Value *, Value *> FirstIterValue;
 

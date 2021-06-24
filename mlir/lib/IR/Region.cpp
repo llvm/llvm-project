@@ -48,8 +48,6 @@ Region *Region::getParentRegion() {
   return container->getParentRegion();
 }
 
-Operation *Region::getParentOp() { return container; }
-
 bool Region::isProperAncestor(Region *other) {
   if (this == other)
     return false;

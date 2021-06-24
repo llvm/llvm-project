@@ -9,8 +9,6 @@
 #include <map>
 #include <set>
 
-#include "Plugins/Language/ObjC/ObjCLanguage.h"
-
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RichManglingContext.h"
 #include "lldb/Core/Section.h"
@@ -18,6 +16,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Symtab.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
@@ -268,6 +267,13 @@ void Symtab::InitNameIndexes() {
     m_name_indexes_computed = true;
     LLDB_SCOPED_TIMER();
 
+    // Collect all loaded language plugins.
+    std::vector<Language *> languages;
+    Language::ForEach([&languages](Language *l) {
+      languages.push_back(l);
+      return true;
+    });
+
     auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
     auto &basename_to_index =
         GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase);
@@ -334,13 +340,17 @@ void Symtab::InitNameIndexes() {
 
         // If the demangled name turns out to be an ObjC name, and is a category
         // name, add the version without categories to the index too.
-        ObjCLanguage::MethodName objc_method(name.GetStringRef(), true);
-        if (objc_method.IsValid(true)) {
-          selector_to_index.Append(objc_method.GetSelector(), value);
-
-          if (ConstString objc_method_no_category =
-                  objc_method.GetFullNameWithoutCategory(true))
-            name_to_index.Append(objc_method_no_category, value);
+        for (Language *lang : languages) {
+          for (auto variant : lang->GetMethodNameVariants(name)) {
+            if (variant.GetType() & lldb::eFunctionNameTypeSelector)
+              selector_to_index.Append(variant.GetName(), value);
+            else if (variant.GetType() & lldb::eFunctionNameTypeFull)
+              name_to_index.Append(variant.GetName(), value);
+            else if (variant.GetType() & lldb::eFunctionNameTypeMethod)
+              method_to_index.Append(variant.GetName(), value);
+            else if (variant.GetType() & lldb::eFunctionNameTypeBase)
+              basename_to_index.Append(variant.GetName(), value);
+          }
         }
       }
     }

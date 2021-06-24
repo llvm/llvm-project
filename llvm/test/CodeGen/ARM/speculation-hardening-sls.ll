@@ -115,11 +115,11 @@ return:                                           ; preds = %entry, %l2
 define i32 @asmgoto() {
 ; NOHARDENARM-LABEL: asmgoto:
 ; NOHARDENARM:       @ %bb.0: @ %entry
+; NOHARDENARM-NEXT:    mov r0, #0
 ; NOHARDENARM-NEXT:    @APP
 ; NOHARDENARM-NEXT:    b .Ltmp2
 ; NOHARDENARM-NEXT:    @NO_APP
-; NOHARDENARM-NEXT:  @ %bb.1: @ %asm.fallthrough
-; NOHARDENARM-NEXT:    mov r0, #0
+; NOHARDENARM-NEXT:  @ %bb.1: @ %common.ret
 ; NOHARDENARM-NEXT:    bx lr
 ; NOHARDENARM-NEXT:  .Ltmp2: @ Block address taken
 ; NOHARDENARM-NEXT:  .LBB2_2: @ %d
@@ -131,7 +131,7 @@ define i32 @asmgoto() {
 ; NOHARDENTHUMB-NEXT:    @APP
 ; NOHARDENTHUMB-NEXT:    b .Ltmp2
 ; NOHARDENTHUMB-NEXT:    @NO_APP
-; NOHARDENTHUMB-NEXT:  @ %bb.1: @ %asm.fallthrough
+; NOHARDENTHUMB-NEXT:  @ %bb.1:
 ; NOHARDENTHUMB-NEXT:    movs r0, #0
 ; NOHARDENTHUMB-NEXT:    bx lr
 ; NOHARDENTHUMB-NEXT:  .Ltmp2: @ Block address taken

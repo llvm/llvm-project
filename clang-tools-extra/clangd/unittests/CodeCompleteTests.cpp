@@ -3221,6 +3221,45 @@ TEST(CompletionTest, NoCrashDueToMacroOrdering) {
               UnorderedElementsAre(Labeled("ECHO(X)"), Labeled("ECHO2(X)")));
 }
 
+TEST(CompletionTest, ObjCCategoryDecls) {
+  TestTU TU;
+  TU.ExtraArgs.push_back("-xobjective-c");
+  TU.HeaderCode = R"objc(
+  @interface Foo
+  @end
+
+  @interface Foo (FooExt1)
+  @end
+
+  @interface Foo (FooExt2)
+  @end
+
+  @interface Bar
+  @end
+
+  @interface Bar (BarExt)
+  @end)objc";
+
+  {
+    Annotations Test(R"objc(
+  @implementation Foo (^)
+  @end
+  )objc");
+    TU.Code = Test.code().str();
+    auto Results = completions(TU, Test.point());
+    EXPECT_THAT(Results.Completions,
+                UnorderedElementsAre(Labeled("FooExt1"), Labeled("FooExt2")));
+  }
+  {
+    Annotations Test(R"objc(
+  @interface Foo (^)
+  @end
+  )objc");
+    TU.Code = Test.code().str();
+    auto Results = completions(TU, Test.point());
+    EXPECT_THAT(Results.Completions, UnorderedElementsAre(Labeled("BarExt")));
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

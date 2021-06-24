@@ -501,11 +501,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
-  auto &LegacyInfo = getLegacyLegalizerInfo();
-  LegacyInfo.setAction({G_BRCOND, S1},
-                       LegacyLegalizeActions::Legal); // VCC branches
-  LegacyInfo.setAction({G_BRCOND, S32},
-                       LegacyLegalizeActions::Legal); // SCC branches
+  // s1 for VCC branches, s32 for SCC branches.
+  getActionDefinitionsBuilder(G_BRCOND).legalFor({S1, S32});
 
   // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
   // elements for v3s16
@@ -653,8 +650,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32)
       .clampMaxNumElements(0, S32, 16);
 
-  LegacyInfo.setAction({G_FRAME_INDEX, PrivatePtr},
-                       LegacyLegalizeActions::Legal);
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({PrivatePtr});
 
   // If the amount is divergent, we have to do a wave reduction to get the
   // maximum value, so this is expanded during RegBankSelect.
@@ -664,7 +660,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
     .customIf(typeIsNot(0, PrivatePtr));
 
-  LegacyInfo.setAction({G_BLOCK_ADDR, CodePtr}, LegacyLegalizeActions::Legal);
+  getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({CodePtr});
 
   auto &FPOpActions = getActionDefinitionsBuilder(
     { G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE})

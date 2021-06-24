@@ -475,10 +475,10 @@ std::string DynamicType::AsFortran() const {
   if (derived_) {
     CHECK(category_ == TypeCategory::Derived);
     return DerivedTypeSpecAsFortran(*derived_);
-  } else if (charLengthParamValue_ || knownLength_) {
+  } else if (charLengthParamValue_ || knownLength()) {
     std::string result{"CHARACTER(KIND="s + std::to_string(kind_) + ",LEN="};
-    if (knownLength_) {
-      result += std::to_string(*knownLength_) + "_8";
+    if (knownLength()) {
+      result += std::to_string(*knownLength()) + "_8";
     } else if (charLengthParamValue_->isAssumed()) {
       result += '*';
     } else if (charLengthParamValue_->isDeferred()) {

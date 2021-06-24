@@ -35,8 +35,8 @@ def PDL_Dialect : Dialect {
     a `pdl.rewrite` that either dispatches to an external rewriter or contains
     a region for the rewrite specified via `pdl`. The types of values in `pdl`
     are handle types to MLIR C++ types, with `!pdl.attribute`, `!pdl.operation`,
-    and `!pdl.type` directly mapping to `mlir::Attribute`, `mlir::Operation*`,
-    and `mlir::Value` respectively.
+    `!pdl.value`, and `!pdl.type` directly mapping to `mlir::Attribute`,
+    `mlir::Operation*`, `mlir::Value`, and `mlir::Type` respectively.
 
     An example pattern is shown below:
 

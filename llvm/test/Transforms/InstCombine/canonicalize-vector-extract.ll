@@ -101,29 +101,6 @@ define <3 x i32> @valid_extraction_h(<8 x i32> %vec) {
 }
 
 ; ============================================================================ ;
-; Invalid canonicalizations
-; ============================================================================ ;
-
-; Idx must be the be a constant multiple of the destination vector's length,
-; otherwise the result is undefined.
-define <4 x i32> @idx_not_constant_multiple(<8 x i32> %vec) {
-; CHECK-LABEL: @idx_not_constant_multiple(
-; CHECK-NEXT:    ret <4 x i32> undef
-;
-  %1 = call <4 x i32> @llvm.experimental.vector.extract.v4i32.v8i32(<8 x i32> %vec, i64 1)
-  ret <4 x i32> %1
-}
-
-; If the extraction overruns the vector, the result is undefined.
-define <10 x i32> @extract_overrun(<8 x i32> %vec) {
-; CHECK-LABEL: @extract_overrun(
-; CHECK-NEXT:    ret <10 x i32> undef
-;
-  %1 = call <10 x i32> @llvm.experimental.vector.extract.v10i32.v8i32(<8 x i32> %vec, i64 0)
-  ret <10 x i32> %1
-}
-
-; ============================================================================ ;
 ; Scalable cases
 ; ============================================================================ ;
 

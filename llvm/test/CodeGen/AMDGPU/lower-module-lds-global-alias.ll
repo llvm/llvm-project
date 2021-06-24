@@ -16,7 +16,7 @@
 ;          But none of them are used anywhere. Hence, @lds.6 is not lowered.
 ;.
 
-; CHECK: %llvm.amdgcn.module.lds.t = type { [4 x i8], [3 x i8], [1 x i8], [2 x i8], [1 x i8] }
+; CHECK: %llvm.amdgcn.module.lds.t = type { [4 x i8], [3 x i8], [1 x i8], [2 x i8] }
 
 ; CHECK-NOT: @lds.1
 ; CHECK-NOT: @lds.2
@@ -41,7 +41,7 @@
 ; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 4
 ; CHECK: @llvm.compiler.used = appending global [1 x i8*] [i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0, i32 0) to i8*)], section "llvm.metadata"
 
-; CHECK: @alias.to.lds.1 = alias [1 x i8], getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 4)
+; CHECK: @alias.to.lds.1 = alias [1 x i8], getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 2)
 ; CHECK: @alias.to.lds.2 = alias [2 x i8], getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 3)
 ; CHECK: @alias.to.gptr.3 = alias i64*, i64* addrspace(1)* @gptr.3
 ; CHECK: @alias.to.gptr.4 = alias i64*, i64* addrspace(1)* @gptr.4

@@ -76,8 +76,8 @@ define i16 @hoist_with_debug3_pr49982(i32 %x, i1 %c.2) !dbg !26 {
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[C_0]], i1 true, i1 [[C_2:%.*]]
 ; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[C_0]], i16 0, i16 20
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[EXIT_1:%.*]], label [[FOR_COND]]
-; CHECK:       exit.1:
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[COMMON_RET:%.*]], label [[FOR_COND]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret i16 [[DOTMUX]]
 ;
 entry:

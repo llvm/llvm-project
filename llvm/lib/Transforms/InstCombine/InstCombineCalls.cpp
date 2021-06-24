@@ -1367,20 +1367,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    Value *ExtSrc0;
-    Value *ExtSrc1;
-
-    // minnum (fpext x), (fpext y) -> minnum x, y
-    // maxnum (fpext x), (fpext y) -> maxnum x, y
-    if (match(II->getArgOperand(0), m_OneUse(m_FPExt(m_Value(ExtSrc0)))) &&
-        match(II->getArgOperand(1), m_OneUse(m_FPExt(m_Value(ExtSrc1)))) &&
-        ExtSrc0->getType() == ExtSrc1->getType()) {
-      Function *F = Intrinsic::getDeclaration(
-          II->getModule(), II->getIntrinsicID(), {ExtSrc0->getType()});
-      CallInst *NewCall = Builder.CreateCall(F, { ExtSrc0, ExtSrc1 });
-      NewCall->copyFastMathFlags(II);
-      NewCall->takeName(II);
+    // m((fpext X), (fpext Y)) -> fpext (m(X, Y))
+    if (match(Arg0, m_OneUse(m_FPExt(m_Value(X)))) &&
+        match(Arg1, m_OneUse(m_FPExt(m_Value(Y)))) &&
+        X->getType() == Y->getType()) {
+      Value *NewCall =
+          Builder.CreateBinaryIntrinsic(IID, X, Y, II, II->getName());
       return new FPExtInst(NewCall, II->getType());
+    }
+
+    // max X, -X --> fabs X
+    // min X, -X --> -(fabs X)
+    // TODO: Remove one-use limitation? That is obviously better for max.
+    //       It would be an extra instruction for min (fnabs), but that is
+    //       still likely better for analysis and codegen.
+    if ((match(Arg0, m_OneUse(m_FNeg(m_Value(X)))) && Arg1 == X) ||
+        (match(Arg1, m_OneUse(m_FNeg(m_Value(X)))) && Arg0 == X)) {
+      Value *R = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
+      if (IID == Intrinsic::minimum || IID == Intrinsic::minnum)
+        R = Builder.CreateFNegFMF(R, II);
+      return replaceInstUsesWith(*II, R);
     }
 
     break;
@@ -1883,13 +1889,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       unsigned SubVecNumElts = SubVecTy->getNumElements();
       unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
 
-      // The result of this call is undefined if IdxN is not a constant multiple
-      // of the SubVec's minimum vector length OR the insertion overruns Vec.
-      if (IdxN % SubVecNumElts != 0 || IdxN + SubVecNumElts > VecNumElts) {
-        replaceInstUsesWith(CI, UndefValue::get(CI.getType()));
-        return eraseInstFromFunction(CI);
-      }
-
       // An insert that entirely overwrites Vec with SubVec is a nop.
       if (VecNumElts == SubVecNumElts) {
         replaceInstUsesWith(CI, SubVec);
@@ -1936,14 +1935,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       unsigned DstNumElts = DstTy->getNumElements();
       unsigned VecNumElts = VecTy->getNumElements();
       unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
-
-      // The result of this call is undefined if IdxN is not a constant multiple
-      // of the result type's minimum vector length OR the extraction overruns
-      // Vec.
-      if (IdxN % DstNumElts != 0 || IdxN + DstNumElts > VecNumElts) {
-        replaceInstUsesWith(CI, UndefValue::get(CI.getType()));
-        return eraseInstFromFunction(CI);
-      }
 
       // Extracting the entirety of Vec is a nop.
       if (VecNumElts == DstNumElts) {
@@ -2319,8 +2310,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(Call, *II);
 
-  PointerType *PTy = cast<PointerType>(Callee->getType());
-  FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
+  FunctionType *FTy = Call.getFunctionType();
   if (FTy->isVarArg()) {
     int ix = FTy->getNumParams();
     // See if we can optimize any arguments passed through the varargs area of

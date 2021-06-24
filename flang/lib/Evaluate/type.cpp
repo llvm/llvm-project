@@ -109,15 +109,15 @@ template <typename A> inline bool PointeeComparison(const A *x, const A *y) {
 bool DynamicType::operator==(const DynamicType &that) const {
   return category_ == that.category_ && kind_ == that.kind_ &&
       PointeeComparison(charLengthParamValue_, that.charLengthParamValue_) &&
-      knownLength_.has_value() == that.knownLength_.has_value() &&
-      (!knownLength_ || *knownLength_ == *that.knownLength_) &&
+      knownLength().has_value() == that.knownLength().has_value() &&
+      (!knownLength() || *knownLength() == *that.knownLength()) &&
       PointeeComparison(derived_, that.derived_);
 }
 
 std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
   if (category_ == TypeCategory::Character) {
-    if (knownLength_) {
-      return AsExpr(Constant<SubscriptInteger>(*knownLength_));
+    if (knownLength()) {
+      return AsExpr(Constant<SubscriptInteger>(*knownLength()));
     } else if (charLengthParamValue_) {
       if (auto length{charLengthParamValue_->GetExplicit()}) {
         return ConvertToType<SubscriptInteger>(std::move(*length));
@@ -194,7 +194,7 @@ bool DynamicType::IsAssumedLengthCharacter() const {
 bool DynamicType::IsNonConstantLengthCharacter() const {
   if (category_ != TypeCategory::Character) {
     return false;
-  } else if (knownLength_) {
+  } else if (knownLength()) {
     return false;
   } else if (!charLengthParamValue_) {
     return true;

@@ -2377,6 +2377,28 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_FOREACH.
 
+**IfMacros** (``std::vector<std::string>``)
+  A vector of macros that should be interpreted as conditionals
+  instead of as function calls.
+
+  These are expected to be macros of the form:
+
+  .. code-block:: c++
+
+    IF(...)
+      <conditional-body>
+    else IF(...)
+      <conditional-body>
+
+  In the .clang-format configuration file, this can be configured like:
+
+  .. code-block:: yaml
+
+    IfMacros: ['IF']
+
+  For example: `KJ_IF_MAYBE
+  <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes>`_
+
 **IncludeBlocks** (``IncludeBlocksStyle``)
   Dependent on the value, multiple ``#include`` blocks can be sorted
   as one and divided based on category.
@@ -2840,6 +2862,42 @@ the configuration (without a prefix: ``Auto``).
                                               bar();
        bar();                               }
      }
+
+**LambdaBodyIndentation** (``LambdaBodyIndentationKind``)
+  The indentation style of lambda bodies. ``Signature`` (the default)
+  causes the lambda body to be indented one additional level relative to
+  the indentation level of the signature. ``OuterScope`` forces the lambda
+  body to be indented one additional level relative to the parent scope
+  containing the lambda signature. For callback-heavy code, it may improve
+  readability to have the signature indented two levels and to use
+  ``OuterScope``. The KJ style guide requires ``OuterScope`.
+  `KJ style guide
+  <https://github.com/capnproto/capnproto/blob/master/kjdoc/style-guide.md>`_
+
+  Possible values:
+
+  * ``LBI_Signature`` (in configuration: ``Signature``)
+    Align lambda body relative to the lambda signature. This is the default.
+
+    .. code-block:: c++
+
+       someMethod(
+           [](SomeReallyLongLambdaSignatureArgument foo) {
+             return;
+           });
+
+  * ``LBI_OuterScope`` (in configuration: ``OuterScope``)
+    Align lambda body relative to the indentation level of the outer scope
+    the lambda signature resides in.
+
+    .. code-block:: c++
+
+       someMethod(
+           [](SomeReallyLongLambdaSignatureArgument foo) {
+         return;
+       });
+
+
 
 **Language** (``LanguageKind``)
   Language, this format style is targeted at.
@@ -3444,10 +3502,12 @@ the configuration (without a prefix: ``Auto``).
          }
        }
 
-  * ``SBPO_ControlStatementsExceptForEachMacros`` (in configuration: ``ControlStatementsExceptForEachMacros``)
+  * ``SBPO_ControlStatementsExceptControlMacros`` (in configuration: ``ControlStatementsExceptControlMacros``)
     Same as ``SBPO_ControlStatements`` except this option doesn't apply to
-    ForEach macros. This is useful in projects where ForEach macros are
-    treated as function calls instead of control statements.
+    ForEach and If macros. This is useful in projects where ForEach/If
+    macros are treated as function calls instead of control statements.
+    ``SBPO_ControlStatementsExceptForEachMacros`` remains an alias for
+    backward compatability.
 
     .. code-block:: c++
 

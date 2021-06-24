@@ -111,6 +111,7 @@ set(files
   __iterator/default_sentinel.h
   __iterator/incrementable_traits.h
   __iterator/iter_move.h
+  __iterator/iter_swap.h
   __iterator/iterator_traits.h
   __iterator/next.h
   __iterator/prev.h
@@ -140,6 +141,7 @@ set(files
   __ranges/all.h
   __ranges/concepts.h
   __ranges/data.h
+  __ranges/drop_view.h
   __ranges/empty.h
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h

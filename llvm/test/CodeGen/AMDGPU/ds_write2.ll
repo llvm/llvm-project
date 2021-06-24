@@ -818,33 +818,22 @@ define amdgpu_kernel void @store_constant_disjoint_offsets() {
 define amdgpu_kernel void @store_misaligned64_constant_offsets() {
 ; CI-LABEL: store_misaligned64_constant_offsets:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_movk_i32 s0, 0x7b
-; CI-NEXT:    s_mov_b32 s1, 0
-; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_mov_b32_e32 v2, 0
-; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_mov_b32_e32 v0, 0x7b
+; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    v_mov_b32_e32 v2, v0
+; CI-NEXT:    v_mov_b32_e32 v3, v1
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_write2_b64 v2, v[0:1], v[0:1] offset1:1
+; CI-NEXT:    ds_write_b128 v1, v[0:3]
 ; CI-NEXT:    s_endpgm
 ;
-; GFX9-ALIGNED-LABEL: store_misaligned64_constant_offsets:
-; GFX9-ALIGNED:       ; %bb.0:
-; GFX9-ALIGNED-NEXT:    s_movk_i32 s0, 0x7b
-; GFX9-ALIGNED-NEXT:    s_mov_b32 s1, 0
-; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-ALIGNED-NEXT:    ds_write2_b64 v2, v[0:1], v[0:1] offset1:1
-; GFX9-ALIGNED-NEXT:    s_endpgm
-;
-; GFX9-UNALIGNED-LABEL: store_misaligned64_constant_offsets:
-; GFX9-UNALIGNED:       ; %bb.0:
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0x7b
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v2, v0
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v3, v1
-; GFX9-UNALIGNED-NEXT:    ds_write_b128 v1, v[0:3]
-; GFX9-UNALIGNED-NEXT:    s_endpgm
+; GFX9-LABEL: store_misaligned64_constant_offsets:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7b
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, v0
+; GFX9-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NEXT:    ds_write_b128 v1, v[0:3]
+; GFX9-NEXT:    s_endpgm
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4
   ret void

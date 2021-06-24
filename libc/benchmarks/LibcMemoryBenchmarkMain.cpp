@@ -17,10 +17,14 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstring>
+
 namespace __llvm_libc {
 
 extern void *memcpy(void *__restrict, const void *__restrict, size_t);
 extern void *memset(void *, int, size_t);
+extern void bzero(void *, size_t);
+extern int memcmp(const void *, const void *, size_t);
 
 } // namespace __llvm_libc
 
@@ -79,7 +83,7 @@ struct Benchmark {
     return [this](ParameterType P) {
       __llvm_libc::memcpy(DstBuffer + P.OffsetBytes, SrcBuffer + P.OffsetBytes,
                           P.SizeBytes);
-      return DstBuffer + P.OffsetBytes;
+      return DstBuffer[P.OffsetBytes];
     };
   }
 
@@ -97,18 +101,55 @@ struct Benchmark {
     return [this](ParameterType P) {
       __llvm_libc::memset(DstBuffer + P.OffsetBytes, P.OffsetBytes & 0xFF,
                           P.SizeBytes);
-      return DstBuffer + P.OffsetBytes;
+      return DstBuffer[P.OffsetBytes];
     };
   }
 
   AlignedBuffer DstBuffer;
+};
+#elif defined(LIBC_BENCHMARK_FUNCTION_BZERO)
+struct Benchmark {
+  static constexpr auto GetDistributions = &getMemsetSizeDistributions;
+  static constexpr size_t BufferCount = 1;
+
+  Benchmark(const size_t BufferSize) : DstBuffer(BufferSize) {}
+
+  inline auto functor() {
+    return [this](ParameterType P) {
+      __llvm_libc::bzero(DstBuffer + P.OffsetBytes, P.SizeBytes);
+      return DstBuffer[P.OffsetBytes];
+    };
+  }
+
+  AlignedBuffer DstBuffer;
+};
+#elif defined(LIBC_BENCHMARK_FUNCTION_MEMCMP)
+struct Benchmark {
+  static constexpr auto GetDistributions = &getMemcmpSizeDistributions;
+  static constexpr size_t BufferCount = 2;
+
+  Benchmark(const size_t BufferSize)
+      : BufferA(BufferSize), BufferB(BufferSize) {
+    // The memcmp buffers always compare equal.
+    memset(BufferA.begin(), 0xF, BufferSize);
+    memset(BufferB.begin(), 0xF, BufferSize);
+  }
+
+  inline auto functor() {
+    return [this](ParameterType P) {
+      return __llvm_libc::memcmp(BufferA + P.OffsetBytes,
+                                 BufferB + P.OffsetBytes, P.SizeBytes);
+    };
+  }
+
+  AlignedBuffer BufferA;
+  AlignedBuffer BufferB;
 };
 #else
 #error "Missing LIBC_BENCHMARK_FUNCTION_XXX definition"
 #endif
 
 struct Harness : Benchmark {
-
   Harness(const size_t BufferSize, size_t BatchParameterCount,
           std::function<unsigned()> SizeSampler,
           std::function<unsigned()> OffsetSampler)

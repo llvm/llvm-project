@@ -45,4 +45,10 @@ def SCFParallelLoopTiling : FunctionPass<"parallel-loop-tiling"> {
   let dependentDialects = ["AffineDialect"];
 }
 
+def SCFForLoopRangeFolding
+    : Pass<"for-loop-range-folding"> {
+  let summary = "Fold add/mul ops into loop range";
+  let constructor = "mlir::createForLoopRangeFoldingPass()";
+}
+
 #endif // MLIR_DIALECT_SCF_PASSES

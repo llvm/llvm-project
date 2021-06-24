@@ -405,6 +405,7 @@ public:
   // OpenMP Environment properties
   int EnvNumTeams;
   int EnvTeamLimit;
+  int EnvTeamThreadLimit;
   int EnvMaxTeamsDefault;
 
   // OpenMP Requires Flags
@@ -644,6 +645,13 @@ public:
       DP("Parsed OMP_MAX_TEAMS_DEFAULT=%d\n", EnvMaxTeamsDefault);
     } else {
       EnvMaxTeamsDefault = -1;
+    }
+    envStr = getenv("OMP_TEAMS_THREAD_LIMIT");
+    if (envStr) {
+      EnvTeamThreadLimit = std::stoi(envStr);
+      DP("Parsed OMP_TEAMS_THREAD_LIMIT=%d\n", EnvTeamThreadLimit);
+    } else {
+      EnvTeamThreadLimit = -1;
     }
 
     // Default state.
@@ -948,6 +956,14 @@ int32_t __tgt_rtl_init_device(int device_id) {
                           DeviceInfo.GroupsPerDevice[device_id])) {
     DP("Default number of teams exceeds device limit, capping at %d\n",
        DeviceInfo.GroupsPerDevice[device_id]);
+  }
+
+  // Adjust threads to the env variables
+  if (DeviceInfo.EnvTeamThreadLimit > 0 &&
+      (enforce_upper_bound(&DeviceInfo.NumThreads[device_id],
+                           DeviceInfo.EnvTeamThreadLimit))) {
+    DP("Capping max number of threads to OMP_TEAMS_THREAD_LIMIT=%d\n",
+       DeviceInfo.EnvTeamThreadLimit);
   }
 
   // Set default number of threads

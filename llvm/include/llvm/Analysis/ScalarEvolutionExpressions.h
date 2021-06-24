@@ -210,8 +210,6 @@ class Type;
       return make_range(op_begin(), op_end());
     }
 
-    Type *getType() const { return getOperand(0)->getType(); }
-
     NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {
       return (NoWrapFlags)(SubclassData & Mask);
     }
@@ -293,6 +291,8 @@ class Type;
       : SCEVCommutativeExpr(ID, scMulExpr, O, N) {}
 
   public:
+    Type *getType() const { return getOperand(0)->getType(); }
+
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const SCEV *S) {
       return S->getSCEVType() == scMulExpr;
@@ -359,6 +359,7 @@ class Type;
       : SCEVNAryExpr(ID, scAddRecExpr, O, N), L(l) {}
 
   public:
+    Type *getType() const { return getStart()->getType(); }
     const SCEV *getStart() const { return Operands[0]; }
     const Loop *getLoop() const { return L; }
 
@@ -445,6 +446,8 @@ class Type;
     }
 
   public:
+    Type *getType() const { return getOperand(0)->getType(); }
+
     static bool classof(const SCEV *S) {
       return isMinMaxType(S->getSCEVType());
     }

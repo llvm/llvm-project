@@ -25,7 +25,7 @@ func @tiled_loop(%A: memref<192x192xf32>,
       : memref<192x192xf32> to memref<192x?xf32, #map1>
     %4 = memref.subview %C_[%i, %j] [%0, %2] [1, 1]
       : memref<192x192xf32> to memref<?x?xf32, #map1>
-    linalg.fill(%4, %cst) : memref<?x?xf32, #map1>, f32
+    linalg.fill(%cst, %4) : f32, memref<?x?xf32, #map1>
     linalg.matmul ins(%1, %3 : memref<?x192xf32, #map1>,
                                memref<192x?xf32, #map1>)
                   outs(%4 : memref<?x?xf32, #map1>)
@@ -63,7 +63,7 @@ func @tiled_loop_reduction(%A: memref<192x192xf32>,
       ins (%A_ = %A: memref<192x192xf32>, %B_ = %B:  memref<192x192xf32>)
       outs (%C_ = %C: memref<f32>)
       iterators["reduction", "reduction"] {
-    linalg.fill(%A_, %cst) : memref<192x192xf32>, f32
+    linalg.fill(%cst, %A_) : f32, memref<192x192xf32>
     linalg.yield
   }
   return

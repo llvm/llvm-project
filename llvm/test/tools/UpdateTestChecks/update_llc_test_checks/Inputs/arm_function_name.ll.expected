@@ -7,6 +7,10 @@
 ; RUN: llc -mtriple=armv7-apple-ios < %s | FileCheck --prefix=IOS %s
 ;
 define hidden i32 @"_Z54bar$ompvariant$bar"() {
+; CHECK-LABEL: _Z54bar$ompvariant$bar:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    mov r0, #2
+; CHECK-NEXT:    bx lr
 entry:
   ret i32 2
 }

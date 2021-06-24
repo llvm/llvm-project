@@ -7292,6 +7292,9 @@ void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
     return;
   }
 
+  if (DefKind.isComparison())
+    UnusedPrivateFields.clear();
+
   if (DefKind.isSpecialMember()
           ? CheckExplicitlyDefaultedSpecialMember(cast<CXXMethodDecl>(FD),
                                                   DefKind.asSpecialMember())
@@ -13199,6 +13202,16 @@ void Sema::setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
 
   auto QT = Context.getFunctionType(ResultTy, Args, EPI);
   SpecialMem->setType(QT);
+
+  // During template instantiation of implicit special member functions we need
+  // a reliable TypeSourceInfo for the function prototype in order to allow
+  // functions to be substituted.
+  if (inTemplateInstantiation() &&
+      cast<CXXRecordDecl>(SpecialMem->getParent())->isLambda()) {
+    TypeSourceInfo *TSI =
+        Context.getTrivialTypeSourceInfo(SpecialMem->getType());
+    SpecialMem->setTypeSourceInfo(TSI);
+  }
 }
 
 CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
@@ -14877,12 +14890,18 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
 
   setupImplicitSpecialMemberType(CopyConstructor, Context.VoidTy, ArgType);
 
+  // During template instantiation of special member functions we need a
+  // reliable TypeSourceInfo for the parameter types in order to allow functions
+  // to be substituted.
+  TypeSourceInfo *TSI = nullptr;
+  if (inTemplateInstantiation() && ClassDecl->isLambda())
+    TSI = Context.getTrivialTypeSourceInfo(ArgType);
+
   // Add the parameter to the constructor.
-  ParmVarDecl *FromParam = ParmVarDecl::Create(Context, CopyConstructor,
-                                               ClassLoc, ClassLoc,
-                                               /*IdentifierInfo=*/nullptr,
-                                               ArgType, /*TInfo=*/nullptr,
-                                               SC_None, nullptr);
+  ParmVarDecl *FromParam =
+      ParmVarDecl::Create(Context, CopyConstructor, ClassLoc, ClassLoc,
+                          /*IdentifierInfo=*/nullptr, ArgType,
+                          /*TInfo=*/TSI, SC_None, nullptr);
   CopyConstructor->setParams(FromParam);
 
   CopyConstructor->setTrivial(

@@ -41,7 +41,7 @@
 @llvm.compiler.used = appending global [3 x i8*] [i8* addrspacecast (i8 addrspace(3)* bitcast (i32 addrspace(3)* @lds.2 to i8 addrspace(3)*) to i8*), i8* addrspacecast (i8 addrspace(1)* bitcast (i64* addrspace(1)* @gptr.4 to i8 addrspace(1)*) to i8*), i8* addrspacecast (i8 addrspace(3)* bitcast (i32 addrspace(3)* @lds.6 to i8 addrspace(3)*) to i8*)], section "llvm.metadata"
 
 ; CHECK-LABEL: @k0()
-; CHECK:   %ld.lds.1 = load i16, i16 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k0.lds.t, %llvm.amdgcn.kernel.k0.lds.t addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 1), align 2
+; CHECK:   %ld.lds.1 = load i16, i16 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k0.lds.t, %llvm.amdgcn.kernel.k0.lds.t addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 1), align 4
 ; CHECK:   %ld.lds.2 = load i32, i32 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k0.lds.t, %llvm.amdgcn.kernel.k0.lds.t addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0), align 4
 ; CHECK:   %ld.lds.3 = load i64, i64 addrspace(3)* @lds.3, align 4
 ; CHECK:   %ld.lds.4 = load float, float addrspace(3)* @lds.4, align 4

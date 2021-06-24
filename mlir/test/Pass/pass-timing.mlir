@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=PIPELINE %s
 // RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=MT_LIST %s
 // RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=MT_PIPELINE %s
-// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=false -test-pm-nested-pipeline -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=NESTED_MT_PIPELINE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=false -test-pm-nested-pipeline -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=NESTED_PIPELINE %s
 
 // LIST: Execution time report
 // LIST: Total Execution Time:
@@ -48,20 +48,20 @@
 // MT_PIPELINE-NEXT: Rest
 // MT_PIPELINE-NEXT: Total
 
-// NESTED_MT_PIPELINE: Execution time report
-// NESTED_MT_PIPELINE: Total Execution Time:
-// NESTED_MT_PIPELINE: Name
-// NESTED_MT_PIPELINE-NEXT: Parser
-// NESTED_MT_PIPELINE-NEXT: Pipeline Collection : ['func', 'module']
-// NESTED_MT_PIPELINE-NEXT:   'func' Pipeline
-// NESTED_MT_PIPELINE-NEXT:     TestFunctionPass
-// NESTED_MT_PIPELINE-NEXT:   'module' Pipeline
-// NESTED_MT_PIPELINE-NEXT:     TestModulePass
-// NESTED_MT_PIPELINE-NEXT:     'func' Pipeline
-// NESTED_MT_PIPELINE-NEXT:       TestFunctionPass
-// NESTED_MT_PIPELINE-NEXT: Output
-// NESTED_MT_PIPELINE-NEXT: Rest
-// NESTED_MT_PIPELINE-NEXT: Total
+// NESTED_PIPELINE: Execution time report
+// NESTED_PIPELINE: Total Execution Time:
+// NESTED_PIPELINE: Name
+// NESTED_PIPELINE-NEXT: Parser
+// NESTED_PIPELINE-NEXT: Pipeline Collection : ['func', 'module']
+// NESTED_PIPELINE-NEXT:   'func' Pipeline
+// NESTED_PIPELINE-NEXT:     TestFunctionPass
+// NESTED_PIPELINE-NEXT:   'module' Pipeline
+// NESTED_PIPELINE-NEXT:     TestModulePass
+// NESTED_PIPELINE-NEXT:     'func' Pipeline
+// NESTED_PIPELINE-NEXT:       TestFunctionPass
+// NESTED_PIPELINE-NEXT: Output
+// NESTED_PIPELINE-NEXT: Rest
+// NESTED_PIPELINE-NEXT: Total
 
 func @foo() {
   return

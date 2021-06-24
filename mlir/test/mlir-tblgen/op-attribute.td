@@ -28,6 +28,31 @@ def AOp : NS_Op<"a_op", []> {
   );
 }
 
+// DECL-LABEL: AOp declarations
+
+// Test attribute name methods
+// ---
+
+// DECL:      static ::llvm::ArrayRef<::llvm::StringRef> getAttributeNames()
+// DECL-NEXT:   static ::llvm::StringRef attrNames[] =
+// DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr")};
+// DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
+
+// DECL:      ::mlir::Identifier aAttrAttrName()
+// DECL-NEXT:      return getAttributeNameForIndex(0);
+// DECL:      ::mlir::Identifier aAttrAttrName(::mlir::OperationName name)
+// DECL-NEXT:      return getAttributeNameForIndex(name, 0);
+
+// DECL:      ::mlir::Identifier bAttrAttrName()
+// DECL-NEXT:      return getAttributeNameForIndex(1);
+// DECL:      ::mlir::Identifier bAttrAttrName(::mlir::OperationName name)
+// DECL-NEXT:      return getAttributeNameForIndex(name, 1);
+
+// DECL:      ::mlir::Identifier cAttrAttrName()
+// DECL-NEXT:      return getAttributeNameForIndex(2);
+// DECL:      ::mlir::Identifier cAttrAttrName(::mlir::OperationName name)
+// DECL-NEXT:      return getAttributeNameForIndex(name, 2);
+
 // DEF-LABEL: AOp definitions
 
 // Test verify method
@@ -48,13 +73,13 @@ def AOp : NS_Op<"a_op", []> {
 // ---
 
 // DEF:      some-attr-kind AOp::aAttrAttr()
-// DEF-NEXT:   (*this)->getAttr("aAttr").template cast<some-attr-kind>()
+// DEF-NEXT:   (*this)->getAttr(aAttrAttrName()).template cast<some-attr-kind>()
 // DEF:      some-return-type AOp::aAttr() {
 // DEF-NEXT:   auto attr = aAttrAttr()
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::bAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr("bAttr").template dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return (*this)->getAttr(bAttrAttrName()).template dyn_cast_or_null<some-attr-kind>()
 // DEF:      some-return-type AOp::bAttr() {
 // DEF-NEXT:   auto attr = bAttrAttr();
 // DEF-NEXT:   if (!attr)
@@ -62,7 +87,7 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   return attr.some-convert-from-storage();
 
 // DEF:      some-attr-kind AOp::cAttrAttr()
-// DEF-NEXT:   return (*this)->getAttr("cAttr").template dyn_cast_or_null<some-attr-kind>()
+// DEF-NEXT:   return (*this)->getAttr(cAttrAttrName()).template dyn_cast_or_null<some-attr-kind>()
 // DEF:      ::llvm::Optional<some-return-type> AOp::cAttr() {
 // DEF-NEXT:   auto attr = cAttrAttr()
 // DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);
@@ -71,30 +96,30 @@ def AOp : NS_Op<"a_op", []> {
 // ---
 
 // DEF:      void AOp::aAttrAttr(some-attr-kind attr) {
-// DEF-NEXT:   (*this)->setAttr("aAttr", attr);
+// DEF-NEXT:   (*this)->setAttr(aAttrAttrName(), attr);
 // DEF:      void AOp::bAttrAttr(some-attr-kind attr) {
-// DEF-NEXT:   (*this)->setAttr("bAttr", attr);
+// DEF-NEXT:   (*this)->setAttr(bAttrAttrName(), attr);
 // DEF:      void AOp::cAttrAttr(some-attr-kind attr) {
-// DEF-NEXT:   (*this)->setAttr("cAttr", attr);
+// DEF-NEXT:   (*this)->setAttr(cAttrAttrName(), attr);
 
 // Test remove methods
 // ---
 
 // DEF: ::mlir::Attribute AOp::removeCAttrAttr() {
-// DEF-NEXT: return (*this)->removeAttr("cAttr");
+// DEF-NEXT: return (*this)->removeAttr(cAttrAttrName());
 
 // Test build methods
 // ---
 
 // DEF:      void AOp::build(
-// DEF:        odsState.addAttribute("aAttr", aAttr);
-// DEF:        odsState.addAttribute("bAttr", bAttr);
+// DEF:        odsState.addAttribute(aAttrAttrName(odsState.name), aAttr);
+// DEF:        odsState.addAttribute(bAttrAttrName(odsState.name), bAttr);
 // DEF:        if (cAttr) {
-// DEF-NEXT:     odsState.addAttribute("cAttr", cAttr);
+// DEF-NEXT:     odsState.addAttribute(cAttrAttrName(odsState.name), cAttr);
 
 // DEF:      void AOp::build(
 // DEF:        some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr
-// DEF:        odsState.addAttribute("aAttr", some-const-builder-call(odsBuilder, aAttr));
+// DEF:        odsState.addAttribute(aAttrAttrName(odsState.name), some-const-builder-call(odsBuilder, aAttr));
 
 // DEF:      void AOp::build(
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
@@ -205,8 +230,8 @@ def DOp : NS_Op<"d_op", []> {
 // DECL: static void build({{.*}}, uint32_t i32_attr, ::llvm::APFloat f64_attr, ::llvm::StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, uint32_t dv_i32_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
 // DEF-LABEL: DOp definitions
-// DEF: odsState.addAttribute("str_attr", odsBuilder.getStringAttr(str_attr));
-// DEF: odsState.addAttribute("dv_str_attr", odsBuilder.getStringAttr(dv_str_attr));
+// DEF: odsState.addAttribute(str_attrAttrName(odsState.name), odsBuilder.getStringAttr(str_attr));
+// DEF: odsState.addAttribute(dv_str_attrAttrName(odsState.name), odsBuilder.getStringAttr(dv_str_attr));
 
 // Test derived type attr.
 // ---
@@ -272,7 +297,7 @@ def UnitAttrOp : NS_Op<"unit_attr_op", []> {
 // DEF:   return {{.*}} != nullptr
 
 // DEF: ::mlir::Attribute UnitAttrOp::removeAttrAttr() {
-// DEF-NEXT:   (*this)->removeAttr("attr");
+// DEF-NEXT:   (*this)->removeAttr(attrAttrName());
 
 // DEF: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/::mlir::UnitAttr attr)
 

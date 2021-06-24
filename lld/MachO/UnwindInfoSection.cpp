@@ -297,7 +297,7 @@ static void addEntriesForFunctionsWithoutUnwindInfo(
   // Add explicit "has no unwind info" entries for all global and local symbols
   // without unwind info.
   auto markNoUnwindInfo = [&cuVector, &hasUnwindInfo](const Defined *d) {
-    if (d->isLive() && isCodeSection(d->isec)) {
+    if (d->isLive() && d->isec && isCodeSection(d->isec)) {
       Ptr ptr = d->getVA();
       if (!hasUnwindInfo.count(ptr))
         cuVector.push_back({ptr, 0, 0, 0, 0});
