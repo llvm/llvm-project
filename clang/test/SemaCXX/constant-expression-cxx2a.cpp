@@ -745,7 +745,7 @@ namespace dtor {
   // Ensure that we can handle temporary cleanups for array temporaries.
   struct ArrElem { constexpr ~ArrElem() {} };
   using Arr = ArrElem[3];
-  static_assert((Arr{}, true));
+  static_assert(((void)Arr{}, true));
 }
 
 namespace dynamic_alloc {
