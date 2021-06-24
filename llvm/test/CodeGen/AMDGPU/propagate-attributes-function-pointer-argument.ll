@@ -30,14 +30,11 @@ define private void @f(void ()* nocapture %0) #0 {
 ; In order to expose this bug, it is necessary that `g` have one of the
 ; propagated attributes, so that a clone and substitution would take place if g
 ; were actually the function being called.
-; CHECK-DAG: define private void @g.1() #0
-; CHECK-DAG: define internal void @g() #1
+; CHECK-DAG: define private void @g.1() #1
+; CHECK-DAG: define internal void @g() #2
 define private void @g() #1 {
     ret void
 }
 
 attributes #0 = { noinline }
 attributes #1 = { noinline "amdgpu-waves-per-eu"="1,10" }
-
-; CHECK: attributes #0 = { noinline }
-; CHECK-NEXT: attributes #1 = { noinline "target-features"="+enable-ds128,+enable-prt-strict-null,+flat-address-space,+flat-for-global,+load-store-opt,+promote-alloca,+trap-handler,+unaligned-access-mode,-wavefrontsize16,-wavefrontsize32,+wavefrontsize64" }
