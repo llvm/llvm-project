@@ -151,13 +151,15 @@ class OperandDef:
   def __init__(self,
                kind: OperandKind,
                type_var: TypeVar,
-               size_exprs: Optional[Sequence[AffineExprDef]] = None):
+               size_exprs: Optional[Sequence[AffineExprDef]] = None,
+               index_dims: Optional[Sequence[DimDef]] = None):
     if not isinstance(type_var, TypeVar):
       raise ValueError(
           f"OperandDef requires a TypeVar but got {repr(type_var)}")
     self.owner = None  # type: Optional["LinalgOpDef"]
     self.type_var = type_var
     self.size_exprs = size_exprs
+    self.index_dims = index_dims
     self.kind = kind
     self.name = None  # type: Optional[str]
     self.registered_index = -1  # type: int
@@ -174,7 +176,8 @@ class OperandDef:
 
   def __repr__(self):
     return (f"{self.name}:OperandDef(kind={self.kind.name}, "
-            f"type={repr(self.type_var)}, size_exprs={self.size_exprs})")
+            f"type={repr(self.type_var)}, size_exprs={self.size_exprs}), "
+            f"index_dims={self.index_dims})")
 
 
 class TensorDef:
@@ -184,15 +187,25 @@ class TensorDef:
   to the body of the structured op. A unique name identifies the tensor operands
   and an index determines their position in the operation's parameter list. A
   tensor definition takes type, a shape, and an optional flag to mark output
-  tensors.
+  tensors. Additionally, a tuple of index dimensions may be used to map the
+  tensor to the loop dimensions of the operation. This mapping is needed to
+  compute the indexing map of shape-only tensors that have no uses.
   """
 
   def __init__(self,
                type_var: TypeVar,
                *shape: AffineExprDef,
+               index_dims: Optional[Sequence[DimDef]] = None,
                output: bool = False):
+    if index_dims and len(shape) != len(index_dims):
+      raise ValueError(f"Expected the shape rank {len(shape)} to match the "
+                       f"number of index_dims {len(index_dims)}")
+    if index_dims and any(not isinstance(dim, DimDef) for dim in index_dims):
+      raise ValueError(f"TensorDef requires index dims of type DimDef but "
+                       f"got {type(index_dims)}")
     kind = OperandKind.OutputTensor if output else OperandKind.InputTensor
-    self.operand_def = OperandDef(kind, type_var, size_exprs=shape)
+    self.operand_def = OperandDef(
+        kind, type_var, size_exprs=shape, index_dims=index_dims)
 
   def __getitem__(self, dims) -> TensorUse:
     assert self.operand_def.owner, "TensorDef is not attached to an op"
