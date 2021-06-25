@@ -182,13 +182,7 @@ public:
 
     assert((!Ty.isVector() || Ty.isScalable() == Other.Ty.isScalable()) &&
            "Unexpected mismatch of scalable property");
-    return Ty.isVector()
-               ? std::make_tuple(Ty.isScalable(),
-                                 Ty.getSizeInBits().getKnownMinSize()) <
-                     std::make_tuple(Other.Ty.isScalable(),
-                                     Other.Ty.getSizeInBits().getKnownMinSize())
-               : Ty.getSizeInBits().getFixedSize() <
-                     Other.Ty.getSizeInBits().getFixedSize();
+    return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
   }
 
   bool operator==(const LLTCodeGen &B) const { return Ty == B.Ty; }
@@ -3794,8 +3788,7 @@ Optional<unsigned> GlobalISelEmitter::getMemSizeBitsFromPredicate(const TreePred
     return None;
 
   // Align so unusual types like i1 don't get rounded down.
-  return llvm::alignTo(
-      static_cast<unsigned>(MemTyOrNone->get().getSizeInBits()), 8);
+  return llvm::alignTo(MemTyOrNone->get().getSizeInBits(), 8);
 }
 
 Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
