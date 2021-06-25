@@ -6,6 +6,7 @@
 // RUN: %clang %s -target x86_64-unknown-linux-gnu -emit-llvm -S -fsanitize=undefined  -fsanitize-coverage=trace-pc,trace-cmp -o - -flegacy-pass-manager | FileCheck %s --check-prefixes=CHECK,UBSAN
 //
 // Host armv7 is currently unsupported: https://bugs.llvm.org/show_bug.cgi?id=46117
+// UNSUPPORTED: armv8l
 // XFAIL: armv7, thumbv7
 // The same issue also occurs on a riscv32 host.
 // XFAIL: riscv32
