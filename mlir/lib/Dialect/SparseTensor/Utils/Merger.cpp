@@ -137,6 +137,33 @@ bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
   return false;
 }
 
+unsigned Merger::buildLattices(unsigned e, unsigned idx) {
+  Kind kind = exp(e).kind;
+  if (kind == Kind::kTensor || kind == Kind::kInvariant) {
+    // Either the index is really used in the tensor expression, or it is
+    // set to the undefined index in that dimension. An invariant expression
+    // is set to a synthetic tensor with undefined indices only.
+    unsigned s = addSet();
+    unsigned t = kind == Kind::kTensor ? exp(e).e0 : syntheticTensor;
+    set(s).push_back(addLat(t, idx, e));
+    return s;
+  }
+  unsigned s0 = buildLattices(exp(e).e0, idx);
+  unsigned s1 = buildLattices(exp(e).e1, idx);
+  switch (kind) {
+  case Kind::kTensor:
+  case Kind::kInvariant:
+    llvm_unreachable("handled above");
+  case Kind::kMulF:
+  case Kind::kMulI:
+    return takeConj(kind, s0, s1);
+  case Kind::kAddF:
+  case Kind::kAddI:
+    return takeDisj(kind, s0, s1);
+  }
+  llvm_unreachable("unexpected expression kind");
+}
+
 #ifndef NDEBUG
 
 //
