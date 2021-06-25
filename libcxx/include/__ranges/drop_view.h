@@ -143,6 +143,9 @@ public:
   // TODO: this is just recreating all_t.
     -> drop_view<decltype(views::all(std::declval<_Range>()))>;
 
+  template<class _Tp>
+  inline constexpr bool enable_borrowed_range<drop_view<_Tp>> = enable_borrowed_range<_Tp>;
+
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
