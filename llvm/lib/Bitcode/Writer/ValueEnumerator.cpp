@@ -378,8 +378,10 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   }
 
   // Enumerate the aliases.
-  for (const GlobalAlias &GA : M.aliases())
+  for (const GlobalAlias &GA : M.aliases()) {
     EnumerateValue(&GA);
+    EnumerateType(GA.getValueType());
+  }
 
   // Enumerate the ifuncs.
   for (const GlobalIFunc &GIF : M.ifuncs())
