@@ -11,7 +11,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 define i8* @test_memccpy() {
 ; CHECK-LABEL: @test_memccpy(
-; CHECK-NEXT:    [[MEMCCPY:%.*]] = call i8* @memccpy(i8* noalias writeonly getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noalias nocapture readonly getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i32 0, i64 60) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[MEMCCPY:%.*]] = call i8* @memccpy(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i32 0, i64 60)
 ; CHECK-NEXT:    ret i8* [[MEMCCPY]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -55,7 +55,7 @@ define i8* @test_not_mempcpy() {
 
 define i32 @test_snprintf() {
 ; CHECK-LABEL: @test_snprintf(
-; CHECK-NEXT:    [[SNPRINTF:%.*]] = call noundef i32 (i8*, i64, i8*, ...) @snprintf(i8* noalias nocapture noundef nonnull writeonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i64 noundef 60, i8* nocapture noundef readonly getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0)) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[SNPRINTF:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i64 60, i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0))
 ; CHECK-NEXT:    ret i32 [[SNPRINTF]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -79,7 +79,7 @@ define i32 @test_not_snprintf() {
 
 define i32 @test_sprintf() {
 ; CHECK-LABEL: @test_sprintf(
-; CHECK-NEXT:    [[SPRINTF:%.*]] = call noundef i32 (i8*, i8*, ...) @sprintf(i8* noalias nocapture noundef nonnull writeonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0)) #[[ATTR1]]
+; CHECK-NEXT:    [[SPRINTF:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0))
 ; CHECK-NEXT:    ret i32 [[SPRINTF]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -103,7 +103,7 @@ define i32 @test_not_sprintf() {
 
 define i8* @test_strcat() {
 ; CHECK-LABEL: @test_strcat(
-; CHECK-NEXT:    [[STRCAT:%.*]] = call i8* @strcat(i8* noalias noundef nonnull returned dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noalias nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0)) #[[ATTR0]]
+; CHECK-NEXT:    [[STRCAT:%.*]] = call i8* @strcat(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0))
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0)
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -125,7 +125,7 @@ define i8* @test_not_strcat() {
 
 define i64 @test_strlcat() {
 ; CHECK-LABEL: @test_strlcat(
-; CHECK-NEXT:    [[STRLCAT:%.*]] = call i64 @strlcat(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[STRLCAT:%.*]] = call i64 @strlcat(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
 ; CHECK-NEXT:    ret i64 [[STRLCAT]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -147,7 +147,7 @@ define i64 @test_not_strlcat() {
 
 define i8* @test_strncat() {
 ; CHECK-LABEL: @test_strncat(
-; CHECK-NEXT:    [[STRNCAT:%.*]] = call i8* @strncat(i8* noalias noundef nonnull returned dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noalias nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22) #[[ATTR0]]
+; CHECK-NEXT:    [[STRNCAT:%.*]] = call i8* @strncat(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0)
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -169,7 +169,7 @@ define i8* @test_not_strncat() {
 
 define i64 @test_strlcpy() {
 ; CHECK-LABEL: @test_strlcpy(
-; CHECK-NEXT:    [[STRLCPY:%.*]] = call i64 @strlcpy(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22) #[[ATTR2]]
+; CHECK-NEXT:    [[STRLCPY:%.*]] = call i64 @strlcpy(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
 ; CHECK-NEXT:    ret i64 [[STRLCPY]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -191,7 +191,7 @@ define i64 @test_not_strlcpy() {
 
 define i32 @test_vsnprintf() {
 ; CHECK-LABEL: @test_vsnprintf(
-; CHECK-NEXT:    [[VSNPRINTF:%.*]] = call noundef i32 @vsnprintf(i8* nocapture noundef getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i64 noundef 4, i8* nocapture noundef readonly getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), %struct.__va_list_tag* noundef null) #[[ATTR1]]
+; CHECK-NEXT:    [[VSNPRINTF:%.*]] = call i32 @vsnprintf(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i64 4, i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), %struct.__va_list_tag* null)
 ; CHECK-NEXT:    ret i32 [[VSNPRINTF]]
 ;
   ; ret i32
@@ -217,7 +217,7 @@ define i32 @test_not_vsnprintf() {
 
 define i32 @test_vsprintf() {
 ; CHECK-LABEL: @test_vsprintf(
-; CHECK-NEXT:    [[VSPRINTF:%.*]] = call noundef i32 @vsprintf(i8* nocapture noundef getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* nocapture noundef readonly getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), %struct.__va_list_tag* noundef null) #[[ATTR1]]
+; CHECK-NEXT:    [[VSPRINTF:%.*]] = call i32 @vsprintf(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), %struct.__va_list_tag* null)
 ; CHECK-NEXT:    ret i32 [[VSPRINTF]]
 ;
   ; ret i32
