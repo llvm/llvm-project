@@ -184,6 +184,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
   // XXX - What does the member GPU mean if device name string passed here?
   if (isAMDGCN(getTriple())) {
     switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
+    case GK_GFX1035:
     case GK_GFX1034:
     case GK_GFX1033:
     case GK_GFX1032:
