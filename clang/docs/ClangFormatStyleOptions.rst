@@ -3236,6 +3236,38 @@ the configuration (without a prefix: ``Auto``).
           BasedOnStyle: llvm
           CanonicalDelimiter: 'cc'
 
+**ReferenceAlignment** (``ReferenceAlignmentStyle``)
+  Reference alignment style (overrides ``PointerAlignment`` for
+  references).
+
+  Possible values:
+
+  * ``RAS_Pointer`` (in configuration: ``Pointer``)
+    Align reference like ``PointerAlignment``.
+
+  * ``RAS_Left`` (in configuration: ``Left``)
+    Align reference to the left.
+
+    .. code-block:: c++
+
+      int& a;
+
+  * ``RAS_Right`` (in configuration: ``Right``)
+    Align reference to the right.
+
+    .. code-block:: c++
+
+      int &a;
+
+  * ``RAS_Middle`` (in configuration: ``Middle``)
+    Align reference in the middle.
+
+    .. code-block:: c++
+
+      int & a;
+
+
+
 **ReflowComments** (``bool``)
   If ``true``, clang-format will attempt to re-flow comments.
 
