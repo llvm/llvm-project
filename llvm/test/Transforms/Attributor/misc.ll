@@ -26,6 +26,7 @@ define internal void @internal(void (i8*)* %fp) {
 ; IS__CGSCC____-SAME: (void (i8*)* noundef nonnull [[FP:%.*]]) {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
+; IS__CGSCC____-NEXT:    [[TMP:%.*]] = bitcast i32* [[A]] to i8*
 ; IS__CGSCC____-NEXT:    call void @foo(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
 ; IS__CGSCC____-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
 ; IS__CGSCC____-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
