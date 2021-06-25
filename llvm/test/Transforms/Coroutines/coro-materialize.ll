@@ -1,5 +1,4 @@
 ; Verifies that we materialize instruction across suspend points
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 define i8* @f(i32 %n) "coroutine.presplit"="1" {
