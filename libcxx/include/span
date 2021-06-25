@@ -134,6 +134,7 @@ template<class Container>
 #include <array>        // for array
 #include <cstddef>      // for byte
 #include <iterator>     // for iterators
+#include <limits>
 #include <type_traits>  // for remove_cv, etc
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

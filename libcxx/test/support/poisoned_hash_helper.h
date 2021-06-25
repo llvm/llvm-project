@@ -9,9 +9,9 @@
 #ifndef SUPPORT_POISONED_HASH_HELPER_H
 #define SUPPORT_POISONED_HASH_HELPER_H
 
-#include <__utility/move.h> // TODO: replace with <utility> when std::hash is moved out of the header
 #include <cassert>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_workarounds.h"
