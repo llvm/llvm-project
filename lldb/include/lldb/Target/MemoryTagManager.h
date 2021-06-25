@@ -26,7 +26,7 @@ namespace lldb_private {
 
 class MemoryTagManager {
 public:
-  typedef Range<lldb::addr_t, size_t> TagRange;
+  typedef Range<lldb::addr_t, lldb::addr_t> TagRange;
 
   // Extract the logical tag from a pointer
   // The tag is returned as a plain value, with any shifts removed.
