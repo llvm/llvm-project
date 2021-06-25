@@ -13,6 +13,7 @@
 #include "rtl.h"
 #include "device.h"
 #include "private.h"
+#include "llvm/OffloadArch/OffloadArch.h"
 
 #if OMPT_SUPPORT
 #include "ompt-target.h"
@@ -423,32 +424,12 @@ static void
 __tgt_get_active_offload_env(__tgt_active_offload_env *active_env,
                              char *offload_arch_output_buffer,
                              size_t offload_arch_output_buffer_size) {
-  void *handle = dlopen("libomptarget.so", RTLD_NOW);
-  if (!handle)
-    DP("dlopen() failed: %s\n", dlerror());
-  char *libomptarget_dir_name = new char[PATH_MAX];
-  if (dlinfo(handle, RTLD_DI_ORIGIN, libomptarget_dir_name) == -1)
-    DP("RTLD_DI_ORIGIN failed: %s\n", dlerror());
-  std::string cmd_bin;
-  cmd_bin.assign(libomptarget_dir_name).append("/../bin/amdgpu-arch");
-  struct stat stat_buffer;
-  if (stat(cmd_bin.c_str(), &stat_buffer)) {
-    DP("Missing offload-arch command at %s \n", cmd_bin.c_str());
-  } else {
-    // Add option to print capabilities of current system
-    FILE *stream = popen(cmd_bin.c_str(), "r");
-    while (fgets(offload_arch_output_buffer, offload_arch_output_buffer_size,
-                 stream) != NULL)
-      ;
-    pclose(stream);
-    active_env->capabilities = offload_arch_output_buffer;
-    size_t slen = strlen(active_env->capabilities);
-    offload_arch_output_buffer[slen - 1] =
-        '\0'; // terminate string before line feed
-    offload_arch_output_buffer +=
-        slen; // To store next value in offload_arch_output_buffer, not likely
-  }
-  delete[] libomptarget_dir_name;
+  // Qget runtime capabilities of this system with libLLVMOffloadArch.a
+  if (int rc = getRuntimeCapabilities(offload_arch_output_buffer,
+                                      offload_arch_output_buffer_size))
+    return;
+  active_env->capabilities = offload_arch_output_buffer;
+  return;
 }
 
 std::vector<std::string> _splitstrings(char *input, const char *sep) {
@@ -475,14 +456,14 @@ static bool _ImageIsCompatibleWithEnv(__tgt_image_info *img_info,
     return true;
 
   // Each runtime requirement for the compiled image is stored in
-  // the img_info->offload_arch string and is separated by __ .
+  // the img_info->offload_arch (TargetID) string.
   // Each runtime capability obtained from "offload-arch -c" is stored in
-  // actvie_env->capabilities and is separated by spaces.
+  // actvie_env->capabilities (TargetID) string.
   // If every requirement has a matching capability, then the image
   // is compatible with active environment
 
   std::vector<std::string> reqs = _splitstrings(img_info->offload_arch, ":");
-  std::vector<std::string> caps = _splitstrings(active_env->capabilities, " ");
+  std::vector<std::string> caps = _splitstrings(active_env->capabilities, ":");
 
   bool is_compatible = true;
   for (auto req : reqs) {

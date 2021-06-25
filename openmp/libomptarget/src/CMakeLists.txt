@@ -42,6 +42,9 @@ if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
 endif()
 target_link_libraries(omptarget PRIVATE
   ${CMAKE_DL_LIBS}
+  -lLLVMOffloadArch
+  -lclang-cpp
+  "-Wl,--no-allow-shlib-undefined"
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 
 # Install libomptarget under the lib destination folder.

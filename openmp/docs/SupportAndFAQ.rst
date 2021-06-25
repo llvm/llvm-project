@@ -179,8 +179,8 @@ compiler build time. Otherwise it will attempt to dlopen ``libcuda.so``. It does
 not have rpath set.
 
 The amdgpu plugin is linked against ROCr if cmake found it at compiler build
-time. Otherwise it will attempt to dlopen ``libhsa-runtime64.so``. It has rpath
-set to ``$ORIGIN``, so installing ``libhsa-runtime64.so`` in the same directory is a
+time. Otherwise it will attempt to dlopen ``libhsa-runtime64.so.1``. It has rpath
+set to ``$ORIGIN``, so installing ``libhsa-runtime64.so.1`` in the same directory is a
 way to locate it without environment variables.
 
 In addition to those, there is a compiler runtime library called deviceRTL.

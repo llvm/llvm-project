@@ -53,7 +53,7 @@ DLWRAP(hsa_amd_register_system_event_handler, 2);
 DLWRAP_FINALIZE();
 
 #ifndef DYNAMIC_HSA_PATH
-#define DYNAMIC_HSA_PATH "libhsa-runtime64.so"
+#define DYNAMIC_HSA_PATH "libhsa-runtime64.so.1"
 #endif
 
 #ifndef TARGET_NAME

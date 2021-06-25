@@ -173,7 +173,7 @@ struct __tgt_image_info {
 /// to determine compatibility of the images with the current environment
 /// that is "in play".
 struct __tgt_active_offload_env {
-  char *capabilities; // string returned by offload-arch -r
+char *capabilities; // string returned by offload-arch -c
 };
 
 /// This struct contains the offload entries identified by the target runtime
