@@ -13,7 +13,7 @@ namespace clangd {
 
 #ifdef CLANGD_PATH_CASE_INSENSITIVE
 std::string maybeCaseFoldPath(PathRef Path) { return Path.lower(); }
-bool pathEqual(PathRef A, PathRef B) { return A.equals_lower(B); }
+bool pathEqual(PathRef A, PathRef B) { return A.equals_insensitive(B); }
 #else  // NOT CLANGD_PATH_CASE_INSENSITIVE
 std::string maybeCaseFoldPath(PathRef Path) { return Path.str(); }
 bool pathEqual(PathRef A, PathRef B) { return A == B; }
