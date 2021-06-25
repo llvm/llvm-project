@@ -6,6 +6,7 @@
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32 %s
 // CHECK-LD32-NOT: warning:
 // CHECK-LD32:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
@@ -31,6 +32,7 @@
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD64 %s
 // CHECK-LD64-NOT: warning:
 // CHECK-LD64:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
@@ -57,6 +59,7 @@
 // RUN:        -pthread \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-PTHREAD %s
 // CHECK-LD32-PTHREAD-NOT: warning:
 // CHECK-LD32-PTHREAD:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
@@ -84,6 +87,7 @@
 // RUN:        -pthreads \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD64-PTHREAD %s
 // CHECK-LD64-PTHREAD-NOT: warning:
 // CHECK-LD64-PTHREAD:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
@@ -111,6 +115,7 @@
 // RUN:        -p \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-PROF %s
 // CHECK-LD32-PROF-NOT: warning:
 // CHECK-LD32-PROF:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
@@ -137,6 +142,7 @@
 // RUN:        -pg \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD64-GPROF %s
 // CHECK-LD64-GPROF-NOT: warning:
 // CHECK-LD64-GPROF:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
@@ -163,6 +169,7 @@
 // RUN:        -static \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-STATIC %s
 // CHECK-LD32-STATIC-NOT: warning:
 // CHECK-LD32-STATIC:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
@@ -189,6 +196,7 @@
 // RUN:        -L%S/Inputs/aix_ppc_tree/powerpc-ibm-aix7.1.0.0 \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-LIBP %s
 // CHECK-LD32-LIBP-NOT: warning:
 // CHECK-LD32-LIBP:     {{.*}}clang{{(.exe)?}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
@@ -272,6 +280,7 @@
 // RUN:        -Wl,-bnocdtors \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-ARG-ORDER %s
 // CHECK-LD32-ARG-ORDER:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-ARG-ORDER:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -300,6 +309,7 @@
 // RUN:        -Wl,-bnocdtors \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-CXX-ARG-ORDER %s
 // CHECK-LD32-CXX-ARG-ORDER:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-CXX-ARG-ORDER:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -327,6 +337,7 @@
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-CXX-ARG-LCXX %s
 // CHECK-LD32-CXX-ARG-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-CXX-ARG-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -350,6 +361,7 @@
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD64-CXX-ARG-LCXX %s
 // CHECK-LD64-CXX-ARG-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
 // CHECK-LD64-CXX-ARG-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -374,6 +386,7 @@
 // RUN:        -nodefaultlibs \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-NODEFLIB-LCXX %s
 // CHECK-LD32-NODEFLIB-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-NODEFLIB-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -398,6 +411,7 @@
 // RUN:        -nodefaultlibs \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD64-NODEFLIB-LCXX %s
 // CHECK-LD64-NODEFLIB-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
 // CHECK-LD64-NODEFLIB-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -422,6 +436,7 @@
 // RUN:        -nostdlib \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-NOSTDLIB-LCXX %s
 // CHECK-LD32-NOSTDLIB-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-NOSTDLIB-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -446,6 +461,7 @@
 // RUN:        -nostdlib \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD64-NOSTDLIB-LCXX %s
 // CHECK-LD64-NOSTDLIB-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
 // CHECK-LD64-NOSTDLIB-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -471,6 +487,7 @@
 // RUN:        -nostdlib++ \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-NOSTDLIBXX-LCXX %s
 // CHECK-LD32-NOSTDLIBXX-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-NOSTDLIBXX-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -495,6 +512,7 @@
 // RUN:        -nostdlib++ \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD64-NOSTDLIBXX-LCXX %s
 // CHECK-LD64-NOSTDLIBXX-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
 // CHECK-LD64-NOSTDLIBXX-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -519,6 +537,7 @@
 // RUN:        -nostartfiles \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-NOSTARTFILES-LCXX %s
 // CHECK-LD32-NOSTARTFILES-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-NOSTARTFILES-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -543,6 +562,7 @@
 // RUN:        -nostartfiles \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-NOSTARTFILES-LCXX %s
 // CHECK-LD64-NOSTARTFILES-LCXX:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
 // CHECK-LD64-NOSTARTFILES-LCXX:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -582,6 +602,7 @@
 // RUN:        -shared \
 // RUN:        -target powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-SHARED %s
 // CHECK-LD32-SHARED:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-SHARED:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
@@ -608,6 +629,7 @@
 // RUN:        -shared \
 // RUN:        -target powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED %s
 // CHECK-LD64-SHARED:     {{.*}}clang{{.*}}" "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
 // CHECK-LD64-SHARED:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
