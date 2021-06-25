@@ -346,7 +346,7 @@ fyl2xp1
 # CHECK-NEXT:  1      3     1.00                  U     fucomi	%st(3), %st
 # CHECK-NEXT:  1      3     1.00                  U     fucompi	%st(3), %st
 # CHECK-NEXT:  1      100   0.50                  U     wait
-# CHECK-NEXT:  1      100   0.50                  U     fxam
+# CHECK-NEXT:  1      3     1.00                  U     fxam
 # CHECK-NEXT:  1      1     0.50                  U     fxch	%st(1)
 # CHECK-NEXT:  1      1     0.50                  U     fxch	%st(3)
 # CHECK-NEXT:  1      100   0.50    *      *      U     fxrstor	(%eax)
@@ -373,7 +373,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 42.00  20.00   -     54.00  349.00 54.00  34.00  39.00   -     13.00  7.00    -      -      -
+# CHECK-NEXT: 42.50  19.50   -     55.00  349.00 55.00  34.00  39.00   -     13.00  7.00    -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -517,7 +517,7 @@ fyl2xp1
 # CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     fucomi	%st(3), %st
 # CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     fucompi	%st(3), %st
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     wait
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fxam
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     fxam
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fxch	%st(1)
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fxch	%st(3)
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     fxrstor	(%eax)
