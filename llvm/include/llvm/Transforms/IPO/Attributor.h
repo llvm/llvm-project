@@ -1735,17 +1735,21 @@ public:
   bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const AbstractAttribute &QueryingAA,
                                const ArrayRef<unsigned> &Opcodes,
-                               bool CheckBBLivenessOnly = false);
+                               bool CheckBBLivenessOnly = false,
+                               bool CheckPotentiallyDead = false);
 
   /// Check \p Pred on all call-like instructions (=CallBased derived).
   ///
   /// See checkForAllCallLikeInstructions(...) for more information.
   bool checkForAllCallLikeInstructions(function_ref<bool(Instruction &)> Pred,
-                                       const AbstractAttribute &QueryingAA) {
+                                       const AbstractAttribute &QueryingAA,
+                                       bool CheckBBLivenessOnly = false,
+                                       bool CheckPotentiallyDead = false) {
     return checkForAllInstructions(Pred, QueryingAA,
                                    {(unsigned)Instruction::Invoke,
                                     (unsigned)Instruction::CallBr,
-                                    (unsigned)Instruction::Call});
+                                    (unsigned)Instruction::Call},
+                                   CheckBBLivenessOnly, CheckPotentiallyDead);
   }
 
   /// Check \p Pred on all Read/Write instructions.
@@ -3498,9 +3502,6 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// Returns true if HeapToStack conversion is assumed to be possible.
   virtual bool isAssumedHeapToStack(CallBase &CB) const = 0;
-
-  /// Returns true if HeapToStack conversion is known to be possible.
-  virtual bool isKnownHeapToStack(CallBase &CB) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);

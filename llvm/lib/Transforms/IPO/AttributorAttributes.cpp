@@ -11,8 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Constants.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -27,9 +29,12 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
@@ -4841,23 +4846,117 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
 };
 
 /// ----------------------- Heap-To-Stack Conversion ---------------------------
-struct AAHeapToStackImpl : public AAHeapToStack {
-  AAHeapToStackImpl(const IRPosition &IRP, Attributor &A)
+struct AAHeapToStackFunction final : public AAHeapToStack {
+
+  struct AllocationInfo {
+    /// The call that allocates the memory.
+    CallBase *const CB;
+
+    /// The kind of allocation.
+    const enum class AllocationKind {
+      MALLOC,
+      CALLOC,
+      ALIGNED_ALLOC,
+    } Kind;
+
+    /// The library function id for the allocation.
+    LibFunc LibraryFunctionId = NotLibFunc;
+
+    /// The status wrt. a rewrite.
+    enum {
+      STACK_DUE_TO_USE,
+      STACK_DUE_TO_FREE,
+      INVALID,
+    } Status = STACK_DUE_TO_USE;
+
+    /// Flag to indicate if we encountered a use that might free this allocation
+    /// but which is not in the deallocation infos.
+    bool HasPotentiallyFreeingUnknownUses = false;
+
+    /// The set of free calls that use this allocation.
+    SmallPtrSet<CallBase *, 1> PotentialFreeCalls{};
+  };
+
+  struct DeallocationInfo {
+    /// The call that deallocates the memory.
+    CallBase *const CB;
+
+    /// Flag to indicate if we don't know all objects this deallocation might
+    /// free.
+    bool MightFreeUnknownObjects = false;
+
+    /// The set of allocation calls that are potentially freed.
+    SmallPtrSet<CallBase *, 1> PotentialAllocationCalls{};
+  };
+
+  AAHeapToStackFunction(const IRPosition &IRP, Attributor &A)
       : AAHeapToStack(IRP, A) {}
 
+  void initialize(Attributor &A) override {
+    AAHeapToStack::initialize(A);
+
+    const Function *F = getAnchorScope();
+    const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
+
+    auto AllocationIdentifierCB = [&](Instruction &I) {
+      CallBase *CB = dyn_cast<CallBase>(&I);
+      if (!CB)
+        return true;
+      if (isFreeCall(CB, TLI)) {
+        DeallocationInfos[CB] = new (A.Allocator) DeallocationInfo{CB};
+        return true;
+      }
+      bool IsMalloc = isMallocLikeFn(CB, TLI);
+      bool IsAlignedAllocLike = !IsMalloc && isAlignedAllocLikeFn(CB, TLI);
+      bool IsCalloc =
+          !IsMalloc && !IsAlignedAllocLike && isCallocLikeFn(CB, TLI);
+      if (!IsMalloc && !IsAlignedAllocLike && !IsCalloc)
+        return true;
+      auto Kind =
+          IsMalloc ? AllocationInfo::AllocationKind::MALLOC
+                   : (IsCalloc ? AllocationInfo::AllocationKind::CALLOC
+                               : AllocationInfo::AllocationKind::ALIGNED_ALLOC);
+
+      AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB, Kind};
+      AllocationInfos[CB] = AI;
+      TLI->getLibFunc(*CB, AI->LibraryFunctionId);
+      return true;
+    };
+
+    bool Success = A.checkForAllCallLikeInstructions(
+        AllocationIdentifierCB, *this, /* CheckBBLivenessOnly */ false,
+        /* CheckPotentiallyDead */ true);
+    (void)Success;
+    assert(Success && "Did not expect the call base visit callback to fail!");
+  }
+
   const std::string getAsStr() const override {
-    return "[H2S] Mallocs Good/Bad: " + std::to_string(MallocCalls.size()) +
-           "/" + std::to_string(BadMallocCalls.size());
+    unsigned NumH2SMallocs = 0, NumInvalidMallocs = 0;
+    for (const auto &It : AllocationInfos) {
+      if (It.second->Status == AllocationInfo::INVALID)
+        ++NumInvalidMallocs;
+      else
+        ++NumH2SMallocs;
+    }
+    return "[H2S] Mallocs Good/Bad: " + std::to_string(NumH2SMallocs) + "/" +
+           std::to_string(NumInvalidMallocs);
+  }
+
+  /// See AbstractAttribute::trackStatistics().
+  void trackStatistics() const override {
+    STATS_DECL(
+        MallocCalls, Function,
+        "Number of malloc/calloc/aligned_alloc calls converted to allocas");
+    for (auto &It : AllocationInfos)
+      if (It.second->Status != AllocationInfo::INVALID)
+        ++BUILD_STAT_NAME(MallocCalls, Function);
   }
 
   bool isAssumedHeapToStack(CallBase &CB) const override {
-    return isValidState() && MallocCalls.contains(&CB) &&
-           !BadMallocCalls.count(&CB);
-  }
-
-  bool isKnownHeapToStack(CallBase &CB) const override {
-    return isValidState() && MallocCalls.contains(&CB) &&
-           !BadMallocCalls.count(&CB);
+    if (isValidState())
+      if (AllocationInfo *AI = AllocationInfos.lookup(&CB))
+        return AI->Status != AllocationInfo::INVALID;
+    return false;
   }
 
   ChangeStatus manifest(Attributor &A) override {
@@ -4868,76 +4967,82 @@ struct AAHeapToStackImpl : public AAHeapToStack {
     Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
-    for (Instruction *MallocCall : MallocCalls) {
-      // This malloc cannot be replaced.
-      if (BadMallocCalls.count(MallocCall))
+    for (auto &It : AllocationInfos) {
+      AllocationInfo &AI = *It.second;
+      if (AI.Status == AllocationInfo::INVALID)
         continue;
 
-      for (Instruction *FreeCall : FreesForMalloc[MallocCall]) {
+      for (CallBase *FreeCall : AI.PotentialFreeCalls) {
         LLVM_DEBUG(dbgs() << "H2S: Removing free call: " << *FreeCall << "\n");
         A.deleteAfterManifest(*FreeCall);
         HasChanged = ChangeStatus::CHANGED;
       }
 
-      LLVM_DEBUG(dbgs() << "H2S: Removing malloc call: " << *MallocCall
+      LLVM_DEBUG(dbgs() << "H2S: Removing malloc-like call: " << *AI.CB
                         << "\n");
 
       auto Remark = [&](OptimizationRemark OR) {
         LibFunc IsAllocShared;
-        if (auto *CB = dyn_cast<CallBase>(MallocCall)) {
-          TLI->getLibFunc(*CB, IsAllocShared);
+        if (TLI->getLibFunc(*AI.CB, IsAllocShared))
           if (IsAllocShared == LibFunc___kmpc_alloc_shared)
             return OR << "Moving globalized variable to the stack.";
-        }
         return OR << "Moving memory allocation from the heap to the stack.";
       };
-      A.emitRemark<OptimizationRemark>(MallocCall, "HeapToStack", Remark);
+      A.emitRemark<OptimizationRemark>(AI.CB, "HeapToStack", Remark);
 
-      Align Alignment;
       Value *Size;
-      if (isCallocLikeFn(MallocCall, TLI)) {
-        auto *Num = MallocCall->getOperand(0);
-        auto *SizeT = MallocCall->getOperand(1);
-        IRBuilder<> B(MallocCall);
+      Optional<APInt> SizeAPI = getSize(A, *this, AI);
+      if (SizeAPI.hasValue()) {
+        Size = ConstantInt::get(AI.CB->getContext(), *SizeAPI);
+      } else if (AI.Kind == AllocationInfo::AllocationKind::CALLOC) {
+        auto *Num = AI.CB->getOperand(0);
+        auto *SizeT = AI.CB->getOperand(1);
+        IRBuilder<> B(AI.CB);
         Size = B.CreateMul(Num, SizeT, "h2s.calloc.size");
-      } else if (isAlignedAllocLikeFn(MallocCall, TLI)) {
-        Size = MallocCall->getOperand(1);
-        Alignment = MaybeAlign(cast<ConstantInt>(MallocCall->getOperand(0))
-                                   ->getValue()
-                                   .getZExtValue())
-                        .valueOrOne();
+      } else if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
+        Size = AI.CB->getOperand(1);
       } else {
-        Size = MallocCall->getOperand(0);
+        Size = AI.CB->getOperand(0);
       }
 
-      unsigned AS = cast<PointerType>(MallocCall->getType())->getAddressSpace();
-      Instruction *AI =
+      Align Alignment(1);
+      if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
+        Optional<APInt> AlignmentAPI =
+            getAPInt(A, *this, *AI.CB->getArgOperand(0));
+        assert(AlignmentAPI.hasValue() &&
+               "Expected an alignment during manifest!");
+        Alignment =
+            max(Alignment, MaybeAlign(AlignmentAPI.getValue().getZExtValue()));
+      }
+
+      unsigned AS = cast<PointerType>(AI.CB->getType())->getAddressSpace();
+      Instruction *Alloca =
           new AllocaInst(Type::getInt8Ty(F->getContext()), AS, Size, Alignment,
-                         "", MallocCall->getNextNode());
+                         "", AI.CB->getNextNode());
 
-      if (AI->getType() != MallocCall->getType())
-        AI = new BitCastInst(AI, MallocCall->getType(), "malloc_bc",
-                             AI->getNextNode());
+      if (Alloca->getType() != AI.CB->getType())
+        Alloca = new BitCastInst(Alloca, AI.CB->getType(), "malloc_bc",
+                                 Alloca->getNextNode());
 
-      A.changeValueAfterManifest(*MallocCall, *AI);
+      A.changeValueAfterManifest(*AI.CB, *Alloca);
 
-      if (auto *II = dyn_cast<InvokeInst>(MallocCall)) {
+      if (auto *II = dyn_cast<InvokeInst>(AI.CB)) {
         auto *NBB = II->getNormalDest();
-        BranchInst::Create(NBB, MallocCall->getParent());
-        A.deleteAfterManifest(*MallocCall);
+        BranchInst::Create(NBB, AI.CB->getParent());
+        A.deleteAfterManifest(*AI.CB);
       } else {
-        A.deleteAfterManifest(*MallocCall);
+        A.deleteAfterManifest(*AI.CB);
       }
 
       // Zero out the allocated memory if it was a calloc.
-      if (isCallocLikeFn(MallocCall, TLI)) {
-        auto *BI = new BitCastInst(AI, MallocCall->getType(), "calloc_bc",
-                                   AI->getNextNode());
+      if (AI.Kind == AllocationInfo::AllocationKind::CALLOC) {
+        auto *BI = new BitCastInst(Alloca, AI.CB->getType(), "calloc_bc",
+                                   Alloca->getNextNode());
         Value *Ops[] = {
             BI, ConstantInt::get(F->getContext(), APInt(8, 0, false)), Size,
             ConstantInt::get(Type::getInt1Ty(F->getContext()), false)};
 
-        Type *Tys[] = {BI->getType(), MallocCall->getOperand(0)->getType()};
+        Type *Tys[] = {BI->getType(), AI.CB->getOperand(0)->getType()};
         Module *M = F->getParent();
         Function *Fn = Intrinsic::getDeclaration(M, Intrinsic::memset, Tys);
         CallInst::Create(Fn, Ops, "", BI->getNextNode());
@@ -4948,21 +5053,58 @@ struct AAHeapToStackImpl : public AAHeapToStack {
     return HasChanged;
   }
 
-  /// Collection of all malloc calls in a function.
-  SmallSetVector<Instruction *, 4> MallocCalls;
+  Optional<APInt> getAPInt(Attributor &A, const AbstractAttribute &AA,
+                           Value &V) {
+    bool UsedAssumedInformation = false;
+    Optional<Constant *> SimpleV =
+        A.getAssumedConstant(V, AA, UsedAssumedInformation);
+    if (!SimpleV.hasValue())
+      return APInt(64, 0);
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(SimpleV.getValue()))
+      return CI->getValue();
+    return llvm::None;
+  }
 
-  /// Collection of malloc calls that cannot be converted.
-  DenseSet<const Instruction *> BadMallocCalls;
+  Optional<APInt> getSize(Attributor &A, const AbstractAttribute &AA,
+                          AllocationInfo &AI) {
 
-  /// A map for each malloc call to the set of associated free calls.
-  DenseMap<Instruction *, SmallPtrSet<Instruction *, 4>> FreesForMalloc;
+    if (AI.Kind == AllocationInfo::AllocationKind::MALLOC)
+      return getAPInt(A, AA, *AI.CB->getArgOperand(0));
+
+    if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC)
+      // Only if the alignment is also constant we return a size.
+      return getAPInt(A, AA, *AI.CB->getArgOperand(0)).hasValue()
+                 ? getAPInt(A, AA, *AI.CB->getArgOperand(1))
+                 : llvm::None;
+
+    assert(AI.Kind == AllocationInfo::AllocationKind::CALLOC &&
+           "Expected only callocs are left");
+    Optional<APInt> Num = getAPInt(A, AA, *AI.CB->getArgOperand(0));
+    Optional<APInt> Size = getAPInt(A, AA, *AI.CB->getArgOperand(1));
+    if (!Num.hasValue() || !Size.hasValue())
+      return llvm::None;
+    bool Overflow = false;
+    Size = Size.getValue().umul_ov(Num.getValue(), Overflow);
+    return Overflow ? llvm::None : Size;
+  }
+
+  /// Collection of all malloc-like calls in a function with associated
+  /// information.
+  DenseMap<CallBase *, AllocationInfo *> AllocationInfos;
+
+  /// Collection of all free-like calls in a function with associated
+  /// information.
+  DenseMap<CallBase *, DeallocationInfo *> DeallocationInfos;
 
   ChangeStatus updateImpl(Attributor &A) override;
 };
 
-ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
+ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
+  ChangeStatus Changed = ChangeStatus::UNCHANGED;
   const Function *F = getAnchorScope();
-  const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
+
+  const auto &LivenessAA =
+      A.getAAFor<AAIsDead>(*this, IRPosition::function(*F), DepClassTy::NONE);
 
   MustBeExecutedContextExplorer &Explorer =
       A.getInfoCache().getMustBeExecutedContextExplorer();
@@ -4970,7 +5112,66 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   bool StackIsAccessibleByOtherThreads =
       A.getInfoCache().stackIsAccessibleByOtherThreads();
 
-  auto FreeCheck = [&](Instruction &I) {
+  // Flag to ensure we update our deallocation information at most once per
+  // updateImpl call and only if we use the free check reasoning.
+  bool HasUpdatedFrees = false;
+
+  auto UpdateFrees = [&]() {
+    HasUpdatedFrees = true;
+
+    for (auto &It : DeallocationInfos) {
+      DeallocationInfo &DI = *It.second;
+      // For now we cannot use deallocations that have unknown inputs, skip
+      // them.
+      if (DI.MightFreeUnknownObjects)
+        continue;
+
+      // No need to analyze dead calls, ignore them instead.
+      if (A.isAssumedDead(*DI.CB, this, &LivenessAA,
+                          /* CheckBBLivenessOnly */ true))
+        continue;
+
+      // Use the optimistic version to get the freed objects, ignoring dead
+      // branches etc.
+      SmallVector<Value *, 8> Objects;
+      if (!getAssumedUnderlyingObjects(A, *DI.CB->getArgOperand(0), Objects,
+                                       *this, DI.CB)) {
+        LLVM_DEBUG(
+            dbgs()
+            << "[H2S] Unexpected failure in getAssumedUnderlyingObjects!\n");
+        DI.MightFreeUnknownObjects = true;
+        continue;
+      }
+
+      // Check each object explicitly.
+      for (auto *Obj : Objects) {
+        // Free of null and undef can be ignored as no-ops (or UB in the latter
+        // case).
+        if (isa<ConstantPointerNull>(Obj) || isa<UndefValue>(Obj))
+          continue;
+
+        CallBase *ObjCB = dyn_cast<CallBase>(Obj);
+        if (!ObjCB) {
+          LLVM_DEBUG(dbgs()
+                     << "[H2S] Free of a non-call object: " << *Obj << "\n");
+          DI.MightFreeUnknownObjects = true;
+          continue;
+        }
+
+        AllocationInfo *AI = AllocationInfos.lookup(ObjCB);
+        if (!AI) {
+          LLVM_DEBUG(dbgs() << "[H2S] Free of a non-allocation object: " << *Obj
+                            << "\n");
+          DI.MightFreeUnknownObjects = true;
+          continue;
+        }
+
+        DI.PotentialAllocationCalls.insert(ObjCB);
+      }
+    }
+  };
+
+  auto FreeCheck = [&](AllocationInfo &AI) {
     // If the stack is not accessible by other threads, the "must-free" logic
     // doesn't apply as the pointer could be shared and needs to be places in
     // "shareable" memory.
@@ -4984,19 +5185,55 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         return false;
       }
     }
-    const auto &Frees = FreesForMalloc.lookup(&I);
-    if (Frees.size() != 1) {
+    if (!HasUpdatedFrees)
+      UpdateFrees();
+
+    // TODO: Allow multi exit functions that have different free calls.
+    if (AI.PotentialFreeCalls.size() != 1) {
       LLVM_DEBUG(dbgs() << "[H2S] did not find one free call but "
-                        << Frees.size() << "\n");
+                        << AI.PotentialFreeCalls.size() << "\n");
       return false;
     }
-    Instruction *UniqueFree = *Frees.begin();
-    return Explorer.findInContextOf(UniqueFree, I.getNextNode());
+    CallBase *UniqueFree = *AI.PotentialFreeCalls.begin();
+    DeallocationInfo *DI = DeallocationInfos.lookup(UniqueFree);
+    if (!DI) {
+      LLVM_DEBUG(
+          dbgs() << "[H2S] unique free call was not known as deallocation call "
+                 << *UniqueFree << "\n");
+      return false;
+    }
+    if (DI->MightFreeUnknownObjects) {
+      LLVM_DEBUG(
+          dbgs() << "[H2S] unique free call might free unknown allocations\n");
+      return false;
+    }
+    if (DI->PotentialAllocationCalls.size() > 1) {
+      LLVM_DEBUG(dbgs() << "[H2S] unique free call might free "
+                        << DI->PotentialAllocationCalls.size()
+                        << " different allocations\n");
+      return false;
+    }
+    if (*DI->PotentialAllocationCalls.begin() != AI.CB) {
+      LLVM_DEBUG(
+          dbgs()
+          << "[H2S] unique free call not known to free this allocation but "
+          << **DI->PotentialAllocationCalls.begin() << "\n");
+      return false;
+    }
+    Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
+    if (!Explorer.findInContextOf(UniqueFree, CtxI)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "[H2S] unique free call might not be executed with the allocation "
+          << *UniqueFree << "\n");
+      return false;
+    }
+    return true;
   };
 
-  auto UsesCheck = [&](Instruction &I) {
+  auto UsesCheck = [&](AllocationInfo &AI) {
     bool ValidUsesOnly = true;
-    bool MustUse = true;
+
     auto Pred = [&](const Use &U, bool &Follow) -> bool {
       Instruction *UserI = cast<Instruction>(U.getUser());
       if (isa<LoadInst>(UserI))
@@ -5014,15 +5251,8 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
       if (auto *CB = dyn_cast<CallBase>(UserI)) {
         if (!CB->isArgOperand(&U) || CB->isLifetimeStartOrEnd())
           return true;
-        // Record malloc.
-        if (isFreeCall(UserI, TLI)) {
-          if (MustUse) {
-            FreesForMalloc[&I].insert(UserI);
-          } else {
-            LLVM_DEBUG(dbgs() << "[H2S] free potentially on different mallocs: "
-                              << *UserI << "\n");
-            ValidUsesOnly = false;
-          }
+        if (DeallocationInfos.count(CB)) {
+          AI.PotentialFreeCalls.insert(CB);
           return true;
         }
 
@@ -5032,30 +5262,29 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
             *this, IRPosition::callsite_argument(*CB, ArgNo),
             DepClassTy::OPTIONAL);
 
-        // If a callsite argument use is nofree, we are fine.
+        // If a call site argument use is nofree, we are fine.
         const auto &ArgNoFreeAA = A.getAAFor<AANoFree>(
             *this, IRPosition::callsite_argument(*CB, ArgNo),
             DepClassTy::OPTIONAL);
 
-        if (!NoCaptureAA.isAssumedNoCapture() ||
-            !ArgNoFreeAA.isAssumedNoFree()) {
+        bool MaybeCaptured = !NoCaptureAA.isAssumedNoCapture();
+        bool MaybeFreed = !ArgNoFreeAA.isAssumedNoFree();
+        if (MaybeCaptured ||
+            (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared &&
+             MaybeFreed)) {
+          AI.HasPotentiallyFreeingUnknownUses |= MaybeFreed;
 
           // Emit a missed remark if this is missed OpenMP globalization.
           auto Remark = [&](OptimizationRemarkMissed ORM) {
-            return ORM << "Could not move globalized variable to the stack. "
-                       << "Variable is potentially "
-                       << (!NoCaptureAA.isAssumedNoCapture() ? "captured. "
-                                                             : "freed. ")
-                       << "Mark as noescape to override.";
+            return ORM << "Could not move globalized variable to the stack as "
+                          "variable is potentially captured in call; mark "
+                          "parameter as "
+                          "`__attribute__((noescape))` to override.";
           };
 
-          LibFunc IsAllocShared;
-          if (auto *AllocShared = dyn_cast<CallBase>(&I)) {
-            TLI->getLibFunc(*AllocShared, IsAllocShared);
-            if (IsAllocShared == LibFunc___kmpc_alloc_shared)
-              A.emitRemark<OptimizationRemarkMissed>(
-                  AllocShared, "HeapToStackFailed", Remark);
-          }
+          if (AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
+            A.emitRemark<OptimizationRemarkMissed>(AI.CB, "HeapToStackFailed",
+                                                   Remark);
 
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
           ValidUsesOnly = false;
@@ -5065,7 +5294,6 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
       if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
           isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
-        MustUse &= !(isa<PHINode>(UserI) || isa<SelectInst>(UserI));
         Follow = true;
         return true;
       }
@@ -5075,95 +5303,63 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
       ValidUsesOnly = false;
       return true;
     };
-    A.checkForAllUses(Pred, *this, I);
+    A.checkForAllUses(Pred, *this, *AI.CB);
     return ValidUsesOnly;
   };
 
-  auto MallocCallocCheck = [&](Instruction &I) {
-    if (BadMallocCalls.count(&I))
-      return true;
+  // The actual update starts here. We look at all allocations and depending on
+  // their status perform the appropriate check(s).
+  for (auto &It : AllocationInfos) {
+    AllocationInfo &AI = *It.second;
+    if (AI.Status == AllocationInfo::INVALID)
+      continue;
 
-    bool IsMalloc = isMallocLikeFn(&I, TLI);
-    bool IsAlignedAllocLike = isAlignedAllocLikeFn(&I, TLI);
-    bool IsCalloc = !IsMalloc && isCallocLikeFn(&I, TLI);
-    if (!IsMalloc && !IsAlignedAllocLike && !IsCalloc) {
-      BadMallocCalls.insert(&I);
-      return true;
+    if (MaxHeapToStackSize == -1) {
+      if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC)
+        if (!getAPInt(A, *this, *AI.CB->getArgOperand(0)).hasValue()) {
+          LLVM_DEBUG(dbgs() << "[H2S] Unknown allocation alignment: " << *AI.CB
+                            << "\n");
+          AI.Status = AllocationInfo::INVALID;
+          Changed = ChangeStatus::CHANGED;
+          continue;
+        }
+    } else {
+      Optional<APInt> Size = getSize(A, *this, AI);
+      if (!Size.hasValue() || Size.getValue().ugt(MaxHeapToStackSize)) {
+        LLVM_DEBUG({
+          if (!Size.hasValue())
+            dbgs() << "[H2S] Unknown allocation size (or alignment): " << *AI.CB
+                   << "\n";
+          else
+            dbgs() << "[H2S] Allocation size too large: " << *AI.CB << " vs. "
+                   << MaxHeapToStackSize << "\n";
+        });
+
+        AI.Status = AllocationInfo::INVALID;
+        Changed = ChangeStatus::CHANGED;
+        continue;
+      }
     }
 
-    if (IsMalloc) {
-      if (MaxHeapToStackSize == -1) {
-        if (UsesCheck(I) || FreeCheck(I)) {
-          MallocCalls.insert(&I);
-          return true;
-        }
-      }
-      if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
-        if (Size->getValue().ule(MaxHeapToStackSize))
-          if (UsesCheck(I) || FreeCheck(I)) {
-            MallocCalls.insert(&I);
-            return true;
-          }
-    } else if (IsAlignedAllocLike && isa<ConstantInt>(I.getOperand(0))) {
-      if (MaxHeapToStackSize == -1) {
-        if (UsesCheck(I) || FreeCheck(I)) {
-          MallocCalls.insert(&I);
-          return true;
-        }
-      }
-      // Only if the alignment and sizes are constant.
-      if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
-        if (Size->getValue().ule(MaxHeapToStackSize))
-          if (UsesCheck(I) || FreeCheck(I)) {
-            MallocCalls.insert(&I);
-            return true;
-          }
-    } else if (IsCalloc) {
-      if (MaxHeapToStackSize == -1) {
-        if (UsesCheck(I) || FreeCheck(I)) {
-          MallocCalls.insert(&I);
-          return true;
-        }
-      }
-      bool Overflow = false;
-      if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
-        if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
-          if ((Size->getValue().umul_ov(Num->getValue(), Overflow))
-                  .ule(MaxHeapToStackSize))
-            if (!Overflow && (UsesCheck(I) || FreeCheck(I))) {
-              MallocCalls.insert(&I);
-              return true;
-            }
-    }
-
-    BadMallocCalls.insert(&I);
-    return true;
-  };
-
-  size_t NumBadMallocs = BadMallocCalls.size();
-
-  A.checkForAllCallLikeInstructions(MallocCallocCheck, *this);
-
-  if (NumBadMallocs != BadMallocCalls.size())
-    return ChangeStatus::CHANGED;
-
-  return ChangeStatus::UNCHANGED;
-}
-
-struct AAHeapToStackFunction final : public AAHeapToStackImpl {
-  AAHeapToStackFunction(const IRPosition &IRP, Attributor &A)
-      : AAHeapToStackImpl(IRP, A) {}
-
-  /// See AbstractAttribute::trackStatistics().
-  void trackStatistics() const override {
-    STATS_DECL(
-        MallocCalls, Function,
-        "Number of malloc/calloc/aligned_alloc calls converted to allocas");
-    for (auto *C : MallocCalls)
-      if (!BadMallocCalls.count(C))
-        ++BUILD_STAT_NAME(MallocCalls, Function);
+    switch (AI.Status) {
+    case AllocationInfo::STACK_DUE_TO_USE:
+      if (UsesCheck(AI))
+        continue;
+      AI.Status = AllocationInfo::STACK_DUE_TO_FREE;
+      LLVM_FALLTHROUGH;
+    case AllocationInfo::STACK_DUE_TO_FREE:
+      if (FreeCheck(AI))
+        continue;
+      AI.Status = AllocationInfo::INVALID;
+      Changed = ChangeStatus::CHANGED;
+      continue;
+    case AllocationInfo::INVALID:
+      llvm_unreachable("Invalid allocations should never reach this point!");
+    };
   }
-};
+
+  return Changed;
+}
 
 /// ----------------------- Privatizable Pointers ------------------------------
 struct AAPrivatizablePtrImpl : public AAPrivatizablePtr {

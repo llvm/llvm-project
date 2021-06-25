@@ -4,7 +4,7 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
-; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured. Mark as noescape to override.
+; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack as variable is potentially captured in call; mark parameter as `__attribute__((noescape))` to override.
 ; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
 ; CHECK-REMARKS: remark: remove_globalization.c:6:2: Moving globalized variable to the stack.
 
@@ -13,8 +13,8 @@ target triple = "nvptx64"
 define void @kernel() {
 ; CHECK-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    call void @bar() #[[ATTR0]]
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -25,7 +25,7 @@ entry:
 
 define internal void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    ret void
@@ -41,7 +41,7 @@ define internal void @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]], !dbg [[DBG6:![0-9]+]]
 ; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
