@@ -47,10 +47,9 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
 
 // ICF needs to hash any section that might potentially be duplicated so
 // that it can match on content rather than identity.
-bool InputSection::isHashableForICF(bool isText) const {
-  if (auto const *concatIsec = dyn_cast<ConcatInputSection>(this))
-    if (concatIsec->shouldOmitFromOutput())
-      return false;
+bool ConcatInputSection::isHashableForICF(bool isText) const {
+  if (shouldOmitFromOutput())
+    return false;
   switch (sectionType(flags)) {
   case S_REGULAR:
     if (isText)
@@ -63,10 +62,9 @@ bool InputSection::isHashableForICF(bool isText) const {
   case S_8BYTE_LITERALS:
   case S_16BYTE_LITERALS:
   case S_LITERAL_POINTERS:
-    // FIXME(gkm): once literal sections are deduplicated, their content and
-    // identity correlate, so we can assign unique IDs to them rather than hash
-    // them.
-    return true;
+    // FIXME(jezng): We should not have any ConcatInputSections of these types
+    // when running ICF.
+    return false;
   case S_ZEROFILL:
   case S_GB_ZEROFILL:
   case S_NON_LAZY_SYMBOL_POINTERS:
@@ -89,7 +87,7 @@ bool InputSection::isHashableForICF(bool isText) const {
   }
 }
 
-void InputSection::hashForICF() {
+void ConcatInputSection::hashForICF() {
   assert(data.data()); // zeroFill section data has nullptr with non-zero size
   assert(icfEqClass[0] == 0); // don't overwrite a unique ID!
   // Turn-on the top bit to guarantee that valid hashes have no collisions
