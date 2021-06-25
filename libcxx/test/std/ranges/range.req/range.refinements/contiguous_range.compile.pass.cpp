@@ -68,3 +68,10 @@ struct DataFunctionWrongReturnType {
 };
 static_assert( std::ranges::random_access_range<DataFunctionWrongReturnType>);
 static_assert(!std::ranges::contiguous_range<const DataFunctionWrongReturnType>);
+
+struct WrongObjectness {
+    const int *begin() const;
+    const int *end() const;
+    void *data() const;
+};
+static_assert(std::ranges::contiguous_range<WrongObjectness>);
