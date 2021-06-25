@@ -18,17 +18,17 @@ define void @testPHI1(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %Len) {
 ; CHECK-NEXT:    blt cr0, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    clrldi r5, r5, 32
-; CHECK-NEXT:    lxv vs4, 0(r4)
-; CHECK-NEXT:    lxv vs5, 16(r4)
+; CHECK-NEXT:    lxv v2, 0(r4)
+; CHECK-NEXT:    lxv v3, 16(r4)
 ; CHECK-NEXT:    addi r4, r4, 32
 ; CHECK-NEXT:    addi r5, r5, -2
 ; CHECK-NEXT:    mtctr r5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lxv vs6, 0(r4)
+; CHECK-NEXT:    lxv vs4, 0(r4)
 ; CHECK-NEXT:    addi r4, r4, 16
-; CHECK-NEXT:    xvf64gerpp acc0, vsp4, vs6
+; CHECK-NEXT:    xvf64gerpp acc0, vsp34, vs4
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: # %for.cond.cleanup
 ; CHECK-NEXT:    xxmfacc acc0
@@ -45,17 +45,17 @@ define void @testPHI1(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %Len) {
 ; CHECK-BE-NEXT:    blt cr0, .LBB0_3
 ; CHECK-BE-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-BE-NEXT:    clrldi r5, r5, 32
-; CHECK-BE-NEXT:    lxv vs4, 0(r4)
-; CHECK-BE-NEXT:    lxv vs5, 16(r4)
+; CHECK-BE-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-NEXT:    lxv v3, 16(r4)
 ; CHECK-BE-NEXT:    addi r4, r4, 32
 ; CHECK-BE-NEXT:    addi r5, r5, -2
 ; CHECK-BE-NEXT:    mtctr r5
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB0_2: # %for.body
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    lxv vs6, 0(r4)
+; CHECK-BE-NEXT:    lxv vs4, 0(r4)
 ; CHECK-BE-NEXT:    addi r4, r4, 16
-; CHECK-BE-NEXT:    xvf64gerpp acc0, vsp4, vs6
+; CHECK-BE-NEXT:    xvf64gerpp acc0, vsp34, vs4
 ; CHECK-BE-NEXT:    bdnz .LBB0_2
 ; CHECK-BE-NEXT:  .LBB0_3: # %for.cond.cleanup
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -108,11 +108,11 @@ declare <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1>, <16 x i8>)
 define dso_local void @testPHI2(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %Len) {
 ; CHECK-LABEL: testPHI2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs4, 0(r4)
-; CHECK-NEXT:    lxv vs5, 16(r4)
-; CHECK-NEXT:    lxv vs6, 32(r4)
+; CHECK-NEXT:    lxv v2, 0(r4)
+; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    lxv vs4, 32(r4)
 ; CHECK-NEXT:    cmpwi r5, 4
-; CHECK-NEXT:    xvf64ger acc0, vsp4, vs6
+; CHECK-NEXT:    xvf64ger acc0, vsp34, vs4
 ; CHECK-NEXT:    blt cr0, .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    clrldi r5, r5, 32
@@ -122,9 +122,9 @@ define dso_local void @testPHI2(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %L
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lxv vs6, 0(r4)
+; CHECK-NEXT:    lxv vs4, 0(r4)
 ; CHECK-NEXT:    addi r4, r4, 16
-; CHECK-NEXT:    xvf64gerpp acc0, vsp4, vs6
+; CHECK-NEXT:    xvf64gerpp acc0, vsp34, vs4
 ; CHECK-NEXT:    bdnz .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: # %for.cond.cleanup
 ; CHECK-NEXT:    xxmfacc acc0
@@ -136,11 +136,11 @@ define dso_local void @testPHI2(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %L
 ;
 ; CHECK-BE-LABEL: testPHI2:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs4, 0(r4)
-; CHECK-BE-NEXT:    lxv vs5, 16(r4)
-; CHECK-BE-NEXT:    lxv vs6, 32(r4)
+; CHECK-BE-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-NEXT:    lxv v3, 16(r4)
+; CHECK-BE-NEXT:    lxv vs4, 32(r4)
 ; CHECK-BE-NEXT:    cmpwi r5, 4
-; CHECK-BE-NEXT:    xvf64ger acc0, vsp4, vs6
+; CHECK-BE-NEXT:    xvf64ger acc0, vsp34, vs4
 ; CHECK-BE-NEXT:    blt cr0, .LBB1_3
 ; CHECK-BE-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-BE-NEXT:    clrldi r5, r5, 32
@@ -150,9 +150,9 @@ define dso_local void @testPHI2(<16 x i8>* %Dst, <16 x i8>* %Src, i32 signext %L
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB1_2: # %for.body
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    lxv vs6, 0(r4)
+; CHECK-BE-NEXT:    lxv vs4, 0(r4)
 ; CHECK-BE-NEXT:    addi r4, r4, 16
-; CHECK-BE-NEXT:    xvf64gerpp acc0, vsp4, vs6
+; CHECK-BE-NEXT:    xvf64gerpp acc0, vsp34, vs4
 ; CHECK-BE-NEXT:    bdnz .LBB1_2
 ; CHECK-BE-NEXT:  .LBB1_3: # %for.cond.cleanup
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -213,7 +213,7 @@ define void @testImplicitDef(<16 x i8>* %ptr) {
 ; CHECK-NEXT:    # implicit-def: $acc0
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %label2
-; CHECK-NEXT:    xvf64gerpp acc0, vsp0, vs0
+; CHECK-NEXT:    xvf64gerpp acc0, vsp34, vs0
 ; CHECK-NEXT:  .LBB2_2: # %label3
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 0(r3)
@@ -224,7 +224,7 @@ define void @testImplicitDef(<16 x i8>* %ptr) {
 ; CHECK-BE-NEXT:    # implicit-def: $acc0
 ; CHECK-BE-NEXT:    bc 12, 4*cr5+lt, .LBB2_2
 ; CHECK-BE-NEXT:  # %bb.1: # %label2
-; CHECK-BE-NEXT:    xvf64gerpp acc0, vsp0, vs0
+; CHECK-BE-NEXT:    xvf64gerpp acc0, vsp34, vs0
 ; CHECK-BE-NEXT:  .LBB2_2: # %label3
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs3, 0(r3)

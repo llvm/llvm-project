@@ -39,13 +39,13 @@ define dso_local void @test(<256 x i1>* %vpp, <256 x i1>* %vp2) local_unnamed_ad
 ; CHECK-NEXT:    stxv v31, 240(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stfd f30, 384(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd f31, 392(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxvp vsp0, 0(r3)
-; CHECK-NEXT:    stxvp vsp0, 32(r1) # 32-byte Folded Spill
+; CHECK-NEXT:    lxvp vsp34, 0(r3)
+; CHECK-NEXT:    stxvp vsp34, 32(r1) # 32-byte Folded Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lxvp vsp0, 32(r1) # 32-byte Folded Reload
-; CHECK-NEXT:    stxvp vsp0, 0(r4)
+; CHECK-NEXT:    lxvp vsp34, 32(r1) # 32-byte Folded Reload
+; CHECK-NEXT:    stxvp vsp34, 0(r4)
 ; CHECK-NEXT:    lxv v31, 240(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv v30, 224(r1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv v29, 208(r1) # 16-byte Folded Reload
@@ -112,13 +112,13 @@ define dso_local void @test(<256 x i1>* %vpp, <256 x i1>* %vp2) local_unnamed_ad
 ; CHECK-BE-NEXT:    stxv v31, 256(r1) # 16-byte Folded Spill
 ; CHECK-BE-NEXT:    stfd f30, 400(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    stfd f31, 408(r1) # 8-byte Folded Spill
-; CHECK-BE-NEXT:    lxvp vsp0, 0(r3)
-; CHECK-BE-NEXT:    stxvp vsp0, 48(r1) # 32-byte Folded Spill
+; CHECK-BE-NEXT:    lxvp vsp34, 0(r3)
+; CHECK-BE-NEXT:    stxvp vsp34, 48(r1) # 32-byte Folded Spill
 ; CHECK-BE-NEXT:    #APP
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    #NO_APP
-; CHECK-BE-NEXT:    lxvp vsp0, 48(r1) # 32-byte Folded Reload
-; CHECK-BE-NEXT:    stxvp vsp0, 0(r4)
+; CHECK-BE-NEXT:    lxvp vsp34, 48(r1) # 32-byte Folded Reload
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r4)
 ; CHECK-BE-NEXT:    lxv v31, 256(r1) # 16-byte Folded Reload
 ; CHECK-BE-NEXT:    lxv v30, 240(r1) # 16-byte Folded Reload
 ; CHECK-BE-NEXT:    lxv v29, 224(r1) # 16-byte Folded Reload
