@@ -99,8 +99,8 @@ public:
 
   void printHelp(StringRef Argv0, bool ShowHidden = false) const {
     Argv0 = sys::path::filename(Argv0);
-    PrintHelp(outs(), (Argv0 + Usage).str().c_str(), Description, ShowHidden,
-              ShowHidden);
+    opt::OptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(), Description,
+                             ShowHidden, ShowHidden);
     // TODO Replace this with OptTable API once it adds extrahelp support.
     outs() << "\nPass @FILE as argument to read options from FILE.\n";
   }

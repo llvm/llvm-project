@@ -618,13 +618,13 @@ static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
   return getOptionHelpGroup(Opts, GroupID);
 }
 
-void OptTable::PrintHelp(raw_ostream &OS, const char *Usage, const char *Title,
+void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                          bool ShowHidden, bool ShowAllAliases) const {
-  PrintHelp(OS, Usage, Title, /*Include*/ 0, /*Exclude*/
+  printHelp(OS, Usage, Title, /*Include*/ 0, /*Exclude*/
             (ShowHidden ? 0 : HelpHidden), ShowAllAliases);
 }
 
-void OptTable::PrintHelp(raw_ostream &OS, const char *Usage, const char *Title,
+void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                          unsigned FlagsToInclude, unsigned FlagsToExclude,
                          bool ShowAllAliases) const {
   OS << "OVERVIEW: " << Title << "\n\n";

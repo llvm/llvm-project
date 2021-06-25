@@ -83,7 +83,7 @@ public:
 } // namespace
 
 static void printHelp(const char *argv0) {
-  MinGWOptTable().PrintHelp(
+  MinGWOptTable().printHelp(
       lld::outs(), (std::string(argv0) + " [options] file...").c_str(), "lld",
       false /*ShowHidden*/, true /*ShowAllAliases*/);
   lld::outs() << "\n";
