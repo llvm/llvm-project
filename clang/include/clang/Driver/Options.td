@@ -4536,6 +4536,11 @@ def fget_symbols_sources : Flag<["-"], "fget-symbols-sources">, Group<Action_Gro
 
 def module_suffix : Separate<["-"], "module-suffix">,  Group<f_Group>, MetaVarName<"<suffix>">,
   HelpText<"Use <suffix> as the suffix for module files (the default value is `.mod`)">;
+def fanalyzed_objects_for_unparse : Flag<["-"],
+  "fanalyzed-objects-for-unparse">,  Group<f_Group>;
+def fno_analyzed_objects_for_unparse : Flag<["-"],
+  "fno-analyzed-objects-for-unparse">,  Group<f_Group>,
+  HelpText<"Do not use the analyzed objects when unparsing">;
 
 }
 
