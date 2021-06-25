@@ -60,8 +60,8 @@ NativeRegisterContext::GetRegisterInfoByName(llvm::StringRef reg_name,
   for (uint32_t reg = start_idx; reg < num_registers; ++reg) {
     const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
 
-    if (reg_name.equals_lower(reg_info->name) ||
-        reg_name.equals_lower(reg_info->alt_name))
+    if (reg_name.equals_insensitive(reg_info->name) ||
+        reg_name.equals_insensitive(reg_info->alt_name))
       return reg_info;
   }
   return nullptr;

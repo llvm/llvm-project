@@ -316,11 +316,11 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
   llvm::StringRef long_help = GetHelpLong();
   llvm::StringRef syntax_help = GetSyntax();
 
-  if (search_short_help && short_help.contains_lower(search_word))
+  if (search_short_help && short_help.contains_insensitive(search_word))
     found_word = true;
-  else if (search_long_help && long_help.contains_lower(search_word))
+  else if (search_long_help && long_help.contains_insensitive(search_word))
     found_word = true;
-  else if (search_syntax && syntax_help.contains_lower(search_word))
+  else if (search_syntax && syntax_help.contains_insensitive(search_word))
     found_word = true;
 
   if (!found_word && search_options && GetOptions() != nullptr) {
@@ -330,7 +330,7 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
     if (!usage_help.Empty()) {
       llvm::StringRef usage_text = usage_help.GetString();
-      if (usage_text.contains_lower(search_word))
+      if (usage_text.contains_insensitive(search_word))
         found_word = true;
     }
   }
