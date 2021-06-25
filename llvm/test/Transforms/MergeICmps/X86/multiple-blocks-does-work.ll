@@ -29,7 +29,7 @@ define zeroext i1 @opeq1(
 ; X86-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[S]], %S* [[B]], i64 0, i32 2
 ; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP4]] to i8*
 ; X86-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP5]] to i8*
-; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture [[CSTR]], i8* nocapture [[CSTR1]], i64 8) #[[ATTR0:[0-9]+]]
+; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 8)
 ; X86-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; X86-NEXT:    br label [[OPEQ1_EXIT]]
 ; X86:       opeq1.exit:

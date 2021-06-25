@@ -7,7 +7,7 @@
 declare i32 @printf(i8*, ...)
 define void @printf_call() {
 ; CHECK-LABEL: @printf_call(
-; CHECK-NEXT:    [[PUTS:%.*]] = call noundef i32 @puts(i8* nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i64 0, i64 0)) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i64 0, i64 0))
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [4 x i8], [4 x i8]* @percent_s, i32 0, i32 0

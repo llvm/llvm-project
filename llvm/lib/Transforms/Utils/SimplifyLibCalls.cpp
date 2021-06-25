@@ -508,8 +508,12 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
-  B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                 ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len));
+  CallInst *NewCI =
+      B.CreateMemCpy(Dst, Align(1), Src, Align(1),
+                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len));
+  NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return Dst;
 }
 
@@ -535,7 +539,10 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
-  B.CreateMemCpy(Dst, Align(1), Src, Align(1), LenV);
+  CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1), LenV);
+  NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return DstEnd;
 }
 
@@ -594,8 +601,11 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
   // strncpy(x, s, c) -> memcpy(align 1 x, align 1 s, c) [s and c are constant]
-  B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                 ConstantInt::get(DL.getIntPtrType(PT), Len));
+  CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
+                                   ConstantInt::get(DL.getIntPtrType(PT), Len));
+  NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return Dst;
 }
 
@@ -1068,8 +1078,11 @@ Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   // memcpy(x, y, n) -> llvm.memcpy(align 1 x, align 1 y, n)
-  B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(1), Align(1),
-                 Size);
+  CallInst *NewCI = B.CreateMemCpy(CI->getArgOperand(0), Align(1),
+                                   CI->getArgOperand(1), Align(1), Size);
+  NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return CI->getArgOperand(0);
 }
 
@@ -1116,7 +1129,14 @@ Value *LibCallSimplifier::optimizeMemPCpy(CallInst *CI, IRBuilderBase &B) {
   Value *Dst = CI->getArgOperand(0);
   Value *N = CI->getArgOperand(2);
   // mempcpy(x, y, n) -> llvm.memcpy(align 1 x, align 1 y, n), x + n
-  B.CreateMemCpy(Dst, Align(1), CI->getArgOperand(1), Align(1), N);
+  CallInst *NewCI =
+      B.CreateMemCpy(Dst, Align(1), CI->getArgOperand(1), Align(1), N);
+  // Propagate attributes, but memcpy has no return value, so make sure that
+  // any return attributes are compliant.
+  // TODO: Attach return value attributes to the 1st operand to preserve them?
+  NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeAttributes(AttributeList::ReturnIndex,
+                          AttributeFuncs::typeIncompatible(NewCI->getType()));
   return B.CreateInBoundsGEP(B.getInt8Ty(), Dst, N);
 }
 
@@ -3240,8 +3260,12 @@ FortifiedLibCallSimplifier::isFortifiedCallFoldable(CallInst *CI,
 Value *FortifiedLibCallSimplifier::optimizeMemCpyChk(CallInst *CI,
                                                      IRBuilderBase &B) {
   if (isFortifiedCallFoldable(CI, 3, 2)) {
-    B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(1),
-                   Align(1), CI->getArgOperand(2));
+    CallInst *NewCI =
+        B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(1),
+                       Align(1), CI->getArgOperand(2));
+    NewCI->setAttributes(CI->getAttributes());
+    NewCI->removeAttributes(AttributeList::ReturnIndex,
+                            AttributeFuncs::typeIncompatible(NewCI->getType()));
     return CI->getArgOperand(0);
   }
   return nullptr;
