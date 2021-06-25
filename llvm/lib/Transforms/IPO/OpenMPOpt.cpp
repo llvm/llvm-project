@@ -2636,15 +2636,25 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   KernelSet Kernels = getDeviceKernels(M);
 
-  // Create internal copies of each function if this is a kernel Module.
+  auto IsCalled = [&](Function &F) {
+    if (Kernels.contains(&F))
+      return true;
+    for (const User *U : F.users())
+      if (!isa<BlockAddress>(U))
+        return true;
+    return false;
+  };
+
+  // Create internal copies of each function if this is a kernel Module. This
+  // allows iterprocedural passes to see every call edge.
   DenseSet<const Function *> InternalizedFuncs;
   if (isOpenMPDevice(M))
     for (Function &F : M)
-      if (!F.isDeclaration() && !Kernels.contains(&F))
+      if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F))
         if (Attributor::internalizeFunction(F, /* Force */ true))
           InternalizedFuncs.insert(&F);
 
-  // Look at every function definition in the Module that wasn't internalized.
+  // Look at every function in the Module unless it was internalized.
   SmallVector<Function *, 16> SCC;
   for (Function &F : M)
     if (!F.isDeclaration() && !InternalizedFuncs.contains(&F))

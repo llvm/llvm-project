@@ -6,6 +6,7 @@ target triple = "nvptx64"
 
 ; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured.
 ; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: remove_globalization.c:6:2: Moving globalized variable to the stack.
 
 @S = external local_unnamed_addr global i8*
 
@@ -30,7 +31,7 @@ define internal void @foo() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !11
+  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !12
   call void @use(i8* %0)
   call void @__kmpc_free_shared(i8* %0)
   ret void
@@ -46,7 +47,7 @@ define internal void @bar() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !12
+  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !13
   call void @share(i8* %0)
   call void @__kmpc_free_shared(i8* %0)
   ret void
@@ -69,6 +70,14 @@ entry:
   ret void
 }
 
+define void @unused() {
+entry:
+  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !14
+  call void @use(i8* %0)
+  call void @__kmpc_free_shared(i8* %0)
+  ret void
+}
+
 ; CHECK: declare i8* @__kmpc_alloc_shared(i64)
 declare i8* @__kmpc_alloc_shared(i64)
 
@@ -87,8 +96,10 @@ declare void @__kmpc_free_shared(i8*)
 !5 = !{void ()* @kernel, !"kernel", i32 1}
 !6 = !{i32 7, !"openmp", i32 50}
 !7 = !{i32 7, !"openmp-device", i32 50}
-!8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-!9 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-!10 = !DISubroutineType(types: !2)
-!11 = !DILocation(line: 2, column: 2, scope: !8)
-!12 = !DILocation(line: 4, column: 2, scope: !9)
+!8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!9 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!10 = distinct !DISubprogram(name: "unused", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!11 = !DISubroutineType(types: !2)
+!12 = !DILocation(line: 2, column: 2, scope: !8)
+!13 = !DILocation(line: 4, column: 2, scope: !9)
+!14 = !DILocation(line: 6, column: 2, scope: !9)
