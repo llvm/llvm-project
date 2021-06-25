@@ -13,7 +13,7 @@ declare i32 @puts(i8*)
 
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 10)
+; CHECK-NEXT:    [[PUTCHAR:%.*]] = call noundef i32 @putchar(i32 noundef 10) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %str = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0

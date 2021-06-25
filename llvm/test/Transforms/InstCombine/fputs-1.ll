@@ -28,7 +28,7 @@ define void @test_simplify2(%FILE* %fp) {
 ; CHECK-LABEL: @test_simplify2(
   %str = getelementptr [2 x i8], [2 x i8]* @A, i32 0, i32 0
   call i32 @fputs(i8* %str, %FILE* %fp)
-; CHECK-NEXT: call i32 @fputc(i32 65, %FILE* %fp)
+; CHECK-NEXT: call noundef i32 @fputc(i32 noundef 65, %FILE* nocapture noundef %fp) #0
   ret void
 ; CHECK-NEXT: ret void
 }
@@ -37,7 +37,7 @@ define void @test_simplify3(%FILE* %fp) {
 ; CHECK-LABEL: @test_simplify3(
   %str = getelementptr [7 x i8], [7 x i8]* @hello, i32 0, i32 0
   call i32 @fputs(i8* %str, %FILE* %fp)
-; CHECK-NEXT: call i32 @fwrite(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @hello, i32 0, i32 0), i32 6, i32 1, %FILE* %fp)
+; CHECK-NEXT: call noundef i32 @fwrite(i8* nocapture noundef getelementptr inbounds ([7 x i8], [7 x i8]* @hello, i32 0, i32 0), i32 noundef 6, i32 noundef 1, %FILE* nocapture noundef %fp) #0
   ret void
 ; CHECK-NEXT: ret void
 }

@@ -141,7 +141,7 @@ define i1 @test_simplify10(i8* %mem1, i8* %mem2, i32 %size) {
 ; NOBCMP-NEXT:    ret i1 [[CMP]]
 ;
 ; BCMP-LABEL: @test_simplify10(
-; BCMP-NEXT:    [[CALL:%.*]] = call i32 @bcmp(i8* %mem1, i8* %mem2, i32 %size)
+; BCMP-NEXT:    [[CALL:%.*]] = call i32 @bcmp(i8* nocapture %mem1, i8* nocapture %mem2, i32 %size) #0
 ; BCMP-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; BCMP-NEXT:    ret i1 [[CMP]]
 ;
