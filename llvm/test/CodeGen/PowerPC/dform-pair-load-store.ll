@@ -23,15 +23,15 @@ define void @foo(i32 zeroext %n, <256 x i1>* %ptr, <256 x i1>* %ptr2) {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lxvp vsp0, -64(r3)
-; CHECK-NEXT:    lxvp vsp2, -32(r3)
-; CHECK-NEXT:    lxvp vsp4, 0(r3)
-; CHECK-NEXT:    lxvp vsp6, 32(r3)
+; CHECK-NEXT:    lxvp vsp34, -64(r3)
+; CHECK-NEXT:    lxvp vsp36, -32(r3)
+; CHECK-NEXT:    lxvp vsp32, 0(r3)
+; CHECK-NEXT:    lxvp vsp38, 32(r3)
 ; CHECK-NEXT:    addi r3, r3, 1
-; CHECK-NEXT:    stxvp vsp0, -64(r4)
-; CHECK-NEXT:    stxvp vsp2, -32(r4)
-; CHECK-NEXT:    stxvp vsp4, 0(r4)
-; CHECK-NEXT:    stxvp vsp6, 32(r4)
+; CHECK-NEXT:    stxvp vsp34, -64(r4)
+; CHECK-NEXT:    stxvp vsp36, -32(r4)
+; CHECK-NEXT:    stxvp vsp32, 0(r4)
+; CHECK-NEXT:    stxvp vsp38, 32(r4)
 ; CHECK-NEXT:    addi r4, r4, 1
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
@@ -49,15 +49,15 @@ define void @foo(i32 zeroext %n, <256 x i1>* %ptr, <256 x i1>* %ptr2) {
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB0_2: # %for.body
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    lxvp vsp0, -64(r3)
-; CHECK-BE-NEXT:    lxvp vsp2, -32(r3)
-; CHECK-BE-NEXT:    lxvp vsp4, 0(r3)
-; CHECK-BE-NEXT:    lxvp vsp6, 32(r3)
+; CHECK-BE-NEXT:    lxvp vsp34, -64(r3)
+; CHECK-BE-NEXT:    lxvp vsp36, -32(r3)
+; CHECK-BE-NEXT:    lxvp vsp32, 0(r3)
+; CHECK-BE-NEXT:    lxvp vsp38, 32(r3)
 ; CHECK-BE-NEXT:    addi r3, r3, 1
-; CHECK-BE-NEXT:    stxvp vsp0, -64(r4)
-; CHECK-BE-NEXT:    stxvp vsp2, -32(r4)
-; CHECK-BE-NEXT:    stxvp vsp4, 0(r4)
-; CHECK-BE-NEXT:    stxvp vsp6, 32(r4)
+; CHECK-BE-NEXT:    stxvp vsp34, -64(r4)
+; CHECK-BE-NEXT:    stxvp vsp36, -32(r4)
+; CHECK-BE-NEXT:    stxvp vsp32, 0(r4)
+; CHECK-BE-NEXT:    stxvp vsp38, 32(r4)
 ; CHECK-BE-NEXT:    addi r4, r4, 1
 ; CHECK-BE-NEXT:    bdnz .LBB0_2
 ; CHECK-BE-NEXT:  # %bb.3: # %for.cond.cleanup
