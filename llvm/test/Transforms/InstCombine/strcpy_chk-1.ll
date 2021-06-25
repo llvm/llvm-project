@@ -52,7 +52,7 @@ define i8* @test_simplify3() {
 
 define i8* @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
+; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* noalias noundef nonnull returned writeonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noalias nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0)) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -67,7 +67,7 @@ define i8* @test_simplify4() {
 define i8* @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
 ; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false, i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @__memcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i32 [[LEN]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @__memcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i32 [[LEN]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0

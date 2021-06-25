@@ -1231,7 +1231,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
     if (!Sym)
-      Sym = getContext().getOrCreateSymbol(SymbolName);
+      Sym = getContext().getOrCreateSymbol(
+          MAI.shouldEmitLabelsInUpperCase() ? SymbolName.upper() : SymbolName);
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
@@ -6212,8 +6213,10 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
     return Error(LabelLoc,
                  "Cannot have just a label for an HLASM inline asm statement");
 
-  // FIXME: Later on, ensure emitted labels are case-insensitive.
-  MCSymbol *Sym = getContext().getOrCreateSymbol(LabelVal);
+  MCSymbol *Sym = getContext().getOrCreateSymbol(
+      getContext().getAsmInfo()->shouldEmitLabelsInUpperCase()
+          ? LabelVal.upper()
+          : LabelVal);
 
   getTargetParser().doBeforeLabelEmit(Sym);
 

@@ -14,6 +14,12 @@ include(CheckSymbolExists)
 include(CMakeDependentOption)
 include(LLVMProcessSources)
 
+if(CMAKE_LINKER MATCHES ".*lld" OR (LLVM_USE_LINKER STREQUAL "lld" OR LLVM_ENABLE_LLD))
+  set(LINKER_IS_LLD TRUE)
+else()
+  set(LINKER_IS_LLD FALSE)
+endif()
+
 if(CMAKE_LINKER MATCHES "lld-link" OR (MSVC AND (LLVM_USE_LINKER STREQUAL "lld" OR LLVM_ENABLE_LLD)))
   set(LINKER_IS_LLD_LINK TRUE)
 else()

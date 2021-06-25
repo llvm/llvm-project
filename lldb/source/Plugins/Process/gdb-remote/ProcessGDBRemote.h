@@ -408,6 +408,9 @@ protected:
 
   bool HasErased(FlashRange range);
 
+  llvm::Expected<std::vector<uint8_t>>
+  DoReadMemoryTags(lldb::addr_t addr, size_t len, int32_t type) override;
+
 private:
   // For ProcessGDBRemote only
   std::string m_partial_profile_data;

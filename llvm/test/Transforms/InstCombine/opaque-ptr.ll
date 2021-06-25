@@ -124,3 +124,45 @@ define void @call(ptr %a) {
   call void %a()
   ret void
 }
+
+declare void @varargs(...)
+define void @varargs_cast_typed_to_opaque_same_type(i32* %a) {
+; CHECK-LABEL: @varargs_cast_typed_to_opaque_same_type(
+; CHECK-NEXT:    call void (...) @varargs(i32* byval(i32) [[A:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %b = bitcast i32* %a to ptr
+  call void (...) @varargs(ptr byval(i32) %b)
+  ret void
+}
+
+define void @varargs_cast_typed_to_opaque_different_type(i32* %a) {
+; CHECK-LABEL: @varargs_cast_typed_to_opaque_different_type(
+; CHECK-NEXT:    call void (...) @varargs(i32* byval(i32) [[A:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %b = bitcast i32* %a to ptr
+  call void (...) @varargs(ptr byval(float) %b)
+  ret void
+}
+
+define void @varargs_cast_typed_to_opaque_different_size(i32* %a) {
+; CHECK-LABEL: @varargs_cast_typed_to_opaque_different_size(
+; CHECK-NEXT:    [[B:%.*]] = bitcast i32* [[A:%.*]] to ptr
+; CHECK-NEXT:    call void (...) @varargs(ptr byval(i64) [[B]])
+; CHECK-NEXT:    ret void
+;
+  %b = bitcast i32* %a to ptr
+  call void (...) @varargs(ptr byval(i64) %b)
+  ret void
+}
+
+define void @varargs_cast_opaque_to_typed(ptr %a) {
+; CHECK-LABEL: @varargs_cast_opaque_to_typed(
+; CHECK-NEXT:    call void (...) @varargs(ptr byval(i8) [[A:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %b = bitcast ptr %a to i8*
+  call void (...) @varargs(i8* byval(i8) %b)
+  ret void
+}

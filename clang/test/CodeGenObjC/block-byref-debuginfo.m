@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -debug-info-kind=limited -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
 
+// CHECK: define internal void @__Block_byref_object_copy_({{.*}} !dbg ![[BYREF_COPY_SP:.*]] {
+// CHECK: getelementptr inbounds {{.*}}, !dbg ![[BYREF_COPY_LOC:.*]]
+
 // CHECK: !DILocalVariable(name: "foo", {{.*}}type: ![[FOOTY:[0-9]+]])
 // CHECK: ![[FOOTY]] = {{.*}}!DICompositeType({{.*}}, name: "Foo"
 
@@ -24,12 +27,23 @@
 
 // CHECK: !DILocalVariable(name: "foo", {{.*}}type: ![[FOOTY]])
 
+// CHECK: ![[BYREF_COPY_SP]] = distinct !DISubprogram(linkageName: "__Block_byref_object_copy_",
+// CHECK: ![[BYREF_COPY_LOC]] = !DILocation(line: 0, scope: ![[BYREF_COPY_SP]])
 
 struct Foo {
   unsigned char *data;
 };
+
+struct Foo2 {
+  id f0;
+};
+
+void (^bptr)(void);
+
 int func() {
   __attribute__((__blocks__(byref))) struct Foo foo;
   ^{ foo.data = 0; }();
+  __block struct Foo2 foo2;
+  bptr = ^{ foo2.f0 =0; };
   return 0;
 }

@@ -49,6 +49,7 @@ public:
   }
   void setAllowDotIsPC(bool Value) { DotIsPC = Value; }
   void setAssemblerDialect(unsigned Value) { AssemblerDialect = Value; }
+  void setEmitLabelsInUpperCase(bool Value) { EmitLabelsInUpperCase = Value; }
 };
 
 // Setup a testing class that the GTest framework can call.
@@ -749,5 +750,37 @@ TEST_F(SystemZAsmLexerTest, CheckPrintAcceptableSymbol2) {
   EXPECT_EQ(true, MUPMAI->isValidUnquotedName(AsmStr));
   AsmStr += "#";
   EXPECT_EQ(true, MUPMAI->isValidUnquotedName(AsmStr));
+}
+
+TEST_F(SystemZAsmLexerTest, CheckLabelCaseUpperCase2) {
+  StringRef AsmStr = "label\nlabel";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  const MCExpr *Expr;
+  bool ParsePrimaryExpr = Parser->parseExpression(Expr);
+  EXPECT_EQ(ParsePrimaryExpr, false);
+
+  const MCSymbolRefExpr *SymbolExpr = dyn_cast<MCSymbolRefExpr>(Expr);
+  EXPECT_NE(SymbolExpr, nullptr);
+  EXPECT_NE(&SymbolExpr->getSymbol(), nullptr);
+  EXPECT_EQ((&SymbolExpr->getSymbol())->getName(), StringRef("label"));
+
+  // Lex the end of statement token.
+  Parser->getLexer().Lex();
+
+  MUPMAI->setEmitLabelsInUpperCase(true);
+
+  ParsePrimaryExpr = Parser->parseExpression(Expr);
+  EXPECT_EQ(ParsePrimaryExpr, false);
+
+  SymbolExpr = dyn_cast<MCSymbolRefExpr>(Expr);
+  EXPECT_NE(SymbolExpr, nullptr);
+  EXPECT_NE(&SymbolExpr->getSymbol(), nullptr);
+  EXPECT_EQ((&SymbolExpr->getSymbol())->getName(), StringRef("LABEL"));
 }
 } // end anonymous namespace
