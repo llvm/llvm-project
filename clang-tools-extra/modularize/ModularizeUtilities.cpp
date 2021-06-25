@@ -470,9 +470,9 @@ bool ModularizeUtilities::isHeader(StringRef FileName) {
   StringRef Extension = llvm::sys::path::extension(FileName);
   if (Extension.size() == 0)
     return true;
-  if (Extension.equals_lower(".h"))
+  if (Extension.equals_insensitive(".h"))
     return true;
-  if (Extension.equals_lower(".inc"))
+  if (Extension.equals_insensitive(".inc"))
     return true;
   return false;
 }
