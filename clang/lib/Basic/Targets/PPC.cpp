@@ -97,6 +97,9 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__dcbtst", "__builtin_ppc_dcbtst");
   Builder.defineMacro("__dcbz", "__builtin_ppc_dcbz");
   Builder.defineMacro("__icbt", "__builtin_ppc_icbt");
+  Builder.defineMacro("__compare_and_swap", "__builtin_ppc_compare_and_swap");
+  Builder.defineMacro("__compare_and_swaplp",
+                      "__builtin_ppc_compare_and_swaplp");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
