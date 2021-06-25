@@ -477,7 +477,8 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
   }
 }
 
-void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
+void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
+                                           uint64_t Offset) {
   const MCSymbol *S = &SRE->getSymbol();
   if (S->isTemporary()) {
     if (!S->isInSection()) {
@@ -488,22 +489,35 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
     }
     S = S->getSection().getBeginSymbol();
     S->setUsedInReloc();
-    SRE =
-        MCSymbolRefExpr::create(S, SRE->getKind(), getContext(), SRE->getLoc());
-    return;
+    SRE = MCSymbolRefExpr::create(S, MCSymbolRefExpr::VK_None, getContext(),
+                                  SRE->getLoc());
   }
-  // Not a temporary, referece it as a weak undefined.
-  bool Created;
-  getAssembler().registerSymbol(*S, &Created);
-  if (Created)
-    cast<MCSymbolELF>(S)->setBinding(ELF::STB_WEAK);
+  const MCConstantExpr *MCOffset = MCConstantExpr::create(Offset, getContext());
+  MCObjectStreamer::visitUsedExpr(*SRE);
+  if (Optional<std::pair<bool, std::string>> Err =
+          MCObjectStreamer::emitRelocDirective(
+              *MCOffset, "BFD_RELOC_NONE", SRE, SRE->getLoc(),
+              *getContext().getSubtargetInfo()))
+    report_fatal_error("Relocation for CG Profile could not be created: " +
+                       Err->second);
 }
 
 void MCELFStreamer::finalizeCGProfile() {
-  for (MCAssembler::CGProfileEntry &E : getAssembler().CGProfile) {
-    finalizeCGProfileEntry(E.From);
-    finalizeCGProfileEntry(E.To);
+  MCAssembler &Asm = getAssembler();
+  if (Asm.CGProfile.empty())
+    return;
+  MCSection *CGProfile = getAssembler().getContext().getELFSection(
+      ".llvm.call-graph-profile", ELF::SHT_LLVM_CALL_GRAPH_PROFILE,
+      ELF::SHF_EXCLUDE, /*sizeof(Elf_CGProfile_Impl<>)=*/8);
+  PushSection();
+  SwitchSection(CGProfile);
+  uint64_t Offset = 0;
+  for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+    finalizeCGProfileEntry(E.From, Offset++);
+    finalizeCGProfileEntry(E.To, Offset++);
+    emitIntValue(E.Count, sizeof(uint64_t));
   }
+  PopSection();
 }
 
 void MCELFStreamer::emitInstToFragment(const MCInst &Inst,

@@ -2870,7 +2870,7 @@ the configuration (without a prefix: ``Auto``).
   body to be indented one additional level relative to the parent scope
   containing the lambda signature. For callback-heavy code, it may improve
   readability to have the signature indented two levels and to use
-  ``OuterScope``. The KJ style guide requires ``OuterScope`.
+  ``OuterScope``. The KJ style guide requires ``OuterScope``.
   `KJ style guide
   <https://github.com/capnproto/capnproto/blob/master/kjdoc/style-guide.md>`_
 
@@ -3235,6 +3235,38 @@ the configuration (without a prefix: ``Auto``).
             - 'cpp'
           BasedOnStyle: llvm
           CanonicalDelimiter: 'cc'
+
+**ReferenceAlignment** (``ReferenceAlignmentStyle``)
+  Reference alignment style (overrides ``PointerAlignment`` for
+  references).
+
+  Possible values:
+
+  * ``RAS_Pointer`` (in configuration: ``Pointer``)
+    Align reference like ``PointerAlignment``.
+
+  * ``RAS_Left`` (in configuration: ``Left``)
+    Align reference to the left.
+
+    .. code-block:: c++
+
+      int& a;
+
+  * ``RAS_Right`` (in configuration: ``Right``)
+    Align reference to the right.
+
+    .. code-block:: c++
+
+      int &a;
+
+  * ``RAS_Middle`` (in configuration: ``Middle``)
+    Align reference in the middle.
+
+    .. code-block:: c++
+
+      int & a;
+
+
 
 **ReflowComments** (``bool``)
   If ``true``, clang-format will attempt to re-flow comments.

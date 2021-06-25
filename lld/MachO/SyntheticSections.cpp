@@ -1166,19 +1166,20 @@ void BitcodeBundleSection::writeTo(uint8_t *buf) const {
 // that only contains a duplicate cstring at a different alignment. See PR50563
 // for details.
 //
-// In practice, the cstrings we've seen so far that require special alignment
-// are all accessed by x86_64 SIMD operations -- x86_64 requires SIMD accesses
-// to be 16-byte-aligned. So for now, I'm just aligning all strings to 16 bytes
-// on x86_64. This is indeed wasteful, but implementation-wise it's simpler
-// than preserving per-string alignment+offsets. It also avoids the
-// aforementioned crash after deduplication of differently-aligned strings.
-// Finally, the overhead is not huge: using 16-byte alignment (vs no alignment)
-// is only a 0.5% size overhead when linking chromium_framework.
+// On x86_64, the cstrings we've seen so far that require special alignment are
+// all accessed by SIMD operations -- x86_64 requires SIMD accesses to be
+// 16-byte-aligned. arm64 also seems to require 16-byte-alignment in some cases
+// (PR50791), but I haven't tracked down the root cause. So for now, I'm just
+// aligning all strings to 16 bytes.  This is indeed wasteful, but
+// implementation-wise it's simpler than preserving per-string
+// alignment+offsets. It also avoids the aforementioned crash after
+// deduplication of differently-aligned strings.  Finally, the overhead is not
+// huge: using 16-byte alignment (vs no alignment) is only a 0.5% size overhead
+// when linking chromium_framework on x86_64.
 CStringSection::CStringSection()
     : SyntheticSection(segment_names::text, section_names::cString),
-      builder(StringTableBuilder::RAW,
-              /*Alignment=*/target->cpuType == CPU_TYPE_X86_64 ? 16 : 1) {
-  align = target->cpuType == CPU_TYPE_X86_64 ? 16 : 1;
+      builder(StringTableBuilder::RAW, /*Alignment=*/16) {
+  align = 16;
   flags = S_CSTRING_LITERALS;
 }
 

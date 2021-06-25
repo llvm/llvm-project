@@ -23,6 +23,38 @@ exit:
   ret void
 }
 
+declare i32 @spec(i32* %p) readonly argmemonly nounwind speculatable
+
+; FIXME: We should strip the nonnull callsite attribute on spec call's argument since it is
+; may not be valid when hoisted to preheader.
+define void @test_strip_attribute(i32* noalias %loc, i32* noalias %sink, i32* %q) {
+; CHECK-LABEL: test_strip_attribute
+; CHECK-LABEL: entry
+; CHECK-NEXT:   %ret = call i32 @load(i32* %loc)
+; CHECK-NEXT:   %nullchk = icmp eq i32* %q, null
+; CHECK-NEXT:   %ret2 = call i32 @spec(i32* nonnull %q)
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %isnull ]
+  %ret = call i32 @load(i32* %loc)
+  %nullchk = icmp eq i32* %q, null
+  br i1 %nullchk, label %isnull, label %nonnullbb
+
+nonnullbb:  
+  %ret2 = call i32 @spec(i32* nonnull %q)
+  br label %isnull
+
+isnull:  
+  store volatile i32 %ret, i32* %sink
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
 
 declare void @store(i32 %val, i32* %p) argmemonly writeonly nounwind
 

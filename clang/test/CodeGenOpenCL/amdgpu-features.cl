@@ -34,6 +34,7 @@
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1032 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1032 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1033 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1033 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1034 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1034 %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1035 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1035 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1100 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1100 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1101 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1101 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1102 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1102 %s
@@ -69,6 +70,7 @@
 // GFX1032: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 // GFX1033: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 // GFX1034: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
+// GFX1035: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst"
 // GFX1100: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts"
 // GFX1101: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts"
 // GFX1102: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+flat-address-space,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts"

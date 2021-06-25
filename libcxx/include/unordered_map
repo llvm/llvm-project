@@ -435,6 +435,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__debug>
 #include <__hash_table>
 #include <__node_handle>
+#include <__utility/forward.h>
 #include <compare>
 #include <functional>
 #include <iterator> // __libcpp_erase_if_container

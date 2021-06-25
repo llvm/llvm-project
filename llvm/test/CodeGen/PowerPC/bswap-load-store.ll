@@ -101,6 +101,8 @@ define i16 @LHBRX(i8* %ptr, i32 %off) {
   ret i16 %tmp6
 }
 
+; TODO: combine the bswap feeding a store on subtargets
+; that do not have an STDBRX.
 define void @STDBRX(i64 %i, i8* %ptr, i64 %off) {
 ; PWR7_32-LABEL: STDBRX:
 ; PWR7_32:       # %bb.0:
@@ -149,19 +151,12 @@ define i64 @LDBRX(i8* %ptr, i64 %off) {
 ;
 ; X64-LABEL: LDBRX:
 ; X64:       # %bb.0:
-; X64-NEXT:    ldx r4, r3, r4
-; X64-NEXT:    rotldi r5, r4, 16
-; X64-NEXT:    rotldi r3, r4, 8
-; X64-NEXT:    rldimi r3, r5, 8, 48
-; X64-NEXT:    rotldi r5, r4, 24
-; X64-NEXT:    rldimi r3, r5, 16, 40
-; X64-NEXT:    rotldi r5, r4, 32
-; X64-NEXT:    rldimi r3, r5, 24, 32
-; X64-NEXT:    rotldi r5, r4, 48
-; X64-NEXT:    rldimi r3, r5, 40, 16
-; X64-NEXT:    rotldi r5, r4, 56
-; X64-NEXT:    rldimi r3, r5, 48, 8
-; X64-NEXT:    rldimi r3, r4, 56, 0
+; X64-NEXT:    li r6, 4
+; X64-NEXT:    lwbrx r5, r3, r4
+; X64-NEXT:    add r3, r3, r4
+; X64-NEXT:    lwbrx r3, r3, r6
+; X64-NEXT:    rldimi r5, r3, 32, 0
+; X64-NEXT:    mr r3, r5
 ; X64-NEXT:    blr
 ;
 ; PWR7_64-LABEL: LDBRX:

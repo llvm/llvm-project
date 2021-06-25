@@ -55,7 +55,7 @@ def fill(value=ScalarDef(T), O=TensorDef(T, S.M, S.K, output=True)):
 # CHECK:     attribute_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s4, s5)>
 @linalg_structured_op
 def strided_copy(
-    I=TensorDef(T, S.W, S.H),
+    I=TensorDef(T, S.IH, S.IW),
     O=TensorDef(T, S.OH, S.OW, output=True),
-    strides=AttributeDef(S.S0, S.S1)):
-  O[D.oh, D.ow] = I[D.h * S.S0, D.w * S.S1]
+    strides=AttributeDef(S.SH, S.SW)):
+  O[D.oh, D.ow] = I[D.h * S.SH, D.w * S.SW]

@@ -508,12 +508,8 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
-  CallInst *NewCI =
-      B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                     ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len));
-  NewCI->setAttributes(CI->getAttributes());
-  NewCI->removeAttributes(AttributeList::ReturnIndex,
-                          AttributeFuncs::typeIncompatible(NewCI->getType()));
+  B.CreateMemCpy(Dst, Align(1), Src, Align(1),
+                 ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len));
   return Dst;
 }
 
@@ -539,10 +535,7 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
-  CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1), LenV);
-  NewCI->setAttributes(CI->getAttributes());
-  NewCI->removeAttributes(AttributeList::ReturnIndex,
-                          AttributeFuncs::typeIncompatible(NewCI->getType()));
+  B.CreateMemCpy(Dst, Align(1), Src, Align(1), LenV);
   return DstEnd;
 }
 
@@ -601,11 +594,8 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
   // strncpy(x, s, c) -> memcpy(align 1 x, align 1 s, c) [s and c are constant]
-  CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
-                                   ConstantInt::get(DL.getIntPtrType(PT), Len));
-  NewCI->setAttributes(CI->getAttributes());
-  NewCI->removeAttributes(AttributeList::ReturnIndex,
-                          AttributeFuncs::typeIncompatible(NewCI->getType()));
+  B.CreateMemCpy(Dst, Align(1), Src, Align(1),
+                 ConstantInt::get(DL.getIntPtrType(PT), Len));
   return Dst;
 }
 
@@ -1078,11 +1068,8 @@ Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   // memcpy(x, y, n) -> llvm.memcpy(align 1 x, align 1 y, n)
-  CallInst *NewCI = B.CreateMemCpy(CI->getArgOperand(0), Align(1),
-                                   CI->getArgOperand(1), Align(1), Size);
-  NewCI->setAttributes(CI->getAttributes());
-  NewCI->removeAttributes(AttributeList::ReturnIndex,
-                          AttributeFuncs::typeIncompatible(NewCI->getType()));
+  B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(1), Align(1),
+                 Size);
   return CI->getArgOperand(0);
 }
 
@@ -1129,14 +1116,7 @@ Value *LibCallSimplifier::optimizeMemPCpy(CallInst *CI, IRBuilderBase &B) {
   Value *Dst = CI->getArgOperand(0);
   Value *N = CI->getArgOperand(2);
   // mempcpy(x, y, n) -> llvm.memcpy(align 1 x, align 1 y, n), x + n
-  CallInst *NewCI =
-      B.CreateMemCpy(Dst, Align(1), CI->getArgOperand(1), Align(1), N);
-  // Propagate attributes, but memcpy has no return value, so make sure that
-  // any return attributes are compliant.
-  // TODO: Attach return value attributes to the 1st operand to preserve them?
-  NewCI->setAttributes(CI->getAttributes());
-  NewCI->removeAttributes(AttributeList::ReturnIndex,
-                          AttributeFuncs::typeIncompatible(NewCI->getType()));
+  B.CreateMemCpy(Dst, Align(1), CI->getArgOperand(1), Align(1), N);
   return B.CreateInBoundsGEP(B.getInt8Ty(), Dst, N);
 }
 
@@ -3260,12 +3240,8 @@ FortifiedLibCallSimplifier::isFortifiedCallFoldable(CallInst *CI,
 Value *FortifiedLibCallSimplifier::optimizeMemCpyChk(CallInst *CI,
                                                      IRBuilderBase &B) {
   if (isFortifiedCallFoldable(CI, 3, 2)) {
-    CallInst *NewCI =
-        B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(1),
-                       Align(1), CI->getArgOperand(2));
-    NewCI->setAttributes(CI->getAttributes());
-    NewCI->removeAttributes(AttributeList::ReturnIndex,
-                            AttributeFuncs::typeIncompatible(NewCI->getType()));
+    B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(1),
+                   Align(1), CI->getArgOperand(2));
     return CI->getArgOperand(0);
   }
   return nullptr;

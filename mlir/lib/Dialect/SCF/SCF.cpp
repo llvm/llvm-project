@@ -73,6 +73,19 @@ void mlir::scf::buildTerminatedBody(OpBuilder &builder, Location loc) {
 // ExecuteRegionOp
 //===----------------------------------------------------------------------===//
 
+/// Replaces the given op with the contents of the given single-block region,
+/// using the operands of the block terminator to replace operation results.
+static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
+                                Region &region, ValueRange blockArgs = {}) {
+  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  Block *block = &region.front();
+  Operation *terminator = block->getTerminator();
+  ValueRange results = terminator->getOperands();
+  rewriter.mergeBlockBefore(block, op, blockArgs);
+  rewriter.replaceOp(op, results);
+  rewriter.eraseOp(terminator);
+}
+
 ///
 /// (ssa-id `=`)? `execute_region` `->` function-result-type `{`
 ///    block+
@@ -116,6 +129,37 @@ static LogicalResult verify(ExecuteRegionOp op) {
   if (op.region().front().getNumArguments() > 0)
     return op.emitOpError("region cannot have any arguments");
   return success();
+}
+
+// Inline an ExecuteRegionOp if it only contains one block.
+//     "test.foo"() : () -> ()
+//      %v = scf.execute_region -> i64 {
+//        %x = "test.val"() : () -> i64
+//        scf.yield %x : i64
+//      }
+//      "test.bar"(%v) : (i64) -> ()
+//
+//  becomes
+//
+//     "test.foo"() : () -> ()
+//     %x = "test.val"() : () -> i64
+//     "test.bar"(%v) : (i64) -> ()
+//
+struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
+  using OpRewritePattern<ExecuteRegionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExecuteRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.region().getBlocks().size() != 1)
+      return failure();
+    replaceOpWithRegion(rewriter, op, op.region());
+    return success();
+  }
+};
+
+void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<SingleBlockExecuteInliner>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -442,19 +486,6 @@ LoopNest mlir::scf::buildLoopNest(
                            bodyBuilder(nestedBuilder, nestedLoc, ivs);
                          return {};
                        });
-}
-
-/// Replaces the given op with the contents of the given single-block region,
-/// using the operands of the block terminator to replace operation results.
-static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
-                                Region &region, ValueRange blockArgs = {}) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
-  Block *block = &region.front();
-  Operation *terminator = block->getTerminator();
-  ValueRange results = terminator->getOperands();
-  rewriter.mergeBlockBefore(block, op, blockArgs);
-  rewriter.replaceOp(op, results);
-  rewriter.eraseOp(terminator);
 }
 
 namespace {

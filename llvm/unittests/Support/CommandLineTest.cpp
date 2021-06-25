@@ -1122,8 +1122,8 @@ TEST(CommandLineTest, GetCommandLineArguments) {
   EXPECT_EQ(llvm::sys::path::is_absolute(argv[0]),
             llvm::sys::path::is_absolute(__argv[0]));
 
-  EXPECT_TRUE(llvm::sys::path::filename(argv[0])
-              .equals_lower("supporttests.exe"))
+  EXPECT_TRUE(
+      llvm::sys::path::filename(argv[0]).equals_insensitive("supporttests.exe"))
       << "Filename of test executable is "
       << llvm::sys::path::filename(argv[0]);
 }

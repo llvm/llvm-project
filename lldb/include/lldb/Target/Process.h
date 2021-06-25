@@ -34,6 +34,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
+#include "lldb/Target/MemoryTagManager.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
@@ -1709,6 +1710,44 @@ public:
   lldb::addr_t CallocateMemory(size_t size, uint32_t permissions,
                                Status &error);
 
+  /// If the address range given is in a memory tagged range and this
+  /// architecture and process supports memory tagging, return a tag
+  /// manager that can be used to maniupulate those memory tags.
+  /// Tags present in the addresses given are ignored.
+  ///
+  /// \param[in] addr
+  ///     Start of memory range.
+  ///
+  /// \param[in] end_addr
+  ///     End of the memory range. Where end is one beyond the last byte to be
+  ///     included.
+  ///
+  /// \return
+  ///     Either a valid pointer to a tag manager or an error describing why one
+  ///     could not be provided.
+  llvm::Expected<const MemoryTagManager *>
+  GetMemoryTagManager(lldb::addr_t addr, lldb::addr_t end_addr);
+
+  /// Expands the range addr to addr+len to align with granule boundaries and
+  /// then calls DoReadMemoryTags to do the target specific operations.
+  /// Tags are returned unpacked so can be used without conversion.
+  ///
+  /// \param[in] tag_manager
+  ///     The tag manager to get memory tagging information from.
+  ///
+  /// \param[in] addr
+  ///     Start of memory range to read tags for.
+  ///
+  /// \param[in] len
+  ///     Length of memory range to read tags for (in bytes).
+  ///
+  /// \return
+  ///     Either the unpacked tags or an error describing a failure to read
+  ///     or unpack them.
+  llvm::Expected<std::vector<lldb::addr_t>>
+  ReadMemoryTags(const MemoryTagManager *tag_manager, lldb::addr_t addr,
+                 size_t len);
+
   /// Resolve dynamically loaded indirect functions.
   ///
   /// \param[in] address
@@ -2720,6 +2759,36 @@ protected:
   ///     True if the structured data was routed to a plugin; otherwise,
   ///     false.
   bool RouteAsyncStructuredData(const StructuredData::ObjectSP object_sp);
+
+  /// Check whether the process supports memory tagging.
+  ///
+  /// \return
+  ///     true if the process supports memory tagging,
+  ///     false otherwise.
+  virtual bool SupportsMemoryTagging() { return false; }
+
+  /// Does the final operation to read memory tags. E.g. sending a GDB packet.
+  /// It assumes that ReadMemoryTags has checked that memory tagging is enabled
+  /// and has expanded the memory range as needed.
+  ///
+  /// \param[in] addr
+  ///    Start of address range to read memory tags for.
+  ///
+  /// \param[in] len
+  ///    Length of the memory range to read tags for (in bytes).
+  ///
+  /// \param[in] type
+  ///    Type of tags to read (get this from a MemoryTagManager)
+  ///
+  /// \return
+  ///     The packed tag data received from the remote or an error
+  ///     if the read failed.
+  virtual llvm::Expected<std::vector<uint8_t>>
+  DoReadMemoryTags(lldb::addr_t addr, size_t len, int32_t type) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "%s does not support reading memory tags",
+                                   GetPluginName().GetCString());
+  }
 
   // Type definitions
   typedef std::map<lldb::LanguageType, lldb::LanguageRuntimeSP>

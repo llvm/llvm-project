@@ -36,7 +36,7 @@ entry:
 ; PGSO-NOT: call i64 @fwrite
 ; PGSO: call i32 @fputs
 ; NPGSO-LABEL: @main_pgso(
-; NPGSO: call i64 @fwrite
+; NPGSO: call noundef i64 @fwrite
 ; NPGSO-NOT: call i32 @fputs
 
   %call = tail call %struct._IO_FILE* @fopen(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0)) #2

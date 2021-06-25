@@ -2988,16 +2988,17 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
          Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
         (Left.is(TT_AttributeParen) || Left.canBePointerOrReferenceQualifier()))
       return true;
-    return (Left.Tok.isLiteral() ||
-            (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
-             (Style.PointerAlignment != FormatStyle::PAS_Left ||
-              (Line.IsMultiVariableDeclStmt &&
-               (Left.NestingLevel == 0 ||
-                (Left.NestingLevel == 1 && Line.First->is(tok::kw_for)))))));
+    return (
+        Left.Tok.isLiteral() ||
+        (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
+         (getTokenPointerOrReferenceAlignment(Right) != FormatStyle::PAS_Left ||
+          (Line.IsMultiVariableDeclStmt &&
+           (Left.NestingLevel == 0 ||
+            (Left.NestingLevel == 1 && Line.First->is(tok::kw_for)))))));
   }
   if (Right.is(TT_FunctionTypeLParen) && Left.isNot(tok::l_paren) &&
       (!Left.is(TT_PointerOrReference) ||
-       (Style.PointerAlignment != FormatStyle::PAS_Right &&
+       (getTokenPointerOrReferenceAlignment(Left) != FormatStyle::PAS_Right &&
         !Line.IsMultiVariableDeclStmt)))
     return true;
   if (Left.is(TT_PointerOrReference)) {
@@ -3013,7 +3014,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
            (Right.is(tok::l_brace) && Right.is(BK_Block)) ||
            (!Right.isOneOf(TT_PointerOrReference, TT_ArraySubscriptLSquare,
                            tok::l_paren) &&
-            (Style.PointerAlignment != FormatStyle::PAS_Right &&
+            (getTokenPointerOrReferenceAlignment(Left) !=
+                 FormatStyle::PAS_Right &&
              !Line.IsMultiVariableDeclStmt) &&
             Left.Previous &&
             !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
@@ -3182,7 +3184,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // Match const and volatile ref-qualifiers without any additional
     // qualifiers such as
     // void Fn() const &;
-    return Style.PointerAlignment != FormatStyle::PAS_Left;
+    return getTokenReferenceAlignment(Right) != FormatStyle::PAS_Left;
   return true;
 }
 
@@ -3534,11 +3536,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   // Space before TT_StructuredBindingLSquare.
   if (Right.is(TT_StructuredBindingLSquare))
     return !Left.isOneOf(tok::amp, tok::ampamp) ||
-           Style.PointerAlignment != FormatStyle::PAS_Right;
+           getTokenReferenceAlignment(Left) != FormatStyle::PAS_Right;
   // Space before & or && following a TT_StructuredBindingLSquare.
   if (Right.Next && Right.Next->is(TT_StructuredBindingLSquare) &&
       Right.isOneOf(tok::amp, tok::ampamp))
-    return Style.PointerAlignment != FormatStyle::PAS_Left;
+    return getTokenReferenceAlignment(Right) != FormatStyle::PAS_Left;
   if ((Right.is(TT_BinaryOperator) && !Left.is(tok::l_paren)) ||
       (Left.isOneOf(TT_BinaryOperator, TT_ConditionalExpr) &&
        !Right.is(tok::r_paren)))
@@ -4034,7 +4036,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return !Right.is(tok::l_paren);
   if (Right.is(TT_PointerOrReference))
     return Line.IsMultiVariableDeclStmt ||
-           (Style.PointerAlignment == FormatStyle::PAS_Right &&
+           (getTokenPointerOrReferenceAlignment(Right) ==
+                FormatStyle::PAS_Right &&
             (!Right.Next || Right.Next->isNot(TT_FunctionDeclarationName)));
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
       Right.is(tok::kw_operator))
@@ -4247,6 +4250,42 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
     Tok = Tok->Next;
   }
   llvm::errs() << "----\n";
+}
+
+FormatStyle::PointerAlignmentStyle
+TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) {
+  assert(Reference.isOneOf(tok::amp, tok::ampamp));
+  switch (Style.ReferenceAlignment) {
+  case FormatStyle::RAS_Pointer:
+    return Style.PointerAlignment;
+  case FormatStyle::RAS_Left:
+    return FormatStyle::PAS_Left;
+  case FormatStyle::RAS_Right:
+    return FormatStyle::PAS_Right;
+  case FormatStyle::RAS_Middle:
+    return FormatStyle::PAS_Middle;
+  }
+  assert(0); //"Unhandled value of ReferenceAlignment"
+  return Style.PointerAlignment;
+}
+
+FormatStyle::PointerAlignmentStyle
+TokenAnnotator::getTokenPointerOrReferenceAlignment(
+    const FormatToken &PointerOrReference) {
+  if (PointerOrReference.isOneOf(tok::amp, tok::ampamp)) {
+    switch (Style.ReferenceAlignment) {
+    case FormatStyle::RAS_Pointer:
+      return Style.PointerAlignment;
+    case FormatStyle::RAS_Left:
+      return FormatStyle::PAS_Left;
+    case FormatStyle::RAS_Right:
+      return FormatStyle::PAS_Right;
+    case FormatStyle::RAS_Middle:
+      return FormatStyle::PAS_Middle;
+    }
+  }
+  assert(PointerOrReference.is(tok::star));
+  return Style.PointerAlignment;
 }
 
 } // namespace format

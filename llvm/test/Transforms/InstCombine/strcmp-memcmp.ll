@@ -11,7 +11,7 @@ declare void @use(i32)
 define i32 @strcmp_memcmp([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -28,7 +28,7 @@ declare i32 @strcmp(i8* nocapture, i8* nocapture)
 define i32 @strcmp_memcmp2([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp2(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -43,7 +43,7 @@ define i32 @strcmp_memcmp2([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strcmp_memcmp3([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp3(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -58,7 +58,7 @@ define i32 @strcmp_memcmp3([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strcmp_memcmp4([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp4(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -73,7 +73,7 @@ define i32 @strcmp_memcmp4([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strcmp_memcmp5([5 x i8]* dereferenceable (5) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp5(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [5 x i8], [5 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -88,7 +88,7 @@ define i32 @strcmp_memcmp5([5 x i8]* dereferenceable (5) %buf) {
 define i32 @strcmp_memcmp6([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp6(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -103,7 +103,7 @@ define i32 @strcmp_memcmp6([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strcmp_memcmp7([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp7(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[MEMCMP_LOBIT:%.*]] = lshr i32 [[MEMCMP]], 31
 ; CHECK-NEXT:    ret i32 [[MEMCMP_LOBIT]]
 ;
@@ -117,7 +117,7 @@ define i32 @strcmp_memcmp7([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strcmp_memcmp8([4 x i8]* dereferenceable (4) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp8(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -132,7 +132,7 @@ define i32 @strcmp_memcmp8([4 x i8]* dereferenceable (4) %buf) {
 define i32 @strcmp_memcmp9([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strcmp_memcmp9(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -148,7 +148,7 @@ define i32 @strcmp_memcmp9([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(2) [[STRING]], i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 2)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(2) [[STRING]], i8* nocapture noundef nonnull dereferenceable(2) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 2) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -165,7 +165,7 @@ declare i32 @strncmp(i8* nocapture, i8* nocapture, i64)
 define i32 @strncmp_memcmp2([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp2(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -180,7 +180,7 @@ define i32 @strncmp_memcmp2([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp3([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp3(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -195,7 +195,7 @@ define i32 @strncmp_memcmp3([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp4([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp4(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -210,7 +210,7 @@ define i32 @strncmp_memcmp4([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp5([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp5(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -226,7 +226,7 @@ define i32 @strncmp_memcmp5([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp6([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp6(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -241,7 +241,7 @@ define i32 @strncmp_memcmp6([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp7([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp7(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -256,7 +256,7 @@ define i32 @strncmp_memcmp7([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp8([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp8(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(3) [[STRING]], i8* noundef nonnull dereferenceable(3) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 3)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(3) [[STRING]], i8* nocapture noundef nonnull dereferenceable(3) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 3) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -271,7 +271,7 @@ define i32 @strncmp_memcmp8([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp9([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp9(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -286,7 +286,7 @@ define i32 @strncmp_memcmp9([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp10([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp10(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[MEMCMP_LOBIT:%.*]] = lshr i32 [[MEMCMP]], 31
 ; CHECK-NEXT:    ret i32 [[MEMCMP_LOBIT]]
 ;
@@ -300,7 +300,7 @@ define i32 @strncmp_memcmp10([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp11([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp11(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -315,7 +315,7 @@ define i32 @strncmp_memcmp11([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp12([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp12(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -330,7 +330,7 @@ define i32 @strncmp_memcmp12([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp13([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp13(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(2) [[STRING]], i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 2)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(2) [[STRING]], i8* nocapture noundef nonnull dereferenceable(2) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 2) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -345,7 +345,7 @@ define i32 @strncmp_memcmp13([12 x i8]* dereferenceable (12) %buf) {
 define i32 @strncmp_memcmp14([12 x i8]* dereferenceable (12) %buf) {
 ; CHECK-LABEL: @strncmp_memcmp14(
 ; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture noundef nonnull dereferenceable(4) [[STRING]], i8* nocapture noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 4) #[[ATTR1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]

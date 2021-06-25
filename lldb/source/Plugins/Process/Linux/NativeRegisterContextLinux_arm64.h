@@ -53,6 +53,9 @@ public:
 
   bool RegisterOffsetIsDynamic() const override { return true; }
 
+  llvm::Expected<MemoryTaggingDetails>
+  GetMemoryTaggingDetails(int32_t type) override;
+
 protected:
   Status ReadGPR() override;
 

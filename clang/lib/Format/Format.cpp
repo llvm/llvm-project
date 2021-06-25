@@ -418,6 +418,16 @@ struct ScalarEnumerationTraits<FormatStyle::SpaceAroundPointerQualifiersStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::ReferenceAlignmentStyle> {
+  static void enumeration(IO &IO, FormatStyle::ReferenceAlignmentStyle &Value) {
+    IO.enumCase(Value, "Pointer", FormatStyle::RAS_Pointer);
+    IO.enumCase(Value, "Middle", FormatStyle::RAS_Middle);
+    IO.enumCase(Value, "Left", FormatStyle::RAS_Left);
+    IO.enumCase(Value, "Right", FormatStyle::RAS_Right);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensOptions> {
   static void enumeration(IO &IO,
                           FormatStyle::SpaceBeforeParensOptions &Value) {
@@ -692,6 +702,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PointerAlignment", Style.PointerAlignment);
     IO.mapOptional("PPIndentWidth", Style.PPIndentWidth);
     IO.mapOptional("RawStringFormats", Style.RawStringFormats);
+    IO.mapOptional("ReferenceAlignment", Style.ReferenceAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
     IO.mapOptional("ShortNamespaceLines", Style.ShortNamespaceLines);
     IO.mapOptional("SortIncludes", Style.SortIncludes);
@@ -1065,6 +1076,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCSpaceAfterProperty = false;
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
+  LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.Standard = FormatStyle::LS_Latest;
@@ -1429,23 +1441,23 @@ FormatStyle getNoStyle() {
 
 bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
                         FormatStyle *Style) {
-  if (Name.equals_lower("llvm")) {
+  if (Name.equals_insensitive("llvm")) {
     *Style = getLLVMStyle(Language);
-  } else if (Name.equals_lower("chromium")) {
+  } else if (Name.equals_insensitive("chromium")) {
     *Style = getChromiumStyle(Language);
-  } else if (Name.equals_lower("mozilla")) {
+  } else if (Name.equals_insensitive("mozilla")) {
     *Style = getMozillaStyle();
-  } else if (Name.equals_lower("google")) {
+  } else if (Name.equals_insensitive("google")) {
     *Style = getGoogleStyle(Language);
-  } else if (Name.equals_lower("webkit")) {
+  } else if (Name.equals_insensitive("webkit")) {
     *Style = getWebKitStyle();
-  } else if (Name.equals_lower("gnu")) {
+  } else if (Name.equals_insensitive("gnu")) {
     *Style = getGNUStyle();
-  } else if (Name.equals_lower("microsoft")) {
+  } else if (Name.equals_insensitive("microsoft")) {
     *Style = getMicrosoftStyle(Language);
-  } else if (Name.equals_lower("none")) {
+  } else if (Name.equals_insensitive("none")) {
     *Style = getNoStyle();
-  } else if (Name.equals_lower("inheritparentconfig")) {
+  } else if (Name.equals_insensitive("inheritparentconfig")) {
     Style->InheritsParentConfig = true;
   } else {
     return false;
@@ -1755,10 +1767,12 @@ private:
         Tok = Tok->Next;
       }
     }
-    if (Style.DerivePointerAlignment)
+    if (Style.DerivePointerAlignment) {
       Style.PointerAlignment = countVariableAlignments(AnnotatedLines) <= 0
                                    ? FormatStyle::PAS_Left
                                    : FormatStyle::PAS_Right;
+      Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
+    }
     if (Style.Standard == FormatStyle::LS_Auto)
       Style.Standard = hasCpp03IncompatibleFormat(AnnotatedLines)
                            ? FormatStyle::LS_Latest
@@ -2959,22 +2973,23 @@ const char *StyleOptionHelpDescription =
 static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
   if (FileName.endswith(".java"))
     return FormatStyle::LK_Java;
-  if (FileName.endswith_lower(".js") || FileName.endswith_lower(".mjs") ||
-      FileName.endswith_lower(".ts"))
+  if (FileName.endswith_insensitive(".js") ||
+      FileName.endswith_insensitive(".mjs") ||
+      FileName.endswith_insensitive(".ts"))
     return FormatStyle::LK_JavaScript; // (module) JavaScript or TypeScript.
   if (FileName.endswith(".m") || FileName.endswith(".mm"))
     return FormatStyle::LK_ObjC;
-  if (FileName.endswith_lower(".proto") ||
-      FileName.endswith_lower(".protodevel"))
+  if (FileName.endswith_insensitive(".proto") ||
+      FileName.endswith_insensitive(".protodevel"))
     return FormatStyle::LK_Proto;
-  if (FileName.endswith_lower(".textpb") ||
-      FileName.endswith_lower(".pb.txt") ||
-      FileName.endswith_lower(".textproto") ||
-      FileName.endswith_lower(".asciipb"))
+  if (FileName.endswith_insensitive(".textpb") ||
+      FileName.endswith_insensitive(".pb.txt") ||
+      FileName.endswith_insensitive(".textproto") ||
+      FileName.endswith_insensitive(".asciipb"))
     return FormatStyle::LK_TextProto;
-  if (FileName.endswith_lower(".td"))
+  if (FileName.endswith_insensitive(".td"))
     return FormatStyle::LK_TableGen;
-  if (FileName.endswith_lower(".cs"))
+  if (FileName.endswith_insensitive(".cs"))
     return FormatStyle::LK_CSharp;
   return FormatStyle::LK_Cpp;
 }
@@ -3034,7 +3049,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   // If the style inherits the parent configuration it is a command line
   // configuration, which wants to inherit, so we have to skip the check of the
   // StyleName.
-  if (!Style.InheritsParentConfig && !StyleName.equals_lower("file")) {
+  if (!Style.InheritsParentConfig && !StyleName.equals_insensitive("file")) {
     if (!getPredefinedStyle(StyleName, Style.Language, &Style))
       return make_string_error("Invalid value for -style");
     if (!Style.InheritsParentConfig)

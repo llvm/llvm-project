@@ -51,6 +51,8 @@ const char *get_elf_mach_gfx_name(uint32_t EFlags) {
     return "gfx1033";
   case EF_AMDGPU_MACH_AMDGCN_GFX1034:
     return "gfx1034";
+  case EF_AMDGPU_MACH_AMDGCN_GFX1035:
+    return "gfx1035";
   default:
     return "--unknown gfx";
   }

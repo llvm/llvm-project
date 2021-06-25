@@ -201,6 +201,7 @@ namespace std {
 
 #include <__availability>
 #include <__config>
+#include <__utility/forward.h>
 #include <__tuple>
 #include <array>
 #include <compare>
