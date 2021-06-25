@@ -262,10 +262,10 @@ static std::pair<bool, std::string> isWindres(llvm::StringRef Argv0) {
   // llvm-rc -> "", llvm-rc
   // aarch64-w64-mingw32-llvm-windres-10.exe -> aarch64-w64-mingw32, llvm-windres
   ProgName = ProgName.rtrim("0123456789.-");
-  if (!ProgName.consume_back_lower("windres"))
+  if (!ProgName.consume_back_insensitive("windres"))
     return std::make_pair<bool, std::string>(false, "");
-  ProgName.consume_back_lower("llvm-");
-  ProgName.consume_back_lower("-");
+  ProgName.consume_back_insensitive("llvm-");
+  ProgName.consume_back_insensitive("-");
   return std::make_pair<bool, std::string>(true, ProgName.str());
 }
 
