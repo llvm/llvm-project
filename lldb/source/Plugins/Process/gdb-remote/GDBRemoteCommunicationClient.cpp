@@ -586,6 +586,50 @@ bool GDBRemoteCommunicationClient::GetMemoryTaggingSupported() {
   return m_supports_memory_tagging == eLazyBoolYes;
 }
 
+DataBufferSP GDBRemoteCommunicationClient::ReadMemoryTags(lldb::addr_t addr,
+                                                          size_t len,
+                                                          int32_t type) {
+  StreamString packet;
+  packet.Printf("qMemTags:%lx,%lx:%x", addr, len, type);
+  StringExtractorGDBRemote response;
+
+  Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_MEMORY);
+
+  if (SendPacketAndWaitForResponse(packet.GetString(), response, false) !=
+          PacketResult::Success ||
+      !response.IsNormalResponse()) {
+    LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s: qMemTags packet failed",
+              __FUNCTION__);
+    return nullptr;
+  }
+
+  // We are expecting
+  // m<hex encoded bytes>
+
+  if (response.GetChar() != 'm') {
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationClient::%s: qMemTags response did not "
+              "begin with \"m\"",
+              __FUNCTION__);
+    return nullptr;
+  }
+
+  size_t expected_bytes = response.GetBytesLeft() / 2;
+  DataBufferSP buffer_sp(new DataBufferHeap(expected_bytes, 0));
+  size_t got_bytes = response.GetHexBytesAvail(buffer_sp->GetData());
+  // Check both because in some situations chars are consumed even
+  // if the decoding fails.
+  if (response.GetBytesLeft() || (expected_bytes != got_bytes)) {
+    LLDB_LOGF(
+        log,
+        "GDBRemoteCommunicationClient::%s: Invalid data in qMemTags response",
+        __FUNCTION__);
+    return nullptr;
+  }
+
+  return buffer_sp;
+}
+
 bool GDBRemoteCommunicationClient::GetxPacketSupported() {
   if (m_supports_x == eLazyBoolCalculate) {
     StringExtractorGDBRemote response;
