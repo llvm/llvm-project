@@ -465,7 +465,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetQOffsets) {
   EXPECT_EQ(llvm::None, GetQOffsets("TextSeg=0x1234"));
   EXPECT_EQ(llvm::None, GetQOffsets("TextSeg=12345678123456789"));
 }
-#if 0
+
 static void
 check_qmemtags(TestClient &client, MockServer &server, size_t read_len,
                const char *packet, llvm::StringRef response,
@@ -530,4 +530,3 @@ TEST_F(GDBRemoteCommunicationClientTest, ReadMemoryTags) {
   check_qmemtags(client, server, 32, "qMemTags:def0,20:1", "m01020",
                  llvm::None);
 }
-#endif

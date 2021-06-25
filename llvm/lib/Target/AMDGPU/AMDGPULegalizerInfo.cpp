@@ -107,7 +107,9 @@ static LegalizeMutation fewerEltsToSize64Vector(unsigned TypeIdx) {
     unsigned Size = Ty.getSizeInBits();
     unsigned Pieces = (Size + 63) / 64;
     unsigned NewNumElts = (Ty.getNumElements() + 1) / Pieces;
-    return std::make_pair(TypeIdx, LLT::scalarOrVector(NewNumElts, EltTy));
+    return std::make_pair(
+        TypeIdx,
+        LLT::scalarOrVector(ElementCount::getFixed(NewNumElts), EltTy));
   };
 }
 
@@ -139,7 +141,7 @@ static LLT getBitcastRegisterType(const LLT Ty) {
     return LLT::scalar(Size);
   }
 
-  return LLT::scalarOrVector(Size / 32, 32);
+  return LLT::scalarOrVector(ElementCount::getFixed(Size / 32), 32);
 }
 
 static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
@@ -154,7 +156,8 @@ static LegalizeMutation bitcastToVectorElement32(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     unsigned Size = Ty.getSizeInBits();
     assert(Size % 32 == 0);
-    return std::make_pair(TypeIdx, LLT::scalarOrVector(Size / 32, 32));
+    return std::make_pair(
+        TypeIdx, LLT::scalarOrVector(ElementCount::getFixed(Size / 32), 32));
   };
 }
 
@@ -1214,7 +1217,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
                 if (MaxSize % EltSize == 0) {
                   return std::make_pair(
-                    0, LLT::scalarOrVector(MaxSize / EltSize, EltTy));
+                      0, LLT::scalarOrVector(
+                             ElementCount::getFixed(MaxSize / EltSize), EltTy));
                 }
 
                 unsigned NumPieces = Query.MMODescrs[0].SizeInBits / MaxSize;
@@ -1242,7 +1246,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 // should be OK, since the new parts will be further legalized.
                 unsigned FloorSize = PowerOf2Floor(DstSize);
                 return std::make_pair(
-                  0, LLT::scalarOrVector(FloorSize / EltSize, EltTy));
+                    0, LLT::scalarOrVector(
+                           ElementCount::getFixed(FloorSize / EltSize), EltTy));
               }
 
               // Need to split because of alignment.
@@ -4448,14 +4453,16 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   LLT RegTy;
 
   if (IsD16 && ST.hasUnpackedD16VMem()) {
-    RoundedTy = LLT::scalarOrVector(AdjustedNumElts, 32);
+    RoundedTy =
+        LLT::scalarOrVector(ElementCount::getFixed(AdjustedNumElts), 32);
     TFETy = LLT::fixed_vector(AdjustedNumElts + 1, 32);
     RegTy = S32;
   } else {
     unsigned EltSize = EltTy.getSizeInBits();
     unsigned RoundedElts = (AdjustedTy.getSizeInBits() + 31) / 32;
     unsigned RoundedSize = 32 * RoundedElts;
-    RoundedTy = LLT::scalarOrVector(RoundedSize / EltSize, EltSize);
+    RoundedTy = LLT::scalarOrVector(
+        ElementCount::getFixed(RoundedSize / EltSize), EltSize);
     TFETy = LLT::fixed_vector(RoundedSize / 32 + 1, S32);
     RegTy = !IsTFE && EltSize == 16 ? V2S16 : S32;
   }

@@ -13,12 +13,10 @@ class NamespaceDefinitionsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    # See also llvm.org/pr28948
     @expectedFailureAll(
-        bugnumber="llvm.org/pr28948",
-        compiler="gcc",
-        compiler_version=[
-            "<",
-            "4.9"])
+        bugnumber="llvm.org/pr50814",
+        compiler="gcc")
     @expectedFailureAll(
         bugnumber="llvm.org/pr28948",
         oslist=['linux'], compiler="gcc", archs=['arm','aarch64'])

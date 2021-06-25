@@ -365,8 +365,10 @@ ValueEnumerator::ValueEnumerator(const Module &M,
     UseListOrders = predictUseListOrder(M);
 
   // Enumerate the global variables.
-  for (const GlobalVariable &GV : M.globals())
+  for (const GlobalVariable &GV : M.globals()) {
     EnumerateValue(&GV);
+    EnumerateType(GV.getValueType());
+  }
 
   // Enumerate the functions.
   for (const Function & F : M) {
@@ -467,6 +469,8 @@ ValueEnumerator::ValueEnumerator(const Module &M,
           EnumerateType(SVI->getShuffleMaskForBitcode()->getType());
         if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
           EnumerateType(GEP->getSourceElementType());
+        if (auto *AI = dyn_cast<AllocaInst>(&I))
+          EnumerateType(AI->getAllocatedType());
         EnumerateType(I.getType());
         if (const auto *Call = dyn_cast<CallBase>(&I)) {
           EnumerateAttributes(Call->getAttributes());

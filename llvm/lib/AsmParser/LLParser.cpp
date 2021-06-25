@@ -980,7 +980,7 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
     return error(AliaseeLoc, "An alias or ifunc must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
 
-  if (IsAlias && Ty != PTy->getElementType()) {
+  if (IsAlias && !PTy->isOpaqueOrPointeeTypeMatches(Ty)) {
     return error(
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
