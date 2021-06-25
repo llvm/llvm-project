@@ -391,9 +391,9 @@ public:
     auto &Flt = Lexer.getTok();
     auto S = Flt.getString();
     double Val;
-    if (S.compare_lower("infinity") == 0) {
+    if (S.compare_insensitive("infinity") == 0) {
       Val = std::numeric_limits<double>::infinity();
-    } else if (S.compare_lower("nan") == 0) {
+    } else if (S.compare_insensitive("nan") == 0) {
       Val = std::numeric_limits<double>::quiet_NaN();
     } else {
       return true;

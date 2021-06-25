@@ -3239,9 +3239,10 @@ bool AsmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
   APFloat Value(Semantics);
   StringRef IDVal = getTok().getString();
   if (getLexer().is(AsmToken::Identifier)) {
-    if (!IDVal.compare_lower("infinity") || !IDVal.compare_lower("inf"))
+    if (!IDVal.compare_insensitive("infinity") ||
+        !IDVal.compare_insensitive("inf"))
       Value = APFloat::getInf(Semantics);
-    else if (!IDVal.compare_lower("nan"))
+    else if (!IDVal.compare_insensitive("nan"))
       Value = APFloat::getNaN(Semantics, false, ~0);
     else
       return TokError("invalid floating point literal");

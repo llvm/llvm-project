@@ -87,7 +87,7 @@ bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
 
         if (MO.isGlobal()) {
           StringRef FuncName = MO.getGlobal()->getName();
-          if (FuncName.compare_lower("fesetround") == 0) {
+          if (FuncName.compare_insensitive("fesetround") == 0) {
             errs() << "Error: You are using the detectroundchange "
                       "option to detect rounding changes that will "
                       "cause LEON errata. The only way to fix this "
