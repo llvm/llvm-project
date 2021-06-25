@@ -293,7 +293,7 @@ static llvm::Error loadFileList(StringRef fileListPath,
 
 /// Parse number assuming it is base 16, but allow 0x prefix.
 static bool parseNumberBase16(StringRef numStr, uint64_t &baseAddress) {
-  if (numStr.startswith_lower("0x"))
+  if (numStr.startswith_insensitive("0x"))
     numStr = numStr.drop_front(2);
   return numStr.getAsInteger(16, baseAddress);
 }
