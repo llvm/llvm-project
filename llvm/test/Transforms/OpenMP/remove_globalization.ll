@@ -30,7 +30,7 @@ define internal void @foo() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !9
+  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !11
   call void @use(i8* %0)
   call void @__kmpc_free_shared(i8* %0)
   ret void
@@ -46,7 +46,7 @@ define internal void @bar() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !10
+  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !12
   call void @share(i8* %0)
   call void @__kmpc_free_shared(i8* %0)
   ret void
@@ -76,7 +76,7 @@ declare i8* @__kmpc_alloc_shared(i64)
 declare void @__kmpc_free_shared(i8*)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4}
+!llvm.module.flags = !{!3, !4, !6, !7}
 !nvvm.annotations = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -85,8 +85,10 @@ declare void @__kmpc_free_shared(i8*)
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{void ()* @kernel, !"kernel", i32 1}
-!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-!7 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-!8 = !DISubroutineType(types: !2)
-!9 = !DILocation(line: 2, column: 2, scope: !6)
-!10 = !DILocation(line: 4, column: 2, scope: !7)
+!6 = !{i32 7, !"openmp", i32 50}
+!7 = !{i32 7, !"openmp-device", i32 50}
+!8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!9 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!10 = !DISubroutineType(types: !2)
+!11 = !DILocation(line: 2, column: 2, scope: !8)
+!12 = !DILocation(line: 4, column: 2, scope: !9)

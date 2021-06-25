@@ -128,9 +128,11 @@ struct FieldInfo;
 struct StructInfo {
   StringRef Name;
   bool IsUnion = false;
+  bool Initializable = true;
   unsigned Alignment = 0;
-  unsigned Size = 0;
   unsigned AlignmentSize = 0;
+  unsigned NextOffset = 0;
+  unsigned Size = 0;
   std::vector<FieldInfo> Fields;
   StringMap<size_t> FieldsByName;
 
@@ -322,7 +324,7 @@ struct StructInitializer {
 
 struct FieldInfo {
   // Offset of the field within the containing STRUCT.
-  size_t Offset = 0;
+  unsigned Offset = 0;
 
   // Total size of the field (= LengthOf * Type).
   unsigned SizeOf = 0;
@@ -344,11 +346,10 @@ FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
     FieldsByName[FieldName.lower()] = Fields.size();
   Fields.emplace_back(FT);
   FieldInfo &Field = Fields.back();
-  if (IsUnion) {
-    Field.Offset = 0;
-  } else {
-    Size = llvm::alignTo(Size, std::min(Alignment, FieldAlignmentSize));
-    Field.Offset = Size;
+  Field.Offset =
+      llvm::alignTo(NextOffset, std::min(Alignment, FieldAlignmentSize));
+  if (!IsUnion) {
+    NextOffset = std::max(NextOffset, Field.Offset);
   }
   AlignmentSize = std::max(AlignmentSize, FieldAlignmentSize);
   return Field;
@@ -669,6 +670,7 @@ private:
     DK_REAL8,
     DK_REAL10,
     DK_ALIGN,
+    DK_EVEN,
     DK_ORG,
     DK_ENDR,
     DK_EXTERN,
@@ -871,8 +873,11 @@ private:
   bool parseDirectiveEquate(StringRef IDVal, StringRef Name,
                             DirectiveKind DirKind, SMLoc NameLoc);
 
-  bool parseDirectiveOrg(); // ".org"
+  bool parseDirectiveOrg(); // "org"
+
+  bool emitAlignTo(int64_t Alignment);
   bool parseDirectiveAlign();  // "align"
+  bool parseDirectiveEven();   // "even"
 
   // ".file", ".line", ".loc", ".stabs"
   bool parseDirectiveFile(SMLoc DirectiveLoc);
@@ -2332,6 +2337,8 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveNestedEnds();
     case DK_ALIGN:
       return parseDirectiveAlign();
+    case DK_EVEN:
+      return parseDirectiveEven();
     case DK_ORG:
       return parseDirectiveOrg();
     case DK_EXTERN:
@@ -3663,10 +3670,11 @@ bool MasmParser::addIntegralField(StringRef Name, unsigned Size) {
 
   Field.SizeOf = Field.Type * IntInfo.Values.size();
   Field.LengthOf = IntInfo.Values.size();
-  if (Struct.IsUnion)
-    Struct.Size = std::max(Struct.Size, Field.SizeOf);
-  else
-    Struct.Size += Field.SizeOf;
+  const unsigned FieldEnd = Field.Offset + Field.SizeOf;
+  if (!Struct.IsUnion) {
+    Struct.NextOffset = FieldEnd;
+  }
+  Struct.Size = std::max(Struct.Size, FieldEnd);
   return false;
 }
 
@@ -3869,10 +3877,12 @@ bool MasmParser::addRealField(StringRef Name, const fltSemantics &Semantics,
   Field.Type = RealInfo.AsIntValues.back().getBitWidth() / 8;
   Field.LengthOf = RealInfo.AsIntValues.size();
   Field.SizeOf = Field.Type * Field.LengthOf;
-  if (Struct.IsUnion)
-    Struct.Size = std::max(Struct.Size, Field.SizeOf);
-  else
-    Struct.Size += Field.SizeOf;
+
+  const unsigned FieldEnd = Field.Offset + Field.SizeOf;
+  if (!Struct.IsUnion) {
+    Struct.NextOffset = FieldEnd;
+  }
+  Struct.Size = std::max(Struct.Size, FieldEnd);
   return false;
 }
 
@@ -4281,14 +4291,16 @@ bool MasmParser::emitFieldInitializer(const FieldInfo &Field,
                                       const StructFieldInfo &Contents,
                                       const StructFieldInfo &Initializer) {
   for (const auto &Init : Initializer.Initializers) {
-    emitStructInitializer(Contents.Structure, Init);
+    if (emitStructInitializer(Contents.Structure, Init))
+      return true;
   }
   // Default-initialize all remaining values.
   for (auto It =
            Contents.Initializers.begin() + Initializer.Initializers.size();
        It != Contents.Initializers.end(); ++It) {
     const auto &Init = *It;
-    emitStructInitializer(Contents.Structure, Init);
+    if (emitStructInitializer(Contents.Structure, Init))
+      return true;
   }
   return false;
 }
@@ -4311,6 +4323,10 @@ bool MasmParser::emitFieldInitializer(const FieldInfo &Field,
 
 bool MasmParser::emitStructInitializer(const StructInfo &Structure,
                                        const StructInitializer &Initializer) {
+  if (!Structure.Initializable)
+    return Error(getLexer().getLoc(),
+                 "cannot initialize a value of type '" + Structure.Name +
+                     "'; 'org' was used in the type's declaration");
   size_t Index = 0, Offset = 0;
   for (const auto &Init : Initializer.FieldInitializers) {
     const auto &Field = Structure.Fields[Index++];
@@ -4367,10 +4383,12 @@ bool MasmParser::addStructField(StringRef Name, const StructInfo &Structure) {
 
   Field.LengthOf = StructInfo.Initializers.size();
   Field.SizeOf = Field.Type * Field.LengthOf;
-  if (OwningStruct.IsUnion)
-    OwningStruct.Size = std::max(OwningStruct.Size, Field.SizeOf);
-  else
-    OwningStruct.Size += Field.SizeOf;
+
+  const unsigned FieldEnd = Field.Offset + Field.SizeOf;
+  if (!OwningStruct.IsUnion) {
+    OwningStruct.NextOffset = FieldEnd;
+  }
+  OwningStruct.Size = std::max(OwningStruct.Size, FieldEnd);
 
   return false;
 }
@@ -4520,6 +4538,8 @@ bool MasmParser::parseDirectiveNestedEnds() {
 
   StructInfo &ParentStruct = StructInProgress.back();
   if (Structure.Name.empty()) {
+    // Anonymous substructures' fields are addressed as if they belong to the
+    // parent structure - so we transfer them to the parent here.
     const size_t OldFields = ParentStruct.Fields.size();
     ParentStruct.Fields.insert(
         ParentStruct.Fields.end(),
@@ -4529,17 +4549,28 @@ bool MasmParser::parseDirectiveNestedEnds() {
       ParentStruct.FieldsByName[FieldByName.getKey()] =
           FieldByName.getValue() + OldFields;
     }
-    if (!ParentStruct.IsUnion) {
-      for (auto FieldIter = ParentStruct.Fields.begin() + OldFields;
-           FieldIter != ParentStruct.Fields.end(); ++FieldIter) {
-        FieldIter->Offset += ParentStruct.Size;
-      }
+
+    unsigned FirstFieldOffset = 0;
+    if (!Structure.Fields.empty() && !ParentStruct.IsUnion) {
+      FirstFieldOffset = llvm::alignTo(
+          ParentStruct.NextOffset,
+          std::min(ParentStruct.Alignment, Structure.AlignmentSize));
     }
 
-    if (ParentStruct.IsUnion)
+    if (ParentStruct.IsUnion) {
       ParentStruct.Size = std::max(ParentStruct.Size, Structure.Size);
-    else
-      ParentStruct.Size += Structure.Size;
+    } else {
+      for (auto FieldIter = ParentStruct.Fields.begin() + OldFields;
+           FieldIter != ParentStruct.Fields.end(); ++FieldIter) {
+        FieldIter->Offset += FirstFieldOffset;
+      }
+
+      const unsigned StructureEnd = FirstFieldOffset + Structure.Size;
+      if (!ParentStruct.IsUnion) {
+        ParentStruct.NextOffset = StructureEnd;
+      }
+      ParentStruct.Size = std::max(ParentStruct.Size, StructureEnd);
+    }
   } else {
     FieldInfo &Field = ParentStruct.addField(Structure.Name, FT_STRUCT,
                                              Structure.AlignmentSize);
@@ -4548,10 +4579,11 @@ bool MasmParser::parseDirectiveNestedEnds() {
     Field.LengthOf = 1;
     Field.SizeOf = Structure.Size;
 
-    if (ParentStruct.IsUnion)
-      ParentStruct.Size = std::max(ParentStruct.Size, Field.SizeOf);
-    else
-      ParentStruct.Size += Field.SizeOf;
+    const unsigned StructureEnd = Field.Offset + Field.SizeOf;
+    if (!ParentStruct.IsUnion) {
+      ParentStruct.NextOffset = StructureEnd;
+    }
+    ParentStruct.Size = std::max(ParentStruct.Size, StructureEnd);
 
     StructInfo.Structure = Structure;
     StructInfo.Initializers.emplace_back();
@@ -4565,22 +4597,66 @@ bool MasmParser::parseDirectiveNestedEnds() {
 }
 
 /// parseDirectiveOrg
-///  ::= .org expression [ , expression ]
+///  ::= org expression
 bool MasmParser::parseDirectiveOrg() {
   const MCExpr *Offset;
   SMLoc OffsetLoc = Lexer.getLoc();
   if (checkForValidSection() || parseExpression(Offset))
     return true;
-
-  // Parse optional fill expression.
-  int64_t FillExpr = 0;
-  if (parseOptionalToken(AsmToken::Comma))
-    if (parseAbsoluteExpression(FillExpr))
-      return addErrorSuffix(" in '.org' directive");
   if (parseToken(AsmToken::EndOfStatement))
-    return addErrorSuffix(" in '.org' directive");
+    return addErrorSuffix(" in 'org' directive");
 
-  getStreamer().emitValueToOffset(Offset, FillExpr, OffsetLoc);
+  if (StructInProgress.empty()) {
+    // Not in a struct; change the offset for the next instruction or data
+    if (checkForValidSection())
+      return addErrorSuffix(" in 'org' directive");
+
+    getStreamer().emitValueToOffset(Offset, 0, OffsetLoc);
+  } else {
+    // Offset the next field of this struct
+    StructInfo &Structure = StructInProgress.back();
+    int64_t OffsetRes;
+    if (!Offset->evaluateAsAbsolute(OffsetRes, getStreamer().getAssemblerPtr()))
+      return Error(OffsetLoc,
+                   "expected absolute expression in 'org' directive");
+    if (OffsetRes < 0)
+      return Error(
+          OffsetLoc,
+          "expected non-negative value in struct's 'org' directive; was " +
+              std::to_string(OffsetRes));
+    Structure.NextOffset = static_cast<unsigned>(OffsetRes);
+
+    // ORG-affected structures cannot be initialized
+    Structure.Initializable = false;
+  }
+
+  return false;
+}
+
+bool MasmParser::emitAlignTo(int64_t Alignment) {
+  if (StructInProgress.empty()) {
+    // Not in a struct; align the next instruction or data
+    if (checkForValidSection())
+      return true;
+
+    // Check whether we should use optimal code alignment for this align
+    // directive.
+    const MCSection *Section = getStreamer().getCurrentSectionOnly();
+    assert(Section && "must have section to emit alignment");
+    if (Section->UseCodeAlign()) {
+      getStreamer().emitCodeAlignment(Alignment, /*MaxBytesToEmit=*/0);
+    } else {
+      // FIXME: Target specific behavior about how the "extra" bytes are filled.
+      getStreamer().emitValueToAlignment(Alignment, /*Value=*/0,
+                                         /*ValueSize=*/1,
+                                         /*MaxBytesToEmit=*/0);
+    }
+  } else {
+    // Align the next field of this struct
+    StructInfo &Structure = StructInProgress.back();
+    Structure.NextOffset = llvm::alignTo(Structure.NextOffset, Alignment);
+  }
+
   return false;
 }
 
@@ -4590,8 +4666,6 @@ bool MasmParser::parseDirectiveAlign() {
   SMLoc AlignmentLoc = getLexer().getLoc();
   int64_t Alignment;
 
-  if (checkForValidSection())
-    return addErrorSuffix(" in align directive");
   // Ignore empty 'align' directives.
   if (getTok().is(AsmToken::EndOfStatement)) {
     return Warning(AlignmentLoc,
@@ -4602,29 +4676,30 @@ bool MasmParser::parseDirectiveAlign() {
       parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in align directive");
 
-  // Always emit an alignment here even if we thrown an error.
+  // Always emit an alignment here even if we throw an error.
   bool ReturnVal = false;
 
-  // Reject alignments that aren't either a power of two or zero, for gas
+  // Reject alignments that aren't either a power of two or zero, for ML.exe
   // compatibility. Alignment of zero is silently rounded up to one.
   if (Alignment == 0)
     Alignment = 1;
   if (!isPowerOf2_64(Alignment))
-    ReturnVal |= Error(AlignmentLoc, "alignment must be a power of 2");
+    ReturnVal |= Error(AlignmentLoc, "alignment must be a power of 2; was " +
+                                         std::to_string(Alignment));
 
-  // Check whether we should use optimal code alignment for this align
-  // directive.
-  const MCSection *Section = getStreamer().getCurrentSectionOnly();
-  assert(Section && "must have section to emit alignment");
-  if (Section->UseCodeAlign()) {
-    getStreamer().emitCodeAlignment(Alignment, /*MaxBytesToEmit=*/0);
-  } else {
-    // FIXME: Target specific behavior about how the "extra" bytes are filled.
-    getStreamer().emitValueToAlignment(Alignment, /*Value=*/0, /*ValueSize=*/1,
-                                       /*MaxBytesToEmit=*/0);
-  }
+  if (emitAlignTo(Alignment))
+    ReturnVal |= addErrorSuffix(" in align directive");
 
   return ReturnVal;
+}
+
+/// parseDirectiveEven
+///  ::= even
+bool MasmParser::parseDirectiveEven() {
+  if (parseToken(AsmToken::EndOfStatement) || emitAlignTo(2))
+    return addErrorSuffix(" in even directive");
+
+  return false;
 }
 
 /// parseDirectiveFile
@@ -6520,7 +6595,8 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap["real8"] = DK_REAL8;
   DirectiveKindMap["real10"] = DK_REAL10;
   DirectiveKindMap["align"] = DK_ALIGN;
-  // DirectiveKindMap[".org"] = DK_ORG;
+  DirectiveKindMap["even"] = DK_EVEN;
+  DirectiveKindMap["org"] = DK_ORG;
   DirectiveKindMap["extern"] = DK_EXTERN;
   DirectiveKindMap["public"] = DK_PUBLIC;
   // DirectiveKindMap[".comm"] = DK_COMM;

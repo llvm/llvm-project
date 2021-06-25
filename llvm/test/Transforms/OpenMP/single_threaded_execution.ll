@@ -68,8 +68,8 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 declare void @__kmpc_kernel_init(i32, i16)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4}
-!nvvm.annotations = !{!5}
+!llvm.module.flags = !{!3, !4, !5, !6}
+!nvvm.annotations = !{!7}
 
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -77,4 +77,6 @@ declare void @__kmpc_kernel_init(i32, i16)
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
-!5 = !{void ()* @kernel, !"kernel", i32 1}
+!5 = !{i32 7, !"openmp", i32 50}
+!6 = !{i32 7, !"openmp-device", i32 50}
+!7 = !{void ()* @kernel, !"kernel", i32 1}
