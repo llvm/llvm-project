@@ -7,8 +7,8 @@ define void @bs(i64* %p) {
 ; CHECK-NEXT:    li 4, 4
 ; CHECK-NEXT:    lwbrx 5, 0, 3
 ; CHECK-NEXT:    lwbrx 4, 3, 4
-; CHECK-NEXT:    rldimi 4, 5, 32, 0
-; CHECK-NEXT:    std 4, 0(3)
+; CHECK-NEXT:    rldimi 5, 4, 32, 0
+; CHECK-NEXT:    std 5, 0(3)
 ; CHECK-NEXT:    blr
   %x = load i64, i64* %p, align 8
   %b = call i64 @llvm.bswap.i64(i64 %x)
@@ -42,9 +42,9 @@ define i64 @misaligned_ld(i64* %p) {
 ; CHECK-LABEL: misaligned_ld:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 4
-; CHECK-NEXT:    lwbrx 5, 0, 3
-; CHECK-NEXT:    lwbrx 3, 3, 4
-; CHECK-NEXT:    rldimi 3, 5, 32, 0
+; CHECK-NEXT:    lwbrx 4, 3, 4
+; CHECK-NEXT:    lwbrx 3, 0, 3
+; CHECK-NEXT:    rldimi 3, 4, 32, 0
 ; CHECK-NEXT:    blr
   %x = load i64, i64* %p, align 1
   %b = call i64 @llvm.bswap.i64(i64 %x)

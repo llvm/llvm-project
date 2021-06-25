@@ -151,11 +151,12 @@ define i64 @LDBRX(i8* %ptr, i64 %off) {
 ;
 ; X64-LABEL: LDBRX:
 ; X64:       # %bb.0:
-; X64-NEXT:    li r5, 4
-; X64-NEXT:    lwbrx r6, r3, r4
+; X64-NEXT:    li r6, 4
+; X64-NEXT:    lwbrx r5, r3, r4
 ; X64-NEXT:    add r3, r3, r4
-; X64-NEXT:    lwbrx r3, r3, r5
-; X64-NEXT:    rldimi r3, r6, 32, 0
+; X64-NEXT:    lwbrx r3, r3, r6
+; X64-NEXT:    rldimi r5, r3, 32, 0
+; X64-NEXT:    mr r3, r5
 ; X64-NEXT:    blr
 ;
 ; PWR7_64-LABEL: LDBRX:
