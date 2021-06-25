@@ -469,6 +469,8 @@ ValueEnumerator::ValueEnumerator(const Module &M,
           EnumerateType(SVI->getShuffleMaskForBitcode()->getType());
         if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
           EnumerateType(GEP->getSourceElementType());
+        if (auto *AI = dyn_cast<AllocaInst>(&I))
+          EnumerateType(AI->getAllocatedType());
         EnumerateType(I.getType());
         if (const auto *Call = dyn_cast<CallBase>(&I)) {
           EnumerateAttributes(Call->getAttributes());
