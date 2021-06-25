@@ -1,0 +1,18 @@
+# RUN: rm -rf %t
+# RUN: clangd-indexer %S/Inputs/Source.cpp > %t.idx
+# RUN: %python %S/pipeline_helper.py --input-file-name=%s --server-arg=--log=verbose --server-arg=-log-prefix=test-prefix --server-log=%t.log --project-root=%S --index-file=%t.idx > /dev/null
+# RUN: FileCheck %s < %t.log
+# REQUIRES: clangd-remote-index
+
+# CHECK: [test-prefix] Server listening on
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","id":1,"method":"workspace/symbol","params":{"query":"gFoo"}}
+# CHECK: [test-prefix] <<< FuzzyFindRequest
+# CHECK: [test-prefix] >>> FuzzyFindReply
+# CHECK: [test-prefix] [public] request v1/FuzzyFind
+---
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
+

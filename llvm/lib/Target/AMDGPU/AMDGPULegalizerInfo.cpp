@@ -49,7 +49,7 @@ static constexpr unsigned MaxRegisterSize = 1024;
 static LLT getPow2VectorType(LLT Ty) {
   unsigned NElts = Ty.getNumElements();
   unsigned Pow2NElts = 1 <<  Log2_32_Ceil(NElts);
-  return Ty.changeNumElements(Pow2NElts);
+  return Ty.changeElementCount(ElementCount::getFixed(Pow2NElts));
 }
 
 // Round the number of bits to the next power of two bits
@@ -2445,7 +2445,8 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
 
 static LLT widenToNextPowerOf2(LLT Ty) {
   if (Ty.isVector())
-    return Ty.changeNumElements(PowerOf2Ceil(Ty.getNumElements()));
+    return Ty.changeElementCount(
+        ElementCount::getFixed(PowerOf2Ceil(Ty.getNumElements())));
   return LLT::scalar(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
@@ -4439,7 +4440,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     return false;
 
   const unsigned AdjustedNumElts = DMaskLanes == 0 ? 1 : DMaskLanes;
-  const LLT AdjustedTy = Ty.changeNumElements(AdjustedNumElts);
+  const LLT AdjustedTy =
+      Ty.changeElementCount(ElementCount::getFixed(AdjustedNumElts));
 
   // The raw dword aligned data component of the load. The only legal cases
   // where this matters should be when using the packed D16 format, for
