@@ -18,6 +18,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
@@ -123,6 +124,8 @@ static bool constantSupportsMMAMatrixType(ConstantOp constantOp) {
 }
 
 static bool supportsMMaMatrixType(Operation *op) {
+  if (isa<scf::ForOp, scf::YieldOp>(op))
+    return true;
   if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
     return transferReadSupportsMMAMatrixType(transferRead);
   if (auto transferWrite = dyn_cast<vector::TransferWriteOp>(op))
@@ -326,6 +329,74 @@ static void convertConstantOp(ConstantOp op,
   valueMapping[op.getResult()] = matrix;
 }
 
+// Replace ForOp with a new ForOp with extra operands. The YieldOp is not
+// updated and needs to be updated separatly for the loop to be correct.
+static scf::ForOp replaceForOpWithNewSignature(OpBuilder &b, scf::ForOp loop,
+                                               ValueRange newIterOperands) {
+  // Create a new loop before the existing one, with the extra operands.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(loop);
+  auto operands = llvm::to_vector<4>(loop.getIterOperands());
+  operands.append(newIterOperands.begin(), newIterOperands.end());
+  scf::ForOp newLoop =
+      b.create<scf::ForOp>(loop.getLoc(), loop.lowerBound(), loop.upperBound(),
+                           loop.step(), operands);
+  newLoop.getBody()->erase();
+  newLoop.getLoopBody().getBlocks().splice(
+      newLoop.getLoopBody().getBlocks().begin(),
+      loop.getLoopBody().getBlocks());
+  for (auto operand : newIterOperands)
+    newLoop.getBody()->addArgument(operand.getType());
+
+  for (auto it : llvm::zip(loop.getResults(), newLoop.getResults().take_front(
+                                                  loop.getNumResults())))
+    std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
+  loop.erase();
+  return newLoop;
+}
+
+static void convertForOp(scf::ForOp op,
+                         llvm::DenseMap<Value, Value> &valueMapping) {
+  SmallVector<Value> newOperands;
+  SmallVector<std::pair<size_t, size_t>> argMapping;
+  for (auto operand : llvm::enumerate(op.getIterOperands())) {
+    auto it = valueMapping.find(operand.value());
+    if (it == valueMapping.end())
+      continue;
+    argMapping.push_back(std::make_pair(
+        operand.index(), op.getNumIterOperands() + newOperands.size()));
+    newOperands.push_back(it->second);
+  }
+  OpBuilder b(op);
+  scf::ForOp newForOp = replaceForOpWithNewSignature(b, op, newOperands);
+  Block &loopBody = *newForOp.getBody();
+  for (auto mapping : argMapping) {
+    valueMapping[newForOp.getResult(mapping.first)] =
+        newForOp.getResult(mapping.second);
+    valueMapping[loopBody.getArgument(mapping.first +
+                                      newForOp.getNumInductionVars())] =
+        loopBody.getArgument(mapping.second + newForOp.getNumInductionVars());
+  }
+}
+
+static void convertYieldOp(scf::YieldOp op,
+                           llvm::DenseMap<Value, Value> &valueMapping) {
+  OpBuilder b(op);
+  auto loop = cast<scf::ForOp>(op->getParentOp());
+  auto yieldOperands = llvm::to_vector<4>(op.getOperands());
+  for (auto operand : llvm::enumerate(op.getOperands())) {
+    auto it = valueMapping.find(operand.value());
+    if (it == valueMapping.end())
+      continue;
+    // Replace the yield of old value with the for op argument to make it easier
+    // to remove the dead code.
+    yieldOperands[operand.index()] = loop.getIterOperands()[operand.index()];
+    yieldOperands.push_back(it->second);
+  }
+  b.create<scf::YieldOp>(op.getLoc(), yieldOperands);
+  op.erase();
+}
+
 namespace mlir {
 
 void populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns) {
@@ -345,6 +416,10 @@ void convertVectorToMMAOps(FuncOp funcOp) {
       convertContractOp(contractOp, valueMapping);
     } else if (auto constantOp = dyn_cast<ConstantOp>(op)) {
       convertConstantOp(constantOp, valueMapping);
+    } else if (auto forOp = dyn_cast<scf::ForOp>(op)) {
+      convertForOp(forOp, valueMapping);
+    } else if (auto yiledOp = dyn_cast<scf::YieldOp>(op)) {
+      convertYieldOp(yiledOp, valueMapping);
     }
   }
 }
