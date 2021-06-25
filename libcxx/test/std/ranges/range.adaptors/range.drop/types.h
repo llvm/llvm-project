@@ -80,6 +80,16 @@ struct BorrowableRange {
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<BorrowableRange> = true;
 
+struct BorrowableView : std::ranges::view_base {
+  friend int* begin(BorrowableView const& range);
+  friend int* end(BorrowableView const&);
+  friend int* begin(BorrowableView& range);
+  friend int* end(BorrowableView&);
+};
+
+template<>
+inline constexpr bool std::ranges::enable_borrowed_range<BorrowableView> = true;
+
 struct InputView : std::ranges::view_base {
   constexpr cpp20_input_iterator<int*> begin() const { return cpp20_input_iterator<int*>(globalBuff); }
   constexpr int* end() const { return globalBuff + 8; }
