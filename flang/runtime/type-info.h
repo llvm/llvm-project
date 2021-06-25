@@ -82,8 +82,7 @@ private:
       lenParameterKind_; // pointer to rank-1 array of INTEGER(1)
 
   // This array of local data components includes the parent component.
-  // Components are in alphabetic order.
-  // TODO pmk: fix to be "component order"
+  // Components are in component order, not collation order of their names.
   // It does not include procedure pointer components.
   StaticDescriptor<1, true>
       component_; // TYPE(COMPONENT), POINTER, DIMENSION(:), CONTIGUOUS
