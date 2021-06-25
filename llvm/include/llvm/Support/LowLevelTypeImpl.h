@@ -182,13 +182,10 @@ public:
                       : LLT::scalar(NewEltSize);
   }
 
-  /// Return a vector or scalar with the same element type and the new number of
-  /// elements.
-  LLT changeNumElements(unsigned NewNumElts) const {
-    assert((!isVector() || !isScalable()) &&
-           "Cannot use changeNumElements on a scalable vector");
-    return LLT::scalarOrVector(ElementCount::getFixed(NewNumElts),
-                               getScalarType());
+  /// Return a vector or scalar with the same element type and the new element
+  /// count.
+  LLT changeElementCount(ElementCount EC) const {
+    return LLT::scalarOrVector(EC, getScalarType());
   }
 
   /// Return a type that is \p Factor times smaller. Reduces the number of
@@ -197,7 +194,7 @@ public:
   LLT divide(int Factor) const {
     assert(Factor != 1);
     if (isVector()) {
-      assert(getNumElements() % Factor == 0);
+      assert(getElementCount().isKnownMultipleOf(Factor));
       return scalarOrVector(getElementCount().divideCoefficientBy(Factor),
                             getElementType());
     }

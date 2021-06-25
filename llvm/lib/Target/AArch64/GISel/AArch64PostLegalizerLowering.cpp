@@ -709,8 +709,9 @@ bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
     assert(MRI.getType(MI.getOperand(0).getReg()).getNumElements() == 2 &&
            "Unexpected dest elements");
     auto Undef = B.buildUndef(SrcTy);
-    DupSrc = B.buildConcatVectors(SrcTy.changeNumElements(4),
-                                  {Src1Reg, Undef.getReg(0)})
+    DupSrc = B.buildConcatVectors(
+                  SrcTy.changeElementCount(ElementCount::getFixed(4)),
+                  {Src1Reg, Undef.getReg(0)})
                  .getReg(0);
   }
   B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()}, {DupSrc, Lane});
