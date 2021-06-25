@@ -3474,14 +3474,30 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemTags(
   if (packet.GetBytesLeft() < 1 || packet.GetChar() != ':')
     return SendIllFormedResponse(packet, invalid_type_err);
 
-  int32_t type =
-      packet.GetS32(std::numeric_limits<int32_t>::max(), /*base=*/16);
-  if (type == std::numeric_limits<int32_t>::max() ||
+  // Type is a signed integer but packed into the packet as its raw bytes.
+  // However, our GetU64 uses strtoull which allows +/-. We do not want this.
+  const char *first_type_char = packet.Peek();
+  if (first_type_char && (*first_type_char == '+' || *first_type_char == '-'))
+    return SendIllFormedResponse(packet, invalid_type_err);
+
+  // Extract type as unsigned then cast to signed.
+  // Using a uint64_t here so that we have some value outside of the 32 bit
+  // range to use as the invalid return value.
+  uint64_t raw_type =
+      packet.GetU64(std::numeric_limits<uint64_t>::max(), /*base=*/16);
+
+  if ( // Make sure the cast below would be valid
+      raw_type > std::numeric_limits<uint32_t>::max() ||
       // To catch inputs like "123aardvark" that will parse but clearly aren't
       // valid in this case.
       packet.GetBytesLeft()) {
     return SendIllFormedResponse(packet, invalid_type_err);
   }
+
+  // First narrow to 32 bits otherwise the copy into type would take
+  // the wrong 4 bytes on big endian.
+  uint32_t raw_type_32 = raw_type;
+  int32_t type = reinterpret_cast<int32_t &>(raw_type_32);
 
   StreamGDBRemote response;
   std::vector<uint8_t> tags;
@@ -3552,7 +3568,11 @@ GDBRemoteCommunicationServerLLGS::Handle_QMemTags(
       packet.GetU64(std::numeric_limits<uint64_t>::max(), /*base=*/16);
   if (raw_type > std::numeric_limits<uint32_t>::max())
     return SendIllFormedResponse(packet, invalid_type_err);
-  int32_t type = static_cast<int32_t>(raw_type);
+
+  // First narrow to 32 bits. Otherwise the copy below would get the wrong
+  // 4 bytes on big endian.
+  uint32_t raw_type_32 = raw_type;
+  int32_t type = reinterpret_cast<int32_t &>(raw_type_32);
 
   // Tag data
   if (packet.GetBytesLeft() < 1 || packet.GetChar() != ':')
