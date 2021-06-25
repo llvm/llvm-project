@@ -596,7 +596,7 @@ public:
   matchAndRewrite(RuntimeCreateGroupOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     TypeConverter *converter = getTypeConverter();
-    Type resultType = op->getResultTypes()[0];
+    Type resultType = op.getResult().getType();
 
     rewriter.replaceOpWithNewOp<CallOp>(
         op, kCreateGroup, converter->convertType(resultType), operands);
