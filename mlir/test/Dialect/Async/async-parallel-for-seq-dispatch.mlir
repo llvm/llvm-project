@@ -1,6 +1,9 @@
 // RUN: mlir-opt %s -split-input-file -async-parallel-for=async-dispatch=false  \
 // RUN: | FileCheck %s --dump-input=always
 
+// The structure of @parallel_compute_fn checked in the async dispatch test.
+// Here we only check the structure of the sequential dispatch loop.
+
 // CHECK-LABEL: @loop_1d
 func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
   // CHECK: %[[GROUP:.*]] = async.create_group
