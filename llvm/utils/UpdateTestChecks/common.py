@@ -780,6 +780,8 @@ def add_global_checks(glob_val_dict, comment_marker, prefix_list, output_lines, 
     for p in prefix_list:
       global_vars_seen = {}
       checkprefixes = p[0]
+      if checkprefixes is None:
+        continue
       for checkprefix in checkprefixes:
         if checkprefix in global_vars_seen_dict:
             global_vars_seen.update(global_vars_seen_dict[checkprefix])
