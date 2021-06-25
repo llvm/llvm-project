@@ -2482,8 +2482,10 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   //    needs to be dereferenced to get the actual function's context.
   // The debug info for locals reflects this difference, so our unwinding of the
   // context register needs to reflect it too.
-  bool indirect_context = IsSwiftAsyncAwaitResumePartialFunctionSymbol(
-      sc.symbol->GetMangled().GetMangledName().GetStringRef());
+  bool indirect_context =
+      sc.symbol ? IsSwiftAsyncAwaitResumePartialFunctionSymbol(
+                      sc.symbol->GetMangled().GetMangledName().GetStringRef())
+                : false;
 
   if (indirect_context) {
     // In a "resume" coroutine, the passed context argument needs to be
