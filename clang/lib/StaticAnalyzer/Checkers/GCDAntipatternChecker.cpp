@@ -80,7 +80,7 @@ static bool isTest(const Decl *D) {
     if (const auto *CD = dyn_cast<ObjCContainerDecl>(OD->getParent())) {
       std::string ContainerName = CD->getNameAsString();
       StringRef CN(ContainerName);
-      if (CN.contains_lower("test") || CN.contains_lower("mock"))
+      if (CN.contains_insensitive("test") || CN.contains_insensitive("mock"))
         return true;
     }
   }
