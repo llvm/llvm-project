@@ -96,14 +96,12 @@ public:
     return vector(ElementCount::getScalable(MinNumElements), ScalarTy);
   }
 
-  static LLT scalarOrVector(uint16_t NumElements, LLT ScalarTy) {
-    // FIXME: Migrate interface to use ElementCount
-    return NumElements == 1 ? ScalarTy
-                            : LLT::fixed_vector(NumElements, ScalarTy);
+  static LLT scalarOrVector(ElementCount EC, LLT ScalarTy) {
+    return EC.isScalar() ? ScalarTy : LLT::vector(EC, ScalarTy);
   }
 
-  static LLT scalarOrVector(uint16_t NumElements, unsigned ScalarSize) {
-    return scalarOrVector(NumElements, LLT::scalar(ScalarSize));
+  static LLT scalarOrVector(ElementCount EC, unsigned ScalarSize) {
+    return scalarOrVector(EC, LLT::scalar(ScalarSize));
   }
 
   explicit LLT(bool isPointer, bool isVector, ElementCount EC,
@@ -189,7 +187,8 @@ public:
   LLT changeNumElements(unsigned NewNumElts) const {
     assert((!isVector() || !isScalable()) &&
            "Cannot use changeNumElements on a scalable vector");
-    return LLT::scalarOrVector(NewNumElts, getScalarType());
+    return LLT::scalarOrVector(ElementCount::getFixed(NewNumElts),
+                               getScalarType());
   }
 
   /// Return a type that is \p Factor times smaller. Reduces the number of
@@ -199,7 +198,8 @@ public:
     assert(Factor != 1);
     if (isVector()) {
       assert(getNumElements() % Factor == 0);
-      return scalarOrVector(getNumElements() / Factor, getElementType());
+      return scalarOrVector(getElementCount().divideCoefficientBy(Factor),
+                            getElementType());
     }
 
     assert(getSizeInBits() % Factor == 0);
