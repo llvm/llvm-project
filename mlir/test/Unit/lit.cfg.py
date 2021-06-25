@@ -37,3 +37,7 @@ if 'HOME' in os.environ:
 for symbolizer in ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH']:
     if symbolizer in os.environ:
         config.environment[symbolizer] = os.environ[symbolizer]
+
+# FIXME: PPC needs to be switched to use the large code model
+if 'powerpc' in config.host_triple:
+    config.unsupported = True
