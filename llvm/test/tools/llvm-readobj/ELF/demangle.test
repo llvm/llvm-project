@@ -199,8 +199,8 @@ Sections:
     Link: .symtab
     EntSize: 8
     Content: "2000000000000000"
-  - Name: .rela.llvm.call-graph-profile
-    Type: SHT_RELA
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
     Info: .llvm.call-graph-profile
     Relocations:
       - Symbol: 1

@@ -134,20 +134,20 @@ entry:
 define dso_local void @testLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-LABEL: testLdStPair:
 ; LE-PAIRED:       # %bb.0: # %entry
-; LE-PAIRED-NEXT:    plxv vs1, g@PCREL+32(0), 1
-; LE-PAIRED-NEXT:    plxv vs0, g@PCREL+48(0), 1
-; LE-PAIRED-NEXT:    pstxv vs1, g@PCREL+64(0), 1
-; LE-PAIRED-NEXT:    pstxv vs0, g@PCREL+80(0), 1
+; LE-PAIRED-NEXT:    plxv v3, g@PCREL+32(0), 1
+; LE-PAIRED-NEXT:    plxv v2, g@PCREL+48(0), 1
+; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+64(0), 1
+; LE-PAIRED-NEXT:    pstxv v2, g@PCREL+80(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testLdStPair:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, g@toc@ha
 ; BE-PAIRED-NEXT:    addi r3, r3, g@toc@l
-; BE-PAIRED-NEXT:    lxv vs1, 48(r3)
-; BE-PAIRED-NEXT:    lxv vs0, 32(r3)
-; BE-PAIRED-NEXT:    stxv vs1, 80(r3)
-; BE-PAIRED-NEXT:    stxv vs0, 64(r3)
+; BE-PAIRED-NEXT:    lxv v3, 48(r3)
+; BE-PAIRED-NEXT:    lxv v2, 32(r3)
+; BE-PAIRED-NEXT:    stxv v3, 80(r3)
+; BE-PAIRED-NEXT:    stxv v2, 64(r3)
 ; BE-PAIRED-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds <256 x i1>, <256 x i1>* @g, i64 1
@@ -163,12 +163,12 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-NEXT:    sldi r3, r3, 5
 ; LE-PAIRED-NEXT:    paddi r5, 0, g@PCREL, 1
 ; LE-PAIRED-NEXT:    add r6, r5, r3
-; LE-PAIRED-NEXT:    lxvx vs1, r5, r3
+; LE-PAIRED-NEXT:    lxvx v3, r5, r3
 ; LE-PAIRED-NEXT:    sldi r3, r4, 5
-; LE-PAIRED-NEXT:    lxv vs0, 16(r6)
+; LE-PAIRED-NEXT:    lxv v2, 16(r6)
 ; LE-PAIRED-NEXT:    add r4, r5, r3
-; LE-PAIRED-NEXT:    stxvx vs1, r5, r3
-; LE-PAIRED-NEXT:    stxv vs0, 16(r4)
+; LE-PAIRED-NEXT:    stxvx v3, r5, r3
+; LE-PAIRED-NEXT:    stxv v2, 16(r4)
 ; LE-PAIRED-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testXLdStPair:
@@ -177,12 +177,12 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-NEXT:    sldi r3, r3, 5
 ; BE-PAIRED-NEXT:    addi r5, r5, g@toc@l
 ; BE-PAIRED-NEXT:    add r6, r5, r3
-; BE-PAIRED-NEXT:    lxvx vs0, r5, r3
+; BE-PAIRED-NEXT:    lxvx v2, r5, r3
 ; BE-PAIRED-NEXT:    sldi r3, r4, 5
-; BE-PAIRED-NEXT:    lxv vs1, 16(r6)
+; BE-PAIRED-NEXT:    lxv v3, 16(r6)
 ; BE-PAIRED-NEXT:    add r4, r5, r3
-; BE-PAIRED-NEXT:    stxvx vs0, r5, r3
-; BE-PAIRED-NEXT:    stxv vs1, 16(r4)
+; BE-PAIRED-NEXT:    stxvx v2, r5, r3
+; BE-PAIRED-NEXT:    stxv v3, 16(r4)
 ; BE-PAIRED-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds <256 x i1>, <256 x i1>* @g, i64 %SrcIdx
@@ -195,10 +195,10 @@ entry:
 define dso_local void @testUnalignedLdStPair() {
 ; LE-PAIRED-LABEL: testUnalignedLdStPair:
 ; LE-PAIRED:       # %bb.0: # %entry
-; LE-PAIRED-NEXT:    plxv vs1, g@PCREL+11(0), 1
-; LE-PAIRED-NEXT:    plxv vs0, g@PCREL+27(0), 1
-; LE-PAIRED-NEXT:    pstxv vs1, g@PCREL+19(0), 1
-; LE-PAIRED-NEXT:    pstxv vs0, g@PCREL+35(0), 1
+; LE-PAIRED-NEXT:    plxv v3, g@PCREL+11(0), 1
+; LE-PAIRED-NEXT:    plxv v2, g@PCREL+27(0), 1
+; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+19(0), 1
+; LE-PAIRED-NEXT:    pstxv v2, g@PCREL+35(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testUnalignedLdStPair:
@@ -206,13 +206,13 @@ define dso_local void @testUnalignedLdStPair() {
 ; BE-PAIRED-NEXT:    addis r3, r2, g@toc@ha
 ; BE-PAIRED-NEXT:    li r4, 11
 ; BE-PAIRED-NEXT:    addi r3, r3, g@toc@l
-; BE-PAIRED-NEXT:    lxvx vs0, r3, r4
+; BE-PAIRED-NEXT:    lxvx v2, r3, r4
 ; BE-PAIRED-NEXT:    li r4, 27
-; BE-PAIRED-NEXT:    lxvx vs1, r3, r4
+; BE-PAIRED-NEXT:    lxvx v3, r3, r4
 ; BE-PAIRED-NEXT:    li r4, 35
-; BE-PAIRED-NEXT:    stxvx vs1, r3, r4
+; BE-PAIRED-NEXT:    stxvx v3, r3, r4
 ; BE-PAIRED-NEXT:    li r4, 19
-; BE-PAIRED-NEXT:    stxvx vs0, r3, r4
+; BE-PAIRED-NEXT:    stxvx v2, r3, r4
 ; BE-PAIRED-NEXT:    blr
 entry:
   %0 = bitcast <256 x i1>* @g to i8*

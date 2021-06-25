@@ -38,7 +38,7 @@ define i8* @test_simplify2() {
 
 define i8* @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    [[STRNCPY:%.*]] = call i8* @strncpy(i8* noalias noundef nonnull returned writeonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noalias nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0), i32 12) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[STRNCPY:%.*]] = call i8* @strncpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0), i32 12)
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0

@@ -377,6 +377,13 @@ def TST_F  : FPI<0xD9, MRM_E4, (outs), (ins), "ftst">;
 } // SchedRW
 } // Uses = [FPCW], mayRaiseFPException = 1
 
+let SchedRW = [WriteFTest] in {
+def XAM_Fp32  : FpIf32<(outs), (ins RFP32:$src), OneArgFP, []>;
+def XAM_Fp64  : FpIf64<(outs), (ins RFP64:$src), OneArgFP, []>;
+def XAM_Fp80  : FpI_<(outs), (ins RFP80:$src), OneArgFP, []>;
+def XAM_F     : FPI<0xD9, MRM_E5, (outs), (ins), "fxam">;
+} // SchedRW
+
 // Versions of FP instructions that take a single memory operand.  Added for the
 //   disassembler; remove as they are included with patterns elsewhere.
 let SchedRW = [WriteFComLd], Uses = [FPCW], mayRaiseFPException = 1,
@@ -732,7 +739,6 @@ def FNOP : I<0xD9, MRM_D0, (outs), (ins), "fnop", []>, Sched<[WriteNop]>;
 let SchedRW = [WriteMicrocoded] in {
 let Defs = [FPSW] in {
 def WAIT : I<0x9B, RawFrm, (outs), (ins), "wait", []>;
-def FXAM : I<0xD9, MRM_E5, (outs), (ins), "fxam", []>;
 def FDECSTP : I<0xD9, MRM_F6, (outs), (ins), "fdecstp", []>;
 def FINCSTP : I<0xD9, MRM_F7, (outs), (ins), "fincstp", []>;
 let Uses = [FPCW], mayRaiseFPException = 1 in {

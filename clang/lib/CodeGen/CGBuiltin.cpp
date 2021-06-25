@@ -15427,6 +15427,19 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *Call = Builder.CreateCall(F, CallOps);
     return Builder.CreateAlignedStore(Call, Ops[0], MaybeAlign(64));
   }
+
+  case PPC::BI__builtin_ppc_compare_and_swap:
+  case PPC::BI__builtin_ppc_compare_and_swaplp: {
+    Address Addr = EmitPointerWithAlignment(E->getArg(0));
+    Address OldValAddr = EmitPointerWithAlignment(E->getArg(1));
+    Value *OldVal = Builder.CreateLoad(OldValAddr);
+    QualType AtomicTy = E->getArg(0)->getType()->getPointeeType();
+    LValue LV = MakeAddrLValue(Addr, AtomicTy);
+    auto Pair = EmitAtomicCompareExchange(
+        LV, RValue::get(OldVal), RValue::get(Ops[2]), E->getExprLoc(),
+        llvm::AtomicOrdering::Monotonic, llvm::AtomicOrdering::Monotonic, true);
+    return Pair.second;
+  }
   }
 }
 

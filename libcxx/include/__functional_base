@@ -11,6 +11,7 @@
 #define _LIBCPP_FUNCTIONAL_BASE
 
 #include <__config>
+#include <__functional/unary_function.h>
 #include <exception>
 #include <new>
 #include <type_traits>

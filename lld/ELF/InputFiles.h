@@ -251,8 +251,8 @@ public:
 
   // SHT_LLVM_CALL_GRAPH_PROFILE table.
   ArrayRef<Elf_CGProfile> cgProfile;
-  // SHT_LLVM_CALL_GRAPH_PROFILE relocations.
-  ArrayRef<Elf_Rela> cgProfileRela;
+  // SHT_LLVM_CALL_GRAPH_PROFILE relocations, always in the REL format.
+  ArrayRef<Elf_Rel> cgProfileRel;
 
   // Get cached DWARF information.
   DWARFCache *getDwarf();

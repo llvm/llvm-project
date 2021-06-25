@@ -397,6 +397,7 @@ public:
   void addPreRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+  void addPreEmitPass2() override;
   // GlobalISEL
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
@@ -535,6 +536,9 @@ void PPCPassConfig::addPreEmitPass() {
 
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createPPCEarlyReturnPass());
+}
+
+void PPCPassConfig::addPreEmitPass2() {
   // Must run branch selection immediately preceding the asm printer.
   addPass(createPPCBranchSelectionPass());
 }

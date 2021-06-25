@@ -14,7 +14,7 @@ define i1 @test(%struct.outer* align 8 dereferenceable(16) %o1, %struct.outer* a
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_OUTER]], %struct.outer* [[O2:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[CSTR:%.*]] = bitcast i64* [[TMP0]] to i8*
 ; CHECK-NEXT:    [[CSTR1:%.*]] = bitcast i64* [[TMP1]] to i8*
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture [[CSTR]], i8* nocapture [[CSTR1]], i64 16) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 16)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[IF_END5:%.*]]
 ; CHECK:       if.end5:

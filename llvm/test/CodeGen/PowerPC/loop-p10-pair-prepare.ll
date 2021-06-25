@@ -27,13 +27,13 @@ define void @foo(i64* %.n, [0 x %_elem_type_of_x]* %.x, [0 x %_elem_type_of_y]* 
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_2: # %_loop_1_do_
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lxvp vsp2, 0(r3)
-; CHECK-NEXT:    lxvp vsp4, 32(r3)
+; CHECK-NEXT:    lxvp vsp34, 0(r3)
+; CHECK-NEXT:    lxvp vsp36, 32(r3)
 ; CHECK-NEXT:    addi r3, r3, 128
-; CHECK-NEXT:    xvadddp vs0, vs0, vs3
-; CHECK-NEXT:    xvadddp vs0, vs0, vs2
-; CHECK-NEXT:    xvadddp vs0, vs0, vs5
-; CHECK-NEXT:    xvadddp vs0, vs0, vs4
+; CHECK-NEXT:    xvadddp vs0, vs0, vs35
+; CHECK-NEXT:    xvadddp vs0, vs0, vs34
+; CHECK-NEXT:    xvadddp vs0, vs0, vs37
+; CHECK-NEXT:    xvadddp vs0, vs0, vs36
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %_loop_1_loopHeader_._return_bb_crit_edge
 ; CHECK-NEXT:    stxv vs0, 0(r6)
@@ -54,13 +54,13 @@ define void @foo(i64* %.n, [0 x %_elem_type_of_x]* %.x, [0 x %_elem_type_of_y]* 
 ; CHECK-BE-NEXT:    .p2align 5
 ; CHECK-BE-NEXT:  .LBB0_2: # %_loop_1_do_
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    lxvp vsp2, 0(r3)
-; CHECK-BE-NEXT:    lxvp vsp4, 32(r3)
+; CHECK-BE-NEXT:    lxvp vsp34, 0(r3)
+; CHECK-BE-NEXT:    lxvp vsp36, 32(r3)
 ; CHECK-BE-NEXT:    addi r3, r3, 128
-; CHECK-BE-NEXT:    xvadddp vs0, vs0, vs2
-; CHECK-BE-NEXT:    xvadddp vs0, vs0, vs3
-; CHECK-BE-NEXT:    xvadddp vs0, vs0, vs4
-; CHECK-BE-NEXT:    xvadddp vs0, vs0, vs5
+; CHECK-BE-NEXT:    xvadddp vs0, vs0, vs34
+; CHECK-BE-NEXT:    xvadddp vs0, vs0, vs35
+; CHECK-BE-NEXT:    xvadddp vs0, vs0, vs36
+; CHECK-BE-NEXT:    xvadddp vs0, vs0, vs37
 ; CHECK-BE-NEXT:    bdnz .LBB0_2
 ; CHECK-BE-NEXT:  # %bb.3: # %_loop_1_loopHeader_._return_bb_crit_edge
 ; CHECK-BE-NEXT:    stxv vs0, 0(r6)

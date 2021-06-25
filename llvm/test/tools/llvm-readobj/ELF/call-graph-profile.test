@@ -34,8 +34,8 @@ Sections:
       - Weight: 89
       - Weight: 98
     EntSize: [[ENTSIZE=<none>]]
-  - Name: .rela.llvm.call-graph-profile
-    Type: SHT_RELA
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
     Info: .llvm.call-graph-profile
     Relocations:
       - Symbol: foo
@@ -98,8 +98,8 @@ Sections:
       - Weight: 10
       - Weight: 20
       - Weight: 20
-  - Name: .rela.llvm.call-graph-profile
-    Type: SHT_RELA
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
     Info: .llvm.call-graph-profile
     Relocations:
       - Symbol: 1
@@ -186,8 +186,8 @@ Sections:
       - Weight: 89
       - Weight: 98
     EntSize: [[ENTSIZE=<none>]]
-  - Name: .rela.llvm.call-graph-profile
-    Type: SHT_RELA
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
     Info: .llvm.call-graph-profile
     Relocations:
       - Symbol: foo
@@ -213,7 +213,7 @@ Symbols:
 # RUN: llvm-readobj %t6.o --cg-profile 2>&1 | FileCheck %s -DFILE=%t6.o --check-prefix=LLVM-RELOC-WRONG-SIZE
 # RUN: llvm-readobj %t6.o --elf-cg-profile 2>&1 | FileCheck %s -DFILE=%t6.o --check-prefix=LLVM-RELOC-WRONG-SIZE
 
-# LLVM-RELOC-WRONG-SIZE:      warning: '[[FILE]]': unable to load relocations for SHT_LLVM_CALL_GRAPH_PROFILE section: section [index 2] has invalid sh_entsize: expected 24, but got 32
+# LLVM-RELOC-WRONG-SIZE:      warning: '[[FILE]]': unable to load relocations for SHT_LLVM_CALL_GRAPH_PROFILE section: section [index 2] has invalid sh_entsize: expected 16, but got 24
 # LLVM-RELOC-WRONG-SIZE-NEXT: CGProfile [
 # LLVM-RELOC-WRONG-SIZE-NEXT:  CGProfileEntry {
 # LLVM-RELOC-WRONG-SIZE-NEXT:    Weight: 89
@@ -236,8 +236,8 @@ Sections:
       - Weight: 89
       - Weight: 98
     EntSize: [[ENTSIZE=<none>]]
-  - Name: .rela.llvm.call-graph-profile
-    Type: SHT_RELA
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
     Info: .llvm.call-graph-profile
     Relocations:
       - Symbol: foo
@@ -251,7 +251,7 @@ Sections:
       - Offset: 0x3
         Symbol: foo
         Type:   R_X86_64_NONE
-    EntSize: 32
+    EntSize: 24
 Symbols:
   - Name: foo
   - Name: bar
