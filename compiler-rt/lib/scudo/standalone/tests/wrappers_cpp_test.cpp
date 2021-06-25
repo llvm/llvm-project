@@ -112,7 +112,8 @@ TEST(ScudoWrappersCppTest, ThreadedNew) {
   // TODO: Investigate why libc sometimes crashes with tag missmatch in
   // __pthread_clockjoin_ex.
   std::unique_ptr<scudo::ScopedDisableMemoryTagChecks> NoTags;
-  if (!SCUDO_ANDROID && scudo::archSupportsMemoryTagging() && scudo::systemSupportsMemoryTagging())
+  if (!SCUDO_ANDROID && scudo::archSupportsMemoryTagging() &&
+      scudo::systemSupportsMemoryTagging())
     NoTags = std::make_unique<scudo::ScopedDisableMemoryTagChecks>();
 
   Ready = false;

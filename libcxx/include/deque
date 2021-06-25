@@ -168,6 +168,7 @@ template <class T, class Allocator, class Predicate>
 #include <compare>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
 #include <type_traits>
 #include <version>

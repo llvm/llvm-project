@@ -52,7 +52,7 @@ define i8* @test_simplify3() {
 
 define i8* @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* noalias writeonly getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noalias nocapture readonly getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0)) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
 ; CHECK-NEXT:    ret i8* [[STPCPY]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -67,7 +67,7 @@ define i8* @test_simplify4() {
 define i8* @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
 ; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false, i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @__memcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i32 [[LEN]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @__memcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i32 [[LEN]])
 ; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 11)
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -82,7 +82,7 @@ define i8* @test_simplify5() {
 
 define i8* @test_simplify6() {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* nocapture noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0))
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 [[STRLEN]]
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;

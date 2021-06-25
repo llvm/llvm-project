@@ -346,7 +346,7 @@ fyl2xp1
 # CHECK-NEXT:  1      2     1.00                  U     fucomi	%st(3), %st
 # CHECK-NEXT:  1      2     1.00                  U     fucompi	%st(3), %st
 # CHECK-NEXT:  2      2     0.50                  U     wait
-# CHECK-NEXT:  1      100   0.25                  U     fxam
+# CHECK-NEXT:  1      2     1.00                  U     fxam
 # CHECK-NEXT:  15     17    4.00                  U     fxch	%st(1)
 # CHECK-NEXT:  15     17    4.00                  U     fxch	%st(3)
 # CHECK-NEXT:  90     63    16.50   *      *      U     fxrstor	(%eax)
@@ -369,7 +369,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     7.00   126.75 52.25  49.00  49.00  27.00  149.75 69.25  9.00
+# CHECK-NEXT:  -     7.00   127.50 52.00  49.00  49.00  27.00  149.50 69.00  9.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -513,7 +513,7 @@ fyl2xp1
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fucomi	%st(3), %st
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fucompi	%st(3), %st
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.50   0.50    -     wait
-# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     fxam
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fxam
 # CHECK-NEXT:  -      -     4.00   2.00    -      -      -     4.00   5.00    -     fxch	%st(1)
 # CHECK-NEXT:  -      -     4.00   2.00    -      -      -     4.00   5.00    -     fxch	%st(3)
 # CHECK-NEXT:  -      -     17.25  12.25  16.50  16.50   -     12.75  14.75   -     fxrstor	(%eax)

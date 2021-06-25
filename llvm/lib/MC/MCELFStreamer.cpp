@@ -513,9 +513,10 @@ void MCELFStreamer::finalizeCGProfile() {
   SwitchSection(CGProfile);
   uint64_t Offset = 0;
   for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
-    finalizeCGProfileEntry(E.From, Offset++);
-    finalizeCGProfileEntry(E.To, Offset++);
+    finalizeCGProfileEntry(E.From, Offset);
+    finalizeCGProfileEntry(E.To, Offset);
     emitIntValue(E.Count, sizeof(uint64_t));
+    Offset += sizeof(uint64_t);
   }
   PopSection();
 }
