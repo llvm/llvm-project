@@ -491,6 +491,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__debug>
 #include <__functional_base>
 #include <__functional/search.h>
+#include <__utility/forward.h>
 #include <concepts>
 #include <exception>
 #include <memory>

@@ -14,6 +14,7 @@
 #include <__functional_base> // std::less
 #include <__memory/allocator_traits.h> // __pointer
 #include <__memory/compressed_pair.h>
+#include <__utility/forward.h>
 #include <cstddef>
 #include <type_traits>
 #include <utility>

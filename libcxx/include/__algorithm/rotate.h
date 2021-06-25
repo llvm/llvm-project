@@ -11,11 +11,13 @@
 
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
+#include <__algorithm/swap_ranges.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
-#include <type_traits>
+#include <__utility/swap.h>
+#include <iterator>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
