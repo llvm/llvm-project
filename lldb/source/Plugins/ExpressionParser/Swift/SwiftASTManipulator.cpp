@@ -899,6 +899,10 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
 
   swift::VarDecl *result_var =
       AddExternalVariable(result_var_name, return_ast_type, metadata_sp);
+  if (!result_var) {
+    error.SetErrorString("Could not add external result variable.");
+    return false;
+  }
 
   result_var->overwriteAccess(swift::AccessLevel::Public);
   result_var->overwriteSetterAccess(swift::AccessLevel::Public);
@@ -942,6 +946,11 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
 
             swift::VarDecl *error_var = AddExternalVariable(
                 error_var_name, error_ast_type, error_metadata_sp);
+
+            if (!error_var) {
+              error.SetErrorString("Could not add external error variable.");
+              return false;
+            }
 
             error_var->overwriteAccess(swift::AccessLevel::Public);
             error_var->overwriteSetterAccess(
@@ -1033,6 +1042,9 @@ bool SwiftASTManipulator::AddExternalVariables(
     swift::Identifier name = variable.m_name;
     swift::Type var_type = GetSwiftType(variable.m_type);
 
+    if (!var_type)
+      return false;
+
     // If the type is an inout or lvalue type (happens if this is an argument)
     // strip that part off:
 
@@ -1121,6 +1133,10 @@ bool SwiftASTManipulator::AddExternalVariables(
       if (!referent_type)
         continue;
 
+      swift::Type swift_referent_type = GetSwiftType(referent_type);
+      if (!swift_referent_type) 
+        continue;
+      
       // One tricky bit here is that this var may be an argument to the function
       // whose context we are
       // emulating, and that argument might be of "inout" type.  We need to
@@ -1130,7 +1146,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       // it is inout or not, so we don't have to do anything more to get this to
       // work.
       swift::Type var_type =
-          GetSwiftType(referent_type)->getWithoutSpecifierType();
+          swift_referent_type->getWithoutSpecifierType();
       if (is_self) {
         // Another tricky bit is that the Metatype types we get have the
         // "Representation" already attached (i.e.
@@ -1318,6 +1334,9 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
       swift::TypeAliasDecl(swift::SourceLoc(), swift::SourceLoc(), name,
                            swift::SourceLoc(), nullptr, &m_source_file);
   swift::Type underlying_type = GetSwiftType(type);
+  if (!underlying_type)
+    return nullptr;
+
   type_alias_decl->setUnderlyingType(underlying_type);
   type_alias_decl->markAsDebuggerAlias(true);
   type_alias_decl->setImplicit(true);
