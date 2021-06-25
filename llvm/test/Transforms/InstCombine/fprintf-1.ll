@@ -21,7 +21,7 @@ define void @test_simplify1(%FILE* %fp) {
 ; CHECK-LABEL: @test_simplify1(
   %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
   call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* %fmt)
-; CHECK-NEXT: call i32 @fwrite(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 12, i32 1, %FILE* %fp)
+; CHECK-NEXT:call noundef i32 @fwrite(i8* nocapture noundef getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 noundef 12, i32 noundef 1, %FILE* nocapture noundef %fp) #0
   ret void
 ; CHECK-NEXT: ret void
 }
@@ -32,7 +32,7 @@ define void @test_simplify2(%FILE* %fp) {
 ; CHECK-LABEL: @test_simplify2(
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_c, i32 0, i32 0
   call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* %fmt, i8 104)
-; CHECK-NEXT: call i32 @fputc(i32 104, %FILE* %fp)
+; CHECK-NEXT: call noundef i32 @fputc(i32 noundef 104, %FILE* nocapture noundef %fp) #0
   ret void
 ; CHECK-NEXT: ret void
 }
@@ -45,7 +45,7 @@ define void @test_simplify3(%FILE* %fp) {
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_s, i32 0, i32 0
   %str = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
   call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* %fmt, i8* %str)
-; CHECK-NEXT: call i32 @fwrite(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 12, i32 1, %FILE* %fp)
+; CHECK-NEXT: call noundef i32 @fwrite(i8* nocapture noundef getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 noundef 12, i32 noundef 1, %FILE* nocapture noundef %fp) #0
   ret void
 ; CHECK-NEXT: ret void
 }
@@ -65,7 +65,7 @@ define void @test_simplify5(%FILE* %fp) {
 ; CHECK-LABEL: @test_simplify5(
   %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
   call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* %fmt) [ "deopt"() ]
-; CHECK-NEXT: call i32 @fwrite(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 12, i32 1, %FILE* %fp) [ "deopt"() ]
+; CHECK-NEXT: call noundef i32 @fwrite(i8* nocapture noundef getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 noundef 12, i32 noundef 1, %FILE* nocapture noundef %fp) #0
   ret void
 ; CHECK-NEXT: ret void
 }
