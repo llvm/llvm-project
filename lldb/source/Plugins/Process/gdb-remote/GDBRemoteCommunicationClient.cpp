@@ -590,7 +590,7 @@ DataBufferSP GDBRemoteCommunicationClient::ReadMemoryTags(lldb::addr_t addr,
                                                           size_t len,
                                                           int32_t type) {
   StreamString packet;
-  packet.Printf("qMemTags:%lx,%lx:%x", addr, len, type);
+  packet.Printf("qMemTags:%" PRIx64 ",%zx:%" PRIx32, addr, len, type);
   StringExtractorGDBRemote response;
 
   Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_MEMORY);
