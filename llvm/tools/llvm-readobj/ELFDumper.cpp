@@ -6723,20 +6723,20 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
       return;
     }
 
-    Elf_Rela_Range CGProfileRela;
+    Elf_Rel_Range CGProfileRel;
     bool UseReloc = (CGRelSection != nullptr);
     if (UseReloc) {
-      Expected<Elf_Rela_Range> CGProfileRelaOrError =
-          this->Obj.relas(*CGRelSection);
+      Expected<Elf_Rel_Range> CGProfileRelaOrError =
+          this->Obj.rels(*CGRelSection);
       if (!CGProfileRelaOrError) {
         this->reportUniqueWarning("unable to load relocations for "
                                   "SHT_LLVM_CALL_GRAPH_PROFILE section: " +
                                   toString(CGProfileRelaOrError.takeError()));
         UseReloc = false;
       } else
-        CGProfileRela = *CGProfileRelaOrError;
+        CGProfileRel = *CGProfileRelaOrError;
 
-      if (UseReloc && CGProfileRela.size() != (CGProfileOrErr->size() * 2)) {
+      if (UseReloc && CGProfileRel.size() != (CGProfileOrErr->size() * 2)) {
         this->reportUniqueWarning(
             "number of from/to pairs does not match number of frequencies");
         UseReloc = false;
@@ -6746,7 +6746,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
           "relocation section for a call graph section doesn't exist");
 
     auto GetIndex = [&](uint32_t Index) {
-      const Elf_Rel_Impl<ELFT, true> &Rel = CGProfileRela[Index];
+      const Elf_Rel_Impl<ELFT, false> &Rel = CGProfileRel[Index];
       return Rel.getSymbol(this->Obj.isMips64EL());
     };
 
