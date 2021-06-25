@@ -45,6 +45,8 @@ BUILTIN(__builtin_ppc_dcbt, "vv*", "")
 BUILTIN(__builtin_ppc_dcbtst, "vv*", "")
 BUILTIN(__builtin_ppc_dcbz, "vv*", "")
 BUILTIN(__builtin_ppc_icbt, "vv*", "")
+BUILTIN(__builtin_ppc_compare_and_swap, "iiD*i*i", "")
+BUILTIN(__builtin_ppc_compare_and_swaplp, "iLiD*Li*Li", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
