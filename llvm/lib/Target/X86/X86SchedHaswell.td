@@ -782,7 +782,7 @@ def : InstRW<[HWWrite3P01], (instrs COM_FIPr, COM_FIr, UCOM_FIPr, UCOM_FIr)>;
 def : InstRW<[HWWriteP1], (instregex "TST_F")>;
 
 // FXAM.
-def : InstRW<[HWWrite2P1], (instrs FXAM)>;
+def : InstRW<[HWWrite2P1], (instrs XAM_F)>;
 
 // FPREM.
 def HWWriteFPREM : SchedWriteRes<[]> {

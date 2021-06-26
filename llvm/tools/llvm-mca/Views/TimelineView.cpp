@@ -21,8 +21,8 @@ TimelineView::TimelineView(const MCSubtargetInfo &sti, MCInstPrinter &Printer,
                            llvm::ArrayRef<llvm::MCInst> S, unsigned Iterations,
                            unsigned Cycles)
     : InstructionView(sti, Printer, S), CurrentCycle(0),
-      MaxCycle(Cycles == 0 ? 80 : Cycles), LastCycle(0), WaitTime(S.size()),
-      UsedBuffer(S.size()) {
+      MaxCycle(Cycles == 0 ? std::numeric_limits<unsigned>::max() : Cycles),
+      LastCycle(0), WaitTime(S.size()), UsedBuffer(S.size()) {
   unsigned NumInstructions = getSource().size();
   assert(Iterations && "Invalid number of iterations specified!");
   NumInstructions *= Iterations;
@@ -288,7 +288,14 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
   for (unsigned Iteration = 0; Iteration < Iterations; ++Iteration) {
     for (const MCInst &Inst : Source) {
       const TimelineViewEntry &Entry = Timeline[IID];
-      if (Entry.CycleRetired == 0)
+      // When an instruction is retired after timeline-max-cycles,
+      // its CycleRetired is left at 0. However, it's possible for
+      // a 0 latency instruction to be retired during cycle 0 and we
+      // don't want to early exit in that case. The CycleExecuted
+      // attribute is set correctly whether or not it is greater
+      // than timeline-max-cycles so we can use that to ensure
+      // we don't early exit because of a 0 latency instruction.
+      if (Entry.CycleRetired == 0 && Entry.CycleExecuted != 0)
         return;
 
       unsigned SourceIndex = IID % Source.size();

@@ -355,7 +355,7 @@ func @nested_extract_slice_and_insert(
   // CHECK-SAME: {__inplace_results_attr__ = ["false"]}
   %sA = tensor.extract_slice %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   %ssA = tensor.extract_slice %sA[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
-  %FA = linalg.fill(%ssA, %f0) : tensor<4x4xf32>, f32 -> tensor<4x4xf32>
+  %FA = linalg.fill(%f0, %ssA) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
   %rsA = tensor.insert_slice %FA into %sA[0, 0][4, 4][1, 1] : tensor<4x4xf32> into tensor<?x?xf32>
   %rA = tensor.insert_slice %rsA into %A[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
@@ -382,7 +382,7 @@ func @nested_extract_slice_and_insert(
   %sB = tensor.extract_slice %B[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   %ssB = tensor.extract_slice %sB[0, 0][4, %idx][1, 1] : tensor<?x?xf32> to tensor<4x?xf32>
   %sssB = tensor.extract_slice %ssB[0, 0][4, 4][1, 1] : tensor<4x?xf32> to tensor<4x4xf32>
-  %FB = linalg.fill(%sssB, %f0) : tensor<4x4xf32>, f32 -> tensor<4x4xf32>
+  %FB = linalg.fill(%f0, %sssB) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
   %rssB = tensor.insert_slice %FB into %ssB[0, 0][4, 4][1, 1] : tensor<4x4xf32> into tensor<4x?xf32>
   %rsB = tensor.insert_slice %rssB into %sB[0, 0][4, %idx][1, 1] : tensor<4x?xf32> into tensor<?x?xf32>
   %rB = tensor.insert_slice %rsB into %B[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
@@ -405,10 +405,70 @@ func @nested_extract_slice_and_insert(
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
   %sC = tensor.extract_slice %C[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   %ssC = tensor.extract_slice %sC[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
-  %FC = linalg.fill(%ssC, %f0) : tensor<4x4xf32>, f32 -> tensor<4x4xf32>
+  %FC = linalg.fill(%f0, %ssC) : f32, tensor<4x4xf32> -> tensor<4x4xf32>
   %rsC = tensor.insert_slice %FC into %sC[0, 0][12345, 67890][1, 1] : tensor<4x4xf32> into tensor<?x?xf32>
   %rC = tensor.insert_slice %rsC into %C[0, 0][%idx, %idx][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
   return %rA, %rB, %rC: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// Simple loop cases
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: func @scf_for_yield_only
+func @scf_for_yield_only(%A : tensor<?xf32>,
+                         %B : tensor<?xf32> {linalg.inplaceable = true},
+                         %lb : index, %ub : index, %step : index)
+  -> (tensor<?xf32>, tensor<?xf32>)
+{
+  //      CHECK: scf.for
+  // CHECK-NEXT: scf.yield
+  // CHECK-NEXT: {__inplace_results_attr__ = ["false"]}
+  %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
+    scf.yield %t : tensor<?xf32>
+  }
+
+  //      CHECK: scf.for
+  // CHECK-NEXT: scf.yield
+  // CHECK-NEXT: {__inplace_results_attr__ = ["true"]}
+  %r1 = scf.for %i = %lb to %ub step %step iter_args(%t = %B) -> (tensor<?xf32>) {
+    scf.yield %t : tensor<?xf32>
+  }
+
+  return %r0, %r1: tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_for_with_tensor.insert_slice
+func @scf_for_with_tensor.insert_slice(%A : tensor<?xf32>,
+              %B : tensor<?xf32> {linalg.inplaceable = true},
+              %C : tensor<4xf32>,
+              %lb : index, %ub : index, %step : index)
+  -> (tensor<?xf32>, tensor<?xf32>)
+{
+  //      CHECK: scf.for
+  // scf.for bbArgs are always inplaceable seen from ops inside the body:
+  //   1. Either the matching tensor is not inplaceable and an alloc occurs
+  //      which makes bbArg inplaceable.
+  //   2. Or it is already inplaceable and so is bbArg.
+  // CHECK-NEXT:   tensor.insert_slice
+  // CHECK-SAME:     {__inplace_results_attr__ = ["true"]}
+  // CHECK-NEXT:   tensor.insert_slice
+  // CHECK-SAME:     {__inplace_results_attr__ = ["true"]}
+  // CHECK-NEXT:   scf.yield
+  // CHECK-NEXT: {__inplace_results_attr__ = ["false", "true"]}
+  %r0:2 = scf.for %i = %lb to %ub step %step iter_args(%tA = %A, %tB = %B)
+      -> (tensor<?xf32>, tensor<?xf32>)
+  {
+    %ttA = tensor.insert_slice %C into %tA[0][4][1] : tensor<4xf32> into tensor<?xf32>
+    %ttB = tensor.insert_slice %C into %tB[0][4][1] : tensor<4xf32> into tensor<?xf32>
+    scf.yield %ttA, %ttB : tensor<?xf32>, tensor<?xf32>
+  }
+
+  return %r0#0, %r0#1: tensor<?xf32>, tensor<?xf32>
 }
 

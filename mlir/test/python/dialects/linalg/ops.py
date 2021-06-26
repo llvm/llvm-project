@@ -59,7 +59,7 @@ def testFill():
       # CHECK-LABEL: func @fill_tensor
       #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: tensor<12x?xf32>
       #  CHECK-NEXT: %[[CST:.*]] = constant 0.0{{.*}} : f32
-      #  CHECK-NEXT: %[[RES:.*]] = linalg.fill(%[[OUT]], %[[CST]]) : tensor<12x?xf32>, f32 -> tensor<12x?xf32>
+      #  CHECK-NEXT: %[[RES:.*]] = linalg.fill(%[[CST]], %[[OUT]]) : f32, tensor<12x?xf32> -> tensor<12x?xf32>
       #  CHECK-NEXT: return %[[RES]] : tensor<12x?xf32>
       @builtin.FuncOp.from_py_func(
           RankedTensorType.get((12, -1), f32))
@@ -73,7 +73,7 @@ def testFill():
       # CHECK-LABEL: func @fill_buffer
       #  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: memref<12x?xf32>
       #  CHECK-NEXT: %[[CST:.*]] = constant 0.0{{.*}} : f32
-      #  CHECK-NEXT: linalg.fill(%[[OUT]], %[[CST]]) : memref<12x?xf32>, f32
+      #  CHECK-NEXT: linalg.fill(%[[CST]], %[[OUT]]) : f32, memref<12x?xf32>
       #  CHECK-NEXT: return
       @builtin.FuncOp.from_py_func(
           MemRefType.get((12, -1), f32))

@@ -93,26 +93,3 @@ func @sparse_to_unannotated_tensor(%arg0: memref<?xf64>) -> tensor<16x32xf64> {
   %0 = sparse_tensor.tensor %arg0 : memref<?xf64> to tensor<16x32xf64>
   return %0 : tensor<16x32xf64>
 }
-
-// -----
-
-#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["dense","compressed"]}>
-
-func @sparse_to_sparse_tensor(%arg0: memref<?xf64>) -> tensor<16x32xf64, #SparseMatrix> {
-  // expected-error@+1 {{unexpected non-dense dimension}}
-  %0 = sparse_tensor.tensor %arg0 : memref<?xf64> to tensor<16x32xf64, #SparseMatrix>
-  return %0 : tensor<16x32xf64, #SparseMatrix>
-}
-
-// -----
-
-#DenseMatrix = #sparse_tensor.encoding<{dimLevelType = ["dense","dense"]}>
-
-func @sparse_to_tensor(%arg0: memref<?xindex>,
-                       %arg1: memref<?xindex>,
-		       %arg2: memref<?xf64>) -> tensor<16x32xf64, #DenseMatrix> {
-  // expected-error@+1 {{expected single values array}}
-  %0 = sparse_tensor.tensor %arg0, %arg1, %arg2
-    : memref<?xindex>, memref<?xindex>, memref<?xf64> to tensor<16x32xf64, #DenseMatrix>
-  return %0 : tensor<16x32xf64, #DenseMatrix>
-}

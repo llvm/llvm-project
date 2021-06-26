@@ -404,6 +404,12 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.SetModuleFileSuffix(moduleSuffix->getValue());
   }
 
+  // -fno-analyzed-objects-for-unparse
+  if (args.hasArg(
+          clang::driver::options::OPT_fno_analyzed_objects_for_unparse)) {
+    res.SetUseAnalyzedObjectsForUnparse(false);
+  }
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 

@@ -13,9 +13,11 @@
 //   void
 //   swap(T (&a)[N], T (&b)[N]);
 
-#include <utility>
+#include <algorithm>
 #include <cassert>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 

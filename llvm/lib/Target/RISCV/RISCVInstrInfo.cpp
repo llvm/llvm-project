@@ -1473,8 +1473,8 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
-  assert(isInt<12>(NumOfVReg) &&
-         "Expect the number of vector registers within 12-bits.");
+  assert(isInt<32>(NumOfVReg) &&
+         "Expect the number of vector registers within 32-bits.");
   if (isPowerOf2_32(NumOfVReg)) {
     uint32_t ShiftAmount = Log2_32(NumOfVReg);
     if (ShiftAmount == 0)
@@ -1502,9 +1502,12 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(VL, RegState::Kill);
   } else {
     Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), N)
-        .addReg(RISCV::X0)
-        .addImm(NumOfVReg);
+    if (!isInt<12>(NumOfVReg))
+      movImm(MBB, II, DL, N, NumOfVReg);
+    else
+      BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), N)
+          .addReg(RISCV::X0)
+          .addImm(NumOfVReg);
     if (!MF.getSubtarget<RISCVSubtarget>().hasStdExtM())
       MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
           MF.getFunction(),

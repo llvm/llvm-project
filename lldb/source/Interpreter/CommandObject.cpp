@@ -219,7 +219,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       // A process that is not running is considered paused.
       if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
         result.AppendError("Process must exist.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
@@ -239,7 +238,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       case eStateUnloaded:
         if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
           result.AppendError("Process must be launched.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
         break;
@@ -249,7 +247,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
         if (GetFlags().Test(eCommandProcessMustBePaused)) {
           result.AppendError("Process is running.  Use 'process interrupt' to "
                              "pause execution.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -259,7 +256,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   if (GetFlags().Test(eCommandProcessMustBeTraced)) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target && !target->GetTrace()) {
-      result.SetError("Process is not being traced.");
+      result.AppendError("Process is not being traced.");
       return false;
     }
   }
@@ -319,11 +316,11 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
   llvm::StringRef long_help = GetHelpLong();
   llvm::StringRef syntax_help = GetSyntax();
 
-  if (search_short_help && short_help.contains_lower(search_word))
+  if (search_short_help && short_help.contains_insensitive(search_word))
     found_word = true;
-  else if (search_long_help && long_help.contains_lower(search_word))
+  else if (search_long_help && long_help.contains_insensitive(search_word))
     found_word = true;
-  else if (search_syntax && syntax_help.contains_lower(search_word))
+  else if (search_syntax && syntax_help.contains_insensitive(search_word))
     found_word = true;
 
   if (!found_word && search_options && GetOptions() != nullptr) {
@@ -333,7 +330,7 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
     if (!usage_help.Empty()) {
       llvm::StringRef usage_text = usage_help.GetString();
-      if (usage_text.contains_lower(search_word))
+      if (usage_text.contains_insensitive(search_word))
         found_word = true;
     }
   }
@@ -351,7 +348,6 @@ bool CommandObject::ParseOptionsAndNotify(Args &args,
   Status error(group_options.NotifyOptionParsingFinished(&exe_ctx));
   if (error.Fail()) {
     result.AppendError(error.AsCString());
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
   return true;

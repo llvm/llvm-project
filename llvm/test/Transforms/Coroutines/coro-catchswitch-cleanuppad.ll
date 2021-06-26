@@ -1,6 +1,5 @@
 ; Tests the PHI nodes in cleanuppads for catchswitch instructions are correctly
 ; split up.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)

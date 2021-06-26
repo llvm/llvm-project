@@ -101,6 +101,7 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx1032 %s 2>&1 | FileCheck --check-prefix=GFX1032 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1033 %s 2>&1 | FileCheck --check-prefix=GFX1033 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1034 %s 2>&1 | FileCheck --check-prefix=GFX1034 %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx1035 %s 2>&1 | FileCheck --check-prefix=GFX1035 %s
 
 // GCNDEFAULT-NOT: -target-cpu
 // GFX600:    "-target-cpu" "gfx600"
@@ -134,3 +135,4 @@
 // GFX1032:   "-target-cpu" "gfx1032"
 // GFX1033:   "-target-cpu" "gfx1033"
 // GFX1034:   "-target-cpu" "gfx1034"
+// GFX1035:   "-target-cpu" "gfx1035"

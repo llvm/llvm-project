@@ -363,7 +363,7 @@ void SBCommandReturnObject::SetError(const char *error_cstr) {
                      error_cstr);
 
   if (error_cstr)
-    ref().SetError(error_cstr);
+    ref().AppendError(error_cstr);
 }
 
 namespace lldb_private {

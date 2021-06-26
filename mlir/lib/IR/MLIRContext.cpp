@@ -24,7 +24,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/DebugAction.h"
-#include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -35,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/RWMutex.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -261,6 +261,9 @@ public:
   // Other
   //===--------------------------------------------------------------------===//
 
+  /// The thread pool to use when processing MLIR tasks in parallel.
+  llvm::ThreadPool threadPool;
+
   /// This is a list of dialects that are created referring to this context.
   /// The MLIRContext owns the objects.
   DenseMap<StringRef, std::unique_ptr<Dialect>> loadedDialects;
@@ -275,10 +278,6 @@ public:
   llvm::StringMap<PointerUnion<Dialect *, MLIRContext *>,
                   llvm::BumpPtrAllocator &>
       identifiers;
-  /// A thread local cache of identifiers to reduce lock contention.
-  ThreadLocalCache<llvm::StringMap<
-      llvm::StringMapEntry<PointerUnion<Dialect *, MLIRContext *>> *>>
-      localIdentifierCache;
 
   /// An allocator used for AbstractAttribute and AbstractType objects.
   llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
@@ -576,6 +575,12 @@ void MLIRContext::disableMultithreading(bool disable) {
   impl->typeUniquer.disableMultithreading(disable);
 }
 
+llvm::ThreadPool &MLIRContext::getThreadPool() {
+  assert(isMultithreadingEnabled() &&
+         "expected multi-threading to be enabled within the context");
+  return impl->threadPool;
+}
+
 void MLIRContext::enterMultiThreadedExecution() {
 #ifndef NDEBUG
   ++impl->multiThreadedExecutionContext;
@@ -710,17 +715,30 @@ void AbstractOperation::insert(
     ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
     VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait) {
-  AbstractOperation opInfo(name, dialect, typeID, std::move(parseAssembly),
-                           std::move(printAssembly),
-                           std::move(verifyInvariants), std::move(foldHook),
-                           std::move(getCanonicalizationPatterns),
-                           std::move(interfaceMap), std::move(hasTrait));
-
-  auto &impl = dialect.getContext()->getImpl();
+    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+    ArrayRef<StringRef> attrNames) {
+  MLIRContext *ctx = dialect.getContext();
+  auto &impl = ctx->getImpl();
   assert(impl.multiThreadedExecutionContext == 0 &&
          "Registering a new operation kind while in a multi-threaded execution "
          "context");
+
+  // Register the attribute names of this operation.
+  MutableArrayRef<Identifier> cachedAttrNames;
+  if (!attrNames.empty()) {
+    cachedAttrNames = MutableArrayRef<Identifier>(
+        impl.identifierAllocator.Allocate<Identifier>(attrNames.size()),
+        attrNames.size());
+    for (unsigned i : llvm::seq<unsigned>(0, attrNames.size()))
+      new (&cachedAttrNames[i]) Identifier(Identifier::get(attrNames[i], ctx));
+  }
+
+  // Register the information for this operation.
+  AbstractOperation opInfo(
+      name, dialect, typeID, std::move(parseAssembly), std::move(printAssembly),
+      std::move(verifyInvariants), std::move(foldHook),
+      std::move(getCanonicalizationPatterns), std::move(interfaceMap),
+      std::move(hasTrait), cachedAttrNames);
   if (!impl.registeredOperations.insert({name, std::move(opInfo)}).second) {
     llvm::errs() << "error: operation named '" << name
                  << "' is already registered.\n";
@@ -733,7 +751,8 @@ AbstractOperation::AbstractOperation(
     ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
     VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait)
+    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+    ArrayRef<Identifier> attrNames)
     : name(Identifier::get(name, dialect.getContext())), dialect(dialect),
       typeID(typeID), interfaceMap(std::move(interfaceMap)),
       foldHookFn(std::move(foldHook)),
@@ -741,7 +760,8 @@ AbstractOperation::AbstractOperation(
       hasTraitFn(std::move(hasTrait)),
       parseAssemblyFn(std::move(parseAssembly)),
       printAssemblyFn(std::move(printAssembly)),
-      verifyInvariantsFn(std::move(verifyInvariants)) {}
+      verifyInvariantsFn(std::move(verifyInvariants)),
+      attributeNames(attrNames) {}
 
 //===----------------------------------------------------------------------===//
 // AbstractType
@@ -796,26 +816,18 @@ Identifier Identifier::get(const Twine &string, MLIRContext *context) {
     return Identifier(&*insertedIt.first);
   }
 
-  // Check for an existing instance in the local cache.
-  auto *&localEntry = (*impl.localIdentifierCache)[str];
-  if (localEntry)
-    return Identifier(localEntry);
-
   // Check for an existing identifier in read-only mode.
   {
     llvm::sys::SmartScopedReader<true> contextLock(impl.identifierMutex);
     auto it = impl.identifiers.find(str);
-    if (it != impl.identifiers.end()) {
-      localEntry = &*it;
-      return Identifier(localEntry);
-    }
+    if (it != impl.identifiers.end())
+      return Identifier(&*it);
   }
 
   // Acquire a writer-lock so that we can safely create the new instance.
   llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
   auto it = impl.identifiers.insert({str, getDialectOrContext()}).first;
-  localEntry = &*it;
-  return Identifier(localEntry);
+  return Identifier(&*it);
 }
 
 Dialect *Identifier::getDialect() {

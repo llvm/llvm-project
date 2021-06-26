@@ -498,7 +498,7 @@ int main(int argc, char **argv) {
   }
 
   if (Args.hasArg(OPT_help)) {
-    T.PrintHelp(
+    T.printHelp(
         outs(), (std::string(argv[0]) + " [options] <input files>").c_str(),
         "manipulate archived DWARF debug symbol files.\n\n"
         "dsymutil links the DWARF debug information found in the object files\n"

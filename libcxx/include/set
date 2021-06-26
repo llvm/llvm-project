@@ -437,6 +437,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__debug>
 #include <__node_handle>
 #include <__tree>
+#include <__utility/forward.h>
 #include <compare>
 #include <functional>
 #include <initializer_list>

@@ -169,6 +169,13 @@ mlirAffineMapGetMajorSubMap(MlirAffineMap affineMap, intptr_t numResults);
 MLIR_CAPI_EXPORTED MlirAffineMap
 mlirAffineMapGetMinorSubMap(MlirAffineMap affineMap, intptr_t numResults);
 
+/// Apply AffineExpr::replace(`map`) to each of the results and return a new
+/// new AffineMap with the new results and the specified number of dims and
+/// symbols.
+MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapReplace(
+    MlirAffineMap affineMap, MlirAffineExpr expression,
+    MlirAffineExpr replacement, intptr_t numResultDims, intptr_t numResultSyms);
+
 /// Returns the simplified affine map resulting from dropping the symbols that
 /// do not appear in any of the individual maps in `affineMaps`.
 /// Asserts that all maps in `affineMaps` are normalized to the same number of

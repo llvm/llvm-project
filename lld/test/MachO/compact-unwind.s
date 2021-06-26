@@ -110,6 +110,9 @@ _main:
 _quux:
   ret
 
+.globl _abs
+_abs = 4
+
 .p2align 2
 _baz:
   .cfi_startproc

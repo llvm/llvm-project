@@ -197,8 +197,17 @@ Sections:
   - Name: .llvm.call-graph-profile
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     Link: .symtab
-    EntSize: 16
-    Content: "01000000020000002000000000000000"
+    EntSize: 8
+    Content: "2000000000000000"
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
+    Info: .llvm.call-graph-profile
+    Relocations:
+      - Symbol: 1
+        Type:   R_X86_64_NONE
+      - Offset: 0x1
+        Symbol: 2
+        Type:   R_X86_64_NONE
   - Name: .llvm_addrsig
     Type: SHT_LLVM_ADDRSIG
     Link: .symtab

@@ -6762,7 +6762,7 @@ def warn_param_mismatched_alignment : Warning<
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
 def err_typecheck_invalid_operands : Error<
-  "invalid operands to binary expression (%0 and %1)">;
+  "invalid operands to binary expression (%0 and %1)">, Deferrable;
 def note_typecheck_invalid_operands_converted : Note<
   "%select{first|second}0 operand was implicitly converted to type %1">;
 def err_typecheck_logical_vector_expr_gnu_cpp_restrict : Error<
@@ -6785,9 +6785,14 @@ def ext_typecheck_compare_complete_incomplete_pointers : Extension<
   "%0 is %select{|in}2complete and "
   "%1 is %select{|in}3complete">,
   InGroup<C11>;
+def warn_typecheck_ordered_comparison_of_function_pointers : Warning<
+  "ordered comparison of function pointers (%0 and %1)">,
+  InGroup<OrderedCompareFunctionPointers>;
 def ext_typecheck_ordered_comparison_of_function_pointers : ExtWarn<
   "ordered comparison of function pointers (%0 and %1)">,
-  InGroup<DiagGroup<"ordered-compare-function-pointers">>;
+  InGroup<OrderedCompareFunctionPointers>;
+def err_typecheck_ordered_comparison_of_function_pointers : Error<
+  "ordered comparison of function pointers (%0 and %1)">;
 def ext_typecheck_comparison_of_fptr_to_void : Extension<
   "equality comparison between function pointer and void pointer (%0 and %1)">;
 def err_typecheck_comparison_of_fptr_to_void : Error<
@@ -9134,9 +9139,6 @@ def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
   "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
-def note_defaulted_comparison_selected_invalid : Note<
-  "would compare %select{|member|base class}0 %1 "
-  "as %2, which does not support relational comparisons">;
 def err_incorrect_defaulted_comparison_constexpr : Error<
   "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
   "three-way comparison operator}0 "

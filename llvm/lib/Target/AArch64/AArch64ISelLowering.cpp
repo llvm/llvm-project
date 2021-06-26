@@ -1125,6 +1125,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VSCALE, MVT::i32, Custom);
 
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Custom);
+
+    setLoadExtAction(ISD::EXTLOAD,  MVT::v4i16, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::EXTLOAD,  MVT::v4i32, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
+    setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
   }
 
   if (Subtarget->hasSVE()) {
@@ -1818,7 +1825,7 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
 
             // Disregard v2i64. Memcpy lowering produces those and splitting
             // them regresses performance on micro-benchmarks and olden/bh.
-            Ty == LLT::vector(2, 64);
+            Ty == LLT::fixed_vector(2, 64);
   }
   return true;
 }
@@ -4472,6 +4479,40 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   return SDValue();
 }
 
+// Custom lowering for extending v4i8 vector loads.
+SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
+                                         SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
+  assert(LoadNode && "Expected custom lowering of a load node");
+  EVT VT = Op->getValueType(0);
+  assert((VT == MVT::v4i16 || VT == MVT::v4i32) && "Expected v4i16 or v4i32");
+
+  if (LoadNode->getMemoryVT() != MVT::v4i8)
+    return SDValue();
+
+  unsigned ExtType;
+  if (LoadNode->getExtensionType() == ISD::SEXTLOAD)
+    ExtType = ISD::SIGN_EXTEND;
+  else if (LoadNode->getExtensionType() == ISD::ZEXTLOAD ||
+           LoadNode->getExtensionType() == ISD::EXTLOAD)
+    ExtType = ISD::ZERO_EXTEND;
+  else
+    return SDValue();
+
+  SDValue Load = DAG.getLoad(MVT::f32, DL, DAG.getEntryNode(),
+                             LoadNode->getBasePtr(), MachinePointerInfo());
+  SDValue Chain = Load.getValue(1);
+  SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f32, Load);
+  SDValue BC = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Vec);
+  SDValue Ext = DAG.getNode(ExtType, DL, MVT::v8i16, BC);
+  Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i16, Ext,
+                    DAG.getConstant(0, DL, MVT::i64));
+  if (VT == MVT::v4i32)
+    Ext = DAG.getNode(ExtType, DL, MVT::v4i32, Ext);
+  return DAG.getMergeValues({Ext, Chain}, DL);
+}
+
 // Generate SUBS and CSEL for integer abs.
 SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
@@ -4715,7 +4756,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::LOAD:
     if (useSVEForFixedLengthVectorVT(Op.getValueType()))
       return LowerFixedLengthVectorLoadToSVE(Op, DAG);
-    llvm_unreachable("Unexpected request to lower ISD::LOAD");
+    return LowerLOAD(Op, DAG);
   case ISD::ADD:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ADD_PRED);
   case ISD::AND:
@@ -8038,7 +8079,7 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
                         : std::make_pair(0U, &AArch64::PPRRegClass);
     }
   }
-  if (StringRef("{cc}").equals_lower(Constraint))
+  if (StringRef("{cc}").equals_insensitive(Constraint))
     return std::make_pair(unsigned(AArch64::NZCV), &AArch64::CCRRegClass);
 
   // Use the default implementation in TargetLowering to convert the register
@@ -11756,7 +11797,7 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
 
   if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
       AlignmentIsAcceptable(MVT::v2i64, Align(16)))
-    return LLT::vector(2, 64);
+    return LLT::fixed_vector(2, 64);
   if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
     return LLT::scalar(128);
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))

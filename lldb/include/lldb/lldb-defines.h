@@ -82,6 +82,7 @@
 #define LLDB_REGNUM_GENERIC_ARG8                                               \
   12 // The register that would contain pointer size or less argument 8 (if any)
 /// Invalid value definitions
+#define LLDB_INVALID_STOP_ID 0
 #define LLDB_INVALID_ADDRESS UINT64_MAX
 #define LLDB_INVALID_INDEX32 UINT32_MAX
 #define LLDB_INVALID_IVAR_OFFSET UINT32_MAX

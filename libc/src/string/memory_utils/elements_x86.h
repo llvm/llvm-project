@@ -46,7 +46,7 @@ template <typename Base> struct Vector : public Base {
   }
 
   static int CharDiff(const char *a, const char *b, uint64_t mask) {
-    const size_t diff_index = __builtin_ctzl(mask);
+    const size_t diff_index = __builtin_ctzll(mask);
     const int ca = (unsigned char)a[diff_index];
     const int cb = (unsigned char)b[diff_index];
     return ca - cb;

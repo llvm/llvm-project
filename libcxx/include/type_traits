@@ -2818,46 +2818,6 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_destructible_v
 
 #endif // __has_keyword(__is_destructible)
 
-// move
-
-template <class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename remove_reference<_Tp>::type&&
-move(_Tp&& __t) _NOEXCEPT
-{
-    typedef _LIBCPP_NODEBUG_TYPE typename remove_reference<_Tp>::type _Up;
-    return static_cast<_Up&&>(__t);
-}
-
-template <class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-_Tp&&
-forward(typename remove_reference<_Tp>::type& __t) _NOEXCEPT
-{
-    return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-_Tp&&
-forward(typename remove_reference<_Tp>::type&& __t) _NOEXCEPT
-{
-    static_assert(!is_lvalue_reference<_Tp>::value,
-                  "cannot forward an rvalue as an lvalue");
-    return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-typename decay<_Tp>::type
-__decay_copy(_Tp&& __t)
-#if _LIBCPP_STD_VER > 17
-noexcept(is_nothrow_convertible_v<_Tp, remove_reference_t<_Tp>>)
-#endif
-{
-    return _VSTD::forward<_Tp>(__t);
-}
-
 template <class _MP, bool _IsMemberFunctionPtr, bool _IsMemberObjectPtr>
 struct __member_pointer_traits_imp
 {
@@ -3866,42 +3826,42 @@ template <class _Fp, class _A0, class ..._Args,
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN((_VSTD::forward<_A0>(__a0).*__f)(_VSTD::forward<_Args>(__args)...))
+_LIBCPP_INVOKE_RETURN((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet1<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN((_VSTD::forward<_A0>(__a0).*__f)(_VSTD::forward<_Args>(__args)...))
+_LIBCPP_INVOKE_RETURN((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet2<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN((__a0.get().*__f)(_VSTD::forward<_Args>(__args)...))
+_LIBCPP_INVOKE_RETURN((__a0.get().*__f)(static_cast<_Args&&>(__args)...))
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet2<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN((__a0.get().*__f)(_VSTD::forward<_Args>(__args)...))
+_LIBCPP_INVOKE_RETURN((__a0.get().*__f)(static_cast<_Args&&>(__args)...))
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet3<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN(((*_VSTD::forward<_A0>(__a0)).*__f)(_VSTD::forward<_Args>(__args)...))
+_LIBCPP_INVOKE_RETURN(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
 
 template <class _Fp, class _A0, class ..._Args,
           class = __enable_if_bullet3<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN(((*_VSTD::forward<_A0>(__a0)).*__f)(_VSTD::forward<_Args>(__args)...))
+_LIBCPP_INVOKE_RETURN(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
 
 // bullets 4, 5 and 6
 
@@ -3910,14 +3870,14 @@ template <class _Fp, class _A0,
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN(_VSTD::forward<_A0>(__a0).*__f)
+_LIBCPP_INVOKE_RETURN(static_cast<_A0&&>(__a0).*__f)
 
 template <class _Fp, class _A0,
           class = __enable_if_bullet4<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN(_VSTD::forward<_A0>(__a0).*__f)
+_LIBCPP_INVOKE_RETURN(static_cast<_A0&&>(__a0).*__f)
 
 template <class _Fp, class _A0,
           class = __enable_if_bullet5<_Fp, _A0>>
@@ -3938,14 +3898,14 @@ template <class _Fp, class _A0,
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN((*_VSTD::forward<_A0>(__a0)).*__f)
+_LIBCPP_INVOKE_RETURN((*static_cast<_A0&&>(__a0)).*__f)
 
 template <class _Fp, class _A0,
           class = __enable_if_bullet6<_Fp, _A0>>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _A0&& __a0)
-_LIBCPP_INVOKE_RETURN((*_VSTD::forward<_A0>(__a0)).*__f)
+_LIBCPP_INVOKE_RETURN((*static_cast<_A0&&>(__a0)).*__f)
 
 // bullet 7
 
@@ -3953,13 +3913,13 @@ template <class _Fp, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR_AFTER_CXX17 auto
 __invoke(_Fp&& __f, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN(_VSTD::forward<_Fp>(__f)(_VSTD::forward<_Args>(__args)...))
+_LIBCPP_INVOKE_RETURN(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
 
 template <class _Fp, class ..._Args>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR auto
 __invoke_constexpr(_Fp&& __f, _Args&& ...__args)
-_LIBCPP_INVOKE_RETURN(_VSTD::forward<_Fp>(__f)(_VSTD::forward<_Args>(__args)...))
+_LIBCPP_INVOKE_RETURN(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
 
 #undef _LIBCPP_INVOKE_RETURN
 
@@ -4185,70 +4145,32 @@ _LIBCPP_INLINE_VAR constexpr bool is_nothrow_invocable_r_v
 
 #endif // _LIBCPP_STD_VER > 14
 
+// __swappable
+
 template <class _Tp> struct __is_swappable;
 template <class _Tp> struct __is_nothrow_swappable;
 
-// swap, swap_ranges
 
-template <class _ForwardIterator1, class _ForwardIterator2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-_ForwardIterator2
-swap_ranges(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2);
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp>
+using __swap_result_t = typename enable_if<is_move_constructible<_Tp>::value && is_move_assignable<_Tp>::value>::type;
+#else
+template <class>
+using __swap_result_t = void;
+#endif
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-#ifndef _LIBCPP_CXX03_LANG
-typename enable_if
-<
-    is_move_constructible<_Tp>::value &&
-    is_move_assignable<_Tp>::value
->::type
-#else
-void
-#endif
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_CONSTEXPR_AFTER_CXX17 __swap_result_t<_Tp>
 swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
-                                    is_nothrow_move_assignable<_Tp>::value)
-{
-    _Tp __t(_VSTD::move(__x));
-    __x = _VSTD::move(__y);
-    __y = _VSTD::move(__t);
-}
+                                    is_nothrow_move_assignable<_Tp>::value);
 
 template<class _Tp, size_t _Np>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename enable_if<
     __is_swappable<_Tp>::value
 >::type
-swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value)
-{
-    _VSTD::swap_ranges(__a, __a + _Np, __b);
-}
-
-template <class _ForwardIterator1, class _ForwardIterator2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-_ForwardIterator2
-swap_ranges(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2)
-{
-    for(; __first1 != __last1; ++__first1, (void) ++__first2)
-        swap(*__first1, *__first2);
-    return __first2;
-}
-
-// iter_swap
-
-template <class _ForwardIterator1, class _ForwardIterator2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-void
-iter_swap(_ForwardIterator1 __a, _ForwardIterator2 __b)
-    //                                  _NOEXCEPT_(_NOEXCEPT_(swap(*__a, *__b)))
-               _NOEXCEPT_(_NOEXCEPT_(swap(*declval<_ForwardIterator1>(),
-                                          *declval<_ForwardIterator2>())))
-{
-    swap(*__a, *__b);
-}
-
-// __swappable
+swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value);
 
 namespace __detail
 {

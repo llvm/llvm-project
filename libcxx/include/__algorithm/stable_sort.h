@@ -15,6 +15,7 @@
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/sort.h>
 #include <__iterator/iterator_traits.h>
+#include <__utility/swap.h>
 #include <memory>
 #include <type_traits> // swap
 

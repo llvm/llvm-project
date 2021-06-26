@@ -159,16 +159,16 @@ Error TextInstrProfReader::readHeader() {
 
   while (Line->startswith(":")) {
     StringRef Str = Line->substr(1);
-    if (Str.equals_lower("ir"))
+    if (Str.equals_insensitive("ir"))
       IsIRInstr = true;
-    else if (Str.equals_lower("fe"))
+    else if (Str.equals_insensitive("fe"))
       IsIRInstr = false;
-    else if (Str.equals_lower("csir")) {
+    else if (Str.equals_insensitive("csir")) {
       IsIRInstr = true;
       IsCS = true;
-    } else if (Str.equals_lower("entry_first"))
+    } else if (Str.equals_insensitive("entry_first"))
       IsEntryFirst = true;
-    else if (Str.equals_lower("not_entry_first"))
+    else if (Str.equals_insensitive("not_entry_first"))
       IsEntryFirst = false;
     else
       return error(instrprof_error::bad_header);

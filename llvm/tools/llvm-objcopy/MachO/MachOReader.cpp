@@ -13,9 +13,9 @@
 #include "llvm/Support/Errc.h"
 #include <memory>
 
-namespace llvm {
-namespace objcopy {
-namespace macho {
+using namespace llvm;
+using namespace llvm::objcopy;
+using namespace llvm::objcopy::macho;
 
 void MachOReader::readHeader(Object &O) const {
   O.Header.Magic = MachOObj.getHeader().magic;
@@ -28,7 +28,7 @@ void MachOReader::readHeader(Object &O) const {
 }
 
 template <typename SectionType>
-Section constructSectionCommon(SectionType Sec, uint32_t Index) {
+static Section constructSectionCommon(SectionType Sec, uint32_t Index) {
   StringRef SegName(Sec.segname, strnlen(Sec.segname, sizeof(Sec.segname)));
   StringRef SectName(Sec.sectname, strnlen(Sec.sectname, sizeof(Sec.sectname)));
   Section S(SegName, SectName);
@@ -60,10 +60,9 @@ template <> Section constructSection(MachO::section_64 Sec, uint32_t Index) {
 }
 
 template <typename SectionType, typename SegmentType>
-Expected<std::vector<std::unique_ptr<Section>>>
-extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
-                const object::MachOObjectFile &MachOObj,
-                uint32_t &NextSectionIndex) {
+Expected<std::vector<std::unique_ptr<Section>>> static extractSections(
+    const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
+    const object::MachOObjectFile &MachOObj, uint32_t &NextSectionIndex) {
   auto End = LoadCmd.Ptr + LoadCmd.C.cmdsize;
   const SectionType *Curr =
       reinterpret_cast<const SectionType *>(LoadCmd.Ptr + sizeof(SegmentType));
@@ -335,7 +334,3 @@ Expected<std::unique_ptr<Object>> MachOReader::create() const {
   readSwiftVersion(*Obj);
   return std::move(Obj);
 }
-
-} // end namespace macho
-} // end namespace objcopy
-} // end namespace llvm

@@ -254,8 +254,7 @@ public:
     ~sentry();
 
     _LIBCPP_INLINE_VISIBILITY
-        _LIBCPP_EXPLICIT
-        operator bool() const {return __ok_;}
+    explicit operator bool() const {return __ok_;}
 };
 
 template <class _CharT, class _Traits>
@@ -1025,8 +1024,6 @@ flush(basic_ostream<_CharT, _Traits>& __os)
     return __os;
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _Stream, class _Tp, class = void>
 struct __is_ostreamable : false_type { };
 
@@ -1037,7 +1034,7 @@ struct __is_ostreamable<_Stream, _Tp, decltype(
 
 template <class _Stream, class _Tp, class = typename enable_if<
     _And<is_base_of<ios_base, _Stream>,
-         __is_ostreamable<_Stream&, const _Tp&>>::value
+         __is_ostreamable<_Stream&, const _Tp&> >::value
 >::type>
 _LIBCPP_INLINE_VISIBILITY
 _Stream&& operator<<(_Stream&& __os, const _Tp& __x)
@@ -1045,8 +1042,6 @@ _Stream&& operator<<(_Stream&& __os, const _Tp& __x)
     __os << __x;
     return _VSTD::move(__os);
 }
-
-#endif // _LIBCPP_CXX03_LANG
 
 template<class _CharT, class _Traits, class _Allocator>
 basic_ostream<_CharT, _Traits>&

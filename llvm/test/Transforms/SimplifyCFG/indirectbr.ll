@@ -20,13 +20,15 @@ define void @indbrtest0(i8** %P, i8** %Q) {
 ; CHECK:       BB0:
 ; CHECK-NEXT:    call void @A()
 ; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       BB1:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[BB0]] ], [ 1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    call void @B(i32 [[X]])
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       BB2:
 ; CHECK-NEXT:    call void @C()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   store i8* blockaddress(@indbrtest0, %BB0), i8** %P
@@ -105,12 +107,14 @@ define void @indbrtest3(i1 %cond, i8* %address) nounwind {
 ; CHECK-LABEL: @indbrtest3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[L1:%.*]], label [[L2:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       L1:
 ; CHECK-NEXT:    call void @A()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       L2:
 ; CHECK-NEXT:    call void @C()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %indirect.goto.dest = select i1 %cond, i8* blockaddress(@indbrtest3, %L1), i8* blockaddress(@indbrtest3, %L2)

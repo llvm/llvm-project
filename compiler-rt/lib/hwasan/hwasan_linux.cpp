@@ -428,7 +428,7 @@ void HwasanOnDeadlySignal(int signo, void *info, void *context) {
   HandleDeadlySignal(info, context, GetTid(), &OnStackUnwind, nullptr);
 }
 
-void Thread::InitStackAndTls() {
+void Thread::InitStackAndTls(const InitState *) {
   uptr tls_size;
   uptr stack_size;
   GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,

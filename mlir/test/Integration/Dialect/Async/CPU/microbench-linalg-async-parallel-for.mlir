@@ -1,12 +1,10 @@
 // RUN:   mlir-opt %s                                                          \
-// RUN:               -linalg-tile-to-parallel-loops="linalg-tile-sizes=256"   \
-// RUN:               -async-parallel-for="num-concurrent-async-execute=4"     \
+// RUN:               -convert-linalg-to-parallel-loops                        \
+// RUN:               -async-parallel-for                                      \
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-ref-counting                              \
-// RUN:               -async-runtime-ref-counting-opt                          \
+// FIXME:             -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
-// RUN:               -lower-affine                                            \
-// RUN:               -convert-linalg-to-loops                                 \
 // RUN:               -convert-scf-to-std                                      \
 // RUN:               -std-expand                                              \
 // RUN:               -convert-vector-to-llvm                                  \
@@ -65,8 +63,8 @@ func @entry() {
   %RHS10 = memref.alloc() {alignment = 64} : memref<1x10xf32>
   %DST10 = memref.alloc() {alignment = 64} : memref<1x10xf32>
 
-  linalg.fill(%LHS10, %f1) : memref<1x10xf32>, f32
-  linalg.fill(%RHS10, %f1) : memref<1x10xf32>, f32
+  linalg.fill(%f1, %LHS10) : f32, memref<1x10xf32>
+  linalg.fill(%f1, %RHS10) : f32, memref<1x10xf32>
 
   %LHS = memref.cast %LHS10 : memref<1x10xf32> to memref<?x?xf32>
   %RHS = memref.cast %RHS10 : memref<1x10xf32> to memref<?x?xf32>

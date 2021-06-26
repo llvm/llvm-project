@@ -296,8 +296,8 @@ func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   %cf = constant 1.0 : f32
   %3 = memref.subview %arg0[%c0, %c0][%c2000, %c4000][%c1, %c1] :
  	 memref<?x?xf32, offset: ?, strides: [?, 1]> to memref<?x?xf32, offset: ?, strides: [?, ?]>
-  linalg.fill(%3, %cf) { __internal_linalg_transform__ = "_promote_views_aligned_"}
-  	:  memref<?x?xf32, offset: ?, strides: [?, ?]>, f32
+  linalg.fill(%cf, %3) { __internal_linalg_transform__ = "_promote_views_aligned_"}
+  	: f32, memref<?x?xf32, offset: ?, strides: [?, ?]>
   return
 }
 // CHECK-LABEL: func @aligned_promote_fill
@@ -306,9 +306,9 @@ func @aligned_promote_fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
 // CHECK:         %[[a0:.*]] = memref.alloc() {alignment = 32 : i64} : memref<32000000xi8>
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<32000000xi8> to memref<?x?xf32>
 // CHECK:         %[[l0:.*]] = memref.subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
-// CHECK:         linalg.fill(%[[v0]], {{.*}}) : memref<?x?xf32>, f32
+// CHECK:         linalg.fill({{.*}}, %[[v0]]) : f32, memref<?x?xf32>
 // CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
-// CHECK:         linalg.fill(%[[v0]], %[[cf]]) : memref<?x?xf32>, f32
+// CHECK:         linalg.fill(%[[cf]], %[[v0]]) : f32, memref<?x?xf32>
 
 func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, offset: ?, strides: [?, 1]>) {
   %c2000 = constant 2000 : index
@@ -319,8 +319,8 @@ func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, offset: ?, st
   %cc = complex.create %cf, %cf : complex<f32>
   %3 = memref.subview %arg0[%c0, %c0][%c2000, %c4000][%c1, %c1] :
  	 memref<?x?xcomplex<f32>, offset: ?, strides: [?, 1]> to memref<?x?xcomplex<f32>, offset: ?, strides: [?, ?]>
-  linalg.fill(%3, %cc) { __internal_linalg_transform__ = "_promote_views_aligned_"}
-  	:  memref<?x?xcomplex<f32>, offset: ?, strides: [?, ?]>, complex<f32>
+  linalg.fill(%cc, %3) { __internal_linalg_transform__ = "_promote_views_aligned_"}
+  	: complex<f32>, memref<?x?xcomplex<f32>, offset: ?, strides: [?, ?]>
   return
 }
 // CHECK-LABEL: func @aligned_promote_fill_complex
@@ -329,9 +329,9 @@ func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, offset: ?, st
 // CHECK:         %[[a0:.*]] = memref.alloc() {alignment = 32 : i64} : memref<64000000xi8>
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<64000000xi8> to memref<?x?xcomplex<f32>>
 // CHECK:         %[[l0:.*]] = memref.subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xcomplex<f32>> to memref<?x?xcomplex<f32>, #[[$STRIDED_2D_u_1]]>
-// CHECK:         linalg.fill(%[[v0]], {{.*}}) : memref<?x?xcomplex<f32>>, complex<f32>
+// CHECK:         linalg.fill({{.*}}, %[[v0]]) : complex<f32>, memref<?x?xcomplex<f32>>
 // CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xcomplex<f32>, #map{{.*}}>, memref<?x?xcomplex<f32>, #map{{.*}}>
-// CHECK:         linalg.fill(%[[v0]], %[[cc]]) : memref<?x?xcomplex<f32>>, complex<f32>
+// CHECK:         linalg.fill(%[[cc]], %[[v0]]) : complex<f32>, memref<?x?xcomplex<f32>>
 
 func @tile_permute_parallel_loop(%arg0: memref<?x?xf32>,
                                  %arg1: memref<?x?xf32>,

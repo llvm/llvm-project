@@ -15,6 +15,7 @@
 #include <__algorithm/min_element.h>
 #include <__algorithm/partial_sort.h>
 #include <__algorithm/unwrap_iter.h>
+#include <__utility/swap.h>
 #include <memory>
 #include <type_traits> // swap
 

@@ -14,40 +14,33 @@
 
 #include "mlir/Pass/Pass.h"
 
-#define PASS_NAME "test-mlir-reducer"
-
 using namespace mlir;
-
-static llvm::cl::OptionCategory clOptionsCategory(PASS_NAME " options");
 
 namespace {
 
 /// This pass looks for for the presence of an operation with the name
 /// "crashOp" in the input MLIR file and crashes the mlir-opt tool if the
 /// operation is found.
-struct TestReducer : public PassWrapper<TestReducer, FunctionPass> {
-  StringRef getArgument() const final { return PASS_NAME; }
+struct TestReducer : public PassWrapper<TestReducer, OperationPass<>> {
+  StringRef getArgument() const final { return "test-mlir-reducer"; }
   StringRef getDescription() const final {
     return "Tests MLIR Reduce tool by generating failures";
   }
-  TestReducer() = default;
-  TestReducer(const TestReducer &pass){};
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 } // end anonymous namespace
 
-void TestReducer::runOnFunction() {
-  for (auto &op : getOperation())
-    op.walk([&](Operation *op) {
-      StringRef opName = op->getName().getStringRef();
+void TestReducer::runOnOperation() {
+  getOperation()->walk([&](Operation *op) {
+    StringRef opName = op->getName().getStringRef();
 
-      if (opName.contains("op_crash")) {
-        llvm::errs() << "MLIR Reducer Test generated failure: Found "
-                        "\"crashOp\" operation\n";
-        exit(1);
-      }
-    });
+    if (opName.contains("op_crash")) {
+      llvm::errs() << "MLIR Reducer Test generated failure: Found "
+                      "\"crashOp\" operation\n";
+      exit(1);
+    }
+  });
 }
 
 namespace mlir {

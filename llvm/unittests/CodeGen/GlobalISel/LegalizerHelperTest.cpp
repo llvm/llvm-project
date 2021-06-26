@@ -145,7 +145,7 @@ TEST_F(AArch64GISelMITest, LowerRotatesVector) {
     getActionDefinitionsBuilder({G_ROTR, G_ROTL}).lower(); });
 
   LLT S32 = LLT::scalar(32);
-  LLT V4S32 = LLT::vector(4, S32);
+  LLT V4S32 = LLT::fixed_vector(4, S32);
   auto SrcTrunc = B.buildTrunc(S32, Copies[0]);
   auto Src = B.buildSplatVector(V4S32, SrcTrunc);
   auto AmtTrunc = B.buildTrunc(S32, Copies[1]);
@@ -1346,8 +1346,8 @@ TEST_F(AArch64GISelMITest, FewerElementsAnd) {
   if (!TM)
     return;
 
-  const LLT V2S32 = LLT::vector(2, 32);
-  const LLT V5S32 = LLT::vector(5, 32);
+  const LLT V2S32 = LLT::fixed_vector(2, 32);
+  const LLT V5S32 = LLT::fixed_vector(5, 32);
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -1402,8 +1402,8 @@ TEST_F(AArch64GISelMITest, MoreElementsAnd) {
     return;
 
   LLT s32 = LLT::scalar(32);
-  LLT v2s32 = LLT::vector(2, 32);
-  LLT v6s32 = LLT::vector(6, 32);
+  LLT v2s32 = LLT::fixed_vector(2, 32);
+  LLT v6s32 = LLT::fixed_vector(6, 32);
 
   LegalizerInfo LI;
   LI.getActionDefinitionsBuilder(TargetOpcode::G_AND)
@@ -1447,8 +1447,8 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
   LLT s1 = LLT::scalar(1);
   LLT s32 = LLT::scalar(32);
   LLT s64 = LLT::scalar(64);
-  LLT v2s32 = LLT::vector(2, 32);
-  LLT v5s32 = LLT::vector(5, 32);
+  LLT v2s32 = LLT::fixed_vector(2, 32);
+  LLT v5s32 = LLT::fixed_vector(5, 32);
 
   LegalizerInfo LI;
   LI.getActionDefinitionsBuilder(TargetOpcode::G_PHI)
@@ -1590,11 +1590,11 @@ TEST_F(AArch64GISelMITest, LowerMinMax) {
     return;
 
   LLT s64 = LLT::scalar(64);
-  LLT v2s32 = LLT::vector(2, 32);
+  LLT v2s32 = LLT::fixed_vector(2, 32);
 
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
-      .lowerFor({s64, LLT::vector(2, s32)});
+        .lowerFor({s64, LLT::fixed_vector(2, s32)});
   });
 
   auto SMin = B.buildSMin(s64, Copies[0], Copies[1]);
@@ -1678,12 +1678,12 @@ TEST_F(AArch64GISelMITest, WidenScalarBuildVector) {
 
   LLT S32 = LLT::scalar(32);
   LLT S16 = LLT::scalar(16);
-  LLT V2S16 = LLT::vector(2, S16);
-  LLT V2S32 = LLT::vector(2, S32);
+  LLT V2S16 = LLT::fixed_vector(2, S16);
+  LLT V2S32 = LLT::fixed_vector(2, S32);
 
   DefineLegalizerInfo(A, {
     getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
-      .lowerFor({s64, LLT::vector(2, s32)});
+        .lowerFor({s64, LLT::fixed_vector(2, s32)});
   });
 
   AInfo Info(MF->getSubtarget());
@@ -3122,7 +3122,7 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
   LLT S64{LLT::scalar(64)};
   LLT P0{LLT::pointer(0, 64)};
   LLT P1{LLT::pointer(1, 32)};
-  LLT V2S32{LLT::vector(2, 32)};
+  LLT V2S32{LLT::fixed_vector(2, 32)};
 
   auto TruncS32 = B.buildTrunc(S32, Copies[0]);
   auto IntToPtrP0 = B.buildIntToPtr(P0, Copies[0]);
@@ -3251,8 +3251,8 @@ TEST_F(AArch64GISelMITest, LowerBSWAP) {
   DefineLegalizerInfo(A, {});
 
   // Make sure vector lowering doesn't assert.
-  auto Cast = B.buildBitcast(LLT::vector(2, 32), Copies[0]);
-  auto BSwap = B.buildBSwap(LLT::vector(2, 32), Cast);
+  auto Cast = B.buildBitcast(LLT::fixed_vector(2, 32), Copies[0]);
+  auto BSwap = B.buildBSwap(LLT::fixed_vector(2, 32), Cast);
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
@@ -3402,7 +3402,7 @@ TEST_F(AArch64GISelMITest, BitcastLoad) {
 
   LLT P0 = LLT::pointer(0, 64);
   LLT S32 = LLT::scalar(32);
-  LLT V4S8 = LLT::vector(4, 8);
+  LLT V4S8 = LLT::fixed_vector(4, 8);
   auto Ptr = B.buildUndef(P0);
 
   DefineLegalizerInfo(A, {});
@@ -3436,7 +3436,7 @@ TEST_F(AArch64GISelMITest, BitcastStore) {
 
   LLT P0 = LLT::pointer(0, 64);
   LLT S32 = LLT::scalar(32);
-  LLT V4S8 = LLT::vector(4, 8);
+  LLT V4S8 = LLT::fixed_vector(4, 8);
   auto Ptr = B.buildUndef(P0);
 
   DefineLegalizerInfo(A, {});
@@ -3470,7 +3470,7 @@ TEST_F(AArch64GISelMITest, BitcastSelect) {
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
-  LLT V4S8 = LLT::vector(4, 8);
+  LLT V4S8 = LLT::fixed_vector(4, 8);
 
   DefineLegalizerInfo(A, {});
 
@@ -3500,7 +3500,7 @@ TEST_F(AArch64GISelMITest, BitcastSelect) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 
   // Doesn't make sense
-  auto VCond = B.buildUndef(LLT::vector(4, 1));
+  auto VCond = B.buildUndef(LLT::fixed_vector(4, 1));
   auto VSelect = B.buildSelect(V4S8, VCond, Val0, Val1);
 
   B.setInsertPt(*EntryMBB, VSelect->getIterator());
@@ -3516,7 +3516,7 @@ TEST_F(AArch64GISelMITest, BitcastBitOps) {
     return;
 
   LLT S32 = LLT::scalar(32);
-  LLT V4S8 = LLT::vector(4, 8);
+  LLT V4S8 = LLT::fixed_vector(4, 8);
 
   DefineLegalizerInfo(A, {});
 
@@ -3601,7 +3601,7 @@ TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
   LLT S32{LLT::scalar(32)};
   LLT S48{LLT::scalar(48)};
   LLT S64{LLT::scalar(64)};
-  LLT V2S64{{LLT::vector(2, 64)}};
+  LLT V2S64{{LLT::fixed_vector(2, 64)}};
 
   auto Implicit1 = B.buildUndef(S64);
   auto Implicit2 = B.buildUndef(S64);
@@ -3663,8 +3663,8 @@ TEST_F(AArch64GISelMITest, WidenFreeze) {
   // Make sure that G_FREEZE is widened with anyext
   LLT S64{LLT::scalar(64)};
   LLT S128{LLT::scalar(128)};
-  LLT V2S32{LLT::vector(2, 32)};
-  LLT V2S64{LLT::vector(2, 64)};
+  LLT V2S32{LLT::fixed_vector(2, 32)};
+  LLT V2S64{LLT::fixed_vector(2, 64)};
 
   auto Vector = B.buildBitcast(V2S32, Copies[0]);
 
@@ -3715,8 +3715,8 @@ TEST_F(AArch64GISelMITest, NarrowFreeze) {
   LLT S32{LLT::scalar(32)};
   LLT S33{LLT::scalar(33)};
   LLT S64{LLT::scalar(64)};
-  LLT V2S16{LLT::vector(2, 16)};
-  LLT V2S32{LLT::vector(2, 32)};
+  LLT V2S16{LLT::fixed_vector(2, 16)};
+  LLT V2S32{LLT::fixed_vector(2, 32)};
 
   auto Trunc = B.buildTrunc(S33, {Copies[0]});
   auto Vector = B.buildBitcast(V2S32, Copies[0]);
@@ -3799,9 +3799,9 @@ TEST_F(AArch64GISelMITest, FewerElementsFreeze) {
   DefineLegalizerInfo(A, {});
 
   LLT S32{LLT::scalar(32)};
-  LLT V2S16{LLT::vector(2, 16)};
-  LLT V2S32{LLT::vector(2, 32)};
-  LLT V4S16{LLT::vector(4, 16)};
+  LLT V2S16{LLT::fixed_vector(2, 16)};
+  LLT V2S32{LLT::fixed_vector(2, 32)};
+  LLT V4S16{LLT::fixed_vector(4, 16)};
 
   auto Vector1 = B.buildBitcast(V2S32, Copies[0]);
   auto Vector2 = B.buildBitcast(V4S16, Copies[0]);
@@ -3851,8 +3851,8 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
 
   DefineLegalizerInfo(A, {});
 
-  LLT V2S32{LLT::vector(2, 32)};
-  LLT V4S32{LLT::vector(4, 32)};
+  LLT V2S32{LLT::fixed_vector(2, 32)};
+  LLT V4S32{LLT::fixed_vector(4, 32)};
 
   auto Vector1 = B.buildBitcast(V2S32, Copies[0]);
   auto FreezeVector1 = B.buildInstr(TargetOpcode::G_FREEZE, {V2S32}, {Vector1});
@@ -3890,9 +3890,9 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
   LLT P0{LLT::pointer(0, 64)};
   LLT S64{LLT::scalar(64)};
   LLT S16{LLT::scalar(16)};
-  LLT V2S16{LLT::vector(2, 16)};
-  LLT V3S16{LLT::vector(3, 16)};
-  LLT V8S16{LLT::vector(8, 16)};
+  LLT V2S16{LLT::fixed_vector(2, 16)};
+  LLT V3S16{LLT::fixed_vector(3, 16)};
+  LLT V8S16{LLT::fixed_vector(8, 16)};
 
   auto Ptr0 = B.buildIntToPtr(P0, Copies[0]);
   auto VectorV8 = B.buildLoad(V8S16, Ptr0, MachinePointerInfo(), Align(8));

@@ -18,12 +18,13 @@ define i32 @f_1(i1 %c) {
 ; Demonstrate that we (intentionally) do not simplify a guard on undef
 ; CHECK-LABEL: @f_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 10, [[TRUE]] ], [ 20, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 undef) [ "deopt"() ]
-; CHECK-NEXT:    ret i32 10
-; CHECK:       false:
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 
 entry:
@@ -71,8 +72,8 @@ define i32 @f_3(i1* %c, i32* %buf) {
 ; CHECK-NEXT:    unreachable
 ; CHECK:       merge_block:
 ; CHECK-NEXT:    [[C1:%.*]] = load volatile i1, i1* [[C]], align 1
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C1]], i32 50, i32 100
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[C1]], i32 50, i32 100
+; CHECK-NEXT:    ret i32 [[DOT]]
 ;
 entry:
   %c0 = load volatile i1, i1* %c

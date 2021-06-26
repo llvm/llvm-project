@@ -252,6 +252,12 @@ The source operands are registers as follows:
 - The least-significant bit for the extraction
 - The width of the extraction
 
+The least-significant bit (lsb) and width operands are in the range:
+
+::
+
+      0 <= lsb < lsb + width <= source bitwidth, where all values are unsigned
+
 G_SBFX sign-extends the result, while G_UBFX zero-extends the result.
 
 .. code-block:: none

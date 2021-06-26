@@ -1,6 +1,9 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
+; CHECK: @global = external global ptr
+@global = external global ptr
+
 ; CHECK: define ptr @f(ptr %a) {
 ; CHECK:     %b = bitcast ptr %a to ptr
 ; CHECK:     ret ptr %b
@@ -97,4 +100,37 @@ define void @cmpxchg(ptr %p, i32 %a, i32 %b) {
 define void @atomicrmw(ptr %a, i32 %i) {
     %b = atomicrmw add ptr %a, i32 %i acquire
     ret void
+}
+
+; CHECK: define void @call(ptr %p)
+; CHECK:     call void %p()
+; CHECK:     ret void
+define void @call(ptr %p) {
+  call void %p()
+  ret void
+}
+
+; CHECK: define void @call_arg(ptr %p, i32 %a)
+; CHECK:     call void %p(i32 %a)
+; CHECK:     ret void
+define void @call_arg(ptr %p, i32 %a) {
+  call void %p(i32 %a)
+  ret void
+}
+
+; CHECK: define void @invoke(ptr %p) personality void ()* @personality {
+; CHECK:   invoke void %p()
+; CHECK:     to label %continue unwind label %cleanup
+declare void @personality()
+define void @invoke(ptr %p) personality void ()* @personality {
+  invoke void %p()
+    to label %continue unwind label %cleanup
+
+continue:
+  ret void
+
+cleanup:
+  landingpad {}
+    cleanup
+  ret void
 }

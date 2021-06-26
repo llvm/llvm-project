@@ -2413,7 +2413,7 @@ static Value createSubViewIntersection(OpBuilder &b,
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
-///      %2 = linalg.fill(%alloc, %pad)
+///      %2 = linalg.fill(%pad, %alloc)
 ///      %3 = subview %view [...][...][...]
 ///      linalg.copy(%3, %alloc)
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType
@@ -2440,7 +2440,7 @@ createFullPartialLinalgCopy(OpBuilder &b, vector::TransferReadOp xferOp,
         b.create<scf::YieldOp>(loc, viewAndIndices);
       },
       [&](OpBuilder &b, Location loc) {
-        b.create<linalg::FillOp>(loc, alloc, xferOp.padding());
+        b.create<linalg::FillOp>(loc, xferOp.padding(), alloc);
         // Take partial subview of memref which guarantees no dimension
         // overflows.
         Value memRefSubView = createSubViewIntersection(

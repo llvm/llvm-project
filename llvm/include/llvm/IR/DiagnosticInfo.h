@@ -220,7 +220,7 @@ public:
   DiagnosticInfoStackSize(const Function &Fn, uint64_t StackSize,
                           DiagnosticSeverity Severity = DS_Warning,
                           uint64_t StackLimit = 0)
-      : DiagnosticInfoResourceLimit(Fn, "stack size", StackSize, Severity,
+      : DiagnosticInfoResourceLimit(Fn, "stack frame size", StackSize, Severity,
                                     DK_StackSize, StackLimit) {}
 
   uint64_t getStackSize() const { return getResourceSize(); }

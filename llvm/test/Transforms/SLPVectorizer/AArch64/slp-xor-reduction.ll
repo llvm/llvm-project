@@ -7,54 +7,29 @@ define i8 @reduce_xor(%struct.buf* %a, %struct.buf* %b) {
 ; CHECK-LABEL: @reduce_xor(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_BUF:%.*]], %struct.buf* [[A:%.*]], i64 0, i32 0, i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B:%.*]], i64 0, i32 0, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[ARRAYIDX3]], align 1
-; CHECK-NEXT:    [[AND12:%.*]] = and i8 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[ARRAYIDX_1]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, i8* [[ARRAYIDX3_1]], align 1
-; CHECK-NEXT:    [[AND12_1:%.*]] = and i8 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[AND12]], [[AND12_1]]
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, i8* [[ARRAYIDX_2]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 2
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, i8* [[ARRAYIDX3_2]], align 1
-; CHECK-NEXT:    [[AND12_2:%.*]] = and i8 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = xor i8 [[TMP4]], [[AND12_2]]
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 3
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, i8* [[ARRAYIDX_3]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX3_3:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = load i8, i8* [[ARRAYIDX3_3]], align 1
-; CHECK-NEXT:    [[AND12_3:%.*]] = and i8 [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = xor i8 [[TMP7]], [[AND12_3]]
 ; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 4
-; CHECK-NEXT:    [[TMP11:%.*]] = load i8, i8* [[ARRAYIDX_4]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX3_4:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 4
-; CHECK-NEXT:    [[TMP12:%.*]] = load i8, i8* [[ARRAYIDX3_4]], align 1
-; CHECK-NEXT:    [[AND12_4:%.*]] = and i8 [[TMP12]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = xor i8 [[TMP10]], [[AND12_4]]
 ; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 5
-; CHECK-NEXT:    [[TMP14:%.*]] = load i8, i8* [[ARRAYIDX_5]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX3_5:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 5
-; CHECK-NEXT:    [[TMP15:%.*]] = load i8, i8* [[ARRAYIDX3_5]], align 1
-; CHECK-NEXT:    [[AND12_5:%.*]] = and i8 [[TMP15]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = xor i8 [[TMP13]], [[AND12_5]]
 ; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 6
-; CHECK-NEXT:    [[TMP17:%.*]] = load i8, i8* [[ARRAYIDX_6]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 6
-; CHECK-NEXT:    [[TMP18:%.*]] = load i8, i8* [[ARRAYIDX3_6]], align 1
-; CHECK-NEXT:    [[AND12_6:%.*]] = and i8 [[TMP18]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = xor i8 [[TMP16]], [[AND12_6]]
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 7
-; CHECK-NEXT:    [[TMP20:%.*]] = load i8, i8* [[ARRAYIDX_7]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ARRAYIDX]] to <8 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX3_7:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 7
-; CHECK-NEXT:    [[TMP21:%.*]] = load i8, i8* [[ARRAYIDX3_7]], align 1
-; CHECK-NEXT:    [[AND12_7:%.*]] = and i8 [[TMP21]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = xor i8 [[TMP19]], [[AND12_7]]
-; CHECK-NEXT:    [[XOR13_7:%.*]] = xor i8 [[TMP22]], 1
-; CHECK-NEXT:    ret i8 [[XOR13_7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ARRAYIDX3]] to <8 x i8>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = and <8 x i8> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> [[TMP4]])
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = xor i8 [[TMP5]], 1
+; CHECK-NEXT:    ret i8 [[OP_EXTRA]]
 ;
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, %struct.buf* %a, i64 0, i32 0, i64 0

@@ -30,8 +30,11 @@ define i32 @f1(i32 %a0) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = add(r16,r0)
 ; CHECK-NEXT:     r17:16 = memd(r29+#0)
-; CHECK-NEXT:     dealloc_return
+; CHECK-NEXT:     deallocframe
 ; CHECK-NEXT:    } // 8-byte Folded Reload
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
 b0:
   %v0 = icmp eq i32 %a0, 0
   br i1 %v0, label %b1, label %b2

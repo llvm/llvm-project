@@ -15,6 +15,10 @@
 #include <memory>
 #include <vector>
 
+namespace llvm {
+class ThreadPool;
+} // end namespace llvm
+
 namespace mlir {
 class AbstractOperation;
 class DebugActionManager;
@@ -113,6 +117,12 @@ public:
   void enableMultithreading(bool enable = true) {
     disableMultithreading(!enable);
   }
+
+  /// Return the thread pool owned by this context. This method requires that
+  /// multithreading be enabled within the context, and should generally not be
+  /// used directly. Users should instead prefer the threading utilities within
+  /// Threading.h.
+  llvm::ThreadPool &getThreadPool();
 
   /// Return true if we should attach the operation to diagnostics emitted via
   /// Operation::emit.

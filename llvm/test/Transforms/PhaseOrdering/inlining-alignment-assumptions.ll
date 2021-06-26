@@ -16,31 +16,28 @@ define internal i1 @callee1(i1 %c, i64* align 8 %ptr) {
 
 define void @caller1(i1 %c, i64* align 1 %ptr) {
 ; ASSUMPTIONS-OFF-LABEL: @caller1(
-; ASSUMPTIONS-OFF-NEXT:    br i1 [[C:%.*]], label [[TRUE2:%.*]], label [[FALSE2:%.*]]
-; ASSUMPTIONS-OFF:       true2:
+; ASSUMPTIONS-OFF-NEXT:    br i1 [[C:%.*]], label [[COMMON_RET:%.*]], label [[FALSE2:%.*]]
+; ASSUMPTIONS-OFF:       common.ret:
+; ASSUMPTIONS-OFF-NEXT:    [[DOTSINK:%.*]] = phi i64 [ 3, [[FALSE2]] ], [ 2, [[TMP0:%.*]] ]
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 0, i64* [[PTR:%.*]], align 8
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 2, i64* [[PTR]], align 4
+; ASSUMPTIONS-OFF-NEXT:    store volatile i64 [[DOTSINK]], i64* [[PTR]], align 4
 ; ASSUMPTIONS-OFF-NEXT:    ret void
 ; ASSUMPTIONS-OFF:       false2:
 ; ASSUMPTIONS-OFF-NEXT:    store volatile i64 1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 -1, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    store volatile i64 3, i64* [[PTR]], align 4
-; ASSUMPTIONS-OFF-NEXT:    ret void
+; ASSUMPTIONS-OFF-NEXT:    br label [[COMMON_RET]]
 ;
 ; ASSUMPTIONS-ON-LABEL: @caller1(
-; ASSUMPTIONS-ON-NEXT:    br i1 [[C:%.*]], label [[TRUE2_CRITEDGE:%.*]], label [[FALSE1:%.*]]
+; ASSUMPTIONS-ON-NEXT:    br i1 [[C:%.*]], label [[COMMON_RET:%.*]], label [[FALSE1:%.*]]
 ; ASSUMPTIONS-ON:       false1:
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 1, i64* [[PTR:%.*]], align 8
+; ASSUMPTIONS-ON-NEXT:    br label [[COMMON_RET]]
+; ASSUMPTIONS-ON:       common.ret:
+; ASSUMPTIONS-ON-NEXT:    [[DOTSINK:%.*]] = phi i64 [ 3, [[FALSE1]] ], [ 2, [[TMP0:%.*]] ]
 ; ASSUMPTIONS-ON-NEXT:    call void @llvm.assume(i1 true) [ "align"(i64* [[PTR]], i64 8) ]
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
@@ -48,17 +45,7 @@ define void @caller1(i1 %c, i64* align 1 %ptr) {
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    ret void
-; ASSUMPTIONS-ON:       true2.critedge:
-; ASSUMPTIONS-ON-NEXT:    call void @llvm.assume(i1 true) [ "align"(i64* [[PTR]], i64 8) ]
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
-; ASSUMPTIONS-ON-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
+; ASSUMPTIONS-ON-NEXT:    store volatile i64 [[DOTSINK]], i64* [[PTR]], align 8
 ; ASSUMPTIONS-ON-NEXT:    ret void
 ;
   br i1 %c, label %true1, label %false1

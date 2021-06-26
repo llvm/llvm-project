@@ -1,5 +1,4 @@
 ; Check that we can handle spills of array allocas
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 declare void @consume.double.ptr(double*)

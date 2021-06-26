@@ -25,7 +25,7 @@ func private @print_memref_f32(memref<*xf32>)
 // Creates and returns a 1-D buffer of size %s1 filled with the value %f
 func @alloc_1d_filled_f32(%s1 : index, %f : f32) -> memref<?xf32> {
   %buf = memref.alloc(%s1) : memref<?xf32>
-  linalg.fill(%buf, %f) : memref<?xf32>, f32
+  linalg.fill(%f, %buf) : f32, memref<?xf32>
   return %buf : memref<?xf32>
 }
 

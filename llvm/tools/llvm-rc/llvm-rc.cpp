@@ -145,7 +145,7 @@ ErrorOr<std::string> findClang(const char *Argv0) {
   return Path;
 }
 
-Triple::ArchType getDefaultArch(Triple::ArchType Arch) {
+bool isUsableArch(Triple::ArchType Arch) {
   switch (Arch) {
   case Triple::x86:
   case Triple::x86_64:
@@ -154,17 +154,23 @@ Triple::ArchType getDefaultArch(Triple::ArchType Arch) {
   case Triple::aarch64:
     // These work properly with the clang driver, setting the expected
     // defines such as _WIN32 etc.
-    return Arch;
+    return true;
   default:
     // Other archs aren't set up for use with windows as target OS, (clang
-    // doesn't define e.g. _WIN32 etc), so set a reasonable default arch.
-    return Triple::x86_64;
+    // doesn't define e.g. _WIN32 etc), so with them we need to set a
+    // different default arch.
+    return false;
   }
+}
+
+Triple::ArchType getDefaultFallbackArch() {
+  return Triple::x86_64;
 }
 
 std::string getClangClTriple() {
   Triple T(sys::getDefaultTargetTriple());
-  T.setArch(getDefaultArch(T.getArch()));
+  if (!isUsableArch(T.getArch()))
+    T.setArch(getDefaultFallbackArch());
   T.setOS(Triple::Win32);
   T.setVendor(Triple::PC);
   T.setEnvironment(Triple::MSVC);
@@ -174,7 +180,8 @@ std::string getClangClTriple() {
 
 std::string getMingwTriple() {
   Triple T(sys::getDefaultTargetTriple());
-  T.setArch(getDefaultArch(T.getArch()));
+  if (!isUsableArch(T.getArch()))
+    T.setArch(getDefaultFallbackArch());
   if (T.isWindowsGNUEnvironment())
     return T.str();
   // Write out the literal form of the vendor/env here, instead of
@@ -262,10 +269,10 @@ static std::pair<bool, std::string> isWindres(llvm::StringRef Argv0) {
   // llvm-rc -> "", llvm-rc
   // aarch64-w64-mingw32-llvm-windres-10.exe -> aarch64-w64-mingw32, llvm-windres
   ProgName = ProgName.rtrim("0123456789.-");
-  if (!ProgName.consume_back_lower("windres"))
+  if (!ProgName.consume_back_insensitive("windres"))
     return std::make_pair<bool, std::string>(false, "");
-  ProgName.consume_back_lower("llvm-");
-  ProgName.consume_back_lower("-");
+  ProgName.consume_back_insensitive("llvm-");
+  ProgName.consume_back_insensitive("-");
   return std::make_pair<bool, std::string>(true, ProgName.str());
 }
 
@@ -347,7 +354,7 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
 
   // The tool prints nothing when invoked with no command-line arguments.
   if (InputArgs.hasArg(WINDRES_help)) {
-    T.PrintHelp(outs(), "windres [options] file...",
+    T.printHelp(outs(), "windres [options] file...",
                 "LLVM windres (GNU windres compatible)", false, true);
     exit(0);
   }
@@ -494,7 +501,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
 
   // The tool prints nothing when invoked with no command-line arguments.
   if (InputArgs.hasArg(OPT_help)) {
-    T.PrintHelp(outs(), "rc [options] file...", "Resource Converter", false);
+    T.printHelp(outs(), "rc [options] file...", "Resource Converter", false);
     exit(0);
   }
 

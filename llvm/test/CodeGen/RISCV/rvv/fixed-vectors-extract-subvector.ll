@@ -297,23 +297,6 @@ define void @extract_v8i1_nxv2i1_0(<vscale x 2 x i1> %x, <8 x i1>* %y) {
   ret void
 }
 
-define void @extract_v8i1_nxv2i1_2(<vscale x 2 x i1> %x, <8 x i1>* %y) {
-; CHECK-LABEL: extract_v8i1_nxv2i1_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf4, ta, mu
-; CHECK-NEXT:    vslidedown.vi v25, v25, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmsne.vi v25, v25, 0
-; CHECK-NEXT:    vse1.v v25, (a0)
-; CHECK-NEXT:    ret
-  %c = call <8 x i1> @llvm.experimental.vector.extract.v8i1.nxv2i1(<vscale x 2 x i1> %x, i64 2)
-  store <8 x i1> %c, <8 x i1>* %y
-  ret void
-}
-
 define void @extract_v8i1_nxv64i1_0(<vscale x 64 x i1> %x, <8 x i1>* %y) {
 ; CHECK-LABEL: extract_v8i1_nxv64i1_0:
 ; CHECK:       # %bb.0:

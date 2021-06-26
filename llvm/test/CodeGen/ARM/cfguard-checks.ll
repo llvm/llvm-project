@@ -101,7 +101,7 @@ lpad:                                             ; preds = %entry
 	; CHECK:       blx r1
   ; CHECK-NEXT:  $Mtmp0:
 	; CHECK-NEXT:  blx r4
-  ; CHECK:       ; %invoke.cont
+  ; CHECK:       ; %common.ret
   ; CHECK:       ; %lpad
 }
 

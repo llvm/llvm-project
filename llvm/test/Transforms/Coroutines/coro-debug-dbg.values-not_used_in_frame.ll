@@ -1,5 +1,5 @@
 ; Tests whether resume function would remain dbg.value infomation if corresponding values are not used in the frame.
-; RUN: opt < %s -coro-early -coro-split -coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='function(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.
 ; CHECK:  define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 16 dereferenceable(80) %FramePtr) !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]

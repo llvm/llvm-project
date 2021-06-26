@@ -45,6 +45,7 @@ public:
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
+  virtual InputSection *canonical() { return this; }
 
   InputFile *file = nullptr;
   StringRef name;
@@ -58,17 +59,6 @@ public:
 
   // is address assigned?
   bool isFinal = false;
-
-  bool isHashableForICF(bool isText) const;
-  void hashForICF();
-  InputSection *canonical() { return replacement ? replacement : this; }
-
-  // ICF can't fold functions with LSDA+personality
-  bool hasPersonality = false;
-  // Points to the surviving section after this one is folded by ICF
-  InputSection *replacement = nullptr;
-  // Equivalence-class ID for ICF
-  uint64_t icfEqClass[2] = {0, 0};
 
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
@@ -105,13 +95,25 @@ public:
   void markLive(uint64_t off) override { live = true; }
   bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
+  bool isHashableForICF(bool isText) const;
+  void hashForICF();
   void writeTo(uint8_t *buf);
+
+  void foldIdentical(ConcatInputSection *redundant);
+  InputSection *canonical() override {
+    return replacement ? replacement : this;
+  }
 
   static bool classof(const InputSection *isec) {
     return isec->kind() == ConcatKind;
   }
 
-  void foldIdentical(ConcatInputSection *redundant);
+  // ICF can't fold functions with LSDA+personality
+  bool hasPersonality = false;
+  // Points to the surviving section after this one is folded by ICF
+  InputSection *replacement = nullptr;
+  // Equivalence-class ID for ICF
+  uint64_t icfEqClass[2] = {0, 0};
 
   // With subsections_via_symbols, most symbols have their own InputSection,
   // and for weak symbols (e.g. from inline functions), only the

@@ -99,19 +99,14 @@ void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
 
 void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   SetStatus(eReturnStatusFailed);
-  assert(!in_string.empty() && "Expected a non-empty error message");
+  if (in_string.empty())
+    return;
   error(GetErrorStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::SetError(const Status &error,
                                    const char *fallback_error_cstr) {
-  assert(error.Fail() && "Expected a failed Status");
-  SetError(error.AsCString(fallback_error_cstr));
-}
-
-void CommandReturnObject::SetError(llvm::StringRef error_str) {
-  SetStatus(eReturnStatusFailed);
-  AppendError(error_str);
+  AppendError(error.AsCString(fallback_error_cstr));
 }
 
 // Similar to AppendError, but do not prepend 'Status: ' to message, and don't

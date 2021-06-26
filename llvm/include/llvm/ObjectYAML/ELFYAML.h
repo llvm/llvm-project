@@ -516,17 +516,13 @@ struct DependentLibrariesSection : Section {
 };
 
 // Represents the call graph profile section entry.
-struct CallGraphEntry {
-  // The symbol of the source of the edge.
-  StringRef From;
-  // The symbol index of the destination of the edge.
-  StringRef To;
+struct CallGraphEntryWeight {
   // The weight of the edge.
   uint64_t Weight;
 };
 
 struct CallGraphProfileSection : Section {
-  Optional<std::vector<CallGraphEntry>> Entries;
+  Optional<std::vector<CallGraphEntryWeight>> Entries;
 
   CallGraphProfileSection() : Section(ChunkKind::CallGraphProfile) {}
 
@@ -738,7 +734,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntryWeight)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::NoteEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionHeader)
@@ -932,8 +928,8 @@ template <> struct MappingTraits<ELFYAML::LinkerOption> {
   static void mapping(IO &IO, ELFYAML::LinkerOption &Sym);
 };
 
-template <> struct MappingTraits<ELFYAML::CallGraphEntry> {
-  static void mapping(IO &IO, ELFYAML::CallGraphEntry &E);
+template <> struct MappingTraits<ELFYAML::CallGraphEntryWeight> {
+  static void mapping(IO &IO, ELFYAML::CallGraphEntryWeight &E);
 };
 
 template <> struct MappingTraits<ELFYAML::Relocation> {

@@ -6,16 +6,14 @@ define i32 @f0(i32 %a0, i32 %a1) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = cmp.gt(r1,r0)
-; CHECK-NEXT:     if (p0.new) r0 = #0
-; CHECK-NEXT:     if (p0.new) jumpr:nt r31
-; CHECK-NEXT:    }
-; CHECK-NEXT:  .LBB0_1: // %b2
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = cmp.gt(r1,#99)
+; CHECK-NEXT:     p1 = cmp.gt(r1,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = mux(p0,##321,#123)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     if (p1) r0 = #0
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 b0:

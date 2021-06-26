@@ -73,8 +73,8 @@ static bool ShouldSignWithBKey(const Function &F) {
 
   const StringRef Key =
       F.getFnAttribute("sign-return-address-key").getValueAsString();
-  assert(Key.equals_lower("a_key") || Key.equals_lower("b_key"));
-  return Key.equals_lower("b_key");
+  assert(Key.equals_insensitive("a_key") || Key.equals_insensitive("b_key"));
+  return Key.equals_insensitive("b_key");
 }
 
 AArch64FunctionInfo::AArch64FunctionInfo(MachineFunction &MF) : MF(MF) {
@@ -94,9 +94,11 @@ AArch64FunctionInfo::AArch64FunctionInfo(MachineFunction &MF) : MF(MF) {
     return;
   }
 
-  const StringRef BTIEnable = F.getFnAttribute("branch-target-enforcement").getValueAsString();
-  assert(BTIEnable.equals_lower("true") || BTIEnable.equals_lower("false"));
-  BranchTargetEnforcement = BTIEnable.equals_lower("true");
+  const StringRef BTIEnable =
+      F.getFnAttribute("branch-target-enforcement").getValueAsString();
+  assert(BTIEnable.equals_insensitive("true") ||
+         BTIEnable.equals_insensitive("false"));
+  BranchTargetEnforcement = BTIEnable.equals_insensitive("true");
 }
 
 bool AArch64FunctionInfo::shouldSignReturnAddress(bool SpillsLR) const {

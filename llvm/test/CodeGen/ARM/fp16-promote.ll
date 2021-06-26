@@ -205,10 +205,9 @@ define i1 @test_fcmp_ueq(half* %p, half* %q) #0 {
 ; CHECK-VFP: vcmp.f32
 ; CHECK-NOVFP: bl __aeabi_fcmplt
 ; CHECK-FP16: vmrs APSR_nzcv, fpscr
-; CHECK-VFP: strmi
-; CHECK-VFP: strpl
-; CHECK-NOVFP: strne
-; CHECK-NOVFP: streq
+; CHECK-VFP: movmi
+; CHECK-VFP: str
+; CHECK-NOVFP: str
 define void @test_br_cc(half* %p, half* %q, i32* %p1, i32* %p2) #0 {
   %a = load half, half* %p, align 2
   %b = load half, half* %q, align 2

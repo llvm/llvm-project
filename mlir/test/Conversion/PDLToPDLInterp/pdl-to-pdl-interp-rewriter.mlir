@@ -73,28 +73,6 @@ module @operation_operands {
 
 // -----
 
-// CHECK-LABEL: module @operation_operands
-module @operation_operands {
-  // CHECK: module @rewriters
-  // CHECK:   func @pdl_generated_rewriter(%[[OPERAND:.*]]: !pdl.value, %[[ROOT:.*]]: !pdl.operation)
-  // CHECK:     %[[NEWOP:.*]] = pdl_interp.create_operation "foo.op"(%[[OPERAND]] : !pdl.value)
-  // CHECK:     %[[OPERAND1:.*]] = pdl_interp.get_result 0 of %[[NEWOP]]
-  // CHECK:     pdl_interp.create_operation "foo.op2"(%[[OPERAND1]] : !pdl.value)
-  pdl.pattern : benefit(1) {
-    %operand = pdl.operand
-    %root = pdl.operation "foo.op"(%operand : !pdl.value)
-    pdl.rewrite %root {
-      %type = pdl.type : i32
-      %newOp = pdl.operation "foo.op"(%operand : !pdl.value) -> (%type : !pdl.type)
-      %result = pdl.result 0 of %newOp
-      %newOp1 = pdl.operation "foo.op2"(%result : !pdl.value)
-      pdl.erase %root
-    }
-  }
-}
-
-// -----
-
 // CHECK-LABEL: module @operation_infer_types_from_replaceop
 module @operation_infer_types_from_replaceop {
   // CHECK: module @rewriters

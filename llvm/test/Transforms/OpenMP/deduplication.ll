@@ -221,3 +221,7 @@ entry:
   call void @useI32(i32 %tid5)
   ret void
 }
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 7, !"openmp", i32 50}

@@ -359,6 +359,16 @@ const Symbol *FindExternallyVisibleObject(
   return nullptr;
 }
 
+const Symbol &BypassGeneric(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (const auto *generic{ultimate.detailsIf<GenericDetails>()}) {
+    if (const Symbol * specific{generic->specific()}) {
+      return *specific;
+    }
+  }
+  return symbol;
+}
+
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type) {
   auto dynamicType{expr.GetType()};

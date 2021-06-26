@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "memtag.h"
 #include "tests/scudo_unit_test.h"
 
 #include <atomic>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -107,6 +109,13 @@ static void stressNew() {
 }
 
 TEST(ScudoWrappersCppTest, ThreadedNew) {
+  // TODO: Investigate why libc sometimes crashes with tag missmatch in
+  // __pthread_clockjoin_ex.
+  std::unique_ptr<scudo::ScopedDisableMemoryTagChecks> NoTags;
+  if (!SCUDO_ANDROID && scudo::archSupportsMemoryTagging() &&
+      scudo::systemSupportsMemoryTagging())
+    NoTags = std::make_unique<scudo::ScopedDisableMemoryTagChecks>();
+
   Ready = false;
   std::thread Threads[32];
   for (size_t I = 0U; I < sizeof(Threads) / sizeof(Threads[0]); I++)

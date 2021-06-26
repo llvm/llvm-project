@@ -34,6 +34,7 @@ set(files
   __algorithm/is_permutation.h
   __algorithm/is_sorted.h
   __algorithm/is_sorted_until.h
+  __algorithm/iter_swap.h
   __algorithm/lexicographical_compare.h
   __algorithm/lower_bound.h
   __algorithm/make_heap.h
@@ -85,6 +86,7 @@ set(files
   __algorithm/sort_heap.h
   __algorithm/stable_partition.h
   __algorithm/stable_sort.h
+  __algorithm/swap_ranges.h
   __algorithm/transform.h
   __algorithm/unique_copy.h
   __algorithm/unique.h
@@ -105,12 +107,16 @@ set(files
   __functional_03
   __functional_base
   __functional_base_03
+  __functional/hash.h
+  __functional/unary_function.h
+  __functional/unwrap_ref.h
   __hash_table
   __iterator/advance.h
   __iterator/concepts.h
   __iterator/default_sentinel.h
   __iterator/incrementable_traits.h
   __iterator/iter_move.h
+  __iterator/iter_swap.h
   __iterator/iterator_traits.h
   __iterator/next.h
   __iterator/prev.h
@@ -140,6 +146,7 @@ set(files
   __ranges/all.h
   __ranges/concepts.h
   __ranges/data.h
+  __ranges/drop_view.h
   __ranges/empty.h
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
@@ -155,6 +162,19 @@ set(files
   __tree
   __tuple
   __undef_macros
+  __utility/__decay_copy.h
+  __utility/as_const.h
+  __utility/cmp.h
+  __utility/declval.h
+  __utility/exchange.h
+  __utility/forward.h
+  __utility/in_place.h
+  __utility/integer_sequence.h
+  __utility/move.h
+  __utility/pair.h
+  __utility/piecewise_construct.h
+  __utility/rel_ops.h
+  __utility/swap.h
   __utility/to_underlying.h
   algorithm
   any

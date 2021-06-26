@@ -1948,21 +1948,13 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
   if (CGM.supportsCOMDAT())
     Fn->setComdat(CGM.getModule().getOrInsertComdat(FuncName));
 
-  IdentifierInfo *II = &C.Idents.get(FuncName);
-
   SmallVector<QualType, 2> ArgTys;
   ArgTys.push_back(C.VoidPtrTy);
   ArgTys.push_back(C.VoidPtrTy);
-  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
 
-  FunctionDecl *FD = FunctionDecl::Create(
-      C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FunctionTy, nullptr, SC_Static, false, false);
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
-  // This is necessary to avoid inheriting the previous line number.
-  FD->setImplicit();
-  StartFunction(FD, ReturnTy, Fn, FI, args);
+  StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
@@ -2143,21 +2135,12 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
   if (CGM.supportsCOMDAT())
     Fn->setComdat(CGM.getModule().getOrInsertComdat(FuncName));
 
-  IdentifierInfo *II = &C.Idents.get(FuncName);
-
   SmallVector<QualType, 1> ArgTys;
   ArgTys.push_back(C.VoidPtrTy);
-  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
-
-  FunctionDecl *FD = FunctionDecl::Create(
-      C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FunctionTy, nullptr, SC_Static, false, false);
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
-  // This is necessary to avoid inheriting the previous line number.
-  FD->setImplicit();
-  StartFunction(FD, ReturnTy, Fn, FI, args);
+  StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
   markAsIgnoreThreadCheckingAtRuntime(Fn);
 
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
@@ -2395,21 +2378,15 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
     llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
                            "__Block_byref_object_copy_", &CGF.CGM.getModule());
 
-  IdentifierInfo *II
-    = &Context.Idents.get("__Block_byref_object_copy_");
-
   SmallVector<QualType, 2> ArgTys;
   ArgTys.push_back(Context.VoidPtrTy);
   ArgTys.push_back(Context.VoidPtrTy);
-  QualType FunctionTy = Context.getFunctionType(ReturnTy, ArgTys, {});
-
-  FunctionDecl *FD = FunctionDecl::Create(
-      Context, Context.getTranslationUnitDecl(), SourceLocation(),
-      SourceLocation(), II, FunctionTy, nullptr, SC_Static, false, false);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
-  CGF.StartFunction(FD, ReturnTy, Fn, FI, args);
+  CGF.StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
+    // Create a scope with an artificial location for the body of this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
   if (generator.needsCopy()) {
     llvm::Type *byrefPtrType = byrefInfo.Type->getPointerTo(0);
@@ -2471,20 +2448,14 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
                            "__Block_byref_object_dispose_",
                            &CGF.CGM.getModule());
 
-  IdentifierInfo *II
-    = &Context.Idents.get("__Block_byref_object_dispose_");
-
   SmallVector<QualType, 1> ArgTys;
   ArgTys.push_back(Context.VoidPtrTy);
-  QualType FunctionTy = Context.getFunctionType(R, ArgTys, {});
-
-  FunctionDecl *FD = FunctionDecl::Create(
-      Context, Context.getTranslationUnitDecl(), SourceLocation(),
-      SourceLocation(), II, FunctionTy, nullptr, SC_Static, false, false);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
-  CGF.StartFunction(FD, R, Fn, FI, args);
+  CGF.StartFunction(GlobalDecl(), R, Fn, FI, args);
+    // Create a scope with an artificial location for the body of this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
   if (generator.needsDispose()) {
     Address addr = CGF.GetAddrOfLocalVar(&Src);

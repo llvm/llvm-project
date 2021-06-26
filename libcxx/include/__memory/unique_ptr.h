@@ -12,8 +12,10 @@
 
 #include <__config>
 #include <__functional_base> // std::less
+#include <__functional/hash.h>
 #include <__memory/allocator_traits.h> // __pointer
 #include <__memory/compressed_pair.h>
+#include <__utility/forward.h>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
@@ -296,7 +298,7 @@ public:
     return __ptr_.second();
   }
   _LIBCPP_INLINE_VISIBILITY
-  _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {
+  explicit operator bool() const _NOEXCEPT {
     return __ptr_.first() != nullptr;
   }
 
@@ -517,7 +519,7 @@ public:
     return __ptr_.second();
   }
   _LIBCPP_INLINE_VISIBILITY
-  _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {
+  explicit operator bool() const _NOEXCEPT {
     return __ptr_.first() != nullptr;
   }
 

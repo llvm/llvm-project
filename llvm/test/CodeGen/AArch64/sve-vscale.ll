@@ -48,6 +48,13 @@ define i32 @rdvl_const() nounwind {
   ret i32 mul nsw (i32 ptrtoint (<vscale x 1 x i8>* getelementptr (<vscale x 1 x i8>, <vscale x 1 x i8>* null, i64 1) to i32), i32 16)
 }
 
+; CHECK-LABEL: rdvl_const_opaque_ptr:
+; CHECK:       rdvl x0, #1
+; CHECK-NEXT:  ret
+define i32 @rdvl_const_opaque_ptr() nounwind {
+  ret i32 mul nsw (i32 ptrtoint (ptr getelementptr (<vscale x 1 x i8>, ptr null, i64 1) to i32), i32 16)
+}
+
 define i32 @vscale_1() nounwind {
 ; CHECK-LABEL: vscale_1:
 ; CHECK:       rdvl [[TMP:x[0-9]+]], #1

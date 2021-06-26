@@ -26,23 +26,23 @@ define arm_aapcs_vfpcc i32 @main() nounwind {
 ; ELFASM-NEXT:    ldr r1, [r0]
 ; ELFASM-NEXT:    bl __aeabi_read_tp
 ; ELFASM-NEXT:    ldr r0, [r0, r1]
-; ELFASM-NEXT:    cmp r0, #13
+; ELFASM-NEXT:    cmp r0, #12
 ; ELFASM-NEXT:    beq .LBB0_3
 ; ELFASM-NEXT:  @ %bb.1: @ %entry
-; ELFASM-NEXT:    cmp r0, #12
+; ELFASM-NEXT:    cmp r0, #13
 ; ELFASM-NEXT:    itt ne
 ; ELFASM-NEXT:    movne.w r0, #-1
 ; ELFASM-NEXT:    popne {r7, pc}
-; ELFASM-NEXT:  .LBB0_2: @ %bb
-; ELFASM-NEXT:    movw r0, :lower16:a
-; ELFASM-NEXT:    movt r0, :upper16:a
-; ELFASM-NEXT:    pop.w {r7, lr}
-; ELFASM-NEXT:    b foo
-; ELFASM-NEXT:  .LBB0_3: @ %bb1
+; ELFASM-NEXT:  .LBB0_2: @ %bb1
 ; ELFASM-NEXT:    movw r0, :lower16:b
 ; ELFASM-NEXT:    movt r0, :upper16:b
 ; ELFASM-NEXT:    pop.w {r7, lr}
 ; ELFASM-NEXT:    b bar
+; ELFASM-NEXT:  .LBB0_3: @ %bb
+; ELFASM-NEXT:    movw r0, :lower16:a
+; ELFASM-NEXT:    movt r0, :upper16:a
+; ELFASM-NEXT:    pop.w {r7, lr}
+; ELFASM-NEXT:    b foo
 ; ELFASM-NEXT:    .p2align 2
 ; ELFASM-NEXT:  @ %bb.4:
 ; ELFASM-NEXT:  .LCPI0_0:
@@ -66,11 +66,11 @@ bb:                                               ; preds = %entry
 ; ELFOBJ-LE:          SectionData (
 ;;;                  BL __aeabi_read_tp is ---+
 ;;;                                           V
-; ELFOBJ-LE-NEXT:     0000: 80B50E48 78440168 FFF7FEFF 40580D28
+; ELFOBJ-LE-NEXT:     0000: 80B50E48 78440168 FFF7FEFF 40580C28
 ; ELFOBJ-BE:          SectionData (
 ;;;                  BL __aeabi_read_tp is ---+
 ;;;                                           V
-; ELFOBJ-BE-NEXT:     0000: B580480E 44786801 F7FFFFFE 5840280D
+; ELFOBJ-BE-NEXT:     0000: B580480E 44786801 F7FFFFFE 5840280C
 
 
 bb1:                                              ; preds = %entry

@@ -303,7 +303,6 @@ int bar(int n){
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK1-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE4]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 8
 // CHECK1-NEXT:    [[CONV7:%.*]] = bitcast i64* [[A_CASTED]] to i8*
@@ -403,7 +402,6 @@ int bar(int n){
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK1-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE4]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i16, i16* [[CONV]], align 8
 // CHECK1-NEXT:    [[CONV7:%.*]] = bitcast i64* [[AA_CASTED]] to i16*
@@ -446,7 +444,6 @@ int bar(int n){
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[AA_ADDR]] to i16*
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK1-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd()
 // CHECK1-NEXT:    br label [[DOTEXECUTE:%.*]]
 // CHECK1:       .execute:
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
@@ -588,7 +585,6 @@ int bar(int n){
 // CHECK2-NEXT:    [[NVPTX_NUM_THREADS5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK2-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE4]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV7:%.*]] = bitcast i32* [[A_CASTED]] to i8*
@@ -688,7 +684,6 @@ int bar(int n){
 // CHECK2-NEXT:    [[NVPTX_NUM_THREADS5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK2-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE4]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i16, i16* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV7:%.*]] = bitcast i32* [[AA_CASTED]] to i16*
@@ -731,7 +726,6 @@ int bar(int n){
 // CHECK2-NEXT:    [[CONV:%.*]] = bitcast i32* [[AA_ADDR]] to i16*
 // CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK2-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd()
 // CHECK2-NEXT:    br label [[DOTEXECUTE:%.*]]
 // CHECK2:       .execute:
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
@@ -873,7 +867,6 @@ int bar(int n){
 // CHECK3-NEXT:    [[NVPTX_NUM_THREADS5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK3-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE4]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i8, i8* [[CONV]], align 4
 // CHECK3-NEXT:    [[CONV7:%.*]] = bitcast i32* [[A_CASTED]] to i8*
@@ -973,7 +966,6 @@ int bar(int n){
 // CHECK3-NEXT:    [[NVPTX_NUM_THREADS5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK3-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE4]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i16, i16* [[CONV]], align 4
 // CHECK3-NEXT:    [[CONV7:%.*]] = bitcast i32* [[AA_CASTED]] to i16*
@@ -1016,7 +1008,6 @@ int bar(int n){
 // CHECK3-NEXT:    [[CONV:%.*]] = bitcast i32* [[AA_ADDR]] to i16*
 // CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK3-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd()
 // CHECK3-NEXT:    br label [[DOTEXECUTE:%.*]]
 // CHECK3:       .execute:
 // CHECK3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])

@@ -5,6 +5,7 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1032 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1033 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1034 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1035 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 v_dot2_f32_f16 v0, v1, v2, v3
 // GFX10: encoding: [0x00,0x40,0x13,0xcc,0x01,0x05,0x0e,0x1c]

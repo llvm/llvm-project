@@ -294,8 +294,8 @@ void X86LegalizerInfo::setLegalizerInfoSSE1() {
 
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
-  const LLT v4s32 = LLT::vector(4, 32);
-  const LLT v2s64 = LLT::vector(2, 64);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -327,15 +327,15 @@ void X86LegalizerInfo::setLegalizerInfoSSE2() {
 
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
-  const LLT v16s8 = LLT::vector(16, 8);
-  const LLT v8s16 = LLT::vector(8, 16);
-  const LLT v4s32 = LLT::vector(4, 32);
-  const LLT v2s64 = LLT::vector(2, 64);
+  const LLT v16s8 = LLT::fixed_vector(16, 8);
+  const LLT v8s16 = LLT::fixed_vector(8, 16);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
 
-  const LLT v32s8 = LLT::vector(32, 8);
-  const LLT v16s16 = LLT::vector(16, 16);
-  const LLT v8s32 = LLT::vector(8, 32);
-  const LLT v4s64 = LLT::vector(4, 64);
+  const LLT v32s8 = LLT::fixed_vector(32, 8);
+  const LLT v16s16 = LLT::fixed_vector(16, 16);
+  const LLT v8s32 = LLT::fixed_vector(8, 32);
+  const LLT v4s64 = LLT::fixed_vector(4, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -377,7 +377,7 @@ void X86LegalizerInfo::setLegalizerInfoSSE41() {
   if (!Subtarget.hasSSE41())
     return;
 
-  const LLT v4s32 = LLT::vector(4, 32);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -388,19 +388,19 @@ void X86LegalizerInfo::setLegalizerInfoAVX() {
   if (!Subtarget.hasAVX())
     return;
 
-  const LLT v16s8 = LLT::vector(16, 8);
-  const LLT v8s16 = LLT::vector(8, 16);
-  const LLT v4s32 = LLT::vector(4, 32);
-  const LLT v2s64 = LLT::vector(2, 64);
+  const LLT v16s8 = LLT::fixed_vector(16, 8);
+  const LLT v8s16 = LLT::fixed_vector(8, 16);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
 
-  const LLT v32s8 = LLT::vector(32, 8);
-  const LLT v64s8 = LLT::vector(64, 8);
-  const LLT v16s16 = LLT::vector(16, 16);
-  const LLT v32s16 = LLT::vector(32, 16);
-  const LLT v8s32 = LLT::vector(8, 32);
-  const LLT v16s32 = LLT::vector(16, 32);
-  const LLT v4s64 = LLT::vector(4, 64);
-  const LLT v8s64 = LLT::vector(8, 64);
+  const LLT v32s8 = LLT::fixed_vector(32, 8);
+  const LLT v64s8 = LLT::fixed_vector(64, 8);
+  const LLT v16s16 = LLT::fixed_vector(16, 16);
+  const LLT v32s16 = LLT::fixed_vector(32, 16);
+  const LLT v8s32 = LLT::fixed_vector(8, 32);
+  const LLT v16s32 = LLT::fixed_vector(16, 32);
+  const LLT v4s64 = LLT::fixed_vector(4, 64);
+  const LLT v8s64 = LLT::fixed_vector(8, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -435,15 +435,15 @@ void X86LegalizerInfo::setLegalizerInfoAVX2() {
   if (!Subtarget.hasAVX2())
     return;
 
-  const LLT v32s8 = LLT::vector(32, 8);
-  const LLT v16s16 = LLT::vector(16, 16);
-  const LLT v8s32 = LLT::vector(8, 32);
-  const LLT v4s64 = LLT::vector(4, 64);
+  const LLT v32s8 = LLT::fixed_vector(32, 8);
+  const LLT v16s16 = LLT::fixed_vector(16, 16);
+  const LLT v8s32 = LLT::fixed_vector(8, 32);
+  const LLT v4s64 = LLT::fixed_vector(4, 64);
 
-  const LLT v64s8 = LLT::vector(64, 8);
-  const LLT v32s16 = LLT::vector(32, 16);
-  const LLT v16s32 = LLT::vector(16, 32);
-  const LLT v8s64 = LLT::vector(8, 64);
+  const LLT v64s8 = LLT::fixed_vector(64, 8);
+  const LLT v32s16 = LLT::fixed_vector(32, 16);
+  const LLT v16s32 = LLT::fixed_vector(16, 32);
+  const LLT v8s64 = LLT::fixed_vector(8, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -471,20 +471,20 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
   if (!Subtarget.hasAVX512())
     return;
 
-  const LLT v16s8 = LLT::vector(16, 8);
-  const LLT v8s16 = LLT::vector(8, 16);
-  const LLT v4s32 = LLT::vector(4, 32);
-  const LLT v2s64 = LLT::vector(2, 64);
+  const LLT v16s8 = LLT::fixed_vector(16, 8);
+  const LLT v8s16 = LLT::fixed_vector(8, 16);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
 
-  const LLT v32s8 = LLT::vector(32, 8);
-  const LLT v16s16 = LLT::vector(16, 16);
-  const LLT v8s32 = LLT::vector(8, 32);
-  const LLT v4s64 = LLT::vector(4, 64);
+  const LLT v32s8 = LLT::fixed_vector(32, 8);
+  const LLT v16s16 = LLT::fixed_vector(16, 16);
+  const LLT v8s32 = LLT::fixed_vector(8, 32);
+  const LLT v4s64 = LLT::fixed_vector(4, 64);
 
-  const LLT v64s8 = LLT::vector(64, 8);
-  const LLT v32s16 = LLT::vector(32, 16);
-  const LLT v16s32 = LLT::vector(16, 32);
-  const LLT v8s64 = LLT::vector(8, 64);
+  const LLT v64s8 = LLT::fixed_vector(64, 8);
+  const LLT v32s16 = LLT::fixed_vector(32, 16);
+  const LLT v16s32 = LLT::fixed_vector(16, 32);
+  const LLT v8s64 = LLT::fixed_vector(8, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -519,7 +519,7 @@ void X86LegalizerInfo::setLegalizerInfoAVX512DQ() {
   if (!(Subtarget.hasAVX512() && Subtarget.hasDQI()))
     return;
 
-  const LLT v8s64 = LLT::vector(8, 64);
+  const LLT v8s64 = LLT::fixed_vector(8, 64);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -529,8 +529,8 @@ void X86LegalizerInfo::setLegalizerInfoAVX512DQ() {
   if (!Subtarget.hasVLX())
     return;
 
-  const LLT v2s64 = LLT::vector(2, 64);
-  const LLT v4s64 = LLT::vector(4, 64);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
+  const LLT v4s64 = LLT::fixed_vector(4, 64);
 
   for (auto Ty : {v2s64, v4s64})
     LegacyInfo.setAction({G_MUL, Ty}, LegacyLegalizeActions::Legal);
@@ -540,8 +540,8 @@ void X86LegalizerInfo::setLegalizerInfoAVX512BW() {
   if (!(Subtarget.hasAVX512() && Subtarget.hasBWI()))
     return;
 
-  const LLT v64s8 = LLT::vector(64, 8);
-  const LLT v32s16 = LLT::vector(32, 16);
+  const LLT v64s8 = LLT::fixed_vector(64, 8);
+  const LLT v32s16 = LLT::fixed_vector(32, 16);
 
   auto &LegacyInfo = getLegacyLegalizerInfo();
 
@@ -555,8 +555,8 @@ void X86LegalizerInfo::setLegalizerInfoAVX512BW() {
   if (!Subtarget.hasVLX())
     return;
 
-  const LLT v8s16 = LLT::vector(8, 16);
-  const LLT v16s16 = LLT::vector(16, 16);
+  const LLT v8s16 = LLT::fixed_vector(8, 16);
+  const LLT v16s16 = LLT::fixed_vector(16, 16);
 
   for (auto Ty : {v8s16, v16s16})
     LegacyInfo.setAction({G_MUL, Ty}, LegacyLegalizeActions::Legal);

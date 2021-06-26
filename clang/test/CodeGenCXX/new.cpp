@@ -176,6 +176,7 @@ void t13(int n) {
 struct Alloc{
   int x;
   void* operator new[](size_t size);
+  __attribute__((returns_nonnull)) void *operator new[](size_t size, const std::nothrow_t &) throw();
   void operator delete[](void* p);
   ~Alloc();
 };
@@ -186,6 +187,10 @@ void f() {
   // CHECK: call void @_ZN5AllocD1Ev(
   // CHECK: call void @_ZN5AllocdaEPv(i8*
   delete[] new Alloc[10][20];
+  // CHECK: [[P:%.*]] = call nonnull i8* @_ZN5AllocnaEmRKSt9nothrow_t(i64 808, {{.*}}) [[ATTR_NOUNWIND:#[^ ]*]]
+  // CHECK-NOT: icmp eq i8* [[P]], null
+  // CHECK: store i64 200
+  delete[] new (nothrow) Alloc[10][20];
   // CHECK: call noalias nonnull i8* @_Znwm
   // CHECK: call void @_ZdlPv(i8*
   delete new bool;
@@ -328,7 +333,7 @@ namespace N3664 {
     // CHECK: call void @_ZdaPv({{.*}}) [[ATTR_BUILTIN_DELETE]]
     delete[] p; // expected-warning {{'delete[]' applied to a pointer that was allocated with 'new'; did you mean 'delete'?}}
 
-    // CHECK: call noalias i8* @_ZnamRKSt9nothrow_t(i64 3, {{.*}}) [[ATTR_BUILTIN_NOTHROW_NEW:#[^ ]*]]
+    // CHECK: call noalias i8* @_ZnamRKSt9nothrow_t(i64 3, {{.*}}) [[ATTR_NOBUILTIN_NOUNWIND_ALLOCSIZE:#[^ ]*]]
     (void) new (nothrow) S[3];
 
     // CHECK: call i8* @_Znwm15MyPlacementType(i64 4){{$}}

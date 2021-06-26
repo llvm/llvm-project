@@ -75,7 +75,7 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //      LINALG:   scf.yield %[[A]], %[[i]], %[[j]] : memref<?x8xf32>, index, index
   //      LINALG: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      LINALG:   linalg.fill(%[[alloc]], %cst) : memref<4x8xf32>, f32
+  //      LINALG:   linalg.fill(%cst, %[[alloc]]) : f32, memref<4x8xf32>
   //      LINALG:   %[[d0:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x8xf32>
   //      LINALG:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[d0]], %[[i]], %[[c4]])
   //      LINALG:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
@@ -167,7 +167,7 @@ func @split_vector_transfer_read_strided_2d(
   // LINALG-SAME:     memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index
   //      LINALG: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      LINALG:   linalg.fill(%[[alloc]], %cst) : memref<4x8xf32>, f32
+  //      LINALG:   linalg.fill(%cst, %[[alloc]]) : f32, memref<4x8xf32>
   //      LINALG:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[c7]], %[[i]], %[[c4]])
   //      LINALG:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
   //      LINALG:   %[[sv:.*]] = memref.subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]

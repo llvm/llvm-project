@@ -1,5 +1,4 @@
 ; Tests that debug information is sane after coro-split
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 source_filename = "simple-repro.c"

@@ -6,8 +6,8 @@
 define i32 @t1(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: t1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    cmp r2, #7
-; CHECK-NEXT:    cmpne r2, #1
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    cmpne r2, #7
 ; CHECK-NEXT:    addne r0, r1, r0
 ; CHECK-NEXT:    addeq r0, r0, r1
 ; CHECK-NEXT:    addeq r0, r0, #1

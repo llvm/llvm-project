@@ -107,8 +107,9 @@ InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
 }
 
 void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
-  PrintHelp(lld::outs(), (std::string(argv0) + " [options] file...").c_str(),
-            "LLVM Linker", showHidden);
+  OptTable::printHelp(lld::outs(),
+                      (std::string(argv0) + " [options] file...").c_str(),
+                      "LLVM Linker", showHidden);
   lld::outs() << "\n";
 }
 

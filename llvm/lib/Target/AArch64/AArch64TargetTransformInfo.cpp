@@ -1791,17 +1791,68 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   // Horizontal adds can use the 'addv' instruction. We model the cost of these
   // instructions as normal vector adds. This is the only arithmetic vector
   // reduction operation for which we have an instruction.
+  // OR, XOR and AND costs should match the codegen from:
+  // OR: llvm/test/CodeGen/AArch64/reduce-or.ll
+  // XOR: llvm/test/CodeGen/AArch64/reduce-xor.ll
+  // AND: llvm/test/CodeGen/AArch64/reduce-and.ll
   static const CostTblEntry CostTblNoPairwise[]{
-      {ISD::ADD, MVT::v8i8,  1},
-      {ISD::ADD, MVT::v16i8, 1},
-      {ISD::ADD, MVT::v4i16, 1},
-      {ISD::ADD, MVT::v8i16, 1},
-      {ISD::ADD, MVT::v4i32, 1},
+      {ISD::ADD, MVT::v8i8,   1},
+      {ISD::ADD, MVT::v16i8,  1},
+      {ISD::ADD, MVT::v4i16,  1},
+      {ISD::ADD, MVT::v8i16,  1},
+      {ISD::ADD, MVT::v4i32,  1},
+      {ISD::OR,  MVT::v8i8,  15},
+      {ISD::OR,  MVT::v16i8, 17},
+      {ISD::OR,  MVT::v4i16,  7},
+      {ISD::OR,  MVT::v8i16,  9},
+      {ISD::OR,  MVT::v2i32,  3},
+      {ISD::OR,  MVT::v4i32,  5},
+      {ISD::OR,  MVT::v2i64,  3},
+      {ISD::XOR, MVT::v8i8,  15},
+      {ISD::XOR, MVT::v16i8, 17},
+      {ISD::XOR, MVT::v4i16,  7},
+      {ISD::XOR, MVT::v8i16,  9},
+      {ISD::XOR, MVT::v2i32,  3},
+      {ISD::XOR, MVT::v4i32,  5},
+      {ISD::XOR, MVT::v2i64,  3},
+      {ISD::AND, MVT::v8i8,  15},
+      {ISD::AND, MVT::v16i8, 17},
+      {ISD::AND, MVT::v4i16,  7},
+      {ISD::AND, MVT::v8i16,  9},
+      {ISD::AND, MVT::v2i32,  3},
+      {ISD::AND, MVT::v4i32,  5},
+      {ISD::AND, MVT::v2i64,  3},
   };
-
-  if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))
-    return LT.first * Entry->Cost;
-
+  switch (ISD) {
+  default:
+    break;
+  case ISD::ADD:
+    if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))
+      return LT.first * Entry->Cost;
+    break;
+  case ISD::XOR:
+  case ISD::AND:
+  case ISD::OR:
+    const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy);
+    if (!Entry)
+      break;
+    auto *ValVTy = cast<FixedVectorType>(ValTy);
+    if (!ValVTy->getElementType()->isIntegerTy(1) &&
+        MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
+        isPowerOf2_32(ValVTy->getNumElements())) {
+      InstructionCost ExtraCost = 0;
+      if (LT.first != 1) {
+        // Type needs to be split, so there is an extra cost of LT.first - 1
+        // arithmetic ops.
+        auto *Ty = FixedVectorType::get(ValTy->getElementType(),
+                                        MTy.getVectorNumElements());
+        ExtraCost = getArithmeticInstrCost(Opcode, Ty, CostKind);
+        ExtraCost *= LT.first - 1;
+      }
+      return Entry->Cost + ExtraCost;
+    }
+    break;
+  }
   return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm,
                                            CostKind);
 }

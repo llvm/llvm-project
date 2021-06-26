@@ -23,28 +23,33 @@
 /// laid out as follows:
 ///
 /// +--------------------+ 0x800000000000 (top of memory)
-/// | application memory |
-/// +--------------------+ 0x700000008000 (kAppAddr)
-/// |                    |
-/// |       unused       |
-/// |                    |
-/// +--------------------+ 0x300000000000 (kUnusedAddr)
-/// |       origin       |
-/// +--------------------+ 0x200000008000 (kOriginAddr)
-/// |       unused       |
+/// |    application 3   |
+/// +--------------------+ 0x700000000000
+/// |      invalid       |
+/// +--------------------+ 0x610000000000
+/// |      origin 1      |
+/// +--------------------+ 0x600000000000
+/// |    application 2   |
+/// +--------------------+ 0x510000000000
+/// |      shadow 1      |
+/// +--------------------+ 0x500000000000
+/// |      invalid       |
+/// +--------------------+ 0x400000000000
+/// |      origin 3      |
+/// +--------------------+ 0x300000000000
+/// |      shadow 3      |
 /// +--------------------+ 0x200000000000
-/// |   shadow memory    |
-/// +--------------------+ 0x100000008000 (kShadowAddr)
-/// |       unused       |
-/// +--------------------+ 0x000000010000
-/// | reserved by kernel |
+/// |      origin 2      |
+/// +--------------------+ 0x110000000000
+/// |      invalid       |
+/// +--------------------+ 0x100000000000
+/// |      shadow 2      |
+/// +--------------------+ 0x010000000000
+/// |    application 1   |
 /// +--------------------+ 0x000000000000
 ///
-///
-/// To derive a shadow memory address from an application memory address, bits
-/// 45-46 are cleared to bring the address into the range
-/// [0x100000008000,0x200000000000). See the function
-/// DataFlowSanitizer::getShadowAddress below.
+/// MEM_TO_SHADOW(mem) = mem ^ 0x500000000000
+/// SHADOW_TO_ORIGIN(shadow) = shadow + 0x100000000000
 ///
 /// For more information, please refer to the design document:
 /// http://clang.llvm.org/docs/DataFlowSanitizerDesign.html
@@ -235,6 +240,30 @@ static StringRef getGlobalTypeString(const GlobalValue &G) {
 
 namespace {
 
+// Memory map parameters used in application-to-shadow address calculation.
+// Offset = (Addr & ~AndMask) ^ XorMask
+// Shadow = ShadowBase + Offset
+// Origin = (OriginBase + Offset) & ~3ULL
+struct MemoryMapParams {
+  uint64_t AndMask;
+  uint64_t XorMask;
+  uint64_t ShadowBase;
+  uint64_t OriginBase;
+};
+
+} // end anonymous namespace
+
+// x86_64 Linux
+// NOLINTNEXTLINE(readability-identifier-naming)
+static const MemoryMapParams Linux_X86_64_MemoryMapParams = {
+    0,              // AndMask (not used)
+    0x500000000000, // XorMask
+    0,              // ShadowBase (not used)
+    0x100000000000, // OriginBase
+};
+
+namespace {
+
 class DFSanABIList {
   std::unique_ptr<SpecialCaseList> SCL;
 
@@ -390,9 +419,6 @@ class DataFlowSanitizer {
   PointerType *PrimitiveShadowPtrTy;
   IntegerType *IntptrTy;
   ConstantInt *ZeroPrimitiveShadow;
-  ConstantInt *ShadowPtrMask;
-  ConstantInt *ShadowBase;
-  ConstantInt *OriginBase;
   Constant *ArgTLS;
   ArrayType *ArgOriginTLSTy;
   Constant *ArgOriginTLS;
@@ -432,6 +458,10 @@ class DataFlowSanitizer {
   DenseMap<Value *, Function *> UnwrappedFnMap;
   AttrBuilder ReadOnlyNoneAttrs;
 
+  /// Memory map parameters used in calculation mapping application addresses
+  /// to shadow addresses and origin addresses.
+  const MemoryMapParams *MapParams;
+
   Value *getShadowOffset(Value *Addr, IRBuilder<> &IRB);
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
   Value *getShadowAddress(Value *Addr, Instruction *Pos, Value *ShadowOffset);
@@ -452,7 +482,7 @@ class DataFlowSanitizer {
   void initializeCallbackFunctions(Module &M);
   void initializeRuntimeFunctions(Module &M);
   void injectMetadataGlobals(Module &M);
-  bool init(Module &M);
+  bool initializeModule(Module &M);
 
   /// Advances \p OriginAddr to point to the next 32-bit origin and then loads
   /// from it. Returns the origin's loaded value.
@@ -1002,7 +1032,7 @@ Type *DataFlowSanitizer::getShadowTy(Value *V) {
   return getShadowTy(V->getType());
 }
 
-bool DataFlowSanitizer::init(Module &M) {
+bool DataFlowSanitizer::initializeModule(Module &M) {
   Triple TargetTriple(M.getTargetTriple());
   const DataLayout &DL = M.getDataLayout();
 
@@ -1010,6 +1040,7 @@ bool DataFlowSanitizer::init(Module &M) {
     report_fatal_error("unsupported operating system");
   if (TargetTriple.getArch() != Triple::x86_64)
     report_fatal_error("unsupported architecture");
+  MapParams = &Linux_X86_64_MemoryMapParams;
 
   Mod = &M;
   Ctx = &M.getContext();
@@ -1022,9 +1053,6 @@ bool DataFlowSanitizer::init(Module &M) {
   ZeroPrimitiveShadow = ConstantInt::getSigned(PrimitiveShadowTy, 0);
   ZeroOrigin = ConstantInt::getSigned(OriginTy, 0);
 
-  ShadowBase = ConstantInt::get(IntptrTy, 0x100000008000LL);
-  OriginBase = ConstantInt::get(IntptrTy, 0x200000008000LL);
-  ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x600000000000LL);
   Type *DFSanUnionLoadArgs[2] = {PrimitiveShadowPtrTy, IntptrTy};
   DFSanUnionLoadFnTy = FunctionType::get(PrimitiveShadowTy, DFSanUnionLoadArgs,
                                          /*isVarArg=*/false);
@@ -1334,7 +1362,7 @@ void DataFlowSanitizer::injectMetadataGlobals(Module &M) {
 }
 
 bool DataFlowSanitizer::runImpl(Module &M) {
-  init(M);
+  initializeModule(M);
 
   if (ABIList.isIn(M, "skip"))
     return false;
@@ -1721,11 +1749,23 @@ void DFSanFunction::setShadow(Instruction *I, Value *Shadow) {
   ValShadowMap[I] = Shadow;
 }
 
+/// Compute the integer shadow offset that corresponds to a given
+/// application address.
+///
+/// Offset = (Addr & ~AndMask) ^ XorMask
 Value *DataFlowSanitizer::getShadowOffset(Value *Addr, IRBuilder<> &IRB) {
-  // Returns Addr & shadow_mask
   assert(Addr != RetvalTLS && "Reinstrumenting?");
-  return IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
-                       IRB.CreatePtrToInt(ShadowPtrMask, IntptrTy));
+  Value *OffsetLong = IRB.CreatePointerCast(Addr, IntptrTy);
+
+  uint64_t AndMask = MapParams->AndMask;
+  if (AndMask)
+    OffsetLong =
+        IRB.CreateAnd(OffsetLong, ConstantInt::get(IntptrTy, ~AndMask));
+
+  uint64_t XorMask = MapParams->XorMask;
+  if (XorMask)
+    OffsetLong = IRB.CreateXor(OffsetLong, ConstantInt::get(IntptrTy, XorMask));
+  return OffsetLong;
 }
 
 std::pair<Value *, Value *>
@@ -1734,13 +1774,22 @@ DataFlowSanitizer::getShadowOriginAddress(Value *Addr, Align InstAlignment,
   // Returns ((Addr & shadow_mask) + origin_base - shadow_base) & ~4UL
   IRBuilder<> IRB(Pos);
   Value *ShadowOffset = getShadowOffset(Addr, IRB);
-  Value *ShadowPtr = getShadowAddress(Addr, Pos, ShadowOffset);
+  Value *ShadowLong = ShadowOffset;
+  uint64_t ShadowBase = MapParams->ShadowBase;
+  if (ShadowBase != 0) {
+    ShadowLong =
+        IRB.CreateAdd(ShadowLong, ConstantInt::get(IntptrTy, ShadowBase));
+  }
+  IntegerType *ShadowTy = IntegerType::get(*Ctx, ShadowWidthBits);
+  Value *ShadowPtr =
+      IRB.CreateIntToPtr(ShadowLong, PointerType::get(ShadowTy, 0));
   Value *OriginPtr = nullptr;
   if (shouldTrackOrigins()) {
-    static Value *OriginByShadowOffset = ConstantInt::get(
-        IntptrTy, OriginBase->getZExtValue() - ShadowBase->getZExtValue());
-
-    Value *OriginLong = IRB.CreateAdd(ShadowOffset, OriginByShadowOffset);
+    Value *OriginLong = ShadowOffset;
+    uint64_t OriginBase = MapParams->OriginBase;
+    if (OriginBase != 0)
+      OriginLong =
+          IRB.CreateAdd(OriginLong, ConstantInt::get(IntptrTy, OriginBase));
     const Align Alignment = llvm::assumeAligned(InstAlignment.value());
     // When alignment is >= 4, Addr must be aligned to 4, otherwise it is UB.
     // So Mask is unnecessary.
@@ -1750,7 +1799,7 @@ DataFlowSanitizer::getShadowOriginAddress(Value *Addr, Align InstAlignment,
     }
     OriginPtr = IRB.CreateIntToPtr(OriginLong, OriginPtrTy);
   }
-  return {ShadowPtr, OriginPtr};
+  return std::make_pair(ShadowPtr, OriginPtr);
 }
 
 Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos,
@@ -1760,7 +1809,6 @@ Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos,
 }
 
 Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
-  // Returns (Addr & shadow_mask)
   IRBuilder<> IRB(Pos);
   Value *ShadowOffset = getShadowOffset(Addr, IRB);
   return getShadowAddress(Addr, Pos, ShadowOffset);

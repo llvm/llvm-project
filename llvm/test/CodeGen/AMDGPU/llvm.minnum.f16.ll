@@ -378,7 +378,7 @@ define amdgpu_kernel void @minnum_v2f16_ieee(
 ; VI-NEXT:    v_max_f16_e64 v1, s5, s5
 ; VI-NEXT:    v_max_f16_e64 v2, s4, s4
 ; VI-NEXT:    v_min_f16_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -501,7 +501,7 @@ define amdgpu_kernel void @minnum_v2f16_imm_a(
 ; VI-NEXT:    v_max_f16_e64 v1, s4, s4
 ; VI-NEXT:    v_min_f16_e32 v0, 0x4200, v0
 ; VI-NEXT:    v_min_f16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -581,7 +581,7 @@ define amdgpu_kernel void @minnum_v2f16_imm_b(
 ; VI-NEXT:    v_max_f16_e64 v1, s4, s4
 ; VI-NEXT:    v_min_f16_e32 v0, 4.0, v0
 ; VI-NEXT:    v_min_f16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -682,7 +682,7 @@ define amdgpu_kernel void @minnum_v3f16(
 ; VI-NEXT:    v_max_f16_e64 v1, s6, s6
 ; VI-NEXT:    v_max_f16_e64 v2, s4, s4
 ; VI-NEXT:    v_min_f16_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    v_max_f16_e64 v1, s7, s7
 ; VI-NEXT:    v_max_f16_e64 v2, s5, s5
 ; VI-NEXT:    v_min_f16_e32 v1, v2, v1
@@ -812,7 +812,7 @@ define amdgpu_kernel void @minnum_v4f16(
 ; VI-NEXT:    v_max_f16_e64 v2, s5, s5
 ; VI-NEXT:    v_max_f16_e64 v1, s7, s7
 ; VI-NEXT:    v_min_f16_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v1, v0, v1
 ; VI-NEXT:    v_max_f16_e64 v2, s4, s4
 ; VI-NEXT:    v_max_f16_e64 v0, s6, s6
 ; VI-NEXT:    s_lshr_b32 s4, s4, 16
@@ -821,7 +821,7 @@ define amdgpu_kernel void @minnum_v4f16(
 ; VI-NEXT:    v_max_f16_e64 v2, s5, s5
 ; VI-NEXT:    v_max_f16_e64 v3, s4, s4
 ; VI-NEXT:    v_min_f16_sdwa v2, v3, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -930,12 +930,12 @@ define amdgpu_kernel void @fmin_v4f16_imm_a(
 ; VI-NEXT:    v_min_f16_sdwa v0, v3, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_min_f16_e32 v1, 0x4200, v1
 ; VI-NEXT:    s_lshr_b32 s4, s4, 16
-; VI-NEXT:    v_or_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v1, v1, v0
 ; VI-NEXT:    v_min_f16_e32 v0, 0x4800, v2
 ; VI-NEXT:    v_max_f16_e64 v2, s4, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x4000
 ; VI-NEXT:    v_min_f16_sdwa v2, v2, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;

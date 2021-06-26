@@ -858,35 +858,23 @@ def : Pat<(sube i8 :$src, i8 :$opd), (SUBX8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
 def : Pat<(sube i16:$src, i16:$opd), (SUBX16dd MxDRD16:$src, MxDRD16:$opd)>;
 def : Pat<(sube i32:$src, i32:$opd), (SUBX32dd MxDRD32:$src, MxDRD32:$opd)>;
 
+multiclass BitwisePat<string INST, SDNode OP> {
+  // op reg, reg
+  def : Pat<(OP i8 :$src, i8 :$opd),
+            (!cast<MxInst>(INST#"8dd")  MxDRD8 :$src, MxDRD8 :$opd)>;
+  def : Pat<(OP i16:$src, i16:$opd),
+            (!cast<MxInst>(INST#"16dd") MxDRD16:$src, MxDRD16:$opd)>;
+  def : Pat<(OP i32:$src, i32:$opd),
+            (!cast<MxInst>(INST#"32dd") MxDRD32:$src, MxDRD32:$opd)>;
+  // op reg, imm
+  def : Pat<(OP i8: $src, MximmSExt8 :$opd),
+            (!cast<MxInst>(INST#"8di")  MxDRD8 :$src, imm:$opd)>;
+  def : Pat<(OP i16:$src, MximmSExt16:$opd),
+            (!cast<MxInst>(INST#"16di") MxDRD16:$src, imm:$opd)>;
+  def : Pat<(OP i32:$src, MximmSExt32:$opd),
+            (!cast<MxInst>(INST#"32di") MxDRD32:$src, imm:$opd)>;
+}
 
-// and reg, reg
-def : Pat<(and i8 :$src, i8 :$opd), (AND8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-def : Pat<(and i16:$src, i16:$opd), (AND16dd MxDRD16:$src, MxDRD16:$opd)>;
-def : Pat<(and i32:$src, i32:$opd), (AND32dd MxDRD32:$src, MxDRD32:$opd)>;
-
-// and reg, imm
-def : Pat<(and i8: $src, MximmSExt8 :$opd), (AND8di  MxDRD8 :$src, imm:$opd)>;
-def : Pat<(and i16:$src, MximmSExt16:$opd), (AND16di MxDRD16:$src, imm:$opd)>;
-def : Pat<(and i32:$src, MximmSExt32:$opd), (AND32di MxDRD32:$src, imm:$opd)>;
-
-
-// xor reg,reg
-def : Pat<(xor i8 :$src, i8 :$opd), (XOR8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-def : Pat<(xor i16:$src, i16:$opd), (XOR16dd MxDRD16:$src, MxDRD16:$opd)>;
-def : Pat<(xor i32:$src, i32:$opd), (XOR32dd MxDRD32:$src, MxDRD32:$opd)>;
-
-// xor reg, imm
-def : Pat<(xor i8: $src, MximmSExt8 :$opd), (XOR8di  MxDRD8 :$src, imm:$opd)>;
-def : Pat<(xor i16:$src, MximmSExt16:$opd), (XOR16di MxDRD16:$src, imm:$opd)>;
-def : Pat<(xor i32:$src, MximmSExt32:$opd), (XOR32di MxDRD32:$src, imm:$opd)>;
-
-
-// or reg, reg
-def : Pat<(or i8 :$src, i8 :$opd), (OR8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-def : Pat<(or i16:$src, i16:$opd), (OR16dd MxDRD16:$src, MxDRD16:$opd)>;
-def : Pat<(or i32:$src, i32:$opd), (OR32dd MxDRD32:$src, MxDRD32:$opd)>;
-
-// or reg, imm
-def : Pat<(or i8: $src, MximmSExt8 :$opd), (OR8di  MxDRD8 :$src, imm:$opd)>;
-def : Pat<(or i16:$src, MximmSExt16:$opd), (OR16di MxDRD16:$src, imm:$opd)>;
-def : Pat<(or i32:$src, MximmSExt32:$opd), (OR32di MxDRD32:$src, imm:$opd)>;
+defm : BitwisePat<"AND", and>;
+defm : BitwisePat<"OR",  or>;
+defm : BitwisePat<"XOR", xor>;

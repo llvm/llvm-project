@@ -17,7 +17,9 @@ set(LLVM_OPTIONAL_SOURCES
 add_lldb_unittest(ProcessUtilityTests
   RegisterContextTest.cpp
   LinuxProcMapsTest.cpp
+  MemoryTagManagerAArch64MTETest.cpp
   ${PLATFORM_SOURCES}
 
   LINK_LIBS
-    lldbPluginProcessUtility)
+    lldbPluginProcessUtility
+    LLVMTestingSupport)
