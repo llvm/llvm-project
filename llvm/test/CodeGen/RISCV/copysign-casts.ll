@@ -357,7 +357,7 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV64I-NEXT:    addi a2, zero, 1
 ; RV64I-NEXT:    slli a2, a2, 31
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a1, a1, 16
+; RV64I-NEXT:    srliw a1, a1, 16
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
