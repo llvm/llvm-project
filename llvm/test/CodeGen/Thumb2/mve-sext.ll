@@ -434,39 +434,13 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @trunc_v16i16_v16i8(<16 x i16> %src) {
 ; CHECK-LABEL: trunc_v16i16_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmov.u16 r0, q0[0]
-; CHECK-NEXT:    vmov.8 q0[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[1]
-; CHECK-NEXT:    vmov.8 q0[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[2]
-; CHECK-NEXT:    vmov.8 q0[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[3]
-; CHECK-NEXT:    vmov.8 q0[3], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[4]
-; CHECK-NEXT:    vmov.8 q0[4], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[5]
-; CHECK-NEXT:    vmov.8 q0[5], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[6]
-; CHECK-NEXT:    vmov.8 q0[6], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[7]
-; CHECK-NEXT:    vmov.8 q0[7], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-NEXT:    vmov.8 q0[8], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[1]
-; CHECK-NEXT:    vmov.8 q0[9], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-NEXT:    vmov.8 q0[10], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-NEXT:    vmov.8 q0[11], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[4]
-; CHECK-NEXT:    vmov.8 q0[12], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[5]
-; CHECK-NEXT:    vmov.8 q0[13], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[6]
-; CHECK-NEXT:    vmov.8 q0[14], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[7]
-; CHECK-NEXT:    vmov.8 q0[15], r0
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vstrb.16 q1, [r0, #8]
+; CHECK-NEXT:    vstrb.16 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = trunc <16 x i16> %src to <16 x i8>
@@ -476,19 +450,13 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @trunc_v8i32_v8i16(<8 x i32> %src) {
 ; CHECK-LABEL: trunc_v8i32_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmov r0, r1, d4
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov.16 q0[1], r1
-; CHECK-NEXT:    vmov r0, r1, d5
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    vmov r0, r1, d3
-; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov.16 q0[7], r1
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vstrh.32 q1, [r0, #8]
+; CHECK-NEXT:    vstrh.32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = trunc <8 x i32> %src to <8 x i16>
@@ -498,34 +466,15 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @trunc_v16i32_v16i8(<16 x i32> %src) {
 ; CHECK-LABEL: trunc_v16i32_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, r1, d8
-; CHECK-NEXT:    vmov.8 q0[0], r0
-; CHECK-NEXT:    vmov.8 q0[1], r1
-; CHECK-NEXT:    vmov r0, r1, d9
-; CHECK-NEXT:    vmov.8 q0[2], r0
-; CHECK-NEXT:    vmov.8 q0[3], r1
-; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vmov.8 q0[4], r0
-; CHECK-NEXT:    vmov.8 q0[5], r1
-; CHECK-NEXT:    vmov r0, r1, d3
-; CHECK-NEXT:    vmov.8 q0[6], r0
-; CHECK-NEXT:    vmov.8 q0[7], r1
-; CHECK-NEXT:    vmov r0, r1, d4
-; CHECK-NEXT:    vmov.8 q0[8], r0
-; CHECK-NEXT:    vmov.8 q0[9], r1
-; CHECK-NEXT:    vmov r0, r1, d5
-; CHECK-NEXT:    vmov.8 q0[10], r0
-; CHECK-NEXT:    vmov.8 q0[11], r1
-; CHECK-NEXT:    vmov r0, r1, d6
-; CHECK-NEXT:    vmov.8 q0[12], r0
-; CHECK-NEXT:    vmov.8 q0[13], r1
-; CHECK-NEXT:    vmov r0, r1, d7
-; CHECK-NEXT:    vmov.8 q0[14], r0
-; CHECK-NEXT:    vmov.8 q0[15], r1
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vstrb.32 q3, [r0, #12]
+; CHECK-NEXT:    vstrb.32 q2, [r0, #8]
+; CHECK-NEXT:    vstrb.32 q1, [r0, #4]
+; CHECK-NEXT:    vstrb.32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = trunc <16 x i32> %src to <16 x i8>
