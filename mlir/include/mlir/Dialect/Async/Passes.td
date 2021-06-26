@@ -12,15 +12,26 @@
 include "mlir/Pass/PassBase.td"
 
 def AsyncParallelFor : Pass<"async-parallel-for"> {
-  let summary = "Convert scf.parallel operations to multiple async regions "
+  let summary = "Convert scf.parallel operations to multiple async compute ops "
                 "executed concurrently for non-overlapping iteration ranges";
   let constructor = "mlir::createAsyncParallelForPass()";
+
   let options = [
-    Option<"numConcurrentAsyncExecute", "num-concurrent-async-execute",
-      "int32_t", /*default=*/"4",
-      "The number of async.execute operations that will be used for concurrent "
-      "loop execution.">
+    Option<"asyncDispatch", "async-dispatch",
+      "bool", /*default=*/"true",
+      "Dispatch async compute tasks using recursive work splitting. If `false` "
+      "async compute tasks will be launched using simple for loop in the "
+      "caller thread.">,
+
+    Option<"numWorkerThreads", "num-workers",
+      "int32_t", /*default=*/"8",
+      "The number of available workers to execute async operations.">,
+
+    Option<"targetBlockSize", "target-block-size",
+      "int32_t", /*default=*/"1000",
+      "The target block size for sharding parallel operation.">
   ];
+
   let dependentDialects = ["async::AsyncDialect", "scf::SCFDialect"];
 }
 
