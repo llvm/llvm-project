@@ -100,17 +100,25 @@ TEST(LowLevelTypeTest, Vector) {
 
 TEST(LowLevelTypeTest, ScalarOrVector) {
   // Test version with number of bits for scalar type.
-  EXPECT_EQ(LLT::scalar(32), LLT::scalarOrVector(1, 32));
-  EXPECT_EQ(LLT::fixed_vector(2, 32), LLT::scalarOrVector(2, 32));
+  EXPECT_EQ(LLT::scalar(32),
+            LLT::scalarOrVector(ElementCount::getFixed(1), 32));
+  EXPECT_EQ(LLT::fixed_vector(2, 32),
+            LLT::scalarOrVector(ElementCount::getFixed(2), 32));
+  EXPECT_EQ(LLT::scalable_vector(1, 32),
+            LLT::scalarOrVector(ElementCount::getScalable(1), 32));
 
   // Test version with LLT for scalar type.
-  EXPECT_EQ(LLT::scalar(32), LLT::scalarOrVector(1, LLT::scalar(32)));
-  EXPECT_EQ(LLT::fixed_vector(2, 32), LLT::scalarOrVector(2, LLT::scalar(32)));
+  EXPECT_EQ(LLT::scalar(32),
+            LLT::scalarOrVector(ElementCount::getFixed(1), LLT::scalar(32)));
+  EXPECT_EQ(LLT::fixed_vector(2, 32),
+            LLT::scalarOrVector(ElementCount::getFixed(2), LLT::scalar(32)));
 
   // Test with pointer elements.
-  EXPECT_EQ(LLT::pointer(1, 32), LLT::scalarOrVector(1, LLT::pointer(1, 32)));
-  EXPECT_EQ(LLT::fixed_vector(2, LLT::pointer(1, 32)),
-            LLT::scalarOrVector(2, LLT::pointer(1, 32)));
+  EXPECT_EQ(LLT::pointer(1, 32), LLT::scalarOrVector(ElementCount::getFixed(1),
+                                                     LLT::pointer(1, 32)));
+  EXPECT_EQ(
+      LLT::fixed_vector(2, LLT::pointer(1, 32)),
+      LLT::scalarOrVector(ElementCount::getFixed(2), LLT::pointer(1, 32)));
 }
 
 TEST(LowLevelTypeTest, ChangeElementType) {
