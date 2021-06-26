@@ -452,6 +452,8 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::VSELECT, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
   }
+  setOperationAction(ISD::TRUNCATE, MVT::v8i32, Custom);
+  setOperationAction(ISD::TRUNCATE, MVT::v16i16, Custom);
 }
 
 ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
@@ -1679,6 +1681,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::WIN__DBZCHK)
     MAKE_CASE(ARMISD::PREDICATE_CAST)
     MAKE_CASE(ARMISD::VECTOR_REG_CAST)
+    MAKE_CASE(ARMISD::MVETRUNC)
     MAKE_CASE(ARMISD::VCMP)
     MAKE_CASE(ARMISD::VCMPZ)
     MAKE_CASE(ARMISD::VTST)
@@ -7376,6 +7379,28 @@ static bool isVMOVNMask(ArrayRef<int> M, EVT VT, bool Top, bool SingleSource) {
   return true;
 }
 
+static bool isVMOVNTruncMask(ArrayRef<int> M, EVT ToVT, bool rev) {
+  unsigned NumElts = ToVT.getVectorNumElements();
+  if (NumElts != M.size())
+    return false;
+
+  // Test if the Trunc can be convertable to a VMOVN with this shuffle. We are
+  // looking for patterns of:
+  // !rev: 0 N/2 1 N/2+1 2 N/2+2 ...
+  //  rev: N/2 0 N/2+1 1 N/2+2 2 ...
+
+  unsigned Off0 = rev ? NumElts / 2 : 0;
+  unsigned Off1 = rev ? 0 : NumElts / 2;
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    if (M[i] >= 0 && M[i] != (int)(Off0 + i / 2))
+      return false;
+    if (M[i + 1] >= 0 && M[i + 1] != (int)(Off1 + i / 2))
+      return false;
+  }
+
+  return true;
+}
+
 // Reconstruct an MVE VCVT from a BuildVector of scalar fptrunc, all extracted
 // from a pair of inputs. For example:
 // BUILDVECTOR(FP_ROUND(EXTRACT_ELT(X, 0),
@@ -8880,13 +8905,13 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG,
 }
 
 // Turn a truncate into a predicate (an i1 vector) into icmp(and(x, 1), 0).
-static SDValue LowerTruncatei1(SDValue N, SelectionDAG &DAG,
+static SDValue LowerTruncatei1(SDNode *N, SelectionDAG &DAG,
                                const ARMSubtarget *ST) {
   assert(ST->hasMVEIntegerOps() && "Expected MVE!");
-  EVT VT = N.getValueType();
+  EVT VT = N->getValueType(0);
   assert((VT == MVT::v16i1 || VT == MVT::v8i1 || VT == MVT::v4i1) &&
          "Expected a vector i1 type!");
-  SDValue Op = N.getOperand(0);
+  SDValue Op = N->getOperand(0);
   EVT FromVT = Op.getValueType();
   SDLoc DL(N);
 
@@ -8894,6 +8919,66 @@ static SDValue LowerTruncatei1(SDValue N, SelectionDAG &DAG,
       DAG.getNode(ISD::AND, DL, FromVT, Op, DAG.getConstant(1, DL, FromVT));
   return DAG.getNode(ISD::SETCC, DL, VT, And, DAG.getConstant(0, DL, FromVT),
                      DAG.getCondCode(ISD::SETNE));
+}
+
+static SDValue LowerTruncate(SDNode *N, SelectionDAG &DAG,
+                             const ARMSubtarget *Subtarget) {
+  if (!Subtarget->hasMVEIntegerOps())
+    return SDValue();
+
+  EVT ToVT = N->getValueType(0);
+  if (ToVT.getScalarType() == MVT::i1)
+    return LowerTruncatei1(N, DAG, Subtarget);
+
+  // MVE does not have a single instruction to perform the truncation of a v4i32
+  // into the lower half of a v8i16, in the same way that a NEON vmovn would.
+  // Most of the instructions in MVE follow the 'Beats' system, where moving
+  // values from different lanes is usually something that the instructions
+  // avoid.
+  //
+  // Instead it has top/bottom instructions such as VMOVLT/B and VMOVNT/B,
+  // which take a the top/bottom half of a larger lane and extend it (or do the
+  // opposite, truncating into the top/bottom lane from a larger lane). Note
+  // that because of the way we widen lanes, a v4i16 is really a v4i32 using the
+  // bottom 16bits from each vector lane. This works really well with T/B
+  // instructions, but that doesn't extend to v8i32->v8i16 where the lanes need
+  // to move order.
+  //
+  // But truncates and sext/zext are always going to be fairly common from llvm.
+  // We have several options for how to deal with them:
+  // - Wherever possible combine them into an instruction that makes them
+  //   "free". This includes loads/stores, which can perform the trunc as part
+  //   of the memory operation. Or certain shuffles that can be turned into
+  //   VMOVN/VMOVL.
+  // - Lane Interleaving to transform blocks surrounded by ext/trunc. So
+  //   trunc(mul(sext(a), sext(b))) may become
+  //   VMOVNT(VMUL(VMOVLB(a), VMOVLB(b)), VMUL(VMOVLT(a), VMOVLT(b))). (Which in
+  //   this case can use VMULL). This is performed in the
+  //   MVELaneInterleavingPass.
+  // - Otherwise we have an option. By default we would expand the
+  //   zext/sext/trunc into a series of lane extract/inserts going via GPR
+  //   registers. One for each vector lane in the vector. This can obviously be
+  //   very expensive.
+  // - The other option is to use the fact that loads/store can extend/truncate
+  //   to turn a trunc into two truncating stack stores and a stack reload. This
+  //   becomes 3 back-to-back memory operations, but at least that is less than
+  //   all the insert/extracts.
+  //
+  // In order to do the last, we convert certain trunc's into MVETRUNC, which
+  // are either optimized where they can be, or eventually lowered into stack
+  // stores/loads. This prevents us from splitting a v8i16 trunc into two stores
+  // two early, where other instructions would be better, and stops us from
+  // having to reconstruct multiple buildvector shuffles into loads/stores.
+  if (ToVT != MVT::v8i16 && ToVT != MVT::v16i8)
+    return SDValue();
+  EVT FromVT = N->getOperand(0).getValueType();
+  if (FromVT != MVT::v8i32 && FromVT != MVT::v16i16)
+    return SDValue();
+
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 0);
+  SDLoc DL(N);
+  return DAG.getNode(ARMISD::MVETRUNC, DL, ToVT, Lo, Hi);
 }
 
 /// isExtendedBUILD_VECTOR - Check if N is a constant BUILD_VECTOR where each
@@ -10022,7 +10107,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::INSERT_VECTOR_ELT: return LowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return LowerEXTRACT_VECTOR_ELT(Op, DAG, Subtarget);
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG, Subtarget);
-  case ISD::TRUNCATE:      return LowerTruncatei1(Op, DAG, Subtarget);
+  case ISD::TRUNCATE:      return LowerTruncate(Op.getNode(), DAG, Subtarget);
   case ISD::FLT_ROUNDS_:   return LowerFLT_ROUNDS_(Op, DAG);
   case ISD::SET_ROUNDING:  return LowerSET_ROUNDING(Op, DAG);
   case ISD::MUL:           return LowerMUL(Op, DAG);
@@ -10164,6 +10249,9 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
      return ;
   case ISD::LOAD:
     LowerLOAD(N, Results, DAG);
+    break;
+  case ISD::TRUNCATE:
+    Res = LowerTruncate(N, DAG, Subtarget);
     break;
   }
   if (Res.getNode())
@@ -14586,6 +14674,17 @@ static SDValue PerformExtractEltCombine(SDNode *N,
   if (SDValue R = PerformExtractEltToVMOVRRD(N, DCI))
     return R;
 
+  // extract (MVETrunc(x)) -> extract x
+  if (Op0->getOpcode() == ARMISD::MVETRUNC) {
+    unsigned Idx = N->getConstantOperandVal(1);
+    unsigned Vec =
+        Idx / Op0->getOperand(0).getValueType().getVectorNumElements();
+    unsigned SubIdx =
+        Idx % Op0->getOperand(0).getValueType().getVectorNumElements();
+    return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Op0.getOperand(Vec),
+                           DCI.DAG.getConstant(SubIdx, dl, MVT::i32));
+  }
+
   return SDValue();
 }
 
@@ -14644,10 +14743,36 @@ static SDValue FlattenVectorShuffle(ShuffleVectorSDNode *N, SelectionDAG &DAG) {
                      Op0->getOperand(0), Op1->getOperand(0));
 }
 
+// shuffle(MVETrunc(x, y)) -> VMOVN(x, y)
+static SDValue PerformShuffleVMOVNCombine(ShuffleVectorSDNode *N,
+                                          SelectionDAG &DAG) {
+  SDValue Trunc = N->getOperand(0);
+  EVT VT = Trunc.getValueType();
+  if (Trunc.getOpcode() != ARMISD::MVETRUNC || !N->getOperand(1).isUndef())
+    return SDValue();
+
+  SDLoc DL(Trunc);
+  if (isVMOVNTruncMask(N->getMask(), VT, 0))
+    return DAG.getNode(
+        ARMISD::VMOVN, DL, VT,
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, Trunc.getOperand(0)),
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, Trunc.getOperand(1)),
+        DAG.getConstant(1, DL, MVT::i32));
+  else if (isVMOVNTruncMask(N->getMask(), VT, 1))
+    return DAG.getNode(
+        ARMISD::VMOVN, DL, VT,
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, Trunc.getOperand(1)),
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, Trunc.getOperand(0)),
+        DAG.getConstant(1, DL, MVT::i32));
+  return SDValue();
+}
+
 /// PerformVECTOR_SHUFFLECombine - Target-specific dag combine xforms for
 /// ISD::VECTOR_SHUFFLE.
 static SDValue PerformVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG) {
   if (SDValue R = FlattenVectorShuffle(cast<ShuffleVectorSDNode>(N), DAG))
+    return R;
+  if (SDValue R = PerformShuffleVMOVNCombine(cast<ShuffleVectorSDNode>(N), DAG))
     return R;
 
   // The LLVM shufflevector instruction does not require the shuffle mask
@@ -15334,7 +15459,7 @@ static SDValue PerformTruncatingStoreCombine(StoreSDNode *St,
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
 }
 
-// Try taking a single vector store from an truncate (which would otherwise turn
+// Try taking a single vector store from an fpround (which would otherwise turn
 // into an expensive buildvector) and splitting it into a series of narrowing
 // stores.
 static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
@@ -15342,7 +15467,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   if (!St->isSimple() || St->isTruncatingStore() || !St->isUnindexed())
     return SDValue();
   SDValue Trunc = St->getValue();
-  if (Trunc->getOpcode() != ISD::TRUNCATE && Trunc->getOpcode() != ISD::FP_ROUND)
+  if (Trunc->getOpcode() != ISD::FP_ROUND)
     return SDValue();
   EVT FromVT = Trunc->getOperand(0).getValueType();
   EVT ToVT = Trunc.getValueType();
@@ -15352,16 +15477,11 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   EVT ToEltVT = ToVT.getVectorElementType();
   EVT FromEltVT = FromVT.getVectorElementType();
 
-  unsigned NumElements = 0;
-  if (FromEltVT == MVT::i32 && (ToEltVT == MVT::i16 || ToEltVT == MVT::i8))
-    NumElements = 4;
-  if (FromEltVT == MVT::i16 && ToEltVT == MVT::i8)
-    NumElements = 8;
-  if (FromEltVT == MVT::f32 && ToEltVT == MVT::f16)
-    NumElements = 4;
-  if (NumElements == 0 ||
-      (FromEltVT != MVT::f32 && FromVT.getVectorNumElements() == NumElements) ||
-      FromVT.getVectorNumElements() % NumElements != 0)
+  if (FromEltVT != MVT::f32 || ToEltVT != MVT::f16)
+    return SDValue();
+
+  unsigned NumElements = 4;
+  if (FromVT.getVectorNumElements() % NumElements != 0)
     return SDValue();
 
   // Test if the Trunc will be convertable to a VMOVN with a shuffle, and if so
@@ -15390,14 +15510,6 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
     return true;
   };
 
-  // It may be preferable to keep the store unsplit as the trunc may end up
-  // being removed. Check that here.
-  if (Trunc.getOperand(0).getOpcode() == ISD::SMIN) {
-    if (SDValue U = PerformVQDMULHCombine(Trunc.getOperand(0).getNode(), DAG)) {
-      DAG.ReplaceAllUsesWith(Trunc.getOperand(0), U);
-      return SDValue();
-    }
-  }
   if (auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Trunc.getOperand(0)))
     if (isVMOVNShuffle(Shuffle, false) || isVMOVNShuffle(Shuffle, true))
       return SDValue();
@@ -15427,13 +15539,52 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
         DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewFromVT, Trunc.getOperand(0),
                     DAG.getConstant(i * NumElements, DL, MVT::i32));
 
-    if (ToEltVT == MVT::f16) {
-      SDValue FPTrunc =
-          DAG.getNode(ARMISD::VCVTN, DL, MVT::v8f16, DAG.getUNDEF(MVT::v8f16),
-                      Extract, DAG.getConstant(0, DL, MVT::i32));
-      Extract = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, MVT::v4i32, FPTrunc);
-    }
+    SDValue FPTrunc =
+        DAG.getNode(ARMISD::VCVTN, DL, MVT::v8f16, DAG.getUNDEF(MVT::v8f16),
+                    Extract, DAG.getConstant(0, DL, MVT::i32));
+    Extract = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, MVT::v4i32, FPTrunc);
 
+    SDValue Store = DAG.getTruncStore(
+        Ch, DL, Extract, NewPtr, St->getPointerInfo().getWithOffset(NewOffset),
+        NewToVT, Alignment.value(), MMOFlags, AAInfo);
+    Stores.push_back(Store);
+  }
+  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Stores);
+}
+
+// Try taking a single vector store from an MVETRUNC (which would otherwise turn
+// into an expensive buildvector) and splitting it into a series of narrowing
+// stores.
+static SDValue PerformSplittingMVETruncToNarrowingStores(StoreSDNode *St,
+                                                         SelectionDAG &DAG) {
+  if (!St->isSimple() || St->isTruncatingStore() || !St->isUnindexed())
+    return SDValue();
+  SDValue Trunc = St->getValue();
+  if (Trunc->getOpcode() != ARMISD::MVETRUNC)
+    return SDValue();
+  EVT FromVT = Trunc->getOperand(0).getValueType();
+  EVT ToVT = Trunc.getValueType();
+
+  LLVMContext &C = *DAG.getContext();
+  SDLoc DL(St);
+  // Details about the old store
+  SDValue Ch = St->getChain();
+  SDValue BasePtr = St->getBasePtr();
+  Align Alignment = St->getOriginalAlign();
+  MachineMemOperand::Flags MMOFlags = St->getMemOperand()->getFlags();
+  AAMDNodes AAInfo = St->getAAInfo();
+
+  EVT NewToVT = EVT::getVectorVT(C, ToVT.getVectorElementType(),
+                                 FromVT.getVectorNumElements());
+
+  SmallVector<SDValue, 4> Stores;
+  for (unsigned i = 0; i < Trunc.getNumOperands(); i++) {
+    unsigned NewOffset =
+        i * FromVT.getVectorNumElements() * ToVT.getScalarSizeInBits() / 8;
+    SDValue NewPtr =
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+
+    SDValue Extract = Trunc.getOperand(i);
     SDValue Store = DAG.getTruncStore(
         Ch, DL, Extract, NewPtr, St->getPointerInfo().getWithOffset(NewOffset),
         NewToVT, Alignment.value(), MMOFlags, AAInfo);
@@ -15498,6 +15649,9 @@ static SDValue PerformSTORECombine(SDNode *N,
       return NewToken;
     if (SDValue NewChain = PerformExtractFpToIntStores(St, DCI.DAG))
       return NewChain;
+    if (SDValue NewToken =
+            PerformSplittingMVETruncToNarrowingStores(St, DCI.DAG))
+      return NewToken;
   }
 
   if (!ISD::isNormalStore(St))
@@ -17062,6 +17216,88 @@ static SDValue PerformBITCASTCombine(SDNode *N,
   return SDValue();
 }
 
+// Some combines for the MVETrunc truncations legalizer helper. Also lowers the
+// node into a buildvector after legalizeOps.
+SDValue ARMTargetLowering::PerformMVETruncCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // MVETrunc(Undef, Undef) -> Undef
+  if (all_of(N->ops(), [](SDValue Op) { return Op.isUndef(); }))
+    return DAG.getUNDEF(VT);
+
+  // MVETrunc(MVETrunc a b, MVETrunc c, d) -> MVETrunc
+  if (N->getNumOperands() == 2 &&
+      N->getOperand(0).getOpcode() == ARMISD::MVETRUNC &&
+      N->getOperand(1).getOpcode() == ARMISD::MVETRUNC)
+    return DAG.getNode(ARMISD::MVETRUNC, DL, VT, N->getOperand(0).getOperand(0),
+                       N->getOperand(0).getOperand(1),
+                       N->getOperand(1).getOperand(0),
+                       N->getOperand(1).getOperand(1));
+
+  // MVETrunc(shuffle, shuffle) -> VMOVN
+  if (N->getNumOperands() == 2 &&
+      N->getOperand(0).getOpcode() == ISD::VECTOR_SHUFFLE &&
+      N->getOperand(1).getOpcode() == ISD::VECTOR_SHUFFLE) {
+    auto *S0 = cast<ShuffleVectorSDNode>(N->getOperand(0).getNode());
+    auto *S1 = cast<ShuffleVectorSDNode>(N->getOperand(1).getNode());
+
+    if (S0->getOperand(0) == S1->getOperand(0) &&
+        S0->getOperand(1) == S1->getOperand(1)) {
+      // Construct complete shuffle mask
+      SmallVector<int, 8> Mask(S0->getMask().begin(), S0->getMask().end());
+      Mask.append(S1->getMask().begin(), S1->getMask().end());
+
+      if (isVMOVNTruncMask(Mask, VT, 0))
+        return DAG.getNode(
+            ARMISD::VMOVN, DL, VT,
+            DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, S0->getOperand(0)),
+            DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, S0->getOperand(1)),
+            DAG.getConstant(1, DL, MVT::i32));
+      if (isVMOVNTruncMask(Mask, VT, 1))
+        return DAG.getNode(
+            ARMISD::VMOVN, DL, VT,
+            DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, S0->getOperand(1)),
+            DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, S0->getOperand(0)),
+            DAG.getConstant(1, DL, MVT::i32));
+    }
+  }
+
+  auto LowerToBuildVec = [&]() {
+    SmallVector<SDValue, 8> Extracts;
+    for (unsigned Op = 0; Op < N->getNumOperands(); Op++) {
+      SDValue O = N->getOperand(Op);
+      for (unsigned i = 0; i < O.getValueType().getVectorNumElements(); i++) {
+        SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, O,
+                                  DAG.getConstant(i, DL, MVT::i32));
+        Extracts.push_back(Ext);
+      }
+    }
+    return DAG.getBuildVector(VT, DL, Extracts);
+  };
+
+  // For MVETrunc of a buildvector or shuffle, it can be beneficial to lower the
+  // truncate to a buildvector to allow the generic optimisations to kick in.
+  if (all_of(N->ops(), [](SDValue Op) {
+        return Op.getOpcode() == ISD::BUILD_VECTOR ||
+               Op.getOpcode() == ISD::VECTOR_SHUFFLE ||
+               (Op.getOpcode() == ISD::BITCAST &&
+                Op.getOperand(0).getOpcode() == ISD::BUILD_VECTOR);
+      }))
+    return LowerToBuildVec();
+
+  // If we are late in the legalization process and nothing has optimised
+  // the trunc to anything better lower it to a series of extracts and a
+  // buildvector.
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue BuildVec = LowerToBuildVec();
+  return LowerBUILD_VECTOR(BuildVec, DCI.DAG, Subtarget);
+}
+
 SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
@@ -17135,6 +17371,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformPREDICATE_CASTCombine(N, DCI);
   case ARMISD::VECTOR_REG_CAST:
     return PerformVECTOR_REG_CASTCombine(N, DCI, Subtarget);
+  case ARMISD::MVETRUNC:
+    return PerformMVETruncCombine(N, DCI);
   case ARMISD::VCMP:
     return PerformVCMPCombine(N, DCI, Subtarget);
   case ISD::VECREDUCE_ADD:
