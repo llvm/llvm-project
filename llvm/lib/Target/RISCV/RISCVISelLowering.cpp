@@ -8029,6 +8029,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(Glue);
   }
 
+  unsigned RetOpc = RISCVISD::RET_FLAG;
   // Interrupt service routines use different return instructions.
   const Function &Func = DAG.getMachineFunction().getFunction();
   if (Func.hasFnAttribute("interrupt")) {
@@ -8040,18 +8041,15 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     StringRef Kind =
       MF.getFunction().getFnAttribute("interrupt").getValueAsString();
 
-    unsigned RetOpc;
     if (Kind == "user")
       RetOpc = RISCVISD::URET_FLAG;
     else if (Kind == "supervisor")
       RetOpc = RISCVISD::SRET_FLAG;
     else
       RetOpc = RISCVISD::MRET_FLAG;
-
-    return DAG.getNode(RetOpc, DL, MVT::Other, RetOps);
   }
 
-  return DAG.getNode(RISCVISD::RET_FLAG, DL, MVT::Other, RetOps);
+  return DAG.getNode(RetOpc, DL, MVT::Other, RetOps);
 }
 
 void RISCVTargetLowering::validateCCReservedRegs(
