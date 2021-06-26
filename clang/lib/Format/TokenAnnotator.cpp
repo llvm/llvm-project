@@ -3579,40 +3579,9 @@ isItAnEmptyLambdaAllowed(const FormatToken &Tok,
   return Tok.Children.empty() && ShortLambdaOption != FormatStyle::SLS_None;
 }
 
-static bool
-isItAInlineLambdaAllowed(const FormatToken &Tok,
-                         FormatStyle::ShortLambdaStyle ShortLambdaOption) {
-  return (ShortLambdaOption == FormatStyle::SLS_Inline &&
-          IsFunctionArgument(Tok)) ||
-         (ShortLambdaOption == FormatStyle::SLS_All);
-}
-
-static bool isOneChildWithoutMustBreakBefore(const FormatToken &Tok) {
-  if (Tok.Children.size() != 1)
-    return false;
-  FormatToken *curElt = Tok.Children[0]->First;
-  while (curElt) {
-    if (curElt->MustBreakBefore)
-      return false;
-    curElt = curElt->Next;
-  }
-  return true;
-}
 static bool isAllmanLambdaBrace(const FormatToken &Tok) {
   return (Tok.is(tok::l_brace) && Tok.is(BK_Block) &&
           !Tok.isOneOf(TT_ObjCBlockLBrace, TT_DictLiteral));
-}
-
-static bool isAllmanBraceIncludedBreakableLambda(
-    const FormatToken &Tok, FormatStyle::ShortLambdaStyle ShortLambdaOption) {
-  if (!isAllmanLambdaBrace(Tok))
-    return false;
-
-  if (isItAnEmptyLambdaAllowed(Tok, ShortLambdaOption))
-    return false;
-
-  return !isItAInlineLambdaAllowed(Tok, ShortLambdaOption) ||
-         !isOneChildWithoutMustBreakBefore(Tok);
 }
 
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
@@ -3776,13 +3745,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Right.is(TT_InlineASMBrace))
     return Right.HasUnescapedNewline;
 
-  auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;
-  if (Style.BraceWrapping.BeforeLambdaBody &&
-      (isAllmanBraceIncludedBreakableLambda(Left, ShortLambdaOption) ||
-       isAllmanBraceIncludedBreakableLambda(Right, ShortLambdaOption))) {
-    return true;
-  }
-
   if (isAllmanBrace(Left) || isAllmanBrace(Right))
     return (Line.startsWith(tok::kw_enum) && Style.BraceWrapping.AfterEnum) ||
            (Line.startsWith(tok::kw_typedef, tok::kw_enum) &&
@@ -3803,6 +3765,11 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         (!Left.Children.empty() &&
          Style.AllowShortLambdasOnASingleLine == FormatStyle::SLS_Empty))
       return true;
+  }
+
+  if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace) &&
+      Left.isOneOf(tok::star, tok::amp, tok::ampamp, TT_TemplateCloser)) {
+    return true;
   }
 
   // Put multiple Java annotation on a new line.
@@ -4209,7 +4176,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
 
   auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;
-  if (Style.BraceWrapping.BeforeLambdaBody) {
+  if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace)) {
     if (isAllmanLambdaBrace(Left))
       return !isItAnEmptyLambdaAllowed(Left, ShortLambdaOption);
     if (isAllmanLambdaBrace(Right))
@@ -4221,7 +4188,6 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
          Right.isMemberAccess() ||
          Right.isOneOf(TT_TrailingReturnArrow, TT_LambdaArrow, tok::lessless,
                        tok::colon, tok::l_square, tok::at) ||
-         (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace)) ||
          (Left.is(tok::r_paren) &&
           Right.isOneOf(tok::identifier, tok::kw_const)) ||
          (Left.is(tok::l_paren) && !Right.is(tok::r_paren)) ||
