@@ -1,4 +1,3 @@
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { i8* }

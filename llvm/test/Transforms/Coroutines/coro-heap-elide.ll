@@ -1,7 +1,6 @@
 ; Tests that the dynamic allocation and deallocation of the coroutine frame is
 ; elided and any tail calls referencing the coroutine frame has the tail 
 ; call attribute removed.
-; RUN: opt < %s -S -inline -coro-elide -instsimplify -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
 ; RUN: opt < %s -S \
 ; RUN:   -passes='cgscc(inline,function(coro-elide,instsimplify,simplify-cfg))' \
 ; RUN:   -aa-pipeline='basic-aa' | FileCheck %s

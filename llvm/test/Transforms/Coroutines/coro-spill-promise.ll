@@ -1,5 +1,4 @@
 ; Check that promise object is reloaded from the correct index of the coro frame.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 %"class.task::promise_type" = type { [64 x i8] }
