@@ -850,7 +850,8 @@ bool AArch64LegalizerInfo::legalizeVectorTrunc(
          isPowerOf2_32(SrcTy.getSizeInBits()));
 
   // Split input type.
-  LLT SplitSrcTy = SrcTy.changeNumElements(SrcTy.getNumElements() / 2);
+  LLT SplitSrcTy =
+      SrcTy.changeElementCount(SrcTy.getElementCount().divideCoefficientBy(2));
   // First, split the source into two smaller vectors.
   SmallVector<Register, 2> SplitSrcs;
   extractParts(SrcReg, MRI, MIRBuilder, SplitSrcTy, 2, SplitSrcs);

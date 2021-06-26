@@ -4237,7 +4237,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
 
   // We only support splitting a shuffle into 2, so adjust NarrowTy accordingly.
   // Further legalization attempts will be needed to do split further.
-  NarrowTy = DstTy.changeNumElements(DstTy.getNumElements() / 2);
+  NarrowTy =
+      DstTy.changeElementCount(DstTy.getElementCount().divideCoefficientBy(2));
   unsigned NewElts = NarrowTy.getNumElements();
 
   SmallVector<Register> SplitSrc1Regs, SplitSrc2Regs;
