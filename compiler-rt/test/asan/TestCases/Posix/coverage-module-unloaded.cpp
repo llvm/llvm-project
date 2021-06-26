@@ -13,6 +13,7 @@
 
 #include <assert.h>
 #include <dlfcn.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -38,10 +39,11 @@ int main(int argc, char **argv) {
 
   // It matters whether the unloaded module has a higher or lower address range
   // than the remaining one. Make sure to test both cases.
+  bool lt = reinterpret_cast<uintptr_t>(bar1) < reinterpret_cast<uintptr_t>(bar2);
   if (argc < 2)
-    dlclose(bar1 < bar2 ? handle1 : handle2);
+    dlclose(lt ? handle1 : handle2);
   else
-    dlclose(bar1 < bar2 ? handle2 : handle1);
+    dlclose(lt ? handle2 : handle1);
   return 0;
 }
 #endif

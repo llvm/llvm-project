@@ -29,63 +29,7 @@ bb:
 
 bb2:
   ret i32* %RHS
-}
 
-define ptr @test1_opaque_ptr(ptr %A, i32 %Offset) {
-; CHECK-LABEL: @test1_opaque_ptr(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[BB:%.*]]
-; CHECK:       bb:
-; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 100
-; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
-; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[RHS_IDX]]
-; CHECK-NEXT:    ret ptr [[RHS_PTR]]
-;
-entry:
-  %tmp = getelementptr inbounds i32, ptr %A, i32 %Offset
-  br label %bb
-
-bb:
-  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
-  %LHS = getelementptr inbounds i32, ptr %A, i32 100
-  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
-  %cond = icmp ult ptr %LHS, %RHS
-  br i1 %cond, label %bb2, label %bb
-
-bb2:
-  ret ptr %RHS
-}
-
-define ptr @test_opaque_ptr_different_types(ptr %A, i32 %Offset) {
-; CHECK-LABEL: @test_opaque_ptr_different_types(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
-; CHECK-NEXT:    br label [[BB:%.*]]
-; CHECK:       bb:
-; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i64, ptr [[A]], i32 100
-; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i32, ptr [[RHS]], i32 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
-; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
-; CHECK:       bb2:
-; CHECK-NEXT:    ret ptr [[RHS]]
-;
-entry:
-  %tmp = getelementptr inbounds i32, ptr %A, i32 %Offset
-  br label %bb
-
-bb:
-  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
-  %LHS = getelementptr inbounds i64, ptr %A, i32 100
-  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
-  %cond = icmp ult ptr %LHS, %RHS
-  br i1 %cond, label %bb2, label %bb
-
-bb2:
-  ret ptr %RHS
 }
 
 define i32 *@test2(i32 %A, i32 %Offset) {

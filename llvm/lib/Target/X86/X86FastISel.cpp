@@ -3842,6 +3842,31 @@ unsigned X86FastISel::fastMaterializeConstant(const Constant *C) {
     return X86MaterializeFP(CFP, VT);
   else if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
     return X86MaterializeGV(GV, VT);
+  else if (isa<UndefValue>(C)) {
+    unsigned Opc = 0;
+    switch (VT.SimpleTy) {
+    default:
+      break;
+    case MVT::f32:
+      if (!X86ScalarSSEf32)
+        Opc = X86::LD_Fp032;
+      break;
+    case MVT::f64:
+      if (!X86ScalarSSEf64)
+        Opc = X86::LD_Fp064;
+      break;
+    case MVT::f80:
+      Opc = X86::LD_Fp080;
+      break;
+    }
+
+    if (Opc) {
+      Register ResultReg = createResultReg(TLI.getRegClassFor(VT));
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc),
+              ResultReg);
+      return ResultReg;
+    }
+  }
 
   return 0;
 }
