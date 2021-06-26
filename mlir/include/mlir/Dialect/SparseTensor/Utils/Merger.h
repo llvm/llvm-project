@@ -19,7 +19,10 @@
 namespace mlir {
 namespace sparse_tensor {
 
+/// Tensor expression kind.
 enum class Kind { kTensor, kInvariant, kMulF, kMulI, kAddF, kAddI };
+
+/// Dimension level type for a tensor (undef means index does not appear).
 enum class Dim { kSparse, kDense, kSingle, kUndef };
 
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
@@ -33,10 +36,14 @@ struct TensorExp {
            (kind == Kind::kInvariant && e0 == -1u && e1 == -1u && val) ||
            (kind >= Kind::kMulF && e0 != -1u && e1 != -1u && !val));
   }
+
+  /// Tensor expression kind.
   Kind kind;
+
   /// Indices of children expression(s).
   unsigned e0;
   unsigned e1;
+
   /// Direct link to IR for an invariant. During code generation,
   /// field is used to cache "hoisted" loop invariant tensor loads.
   Value val;
@@ -50,13 +57,16 @@ struct LatPoint {
     bits.set(b);
   }
   LatPoint(const llvm::BitVector &b, unsigned e) : bits(b), exp(e) {}
+
   /// Conjunction of tensor loop indices as bitvector. This represents
   /// all indices involved in the tensor expression
   llvm::BitVector bits;
+
   /// Simplified conjunction of tensor loop indices as bitvector. This
   /// represents a simplified condition under which this tensor expression
   /// must execute. Pre-computed during codegen to avoid repeated eval.
   llvm::BitVector simple;
+
   /// Index of the tensor expresssion.
   unsigned exp;
 };
@@ -145,6 +155,14 @@ public:
   TensorExp &exp(unsigned e) { return tensorExps[e]; }
   LatPoint &lat(unsigned l) { return latPoints[l]; }
   SmallVector<unsigned, 16> &set(unsigned s) { return latSets[s]; }
+
+#ifndef NDEBUG
+  /// Print methods (for debugging).
+  void dumpExp(unsigned e) const;
+  void dumpLat(unsigned p) const;
+  void dumpSet(unsigned s) const;
+  void dumpBits(const llvm::BitVector &bits) const;
+#endif
 
 private:
   const unsigned outTensor;
