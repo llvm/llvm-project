@@ -4801,11 +4801,8 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
     bool IsOrdered = State.VF.isVector() &&
                      Cost->isInLoopReduction(cast<PHINode>(PN)) &&
                      Cost->useOrderedReductions(*RdxDesc);
-
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      // This is phase one of vectorizing PHIs.
-      if (Part > 0 && IsOrdered)
-        return;
+    unsigned LastPartForNewPhi = IsOrdered ? 1 : State.UF;
+    for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
       Value *EntryPart = PHINode::Create(
           VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
       State.set(PhiR, EntryPart, Part);
