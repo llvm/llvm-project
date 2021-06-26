@@ -2900,6 +2900,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Right) {
   if (Left.is(tok::kw_return) && Right.isNot(tok::semi))
     return true;
+  if (Style.isJson() && Left.is(tok::string_literal) && Right.is(tok::colon))
+    return false;
   if (Left.is(Keywords.kw_assert) && Style.Language == FormatStyle::LK_Java)
     return true;
   if (Style.ObjCSpaceAfterProperty && Line.Type == LT_ObjCProperty &&
@@ -3227,6 +3229,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // and "%d %d"
     if (Left.is(tok::numeric_constant) && Right.is(tok::percent))
       return HasExistingWhitespace();
+  } else if (Style.isJson()) {
+    if (Right.is(tok::colon))
+      return false;
   } else if (Style.isCSharp()) {
     // Require spaces around '{' and  before '}' unless they appear in
     // interpolated strings. Interpolated strings are merged into a single token
@@ -3667,6 +3672,26 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
              Style.Language == FormatStyle::LK_TableGen ||
              Style.Language == FormatStyle::LK_TextProto) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
+      return true;
+  }
+
+  // Basic JSON newline processing.
+  if (Style.isJson()) {
+    // Always break after a JSON record opener.
+    // {
+    // }
+    if (Left.is(TT_DictLiteral) && Left.is(tok::l_brace))
+      return true;
+    // Always break after a JSON array opener.
+    // [
+    // ]
+    if (Left.is(TT_ArrayInitializerLSquare) && Left.is(tok::l_square) &&
+        !Right.is(tok::r_square))
+      return true;
+    // Always break afer successive entries.
+    // 1,
+    // 2
+    if (Left.is(tok::comma))
       return true;
   }
 
