@@ -621,8 +621,8 @@ private:
     }
 
     // If we have "x ult 3", for example, then we can add 0,1,2 to the set.
-    ConstantRange Span = ConstantRange::makeAllowedICmpRegion(
-        ICI->getPredicate(), C->getValue());
+    ConstantRange Span =
+        ConstantRange::makeExactICmpRegion(ICI->getPredicate(), C->getValue());
 
     // Shift the range if the compare is fed by an add. This is the range
     // compare idiom as emitted by instcombine.
