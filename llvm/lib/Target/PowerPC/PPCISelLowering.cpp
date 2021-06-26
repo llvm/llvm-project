@@ -15251,7 +15251,9 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     LoadSDNode *LD = cast<LoadSDNode>(N->getOperand(0));
 
     // Can't split volatile or atomic loads.
-    if (!LD->isSimple())
+    // FIXME: Disabling this to unblock the big endian bot until I can get it
+    // fixed.
+    if (!LD->isSimple() || !Subtarget.hasLDBRX())
       return SDValue();
     SDValue BasePtr = LD->getBasePtr();
     SDValue Lo = DAG.getLoad(MVT::i32, dl, LD->getChain(), BasePtr,
