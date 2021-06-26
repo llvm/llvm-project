@@ -231,7 +231,7 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
     memcpy(buf, isec->data.data(), isec->data.size());
 
     for (const Reloc &r : isec->relocs) {
-      uint64_t referentVA = 0;
+      uint64_t referentVA = UINT64_MAX; // Tombstone value
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
           assert(referentSym->isInGot());
@@ -242,14 +242,12 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
           // that we can distinguish the null pointer case.
           referentVA = referentSym->gotIndex + 1;
         }
-      } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+      } else {
+        auto *referentIsec = r.referent.get<InputSection *>();
         ConcatInputSection *concatIsec = checkTextSegment(referentIsec);
-        if (concatIsec->shouldOmitFromOutput())
-          referentVA = UINT64_MAX; // Tombstone value
-        else
+        if (!concatIsec->shouldOmitFromOutput())
           referentVA = referentIsec->getVA(r.addend);
       }
-
       writeAddress(buf + r.offset, referentVA, r.length);
     }
   }
