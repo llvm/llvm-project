@@ -147,6 +147,8 @@ def config():
                       help='Keep function signature information around for the check line')
   parser.add_argument('--check-attributes', action='store_true',
                       help='Check "Function Attributes" for functions')
+  parser.add_argument('--check-globals', action='store_true',
+                      help='Check global entries (global variables, metadata, attribute sets, ...) for functions')
   parser.add_argument('tests', nargs='+')
   args = common.parse_commandline_args(parser)
   infer_dependent_args(args)
@@ -301,6 +303,7 @@ def main():
     global_vars_seen_dict = {}
     prefix_set = set([prefix for p in filecheck_run_list for prefix in p[0]])
     output_lines = []
+    has_checked_pre_function_globals = False
 
     include_generated_funcs = common.find_arg_in_test(ti,
                                                       lambda args: ti.args.include_generated_funcs,
@@ -333,6 +336,10 @@ def main():
                              prefixes,
                              func_dict, func)
 
+      if ti.args.check_globals:
+        common.add_global_checks(builder.global_var_dict(), '//', run_list,
+                                 output_lines, global_vars_seen_dict, True,
+                                 True)
       common.add_checks_at_end(output_lines, filecheck_run_list, builder.func_order(),
                                '//', lambda my_output_lines, prefixes, func:
                                check_generator(my_output_lines,
@@ -347,6 +354,9 @@ def main():
         m = common.CHECK_RE.match(line)
         if m and m.group(1) in prefix_set:
           continue  # Don't append the existing CHECK lines
+        # Skip special separator comments added by commmon.add_global_checks.
+        if line.strip() == '//' + common.SEPARATOR:
+          continue
         if idx in line2spell_and_mangled_list:
           added = set()
           for spell, mangled in line2spell_and_mangled_list[idx]:
@@ -364,6 +374,11 @@ def main():
                 # line as part of common.add_ir_checks()
                 output_lines.pop()
                 last_line = output_lines[-1].strip()
+              if ti.args.check_globals and not has_checked_pre_function_globals:
+                common.add_global_checks(builder.global_var_dict(), '//',
+                                         run_list, output_lines,
+                                         global_vars_seen_dict, True, True)
+                has_checked_pre_function_globals = True
               if added:
                 output_lines.append('//')
               added.add(mangled)
@@ -375,6 +390,9 @@ def main():
         if include_line:
           output_lines.append(line.rstrip('\n'))
 
+    if ti.args.check_globals:
+      common.add_global_checks(builder.global_var_dict(), '//', run_list,
+                               output_lines, global_vars_seen_dict, True, False)
     common.debug('Writing %d lines to %s...' % (len(output_lines), ti.path))
     with open(ti.path, 'wb') as f:
       f.writelines(['{}\n'.format(l).encode('utf-8') for l in output_lines])
