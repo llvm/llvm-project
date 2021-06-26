@@ -76,25 +76,41 @@ The following is the memory layout for Linux/x86\_64:
 +---------------+---------------+--------------------+
 |    Start      |    End        |        Use         |
 +===============+===============+====================+
-| 0x700000008000|0x800000000000 | application memory |
+| 0x700000000000|0x800000000000 |    application 3   |
 +---------------+---------------+--------------------+
-| 0x300000000000|0x700000008000 |       unused       |
+| 0x610000000000|0x700000000000 |       unused       |
 +---------------+---------------+--------------------+
-| 0x200000008000|0x300000000000 |       origin       |
+| 0x600000000000|0x610000000000 |      origin 1      |
 +---------------+---------------+--------------------+
-| 0x200000000000|0x200000008000 |       unused       |
+| 0x510000000000|0x600000000000 |    application 2   |
 +---------------+---------------+--------------------+
-| 0x100000008000|0x200000000000 |   shadow memory    |
+| 0x500000000000|0x510000000000 |      shadow 1      |
 +---------------+---------------+--------------------+
-| 0x000000010000|0x100000008000 |       unused       |
+| 0x400000000000|0x500000000000 |       unused       |
 +---------------+---------------+--------------------+
-| 0x000000000000|0x000000010000 | reserved by kernel |
+| 0x300000000000|0x400000000000 |      origin 3      |
++---------------+---------------+--------------------+
+| 0x200000000000|0x300000000000 |      shadow 3      |
++---------------+---------------+--------------------+
+| 0x110000000000|0x200000000000 |      origin 2      |
++---------------+---------------+--------------------+
+| 0x100000000000|0x110000000000 |       unused       |
++---------------+---------------+--------------------+
+| 0x010000000000|0x100000000000 |      shadow 2      |
++---------------+---------------+--------------------+
+| 0x000000000000|0x010000000000 |    application 1   |
 +---------------+---------------+--------------------+
 
 Each byte of application memory corresponds to a single byte of shadow
-memory, which is used to store its taint label. As for LLVM SSA
-registers, we have not found it necessary to associate a label with
-each byte or bit of data, as some other tools do. Instead, labels are
+memory, which is used to store its taint label. We map memory, shadow, and
+origin regions to each other with these masks and offsets:
+
+* shadow_addr = memory_addr ^ 0x500000000000
+
+* origin_addr = shadow_addr + 0x100000000000
+
+As for LLVM SSA registers, we have not found it necessary to associate a label
+with each byte or bit of data, as some other tools do. Instead, labels are
 associated directly with registers.  Loads will result in a union of
 all shadow labels corresponding to bytes loaded, and stores will
 result in a copy of the label of the stored value to the shadow of all
