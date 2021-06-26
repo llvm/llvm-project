@@ -60,6 +60,12 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }
 
+bool Type::isOpaquePointerTy() const {
+  if (auto *PTy = dyn_cast<PointerType>(this))
+    return PTy->isOpaque();
+  return false;
+}
+
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // Identity cast means no change so return true
   if (this == Ty)
@@ -691,8 +697,7 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
   LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
 
   // Create opaque pointer for pointer to opaque pointer.
-  if (CImpl->ForceOpaquePointers ||
-      (isa<PointerType>(EltTy) && cast<PointerType>(EltTy)->isOpaque()))
+  if (CImpl->ForceOpaquePointers || EltTy->isOpaquePointerTy())
     return get(EltTy->getContext(), AddressSpace);
 
   // Since AddressSpace #0 is the common case, we special case it.
