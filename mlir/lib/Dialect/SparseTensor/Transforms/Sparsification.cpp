@@ -302,37 +302,6 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   return false;
 }
 
-/// Builds the iteration lattices in a bottom-up traversal given the remaining
-/// tensor (sub)expression and the next loop index in the iteration graph.
-static unsigned buildLattices(Merger &merger, linalg::GenericOp op,
-                              unsigned exp, unsigned idx) {
-  Kind kind = merger.exp(exp).kind;
-  if (kind == Kind::kTensor || kind == Kind::kInvariant) {
-    // Either the index is really used in the tensor expression, or it is
-    // set to the undefined index in that dimension. An invariant expression
-    // is set to a synthetic tensor with undefined indices only.
-    unsigned s = merger.addSet();
-    unsigned t = kind == Kind::kTensor ? merger.exp(exp).e0
-                                       : op.getNumInputsAndOutputs();
-    merger.set(s).push_back(merger.addLat(t, idx, exp));
-    return s;
-  }
-  unsigned s0 = buildLattices(merger, op, merger.exp(exp).e0, idx);
-  unsigned s1 = buildLattices(merger, op, merger.exp(exp).e1, idx);
-  switch (kind) {
-  case Kind::kTensor:
-  case Kind::kInvariant:
-    llvm_unreachable("handled above");
-  case Kind::kMulF:
-  case Kind::kMulI:
-    return merger.takeConj(kind, s0, s1);
-  case Kind::kAddF:
-  case Kind::kAddI:
-    return merger.takeDisj(kind, s0, s1);
-  }
-  llvm_unreachable("unexpected expression kind");
-}
-
 /// Maps sparse integer option to actual integral storage type.
 static Type genIntType(PatternRewriter &rewriter, unsigned width) {
   if (width == 0)
@@ -1121,7 +1090,7 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   // in play for a non-singleton loop sequence.
   Location loc = op.getLoc();
   unsigned idx = topSort[at];
-  unsigned lts = merger.optimizeSet(buildLattices(merger, op, exp, idx));
+  unsigned lts = merger.optimizeSet(merger.buildLattices(exp, idx));
   unsigned lsize = merger.set(lts).size();
   assert(lsize != 0);
   unsigned l0 = merger.set(lts)[0];
