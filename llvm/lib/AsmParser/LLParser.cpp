@@ -2597,6 +2597,8 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
         return tokError("basic block pointers are invalid");
       if (Result->isVoidTy())
         return tokError("pointers to void are invalid - use i8* instead");
+      if (Result->isOpaquePointerTy())
+        return tokError("ptr* is invalid - use ptr instead");
       if (!PointerType::isValidElementType(Result))
         return tokError("pointer to this type is invalid");
       Result = PointerType::getUnqual(Result);
