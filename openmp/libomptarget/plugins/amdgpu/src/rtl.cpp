@@ -15,9 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <dlfcn.h>
 #include <elf.h>
-#include <ffi.h>
 #include <fstream>
 #include <iostream>
 #include <libelf.h>
