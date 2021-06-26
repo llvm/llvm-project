@@ -611,6 +611,13 @@ enum NodeType {
   MULHU,
   MULHS,
 
+  // ABDS/ABDU - Absolute difference - Return the absolute difference between
+  // two numbers interpreted as signed/unsigned.
+  // i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
+  //  or trunc(abs(zext(Op0) - zext(Op1))) becomes abdu(Op0, Op1)
+  ABDS,
+  ABDU,
+
   /// [US]{MIN/MAX} - Binary minimum or maximum of signed or unsigned
   /// integers.
   SMIN,
