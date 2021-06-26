@@ -66,7 +66,7 @@ extern "C" AsyncToken *mlirAsyncRuntimeCreateToken();
 extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int32_t);
 
 // Create a new `async.group` in empty state.
-extern "C" AsyncGroup *mlirAsyncRuntimeCreateGroup();
+extern "C" AsyncGroup *mlirAsyncRuntimeCreateGroup(int64_t size);
 
 extern "C" int64_t mlirAsyncRuntimeAddTokenToGroup(AsyncToken *, AsyncGroup *);
 

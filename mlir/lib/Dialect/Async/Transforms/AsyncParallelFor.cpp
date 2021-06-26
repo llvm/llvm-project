@@ -165,8 +165,14 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     numBlocks[i] = divup(tripCounts[i], blockSize[i]);
   }
 
+  // Total number of async compute blocks.
+  Value totalBlocks = numBlocks[0];
+  for (size_t i = 1; i < op.getNumLoops(); ++i)
+    totalBlocks = rewriter.create<MulIOp>(loc, totalBlocks, numBlocks[i]);
+
   // Create an async.group to wait on all async tokens from async execute ops.
-  auto group = rewriter.create<CreateGroupOp>(loc, GroupType::get(ctx));
+  auto group =
+      rewriter.create<CreateGroupOp>(loc, GroupType::get(ctx), totalBlocks);
 
   // Build a scf.for loop nest from the parallel operation.
 
