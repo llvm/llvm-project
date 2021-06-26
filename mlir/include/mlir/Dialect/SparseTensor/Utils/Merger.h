@@ -83,7 +83,7 @@ public:
   /// additional synthetic tensor at the end of this set to represent all
   /// invariant expressions in the kernel.
   Merger(unsigned t, unsigned l)
-      : outTensor(t - 1), numTensors(t + 1), numLoops(l),
+      : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1), numLoops(l),
         dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
 
   /// Adds a tensor expression. Returns its index.
@@ -148,6 +148,11 @@ public:
   /// Returns true if any set bit corresponds to queried dim.
   bool hasAnyDimOf(const llvm::BitVector &bits, Dim d) const;
 
+  /// Builds the iteration lattices in a bottom-up traversal given the remaining
+  /// tensor (sub)expression and the next loop index in the iteration graph.
+  /// Returns index of the root expression.
+  unsigned buildLattices(unsigned exp, unsigned idx);
+
   /// Setter
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
@@ -166,6 +171,7 @@ public:
 
 private:
   const unsigned outTensor;
+  const unsigned syntheticTensor;
   const unsigned numTensors;
   const unsigned numLoops;
 
