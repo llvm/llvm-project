@@ -258,7 +258,8 @@ static bool matchBitfieldExtractFromSExtInReg(
           m_OneNonDBGUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
                                   m_GLShr(m_Reg(ShiftSrc), m_ICst(ShiftImm))))))
     return false;
-  if (ShiftImm < 0 || ShiftImm + Width > Ty.getSizeInBits())
+  if (ShiftImm < 0 ||
+      static_cast<uint64_t>(ShiftImm + Width) > Ty.getSizeInBits())
     return false;
   MatchInfo = [=](MachineIRBuilder &B) {
     auto Cst1 = B.buildConstant(Ty, ShiftImm);
