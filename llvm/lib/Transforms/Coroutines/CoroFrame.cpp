@@ -937,7 +937,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   unsigned LineNum = PromiseDIVariable->getLine();
 
   DICompositeType *FrameDITy = DBuilder.createStructType(
-      PromiseDIScope, "__coro_frame_ty", DFile, LineNum, Shape.FrameSize * 8,
+      DIS, "__coro_frame_ty", DFile, LineNum, Shape.FrameSize * 8,
       Shape.FrameAlign.value() * 8, llvm::DINode::FlagArtificial, nullptr,
       llvm::DINodeArray());
   StructType *FrameTy = Shape.FrameTy;
@@ -1031,8 +1031,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
       Name = NameCache[Index].str();
       DITy = TyCache[Index];
     } else {
-      DITy = solveDIType(DBuilder, Ty, Layout, PromiseDIScope, LineNum,
-                         DITypeCache);
+      DITy = solveDIType(DBuilder, Ty, Layout, FrameDITy, LineNum, DITypeCache);
       assert(DITy && "SolveDIType shouldn't return nullptr.\n");
       Name = DITy->getName().str();
       Name += "_" + std::to_string(UnknownTypeNum);
@@ -1040,8 +1039,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
     }
 
     Elements.push_back(DBuilder.createMemberType(
-        PromiseDIScope, Name, DFile, LineNum, SizeInBits, AlignInBits,
-        OffsetInBits, llvm::DINode::FlagArtificial, DITy));
+        FrameDITy, Name, DFile, LineNum, SizeInBits, AlignInBits, OffsetInBits,
+        llvm::DINode::FlagArtificial, DITy));
   }
 
   DBuilder.replaceArrays(FrameDITy, DBuilder.getOrCreateArray(Elements));
