@@ -514,24 +514,24 @@ int main() {
 // CHECK1-NEXT:    call void @.omp_initializer.(%struct.S* [[S1]], %struct.S* [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK1:       omp.inner.for.cond:
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !2
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !3
 // CHECK1-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 10
 // CHECK1-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK1:       omp.inner.for.cond.cleanup:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !2
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !3
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK1-NEXT:    store i32 [[ADD]], i32* [[I]], align 4, !llvm.access.group !2
+// CHECK1-NEXT:    store i32 [[ADD]], i32* [[I]], align 4, !llvm.access.group !3
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !2
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !3
 // CHECK1-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP3]], 1
-// CHECK1-NEXT:    store i32 [[ADD2]], i32* [[DOTOMP_IV]], align 4, !llvm.access.group !2
-// CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
+// CHECK1-NEXT:    store i32 [[ADD2]], i32* [[DOTOMP_IV]], align 4, !llvm.access.group !3
+// CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    store i32 10, i32* [[I]], align 4
 // CHECK1-NEXT:    call void @.omp_combiner.(%struct.S* [[TMP0]], %struct.S* [[S1]])
@@ -3585,24 +3585,24 @@ int main() {
 // CHECK2-NEXT:    call void @.omp_initializer.(%struct.S* [[S1]], %struct.S* [[TMP0]])
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK2:       omp.inner.for.cond:
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !2
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !3
 // CHECK2-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 10
 // CHECK2-NEXT:    br i1 [[CMP]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK2:       omp.inner.for.cond.cleanup:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK2:       omp.inner.for.body:
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !2
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !3
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK2-NEXT:    store i32 [[ADD]], i32* [[I]], align 4, !llvm.access.group !2
+// CHECK2-NEXT:    store i32 [[ADD]], i32* [[I]], align 4, !llvm.access.group !3
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !2
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group !3
 // CHECK2-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP3]], 1
-// CHECK2-NEXT:    store i32 [[ADD2]], i32* [[DOTOMP_IV]], align 4, !llvm.access.group !2
-// CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
+// CHECK2-NEXT:    store i32 [[ADD2]], i32* [[DOTOMP_IV]], align 4, !llvm.access.group !3
+// CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    store i32 10, i32* [[I]], align 4
 // CHECK2-NEXT:    call void @.omp_combiner.(%struct.S* [[TMP0]], %struct.S* [[S1]])
