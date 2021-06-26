@@ -22,11 +22,84 @@ declare void @foo(i32* %p)
 
 declare void @foo_nounw(i32* %p) nounwind nofree
 
+declare void @usei8(i8)
+
 declare i32 @no_return_call() noreturn
 
 declare void @free(i8* nocapture)
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
+
+define void @h2s_value_simplify_interaction(i1 %c, i8* %A) {
+; IS________OPM-LABEL: define {{[^@]+}}@h2s_value_simplify_interaction
+; IS________OPM-SAME: (i1 [[C:%.*]], i8* nocapture nofree [[A:%.*]]) {
+; IS________OPM-NEXT:  entry:
+; IS________OPM-NEXT:    [[M:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
+; IS________OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS________OPM:       t:
+; IS________OPM-NEXT:    br i1 false, label [[DEAD:%.*]], label [[F2:%.*]]
+; IS________OPM:       f:
+; IS________OPM-NEXT:    br label [[J:%.*]]
+; IS________OPM:       f2:
+; IS________OPM-NEXT:    [[C1:%.*]] = bitcast i8* [[M]] to i32*
+; IS________OPM-NEXT:    [[C2:%.*]] = bitcast i32* [[C1]] to i8*
+; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[C2]], align 1
+; IS________OPM-NEXT:    call void @usei8(i8 [[L]])
+; IS________OPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef [[C2]]) #[[ATTR5:[0-9]+]]
+; IS________OPM-NEXT:    br label [[J]]
+; IS________OPM:       dead:
+; IS________OPM-NEXT:    unreachable
+; IS________OPM:       j:
+; IS________OPM-NEXT:    [[PHI:%.*]] = phi i8* [ [[M]], [[F]] ], [ null, [[F2]] ]
+; IS________OPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree noundef [[PHI]]) #[[ATTR5]]
+; IS________OPM-NEXT:    ret void
+;
+; IS________NPM-LABEL: define {{[^@]+}}@h2s_value_simplify_interaction
+; IS________NPM-SAME: (i1 [[C:%.*]], i8* nocapture nofree [[A:%.*]]) {
+; IS________NPM-NEXT:  entry:
+; IS________NPM-NEXT:    [[M:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
+; IS________NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; IS________NPM:       t:
+; IS________NPM-NEXT:    br i1 false, label [[DEAD:%.*]], label [[F2:%.*]]
+; IS________NPM:       f:
+; IS________NPM-NEXT:    br label [[J:%.*]]
+; IS________NPM:       f2:
+; IS________NPM-NEXT:    [[C1:%.*]] = bitcast i8* [[M]] to i32*
+; IS________NPM-NEXT:    [[C2:%.*]] = bitcast i32* [[C1]] to i8*
+; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[C2]], align 1
+; IS________NPM-NEXT:    call void @usei8(i8 [[L]])
+; IS________NPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef [[C2]]) #[[ATTR6:[0-9]+]]
+; IS________NPM-NEXT:    br label [[J]]
+; IS________NPM:       dead:
+; IS________NPM-NEXT:    unreachable
+; IS________NPM:       j:
+; IS________NPM-NEXT:    [[PHI:%.*]] = phi i8* [ [[M]], [[F]] ], [ null, [[F2]] ]
+; IS________NPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree noundef [[PHI]]) #[[ATTR6]]
+; IS________NPM-NEXT:    ret void
+;
+entry:
+  %add = add i64 2, 2
+  %m = tail call noalias i8* @malloc(i64 %add)
+  br i1 %c, label %t, label %f
+t:
+  br i1 false, label %dead, label %f2
+f:
+  br label %j
+f2:
+  %c1 = bitcast i8* %m to i32*
+  %c2 = bitcast i32* %c1 to i8*
+  %l = load i8, i8* %c2
+  call void @usei8(i8 %l)
+  call void @no_sync_func(i8* noundef %c2) nounwind
+  br label %j
+dead:
+  br label %j
+j:
+  %phi = phi i8* [ %m, %f ], [ null, %f2 ], [ %A, %dead ]
+  tail call void @no_sync_func(i8* noundef %phi) nounwind
+  ;tail call void @free(i8* %m)
+  ret void
+}
 
 define void @nofree_arg_only(i8* %p1, i8* %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@nofree_arg_only
@@ -336,7 +409,7 @@ define void @test9() {
 ; IS________OPM-NEXT:    tail call void @no_sync_func(i8* noalias nocapture nofree [[TMP1]])
 ; IS________OPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
 ; IS________OPM-NEXT:    store i32 10, i32* [[TMP2]], align 4
-; IS________OPM-NEXT:    tail call void @foo_nounw(i32* nofree noundef align 4 [[TMP2]]) #[[ATTR5:[0-9]+]]
+; IS________OPM-NEXT:    tail call void @foo_nounw(i32* nofree noundef align 4 [[TMP2]]) #[[ATTR5]]
 ; IS________OPM-NEXT:    tail call void @free(i8* nocapture noundef nonnull align 4 dereferenceable(4) [[TMP1]])
 ; IS________OPM-NEXT:    ret void
 ;
@@ -345,7 +418,7 @@ define void @test9() {
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* noalias nocapture nofree [[TMP1]])
 ; IS________NPM-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
 ; IS________NPM-NEXT:    store i32 10, i32* [[TMP2]], align 4
-; IS________NPM-NEXT:    tail call void @foo_nounw(i32* nofree noundef align 4 [[TMP2]]) #[[ATTR6:[0-9]+]]
+; IS________NPM-NEXT:    tail call void @foo_nounw(i32* nofree noundef align 4 [[TMP2]]) #[[ATTR6]]
 ; IS________NPM-NEXT:    tail call void @free(i8* nocapture noundef nonnull align 4 dereferenceable(4) [[TMP1]])
 ; IS________NPM-NEXT:    ret void
 ;
