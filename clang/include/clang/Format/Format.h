@@ -2493,6 +2493,8 @@ struct FormatStyle {
     LK_Java,
     /// Should be used for JavaScript.
     LK_JavaScript,
+    /// Should be used for JSON.
+    LK_Json,
     /// Should be used for Objective-C, Objective-C++.
     LK_ObjC,
     /// Should be used for Protocol Buffers
@@ -2506,6 +2508,7 @@ struct FormatStyle {
   };
   bool isCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
   bool isCSharp() const { return Language == LK_CSharp; }
+  bool isJson() const { return Language == LK_Json; }
 
   /// Language, this format style is targeted at.
   LanguageKind Language;
@@ -3796,6 +3799,8 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
     return "Java";
   case FormatStyle::LK_JavaScript:
     return "JavaScript";
+  case FormatStyle::LK_Json:
+    return "Json";
   case FormatStyle::LK_Proto:
     return "Proto";
   case FormatStyle::LK_TableGen:
