@@ -31,6 +31,10 @@
 
 // --- C++2b features ---
 
+#if check(implicit_move, 0, 0, 0, 0, 0, 202011)
+#error "wrong value for __cpp_implicit_move"
+#endif
+
 #if check(size_t_suffix, 0, 0, 0, 0, 0, 202011)
 #error "wrong value for __cpp_size_t_suffix"
 #endif
