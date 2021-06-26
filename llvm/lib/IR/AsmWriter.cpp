@@ -63,7 +63,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/Use.h"
-#include "llvm/IR/UseListOrder.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -95,26 +94,10 @@ AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-namespace {
+using OrderMap = MapVector<const Value *, unsigned>;
 
-struct OrderMap {
-  DenseMap<const Value *, std::pair<unsigned, bool>> IDs;
-
-  unsigned size() const { return IDs.size(); }
-  std::pair<unsigned, bool> &operator[](const Value *V) { return IDs[V]; }
-
-  std::pair<unsigned, bool> lookup(const Value *V) const {
-    return IDs.lookup(V);
-  }
-
-  void index(const Value *V) {
-    // Explicitly sequence get-size and insert-value operations to avoid UB.
-    unsigned ID = IDs.size() + 1;
-    IDs[V].first = ID;
-  }
-};
-
-} // end anonymous namespace
+using UseListOrderMap =
+    DenseMap<const Function *, MapVector<const Value *, std::vector<unsigned>>>;
 
 /// Look for a value that might be wrapped as metadata, e.g. a value in a
 /// metadata operand. Returns the input value as-is if it is not wrapped.
@@ -126,7 +109,7 @@ static const Value *skipMetadataWrapper(const Value *V) {
 }
 
 static void orderValue(const Value *V, OrderMap &OM) {
-  if (OM.lookup(V).first)
+  if (OM.lookup(V))
     return;
 
   if (const Constant *C = dyn_cast<Constant>(V))
@@ -137,7 +120,8 @@ static void orderValue(const Value *V, OrderMap &OM) {
 
   // Note: we cannot cache this lookup above, since inserting into the map
   // changes the map's size, and thus affects the other IDs.
-  OM.index(V);
+  unsigned ID = OM.size() + 1;
+  OM[V] = ID;
 }
 
 static OrderMap orderModule(const Module *M) {
@@ -187,33 +171,32 @@ static OrderMap orderModule(const Module *M) {
   return OM;
 }
 
-static void predictValueUseListOrderImpl(const Value *V, const Function *F,
-                                         unsigned ID, const OrderMap &OM,
-                                         UseListOrderStack &Stack) {
+static std::vector<unsigned>
+predictValueUseListOrder(const Value *V, unsigned ID, const OrderMap &OM) {
   // Predict use-list order for this one.
   using Entry = std::pair<const Use *, unsigned>;
   SmallVector<Entry, 64> List;
   for (const Use &U : V->uses())
     // Check if this user will be serialized.
-    if (OM.lookup(U.getUser()).first)
+    if (OM.lookup(U.getUser()))
       List.push_back(std::make_pair(&U, List.size()));
 
   if (List.size() < 2)
     // We may have lost some users.
-    return;
+    return {};
 
   bool GetsReversed =
       !isa<GlobalVariable>(V) && !isa<Function>(V) && !isa<BasicBlock>(V);
   if (auto *BA = dyn_cast<BlockAddress>(V))
-    ID = OM.lookup(BA->getBasicBlock()).first;
+    ID = OM.lookup(BA->getBasicBlock());
   llvm::sort(List, [&](const Entry &L, const Entry &R) {
     const Use *LU = L.first;
     const Use *RU = R.first;
     if (LU == RU)
       return false;
 
-    auto LID = OM.lookup(LU->getUser()).first;
-    auto RID = OM.lookup(RU->getUser()).first;
+    auto LID = OM.lookup(LU->getUser());
+    auto RID = OM.lookup(RU->getUser());
 
     // If ID is 4, then expect: 7 6 5 1 2 3.
     if (LID < RID) {
@@ -241,89 +224,38 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
         return L.second < R.second;
       }))
     // Order is already correct.
-    return;
+    return {};
 
   // Store the shuffle.
-  Stack.emplace_back(V, F, List.size());
-  assert(List.size() == Stack.back().Shuffle.size() && "Wrong size");
+  std::vector<unsigned> Shuffle(List.size());
   for (size_t I = 0, E = List.size(); I != E; ++I)
-    Stack.back().Shuffle[I] = List[I].second;
+    Shuffle[I] = List[I].second;
+  return Shuffle;
 }
 
-static void predictValueUseListOrder(const Value *V, const Function *F,
-                                     OrderMap &OM, UseListOrderStack &Stack) {
-  auto &IDPair = OM[V];
-  assert(IDPair.first && "Unmapped value");
-  if (IDPair.second)
-    // Already predicted.
-    return;
-
-  // Do the actual prediction.
-  IDPair.second = true;
-  if (!V->use_empty() && std::next(V->use_begin()) != V->use_end())
-    predictValueUseListOrderImpl(V, F, IDPair.first, OM, Stack);
-
-  // Recursive descent into constants.
-  if (const Constant *C = dyn_cast<Constant>(V))
-    if (C->getNumOperands()) // Visit GlobalValues.
-      for (const Value *Op : C->operands())
-        if (isa<Constant>(Op)) // Visit GlobalValues.
-          predictValueUseListOrder(Op, F, OM, Stack);
-}
-
-static UseListOrderStack predictUseListOrder(const Module *M) {
+static UseListOrderMap predictUseListOrder(const Module *M) {
   OrderMap OM = orderModule(M);
-
-  // Use-list orders need to be serialized after all the users have been added
-  // to a value, or else the shuffles will be incomplete.  Store them per
-  // function in a stack.
-  //
-  // Aside from function order, the order of values doesn't matter much here.
-  UseListOrderStack Stack;
-
-  // We want to visit the functions backward now so we can list function-local
-  // constants in the last Function they're used in.  Module-level constants
-  // have already been visited above.
-  for (const Function &F : make_range(M->rbegin(), M->rend())) {
-    if (F.isDeclaration())
+  UseListOrderMap ULOM;
+  for (const auto &Pair : OM) {
+    const Value *V = Pair.first;
+    if (V->use_empty() || std::next(V->use_begin()) == V->use_end())
       continue;
-    for (const BasicBlock &BB : F)
-      predictValueUseListOrder(&BB, &F, OM, Stack);
-    for (const Argument &A : F.args())
-      predictValueUseListOrder(&A, &F, OM, Stack);
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
-        for (const Value *Op : I.operands()) {
-          Op = skipMetadataWrapper(Op);
-          if (isa<Constant>(*Op) || isa<InlineAsm>(*Op)) // Visit GlobalValues.
-            predictValueUseListOrder(Op, &F, OM, Stack);
-        }
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
-        predictValueUseListOrder(&I, &F, OM, Stack);
+
+    std::vector<unsigned> Shuffle =
+        predictValueUseListOrder(V, Pair.second, OM);
+    if (Shuffle.empty())
+      continue;
+
+    const Function *F = nullptr;
+    if (auto *I = dyn_cast<Instruction>(V))
+      F = I->getFunction();
+    if (auto *A = dyn_cast<Argument>(V))
+      F = A->getParent();
+    if (auto *BB = dyn_cast<BasicBlock>(V))
+      F = BB->getParent();
+    ULOM[F][V] = std::move(Shuffle);
   }
-
-  // Visit globals last.
-  for (const GlobalVariable &G : M->globals())
-    predictValueUseListOrder(&G, nullptr, OM, Stack);
-  for (const Function &F : *M)
-    predictValueUseListOrder(&F, nullptr, OM, Stack);
-  for (const GlobalAlias &A : M->aliases())
-    predictValueUseListOrder(&A, nullptr, OM, Stack);
-  for (const GlobalIFunc &I : M->ifuncs())
-    predictValueUseListOrder(&I, nullptr, OM, Stack);
-  for (const GlobalVariable &G : M->globals())
-    if (G.hasInitializer())
-      predictValueUseListOrder(G.getInitializer(), nullptr, OM, Stack);
-  for (const GlobalAlias &A : M->aliases())
-    predictValueUseListOrder(A.getAliasee(), nullptr, OM, Stack);
-  for (const GlobalIFunc &I : M->ifuncs())
-    predictValueUseListOrder(I.getResolver(), nullptr, OM, Stack);
-  for (const Function &F : *M)
-    for (const Use &U : F.operands())
-      predictValueUseListOrder(U.get(), nullptr, OM, Stack);
-
-  return Stack;
+  return ULOM;
 }
 
 static const Module *getModuleFromVal(const Value *V) {
@@ -2643,7 +2575,7 @@ class AssemblyWriter {
   SetVector<const Comdat *> Comdats;
   bool IsForDebug;
   bool ShouldPreserveUseListOrder;
-  UseListOrderStack UseListOrders;
+  UseListOrderMap UseListOrders;
   SmallVector<StringRef, 8> MDNames;
   /// Synchronization scope names registered with LLVMContext.
   SmallVector<StringRef, 8> SSNs;
@@ -2692,7 +2624,7 @@ public:
   void printInstructionLine(const Instruction &I);
   void printInstruction(const Instruction &I);
 
-  void printUseListOrder(const UseListOrder &Order);
+  void printUseListOrder(const Value *V, const std::vector<unsigned> &Shuffle);
   void printUseLists(const Function *F);
 
   void printModuleSummaryIndex();
@@ -2926,15 +2858,14 @@ void AssemblyWriter::printModule(const Module *M) {
   for (const GlobalIFunc &GI : M->ifuncs())
     printIndirectSymbol(&GI);
 
-  // Output global use-lists.
-  printUseLists(nullptr);
-
   // Output all of the functions.
   for (const Function &F : *M) {
     Out << '\n';
     printFunction(&F);
   }
-  assert(UseListOrders.empty() && "All use-lists should have been consumed");
+
+  // Output global use-lists.
+  printUseLists(nullptr);
 
   // Output all attribute groups.
   if (!Machine.as_empty()) {
@@ -4527,43 +4458,39 @@ void AssemblyWriter::writeAllAttributeGroups() {
         << I.first.getAsString(true) << " }\n";
 }
 
-void AssemblyWriter::printUseListOrder(const UseListOrder &Order) {
+void AssemblyWriter::printUseListOrder(const Value *V,
+                                       const std::vector<unsigned> &Shuffle) {
   bool IsInFunction = Machine.getFunction();
   if (IsInFunction)
     Out << "  ";
 
   Out << "uselistorder";
-  if (const BasicBlock *BB =
-          IsInFunction ? nullptr : dyn_cast<BasicBlock>(Order.V)) {
+  if (const BasicBlock *BB = IsInFunction ? nullptr : dyn_cast<BasicBlock>(V)) {
     Out << "_bb ";
     writeOperand(BB->getParent(), false);
     Out << ", ";
     writeOperand(BB, false);
   } else {
     Out << " ";
-    writeOperand(Order.V, true);
+    writeOperand(V, true);
   }
   Out << ", { ";
 
-  assert(Order.Shuffle.size() >= 2 && "Shuffle too small");
-  Out << Order.Shuffle[0];
-  for (unsigned I = 1, E = Order.Shuffle.size(); I != E; ++I)
-    Out << ", " << Order.Shuffle[I];
+  assert(Shuffle.size() >= 2 && "Shuffle too small");
+  Out << Shuffle[0];
+  for (unsigned I = 1, E = Shuffle.size(); I != E; ++I)
+    Out << ", " << Shuffle[I];
   Out << " }\n";
 }
 
 void AssemblyWriter::printUseLists(const Function *F) {
-  auto hasMore =
-      [&]() { return !UseListOrders.empty() && UseListOrders.back().F == F; };
-  if (!hasMore())
-    // Nothing to do.
+  auto It = UseListOrders.find(F);
+  if (It == UseListOrders.end())
     return;
 
   Out << "\n; uselistorder directives\n";
-  while (hasMore()) {
-    printUseListOrder(UseListOrders.back());
-    UseListOrders.pop_back();
-  }
+  for (const auto &Pair : It->second)
+    printUseListOrder(Pair.first, Pair.second);
 }
 
 //===----------------------------------------------------------------------===//
