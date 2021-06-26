@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMJITLink
   # ELF
 
   ELF.cpp
+  ELFLinkGraphBuilder.cpp
   ELF_x86_64.cpp
 
   # Architectures:
