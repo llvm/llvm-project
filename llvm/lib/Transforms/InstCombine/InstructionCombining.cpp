@@ -3083,13 +3083,36 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
         return BinaryOperator::Create(BinOp, LHS, RHS);
       }
 
-      // If the normal result of the add is dead, and the RHS is a constant,
-      // we can transform this into a range comparison.
-      // overflow = uadd a, -4  -->  overflow = icmp ugt a, 3
-      if (WO->getIntrinsicID() == Intrinsic::uadd_with_overflow)
+      assert(*EV.idx_begin() == 1 &&
+             "unexpected extract index for overflow inst");
+
+      // If the normal result of the computation is dead, and the RHS is a
+      // constant, we can transform this into a range comparison for many cases.
+      // TODO: We can generalize these for non-constant rhs when the newly
+      // formed expressions are known to simplify.  Constants are merely one
+      // such case.
+      // TODO: Handle vector splats.
+      switch (WO->getIntrinsicID()) {
+      default:
+        break;
+      case Intrinsic::uadd_with_overflow:
+        // overflow = uadd a, -4  -->  overflow = icmp ugt a, 3
         if (ConstantInt *CI = dyn_cast<ConstantInt>(WO->getRHS()))
           return new ICmpInst(ICmpInst::ICMP_UGT, WO->getLHS(),
                               ConstantExpr::getNot(CI));
+        break;
+      case Intrinsic::umul_with_overflow:
+        // overflow for umul a, C  --> a > UINT_MAX udiv C
+        // (unless C == 0, in which case no overflow ever occurs)
+        if (ConstantInt *CI = dyn_cast<ConstantInt>(WO->getRHS())) {
+          assert(!CI->isZero() && "handled by instruction simplify");
+          auto UMax = APInt::getMaxValue(CI->getType()->getBitWidth());
+          auto *Op =
+            ConstantExpr::getUDiv(ConstantInt::get(CI->getType(), UMax), CI);
+          return new ICmpInst(ICmpInst::ICMP_UGT, WO->getLHS(), Op);
+        }
+        break;
+      };
     }
   }
   if (LoadInst *L = dyn_cast<LoadInst>(Agg))
