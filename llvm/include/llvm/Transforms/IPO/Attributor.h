@@ -1429,12 +1429,16 @@ struct Attributor {
   /// uses should be changed too.
   bool changeValueAfterManifest(Value &V, Value &NV,
                                 bool ChangeDroppable = true) {
-    bool Changed = false;
-    for (auto &U : V.uses())
-      if (ChangeDroppable || !U.getUser()->isDroppable())
-        Changed |= changeUseAfterManifest(U, NV);
-
-    return Changed;
+    auto &Entry = ToBeChangedValues[&V];
+    Value *&CurNV = Entry.first;
+    if (CurNV && (CurNV->stripPointerCasts() == NV.stripPointerCasts() ||
+                  isa<UndefValue>(CurNV)))
+      return false;
+    assert((!CurNV || CurNV == &NV || isa<UndefValue>(NV)) &&
+           "Value replacement was registered twice with different values!");
+    CurNV = &NV;
+    Entry.second = ChangeDroppable;
+    return true;
   }
 
   /// Record that \p I is to be replaced with `unreachable` after information
@@ -1889,6 +1893,10 @@ private:
   /// Uses we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
   DenseMap<Use *, Value *> ToBeChangedUses;
+
+  /// Values we replace with a new value after manifest is done. We will remove
+  /// then trivially dead instructions as well.
+  DenseMap<Value *, std::pair<Value *, bool>> ToBeChangedValues;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
   SmallDenseSet<WeakVH, 16> ToBeChangedToUnreachableInsts;

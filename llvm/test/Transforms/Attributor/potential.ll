@@ -633,7 +633,7 @@ define i32 @optimize_poison_1(i1 %c) {
 ; IS__TUNIT_NPM:       t:
 ; IS__TUNIT_NPM-NEXT:    ret i32 0
 ; IS__TUNIT_NPM:       f:
-; IS__TUNIT_NPM-NEXT:    ret i32 undef
+; IS__TUNIT_NPM-NEXT:    ret i32 0
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@optimize_poison_1
@@ -651,7 +651,7 @@ define i32 @optimize_poison_1(i1 %c) {
 ; IS__CGSCC_NPM:       t:
 ; IS__CGSCC_NPM-NEXT:    ret i32 0
 ; IS__CGSCC_NPM:       f:
-; IS__CGSCC_NPM-NEXT:    ret i32 undef
+; IS__CGSCC_NPM-NEXT:    ret i32 0
 ;
   br i1 %c, label %t, label %f
 t:
