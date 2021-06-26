@@ -67,7 +67,7 @@ attributes #4 = { argmemonly nounwind willreturn }
 attributes #5 = { nounwind readnone speculatable willreturn }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!13, !14, !15}
+!llvm.module.flags = !{!13, !14, !15, !59}
 !llvm.ident = !{!16}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0 (https://github.com/llvm/llvm-project.git 73cea83a6f5ab521edf3cccfc603534776d691ec)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
@@ -129,3 +129,4 @@ attributes #5 = { nounwind readnone speculatable willreturn }
 !56 = !DILocation(line: 18, column: 1, scope: !33)
 !57 = !{!58}
 !58 = !{i64 2, i64 -1, i64 -1, i1 true}
+!59 = !{i32 7, !"openmp", i32 50}
