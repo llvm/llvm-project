@@ -4,9 +4,7 @@
 define <2 x i64> @shr64x2(<2 x i64> %a, i64 %b) {
 ; CHECK-LABEL: shr64x2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg x8, x0
-; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    neg v1.2d, v1.2d
+; CHECK-NEXT:    dup v1.2d, x0
 ; CHECK-NEXT:    sshl v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -20,9 +18,7 @@ entry:
 define <4 x i32> @shr32x4(<4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: shr32x4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    dup v1.4s, w0
 ; CHECK-NEXT:    sshl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -36,9 +32,7 @@ entry:
 define <4 x i32> @shr32x4undef(<4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: shr32x4undef:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    dup v1.4s, w0
 ; CHECK-NEXT:    sshl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -52,9 +46,7 @@ entry:
 define <8 x i16> @shr16x8(<8 x i16> %a, i16 %b) {
 ; CHECK-LABEL: shr16x8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    neg v1.8h, v1.8h
+; CHECK-NEXT:    dup v1.8h, w0
 ; CHECK-NEXT:    sshl v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -68,9 +60,7 @@ entry:
 define <16 x i8> @shr8x16(<16 x i8> %a, i8 %b) {
 ; CHECK-LABEL: shr8x16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.16b, w8
-; CHECK-NEXT:    neg v1.16b, v1.16b
+; CHECK-NEXT:    dup v1.16b, w0
 ; CHECK-NEXT:    sshl v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -84,9 +74,7 @@ entry:
 define <1 x i64> @shr64x1(<1 x i64> %a, i64 %b) {
 ; CHECK-LABEL: shr64x1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg x8, x0
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    neg d1, d1
+; CHECK-NEXT:    fmov d1, x0
 ; CHECK-NEXT:    sshl d0, d0, d1
 ; CHECK-NEXT:    ret
 entry:
@@ -99,9 +87,7 @@ entry:
 define <2 x i32> @shr32x2(<2 x i32> %a, i32 %b) {
 ; CHECK-LABEL: shr32x2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.2s, w8
-; CHECK-NEXT:    neg v1.2s, v1.2s
+; CHECK-NEXT:    dup v1.2s, w0
 ; CHECK-NEXT:    sshl v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -115,9 +101,7 @@ entry:
 define <4 x i16> @shr16x4(<4 x i16> %a, i16 %b) {
 ; CHECK-LABEL: shr16x4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    neg v1.4h, v1.4h
+; CHECK-NEXT:    dup v1.4h, w0
 ; CHECK-NEXT:    sshl v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
 entry:
@@ -131,9 +115,7 @@ entry:
 define <8 x i8> @shr8x8(<8 x i8> %a, i8 %b) {
 ; CHECK-LABEL: shr8x8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.8b, w8
-; CHECK-NEXT:    neg v1.8b, v1.8b
+; CHECK-NEXT:    dup v1.8b, w0
 ; CHECK-NEXT:    sshl v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
 entry:
@@ -147,9 +129,7 @@ entry:
 define <2 x i64> @lshr64x2(<2 x i64> %a, i64 %b) {
 ; CHECK-LABEL: lshr64x2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg x8, x0
-; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    neg v1.2d, v1.2d
+; CHECK-NEXT:    dup v1.2d, x0
 ; CHECK-NEXT:    ushl v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -163,9 +143,7 @@ entry:
 define <4 x i32> @lshr32x4(<4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: lshr32x4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    dup v1.4s, w0
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -179,9 +157,7 @@ entry:
 define <4 x i32> @lshr32x4undef(<4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: lshr32x4undef:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    dup v1.4s, w0
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -195,9 +171,7 @@ entry:
 define <8 x i16> @lshr16x8(<8 x i16> %a, i16 %b) {
 ; CHECK-LABEL: lshr16x8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    neg v1.8h, v1.8h
+; CHECK-NEXT:    dup v1.8h, w0
 ; CHECK-NEXT:    ushl v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -211,9 +185,7 @@ entry:
 define <16 x i8> @lshr8x16(<16 x i8> %a, i8 %b) {
 ; CHECK-LABEL: lshr8x16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.16b, w8
-; CHECK-NEXT:    neg v1.16b, v1.16b
+; CHECK-NEXT:    dup v1.16b, w0
 ; CHECK-NEXT:    ushl v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -227,9 +199,7 @@ entry:
 define <1 x i64> @lshr64x1(<1 x i64> %a, i64 %b) {
 ; CHECK-LABEL: lshr64x1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg x8, x0
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    neg d1, d1
+; CHECK-NEXT:    fmov d1, x0
 ; CHECK-NEXT:    ushl d0, d0, d1
 ; CHECK-NEXT:    ret
 entry:
@@ -242,9 +212,7 @@ entry:
 define <2 x i32> @lshr32x2(<2 x i32> %a, i32 %b) {
 ; CHECK-LABEL: lshr32x2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.2s, w8
-; CHECK-NEXT:    neg v1.2s, v1.2s
+; CHECK-NEXT:    dup v1.2s, w0
 ; CHECK-NEXT:    ushl v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -258,9 +226,7 @@ entry:
 define <4 x i16> @lshr16x4(<4 x i16> %a, i16 %b) {
 ; CHECK-LABEL: lshr16x4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    neg v1.4h, v1.4h
+; CHECK-NEXT:    dup v1.4h, w0
 ; CHECK-NEXT:    ushl v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
 entry:
@@ -274,9 +240,7 @@ entry:
 define <8 x i8> @lshr8x8(<8 x i8> %a, i8 %b) {
 ; CHECK-LABEL: lshr8x8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v1.8b, w8
-; CHECK-NEXT:    neg v1.8b, v1.8b
+; CHECK-NEXT:    dup v1.8b, w0
 ; CHECK-NEXT:    ushl v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
 entry:
@@ -603,9 +567,7 @@ entry:
 define <vscale x 16 x i8> @subsub(<vscale x 16 x i8> %a, i8 %b) {
 ; CHECK-LABEL: subsub:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z0.b, w8
-; CHECK-NEXT:    subr z0.b, z0.b, #0 // =0x0
+; CHECK-NEXT:    mov z0.b, w0
 ; CHECK-NEXT:    ret
 entry:
   %sub = sub i8 0, %b

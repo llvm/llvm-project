@@ -4,9 +4,7 @@
 define <16 x i8> @subsubii8(<16 x i8> %a, i8 %b) {
 ; CHECK-LABEL: subsubii8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    dup v0.16b, w8
-; CHECK-NEXT:    neg v0.16b, v0.16b
+; CHECK-NEXT:    dup v0.16b, w0
 ; CHECK-NEXT:    ret
 entry:
   %sub = sub i8 0, %b
@@ -19,9 +17,7 @@ entry:
 define <vscale x 16 x i8> @subsubni8(<vscale x 16 x i8> %a, i8 %b) {
 ; CHECK-LABEL: subsubni8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    neg w8, w0
-; CHECK-NEXT:    mov z0.b, w8
-; CHECK-NEXT:    subr z0.b, z0.b, #0 // =0x0
+; CHECK-NEXT:    mov z0.b, w0
 ; CHECK-NEXT:    ret
 entry:
   %sub = sub i8 0, %b
