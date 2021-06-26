@@ -18,18 +18,33 @@ func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
 // CHECK:         memref.store
 
 // CHECK-LABEL: func private @async_dispatch_fn
+// CHECK-SAME:  (
 // CHECK-SAME:    %[[GROUP:arg0]]: !async.group,
 // CHECK-SAME:    %[[BLOCK_START:arg1]]: index
 // CHECK-SAME:    %[[BLOCK_END:arg2]]: index
-
-// CHECK:         scf.while (%[[S:.*]] = %[[BLOCK_START]],
-// CHECK-SAME:               %[[E:.*]] = %[[BLOCK_END]])
+// CHECK-SAME:  )
+// CHECK:         %[[C1:.*]] = constant 1 : index
+// CHECK:         %[[C2:.*]] = constant 2 : index
+// CHECK:         scf.while (%[[S0:.*]] = %[[BLOCK_START]],
+// CHECK-SAME:               %[[E0:.*]] = %[[BLOCK_END]])
+// While loop `before` block decides if we need to dispatch more tasks.
+// CHECK:         {
+// CHECK:           %[[DIFF0:.*]] = subi %[[E0]], %[[S0]]
+// CHECK:           %[[COND:.*]] = cmpi sgt, %[[DIFF0]], %[[C1]]
+// CHECK:           scf.condition(%[[COND]])
+// While loop `after` block splits the range in half and submits async task
+// to process the second half using the call to the same dispatch function.
 // CHECK:         } do {
+// CHECK:         ^bb0(%[[S1:.*]]: index, %[[E1:.*]]: index):
+// CHECK:           %[[DIFF1:.*]] = subi %[[E1]], %[[S1]]
+// CHECK:           %[[HALF:.*]] = divi_signed %[[DIFF1]], %[[C2]]
+// CHECK:           %[[MID:.*]] = addi %[[S1]], %[[HALF]]
 // CHECK:           %[[TOKEN:.*]] = async.execute
 // CHECK:             call @async_dispatch_fn
-// CHECK:             async.add_to_group
+// CHECK:           async.add_to_group
+// CHECK:           scf.yield %[[S1]], %[[MID]]
 // CHECK:         }
-
+// After async dispatch the first block processed in the caller thread.
 // CHECK:         call @parallel_compute_fn(%[[BLOCK_START]]
 
 // -----
