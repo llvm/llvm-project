@@ -1,4 +1,4 @@
-# RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s
+; RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s
 
 .data
 BYTE 2, 4, 6, 8
