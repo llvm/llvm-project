@@ -642,8 +642,10 @@ static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierStart,
   EarlierIntrinsic->setDestAlignment(PrefAlign);
 
   if (!IsOverwriteEnd) {
-    Type *Int8PtrTy = Type::getInt8PtrTy(EarlierIntrinsic->getContext());
     Value *OrigDest = EarlierIntrinsic->getRawDest();
+    Type *Int8PtrTy =
+        Type::getInt8PtrTy(EarlierIntrinsic->getContext(),
+                           OrigDest->getType()->getPointerAddressSpace());
     Value *Dest = OrigDest;
     if (OrigDest->getType() != Int8PtrTy)
       Dest = CastInst::CreatePointerCast(OrigDest, Int8PtrTy, "", EarlierWrite);
