@@ -11,12 +11,12 @@ Standalone Tool
 ===============
 
 :program:`clang-format` is located in `clang/tools/clang-format` and can be used
-to format C/C++/Java/JavaScript/Objective-C/Protobuf/C# code.
+to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
 
 .. code-block:: console
 
   $ clang-format -help
-  OVERVIEW: A tool to format C/C++/Java/JavaScript/Objective-C/Protobuf/C# code.
+  OVERVIEW: A tool to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
 
   If no arguments are specified, it formats the code from standard input
   and writes the result to the standard output.

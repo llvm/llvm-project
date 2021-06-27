@@ -536,6 +536,7 @@ The matrix type extension also supports operations on a matrix and a scalar.
 The matrix type extension supports division on a matrix and a scalar but not on a matrix and a matrix.
 
 .. code-block:: c++
+
   typedef float m4x4_t __attribute__((matrix_type(4, 4)));
 
   m4x4_t f(m4x4_t a) {
@@ -543,8 +544,8 @@ The matrix type extension supports division on a matrix and a scalar but not on 
     return a;
   }
 
-The matrix type extension supports compound assignments for addition, subtraction, and multiplication between matrices
-and between a matrix and a scalar, provided their types are consistent.
+The matrix type extension supports compound assignments for addition, subtraction, and multiplication on matrices
+and on a matrix and a scalar, provided their types are consistent.
 
 .. code-block:: c++
 

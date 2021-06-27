@@ -411,6 +411,17 @@ static bool format(StringRef FileName) {
   unsigned CursorPosition = Cursor;
   Replacements Replaces = sortIncludes(*FormatStyle, Code->getBuffer(), Ranges,
                                        AssumedFileName, &CursorPosition);
+
+  // To format JSON insert a variable to trick the code into thinking its
+  // JavaScript.
+  if (FormatStyle->isJson()) {
+    auto Err = Replaces.add(tooling::Replacement(
+        tooling::Replacement(AssumedFileName, 0, 0, "x = ")));
+    if (Err) {
+      llvm::errs() << "Bad Json variable insertion\n";
+    }
+  }
+
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
   if (!ChangedCode) {
     llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
@@ -506,7 +517,8 @@ int main(int argc, const char **argv) {
   cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(
       argc, argv,
-      "A tool to format C/C++/Java/JavaScript/Objective-C/Protobuf/C# code.\n\n"
+      "A tool to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# "
+      "code.\n\n"
       "If no arguments are specified, it formats the code from standard input\n"
       "and writes the result to the standard output.\n"
       "If <file>s are given, it reformats the files. If -i is specified\n"

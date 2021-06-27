@@ -5066,15 +5066,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Assert(Alignment->getValue().isPowerOf2(),
            "masked_load: alignment must be a power of 2", Call);
 
-    // DataTy is the overloaded type
-    Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
-    Assert(DataTy == Call.getType(),
+    PointerType *PtrTy = cast<PointerType>(Ptr->getType());
+    Assert(PtrTy->isOpaqueOrPointeeTypeMatches(Call.getType()),
            "masked_load: return must match pointer type", Call);
-    Assert(PassThru->getType() == DataTy,
-           "masked_load: pass through and data type must match", Call);
+    Assert(PassThru->getType() == Call.getType(),
+           "masked_load: pass through and return type must match", Call);
     Assert(cast<VectorType>(Mask->getType())->getElementCount() ==
-               cast<VectorType>(DataTy)->getElementCount(),
-           "masked_load: vector mask must be same length as data", Call);
+               cast<VectorType>(Call.getType())->getElementCount(),
+           "masked_load: vector mask must be same length as return", Call);
     break;
   }
   case Intrinsic::masked_store: {
@@ -5087,13 +5086,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Assert(Alignment->getValue().isPowerOf2(),
            "masked_store: alignment must be a power of 2", Call);
 
-    // DataTy is the overloaded type
-    Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
-    Assert(DataTy == Val->getType(),
+    PointerType *PtrTy = cast<PointerType>(Ptr->getType());
+    Assert(PtrTy->isOpaqueOrPointeeTypeMatches(Val->getType()),
            "masked_store: storee must match pointer type", Call);
     Assert(cast<VectorType>(Mask->getType())->getElementCount() ==
-               cast<VectorType>(DataTy)->getElementCount(),
-           "masked_store: vector mask must be same length as data", Call);
+               cast<VectorType>(Val->getType())->getElementCount(),
+           "masked_store: vector mask must be same length as value", Call);
     break;
   }
 
