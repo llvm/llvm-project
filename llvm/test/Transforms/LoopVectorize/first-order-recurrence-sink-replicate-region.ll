@@ -10,7 +10,7 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_1
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
-; CHECK-NEXT:   WIDEN-PHI %0 = phi 0, %conv
+; CHECK-NEXT:   WIDEN-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<%3> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT: Successor(s): loop.0
@@ -83,7 +83,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_2
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
-; CHECK-NEXT:   WIDEN-PHI %recur = phi 0, %recur.next
+; CHECK-NEXT:   WIDEN-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<%3> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT: Successor(s): loop.0
@@ -155,7 +155,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, i32* %ptr) optsize 
 ; CHECK-LABEL: sink_replicate_region_3_reduction
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
-; CHECK-NEXT:   WIDEN-PHI %recur = phi 0, %recur.next
+; CHECK-NEXT:   WIDEN-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   WIDEN-PHI ir<%and.red> = phi ir<1234>, ir<%and.red.next>
 ; CHECK-NEXT:   EMIT vp<%4> = icmp ule ir<%iv> vp<%0>
@@ -214,7 +214,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-LABEL: sink_replicate_region_4_requires_split_at_end_of_block
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
-; CHECK-NEXT:   WIDEN-PHI %0 = phi 0, %conv
+; CHECK-NEXT:   WIDEN-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<%3> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT:   REPLICATE ir<%gep> = getelementptr ir<%ptr>, ir<%iv>
@@ -312,7 +312,7 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 
 ; CHECK-LABEL: sink_replicate_region_after_replicate_region
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
-; CHECK-NEXT:   WIDEN-PHI %recur = phi 0, %recur.next
+; CHECK-NEXT:   WIDEN-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<%3> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT: Successor(s): loop.0
