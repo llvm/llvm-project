@@ -61,6 +61,26 @@ entry:
   ret void
 }
 
+define void @write4to7_addrspace(i32 addrspace(1)* nocapture %p) {
+; CHECK-LABEL: @write4to7_addrspace(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[P3:%.*]] = bitcast i32 addrspace(1)* [[ARRAYIDX0]] to i8 addrspace(1)*
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[P3]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p1i8.i64(i8 addrspace(1)* align 4 [[TMP0]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[P]], i64 1
+; CHECK-NEXT:    store i32 1, i32 addrspace(1)* [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %arrayidx0 = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 1
+  %p3 = bitcast i32 addrspace(1)* %arrayidx0 to i8 addrspace(1)*
+  call void @llvm.memset.p1i8.i64(i8 addrspace(1)* align 4 %p3, i8 0, i64 28, i1 false)
+  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 1
+  store i32 1, i32 addrspace(1)* %arrayidx1, align 4
+  ret void
+}
+
 define void @write4to7_atomic(i32* nocapture %p) {
 ; CHECK-LABEL: @write4to7_atomic(
 ; CHECK-NEXT:  entry:
@@ -433,6 +453,7 @@ entry:
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 declare void @llvm.memset.p0i32.i64(i32* nocapture, i8, i64, i1) nounwind
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p1i8.i64(i8 addrspace(1)* nocapture, i8, i64, i1) nounwind
 declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture, i8, i64, i32) nounwind
 
 define void @ow_begin_align1(i8* nocapture %p) {
