@@ -642,12 +642,20 @@ static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierStart,
   EarlierIntrinsic->setDestAlignment(PrefAlign);
 
   if (!IsOverwriteEnd) {
+    Type *Int8PtrTy = Type::getInt8PtrTy(EarlierIntrinsic->getContext());
+    Value *OrigDest = EarlierIntrinsic->getRawDest();
+    Value *Dest = OrigDest;
+    if (OrigDest->getType() != Int8PtrTy)
+      Dest = CastInst::CreatePointerCast(OrigDest, Int8PtrTy, "", EarlierWrite);
     Value *Indices[1] = {
         ConstantInt::get(EarlierWriteLength->getType(), ToRemoveSize)};
-    GetElementPtrInst *NewDestGEP = GetElementPtrInst::CreateInBounds(
-        EarlierIntrinsic->getRawDest()->getType()->getPointerElementType(),
-        EarlierIntrinsic->getRawDest(), Indices, "", EarlierWrite);
+    Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
+        Type::getInt8Ty(EarlierIntrinsic->getContext()),
+        Dest, Indices, "", EarlierWrite);
     NewDestGEP->setDebugLoc(EarlierIntrinsic->getDebugLoc());
+    if (NewDestGEP->getType() != OrigDest->getType())
+      NewDestGEP = CastInst::CreatePointerCast(NewDestGEP, OrigDest->getType(),
+                                               "", EarlierWrite);
     EarlierIntrinsic->setDest(NewDestGEP);
   }
 
