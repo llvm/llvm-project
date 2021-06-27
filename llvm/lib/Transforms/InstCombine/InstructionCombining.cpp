@@ -942,13 +942,16 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
     assert(canConstantFoldCallTo(II, cast<Function>(II->getCalledOperand())) &&
            "Expected constant-foldable intrinsic");
     Intrinsic::ID IID = II->getIntrinsicID();
-    SmallVector<Value *, 2> Args = {SO};
+    if (II->getNumArgOperands() == 1)
+      return Builder.CreateUnaryIntrinsic(IID, SO);
 
-    // Propagate the zero-is-undef argument to the new instruction.
-    if (IID == Intrinsic::ctlz || IID == Intrinsic::cttz)
-      Args.push_back(II->getArgOperand(1));
-
-    return Builder.CreateIntrinsic(IID, I.getType(), Args);
+    // This works for real binary ops like min/max (where we always expect the
+    // constant operand to be canonicalized as op1) and unary ops with a bonus
+    // constant argument like ctlz/cttz.
+    // TODO: Handle non-commutative binary intrinsics as below for binops.
+    assert(II->getNumArgOperands() == 2 && "Expected binary intrinsic");
+    assert(isa<Constant>(II->getArgOperand(1)) && "Expected constant operand");
+    return Builder.CreateBinaryIntrinsic(IID, SO, II->getArgOperand(1));
   }
 
   assert(I.isBinaryOp() && "Unexpected opcode for select folding");
