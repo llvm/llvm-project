@@ -56,8 +56,9 @@ class VPRecipeBuilder {
   // marked by having a nullptr entry in this map.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
 
-  /// Cross-iteration reduction phis for which we need to add the incoming value
-  /// from the backedge after all recipes have been created.
+  /// Cross-iteration reduction & first-order recurrence phis for which we need
+  /// to add the incoming value from the backedge after all recipes have been
+  /// created.
   SmallVector<VPWidenPHIRecipe *, 4> PhisToFix;
 
   /// Check if \p I can be widened at the start of \p Range and possibly
@@ -170,8 +171,8 @@ public:
       Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
       VPlanPtr &Plan);
 
-  /// Add the incoming values from the backedge to reduction cross-iteration
-  /// phis.
+  /// Add the incoming values from the backedge to reduction & first-order
+  /// recurrence cross-iteration phis.
   void fixHeaderPhis();
 };
 } // end namespace llvm

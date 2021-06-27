@@ -849,7 +849,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   WIDEN-PHI %for = phi 0, %lv.a
+; CHECK-NEXT:   WIDEN-PHI ir<%for> = phi ir<0>, ir<%lv.a>
 ; CHECK-NEXT:   EMIT vp<%3> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%iv>
 ; CHECK-NEXT: Successor(s): pred.load
