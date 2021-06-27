@@ -1214,9 +1214,11 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
   Value *MemsetLen = Builder.CreateSelect(
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
+  unsigned DestAS = Dest->getType()->getPointerAddressSpace();
   Instruction *NewMemSet = Builder.CreateMemSet(
       Builder.CreateGEP(Builder.getInt8Ty(),
-                        Builder.CreatePointerCast(Dest, Builder.getInt8PtrTy()),
+                        Builder.CreatePointerCast(Dest,
+                                                  Builder.getInt8PtrTy(DestAS)),
                         SrcSize),
       MemSet->getOperand(1), MemsetLen, MaybeAlign(Align));
 
