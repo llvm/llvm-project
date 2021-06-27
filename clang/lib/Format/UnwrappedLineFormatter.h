@@ -47,6 +47,7 @@ private:
   /// of the \c UnwrappedLine if there was no structural parsing error.
   void formatFirstToken(const AnnotatedLine &Line,
                         const AnnotatedLine *PreviousLine,
+                        const AnnotatedLine *PrevPrevLine,
                         const SmallVectorImpl<AnnotatedLine *> &Lines,
                         unsigned Indent, unsigned NewlineIndent);
 
