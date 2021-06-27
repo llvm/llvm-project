@@ -13376,8 +13376,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
         cast<llvm::FixedVectorType>(Ops[0]->getType())->getNumElements();
     unsigned ShiftVal = cast<llvm::ConstantInt>(Ops[2])->getZExtValue() & 0xff;
 
-    // Mask the shift amount to width of two vectors.
-    ShiftVal &= (2 * NumElts) - 1;
+    // Mask the shift amount to width of a vector.
+    ShiftVal &= NumElts - 1;
 
     int Indices[16];
     for (unsigned i = 0; i != NumElts; ++i)
