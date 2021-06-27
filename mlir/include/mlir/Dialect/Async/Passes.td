@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AsyncParallelFor : Pass<"async-parallel-for"> {
+def AsyncParallelFor : Pass<"async-parallel-for", "ModuleOp"> {
   let summary = "Convert scf.parallel operations to multiple async compute ops "
                 "executed concurrently for non-overlapping iteration ranges";
   let constructor = "mlir::createAsyncParallelForPass()";
