@@ -1117,7 +1117,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                                  DstOps[0].getLLTTy(*getMRI());
                         }) &&
            "type mismatch in output list");
-    assert(DstOps.size() * DstOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
+    assert((TypeSize::ScalarTy)DstOps.size() *
+                   DstOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
            "input operands do not cover output register");
     break;
@@ -1131,7 +1132,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                                  SrcOps[0].getLLTTy(*getMRI());
                         }) &&
            "type mismatch in input list");
-    assert(SrcOps.size() * SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
+    assert((TypeSize::ScalarTy)SrcOps.size() *
+                   SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
            "input operands do not cover output register");
     if (SrcOps.size() == 1)
@@ -1182,7 +1184,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                                  SrcOps[0].getLLTTy(*getMRI());
                         }) &&
            "type mismatch in input list");
-    assert(SrcOps.size() * SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
+    assert((TypeSize::ScalarTy)SrcOps.size() *
+                   SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
            "input scalars do not exactly cover the output vector register");
     break;
@@ -1215,7 +1218,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                                       SrcOps[0].getLLTTy(*getMRI()));
                         }) &&
            "type mismatch in input list");
-    assert(SrcOps.size() * SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
+    assert((TypeSize::ScalarTy)SrcOps.size() *
+                   SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
            "input vectors do not exactly cover the output vector register");
     break;

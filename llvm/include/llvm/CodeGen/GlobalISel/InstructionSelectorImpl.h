@@ -595,7 +595,7 @@ bool InstructionSelector::executeMatchTable(
     case GIM_CheckPointerToAny: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
-      int64_t SizeInBits = MatchTable[CurrentIdx++];
+      uint64_t SizeInBits = MatchTable[CurrentIdx++];
 
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIM_CheckPointerToAny(MIs["
