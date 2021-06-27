@@ -97,6 +97,8 @@ extern char &AMDGPUMachineCFGStructurizerID;
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
 Pass *createAMDGPUAnnotateKernelFeaturesPass();
+Pass *createAMDGPUAttributorPass();
+void initializeAMDGPUAttributorPass(PassRegistry &);
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
 

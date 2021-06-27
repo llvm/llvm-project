@@ -293,12 +293,14 @@ static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
 /// attribute list \p Attrs. This is only the case if it was not already present
 /// in \p Attrs at the position describe by \p PK and \p AttrIdx.
 static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
-                             AttributeList &Attrs, int AttrIdx) {
+                             AttributeList &Attrs, int AttrIdx,
+                             bool ForceReplace = false) {
 
   if (Attr.isEnumAttribute()) {
     Attribute::AttrKind Kind = Attr.getKindAsEnum();
     if (Attrs.hasAttribute(AttrIdx, Kind))
-      if (isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
+      if (!ForceReplace &&
+          isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
         return false;
     Attrs = Attrs.addAttribute(Ctx, AttrIdx, Attr);
     return true;
@@ -306,7 +308,8 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
   if (Attr.isStringAttribute()) {
     StringRef Kind = Attr.getKindAsString();
     if (Attrs.hasAttribute(AttrIdx, Kind))
-      if (isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
+      if (!ForceReplace &&
+          isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
         return false;
     Attrs = Attrs.addAttribute(Ctx, AttrIdx, Attr);
     return true;
@@ -314,7 +317,8 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
   if (Attr.isIntAttribute()) {
     Attribute::AttrKind Kind = Attr.getKindAsEnum();
     if (Attrs.hasAttribute(AttrIdx, Kind))
-      if (isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
+      if (!ForceReplace &&
+          isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
         return false;
     Attrs = Attrs.removeAttribute(Ctx, AttrIdx, Kind);
     Attrs = Attrs.addAttribute(Ctx, AttrIdx, Attr);
@@ -395,7 +399,8 @@ ChangeStatus AbstractAttribute::update(Attributor &A) {
 
 ChangeStatus
 IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
-                                   const ArrayRef<Attribute> &DeducedAttrs) {
+                                   const ArrayRef<Attribute> &DeducedAttrs,
+                                   bool ForceReplace) {
   Function *ScopeFn = IRP.getAnchorScope();
   IRPosition::Kind PK = IRP.getPositionKind();
 
@@ -423,7 +428,7 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   for (const Attribute &Attr : DeducedAttrs) {
-    if (!addIfNotExistent(Ctx, Attr, Attrs, IRP.getAttrIdx()))
+    if (!addIfNotExistent(Ctx, Attr, Attrs, IRP.getAttrIdx(), ForceReplace))
       continue;
 
     HasChanged = ChangeStatus::CHANGED;
@@ -888,6 +893,22 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
       recordDependence(*IsDeadAA, *QueryingAA, DepClass);
     if (!IsDeadAA->isKnownDead())
       UsedAssumedInformation = true;
+    return true;
+  }
+
+  return false;
+}
+
+bool Attributor::isAssumedDead(const BasicBlock &BB,
+                               const AbstractAttribute *QueryingAA,
+                               const AAIsDead *FnLivenessAA,
+                               DepClassTy DepClass) {
+  if (!FnLivenessAA)
+    FnLivenessAA = lookupAAFor<AAIsDead>(IRPosition::function(*BB.getParent()),
+                                         QueryingAA, DepClassTy::NONE);
+  if (FnLivenessAA->isAssumedDead(&BB)) {
+    if (QueryingAA)
+      recordDependence(*FnLivenessAA, *QueryingAA, DepClass);
     return true;
   }
 
@@ -2213,6 +2234,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // The alignment of a pointer is interesting for loads.
     case Instruction::Store:
       // The alignment of a pointer is interesting for stores.
+    case Instruction::Alloca:
+    case Instruction::AddrSpaceCast:
       IsInterestingOpcode = true;
     }
     if (IsInterestingOpcode) {
