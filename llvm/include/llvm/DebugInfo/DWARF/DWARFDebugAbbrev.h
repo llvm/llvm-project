@@ -47,6 +47,8 @@ public:
     return Decls.end();
   }
 
+  std::string getCodeRange() const;
+
 private:
   void clear();
 };
