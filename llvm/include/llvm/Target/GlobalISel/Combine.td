@@ -645,6 +645,13 @@ def bitfield_extract_from_sext_inreg : GICombineRule<
 
 def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
                                             bitfield_extract_from_and]>;
+def reassoc_ptradd : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_PTR_ADD):$root,
+    [{ return Helper.matchReassocPtrAdd(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
+def reassocs : GICombineGroup<[reassoc_ptradd]>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -678,9 +685,10 @@ def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
                                        mul_by_neg_one]>;
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
-    extract_vec_elt_combines, ptr_add_immed_chain, combines_for_extload,
+    extract_vec_elt_combines, combines_for_extload,
     combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands,
+    reassocs, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, ext_ext_fold,

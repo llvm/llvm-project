@@ -511,8 +511,14 @@ public:
       SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo);
 
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// By default, it erases the instruction \p MI from the function.
   bool applyBuildFn(MachineInstr &MI,
                     std::function<void(MachineIRBuilder &)> &MatchInfo);
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// This variant does not erase \p MI after calling the build function.
+  bool applyBuildFnNoErase(MachineInstr &MI,
+                           std::function<void(MachineIRBuilder &)> &MatchInfo);
+
   bool matchFunnelShiftToRotate(MachineInstr &MI);
   void applyFunnelShiftToRotate(MachineInstr &MI);
   bool matchRotateOutOfRange(MachineInstr &MI);
@@ -527,6 +533,11 @@ public:
   /// Match: and (lshr x, cst), mask -> ubfx x, cst, width
   bool matchBitfieldExtractFromAnd(
       MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
+
+  /// Reassociate pointer calculations with G_ADD involved, to allow better
+  /// addressing mode usage.
+  bool matchReassocPtrAdd(MachineInstr &MI,
+                          std::function<void(MachineIRBuilder &)> &MatchInfo);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
@@ -589,6 +600,11 @@ private:
       SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
       const SmallVector<Register, 8> &RegsToVisit,
       const unsigned MemSizeInBits);
+
+  /// Examines the G_PTR_ADD instruction \p PtrAdd and determines if performing
+  /// a re-association of its operands would break an existing legal addressing
+  /// mode that the address computation currently represents.
+  bool reassociationCanBreakAddressingModePattern(MachineInstr &PtrAdd);
 };
 } // namespace llvm
 
