@@ -51790,7 +51790,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &X86::GR16RegClass);
         if (VT == MVT::i32 || VT == MVT::f32)
           return std::make_pair(0U, &X86::GR32RegClass);
-        if (VT != MVT::f80)
+        if (VT != MVT::f80 && !VT.isVector())
           return std::make_pair(0U, &X86::GR64RegClass);
         break;
       }
@@ -51801,9 +51801,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR8_ABCD_LRegClass);
       if (VT == MVT::i16)
         return std::make_pair(0U, &X86::GR16_ABCDRegClass);
-      if (VT == MVT::i32 || VT == MVT::f32 || !Subtarget.is64Bit())
+      if (VT == MVT::i32 || VT == MVT::f32 ||
+          (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32_ABCDRegClass);
-      if (VT != MVT::f80)
+      if (VT != MVT::f80 && !VT.isVector())
         return std::make_pair(0U, &X86::GR64_ABCDRegClass);
       break;
     case 'r':   // GENERAL_REGS
@@ -51812,9 +51813,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR8RegClass);
       if (VT == MVT::i16)
         return std::make_pair(0U, &X86::GR16RegClass);
-      if (VT == MVT::i32 || VT == MVT::f32 || !Subtarget.is64Bit())
+      if (VT == MVT::i32 || VT == MVT::f32 ||
+          (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32RegClass);
-      if (VT != MVT::f80)
+      if (VT != MVT::f80 && !VT.isVector())
         return std::make_pair(0U, &X86::GR64RegClass);
       break;
     case 'R':   // LEGACY_REGS
@@ -51822,9 +51824,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::GR8_NOREXRegClass);
       if (VT == MVT::i16)
         return std::make_pair(0U, &X86::GR16_NOREXRegClass);
-      if (VT == MVT::i32 || VT == MVT::f32 || !Subtarget.is64Bit())
+      if (VT == MVT::i32 || VT == MVT::f32 ||
+          (!VT.isVector() && !Subtarget.is64Bit()))
         return std::make_pair(0U, &X86::GR32_NOREXRegClass);
-      if (VT != MVT::f80)
+      if (VT != MVT::f80 && !VT.isVector())
         return std::make_pair(0U, &X86::GR64_NOREXRegClass);
       break;
     case 'f':  // FP Stack registers.
