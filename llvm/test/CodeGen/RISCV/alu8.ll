@@ -124,7 +124,7 @@ define i8 @srli(i8 %a) nounwind {
 ; RV64I-LABEL: srli:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a0, a0, 192
-; RV64I-NEXT:    srliw a0, a0, 6
+; RV64I-NEXT:    srli a0, a0, 6
 ; RV64I-NEXT:    ret
   %1 = lshr i8 %a, 6
   ret i8 %1

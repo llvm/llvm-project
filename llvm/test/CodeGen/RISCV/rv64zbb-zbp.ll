@@ -614,25 +614,25 @@ define i8 @srli_i8(i8 %a) nounwind {
 ; RV64I-LABEL: srli_i8:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a0, a0, 192
-; RV64I-NEXT:    srliw a0, a0, 6
+; RV64I-NEXT:    srli a0, a0, 6
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: srli_i8:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    andi a0, a0, 192
-; RV64IB-NEXT:    srliw a0, a0, 6
+; RV64IB-NEXT:    srli a0, a0, 6
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: srli_i8:
 ; RV64IBB:       # %bb.0:
 ; RV64IBB-NEXT:    andi a0, a0, 192
-; RV64IBB-NEXT:    srliw a0, a0, 6
+; RV64IBB-NEXT:    srli a0, a0, 6
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: srli_i8:
 ; RV64IBP:       # %bb.0:
 ; RV64IBP-NEXT:    andi a0, a0, 192
-; RV64IBP-NEXT:    srliw a0, a0, 6
+; RV64IBP-NEXT:    srli a0, a0, 6
 ; RV64IBP-NEXT:    ret
   %1 = lshr i8 %a, 6
   ret i8 %1
@@ -648,13 +648,13 @@ define i8 @srai_i8(i8 %a) nounwind {
 ; RV64IB-LABEL: srai_i8:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    sext.b a0, a0
-; RV64IB-NEXT:    sraiw a0, a0, 5
+; RV64IB-NEXT:    srai a0, a0, 5
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: srai_i8:
 ; RV64IBB:       # %bb.0:
 ; RV64IBB-NEXT:    sext.b a0, a0
-; RV64IBB-NEXT:    sraiw a0, a0, 5
+; RV64IBB-NEXT:    srai a0, a0, 5
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: srai_i8:
@@ -676,19 +676,19 @@ define i16 @srli_i16(i16 %a) nounwind {
 ; RV64IB-LABEL: srli_i16:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    zext.h a0, a0
-; RV64IB-NEXT:    srliw a0, a0, 6
+; RV64IB-NEXT:    srli a0, a0, 6
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: srli_i16:
 ; RV64IBB:       # %bb.0:
 ; RV64IBB-NEXT:    zext.h a0, a0
-; RV64IBB-NEXT:    srliw a0, a0, 6
+; RV64IBB-NEXT:    srli a0, a0, 6
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: srli_i16:
 ; RV64IBP:       # %bb.0:
 ; RV64IBP-NEXT:    zext.h a0, a0
-; RV64IBP-NEXT:    srliw a0, a0, 6
+; RV64IBP-NEXT:    srli a0, a0, 6
 ; RV64IBP-NEXT:    ret
   %1 = lshr i16 %a, 6
   ret i16 %1
@@ -704,13 +704,13 @@ define i16 @srai_i16(i16 %a) nounwind {
 ; RV64IB-LABEL: srai_i16:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    sext.h a0, a0
-; RV64IB-NEXT:    sraiw a0, a0, 9
+; RV64IB-NEXT:    srai a0, a0, 9
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: srai_i16:
 ; RV64IBB:       # %bb.0:
 ; RV64IBB-NEXT:    sext.h a0, a0
-; RV64IBB-NEXT:    sraiw a0, a0, 9
+; RV64IBB-NEXT:    srai a0, a0, 9
 ; RV64IBB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: srai_i16:
