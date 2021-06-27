@@ -357,6 +357,8 @@ public:
     return StringOffsetsTableContribution->Base;
   }
 
+  uint64_t getAbbreviationsOffset() const { return Header.getAbbrOffset(); }
+
   const DWARFAbbreviationDeclarationSet *getAbbreviations() const;
 
   static bool isMatchingUnitTypeAndTag(uint8_t UnitType, dwarf::Tag Tag) {
