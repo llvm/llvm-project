@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
@@ -516,32 +517,6 @@ static LogicalResult verify(ReshapeOp op) {
 // ExtractSliceOp
 //===----------------------------------------------------------------------===//
 
-/// Helper function to dispatch an OpFoldResult into either the `dynamicVec` if
-/// it is a Value or into `staticVec` if it is an IntegerAttr.
-/// In the case of a Value, a copy of the `sentinel` value is also pushed to
-/// `staticVec`. This is useful to extract mixed static and dynamic entries that
-/// come from an AttrSizedOperandSegments trait.
-static void dispatchIndexOpFoldResult(OpFoldResult ofr,
-                                      SmallVectorImpl<Value> &dynamicVec,
-                                      SmallVectorImpl<int64_t> &staticVec,
-                                      int64_t sentinel) {
-  if (auto v = ofr.dyn_cast<Value>()) {
-    dynamicVec.push_back(v);
-    staticVec.push_back(sentinel);
-    return;
-  }
-  APInt apInt = ofr.dyn_cast<Attribute>().cast<IntegerAttr>().getValue();
-  staticVec.push_back(apInt.getSExtValue());
-}
-
-static void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
-                                       SmallVectorImpl<Value> &dynamicVec,
-                                       SmallVectorImpl<int64_t> &staticVec,
-                                       int64_t sentinel) {
-  for (auto ofr : ofrs)
-    dispatchIndexOpFoldResult(ofr, dynamicVec, staticVec, sentinel);
-}
-
 /// An extract_slice op result type can be fully inferred from the source type
 /// and the static representation of offsets, sizes and strides. Special
 /// sentinels encode the dynamic case.
@@ -561,14 +536,6 @@ Type ExtractSliceOp::inferResultType(RankedTensorType sourceRankedTensorType,
                                       numTrailingSizes));
   return RankedTensorType::get(staticSizes,
                                sourceRankedTensorType.getElementType());
-}
-
-/// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
-static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
-  return llvm::to_vector<4>(
-      llvm::map_range(attr.cast<ArrayAttr>(), [](Attribute a) -> int64_t {
-        return a.cast<IntegerAttr>().getInt();
-      }));
 }
 
 Type ExtractSliceOp::inferResultType(
@@ -890,17 +857,16 @@ foldIdentityOffsetSizeAndStrideOpInterface(OffsetSizeAndStrideOpInterface op,
                                            ShapedType shapedType) {
   OpBuilder b(op.getContext());
   for (OpFoldResult ofr : op.getMixedOffsets())
-    if (!isEqualConstantIntOrValue(ofr, b.getIndexAttr(0)))
+    if (getConstantIntValue(ofr) != static_cast<int64_t>(0))
       return failure();
   // Rank-reducing noops only need to inspect the leading dimensions: llvm::zip
   // is appropriate.
   auto shape = shapedType.getShape();
   for (auto it : llvm::zip(op.getMixedSizes(), shape))
-    if (!isEqualConstantIntOrValue(std::get<0>(it),
-                                   b.getIndexAttr(std::get<1>(it))))
+    if (getConstantIntValue(std::get<0>(it)) != std::get<1>(it))
       return failure();
   for (OpFoldResult ofr : op.getMixedStrides())
-    if (!isEqualConstantIntOrValue(ofr, b.getIndexAttr(1)))
+    if (getConstantIntValue(ofr) != static_cast<int64_t>(1))
       return failure();
   return success();
 }
