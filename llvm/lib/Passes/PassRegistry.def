@@ -331,9 +331,10 @@ FUNCTION_PASS("memprof", MemProfilerPass())
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS
-#define FUNCTION_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER, PARAMS)
+#define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
 FUNCTION_PASS_WITH_PARAMS("loop-unroll",
+                          "LoopUnrollPass",
                            [](LoopUnrollOptions Opts) {
                              return LoopUnrollPass(Opts);
                            },
@@ -345,12 +346,14 @@ FUNCTION_PASS_WITH_PARAMS("loop-unroll",
                           "no-runtime;runtime;"
                           "no-upperbound;upperbound")
 FUNCTION_PASS_WITH_PARAMS("msan",
+                          "MemorySanitizerPass",
                            [](MemorySanitizerOptions Opts) {
                              return MemorySanitizerPass(Opts);
                            },
                           parseMSanPassOptions,
                           "recover;kernel;track-origins=N")
 FUNCTION_PASS_WITH_PARAMS("simplify-cfg",
+                          "SimplifyCFGPass",
                            [](SimplifyCFGOptions Opts) {
                              return SimplifyCFGPass(Opts);
                            },
@@ -363,6 +366,7 @@ FUNCTION_PASS_WITH_PARAMS("simplify-cfg",
                           "bonus-inst-threshold=N"
                           )
 FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
+                          "LoopVectorizePass",
                            [](LoopVectorizeOptions Opts) {
                              return LoopVectorizePass(Opts);
                            },
@@ -370,12 +374,14 @@ FUNCTION_PASS_WITH_PARAMS("loop-vectorize",
                           "no-interleave-forced-only;interleave-forced-only;"
                           "no-vectorize-forced-only;vectorize-forced-only")
 FUNCTION_PASS_WITH_PARAMS("mldst-motion",
+                          "MergedLoadStoreMotionPass",
                            [](MergedLoadStoreMotionOptions Opts) {
                              return MergedLoadStoreMotionPass(Opts);
                            },
                           parseMergedLoadStoreMotionOptions,
                           "no-split-footer-bb;split-footer-bb")
 FUNCTION_PASS_WITH_PARAMS("gvn",
+                          "GVN",
                            [](GVNOptions Opts) {
                              return GVN(Opts);
                            },
@@ -385,6 +391,7 @@ FUNCTION_PASS_WITH_PARAMS("gvn",
                           "no-split-backedge-load-pre;split-backedge-load-pre;"
                           "no-memdep;memdep")
 FUNCTION_PASS_WITH_PARAMS("print<stack-lifetime>",
+                          "StackLifetimePrinterPass",
                            [](StackLifetime::LivenessType Type) {
                              return StackLifetimePrinterPass(dbgs(), Type);
                            },
@@ -436,9 +443,10 @@ LOOP_PASS("loop-versioning-licm", LoopVersioningLICMPass())
 #undef LOOP_PASS
 
 #ifndef LOOP_PASS_WITH_PARAMS
-#define LOOP_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER, PARAMS)
+#define LOOP_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
 LOOP_PASS_WITH_PARAMS("unswitch",
+                      "SimpleLoopUnswitchPass",
                       [](bool NonTrivial) {
                         return SimpleLoopUnswitchPass(NonTrivial);
                       },
