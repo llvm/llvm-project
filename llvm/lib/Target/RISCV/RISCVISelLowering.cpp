@@ -451,7 +451,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
-      setOperationAction(ISD::SELECT, VT, Expand);
+      setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::VSELECT, VT, Expand);
 
@@ -538,7 +538,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
-      setOperationAction(ISD::SELECT, VT, Expand);
+      setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
 
       setOperationAction(ISD::STEP_VECTOR, VT, Custom);
@@ -598,7 +598,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
 
-      setOperationAction(ISD::SELECT, VT, Expand);
+      setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
 
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
@@ -668,6 +668,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::SETCC, VT, Custom);
 
+        setOperationAction(ISD::SELECT, VT, Custom);
+
         setOperationAction(ISD::TRUNCATE, VT, Custom);
 
         setOperationAction(ISD::BITCAST, VT, Custom);
@@ -729,7 +731,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::MULHU, VT, Custom);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
-        setOperationAction(ISD::SELECT, VT, Expand);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
 
         setOperationAction(ISD::ANY_EXTEND, VT, Custom);
@@ -794,7 +795,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setCondCodeAction(CC, VT, Expand);
 
         setOperationAction(ISD::VSELECT, VT, Custom);
-        setOperationAction(ISD::SELECT, VT, Expand);
+        setOperationAction(ISD::SELECT, VT, Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
 
         setOperationAction(ISD::BITCAST, VT, Custom);
@@ -835,6 +836,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::XOR);
+  setTargetDAGCombine(ISD::ANY_EXTEND);
   if (Subtarget.hasStdExtV()) {
     setTargetDAGCombine(ISD::FCOPYSIGN);
     setTargetDAGCombine(ISD::MGATHER);
@@ -2736,7 +2738,17 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   SDValue TrueV = Op.getOperand(1);
   SDValue FalseV = Op.getOperand(2);
   SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
+
+  // Lower vector SELECTs to VSELECTs by splatting the condition.
+  if (VT.isVector()) {
+    MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
+    SDValue CondSplat = VT.isScalableVector()
+                            ? DAG.getSplatVector(SplatCondVT, DL, CondV)
+                            : DAG.getSplatBuildVector(SplatCondVT, DL, CondV);
+    return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
+  }
 
   // If the result type is XLenVT and CondV is the output of a SETCC node
   // which also operated on XLenVT inputs, then merge the SETCC node into the
@@ -2744,11 +2756,11 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // compare+branch instructions. i.e.:
   // (select (setcc lhs, rhs, cc), truev, falsev)
   // -> (riscvisd::select_cc lhs, rhs, cc, truev, falsev)
-  if (Op.getSimpleValueType() == XLenVT && CondV.getOpcode() == ISD::SETCC &&
+  if (VT == XLenVT && CondV.getOpcode() == ISD::SETCC &&
       CondV.getOperand(0).getSimpleValueType() == XLenVT) {
     SDValue LHS = CondV.getOperand(0);
     SDValue RHS = CondV.getOperand(1);
-    auto CC = cast<CondCodeSDNode>(CondV.getOperand(2));
+    const auto *CC = cast<CondCodeSDNode>(CondV.getOperand(2));
     ISD::CondCode CCVal = CC->get();
 
     // Special case for a select of 2 constants that have a diffence of 1.
@@ -5595,6 +5607,83 @@ static SDValue performXORCombine(SDNode *N,
   return combineSelectCCAndUseCommutative(N, DAG, false);
 }
 
+// Attempt to turn ANY_EXTEND into SIGN_EXTEND if the input to the ANY_EXTEND
+// has users that require SIGN_EXTEND and the SIGN_EXTEND can be done for free
+// by an instruction like ADDW/SUBW/MULW. Without this the ANY_EXTEND would be
+// removed during type legalization leaving an ADD/SUB/MUL use that won't use
+// ADDW/SUBW/MULW.
+static SDValue performANY_EXTENDCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.is64Bit())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  SDValue Src = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i64 || Src.getValueType() != MVT::i32)
+    return SDValue();
+
+  // The opcode must be one that can implicitly sign_extend.
+  // FIXME: Additional opcodes.
+  switch (Src.getOpcode()) {
+  default:
+    return SDValue();
+  case ISD::MUL:
+    if (!Subtarget.hasStdExtM())
+      return SDValue();
+    LLVM_FALLTHROUGH;
+  case ISD::ADD:
+  case ISD::SUB:
+    break;
+  }
+
+  SmallVector<SDNode *, 4> SetCCs;
+  for (SDNode::use_iterator UI = Src.getNode()->use_begin(),
+                            UE = Src.getNode()->use_end();
+       UI != UE; ++UI) {
+    SDNode *User = *UI;
+    if (User == N)
+      continue;
+    if (UI.getUse().getResNo() != Src.getResNo())
+      continue;
+    // All i32 setccs are legalized by sign extending operands.
+    if (User->getOpcode() == ISD::SETCC) {
+      SetCCs.push_back(User);
+      continue;
+    }
+    // We don't know if we can extend this user.
+    break;
+  }
+
+  // If we don't have any SetCCs, this isn't worthwhile.
+  if (SetCCs.empty())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Src);
+  DCI.CombineTo(N, SExt);
+
+  // Promote all the setccs.
+  for (SDNode *SetCC : SetCCs) {
+    SmallVector<SDValue, 4> Ops;
+
+    for (unsigned j = 0; j != 2; ++j) {
+      SDValue SOp = SetCC->getOperand(j);
+      if (SOp == Src)
+        Ops.push_back(SExt);
+      else
+        Ops.push_back(DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, SOp));
+    }
+
+    Ops.push_back(SetCC->getOperand(2));
+    DCI.CombineTo(SetCC,
+                  DAG.getNode(ISD::SETCC, DL, SetCC->getValueType(0), Ops));
+  }
+  return SDValue(N, 0);
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5819,6 +5908,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return performORCombine(N, DCI, Subtarget);
   case ISD::XOR:
     return performXORCombine(N, DCI, Subtarget);
+  case ISD::ANY_EXTEND:
+    return performANY_EXTENDCombine(N, DCI, Subtarget);
   case RISCVISD::SELECT_CC: {
     // Transform
     SDValue LHS = N->getOperand(0);

@@ -235,6 +235,8 @@ protected:
   friend class GDBRemoteCommunicationClient;
   friend class GDBRemoteRegisterContext;
 
+  bool SupportsMemoryTagging() override;
+
   /// Broadcaster event bits definitions.
   enum {
     eBroadcastBitAsyncContinue = (1 << 0),
@@ -405,6 +407,9 @@ protected:
   Status FlashDone();
 
   bool HasErased(FlashRange range);
+
+  llvm::Expected<std::vector<uint8_t>>
+  DoReadMemoryTags(lldb::addr_t addr, size_t len, int32_t type) override;
 
 private:
   // For ProcessGDBRemote only

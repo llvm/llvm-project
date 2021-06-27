@@ -211,13 +211,13 @@ def FillOp : LinalgStructured_Op<"fill", []> {
   }];
 
   let assemblyFormat = [{
-    `(` $output `,` $value `)` attr-dict `:`
-        type($output) `,` type($value) (`->` type($result)^)?
-      custom<FillOpRegion>($region, ref(type($output)), ref(type($value)))
+    `(` $value `,` $output `)` attr-dict `:`
+        type($value) `,` type($output) (`->` type($result)^)?
+      custom<FillOpRegion>($region, ref(type($value)), ref(type($output)))
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$output, "Value":$value)>
+    OpBuilder<(ins "Value":$value, "Value":$output)>
   ];
 
   let verifier = [{ return ::verify(*this); }];

@@ -630,11 +630,11 @@ void OptionValueProperties::Apropos(
       } else {
         bool match = false;
         llvm::StringRef name = property->GetName();
-        if (name.contains_lower(keyword))
+        if (name.contains_insensitive(keyword))
           match = true;
         else {
           llvm::StringRef desc = property->GetDescription();
-          if (desc.contains_lower(keyword))
+          if (desc.contains_insensitive(keyword))
             match = true;
         }
         if (match) {

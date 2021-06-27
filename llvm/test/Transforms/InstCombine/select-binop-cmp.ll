@@ -31,7 +31,7 @@ define i32 @select_xor_icmp2(i32 %x, i32 %y, i32 %z) {
 define i32 @select_xor_icmp_meta(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp_meta(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]], !prof !0
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[Z:%.*]], i32 [[Y:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A = icmp eq i32 %x, 0
@@ -1267,12 +1267,10 @@ define i32 @select_replace_udiv_speculatable(i32 %x, i32 %y) {
 }
 
 ; We can't replace %x by 0 here, because that would cause UB. However,
-; replacing the udiv result by poisong is fine.
+; replacing the udiv result by poison is fine.
 define i32 @select_replace_udiv_non_speculatable(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_replace_udiv_non_speculatable(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 poison, i32 [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
 ;
   %c = icmp eq i32 %x, 0
   %div = udiv i32 %y, %x

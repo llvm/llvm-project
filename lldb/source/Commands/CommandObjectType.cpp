@@ -2744,7 +2744,7 @@ public:
   bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
     if (raw_command_line.empty()) {
-      result.SetError(
+      result.AppendError(
           "type lookup cannot be invoked without a type name as argument");
       return false;
     }

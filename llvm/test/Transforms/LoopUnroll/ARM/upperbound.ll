@@ -75,13 +75,10 @@ define i32 @test2(i32 %l86) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L86_OFF:%.*]] = add i32 [[L86:%.*]], -1
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[L86_OFF]], 24
-; CHECK-NEXT:    br i1 [[SWITCH]], label [[FOR_END_I_IF_END8_I_CRIT_EDGE_I:%.*]], label [[FOR_INC_I_3_I_5:%.*]]
-; CHECK:       for.end.i.if.end8.i_crit_edge.i:
-; CHECK-NEXT:    ret i32 0
-; CHECK:       for.inc.i.3.i.5:
 ; CHECK-NEXT:    [[DOTNOT30:%.*]] = icmp ne i32 [[L86]], 25
 ; CHECK-NEXT:    [[SPEC_SELECT24:%.*]] = zext i1 [[DOTNOT30]] to i32
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT24]]
+; CHECK-NEXT:    [[COMMON_RET31_OP:%.*]] = select i1 [[SWITCH]], i32 0, i32 [[SPEC_SELECT24]]
+; CHECK-NEXT:    ret i32 [[COMMON_RET31_OP]]
 ;
 entry:
   br label %for.body.i.i

@@ -52,9 +52,9 @@ static void normalizeCPUNamesForAssembler(const ArgList &Args,
                                           ArgStringList &CmdArgs) {
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPUArg(A->getValue());
-    if (CPUArg.equals_lower("krait"))
+    if (CPUArg.equals_insensitive("krait"))
       CmdArgs.push_back("-mcpu=cortex-a15");
-    else if(CPUArg.equals_lower("kryo"))
+    else if (CPUArg.equals_insensitive("kryo"))
       CmdArgs.push_back("-mcpu=cortex-a57");
     else
       Args.AddLastArg(CmdArgs, options::OPT_mcpu_EQ);
@@ -697,7 +697,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // if a linker other than ld.lld is specified, dont use closed ld.lld.
   if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
     StringRef LinkerName = Args.getLastArgValue(options::OPT_fuse_ld_EQ, "ld");
-    if (!LinkerName.equals_lower("lld"))
+    if (!LinkerName.equals_insensitive("lld"))
       ProprietaryToolChain = false;
   }
 

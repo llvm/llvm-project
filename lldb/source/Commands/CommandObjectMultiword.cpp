@@ -98,7 +98,7 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     return result.Succeeded();
   }
 
-  if (sub_command.equals_lower("help")) {
+  if (sub_command.equals_insensitive("help")) {
     this->CommandObject::GenerateHelpText(result);
     return result.Succeeded();
   }
@@ -396,6 +396,6 @@ bool CommandObjectProxy::Execute(const char *args_string,
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->Execute(args_string, result);
-  result.SetError(GetUnsupportedError());
+  result.AppendError(GetUnsupportedError());
   return false;
 }

@@ -696,6 +696,14 @@ public:
     return isOpaque() || PointeeTy == Ty;
   }
 
+  /// Return true if both pointer types have the same element type. Two opaque
+  /// pointers are considered to have the same element type, while an opaque
+  /// and a non-opaque pointer have different element types.
+  /// TODO: Remove after opaque pointer transition is complete.
+  bool hasSameElementTypeAs(PointerType *Other) {
+    return PointeeTy == Other->PointeeTy;
+  }
+
   /// Implement support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
     return T->getTypeID() == PointerTyID;

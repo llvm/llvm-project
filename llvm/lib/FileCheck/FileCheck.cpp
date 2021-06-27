@@ -1229,7 +1229,7 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
   // If this is a fixed string pattern, just match it now.
   if (!FixedStr.empty()) {
     size_t Pos =
-        IgnoreCase ? Buffer.find_lower(FixedStr) : Buffer.find(FixedStr);
+        IgnoreCase ? Buffer.find_insensitive(FixedStr) : Buffer.find(FixedStr);
     if (Pos == StringRef::npos)
       return make_error<NotFoundError>();
     return MatchResult(Pos, /*MatchLen=*/FixedStr.size(), Error::success());

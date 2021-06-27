@@ -429,20 +429,14 @@ __OMP_RTL(__kmpc_nvptx_teams_reduce_nowait_v2, false, Int32, IdentPtr, Int32,
           GlobalListPtr, GlobalListPtr, GlobalListPtr, GlobalListPtr)
 
 __OMP_RTL(__kmpc_shuffle_int64, false, Int64, Int64, Int16, Int16)
-__OMP_RTL(__kmpc_data_sharing_init_stack, false, Void, )
-__OMP_RTL(__kmpc_data_sharing_init_stack_spmd, false, Void, )
 
-__OMP_RTL(__kmpc_data_sharing_coalesced_push_stack, false, VoidPtr, SizeTy, Int16)
-__OMP_RTL(__kmpc_data_sharing_push_stack, false, VoidPtr, SizeTy, Int16)
-__OMP_RTL(__kmpc_data_sharing_pop_stack, false, Void, VoidPtr)
+__OMP_RTL(__kmpc_alloc_shared, false, VoidPtr, SizeTy)
+__OMP_RTL(__kmpc_free_shared, false, Void, VoidPtr)
 __OMP_RTL(__kmpc_begin_sharing_variables, false, Void, VoidPtrPtrPtr, SizeTy)
 __OMP_RTL(__kmpc_end_sharing_variables, false, Void, )
 __OMP_RTL(__kmpc_get_shared_variables, false, Void, VoidPtrPtrPtr)
 __OMP_RTL(__kmpc_parallel_level, false, Int16, IdentPtr, Int32)
 __OMP_RTL(__kmpc_is_spmd_exec_mode, false, Int8, )
-__OMP_RTL(__kmpc_get_team_static_memory, false, Void, Int16, VoidPtr, SizeTy,
-          Int16, VoidPtrPtr)
-__OMP_RTL(__kmpc_restore_team_static_memory, false, Void, Int16, Int16)
 __OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
 
 __OMP_RTL(__kmpc_warp_active_thread_mask, false, LanemaskTy,)
@@ -504,6 +498,11 @@ __OMP_ATTRS_SET(InaccessibleArgOnlyAttrs,
                                    EnumAttr(InaccessibleMemOrArgMemOnly),
                                    EnumAttr(WillReturn), EnumAttr(NoFree))
                     : AttributeSet(EnumAttr(NoUnwind)))
+
+__OMP_ATTRS_SET(NoCaptureAttrs,
+                OptimisticAttributes
+                    ? AttributeSet(EnumAttr(NoCapture))
+                    : AttributeSet(EnumAttr(NoCapture)))
 
 #if 0
 __OMP_ATTRS_SET(InaccessibleOnlyAttrs,
@@ -845,6 +844,11 @@ __OMP_RTL_ATTRS(__kmpc_doacross_wait, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_doacross_fini, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
+
+__OMP_RTL_ATTRS(__kmpc_alloc_shared, DefaultAttrs, ReturnPtrAttrs,
+                ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_free_shared, AllocAttrs, AttributeSet(),
+                ParamAttrs(NoCaptureAttrs))
 
 __OMP_RTL_ATTRS(__kmpc_alloc, DefaultAttrs, ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free, AllocAttrs, AttributeSet(), ParamAttrs())

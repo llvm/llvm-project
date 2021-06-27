@@ -251,7 +251,7 @@ module {
   func @matmul_out_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                       %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
     %c0 = constant 0.0 : f32
-    %0 = linalg.fill(%arg0, %c0) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+    %0 = linalg.fill(%c0, %arg0) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
     %1 = linalg.matmul {__internal_linalg_transform__ = "out_fusion"}
       ins(%arg1, %arg2 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -268,7 +268,7 @@ module {
 //       CHECK: scf.for %[[I:.*]]{{.*}}iter_args(%{{.*}} = %[[ARG0]]) -> (tensor<?x?xf32>) {
 //       CHECK:   scf.for %[[J:.*]]
 //       CHECK:     %[[ST:.*]] = tensor.extract_slice %[[ARG0]]
-//       CHECK:     %[[ST_FILL:.*]] = linalg.fill(%[[ST]], %[[C0]]) {__internal_linalg_transform__ = "after_out_fusion_producer"} : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+//       CHECK:     %[[ST_FILL:.*]] = linalg.fill(%[[C0]], %[[ST]]) {__internal_linalg_transform__ = "after_out_fusion_producer"} : f32, tensor<?x?xf32> -> tensor<?x?xf32>
 //       CHECK:     %[[ST_MM_RES:.*]] = scf.for %[[K:.*]]{{.*}}iter_args(%[[BB:.*]] = %[[ST_FILL]]) -> (tensor<?x?xf32>) {
 //   CHECK-NOT:       fill
 //       CHECK:       %[[ST_MM:.*]] = linalg.matmul {__internal_linalg_transform__ = "after_out_fusion"} ins(%{{.*}}, %{{.*}} : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[BB]] : tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -304,7 +304,7 @@ module {
 // TLOOP:    %[[A_SUB:.*]] = tensor.extract_slice %[[A_]][%[[I]], 0]
 // TLOOP:    %[[B_SUB:.*]] = tensor.extract_slice %[[B_]][0, %[[J]]]
 // TLOOP:    %[[OUT_SUB:.*]] = tensor.extract_slice %[[OUT_]][%[[I]], %[[J]]]
-// TLOOP:    %[[INIT_SUB:.*]] = linalg.fill(%[[OUT_SUB]], %[[C0_F32_]])
+// TLOOP:    %[[INIT_SUB:.*]] = linalg.fill(%[[C0_F32_]], %[[OUT_SUB]])
 
 // TLOOP:    %[[AB_SUB:.*]] = linalg.tiled_loop (%[[K:.*]]) = (%[[C0]])
 // TLOOP-SAME: to (%[[DIM_A__1]]) step (%[[C16]])

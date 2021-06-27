@@ -191,7 +191,7 @@ public:
   Region *getParentRegion();
 
   /// Return the parent operation this region is attached to.
-  Operation *getParentOp();
+  Operation *getParentOp() { return container; }
 
   /// Find the first parent operation of the given type, or nullptr if there is
   /// no ancestor operation.

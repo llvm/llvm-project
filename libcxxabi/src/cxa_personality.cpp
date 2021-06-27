@@ -245,7 +245,7 @@ readSLEB128(const uint8_t** data)
 /// @returns decoded value
 static
 uintptr_t
-readEncodedPointer(const uint8_t** data, uint8_t encoding, uintptr_t /*base*/ = 0)
+readEncodedPointer(const uint8_t** data, uint8_t encoding, uintptr_t base = 0)
 {
     uintptr_t result = 0;
     if (encoding == DW_EH_PE_omit)
@@ -296,8 +296,12 @@ readEncodedPointer(const uint8_t** data, uint8_t encoding, uintptr_t /*base*/ = 
         if (result)
             result += (uintptr_t)(*data);
         break;
-    case DW_EH_PE_textrel:
     case DW_EH_PE_datarel:
+        assert((base != 0) && "DW_EH_PE_datarel is invalid with a base of 0");
+        if (result)
+            result += base;
+        break;
+    case DW_EH_PE_textrel:
     case DW_EH_PE_funcrel:
     case DW_EH_PE_aligned:
     default:
@@ -349,7 +353,7 @@ static const void* read_target2_value(const void* ptr)
 static const __shim_type_info*
 get_shim_type_info(uint64_t ttypeIndex, const uint8_t* classInfo,
                    uint8_t ttypeEncoding, bool native_exception,
-                   _Unwind_Exception* unwind_exception, uintptr_t base = 0)
+                   _Unwind_Exception* unwind_exception, uintptr_t /*base*/ = 0)
 {
     if (classInfo == 0)
     {
@@ -421,7 +425,7 @@ bool
 exception_spec_can_catch(int64_t specIndex, const uint8_t* classInfo,
                          uint8_t ttypeEncoding, const __shim_type_info* excpType,
                          void* adjustedPtr, _Unwind_Exception* unwind_exception,
-                         uintptr_t base = 0)
+                         uintptr_t /*base*/ = 0)
 {
     if (classInfo == 0)
     {
@@ -536,6 +540,9 @@ set_registers(_Unwind_Exception* unwind_exception, _Unwind_Context* context,
 {
 #if defined(__USING_SJLJ_EXCEPTIONS__)
 #define __builtin_eh_return_data_regno(regno) regno
+#elif defined(__ibmxl__)
+// IBM xlclang++ compiler does not support __builtin_eh_return_data_regno.
+#define __builtin_eh_return_data_regno(regno) regno + 3
 #endif
   _Unwind_SetGR(context, __builtin_eh_return_data_regno(0),
                 reinterpret_cast<uintptr_t>(unwind_exception));
@@ -615,7 +622,11 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
         return;
     }
     results.languageSpecificData = lsda;
+#if defined(_AIX)
+    uintptr_t base = _Unwind_GetDataRelBase(context);
+#else
     uintptr_t base = 0;
+#endif
     // Get the current instruction pointer and offset it before next
     // instruction in the current frame which threw the exception.
     uintptr_t ip = _Unwind_GetIP(context) - 1;
@@ -640,7 +651,8 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
     //       dwarf emission
     // Parse LSDA header.
     uint8_t lpStartEncoding = *lsda++;
-    const uint8_t* lpStart = (const uint8_t*)readEncodedPointer(&lsda, lpStartEncoding);
+    const uint8_t* lpStart =
+        (const uint8_t*)readEncodedPointer(&lsda, lpStartEncoding, base);
     if (lpStart == 0)
         lpStart = (const uint8_t*)funcStart;
     uint8_t ttypeEncoding = *lsda++;
@@ -919,6 +931,15 @@ __gxx_personality_v0
 
         // Jump to the handler.
         set_registers(unwind_exception, context, results);
+        // Cache base for calculating the address of ttype in
+        // __cxa_call_unexpected.
+        if (results.ttypeIndex < 0) {
+#if defined(_AIX)
+          exception_header->catchTemp = (void *)_Unwind_GetDataRelBase(context);
+#else
+          exception_header->catchTemp = 0;
+#endif
+        }
         return _URC_INSTALL_CONTEXT;
     }
 
@@ -948,6 +969,16 @@ __gxx_personality_v0
     assert(actions & _UA_CLEANUP_PHASE);
     assert(results.reason == _URC_HANDLER_FOUND);
     set_registers(unwind_exception, context, results);
+    // Cache base for calculating the address of ttype in __cxa_call_unexpected.
+    if (results.ttypeIndex < 0) {
+      __cxa_exception* exception_header =
+            (__cxa_exception*)(unwind_exception + 1) - 1;
+#if defined(_AIX)
+      exception_header->catchTemp = (void *)_Unwind_GetDataRelBase(context);
+#else
+      exception_header->catchTemp = 0;
+#endif
+    }
     return _URC_INSTALL_CONTEXT;
 }
 
@@ -1137,6 +1168,7 @@ __cxa_call_unexpected(void* arg)
 #else
         ttypeIndex = old_exception_header->handlerSwitchValue;
         lsda = old_exception_header->languageSpecificData;
+        base = (uintptr_t)old_exception_header->catchTemp;
 #endif
     }
     else
@@ -1160,11 +1192,13 @@ __cxa_call_unexpected(void* arg)
             // Have:
             //   old_exception_header->languageSpecificData
             //   old_exception_header->actionRecord
+            //   old_exception_header->catchTemp, base for calculating ttype
             // Need
             //   const uint8_t* classInfo
             //   uint8_t ttypeEncoding
             uint8_t lpStartEncoding = *lsda++;
-            const uint8_t* lpStart = (const uint8_t*)readEncodedPointer(&lsda, lpStartEncoding);
+            const uint8_t* lpStart =
+                (const uint8_t*)readEncodedPointer(&lsda, lpStartEncoding, base);
             (void)lpStart;  // purposefully unused.  Just needed to increment lsda.
             uint8_t ttypeEncoding = *lsda++;
             if (ttypeEncoding == DW_EH_PE_omit)
@@ -1237,6 +1271,15 @@ __cxa_call_unexpected(void* arg)
     }
     std::__terminate(t_handler);
 }
+
+#if defined(_AIX)
+// Personality routine for EH using the range table. Make it an alias of
+// __gxx_personality_v0().
+_LIBCXXABI_FUNC_VIS _Unwind_Reason_Code __xlcxx_personality_v1(
+    int version, _Unwind_Action actions, uint64_t exceptionClass,
+    _Unwind_Exception* unwind_exception, _Unwind_Context* context)
+    __attribute__((__alias__("__gxx_personality_v0")));
+#endif
 
 }  // extern "C"
 

@@ -73,4 +73,71 @@ TEST_F(AttributorTestBase, TestCast) {
   ASSERT_TRUE(SSucc);
 }
 
+TEST_F(AttributorTestBase, AAReachabilityTest) {
+  const char *ModuleString = R"(
+    declare void @func4()
+    declare void @func3()
+
+    define void @func2() {
+    entry:
+      call void @func3()
+      ret void
+    }
+
+    define void @func1() {
+    entry:
+      call void @func2()
+      ret void
+    }
+
+    define void @func5(void ()* %unknown) {
+    entry:
+      call void %unknown()
+      ret void
+    }
+
+    define void @func6() {
+    entry:
+      call void @func5(void ()* @func3)
+      ret void
+    }
+  )";
+
+  Module &M = parseModule(ModuleString);
+
+  SetVector<Function *> Functions;
+  AnalysisGetter AG;
+  for (Function &F : M)
+    Functions.insert(&F);
+
+  CallGraphUpdater CGUpdater;
+  BumpPtrAllocator Allocator;
+  InformationCache InfoCache(M, AG, Allocator, nullptr);
+  Attributor A(Functions, InfoCache, CGUpdater);
+
+  Function *F1 = M.getFunction("func1");
+  Function *F3 = M.getFunction("func3");
+  Function *F4 = M.getFunction("func4");
+  Function *F6 = M.getFunction("func6");
+
+  const AAFunctionReachability &F1AA =
+      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(*F1));
+
+  const AAFunctionReachability &F6AA =
+      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(*F6));
+
+  F1AA.canReach(A, F3);
+  F1AA.canReach(A, F4);
+  F6AA.canReach(A, F4);
+
+  A.run();
+
+  ASSERT_TRUE(F1AA.canReach(A, F3));
+  ASSERT_FALSE(F1AA.canReach(A, F4));
+
+  // Assumed to be reacahable, since F6 can reach a function with
+  // a unknown callee.
+  ASSERT_TRUE(F6AA.canReach(A, F4));
+}
+
 } // namespace llvm

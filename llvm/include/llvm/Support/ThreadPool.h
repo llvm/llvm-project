@@ -70,6 +70,9 @@ public:
 
   unsigned getThreadCount() const { return ThreadCount; }
 
+  /// Returns true if the current thread is a worker thread of this thread pool.
+  bool isWorkerThread() const;
+
 private:
   bool workCompletedUnlocked() { return !ActiveThreads && Tasks.empty(); }
 

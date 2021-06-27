@@ -96,7 +96,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
 #if defined(_WIN32)
   const char *disable_crash_dialog_var = getenv("LLDB_DISABLE_CRASH_DIALOG");
   if (disable_crash_dialog_var &&
-      llvm::StringRef(disable_crash_dialog_var).equals_lower("true")) {
+      llvm::StringRef(disable_crash_dialog_var).equals_insensitive("true")) {
     // This will prevent Windows from displaying a dialog box requiring user
     // interaction when
     // LLDB crashes.  This is mostly useful when automating LLDB, for example

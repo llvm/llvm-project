@@ -775,10 +775,13 @@ void Function::recalculateIntrinsicID() {
 /// indicating that extra care must be taken to ensure a unique name.
 static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
   std::string Result;
-  if (PointerType* PTyp = dyn_cast<PointerType>(Ty)) {
-    Result += "p" + utostr(PTyp->getAddressSpace()) +
-              getMangledTypeStr(PTyp->getElementType(), HasUnnamedType);
-  } else if (ArrayType* ATyp = dyn_cast<ArrayType>(Ty)) {
+  if (PointerType *PTyp = dyn_cast<PointerType>(Ty)) {
+    Result += "p" + utostr(PTyp->getAddressSpace());
+    // Opaque pointer doesn't have pointee type information, so we just mangle
+    // address space for opaque pointer.
+    if (!PTyp->isOpaque())
+      Result += getMangledTypeStr(PTyp->getElementType(), HasUnnamedType);
+  } else if (ArrayType *ATyp = dyn_cast<ArrayType>(Ty)) {
     Result += "a" + utostr(ATyp->getNumElements()) +
               getMangledTypeStr(ATyp->getElementType(), HasUnnamedType);
   } else if (StructType *STyp = dyn_cast<StructType>(Ty)) {
@@ -803,7 +806,7 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
       Result += "vararg";
     // Ensure nested function types are distinguishable.
     Result += "f";
-  } else if (VectorType* VTy = dyn_cast<VectorType>(Ty)) {
+  } else if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
     ElementCount EC = VTy->getElementCount();
     if (EC.isScalable())
       Result += "nx";

@@ -1124,14 +1124,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   }
 
   // Binary operations propagate poison.
-  // FIXME: Currently, or/and i1 poison aren't folded into poison because
-  // it causes miscompilation when combined with another optimization in
-  // InstCombine (select i1 -> and/or). The select fold is wrong, but
-  // fixing it requires an effort, so temporarily disable this until it is
-  // fixed.
-  bool PoisonFold = !C1->getType()->isIntegerTy(1) ||
-                    (Opcode != Instruction::Or && Opcode != Instruction::And);
-  if (PoisonFold && (isa<PoisonValue>(C1) || isa<PoisonValue>(C2)))
+  if (isa<PoisonValue>(C1) || isa<PoisonValue>(C2))
     return PoisonValue::get(C1->getType());
 
   // Handle scalar UndefValue and scalable vector UndefValue. Fixed-length

@@ -5,6 +5,12 @@ Using the New Pass Manager
 .. contents::
     :local:
 
+Overview
+========
+
+For an overview of the new pass manager, see the `blog post
+<https://blog.llvm.org/posts/2021-03-26-the-new-pass-manager/>`_.
+
 Adding Passes to a Pass Manager
 ===============================
 
@@ -349,6 +355,89 @@ module-level implementations of specific types of alias analysis. Currently
 invalidated so this is not so much of a concern. See
 ``OuterAnalysisManagerProxy::Result::registerOuterAnalysisInvalidation()``
 for more details.
+
+Invoking ``opt``
+================
+
+To use the legacy pass manager:
+
+.. code-block:: shell
+
+  $ opt -enable-new-pm=0 -pass1 -pass2 /tmp/a.ll -S
+
+This will be removed once the legacy pass manager is deprecated and removed for
+the optimization pipeline.
+
+To use the new PM:
+
+.. code-block:: shell
+
+  $ opt -passes='pass1,pass2' /tmp/a.ll -S
+
+The new PM typically requires explicit pass nesting. For example, to run a
+function pass, then a module pass, we need to wrap the function pass in a module
+adaptor:
+
+.. code-block:: shell
+
+  $ opt -passes='function(no-op-function),no-op-module' /tmp/a.ll -S
+
+A more complete example, and ``-debug-pass-manager`` to show the execution
+order:
+
+.. code-block:: shell
+
+  $ opt -passes='no-op-module,cgscc(no-op-cgscc,function(no-op-function,loop(no-op-loop))),function(no-op-function,loop(no-op-loop))' /tmp/a.ll -S -debug-pass-manager
+
+Improper nesting can lead to error messages such as
+
+.. code-block:: shell
+
+  $ opt -passes='no-op-function,no-op-module' /tmp/a.ll -S
+  opt: unknown function pass 'no-op-module'
+
+The nesting is: module (-> cgscc) -> function -> loop, where the CGSCC nesting is optional.
+
+There are a couple of special cases for easier typing:
+
+* If the first pass is not a module pass, a pass manager of the first pass is
+  implicitly created
+
+  * For example, the following are equivalent
+
+.. code-block:: shell
+
+  $ opt -passes='no-op-function,no-op-function' /tmp/a.ll -S
+  $ opt -passes='function(no-op-function,no-op-function)' /tmp/a.ll -S
+
+* If there is an adaptor for a pass that lets it fit in the previous pass
+  manager, that is implicitly created
+
+  * For example, the following are equivalent
+
+.. code-block:: shell
+
+  $ opt -passes='no-op-function,no-op-loop' /tmp/a.ll -S
+  $ opt -passes='no-op-function,loop(no-op-loop)' /tmp/a.ll -S
+
+For a list of available passes and analyses, including the IR unit (module,
+CGSCC, function, loop) they operate on, run
+
+.. code-block:: shell
+
+  $ opt --print-passes
+
+or take a look at ``PassRegistry.def``.
+
+To make sure an analysis named ``foo`` is available before a pass, add
+``require<foo>`` to the pass pipeline. This adds a pass that simply requests
+that the analysis is run. This pass is also subject to proper nesting.  For
+example, to make sure some function analysis is already computed for all
+functions before a module pass:
+
+.. code-block:: shell
+
+  $ opt -passes='function(require<my-function-analysis>),my-module-pass' /tmp/a.ll -S
 
 Status of the New and Legacy Pass Managers
 ==========================================

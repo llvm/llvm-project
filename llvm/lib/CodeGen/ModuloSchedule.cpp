@@ -1275,15 +1275,15 @@ class KernelRewriter {
   Register undef(const TargetRegisterClass *RC);
 
 public:
-  KernelRewriter(MachineLoop &L, ModuloSchedule &S,
+  KernelRewriter(MachineLoop &L, ModuloSchedule &S, MachineBasicBlock *LoopBB,
                  LiveIntervals *LIS = nullptr);
   void rewrite();
 };
 } // namespace
 
 KernelRewriter::KernelRewriter(MachineLoop &L, ModuloSchedule &S,
-                               LiveIntervals *LIS)
-    : S(S), BB(L.getTopBlock()), PreheaderBB(L.getLoopPreheader()),
+                               MachineBasicBlock *LoopBB, LiveIntervals *LIS)
+    : S(S), BB(LoopBB), PreheaderBB(L.getLoopPreheader()),
       ExitBB(L.getExitBlock()), MRI(BB->getParent()->getRegInfo()),
       TII(BB->getParent()->getSubtarget().getInstrInfo()), LIS(LIS) {
   PreheaderBB = *BB->pred_begin();
@@ -1981,7 +1981,7 @@ void PeelingModuloScheduleExpander::fixupBranches() {
 }
 
 void PeelingModuloScheduleExpander::rewriteKernel() {
-  KernelRewriter KR(*Schedule.getLoop(), Schedule);
+  KernelRewriter KR(*Schedule.getLoop(), Schedule, BB);
   KR.rewrite();
 }
 
@@ -2024,7 +2024,7 @@ void PeelingModuloScheduleExpander::validateAgainstModuloScheduleExpander() {
   Preheader->addSuccessor(BB);
 
   // Now run the new expansion algorithm.
-  KernelRewriter KR(*Schedule.getLoop(), Schedule);
+  KernelRewriter KR(*Schedule.getLoop(), Schedule, BB);
   KR.rewrite();
   peelPrologAndEpilogs();
 

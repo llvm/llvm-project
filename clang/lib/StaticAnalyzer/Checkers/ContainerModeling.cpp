@@ -763,14 +763,14 @@ bool isBeginCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_lower("begin");
+  return IdInfo->getName().endswith_insensitive("begin");
 }
 
 bool isEndCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
     return false;
-  return IdInfo->getName().endswith_lower("end");
+  return IdInfo->getName().endswith_insensitive("end");
 }
 
 const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,

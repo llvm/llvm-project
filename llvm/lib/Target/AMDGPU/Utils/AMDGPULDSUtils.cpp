@@ -12,7 +12,7 @@
 
 #include "AMDGPULDSUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Constants.h"
@@ -44,20 +44,6 @@ class CollectReachableCallees {
     }
   }
 
-  // For a given caller node, collect all reachable callee nodes.
-  SmallPtrSet<CallGraphNode *, 8> collectCGNodes(CallGraphNode *CGN) {
-    SmallPtrSet<CallGraphNode *, 8> CGNodes;
-
-    for (scc_iterator<CallGraphNode *> I = scc_begin(CGN); !I.isAtEnd(); ++I) {
-      const std::vector<CallGraphNode *> &SCC = *I;
-      assert(!SCC.empty() && "SCC with no functions?");
-      for (auto *CGNode : SCC)
-        CGNodes.insert(CGNode);
-    }
-
-    return CGNodes;
-  }
-
   // For given kernel, collect all its reachable non-kernel functions.
   SmallPtrSet<Function *, 8> collectReachableCallees(Function *K) {
     SmallPtrSet<Function *, 8> ReachableCallees;
@@ -65,19 +51,16 @@ class CollectReachableCallees {
     // Call graph node which represents this kernel.
     auto *KCGN = CG[K];
 
-    // Collect all reachable call graph nodes from the node representing this
-    // kernel.
-    SmallPtrSet<CallGraphNode *, 8> CGNodes = collectCGNodes(KCGN);
-
-    // Go through collected reachable nodes, visit all thier call sites, if the
-    // call site is direct, add corresponding callee to reachable callee set, if
-    // it is indirect, resolve the indirect call site to potential reachable
-    // callees, add them to reachable callee set, and repeat the process for the
-    // newly added potential callee nodes.
+    // Go through all call graph nodes reachable from the node representing this
+    // kernel, visit all their call sites, if the call site is direct, add
+    // corresponding callee to reachable callee set, if it is indirect, resolve
+    // the indirect call site to potential reachable callees, add them to
+    // reachable callee set, and repeat the process for the newly added
+    // potential callee nodes.
     //
     // FIXME: Need to handle bit-casted function pointers.
     //
-    SmallVector<CallGraphNode *, 8> CGNStack(CGNodes.begin(), CGNodes.end());
+    SmallVector<CallGraphNode *, 8> CGNStack(df_begin(KCGN), df_end(KCGN));
     SmallPtrSet<CallGraphNode *, 8> VisitedCGNodes;
     while (!CGNStack.empty()) {
       auto *CGN = CGNStack.pop_back_val();
@@ -97,9 +80,7 @@ class CollectReachableCallees {
             auto *ACallee = ACGN->getFunction();
             if (ACallee->getFunctionType() == RCBFTy) {
               ReachableCallees.insert(ACallee);
-              SmallPtrSet<CallGraphNode *, 8> IGCNNodes = collectCGNodes(ACGN);
-              for (auto *IGCN : IGCNNodes)
-                CGNStack.push_back(IGCN);
+              CGNStack.append(df_begin(ACGN), df_end(ACGN));
             }
           }
         }

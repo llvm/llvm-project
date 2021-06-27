@@ -81,7 +81,7 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
     // strip-10.exe -> strip
     // powerpc64-unknown-freebsd13-objcopy -> objcopy
     // llvm-install-name-tool -> install-name-tool
-    auto I = Stem.rfind_lower(Tool);
+    auto I = Stem.rfind_insensitive(Tool);
     return I != StringRef::npos &&
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };

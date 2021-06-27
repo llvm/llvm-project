@@ -687,11 +687,17 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         return;
       }
 
+      // Mask needs to be copied to V0.
+      SDValue Chain = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                           RISCV::V0, Mask, SDValue());
+      SDValue Glue = Chain.getValue(1);
+      SDValue V0 = CurDAG->getRegister(RISCV::V0, VT);
+
       // Otherwise use
       // vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
       SDValue Cmp = SDValue(
           CurDAG->getMachineNode(VMSLTMaskOpcode, DL, VT,
-                                 {MaskedOff, Src1, Src2, Mask, VL, SEW}),
+                                 {MaskedOff, Src1, Src2, V0, VL, SEW, Glue}),
           0);
       ReplaceNode(Node, CurDAG->getMachineNode(VMXOROpcode, DL, VT,
                                                {Cmp, Mask, VL, MaskSEW}));

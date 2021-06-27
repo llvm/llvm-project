@@ -980,7 +980,7 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
     return error(AliaseeLoc, "An alias or ifunc must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
 
-  if (IsAlias && Ty != PTy->getElementType()) {
+  if (IsAlias && !PTy->isOpaqueOrPointeeTypeMatches(Ty)) {
     return error(
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
@@ -1470,23 +1470,19 @@ static inline GlobalValue *createGlobalFwdRef(Module *M, PointerType *PTy,
 
 Value *LLParser::checkValidVariableType(LocTy Loc, const Twine &Name, Type *Ty,
                                         Value *Val, bool IsCall) {
-  if (Val->getType() == Ty)
+  Type *ValTy = Val->getType();
+  if (ValTy == Ty)
     return Val;
-  // For calls we also accept variables in the program address space.
-  Type *SuggestedTy = Ty;
-  if (IsCall && isa<PointerType>(Ty)) {
-    Type *TyInProgAS = cast<PointerType>(Ty)->getElementType()->getPointerTo(
-        M->getDataLayout().getProgramAddressSpace());
-    SuggestedTy = TyInProgAS;
-    if (Val->getType() == TyInProgAS)
-      return Val;
-  }
+  // For calls, we also allow opaque pointers.
+  if (IsCall && ValTy == PointerType::get(Ty->getContext(),
+                                          Ty->getPointerAddressSpace()))
+    return Val;
   if (Ty->isLabelTy())
     error(Loc, "'" + Name + "' is not a basic block");
   else
     error(Loc, "'" + Name + "' defined with type '" +
                    getTypeString(Val->getType()) + "' but expected '" +
-                   getTypeString(SuggestedTy) + "'");
+                   getTypeString(Ty) + "'");
   return nullptr;
 }
 
@@ -2579,7 +2575,7 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   }
   }
 
-  if (Result->isPointerTy() && cast<PointerType>(Result)->isOpaque()) {
+  if (Result->isOpaquePointerTy()) {
     unsigned AddrSpace;
     if (parseOptionalAddrSpace(AddrSpace))
       return true;
@@ -2601,6 +2597,8 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
         return tokError("basic block pointers are invalid");
       if (Result->isVoidTy())
         return tokError("pointers to void are invalid - use i8* instead");
+      if (Result->isOpaquePointerTy())
+        return tokError("ptr* is invalid - use ptr instead");
       if (!PointerType::isValidElementType(Result))
         return tokError("pointer to this type is invalid");
       Result = PointerType::getUnqual(Result);

@@ -115,10 +115,9 @@ define void @other_ops(i8 %x) {
   ret void
 }
 
-; TODO: these must be folded into poison; D92270
 define void @logicalops_i1(i1 %x) {
 ; CHECK-LABEL: @logicalops_i1(
-; CHECK-NEXT:    call void (...) @use(i1 true, i1 false)
+; CHECK-NEXT:    call void (...) @use(i1 poison, i1 poison)
 ; CHECK-NEXT:    ret void
 ;
   %i1 = or i1 %x, poison

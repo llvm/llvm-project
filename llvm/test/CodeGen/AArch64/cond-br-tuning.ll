@@ -8,14 +8,9 @@ target triple = "aarch64-linaro-linux-gnueabi"
 
 define void @test_add_cbz(i32 %a, i32 %b, i32* %ptr) {
 ; CHECK-LABEL: test_add_cbz:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    cmn w0, w1
-; CHECK-NEXT:    b.eq .LBB0_2
-; CHECK-NEXT:  // %bb.1: // %L1
-; CHECK-NEXT:    str wzr, [x2]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_2: // %L2
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    cset w8, eq
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %c = add nsw i32 %a, %b
@@ -31,13 +26,9 @@ L2:
 
 define void @test_add_cbz_multiple_use(i32 %a, i32 %b, i32* %ptr) {
 ; CHECK-LABEL: test_add_cbz_multiple_use:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    adds w8, w0, w1
-; CHECK-NEXT:    b.eq .LBB1_2
-; CHECK-NEXT:  // %bb.1: // %L1
-; CHECK-NEXT:    str wzr, [x2]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_2: // %L2
+; CHECK-NEXT:    csel w8, wzr, w8, ne
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %c = add nsw i32 %a, %b
@@ -53,14 +44,9 @@ L2:
 
 define void @test_add_cbz_64(i64 %a, i64 %b, i64* %ptr) {
 ; CHECK-LABEL: test_add_cbz_64:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    cmn x0, x1
-; CHECK-NEXT:    b.eq .LBB2_2
-; CHECK-NEXT:  // %bb.1: // %L1
-; CHECK-NEXT:    str xzr, [x2]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_2: // %L2
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    cset w8, eq
 ; CHECK-NEXT:    str x8, [x2]
 ; CHECK-NEXT:    ret
   %c = add nsw i64 %a, %b
@@ -76,14 +62,9 @@ L2:
 
 define void @test_and_cbz(i32 %a, i32* %ptr) {
 ; CHECK-LABEL: test_and_cbz:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    tst w0, #0x6
-; CHECK-NEXT:    b.eq .LBB3_2
-; CHECK-NEXT:  // %bb.1: // %L1
-; CHECK-NEXT:    str wzr, [x1]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB3_2: // %L2
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    cset w8, eq
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %c = and i32 %a, 6
@@ -99,14 +80,9 @@ L2:
 
 define void @test_bic_cbnz(i32 %a, i32 %b, i32* %ptr) {
 ; CHECK-LABEL: test_bic_cbnz:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    bics wzr, w1, w0
-; CHECK-NEXT:    b.ne .LBB4_2
-; CHECK-NEXT:  // %bb.1: // %L1
-; CHECK-NEXT:    str wzr, [x2]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB4_2: // %L2
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %c = and i32 %a, %b

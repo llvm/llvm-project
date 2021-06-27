@@ -571,15 +571,19 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       CHECK(obj.getSectionStringTable(objSections), this);
 
   std::vector<ArrayRef<Elf_Word>> selectedGroups;
+  // SHT_LLVM_CALL_GRAPH_PROFILE Section Index.
+  size_t cgProfileSectionIndex = 0;
 
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
+    if (sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE) {
       cgProfile =
           check(obj.template getSectionContentsAsArray<Elf_CGProfile>(sec));
+      cgProfileSectionIndex = i;
+    }
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
@@ -665,8 +669,13 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
+    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA) {
       this->sections[i] = createInputSection(sec);
+      if (cgProfileSectionIndex && sec.sh_info == cgProfileSectionIndex) {
+        if (sec.sh_type == SHT_REL)
+          cgProfileRel = CHECK(getObj().rels(sec), this);
+      }
+    }
 
     // A SHF_LINK_ORDER section with sh_link=0 is handled as if it did not have
     // the flag.

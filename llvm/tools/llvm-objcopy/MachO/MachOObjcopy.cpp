@@ -21,11 +21,11 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
-namespace llvm {
-namespace objcopy {
-namespace macho {
+using namespace llvm;
+using namespace llvm::objcopy;
+using namespace llvm::objcopy::macho;
+using namespace llvm::object;
 
-using namespace object;
 using SectionPred = std::function<bool(const std::unique_ptr<Section> &Sec)>;
 using LoadCommandPred = std::function<bool(const LoadCommand &LC)>;
 
@@ -373,8 +373,10 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   return Error::success();
 }
 
-Error executeObjcopyOnBinary(const CommonConfig &Config, const MachOConfig &,
-                             object::MachOObjectFile &In, raw_ostream &Out) {
+Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
+                                             const MachOConfig &,
+                                             object::MachOObjectFile &In,
+                                             raw_ostream &Out) {
   MachOReader Reader(In);
   Expected<std::unique_ptr<Object>> O = Reader.create();
   if (!O)
@@ -402,9 +404,9 @@ Error executeObjcopyOnBinary(const CommonConfig &Config, const MachOConfig &,
   return Writer.write();
 }
 
-Error executeObjcopyOnMachOUniversalBinary(const MultiFormatConfig &Config,
-                                           const MachOUniversalBinary &In,
-                                           raw_ostream &Out) {
+Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
+    const MultiFormatConfig &Config, const MachOUniversalBinary &In,
+    raw_ostream &Out) {
   SmallVector<OwningBinary<Binary>, 2> Binaries;
   SmallVector<Slice, 2> Slices;
   for (const auto &O : In.objects()) {
@@ -477,7 +479,3 @@ Error executeObjcopyOnMachOUniversalBinary(const MultiFormatConfig &Config,
 
   return Error::success();
 }
-
-} // end namespace macho
-} // end namespace objcopy
-} // end namespace llvm

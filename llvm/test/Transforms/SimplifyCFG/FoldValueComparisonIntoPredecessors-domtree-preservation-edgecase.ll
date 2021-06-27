@@ -4,19 +4,19 @@
 define dso_local i32 @readCBPandCoeffsFromNAL(i1 %c, i32 %x, i32 %y) local_unnamed_addr {
 ; CHECK-LABEL: @readCBPandCoeffsFromNAL(
 ; CHECK-NEXT:  if.end:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_END80:%.*]], label [[IF_THEN64:%.*]]
-; CHECK:       if.then64:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ [[Y:%.*]], [[IF_END:%.*]] ], [ 1, [[IF_END172237:%.*]] ], [ 0, [[IF_END80]] ], [ 0, [[IF_END80]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_END80:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[Y:%.*]], [[IF_END:%.*]] ], [ 1, [[IF_END172237:%.*]] ], [ 0, [[IF_END80]] ], [ 0, [[IF_END80]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       if.end80:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[INFLOOP:%.*]] [
 ; CHECK-NEXT:    i32 10, label [[IF_END172237]]
 ; CHECK-NEXT:    i32 14, label [[IF_END172237]]
-; CHECK-NEXT:    i32 9, label [[IF_THEN64]]
-; CHECK-NEXT:    i32 12, label [[IF_THEN64]]
+; CHECK-NEXT:    i32 9, label [[COMMON_RET]]
+; CHECK-NEXT:    i32 12, label [[COMMON_RET]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end172237:
-; CHECK-NEXT:    br label [[IF_THEN64]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       infloop:
 ; CHECK-NEXT:    br label [[INFLOOP]]
 ;

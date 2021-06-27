@@ -384,7 +384,8 @@ public:
 
         unsigned UnmergeNumElts =
             DestTy.isVector() ? CastSrcTy.getNumElements() / NumDefs : 1;
-        LLT UnmergeTy = CastSrcTy.changeNumElements(UnmergeNumElts);
+        LLT UnmergeTy = CastSrcTy.changeElementCount(
+            ElementCount::getFixed(UnmergeNumElts));
 
         if (isInstUnsupported(
                 {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, CastSrcTy}}))

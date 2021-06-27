@@ -1,9 +1,9 @@
-# This file introduces a templates for running clang-tblgen.
+# This file introduces a template for running clang-tblgen.
 #
 # Parameters:
 #
 #   args (required)
-#       [list of strings] Flags to pass to llvm-tblgen.
+#       [list of strings] Flags to pass to clang-tblgen.
 #
 #   output_name (optional)
 #       Basename of the generated output file.
@@ -36,7 +36,7 @@ template("clang_tablegen") {
 
     args = [
              "-I",
-             rebase_path("//clang/include", root_out_dir),
+             rebase_path("//clang/include", root_build_dir),
            ] + invoker.args
     tblgen_target = "//clang/utils/TableGen:clang-tblgen"
   }

@@ -654,6 +654,14 @@ void mlir::python::populateIRAffine(py::module &m) {
                  mlirAffineMapGetMinorSubMap(self, nResults);
              return PyAffineMap(self.getContext(), affineMap);
            })
+      .def("replace",
+           [](PyAffineMap &self, PyAffineExpr &expression,
+              PyAffineExpr &replacement, intptr_t numResultDims,
+              intptr_t numResultSyms) {
+             MlirAffineMap affineMap = mlirAffineMapReplace(
+                 self, expression, replacement, numResultDims, numResultSyms);
+             return PyAffineMap(self.getContext(), affineMap);
+           })
       .def_property_readonly(
           "is_permutation",
           [](PyAffineMap &self) { return mlirAffineMapIsPermutation(self); })

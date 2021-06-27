@@ -270,9 +270,15 @@ public:
   cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, double> ulp(T input) {
     fputil::FPBits<T> bits(input);
     MPFRNumber mpfrInput(input);
+    // When calculating error, we first round this number to the floating
+    // point type T and calculate the ulp error against this rounded number.
+    // The input is always either exact or rounded. So, we if compare
+    // with this number directly, we can end up with a large ULP error.
+    MPFRNumber thisRoundedToFloat(as<T>());
 
-    // abs(value - input)
-    mpfr_sub(mpfrInput.value, value, mpfrInput.value, MPFR_RNDN);
+    // abs(thisRoundedToFloat - input)
+    mpfr_sub(mpfrInput.value, thisRoundedToFloat.value, mpfrInput.value,
+             MPFR_RNDN);
     mpfr_abs(mpfrInput.value, mpfrInput.value, MPFR_RNDN);
 
     // get eps(input)
@@ -282,7 +288,7 @@ public:
       // correcting denormal exponent
       ++epsExponent;
     } else if ((bits.encoding.mantissa == 0) && (bits.encoding.exponent > 1) &&
-               mpfr_less_p(value, mpfrInput.value)) {
+               mpfr_less_p(thisRoundedToFloat.value, mpfrInput.value)) {
       // when the input is exactly 2^n, distance (epsilon) between the input
       // and the next floating point number is different from the distance to
       // the previous floating point number.  So in that case, if the correct

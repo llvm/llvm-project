@@ -728,6 +728,9 @@ description (``*.td``) files.  Our goal is for the entire instruction selector
 to be generated from these ``.td`` files, though currently there are still
 things that require custom C++ code.
 
+`GlobalISel <https://llvm.org/docs/GlobalISel/index.html>`_ is another
+instruction selection framework.
+
 .. _SelectionDAG:
 
 Introduction to SelectionDAGs

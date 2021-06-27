@@ -1,4 +1,3 @@
-; RUN: opt < %s -enable-coroutines -O2 -S | FileCheck --check-prefixes=CHECK %s
 ; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK %s
 
 target datalayout = "p:64:64:64"

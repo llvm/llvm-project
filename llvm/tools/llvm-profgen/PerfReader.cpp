@@ -460,6 +460,16 @@ bool PerfReader::extractLBRStack(TraceStream &TraceIt,
         // they are likely in different contexts.
         break;
       }
+
+      if (Binary->addressIsReturn(Src)) {
+        // In a callback case, a return from internal code, say A, to external
+        // runtime can happen. The external runtime can then call back to
+        // another internal routine, say B. Making an artificial branch that
+        // looks like a return from A to B can confuse the unwinder to treat
+        // the instruction before B as the call instruction.
+        break;
+      }
+
       // For transition to external code, group the Source with the next
       // availabe transition target.
       Dst = PrevTrDst;

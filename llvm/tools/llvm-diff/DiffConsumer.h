@@ -34,7 +34,7 @@ class StringRef;
     /// Right are IR "containers" of some sort which are being
     /// considered for structural equivalence: global variables,
     /// functions, blocks, instructions, etc.
-    virtual void enterContext(Value *Left, Value *Right) = 0;
+    virtual void enterContext(const Value *Left, const Value *Right) = 0;
 
     /// Record that a local context has been exited.
     virtual void exitContext() = 0;
@@ -55,14 +55,14 @@ class StringRef;
   class DiffConsumer : public Consumer {
   private:
     struct DiffContext {
-      DiffContext(Value *L, Value *R)
-        : L(L), R(R), Differences(false), IsFunction(isa<Function>(L)) {}
-      Value *L;
-      Value *R;
+      DiffContext(const Value *L, const Value *R)
+          : L(L), R(R), Differences(false), IsFunction(isa<Function>(L)) {}
+      const Value *L;
+      const Value *R;
       bool Differences;
       bool IsFunction;
-      DenseMap<Value*,unsigned> LNumbering;
-      DenseMap<Value*,unsigned> RNumbering;
+      DenseMap<const Value *, unsigned> LNumbering;
+      DenseMap<const Value *, unsigned> RNumbering;
     };
 
     raw_ostream &out;
@@ -70,7 +70,7 @@ class StringRef;
     bool Differences;
     unsigned Indent;
 
-    void printValue(Value *V, bool isL);
+    void printValue(const Value *V, bool isL);
     void header();
     void indent();
 
@@ -79,7 +79,7 @@ class StringRef;
       : out(errs()), Differences(false), Indent(0) {}
 
     bool hadDifferences() const;
-    void enterContext(Value *L, Value *R) override;
+    void enterContext(const Value *L, const Value *R) override;
     void exitContext() override;
     void log(StringRef text) override;
     void logf(const LogBuilder &Log) override;

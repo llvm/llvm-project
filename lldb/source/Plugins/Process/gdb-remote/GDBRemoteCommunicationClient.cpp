@@ -311,6 +311,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_multiprocess = eLazyBoolNo;
   m_supports_qEcho = eLazyBoolNo;
   m_supports_QPassSignals = eLazyBoolNo;
+  m_supports_memory_tagging = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -356,6 +357,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_QPassSignals = eLazyBoolYes;
       else if (x == "multiprocess+")
         m_supports_multiprocess = eLazyBoolYes;
+      else if (x == "memory-tagging+")
+        m_supports_memory_tagging = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -574,6 +577,57 @@ bool GDBRemoteCommunicationClient::GetSharedCacheInfoSupported() {
     }
   }
   return m_supports_jGetSharedCacheInfo;
+}
+
+bool GDBRemoteCommunicationClient::GetMemoryTaggingSupported() {
+  if (m_supports_memory_tagging == eLazyBoolCalculate) {
+    GetRemoteQSupported();
+  }
+  return m_supports_memory_tagging == eLazyBoolYes;
+}
+
+DataBufferSP GDBRemoteCommunicationClient::ReadMemoryTags(lldb::addr_t addr,
+                                                          size_t len,
+                                                          int32_t type) {
+  StreamString packet;
+  packet.Printf("qMemTags:%" PRIx64 ",%zx:%" PRIx32, addr, len, type);
+  StringExtractorGDBRemote response;
+
+  Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_MEMORY);
+
+  if (SendPacketAndWaitForResponse(packet.GetString(), response, false) !=
+          PacketResult::Success ||
+      !response.IsNormalResponse()) {
+    LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s: qMemTags packet failed",
+              __FUNCTION__);
+    return nullptr;
+  }
+
+  // We are expecting
+  // m<hex encoded bytes>
+
+  if (response.GetChar() != 'm') {
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationClient::%s: qMemTags response did not "
+              "begin with \"m\"",
+              __FUNCTION__);
+    return nullptr;
+  }
+
+  size_t expected_bytes = response.GetBytesLeft() / 2;
+  DataBufferSP buffer_sp(new DataBufferHeap(expected_bytes, 0));
+  size_t got_bytes = response.GetHexBytesAvail(buffer_sp->GetData());
+  // Check both because in some situations chars are consumed even
+  // if the decoding fails.
+  if (response.GetBytesLeft() || (expected_bytes != got_bytes)) {
+    LLDB_LOGF(
+        log,
+        "GDBRemoteCommunicationClient::%s: Invalid data in qMemTags response",
+        __FUNCTION__);
+    return nullptr;
+  }
+
+  return buffer_sp;
 }
 
 bool GDBRemoteCommunicationClient::GetxPacketSupported() {

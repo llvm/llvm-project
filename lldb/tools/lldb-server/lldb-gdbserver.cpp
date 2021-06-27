@@ -356,7 +356,7 @@ public:
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =
         (Name + " [options] [[host]:port] [[--] program args...]").str();
-    OptTable::PrintHelp(llvm::outs(), Usage.c_str(), "lldb-server");
+    OptTable::printHelp(llvm::outs(), Usage.c_str(), "lldb-server");
     llvm::outs() << R"(
 DESCRIPTION
   lldb-server connects to the LLDB client, which drives the debugging session.

@@ -684,7 +684,8 @@ int64_t getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
 /// is a simple API that does not depend on the analysis pass.
 /// \param StrictCheck Ensure that the calculated distance matches the
 /// type-based one after all the bitcasts removal in the provided pointers.
-Optional<int> getPointersDiff(Value *PtrA, Value *PtrB, const DataLayout &DL,
+Optional<int> getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
+                              Value *PtrB, const DataLayout &DL,
                               ScalarEvolution &SE, bool StrictCheck = false,
                               bool CheckType = true);
 
@@ -698,7 +699,7 @@ Optional<int> getPointersDiff(Value *PtrA, Value *PtrB, const DataLayout &DL,
 /// sorted indices in \p SortedIndices as a[i+0], a[i+1], a[i+4], a[i+7] and
 /// saves the mask for actual memory accesses in program order in
 /// \p SortedIndices as <1,2,0,3>
-bool sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
+bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
                      ScalarEvolution &SE,
                      SmallVectorImpl<unsigned> &SortedIndices);
 

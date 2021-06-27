@@ -28,7 +28,6 @@ bool CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
     result.SetStatus(eReturnStatusSuccessFinishResult);
   } else {
     result.AppendError("the version command takes no arguments.");
-    result.SetStatus(eReturnStatusFailed);
   }
   return true;
 }

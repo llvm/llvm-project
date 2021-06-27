@@ -26,17 +26,29 @@ FileHeader:
   Class: ELFCLASS64
   Data:  ELFDATA2LSB
   Type:  ET_DYN
+  Machine: EM_X86_64
 Sections:
   - Name: .llvm.call-graph-profile
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     Entries:
-      - From:   foo
-        To:     bar
-        Weight: 89
-      - From:   bar
-        To:     foo
-        Weight: 98
+      - Weight: 89
+      - Weight: 98
     EntSize: [[ENTSIZE=<none>]]
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
+    Info: .llvm.call-graph-profile
+    Relocations:
+      - Symbol: foo
+        Type:   R_X86_64_NONE
+      - Offset: 0x1
+        Symbol: bar
+        Type:   R_X86_64_NONE
+      - Offset: 0x2
+        Symbol: bar
+        Type:   R_X86_64_NONE
+      - Offset: 0x3
+        Symbol: foo
+        Type:   R_X86_64_NONE
 Symbols:
   - Name: foo
   - Name: bar
@@ -46,9 +58,7 @@ Symbols:
 # RUN: llvm-readobj %t2.o --cg-profile 2>&1 | FileCheck %s -DFILE=%t2.o --check-prefix=LLVM-ERR
 # RUN: llvm-readelf %t2.o --cg-profile | FileCheck %s --check-prefix=GNU
 
-# LLVM-ERR:      CGProfile [
-# LLVM-ERR-NEXT: warning: '[[FILE]]': unable to dump the SHT_LLVM_CALL_GRAPH_PROFILE section: section [index 1] has invalid sh_entsize: expected 16, but got 15
-# LLVM-ERR-NEXT: ]
+# LLVM-ERR: warning: '[[FILE]]': unable to load the SHT_LLVM_CALL_GRAPH_PROFILE section: section [index 1] has invalid sh_entsize: expected 8, but got 15
 
 ## Check we report a warning when unable to dump a name of a symbol.
 # RUN: yaml2obj %s --docnum=2 -o %t3.o
@@ -69,7 +79,7 @@ Symbols:
 # LLVM-BROKEN-SYM-NEXT:   }
 # LLVM-BROKEN-SYM-NEXT:   CGProfileEntry {
 # LLVM-BROKEN-SYM-NEXT:     From: (0)
-# LLVM-BROKEN-SYM-NEXT: warning: '[[FILE]]': unable to read the name of symbol with index 4: unable to get symbol from section [index 3]: invalid symbol index (4)
+# LLVM-BROKEN-SYM-NEXT: warning: '[[FILE]]': unable to read the name of symbol with index 4: unable to get symbol from section [index 4]: invalid symbol index (4)
 # LLVM-BROKEN-SYM-NEXT:     To: <?> (4)
 # LLVM-BROKEN-SYM-NEXT:     Weight: 20
 # LLVM-BROKEN-SYM-NEXT:   }
@@ -80,19 +90,35 @@ FileHeader:
   Class: ELFCLASS64
   Data:  ELFDATA2LSB
   Type:  ET_DYN
+  Machine: EM_X86_64
 Sections:
   - Name: .llvm.call-graph-profile
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     Entries:
-      - From:   1
-        To:     2
-        Weight: 10
-      - From:   2
-        To:     3
-        Weight: 20
-      - From:   0x0 ## Null symbol.
-        To:     0x4 ## This index goes past the end of the symbol table.
-        Weight: 20
+      - Weight: 10
+      - Weight: 20
+      - Weight: 20
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
+    Info: .llvm.call-graph-profile
+    Relocations:
+      - Symbol: 1
+        Type:   R_X86_64_NONE
+      - Offset: 0x1
+        Symbol: 2
+        Type:   R_X86_64_NONE
+      - Offset: 0x2
+        Symbol: 2
+        Type:   R_X86_64_NONE
+      - Offset: 0x3
+        Symbol: 3
+        Type:   R_X86_64_NONE
+      - Offset: 0x4
+        Symbol: 0x0 ## Null symbol.
+        Type:   R_X86_64_NONE
+      - Offset: 0x5
+        Symbol: 0x4 ## This index goes past the end of the symbol table.
+        Type:   R_X86_64_NONE
   - Name:    .strtab
     Type:    SHT_STRTAB
     Content: "0041004200" ## '\0', 'A', '\0', 'B', '\0'
@@ -100,3 +126,132 @@ Symbols:
   - StName: 1    ## 'A'
   - StName: 0xFF ## An arbitrary currupted index in the string table.
   - StName: 3    ## 'B'
+
+## Check we report a warning when a relocation section is not present.
+# RUN: yaml2obj %s --docnum=3 -o %t4.o
+# RUN: llvm-readobj %t4.o --cg-profile 2>&1 | FileCheck %s -DFILE=%t4.o --check-prefix=LLVM-NO-RELOC
+# RUN: llvm-readobj %t4.o --elf-cg-profile 2>&1 | FileCheck %s -DFILE=%t4.o --check-prefix=LLVM-NO-RELOC
+
+# LLVM-NO-RELOC:      warning: '[[FILE]]': relocation section for a call graph section doesn't exist
+# LLVM-NO-RELOC-NEXT: CGProfile [
+# LLVM-NO-RELOC-NEXT:  CGProfileEntry {
+# LLVM-NO-RELOC-NEXT:    Weight: 89
+# LLVM-NO-RELOC-NEXT:  }
+# LLVM-NO-RELOC-NEXT:  CGProfileEntry {
+# LLVM-NO-RELOC-NEXT:    Weight: 98
+# LLVM-NO-RELOC-NEXT:  }
+# LLVM-NO-RELOC-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Entries:
+      - Weight: 89
+      - Weight: 98
+    EntSize: [[ENTSIZE=<none>]]
+Symbols:
+  - Name: foo
+  - Name: bar
+
+## Check we report a warning when the number of relocation section entries does not match the number of call graph entries.
+# RUN: yaml2obj %s --docnum=4 -o %t5.o
+# RUN: llvm-readobj %t5.o --cg-profile 2>&1 | FileCheck %s -DFILE=%t5.o --check-prefix=LLVM-RELOC-GRAPH-NOT-MATCH
+# RUN: llvm-readobj %t5.o --elf-cg-profile 2>&1 | FileCheck %s -DFILE=%t5.o --check-prefix=LLVM-RELOC-GRAPH-NOT-MATCH
+
+# LLVM-RELOC-GRAPH-NOT-MATCH:      warning: '[[FILE]]': number of from/to pairs does not match number of frequencies
+# LLVM-RELOC-GRAPH-NOT-MATCH-NEXT: CGProfile [
+# LLVM-RELOC-GRAPH-NOT-MATCH-NEXT:  CGProfileEntry {
+# LLVM-RELOC-GRAPH-NOT-MATCH-NEXT:    Weight: 89
+# LLVM-RELOC-GRAPH-NOT-MATCH-NEXT:  }
+# LLVM-RELOC-GRAPH-NOT-MATCH-NEXT:  CGProfileEntry {
+# LLVM-RELOC-GRAPH-NOT-MATCH-NEXT:    Weight: 98
+# LLVM-RELOC-GRAPH-NOT-MATCH-NEXT:  }
+# LLVM-RELOC-GRAPH-NOT-MATCH-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Entries:
+      - Weight: 89
+      - Weight: 98
+    EntSize: [[ENTSIZE=<none>]]
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
+    Info: .llvm.call-graph-profile
+    Relocations:
+      - Symbol: foo
+        Type:   R_X86_64_NONE
+      - Offset: 0x1
+        Symbol: bar
+        Type:   R_X86_64_NONE
+      - Offset: 0x2
+        Symbol: bar
+        Type:   R_X86_64_NONE
+      - Offset: 0x3
+        Symbol: foo
+        Type:   R_X86_64_NONE
+      - Offset: 0x4
+        Symbol: foo
+        Type:   R_X86_64_NONE
+Symbols:
+  - Name: foo
+  - Name: bar
+
+## Check we report a warning when a relocation section cant't be loaded.
+# RUN: yaml2obj %s --docnum=5 -o %t6.o
+# RUN: llvm-readobj %t6.o --cg-profile 2>&1 | FileCheck %s -DFILE=%t6.o --check-prefix=LLVM-RELOC-WRONG-SIZE
+# RUN: llvm-readobj %t6.o --elf-cg-profile 2>&1 | FileCheck %s -DFILE=%t6.o --check-prefix=LLVM-RELOC-WRONG-SIZE
+
+# LLVM-RELOC-WRONG-SIZE:      warning: '[[FILE]]': unable to load relocations for SHT_LLVM_CALL_GRAPH_PROFILE section: section [index 2] has invalid sh_entsize: expected 16, but got 24
+# LLVM-RELOC-WRONG-SIZE-NEXT: CGProfile [
+# LLVM-RELOC-WRONG-SIZE-NEXT:  CGProfileEntry {
+# LLVM-RELOC-WRONG-SIZE-NEXT:    Weight: 89
+# LLVM-RELOC-WRONG-SIZE-NEXT:  }
+# LLVM-RELOC-WRONG-SIZE-NEXT:  CGProfileEntry {
+# LLVM-RELOC-WRONG-SIZE-NEXT:    Weight: 98
+# LLVM-RELOC-WRONG-SIZE-NEXT:  }
+# LLVM-RELOC-WRONG-SIZE-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Entries:
+      - Weight: 89
+      - Weight: 98
+    EntSize: [[ENTSIZE=<none>]]
+  - Name: .rel.llvm.call-graph-profile
+    Type: SHT_REL
+    Info: .llvm.call-graph-profile
+    Relocations:
+      - Symbol: foo
+        Type:   R_X86_64_NONE
+      - Offset: 0x1
+        Symbol: bar
+        Type:   R_X86_64_NONE
+      - Offset: 0x2
+        Symbol: bar
+        Type:   R_X86_64_NONE
+      - Offset: 0x3
+        Symbol: foo
+        Type:   R_X86_64_NONE
+    EntSize: 24
+Symbols:
+  - Name: foo
+  - Name: bar

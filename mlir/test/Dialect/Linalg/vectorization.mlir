@@ -157,7 +157,7 @@ func @test_vectorize_scalar_input(%A : memref<8x16xf32>, %arg0 : f32) {
 func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
   //       CHECK: %[[V:.*]] = vector.broadcast {{.*}} : f32 to vector<8x16xf32>
   //       CHECK: vector.transfer_write %[[V]], {{.*}} : vector<8x16xf32>, memref<8x16xf32>
-  linalg.fill(%A, %arg0) :  memref<8x16xf32>, f32
+  linalg.fill(%arg0, %A) : f32, memref<8x16xf32>
   return
 }
 
@@ -167,7 +167,7 @@ func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
 func @test_vectorize_fill_scalar(%A : memref<f32>, %arg0 : f32) {
   //  CHECK-SAME: (%[[M:.*]]: memref<f32>, %[[V:.*]]: f32)
   //       CHECK:   store %[[V]], %[[M]][] : memref<f32>
-  linalg.fill(%A, %arg0) :  memref<f32>, f32
+  linalg.fill(%arg0, %A) : f32, memref<f32>
   return
 }
 
@@ -584,7 +584,7 @@ func @pad_static_source(%arg0: tensor<2x5x2xf32>, %pad_value: f32) -> tensor<2x6
 //       CHECK:   %[[V4:.*]] = addi %[[DIM3]], %[[C3]] : index
 //       CHECK:   %[[V5:.*]] = addi %[[V4]], %[[C2]] : index
 //       CHECK:   %[[INIT:.*]] = linalg.init_tensor [6, %[[V1]], %[[V2]], %[[V5]]] : tensor<6x?x?x?xf32>
-//       CHECK:   %[[FILL:.*]] = linalg.fill(%[[INIT]], %{{.*}}) : tensor<6x?x?x?xf32>, f32 -> tensor<6x?x?x?xf32>
+//       CHECK:   %[[FILL:.*]] = linalg.fill(%{{.*}}, %[[INIT]]) : f32, tensor<6x?x?x?xf32> -> tensor<6x?x?x?xf32>
 //       CHECK:   %[[SRCDIM:.*]] = memref.dim %[[SRC]], %[[C3]] : tensor<1x2x2x?xf32>
 //       CHECK:   %[[RESULT:.*]] = tensor.insert_slice %[[SRC]] into %[[FILL]][2, %[[LOW]], 3, 3] [1, 2, 2, %[[SRCDIM]]] [1, 1, 1, 1] : tensor<1x2x2x?xf32> into tensor<6x?x?x?xf32>
 //       CHECK:   return %[[RESULT]]

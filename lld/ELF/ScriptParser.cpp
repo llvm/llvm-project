@@ -288,10 +288,11 @@ void ScriptParser::addFile(StringRef s) {
   if (isUnderSysroot && s.startswith("/")) {
     SmallString<128> pathData;
     StringRef path = (config->sysroot + s).toStringRef(pathData);
-    if (sys::fs::exists(path)) {
+    if (sys::fs::exists(path))
       driver->addFile(saver.save(path), /*withLOption=*/false);
-      return;
-    }
+    else
+      setError("cannot find " + s + " inside " + config->sysroot);
+    return;
   }
 
   if (s.startswith("/")) {
@@ -1126,24 +1127,24 @@ Expr ScriptParser::readConstant() {
 static Optional<uint64_t> parseInt(StringRef tok) {
   // Hexadecimal
   uint64_t val;
-  if (tok.startswith_lower("0x")) {
+  if (tok.startswith_insensitive("0x")) {
     if (!to_integer(tok.substr(2), val, 16))
       return None;
     return val;
   }
-  if (tok.endswith_lower("H")) {
+  if (tok.endswith_insensitive("H")) {
     if (!to_integer(tok.drop_back(), val, 16))
       return None;
     return val;
   }
 
   // Decimal
-  if (tok.endswith_lower("K")) {
+  if (tok.endswith_insensitive("K")) {
     if (!to_integer(tok.drop_back(), val, 10))
       return None;
     return val * 1024;
   }
-  if (tok.endswith_lower("M")) {
+  if (tok.endswith_insensitive("M")) {
     if (!to_integer(tok.drop_back(), val, 10))
       return None;
     return val * 1024 * 1024;

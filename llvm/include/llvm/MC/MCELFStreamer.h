@@ -85,7 +85,7 @@ private:
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
   void fixSymbolsInTLSFixups(const MCExpr *expr);
-  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
+  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);
   void finalizeCGProfile();
 
   /// Merge the content of the fragment \p EF into the fragment \p DF.

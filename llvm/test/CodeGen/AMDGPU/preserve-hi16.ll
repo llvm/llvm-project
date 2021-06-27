@@ -1,4 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX8 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX900 %s
+; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX906 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}shl_i16:
@@ -188,3 +190,97 @@ define i32 @max_i16_zext_i32(i16 %x, i16 %y) {
   %zext = zext i16 %res to i32
   ret i32 %zext
 }
+
+; GCN-LABEL: {{^}}zext_fadd_f16:
+; GFX8: v_add_f16_e32 [[ADD:v[0-9]+]], v0, v1
+; GFX8-NEXT: s_setpc_b64
+
+; GFX9: v_add_f16_e32 [[ADD:v[0-9]+]], v0, v1
+; GFX9-NEXT: s_setpc_b64
+
+; GFX10: v_add_f16_e32 [[ADD:v[0-9]+]], v0, v1
+; GFX10-NEXT: v_and_b32_e32 v0, 0xffff, [[ADD]]
+define i32 @zext_fadd_f16(half %x, half %y) {
+  %add = fadd half %x, %y
+  %cast = bitcast half %add to i16
+  %zext = zext i16 %cast to i32
+  ret i32 %zext
+}
+
+; GCN-LABEL: {{^}}zext_fma_f16:
+; GFX8: v_fma_f16 [[FMA:v[0-9]+]], v0, v1, v2
+; GFX8-NEXT: s_setpc_b64
+
+; GFX9: v_fma_f16 [[FMA:v[0-9]+]], v0, v1, v2
+; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, [[FMA]]
+
+; GFX10: v_fmac_f16_e32 [[FMA:v[0-9]+]], v0, v1
+; GFX10-NEXT: v_and_b32_e32 v0, 0xffff, [[FMA]]
+define i32 @zext_fma_f16(half %x, half %y, half %z) {
+  %fma = call half @llvm.fma.f16(half %x, half %y, half %z)
+  %cast = bitcast half %fma to i16
+  %zext = zext i16 %cast to i32
+  ret i32 %zext
+}
+
+; GCN-LABEL: {{^}}zext_div_fixup_f16:
+; GFX8: v_div_fixup_f16 v0, v0, v1, v2
+; GFX8-NEXT: s_setpc_b64
+
+; GFX9: v_div_fixup_f16 v0, v0, v1, v2
+; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+
+; GFX10: v_div_fixup_f16 v0, v0, v1, v2
+; GFX10-NEXT: v_and_b32_e32 v0, 0xffff, v0
+define i32 @zext_div_fixup_f16(half %x, half %y, half %z) {
+  %div.fixup = call half @llvm.amdgcn.div.fixup.f16(half %x, half %y, half %z)
+  %cast = bitcast half %div.fixup to i16
+  %zext = zext i16 %cast to i32
+  ret i32 %zext
+}
+
+; We technically could eliminate the and on gfx9 here but we don't try
+; to inspect the source of the fptrunc. We're only worried about cases
+; that lower to v_fma_mix* instructions.
+
+; GCN-LABEL: {{^}}zext_fptrunc_f16:
+; GFX8: v_cvt_f16_f32_e32 v0, v0
+; GFX8-NEXT: s_setpc_b64
+
+; GFX9: v_cvt_f16_f32_e32 v0, v0
+; GFX9-NEXT: s_setpc_b64
+
+; GFX10: v_cvt_f16_f32_e32 v0, v0
+; GFX10-NEXT: v_and_b32_e32 v0, 0xffff, v0
+define i32 @zext_fptrunc_f16(float %x) {
+  %fptrunc = fptrunc float %x to half
+  %cast = bitcast half %fptrunc to i16
+  %zext = zext i16 %cast to i32
+  ret i32 %zext
+}
+
+; GCN-LABEL: {{^}}zext_fptrunc_fma_f16:
+; GFX8: v_fma_f32 v0, v0, v1, v2
+; GFX8-NEXT: v_cvt_f16_f32_e32 v0, v0
+; GFX8-NEXT: s_setpc_b64
+
+; GFX900: v_fma_f32 v0, v0, v1, v2
+; GFX900-NEXT: v_cvt_f16_f32_e32 v0, v0
+; GFX900-NEXT: s_setpc_b64
+
+; GFX906: v_fma_mixlo_f16 v0, v0, v1, v2
+; GFX906-NEXT: v_and_b32_e32 v0, 0xffff, v0
+
+; GFX10: v_fma_mixlo_f16 v0, v0, v1, v2
+; GFX10-NEXT: v_and_b32_e32 v0, 0xffff, v0
+define i32 @zext_fptrunc_fma_f16(float %x, float %y, float %z) {
+  %fma = call float @llvm.fma.f32(float %x, float %y, float %z)
+  %fptrunc = fptrunc float %fma to half
+  %cast = bitcast half %fptrunc to i16
+  %zext = zext i16 %cast to i32
+  ret i32 %zext
+}
+
+declare half @llvm.amdgcn.div.fixup.f16(half, half, half)
+declare half @llvm.fma.f16(half, half, half)
+declare float @llvm.fma.f32(float, float, float)

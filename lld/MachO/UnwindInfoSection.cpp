@@ -153,7 +153,9 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     Reloc &rFunc = isec->relocs[++i];
     assert(r.offset ==
            rFunc.offset + offsetof(CompactUnwindEntry<Ptr>, personality));
-    rFunc.referent.get<InputSection *>()->hasPersonality = true;
+    auto *referentIsec =
+        cast<ConcatInputSection>(rFunc.referent.get<InputSection *>());
+    referentIsec->hasPersonality = true;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {
@@ -297,7 +299,7 @@ static void addEntriesForFunctionsWithoutUnwindInfo(
   // Add explicit "has no unwind info" entries for all global and local symbols
   // without unwind info.
   auto markNoUnwindInfo = [&cuVector, &hasUnwindInfo](const Defined *d) {
-    if (d->isLive() && isCodeSection(d->isec)) {
+    if (d->isLive() && d->isec && isCodeSection(d->isec)) {
       Ptr ptr = d->getVA();
       if (!hasUnwindInfo.count(ptr))
         cuVector.push_back({ptr, 0, 0, 0, 0});

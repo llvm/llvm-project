@@ -25,7 +25,7 @@ func private @print_memref_f32(memref<*xf32>)
 // Creates and returns 5-D buffer of size (%s1, %s2, %s3, %s4, %s5) filled with the value %f
 func @alloc_5d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %s5 : index, %f : f32) -> memref<?x?x?x?x?xf32> {
   %buf = memref.alloc(%s1, %s2, %s3, %s4, %s5) : memref<?x?x?x?x?xf32>
-  linalg.fill(%buf, %f) : memref<?x?x?x?x?xf32>, f32
+  linalg.fill(%f, %buf) : f32, memref<?x?x?x?x?xf32>
   return %buf : memref<?x?x?x?x?xf32>
 }
 

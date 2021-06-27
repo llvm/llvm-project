@@ -100,7 +100,8 @@ public:
   //  variant_names[1] => "-[NSString(my_additions) myStringWithCString:]"
   //  variant_names[2] => "+[NSString myStringWithCString:]"
   //  variant_names[3] => "-[NSString myStringWithCString:]"
-  std::vector<ConstString>
+  // Also returns the FunctionNameType of each possible name.
+  std::vector<Language::MethodNameVariant>
   GetMethodNameVariants(ConstString method_name) const override;
 
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;

@@ -138,6 +138,15 @@ MlirAffineMap mlirAffineMapGetMinorSubMap(MlirAffineMap affineMap,
   return wrap(unwrap(affineMap).getMinorSubMap(numResults));
 }
 
+MlirAffineMap mlirAffineMapReplace(MlirAffineMap affineMap,
+                                   MlirAffineExpr expression,
+                                   MlirAffineExpr replacement,
+                                   intptr_t numResultDims,
+                                   intptr_t numResultSyms) {
+  return wrap(unwrap(affineMap).replace(unwrap(expression), unwrap(replacement),
+                                        numResultDims, numResultSyms));
+}
+
 void mlirAffineMapCompressUnusedSymbols(
     MlirAffineMap *affineMaps, intptr_t size, void *result,
     void (*populateResult)(void *res, intptr_t idx, MlirAffineMap m)) {

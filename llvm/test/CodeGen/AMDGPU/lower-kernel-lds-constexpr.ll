@@ -76,7 +76,7 @@ define amdgpu_kernel void @k3(i64 %x) {
 ; CHECK-NEXT:    %3 = getelementptr inbounds [32 x i8], [32 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k3.lds.t, %llvm.amdgcn.kernel.k3.lds.t addrspace(3)* @llvm.amdgcn.kernel.k3.lds, i32 0, i32 0), i32 0, i32 24
 ; CHECK-NEXT:    %4 = bitcast i8 addrspace(3)* %3 to i64 addrspace(3)*
 ; CHECK-NEXT:    %ptr2 = addrspacecast i64 addrspace(3)* %4 to i64*
-; CHECK-NEXT:    store i64 2, i64* %ptr2, align 1
+; CHECK-NEXT:    store i64 2, i64* %ptr2, align 8
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = addrspacecast i64 addrspace(3)* bitcast (i8 addrspace(3)* getelementptr inbounds ([32 x i8], [32 x i8] addrspace(3)* @lds.3, i32 0, i32 16) to i64 addrspace(3)*) to i64*

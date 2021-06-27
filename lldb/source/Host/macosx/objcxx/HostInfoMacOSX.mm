@@ -513,10 +513,10 @@ extern "C" bool _dyld_get_shared_cache_uuid(uuid_t uuid);
 namespace {
 class SharedCacheInfo {
 public:
-  const UUID &GetUUID() const { return m_uuid; };
+  const UUID &GetUUID() const { return m_uuid; }
   const llvm::StringMap<SharedCacheImageInfo> &GetImages() const {
     return m_images;
-  };
+  }
 
   SharedCacheInfo();
 

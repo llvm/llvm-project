@@ -201,15 +201,15 @@ void OpMethod::writeDeclTo(raw_ostream &os) const {
   os.indent(2);
   if (isStatic())
     os << "static ";
-  if (properties & MP_Constexpr)
+  if ((properties & MP_Constexpr) == MP_Constexpr)
     os << "constexpr ";
   methodSignature.writeDeclTo(os);
-  if (!isInline())
+  if (!isInline()) {
     os << ";";
-  else {
+  } else {
     os << " {\n";
-    methodBody.writeTo(os);
-    os << "}";
+    methodBody.writeTo(os.indent(2));
+    os.indent(2) << "}";
   }
 }
 

@@ -101,6 +101,8 @@ define i16 @LHBRX(i8* %ptr, i32 %off) {
   ret i16 %tmp6
 }
 
+; TODO: combine the bswap feeding a store on subtargets
+; that do not have an STDBRX.
 define void @STDBRX(i64 %i, i8* %ptr, i64 %off) {
 ; PWR7_32-LABEL: STDBRX:
 ; PWR7_32:       # %bb.0:

@@ -552,8 +552,9 @@ TEST_F(SymbolCollectorTest, ObjCSymbols) {
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(
                   QName("Person"), QName("Person::someMethodName:lastName:"),
-                  QName("MyCategory"), QName("Person::someMethodName2:"),
-                  QName("MyProtocol"), QName("MyProtocol::someMethodName3:")));
+                  AllOf(QName("MyCategory"), ForCodeCompletion(false)),
+                  QName("Person::someMethodName2:"), QName("MyProtocol"),
+                  QName("MyProtocol::someMethodName3:")));
 }
 
 TEST_F(SymbolCollectorTest, ObjCPropertyImpl) {

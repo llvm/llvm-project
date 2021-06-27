@@ -517,20 +517,14 @@ define void @test_fccmp(half %in, half* %out) {
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
 ; CHECK-CVT-NEXT: fcmp s0, s1
-; CHECK-CVT-NEXT: b.mi [[BRCC_ELSE:.?LBB[0-9_]+]]
-; CHECK-CVT-NEXT: str  wzr, [x0]
-; CHECK-CVT-NEXT: ret
-; CHECK-CVT-NEXT: [[BRCC_ELSE]]:
-; CHECK-CVT-NEXT: str  wzr, [x1]
+; CHECK-CVT-NEXT: csel x8, x0, x1, pl
+; CHECK-CVT-NEXT: str wzr, [x8]
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_br_cc:
 ; CHECK-FP16-NEXT: fcmp h0, h1
-; CHECK-FP16-NEXT: b.mi [[BRCC_ELSE:.?LBB[0-9_]+]]
-; CHECK-FP16-NEXT: str  wzr, [x0]
-; CHECK-FP16-NEXT: ret
-; CHECK-FP16-NEXT: [[BRCC_ELSE]]:
-; CHECK-FP16-NEXT: str  wzr, [x1]
+; CHECK-FP16-NEXT: csel x8, x0, x1, pl
+; CHECK-FP16-NEXT: str wzr, [x8]
 ; CHECK-FP16-NEXT: ret
 
 define void @test_br_cc(half %a, half %b, i32* %p1, i32* %p2) #0 {

@@ -5,14 +5,14 @@
 define i32 @test1(i1 %C) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0
+; CHECK-NEXT:    ret i32 [[DOT]]
 ;
 ; DBGINFO-LABEL: @test1(
 ; DBGINFO-NEXT:  entry:
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG11:![0-9]+]]
-; DBGINFO-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0, !dbg [[DBG11]]
-; DBGINFO-NEXT:    ret i32 [[SPEC_SELECT]], !dbg [[DBG12:![0-9]+]]
+; DBGINFO-NEXT:    [[DOT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0
+; DBGINFO-NEXT:    ret i32 [[DOT]], !dbg [[DBG12:![0-9]+]]
 ;
 entry:
   br i1 %C, label %T, label %F
@@ -24,11 +24,11 @@ F:              ; preds = %entry
 
 define void @test2(i1 %C) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:  T:
+; CHECK-NEXT:  common.ret:
 ; CHECK-NEXT:    ret void
 ;
 ; DBGINFO-LABEL: @test2(
-; DBGINFO-NEXT:  T:
+; DBGINFO-NEXT:  common.ret:
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META15:![0-9]+]], metadata !DIExpression()), !dbg [[DBG16:![0-9]+]]
 ; DBGINFO-NEXT:    ret void, !dbg [[DBG17:![0-9]+]]
 ;

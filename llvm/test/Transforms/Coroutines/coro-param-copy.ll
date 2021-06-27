@@ -1,6 +1,5 @@
 ; Check that we create copy the data from the alloca into the coroutine
 ; frame slot if it was written to.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 define i8* @f() "coroutine.presplit"="1" {

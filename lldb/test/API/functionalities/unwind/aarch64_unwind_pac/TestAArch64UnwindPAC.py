@@ -15,6 +15,9 @@ class AArch64UnwindPAC(TestBase):
     @skipIf(oslist=no_match(['linux']))
     def test(self):
         """Test that we can backtrace correctly when AArch64 PAC is enabled"""
+        if not self.isAArch64PAuth():
+            self.skipTest('Target must support Pointer Authentication.')
+
         self.build()
 
         self.line = line_number('main.c', '// Frame func_c')

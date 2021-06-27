@@ -1739,3 +1739,6 @@ attributes #0 = { noinline }
 ; OPTIMISTIC: ; Function Attrs: convergent noinline nounwind 
 ; OPTIMISTIC-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
 
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 7, !"openmp", i32 50}

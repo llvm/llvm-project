@@ -220,7 +220,7 @@ int main(int Argc, char **Argv) {
 
   if (InputArgs.hasArg(OPT_help)) {
     std::string Usage = llvm::formatv("{0} [ /options ] file", ProgName).str();
-    T.PrintHelp(outs(), Usage.c_str(), "LLVM MASM Assembler",
+    T.printHelp(outs(), Usage.c_str(), "LLVM MASM Assembler",
                 /*ShowHidden=*/false);
     return 0;
   } else if (InputFilename.empty()) {

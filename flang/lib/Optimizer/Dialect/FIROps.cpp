@@ -252,7 +252,7 @@ static void printCallOp(mlir::OpAsmPrinter &p, fir::CallOp &op) {
   else
     p << op.getOperand(0);
   p << '(' << op->getOperands().drop_front(isDirect ? 0 : 1) << ')';
-  p.printOptionalAttrDict(op->getAttrs(), {fir::CallOp::calleeAttrName()});
+  p.printOptionalAttrDict(op->getAttrs(), {"callee"});
   auto resultTypes{op.getResultTypes()};
   llvm::SmallVector<Type, 8> argTypes(
       llvm::drop_begin(op.getOperandTypes(), isDirect ? 0 : 1));
@@ -269,7 +269,7 @@ static mlir::ParseResult parseCallOp(mlir::OpAsmParser &parser,
   mlir::SymbolRefAttr funcAttr;
   bool isDirect = operands.empty();
   if (isDirect)
-    if (parser.parseAttribute(funcAttr, fir::CallOp::calleeAttrName(), attrs))
+    if (parser.parseAttribute(funcAttr, "callee", attrs))
       return mlir::failure();
 
   Type type;
@@ -586,8 +586,7 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
   bool simpleInitializer = false;
   if (mlir::succeeded(parser.parseOptionalLParen())) {
     Attribute attr;
-    if (parser.parseAttribute(attr, fir::GlobalOp::initValAttrName(),
-                              result.attributes) ||
+    if (parser.parseAttribute(attr, "initVal", result.attributes) ||
         parser.parseRParen())
       return mlir::failure();
     simpleInitializer = true;
@@ -595,15 +594,14 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
 
   if (succeeded(parser.parseOptionalKeyword("constant"))) {
     // if "constant" keyword then mark this as a constant, not a variable
-    result.addAttribute(fir::GlobalOp::constantAttrName(),
-                        builder.getUnitAttr());
+    result.addAttribute("constant", builder.getUnitAttr());
   }
 
   mlir::Type globalType;
   if (parser.parseColonType(globalType))
     return mlir::failure();
 
-  result.addAttribute(fir::GlobalOp::typeAttrName(),
+  result.addAttribute(fir::GlobalOp::typeAttrName(result.name),
                       mlir::TypeAttr::get(globalType));
 
   if (simpleInitializer) {
@@ -628,14 +626,14 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder, OperationState &result,
                           Attribute initialVal, StringAttr linkage,
                           ArrayRef<NamedAttribute> attrs) {
   result.addRegion();
-  result.addAttribute(typeAttrName(), mlir::TypeAttr::get(type));
+  result.addAttribute(typeAttrName(result.name), mlir::TypeAttr::get(type));
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
   result.addAttribute(symbolAttrName(), builder.getSymbolRefAttr(name));
   if (isConstant)
-    result.addAttribute(constantAttrName(), builder.getUnitAttr());
+    result.addAttribute(constantAttrName(result.name), builder.getUnitAttr());
   if (initialVal)
-    result.addAttribute(initValAttrName(), initialVal);
+    result.addAttribute(initValAttrName(result.name), initialVal);
   if (linkage)
     result.addAttribute(linkageAttrName(), linkage);
   result.attributes.append(attrs.begin(), attrs.end());
@@ -754,7 +752,7 @@ void fir::IterWhileOp::build(mlir::OpBuilder &builder,
   result.addOperands({lb, ub, step, iterate});
   if (finalCountValue) {
     result.addTypes(builder.getIndexType());
-    result.addAttribute(finalValueAttrName(), builder.getUnitAttr());
+    result.addAttribute(finalValueAttrName(result.name), builder.getUnitAttr());
   }
   result.addTypes(iterate.getType());
   result.addOperands(iterArgs);
@@ -846,7 +844,7 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
   llvm::SmallVector<mlir::Type, 4> argTypes;
   // Induction variable (hidden)
   if (prependCount)
-    result.addAttribute(IterWhileOp::finalValueAttrName(),
+    result.addAttribute(IterWhileOp::finalValueAttrName(result.name),
                         builder.getUnitAttr());
   else
     argTypes.push_back(indexType);
@@ -940,8 +938,7 @@ static void print(mlir::OpAsmPrinter &p, fir::IterWhileOp op) {
   } else if (op.finalValue()) {
     p << " -> (" << op.getResultTypes() << ')';
   }
-  p.printOptionalAttrDictWithKeyword(op->getAttrs(),
-                                     {IterWhileOp::finalValueAttrName()});
+  p.printOptionalAttrDictWithKeyword(op->getAttrs(), {"finalValue"});
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 }
@@ -1011,7 +1008,7 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
   result.addOperands(iterArgs);
   if (finalCountValue) {
     result.addTypes(builder.getIndexType());
-    result.addAttribute(finalValueAttrName(), builder.getUnitAttr());
+    result.addAttribute(finalValueAttrName(result.name), builder.getUnitAttr());
   }
   for (auto v : iterArgs)
     result.addTypes(v.getType());
@@ -1022,7 +1019,7 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
   bodyRegion->front().addArgument(builder.getIndexType());
   bodyRegion->front().addArguments(iterArgs.getTypes());
   if (unordered)
-    result.addAttribute(unorderedAttrName(), builder.getUnitAttr());
+    result.addAttribute(unorderedAttrName(result.name), builder.getUnitAttr());
   result.addAttributes(attributes);
 }
 
@@ -1045,8 +1042,7 @@ static mlir::ParseResult parseDoLoopOp(mlir::OpAsmParser &parser,
     return failure();
 
   if (mlir::succeeded(parser.parseOptionalKeyword("unordered")))
-    result.addAttribute(fir::DoLoopOp::unorderedAttrName(),
-                        builder.getUnitAttr());
+    result.addAttribute("unordered", builder.getUnitAttr());
 
   // Parse the optional initial iteration arguments.
   llvm::SmallVector<mlir::OpAsmParser::OperandType, 4> regionArgs, operands;
@@ -1080,7 +1076,8 @@ static mlir::ParseResult parseDoLoopOp(mlir::OpAsmParser &parser,
 
   // Induction variable.
   if (prependCount)
-    result.addAttribute(DoLoopOp::finalValueAttrName(), builder.getUnitAttr());
+    result.addAttribute(DoLoopOp::finalValueAttrName(result.name),
+                        builder.getUnitAttr());
   else
     argTypes.push_back(indexType);
   // Loop carried variables
@@ -1172,8 +1169,7 @@ static void print(mlir::OpAsmPrinter &p, fir::DoLoopOp op) {
     printBlockTerminators = true;
   }
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
-                                     {fir::DoLoopOp::unorderedAttrName(),
-                                      fir::DoLoopOp::finalValueAttrName()});
+                                     {"unordered", "finalValue"});
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
 }

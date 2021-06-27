@@ -874,13 +874,6 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_NOALIAS
 #endif
 
-#if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__) || \
-    (!defined(_LIBCPP_CXX03_LANG) && defined(__GNUC__)) // All supported GCC versions
-#  define _LIBCPP_EXPLICIT explicit
-#else
-#  define _LIBCPP_EXPLICIT
-#endif
-
 #if __has_attribute(using_if_exists)
 # define _LIBCPP_USING_IF_EXISTS __attribute__((using_if_exists))
 #else

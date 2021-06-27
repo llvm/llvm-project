@@ -1,6 +1,4 @@
-; RUN: opt < %s -always-inline -barrier -coro-split -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='always-inline,cgscc(coro-split)' -S | FileCheck %s
-; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -sample-profile -coro-split -disable-inlining=true -S | FileCheck %s
 ; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -passes='sample-profile,cgscc(coro-split)' -disable-inlining=true -S | FileCheck %s
 
 ; Function Attrs: alwaysinline ssp uwtable

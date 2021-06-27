@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_OPERATOR_H
 #define LLVM_IR_OPERATOR_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/IR/Constants.h"
@@ -576,6 +577,12 @@ public:
       Type *SourceType, ArrayRef<const Value *> Index, const DataLayout &DL,
       APInt &Offset,
       function_ref<bool(Value &, APInt &)> ExternalAnalysis = nullptr);
+
+  /// Collect the offset of this GEP as a map of Values to their associated
+  /// APInt multipliers, as well as a total Constant Offset.
+  bool collectOffset(const DataLayout &DL, unsigned BitWidth,
+                     MapVector<Value *, APInt> &VariableOffsets,
+                     APInt &ConstantOffset) const;
 };
 
 class PtrToIntOperator

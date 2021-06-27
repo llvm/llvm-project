@@ -95,7 +95,7 @@ define i1 @test_simplify7(i32 %C) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i16 1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9217
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i16 [[TMP4]], 0
-; CHECK-NEXT:    [[MEMCHR1:%.*]] = and i1 [[MEMCHR_BOUNDS]], [[MEMCHR_BITS]]
+; CHECK-NEXT:    [[MEMCHR1:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false
 ; CHECK-NEXT:    ret i1 [[MEMCHR1]]
 ;
 

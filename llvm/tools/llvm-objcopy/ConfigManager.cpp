@@ -22,8 +22,8 @@
 #include "llvm/Support/StringSaver.h"
 #include <memory>
 
-namespace llvm {
-namespace objcopy {
+using namespace llvm;
+using namespace llvm::objcopy;
 
 namespace {
 enum ObjcopyID {
@@ -273,10 +273,12 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
+namespace {
 struct TargetInfo {
   FileFormat Format;
   MachineInfo Machine;
 };
+} // namespace
 
 // FIXME: consolidate with the bfd parsing used by lld.
 static const StringMap<MachineInfo> TargetMap{
@@ -338,10 +340,9 @@ getOutputTargetInfoByTargetName(StringRef TargetName) {
   return {TargetInfo{Format, MI}};
 }
 
-static Error
-addSymbolsFromFile(NameMatcher &Symbols, BumpPtrAllocator &Alloc,
-                   StringRef Filename, MatchStyle MS,
-                   llvm::function_ref<Error(Error)> ErrorCallback) {
+static Error addSymbolsFromFile(NameMatcher &Symbols, BumpPtrAllocator &Alloc,
+                                StringRef Filename, MatchStyle MS,
+                                function_ref<Error(Error)> ErrorCallback) {
   StringSaver Saver(Alloc);
   SmallVector<StringRef, 16> Lines;
   auto BufOrErr = MemoryBuffer::getFile(Filename);
@@ -364,7 +365,7 @@ addSymbolsFromFile(NameMatcher &Symbols, BumpPtrAllocator &Alloc,
 
 Expected<NameOrPattern>
 NameOrPattern::create(StringRef Pattern, MatchStyle MS,
-                      llvm::function_ref<Error(Error)> ErrorCallback) {
+                      function_ref<Error(Error)> ErrorCallback) {
   switch (MS) {
   case MatchStyle::Literal:
     return NameOrPattern(Pattern);
@@ -458,7 +459,7 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
     HelpText = " [options] input";
     break;
   }
-  OptTable.PrintHelp(OS, (ToolName + HelpText).str().c_str(),
+  OptTable.printHelp(OS, (ToolName + HelpText).str().c_str(),
                      (ToolName + " tool").str().c_str());
   // TODO: Replace this with libOption call once it adds extrahelp support.
   // The CommandLine library has a cl::extrahelp class to support this,
@@ -630,8 +631,8 @@ Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
-                    llvm::function_ref<Error(Error)> ErrorCallback) {
+objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
+                             function_ref<Error(Error)> ErrorCallback) {
   DriverConfig DC;
   ObjcopyOptTable T;
 
@@ -1051,7 +1052,7 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 // If a help flag is set then ParseInstallNameToolOptions will print the help
 // messege and exit.
 Expected<DriverConfig>
-parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
+objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   DriverConfig DC;
   ConfigManager ConfigMgr;
   CommonConfig &Config = ConfigMgr.Common;
@@ -1183,7 +1184,7 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
 }
 
 Expected<DriverConfig>
-parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
+objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
   DriverConfig DC;
   ConfigManager ConfigMgr;
   CommonConfig &Config = ConfigMgr.Common;
@@ -1231,8 +1232,8 @@ parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr) {
 // help flag is set then ParseStripOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-parseStripOptions(ArrayRef<const char *> RawArgsArr,
-                  llvm::function_ref<Error(Error)> ErrorCallback) {
+objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
+                           function_ref<Error(Error)> ErrorCallback) {
   const char *const *DashDash =
       std::find_if(RawArgsArr.begin(), RawArgsArr.end(),
                    [](StringRef Str) { return Str == "--"; });
@@ -1378,6 +1379,3 @@ parseStripOptions(ArrayRef<const char *> RawArgsArr,
 
   return std::move(DC);
 }
-
-} // namespace objcopy
-} // namespace llvm

@@ -1026,7 +1026,7 @@ namespace {
       if (XText.empty() || YText.empty())
         return !XText.empty();
             
-      int result = XText.compare_lower(YText);
+      int result = XText.compare_insensitive(YText);
       if (result < 0)
         return true;
       if (result > 0)

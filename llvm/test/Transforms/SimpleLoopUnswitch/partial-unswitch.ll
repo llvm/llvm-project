@@ -1108,11 +1108,11 @@ define i32 @partial_unswitch_exiting_block_with_multiple_unswitch_candidates(i32
 ; CHECK-LABEL: @partial_unswitch_exiting_block_with_multiple_unswitch_candidates(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ne i32 [[TMP0:%.*]], 0
-; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
-; CHECK:       entry.split.us:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[PTR:%.*]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 41
-; CHECK-NEXT:    br i1 [[TMP3]], label [[ENTRY_SPLIT_US_SPLIT:%.*]], label [[ENTRY_SPLIT_US_SPLIT_US:%.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[ENTRY_SPLIT_US_SPLIT_US:%.*]], label [[ENTRY_SPLIT_US_SPLIT:%.*]]
 ; CHECK:       entry.split.us.split.us:
 ; CHECK-NEXT:    br label [[LOOP_US_US:%.*]]
 ; CHECK:       loop.us.us:
@@ -1122,14 +1122,12 @@ define i32 @partial_unswitch_exiting_block_with_multiple_unswitch_candidates(i32
 ; CHECK:       entry.split.us.split:
 ; CHECK-NEXT:    br label [[LOOP_US:%.*]]
 ; CHECK:       loop.us:
-; CHECK-NEXT:    [[VAL_US:%.*]] = load i32, i32* [[PTR]], align 16
-; CHECK-NEXT:    [[IF_COND_US:%.*]] = icmp ult i32 [[VAL_US]], 41
-; CHECK-NEXT:    br i1 [[IF_COND_US]], label [[IF_THEN_US:%.*]], label [[EXITING_US:%.*]]
-; CHECK:       if.then.us:
-; CHECK-NEXT:    store i32 [[TMP1:%.*]], i32* [[PTR]], align 16
-; CHECK-NEXT:    br label [[EXITING_US]]
+; CHECK-NEXT:    br label [[EXITING_US:%.*]]
 ; CHECK:       exiting.us:
-; CHECK-NEXT:    br label [[LOOP_US]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br label [[EXIT_SPLIT_US:%.*]]
+; CHECK:       exit.split.us:
+; CHECK-NEXT:    [[RET_VAL_US:%.*]] = phi i32 [ 1, [[EXITING_US]] ]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -1137,13 +1135,16 @@ define i32 @partial_unswitch_exiting_block_with_multiple_unswitch_candidates(i32
 ; CHECK-NEXT:    [[IF_COND:%.*]] = icmp ult i32 [[VAL]], 41
 ; CHECK-NEXT:    br i1 [[IF_COND]], label [[IF_THEN:%.*]], label [[EXITING:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[PTR]], align 16
+; CHECK-NEXT:    store i32 [[TMP1:%.*]], i32* [[PTR]], align 16
 ; CHECK-NEXT:    br label [[EXITING]]
 ; CHECK:       exiting:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       exit:
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[LOOP]], label [[EXIT_SPLIT:%.*]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       exit.split:
 ; CHECK-NEXT:    [[RET_VAL:%.*]] = phi i32 [ 1, [[EXITING]] ]
-; CHECK-NEXT:    ret i32 [[RET_VAL]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[DOTUS_PHI:%.*]] = phi i32 [ [[RET_VAL]], [[EXIT_SPLIT]] ], [ [[RET_VAL_US]], [[EXIT_SPLIT_US]] ]
+; CHECK-NEXT:    ret i32 [[DOTUS_PHI]]
 ;
 entry:
   %exit.cond = icmp ne i32 %0, 0
@@ -1166,6 +1167,165 @@ exit:
   ret i32 %ret.val
 }
 
+; The path with noclobber block is only duplicated so we need to calculate only
+; the cost of the path with noclobber.
+define i32 @partial_unswitch_true_successor_for_cost_calculation(i32* %ptr, i32 %N) {
+; CHECK-LABEL: @partial_unswitch_true_successor_for_cost_calculation(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 100
+; CHECK-NEXT:    br i1 [[TMP1]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br label [[LOOP_HEADER_US:%.*]]
+; CHECK:       loop.header.us:
+; CHECK-NEXT:    [[IV_US:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US]] ], [ [[IV_NEXT_US:%.*]], [[LOOP_LATCH_US:%.*]] ]
+; CHECK-NEXT:    br label [[NOCLOBBER_US:%.*]]
+; CHECK:       noclobber.us:
+; CHECK-NEXT:    br label [[LOOP_LATCH_US]]
+; CHECK:       loop.latch.us:
+; CHECK-NEXT:    [[C_US:%.*]] = icmp ult i32 [[IV_US]], [[N:%.*]]
+; CHECK-NEXT:    [[IV_NEXT_US]] = add i32 [[IV_US]], 1
+; CHECK-NEXT:    br i1 [[C_US]], label [[LOOP_HEADER_US]], label [[EXIT_SPLIT_US:%.*]]
+; CHECK:       exit.split.us:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[SC:%.*]] = icmp eq i32 [[LV]], 100
+; CHECK-NEXT:    br i1 [[SC]], label [[NOCLOBBER:%.*]], label [[CLOBBER:%.*]]
+; CHECK:       noclobber:
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       clobber:
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[IV]], [[N]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP_HEADER]], label [[EXIT_SPLIT:%.*]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       exit.split:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 10
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %lv = load i32, i32* %ptr
+  %sc = icmp eq i32 %lv, 100
+  br i1 %sc, label %noclobber, label %clobber
+
+noclobber:
+  br label %loop.latch
+
+clobber:
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  call void @clobber()
+  br label %loop.latch
+
+loop.latch:
+  %c = icmp ult i32 %iv, %N
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %loop.header, label %exit
+
+exit:
+  ret i32 10
+}
+
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[UNSWITCH_PARTIAL_DISABLE:![0-9]+]]}
 ; CHECK: [[UNSWITCH_PARTIAL_DISABLE]] = !{!"llvm.loop.unswitch.partial.disable"}
 ; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[UNSWITCH_PARTIAL_DISABLE]]}
@@ -1177,3 +1337,4 @@ exit:
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[UNSWITCH_PARTIAL_DISABLE]]}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[UNSWITCH_PARTIAL_DISABLE]]}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[UNSWITCH_PARTIAL_DISABLE]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[UNSWITCH_PARTIAL_DISABLE]]}

@@ -125,9 +125,9 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE: cbz w0
 ; CHECK-APPLE: mov w0, #16
 ; CHECK-APPLE: malloc
+; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE: mov [[ID:w[0-9]+]], #1
 ; CHECK-APPLE: strb [[ID]], [x0, #8]
-; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE-NOT: x21
 ; CHECK-APPLE: ret
 
