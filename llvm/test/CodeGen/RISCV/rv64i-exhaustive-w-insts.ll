@@ -1529,7 +1529,7 @@ define i32 @aext_srliw_sext(i32 signext %a) nounwind {
 define i32 @aext_srliw_zext(i32 zeroext %a) nounwind {
 ; RV64I-LABEL: aext_srliw_zext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a0, a0, 3
+; RV64I-NEXT:    srli a0, a0, 3
 ; RV64I-NEXT:    ret
   %1 = lshr i32 %a, 3
   ret i32 %1
@@ -1556,7 +1556,7 @@ define signext i32 @sext_srliw_sext(i32 signext %a) nounwind {
 define signext i32 @sext_srliw_zext(i32 zeroext %a) nounwind {
 ; RV64I-LABEL: sext_srliw_zext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a0, a0, 6
+; RV64I-NEXT:    srli a0, a0, 6
 ; RV64I-NEXT:    ret
   %1 = lshr i32 %a, 6
   ret i32 %1
@@ -1583,7 +1583,7 @@ define zeroext i32 @zext_srliw_sext(i32 signext %a) nounwind {
 define zeroext i32 @zext_srliw_zext(i32 zeroext %a) nounwind {
 ; RV64I-LABEL: zext_srliw_zext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srliw a0, a0, 9
+; RV64I-NEXT:    srli a0, a0, 9
 ; RV64I-NEXT:    ret
   %1 = lshr i32 %a, 9
   ret i32 %1
@@ -1603,7 +1603,7 @@ define i32 @aext_sraiw_aext(i32 %a) nounwind {
 define i32 @aext_sraiw_sext(i32 signext %a) nounwind {
 ; RV64I-LABEL: aext_sraiw_sext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraiw a0, a0, 2
+; RV64I-NEXT:    srai a0, a0, 2
 ; RV64I-NEXT:    ret
   %1 = ashr i32 %a, 2
   ret i32 %1
@@ -1630,7 +1630,7 @@ define signext i32 @sext_sraiw_aext(i32 %a) nounwind {
 define signext i32 @sext_sraiw_sext(i32 signext %a) nounwind {
 ; RV64I-LABEL: sext_sraiw_sext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraiw a0, a0, 5
+; RV64I-NEXT:    srai a0, a0, 5
 ; RV64I-NEXT:    ret
   %1 = ashr i32 %a, 5
   ret i32 %1
