@@ -35,7 +35,6 @@ static constexpr llvm::StringRef kPrintNewline = "printNewline";
 static constexpr llvm::StringRef kMalloc = "malloc";
 static constexpr llvm::StringRef kAlignedAlloc = "aligned_alloc";
 static constexpr llvm::StringRef kFree = "free";
-static constexpr llvm::StringRef kMemRefCopy = "memref_copy";
 
 /// Generic print function lookupOrCreate helper.
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFn(ModuleOp moduleOp, StringRef name,
@@ -112,15 +111,6 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFreeFn(ModuleOp moduleOp) {
   return LLVM::lookupOrCreateFn(
       moduleOp, kFree,
       LLVM::LLVMPointerType::get(IntegerType::get(moduleOp->getContext(), 8)),
-      LLVM::LLVMVoidType::get(moduleOp->getContext()));
-}
-
-LLVM::LLVMFuncOp
-mlir::LLVM::lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
-                                       Type unrankedDescriptorType) {
-  return LLVM::lookupOrCreateFn(
-      moduleOp, kMemRefCopy,
-      ArrayRef<Type>{indexType, unrankedDescriptorType, unrankedDescriptorType},
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
 
