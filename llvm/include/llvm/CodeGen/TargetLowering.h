@@ -4488,6 +4488,14 @@ public:
   SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
                                   SDValue Index) const;
 
+  /// Get a pointer to a sub-vector of type \p SubVecVT at index \p Idx located
+  /// in memory for a vector of type \p VecVT starting at a base address of
+  /// \p VecPtr. If \p Idx plus the size of \p SubVecVT is out of bounds the
+  /// returned pointer is unspecified, but the value returned will be such that
+  /// the entire subvector would be within the vector bounds.
+  SDValue getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
+                                 EVT SubVecVT, SDValue Index) const;
+
   /// Method for building the DAG expansion of ISD::[US][MIN|MAX]. This
   /// method accepts integers as its arguments.
   SDValue expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const;
