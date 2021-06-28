@@ -2174,7 +2174,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // functions with -funique-internal-linkage-names.
   if (TargetDecl && CodeGenOpts.UniqueInternalLinkageNames) {
     if (auto *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
-      if (this->getFunctionLinkage(Fn) == llvm::GlobalValue::InternalLinkage)
+      if (this->getFunctionLinkage(CalleeInfo.getCalleeDecl()) ==
+          llvm::GlobalValue::InternalLinkage)
         FuncAttrs.addAttribute("sample-profile-suffix-elision-policy",
                                "selected");
     }
