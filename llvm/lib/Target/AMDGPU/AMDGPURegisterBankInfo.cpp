@@ -1532,8 +1532,8 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
   return true;
 }
 
-bool AMDGPURegisterBankInfo::applyMappingBFEIntrinsic(
-  const OperandsMapper &OpdMapper, bool Signed) const {
+bool AMDGPURegisterBankInfo::applyMappingBFE(const OperandsMapper &OpdMapper,
+                                             bool Signed) const {
   MachineInstr &MI = OpdMapper.getMI();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
 
@@ -1545,19 +1545,69 @@ bool AMDGPURegisterBankInfo::applyMappingBFEIntrinsic(
 
   const LLT S32 = LLT::scalar(32);
 
+  unsigned FirstOpnd = MI.getOpcode() == AMDGPU::G_INTRINSIC ? 2 : 1;
+  Register SrcReg = MI.getOperand(FirstOpnd).getReg();
+  Register OffsetReg = MI.getOperand(FirstOpnd + 1).getReg();
+  Register WidthReg = MI.getOperand(FirstOpnd + 2).getReg();
+
   const RegisterBank *DstBank =
     OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
   if (DstBank == &AMDGPU::VGPRRegBank) {
     if (Ty == S32)
       return true;
 
-    // TODO: 64-bit version is scalar only, so we need to expand this.
-    return false;
-  }
+    // There is no 64-bit vgpr bitfield extract instructions so the operation
+    // is expanded to a sequence of instructions that implement the operation.
+    ApplyRegBankMapping ApplyBank(*this, MRI, &AMDGPU::VGPRRegBank);
+    MachineIRBuilder B(MI, ApplyBank);
 
-  Register SrcReg = MI.getOperand(2).getReg();
-  Register OffsetReg = MI.getOperand(3).getReg();
-  Register WidthReg = MI.getOperand(4).getReg();
+    const LLT S64 = LLT::scalar(64);
+    // Shift the source operand so that extracted bits start at bit 0.
+    auto ShiftOffset = Signed ? B.buildAShr(S64, SrcReg, OffsetReg)
+                              : B.buildLShr(S64, SrcReg, OffsetReg);
+    auto UnmergeSOffset = B.buildUnmerge({S32, S32}, ShiftOffset);
+
+    // A 64-bit bitfield extract uses the 32-bit bitfield extract instructions
+    // if the width is a constant.
+    if (auto ConstWidth = getConstantVRegValWithLookThrough(WidthReg, MRI)) {
+      // Use the 32-bit bitfield extract instruction if the width is a constant.
+      // Depending on the width size, use either the low or high 32-bits.
+      auto Zero = B.buildConstant(S32, 0);
+      auto WidthImm = ConstWidth->Value.getZExtValue();
+      if (WidthImm <= 32) {
+        // Use bitfield extract on the lower 32-bit source, and then sign-extend
+        // or clear the upper 32-bits.
+        auto Extract =
+            Signed ? B.buildSbfx(S32, UnmergeSOffset.getReg(0), Zero, WidthReg)
+                   : B.buildUbfx(S32, UnmergeSOffset.getReg(0), Zero, WidthReg);
+        auto Extend =
+            Signed ? B.buildAShr(S32, Extract, B.buildConstant(S32, 31)) : Zero;
+        B.buildMerge(DstReg, {Extract, Extend});
+      } else {
+        // Use bitfield extract on upper 32-bit source, and combine with lower
+        // 32-bit source.
+        auto UpperWidth = B.buildConstant(S32, WidthImm - 32);
+        auto Extract =
+            Signed
+                ? B.buildSbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth)
+                : B.buildUbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth);
+        B.buildMerge(DstReg, {UnmergeSOffset.getReg(0), Extract});
+      }
+      MI.eraseFromParent();
+      return true;
+    }
+
+    // Expand to Src >> Offset << (64 - Width) >> (64 - Width) using 64-bit
+    // operations.
+    auto ExtShift = B.buildSub(S32, B.buildConstant(S32, 64), WidthReg);
+    auto SignBit = B.buildShl(S64, ShiftOffset, ExtShift);
+    if (Signed)
+      B.buildAShr(S64, SignBit, ExtShift);
+    else
+      B.buildLShr(S64, SignBit, ExtShift);
+    MI.eraseFromParent();
+    return true;
+  }
 
   // The scalar form packs the offset and width in a single operand.
 
@@ -2960,10 +3010,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     case Intrinsic::amdgcn_sbfe:
-      applyMappingBFEIntrinsic(OpdMapper, true);
+      applyMappingBFE(OpdMapper, true);
       return;
     case Intrinsic::amdgcn_ubfe:
-      applyMappingBFEIntrinsic(OpdMapper, false);
+      applyMappingBFE(OpdMapper, false);
       return;
     case Intrinsic::amdgcn_ballot:
       // Use default handling and insert copy to vcc source.
@@ -3054,6 +3104,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   }
   case AMDGPU::G_DYN_STACKALLOC:
     applyMappingDynStackAlloc(MI, OpdMapper, MRI);
+    return;
+  case AMDGPU::G_SBFX:
+    applyMappingBFE(OpdMapper, /*Signed*/ true);
+    return;
+  case AMDGPU::G_UBFX:
+    applyMappingBFE(OpdMapper, /*Signed*/ false);
     return;
   default:
     break;
@@ -3529,6 +3585,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UMAX:
   case AMDGPU::G_ABS:
   case AMDGPU::G_SHUFFLE_VECTOR:
+  case AMDGPU::G_SBFX:
+  case AMDGPU::G_UBFX:
     if (isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
     LLVM_FALLTHROUGH;
