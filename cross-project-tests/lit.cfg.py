@@ -1,5 +1,3 @@
-# -*- Python -*-
-
 import os
 import platform
 import re
@@ -15,12 +13,9 @@ from lit.llvm.subst import ToolSubst
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
-config.name = 'debuginfo-tests'
+config.name = 'cross-project-tests'
 
 # testFormat: The test format to use to interpret tests.
-#
-# For now we require '&&' between commands, until they get globally killed and
-# the test runner updated.
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
@@ -32,16 +27,17 @@ config.suffixes = ['.c', '.cpp', '.m']
 config.excludes = ['Inputs']
 
 # test_source_root: The root path where tests are located.
-config.test_source_root = os.path.join(config.debuginfo_tests_src_root)
+config.test_source_root = config.cross_project_tests_src_root
 
 # test_exec_root: The root path where tests should be run.
-config.test_exec_root = config.debuginfo_tests_obj_root
+config.test_exec_root = config.cross_project_tests_obj_root
 
 llvm_config.use_default_substitutions()
 
 tools = [
     ToolSubst('%test_debuginfo', command=os.path.join(
-        config.debuginfo_tests_src_root, 'llgdb-tests', 'test_debuginfo.pl')),
+        config.cross_project_tests_src_root, 'debuginfo-tests',
+        'llgdb-tests', 'test_debuginfo.pl')),
     ToolSubst("%llvm_src_root", config.llvm_src_root),
     ToolSubst("%llvm_tools_dir", config.llvm_tools_dir),
 ]
@@ -71,11 +67,15 @@ if is_msvc:
     tools.append(ToolSubst('%cdb', '"%s"' % os.path.join(win_sdk, 'Debuggers',
                                                          arch, 'cdb.exe')))
 
-# clang_src_dir is not used by these tests, but is required by
-# use_clang(), so set it to "".
+# clang_src_dir and lld_src_dir are not used by these tests, but are required by
+# use_clang() and use_lld() respectively, so set them to "", if needed.
 if not hasattr(config, 'clang_src_dir'):
     config.clang_src_dir = ""
-llvm_config.use_clang()
+llvm_config.use_clang(required=('clang' in config.llvm_enabled_projects))
+
+if not hasattr(config, 'lld_src_dir'):
+    config.lld_src_dir = ""
+llvm_config.use_lld(required=('lld' in config.llvm_enabled_projects))
 
 if config.llvm_use_sanitizer:
     # Propagate path to symbolizer for ASan/MSan.
@@ -125,8 +125,8 @@ if lldb_path is not None:
 
 # Produce dexter path, lldb path, and combine into the %dexter substitution
 # for running a test.
-dexter_path = os.path.join(config.debuginfo_tests_src_root,
-                           'dexter', 'dexter.py')
+dexter_path = os.path.join(config.cross_project_tests_src_root,
+                           'debuginfo-tests', 'dexter', 'dexter.py')
 dexter_test_cmd = '"{}" "{}" test'.format(sys.executable, dexter_path)
 if lldb_path is not None:
   dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
@@ -172,7 +172,6 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
-# available_features: REQUIRES/UNSUPPORTED lit commands look at this list.
 if platform.system() == 'Darwin':
     xcode_lldb_vers = subprocess.check_output(['xcrun', 'lldb', '--version']).decode("utf-8")
     match = re.search('lldb-(\d+)', xcode_lldb_vers)
