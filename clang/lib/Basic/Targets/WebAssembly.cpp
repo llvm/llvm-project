@@ -234,7 +234,8 @@ ArrayRef<Builtin::Info> WebAssemblyTargetInfo::getTargetBuiltins() const {
                                              Builtin::FirstTSBuiltin);
 }
 
-void WebAssemblyTargetInfo::adjust(LangOptions &Opts) {
+void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,
+                                   LangOptions &Opts) {
   // If the Atomics feature isn't available, turn off POSIXThreads and
   // ThreadModel, so that we don't predefine _REENTRANT or __STDCPP_THREADS__.
   if (!HasAtomics) {
