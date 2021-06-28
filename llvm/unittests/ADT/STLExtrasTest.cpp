@@ -764,4 +764,151 @@ TEST(STLExtras, Unique) {
   EXPECT_EQ(3, V[3]);
 }
 
+TEST(STLExtrasTest, TypesAreDistinct) {
+  EXPECT_TRUE((llvm::TypesAreDistinct<>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, int>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, float>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, float, int>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, float, double>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, float, double, float>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int *>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int &>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int &&>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, const int>::value));
+}
+
+TEST(STLExtrasTest, FirstIndexOfType) {
+  EXPECT_EQ((llvm::FirstIndexOfType<int, int>::value), 0u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int, int, int>::value), 0u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int, float, int>::value), 1u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int const *, float, int, int const *,
+                                    const int>::value),
+            2u);
+}
+
+TEST(STLExtrasTest, TypeAtIndex) {
+  EXPECT_TRUE((std::is_same<int, llvm::TypeAtIndex<0, int>>::value));
+  EXPECT_TRUE((std::is_same<int, llvm::TypeAtIndex<0, int, float>>::value));
+  EXPECT_TRUE((std::is_same<float, llvm::TypeAtIndex<1, int, float>>::value));
+  EXPECT_TRUE(
+      (std::is_same<float, llvm::TypeAtIndex<1, int, float, double>>::value));
+  EXPECT_TRUE(
+      (std::is_same<float, llvm::TypeAtIndex<1, int, float, double>>::value));
+  EXPECT_TRUE(
+      (std::is_same<double, llvm::TypeAtIndex<2, int, float, double>>::value));
+}
+
+TEST(STLExtrasTest, MakeVisitorOneCallable) {
+  auto IdentityLambda = [](auto X) { return X; };
+  auto IdentityVisitor = makeVisitor(IdentityLambda);
+  EXPECT_EQ(IdentityLambda(1), IdentityVisitor(1));
+  EXPECT_EQ(IdentityLambda(2.0f), IdentityVisitor(2.0f));
+  EXPECT_TRUE((std::is_same<decltype(IdentityLambda(IdentityLambda)),
+                            decltype(IdentityLambda)>::value));
+  EXPECT_TRUE((std::is_same<decltype(IdentityVisitor(IdentityVisitor)),
+                            decltype(IdentityVisitor)>::value));
+}
+
+TEST(STLExtrasTest, MakeVisitorTwoCallables) {
+  auto Visitor =
+      makeVisitor([](int) { return "int"; }, [](std::string) { return "str"; });
+  EXPECT_EQ(Visitor(42), "int");
+  EXPECT_EQ(Visitor("foo"), "str");
+}
+
+TEST(STLExtrasTest, MakeVisitorCallableMultipleOperands) {
+  auto Second = makeVisitor([](int I, float F) { return F; },
+                            [](float F, int I) { return I; });
+  EXPECT_EQ(Second(1.f, 1), 1);
+  EXPECT_EQ(Second(1, 1.f), 1.f);
+}
+
+TEST(STLExtrasTest, MakeVisitorDefaultCase) {
+  {
+    auto Visitor = makeVisitor([](int I) { return I + 100; },
+                               [](float F) { return F * 2; },
+                               [](auto) { return "unhandled type"; });
+    EXPECT_EQ(Visitor(24), 124);
+    EXPECT_EQ(Visitor(2.f), 4.f);
+    EXPECT_EQ(Visitor(2.), "unhandled type");
+    EXPECT_EQ(Visitor(Visitor), "unhandled type");
+  }
+  {
+    auto Visitor = makeVisitor([](auto) { return "unhandled type"; },
+                               [](int I) { return I + 100; },
+                               [](float F) { return F * 2; });
+    EXPECT_EQ(Visitor(24), 124);
+    EXPECT_EQ(Visitor(2.f), 4.f);
+    EXPECT_EQ(Visitor(2.), "unhandled type");
+    EXPECT_EQ(Visitor(Visitor), "unhandled type");
+  }
+}
+
+template <bool Moveable, bool Copyable>
+struct Functor : Counted<Moveable, Copyable> {
+  using Counted<Moveable, Copyable>::Counted;
+  void operator()() {}
+};
+
+TEST(STLExtrasTest, MakeVisitorLifetimeSemanticsPRValue) {
+  int Copies = 0;
+  int Moves = 0;
+  int Destructors = 0;
+  {
+    auto V = makeVisitor(Functor<true, false>(Copies, Moves, Destructors));
+    (void)V;
+    EXPECT_EQ(0, Copies);
+    EXPECT_EQ(1, Moves);
+    EXPECT_EQ(1, Destructors);
+  }
+  EXPECT_EQ(0, Copies);
+  EXPECT_EQ(1, Moves);
+  EXPECT_EQ(2, Destructors);
+}
+
+TEST(STLExtrasTest, MakeVisitorLifetimeSemanticsRValue) {
+  int Copies = 0;
+  int Moves = 0;
+  int Destructors = 0;
+  {
+    Functor<true, false> F(Copies, Moves, Destructors);
+    {
+      auto V = makeVisitor(std::move(F));
+      (void)V;
+      EXPECT_EQ(0, Copies);
+      EXPECT_EQ(1, Moves);
+      EXPECT_EQ(0, Destructors);
+    }
+    EXPECT_EQ(0, Copies);
+    EXPECT_EQ(1, Moves);
+    EXPECT_EQ(1, Destructors);
+  }
+  EXPECT_EQ(0, Copies);
+  EXPECT_EQ(1, Moves);
+  EXPECT_EQ(2, Destructors);
+}
+
+TEST(STLExtrasTest, MakeVisitorLifetimeSemanticsLValue) {
+  int Copies = 0;
+  int Moves = 0;
+  int Destructors = 0;
+  {
+    Functor<true, true> F(Copies, Moves, Destructors);
+    {
+      auto V = makeVisitor(F);
+      (void)V;
+      EXPECT_EQ(1, Copies);
+      EXPECT_EQ(0, Moves);
+      EXPECT_EQ(0, Destructors);
+    }
+    EXPECT_EQ(1, Copies);
+    EXPECT_EQ(0, Moves);
+    EXPECT_EQ(1, Destructors);
+  }
+  EXPECT_EQ(1, Copies);
+  EXPECT_EQ(0, Moves);
+  EXPECT_EQ(2, Destructors);
+}
+
 } // namespace
