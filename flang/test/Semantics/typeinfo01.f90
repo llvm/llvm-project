@@ -171,7 +171,7 @@ module m09
 end module
 
 module m10
-  type :: t
+  type, bind(c) :: t ! non-extensible
   end type
   interface read(formatted)
     procedure :: rf
