@@ -74,21 +74,21 @@
 # FLAGS-NEXT:    reloff 0
 # FLAGS-NEXT:    nreloc 0
 # FLAGS-NEXT:      type S_THREAD_LOCAL_ZEROFILL
-# FLAGS:       sectname __bss
-# FLAGS-NEXT:   segname __DATA
-# FLAGS-NEXT:      addr
-# FLAGS-NEXT:      size 0x0000000000002000
-# FLAGS-NEXT:    offset 0
-# FLAGS-NEXT:     align 2^0 (1)
-# FLAGS-NEXT:    reloff 0
-# FLAGS-NEXT:    nreloc 0
-# FLAGS-NEXT:      type S_ZEROFILL
 # FLAGS:       sectname __common
 # FLAGS-NEXT:   segname __DATA
 # FLAGS-NEXT:      addr
 # FLAGS-NEXT:      size 0x0000000000004000
 # FLAGS-NEXT:    offset 0
 # FLAGS-NEXT:     align 2^14 (16384)
+# FLAGS-NEXT:    reloff 0
+# FLAGS-NEXT:    nreloc 0
+# FLAGS-NEXT:      type S_ZEROFILL
+# FLAGS:       sectname __bss
+# FLAGS-NEXT:   segname __DATA
+# FLAGS-NEXT:      addr
+# FLAGS-NEXT:      size 0x0000000000002000
+# FLAGS-NEXT:    offset 0
+# FLAGS-NEXT:     align 2^0 (1)
 # FLAGS-NEXT:    reloff 0
 # FLAGS-NEXT:    nreloc 0
 # FLAGS-NEXT:      type S_ZEROFILL

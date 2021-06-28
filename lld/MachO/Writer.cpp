@@ -79,7 +79,10 @@ public:
 
   LCUuid *uuidCommand = nullptr;
   OutputSegment *linkEditSegment = nullptr;
-  DenseMap<NamePair, ConcatOutputSection *> concatOutputSections;
+
+  // Output sections are added to output segments in iteration order
+  // of ConcatOutputSection, so must have deterministic iteration order.
+  MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
