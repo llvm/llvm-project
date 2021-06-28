@@ -4642,7 +4642,6 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
   }
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
-  unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
   PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
   if (!PtrTy && Ptr->getType()->isVectorTy())
     PtrTy = dyn_cast<PointerType>(
@@ -4650,22 +4649,10 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
   assert(PtrTy && "Unexpected type for Ptr argument");
   unsigned AddressSpace = PtrTy->getAddressSpace();
 
-  bool Scalarize = false;
   if ((Opcode == Instruction::Load &&
        !isLegalMaskedGather(SrcVTy, Align(Alignment))) ||
       (Opcode == Instruction::Store &&
        !isLegalMaskedScatter(SrcVTy, Align(Alignment))))
-    Scalarize = true;
-  // Gather / Scatter for vector 2 is not profitable on KNL / SKX
-  // Vector-4 of gather/scatter instruction does not exist on KNL.
-  // We can extend it to 8 elements, but zeroing upper bits of
-  // the mask vector will add more instructions. Right now we give the scalar
-  // cost of vector-4 for KNL. TODO: Check, maybe the gather/scatter instruction
-  // is better in the VariableMask case.
-  if (ST->hasAVX512() && (VF == 2 || (VF == 4 && !ST->hasVLX())))
-    Scalarize = true;
-
-  if (Scalarize)
     return getGSScalarCost(Opcode, SrcVTy, VariableMask, Alignment,
                            AddressSpace);
 
@@ -4800,6 +4787,14 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
   if (auto *DataVTy = dyn_cast<FixedVectorType>(DataTy)) {
     unsigned NumElts = DataVTy->getNumElements();
     if (NumElts == 1)
+      return false;
+    // Gather / Scatter for vector 2 is not profitable on KNL / SKX
+    // Vector-4 of gather/scatter instruction does not exist on KNL.
+    // We can extend it to 8 elements, but zeroing upper bits of
+    // the mask vector will add more instructions. Right now we give the scalar
+    // cost of vector-4 for KNL. TODO: Check, maybe the gather/scatter
+    // instruction is better in the VariableMask case.
+    if (ST->hasAVX512() && (NumElts == 2 || (NumElts == 4 && !ST->hasVLX())))
       return false;
   }
   Type *ScalarTy = DataTy->getScalarType();
