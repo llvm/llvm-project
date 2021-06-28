@@ -1433,6 +1433,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
           // address (jump target or memory operand address) and print it on the
           // right of the instruction.
           if (Disassembled && MIA) {
+            // Branch targets are printed just after the instructions.
+            llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
             bool PrintTarget =
                 MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target);
@@ -1443,8 +1445,11 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                 Target = *MaybeTarget;
                 PrintTarget = true;
                 // Do not print real address when symbolizing.
-                if (!SymbolizeOperands)
-                  FOS << "  # 0x" << Twine::utohexstr(Target);
+                if (!SymbolizeOperands) {
+                  // Memory operand addresses are printed as comments.
+                  TargetOS = &CommentStream;
+                  *TargetOS << "0x" << Twine::utohexstr(Target);
+                }
               }
             if (PrintTarget) {
               // In a relocatable object, the target's section must reside in
@@ -1503,22 +1508,26 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                 if (Demangle)
                   TargetName = demangle(TargetName);
 
-                FOS << " <";
+                *TargetOS << " <";
                 if (!Disp) {
                   // Always Print the binary symbol precisely corresponding to
                   // the target address.
-                  FOS << TargetName;
+                  *TargetOS << TargetName;
                 } else if (!LabelAvailable) {
                   // Always Print the binary symbol plus an offset if there's no
                   // local label corresponding to the target address.
-                  FOS << TargetName << "+0x" << Twine::utohexstr(Disp);
+                  *TargetOS << TargetName << "+0x" << Twine::utohexstr(Disp);
                 } else {
-                  FOS << AllLabels[Target];
+                  *TargetOS << AllLabels[Target];
                 }
-                FOS << ">";
+                *TargetOS << ">";
               } else if (LabelAvailable) {
-                FOS << " <" << AllLabels[Target] << ">";
+                *TargetOS << " <" << AllLabels[Target] << ">";
               }
+              // By convention, each record in the comment stream should be
+              // terminated.
+              if (TargetOS == &CommentStream)
+                *TargetOS << "\n";
             }
           }
         }
