@@ -121,19 +121,20 @@ static LogicalResult verifyConvOp(T op) {
   if (!inputType || !weightType)
     return failure();
 
-  auto inputQType =
-      inputType.getElementType().template isa<mlir::quant::QuantizedType>();
-  auto weightQType =
-      weightType.getElementType().template isa<mlir::quant::QuantizedType>();
+  auto inputEType = inputType.getElementType();
+  auto weightEType = weightType.getElementType();
+
+  bool inputIsQuant = !inputEType.template isa<FloatType>();
+  bool weightIsQuant = !weightEType.template isa<FloatType>();
 
   // Either both must be quantized or both unquantized.
-  if (inputQType != weightQType)
+  if (inputIsQuant != weightIsQuant)
     return failure();
 
   // Quantized type must have constructed the quantizationattr, and unquantized
   // types should not have a quantizationattr.
-  if ((inputQType && !op.quantization_info()) ||
-      (!inputQType && op.quantization_info()))
+  if ((inputIsQuant && !op.quantization_info()) ||
+      (!inputIsQuant && op.quantization_info()))
     return failure();
 
   return success();
