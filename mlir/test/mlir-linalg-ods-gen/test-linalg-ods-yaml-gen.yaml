@@ -76,7 +76,7 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:      TypeRange(outputs)
 
 # IMPL-LABEL:  void Test1Op::regionBuilder(
-#       IMPL:    ImplicitLocOpBuilder &b, Block &block, ValueRange captures)
+#       IMPL:    ImplicitLocOpBuilder &b, Block &block)
 #       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.constant("42 : i64");
 #   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL0]]);
 #   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
@@ -163,8 +163,7 @@ structured_op: !LinalgStructuredOpConfig
 #       IMPL:  auto attr = op->getAttrOfType<DenseElementsAttr>("strides")
 #       IMPL:  "missing indexing map required attribute 'strides'"
 
-#       IMPL:  void Test2Op::regionBuilder(
-#  IMPL-NEXT:    ImplicitLocOpBuilder &b, Block &block, ValueRange captures)
+#       IMPL:  void Test2Op::regionBuilder(ImplicitLocOpBuilder &b, Block &block)
 #  IMPL-NEXT:    assert(2 > 0 && block.getNumArguments() == 2 &&
 
 #       IMPL:   yields.push_back(block.getArgument(0));
