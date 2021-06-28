@@ -6,6 +6,9 @@
 ; CHECK: @g = external global i16
 @g = external global i16
 
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr null, ptr null }]
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* null, i8* null }]
+
 ; CHECK: @ga = alias i18, ptr @g2
 @g2 = global i18 0
 @ga = alias i18, i18* @g2

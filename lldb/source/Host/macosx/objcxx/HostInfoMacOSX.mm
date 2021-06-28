@@ -383,17 +383,22 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
 
   auto xcrun = [](const std::string &sdk,
                   llvm::StringRef developer_dir = "") -> std::string {
-    std::string xcrun_cmd = "xcrun --show-sdk-path --sdk " + sdk;
-    if (!developer_dir.empty())
-      xcrun_cmd = "/usr/bin/env DEVELOPER_DIR=\"" + developer_dir.str() +
-                  "\" " + xcrun_cmd;
+    Args args;
+    if (!developer_dir.empty()) {
+      args.AppendArgument("/usr/bin/env");
+      args.AppendArgument("DEVELOPER_DIR=" + developer_dir.str());
+    }
+    args.AppendArgument("/usr/bin/xcrun");
+    args.AppendArgument("--show-sdk-path");
+    args.AppendArgument("--sdk");
+    args.AppendArgument(sdk);
 
     int status = 0;
     int signo = 0;
     std::string output_str;
     lldb_private::Status error =
-        Host::RunShellCommand(xcrun_cmd, FileSpec(), &status, &signo,
-                              &output_str, std::chrono::seconds(15));
+        Host::RunShellCommand(args, FileSpec(), &status, &signo, &output_str,
+                              std::chrono::seconds(15));
 
     // Check that xcrun return something useful.
     if (status != 0 || output_str.empty())

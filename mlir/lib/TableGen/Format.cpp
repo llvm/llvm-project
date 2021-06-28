@@ -97,12 +97,21 @@ FmtObjectBase::splitFmtSegment(StringRef fmt) {
   // First try to see if it's a positional placeholder, and then handle special
   // placeholders.
 
-  size_t end = fmt.find_if_not([](char c) { return std::isdigit(c); }, 1);
+  size_t end =
+      fmt.find_if_not([](char c) { return std::isdigit(c); }, /*From=*/1);
   if (end != 1) {
     // We have a positional placeholder. Parse the index.
     size_t index = 0;
     if (fmt.substr(1, end - 1).consumeInteger(0, index)) {
       llvm_unreachable("invalid replacement sequence index");
+    }
+
+    // Check if this is the part of a range specification.
+    if (fmt.substr(end, 3) == "...") {
+      // Currently only ranges without upper bound are supported.
+      return {
+          FmtReplacement{fmt.substr(0, end + 3), index, FmtReplacement::kUnset},
+          fmt.substr(end + 3)};
     }
 
     if (end == StringRef::npos) {
@@ -161,6 +170,20 @@ void FmtObjectBase::format(raw_ostream &s) const {
         else
           s << repl.spec << kMarkerForNoSubst;
       }
+      continue;
+    }
+
+    if (repl.type == FmtReplacement::Type::PositionalRangePH) {
+      if (repl.index >= adapters.size()) {
+        s << repl.spec << kMarkerForNoSubst;
+        continue;
+      }
+      auto range = llvm::makeArrayRef(adapters);
+      range = range.drop_front(repl.index);
+      if (repl.end != FmtReplacement::kUnset)
+        range = range.drop_back(adapters.size() - repl.end);
+      llvm::interleaveComma(range, s,
+                            [&](auto &x) { x->format(s, /*Options=*/""); });
       continue;
     }
 

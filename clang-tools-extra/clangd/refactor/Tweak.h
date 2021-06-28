@@ -78,6 +78,9 @@ public:
     /// A message to be displayed to the user.
     llvm::Optional<std::string> ShowMessage;
     FileEdits ApplyEdits;
+    /// Whether the edits should be formatted before presenting to the client.
+    /// Note that it applies to all files.
+    bool FormatEdits = true;
 
     static Effect showMessage(StringRef S) {
       Effect E;
