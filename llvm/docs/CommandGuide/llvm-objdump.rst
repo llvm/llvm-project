@@ -132,7 +132,7 @@ OPTIONS
 .. option:: --debug-vars-indent=<width>
 
   Distance to indent the source-level variable display, relative to the start
-  of the disassembly. Defaults to 40 characters.
+  of the disassembly. Defaults to 52 characters.
 
 .. option:: -j, --section=<section1[,section2,...]>
 
