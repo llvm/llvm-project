@@ -523,7 +523,7 @@ public:
   CStringSection();
   void addInput(CStringInputSection *);
   uint64_t getSize() const override { return builder.getSize(); }
-  void finalize() override;
+  void finalizeContents();
   bool isNeeded() const override { return !inputs.empty(); }
   void writeTo(uint8_t *buf) const override { builder.write(buf); }
 
