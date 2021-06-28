@@ -51,6 +51,12 @@ public:
   /// If enabled, diagnostics for parameters that are used together in a
   /// similar way are not emitted.
   const bool SuppressParametersUsedTogether;
+
+  /// The number of characters two parameter names might be dissimilar at
+  /// either end for the report about the parameters to be silenced.
+  /// E.g. the names "LHS" and "RHS" are 1-dissimilar suffixes of each other,
+  /// while "Text1" and "Text2" are 1-dissimilar prefixes of each other.
+  const std::size_t NamePrefixSuffixSilenceDissimilarityTreshold;
 };
 
 } // namespace bugprone

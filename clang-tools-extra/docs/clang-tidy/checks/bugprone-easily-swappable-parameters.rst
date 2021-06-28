@@ -169,6 +169,27 @@ noisiness.
     * Separate ``return`` statements return either of the parameters on
       different code paths.
 
+.. option:: NamePrefixSuffixSilenceDissimilarityTreshold
+
+    The number of characters two parameter names might be different on *either*
+    the head or the tail end with the rest of the name the same so that the
+    warning about the two parameters are silenced.
+    Defaults to `1`.
+    Might be any positive integer.
+    If `0`, the filtering heuristic based on the parameters' names is turned
+    off.
+
+    This option can be used to silence warnings about parameters where the
+    naming scheme indicates that the order of those parameters do not matter.
+
+    For example, the parameters ``LHS`` and ``RHS`` are 1-dissimilar suffixes
+    of each other: ``L`` and ``R`` is the different character, while ``HS``
+    is the common suffix.
+    Similarly, parameters ``text1, text2, text3`` are 1-dissimilar prefixes
+    of each other, with the numbers at the end being the dissimilar part.
+    If the value is at least `1`, such cases will not be reported.
+
+
 Limitations
 -----------
 

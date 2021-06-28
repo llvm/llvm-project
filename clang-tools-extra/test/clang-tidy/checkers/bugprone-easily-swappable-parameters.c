@@ -5,7 +5,8 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: "bool;MyBool;struct U;MAKE_LOGICAL_TYPE(int)"}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 0}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0} \
+// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold, value: 0} \
 // RUN:  ]}' -- -x c
 
 #define bool _Bool
