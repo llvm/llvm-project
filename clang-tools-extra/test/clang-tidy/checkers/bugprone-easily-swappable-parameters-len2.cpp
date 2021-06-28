@@ -2,7 +2,8 @@
 // RUN:   -config='{CheckOptions: [ \
 // RUN:     {key: bugprone-easily-swappable-parameters.MinimumLength, value: 2}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: ""}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""} \
+// RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0} \
 // RUN:  ]}' --
 
 namespace std {
@@ -104,6 +105,14 @@ void differentPtrs(int *IP, long *LP) {} // NO-WARN: Not the same type.
 
 typedef int MyInt1;
 using MyInt2 = int;
+typedef MyInt2 MyInt2b;
+
+using CInt = const int;
+using CMyInt1 = const MyInt1;
+using CMyInt2 = const MyInt2;
+
+typedef long MyLong1;
+using MyLong2 = long;
 
 void typedefAndTypedef1(MyInt1 I1, MyInt1 I2) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: 2 adjacent parameters of 'typedefAndTypedef1' of similar type ('MyInt1')
@@ -133,8 +142,6 @@ void betweenTypedef2(MyInt1 I, MyInt2 J) {}
 // CHECK-MESSAGES: :[[@LINE-3]]:39: note: the last parameter in the range is 'J'
 // CHECK-MESSAGES: :[[@LINE-4]]:22: note: after resolving type aliases, the common type of 'MyInt1' and 'MyInt2' is 'int'
 
-typedef MyInt2 MyInt2b;
-
 void typedefChain(int I, MyInt1 MI1, MyInt2 MI2, MyInt2b MI2b) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: 4 adjacent parameters of 'typedefChain' of similar type are
 // CHECK-MESSAGES: :[[@LINE-2]]:23: note: the first parameter in the range is 'I'
@@ -143,22 +150,21 @@ void typedefChain(int I, MyInt1 MI1, MyInt2 MI2, MyInt2b MI2b) {}
 // CHECK-MESSAGES: :[[@LINE-5]]:19: note: after resolving type aliases, 'int' and 'MyInt2' are the same
 // CHECK-MESSAGES: :[[@LINE-6]]:19: note: after resolving type aliases, 'int' and 'MyInt2b' are the same
 
-typedef long MyLong1;
-using MyLong2 = long;
-
 void throughTypedefToOtherType(MyInt1 I, MyLong1 J) {} // NO-WARN: int and long.
 
-void qualified1(int I, const int CI) {} // NO-WARN: Not the same type.
+void qualified1(int I, const int CI) {} // NO-WARN: Different qualifiers.
 
-void qualified2(int I, volatile int VI) {} // NO-WARN: Not the same type.
+void qualified2(int I, volatile int VI) {} // NO-WARN: Different qualifiers.
 
-void qualified3(int *IP, const int *CIP) {} // NO-WARN: Not the same type.
+void qualified3(int *IP, const int *CIP) {} // NO-WARN: Different qualifiers.
 
 void qualified4(const int CI, const long CL) {} // NO-WARN: Not the same type.
 
-using CInt = const int;
+void qualifiedPtr1(int *IP, int *const IPC) {} // NO-WARN: Different qualifiers.
 
-void qualifiedThroughTypedef1(int I, CInt CI) {} // NO-WARN: Not the same type.
+void qualifiedTypeAndQualifiedPtr1(const int *CIP, int *const volatile IPCV) {} // NO-WARN: Not the same type.
+
+void qualifiedThroughTypedef1(int I, CInt CI) {} // NO-WARN: Different qualifiers.
 
 void qualifiedThroughTypedef2(CInt CI1, const int CI2) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 2 adjacent parameters of 'qualifiedThroughTypedef2' of similar type are
@@ -166,13 +172,32 @@ void qualifiedThroughTypedef2(CInt CI1, const int CI2) {}
 // CHECK-MESSAGES: :[[@LINE-3]]:51: note: the last parameter in the range is 'CI2'
 // CHECK-MESSAGES: :[[@LINE-4]]:31: note: after resolving type aliases, 'CInt' and 'const int' are the same
 
-void qualifiedThroughTypedef3(CInt CI1, const MyInt1 CI2, const int CI3) {} // NO-WARN: Not the same type.
+void qualifiedThroughTypedef3(CInt CI1, const MyInt1 CI2, const int CI3) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 3 adjacent parameters of 'qualifiedThroughTypedef3' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:36: note: the first parameter in the range is 'CI1'
+// CHECK-MESSAGES: :[[@LINE-3]]:69: note: the last parameter in the range is 'CI3'
+// CHECK-MESSAGES: :[[@LINE-4]]:31: note: after resolving type aliases, the common type of 'CInt' and 'const MyInt1' is 'const int'
+// CHECK-MESSAGES: :[[@LINE-5]]:31: note: after resolving type aliases, 'CInt' and 'const int' are the same
+// CHECK-MESSAGES: :[[@LINE-6]]:41: note: after resolving type aliases, 'const MyInt1' and 'const int' are the same
 
 void qualifiedThroughTypedef4(CInt CI1, const MyInt1 CI2, const MyInt2 CI3) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: 2 adjacent parameters of 'qualifiedThroughTypedef4' of similar type are
-// CHECK-MESSAGES: :[[@LINE-2]]:54: note: the first parameter in the range is 'CI2'
+// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 3 adjacent parameters of 'qualifiedThroughTypedef4' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:36: note: the first parameter in the range is 'CI1'
 // CHECK-MESSAGES: :[[@LINE-3]]:72: note: the last parameter in the range is 'CI3'
-// CHECK-MESSAGES: :[[@LINE-4]]:41: note: after resolving type aliases, the common type of 'const MyInt1' and 'const MyInt2' is 'int'
+// CHECK-MESSAGES: :[[@LINE-4]]:31: note: after resolving type aliases, the common type of 'CInt' and 'const MyInt1' is 'const int'
+// CHECK-MESSAGES: :[[@LINE-5]]:31: note: after resolving type aliases, the common type of 'CInt' and 'const MyInt2' is 'const int'
+// CHECK-MESSAGES: :[[@LINE-6]]:41: note: after resolving type aliases, the common type of 'const MyInt1' and 'const MyInt2' is 'const int'
+
+void qualifiedThroughTypedef5(CMyInt1 CMI1, CMyInt2 CMI2) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 2 adjacent parameters of 'qualifiedThroughTypedef5' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:39: note: the first parameter in the range is 'CMI1'
+// CHECK-MESSAGES: :[[@LINE-3]]:53: note: the last parameter in the range is 'CMI2'
+// CHECK-MESSAGES: :[[@LINE-4]]:31: note: after resolving type aliases, the common type of 'CMyInt1' and 'CMyInt2' is 'const int'
+
+void qualifiedThroughTypedef6(CMyInt1 CMI1, int I) {} // NO-WARN: Different qualifiers.
+
+template <typename T>
+void copy(const T *Dest, T *Source) {} // NO-WARN: Different qualifiers.
 
 void reference1(int I, int &IR) {} // NO-WARN: Distinct semantics when called.
 
@@ -201,16 +226,21 @@ void reference6(int I, const int &CIR, int J, const int &CJR) {}
 using ICRTy = const int &;
 using MyIntCRTy = const MyInt1 &;
 
+void referenceToTypedef1(CInt &CIR, int I) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:26: warning: 2 adjacent parameters of 'referenceToTypedef1' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:32: note: the first parameter in the range is 'CIR'
+// CHECK-MESSAGES: :[[@LINE-3]]:41: note: the last parameter in the range is 'I'
+// CHECK-MESSAGES: :[[@LINE-4]]:37: note: 'CInt &' and 'int' parameters accept and bind the same kind of values
+
 void referenceThroughTypedef(int I, ICRTy Builtin, MyIntCRTy MyInt) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: 3 adjacent parameters of 'referenceThroughTypedef' of similar type are
 // CHECK-MESSAGES: :[[@LINE-2]]:34: note: the first parameter in the range is 'I'
 // CHECK-MESSAGES: :[[@LINE-3]]:62: note: the last parameter in the range is 'MyInt'
-// CHECK-MESSAGES: :[[@LINE-4]]:30: note: after resolving type aliases, the common type of 'int' and 'ICRTy' is 'const int'
-// CHECK-MESSAGES: :[[@LINE-5]]:37: note: 'int' and 'ICRTy' parameters accept and bind the same kind of values
-// CHECK-MESSAGES: :[[@LINE-6]]:30: note: after resolving type aliases, 'int' and 'MyIntCRTy' are the same
-// CHECK-MESSAGES: :[[@LINE-7]]:52: note: 'int' and 'MyIntCRTy' parameters accept and bind the same kind of values
-// CHECK-MESSAGES: :[[@LINE-8]]:37: note: after resolving type aliases, the common type of 'ICRTy' and 'MyIntCRTy' is 'int'
-// CHECK-MESSAGES: :[[@LINE-9]]:52: note: 'ICRTy' and 'MyIntCRTy' parameters accept and bind the same kind of values
+// CHECK-MESSAGES: :[[@LINE-4]]:37: note: 'int' and 'ICRTy' parameters accept and bind the same kind of values
+// CHECK-MESSAGES: :[[@LINE-5]]:30: note: after resolving type aliases, 'int' and 'MyIntCRTy' are the same
+// CHECK-MESSAGES: :[[@LINE-6]]:52: note: 'int' and 'MyIntCRTy' parameters accept and bind the same kind of values
+// CHECK-MESSAGES: :[[@LINE-7]]:37: note: after resolving type aliases, the common type of 'ICRTy' and 'MyIntCRTy' is 'int'
+// CHECK-MESSAGES: :[[@LINE-8]]:52: note: 'ICRTy' and 'MyIntCRTy' parameters accept and bind the same kind of values
 
 short const typedef int unsigned Eldritch;
 typedef const unsigned short Holy;

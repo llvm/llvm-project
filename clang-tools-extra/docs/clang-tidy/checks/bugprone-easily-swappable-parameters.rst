@@ -32,6 +32,34 @@ to strengthen the type safety of a project, no automatic fix-its are offered.
 Options
 -------
 
+Extension/relaxation options
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Relaxation (or extension) options can be used to broaden the scope of the
+analysis and fine-tune the enabling of more mixes between types.
+Some mixes may depend on coding style or preference specific to a project,
+however, it should be noted that enabling *all* of these relaxations model the
+way of mixing at call sites the most.
+These options are expected to make the check report for more functions, and
+report longer mixable ranges.
+
+.. option:: QualifiersMix
+
+    Whether to consider parameters of some *cvr-qualified* ``T`` and a
+    differently *cvr-qualified* ``T`` (i.e. ``T`` and ``const T``, ``const T``
+    and ``volatile T``, etc.) mixable between one another.
+    If `false`, the check will consider differently qualified types unmixable.
+    `True` turns the warnings on.
+    Defaults to `false`.
+
+    The following example produces a diagnostic only if `QualifiersMix` is
+    enabled:
+
+    .. code-block:: c++
+
+        void *memcpy(const void *Destination, void *Source, std::size_t N) {}
+
+
 Filtering options
 ^^^^^^^^^^^^^^^^^
 
