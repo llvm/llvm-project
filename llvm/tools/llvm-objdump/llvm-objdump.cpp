@@ -1039,6 +1039,29 @@ static StringRef getSegmentName(const MachOObjectFile *MachO,
   return "";
 }
 
+static void emitPostInstructionInfo(formatted_raw_ostream &FOS,
+                                    const MCAsmInfo &MAI,
+                                    const MCSubtargetInfo &STI,
+                                    StringRef Comments,
+                                    LiveVariablePrinter &LVP) {
+  do {
+    if (!Comments.empty()) {
+      // Emit a line of comments.
+      StringRef Comment;
+      std::tie(Comment, Comments) = Comments.split('\n');
+      // MAI.getCommentColumn() assumes that instructions are printed at the
+      // position of 8, while getInstStartColumn() returns the actual position.
+      unsigned CommentColumn =
+          MAI.getCommentColumn() - 8 + getInstStartColumn(STI);
+      FOS.PadToColumn(CommentColumn);
+      FOS << MAI.getCommentString() << ' ' << Comment;
+    }
+    LVP.printAfterInst(FOS);
+    FOS << '\n';
+  } while (!Comments.empty());
+  FOS.flush();
+}
+
 static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                               MCContext &Ctx, MCDisassembler *PrimaryDisAsm,
                               MCDisassembler *SecondaryDisAsm,
@@ -1396,12 +1419,14 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
           LVP.update({Index, Section.getIndex()},
                      {Index + Size, Section.getIndex()}, Index + Size != End);
 
+          IP->setCommentStream(CommentStream);
+
           PIP.printInst(
               *IP, Disassembled ? &Inst : nullptr, Bytes.slice(Index, Size),
               {SectionAddr + Index + VMAAdjustment, Section.getIndex()}, FOS,
               "", *STI, &SP, Obj->getFileName(), &Rels, LVP);
-          FOS << CommentStream.str();
-          Comments.clear();
+
+          IP->setCommentStream(llvm::nulls());
 
           // If disassembly has failed, avoid analysing invalid/incomplete
           // instruction information. Otherwise, try to resolve the target
@@ -1498,8 +1523,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
           }
         }
 
-        LVP.printAfterInst(FOS);
-        FOS << "\n";
+        assert(Ctx.getAsmInfo());
+        emitPostInstructionInfo(FOS, *Ctx.getAsmInfo(), *STI,
+                                CommentStream.str(), LVP);
+        Comments.clear();
 
         // Hexagon does this in pretty printer
         if (Obj->getArch() != Triple::hexagon) {
