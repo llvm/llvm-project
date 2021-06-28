@@ -3,7 +3,8 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.MinimumLength, value: 2}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: ""}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0} \
+// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 0} \
 // RUN:  ]}' --
 
 namespace std {
@@ -340,3 +341,6 @@ void memberTypedefDependentReference3(
 // CHECK-MESSAGES: :[[@LINE-3]]:38: note: the first parameter in the range is 'E'
 // CHECK-MESSAGES: :[[@LINE-3]]:45: note: the last parameter in the range is 'R'
 // CHECK-MESSAGES: :[[@LINE-4]]:5: note: 'typename Vector<T>::element_type' and 'const typename Vector<T>::element_type &' parameters accept and bind the same kind of values
+
+void functionPrototypeLosesNoexcept(void (*NonThrowing)() noexcept, void (*Throwing)()) {}
+// NO-WARN: This call cannot be swapped, even if "getCanonicalType()" believes otherwise.
