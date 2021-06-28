@@ -15,7 +15,10 @@
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 #ifndef _WIN32
+#include <alloca.h>
 #include <sys/time.h>
+#else
+#include "malloc.h"
 #endif // _WIN32
 
 #include <cinttypes>
