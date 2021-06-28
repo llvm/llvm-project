@@ -60,6 +60,12 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }
 
+bool Type::isOpaquePointerTy() const {
+  if (auto *PTy = dyn_cast<PointerType>(this))
+    return PTy->isOpaque();
+  return false;
+}
+
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // Identity cast means no change so return true
   if (this == Ty)
@@ -690,7 +696,8 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
 
   LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
 
-  if (CImpl->ForceOpaquePointers)
+  // Create opaque pointer for pointer to opaque pointer.
+  if (CImpl->ForceOpaquePointers || EltTy->isOpaquePointerTy())
     return get(EltTy->getContext(), AddressSpace);
 
   // Since AddressSpace #0 is the common case, we special case it.
@@ -729,19 +736,13 @@ PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
 }
 
 PointerType *Type::getPointerTo(unsigned AddrSpace) const {
-  // Pointer to opaque pointer is opaque pointer.
-  if (auto *PTy = dyn_cast<PointerType>(this))
-    if (PTy->isOpaque())
-      return PointerType::get(getContext(), AddrSpace);
-
   return PointerType::get(const_cast<Type*>(this), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isTokenTy() &&
-         !ElemTy->isX86_AMXTy() &&
-         !(ElemTy->isPointerTy() && cast<PointerType>(ElemTy)->isOpaque());
+         !ElemTy->isX86_AMXTy();
 }
 
 bool PointerType::isLoadableOrStorableType(Type *ElemTy) {

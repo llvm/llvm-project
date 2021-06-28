@@ -8,6 +8,9 @@
 
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 
+#include "mlir/IR/Operation.h"
+#include "llvm/Support/Debug.h"
+
 namespace mlir {
 namespace sparse_tensor {
 
@@ -133,6 +136,111 @@ bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
       return true;
   return false;
 }
+
+unsigned Merger::buildLattices(unsigned e, unsigned idx) {
+  Kind kind = exp(e).kind;
+  if (kind == Kind::kTensor || kind == Kind::kInvariant) {
+    // Either the index is really used in the tensor expression, or it is
+    // set to the undefined index in that dimension. An invariant expression
+    // is set to a synthetic tensor with undefined indices only.
+    unsigned s = addSet();
+    unsigned t = kind == Kind::kTensor ? exp(e).e0 : syntheticTensor;
+    set(s).push_back(addLat(t, idx, e));
+    return s;
+  }
+  unsigned s0 = buildLattices(exp(e).e0, idx);
+  unsigned s1 = buildLattices(exp(e).e1, idx);
+  switch (kind) {
+  case Kind::kTensor:
+  case Kind::kInvariant:
+    llvm_unreachable("handled above");
+  case Kind::kMulF:
+  case Kind::kMulI:
+    return takeConj(kind, s0, s1);
+  case Kind::kAddF:
+  case Kind::kAddI:
+    return takeDisj(kind, s0, s1);
+  }
+  llvm_unreachable("unexpected expression kind");
+}
+
+#ifndef NDEBUG
+
+//
+// Print methods (for debugging).
+//
+
+void Merger::dumpExp(unsigned e) const {
+  switch (tensorExps[e].kind) {
+  case Kind::kTensor:
+    llvm::dbgs() << "tensor_" << tensorExps[e].e0;
+    break;
+  case Kind::kInvariant:
+    llvm::dbgs() << "invariant";
+    break;
+  default:
+  case Kind::kMulI:
+    llvm::dbgs() << "(";
+    dumpExp(tensorExps[e].e0);
+    llvm::dbgs() << " * ";
+    dumpExp(tensorExps[e].e1);
+    llvm::dbgs() << ")";
+    break;
+  case Kind::kAddF:
+  case Kind::kAddI:
+    llvm::dbgs() << "(";
+    dumpExp(tensorExps[e].e0);
+    llvm::dbgs() << " + ";
+    dumpExp(tensorExps[e].e1);
+    llvm::dbgs() << ")";
+    break;
+  }
+}
+
+void Merger::dumpLat(unsigned p) const {
+  llvm::dbgs() << "lat(";
+  dumpBits(latPoints[p].bits);
+  llvm::dbgs() << " :";
+  dumpBits(latPoints[p].simple);
+  llvm::dbgs() << " / ";
+  dumpExp(latPoints[p].exp);
+  llvm::dbgs() << " )\n";
+}
+
+void Merger::dumpSet(unsigned s) const {
+  llvm::dbgs() << "{ #" << latSets[s].size() << "\n";
+  for (unsigned p : latSets[s]) {
+    llvm::dbgs() << "  ";
+    dumpLat(p);
+  }
+  llvm::dbgs() << "}\n";
+}
+
+void Merger::dumpBits(const llvm::BitVector &bits) const {
+  for (unsigned b = 0, be = bits.size(); b < be; b++) {
+    if (bits[b]) {
+      unsigned t = tensor(b);
+      unsigned i = index(b);
+      llvm::dbgs() << " i_" << t << "_" << i << "_";
+      switch (dims[t][i]) {
+      case Dim::kSparse:
+        llvm::dbgs() << "S";
+        break;
+      case Dim::kDense:
+        llvm::dbgs() << "D";
+        break;
+      case Dim::kSingle:
+        llvm::dbgs() << "T";
+        break;
+      case Dim::kUndef:
+        llvm::dbgs() << "U";
+        break;
+      }
+    }
+  }
+}
+
+#endif // NDEBUG
 
 } // namespace sparse_tensor
 } // namespace mlir

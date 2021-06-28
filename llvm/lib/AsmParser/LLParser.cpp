@@ -980,7 +980,7 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
     return error(AliaseeLoc, "An alias or ifunc must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
 
-  if (IsAlias && Ty != PTy->getElementType()) {
+  if (IsAlias && !PTy->isOpaqueOrPointeeTypeMatches(Ty)) {
     return error(
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
@@ -2575,7 +2575,7 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   }
   }
 
-  if (Result->isPointerTy() && cast<PointerType>(Result)->isOpaque()) {
+  if (Result->isOpaquePointerTy()) {
     unsigned AddrSpace;
     if (parseOptionalAddrSpace(AddrSpace))
       return true;
@@ -2597,6 +2597,8 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
         return tokError("basic block pointers are invalid");
       if (Result->isVoidTy())
         return tokError("pointers to void are invalid - use i8* instead");
+      if (Result->isOpaquePointerTy())
+        return tokError("ptr* is invalid - use ptr instead");
       if (!PointerType::isValidElementType(Result))
         return tokError("pointer to this type is invalid");
       Result = PointerType::getUnqual(Result);

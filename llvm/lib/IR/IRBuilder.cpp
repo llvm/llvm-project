@@ -62,7 +62,7 @@ Type *IRBuilderBase::getCurrentFunctionReturnType() const {
 
 Value *IRBuilderBase::getCastedInt8PtrValue(Value *Ptr) {
   auto *PT = cast<PointerType>(Ptr->getType());
-  if (PT->getElementType()->isIntegerTy(8))
+  if (PT->isOpaqueOrPointeeTypeMatches(getInt8Ty()))
     return Ptr;
 
   // Otherwise, we need to insert a bitcast.

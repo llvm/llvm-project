@@ -227,6 +227,9 @@ public:
   /// True if this is an instance of PointerType.
   bool isPointerTy() const { return getTypeID() == PointerTyID; }
 
+  /// True if this is an instance of an opaque PointerType.
+  bool isOpaquePointerTy() const;
+
   /// Return true if this is a pointer type or a vector of pointer types.
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 

@@ -302,7 +302,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 }
 
 //===----------------------------------------------------------------------===//
-// Convert async.create_group operation to async.runtime.create
+// Convert async.create_group operation to async.runtime.create_group
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -313,8 +313,8 @@ public:
   LogicalResult
   matchAndRewrite(CreateGroupOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<RuntimeCreateOp>(
-        op, GroupType::get(op->getContext()));
+    rewriter.replaceOpWithNewOp<RuntimeCreateGroupOp>(
+        op, GroupType::get(op->getContext()), operands);
     return success();
   }
 };

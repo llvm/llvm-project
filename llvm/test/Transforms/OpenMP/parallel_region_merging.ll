@@ -782,11 +782,12 @@ entry:
 }
 
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !3}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!2}
 !2 = !{i64 2, i64 -1, i64 -1, i1 true}
+!3 = !{i32 7, !"openmp", i32 50}
 ; CHECK-LABEL: define {{[^@]+}}@merge
 ; CHECK-SAME: (i32 [[A:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
@@ -6908,3 +6909,4 @@ entry:
 ; CHECK2-NEXT:    call void @use(i32 [[TMP0]])
 ; CHECK2-NEXT:    ret void
 ;
+

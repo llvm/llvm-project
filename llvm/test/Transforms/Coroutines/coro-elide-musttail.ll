@@ -2,8 +2,6 @@
 ; Only run with new pass manager since old pass manager's alias analysis isn't
 ; powerful enough to tell that the tailcall's arguments don't alias the frame.
 ;
-; RUN: opt < %s -coro-elide -S | FileCheck %s
-; RUN: opt < %s -disable-basic-aa -coro-elide -S | FileCheck %s -check-prefix=NOAA
 ; RUN: opt < %s -passes='coro-elide' -S | FileCheck %s
 ; RUN: opt < %s -aa-pipeline= -passes='coro-elide' -S | FileCheck %s -check-prefix=NOAA
 

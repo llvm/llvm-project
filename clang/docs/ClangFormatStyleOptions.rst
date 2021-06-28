@@ -2919,6 +2919,9 @@ the configuration (without a prefix: ``Auto``).
   * ``LK_JavaScript`` (in configuration: ``JavaScript``)
     Should be used for JavaScript.
 
+  * ``LK_Json`` (in configuration: ``Json``)
+    Should be used for JSON.
+
   * ``LK_ObjC`` (in configuration: ``ObjC``)
     Should be used for Objective-C, Objective-C++.
 

@@ -19,7 +19,10 @@
 namespace mlir {
 namespace sparse_tensor {
 
+/// Tensor expression kind.
 enum class Kind { kTensor, kInvariant, kMulF, kMulI, kAddF, kAddI };
+
+/// Dimension level type for a tensor (undef means index does not appear).
 enum class Dim { kSparse, kDense, kSingle, kUndef };
 
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
@@ -33,10 +36,14 @@ struct TensorExp {
            (kind == Kind::kInvariant && e0 == -1u && e1 == -1u && val) ||
            (kind >= Kind::kMulF && e0 != -1u && e1 != -1u && !val));
   }
+
+  /// Tensor expression kind.
   Kind kind;
+
   /// Indices of children expression(s).
   unsigned e0;
   unsigned e1;
+
   /// Direct link to IR for an invariant. During code generation,
   /// field is used to cache "hoisted" loop invariant tensor loads.
   Value val;
@@ -50,13 +57,16 @@ struct LatPoint {
     bits.set(b);
   }
   LatPoint(const llvm::BitVector &b, unsigned e) : bits(b), exp(e) {}
+
   /// Conjunction of tensor loop indices as bitvector. This represents
   /// all indices involved in the tensor expression
   llvm::BitVector bits;
+
   /// Simplified conjunction of tensor loop indices as bitvector. This
   /// represents a simplified condition under which this tensor expression
   /// must execute. Pre-computed during codegen to avoid repeated eval.
   llvm::BitVector simple;
+
   /// Index of the tensor expresssion.
   unsigned exp;
 };
@@ -73,7 +83,7 @@ public:
   /// additional synthetic tensor at the end of this set to represent all
   /// invariant expressions in the kernel.
   Merger(unsigned t, unsigned l)
-      : outTensor(t - 1), numTensors(t + 1), numLoops(l),
+      : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1), numLoops(l),
         dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
 
   /// Adds a tensor expression. Returns its index.
@@ -138,6 +148,11 @@ public:
   /// Returns true if any set bit corresponds to queried dim.
   bool hasAnyDimOf(const llvm::BitVector &bits, Dim d) const;
 
+  /// Builds the iteration lattices in a bottom-up traversal given the remaining
+  /// tensor (sub)expression and the next loop index in the iteration graph.
+  /// Returns index of the root expression.
+  unsigned buildLattices(unsigned exp, unsigned idx);
+
   /// Setter
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
@@ -146,8 +161,17 @@ public:
   LatPoint &lat(unsigned l) { return latPoints[l]; }
   SmallVector<unsigned, 16> &set(unsigned s) { return latSets[s]; }
 
+#ifndef NDEBUG
+  /// Print methods (for debugging).
+  void dumpExp(unsigned e) const;
+  void dumpLat(unsigned p) const;
+  void dumpSet(unsigned s) const;
+  void dumpBits(const llvm::BitVector &bits) const;
+#endif
+
 private:
   const unsigned outTensor;
+  const unsigned syntheticTensor;
   const unsigned numTensors;
   const unsigned numLoops;
 

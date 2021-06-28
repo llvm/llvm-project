@@ -179,6 +179,8 @@ public:
           FilenamesBegin(FilenamesBegin), FilenamesSize(FilenamesSize) {}
   };
 
+  using FuncRecordsStorage = std::unique_ptr<MemoryBuffer>;
+
 private:
   std::vector<std::string> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
@@ -191,9 +193,9 @@ private:
   // Used to tie the lifetimes of coverage function records to the lifetime of
   // this BinaryCoverageReader instance. Needed to support the format change in
   // D69471, which can split up function records into multiple sections on ELF.
-  std::string FuncRecords;
+  FuncRecordsStorage FuncRecords;
 
-  BinaryCoverageReader(std::string &&FuncRecords)
+  BinaryCoverageReader(FuncRecordsStorage &&FuncRecords)
       : FuncRecords(std::move(FuncRecords)) {}
 
 public:
@@ -206,7 +208,8 @@ public:
          StringRef CompilationDir = "");
 
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  createCoverageReaderFromBuffer(StringRef Coverage, std::string &&FuncRecords,
+  createCoverageReaderFromBuffer(StringRef Coverage,
+                                 FuncRecordsStorage &&FuncRecords,
                                  InstrProfSymtab &&ProfileNames,
                                  uint8_t BytesInAddress,
                                  support::endianness Endian,

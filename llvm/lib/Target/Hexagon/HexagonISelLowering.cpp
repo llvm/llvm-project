@@ -1913,19 +1913,20 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
 }
 
 void
-HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, const SDLoc &dl,
-      unsigned NeedAlign) const {
+HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
+      const SDLoc &dl) const {
   auto *CA = dyn_cast<ConstantSDNode>(Ptr);
   if (!CA)
     return;
   unsigned Addr = CA->getZExtValue();
-  unsigned HaveAlign = Addr != 0 ? 1u << countTrailingZeros(Addr) : NeedAlign;
+  Align HaveAlign =
+      Addr != 0 ? Align(1u << countTrailingZeros(Addr)) : NeedAlign;
   if (HaveAlign < NeedAlign) {
     std::string ErrMsg;
     raw_string_ostream O(ErrMsg);
     O << "Misaligned constant address: " << format_hex(Addr, 10)
-      << " has alignment " << HaveAlign
-      << ", but the memory access requires " << NeedAlign;
+      << " has alignment " << HaveAlign.value()
+      << ", but the memory access requires " << NeedAlign.value();
     if (DebugLoc DL = dl.getDebugLoc())
       DL.print(O << ", at ");
     report_fatal_error(O.str());
@@ -2900,8 +2901,8 @@ HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
     LN = cast<LoadSDNode>(NL.getNode());
   }
 
-  unsigned ClaimAlign = LN->getAlignment();
-  validateConstPtrAlignment(LN->getBasePtr(), dl, ClaimAlign);
+  Align ClaimAlign = LN->getAlign();
+  validateConstPtrAlignment(LN->getBasePtr(), ClaimAlign, dl);
   // Call LowerUnalignedLoad for all loads, it recognizes loads that
   // don't need extra aligning.
   SDValue LU = LowerUnalignedLoad(SDValue(LN, 0), DAG);
@@ -2932,12 +2933,11 @@ HexagonTargetLowering::LowerStore(SDValue Op, SelectionDAG &DAG) const {
     SN = cast<StoreSDNode>(NS.getNode());
   }
 
-  unsigned ClaimAlign = SN->getAlignment();
-  SDValue Ptr = SN->getBasePtr();
-  validateConstPtrAlignment(Ptr, dl, ClaimAlign);
+  Align ClaimAlign = SN->getAlign();
+  validateConstPtrAlignment(SN->getBasePtr(), ClaimAlign, dl);
 
   MVT StoreTy = SN->getMemoryVT().getSimpleVT();
-  unsigned NeedAlign = Subtarget.getTypeAlignment(StoreTy);
+  Align NeedAlign = Subtarget.getTypeAlignment(StoreTy);
   if (ClaimAlign < NeedAlign)
     return expandUnalignedStore(SN, DAG);
   return SDValue(SN, 0);
@@ -2948,8 +2948,8 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
       const {
   LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
   MVT LoadTy = ty(Op);
-  unsigned NeedAlign = Subtarget.getTypeAlignment(LoadTy);
-  unsigned HaveAlign = LN->getAlignment();
+  unsigned NeedAlign = Subtarget.getTypeAlignment(LoadTy).value();
+  unsigned HaveAlign = LN->getAlign().value();
   if (HaveAlign >= NeedAlign)
     return Op;
 

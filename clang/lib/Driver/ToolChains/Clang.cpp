@@ -3286,7 +3286,8 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       CmdArgs.push_back(Args.MakeArgString(A->getOption().getPrefixedName()));
 
   // Only add the default headers if we are compiling OpenCL sources.
-  if ((types::isOpenCL(InputType) || Args.hasArg(options::OPT_cl_std_EQ)) &&
+  if ((types::isOpenCL(InputType) ||
+       (Args.hasArg(options::OPT_cl_std_EQ) && types::isSrcFile(InputType))) &&
       !Args.hasArg(options::OPT_cl_no_stdinc)) {
     CmdArgs.push_back("-finclude-default-header");
     CmdArgs.push_back("-fdeclare-opencl-builtins");

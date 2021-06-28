@@ -75,10 +75,38 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   bool warnAsErr_ = false;
 
+  /// This flag controls the unparsing and is used to decide whether to print out
+  /// the semantically analyzed version of an object or expression or the plain
+  /// version that does not include any information from semantic analysis.
+  bool useAnalyzedObjectsForUnparse_ = true;
+
   // Fortran Dialect options
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds_;
 
   bool EnableConformanceChecks_ = false;
+
+  /// Used in e.g. unparsing to dump the analyzed rather than the original
+  /// parse-tree objects.
+  Fortran::parser::AnalyzedObjectsAsFortran AsFortran_{
+      [](llvm::raw_ostream &o, const Fortran::evaluate::GenericExprWrapper &x) {
+        if (x.v) {
+          x.v->AsFortran(o);
+        } else {
+          o << "(bad expression)";
+        }
+      },
+      [](llvm::raw_ostream &o,
+          const Fortran::evaluate::GenericAssignmentWrapper &x) {
+        if (x.v) {
+          x.v->AsFortran(o);
+        } else {
+          o << "(bad assignment)";
+        }
+      },
+      [](llvm::raw_ostream &o, const Fortran::evaluate::ProcedureRef &x) {
+        x.AsFortran(o << "CALL ");
+      },
+  };
 
 public:
   CompilerInvocation() = default;
@@ -108,9 +136,19 @@ public:
   bool &warnAsErr() { return warnAsErr_; }
   const bool &warnAsErr() const { return warnAsErr_; }
 
+  bool &useAnalyzedObjectsForUnparse() { return useAnalyzedObjectsForUnparse_; }
+  const bool &useAnalyzedObjectsForUnparse() const {
+    return useAnalyzedObjectsForUnparse_;
+  }
+
   bool &enableConformanceChecks() { return EnableConformanceChecks_; }
   const bool &enableConformanceChecks() const {
     return EnableConformanceChecks_;
+  }
+
+  Fortran::parser::AnalyzedObjectsAsFortran &asFortran() { return AsFortran_; }
+  const Fortran::parser::AnalyzedObjectsAsFortran &asFortran() const {
+    return AsFortran_;
   }
 
   Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds() {
@@ -141,6 +179,10 @@ public:
   void SetDebugModuleDir(bool flag) { debugModuleDir_ = flag; }
 
   void SetWarnAsErr(bool flag) { warnAsErr_ = flag; }
+
+  void SetUseAnalyzedObjectsForUnparse(bool flag) {
+    useAnalyzedObjectsForUnparse_ = flag;
+  }
 
   /// Set the Fortran options to predifined defaults. These defaults are
   /// consistend with f18/f18.cpp.

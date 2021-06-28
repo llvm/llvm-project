@@ -1,6 +1,5 @@
 ; Tests that if an alloca is escaped through storing the address,
 ; the alloac will be put on the frame.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 define i8* @f() "coroutine.presplit"="1" {

@@ -1,5 +1,4 @@
 ; Make sure that all library helper coro intrinsics are lowered.
-; RUN: opt < %s -O0 -enable-coroutines -S | FileCheck %s
 ; RUN: opt < %s -passes='default<O0>' -enable-coroutines -S | FileCheck %s
 
 ; CHECK-LABEL: @uses_library_support_coro_intrinsics(

@@ -122,8 +122,10 @@ func @await_value(%arg0: !async.value<f32>) -> f32 {
 }
 
 // CHECK-LABEL: @create_group_and_await_all
-func @create_group_and_await_all(%arg0: !async.token, %arg1: !async.value<f32>) -> index {
-  %0 = async.create_group
+func @create_group_and_await_all(%arg0: !async.token,
+                                 %arg1: !async.value<f32>) -> index {
+  %c = constant 2 : index
+  %0 = async.create_group %c : !async.group
 
   // CHECK: async.add_to_group %arg0
   // CHECK: async.add_to_group %arg1

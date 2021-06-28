@@ -9,6 +9,7 @@ static_library("JITLink") {
   sources = [
     "EHFrameSupport.cpp",
     "ELF.cpp",
+    "ELFLinkGraphBuilder.cpp",
     "ELF_x86_64.cpp",
     "JITLink.cpp",
     "JITLinkGeneric.cpp",

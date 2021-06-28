@@ -262,6 +262,128 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                    "}",
                    getGoogleStyle()));
 
+  auto CustomStyle = clang::format::getLLVMStyle();
+  CustomStyle.BreakBeforeBraces = clang::format::FormatStyle::BS_Custom;
+  CustomStyle.BraceWrapping.AfterNamespace = true;
+  CustomStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
+  EXPECT_EQ("namespace N\n"
+            "{\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("namespace N\n"
+                   "{\n"
+                   "\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   CustomStyle));
+  EXPECT_EQ("/* something */ namespace N\n"
+            "{\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("/* something */ namespace N {\n"
+                   "\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   CustomStyle));
+  EXPECT_EQ("inline namespace N\n"
+            "{\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("inline namespace N\n"
+                   "{\n"
+                   "\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   CustomStyle));
+  EXPECT_EQ("/* something */ inline namespace N\n"
+            "{\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("/* something */ inline namespace N\n"
+                   "{\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   CustomStyle));
+  EXPECT_EQ("export namespace N\n"
+            "{\n"
+            "\n"
+            "int i;\n"
+            "}",
+            format("export namespace N\n"
+                   "{\n"
+                   "\n"
+                   "int    i;\n"
+                   "}",
+                   CustomStyle));
+  EXPECT_EQ("namespace a\n"
+            "{\n"
+            "namespace b\n"
+            "{\n"
+            "\n"
+            "class AA {};\n"
+            "\n"
+            "} // namespace b\n"
+            "} // namespace a\n",
+            format("namespace a\n"
+                   "{\n"
+                   "namespace b\n"
+                   "{\n"
+                   "\n"
+                   "\n"
+                   "class AA {};\n"
+                   "\n"
+                   "\n"
+                   "}\n"
+                   "}\n",
+                   CustomStyle));
+  EXPECT_EQ("namespace A /* comment */\n"
+            "{\n"
+            "class B {}\n"
+            "} // namespace A",
+            format("namespace A /* comment */ { class B {} }", CustomStyle));
+  EXPECT_EQ("namespace A\n"
+            "{ /* comment */\n"
+            "class B {}\n"
+            "} // namespace A",
+            format("namespace A {/* comment */ class B {} }", CustomStyle));
+  EXPECT_EQ("namespace A\n"
+            "{ /* comment */\n"
+            "\n"
+            "class B {}\n"
+            "\n"
+            ""
+            "} // namespace A",
+            format("namespace A { /* comment */\n"
+                   "\n"
+                   "\n"
+                   "class B {}\n"
+                   "\n"
+                   "\n"
+                   "}",
+                   CustomStyle));
+  EXPECT_EQ("namespace A /* comment */\n"
+            "{\n"
+            "\n"
+            "class B {}\n"
+            "\n"
+            "} // namespace A",
+            format("namespace A/* comment */ {\n"
+                   "\n"
+                   "\n"
+                   "class B {}\n"
+                   "\n"
+                   "\n"
+                   "}",
+                   CustomStyle));
+
   // ...but do keep inlining and removing empty lines for non-block extern "C"
   // functions.
   verifyFormat("extern \"C\" int f() { return 42; }", getGoogleStyle());
@@ -16272,6 +16394,52 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
   // clang-format on
 }
 
+TEST_F(FormatTest, AlignWithInitializerPeriods) {
+  auto Style = getLLVMStyleWithColumns(60);
+
+  verifyFormat("void foo1(void) {\n"
+               "  BYTE p[1] = 1;\n"
+               "  A B = {.one_foooooooooooooooo = 2,\n"
+               "         .two_fooooooooooooo = 3,\n"
+               "         .three_fooooooooooooo = 4};\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_None;
+  verifyFormat("void foo2(void) {\n"
+               "  BYTE p[1]    = 1;\n"
+               "  A B          = {.one_foooooooooooooooo = 2,\n"
+               "                  .two_fooooooooooooo    = 3,\n"
+               "                  .three_fooooooooooooo  = 4};\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_None;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("void foo3(void) {\n"
+               "  BYTE p[1] = 1;\n"
+               "  A    B = {.one_foooooooooooooooo = 2,\n"
+               "            .two_fooooooooooooo = 3,\n"
+               "            .three_fooooooooooooo = 4};\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("void foo4(void) {\n"
+               "  BYTE p[1]    = 1;\n"
+               "  A    B       = {.one_foooooooooooooooo = 2,\n"
+               "                  .two_fooooooooooooo    = 3,\n"
+               "                  .three_fooooooooooooo  = 4};\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, LinuxBraceBreaking) {
   FormatStyle LinuxBraceStyle = getLLVMStyle();
   LinuxBraceStyle.BreakBeforeBraces = FormatStyle::BS_Linux;
@@ -19550,8 +19718,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "          });\n"
                "    });",
                LLVMWithBeforeLambdaBody);
-  verifyFormat("void Fct()\n"
-               "{\n"
+  verifyFormat("void Fct() {\n"
                "  return {[]()\n"
                "          {\n"
                "            return 17;\n"
@@ -19754,6 +19921,35 @@ TEST_F(FormatTest, FormatsLambdas) {
                "            return 17;\n"
                "          });\n"
                "    });",
+               LLVMWithBeforeLambdaBody);
+
+  LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
+      FormatStyle::ShortLambdaStyle::SLS_None;
+
+  verifyFormat("auto select = [this]() -> const Library::Object *\n"
+               "{\n"
+               "  return MyAssignment::SelectFromList(this);\n"
+               "};\n",
+               LLVMWithBeforeLambdaBody);
+
+  verifyFormat("auto select = [this]() -> const Library::Object &\n"
+               "{\n"
+               "  return MyAssignment::SelectFromList(this);\n"
+               "};\n",
+               LLVMWithBeforeLambdaBody);
+
+  verifyFormat("auto select = [this]() -> std::unique_ptr<Object>\n"
+               "{\n"
+               "  return MyAssignment::SelectFromList(this);\n"
+               "};\n",
+               LLVMWithBeforeLambdaBody);
+
+  verifyFormat("namespace test {\n"
+               "class Test {\n"
+               "public:\n"
+               "  Test() = default;\n"
+               "};\n"
+               "} // namespace test",
                LLVMWithBeforeLambdaBody);
 
   // Lambdas with different indentation styles.

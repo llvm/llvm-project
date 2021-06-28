@@ -288,10 +288,11 @@ void ScriptParser::addFile(StringRef s) {
   if (isUnderSysroot && s.startswith("/")) {
     SmallString<128> pathData;
     StringRef path = (config->sysroot + s).toStringRef(pathData);
-    if (sys::fs::exists(path)) {
+    if (sys::fs::exists(path))
       driver->addFile(saver.save(path), /*withLOption=*/false);
-      return;
-    }
+    else
+      setError("cannot find " + s + " inside " + config->sysroot);
+    return;
   }
 
   if (s.startswith("/")) {

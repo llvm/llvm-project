@@ -444,7 +444,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::llvm::all_of(getMixedStrides(), [](OpFoldResult ofr) {
-          return ::mlir::isEqualConstantInt(ofr, 1);
+          return ::mlir::getConstantIntValue(ofr) == static_cast<int64_t>(1);
         });
       }]
     >,
@@ -456,7 +456,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::llvm::all_of(getMixedOffsets(), [](OpFoldResult ofr) {
-          return ::mlir::isEqualConstantInt(ofr, 0);
+          return ::mlir::getConstantIntValue(ofr) == static_cast<int64_t>(0);
         });
       }]
     >,

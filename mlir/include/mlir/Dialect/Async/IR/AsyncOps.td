@@ -160,20 +160,24 @@ def Async_CreateGroupOp : Async_Op<"create_group", [NoSideEffect]> {
   let summary = "creates an empty async group";
   let description = [{
     The `async.create_group` allocates an empty async group. Async tokens or
-    values can be added to this group later.
+    values can be added to this group later. The size of the group must be
+    specified at construction time, and `await_all` operation will first
+    wait until the number of added tokens or values reaches the group size.
 
     Example:
 
     ```mlir
-    %0 = async.create_group
+    %size = ... : index
+    %group = async.create_group %size : !async.group
     ...
-    async.await_all %0
+    async.await_all %group
     ```
   }];
 
+  let arguments = (ins Index:$size);
   let results = (outs Async_GroupType:$result);
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "$size `:` type($result) attr-dict";
 }
 
 def Async_AddToGroupOp : Async_Op<"add_to_group", []> {
@@ -186,7 +190,7 @@ def Async_AddToGroupOp : Async_Op<"add_to_group", []> {
     Example:
 
     ```mlir
-    %0 = async.create_group
+    %0 = async.create_group %size : !async.group
     %1 = ... : !async.token
     %2 = async.add_to_group %1, %0 : !async.token
     ```
@@ -209,7 +213,7 @@ def Async_AwaitAllOp : Async_Op<"await_all", []> {
     Example:
 
     ```mlir
-    %0 = async.create_group
+    %0 = async.create_group %size : !async.group
 
     %1 = ... : !async.token
     %2 = async.add_to_group %1, %0 : !async.token
@@ -331,15 +335,26 @@ def Async_CoroSuspendOp : Async_Op<"coro.suspend", [Terminator]> {
 // Runtime API defined in the `ExecutionEngine/AsyncRuntime.h`.
 
 def Async_RuntimeCreateOp : Async_Op<"runtime.create"> {
-  let summary = "creates an async runtime value (token, value or group)";
+  let summary = "creates an async runtime token or value";
   let description = [{
-    The `async.runtime.create` operation creates an async dialect value
-    (token, value or group). Tokens and values are created in non-ready state.
-    Groups are created in empty state.
+    The `async.runtime.create` operation creates an async dialect token or
+    value. Tokens and values are created in the non-ready state.
   }];
 
-  let results = (outs Async_AnyAsyncType:$result);
+  let results = (outs Async_AnyValueOrTokenType:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
+}
+
+def Async_RuntimeCreateGroupOp : Async_Op<"runtime.create_group"> {
+  let summary = "creates an async runtime group";
+  let description = [{
+    The `async.runtime.create_group` operation creates an async dialect group
+    of the given size. Group created in the empty state.
+  }];
+
+  let arguments = (ins Index:$size);
+  let results = (outs Async_GroupType:$result);
+  let assemblyFormat = "$size `:` type($result) attr-dict ";
 }
 
 def Async_RuntimeSetAvailableOp : Async_Op<"runtime.set_available"> {

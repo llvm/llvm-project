@@ -4,11 +4,20 @@
 define void @bs(i64* %p) {
 ; CHECK-LABEL: bs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, 4
-; CHECK-NEXT:    lwbrx 5, 0, 3
-; CHECK-NEXT:    lwbrx 4, 3, 4
-; CHECK-NEXT:    rldimi 5, 4, 32, 0
-; CHECK-NEXT:    std 5, 0(3)
+; CHECK-NEXT:    ld 4, 0(3)
+; CHECK-NEXT:    rotldi 5, 4, 16
+; CHECK-NEXT:    rotldi 6, 4, 8
+; CHECK-NEXT:    rldimi 6, 5, 8, 48
+; CHECK-NEXT:    rotldi 5, 4, 24
+; CHECK-NEXT:    rldimi 6, 5, 16, 40
+; CHECK-NEXT:    rotldi 5, 4, 32
+; CHECK-NEXT:    rldimi 6, 5, 24, 32
+; CHECK-NEXT:    rotldi 5, 4, 48
+; CHECK-NEXT:    rldimi 6, 5, 40, 16
+; CHECK-NEXT:    rotldi 5, 4, 56
+; CHECK-NEXT:    rldimi 6, 5, 48, 8
+; CHECK-NEXT:    rldimi 6, 4, 56, 0
+; CHECK-NEXT:    std 6, 0(3)
 ; CHECK-NEXT:    blr
   %x = load i64, i64* %p, align 8
   %b = call i64 @llvm.bswap.i64(i64 %x)
@@ -41,10 +50,19 @@ define i64 @volatile_ld(i64* %p) {
 define i64 @misaligned_ld(i64* %p) {
 ; CHECK-LABEL: misaligned_ld:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, 4
-; CHECK-NEXT:    lwbrx 4, 3, 4
-; CHECK-NEXT:    lwbrx 3, 0, 3
-; CHECK-NEXT:    rldimi 3, 4, 32, 0
+; CHECK-NEXT:    ld 4, 0(3)
+; CHECK-NEXT:    rotldi 5, 4, 16
+; CHECK-NEXT:    rotldi 3, 4, 8
+; CHECK-NEXT:    rldimi 3, 5, 8, 48
+; CHECK-NEXT:    rotldi 5, 4, 24
+; CHECK-NEXT:    rldimi 3, 5, 16, 40
+; CHECK-NEXT:    rotldi 5, 4, 32
+; CHECK-NEXT:    rldimi 3, 5, 24, 32
+; CHECK-NEXT:    rotldi 5, 4, 48
+; CHECK-NEXT:    rldimi 3, 5, 40, 16
+; CHECK-NEXT:    rotldi 5, 4, 56
+; CHECK-NEXT:    rldimi 3, 5, 48, 8
+; CHECK-NEXT:    rldimi 3, 4, 56, 0
 ; CHECK-NEXT:    blr
   %x = load i64, i64* %p, align 1
   %b = call i64 @llvm.bswap.i64(i64 %x)

@@ -3412,3 +3412,9 @@ const char *M68kTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return NULL;
   }
 }
+
+CCAssignFn *M68kTargetLowering::getCCAssignFnForCall(CallingConv::ID CC,
+                                                     bool Return,
+                                                     bool IsVarArg) const {
+  return CC_M68k_C;
+}
