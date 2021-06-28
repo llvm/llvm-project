@@ -1946,11 +1946,16 @@ static void rewriteMaterializableInstructions(IRBuilder<> &IRB,
     for (Instruction *U : E.second) {
       // If we have not seen this block, materialize the value.
       if (CurrentBlock != U->getParent()) {
-        CurrentBlock = U->getParent();
+
+        bool IsInCoroSuspendBlock = isa<AnyCoroSuspendInst>(U);
+        CurrentBlock = IsInCoroSuspendBlock
+                           ? U->getParent()->getSinglePredecessor()
+                           : U->getParent();
         CurrentMaterialization = cast<Instruction>(Def)->clone();
         CurrentMaterialization->setName(Def->getName());
         CurrentMaterialization->insertBefore(
-            &*CurrentBlock->getFirstInsertionPt());
+            IsInCoroSuspendBlock ? CurrentBlock->getTerminator()
+                                 : &*CurrentBlock->getFirstInsertionPt());
       }
       if (auto *PN = dyn_cast<PHINode>(U)) {
         assert(PN->getNumIncomingValues() == 1 &&
