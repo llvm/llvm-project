@@ -14650,6 +14650,8 @@ static SDValue PerformExtractEltCombine(SDNode *N,
       return DCI.DAG.getNode(ARMISD::VMOVhr, dl, VT, X);
     if (VT == MVT::i32 && X.getValueType() == MVT::f16)
       return DCI.DAG.getNode(ARMISD::VMOVrh, dl, VT, X);
+    if (VT == MVT::f32 && X.getValueType() == MVT::i32)
+      return DCI.DAG.getNode(ISD::BITCAST, dl, VT, X);
 
     while (X.getValueType() != VT && X->getOpcode() == ISD::BITCAST)
       X = X->getOperand(0);
