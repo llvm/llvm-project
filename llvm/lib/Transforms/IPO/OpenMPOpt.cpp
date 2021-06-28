@@ -2668,7 +2668,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions, Kernels);
 
-  unsigned MaxFixponitIterations = (isOpenMPDevice) ? 128 : 32;
+  unsigned MaxFixponitIterations = (isOpenMPDevice(M)) ? 128 : 32;
   Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false,
                MaxFixponitIterations, OREGetter, DEBUG_TYPE);
 
