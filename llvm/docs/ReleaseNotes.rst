@@ -74,6 +74,11 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+Changes to the AArch64 Backend
+--------------------------
+
+* Introduced support for Armv9-A's Realm Management Extension.
+
 Changes to the ARM Backend
 --------------------------
 
