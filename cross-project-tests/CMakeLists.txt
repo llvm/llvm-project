@@ -66,14 +66,22 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
   )
 
-add_lit_testsuite(check-debuginfo "Running cross-project tests"
+add_lit_testsuite(check-cross-project "Running cross-project tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
 
-# Add check-debuginfo-* targets.
+# Add alias for debuginfo test subset.
+add_lit_testsuite(check-debuginfo "Running debuginfo tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/debuginfo-tests
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
+  )
+
+# Add check-cross-project-* targets.
 add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
 
+set_target_properties(check-cross-project PROPERTIES FOLDER "Tests")
 set_target_properties(check-debuginfo PROPERTIES FOLDER "Tests")
