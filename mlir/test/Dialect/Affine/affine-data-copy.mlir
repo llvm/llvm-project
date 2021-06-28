@@ -273,10 +273,13 @@ func @max_lower_bound(%M: memref<2048x516xf64>, %i : index, %j : index) {
 
 // -----
 
-// CHECK-LABEL: func @empty_loop
-func @empty_loop(%arg0: memref<1024x1024xf64>) {
-  // Empty loop - so no copy generation happens.
+// CHECK-LABEL: func @empty_loops
+func @empty_loops(%arg0: memref<1024x1024xf64>) {
+  // Empty loops - so no copy generation happens.
   affine.for %i = 0 to 0 {
+    affine.load %arg0[0, %i] : memref<1024x1024xf64>
+  }
+  affine.for %i = 0 to -16 {
     affine.load %arg0[0, %i] : memref<1024x1024xf64>
   }
   return
