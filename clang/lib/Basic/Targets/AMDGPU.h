@@ -93,7 +93,7 @@ public:
 
   void setAddressSpaceMap(bool DefaultIsPrivate);
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(LangOptions &Opts) override;
 
   uint64_t getPointerWidthV(unsigned AddrSpace) const override {
     if (isR600(getTriple()))
