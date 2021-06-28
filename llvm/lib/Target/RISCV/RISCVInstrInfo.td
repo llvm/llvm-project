@@ -1262,11 +1262,11 @@ def : Pat<(sext_inreg (sub GPR:$rs1, GPR:$rs2), i32),
           (SUBW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
           (SLLIW GPR:$rs1, uimm5:$shamt)>;
-def : Pat<(i64 (srl (zexti32 (i64 GPR:$rs1)), uimm5:$shamt)),
+def : Pat<(i64 (srl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLIW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(i64 (srl (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt)),
           (SRLIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;
-def : Pat<(i64 (sra (sexti32 (i64 GPR:$rs1)), uimm5:$shamt)),
+def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
           (SRAIW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(i64 (sra (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt)),
           (SRAIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;
