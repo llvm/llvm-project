@@ -594,6 +594,11 @@ public:
                                           RangeSet::Factory &F,
                                           ProgramStateRef State);
 
+  void dumpToStream(ProgramStateRef State, raw_ostream &os) const;
+  LLVM_DUMP_METHOD void dump(ProgramStateRef State) const {
+    dumpToStream(State, llvm::errs());
+  }
+
   /// Check equivalence data for consistency.
   LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED static bool
   isClassDataConsistent(ProgramStateRef State);
@@ -1414,6 +1419,17 @@ public:
 
   void printJson(raw_ostream &Out, ProgramStateRef State, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const override;
+  void printConstraints(raw_ostream &Out, ProgramStateRef State,
+                        const char *NL = "\n", unsigned int Space = 0,
+                        bool IsDot = false) const;
+  void printEquivalenceClasses(raw_ostream &Out, ProgramStateRef State,
+                               const char *NL = "\n", unsigned int Space = 0,
+                               bool IsDot = false) const;
+  void printEquivalenceClass(raw_ostream &Out, ProgramStateRef State,
+                             EquivalenceClass Class) const;
+  void printDisequalities(raw_ostream &Out, ProgramStateRef State,
+                          const char *NL = "\n", unsigned int Space = 0,
+                          bool IsDot = false) const;
 
   //===------------------------------------------------------------------===//
   // Implementation for interface from RangedConstraintManager.
@@ -1636,6 +1652,15 @@ ConstraintMap ento::getConstraintMap(ProgramStateRef State) {
 //===----------------------------------------------------------------------===//
 //                     EqualityClass implementation details
 //===----------------------------------------------------------------------===//
+
+LLVM_DUMP_METHOD void EquivalenceClass::dumpToStream(ProgramStateRef State,
+                                                     raw_ostream &os) const {
+  SymbolSet ClassMembers = getClassMembers(State);
+  for (const SymbolRef &MemberSym : ClassMembers) {
+    MemberSym->dump();
+    os << "\n";
+  }
+}
 
 inline EquivalenceClass EquivalenceClass::find(ProgramStateRef State,
                                                SymbolRef Sym) {
@@ -2483,6 +2508,16 @@ ProgramStateRef RangeConstraintManager::assumeSymOutsideInclusiveRange(
 void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
                                        const char *NL, unsigned int Space,
                                        bool IsDot) const {
+  printConstraints(Out, State, NL, Space, IsDot);
+  printEquivalenceClasses(Out, State, NL, Space, IsDot);
+  printDisequalities(Out, State, NL, Space, IsDot);
+}
+
+void RangeConstraintManager::printConstraints(raw_ostream &Out,
+                                              ProgramStateRef State,
+                                              const char *NL,
+                                              unsigned int Space,
+                                              bool IsDot) const {
   ConstraintRangeTy Constraints = State->get<ConstraintRange>();
 
   Indent(Out, Space, IsDot) << "\"constraints\": ";
@@ -2510,6 +2545,109 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
       P.second.dump(Out);
       Out << "\" }";
     }
+  }
+  Out << NL;
+
+  --Space;
+  Indent(Out, Space, IsDot) << "]," << NL;
+}
+
+void RangeConstraintManager::printEquivalenceClass(
+    raw_ostream &Out, ProgramStateRef State, EquivalenceClass Class) const {
+  bool FirstMember = true;
+  SymbolSet ClassMembers = Class.getClassMembers(State);
+  Out << "[ ";
+  for (SymbolRef ClassMember : ClassMembers) {
+    if (FirstMember)
+      FirstMember = false;
+    else
+      Out << ", ";
+    Out << "\"" << ClassMember << "\"";
+  }
+  Out << " ]";
+}
+
+void RangeConstraintManager::printEquivalenceClasses(raw_ostream &Out,
+                                                     ProgramStateRef State,
+                                                     const char *NL,
+                                                     unsigned int Space,
+                                                     bool IsDot) const {
+  ClassMembersTy Members = State->get<ClassMembers>();
+
+  Indent(Out, Space, IsDot) << "\"equivalence_classes\": ";
+  if (Members.isEmpty()) {
+    Out << "null," << NL;
+    return;
+  }
+
+  ++Space;
+  Out << '[' << NL;
+  bool FirstClass = true;
+  for (std::pair<EquivalenceClass, SymbolSet> ClassToSymbolSet : Members) {
+    EquivalenceClass Class = ClassToSymbolSet.first;
+
+    if (FirstClass) {
+      FirstClass = false;
+    } else {
+      Out << ',';
+      Out << NL;
+    }
+    Indent(Out, Space, IsDot);
+    printEquivalenceClass(Out, State, Class);
+  }
+  Out << NL;
+
+  --Space;
+  Indent(Out, Space, IsDot) << "]," << NL;
+}
+
+void RangeConstraintManager::printDisequalities(raw_ostream &Out,
+                                                ProgramStateRef State,
+                                                const char *NL,
+                                                unsigned int Space,
+                                                bool IsDot) const {
+  DisequalityMapTy Disequalities = State->get<DisequalityMap>();
+
+  Indent(Out, Space, IsDot) << "\"disequality_info\": ";
+  if (Disequalities.isEmpty()) {
+    Out << "null," << NL;
+    return;
+  }
+
+  ++Space;
+  Out << '[' << NL;
+  bool FirstClass = true;
+  for (std::pair<EquivalenceClass, ClassSet> ClassToDisEqSet : Disequalities) {
+    EquivalenceClass Class = ClassToDisEqSet.first;
+    if (FirstClass) {
+      FirstClass = false;
+    } else {
+      Out << ',';
+      Out << NL;
+    }
+    Indent(Out, Space, IsDot) << "{" << NL;
+    unsigned int DisEqSpace = Space + 1;
+    Indent(Out, DisEqSpace, IsDot) << "\"class\": ";
+    printEquivalenceClass(Out, State, Class);
+    ClassSet DisequalClasses = ClassToDisEqSet.second;
+    if (!DisequalClasses.isEmpty()) {
+      Out << "," << NL;
+      Indent(Out, DisEqSpace, IsDot) << "\"disequal_to\": [" << NL;
+      unsigned int DisEqClassSpace = DisEqSpace + 1;
+      Indent(Out, DisEqClassSpace, IsDot);
+      bool FirstDisEqClass = true;
+      for (EquivalenceClass DisEqClass : DisequalClasses) {
+        if (FirstDisEqClass) {
+          FirstDisEqClass = false;
+        } else {
+          Out << ',' << NL;
+          Indent(Out, DisEqClassSpace, IsDot);
+        }
+        printEquivalenceClass(Out, State, DisEqClass);
+      }
+      Out << "]" << NL;
+    }
+    Indent(Out, Space, IsDot) << "}";
   }
   Out << NL;
 
