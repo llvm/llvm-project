@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: opt %s -dce -S | FileCheck %s
 
 ; Tests the salvaging of binary operators that use more than one non-constant
