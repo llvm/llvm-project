@@ -1496,6 +1496,37 @@ static LogicalResult verify(ReturnOp op) {
 // SelectOp
 //===----------------------------------------------------------------------===//
 
+// Transforms a select to a not, where relevant.
+//
+//  select %arg, %false, %true
+//
+//  becomes
+//
+//  xor %arg, %true
+struct SelectToNot : public OpRewritePattern<SelectOp> {
+  using OpRewritePattern<SelectOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SelectOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!matchPattern(op.getTrueValue(), m_Zero()))
+      return failure();
+
+    if (!matchPattern(op.getFalseValue(), m_One()))
+      return failure();
+
+    if (!op.getType().isInteger(1))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<XOrOp>(op, op.condition(), op.getFalseValue());
+    return success();
+  }
+};
+
+void SelectOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                           MLIRContext *context) {
+  results.insert<SelectToNot>(context);
+}
+
 OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
   auto trueVal = getTrueValue();
   auto falseVal = getFalseValue();
