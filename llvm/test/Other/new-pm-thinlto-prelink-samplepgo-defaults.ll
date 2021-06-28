@@ -52,8 +52,7 @@
 ; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
-; CHECK-O2-NEXT: Running pass: OpenMPOptPass
-; CHECK-O3-NEXT: Running pass: OpenMPOptPass
+; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-O-NEXT: Running pass: IPSCCPPass
 ; CHECK-O-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
