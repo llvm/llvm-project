@@ -1161,7 +1161,7 @@ static void addSanitizers(const Triple &TargetTriple,
             CompileKernel, Recover, ModuleUseAfterScope, UseOdrIndicator,
             DestructorKind));
         MPM.addPass(createModuleToFunctionPassAdaptor(AddressSanitizerPass(
-            CompileKernel, Recover, UseAfterScope, UseAfterReturn)));
+            {CompileKernel, Recover, UseAfterScope, UseAfterReturn})));
       }
     };
     ASanPass(SanitizerKind::Address, false);
@@ -1171,8 +1171,8 @@ static void addSanitizers(const Triple &TargetTriple,
       if (LangOpts.Sanitize.has(Mask)) {
         bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
         MPM.addPass(HWAddressSanitizerPass(
-            CompileKernel, Recover,
-            /*DisableOptimization=*/CodeGenOpts.OptimizationLevel == 0));
+            {CompileKernel, Recover,
+             /*DisableOptimization=*/CodeGenOpts.OptimizationLevel == 0}));
       }
     };
     HWASanPass(SanitizerKind::HWAddress, false);

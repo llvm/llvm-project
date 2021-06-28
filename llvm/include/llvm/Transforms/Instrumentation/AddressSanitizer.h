@@ -89,6 +89,20 @@ private:
   static AnalysisKey Key;
 };
 
+struct AddressSanitizerOptions {
+  AddressSanitizerOptions()
+      : AddressSanitizerOptions(false, false, false,
+                                AsanDetectStackUseAfterReturnMode::Runtime){};
+  AddressSanitizerOptions(bool CompileKernel, bool Recover, bool UseAfterScope,
+                          AsanDetectStackUseAfterReturnMode UseAfterReturn)
+      : CompileKernel(CompileKernel), Recover(Recover),
+        UseAfterScope(UseAfterScope), UseAfterReturn(UseAfterReturn){};
+  bool CompileKernel;
+  bool Recover;
+  bool UseAfterScope;
+  AsanDetectStackUseAfterReturnMode UseAfterReturn;
+};
+
 /// Public interface to the address sanitizer pass for instrumenting code to
 /// check for various memory errors at runtime.
 ///
@@ -98,19 +112,13 @@ private:
 /// surrounding requested memory to be checked for invalid accesses.
 class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
 public:
-  explicit AddressSanitizerPass(
-      bool CompileKernel = false, bool Recover = false,
-      bool UseAfterScope = false,
-      AsanDetectStackUseAfterReturnMode UseAfterReturn =
-          AsanDetectStackUseAfterReturnMode::Runtime);
+  explicit AddressSanitizerPass(AddressSanitizerOptions Options)
+      : Options(Options){};
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 
 private:
-  bool CompileKernel;
-  bool Recover;
-  bool UseAfterScope;
-  AsanDetectStackUseAfterReturnMode UseAfterReturn;
+  AddressSanitizerOptions Options;
 };
 
 /// Public interface to the address sanitizer module pass for instrumenting code
