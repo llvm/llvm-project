@@ -249,7 +249,7 @@ struct __type_info_implementations {
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
     static size_t __hash(__type_name_t __v) _NOEXCEPT {
       if (__is_type_name_unique(__v))
-        return reinterpret_cast<size_t>(__v);
+        return __v;
       return __non_unique_impl::__hash(__type_name_to_string(__v));
     }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
