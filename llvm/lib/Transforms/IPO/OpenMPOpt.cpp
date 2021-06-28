@@ -2668,9 +2668,9 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions, Kernels);
 
-  unsigned MaxFixponitIterations = (isOpenMPDevice(M)) ? 128 : 32;
+  unsigned MaxFixpointIterations = (isOpenMPDevice(M)) ? 128 : 32;
   Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false,
-               MaxFixponitIterations, OREGetter, DEBUG_TYPE);
+               MaxFixpointIterations, OREGetter, DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(true);
@@ -2720,9 +2720,9 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ Functions, Kernels);
 
-  unsigned MaxFixponitIterations = (isOpenMPDevice(M)) ? 128 : 32;
+  unsigned MaxFixpointIterations = (isOpenMPDevice(M)) ? 128 : 32;
   Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true,
-               MaxFixponitIterations, OREGetter, DEBUG_TYPE);
+               MaxFixpointIterations, OREGetter, DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(false);
@@ -2786,9 +2786,9 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
                                   Allocator,
                                   /*CGSCC*/ Functions, Kernels);
 
-    unsigned MaxFixponitIterations = (isOpenMPDevice(M)) ? 128 : 32;
+    unsigned MaxFixpointIterations = (isOpenMPDevice(M)) ? 128 : 32;
     Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true,
-                 MaxFixponitIterations, OREGetter, DEBUG_TYPE);
+                 MaxFixpointIterations, OREGetter, DEBUG_TYPE);
 
     OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
     return OMPOpt.run(false);
