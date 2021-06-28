@@ -192,7 +192,7 @@ define void @may_overflow_i32_sext([16 x i8]* %ptr, i32 %idx) {
 ; CHECK-LABEL: Function: may_overflow_i32_sext: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
 ; CHECK-NEXT:    PartialAlias (off 3):  [16 x i8]* %ptr, i8* %gep.3
-; CHECK-NEXT:    MayAlias:	i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
   %mul = mul i32 %idx, 678152731
   %sub = sub i32 %mul, 1582356375
@@ -208,7 +208,7 @@ define void @nuw_nsw_i32_sext([16 x i8]* %ptr, i32 %idx) {
 ; CHECK-LABEL: Function: nuw_nsw_i32_sext: 3 pointers, 0 call sites
 ; CHECK-NEXT:    NoAlias:  [16 x i8]* %ptr, i8* %gep.idx
 ; CHECK-NEXT:    PartialAlias (off 3):  [16 x i8]* %ptr, i8* %gep.3
-; CHECK-NEXT:    NoAlias:	i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    NoAlias:   i8* %gep.3, i8* %gep.idx
 ;
   %mul = mul nuw nsw i32 %idx, 678152731
   %sub = sub nuw nsw i32 %mul, 1582356375
@@ -225,7 +225,7 @@ define void @may_overflow_i32_zext([16 x i8]* %ptr, i32 %idx) {
 ; CHECK-LABEL: Function: may_overflow_i32_zext: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
 ; CHECK-NEXT:    PartialAlias (off 3):  [16 x i8]* %ptr, i8* %gep.3
-; CHECK-NEXT:    MayAlias:	i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
   %mul = mul i32 %idx, 678152731
   %sub = sub i32 %mul, 1582356375
@@ -241,7 +241,7 @@ define void @nuw_nsw_i32_zext([16 x i8]* %ptr, i32 %idx) {
 ; CHECK-LABEL: Function: nuw_nsw_i32_zext: 3 pointers, 0 call sites
 ; CHECK-NEXT:    NoAlias:  [16 x i8]* %ptr, i8* %gep.idx
 ; CHECK-NEXT:    PartialAlias (off 3):  [16 x i8]* %ptr, i8* %gep.3
-; CHECK-NEXT:    NoAlias:	i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    NoAlias:   i8* %gep.3, i8* %gep.idx
 ;
   %mul = mul nuw nsw i32 %idx, 678152731
   %sub = sub nuw nsw i32 %mul, 1582356375
@@ -250,5 +250,24 @@ define void @nuw_nsw_i32_zext([16 x i8]* %ptr, i32 %idx) {
   store i8 0, i8* %gep.idx, align 1
   %gep.3 = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i32 3
   store i8 1, i8* %gep.3, align 1
+  ret void
+}
+
+; %mul.1 and %sub.2 are equal, if %idx = 9, because %mul.1 overflows. Hence
+; %gep.mul.1 and %gep.sub.2 may alias.
+define void @may_overflow_pointer_diff([16 x i8]* %ptr, i64 %idx) {
+; CHECK-LABEL: Function: may_overflow_pointer_diff: 3 pointers, 0 call sites
+; CHECK-NEXT:  MayAlias: [16 x i8]* %ptr, i8* %gep.mul.1
+; CHECK-NEXT:  MayAlias: [16 x i8]* %ptr, i8* %gep.sub.2
+; CHECK-NEXT:  NoAlias:  i8* %gep.mul.1, i8* %gep.sub.2
+;
+  %mul.1 = mul i64 %idx, 6148914691236517207
+  %gep.mul.1  = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %mul.1
+  store i8 1, i8* %gep.mul.1, align 1
+  %mul.2 = mul nsw i64 %idx, 3
+  %sub.2 = sub nsw i64 %mul.2, 12
+  %gep.sub.2= getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub.2
+  store i8 0, i8* %gep.sub.2, align 1
+
   ret void
 }
