@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // <ostream>
 
 // template <class charT, class traits = char_traits<charT> >
