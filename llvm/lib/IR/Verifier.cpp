@@ -3353,9 +3353,11 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   if (FoundAttachedCallBundle)
-    Assert(FTy->getReturnType()->isPointerTy(),
+    Assert((FTy->getReturnType()->isPointerTy() ||
+            (Call.doesNotReturn() && FTy->getReturnType()->isVoidTy())),
            "a call with operand bundle \"clang.arc.attachedcall\" must call a "
-           "function returning a pointer",
+           "function returning a pointer or a non-returning function that has "
+           "a void return type",
            Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
