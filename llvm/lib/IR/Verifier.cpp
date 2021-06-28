@@ -699,8 +699,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
              "the third field of the element type is mandatory, "
              "specify i8* null to migrate from the obsoleted 2-field form");
       Type *ETy = STy->getTypeAtIndex(2);
+      Type *Int8Ty = Type::getInt8Ty(ETy->getContext());
       Assert(ETy->isPointerTy() &&
-                 cast<PointerType>(ETy)->getElementType()->isIntegerTy(8),
+                 cast<PointerType>(ETy)->isOpaqueOrPointeeTypeMatches(Int8Ty),
              "wrong type for intrinsic global variable", &GV);
     }
   }
