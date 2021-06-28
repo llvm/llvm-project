@@ -1657,6 +1657,9 @@ BUILTIN(__builtin_ms_va_start, "vc*&.", "nt")
 BUILTIN(__builtin_ms_va_end, "vc*&", "n")
 BUILTIN(__builtin_ms_va_copy, "vc*&c*&", "n")
 
+// Arithmetic Fence: to prevent FP reordering and reassociation optimizations
+LANGBUILTIN(__arithmetic_fence, "v.", "t", ALL_LANGUAGES)
+
 #undef BUILTIN
 #undef LIBBUILTIN
 #undef LANGBUILTIN
