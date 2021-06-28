@@ -2159,16 +2159,6 @@ static void setOR(Function &Caller, const Function &Callee) {
 /// If the inlined function had a higher stack protection level than the
 /// calling function, then bump up the caller's stack protection level.
 static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
-#ifndef NDEBUG
-  if (!Callee.hasFnAttribute(Attribute::AlwaysInline)) {
-    assert(!(!Callee.hasStackProtectorFnAttr() &&
-             Caller.hasStackProtectorFnAttr()) &&
-           "stack protected caller but callee requested no stack protector");
-    assert(!(!Caller.hasStackProtectorFnAttr() &&
-             Callee.hasStackProtectorFnAttr()) &&
-           "stack protected callee but caller requested no stack protector");
-  }
-#endif
   // If upgrading the SSP attribute, clear out the old SSP Attributes first.
   // Having multiple SSP attributes doesn't actually hurt, but it adds useless
   // clutter to the IR.

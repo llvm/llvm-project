@@ -1922,7 +1922,8 @@ example:
     A function with the ``ssp`` attribute but without the ``alwaysinline``
     attribute cannot be inlined into a function without a
     ``ssp/sspreq/sspstrong`` attribute. If inlined, the caller will get the
-    ``ssp`` attribute.
+    ``ssp`` attribute. ``call``, ``invoke``, and ``callbr`` instructions with
+    the ``alwaysinline`` attribute force inlining.
 ``sspstrong``
     This attribute indicates that the function should emit a stack smashing
     protector. This attribute causes a strong heuristic to be used when
@@ -1950,7 +1951,9 @@ example:
     A function with the ``sspstrong`` attribute but without the
     ``alwaysinline`` attribute cannot be inlined into a function without a
     ``ssp/sspstrong/sspreq`` attribute. If inlined, the caller will get the
-    ``sspstrong`` attribute unless the ``sspreq`` attribute exists.
+    ``sspstrong`` attribute unless the ``sspreq`` attribute exists.  ``call``,
+    ``invoke``, and ``callbr`` instructions with the ``alwaysinline`` attribute
+    force inlining.
 ``sspreq``
     This attribute indicates that the function should *always* emit a stack
     smashing protector. This overrides the ``ssp`` and ``sspstrong`` function
@@ -1970,7 +1973,8 @@ example:
     A function with the ``sspreq`` attribute but without the ``alwaysinline``
     attribute cannot be inlined into a function without a
     ``ssp/sspstrong/sspreq`` attribute. If inlined, the caller will get the
-    ``sspreq`` attribute.
+    ``sspreq`` attribute.  ``call``, ``invoke``, and ``callbr`` instructions
+    with the ``alwaysinline`` attribute force inlining.
 
 ``strictfp``
     This attribute indicates that the function was called from a scope that
