@@ -15440,6 +15440,27 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
         llvm::AtomicOrdering::Monotonic, llvm::AtomicOrdering::Monotonic, true);
     return Pair.second;
   }
+  case PPC::BI__builtin_ppc_fetch_and_add:
+  case PPC::BI__builtin_ppc_fetch_and_addlp: {
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Add, E,
+                                 llvm::AtomicOrdering::Monotonic);
+  }
+  case PPC::BI__builtin_ppc_fetch_and_and:
+  case PPC::BI__builtin_ppc_fetch_and_andlp: {
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::And, E,
+                                 llvm::AtomicOrdering::Monotonic);
+  }
+
+  case PPC::BI__builtin_ppc_fetch_and_or:
+  case PPC::BI__builtin_ppc_fetch_and_orlp: {
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Or, E,
+                                 llvm::AtomicOrdering::Monotonic);
+  }
+  case PPC::BI__builtin_ppc_fetch_and_swap:
+  case PPC::BI__builtin_ppc_fetch_and_swaplp: {
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Xchg, E,
+                                 llvm::AtomicOrdering::Monotonic);
+  }
   }
 }
 
