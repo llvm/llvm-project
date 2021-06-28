@@ -813,6 +813,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SUBC, VT, Expand);
     setOperationAction(ISD::SUBE, VT, Expand);
 
+    // Absolute difference
+    setOperationAction(ISD::ABDS, VT, Expand);
+    setOperationAction(ISD::ABDU, VT, Expand);
+
     // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);

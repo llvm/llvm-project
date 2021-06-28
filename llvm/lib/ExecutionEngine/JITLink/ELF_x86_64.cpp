@@ -18,6 +18,7 @@
 
 #include "DefineExternalSectionStartAndEndSymbols.h"
 #include "EHFrameSupportImpl.h"
+#include "ELFLinkGraphBuilder.h"
 #include "JITLinkGeneric.h"
 #include "PerGraphGOTAndPLTStubsBuilder.h"
 
@@ -237,7 +238,7 @@ namespace jitlink {
 
 // This should become a template as the ELFFile is so a lot of this could become
 // generic
-class ELFLinkGraphBuilder_x86_64 {
+class ELFLinkGraphBuilder_x86_64 : public ELFLinkGraphBuilder<object::ELF64LE> {
 
 private:
   Section *CommonSection = nullptr;
@@ -285,9 +286,7 @@ private:
                                     formatv("{0:d}", Type));
   }
 
-  std::unique_ptr<LinkGraph> G;
   // This could be a template
-  const object::ELFFile<object::ELF64LE> &Obj;
   object::ELFFile<object::ELF64LE>::Elf_Shdr_Range sections;
   SymbolTable SymTab;
 
@@ -685,10 +684,8 @@ private:
 public:
   ELFLinkGraphBuilder_x86_64(StringRef FileName,
                              const object::ELFFile<object::ELF64LE> &Obj)
-      : G(std::make_unique<LinkGraph>(
-            FileName.str(), Triple("x86_64-unknown-linux"), getPointerSize(Obj),
-            getEndianness(Obj), getELFX86RelocationKindName)),
-        Obj(Obj) {}
+      : ELFLinkGraphBuilder(Obj, Triple("x86_64-unknown-linux"), FileName,
+                            getELFX86RelocationKindName) {}
 
   Expected<std::unique_ptr<LinkGraph>> buildGraph() {
     // Sanity check: we only operate on relocatable objects.

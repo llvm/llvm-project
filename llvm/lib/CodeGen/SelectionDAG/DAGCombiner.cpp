@@ -9071,6 +9071,40 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
   return SDValue();
 }
 
+// Given a ABS node, detect the following pattern:
+// (ABS (SUB (EXTEND a), (EXTEND b))).
+// Generates UABD/SABD instruction.
+static SDValue combineABSToABD(SDNode *N, SelectionDAG &DAG,
+                               const TargetLowering &TLI) {
+  SDValue AbsOp1 = N->getOperand(0);
+  SDValue Op0, Op1;
+
+  if (AbsOp1.getOpcode() != ISD::SUB)
+    return SDValue();
+
+  Op0 = AbsOp1.getOperand(0);
+  Op1 = AbsOp1.getOperand(1);
+
+  unsigned Opc0 = Op0.getOpcode();
+  // Check if the operands of the sub are (zero|sign)-extended.
+  if (Opc0 != Op1.getOpcode() ||
+      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND))
+    return SDValue();
+
+  EVT VT1 = Op0.getOperand(0).getValueType();
+  EVT VT2 = Op1.getOperand(0).getValueType();
+  // Check if the operands are of same type and valid size.
+  unsigned ABDOpcode = (Opc0 == ISD::SIGN_EXTEND) ? ISD::ABDS : ISD::ABDU;
+  if (VT1 != VT2 || !TLI.isOperationLegalOrCustom(ABDOpcode, VT1))
+    return SDValue();
+
+  Op0 = Op0.getOperand(0);
+  Op1 = Op1.getOperand(0);
+  SDValue ABD =
+      DAG.getNode(ABDOpcode, SDLoc(N), Op0->getValueType(0), Op0, Op1);
+  return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), ABD);
+}
+
 SDValue DAGCombiner::visitABS(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -9084,6 +9118,10 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
   // fold (abs x) -> x iff not-negative
   if (DAG.SignBitIsZero(N0))
     return N0;
+
+  if (SDValue ABD = combineABSToABD(N, DAG, TLI))
+    return ABD;
+
   return SDValue();
 }
 

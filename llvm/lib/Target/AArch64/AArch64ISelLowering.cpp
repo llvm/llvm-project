@@ -1050,6 +1050,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::USUBSAT, VT, Legal);
     }
 
+    for (MVT VT : {MVT::v8i8, MVT::v4i16, MVT::v2i32, MVT::v16i8, MVT::v8i16,
+                   MVT::v4i32}) {
+      setOperationAction(ISD::ABDS, VT, Legal);
+      setOperationAction(ISD::ABDU, VT, Legal);
+    }
+
     // Vector reductions
     for (MVT VT : { MVT::v4f16, MVT::v2f32,
                     MVT::v8f16, MVT::v4f32, MVT::v2f64 }) {
@@ -2116,8 +2122,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CTPOP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::DUP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::INDEX_VECTOR)
-    MAKE_CASE(AArch64ISD::UABD)
-    MAKE_CASE(AArch64ISD::SABD)
     MAKE_CASE(AArch64ISD::UADDLP)
     MAKE_CASE(AArch64ISD::CALL_RVMARKER)
   }
@@ -4082,8 +4086,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::aarch64_neon_sabd:
   case Intrinsic::aarch64_neon_uabd: {
-    unsigned Opcode = IntNo == Intrinsic::aarch64_neon_uabd ? AArch64ISD::UABD
-                                                            : AArch64ISD::SABD;
+    unsigned Opcode = IntNo == Intrinsic::aarch64_neon_uabd ? ISD::ABDU
+                                                            : ISD::ABDS;
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
@@ -12099,8 +12103,8 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
   SDValue UABDHigh8Op1 =
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT1->getOperand(0),
                   DAG.getConstant(8, DL, MVT::i64));
-  SDValue UABDHigh8 = DAG.getNode(IsZExt ? AArch64ISD::UABD : AArch64ISD::SABD,
-                                  DL, MVT::v8i8, UABDHigh8Op0, UABDHigh8Op1);
+  SDValue UABDHigh8 = DAG.getNode(IsZExt ? ISD::ABDU : ISD::ABDS, DL, MVT::v8i8,
+                                  UABDHigh8Op0, UABDHigh8Op1);
   SDValue UABDL = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i16, UABDHigh8);
 
   // Second, create the node pattern of UABAL.
@@ -12110,8 +12114,8 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
   SDValue UABDLo8Op1 =
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT1->getOperand(0),
                   DAG.getConstant(0, DL, MVT::i64));
-  SDValue UABDLo8 = DAG.getNode(IsZExt ? AArch64ISD::UABD : AArch64ISD::SABD,
-                                DL, MVT::v8i8, UABDLo8Op0, UABDLo8Op1);
+  SDValue UABDLo8 = DAG.getNode(IsZExt ? ISD::ABDU : ISD::ABDS, DL, MVT::v8i8,
+                                UABDLo8Op0, UABDLo8Op1);
   SDValue ZExtUABD = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i16, UABDLo8);
   SDValue UABAL = DAG.getNode(ISD::ADD, DL, MVT::v8i16, UABDL, ZExtUABD);
 
@@ -12168,48 +12172,6 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   SDValue Dot = DAG.getNode(DotOpcode, DL, Zeros.getValueType(), Zeros,
                             A.getOperand(0), B);
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0), Dot);
-}
-
-// Given a ABS node, detect the following pattern:
-// (ABS (SUB (EXTEND a), (EXTEND b))).
-// Generates UABD/SABD instruction.
-static SDValue performABSCombine(SDNode *N, SelectionDAG &DAG,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const AArch64Subtarget *Subtarget) {
-  SDValue AbsOp1 = N->getOperand(0);
-  SDValue Op0, Op1;
-
-  if (AbsOp1.getOpcode() != ISD::SUB)
-    return SDValue();
-
-  Op0 = AbsOp1.getOperand(0);
-  Op1 = AbsOp1.getOperand(1);
-
-  unsigned Opc0 = Op0.getOpcode();
-  // Check if the operands of the sub are (zero|sign)-extended.
-  if (Opc0 != Op1.getOpcode() ||
-      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND))
-    return SDValue();
-
-  EVT VectorT1 = Op0.getOperand(0).getValueType();
-  EVT VectorT2 = Op1.getOperand(0).getValueType();
-  // Check if vectors are of same type and valid size.
-  uint64_t Size = VectorT1.getFixedSizeInBits();
-  if (VectorT1 != VectorT2 || (Size != 64 && Size != 128))
-    return SDValue();
-
-  // Check if vector element types are valid.
-  EVT VT1 = VectorT1.getVectorElementType();
-  if (VT1 != MVT::i8 && VT1 != MVT::i16 && VT1 != MVT::i32)
-    return SDValue();
-
-  Op0 = Op0.getOperand(0);
-  Op1 = Op1.getOperand(0);
-  unsigned ABDOpcode =
-      (Opc0 == ISD::SIGN_EXTEND) ? AArch64ISD::SABD : AArch64ISD::UABD;
-  SDValue ABD =
-      DAG.getNode(ABDOpcode, SDLoc(N), Op0->getValueType(0), Op0, Op1);
-  return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), ABD);
 }
 
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
@@ -14377,8 +14339,8 @@ static SDValue performExtendCombine(SDNode *N,
   // helps the backend to decide that an sabdl2 would be useful, saving a real
   // extract_high operation.
   if (!DCI.isBeforeLegalizeOps() && N->getOpcode() == ISD::ZERO_EXTEND &&
-      (N->getOperand(0).getOpcode() == AArch64ISD::UABD ||
-       N->getOperand(0).getOpcode() == AArch64ISD::SABD)) {
+      (N->getOperand(0).getOpcode() == ISD::ABDU ||
+       N->getOperand(0).getOpcode() == ISD::ABDS)) {
     SDNode *ABDNode = N->getOperand(0).getNode();
     SDValue NewABD =
         tryCombineLongOpWithDup(Intrinsic::not_intrinsic, ABDNode, DCI, DAG);
@@ -16344,8 +16306,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   default:
     LLVM_DEBUG(dbgs() << "Custom combining: skipping\n");
     break;
-  case ISD::ABS:
-    return performABSCombine(N, DAG, DCI, Subtarget);
   case ISD::ADD:
   case ISD::SUB:
     return performAddSubCombine(N, DCI, DAG);
