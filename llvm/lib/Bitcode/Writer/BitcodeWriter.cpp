@@ -1760,7 +1760,6 @@ void ModuleBitcodeWriter::writeDIFile(const DIFile *N,
 void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                              SmallVectorImpl<uint64_t> &Record,
                                              unsigned Abbrev) {
-  assert(N->isDistinct() && "Expected distinct compile units");
   Record.push_back(/* IsDistinct */ true);
   Record.push_back(N->getSourceLanguage());
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -2011,7 +2010,7 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
   Record.reserve(N->getElements().size() + 1);
-  const uint64_t Version = 3 << 1;
+  const uint64_t Version = 4 << 1;
   Record.push_back((uint64_t)N->isDistinct() | Version);
   Record.append(N->elements_begin(), N->elements_end());
 
@@ -2155,6 +2154,20 @@ void ModuleBitcodeWriter::writeMetadataRecords(
       IndexPos->push_back(Stream.GetCurrentBitNo());
     if (const MDNode *N = dyn_cast<MDNode>(MD)) {
       assert(N->isResolved() && "Expected forward references to be resolved");
+
+#ifndef NDEBUG
+      switch (N->getMetadataID()) {
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS)                                      \
+  case Metadata::CLASS##Kind:                                                  \
+    assert(!N->isDistinct() && "Expected non-distinct " #CLASS);               \
+    break;
+#define HANDLE_MDNODE_LEAF_DISTINCT(CLASS)                                     \
+  case Metadata::CLASS##Kind:                                                  \
+    assert(N->isDistinct() && "Expected distinct " #CLASS);                    \
+    break;
+#include "llvm/IR/Metadata.def"
+      }
+#endif
 
       switch (N->getMetadataID()) {
       default:
