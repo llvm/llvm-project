@@ -291,17 +291,17 @@ Compiled to LLVM, this function would be represented like this:
     %X = alloca i32, align 4
     %Y = alloca i32, align 4
     %Z = alloca i32, align 4
-    call void @llvm.dbg.declare(metadata i32* %X, metadata !11, metadata !13), !dbg !14
-    store i32 21, i32* %X, align 4, !dbg !14
-    call void @llvm.dbg.declare(metadata i32* %Y, metadata !15, metadata !13), !dbg !16
-    store i32 22, i32* %Y, align 4, !dbg !16
-    call void @llvm.dbg.declare(metadata i32* %Z, metadata !17, metadata !13), !dbg !19
-    store i32 23, i32* %Z, align 4, !dbg !19
-    %0 = load i32, i32* %X, align 4, !dbg !20
-    store i32 %0, i32* %Z, align 4, !dbg !21
-    %1 = load i32, i32* %Y, align 4, !dbg !22
-    store i32 %1, i32* %X, align 4, !dbg !23
-    ret void, !dbg !24
+    call void @llvm.dbg.declare(metadata i32* %X, metadata !11, metadata !DIExpression()), !dbg !13
+    store i32 21, i32* %X, align 4, !dbg !13
+    call void @llvm.dbg.declare(metadata i32* %Y, metadata !14, metadata !DIExpression()), !dbg !15
+    store i32 22, i32* %Y, align 4, !dbg !15
+    call void @llvm.dbg.declare(metadata i32* %Z, metadata !16, metadata !DIExpression()), !dbg !18
+    store i32 23, i32* %Z, align 4, !dbg !18
+    %0 = load i32, i32* %X, align 4, !dbg !19
+    store i32 %0, i32* %Z, align 4, !dbg !20
+    %1 = load i32, i32* %Y, align 4, !dbg !21
+    store i32 %1, i32* %X, align 4, !dbg !22
+    ret void, !dbg !23
   }
 
   ; Function Attrs: nounwind readnone
@@ -327,18 +327,17 @@ Compiled to LLVM, this function would be represented like this:
   !10 = !{!"clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)"}
   !11 = !DILocalVariable(name: "X", scope: !4, file: !1, line: 2, type: !12)
   !12 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-  !13 = !DIExpression()
-  !14 = !DILocation(line: 2, column: 9, scope: !4)
-  !15 = !DILocalVariable(name: "Y", scope: !4, file: !1, line: 3, type: !12)
-  !16 = !DILocation(line: 3, column: 9, scope: !4)
-  !17 = !DILocalVariable(name: "Z", scope: !18, file: !1, line: 5, type: !12)
-  !18 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
-  !19 = !DILocation(line: 5, column: 11, scope: !18)
-  !20 = !DILocation(line: 6, column: 11, scope: !18)
-  !21 = !DILocation(line: 6, column: 9, scope: !18)
-  !22 = !DILocation(line: 8, column: 9, scope: !4)
-  !23 = !DILocation(line: 8, column: 7, scope: !4)
-  !24 = !DILocation(line: 9, column: 3, scope: !4)
+  !13 = !DILocation(line: 2, column: 9, scope: !4)
+  !14 = !DILocalVariable(name: "Y", scope: !4, file: !1, line: 3, type: !12)
+  !15 = !DILocation(line: 3, column: 9, scope: !4)
+  !16 = !DILocalVariable(name: "Z", scope: !17, file: !1, line: 5, type: !12)
+  !17 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
+  !18 = !DILocation(line: 5, column: 11, scope: !17)
+  !19 = !DILocation(line: 6, column: 11, scope: !17)
+  !20 = !DILocation(line: 6, column: 9, scope: !17)
+  !21 = !DILocation(line: 8, column: 9, scope: !4)
+  !22 = !DILocation(line: 8, column: 7, scope: !4)
+  !23 = !DILocation(line: 9, column: 3, scope: !4)
 
 
 This example illustrates a few important details about LLVM debugging
@@ -349,21 +348,21 @@ variable definitions, and the code used to implement the function.
 
 .. code-block:: llvm
 
-  call void @llvm.dbg.declare(metadata i32* %X, metadata !11, metadata !13), !dbg !14
+  call void @llvm.dbg.declare(metadata i32* %X, metadata !11, metadata !DIExpression()), !dbg !13
     ; [debug line = 2:7] [debug variable = X]
 
 The first intrinsic ``%llvm.dbg.declare`` encodes debugging information for the
-variable ``X``.  The metadata ``!dbg !14`` attached to the intrinsic provides
+variable ``X``.  The metadata ``!dbg !13`` attached to the intrinsic provides
 scope information for the variable ``X``.
 
 .. code-block:: text
 
-  !14 = !DILocation(line: 2, column: 9, scope: !4)
+  !13 = !DILocation(line: 2, column: 9, scope: !4)
   !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5,
                               isLocal: false, isDefinition: true, scopeLine: 1,
                               isOptimized: false, variables: !2)
 
-Here ``!14`` is metadata providing `location information
+Here ``!13`` is metadata providing `location information
 <LangRef.html#dilocation>`_.  In this example, scope is encoded by ``!4``, a
 `subprogram descriptor <LangRef.html#disubprogram>`_.  This way the location
 information attached to the intrinsics indicates that the variable ``X`` is
@@ -373,20 +372,20 @@ Now lets take another example.
 
 .. code-block:: llvm
 
-  call void @llvm.dbg.declare(metadata i32* %Z, metadata !17, metadata !13), !dbg !19
+  call void @llvm.dbg.declare(metadata i32* %Z, metadata !16, metadata !DIExpression()), !dbg !18
     ; [debug line = 5:9] [debug variable = Z]
 
 The third intrinsic ``%llvm.dbg.declare`` encodes debugging information for
-variable ``Z``.  The metadata ``!dbg !19`` attached to the intrinsic provides
+variable ``Z``.  The metadata ``!dbg !18`` attached to the intrinsic provides
 scope information for the variable ``Z``.
 
 .. code-block:: text
 
-  !18 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
-  !19 = !DILocation(line: 5, column: 11, scope: !18)
+  !17 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
+  !18 = !DILocation(line: 5, column: 11, scope: !17)
 
-Here ``!19`` indicates that ``Z`` is declared at line number 5 and column
-number 11 inside of lexical scope ``!18``.  The lexical scope itself resides
+Here ``!18`` indicates that ``Z`` is declared at line number 5 and column
+number 11 inside of lexical scope ``!17``.  The lexical scope itself resides
 inside of subprogram ``!4`` described above.
 
 The scope information attached with each instruction provides a straightforward
@@ -800,14 +799,14 @@ presents several difficulties:
     br label %exit, !dbg !26
 
   truebr:
-    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !24
-    call void @llvm.dbg.value(metadata i32 1, metadata !23, metadata !DIExpression()), !dbg !24
+    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !23
+    call void @llvm.dbg.value(metadata i32 1, metadata !22, metadata !DIExpression()), !dbg !23
     %value1 = add i32 %input, 1
     br label %bb1
 
   falsebr:
-    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !24
-    call void @llvm.dbg.value(metadata i32 2, metadata !23, metadata !DIExpression()), !dbg !24
+    call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !23
+    call void @llvm.dbg.value(metadata i32 2, metadata !22, metadata !DIExpression()), !dbg !23
     %value = add i32 %input, 2
     br label %bb1
 
@@ -818,7 +817,7 @@ presents several difficulties:
 Here the difficulties are:
 
 * The control flow is roughly the opposite of basic block order
-* The value of the ``!23`` variable merges into ``%bb1``, but there is no PHI
+* The value of the ``!22`` variable merges into ``%bb1``, but there is no PHI
   node
 
 As mentioned above, the ``llvm.dbg.value`` intrinsics essentially form an
@@ -831,9 +830,9 @@ location, which would lead to a large number of debugging intrinsics being
 generated.
 
 Examining the example above, variable ``!30`` is assigned ``%input`` on both
-conditional paths through the function, while ``!23`` is assigned differing
+conditional paths through the function, while ``!22`` is assigned differing
 constant values on either path. Where control flow merges in ``%bb1`` we would
-want ``!30`` to keep its location (``%input``), but ``!23`` to become undefined
+want ``!30`` to keep its location (``%input``), but ``!22`` to become undefined
 as we cannot determine at runtime what value it should have in %bb1 without
 inserting a PHI node. mem2reg does not insert the PHI node to avoid changing
 codegen when debugging is enabled, and does not insert the other dbg.values
@@ -852,7 +851,7 @@ DbgEntityHistoryCalculator) to build a map of each instruction to every
 valid variable location, without the need to consider control flow. From
 the example above, it is otherwise difficult to determine that the location
 of variable ``!30`` should flow "up" into block ``%bb1``, but that the location
-of variable ``!23`` should not flow "down" into the ``%exit`` block.
+of variable ``!22`` should not flow "down" into the ``%exit`` block.
 
 .. _ccxx_frontend:
 
