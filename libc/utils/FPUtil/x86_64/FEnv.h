@@ -188,12 +188,10 @@ static inline int disableExcept(int excepts) {
 }
 
 static inline int clearExcept(int excepts) {
-  // An instruction to write to x87 status word ins't available. So, we
-  // just clear all of the x87 exceptions.
-  // TODO: One can potentially use fegetenv/fesetenv to clear only the
-  // listed exceptions in the x87 status word. We can do this if it is
-  // really required.
-  internal::clearX87Exceptions();
+  internal::X87StateDescriptor state;
+  internal::getX87StateDescriptor(state);
+  state.StatusWord &= ~internal::getStatusValueForExcept(excepts);
+  internal::writeX87StateDescriptor(state);
 
   uint32_t mxcsr = internal::getMXCSR();
   mxcsr &= ~internal::getStatusValueForExcept(excepts);
