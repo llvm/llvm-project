@@ -1063,15 +1063,24 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     } else {
       CompilerType actual_type = variable.GetType();
       // Desugar '$lldb_context', etc.
-      auto transformed_type = GetSwiftType(actual_type).transform(
-        [](swift::Type t) -> swift::Type {
-          if (auto *aliasTy = swift::dyn_cast<swift::TypeAliasType>(t.getPointer())) {
-            if (aliasTy && aliasTy->getDecl()->isDebuggerAlias()) {
-              return aliasTy->getSinglyDesugaredType();
+      swift::Type actual_swift_type = GetSwiftType(actual_type);
+      if (!actual_swift_type)
+        return llvm::None;
+
+      auto transformed_type =
+          actual_swift_type.transform([](swift::Type t) -> swift::Type {
+            if (auto *aliasTy =
+                    swift::dyn_cast<swift::TypeAliasType>(t.getPointer())) {
+              if (aliasTy && aliasTy->getDecl()->isDebuggerAlias()) {
+                return aliasTy->getSinglyDesugaredType();
+              }
             }
-          }
-          return t;
-      });
+            return t;
+          });
+
+      if (!transformed_type)
+        return llvm::None;
+
       actual_type =
           ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
       auto *swift_ast_ctx =
@@ -1411,8 +1420,9 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
                          *code_manipulator, options.GetUseDynamic());
 
       // Register all local variables so that lookups to them resolve.
-      if (auto error = RegisterAllVariables(sc, stack_frame_sp, *swift_ast_context,
-                                            local_variables, options.GetUseDynamic()))
+      if (auto error =
+              RegisterAllVariables(sc, stack_frame_sp, *swift_ast_context,
+                                   local_variables, options.GetUseDynamic()))
         return std::move(*error);
     }
 
@@ -1427,7 +1437,9 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     ResolveSpecialNames(sc, exe_scope, *swift_ast_context, special_names,
                         local_variables);
 
-    code_manipulator->AddExternalVariables(local_variables);
+    if (!code_manipulator->AddExternalVariables(local_variables))
+      return make_error<StringError>(inconvertibleErrorCode(),
+                                     "Could not add external variables.");
 
     stack_frame_sp.reset();
   }
