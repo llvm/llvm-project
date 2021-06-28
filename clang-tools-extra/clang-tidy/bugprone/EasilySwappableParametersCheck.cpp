@@ -98,24 +98,24 @@ namespace model {
 
 /// The language features involved in allowing the mix between two parameters.
 enum class MixFlags : unsigned char {
-  Invalid = 0, //< Sentinel bit pattern. DO NOT USE!
+  Invalid = 0, ///< Sentinel bit pattern. DO NOT USE!
 
-  //< Certain constructs (such as pointers to noexcept/non-noexcept functions)
-  // have the same CanonicalType, which would result in false positives.
-  // During the recursive modelling call, this flag is set if a later diagnosed
-  // canonical type equivalence should be thrown away.
+  /// Certain constructs (such as pointers to noexcept/non-noexcept functions)
+  /// have the same CanonicalType, which would result in false positives.
+  /// During the recursive modelling call, this flag is set if a later diagnosed
+  /// canonical type equivalence should be thrown away.
   WorkaroundDisableCanonicalEquivalence = 1,
 
-  None = 2,           //< Mix between the two parameters is not possible.
-  Trivial = 4,        //< The two mix trivially, and are the exact same type.
-  Canonical = 8,      //< The two mix because the types refer to the same
-                      // CanonicalType, but we do not elaborate as to how.
-  TypeAlias = 16,     //< The path from one type to the other involves
-                      // desugaring type aliases.
-  ReferenceBind = 32, //< The mix involves the binding power of "const &".
-  Qualifiers = 64,    //< The mix involves change in the qualifiers.
-  ImplicitConversion = 128, //< The mixing of the parameters is possible
-                            // through implicit conversions between the types.
+  None = 2,           ///< Mix between the two parameters is not possible.
+  Trivial = 4,        ///< The two mix trivially, and are the exact same type.
+  Canonical = 8,      ///< The two mix because the types refer to the same
+                      /// CanonicalType, but we do not elaborate as to how.
+  TypeAlias = 16,     ///< The path from one type to the other involves
+                      /// desugaring type aliases.
+  ReferenceBind = 32, ///< The mix involves the binding power of "const &".
+  Qualifiers = 64,    ///< The mix involves change in the qualifiers.
+  ImplicitConversion = 128, ///< The mixing of the parameters is possible
+                            /// through implicit conversions between the types.
 
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue =*/ImplicitConversion)
 };
@@ -546,16 +546,16 @@ struct MixableParameterRange {
 
 /// Helper enum for the recursive calls in the modelling that toggle what kinds
 /// of implicit conversions are to be modelled.
-enum ImplicitConversionModellingMode : unsigned char {
-  //< No implicit conversions are modelled.
-  ICMM_None,
+enum class ImplicitConversionModellingMode : unsigned char {
+  /// No implicit conversions are modelled.
+  None,
 
-  //< The full implicit conversion sequence is modelled.
-  ICMM_All,
+  /// The full implicit conversion sequence is modelled.
+  All,
 
-  //< Only model a unidirectional implicit conversion and within it only one
-  // standard conversion sequence.
-  ICMM_OneWaySingleStandardOnly
+  /// Only model a unidirectional implicit conversion and within it only one
+  /// standard conversion sequence.
+  OneWaySingleStandardOnly
 };
 
 static MixData
@@ -684,9 +684,9 @@ calculateMixability(const TheCheck &Check, QualType LType, QualType RType,
     // some other match. However, this must not consider implicit conversions.
     LLVM_DEBUG(llvm::dbgs()
                << "--- calculateMixability. LHS and RHS are Ptrs.\n");
-    MixData MixOfPointee =
-        calculateMixability(Check, LType->getPointeeType(),
-                            RType->getPointeeType(), Ctx, ICMM_None);
+    MixData MixOfPointee = calculateMixability(
+        Check, LType->getPointeeType(), RType->getPointeeType(), Ctx,
+        ImplicitConversionModellingMode::None);
     if (hasFlag(MixOfPointee.Flags,
                 MixFlags::WorkaroundDisableCanonicalEquivalence))
       RecursiveReturnDiscardingCanonicalType = true;
@@ -699,7 +699,7 @@ calculateMixability(const TheCheck &Check, QualType LType, QualType RType,
     }
   }
 
-  if (ImplicitMode > ICMM_None) {
+  if (ImplicitMode > ImplicitConversionModellingMode::None) {
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. Start implicit...\n");
     MixData MixLTR =
         approximateImplicitConversion(Check, LType, RType, Ctx, ImplicitMode);
@@ -707,8 +707,9 @@ calculateMixability(const TheCheck &Check, QualType LType, QualType RType,
         if (hasFlag(MixLTR.Flags, MixFlags::ImplicitConversion)) llvm::dbgs()
             << "--- calculateMixability. Implicit Left -> Right found.\n";);
 
-    if (ImplicitMode == ICMM_OneWaySingleStandardOnly && MixLTR.Conversion &&
-        !MixLTR.Conversion.AfterFirstStandard.isNull() &&
+    if (ImplicitMode ==
+            ImplicitConversionModellingMode::OneWaySingleStandardOnly &&
+        MixLTR.Conversion && !MixLTR.Conversion.AfterFirstStandard.isNull() &&
         MixLTR.Conversion.UDConvKind == ConversionSequence::UDCK_None &&
         MixLTR.Conversion.AfterSecondStandard.isNull()) {
       // The invoker of the method requested only modelling a single standard
@@ -952,7 +953,8 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   // the QualifiersMix check config.
   LLVM_DEBUG(llvm::dbgs()
              << "--- approximateStdConv. Trying qualifier adjustment...\n");
-  MixData QualConv = calculateMixability(Check, WorkType, To, Ctx, ICMM_None);
+  MixData QualConv = calculateMixability(Check, WorkType, To, Ctx,
+                                         ImplicitConversionModellingMode::None);
   QualConv.sanitize();
   if (hasFlag(QualConv.Flags, MixFlags::Qualifiers)) {
     LLVM_DEBUG(llvm::dbgs()
@@ -1001,9 +1003,9 @@ public:
                      QualType ToType) {
     // Try to go from the FromType to the ToType wiht only a single implicit
     // conversion, to see if the conversion function is applicable.
-    MixData Mix =
-        calculateMixability(Check, FromType, ToType, ConvFun->getASTContext(),
-                            ICMM_OneWaySingleStandardOnly);
+    MixData Mix = calculateMixability(
+        Check, FromType, ToType, ConvFun->getASTContext(),
+        ImplicitConversionModellingMode::OneWaySingleStandardOnly);
     Mix.sanitize();
     if (!Mix.indicatesMixability())
       return;
@@ -1190,7 +1192,17 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
   LLVM_DEBUG(llvm::dbgs() << ">>> approximateImplicitConversion for LType:\n";
              LType.dump(llvm::dbgs(), Ctx); llvm::dbgs() << "\nand RType:\n";
              RType.dump(llvm::dbgs(), Ctx);
-             llvm::dbgs() << "\nimplicit mode: " << ImplicitMode << '\n';);
+             llvm::dbgs() << "\nimplicit mode: "; switch (ImplicitMode) {
+               case ImplicitConversionModellingMode::None:
+                 llvm::dbgs() << "None";
+                 break;
+               case ImplicitConversionModellingMode::All:
+                 llvm::dbgs() << "All";
+                 break;
+               case ImplicitConversionModellingMode::OneWaySingleStandardOnly:
+                 llvm::dbgs() << "OneWay, Single, STD Only";
+                 break;
+             } llvm::dbgs() << '\n';);
   if (LType == RType)
     return {MixFlags::Trivial, LType};
 
@@ -1210,7 +1222,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
     WorkType = ImplicitSeq.AfterFirstStandard;
   }
 
-  if (ImplicitMode == ICMM_OneWaySingleStandardOnly)
+  if (ImplicitMode == ImplicitConversionModellingMode::OneWaySingleStandardOnly)
     // If the caller only requested modelling of a standard conversion, bail.
     return {ImplicitSeq.AfterFirstStandard.isNull()
                 ? MixFlags::None
@@ -1262,7 +1274,8 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
       llvm::dbgs()
       << "--- approximateImplicitConversion. Try to find post-conversion.\n");
   MixData SecondStdConv = approximateImplicitConversion(
-      Check, WorkType, RType, Ctx, ICMM_OneWaySingleStandardOnly);
+      Check, WorkType, RType, Ctx,
+      ImplicitConversionModellingMode::OneWaySingleStandardOnly);
   if (SecondStdConv.indicatesMixability()) {
     LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Standard "
                                "Post-Conversion found!\n");
@@ -1341,8 +1354,9 @@ static MixableParameterRange modelMixingRange(
 
       Mix M{Jth, Ith,
             calculateMixability(Check, Jth->getType(), Ith->getType(), Ctx,
-                                Check.ModelImplicitConversions ? ICMM_All
-                                                               : ICMM_None)};
+                                Check.ModelImplicitConversions
+                                    ? ImplicitConversionModellingMode::All
+                                    : ImplicitConversionModellingMode::None)};
       LLVM_DEBUG(llvm::dbgs() << "Mix flags (raw)           : "
                               << formatMixFlags(M.flags()) << '\n');
       M.sanitize();
