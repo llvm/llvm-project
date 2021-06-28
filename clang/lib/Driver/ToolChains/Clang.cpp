@@ -4975,11 +4975,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    false))
     CmdArgs.push_back("-fsplit-stack");
 
-  // -fprotect-parens=0 is default.
-  if (Args.hasFlag(options::OPT_fprotect_parens,
-                   options::OPT_fno_protect_parens, false))
-    CmdArgs.push_back("-fprotect-parens");
-
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
 
   if (Arg *A = Args.getLastArg(options::OPT_fextend_args_EQ)) {

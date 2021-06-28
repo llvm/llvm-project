@@ -430,11 +430,6 @@ void TargetInfo::adjust(LangOptions &Opts) {
   // its corresponding signed type.
   PaddingOnUnsignedFixedPoint |= Opts.PaddingOnUnsignedFixedPoint;
   CheckFixedPointBits();
-
-  if (Opts.ProtectParens && !checkArithmeticFenceSupported()) {
-    Diags.Report(diag::err_opt_not_valid_on_target) << "-fprotect-parens";
-    Opts.ProtectParens = false;
-  }
 }
 
 bool TargetInfo::initFeatureMap(

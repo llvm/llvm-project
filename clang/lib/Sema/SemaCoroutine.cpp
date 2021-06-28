@@ -291,6 +291,26 @@ static ExprResult buildOperatorCoawaitCall(Sema &SemaRef, Scope *S,
                                   cast<UnresolvedLookupExpr>(R.get()));
 }
 
+static Expr *buildBuiltinCall(Sema &S, SourceLocation Loc, Builtin::ID Id,
+                              MultiExprArg CallArgs) {
+  StringRef Name = S.Context.BuiltinInfo.getName(Id);
+  LookupResult R(S, &S.Context.Idents.get(Name), Loc, Sema::LookupOrdinaryName);
+  S.LookupName(R, S.TUScope, /*AllowBuiltinCreation=*/true);
+
+  auto *BuiltInDecl = R.getAsSingle<FunctionDecl>();
+  assert(BuiltInDecl && "failed to find builtin declaration");
+
+  ExprResult DeclRef =
+      S.BuildDeclRefExpr(BuiltInDecl, BuiltInDecl->getType(), VK_LValue, Loc);
+  assert(DeclRef.isUsable() && "Builtin reference cannot fail");
+
+  ExprResult Call =
+      S.BuildCallExpr(/*Scope=*/nullptr, DeclRef.get(), Loc, CallArgs, Loc);
+
+  assert(!Call.isInvalid() && "Call to builtin cannot fail!");
+  return Call.get();
+}
+
 static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
                                        SourceLocation Loc) {
   QualType CoroHandleType = lookupCoroutineHandleType(S, PromiseType, Loc);
@@ -307,7 +327,7 @@ static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
   }
 
   Expr *FramePtr =
-      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});
+      buildBuiltinCall(S, Loc, Builtin::BI__builtin_coro_frame, {});
 
   CXXScopeSpec SS;
   ExprResult FromAddr =
@@ -384,8 +404,8 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
   // the resume call and return instruction, which would interfere with the
   // musttail call contract.
   JustAddress = S.MaybeCreateExprWithCleanups(JustAddress);
-  return S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_resume,
-                                JustAddress);
+  return buildBuiltinCall(S, Loc, Builtin::BI__builtin_coro_resume,
+                          JustAddress);
 }
 
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
@@ -1337,10 +1357,10 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return false;
 
   Expr *FramePtr =
-      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});
+      buildBuiltinCall(S, Loc, Builtin::BI__builtin_coro_frame, {});
 
   Expr *FrameSize =
-      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_size, {});
+      buildBuiltinCall(S, Loc, Builtin::BI__builtin_coro_size, {});
 
   // Make new call.
 
@@ -1369,7 +1389,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return false;
 
   Expr *CoroFree =
-      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_free, {FramePtr});
+      buildBuiltinCall(S, Loc, Builtin::BI__builtin_coro_free, {FramePtr});
 
   SmallVector<Expr *, 2> DeleteArgs{CoroFree};
 
