@@ -81,6 +81,9 @@ TEST(LowLevelTypeTest, Vector) {
       EXPECT_EQ(EC, VTy.getElementCount());
       if (!EC.isScalable())
         EXPECT_EQ(S * EC.getFixedValue(), VTy.getSizeInBits());
+      else
+        EXPECT_EQ(TypeSize::Scalable(S * EC.getKnownMinValue()),
+                  VTy.getSizeInBits());
 
       // Test equality operators.
       EXPECT_TRUE(VTy == VTy);
