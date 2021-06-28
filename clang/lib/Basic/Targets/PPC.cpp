@@ -614,10 +614,10 @@ void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
-void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+void PPCTargetInfo::adjust(LangOptions &Opts) {
   if (HasAltivec)
     Opts.AltiVec = 1;
-  TargetInfo::adjust(Diags, Opts);
+  TargetInfo::adjust(Opts);
   if (LongDoubleFormat != &llvm::APFloat::IEEEdouble())
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()
