@@ -17,9 +17,9 @@
 # RUN: %lld -lSystem -L%t -ltlv %t/test.o -o %t/test
 # RUN: llvm-objdump --bind -d --no-show-raw-insn %t/test | FileCheck %s
 
-# CHECK:      movq [[#]](%rip), %rax # 0x[[#%x, FOO:]]
-# CHECK-NEXT: movq [[#]](%rip), %rax # 0x[[#%x, BAR:]]
-# CHECK-NEXT: movq [[#]](%rip), %rax # 0x[[#%x, BAZ:]]
+# CHECK:      movq [[#]](%rip), %rax ## 0x[[#%x, FOO:]]
+# CHECK-NEXT: movq [[#]](%rip), %rax ## 0x[[#%x, BAR:]]
+# CHECK-NEXT: movq [[#]](%rip), %rax ## 0x[[#%x, BAZ:]]
 
 # CHECK-LABEL: Bind table:
 # CHECK-DAG: __DATA       __thread_ptrs  0x{{0*}}[[#%x, FOO]] pointer 0   libtlv   _foo
