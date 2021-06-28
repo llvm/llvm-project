@@ -52,7 +52,7 @@ if("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
 endif()
 
 # The Windows builder scripts pass -fuse-ld=lld.
-if (WIN32)
+if (WIN32 OR "lld" IN_LIST LLVM_ENABLE_PROJECTS)
   list(APPEND CROSS_PROJECT_TEST_DEPS lld)
 endif()
 

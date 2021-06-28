@@ -67,11 +67,14 @@ if is_msvc:
     tools.append(ToolSubst('%cdb', '"%s"' % os.path.join(win_sdk, 'Debuggers',
                                                          arch, 'cdb.exe')))
 
-# clang_src_dir is not used by these tests, but is required by
-# use_clang(), so set it to "".
+# clang_src_dir and lld_src_dir are not used by these tests, but are required by
+# use_clang() and use_lld() respectively, so set them to "", if needed.
 if not hasattr(config, 'clang_src_dir'):
     config.clang_src_dir = ""
 llvm_config.use_clang()
+if not hasattr(config, 'lld_src_dir'):
+    config.lld_src_dir = ""
+llvm_config.use_lld(required=('lld' in config.llvm_enabled_projects))
 
 if config.llvm_use_sanitizer:
     # Propagate path to symbolizer for ASan/MSan.
