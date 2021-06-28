@@ -68,6 +68,19 @@ inline ArrayRef<NamedAttribute> getResultAttrs(Operation *op, unsigned index) {
   return resultDict ? resultDict.getValue() : llvm::None;
 }
 
+/// Insert the specified arguments and update the function type attribute.
+void insertFunctionArguments(Operation *op, ArrayRef<unsigned> argIndices,
+                             TypeRange argTypes,
+                             ArrayRef<DictionaryAttr> argAttrs,
+                             ArrayRef<Optional<Location>> argLocs,
+                             unsigned originalNumArgs, Type newType);
+
+/// Insert the specified results and update the function type attribute.
+void insertFunctionResults(Operation *op, ArrayRef<unsigned> resultIndices,
+                           TypeRange resultTypes,
+                           ArrayRef<DictionaryAttr> resultAttrs,
+                           unsigned originalNumResults, Type newType);
+
 /// Erase the specified arguments and update the function type attribute.
 void eraseFunctionArguments(Operation *op, ArrayRef<unsigned> argIndices,
                             unsigned originalNumArgs, Type newType);
@@ -208,6 +221,22 @@ public:
     return function_like_impl::getFunctionType(this->getOperation());
   }
 
+  /// Return the type of this function with the specified arguments and results
+  /// inserted. This is used to update the function's signature in the
+  /// `insertArguments` and `insertResults` methods. The arrays must be sorted
+  /// by increasing index.
+  ///
+  /// Note that the concrete class must define a method with the same name to
+  /// hide this one if the concrete class does not use FunctionType for the
+  /// function type under the hood.
+  FunctionType getTypeWithArgsAndResults(ArrayRef<unsigned> argIndices,
+                                         TypeRange argTypes,
+                                         ArrayRef<unsigned> resultIndices,
+                                         TypeRange resultTypes) {
+    return getType().getWithArgsAndResults(argIndices, argTypes, resultIndices,
+                                           resultTypes);
+  }
+
   /// Return the type of this function without the specified arguments and
   /// results. This is used to update the function's signature in the
   /// `eraseArguments` and `eraseResults` methods. The arrays of indices are
@@ -265,6 +294,48 @@ public:
 
   ValueTypeRange<BlockArgListType> getArgumentTypes() {
     return getBody().getArgumentTypes();
+  }
+
+  /// Insert a single argument of type `argType` with attributes `argAttrs` and
+  /// location `argLoc` at `argIndex`.
+  void insertArgument(unsigned argIndex, Type argType, DictionaryAttr argAttrs,
+                      Optional<Location> argLoc = {}) {
+    insertArguments({argIndex}, {argType}, {argAttrs}, {argLoc});
+  }
+
+  /// Inserts arguments with the listed types, attributes, and locations at the
+  /// listed indices. `argIndices` must be sorted. Arguments are inserted in the
+  /// order they are listed, such that arguments with identical index will
+  /// appear in the same order that they were listed here.
+  void insertArguments(ArrayRef<unsigned> argIndices, TypeRange argTypes,
+                       ArrayRef<DictionaryAttr> argAttrs,
+                       ArrayRef<Optional<Location>> argLocs) {
+    unsigned originalNumArgs = getNumArguments();
+    Type newType = getTypeWithArgsAndResults(
+        argIndices, argTypes, /*resultIndices=*/{}, /*resultTypes=*/{});
+    function_like_impl::insertFunctionArguments(
+        this->getOperation(), argIndices, argTypes, argAttrs, argLocs,
+        originalNumArgs, newType);
+  }
+
+  /// Insert a single result of type `resultType` at `resultIndex`.
+  void insertResult(unsigned resultIndex, Type resultType,
+                    DictionaryAttr resultAttrs) {
+    insertResults({resultIndex}, {resultType}, {resultAttrs});
+  }
+
+  /// Inserts results with the listed types at the listed indices.
+  /// `resultIndices` must be sorted. Results are inserted in the order they are
+  /// listed, such that results with identical index will appear in the same
+  /// order that they were listed here.
+  void insertResults(ArrayRef<unsigned> resultIndices, TypeRange resultTypes,
+                     ArrayRef<DictionaryAttr> resultAttrs) {
+    unsigned originalNumResults = getNumResults();
+    Type newType = getTypeWithArgsAndResults(/*argIndices=*/{}, /*argTypes=*/{},
+                                             resultIndices, resultTypes);
+    function_like_impl::insertFunctionResults(
+        this->getOperation(), resultIndices, resultTypes, resultAttrs,
+        originalNumResults, newType);
   }
 
   /// Erase a single argument at `argIndex`.
