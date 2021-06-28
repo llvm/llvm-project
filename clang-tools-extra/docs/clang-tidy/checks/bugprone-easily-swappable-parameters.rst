@@ -140,6 +140,34 @@ noisiness.
     `ConstIterator`, `const_reverse_iterator`, `ConstReverseIterator`.
     In addition, `_Bool` (but not `_bool`) is also part of the default value.
 
+.. option:: SuppressParametersUsedTogether
+
+    Suppresses diagnostics about parameters that are used together or in a
+    similar fashion inside the function's body.
+    Defaults to `true`.
+    Specifying `false` will turn off the heuristics.
+
+    Currently, the following heuristics are implemented which will suppress the
+    warning about the parameter pair involved:
+
+    * The parameters are used in the same expression, e.g. ``f(a, b)`` or
+      ``a < b``.
+    * The parameters are further passed to the same function to the same
+      parameter of that function, of the same overload.
+      E.g. ``f(a, 1)`` and ``f(b, 2)`` to some ``f(T, int)``.
+
+      .. note::
+
+        The check does not perform path-sensitive analysis, and as such,
+        "same function" in this context means the same function declaration.
+        If the same member function of a type on two distinct instances are
+        called with the parameters, it will still be regarded as
+        "same function".
+
+    * The same member field is accessed, or member method is called of the
+      two parameters, e.g. ``a.foo()`` and ``b.foo()``.
+    * Separate ``return`` statements return either of the parameters on
+      different code paths.
 
 Limitations
 -----------
