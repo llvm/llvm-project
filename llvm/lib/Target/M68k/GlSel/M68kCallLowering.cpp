@@ -15,17 +15,12 @@
 #include "M68kCallLowering.h"
 #include "M68kISelLowering.h"
 #include "M68kInstrInfo.h"
-#include "M68kSubtarget.h"
-#include "M68kTargetMachine.h"
-#include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/TargetCallingConv.h"
-
 using namespace llvm;
 
 M68kCallLowering::M68kCallLowering(const M68kTargetLowering &TLI)
     : CallLowering(&TLI) {}
+
 bool M68kCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                    const Value *Val, ArrayRef<Register> VRegs,
                                    FunctionLoweringInfo &FLI,
@@ -41,50 +36,11 @@ bool M68kCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                             const Function &F,
                                             ArrayRef<ArrayRef<Register>> VRegs,
                                             FunctionLoweringInfo &FLI) const {
-  MachineFunction &MF = MIRBuilder.getMF();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const auto &DL = F.getParent()->getDataLayout();
-  auto &TLI = *getTLI<M68kTargetLowering>();
 
-  SmallVector<ArgInfo, 8> SplitArgs;
-  unsigned I = 0;
-  for (const auto &Arg : F.args()) {
-    ArgInfo OrigArg{VRegs[I], Arg.getType()};
-    setArgFlags(OrigArg, I + AttributeList::FirstArgIndex, DL, F);
-    splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
-    ++I;
-  }
+  if (F.arg_empty())
+    return true;
 
-  CCAssignFn *AssignFn =
-      TLI.getCCAssignFnForCall(F.getCallingConv(), false, F.isVarArg());
-  IncomingValueAssigner ArgAssigner(AssignFn);
-  FormalArgHandler ArgHandler(MIRBuilder, MRI);
-  return determineAndHandleAssignments(ArgHandler, ArgAssigner, SplitArgs,
-                                       MIRBuilder, F.getCallingConv(),
-                                       F.isVarArg());
-}
-
-void M68kIncomingValueHandler::assignValueToReg(Register ValVReg,
-                                                Register PhysReg,
-                                                CCValAssign &VA) {
-  MIRBuilder.getMRI()->addLiveIn(PhysReg);
-  MIRBuilder.getMBB().addLiveIn(PhysReg);
-  IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
-}
-
-void M68kIncomingValueHandler::assignValueToAddress(Register ValVReg,
-                                                    Register Addr,
-                                                    uint64_t Size,
-                                                    MachinePointerInfo &MPO,
-                                                    CCValAssign &VA) {
-  llvm_unreachable("unimeplemented");
-}
-
-Register M68kIncomingValueHandler::getStackAddress(uint64_t Size,
-                                                   int64_t Offset,
-                                                   MachinePointerInfo &MPO,
-                                                   ISD::ArgFlagsTy Flags) {
-  llvm_unreachable("unimeplemented");
+  return false;
 }
 
 bool M68kCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,

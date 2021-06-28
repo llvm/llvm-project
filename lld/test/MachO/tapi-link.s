@@ -14,7 +14,7 @@
 # RUN: llvm-objdump --bind --no-show-raw-insn -d -r %t/with-reexport | FileCheck %s
 
 # CHECK: Disassembly of section __TEXT,__text:
-# CHECK: movq {{.*}} # [[ADDR:[0-9a-f]+]]
+# CHECK: movq {{.*}} ## 0x[[ADDR:[0-9a-f]+]]
 
 # CHECK: Bind table:
 # CHECK-DAG: __DATA_CONST __got 0x[[ADDR]] pointer 0 libSystem ___nan

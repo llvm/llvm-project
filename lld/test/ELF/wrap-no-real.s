@@ -9,9 +9,9 @@
 // RUN: llvm-readelf -s -x .got %t | FileCheck --check-prefix=READELF --implicit-check-not=__real_ %s
 
 // CHECK: <_start>:
-// CHECK-NEXT: movq {{.*}}(%rip), %rax  # 2021a8
-// CHECK-NEXT: movq {{.*}}(%rip), %rbx  # 2021a8
-// CHECK-NEXT: movq {{.*}}(%rip), %rcx  # 2021b0
+// CHECK-NEXT: movq {{.*}}(%rip), %rax  # 0x2021a8
+// CHECK-NEXT: movq {{.*}}(%rip), %rbx  # 0x2021a8
+// CHECK-NEXT: movq {{.*}}(%rip), %rcx  # 0x2021b0
 
 // READELF:      0000000000011000  0 NOTYPE GLOBAL DEFAULT ABS foo
 // READELF:      0000000000011010  0 NOTYPE GLOBAL DEFAULT ABS __wrap_foo
@@ -23,9 +23,9 @@
 // RUN: llvm-readelf -s -x .got %t2 | FileCheck --check-prefix=READELF --implicit-check-not=__real_ %s
 
 // CHECK2: <_start>:
-// CHECK2-NEXT: movq {{.*}}(%rip), %rax  # 2022e0
-// CHECK2-NEXT: movq {{.*}}(%rip), %rbx  # 2022e0
-// CHECK2-NEXT: movq {{.*}}(%rip), %rcx  # 2022e8
+// CHECK2-NEXT: movq {{.*}}(%rip), %rax  # 0x2022e0
+// CHECK2-NEXT: movq {{.*}}(%rip), %rbx  # 0x2022e0
+// CHECK2-NEXT: movq {{.*}}(%rip), %rcx  # 0x2022e8
 
 .global _start
 _start:
