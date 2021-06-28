@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 \
 // RUN:  -analyzer-checker=debug.ExprInspection %s 2>&1 | FileCheck %s
+// UNSUPPORTED: windows
 
 void clang_analyzer_printState();
 
