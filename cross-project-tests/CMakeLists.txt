@@ -15,7 +15,6 @@ set(CROSS_PROJECT_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(CROSS_PROJECT_TEST_DEPS
-  clang
   FileCheck
   count
   llvm-config
@@ -23,6 +22,10 @@ set(CROSS_PROJECT_TEST_DEPS
   check-gdb-llvm-support
   not
   )
+
+if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
+  list(APPEND CROSS_PROJECT_TEST_DEPS clang)
+endif()
 
 if ("mlir" IN_LIST LLVM_ENABLE_PROJECTS)
   add_llvm_executable(check-gdb-mlir-support
