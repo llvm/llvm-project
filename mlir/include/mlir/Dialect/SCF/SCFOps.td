@@ -108,14 +108,8 @@ def ExecuteRegionOp : SCF_Op<"execute_region"> {
 
   let regions = (region AnyRegion:$region);
 
-  // TODO: If the parent is a func like op (which would be the case if all other
-  // ops are from the std dialect), the inliner logic could be readily used to
-  // inline.
   let hasCanonicalizer = 1;
 
-  // TODO: can fold if it returns a constant.
-  // TODO: Single block execute_region ops can be readily inlined irrespective
-  // of which op is a parent. Add a fold for this.
   let hasFolder = 0;
 }
 

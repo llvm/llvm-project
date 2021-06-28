@@ -7441,6 +7441,12 @@ def warn_deprecated_volatile_structured_binding : Warning<
   "volatile qualifier in structured binding declaration is deprecated">,
   InGroup<DeprecatedVolatile>;
 
+def warn_deprecated_altivec_src_compat : Warning<
+  "Current handling of vector bool and vector pixel types in this context are "
+  "deprecated. The default behaviour will soon change to that implied by the "
+  "'-altivec-compat=xl' option">,
+  InGroup<DiagGroup<"deprecated-altivec-src-compat">>;
+
 def err_catch_incomplete_ptr : Error<
   "cannot catch pointer to incomplete type %0">;
 def err_catch_incomplete_ref : Error<

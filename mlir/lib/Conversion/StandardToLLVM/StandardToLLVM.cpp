@@ -2618,6 +2618,68 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
   }
 };
 
+struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
+  using ConvertOpToLLVMPattern<memref::CopyOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    memref::CopyOp::Adaptor adaptor(operands);
+    auto srcType = op.source().getType().cast<BaseMemRefType>();
+    auto targetType = op.target().getType().cast<BaseMemRefType>();
+
+    // First make sure we have an unranked memref descriptor representation.
+    auto makeUnranked = [&, this](Value ranked, BaseMemRefType type) {
+      auto rank = rewriter.create<LLVM::ConstantOp>(
+          loc, getIndexType(), rewriter.getIndexAttr(type.getRank()));
+      auto *typeConverter = getTypeConverter();
+      auto ptr =
+          typeConverter->promoteOneMemRefDescriptor(loc, ranked, rewriter);
+      auto voidPtr =
+          rewriter.create<LLVM::BitcastOp>(loc, getVoidPtrType(), ptr)
+              .getResult();
+      auto unrankedType =
+          UnrankedMemRefType::get(type.getElementType(), type.getMemorySpace());
+      return UnrankedMemRefDescriptor::pack(rewriter, loc, *typeConverter,
+                                            unrankedType,
+                                            ValueRange{rank, voidPtr});
+    };
+
+    Value unrankedSource = srcType.hasRank()
+                               ? makeUnranked(adaptor.source(), srcType)
+                               : adaptor.source();
+    Value unrankedTarget = targetType.hasRank()
+                               ? makeUnranked(adaptor.target(), targetType)
+                               : adaptor.target();
+
+    // Now promote the unranked descriptors to the stack.
+    auto one = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
+                                                 rewriter.getIndexAttr(1));
+    auto promote = [&](Value desc) {
+      auto ptrType = LLVM::LLVMPointerType::get(desc.getType());
+      auto allocated =
+          rewriter.create<LLVM::AllocaOp>(loc, ptrType, ValueRange{one});
+      rewriter.create<LLVM::StoreOp>(loc, desc, allocated);
+      return allocated;
+    };
+
+    auto sourcePtr = promote(unrankedSource);
+    auto targetPtr = promote(unrankedTarget);
+
+    auto elemSize = rewriter.create<LLVM::ConstantOp>(
+        loc, getIndexType(),
+        rewriter.getIndexAttr(srcType.getElementTypeBitWidth() / 8));
+    auto copyFn = LLVM::lookupOrCreateMemRefCopyFn(
+        op->getParentOfType<ModuleOp>(), getIndexType(), sourcePtr.getType());
+    rewriter.create<LLVM::CallOp>(loc, copyFn,
+                                  ValueRange{elemSize, sourcePtr, targetPtr});
+    rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+
 /// Extracts allocated, aligned pointers and offset from a ranked or unranked
 /// memref type. In unranked case, the fields are extracted from the underlying
 /// ranked descriptor.
@@ -4009,6 +4071,7 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       GetGlobalMemrefOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
+      MemRefCopyOpLowering,
       MemRefReinterpretCastOpLowering,
       MemRefReshapeOpLowering,
       RankOpLowering,
