@@ -249,7 +249,6 @@ bb10:
   ret i1 %cmp
 }
 
-; FIXME:
 ; It is not generally safe to hoist an expression (sdiv) that may trap.
 
 define i1 @PR50906() {
@@ -257,9 +256,10 @@ define i1 @PR50906() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ icmp sgt (i32 sdiv (i32 7, i32 ptrtoint (i1 ()* @PR50906 to i32)), i32 1), [[NEXT:%.*]] ], [ icmp sgt (i32 sdiv (i32 7, i32 ptrtoint (i1 ()* @PR50906 to i32)), i32 0), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[NEXT:%.*]] ]
 ; CHECK-NEXT:    br label [[NEXT]]
 ; CHECK:       next:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[PHI]], sdiv (i32 7, i32 ptrtoint (i1 ()* @PR50906 to i32))
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[CMP]]
