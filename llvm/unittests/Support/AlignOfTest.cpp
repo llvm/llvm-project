@@ -131,9 +131,17 @@ TEST(AlignOfTest, BasicAlignedArray) {
   EXPECT_EQ(alignof(T<long>), alignof(AlignedCharArrayUnion<long>));
   EXPECT_EQ(alignof(T<long long>), alignof(AlignedCharArrayUnion<long long>));
   EXPECT_EQ(alignof(T<float>), alignof(AlignedCharArrayUnion<float>));
+#ifdef _AIX
+  EXPECT_LE(alignof(T<double>), alignof(AlignedCharArrayUnion<double>));
+  EXPECT_LE(alignof(T<long double>),
+            alignof(AlignedCharArrayUnion<long double>));
+  EXPECT_LE(alignof(S4), alignof(AlignedCharArrayUnion<S4>));
+#else
   EXPECT_EQ(alignof(T<double>), alignof(AlignedCharArrayUnion<double>));
   EXPECT_EQ(alignof(T<long double>),
             alignof(AlignedCharArrayUnion<long double>));
+  EXPECT_EQ(alignof(S4), alignof(AlignedCharArrayUnion<S4>));
+#endif
   EXPECT_EQ(alignof(T<void *>), alignof(AlignedCharArrayUnion<void *>));
   EXPECT_EQ(alignof(T<int *>), alignof(AlignedCharArrayUnion<int *>));
   EXPECT_EQ(alignof(T<double (*)(double)>),
@@ -143,7 +151,6 @@ TEST(AlignOfTest, BasicAlignedArray) {
   EXPECT_EQ(alignof(S1), alignof(AlignedCharArrayUnion<S1>));
   EXPECT_EQ(alignof(S2), alignof(AlignedCharArrayUnion<S2>));
   EXPECT_EQ(alignof(S3), alignof(AlignedCharArrayUnion<S3>));
-  EXPECT_EQ(alignof(S4), alignof(AlignedCharArrayUnion<S4>));
   EXPECT_EQ(alignof(S5), alignof(AlignedCharArrayUnion<S5>));
   EXPECT_EQ(alignof(S6), alignof(AlignedCharArrayUnion<S6>));
   EXPECT_EQ(alignof(D1), alignof(AlignedCharArrayUnion<D1>));
