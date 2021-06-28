@@ -246,6 +246,36 @@ static LogicalResult verify(ExecuteOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+/// CreateGroupOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult CreateGroupOp::canonicalize(CreateGroupOp op,
+                                          PatternRewriter &rewriter) {
+  // Find all `await_all` users of the group.
+  llvm::SmallVector<AwaitAllOp> awaitAllUsers;
+
+  auto isAwaitAll = [&](Operation *op) -> bool {
+    if (AwaitAllOp awaitAll = dyn_cast<AwaitAllOp>(op)) {
+      awaitAllUsers.push_back(awaitAll);
+      return true;
+    }
+    return false;
+  };
+
+  // Check if all users of the group are `await_all` operations.
+  if (!llvm::all_of(op->getUsers(), isAwaitAll))
+    return failure();
+
+  // If group is only awaited without adding anything to it, we can safely erase
+  // the create operation and all users.
+  for (AwaitAllOp awaitAll : awaitAllUsers)
+    rewriter.eraseOp(awaitAll);
+  rewriter.eraseOp(op);
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 /// AwaitOp
 //===----------------------------------------------------------------------===//
 
