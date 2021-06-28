@@ -69,6 +69,10 @@ bool Dialect::hasConstantMaterializer() const {
   return def->getValueAsBit("hasConstantMaterializer");
 }
 
+bool Dialect::hasNonDefaultDestructor() const {
+  return def->getValueAsBit("hasNonDefaultDestructor");
+}
+
 bool Dialect::hasOperationAttrVerify() const {
   return def->getValueAsBit("hasOperationAttrVerify");
 }

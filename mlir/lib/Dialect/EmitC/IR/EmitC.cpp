@@ -14,6 +14,8 @@
 using namespace mlir;
 using namespace mlir::emitc;
 
+#include "mlir/Dialect/EmitC/IR/EmitCDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // EmitCDialect
 //===----------------------------------------------------------------------===//

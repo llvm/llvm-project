@@ -26,6 +26,8 @@
 using namespace mlir;
 using namespace mlir::test;
 
+#include "TestOpsDialect.cpp.inc"
+
 void mlir::test::registerTestDialect(DialectRegistry &registry) {
   registry.insert<TestDialect>();
 }
