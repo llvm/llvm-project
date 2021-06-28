@@ -320,7 +320,9 @@ template <Direction DIR>
 class ExternalIoStatementState : public ExternalIoStatementBase,
                                  public IoDirectionState<DIR> {
 public:
-  using ExternalIoStatementBase::ExternalIoStatementBase;
+  ExternalIoStatementState(
+      ExternalFileUnit &, const char *sourceFile = nullptr, int sourceLine = 0);
+  MutableModes &mutableModes() { return mutableModes_; }
   int EndIoStatement();
   bool Emit(const char *, std::size_t, std::size_t elementBytes);
   bool Emit(const char *, std::size_t);
@@ -333,6 +335,12 @@ public:
   void HandleAbsolutePosition(std::int64_t);
   bool BeginReadingRecord();
   void FinishReadingRecord();
+
+private:
+  // These are forked from ConnectionState's modes at the beginning
+  // of each formatted I/O statement so they may be overridden by control
+  // edit descriptors during the statement.
+  MutableModes mutableModes_;
 };
 
 template <Direction DIR, typename CHAR>
@@ -343,7 +351,6 @@ public:
   ExternalFormattedIoStatementState(ExternalFileUnit &, const CharType *format,
       std::size_t formatLength, const char *sourceFile = nullptr,
       int sourceLine = 0);
-  MutableModes &mutableModes() { return mutableModes_; }
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
@@ -351,10 +358,6 @@ public:
   }
 
 private:
-  // These are forked from ConnectionState's modes at the beginning
-  // of each formatted I/O statement so they may be overridden by control
-  // edit descriptors during the statement.
-  MutableModes mutableModes_;
   FormatControl<ExternalFormattedIoStatementState> format_;
 };
 

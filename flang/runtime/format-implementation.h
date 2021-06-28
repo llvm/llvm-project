@@ -357,6 +357,8 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       }
     } else if (ch == '/') {
       context.AdvanceRecord(repeat && *repeat > 0 ? *repeat : 1);
+    } else if (ch == '$' || ch == '\\') {
+      context.mutableModes().nonAdvancing = true;
     } else {
       context.SignalError(IostatErrorInFormat,
           "Invalid character '%c' in FORMAT", static_cast<char>(ch));
