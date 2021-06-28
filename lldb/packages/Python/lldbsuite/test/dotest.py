@@ -929,6 +929,7 @@ def run_suite():
             err = lldb.remote_platform.ConnectRemote(platform_connect_options)
             if err.Success():
                 print("Connected.")
+                lldb.selected_platform = lldb.remote_platform
             else:
                 print("error: failed to connect to remote platform using URL '%s': %s" % (
                     configuration.lldb_platform_url, err))
@@ -957,9 +958,6 @@ def run_suite():
     # Set up the working directory.
     # Note that it's not dotest's job to clean this directory.
     lldbutil.mkdir_p(configuration.test_build_dir)
-
-    from . import lldbplatformutil
-    target_platform = lldbplatformutil.getPlatform()
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
