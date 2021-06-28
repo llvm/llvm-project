@@ -20,6 +20,22 @@ def matmul(
   implements(ContractionOpInterface)
   C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
 
+@linalg_structured_op
+def quantized_matmul(
+    A=TensorDef(T1, S.M, S.K),
+    B=TensorDef(T2, S.K, S.N),
+    AZp=ScalarDef(I32),
+    BZp=ScalarDef(I32),
+    C=TensorDef(U, S.M, S.N, output=True)):
+  """Performs a matrix multiplication of two 2D inputs.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output. The quantized variant
+  includes zero-point adjustments for the left and right operands of the
+  matmul.
+  """
+  domain(D.m, D.n, D.k)
+  C[D.m, D.n] += (cast(U, A[D.m, D.k]) - cast(U, AZp)) * (cast(U, B[D.k, D.n]) - cast(U, BZp))
 
 @linalg_structured_op
 def mmt4d(lhs=TensorDef(TV.LhsType, S.M, S.K, S.M0, S.K0),
@@ -40,7 +56,6 @@ def mmt4d(lhs=TensorDef(TV.LhsType, S.M, S.K, S.M0, S.K0),
   implements(ContractionOpInterface)
   accum[D.m, D.n, D.m0, D.n0] += cast(TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * cast(TV.AccumType, rhs[D.n, D.k, D.n0, D.k0])
 
-
 @linalg_structured_op
 def batch_matmul(
     A=TensorDef(T1, Batch, S.M, S.K),
@@ -54,6 +69,23 @@ def batch_matmul(
   domain(D.b, D.m, D.n, D.k)
   implements(ContractionOpInterface)
   C[D.b, D.m, D.n] += cast(U, A[D.b, D.m, D.k]) * cast(U, B[D.b, D.k, D.n])
+
+@linalg_structured_op
+def quantized_batch_matmul(
+    A=TensorDef(T1, Batch, S.M, S.K),
+    B=TensorDef(T2, Batch, S.K, S.N),
+    AZp=ScalarDef(I32),
+    BZp=ScalarDef(I32),
+    C=TensorDef(U, Batch, S.M, S.N, output=True)):
+  """Performs a batched matrix multiplication of two 3D inputs.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output. The quantized variant
+  includes zero-point adjustments for the left and right operands of the
+  matmul.
+  """
+  domain(D.b, D.m, D.n, D.k)
+  C[D.b, D.m, D.n] += (cast(U, A[D.b, D.m, D.k]) - cast(U, AZp)) * (cast(U, B[D.b, D.k, D.n]) - cast(U, BZp))
 
 
 @linalg_structured_op
