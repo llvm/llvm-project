@@ -4,7 +4,7 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
-; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured.
+; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured. Mark as noescape to override.
 ; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
 ; CHECK-REMARKS: remark: remove_globalization.c:6:2: Moving globalized variable to the stack.
 
