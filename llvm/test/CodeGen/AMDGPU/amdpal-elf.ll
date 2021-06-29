@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri -filetype=obj | llvm-readobj -symbols -s -sd - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdpal -mcpu=kaveri | llvm-readobj -symbols -s -sd - | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri -filetype=obj | llvm-readobj -S --sd --syms - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdpal -mcpu=kaveri | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
 

@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false --code-model=large -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck --check-prefix=RELOC %s
-; RUN: llvm-readobj -t %t.o | FileCheck --check-prefix=SYM %s
+; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck --check-prefix=DIS %s
 
 @GInit = global double 1.000000e+00, align 8

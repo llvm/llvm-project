@@ -3,7 +3,7 @@
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
 ; RUN: FileCheck --check-prefix=OBJ %s
 ; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck --check-prefix=RELOC %s
-; RUN: llvm-readobj -t %t.o | FileCheck --check-prefix=SYM %s
+; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
 ; RUN: llvm-objdump -r %t.o | FileCheck --check-prefix=DIS_REL %s
 

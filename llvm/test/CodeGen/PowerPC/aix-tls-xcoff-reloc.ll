@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck --check-prefix=RELOC %s
-; RUN: llvm-readobj -t %t.o | FileCheck --check-prefix=SYM %s
+; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck --check-prefix=DIS %s
 
 @const_ivar = constant i32 6, align 4
