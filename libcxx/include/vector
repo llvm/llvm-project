@@ -144,7 +144,7 @@ public:
     public:
         reference(const reference&) noexcept;
         operator bool() const noexcept;
-        reference& operator=(const bool x) noexcept;
+        reference& operator=(bool x) noexcept;
         reference& operator=(const reference& x) noexcept;
         iterator operator&() const noexcept;
         void flip() noexcept;

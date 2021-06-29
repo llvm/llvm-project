@@ -423,7 +423,7 @@ get_swprintf()
 }
 
 template <typename S, typename V>
-S i_to_string(const V v)
+S i_to_string(V v)
 {
 //  numeric_limits::digits10 returns value less on 1 than desired for unsigned numbers.
 //  For example, for 1-byte unsigned value digits10 is 2 (999 can not be represented),
