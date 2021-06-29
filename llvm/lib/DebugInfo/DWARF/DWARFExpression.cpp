@@ -326,6 +326,9 @@ void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
                             bool IsEH) const {
   uint32_t EntryValExprSize = 0;
   uint64_t EntryValStartOffset = 0;
+  if (Data.getData().empty())
+    OS << "<empty>";
+
   for (auto &Op : *this) {
     if (!Op.print(OS, DumpOpts, this, RegInfo, U, IsEH)) {
       uint64_t FailOffset = Op.getEndOffset();
