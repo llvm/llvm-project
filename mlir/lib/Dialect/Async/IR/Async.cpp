@@ -14,6 +14,8 @@
 using namespace mlir;
 using namespace mlir::async;
 
+#include "mlir/Dialect/Async/IR/AsyncOpsDialect.cpp.inc"
+
 void AsyncDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
@@ -241,6 +243,36 @@ static LogicalResult verify(ExecuteOp op) {
   if (op.body().getArgumentTypes() != unwrappedTypes)
     return op.emitOpError("async body region argument types do not match the "
                           "execute operation arguments types");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+/// CreateGroupOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult CreateGroupOp::canonicalize(CreateGroupOp op,
+                                          PatternRewriter &rewriter) {
+  // Find all `await_all` users of the group.
+  llvm::SmallVector<AwaitAllOp> awaitAllUsers;
+
+  auto isAwaitAll = [&](Operation *op) -> bool {
+    if (AwaitAllOp awaitAll = dyn_cast<AwaitAllOp>(op)) {
+      awaitAllUsers.push_back(awaitAll);
+      return true;
+    }
+    return false;
+  };
+
+  // Check if all users of the group are `await_all` operations.
+  if (!llvm::all_of(op->getUsers(), isAwaitAll))
+    return failure();
+
+  // If group is only awaited without adding anything to it, we can safely erase
+  // the create operation and all users.
+  for (AwaitAllOp awaitAll : awaitAllUsers)
+    rewriter.eraseOp(awaitAll);
+  rewriter.eraseOp(op);
 
   return success();
 }

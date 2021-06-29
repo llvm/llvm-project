@@ -531,6 +531,9 @@ void Value::replaceUsesWithIf(Value *New,
   assert(New->getType() == getType() &&
          "replaceUses of value with new value of different type!");
 
+  SmallVector<TrackingVH<Constant>, 8> Consts;
+  SmallPtrSet<Constant *, 8> Visited;
+
   for (use_iterator UI = use_begin(), E = use_end(); UI != E;) {
     Use &U = *UI;
     ++UI;
@@ -540,11 +543,18 @@ void Value::replaceUsesWithIf(Value *New,
     // constant because they are uniqued.
     if (auto *C = dyn_cast<Constant>(U.getUser())) {
       if (!isa<GlobalValue>(C)) {
-        C->handleOperandChange(this, New);
+        if (Visited.insert(C).second)
+          Consts.push_back(TrackingVH<Constant>(C));
         continue;
       }
     }
     U.set(New);
+  }
+
+  while (!Consts.empty()) {
+    // FIXME: handleOperandChange() updates all the uses in a given Constant,
+    //        not just the one passed to ShouldReplace
+    Consts.pop_back_val()->handleOperandChange(this, New);
   }
 }
 

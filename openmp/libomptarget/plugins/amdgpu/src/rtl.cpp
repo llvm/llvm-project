@@ -71,6 +71,10 @@ hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t device_id) {
 }
 }
 
+// Heuristic parameters used for kernel launch
+// Number of teams per CU to allow scheduling flexibility
+static const unsigned DefaultTeamsPerCU = 4;
+
 int print_kernel_trace;
 
 #ifdef OMPTARGET_DEBUG
@@ -934,7 +938,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
        DeviceInfo.EnvNumTeams);
   } else {
     char *TeamsPerCUEnvStr = getenv("OMP_TARGET_TEAMS_PER_PROC");
-    int TeamsPerCU = 1; // default number of teams per CU is 1
+    int TeamsPerCU = DefaultTeamsPerCU;
     if (TeamsPerCUEnvStr) {
       TeamsPerCU = std::stoi(TeamsPerCUEnvStr);
     }

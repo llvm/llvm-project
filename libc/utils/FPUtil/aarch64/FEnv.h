@@ -90,10 +90,10 @@ static inline int disableExcept(int excepts) {
 }
 
 static inline int clearExcept(int excepts) {
-  uint32_t controlWord = FEnv::getControlWord();
+  uint32_t statusWord = FEnv::getStatusWord();
   uint32_t toClear = FEnv::getStatusValueForExcept(excepts);
-  controlWord &= ~(toClear << FEnv::ExceptionStatusFlagsBitPosition);
-  FEnv::writeStatusWord(controlWord);
+  statusWord &= ~(toClear << FEnv::ExceptionStatusFlagsBitPosition);
+  FEnv::writeStatusWord(statusWord);
   return 0;
 }
 

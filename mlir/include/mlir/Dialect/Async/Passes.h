@@ -29,6 +29,8 @@ std::unique_ptr<Pass> createAsyncRuntimeRefCountingPass();
 
 std::unique_ptr<Pass> createAsyncRuntimeRefCountingOptPass();
 
+std::unique_ptr<Pass> createAsyncRuntimePolicyBasedRefCountingPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

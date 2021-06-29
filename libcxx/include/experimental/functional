@@ -86,7 +86,6 @@ inline namespace fundamentals_v1 {
 
 */
 
-#include <__functional/search.h>
 #include <experimental/__config>
 #include <functional>
 #include <algorithm>

@@ -2,7 +2,7 @@
 ## containing symbols with duplicate names (but different name suffixes).
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj -t %t1 | FileCheck %s --check-prefix=CASE1
+# RUN: llvm-readobj --syms %t1 | FileCheck %s --check-prefix=CASE1
 
 # CASE1: Name: localfoo (1)
 # CASE1: Name: localfoo (1)

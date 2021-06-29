@@ -2099,7 +2099,6 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
     CGSCCPassManager CGPM;
     CGPM.addPass(CoroSplitPass());
-    CGPM.addPass(createCGSCCToFunctionPassAdaptor(CoroElidePass()));
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
 
     MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));

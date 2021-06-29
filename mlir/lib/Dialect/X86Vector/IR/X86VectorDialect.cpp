@@ -18,6 +18,8 @@
 
 using namespace mlir;
 
+#include "mlir/Dialect/X86Vector/X86VectorDialect.cpp.inc"
+
 void x86vector::X86VectorDialect::initialize() {
   addOperations<
 #define GET_OP_LIST

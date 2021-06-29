@@ -30,6 +30,8 @@
 using namespace mlir;
 using namespace ROCDL;
 
+#include "mlir/Dialect/LLVMIR/ROCDLOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // Parsing for ROCDL ops
 //===----------------------------------------------------------------------===//

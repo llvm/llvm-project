@@ -128,8 +128,7 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
     Register ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
-        MPO, MachineMemOperand::MOStore, VA.getLocVT().getStoreSize(),
-        Align(1));
+        MPO, MachineMemOperand::MOStore, LLT(VA.getLocVT()), Align(1));
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 

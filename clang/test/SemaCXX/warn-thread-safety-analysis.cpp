@@ -636,11 +636,11 @@ void shared_fun_0() {
 
 void shared_fun_1() {
   sls_mu.ReaderLock(); // \
-    // expected-warning {{mutex 'sls_mu' is acquired exclusively and shared in the same scope}}
+    // expected-note {{the other acquisition of mutex 'sls_mu' is here}}
   do {
     sls_mu.Unlock();
     sls_mu.Lock();  // \
-      // expected-note {{the other acquisition of mutex 'sls_mu' is here}}
+      // expected-warning {{mutex 'sls_mu' is acquired exclusively and shared in the same scope}}
   } while (getBool());
   sls_mu.Unlock();
 }
@@ -695,11 +695,11 @@ void shared_fun_11() {
 
 void shared_bad_0() {
   sls_mu.Lock();  // \
-    // expected-warning {{mutex 'sls_mu' is acquired exclusively and shared in the same scope}}
+    // expected-note {{the other acquisition of mutex 'sls_mu' is here}}
   do {
     sls_mu.Unlock();
     sls_mu.ReaderLock();  // \
-      // expected-note {{the other acquisition of mutex 'sls_mu' is here}}
+      // expected-warning {{mutex 'sls_mu' is acquired exclusively and shared in the same scope}}
   } while (getBool());
   sls_mu.Unlock();
 }
@@ -2771,6 +2771,45 @@ void unlockJoin() {
     scope.Unlock();
   // No warning on join point because the lock will be released by the scope object anyway.
   x = 2; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void loopAcquire() {
+  RelockableMutexLock scope(&mu, DeferTraits{});
+  for (unsigned i = 1; i < 10; ++i)
+    scope.Lock(); // We could catch this double lock with negative capabilities.
+}
+
+void loopRelease() {
+  RelockableMutexLock scope(&mu, ExclusiveTraits{}); // expected-note {{mutex acquired here}}
+  // We have to warn on this join point despite the lock being managed ...
+  for (unsigned i = 1; i < 10; ++i) { // expected-warning {{expecting mutex 'mu' to be held at start of each loop}}
+    x = 1; // ... because we might miss that this doesn't always happen under lock.
+    if (i == 5)
+      scope.Unlock();
+  }
+}
+
+void loopAcquireContinue() {
+  RelockableMutexLock scope(&mu, DeferTraits{});
+  for (unsigned i = 1; i < 10; ++i) {
+    x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+    if (i == 5) {
+      scope.Lock();
+      continue;
+    }
+  }
+}
+
+void loopReleaseContinue() {
+  RelockableMutexLock scope(&mu, ExclusiveTraits{}); // expected-note {{mutex acquired here}}
+  // We have to warn on this join point despite the lock being managed ...
+  for (unsigned i = 1; i < 10; ++i) {
+    x = 1; // ... because we might miss that this doesn't always happen under lock.
+    if (i == 5) {
+      scope.Unlock();
+      continue; // expected-warning {{expecting mutex 'mu' to be held at start of each loop}}
+    }
+  }
 }
 
 void exclusiveSharedJoin() {

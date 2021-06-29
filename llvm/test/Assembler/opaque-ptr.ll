@@ -4,6 +4,13 @@
 ; CHECK: @global = external global ptr
 @global = external global ptr
 
+; CHECK: @fptr1 = external global ptr ()*
+; CHECK: @fptr2 = external global ptr () addrspace(1)*
+; CHECK: @fptr3 = external global ptr () addrspace(1)* addrspace(2)*
+@fptr1 = external global ptr ()*
+@fptr2 = external global ptr () addrspace(1)*
+@fptr3 = external global ptr () addrspace(1)* addrspace(2)*
+
 ; CHECK: define ptr @f(ptr %a) {
 ; CHECK:     %b = bitcast ptr %a to ptr
 ; CHECK:     ret ptr %b
@@ -132,5 +139,10 @@ continue:
 cleanup:
   landingpad {}
     cleanup
+  ret void
+}
+
+; CHECK: define void @byval(ptr byval({ i32, i32 }) %0)
+define void @byval(ptr byval({ i32, i32 }) %0) {
   ret void
 }
