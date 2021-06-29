@@ -43,6 +43,10 @@
 #include <grpc++/ext/proto_server_reflection_plugin.h>
 #endif
 
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
+
 namespace clang {
 namespace clangd {
 namespace remote {
@@ -354,12 +358,25 @@ private:
   std::atomic<llvm::sys::TimePoint<>> IndexBuildTime;
 };
 
+void maybeTrimMemory() {
+#if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
+  malloc_trim(0);
+#endif
+}
+
 // Detect changes in \p IndexPath file and load new versions of the index
 // whenever they become available.
 void hotReload(clangd::SwapIndex &Index, llvm::StringRef IndexPath,
                llvm::vfs::Status &LastStatus,
                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> &FS,
                Monitor &Monitor) {
+  // glibc malloc doesn't shrink an arena if there are items living at the end,
+  // which might happen since we destroy the old index after building new one.
+  // Trim more aggresively to keep memory usage of the server low.
+  // Note that we do it deliberately here rather than after Index.reset(),
+  // because old index might still be kept alive after the reset call if we are
+  // serving requests.
+  maybeTrimMemory();
   auto Status = FS->status(IndexPath);
   // Requested file is same as loaded index: no reload is needed.
   if (!Status || (Status->getLastModificationTime() ==
