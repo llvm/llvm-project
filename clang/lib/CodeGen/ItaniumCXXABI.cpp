@@ -2611,15 +2611,6 @@ static llvm::Function *createGlobalInitOrCleanupFn(CodeGen::CodeGenModule &CGM,
   return GlobalInitOrCleanupFn;
 }
 
-static FunctionDecl *
-createGlobalInitOrCleanupFnDecl(CodeGen::CodeGenModule &CGM, StringRef FnName) {
-  ASTContext &Ctx = CGM.getContext();
-  QualType FunctionTy = Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {});
-  return FunctionDecl::Create(
-      Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-      &Ctx.Idents.get(FnName), FunctionTy, nullptr, SC_Static, false, false);
-}
-
 void CodeGenModule::unregisterGlobalDtorsWithUnAtExit() {
   for (const auto &I : DtorsUsingAtExit) {
     int Priority = I.first;
@@ -2629,13 +2620,11 @@ void CodeGenModule::unregisterGlobalDtorsWithUnAtExit() {
     llvm::Function *GlobalCleanupFn =
         createGlobalInitOrCleanupFn(*this, GlobalCleanupFnName);
 
-    FunctionDecl *GlobalCleanupFD =
-        createGlobalInitOrCleanupFnDecl(*this, GlobalCleanupFnName);
-
     CodeGenFunction CGF(*this);
-    CGF.StartFunction(GlobalDecl(GlobalCleanupFD), getContext().VoidTy,
-                      GlobalCleanupFn, getTypes().arrangeNullaryFunction(),
-                      FunctionArgList(), SourceLocation(), SourceLocation());
+    CGF.StartFunction(GlobalDecl(), getContext().VoidTy, GlobalCleanupFn,
+                      getTypes().arrangeNullaryFunction(), FunctionArgList(),
+                      SourceLocation(), SourceLocation());
+    auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
     // Get the destructor function type, void(*)(void).
     llvm::FunctionType *dtorFuncTy = llvm::FunctionType::get(CGF.VoidTy, false);
@@ -2688,13 +2677,12 @@ void CodeGenModule::registerGlobalDtorsWithAtExit() {
         std::string("__GLOBAL_init_") + llvm::to_string(Priority);
     llvm::Function *GlobalInitFn =
         createGlobalInitOrCleanupFn(*this, GlobalInitFnName);
-    FunctionDecl *GlobalInitFD =
-        createGlobalInitOrCleanupFnDecl(*this, GlobalInitFnName);
 
     CodeGenFunction CGF(*this);
-    CGF.StartFunction(GlobalDecl(GlobalInitFD), getContext().VoidTy,
-                      GlobalInitFn, getTypes().arrangeNullaryFunction(),
-                      FunctionArgList(), SourceLocation(), SourceLocation());
+    CGF.StartFunction(GlobalDecl(), getContext().VoidTy, GlobalInitFn,
+                      getTypes().arrangeNullaryFunction(), FunctionArgList(),
+                      SourceLocation(), SourceLocation());
+    auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
     // Since constructor functions are run in non-descending order of their
     // priorities, destructors are registered in non-descending order of their
