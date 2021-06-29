@@ -895,4 +895,43 @@ bb:
   br i1 %tmp9, label %bb1, label %bb2, !prof !2
 }
 
+; %vec.dead will be marked as dead instruction in the vector loop and no recipe
+; will be created for it. Make sure a valid sink target is used.
+define void @sink_after_dead_inst(i32* %A.ptr) {
+; CHECK-LABEL: @sink_after_dead_inst
+; CHECK-LABEL: vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT]], %vector.body ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = zext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[SEXT:%.*]] = shl i64 [[OFFSET_IDX]], 48
+; CHECK-NEXT:    [[SHIFT:%.*]] = ashr exact i64 [[SEXT]], 48
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* %A.ptr, i64 [[SHIFT]]
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32* [[GEP]]  to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* [[CAST]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[EC]], label %middle.block, label %vector.body
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %for = phi i32 [ 0, %entry ], [ %for.prev, %loop ]
+  %cmp = icmp eq i32 %for, 15
+  %C = icmp eq i1 %cmp, true
+  %vec.dead = and i1 %C, 1
+  %iv.next = add i16 %iv, 1
+  %B1 = or i16 %iv.next, %iv.next
+  %B3 = and i1 %cmp, %C
+  %for.prev = zext i16 %B1 to i32
+
+  %ext = zext i1 %B3 to i32
+  %A.gep = getelementptr i32, i32* %A.ptr, i16 %iv
+  store i32 0, i32* %A.gep
+  br i1 %vec.dead, label %for.end, label %loop
+
+for.end:
+  ret void
+}
+
 !2 = !{!"branch_weights", i32 1, i32 1}
