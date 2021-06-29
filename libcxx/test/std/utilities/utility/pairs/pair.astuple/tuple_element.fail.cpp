@@ -17,7 +17,7 @@
 int main(int, char**)
 {
     typedef std::pair<int, short> T;
-    std::tuple_element<2, T>::type foo; // expected-error@utility:* {{Index out of bounds in std::tuple_element<std::pair<T1, T2>>}}
+    std::tuple_element<2, T>::type foo; // expected-error@*:* {{Index out of bounds in std::tuple_element<std::pair<T1, T2>>}}
 
-  return 0;
+    return 0;
 }

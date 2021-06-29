@@ -107,6 +107,9 @@ set(files
   __functional_03
   __functional_base
   __functional_base_03
+  __functional/hash.h
+  __functional/unary_function.h
+  __functional/unwrap_ref.h
   __hash_table
   __iterator/advance.h
   __iterator/concepts.h
@@ -160,9 +163,17 @@ set(files
   __tuple
   __undef_macros
   __utility/__decay_copy.h
+  __utility/as_const.h
+  __utility/cmp.h
   __utility/declval.h
+  __utility/exchange.h
   __utility/forward.h
+  __utility/in_place.h
+  __utility/integer_sequence.h
   __utility/move.h
+  __utility/pair.h
+  __utility/piecewise_construct.h
+  __utility/rel_ops.h
   __utility/swap.h
   __utility/to_underlying.h
   algorithm
