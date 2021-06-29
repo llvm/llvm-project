@@ -13954,45 +13954,32 @@ static bool BitsProperlyConcatenate(const APInt &A, const APInt &B) {
 }
 
 static SDValue FindBFIToCombineWith(SDNode *N) {
-  // We have a BFI in N. Follow a possible chain of BFIs and find a BFI it can combine with,
-  // if one exists.
+  // We have a BFI in N. Find a BFI it can combine with, if one exists.
   APInt ToMask, FromMask;
   SDValue From = ParseBFI(N, ToMask, FromMask);
   SDValue To = N->getOperand(0);
 
-  // Now check for a compatible BFI to merge with. We can pass through BFIs that
-  // aren't compatible, but not if they set the same bit in their destination as
-  // we do (or that of any BFI we're going to combine with).
   SDValue V = To;
-  APInt CombinedToMask = ToMask;
-  while (V.getOpcode() == ARMISD::BFI) {
-    APInt NewToMask, NewFromMask;
-    SDValue NewFrom = ParseBFI(V.getNode(), NewToMask, NewFromMask);
-    if (NewFrom != From) {
-      // This BFI has a different base. Keep going.
-      CombinedToMask |= NewToMask;
-      V = V.getOperand(0);
-      continue;
-    }
+  if (V.getOpcode() != ARMISD::BFI)
+    return SDValue();
 
-    // Do the written bits conflict with any we've seen so far?
-    if ((NewToMask & CombinedToMask).getBoolValue())
-      // Conflicting bits - bail out because going further is unsafe.
-      return SDValue();
+  APInt NewToMask, NewFromMask;
+  SDValue NewFrom = ParseBFI(V.getNode(), NewToMask, NewFromMask);
+  if (NewFrom != From)
+    return SDValue();
 
-    // Are the new bits contiguous when combined with the old bits?
-    if (BitsProperlyConcatenate(ToMask, NewToMask) &&
-        BitsProperlyConcatenate(FromMask, NewFromMask))
-      return V;
-    if (BitsProperlyConcatenate(NewToMask, ToMask) &&
-        BitsProperlyConcatenate(NewFromMask, FromMask))
-      return V;
+  // Do the written bits conflict with any we've seen so far?
+  if ((NewToMask & ToMask).getBoolValue())
+    // Conflicting bits.
+    return SDValue();
 
-    // We've seen a write to some bits, so track it.
-    CombinedToMask |= NewToMask;
-    // Keep going...
-    V = V.getOperand(0);
-  }
+  // Are the new bits contiguous when combined with the old bits?
+  if (BitsProperlyConcatenate(ToMask, NewToMask) &&
+      BitsProperlyConcatenate(FromMask, NewFromMask))
+    return V;
+  if (BitsProperlyConcatenate(NewToMask, ToMask) &&
+      BitsProperlyConcatenate(NewFromMask, FromMask))
+    return V;
 
   return SDValue();
 }
@@ -14018,40 +14005,35 @@ static SDValue PerformBFICombine(SDNode *N,
       return DCI.DAG.getNode(ARMISD::BFI, SDLoc(N), N->getValueType(0),
                              N->getOperand(0), N1.getOperand(0),
                              N->getOperand(2));
-  } else if (N->getOperand(0).getOpcode() == ARMISD::BFI) {
-    // We have a BFI of a BFI. Walk up the BFI chain to see how long it goes.
-    // Keep track of any consecutive bits set that all come from the same base
-    // value. We can combine these together into a single BFI.
-    SDValue CombineBFI = FindBFIToCombineWith(N);
-    if (CombineBFI == SDValue())
-      return SDValue();
+    return SDValue();
+  }
+  // Look for another BFI to combine with.
+  SDValue CombineBFI = FindBFIToCombineWith(N);
+  if (CombineBFI == SDValue())
+    return SDValue();
 
-    // We've found a BFI.
-    APInt ToMask1, FromMask1;
-    SDValue From1 = ParseBFI(N, ToMask1, FromMask1);
+  // We've found a BFI.
+  APInt ToMask1, FromMask1;
+  SDValue From1 = ParseBFI(N, ToMask1, FromMask1);
 
-    APInt ToMask2, FromMask2;
-    SDValue From2 = ParseBFI(CombineBFI.getNode(), ToMask2, FromMask2);
-    assert(From1 == From2);
-    (void)From2;
+  APInt ToMask2, FromMask2;
+  SDValue From2 = ParseBFI(CombineBFI.getNode(), ToMask2, FromMask2);
+  assert(From1 == From2);
+  (void)From2;
 
-    // First, unlink CombineBFI.
-    DCI.DAG.ReplaceAllUsesWith(CombineBFI, CombineBFI.getOperand(0));
-    // Then create a new BFI, combining the two together.
-    APInt NewFromMask = FromMask1 | FromMask2;
-    APInt NewToMask = ToMask1 | ToMask2;
+  // Create a new BFI, combining the two together.
+  APInt NewFromMask = FromMask1 | FromMask2;
+  APInt NewToMask = ToMask1 | ToMask2;
 
-    EVT VT = N->getValueType(0);
-    SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDLoc dl(N);
 
-    if (NewFromMask[0] == 0)
-      From1 = DCI.DAG.getNode(
+  if (NewFromMask[0] == 0)
+    From1 = DCI.DAG.getNode(
         ISD::SRL, dl, VT, From1,
         DCI.DAG.getConstant(NewFromMask.countTrailingZeros(), dl, VT));
-    return DCI.DAG.getNode(ARMISD::BFI, dl, VT, N->getOperand(0), From1,
-                           DCI.DAG.getConstant(~NewToMask, dl, VT));
-  }
-  return SDValue();
+  return DCI.DAG.getNode(ARMISD::BFI, dl, VT, CombineBFI.getOperand(0), From1,
+                         DCI.DAG.getConstant(~NewToMask, dl, VT));
 }
 
 /// PerformVMOVRRDCombine - Target-specific dag combine xforms for
