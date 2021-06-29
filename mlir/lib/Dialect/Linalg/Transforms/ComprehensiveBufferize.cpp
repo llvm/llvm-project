@@ -357,7 +357,9 @@ static bool hasKnownBufferizationAliasingBehavior(Operation *op) {
   return
       // clang-format off
       isa<CallOpInterface,
+          tensor::CastOp,
           scf::ForOp,
+          InitTensorOp,
           LinalgOp,
           ReturnOp,
           ExtractSliceOp,
@@ -420,6 +422,14 @@ static OpResult getInplaceableOpResult(InsertSliceOp op, OpOperand &opOperand) {
 
 /// Return the OpResult that may bufferize into the same buffer as `opOperand`
 /// when the op is bufferized inplace.
+/// Return null if no such result exists.
+static OpResult getInplaceableOpResult(tensor::CastOp op,
+                                       OpOperand &opOperand) {
+  return op->getResult(0);
+}
+
+/// Return the OpResult that may bufferize into the same buffer as `opOperand`
+/// when the op is bufferized inplace.
 /// The inplace analysis uses this information along with interfering read
 /// analysis to determine which op results reuse the same buffer as some
 /// operand.
@@ -428,7 +438,8 @@ static OpResult getInplaceableOpResult(OpOperand &opOperand) {
       // clang-format off
         // Ops that perform destructive updates on operand(s) to produce
         // result(s).
-        .Case<scf::ForOp,
+        .Case<tensor::CastOp,
+              scf::ForOp,
               LinalgOp,
               InsertSliceOp,
               VectorTransferOpInterface>(
@@ -455,6 +466,7 @@ static Optional<OpOperand *> getAliasingOpOperand(OpResult result) {
   if (!hasKnownBufferizationAliasingBehavior(result.getDefiningOp()))
     return None;
   return TypeSwitch<Operation *, OpOperand *>(result.getDefiningOp())
+      .Case([&](tensor::CastOp op) { return &op->getOpOperand(0); })
       .Case([&](LinalgOp op) {
         return op.getOutputTensorOperands()[result.getResultNumber()];
       })
@@ -1559,6 +1571,35 @@ bufferize(OpBuilder &b, CallOpInterface callOp, BlockAndValueMapping &bvm,
   return success();
 }
 
+/// tensor::CastOp bufferizes to memref::CastOp.
+static LogicalResult bufferize(OpBuilder &b, tensor::CastOp castOp,
+                               BlockAndValueMapping &bvm,
+                               BufferizationAliasInfo &aliasInfo) {
+  // Take a guard before anything else.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(castOp);
+
+  Type sourceType = lookup(bvm, castOp.source()).getType();
+  auto rankedMemRefType = sourceType.dyn_cast<MemRefType>();
+  auto unrankedMemRefType = sourceType.dyn_cast<UnrankedMemRefType>();
+  assert(rankedMemRefType || unrankedMemRefType);
+  unsigned memorySpace = rankedMemRefType
+                             ? rankedMemRefType.getMemorySpaceAsInt()
+                             : unrankedMemRefType.getMemorySpaceAsInt();
+  TensorType tensorType = castOp.getResult().getType().cast<TensorType>();
+  ArrayRef<AffineMap> affineMaps =
+      rankedMemRefType && tensorType.isa<RankedTensorType>()
+          ? rankedMemRefType.getAffineMaps()
+          : ArrayRef<AffineMap>{};
+  Type memRefType = getContiguousOrUnrankedMemRefType(
+      castOp.getResult().getType(), {}, memorySpace);
+  Value res = b.create<memref::CastOp>(castOp.getLoc(), memRefType,
+                                       lookup(bvm, castOp.source()));
+  aliasInfo.insertNewBufferEquivalence(res, castOp.getResult());
+  map(bvm, castOp.getResult(), res);
+  return success();
+}
+
 /// DimOp tensor operand is modified inplace. This allows leaving dead
 /// tensors behind that will get DCE'd.
 static LogicalResult bufferize(OpBuilder &b, tensor::DimOp dimOp,
@@ -1632,6 +1673,21 @@ static LogicalResult bufferize(OpBuilder &b, FuncOp funcOp,
     aliasInfo.insertNewBufferEquivalence(bufferCast, bbArg);
     map(bvm, bbArg, bufferCast);
   }
+  return success();
+}
+
+/// InitTensor always allocates.
+/// TODO: consider hoisting across function boundaries prior to bufferization.
+static LogicalResult bufferize(OpBuilder &b, InitTensorOp initTensorOp,
+                               BlockAndValueMapping &bvm,
+                               BufferizationAliasInfo &aliasInfo) {
+  // Take a guard before anything else.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(initTensorOp);
+
+  Value alloc = createNewAllocDeallocPairForShapedValue(
+      b, initTensorOp->getLoc(), initTensorOp.result(), aliasInfo);
+  map(bvm, initTensorOp.result(), alloc);
   return success();
 }
 
@@ -2070,16 +2126,18 @@ static LogicalResult bufferizeFuncOpInternals(
   // Since walk has to be PreOrder, we need to erase ops that require it
   // separately: this is the case for CallOp
   SmallVector<Operation *> toErase;
-  WalkResult result = funcOp.walk<WalkOrder::PreOrder>([&](Operation *op)
-                                                           -> WalkResult {
-    // clang-format off
+  WalkResult result =
+      funcOp.walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
+        // clang-format off
     WalkResult result =
       TypeSwitch<Operation *, LogicalResult>(op)
       // Skip BufferCast and TensorLoad ops.
       .Case<memref::BufferCastOp,
             memref::TensorLoadOp>([&](auto) { return success(); })
-      .Case<tensor::DimOp,
+      .Case<tensor::CastOp,
+            tensor::DimOp,
             scf::ForOp,
+            InitTensorOp,
             LinalgOp,
             ReturnOp,
             ExtractSliceOp,
@@ -2100,16 +2158,16 @@ static LogicalResult bufferizeFuncOpInternals(
           return failure();
         return success();
       });
-    // clang-format on
+        // clang-format on
 
-    // Register post-walk erasure, if necessary.
-    if (isa<CallOpInterface>(op))
-      if (llvm::any_of(op->getOperandTypes(), isaTensor) ||
-          llvm::any_of(op->getResultTypes(), isaTensor))
-        toErase.push_back(op);
+        // Register post-walk erasure, if necessary.
+        if (isa<CallOpInterface>(op))
+          if (llvm::any_of(op->getOperandTypes(), isaTensor) ||
+              llvm::any_of(op->getResultTypes(), isaTensor))
+            toErase.push_back(op);
 
-    return result;
-  });
+        return result;
+      });
   LDBG("End BufferizeFuncOpInternals:\n" << funcOp << '\n');
 
   for (Operation *op : toErase)
