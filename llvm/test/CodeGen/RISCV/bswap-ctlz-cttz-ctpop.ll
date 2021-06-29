@@ -499,9 +499,9 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srliw a1, a0, 2
+; RV64I-NEXT:    srli a1, a0, 2
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    srliw a1, a0, 4
+; RV64I-NEXT:    srli a1, a0, 4
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srli a1, a0, 8
 ; RV64I-NEXT:    or a0, a0, a1
