@@ -3606,14 +3606,18 @@ LDVSSABlock *LDVSSABlockIterator::operator*() {
   return Updater.getSSALDVBlock(*PredIt);
 }
 
-} // namespace
-
-namespace llvm {
+#ifndef NDEBUG
 
 raw_ostream &operator<<(raw_ostream &out, const LDVSSAPhi &PHI) {
   out << "SSALDVPHI " << PHI.PHIValNum;
   return out;
 }
+
+#endif
+
+} // namespace
+
+namespace llvm {
 
 /// Template specialization to give SSAUpdater access to CFG and value
 /// information. SSAUpdater calls methods in these traits, passing in the
