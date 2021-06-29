@@ -201,6 +201,19 @@ public:
   SymExpr::symbol_iterator symbol_end() const {
     return SymExpr::symbol_end();
   }
+
+  /// Try to get a reasonable type for the given value.
+  ///
+  /// \returns The best approximation of the value type or Null.
+  /// In theory, all symbolic values should be typed, but this function
+  /// is still a WIP and might have a few blind spots.
+  ///
+  /// \note This function should not be used when the user has access to the
+  /// bound expression AST node as well, since AST always has exact types.
+  ///
+  /// \note Loc values are interpreted as pointer rvalues for the purposes of
+  /// this method.
+  QualType getType(const ASTContext &) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, clang::ento::SVal V) {
