@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! UNPACK() intrinsic function error tests
 program test_unpack
   integer, dimension(2) :: vector = [343, 512]
