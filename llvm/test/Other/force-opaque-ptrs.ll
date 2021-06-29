@@ -20,8 +20,15 @@ define void @f(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i17, align 4
+; CHECK-NEXT:    call void @fn.fwd(i32 0)
+; CHECK-NEXT:    store i32 0, ptr @g.fwd, align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i17
+  call void @fn.fwd(i32 0)
+  store i32 0, i32* @g.fwd
   ret void
 }
+
+@g.fwd = global i32 0
+declare void @fn.fwd(i32)
