@@ -318,14 +318,15 @@ LogicalResult LinalgOp::reifyReturnTypeShapesPerResultDim(
 
 LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   LinalgOp linalgOp = cast<LinalgOp>(op);
-  // Expect at least one input/output operand.
+  // Expect at least one output operand.
   // This means an op that constructs a tensor out of indices cannot be a
   // LinalgOp at the moment. For now this will have to be a special op until we
   // have output shape operands that are not tensors.
-  int64_t numInputsAndOutputs = linalgOp.getNumInputsAndOutputs();
-  if (numInputsAndOutputs == 0)
-    return op->emitOpError("expected at least one input/output operand");
-  if (failed(OpTrait::impl::verifyAtLeastNOperands(op, numInputsAndOutputs)))
+  int64_t numInputs = linalgOp.getNumInputs();
+  int64_t numOutputs = linalgOp.getNumOutputs();
+  if (numOutputs == 0)
+    return op->emitOpError("expected at least one output operand");
+  if (failed(OpTrait::impl::verifyNOperands(op, numInputs + numOutputs)))
     return failure();
   // Should have at least one output tensor per result tensor.
   // Can also have outbut buffers that do not correspond to results.

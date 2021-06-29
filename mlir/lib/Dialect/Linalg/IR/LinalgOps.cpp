@@ -3038,8 +3038,6 @@ struct FoldTensorCastOp : public OpInterfaceRewritePattern<LinalgOp> {
                                  : opOperand->get());
       newResultTypes.push_back(newOperands.back().getType());
     }
-    auto extraOperands = op.getAssumedNonShapedOperands();
-    newOperands.append(extraOperands.begin(), extraOperands.end());
     // Clone op.
     Operation *newOp =
         op.clone(rewriter, op->getLoc(), newResultTypes, newOperands);
@@ -3109,7 +3107,6 @@ struct DeduplicateInputs : public OpInterfaceRewritePattern<LinalgOp> {
         newOperands.push_back(opOperand->get());
     SmallVector<Value> outputOperands = op.getOutputOperands();
     llvm::append_range(newOperands, outputOperands);
-    llvm::append_range(newOperands, op.getAssumedNonShapedOperands());
 
     // Repair the indexing maps by filtering out the ones that have been
     // eliminated.
