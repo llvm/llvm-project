@@ -437,7 +437,7 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC =
       static_cast<const toolchains::AMDGPUOpenMPToolChain &>(TC);
 
-  std::string GPUArch = Args.getLastArgValue(options::OPT_march_EQ).str();
+  std::string GPUArch = AMDGPUOpenMPTC.getOffloadArch();
   if (GPUArch.empty()) {
     if (!checkSystemForAMDGPU(Args, AMDGPUOpenMPTC, GPUArch))
       return;
@@ -475,11 +475,24 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D, const llvm::Triple
   getProgramPaths().push_back(getDriver().Dir);
 }
 
+AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
+                                             const llvm::Triple &Triple,
+                                             const ToolChain &HostTC,
+                                             const ArgList &Args,
+                                             const Action::OffloadKind OK,
+                                             const std::string OffloadArch)
+    : ROCMToolChain(D, Triple, Args), HostTC(HostTC), OK(OK) {
+  // Lookup binaries into the driver directory, this is used to
+  // discover the clang-offload-bundler executable.
+  getProgramPaths().push_back(getDriver().Dir);
+  this->OffloadArch = std::move(OffloadArch);
+}
+
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
-  std::string GPUArch = DriverArgs.getLastArgValue(options::OPT_march_EQ).str();
+  std::string GPUArch = getOffloadArch();
   if (GPUArch.empty()) {
     if (!checkSystemForAMDGPU(DriverArgs, *this, GPUArch))
       return;

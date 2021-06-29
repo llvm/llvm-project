@@ -141,6 +141,9 @@ def err_drv_invalid_diagnotics_hotness_threshold : Error<
   "invalid argument in '%0', only integer or 'auto' is supported">;
 def err_drv_missing_argument : Error<
   "argument to '%0' is missing (expected %1 value%s1)">;
+def err_drv_missing_Xopenmptarget_or_march: Error<
+  "The option -fopenmp-targets= requires additional options -Xopenmp-target= and -march= .">,
+  DefaultFatal;
 def err_drv_invalid_Xarch_argument_with_args : Error<
   "invalid Xarch argument: '%0', options requiring arguments are unsupported">;
 def err_drv_Xopenmp_target_missing_triple : Error<

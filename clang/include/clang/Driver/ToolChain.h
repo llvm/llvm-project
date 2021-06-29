@@ -182,6 +182,8 @@ private:
   mutable llvm::Optional<UnwindLibType> unwindLibType;
 
 protected:
+  // OpenMP creates a toolchain for each target arch. eg - gfx908
+  std::string OffloadArch;
   MultilibSet Multilibs;
   Multilib SelectedMultilib;
 
@@ -256,6 +258,8 @@ public:
     assert(!EffectiveTriple.getTriple().empty() && "No effective triple");
     return EffectiveTriple;
   }
+
+  const std::string getOffloadArch() const { return OffloadArch; }
 
   path_list &getLibraryPaths() { return LibraryPaths; }
   const path_list &getLibraryPaths() const { return LibraryPaths; }

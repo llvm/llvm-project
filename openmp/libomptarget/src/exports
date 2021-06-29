@@ -2,6 +2,7 @@ VERS1.0 {
   global:
     __tgt_register_requires;
     __tgt_register_lib;
+    __tgt_register_image_info;
     __tgt_unregister_lib;
     __tgt_init_all_rtls;
     __tgt_target_data_begin;

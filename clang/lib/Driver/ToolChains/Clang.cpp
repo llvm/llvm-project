@@ -6813,11 +6813,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // For all the host OpenMP offloading compile jobs we need to pass the targets
-  // information using -fopenmp-targets= option.
+  // information using `-fopenmp-targets=` option.
   if (JA.isHostOffloading(Action::OFK_OpenMP)) {
     SmallString<128> TargetInfo("-fopenmp-targets=");
 
     Arg *Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
+    
     assert(Tgts && Tgts->getNumValues() &&
            "OpenMP offloading has to have targets specified.");
     for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
@@ -7830,22 +7831,9 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
       Triples += '-';
       Triples += CurDep->getOffloadingArch();
     }
-
-    // TODO: Replace parsing of -march flag. Can be done by storing GPUArch
-    //       with each toolchain.
-    StringRef GPUArchName;
-    if (CurKind == Action::OFK_OpenMP) {
-      // Extract GPUArch from -march argument in TC argument list.
-      for (unsigned ArgIndex = 0; ArgIndex < TCArgs.size(); ArgIndex++) {
-        auto ArchStr = StringRef(TCArgs.getArgString(ArgIndex));
-        auto Arch = ArchStr.startswith_insensitive("-march=");
-        if (Arch) {
-          GPUArchName = ArchStr.substr(7);
-          Triples += "-";
-          break;
-        }
-      }
-      Triples += GPUArchName.str();
+    if (CurKind == Action::OFK_OpenMP && !CurTC->getOffloadArch().empty()) {
+      Triples += '-';
+      Triples += CurTC->getOffloadArch();
     }
   }
   CmdArgs.push_back(TCArgs.MakeArgString(Triples));
@@ -7927,11 +7915,16 @@ static void createUnbundleArchiveCommand(Compilation &C,
       ArgStringList CmdArgs;
 
       SmallString<128> DeviceTriple;
-      DeviceTriple += Action::GetOffloadKindName(Dep.DependentOffloadKind);
+      auto OffloadKind = Dep.DependentOffloadKind;
+      DeviceTriple += Action::GetOffloadKindName(OffloadKind);
       DeviceTriple += '-';
       DeviceTriple += Triple.normalize();
       DeviceTriple += '-';
-      DeviceTriple += Dep.DependentBoundArch;
+      if (OffloadKind == Action::OFK_OpenMP &&
+          !Dep.DependentToolChain->getOffloadArch().empty())
+        DeviceTriple += Dep.DependentToolChain->getOffloadArch();
+      else
+        DeviceTriple += Dep.DependentBoundArch;
 
       std::string UnbundleArg("-unbundle");
       std::string TypeArg("-type=a");
@@ -7997,7 +7990,8 @@ void OffloadBundler::ConstructJobMultipleOutputs(
       Triples += ',';
 
     auto &Dep = DepInfo[I];
-    Triples += Action::GetOffloadKindName(Dep.DependentOffloadKind);
+    auto OffloadKind = Dep.DependentOffloadKind;
+    Triples += Action::GetOffloadKindName(OffloadKind);
     Triples += '-';
     Triples += Dep.DependentToolChain->getTriple().normalize();
     if ((Dep.DependentOffloadKind == Action::OFK_HIP ||
@@ -8006,25 +8000,10 @@ void OffloadBundler::ConstructJobMultipleOutputs(
       Triples += '-';
       Triples += Dep.DependentBoundArch;
     }
-    // TODO: Replace parsing of -march flag. Can be done by storing GPUArch
-    //       with each toolchain.
-    StringRef GPUArchName;
-    if (Dep.DependentOffloadKind == Action::OFK_OpenMP) {
-      // Extract GPUArch from -march argument in TC argument list.
-      for (unsigned ArgIndex = 0; ArgIndex < TCArgs.size(); ArgIndex++) {
-        StringRef ArchStr = StringRef(TCArgs.getArgString(ArgIndex));
-        auto Arch = ArchStr.startswith_insensitive("-march=");
-        if (Arch) {
-          GPUArchName = ArchStr.substr(7);
-          Triples += "-";
-          break;
-        }
-      }
-      if(GPUArchName.empty() && !Dep.DependentBoundArch.empty()) {
-        GPUArchName = Dep.DependentBoundArch;
-        Triples += "-";
-      }
-      Triples += GPUArchName.str();
+    if (OffloadKind == Action::OFK_OpenMP &&
+        !Dep.DependentToolChain->getOffloadArch().empty()) {
+      Triples += '-';
+      Triples += Dep.DependentToolChain->getOffloadArch();
     }
   }
 
@@ -8071,9 +8050,21 @@ void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  // Add inputs.
+  auto TCs = C.getOffloadToolChains<Action::OFK_OpenMP>();
+
+  // Add offload-arch of each image
+  auto II = TCs.first;
   for (const InputInfo &I : Inputs) {
     assert(I.isFilename() && "Invalid input.");
+    if (I.getAction()) {
+      auto TC = II->second;
+      II++;
+      std::string OffloadArchs("--offload-arch=");
+      OffloadArchs.append(TC->getOffloadArch());
+
+      // FIXME: Add other architecture OffloadArchs here
+      CmdArgs.push_back(Args.MakeArgString(OffloadArchs.c_str()));
+    }
     CmdArgs.push_back(I.getFilename());
   }
 

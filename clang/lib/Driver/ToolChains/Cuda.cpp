@@ -382,6 +382,8 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // flag or the default value.
   if (JA.isDeviceOffloading(Action::OFK_OpenMP)) {
     GPUArchName = Args.getLastArgValue(options::OPT_march_EQ);
+    if (GPUArchName.empty())
+      GPUArchName = TC.getOffloadArch();
     assert(!GPUArchName.empty() && "Must have an architecture passed in.");
   } else
     GPUArchName = JA.getOffloadingArch();
@@ -575,6 +577,9 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
 
   StringRef GPUArch =
       Args.getLastArgValue(options::OPT_march_EQ);
+  if (GPUArch.empty())
+    GPUArch = getToolChain().getOffloadArch();
+
   assert(!GPUArch.empty() && "At least one GPU Arch required for ptxas.");
 
   CmdArgs.push_back("-arch");
@@ -645,6 +650,22 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
   getProgramPaths().push_back(getDriver().Dir);
 }
 
+CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
+                             const ToolChain &HostTC, const ArgList &Args,
+                             const Action::OffloadKind OK,
+                             const std::string OffloadArch)
+    : ToolChain(D, Triple, Args), HostTC(HostTC),
+      CudaInstallation(D, HostTC.getTriple(), Args), OK(OK) {
+  if (CudaInstallation.isValid()) {
+    CudaInstallation.WarnIfUnsupportedVersion();
+    getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
+  }
+  // Lookup binaries into the driver directory, this is used to
+  // discover the clang-offload-bundler executable.
+  getProgramPaths().push_back(getDriver().Dir);
+  this->OffloadArch = std::move(OffloadArch);
+}
+
 std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
   // Only object files are changed, for example assembly files keep their .s
   // extensions. CUDA also continues to use .o as they don't use nvlink but
@@ -666,6 +687,8 @@ void CudaToolChain::addClangTargetOptions(
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
+  if (GpuArch.empty())
+    GpuArch = getOffloadArch();
   assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
   assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
           DeviceOffloadingKind == Action::OFK_Cuda) &&
@@ -827,6 +850,8 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
         DAL->append(A);
 
     StringRef Arch = DAL->getLastArgValue(options::OPT_march_EQ);
+    if (Arch.empty())
+      Arch = getOffloadArch();
     if (Arch.empty())
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                         CLANG_OPENMP_NVPTX_DEFAULT_ARCH);
