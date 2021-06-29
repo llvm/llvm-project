@@ -69,7 +69,7 @@ attributes #1 = { readonly willreturn }
 attributes #2 = { readnone willreturn }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!9, !10, !11, !12, !13}
+!llvm.module.flags = !{!9, !10, !11, !12, !13, !52}
 !llvm.ident = !{!14}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
@@ -124,3 +124,4 @@ attributes #2 = { readnone willreturn }
 !49 = !DILocalVariable(name: ".global_tid.", arg: 1, scope: !47, type: !28, flags: DIFlagArtificial)
 !50 = !DILocalVariable(name: ".bound_tid.", arg: 2, scope: !47, type: !28, flags: DIFlagArtificial)
 !51 = !DILocation(line: 15, column: 2, scope: !47)
+!52 = !{i32 7, !"openmp", i32 50}
