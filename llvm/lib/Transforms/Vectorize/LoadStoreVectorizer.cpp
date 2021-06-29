@@ -312,8 +312,8 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
     return false;
 
   // Make sure that A and B are different pointers of the same size type.
-  Type *PtrATy = PtrA->getType()->getPointerElementType();
-  Type *PtrBTy = PtrB->getType()->getPointerElementType();
+  Type *PtrATy = getLoadStoreType(A);
+  Type *PtrBTy = getLoadStoreType(B);
   if (PtrA == PtrB ||
       PtrATy->isVectorTy() != PtrBTy->isVectorTy() ||
       DL.getTypeStoreSize(PtrATy) != DL.getTypeStoreSize(PtrBTy) ||
