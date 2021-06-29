@@ -3574,6 +3574,9 @@ public:
   LDVSSAUpdater(LocIdx L, ValueIDNum **MLiveIns) : Loc(L), MLiveIns(MLiveIns) {}
 
   void reset() {
+    for (auto &Block : BlockMap)
+      delete Block.second;
+
     PHIs.clear();
     UndefMap.clear();
     BlockMap.clear();

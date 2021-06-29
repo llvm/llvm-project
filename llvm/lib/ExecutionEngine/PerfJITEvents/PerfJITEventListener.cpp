@@ -284,6 +284,9 @@ void PerfJITEventListener::notifyObjectLoaded(
     NotifyCode(Name, *AddrOrErr, Size);
   }
 
+  // avoid races with writes
+  std::lock_guard<sys::Mutex> Guard(Mutex);
+
   Dumpstream->flush();
 }
 
