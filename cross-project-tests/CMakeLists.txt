@@ -5,7 +5,7 @@
 find_package(Python3 COMPONENTS Interpreter)
 
 add_llvm_executable(check-gdb-llvm-support
-        llvm-prettyprinters/gdb/llvm-support.cpp
+        debuginfo-tests/llvm-prettyprinters/gdb/llvm-support.cpp
 )
 target_link_libraries(check-gdb-llvm-support PRIVATE LLVMSupport)
 
@@ -24,7 +24,7 @@ set(DEBUGINFO_TEST_DEPS
 
 if ("mlir" IN_LIST LLVM_ENABLE_PROJECTS)
   add_llvm_executable(check-gdb-mlir-support
-        llvm-prettyprinters/gdb/mlir-support.cpp
+        debuginfo-tests/llvm-prettyprinters/gdb/mlir-support.cpp
   )
   target_include_directories(check-gdb-mlir-support PRIVATE
                                ${LLVM_EXTERNAL_MLIR_SOURCE_DIR}/include
@@ -61,7 +61,7 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
   )
 
-add_lit_testsuite(check-debuginfo "Running debug info integration tests"
+add_lit_testsuite(check-debuginfo "Running cross-project tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${DEBUGINFO_TEST_DEPS}
   )
@@ -71,4 +71,4 @@ add_lit_testsuites(DEBUGINFO ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${DEBUGINFO_TEST_DEPS}
   )
 
-set_target_properties(check-debuginfo PROPERTIES FOLDER "Debug info tests")
+set_target_properties(check-debuginfo PROPERTIES FOLDER "Tests")

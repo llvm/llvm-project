@@ -32,7 +32,7 @@ config.suffixes = ['.c', '.cpp', '.m']
 config.excludes = ['Inputs']
 
 # test_source_root: The root path where tests are located.
-config.test_source_root = os.path.join(config.debuginfo_tests_src_root)
+config.test_source_root = config.debuginfo_tests_src_root
 
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = config.debuginfo_tests_obj_root
@@ -41,7 +41,8 @@ llvm_config.use_default_substitutions()
 
 tools = [
     ToolSubst('%test_debuginfo', command=os.path.join(
-        config.debuginfo_tests_src_root, 'llgdb-tests', 'test_debuginfo.pl')),
+        config.debuginfo_tests_src_root, 'debuginfo-tests',
+        'llgdb-tests', 'test_debuginfo.pl')),
     ToolSubst("%llvm_src_root", config.llvm_src_root),
     ToolSubst("%llvm_tools_dir", config.llvm_tools_dir),
 ]
@@ -126,7 +127,7 @@ if lldb_path is not None:
 # Produce dexter path, lldb path, and combine into the %dexter substitution
 # for running a test.
 dexter_path = os.path.join(config.debuginfo_tests_src_root,
-                           'dexter', 'dexter.py')
+                           'debuginfo-tests', 'dexter', 'dexter.py')
 dexter_test_cmd = '"{}" "{}" test'.format(sys.executable, dexter_path)
 if lldb_path is not None:
   dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
