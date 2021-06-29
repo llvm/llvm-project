@@ -601,7 +601,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       continue;
 
     std::vector<uint32_t> &symbolIndices = symbolsBySection[i];
-    llvm::sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
+    llvm::stable_sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
       return nList[lhs].n_value < nList[rhs].n_value;
     });
     uint64_t sectionAddr = sectionHeaders[i].addr;
