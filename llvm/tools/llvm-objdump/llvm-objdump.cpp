@@ -221,7 +221,7 @@ uint32_t objdump::PrefixStrip;
 
 DebugVarsFormat objdump::DbgVariables = DVDisabled;
 
-int objdump::DbgIndent = 40;
+int objdump::DbgIndent = 52;
 
 static StringSet<> DisasmSymbolSet;
 StringSet<> objdump::FoundSectionSet;
