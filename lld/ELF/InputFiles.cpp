@@ -672,8 +672,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA) {
       this->sections[i] = createInputSection(sec);
       if (cgProfileSectionIndex && sec.sh_info == cgProfileSectionIndex) {
-        if (sec.sh_type == SHT_RELA)
-          cgProfileRela = CHECK(getObj().relas(sec), this);
+        if (sec.sh_type == SHT_REL)
+          cgProfileRel = CHECK(getObj().rels(sec), this);
       }
     }
 

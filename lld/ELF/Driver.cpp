@@ -857,15 +857,15 @@ static void readCallGraph(MemoryBufferRef mb) {
 
 template <class ELFT> static void readCallGraphsFromObjectFiles() {
   auto getIndex = [&](ObjFile<ELFT> *obj, uint32_t index) {
-    const Elf_Rel_Impl<ELFT, true> &rel = obj->cgProfileRela[index];
+    const Elf_Rel_Impl<ELFT, false> &rel = obj->cgProfileRel[index];
     return rel.getSymbol(config->isMips64EL);
   };
 
   for (auto file : objectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file);
-    if (obj->cgProfileRela.empty())
+    if (obj->cgProfileRel.empty())
       continue;
-    if (obj->cgProfileRela.size() != obj->cgProfile.size() * 2)
+    if (obj->cgProfileRel.size() != obj->cgProfile.size() * 2)
       fatal("number of relocations doesn't match Weights");
     for (uint32_t i = 0, size = obj->cgProfile.size(); i < size; ++i) {
       const Elf_CGProfile_Impl<ELFT> &cgpe = obj->cgProfile[i];
