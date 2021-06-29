@@ -1162,7 +1162,7 @@ public:
   /// Apply changes to the target information with respect to certain
   /// language options which change the target configuration and adjust
   /// the language based on the target options where applicable.
-  virtual void adjust(LangOptions &Opts);
+  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts);
 
   /// Adjust target options based on codegen options.
   virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,

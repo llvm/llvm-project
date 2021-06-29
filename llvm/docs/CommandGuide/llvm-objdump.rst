@@ -169,6 +169,10 @@ OPTIONS
 
   When disassembling, do not print leading addresses.
 
+.. option:: --no-print-imm-hex
+
+  Do not use hex format for immediate values in disassembly output (default).
+
 .. option:: --no-show-raw-insn
 
   When disassembling, do not print the raw bytes of each instruction.
