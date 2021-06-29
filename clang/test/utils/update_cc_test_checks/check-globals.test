@@ -31,7 +31,8 @@ RUN: rm %t/igf-again.c
 RUN: cp %S/Inputs/lit.cfg.example %t/lit.cfg
 # Show lit failures while avoiding confusing FileCheck input dump nesting.
 RUN: %lit %t
-# Lit was successful.  Sanity-check the results.
+# Lit was successful.  Sanity-check the results with deterministic test order.
+RUN: rm %t/.lit_test_times.txt
 RUN: %lit %t 2>&1 | FileCheck -check-prefix=LIT-RUN %s
 
 END.
