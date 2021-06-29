@@ -30,7 +30,8 @@ unreachable:
 ; CHECK-DAG: define void @test1(
 ; CHECK: %[[CS:.*]] = catchswitch within none
 ; CHECK: %[[CP:.*]] = catchpad within %[[CS]] [i8* null, i32 64, i8* null]
-; CHECK: call noundef i32 @putchar(i32 noundef 10) #0 [ "funclet"(token %cp) ]
+; CHECK: call i32 @putchar(i32 10) [ "funclet"(token %[[CP]]) ]
+
 declare void @_CxxThrowException(i8*, i8*)
 
 declare i32 @__CxxFrameHandler3(...)

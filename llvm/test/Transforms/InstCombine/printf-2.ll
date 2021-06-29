@@ -29,7 +29,7 @@ declare void @printf(i8*, ...)
 ;.
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    [[PUTCHAR:%.*]] = call noundef i32 @putchar(i32 noundef 104) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 104)
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [2 x i8], [2 x i8]* @h, i32 0, i32 0
@@ -39,7 +39,7 @@ define void @test_simplify1() {
 
 define void @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    [[PUTS:%.*]] = call noundef i32 @puts(i8* nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str, i32 0, i32 0)) #[[ATTR0]]
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str, i32 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
@@ -49,7 +49,7 @@ define void @test_simplify2() {
 
 define void @test_simplify6() {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[PUTS:%.*]] = call noundef i32 @puts(i8* nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0)) #[[ATTR0]]
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [4 x i8], [4 x i8]* @percent_s, i32 0, i32 0
@@ -60,7 +60,7 @@ define void @test_simplify6() {
 
 define void @test_simplify7() {
 ; CHECK-LABEL: @test_simplify7(
-; CHECK-NEXT:    [[PUTCHAR:%.*]] = call noundef i32 @putchar(i32 noundef 97) #[[ATTR0]]
+; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 97)
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
@@ -85,7 +85,7 @@ define void @test_simplify8() {
 
 define void @test_simplify9() {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    [[PUTS:%.*]] = call noundef i32 @puts(i8* nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str.1, i32 0, i32 0)) #[[ATTR0]]
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str.1, i32 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
@@ -100,8 +100,8 @@ define void @test_simplify9() {
 
 define void @test_simplify10() {
 ; CHECK-LABEL: @test_simplify10(
-; CHECK-NEXT:    [[PUTCHAR:%.*]] = call noundef i32 @putchar(i32 noundef 97) #[[ATTR0]]
-; CHECK-NEXT:    [[PUTS:%.*]] = call noundef i32 @puts(i8* nocapture noundef nonnull readonly dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str.2, i32 0, i32 0)) #[[ATTR0]]
+; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 97)
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str.2, i32 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
@@ -114,5 +114,5 @@ define void @test_simplify10() {
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree nounwind }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree nounwind }
 ;.

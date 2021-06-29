@@ -3,7 +3,7 @@
 
 define float @test1(float %x) nounwind readnone ssp {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #3
 ; CHECK-NEXT:    ret float [[SQRTF]]
 ;
   %conv = fpext float %x to double
@@ -16,7 +16,7 @@ define float @test1(float %x) nounwind readnone ssp {
 
 define float @test2(float %x) nounwind readnone ssp {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #[[ATTR3]]
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]]) #3
 ; CHECK-NEXT:    ret float [[SQRTF]]
 ;
   %conv = fpext float %x to double
@@ -31,8 +31,8 @@ define float @test2(float %x) nounwind readnone ssp {
 
 define float @test3(float* %v) nounwind uwtable ssp {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double 0x7FF8000000000000) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #[[ATTR3]]
+; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double 0x7FF8000000000000) #3
+; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #4
 ; CHECK-NEXT:    [[CONV38:%.*]] = fptrunc double [[CALL34]] to float
 ; CHECK-NEXT:    ret float [[CONV38]]
 ;
@@ -51,7 +51,7 @@ define float @test3(float* %v) nounwind uwtable ssp {
 
 define void @0(float %f) {
 ; CHECK-LABEL: @0(
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]])
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]]) #2
 ; CHECK-NEXT:    ret void
 ;
   %d = fpext float %f to double
