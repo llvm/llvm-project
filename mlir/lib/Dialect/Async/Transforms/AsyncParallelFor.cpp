@@ -513,18 +513,48 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   Value groupSize = b.create<SubIOp>(blockCount, c1);
   Value group = b.create<CreateGroupOp>(GroupType::get(ctx), groupSize);
 
-  // Pack the async dispath function operands to launch the work splitting.
-  SmallVector<Value> asyncDispatchOperands = {group, c0, blockCount, blockSize};
-  asyncDispatchOperands.append(tripCounts);
-  asyncDispatchOperands.append(op.lowerBound().begin(), op.lowerBound().end());
-  asyncDispatchOperands.append(op.upperBound().begin(), op.upperBound().end());
-  asyncDispatchOperands.append(op.step().begin(), op.step().end());
-  asyncDispatchOperands.append(parallelComputeFunction.captures);
+  // Appends operands shared by async dispatch and parallel compute functions to
+  // the given operands vector.
+  auto appendBlockComputeOperands = [&](SmallVector<Value> &operands) {
+    operands.append(tripCounts);
+    operands.append(op.lowerBound().begin(), op.lowerBound().end());
+    operands.append(op.upperBound().begin(), op.upperBound().end());
+    operands.append(op.step().begin(), op.step().end());
+    operands.append(parallelComputeFunction.captures);
+  };
 
-  // Launch async dispatch function for [0, blockCount) range.
-  b.create<CallOp>(asyncDispatchFunction.sym_name(),
-                   asyncDispatchFunction.getCallableResults(),
-                   asyncDispatchOperands);
+  // Check if the block size is one, in this case we can skip the async dispatch
+  // completely. If this will be known statically, then canonicalization will
+  // erase async group operations.
+  Value isSingleBlock = b.create<CmpIOp>(CmpIPredicate::eq, blockCount, c1);
+
+  auto syncDispatch = [&](OpBuilder &nestedBuilder, Location loc) {
+    ImplicitLocOpBuilder nb(loc, nestedBuilder);
+
+    // Call parallel compute function for the single block.
+    SmallVector<Value> operands = {c0, blockSize};
+    appendBlockComputeOperands(operands);
+
+    nb.create<CallOp>(parallelComputeFunction.func.sym_name(),
+                      parallelComputeFunction.func.getCallableResults(),
+                      operands);
+    nb.create<scf::YieldOp>();
+  };
+
+  auto asyncDispatch = [&](OpBuilder &nestedBuilder, Location loc) {
+    ImplicitLocOpBuilder nb(loc, nestedBuilder);
+
+    // Launch async dispatch function for [0, blockCount) range.
+    SmallVector<Value> operands = {group, c0, blockCount, blockSize};
+    appendBlockComputeOperands(operands);
+
+    nb.create<CallOp>(asyncDispatchFunction.sym_name(),
+                      asyncDispatchFunction.getCallableResults(), operands);
+    nb.create<scf::YieldOp>();
+  };
+
+  // Dispatch either single block compute function, or launch async dispatch.
+  b.create<scf::IfOp>(TypeRange(), isSingleBlock, syncDispatch, asyncDispatch);
 
   // Wait for the completion of all parallel compute operations.
   b.create<AwaitAllOp>(group);
