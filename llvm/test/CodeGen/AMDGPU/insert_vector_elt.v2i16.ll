@@ -1039,10 +1039,10 @@ define amdgpu_kernel void @s_insertelement_v2i16_dynamic(<2 x i16> addrspace(1)*
 ; GFX9-LABEL: s_insertelement_v2i16_dynamic:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x10
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s4, s[8:9], 0x0
+; GFX9-NEXT:    s_load_dword s4, s[6:7], 0x0
 ; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshl_b32 s2, s4, 4
@@ -1057,7 +1057,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_dynamic(<2 x i16> addrspace(1)*
 ; VI-LABEL: s_insertelement_v2i16_dynamic:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x10
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x10
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -1076,7 +1076,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_dynamic(<2 x i16> addrspace(1)*
 ; CI-LABEL: s_insertelement_v2i16_dynamic:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; CI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x4
+; CI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x4
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -1169,10 +1169,10 @@ define amdgpu_kernel void @v_insertelement_v2f16_dynamic_vgpr(<2 x half> addrspa
 ; GFX9-LABEL: v_insertelement_v2f16_dynamic_vgpr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x10
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v0, s[8:9]
+; GFX9-NEXT:    global_load_dword v1, v0, s[6:7]
 ; GFX9-NEXT:    global_load_dword v2, v0, s[2:3]
 ; GFX9-NEXT:    s_mov_b32 s2, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
@@ -1187,7 +1187,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_dynamic_vgpr(<2 x half> addrspa
 ; VI-LABEL: v_insertelement_v2f16_dynamic_vgpr:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x10
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x10
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
@@ -1214,7 +1214,7 @@ define amdgpu_kernel void @v_insertelement_v2f16_dynamic_vgpr(<2 x half> addrspa
 ; CI-LABEL: v_insertelement_v2f16_dynamic_vgpr:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; CI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x4
+; CI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x4
 ; CI-NEXT:    v_lshlrev_b32_e32 v4, 2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
