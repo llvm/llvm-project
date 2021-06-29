@@ -176,11 +176,11 @@ static cl::opt<unsigned> TimelineMaxIterations(
     cl::desc("Maximum number of iterations to print in timeline view"),
     cl::cat(ViewOptions), cl::init(0));
 
-static cl::opt<unsigned> TimelineMaxCycles(
-    "timeline-max-cycles",
-    cl::desc(
-        "Maximum number of cycles in the timeline view. Defaults to 80 cycles"),
-    cl::cat(ViewOptions), cl::init(80));
+static cl::opt<unsigned>
+    TimelineMaxCycles("timeline-max-cycles",
+                      cl::desc("Maximum number of cycles in the timeline view, "
+                               "or 0 for unlimited. Defaults to 80 cycles"),
+                      cl::cat(ViewOptions), cl::init(80));
 
 static cl::opt<bool>
     AssumeNoAlias("noalias",
