@@ -113,6 +113,15 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
   return true;
 }
 
+/// Return true if the constant is a splat to a 2D vector so that it can be
+/// converted to a MMA constant matrix op.
+static bool constantSupportsMMAMatrixType(ConstantOp constantOp) {
+  auto vecType = constantOp.getType().dyn_cast<VectorType>();
+  if (!vecType || vecType.getRank() != 2)
+    return false;
+  return constantOp.value().isa<SplatElementsAttr>();
+}
+
 static bool supportsMMaMatrixType(Operation *op) {
   if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
     return transferReadSupportsMMAMatrixType(transferRead);
@@ -120,6 +129,8 @@ static bool supportsMMaMatrixType(Operation *op) {
     return transferWriteSupportsMMAMatrixType(transferWrite);
   if (auto contract = dyn_cast<vector::ContractionOp>(op))
     return contractSupportsMMAMatrixType(contract);
+  if (auto constant = dyn_cast<ConstantOp>(op))
+    return constantSupportsMMAMatrixType(constant);
   return false;
 }
 
@@ -241,10 +252,11 @@ struct CombineTransferReadOpTranspose final
 } // namespace
 
 // MMA types have different layout based on how they are used in matmul ops.
-// Figure the right layout to use by looking at Transfer op uses.
+// Figure the right layout to use by looking at op uses.
 // TODO: Change the GPU dialect to abstract the layout at the this level and
 // only care about it during lowering to NVVM.
-static const char *inferFragType(vector::TransferReadOp op) {
+template <typename OpTy>
+static const char *inferFragType(OpTy op) {
   for (Operation *users : op->getUsers()) {
     auto contract = dyn_cast<vector::ContractionOp>(users);
     if (!contract)
@@ -297,6 +309,23 @@ static void convertContractOp(vector::ContractionOp op,
   valueMapping[op.getResult()] = matmul;
 }
 
+/// Convert a 2D splat ConstantOp to a SubgroupMmaConstantMatrix op.
+static void convertConstantOp(ConstantOp op,
+                              llvm::DenseMap<Value, Value> &valueMapping) {
+  assert(constantSupportsMMAMatrixType(op));
+  OpBuilder b(op);
+  Attribute splat = op.getValue().cast<SplatElementsAttr>().getSplatValue();
+  auto scalarConstant =
+      b.create<ConstantOp>(op.getLoc(), splat.getType(), splat);
+  const char *fragType = inferFragType(op);
+  auto vecType = op.getType().cast<VectorType>();
+  gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
+      vecType.getShape(), vecType.getElementType(), llvm::StringRef(fragType));
+  auto matrix = b.create<gpu::SubgroupMmaConstantMatrixOp>(op.getLoc(), type,
+                                                           scalarConstant);
+  valueMapping[op.getResult()] = matrix;
+}
+
 namespace mlir {
 
 void populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns) {
@@ -314,6 +343,8 @@ void convertVectorToMMAOps(FuncOp funcOp) {
       convertTransferWriteOp(transferWrite, valueMapping);
     } else if (auto contractOp = dyn_cast<vector::ContractionOp>(op)) {
       convertContractOp(contractOp, valueMapping);
+    } else if (auto constantOp = dyn_cast<ConstantOp>(op)) {
+      convertConstantOp(constantOp, valueMapping);
     }
   }
 }
