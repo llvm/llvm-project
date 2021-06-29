@@ -142,6 +142,10 @@ namespace opts {
   // Also -t in llvm-readelf mode.
   cl::opt<bool> SectionDetails("section-details",
                                cl::desc("Display the section details"));
+  static cl::alias SectionDetailsShort("t",
+                                       cl::desc("Alias for --section-details"),
+                                       cl::aliasopt(SectionDetails),
+                                       cl::NotHidden);
 
   // --symbols
   // Also -s in llvm-readelf mode, or -t in llvm-readobj mode.
@@ -151,6 +155,9 @@ namespace opts {
                        "symbol table when using GNU output style for ELF"));
   cl::alias SymbolsGNU("syms", cl::desc("Alias for --symbols"),
                        cl::aliasopt(Symbols));
+  static cl::alias SymbolsShort("s", cl::desc("Alias for --symbols"),
+                                cl::aliasopt(Symbols), cl::NotHidden,
+                                cl::Grouping);
 
   // --dyn-symbols, --dyn-syms
   // Also --dt in llvm-readobj mode.
@@ -694,16 +701,6 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
 
 /// Registers aliases that should only be allowed by readobj.
 static void registerReadobjAliases() {
-  // -s has meant --sections for a very long time in llvm-readobj despite
-  // meaning --symbols in readelf.
-  static cl::alias SectionsShort("s", cl::desc("Alias for --section-headers"),
-                                 cl::aliasopt(opts::SectionHeaders),
-                                 cl::NotHidden);
-
-  // llvm-readelf reserves it for --section-details.
-  static cl::alias SymbolsShort("t", cl::desc("Alias for --symbols"),
-                                cl::aliasopt(opts::Symbols), cl::NotHidden);
-
   // The following two-letter aliases are only provided for readobj, as readelf
   // allows single-letter args to be grouped together.
   static cl::alias SectionRelocationsShort(
@@ -721,16 +718,6 @@ static void registerReadobjAliases() {
 
 /// Registers aliases that should only be allowed by readelf.
 static void registerReadelfAliases() {
-  // -s is here because for readobj it means --sections.
-  static cl::alias SymbolsShort("s", cl::desc("Alias for --symbols"),
-                                cl::aliasopt(opts::Symbols), cl::NotHidden,
-                                cl::Grouping);
-
-  // -t is here because for readobj it is an alias for --symbols.
-  static cl::alias SectionDetailsShort(
-      "t", cl::desc("Alias for --section-details"),
-      cl::aliasopt(opts::SectionDetails), cl::NotHidden);
-
   // Allow all single letter flags to be grouped together.
   for (auto &OptEntry : cl::getRegisteredOptions()) {
     StringRef ArgName = OptEntry.getKey();
