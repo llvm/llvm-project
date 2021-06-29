@@ -267,6 +267,10 @@ class Dialect {
   // If this dialect overrides the hook for materializing constants.
   bit hasConstantMaterializer = 0;
 
+  /// If the dialect definition provides a non-default destructor.
+  /// If false, a default destructor implementation will be generated.
+  bit hasNonDefaultDestructor = 0;
+
   // If this dialect overrides the hook for verifying operation attributes.
   bit hasOperationAttrVerify = 0;
 

@@ -12,6 +12,8 @@
 using namespace mlir;
 using namespace mlir::memref;
 
+#include "mlir/Dialect/MemRef/IR/MemRefOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // MemRefDialect Dialect Interfaces
 //===----------------------------------------------------------------------===//

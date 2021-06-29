@@ -31,6 +31,7 @@ def Test_Dialect : Dialect {
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationInterfaceFallback = 1;
+  let hasNonDefaultDestructor = 1;
   let dependentDialects = ["::mlir::DLTIDialect"];
 
   let extraClassDeclaration = [{
@@ -47,8 +48,6 @@ def Test_Dialect : Dialect {
       getParseOperationHook(StringRef opName) const override;
     LogicalResult printOperation(Operation *op,
                                  OpAsmPrinter &printer) const override;
-
-    ~TestDialect();
   private:
     // Storage for a custom fallback interface.
     void *fallbackEffectOpInterfaces;

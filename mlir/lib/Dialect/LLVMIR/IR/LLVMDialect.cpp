@@ -36,6 +36,8 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
+#include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
+
 static constexpr const char kVolatileAttrName[] = "volatile_";
 static constexpr const char kNonTemporalAttrName[] = "nontemporal";
 
