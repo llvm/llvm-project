@@ -58,6 +58,30 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
 }
 """
 
+conv_boiler = """
+func @main() -> i32 attributes {llvm.emit_c_interface} {
+  %v0 = constant 0 : i32
+  %v1 = constant 1.0 : f64
+  %v2 = constant 2.0 : f64
+
+  %input = memref.alloc() : memref<1x4x16x1xf64>
+  %filter = memref.alloc() : memref<2x2x1xf64>
+  %output = memref.alloc() : memref<1x2x4x1xi32>
+  linalg.fill(%v1, %input) : f64, memref<1x4x16x1xf64>
+  linalg.fill(%v2, %filter) : f64, memref<2x2x1xf64>
+  linalg.fill(%v0, %output) : i32, memref<1x2x4x1xi32>
+
+  call @conv_on_buffers(%input, %filter, %output) :
+    (memref<1x4x16x1xf64>, memref<2x2x1xf64>, memref<1x2x4x1xi32>) -> ()
+
+  %c0 = constant 0 : index
+  %0 = memref.load %output[%c0, %c0, %c0, %c0] : memref<1x2x4x1xi32>
+
+  // TODO: FFI-based solution to allow testing and printing with python code.
+  return %0 : i32
+}
+"""
+
 
 def transform(module, boilerplate):
   import mlir.conversions
@@ -69,8 +93,9 @@ def transform(module, boilerplate):
   mod = Module.parse(
       str(module.operation.regions[0].blocks[0].operations[0].operation) +
       boilerplate)
-  pm = PassManager.parse("func(convert-linalg-to-loops, convert-scf-to-std)," +
-                         "convert-vector-to-llvm," + "convert-std-to-llvm")
+  pm = PassManager.parse("func(convert-linalg-to-loops, lower-affine, " +
+                         "convert-scf-to-std), convert-vector-to-llvm," +
+                         "convert-std-to-llvm")
   pm.run(mod)
   return mod
 
@@ -183,3 +208,38 @@ def test_fill_generic():
 
 
 test_fill_generic()
+
+
+def test_conv_generic():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f64 = F64Type.get()
+    i32 = IntegerType.get_signless(32)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2, 1), f64),
+          MemRefType.get((1, 2, 4, 1), i32))
+      def conv_on_buffers(input, filter, output):
+        linalg.depthwise_conv_2d_input_nhwc_filter_hwc_poly(
+            input,
+            filter,
+            outs=[output],
+            strides=[2, 4],
+            dilations=[1, 2],
+            emit_generic=True)
+
+    execution_engine = ExecutionEngine(transform(module, conv_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result i32.
+    # Arguments must be passed as pointers.
+    c_int_p = ctypes.c_int * 1
+    res = c_int_p(-1)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # CHECK: RESULT: 8
+
+
+test_conv_generic()

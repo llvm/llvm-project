@@ -7,6 +7,9 @@ from mlir.dialects import std
 
 from mlir.dialects.linalg.opdsl.lang import *
 
+T1 = TV.T1
+T2 = TV.T2
+
 
 @linalg_structured_op
 def matmul_mono(
@@ -18,10 +21,22 @@ def matmul_mono(
 
 @linalg_structured_op
 def matmul_poly(
-    A=TensorDef(TV.T1, S.M, S.K),
-    B=TensorDef(TV.T2, S.K, S.N),
+    A=TensorDef(T1, S.M, S.K),
+    B=TensorDef(T2, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True)):
   C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
+
+
+@linalg_structured_op
+def conv_poly(
+    I=TensorDef(T1, S.N, S.IH, S.IW, S.C),
+    K=TensorDef(T2, S.KH, S.KW, S.C),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  O[D.n, D.oh, D.ow, D.c] += cast(
+      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+           D.c]) * cast(U, K[D.kh, D.kw, D.c])
 
 
 @linalg_structured_op
@@ -56,6 +71,10 @@ with Context() as ctx, Location.unknown():
     # CHECK: #[[$MAPA:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
     # CHECK: #[[$MAPB:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
     # CHECK: #[[$MAPC:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+    # CHECK: #[[$MAPI:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1 * 2 + d4, d2 * 4 + d5 * 2, d3)>
+    # CHECK: #[[$MAPK:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d4, d5, d3)>
+    # CHECK: #[[$MAPO:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
 
     # CHECK-LABEL: func @test_matmul_mono
     # CHECK-SAME:  %[[A:.+]]: tensor<4x16xf32>
@@ -161,17 +180,11 @@ with Context() as ctx, Location.unknown():
     # CHECK-LABEL: @test_fill_rng
     # CHECK:      ^{{.*}}(%[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32, %{{.*}}
     # CHECK-DAG:    %[[IDX0:.+]] = linalg.index 0 : index
-    # CHECK-DAG:    %[[IDX1:.+]] = linalg.index 1 : index
     # CHECK-DAG:    %[[IDX0_CAST:.+]] = index_cast %[[IDX0]] : index to i32
-    # CHECK-DAG:    %[[IDX1_CAST:.+]] = index_cast %[[IDX1]] : index to i32
     # CHECK-DAG:    %[[RND0:.+]] = addi %[[IDX0_CAST]], %[[SEED]] : i32
     # CHECK-DAG:    %[[CST0:.+]] = constant 1103515245 : i64
     # CHECK-DAG:    %[[CST0_CAST:.+]] = trunci %[[CST0]] : i64 to i32
-    # CHECK-DAG:    %[[CST1:.+]] = constant 12345 : i64
-    # CHECK-DAG:    %[[CST1_CAST:.+]] = trunci %[[CST1]] : i64 to i32
-    # CHECK-DAG:    %[[RND1:.+]] = muli %[[RND0]], %[[CST0_CAST]] : i32
-    # CHECK-DAG:    %[[RND2:.+]] = addi %[[RND1]], %[[CST1_CAST]] : i32
-    # Skip random number computation for the second index.
+    # Skip the remaining random number computation and match the scaling logic.
     # CHECK-DAG:    %[[DIFF:.+]] = subf %[[MAX]], %[[MIN]] : f64
     # CHECK-DAG:    %[[CST3:.+]] = constant 2.3283063999999999E-10 : f64
     # CHECK-DAG:    %[[FACT:.+]] = mulf %[[DIFF]], %[[CST3]] : f64
@@ -182,6 +195,25 @@ with Context() as ctx, Location.unknown():
                                  RankedTensorType.get((4, 16), i32))
     def test_fill_rng(min, max, seed, init_result):
       return fill_rng(min, max, seed, outs=[init_result])
+
+    # CHECK-LABEL: @test_f32i32_conv
+    # CHECK: linalg.generic
+    # CHECK-SAME: indexing_maps = [#[[$MAPI]], #[[$MAPK]], #[[$MAPO]]]
+    # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]
+    # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[FILTER:.+]]: f32, %[[OUT:.+]]: i32)
+    # CHECK-NEXT:   %[[IN_CAST:.+]] = fptosi %[[IN:.+]] : f32 to i32
+    # CHECK-NEXT:   %[[FILTER_CAST:.+]] = fptosi %[[FILTER:.+]] : f32 to i32
+    # CHECK-NEXT:   %[[PROD:.+]] = muli %[[IN_CAST]], %[[FILTER_CAST]] : i32
+    # CHECK-NEXT:   %[[SUM:.+]] = addi %[[OUT]], %[[PROD]] : i32
+    # CHECK-NEXT:   linalg.yield %[[SUM]] : i32
+    # CHECK-NEXT: -> tensor<2x4xi32>
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2, 1),
+                                                                 f32),
+        RankedTensorType.get((2, 4), i32))
+    def test_f32i32_conv(input, filter, init_result):
+      return conv_poly(
+          input, filter, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 
 
 print(module)
