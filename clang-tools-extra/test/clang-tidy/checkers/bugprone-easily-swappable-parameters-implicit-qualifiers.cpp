@@ -5,7 +5,8 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 1}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 1}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0} \
+// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold, value: 0} \
 // RUN:  ]}' --
 
 void numericAndQualifierConversion(int I, const double CD) { numericAndQualifierConversion(CD, I); }
