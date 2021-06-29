@@ -35,3 +35,18 @@ define i32 @ssp_caller() sspstrong {
   %2 = call i32 @nossp_alwaysinline()
   ret i32 %2
 }
+
+; The alwaysinline attribute can also appear on the CallBase (ie. the call
+; site), ie. when __attribute__((flatten)) is used on the caller. Treat this
+; the same as if the caller had the fn attr alwaysinline and permit inline
+; substitution, despite the mismatch between caller and callee on ssp attrs.
+;
+; Curiously, the always_inline attribute on a CallInst is only expanded by the
+; inline pass, but not always_inline pass!
+define i32 @nossp_alwaysinline_caller() {
+; CHECK-INLINE-LABEL: @nossp_alwaysinline_caller(
+; CHECK-INLINE-NEXT:    ret i32 42
+;
+  %1 = call i32 @ssp() alwaysinline
+  ret i32 %1
+}
