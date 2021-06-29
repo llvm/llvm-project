@@ -1,13 +1,8 @@
 ; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
-; CHECK: Loop %bb: backedge-taken count is ((-5 + %x) /u 3)
+; CHECK: Loop %bb: backedge-taken count is (((-7 + (-1 * (1 umin (-7 + %x)))<nuw><nsw> + %x) /u 3) + (1 umin (-7 + %x)))
 ; CHECK: Loop %bb: max backedge-taken count is 1431655764
-
-
-; ScalarEvolution can't compute a trip count because it doesn't know if
-; dividing by the stride will have a remainder. This could theoretically
-; be teaching it how to use a more elaborate trip count computation.
 
 define i32 @f(i32 %x) nounwind readnone {
 entry:
