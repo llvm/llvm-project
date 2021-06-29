@@ -94,6 +94,7 @@ Expected<std::vector<std::unique_ptr<Section>>> static extractSections(
     S.Content =
         StringRef(reinterpret_cast<const char *>(Data->data()), Data->size());
 
+    const uint32_t CPUType = MachOObj.getHeader().cputype;
     S.Relocations.reserve(S.NReloc);
     for (auto RI = MachOObj.section_rel_begin(SecRef->getRawDataRefImpl()),
               RE = MachOObj.section_rel_end(SecRef->getRawDataRefImpl());
@@ -102,6 +103,10 @@ Expected<std::vector<std::unique_ptr<Section>>> static extractSections(
       R.Symbol = nullptr; // We'll fill this field later.
       R.Info = MachOObj.getRelocation(RI->getRawDataRefImpl());
       R.Scattered = MachOObj.isRelocationScattered(R.Info);
+      unsigned Type = MachOObj.getAnyRelocationType(R.Info);
+      // TODO Support CPU_TYPE_ARM.
+      R.IsAddend = !R.Scattered && (CPUType == MachO::CPU_TYPE_ARM64 &&
+                                    Type == MachO::ARM64_RELOC_ADDEND);
       R.Extern = !R.Scattered && MachOObj.getPlainRelocationExternal(R.Info);
       S.Relocations.push_back(R);
     }
@@ -222,7 +227,7 @@ void MachOReader::setSymbolInRelocationInfo(Object &O) const {
   for (LoadCommand &LC : O.LoadCommands)
     for (std::unique_ptr<Section> &Sec : LC.Sections)
       for (auto &Reloc : Sec->Relocations)
-        if (!Reloc.Scattered) {
+        if (!Reloc.Scattered && !Reloc.IsAddend) {
           const uint32_t SymbolNum =
               Reloc.getPlainRelocationSymbolNum(MachOObj.isLittleEndian());
           if (Reloc.Extern) {
