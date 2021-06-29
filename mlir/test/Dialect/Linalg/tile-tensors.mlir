@@ -130,17 +130,3 @@ func @generic_op_tensors(
 // TLOOP-SAME: ins (%{{.*}} = %[[ARG_0]]: [[TY]], %{{.*}} = %[[ARG_1]]: [[TY]])
 // TLOOP-SAME: outs (%{{.*}} = %[[INIT]]: [[TY]])
 // TLOOP-SAME: distribution["block_x", "block_y", "none"] {
-
-
-func @fill(%arg0 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
- %c0 = constant 0.0 : f32
- %0 = linalg.fill(%c0, %arg0) : f32, tensor<?x?x?xf32> -> tensor<?x?x?xf32>
- return %0 : tensor<?x?x?xf32>
-}
-// CHECK-LABEL: func @fill
-
-// TLOOP-LABEL: func @fill
-// TLOOP-NOT: ins
-// TLOOP: tensor.extract_slice
-// TLOOP-NEXT: linalg.fill
-// TLOOP-NEXT: tensor.insert_slice

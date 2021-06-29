@@ -242,8 +242,6 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
         applyMapToValues(b, loc, shapeSizesToLoopsMap, allShapeSizes);
     SmallVector<Value, 4> tiledOperands = makeTiledShapes(
         b, loc, op, operands, interchangedIvs, tileSizes, sizeBounds);
-    auto nonShapedOperands = op.getAssumedNonShapedOperands();
-    tiledOperands.append(nonShapedOperands.begin(), nonShapedOperands.end());
 
     // TODO: use an interface/adaptor to avoid leaking position in
     // `tiledOperands`.
