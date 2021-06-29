@@ -174,8 +174,10 @@ struct SimplifyDeadAlloc : public OpRewritePattern<T> {
 
   LogicalResult matchAndRewrite(T alloc,
                                 PatternRewriter &rewriter) const override {
-    if (llvm::any_of(alloc->getUsers(), [](Operation *op) {
-          return !isa<StoreOp, DeallocOp>(op);
+    if (llvm::any_of(alloc->getUsers(), [&](Operation *op) {
+        if (auto storeOp = dyn_cast<StoreOp>(op))
+          return storeOp.value() == alloc;
+        return !isa<DeallocOp>(op);
         }))
       return failure();
 
