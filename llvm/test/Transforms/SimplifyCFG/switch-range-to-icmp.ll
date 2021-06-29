@@ -9,12 +9,15 @@ define i32 @basic(i32 %x) {
 ; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -5
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 3
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[DEFAULT:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[DEFAULT]] ], [ [[TMP1:%.*]], [[A]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       default:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @f(i32 0)
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       a:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @f(i32 1)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 
 entry:
@@ -38,12 +41,15 @@ define i32 @unreachable(i32 %x) {
 ; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -5
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 3
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[A]] ], [ [[TMP1:%.*]], [[B]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       a:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @f(i32 0)
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       b:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @f(i32 1)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 
 entry:
@@ -73,12 +79,15 @@ define i32 @unreachable2(i32 %x) {
 ; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -5
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 3
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP0:%.*]], [[A]] ], [ [[TMP1:%.*]], [[B]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       a:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @f(i32 0)
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP0]] = call i32 @f(i32 0)
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       b:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @f(i32 1)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1]] = call i32 @f(i32 1)
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 
 entry:

@@ -6,12 +6,12 @@ define void @test(i32* %P, i32* %Q, i1 %A, i1 %B) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[A_NOT]], i1 true, i1 [[B:%.*]]
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[B:%.*]], label [[C:%.*]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[B:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       b:
 ; CHECK-NEXT:    store i32 123, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    ret void
-; CHECK:       c:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 
 entry:

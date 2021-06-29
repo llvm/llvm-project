@@ -13,16 +13,16 @@ define void @test1(i32 %V) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[A:%.*]] [
 ; CHECK-NEXT:    i32 4, label [[T:%.*]]
-; CHECK-NEXT:    i32 17, label [[DONE:%.*]]
+; CHECK-NEXT:    i32 17, label [[COMMON_RET:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    call void @foo2()
-; CHECK-NEXT:    br label [[DONE]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       A:
 ; CHECK-NEXT:    call void @foo1()
-; CHECK-NEXT:    br label [[DONE]]
-; CHECK:       Done:
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ;
   switch i32 %V, label %A [
@@ -68,21 +68,21 @@ define void @test2(i32 %V) {
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[A:%.*]] [
 ; CHECK-NEXT:    i32 4, label [[T:%.*]]
 ; CHECK-NEXT:    i32 17, label [[D:%.*]]
-; CHECK-NEXT:    i32 1234, label [[E:%.*]]
+; CHECK-NEXT:    i32 1234, label [[COMMON_RET:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[V]], 42
-; CHECK-NEXT:    br i1 [[COND]], label [[D]], label [[E]]
+; CHECK-NEXT:    br i1 [[COND]], label [[D]], label [[COMMON_RET]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()
 ; CHECK-NEXT:    call void @foo1()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       D:
 ; CHECK-NEXT:    call void @foo1()
-; CHECK-NEXT:    ret void
-; CHECK:       E:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i32 %V, label %A [
   i32 4, label %T
