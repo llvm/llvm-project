@@ -57,6 +57,14 @@ void IoErrorHandler::SignalError(int iostatOrErrno) {
   SignalError(iostatOrErrno, nullptr);
 }
 
+void IoErrorHandler::Forward(
+    int ioStatOrErrno, const char *msg, std::size_t length) {
+  SignalError(ioStatOrErrno);
+  if (ioStat_ != IostatOk && (flags_ & hasIoMsg)) {
+    ioMsg_ = SaveDefaultCharacter(msg, length, *this);
+  }
+}
+
 void IoErrorHandler::SignalErrno() { SignalError(errno); }
 
 void IoErrorHandler::SignalEnd() { SignalError(IostatEnd); }

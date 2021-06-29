@@ -42,4 +42,4 @@ __host__ __device__ void bar() {
 // HOST: declare void @_Z3bazv() [[BAZ_ATTR:#[0-9]+]]
 // HOST: attributes [[BAZ_ATTR]] = {
 // HOST-NOT: convergent
-// NOST-SAME: }
+// HOST-SAME: }

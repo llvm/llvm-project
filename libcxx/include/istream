@@ -192,14 +192,12 @@ public:
     { this->init(__sb); }
     virtual ~basic_istream();
 protected:
-#ifndef _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     basic_istream(basic_istream&& __rhs);
 
     // 27.7.1.1.2 Assign/swap:
     inline _LIBCPP_INLINE_VISIBILITY
     basic_istream& operator=(basic_istream&& __rhs);
-#endif
 
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void swap(basic_istream& __rhs) {
@@ -207,10 +205,8 @@ protected:
       basic_ios<char_type, traits_type>::swap(__rhs);
     }
 
-#ifndef _LIBCPP_CXX03_LANG
     basic_istream           (const basic_istream& __rhs) = delete;
     basic_istream& operator=(const basic_istream& __rhs) = delete;
-#endif
 public:
 
     // 27.7.1.1.3 Prefix/suffix:
@@ -333,8 +329,6 @@ basic_istream<_CharT, _Traits>::sentry::sentry(basic_istream<_CharT, _Traits>& _
         __is.setstate(ios_base::failbit);
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>::basic_istream(basic_istream&& __rhs)
     : __gc_(__rhs.__gc_)
@@ -350,8 +344,6 @@ basic_istream<_CharT, _Traits>::operator=(basic_istream&& __rhs)
     swap(__rhs);
     return *this;
 }
-
-#endif // _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits>
 basic_istream<_CharT, _Traits>::~basic_istream()
@@ -1416,20 +1408,17 @@ public:
 
     virtual ~basic_iostream();
 protected:
-#ifndef _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     basic_iostream(basic_iostream&& __rhs);
 
     // assign/swap
     inline _LIBCPP_INLINE_VISIBILITY
     basic_iostream& operator=(basic_iostream&& __rhs);
-#endif
+
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void swap(basic_iostream& __rhs)
     { basic_istream<char_type, traits_type>::swap(__rhs); }
 };
-
-#ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits>
 basic_iostream<_CharT, _Traits>::basic_iostream(basic_iostream&& __rhs)
@@ -1444,8 +1433,6 @@ basic_iostream<_CharT, _Traits>::operator=(basic_iostream&& __rhs)
     swap(__rhs);
     return *this;
 }
-
-#endif // _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits>
 basic_iostream<_CharT, _Traits>::~basic_iostream()
@@ -1570,8 +1557,6 @@ getline(basic_istream<_CharT, _Traits>& __is,
     return getline(__is, __str, __is.widen('\n'));
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template<class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 basic_istream<_CharT, _Traits>&
@@ -1589,8 +1574,6 @@ getline(basic_istream<_CharT, _Traits>&& __is,
 {
     return getline(__is, __str, __is.widen('\n'));
 }
-
-#endif // _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, size_t _Size>
 basic_istream<_CharT, _Traits>&

@@ -104,23 +104,22 @@ static bool equalsVariable(const ConcatInputSection *ia,
       if (isa<Defined>(sa)) {
         const auto *da = dyn_cast<Defined>(sa);
         const auto *db = dyn_cast<Defined>(sb);
-        if (da->value != db->value)
-          return false;
-        if (da->isAbsolute() != db->isAbsolute())
-          return false;
-        if (da->isec) {
+        if (da->isec && db->isec) {
           if (da->isec->kind() != db->isec->kind())
             return false;
           if (const auto *isecA = dyn_cast<ConcatInputSection>(da->isec)) {
             const auto *isecB = cast<ConcatInputSection>(db->isec);
-            if (isecA->icfEqClass[icfPass % 2] !=
-                isecB->icfEqClass[icfPass % 2])
-              return false;
-          } else {
-            // FIXME: implement ICF for other InputSection kinds
-            return false;
+            return da->value == db->value && isecA->icfEqClass[icfPass % 2] ==
+                                                 isecB->icfEqClass[icfPass % 2];
           }
+          // Else we have two literal sections. References to them are
+          // constant-equal if their offsets in the output section are equal.
+          return da->isec->parent == db->isec->parent &&
+                 da->isec->getOffset(da->value) ==
+                     db->isec->getOffset(db->value);
         }
+        assert(da->isAbsolute() && db->isAbsolute());
+        return da->value == db->value;
       } else if (isa<DylibSymbol>(sa)) {
         // There is one DylibSymbol per gotIndex and we already checked for
         // symbol equality, thus we know that these must be different.
@@ -135,14 +134,13 @@ static bool equalsVariable(const ConcatInputSection *ia,
         return false;
       if (const auto *isecA = dyn_cast<ConcatInputSection>(sa)) {
         const auto *isecB = cast<ConcatInputSection>(sb);
-        if (isecA->icfEqClass[icfPass % 2] != isecB->icfEqClass[icfPass % 2])
-          return false;
+        return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
       } else {
-        // FIXME: implement ICF for other InputSection kinds
-        return false;
+        assert(isa<CStringInputSection>(sa) ||
+               isa<WordLiteralInputSection>(sa));
+        return sa->getOffset(ra.addend) == sb->getOffset(rb.addend);
       }
     }
-    return true;
   };
   return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
                     f);
@@ -207,11 +205,15 @@ void ICF::run() {
           if (auto *dylibSym = dyn_cast<DylibSymbol>(sym))
             hash += dylibSym->stubsHelperIndex;
           else if (auto *defined = dyn_cast<Defined>(sym)) {
-            hash += defined->value;
-            if (defined->isec)
-              if (auto *isec = cast<ConcatInputSection>(defined->isec))
-                hash += isec->icfEqClass[icfPass % 2];
-            // FIXME: implement ICF for other InputSection kinds
+            if (defined->isec) {
+              if (auto isec = dyn_cast<ConcatInputSection>(defined->isec))
+                hash += defined->value + isec->icfEqClass[icfPass % 2];
+              else
+                hash += defined->isec->kind() +
+                        defined->isec->getOffset(defined->value);
+            } else {
+              hash += defined->value;
+            }
           } else
             llvm_unreachable("foldIdenticalSections symbol kind");
         }

@@ -224,9 +224,13 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   Funcs.erase(
       removeIfBinary(Funcs.begin(), Funcs.end(),
                      [&](const auto &Prev, const auto &Curr) {
-                       if (Prev.Range.intersects(Curr.Range)) {
-                         // Overlapping address ranges.
-                         if (Prev.Range == Curr.Range) {
+                       // Empty ranges won't intersect, but we still need to
+                       // catch the case where we have multiple symbols at the
+                       // same address and coalesce them.
+                       const bool ranges_equal = Prev.Range == Curr.Range;
+                       if (ranges_equal || Prev.Range.intersects(Curr.Range)) {
+                         // Overlapping ranges or empty identical ranges.
+                         if (ranges_equal) {
                            // Same address range. Check if one is from debug
                            // info and the other is from a symbol table. If
                            // so, then keep the one with debug info. Our
