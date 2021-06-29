@@ -71,7 +71,8 @@ if is_msvc:
 # use_clang() and use_lld() respectively, so set them to "", if needed.
 if not hasattr(config, 'clang_src_dir'):
     config.clang_src_dir = ""
-llvm_config.use_clang()
+llvm_config.use_clang(required=('clang' in config.llvm_enabled_projects))
+
 if not hasattr(config, 'lld_src_dir'):
     config.lld_src_dir = ""
 llvm_config.use_lld(required=('lld' in config.llvm_enabled_projects))
