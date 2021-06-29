@@ -74,8 +74,7 @@ MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         "Packed tag data size does not match expected number of tags. "
-        "Expected %" PRIu64 " tag(s) for %" PRIu64 " granules, got %" PRIu64
-        " tag(s).",
+        "Expected %zu tag(s) for %zu granules, got %zu tag(s).",
         granules, granules, num_tags);
   }
 
