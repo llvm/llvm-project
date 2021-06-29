@@ -98,7 +98,7 @@ else()
 endif()
 
 # create libraries
-set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx906)
+set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
