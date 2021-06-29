@@ -1011,7 +1011,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (ReservedArgStack || IncomingArgStackToRestore) {
-    assert(ReservedArgStack + IncomingArgStackToRestore >= 0 &&
+    assert((int)ReservedArgStack + IncomingArgStackToRestore >= 0 &&
            "attempting to restore negative stack amount");
     emitSPUpdate(isARM, MBB, MBBI, dl, TII,
                  ReservedArgStack + IncomingArgStackToRestore,
