@@ -1149,7 +1149,11 @@ template <class LP> void macho::writeResult() { Writer().run<LP>(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  in.cStringSection = config->dedupLiterals ? make<CStringSection>() : nullptr;
+  if (config->dedupLiterals) {
+    in.cStringSection = make<DeduplicatedCStringSection>();
+  } else {
+    in.cStringSection = make<CStringSection>();
+  }
   in.wordLiteralSection =
       config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
   in.rebase = make<RebaseSection>();

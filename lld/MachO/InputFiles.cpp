@@ -262,10 +262,9 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
     uint32_t align = 1 << sec.align;
     uint32_t flags = sec.flags;
 
-    if (config->dedupLiterals &&
-        (sectionType(sec.flags) == S_CSTRING_LITERALS ||
-         isWordLiteralSection(sec.flags))) {
-      if (sec.nreloc)
+    if (sectionType(sec.flags) == S_CSTRING_LITERALS ||
+        (config->dedupLiterals && isWordLiteralSection(sec.flags))) {
+      if (sec.nreloc && config->dedupLiterals)
         fatal(toString(this) + " contains relocations in " + sec.segname + "," +
               sec.sectname +
               ", so LLD cannot deduplicate literals. Try re-running without "
