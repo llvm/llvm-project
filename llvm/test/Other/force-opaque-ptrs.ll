@@ -5,6 +5,10 @@
 ; CHECK: @g = external global i16
 @g = external global i16
 
+; CHECK: @ga = alias i18, ptr @g2
+@g2 = global i18 0
+@ga = alias i18, i18* @g2
+
 define void @f(i32* %p) {
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (ptr [[P:%.*]]) {
