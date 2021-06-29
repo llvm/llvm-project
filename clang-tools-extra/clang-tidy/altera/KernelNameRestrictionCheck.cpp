@@ -70,9 +70,9 @@ void KernelNameRestrictionPPCallbacks::InclusionDirective(
 
 bool KernelNameRestrictionPPCallbacks::fileNameIsRestricted(
     StringRef FileName) {
-  return FileName.equals_lower("kernel.cl") ||
-         FileName.equals_lower("verilog.cl") ||
-         FileName.equals_lower("vhdl.cl");
+  return FileName.equals_insensitive("kernel.cl") ||
+         FileName.equals_insensitive("verilog.cl") ||
+         FileName.equals_insensitive("vhdl.cl");
 }
 
 void KernelNameRestrictionPPCallbacks::EndOfMainFile() {
