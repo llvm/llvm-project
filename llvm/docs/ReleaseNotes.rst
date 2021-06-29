@@ -164,6 +164,11 @@ Changes to the LLVM tools
   ``--x86-asm-syntax`` is a deprecated internal option which will be removed in LLVM 14.0.0.
   (`D101695 <https://reviews.llvm.org/D101695>`_)
 
+* The llvm-readobj short aliases ``-s`` (previously ``--sections``) and ``-t``
+  (previously ``--syms``) have been changed to ``--syms`` and
+  ``--section-details`` respectively, to match llvm-readelf.
+  (`D105055 <https://reviews.llvm.org/D105055>`_)
+
 Changes to LLDB
 ---------------------------------
 
