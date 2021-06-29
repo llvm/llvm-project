@@ -957,7 +957,7 @@ void Writer::foldIdenticalSections() {
   // relocs to find every referenced InputSection, but that precludes easy
   // parallelization. Therefore, we hash every InputSection here where we have
   // them all accessible as a simple vector.
-  std::vector<InputSection *> hashable;
+  std::vector<ConcatInputSection *> hashable;
   // If an InputSection is ineligible for ICF, we give it a unique ID to force
   // it into an unfoldable singleton equivalence class.  Begin the unique-ID
   // space at inputSections.size(), so that it will never intersect with
@@ -967,12 +967,16 @@ void Writer::foldIdenticalSections() {
   // ICF::segregate()
   uint64_t icfUniqueID = inputSections.size();
   for (InputSection *isec : inputSections) {
-    if (isec->isHashableForICF(isec->parent == textOutputSection))
-      hashable.push_back(isec);
-    else
-      isec->icfEqClass[0] = ++icfUniqueID;
+    if (auto *concatIsec = dyn_cast<ConcatInputSection>(isec)) {
+      if (concatIsec->isHashableForICF(isec->parent == textOutputSection))
+        hashable.push_back(concatIsec);
+      else
+        concatIsec->icfEqClass[0] = ++icfUniqueID;
+    }
+    // FIXME: hash literal sections here?
   }
-  parallelForEach(hashable, [](InputSection *isec) { isec->hashForICF(); });
+  parallelForEach(hashable,
+                  [](ConcatInputSection *isec) { isec->hashForICF(); });
   // Now that every input section is either hashed or marked as unique,
   // run the segregation algorithm to detect foldable subsections
   ICF(textOutputSection->inputs).run();

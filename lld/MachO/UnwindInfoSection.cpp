@@ -153,7 +153,9 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     Reloc &rFunc = isec->relocs[++i];
     assert(r.offset ==
            rFunc.offset + offsetof(CompactUnwindEntry<Ptr>, personality));
-    rFunc.referent.get<InputSection *>()->hasPersonality = true;
+    auto *referentIsec =
+        cast<ConcatInputSection>(rFunc.referent.get<InputSection *>());
+    referentIsec->hasPersonality = true;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {
