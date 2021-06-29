@@ -28,7 +28,7 @@ void MachOReader::readHeader(Object &O) const {
 }
 
 template <typename SectionType>
-static Section constructSectionCommon(const SectionType &Sec, uint32_t Index) {
+static Section constructSectionCommon(SectionType Sec, uint32_t Index) {
   StringRef SegName(Sec.segname, strnlen(Sec.segname, sizeof(Sec.segname)));
   StringRef SectName(Sec.sectname, strnlen(Sec.sectname, sizeof(Sec.sectname)));
   Section S(SegName, SectName);
@@ -46,11 +46,14 @@ static Section constructSectionCommon(const SectionType &Sec, uint32_t Index) {
   return S;
 }
 
-static Section constructSection(const MachO::section &Sec, uint32_t Index) {
+template <typename SectionType>
+Section constructSection(SectionType Sec, uint32_t Index);
+
+template <> Section constructSection(MachO::section Sec, uint32_t Index) {
   return constructSectionCommon(Sec, Index);
 }
 
-static Section constructSection(const MachO::section_64 &Sec, uint32_t Index) {
+template <> Section constructSection(MachO::section_64 Sec, uint32_t Index) {
   Section S = constructSectionCommon(Sec, Index);
   S.Reserved3 = Sec.reserved3;
   return S;
