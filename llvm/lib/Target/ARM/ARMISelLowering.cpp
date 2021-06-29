@@ -17217,7 +17217,7 @@ static SDValue PerformBITCASTCombine(SDNode *N,
 }
 
 // Some combines for the MVETrunc truncations legalizer helper. Also lowers the
-// node into a buildvector after legalizeOps.
+// node into stack operations after legalizeOps.
 SDValue ARMTargetLowering::PerformMVETruncCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17265,7 +17265,14 @@ SDValue ARMTargetLowering::PerformMVETruncCombine(
     }
   }
 
-  auto LowerToBuildVec = [&]() {
+  // For MVETrunc of a buildvector or shuffle, it can be beneficial to lower the
+  // truncate to a buildvector to allow the generic optimisations to kick in.
+  if (all_of(N->ops(), [](SDValue Op) {
+        return Op.getOpcode() == ISD::BUILD_VECTOR ||
+               Op.getOpcode() == ISD::VECTOR_SHUFFLE ||
+               (Op.getOpcode() == ISD::BITCAST &&
+                Op.getOperand(0).getOpcode() == ISD::BUILD_VECTOR);
+      })) {
     SmallVector<SDValue, 8> Extracts;
     for (unsigned Op = 0; Op < N->getNumOperands(); Op++) {
       SDValue O = N->getOperand(Op);
@@ -17276,26 +17283,40 @@ SDValue ARMTargetLowering::PerformMVETruncCombine(
       }
     }
     return DAG.getBuildVector(VT, DL, Extracts);
-  };
-
-  // For MVETrunc of a buildvector or shuffle, it can be beneficial to lower the
-  // truncate to a buildvector to allow the generic optimisations to kick in.
-  if (all_of(N->ops(), [](SDValue Op) {
-        return Op.getOpcode() == ISD::BUILD_VECTOR ||
-               Op.getOpcode() == ISD::VECTOR_SHUFFLE ||
-               (Op.getOpcode() == ISD::BITCAST &&
-                Op.getOperand(0).getOpcode() == ISD::BUILD_VECTOR);
-      }))
-    return LowerToBuildVec();
+  }
 
   // If we are late in the legalization process and nothing has optimised
-  // the trunc to anything better lower it to a series of extracts and a
-  // buildvector.
+  // the trunc to anything better, lower it to a stack store and reload,
+  // performing the truncation whilst keeping the lanes in the correct order:
+  //   VSTRH.32 a, stack; VSTRH.32 b, stack+8; VLDRW.32 stack;
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  SDValue BuildVec = LowerToBuildVec();
-  return LowerBUILD_VECTOR(BuildVec, DCI.DAG, Subtarget);
+  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::Fixed(16), Align(4));
+  int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  int NumIns = N->getNumOperands();
+  assert((NumIns == 2 || NumIns == 4) &&
+         "Expected 2 or 4 inputs to an MVETrunc");
+  EVT StoreVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+  if (N->getNumOperands() == 4)
+    StoreVT = StoreVT.getHalfNumVectorElementsVT(*DAG.getContext());
+
+  SmallVector<SDValue> Chains;
+  for (int I = 0; I < NumIns; I++) {
+    SDValue Ptr = DAG.getNode(
+        ISD::ADD, DL, StackPtr.getValueType(), StackPtr,
+        DAG.getConstant(I * 16 / NumIns, DL, StackPtr.getValueType()));
+    MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(
+        DAG.getMachineFunction(), SPFI, I * 16 / NumIns);
+    SDValue Ch = DAG.getTruncStore(DAG.getEntryNode(), DL, N->getOperand(I),
+                                   Ptr, MPI, StoreVT, Align(4));
+    Chains.push_back(Ch);
+  }
+
+  SDValue Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
+  MachinePointerInfo MPI =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI, 0);
+  return DAG.getLoad(VT, DL, Chain, StackPtr, MPI, Align(4));
 }
 
 SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
