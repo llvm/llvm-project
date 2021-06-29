@@ -11,6 +11,7 @@
 #define _LIBCPP___TREE
 
 #include <__config>
+#include <__utility/forward.h>
 #include <algorithm>
 #include <iterator>
 #include <memory>

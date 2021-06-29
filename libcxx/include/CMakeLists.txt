@@ -34,6 +34,7 @@ set(files
   __algorithm/is_permutation.h
   __algorithm/is_sorted.h
   __algorithm/is_sorted_until.h
+  __algorithm/iter_swap.h
   __algorithm/lexicographical_compare.h
   __algorithm/lower_bound.h
   __algorithm/make_heap.h
@@ -85,6 +86,7 @@ set(files
   __algorithm/sort_heap.h
   __algorithm/stable_partition.h
   __algorithm/stable_sort.h
+  __algorithm/swap_ranges.h
   __algorithm/transform.h
   __algorithm/unique_copy.h
   __algorithm/unique.h
@@ -157,6 +159,11 @@ set(files
   __tree
   __tuple
   __undef_macros
+  __utility/__decay_copy.h
+  __utility/declval.h
+  __utility/forward.h
+  __utility/move.h
+  __utility/swap.h
   __utility/to_underlying.h
   algorithm
   any

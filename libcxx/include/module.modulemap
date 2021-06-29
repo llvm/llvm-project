@@ -666,9 +666,12 @@ module std [system] {
     export *
 
     module __utility {
-      module to_underlying {
-        header "__utility/to_underlying.h"
-      }
+      module __decay_copy  { header "__utility/__decay_copy.h"  }
+      module declval       { header "__utility/declval.h"       }
+      module forward       { header "__utility/forward.h"       }
+      module move          { header "__utility/move.h"          }
+      module swap          { header "__utility/swap.h"          }
+      module to_underlying { header "__utility/to_underlying.h" }
     }
   }
   module valarray {

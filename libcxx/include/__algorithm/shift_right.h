@@ -12,6 +12,7 @@
 #include <__config>
 #include <__algorithm/move.h>
 #include <__algorithm/move_backward.h>
+#include <__algorithm/swap_ranges.h>
 #include <__iterator/iterator_traits.h>
 #include <type_traits> // swap
 
