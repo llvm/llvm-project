@@ -291,10 +291,63 @@ define void @test_must_alias_different_size(i8* noalias %src, i64 %src_size, i8*
   ret void
 }
 
+define void @test_opaque_ptrs(ptr %src, i64 %src_size, ptr noalias %dst, i64 %dst_size, i8 %c) {
+; CHECK-LABEL: @test_opaque_ptrs(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast ptr [[DST:%.*]] to i8*
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, i8* [[TMP4]], i64 [[SRC_SIZE]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP5]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %src_size, i1 false)
+  ret void
+}
+
+define void @test_weird_element_type(i16* %src, i64 %src_size, i16* noalias %dst, i64 %dst_size, i8 %c) {
+; CHECK-LABEL: @test_weird_element_type(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16* [[DST:%.*]] to i8*
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, i8* [[TMP4]], i64 [[SRC_SIZE]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP5]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i16.p0i16.i64(i16* [[DST]], i16* [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i16.i64(i16* %dst, i8 %c, i64 %dst_size, i1 false)
+  call void @llvm.memcpy.p0i16.p0i16.i64(i16* %dst, i16* %src, i64 %src_size, i1 false)
+  ret void
+}
+
+define void @test_addrspace(i8 addrspace(1)* %src, i64 %src_size, i8 addrspace(1)* noalias %dst, i64 %dst_size, i8 %c) {
+; CHECK-LABEL: @test_addrspace(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, i8 addrspace(1)* [[DST:%.*]], i64 [[SRC_SIZE]]
+; CHECK-NEXT:    call void @llvm.memset.p1i8.i64(i8 addrspace(1)* align 1 [[TMP4]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* [[DST]], i8 addrspace(1)* [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 %c, i64 %dst_size, i1 false)
+  call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i64 %src_size, i1 false)
+  ret void
+}
+
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
 declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1)
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1)
 declare void @llvm.memset.p0i8.i128(i8* nocapture, i8, i128, i1)
 declare void @llvm.memcpy.p0i8.p0i8.i128(i8* nocapture, i8* nocapture readonly, i128, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
+declare void @llvm.memset.p0i16.i64(i16* nocapture, i8, i64, i1)
+declare void @llvm.memcpy.p0i16.p0i16.i64(i16* nocapture, i16* nocapture readonly, i64, i1)
+declare void @llvm.memset.p1i8.i64(i8 addrspace(1)* nocapture, i8, i64, i1)
+declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture readonly, i64, i1)
 declare void @call()

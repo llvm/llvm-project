@@ -88,4 +88,5 @@ add_clang_library(clangDriver
   LINK_LIBS
   clangBasic
   ${system_libs}
+  ${LLVM_PTHREAD_LIB}
   )
