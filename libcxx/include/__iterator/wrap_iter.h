@@ -25,61 +25,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Iter> class __wrap_iter;
-
-template <class _Iter1, class _Iter2>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator==(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-template <class _Iter1, class _Iter2>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator<(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-template <class _Iter1, class _Iter2>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator!=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-template <class _Iter1, class _Iter2>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator>(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-template <class _Iter1, class _Iter2>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator>=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-template <class _Iter1, class _Iter2>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator<=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-#ifndef _LIBCPP_CXX03_LANG
-template <class _Iter1, class _Iter2>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-auto
-operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
--> decltype(__x.base() - __y.base());
-#else
-template <class _Iter1, class _Iter2>
-_LIBCPP_INLINE_VISIBILITY
-typename __wrap_iter<_Iter1>::difference_type
-operator-(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-#endif
-
-template <class _Iter>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-__wrap_iter<_Iter>
-operator+(typename __wrap_iter<_Iter>::difference_type, __wrap_iter<_Iter>) _NOEXCEPT;
-
-template <class _Ip, class _Op> _Op _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 copy(_Ip, _Ip, _Op);
-template <class _B1, class _B2> _B2 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 copy_backward(_B1, _B1, _B2);
-template <class _Ip, class _Op> _Op _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 move(_Ip, _Ip, _Op);
-template <class _B1, class _B2> _B2 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 move_backward(_B1, _B1, _B2);
-
 template <class _Iter>
 class __wrap_iter
 {
@@ -217,55 +162,78 @@ private:
     template <class _CharT, class _Traits, class _Alloc> friend class basic_string;
     template <class _Tp, class _Alloc> friend class _LIBCPP_TEMPLATE_VIS vector;
     template <class _Tp, size_t> friend class _LIBCPP_TEMPLATE_VIS span;
-
-    template <class _Iter1, class _Iter2>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    bool
-    operator==(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-    template <class _Iter1, class _Iter2>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    bool
-    operator<(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-    template <class _Iter1, class _Iter2>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    bool
-    operator!=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-    template <class _Iter1, class _Iter2>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    bool
-    operator>(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-    template <class _Iter1, class _Iter2>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    bool
-    operator>=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-    template <class _Iter1, class _Iter2>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    bool
-    operator<=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-
-#ifndef _LIBCPP_CXX03_LANG
-    template <class _Iter1, class _Iter2>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    auto
-    operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-    -> decltype(__x.base() - __y.base());
-#else
-    template <class _Iter1, class _Iter2>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    typename __wrap_iter<_Iter1>::difference_type
-    operator-(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
-#endif
-
-    template <class _Iter1>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
-    __wrap_iter<_Iter1>
-    operator+(typename __wrap_iter<_Iter1>::difference_type, __wrap_iter<_Iter1>) _NOEXCEPT;
 };
+
+template <class _Iter1, class _Iter2>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+{
+    return __x.base() == __y.base();
+}
+
+template <class _Iter1, class _Iter2>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+{
+#if _LIBCPP_DEBUG_LEVEL == 2
+    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
+                   "Attempted to compare incomparable iterators");
+#endif
+    return __x.base() < __y.base();
+}
+
+template <class _Iter1, class _Iter2>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+{
+    return !(__x == __y);
+}
+
+template <class _Iter1, class _Iter2>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+{
+    return __y < __x;
+}
+
+template <class _Iter1, class _Iter2>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+{
+    return !(__x < __y);
+}
+
+template <class _Iter1, class _Iter2>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+bool operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+{
+    return !(__y < __x);
+}
+
+template <class _Iter1, class _Iter2>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+#ifndef _LIBCPP_CXX03_LANG
+auto operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+    -> decltype(__x.base() - __y.base())
+#else
+typename __wrap_iter<_Iter1>::difference_type
+operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+#endif // C++03
+{
+#if _LIBCPP_DEBUG_LEVEL == 2
+    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
+                   "Attempted to subtract incompatible iterators");
+#endif
+    return __x.base() - __y.base();
+}
+
+template <class _Iter1>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+__wrap_iter<_Iter1> operator+(typename __wrap_iter<_Iter1>::difference_type __n, __wrap_iter<_Iter1> __x) _NOEXCEPT
+{
+    __x += __n;
+    return __x;
+}
 
 #if _LIBCPP_STD_VER <= 17
 template <class _It>
@@ -277,127 +245,6 @@ _LIBCPP_CONSTEXPR
 decltype(_VSTD::__to_address(declval<_Iter>()))
 __to_address(__wrap_iter<_Iter> __w) _NOEXCEPT {
     return _VSTD::__to_address(__w.base());
-}
-
-template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-{
-    return __x.base() == __y.base();
-}
-
-template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-{
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
-                   "Attempted to compare incomparable iterators");
-#endif
-    return __x.base() < __y.base();
-}
-
-template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-{
-    return !(__x == __y);
-}
-
-template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-{
-    return __y < __x;
-}
-
-template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-{
-    return !(__x < __y);
-}
-
-template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-{
-    return !(__y < __x);
-}
-
-template <class _Iter1>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
-{
-    return !(__x == __y);
-}
-
-template <class _Iter1>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
-{
-    return __y < __x;
-}
-
-template <class _Iter1>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
-{
-    return !(__x < __y);
-}
-
-template <class _Iter1>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-bool
-operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT
-{
-    return !(__y < __x);
-}
-
-#ifndef _LIBCPP_CXX03_LANG
-template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-auto
-operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
--> decltype(__x.base() - __y.base())
-{
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
-                   "Attempted to subtract incompatible iterators");
-#endif
-    return __x.base() - __y.base();
-}
-#else
-template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-typename __wrap_iter<_Iter1>::difference_type
-operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-{
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
-                   "Attempted to subtract incompatible iterators");
-#endif
-    return __x.base() - __y.base();
-}
-#endif
-
-template <class _Iter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
-__wrap_iter<_Iter>
-operator+(typename __wrap_iter<_Iter>::difference_type __n,
-          __wrap_iter<_Iter> __x) _NOEXCEPT
-{
-    __x += __n;
-    return __x;
 }
 
 _LIBCPP_END_NAMESPACE_STD
