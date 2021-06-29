@@ -4,7 +4,8 @@
 // RUN: %clangxx_asan %s -DSENDTO -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-SENDTO
 // RUN: %clangxx_asan %s -DSENDTO -o %t && %env_asan_opts=intercept_send=0 %run %t 2>&1
 //
-// UNSUPPORTED: android
+// This will try to fast unwind on Arm Thumb, where fast unwinding does not work.
+// UNSUPPORTED: android, !fast-unwinder-works
 
 #include <stdio.h>
 #include <unistd.h>
