@@ -69,6 +69,16 @@ define i32* @noop_ptrint_pair_ce2() {
   ret i32* inttoptr (i64 ptrtoint (i32 addrspace(1)* @g to i64) to i32*)
 }
 
+; COMMON-LABEL: @noop_ptrint_pair_ce3(
+; AMDGCN-NEXT: %i = inttoptr i64 ptrtoint (i32 addrspace(1)* @g to i64) to i32*
+; AMDGCN-NEXT: ret void
+; NOTTI-NEXT: %i = inttoptr i64 ptrtoint (i32 addrspace(1)* @g to i64) to i32*
+; NOTTI-NEXT: ret void
+define void @noop_ptrint_pair_ce3() {
+  %i = inttoptr i64 ptrtoint (i32 addrspace(1)* @g to i64) to i32*
+  ret void
+}
+
 ; COMMON-LABEL: @non_noop_ptrint_pair_ce(
 ; AMDGCN-NEXT: store i32 0, i32* inttoptr (i64 ptrtoint (i32 addrspace(3)* @l to i64) to i32*)
 ; AMDGCN-NEXT: ret void

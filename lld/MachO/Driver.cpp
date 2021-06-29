@@ -1080,7 +1080,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
-  config->dedupLiterals = args.hasArg(OPT_deduplicate_literals);
+  config->icfLevel = getICFLevel(args);
+  config->dedupLiterals = args.hasArg(OPT_deduplicate_literals) ||
+                          config->icfLevel != ICFLevel::none;
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
@@ -1122,8 +1124,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                                 : NamespaceKind::flat;
 
   config->undefinedSymbolTreatment = getUndefinedSymbolTreatment(args);
-
-  config->icfLevel = getICFLevel(args);
 
   if (config->outputType == MH_EXECUTE)
     config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),

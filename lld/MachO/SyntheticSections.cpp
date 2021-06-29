@@ -1188,7 +1188,7 @@ void CStringSection::addInput(CStringInputSection *isec) {
   inputs.push_back(isec);
 }
 
-void CStringSection::finalize() {
+void CStringSection::finalizeContents() {
   // Add all string pieces to the string table builder to create section
   // contents.
   for (const CStringInputSection *isec : inputs)

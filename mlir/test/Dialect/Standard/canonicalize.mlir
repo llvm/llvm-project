@@ -319,3 +319,15 @@ func @branchCondProp(%arg0: i1) {
 ^exit:
   return
 }
+
+// -----
+
+// CHECK-LABEL: @selToNot
+//       CHECK:       %[[trueval:.+]] = constant true
+//       CHECK:       %{{.+}} = xor %arg0, %[[trueval]] : i1
+func @selToNot(%arg0: i1) -> i1 {
+  %true = constant true
+  %false = constant false
+  %res = select %arg0, %false, %true : i1
+  return %res : i1
+}

@@ -356,7 +356,8 @@ private:
   /// reductions, with one operand being vector and the other being the scalar
   /// reduction chain.
   void adjustRecipesForInLoopReductions(VPlanPtr &Plan,
-                                        VPRecipeBuilder &RecipeBuilder);
+                                        VPRecipeBuilder &RecipeBuilder,
+                                        ElementCount MinVF);
 };
 
 } // namespace llvm

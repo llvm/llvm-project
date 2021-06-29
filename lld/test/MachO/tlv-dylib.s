@@ -17,9 +17,9 @@
 # RUN: %lld -lSystem -L%t -ltlv %t/test.o -o %t/test
 # RUN: llvm-objdump --bind -d --no-show-raw-insn %t/test | FileCheck %s
 
-# CHECK:      movq [[#]](%rip), %rax # [[#%x, FOO:]]
-# CHECK-NEXT: movq [[#]](%rip), %rax # [[#%x, BAR:]]
-# CHECK-NEXT: movq [[#]](%rip), %rax # [[#%x, BAZ:]]
+# CHECK:      movq [[#]](%rip), %rax ## 0x[[#%x, FOO:]]
+# CHECK-NEXT: movq [[#]](%rip), %rax ## 0x[[#%x, BAR:]]
+# CHECK-NEXT: movq [[#]](%rip), %rax ## 0x[[#%x, BAZ:]]
 
 # CHECK-LABEL: Bind table:
 # CHECK-DAG: __DATA       __thread_ptrs  0x{{0*}}[[#%x, FOO]] pointer 0   libtlv   _foo
@@ -74,21 +74,21 @@
 # FLAGS-NEXT:    reloff 0
 # FLAGS-NEXT:    nreloc 0
 # FLAGS-NEXT:      type S_THREAD_LOCAL_ZEROFILL
-# FLAGS:       sectname __bss
-# FLAGS-NEXT:   segname __DATA
-# FLAGS-NEXT:      addr
-# FLAGS-NEXT:      size 0x0000000000002000
-# FLAGS-NEXT:    offset 0
-# FLAGS-NEXT:     align 2^0 (1)
-# FLAGS-NEXT:    reloff 0
-# FLAGS-NEXT:    nreloc 0
-# FLAGS-NEXT:      type S_ZEROFILL
 # FLAGS:       sectname __common
 # FLAGS-NEXT:   segname __DATA
 # FLAGS-NEXT:      addr
 # FLAGS-NEXT:      size 0x0000000000004000
 # FLAGS-NEXT:    offset 0
 # FLAGS-NEXT:     align 2^14 (16384)
+# FLAGS-NEXT:    reloff 0
+# FLAGS-NEXT:    nreloc 0
+# FLAGS-NEXT:      type S_ZEROFILL
+# FLAGS:       sectname __bss
+# FLAGS-NEXT:   segname __DATA
+# FLAGS-NEXT:      addr
+# FLAGS-NEXT:      size 0x0000000000002000
+# FLAGS-NEXT:    offset 0
+# FLAGS-NEXT:     align 2^0 (1)
 # FLAGS-NEXT:    reloff 0
 # FLAGS-NEXT:    nreloc 0
 # FLAGS-NEXT:      type S_ZEROFILL

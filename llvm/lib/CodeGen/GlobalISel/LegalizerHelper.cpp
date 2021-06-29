@@ -2027,6 +2027,21 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
 
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX:
+    Observer.changingInstr(MI);
+
+    if (TypeIdx == 0) {
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+      widenScalarDst(MI, WideTy);
+    } else {
+      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
+      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ZEXT);
+    }
+
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_SHL:
     Observer.changingInstr(MI);
 

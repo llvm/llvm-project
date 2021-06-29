@@ -12,10 +12,10 @@
 # RUN:     llvm-objdump - -d --debug-vars | \
 # RUN:     FileCheck %s --check-prefix=RAW --strict-whitespace
 
-## Check that passing the default value for --debug-vars-indent (40) makes no
+## Check that passing the default value for --debug-vars-indent (52) makes no
 ## change to the output.
 # RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
-# RUN:     llvm-objdump - -d --debug-vars --debug-vars-indent=40 | \
+# RUN:     llvm-objdump - -d --debug-vars --debug-vars-indent=52 | \
 # RUN:     FileCheck %s --check-prefix=RAW --strict-whitespace
 
 # RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
@@ -50,19 +50,19 @@
 ## 8-byte tab stop, so these might not look aligned in a text editor.
 
 # RAW: 00000000 <foo>:
-# RAW-NEXT:                                                                 ┠─ a = R0 
-# RAW-NEXT:                                                                 ┃ ┠─ b = R1 
-# RAW-NEXT:                                                                 ┃ ┃ ┠─ c = R2 
-# RAW-NEXT:                                                                 ┃ ┃ ┃ ┌─ x = R0 
-# RAW-NEXT:        0: 00 00 81 e0  	add	r0, r1, r0                      ┻ ┃ ┃ ╈   
-# RAW-NEXT:                                                                 ┌─ y = R0 
-# RAW-NEXT:        4: 02 00 80 e0  	add	r0, r0, r2                      ╈ ┃ ┃ ┻   
-# RAW-NEXT:        8: 1e ff 2f e1  	bx	lr                              ┻ ┻ ┻     
+# RAW-NEXT:                                                                             ┠─ a = R0 
+# RAW-NEXT:                                                                             ┃ ┠─ b = R1 
+# RAW-NEXT:                                                                             ┃ ┃ ┠─ c = R2 
+# RAW-NEXT:                                                                             ┃ ┃ ┃ ┌─ x = R0 
+# RAW-NEXT:        0: 00 00 81 e0  	add	r0, r1, r0                                  ┻ ┃ ┃ ╈   
+# RAW-NEXT:                                                                             ┌─ y = R0 
+# RAW-NEXT:        4: 02 00 80 e0  	add	r0, r0, r2                                  ╈ ┃ ┃ ┻   
+# RAW-NEXT:        8: 1e ff 2f e1  	bx	lr                                          ┻ ┻ ┻     
 # RAW-EMPTY:
 # RAW-NEXT: 0000000c <bar>:
-# RAW-NEXT:                                                                 ┠─ a = R0 
-# RAW-NEXT:        c: 01 00 80 e2  	add	r0, r0, #1                      ┃         
-# RAW-NEXT:       10: 1e ff 2f e1  	bx	lr                              ┻         
+# RAW-NEXT:                                                                             ┠─ a = R0 
+# RAW-NEXT:        c: 01 00 80 e2  	add	r0, r0, #1                                  ┃         
+# RAW-NEXT:       10: 1e ff 2f e1  	bx	lr                                          ┻         
 
 
 # INDENT: 00000000 <foo>:
@@ -81,70 +81,70 @@
 # INDENT-NEXT:       10: 1e ff 2f e1  	bx	lr                    ┻         
 
 # NO-RAW: 00000000 <foo>:
-# NO-RAW-NEXT:                                                         ┠─ a = R0
-# NO-RAW-NEXT:                                                         ┃ ┠─ b = R1
-# NO-RAW-NEXT:                                                         ┃ ┃ ┠─ c = R2
-# NO-RAW-NEXT:                                                         ┃ ┃ ┃ ┌─ x = R0
-# NO-RAW-NEXT:        0:      	add	r0, r1, r0                      ┻ ┃ ┃ ╈
-# NO-RAW-NEXT:                                                         ┌─ y = R0
-# NO-RAW-NEXT:        4:      	add	r0, r0, r2                      ╈ ┃ ┃ ┻
-# NO-RAW-NEXT:        8:      	bx	lr                              ┻ ┻ ┻
+# NO-RAW-NEXT:                                                                     ┠─ a = R0
+# NO-RAW-NEXT:                                                                     ┃ ┠─ b = R1
+# NO-RAW-NEXT:                                                                     ┃ ┃ ┠─ c = R2
+# NO-RAW-NEXT:                                                                     ┃ ┃ ┃ ┌─ x = R0
+# NO-RAW-NEXT:        0:      	add	r0, r1, r0                                  ┻ ┃ ┃ ╈
+# NO-RAW-NEXT:                                                                     ┌─ y = R0
+# NO-RAW-NEXT:        4:      	add	r0, r0, r2                                  ╈ ┃ ┃ ┻
+# NO-RAW-NEXT:        8:      	bx	lr                                          ┻ ┻ ┻
 # NO-RAW-EMPTY:
 # NO-RAW-NEXT: 0000000c <bar>:
-# NO-RAW-NEXT:                                                         ┠─ a = R0
-# NO-RAW-NEXT:        c:      	add	r0, r0, #1                      ┃
-# NO-RAW-NEXT:       10:      	bx	lr                              ┻
+# NO-RAW-NEXT:                                                                     ┠─ a = R0
+# NO-RAW-NEXT:        c:      	add	r0, r0, #1                                  ┃
+# NO-RAW-NEXT:       10:      	bx	lr                                          ┻
 
 # LINE-NUMS: 00000000 <foo>:
 # LINE-NUMS-NEXT: ; foo():
-# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:2                                 ┠─ a = R0
-# LINE-NUMS-NEXT:                                                         ┃ ┠─ b = R1
-# LINE-NUMS-NEXT:                                                         ┃ ┃ ┠─ c = R2
-# LINE-NUMS-NEXT:                                                         ┃ ┃ ┃ ┌─ x = R0
-# LINE-NUMS-NEXT:        0:      	add	r0, r1, r0                      ┻ ┃ ┃ ╈
-# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:3                                 ┌─ y = R0
-# LINE-NUMS-NEXT:        4:      	add	r0, r0, r2                      ╈ ┃ ┃ ┻
-# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:4                                 ┃ ┃ ┃
-# LINE-NUMS-NEXT:        8:      	bx	lr                              ┻ ┻ ┻
+# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:2                                             ┠─ a = R0
+# LINE-NUMS-NEXT:                                                                     ┃ ┠─ b = R1
+# LINE-NUMS-NEXT:                                                                     ┃ ┃ ┠─ c = R2
+# LINE-NUMS-NEXT:                                                                     ┃ ┃ ┃ ┌─ x = R0
+# LINE-NUMS-NEXT:        0:      	add	r0, r1, r0                                  ┻ ┃ ┃ ╈
+# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:3                                             ┌─ y = R0
+# LINE-NUMS-NEXT:        4:      	add	r0, r0, r2                                  ╈ ┃ ┃ ┻
+# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:4                                             ┃ ┃ ┃
+# LINE-NUMS-NEXT:        8:      	bx	lr                                          ┻ ┻ ┻
 # LINE-NUMS-EMPTY:
 # LINE-NUMS-NEXT: 0000000c <bar>:
 # LINE-NUMS-NEXT: ; bar():
-# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:8                                 ┠─ a = R0
-# LINE-NUMS-NEXT:        c:      	add	r0, r0, #1                      ┃
-# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:9                                 ┃
-# LINE-NUMS-NEXT:       10:      	bx	lr                              ┻
+# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:8                                             ┠─ a = R0
+# LINE-NUMS-NEXT:        c:      	add	r0, r0, #1                                  ┃
+# LINE-NUMS-NEXT: ; SRC_COMPDIR{{[\\/]}}debug.c:9                                             ┃
+# LINE-NUMS-NEXT:       10:      	bx	lr                                          ┻
 
 # SOURCE: 00000000 <foo>:
-# SOURCE-NEXT: ;   int x = a + b;                                      ┠─ a = R0
-# SOURCE-NEXT:                                                         ┃ ┠─ b = R1
-# SOURCE-NEXT:                                                         ┃ ┃ ┠─ c = R2
-# SOURCE-NEXT:                                                         ┃ ┃ ┃ ┌─ x = R0
-# SOURCE-NEXT:        0:      	add	r0, r1, r0                      ┻ ┃ ┃ ╈
-# SOURCE-NEXT: ;   int y = x + c;                                      ┌─ y = R0
-# SOURCE-NEXT:        4:      	add	r0, r0, r2                      ╈ ┃ ┃ ┻
-# SOURCE-NEXT: ;   return y;                                           ┃ ┃ ┃
-# SOURCE-NEXT:        8:      	bx	lr                              ┻ ┻ ┻
+# SOURCE-NEXT: ;   int x = a + b;                                                  ┠─ a = R0
+# SOURCE-NEXT:                                                                     ┃ ┠─ b = R1
+# SOURCE-NEXT:                                                                     ┃ ┃ ┠─ c = R2
+# SOURCE-NEXT:                                                                     ┃ ┃ ┃ ┌─ x = R0
+# SOURCE-NEXT:        0:      	add	r0, r1, r0                                  ┻ ┃ ┃ ╈
+# SOURCE-NEXT: ;   int y = x + c;                                                  ┌─ y = R0
+# SOURCE-NEXT:        4:      	add	r0, r0, r2                                  ╈ ┃ ┃ ┻
+# SOURCE-NEXT: ;   return y;                                                       ┃ ┃ ┃
+# SOURCE-NEXT:        8:      	bx	lr                                          ┻ ┻ ┻
 # SOURCE-EMPTY:
 # SOURCE-NEXT: 0000000c <bar>:
-# SOURCE-NEXT: ;   a++;                                                ┠─ a = R0
-# SOURCE-NEXT:        c:      	add	r0, r0, #1                      ┃
-# SOURCE-NEXT: ;   return a;                                           ┃
-# SOURCE-NEXT:       10:      	bx	lr                              ┻
+# SOURCE-NEXT: ;   a++;                                                            ┠─ a = R0
+# SOURCE-NEXT:        c:      	add	r0, r0, #1                                  ┃
+# SOURCE-NEXT: ;   return a;                                                       ┃
+# SOURCE-NEXT:       10:      	bx	lr                                          ┻
 
 # ASCII: 00000000 <foo>:
-# ASCII-NEXT:                                                                 |- a = R0 
-# ASCII-NEXT:                                                                 | |- b = R1 
-# ASCII-NEXT:                                                                 | | |- c = R2 
-# ASCII-NEXT:                                                                 | | | /- x = R0 
-# ASCII-NEXT:        0: 00 00 81 e0  	add	r0, r1, r0                      v | | ^   
-# ASCII-NEXT:                                                                 /- y = R0 
-# ASCII-NEXT:        4: 02 00 80 e0  	add	r0, r0, r2                      ^ | | v   
-# ASCII-NEXT:        8: 1e ff 2f e1  	bx	lr                              v v v     
+# ASCII-NEXT:                                                                             |- a = R0 
+# ASCII-NEXT:                                                                             | |- b = R1 
+# ASCII-NEXT:                                                                             | | |- c = R2 
+# ASCII-NEXT:                                                                             | | | /- x = R0 
+# ASCII-NEXT:        0: 00 00 81 e0  	add	r0, r1, r0                                  v | | ^   
+# ASCII-NEXT:                                                                             /- y = R0 
+# ASCII-NEXT:        4: 02 00 80 e0  	add	r0, r0, r2                                  ^ | | v   
+# ASCII-NEXT:        8: 1e ff 2f e1  	bx	lr                                          v v v     
 # ASCII-EMPTY:
 # ASCII-NEXT: 0000000c <bar>:
-# ASCII-NEXT:                                                                 |- a = R0 
-# ASCII-NEXT:        c: 01 00 80 e2  	add	r0, r0, #1                      |         
-# ASCII-NEXT:       10: 1e ff 2f e1  	bx	lr                              v         
+# ASCII-NEXT:                                                                             |- a = R0 
+# ASCII-NEXT:        c: 01 00 80 e2  	add	r0, r0, #1                                  |         
+# ASCII-NEXT:       10: 1e ff 2f e1  	bx	lr                                          v         
 
 	.text
 	.syntax unified

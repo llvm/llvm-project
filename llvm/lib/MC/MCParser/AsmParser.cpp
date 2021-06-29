@@ -6302,8 +6302,12 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
   if (ShouldParseAsHLASMLabel) {
     // If there were any errors while handling and emitting the label,
     // early return.
-    if (parseAsHLASMLabel(Info, SI))
+    if (parseAsHLASMLabel(Info, SI)) {
+      // If we know we've failed in parsing, simply eat until end of the
+      // statement. This ensures that we don't process any other statements.
+      eatToEndOfStatement();
       return true;
+    }
   }
 
   return parseAsMachineInstruction(Info, SI);

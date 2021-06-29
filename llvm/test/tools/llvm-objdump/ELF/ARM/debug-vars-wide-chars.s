@@ -13,9 +13,9 @@
 ## characters.
 
 # CHECK: 00000000 <foo>:
-# CHECK-NEXT: ;   return *喵;                                                 ┠─ 喵 = R0
-# CHECK-NEXT:        0: 00 00 90 e5  	ldr	r0, [r0]                        ┻   
-# CHECK-NEXT:        4: 1e ff 2f e1  	bx	lr                                  
+# CHECK-NEXT: ;   return *喵;                                                             ┠─ 喵 = R0
+# CHECK-NEXT:        0: 00 00 90 e5  	ldr	r0, [r0]                                    ┻   
+# CHECK-NEXT:        4: 1e ff 2f e1  	bx	lr                                              
 
 	.text
 	.syntax unified

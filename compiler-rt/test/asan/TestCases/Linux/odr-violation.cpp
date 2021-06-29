@@ -43,6 +43,8 @@
 // GNU driver doesn't handle .so files properly.
 // REQUIRES: Clang
 
+// REQUIRES: fast-unwinder-works
+
 #ifndef SZ
 # define SZ 4
 #endif

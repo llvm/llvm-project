@@ -53,14 +53,15 @@ Q: How to build an OpenMP GPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To build an *effective* OpenMP offload capable compiler, only one extra CMake
 option, `LLVM_ENABLE_RUNTIMES="openmp"`, is needed when building LLVM (Generic
-information about building LLVM is available `here <https://llvm.org/docs/GettingStarted.html>`__.).
-Make sure all backends that are targeted by OpenMP to be enabled. By default,
-Clang will be built with all backends enabled.
-When building with `LLVM_ENABLE_RUNTIMES="openmp"` OpenMP should not be enabled
-in `LLVM_ENABLE_PROJECTS` because it is enabled by default.
+information about building LLVM is available `here
+<https://llvm.org/docs/GettingStarted.html>`__.).  Make sure all backends that
+are targeted by OpenMP to be enabled. By default, Clang will be built with all
+backends enabled.  When building with `LLVM_ENABLE_RUNTIMES="openmp"` OpenMP
+should not be enabled in `LLVM_ENABLE_PROJECTS` because it is enabled by
+default.
 
-For Nvidia offload, please see :ref:`_build_nvidia_offload_capable_compiler`.
-For AMDGPU offload, please see :ref:`_build_amdgpu_offload_capable_compiler`.
+For Nvidia offload, please see :ref:`build_nvidia_offload_capable_compiler`.
+For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
 
 .. note::
   The compiler that generates the offload code should be the same (version) as
@@ -86,40 +87,50 @@ available GPUs failed, you should also set:
 
 Q: How to build an OpenMP AMDGPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A subset of the `ROCm <https://github.com/radeonopencompute>` toolchain is
+A subset of the `ROCm <https://github.com/radeonopencompute>`_ toolchain is
 required to build the LLVM toolchain and to execute the openmp application.
 Either install ROCm somewhere that cmake's find_package can locate it, or
 build the required subcomponents ROCt and ROCr from source.
 
-The two components used are ROCT-Thunk-Interface, roct, and ROCR-Runtime,
-rocr. Roct is the userspace part of the linux driver. It calls into the
-driver which ships with the linux kernel. It is an implementation detail of
-Rocr from OpenMP's perspective. Rocr is an implementation of `HSA <http://www.hsafoundation.com>`.
+The two components used are ROCT-Thunk-Interface, roct, and ROCR-Runtime, rocr.
+Roct is the userspace part of the linux driver. It calls into the driver which
+ships with the linux kernel. It is an implementation detail of Rocr from
+OpenMP's perspective. Rocr is an implementation of `HSA
+<http://www.hsafoundation.com>`_.
 
-    SOURCE_DIR=same-as-llvm-source # e.g. the checkout of llvm-project, next to openmp
-    BUILD_DIR=somewhere
-    INSTALL_PREFIX=same-as-llvm-install
-    
-    cd $SOURCE_DIR
-    git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.1.x --single-branch
-    git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.1.x --single-branch
-    
-    cd $BUILD_DIR && mkdir roct && cd roct
-    cmake $SOURCE_DIR/ROCT-Thunk-Interface/ -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
-    make && make install
+.. code-block:: text
 
-    cd $BUILD_DIR && mkdir rocr && cd rocr
-    cmake $SOURCE_DIR/ROCR-Runtime/src -DIMAGE_SUPPORT=OFF -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
-    make && make install
+  SOURCE_DIR=same-as-llvm-source # e.g. the checkout of llvm-project, next to openmp
+  BUILD_DIR=somewhere
+  INSTALL_PREFIX=same-as-llvm-install
+  
+  cd $SOURCE_DIR
+  git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.1.x \
+    --single-branch
+  git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.1.x \
+    --single-branch
+  
+  cd $BUILD_DIR && mkdir roct && cd roct
+  cmake $SOURCE_DIR/ROCT-Thunk-Interface/ -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
+    -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+  make && make install
 
-IMAGE_SUPPORT requires building rocr with clang and is not used by openmp.
+  cd $BUILD_DIR && mkdir rocr && cd rocr
+  cmake $SOURCE_DIR/ROCR-Runtime/src -DIMAGE_SUPPORT=OFF \
+    -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=ON
+  make && make install
+
+``IMAGE_SUPPORT`` requires building rocr with clang and is not used by openmp.
     
 Provided cmake's find_package can find the ROCR-Runtime package, LLVM will
-build a tool `bin/amdgpu-arch` which will print a string like 'gfx906' when
+build a tool ``bin/amdgpu-arch`` which will print a string like ``gfx906`` when
 run if it recognises a GPU on the local system. LLVM will also build a shared
 library, libomptarget.rtl.amdgpu.so, which is linked against rocr.
 
 With those libraries installed, then LLVM build and installed, try:
+
+.. code-block:: shell
 
     clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa example.c -o example && ./example
 
@@ -153,8 +164,8 @@ For now, the answer is most likely *no*. Please see :ref:`build_offload_capable_
 Q: Does Clang support `<math.h>` and `<complex.h>` operations in OpenMP target on GPUs?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Yes, LLVM/Clang allows math functions and complex arithmetic inside of OpenMP target regions
-that are compiled for GPUs.
+Yes, LLVM/Clang allows math functions and complex arithmetic inside of OpenMP
+target regions that are compiled for GPUs.
 
 Clang provides a set of wrapper headers that are found first when `math.h` and
 `complex.h`, for C, `cmath` and `complex`, for C++, or similar headers are
@@ -202,8 +213,8 @@ an error like this.
 Currently, the only solution is to change how the application is built and avoid
 the use of static libraries.
 
-Q: Can I use dynamically linked libraries with OpenMP offloading
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Q: Can I use dynamically linked libraries with OpenMP offloading?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Dynamically linked libraries can be only used if there is no device code split
 between the library and application. Anything declared on the device inside the
@@ -220,3 +231,36 @@ correct GCC toolchain in the second stage of the build.
 For example, if your system-wide GCC installation is too old to build LLVM and
 you would like to use a newer GCC, set the CMake variable `GCC_INSTALL_PREFIX`
 to inform clang of the GCC installation you would like to use in the second stage.
+
+Q: How can I include OpenMP offloading support in my CMake project?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Currently, there is an experimental CMake find module for OpenMP target
+offloading provided by LLVM. It will attempt to find OpenMP target offloading
+support for your compiler. The flags necessary for OpenMP target offloading will
+be loaded into the ``OpenMPTarget::OpenMPTarget_<device>`` target or the
+``OpenMPTarget_<device>_FLAGS`` variable if successful. Currently supported
+devices are ``AMDGCN`` and ``NVPTX``. 
+
+To use this module, simply add the path to CMake's current module path and call
+``find_package``. The module will be installed with your OpenMP installation by
+default. Including OpenMP offloading support in an application should now only
+require a few additions.
+
+.. code-block:: cmake
+
+  cmake_minimum_required(VERSION 3.13.4)
+  project(offloadTest VERSION 1.0 LANGUAGES CXX)
+  
+  list(APPEND CMAKE_MODULE_PATH "${PATH_TO_OPENMP_INSTALL}/lib/cmake/openmp")
+  
+  find_package(OpenMPTarget REQUIRED NVPTX)
+  
+  add_executable(offload)
+  target_link_libraries(offload PRIVATE OpenMPTarget::OpenMPTarget_NVPTX)
+  target_sources(offload PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp)
+
+Using this module requires at least CMake version 3.13.4. Supported languages
+are C and C++ with Fortran support planned in the future. Compiler support is
+best for Clang but this module should work for other compiler vendors such as
+IBM, GNU.

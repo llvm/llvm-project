@@ -554,3 +554,91 @@ func @vector_load_affine_apply_store_load(%in : memref<512xf32>, %out : memref<5
   }
   return
 }
+
+// CHECK-LABEL: func @external_no_forward_load
+
+func @external_no_forward_load(%in : memref<512xf32>, %out : memref<512xf32>) {
+  affine.for %i = 0 to 16 {
+    %ld0 = affine.load %in[32*%i] : memref<512xf32>
+    affine.store %ld0, %out[32*%i] : memref<512xf32>
+    "memop"(%in, %out) : (memref<512xf32>, memref<512xf32>) -> ()
+    %ld1 = affine.load %in[32*%i] : memref<512xf32>
+    affine.store %ld1, %out[32*%i] : memref<512xf32>
+  }
+  return
+}
+// CHECK:   affine.load
+// CHECK:   affine.store
+// CHECK:   affine.load
+// CHECK:   affine.store
+
+// CHECK-LABEL: func @external_no_forward_store
+
+func @external_no_forward_store(%in : memref<512xf32>, %out : memref<512xf32>) {
+  %cf1 = constant 1.0 : f32
+  affine.for %i = 0 to 16 {
+    affine.store %cf1, %in[32*%i] : memref<512xf32>
+    "memop"(%in, %out) : (memref<512xf32>, memref<512xf32>) -> ()
+    %ld1 = affine.load %in[32*%i] : memref<512xf32>
+    affine.store %ld1, %out[32*%i] : memref<512xf32>
+  }
+  return
+}
+// CHECK:   affine.store
+// CHECK:   affine.load
+// CHECK:   affine.store
+
+// CHECK-LABEL: func @no_forward_cast
+
+func @no_forward_cast(%in : memref<512xf32>, %out : memref<512xf32>) {
+  %cf1 = constant 1.0 : f32
+  %cf2 = constant 2.0 : f32
+  %m2 = memref.cast %in : memref<512xf32> to memref<?xf32>
+  affine.for %i = 0 to 16 {
+    affine.store %cf1, %in[32*%i] : memref<512xf32>
+    affine.store %cf2, %m2[32*%i] : memref<?xf32>
+    %ld1 = affine.load %in[32*%i] : memref<512xf32>
+    affine.store %ld1, %out[32*%i] : memref<512xf32>
+  }
+  return
+}
+// CHECK:   affine.store
+// CHECK-NEXT:   affine.store
+// CHECK-NEXT:   affine.load
+// CHECK-NEXT:   affine.store
+
+// Although there is a dependence from the second store to the load, it is
+// satisfied by the outer surrounding loop, and does not prevent the first
+// store to be forwarded to the load.
+
+// CHECK-LABEL: func @overlap_no_fwd
+func @overlap_no_fwd(%N : index) -> f32 {
+  %cf7 = constant 7.0 : f32
+  %cf9 = constant 9.0 : f32
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %m = memref.alloc() : memref<10xf32>
+  affine.for %i0 = 0 to 5 {
+    affine.store %cf7, %m[2 * %i0] : memref<10xf32>
+    affine.for %i1 = 0 to %N {
+      %v0 = affine.load %m[2 * %i0] : memref<10xf32>
+      %v1 = addf %v0, %v0 : f32
+      affine.store %cf9, %m[%i0 + 1] : memref<10xf32>
+    }
+  }
+  // Due to this load, the memref isn't optimized away.
+  %v3 = affine.load %m[%c1] : memref<10xf32>
+  return %v3 : f32
+
+// CHECK:  affine.for %{{.*}} = 0 to 5 {
+// CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:    affine.for %{{.*}} = 0 to %{{.*}} {
+// CHECK-NEXT:      %{{.*}} = affine.load
+// CHECK-NEXT:      %{{.*}} = addf %{{.*}}, %{{.*}} : f32
+// CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// CHECK-NEXT:  %{{.*}} = affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:  return %{{.*}} : f32
+}
+

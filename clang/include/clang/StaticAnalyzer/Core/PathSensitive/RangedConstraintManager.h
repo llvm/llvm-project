@@ -213,6 +213,9 @@ public:
     ///             where N = size(What)
     RangeSet negate(RangeSet What);
 
+    /// Return associated value factory.
+    BasicValueFactory &getValueFactory() const { return ValueFactory; }
+
   private:
     /// Return a persistent version of the given container.
     RangeSet makePersistent(ContainerType &&From);

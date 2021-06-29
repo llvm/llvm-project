@@ -1,5 +1,5 @@
 ; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK %s
-
+; RUN: opt < %s -enable-coroutines -O0 -S
 target datalayout = "p:64:64:64"
 
 %async.task = type { i64 }
@@ -205,11 +205,12 @@ entry:
   store i8* %async.ctxt, i8** %callee_context.caller_context.addr
   %resume_proj_fun = bitcast i8*(i8*)* @resume_context_projection to i8*
   %callee = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
+  %task.casted = bitcast i8* %arg0 to %async.task*
   %res = call {i8*, i8*, i8*} (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 2,
                                                   i8* %resume.func_ptr,
                                                   i8* %resume_proj_fun,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
-                                                  i8* %callee, i8* %callee_context, %async.task* %task, %async.actor *%actor), !dbg !9
+                                                  i8* %callee, i8* %callee_context, %async.task* %task.casted, %async.actor *%actor), !dbg !9
 
   %continuation_task_arg = extractvalue {i8*, i8*, i8*} %res, 0
   %task.2 =  bitcast i8* %continuation_task_arg to %async.task*
@@ -227,7 +228,7 @@ entry:
                                                   i8* %resume.func_ptr.1,
                                                   i8* %resume_proj_fun.2,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
-                                                  i8* %callee.2, i8* %callee_context, %async.task* %task, %async.actor *%actor)
+                                                  i8* %callee.2, i8* %callee_context, %async.task* %task.casted, %async.actor *%actor)
 
   call void @llvm.coro.async.context.dealloc(i8* %callee_context)
   %continuation_actor_arg = extractvalue {i8*, i8*, i8*} %res.2, 1
@@ -535,6 +536,7 @@ declare swiftcc void @asyncReturn(i8*, %async.task*, %async.actor*)
 declare swiftcc void @asyncSuspend(i8*, %async.task*, %async.actor*)
 declare i8* @llvm.coro.async.resume()
 declare void @llvm.coro.async.size.replace(i8*, i8*)
+declare i8* @hide(i8*)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!0}

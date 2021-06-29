@@ -13,6 +13,7 @@ add_clang_library(clangTidyBugproneModule
   CopyConstructorInitCheck.cpp
   DanglingHandleCheck.cpp
   DynamicStaticInitializersCheck.cpp
+  EasilySwappableParametersCheck.cpp
   ExceptionEscapeCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp

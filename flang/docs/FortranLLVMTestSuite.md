@@ -21,18 +21,18 @@ code-generation capabilities.
 
 Fortran support can be enabled by setting the following CMake variables:
 ```
-% cmake -DCMAKE_Fortran_COMPILER=<path to Fortran compiler> \
-        -DTEST_SUITE_FORTRAN:STRING=ON \
-        -C../test-suite/cmake/caches/O3.cmake \
-        ../test-suite
+cmake -G "Ninja" -DCMAKE_C_COMPILER=<path to C compiler> \
+    -DCMAKE_CXX_COMPILER=<path to C++ compiler> \
+    -DCMAKE_Fortran_COMPILER=<path to Fortran compiler> \
+    -DTEST_SUITE_COLLECT_CODE_SIZE:STRING=OFF \
+    -DTEST_SUITE_SUBDIRS:STRING="Fortran" \
+    -DTEST_SUITE_FORTRAN:STRING=ON ..
 ```
 
-At the moment, there is only a "hello world" Fortran test. A current
-shortcoming in the design of the test suite is that building the C/C++
-tests is conflated with building and running the Fortran tests,
-i.e. it is not possible to only build and run the Fortran tests with
-the exception of the [External
-tests](https://llvm.org/docs/TestSuiteGuide.html#external-suites).
+This will configure the test-suite to run only the Fortran tests which
+are found in the Fortran subdirectory. To run the C/C++ tests
+alongside the Fortran tests omit the `-DTEST_SUITE_SUBDIRS` CMake
+variable.
 
 
 ## Running the SPEC CPU 2017
