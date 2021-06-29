@@ -145,7 +145,7 @@ ErrorOr<std::string> findClang(const char *Argv0) {
   return Path;
 }
 
-Triple::ArchType getDefaultArch(Triple::ArchType Arch) {
+bool isUsableArch(Triple::ArchType Arch) {
   switch (Arch) {
   case Triple::x86:
   case Triple::x86_64:
@@ -154,17 +154,23 @@ Triple::ArchType getDefaultArch(Triple::ArchType Arch) {
   case Triple::aarch64:
     // These work properly with the clang driver, setting the expected
     // defines such as _WIN32 etc.
-    return Arch;
+    return true;
   default:
     // Other archs aren't set up for use with windows as target OS, (clang
-    // doesn't define e.g. _WIN32 etc), so set a reasonable default arch.
-    return Triple::x86_64;
+    // doesn't define e.g. _WIN32 etc), so with them we need to set a
+    // different default arch.
+    return false;
   }
+}
+
+Triple::ArchType getDefaultFallbackArch() {
+  return Triple::x86_64;
 }
 
 std::string getClangClTriple() {
   Triple T(sys::getDefaultTargetTriple());
-  T.setArch(getDefaultArch(T.getArch()));
+  if (!isUsableArch(T.getArch()))
+    T.setArch(getDefaultFallbackArch());
   T.setOS(Triple::Win32);
   T.setVendor(Triple::PC);
   T.setEnvironment(Triple::MSVC);
@@ -174,7 +180,8 @@ std::string getClangClTriple() {
 
 std::string getMingwTriple() {
   Triple T(sys::getDefaultTargetTriple());
-  T.setArch(getDefaultArch(T.getArch()));
+  if (!isUsableArch(T.getArch()))
+    T.setArch(getDefaultFallbackArch());
   if (T.isWindowsGNUEnvironment())
     return T.str();
   // Write out the literal form of the vendor/env here, instead of
