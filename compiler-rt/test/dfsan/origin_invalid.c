@@ -9,8 +9,14 @@
 int main(int argc, char *argv[]) {
   uint64_t a = 10;
   dfsan_set_label(1, &a, sizeof(a));
-  size_t origin_addr =
-      (((size_t)&a & ~0x600000000000LL + 0x100000000000LL) & ~0x3UL);
+
+  // Manually compute origin address for &a.
+  // See x86 MEM_TO_ORIGIN macro for logic to replicate here.
+  // Alignment is also needed after to MEM_TO_ORIGIN.
+  uint64_t origin_addr =
+      (((uint64_t)&a ^ 0x500000000000ULL) + 0x100000000000ULL) & ~0x3ULL;
+
+  // Take the address we computed, and store 0 in it to mess it up.
   asm("mov %0, %%rax": :"r"(origin_addr));
   asm("movq $0, (%rax)");
   dfsan_print_origin_trace(&a, "invalid");

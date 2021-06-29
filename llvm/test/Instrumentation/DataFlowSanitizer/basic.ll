@@ -1,5 +1,5 @@
-; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,CHECK_NO_ORIGIN -DSHADOW_MASK=-105553116266497   --dump-input-context=100
-; RUN: opt < %s -dfsan -dfsan-track-origins=1  -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN -DSHADOW_MASK=-105553116266497  --dump-input-context=100
+; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,CHECK_NO_ORIGIN -DSHADOW_XOR_MASK=87960930222080 --dump-input-context=100
+; RUN: opt < %s -dfsan -dfsan-track-origins=1  -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN -DSHADOW_XOR_MASK=87960930222080 --dump-input-context=100
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i8 @load(i8* %p) {
   ; CHECK-LABEL: define i8 @load.dfsan
-  ; CHECK: and i64 {{.*}}, [[SHADOW_MASK]]
+  ; CHECK: xor i64 {{.*}}, [[SHADOW_XOR_MASK]]
   ; CHECK: ret i8 %a
   %a = load i8, i8* %p
   ret i8 %a
@@ -22,7 +22,7 @@ define i8 @load(i8* %p) {
 
 define void @store(i8* %p) {
   ; CHECK-LABEL: define void @store.dfsan
-  ; CHECK: and i64 {{.*}}, [[SHADOW_MASK]]
+  ; CHECK: xor i64 {{.*}}, [[SHADOW_XOR_MASK]]
   ; CHECK: ret void
   store i8 0, i8* %p
   ret void

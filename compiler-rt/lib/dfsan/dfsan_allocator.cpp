@@ -33,15 +33,11 @@ struct DFsanMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
 };
 
+static const uptr kAllocatorSpace = 0x700000000000ULL;
 static const uptr kMaxAllowedMallocSize = 8UL << 30;
 
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
-  // TODO: DFSan assumes application memory starts from 0x700000008000. For
-  // unknown reason, the sanitizer allocator does not support any start address
-  // between 0x701000000000 and 0x700000008000. After switching to fast8labels
-  // mode, DFSan memory layout will be changed to the same to MSan's. Then we
-  // set the start address to 0x700000000000 as MSan.
-  static const uptr kSpaceBeg = 0x701000000000ULL;
+  static const uptr kSpaceBeg = kAllocatorSpace;
   static const uptr kSpaceSize = 0x40000000000;  // 4T.
   static const uptr kMetadataSize = sizeof(Metadata);
   typedef DefaultSizeClassMap SizeClassMap;
