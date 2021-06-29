@@ -755,6 +755,30 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectG_SBFX_UBFX(MachineInstr &MI) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register OffsetReg = MI.getOperand(2).getReg();
+  Register WidthReg = MI.getOperand(3).getReg();
+
+  assert(RBI.getRegBank(DstReg, *MRI, TRI)->getID() == AMDGPU::VGPRRegBankID &&
+         "scalar BFX instructions are expanded in regbankselect");
+  assert(MRI->getType(MI.getOperand(0).getReg()).getSizeInBits() == 32 &&
+         "64-bit vector BFX instructions are expanded in regbankselect");
+
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock *MBB = MI.getParent();
+
+  bool IsSigned = MI.getOpcode() == TargetOpcode::G_SBFX;
+  unsigned Opc = IsSigned ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), DstReg)
+                 .addReg(SrcReg)
+                 .addReg(OffsetReg)
+                 .addReg(WidthReg);
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
 bool AMDGPUInstructionSelector::selectInterpP1F16(MachineInstr &MI) const {
   if (STI.getLDSBankCount() != 16)
     return selectImpl(MI, *CoverageInfo);
@@ -3189,6 +3213,9 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectBVHIntrinsic(I);
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
     return selectAMDGPU_BUFFER_ATOMIC_FADD(I);
+  case AMDGPU::G_SBFX:
+  case AMDGPU::G_UBFX:
+    return selectG_SBFX_UBFX(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
