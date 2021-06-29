@@ -11,6 +11,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -179,8 +180,20 @@ namespace {
       Root      = 0x01,
       Internal  = 0x02,
       Used      = 0x04,
-      InBounds  = 0x08
+      InBounds  = 0x08,
+      Pointer   = 0x10,   // See note below.
     };
+    // Note: GEP indices generally traverse nested types, and so a GepNode
+    // (representing a single index) can be associated with some composite
+    // type. The exception is the GEP input, which is a pointer, and not
+    // a composite type (at least not in the sense of having sub-types).
+    // Also, the corresponding index plays a different role as well: it is
+    // simply added to the input pointer. Since pointer types are becoming
+    // opaque (i.e. are no longer going to include the pointee type), the
+    // two pieces of information (1) the fact that it's a pointer, and
+    // (2) the pointee type, need to be stored separately. The pointee type
+    // will be stored in the PTy member, while the fact that the node
+    // operates on a pointer will be reflected by the flag "Pointer".
 
     uint32_t Flags = 0;
     union {
@@ -188,7 +201,9 @@ namespace {
       Value *BaseVal;
     };
     Value *Idx = nullptr;
-    Type *PTy = nullptr;  // Type of the pointer operand.
+    Type *PTy = nullptr;    // Type indexed by this node. For pointer nodes
+                            // this is the "pointee" type, and indexing a
+                            // pointer does not change the type.
 
     GepNode() : Parent(nullptr) {}
     GepNode(const GepNode *N) : Flags(N->Flags), Idx(N->Idx), PTy(N->PTy) {
@@ -200,12 +215,6 @@ namespace {
 
     friend raw_ostream &operator<< (raw_ostream &OS, const GepNode &GN);
   };
-
-  Type *next_type(Type *Ty, Value *Idx) {
-    if (auto *PTy = dyn_cast<PointerType>(Ty))
-      return PTy->getElementType();
-    return GetElementPtrInst::getTypeAtIndex(Ty, Idx);
-  }
 
   raw_ostream &operator<< (raw_ostream &OS, const GepNode &GN) {
     OS << "{ {";
@@ -229,6 +238,11 @@ namespace {
       if (Comma)
         OS << ',';
       OS << "inbounds";
+    }
+    if (GN.Flags & GepNode::Pointer) {
+      if (Comma)
+        OS << ',';
+      OS << "pointer";
     }
     OS << "} ";
     if (GN.Flags & GepNode::Root)
@@ -347,7 +361,8 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
     // chain. Link to it here.
     N->Parent = F->second;
   }
-  N->PTy = PtrOp->getType();
+  N->PTy = GepI->getSourceElementType();
+  N->Flags |= GepNode::Pointer;
   N->Idx = *GepI->idx_begin();
 
   // Collect the list of users of this GEP instruction. Will add it to the
@@ -367,10 +382,10 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   Nodes.push_back(N);
   NodeOrder.insert(N);
 
-  // Skip the first index operand, since we only handle 0. This dereferences
-  // the pointer operand.
+  // Skip the first index operand, since it was already handled above. This
+  // dereferences the pointer operand.
   GepNode *PN = N;
-  Type *PtrTy = cast<PointerType>(PtrOp->getType())->getElementType();
+  Type *PtrTy = GepI->getSourceElementType();
   for (User::op_iterator OI = GepI->idx_begin()+1, OE = GepI->idx_end();
        OI != OE; ++OI) {
     Value *Op = *OI;
@@ -383,7 +398,7 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
     NodeOrder.insert(Nx);
     PN = Nx;
 
-    PtrTy = next_type(PtrTy, Op);
+    PtrTy = GetElementPtrInst::getTypeAtIndex(PtrTy, Op);
   }
 
   // After last node has been created, update the use information.
@@ -503,16 +518,18 @@ static bool node_eq(GepNode *N1, GepNode *N2, NodePairSet &Eq,
       return false;
     // Not previously compared.
     bool Root1 = N1->Flags & GepNode::Root;
-    bool Root2 = N2->Flags & GepNode::Root;
+    uint32_t CmpFlags = GepNode::Root | GepNode::Pointer;
+    bool Different = (N1->Flags & CmpFlags) != (N2->Flags & CmpFlags);
     NodePair P = node_pair(N1, N2);
-    // If the Root flag has different values, the nodes are different.
+    // If the root/pointer flags have different values, the nodes are
+    // different.
     // If both nodes are root nodes, but their base pointers differ,
     // they are different.
-    if (Root1 != Root2 || (Root1 && N1->BaseVal != N2->BaseVal)) {
+    if (Different || (Root1 && N1->BaseVal != N2->BaseVal)) {
       Ne.insert(P);
       return false;
     }
-    // Here the root flags are identical, and for root nodes the
+    // Here the root/pointer flags are identical, and for root nodes the
     // base pointers are equal, so the root nodes are equal.
     // For non-root nodes, compare their parent nodes.
     if (Root1 || node_eq(N1->Parent, N2->Parent, Eq, Ne)) {
@@ -927,8 +944,10 @@ namespace {
     for (NodeToValueMap::const_iterator I = Loc.Map.begin(), E = Loc.Map.end();
          I != E; ++I) {
       OS << I->first << " -> ";
-      BasicBlock *B = cast<BasicBlock>(I->second);
-      OS << B->getName() << '(' << B << ')';
+      if (BasicBlock *B = cast_or_null<BasicBlock>(I->second))
+        OS << B->getName() << '(' << B << ')';
+      else
+        OS << "<null-block>";
       OS << '\n';
     }
     return OS;
@@ -1088,41 +1107,39 @@ Value *HexagonCommonGEP::fabricateGEP(NodeVect &NA, BasicBlock::iterator At,
 
   GetElementPtrInst *NewInst = nullptr;
   Value *Input = RN->BaseVal;
-  Value **IdxList = new Value*[Num+1];
-  unsigned nax = 0;
+  Type *InpTy = RN->PTy;
+
+  unsigned Idx = 0;
   do {
-    unsigned IdxC = 0;
+    SmallVector<Value*, 4> IdxList;
     // If the type of the input of the first node is not a pointer,
     // we need to add an artificial i32 0 to the indices (because the
     // actual input in the IR will be a pointer).
-    if (!NA[nax]->PTy->isPointerTy()) {
+    if (!(NA[Idx]->Flags & GepNode::Pointer)) {
       Type *Int32Ty = Type::getInt32Ty(*Ctx);
-      IdxList[IdxC++] = ConstantInt::get(Int32Ty, 0);
+      IdxList.push_back(ConstantInt::get(Int32Ty, 0));
     }
 
     // Keep adding indices from NA until we have to stop and generate
     // an "intermediate" GEP.
-    while (++nax <= Num) {
-      GepNode *N = NA[nax-1];
-      IdxList[IdxC++] = N->Idx;
-      if (nax < Num) {
-        // We have to stop, if the expected type of the output of this node
-        // is not the same as the input type of the next node.
-        Type *NextTy = next_type(N->PTy, N->Idx);
-        if (NextTy != NA[nax]->PTy)
+    while (++Idx <= Num) {
+      GepNode *N = NA[Idx-1];
+      IdxList.push_back(N->Idx);
+      if (Idx < Num) {
+        // We have to stop if we reach a pointer.
+        if (NA[Idx]->Flags & GepNode::Pointer)
           break;
       }
     }
-    ArrayRef<Value*> A(IdxList, IdxC);
-    Type *InpTy = Input->getType();
-    Type *ElTy = cast<PointerType>(InpTy->getScalarType())->getElementType();
-    NewInst = GetElementPtrInst::Create(ElTy, Input, A, "cgep", &*At);
+    NewInst = GetElementPtrInst::Create(InpTy, Input, IdxList, "cgep", &*At);
     NewInst->setIsInBounds(RN->Flags & GepNode::InBounds);
     LLVM_DEBUG(dbgs() << "new GEP: " << *NewInst << '\n');
-    Input = NewInst;
-  } while (nax <= Num);
+    if (Idx < Num) {
+      Input = NewInst;
+      InpTy = NA[Idx]->PTy;
+    }
+  } while (Idx <= Num);
 
-  delete[] IdxList;
   return NewInst;
 }
 
