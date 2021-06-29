@@ -943,8 +943,7 @@ public:
   }
   kmp_flag_oncore(volatile kmp_uint64 *p, kmp_uint32 idx)
       : kmp_flag_native<kmp_uint64, flag_oncore, false>(p), offset(idx),
-        flag_switch(false),
-        bt(bs_last_barrier) USE_ITT_BUILD_ARG(itt_sync_obj(nullptr)) {}
+        flag_switch(false), bt(bs_last_barrier), itt_sync_obj(nullptr) {}
   kmp_flag_oncore(volatile kmp_uint64 *p, kmp_uint64 c, kmp_uint32 idx,
                   enum barrier_type bar_t,
                   kmp_info_t *thr USE_ITT_BUILD_ARG(void *itt))
