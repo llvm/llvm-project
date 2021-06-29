@@ -73,7 +73,7 @@ protected:
   DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A, DwarfDebug *DW,
             DwarfFile *DWU);
 
-  bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie);
+  bool applySubprogramDefinitionAttributes(const DISubprogram *SP, DIE &SPDie, bool Minimal);
 
   bool isShareableAcrossCUs(const DINode *D) const;
 
