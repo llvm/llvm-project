@@ -171,6 +171,8 @@ class HwasanThreadList {
     return stats_;
   }
 
+  uptr GetRingBufferSize() const { return ring_buffer_size_; }
+
  private:
   Thread *AllocThread() {
     SpinMutexLock l(&free_space_mutex_);
