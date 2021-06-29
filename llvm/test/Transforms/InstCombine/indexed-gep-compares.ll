@@ -249,6 +249,35 @@ bb10:
   ret i1 %cmp
 }
 
+; FIXME:
+; It is not generally safe to hoist an expression (sdiv) that may trap.
+
+define i1 @PR50906() {
+; CHECK-LABEL: @PR50906(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ icmp sgt (i32 sdiv (i32 7, i32 ptrtoint (i1 ()* @PR50906 to i32)), i32 1), [[NEXT:%.*]] ], [ icmp sgt (i32 sdiv (i32 7, i32 ptrtoint (i1 ()* @PR50906 to i32)), i32 0), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[NEXT]]
+; CHECK:       next:
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %phi = phi i32 [ 0, %entry ], [ 1, %next ]
+  br label %next
+
+next:
+  %cmp = icmp sgt i32 sdiv (i32 7, i32 ptrtoint (i1 ()* @PR50906 to i32)), %phi
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i1 %cmp
+}
 
 declare i32 @__gxx_personality_v0(...)
 
