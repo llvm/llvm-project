@@ -65,7 +65,6 @@ tools = [
     'mlir-linalg-ods-gen',
     'mlir-linalg-ods-yaml-gen',
     'mlir-reduce',
-    'mlir-sdbm-api-test',
 ]
 
 # The following tools are optional
