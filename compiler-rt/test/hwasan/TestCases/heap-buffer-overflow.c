@@ -52,14 +52,12 @@ int main(int argc, char **argv) {
 // CHECKM: is located 0 bytes to the right of 1000000-byte region
 //
 // CHECK31: tags: [[TAG:..]]/0e (ptr/mem)
-// CHECK31-NOT: Invalid access starting at offset
 // CHECK31: is located 1 bytes to the right of 30-byte region
 // CHECK31: Memory tags around the buggy address
 // CHECK31: [0e]
 // CHECK31: Tags for short granules around the buggy address
 // CHECK31: {{\[}}[[TAG]]]
 //
-// CHECK20-NOT: Invalid access starting at offset
 // CHECK20: is located 10 bytes to the right of 20-byte region [0x{{.*}}0,0x{{.*}}4)
   free(x);
 }
