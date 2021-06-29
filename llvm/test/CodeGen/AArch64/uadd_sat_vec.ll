@@ -112,23 +112,11 @@ define void @v8i8(<8 x i8>* %px, <8 x i8>* %py, <8 x i8>* %pz) nounwind {
 define void @v4i8(<4 x i8>* %px, <4 x i8>* %py, <4 x i8>* %pz) nounwind {
 ; CHECK-LABEL: v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x1]
-; CHECK-NEXT:    ldrb w10, [x0, #1]
-; CHECK-NEXT:    ldrb w11, [x1, #1]
-; CHECK-NEXT:    ldrb w12, [x0, #2]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    ldrb w8, [x1, #2]
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    mov v0.h[1], w10
-; CHECK-NEXT:    ldrb w9, [x0, #3]
-; CHECK-NEXT:    ldrb w10, [x1, #3]
-; CHECK-NEXT:    mov v1.h[1], w11
-; CHECK-NEXT:    mov v0.h[2], w12
-; CHECK-NEXT:    mov v1.h[2], w8
-; CHECK-NEXT:    mov v0.h[3], w9
-; CHECK-NEXT:    mov v1.h[3], w10
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
 ; CHECK-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    umin v0.4h, v0.4h, v2.4h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
