@@ -338,14 +338,6 @@ void AndroidTestTlsSlot() {
 void AndroidTestTlsSlot() {}
 #endif
 
-Thread *GetCurrentThread() {
-  uptr *ThreadLongPtr = GetCurrentThreadLongPtr();
-  if (UNLIKELY(*ThreadLongPtr == 0))
-    return nullptr;
-  auto *R = (StackAllocationsRingBuffer *)ThreadLongPtr;
-  return hwasanThreadList().GetThreadByBufferAddress((uptr)R->Next());
-}
-
 static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   // Access type is passed in a platform dependent way (see below) and encoded
   // as 0xXY, where X&1 is 1 for store, 0 for load, and X&2 is 1 if the error is
