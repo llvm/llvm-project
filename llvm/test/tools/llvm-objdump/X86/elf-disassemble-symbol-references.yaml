@@ -7,7 +7,7 @@
 # EXEC-LABEL: <third>:
 # EXEC-NEXT:   4005: e8 12 34 56 78                callq   0x7856741c <data1+0x7856241c>
 # EXEC-LABEL: <fourth>:
-# EXEC-NEXT:   400a: 8b 05 f0 0f 00 00             movl    4080(%rip), %eax  # 5000 <data1>
+# EXEC-NEXT:   400a: 8b 05 f0 0f 00 00             movl    4080(%rip), %eax  # 0x5000 <data1>
 
 --- !ELF
 FileHeader:

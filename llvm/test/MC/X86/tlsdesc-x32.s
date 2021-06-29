@@ -9,7 +9,7 @@
 
 # SYM: TLS GLOBAL DEFAULT UND a
 
-# CHECK:      0: 40 8d 05 00 00 00 00  leal (%rip), %eax  # 7 <{{.*}}>
+# CHECK:      0: 40 8d 05 00 00 00 00  leal (%rip), %eax  # 0x7 <{{.*}}>
 # CHECK-NEXT:   00000003: R_X86_64_GOTPC32_TLSDESC a-0x4
 # CHECK-NEXT: 7: 67 ff 10              callq *(%eax)
 # CHECK-NEXT:   00000007: R_X86_64_TLSDESC_CALL a

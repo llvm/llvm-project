@@ -1444,7 +1444,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                 PrintTarget = true;
                 // Do not print real address when symbolizing.
                 if (!SymbolizeOperands)
-                  FOS << "  # " << Twine::utohexstr(Target);
+                  FOS << "  # 0x" << Twine::utohexstr(Target);
               }
             if (PrintTarget) {
               // In a relocatable object, the target's section must reside in
