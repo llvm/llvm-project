@@ -92,4 +92,5 @@ ExternalFileUnit &UnitMap::Create(int n, const Terminator &terminator) {
   bucket_[Hash(n)].swap(chain.next); // pushes new node as list head
   return chain.unit;
 }
+
 } // namespace Fortran::runtime::io

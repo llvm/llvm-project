@@ -87,8 +87,11 @@ ExternalFileUnit *ExternalFileUnit::LookUpForClose(int unit) {
   return GetUnitMap().LookUpForClose(unit);
 }
 
-int ExternalFileUnit::NewUnit(const Terminator &terminator) {
-  return GetUnitMap().NewUnit(terminator).unitNumber();
+ExternalFileUnit &ExternalFileUnit::NewUnit(
+    const Terminator &terminator, bool forChildIo) {
+  ExternalFileUnit &unit{GetUnitMap().NewUnit(terminator)};
+  unit.createdForInternalChildIo_ = forChildIo;
+  return unit;
 }
 
 void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
@@ -697,4 +700,43 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   BeginRecord();
   impliedEndfile_ = false;
 }
+
+ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {
+  OwningPtr<ChildIo> current{std::move(child_)};
+  Terminator &terminator{parent.GetIoErrorHandler()};
+  OwningPtr<ChildIo> next{New<ChildIo>{terminator}(parent, std::move(current))};
+  child_.reset(next.release());
+  return *child_;
+}
+
+void ExternalFileUnit::PopChildIo(ChildIo &child) {
+  if (child_.get() != &child) {
+    child.parent().GetIoErrorHandler().Crash(
+        "ChildIo being popped is not top of stack");
+  }
+  child_.reset(child.AcquirePrevious().release()); // deletes top child
+}
+
+void ChildIo::EndIoStatement() {
+  io_.reset();
+  u_.emplace<std::monostate>();
+}
+
+bool ChildIo::CheckFormattingAndDirection(Terminator &terminator,
+    const char *what, bool unformatted, Direction direction) {
+  bool parentIsUnformatted{!parent_.get_if<FormattedIoStatementState>()};
+  bool parentIsInput{!parent_.get_if<IoDirectionState<Direction::Output>>()};
+  if (unformatted != parentIsUnformatted) {
+    terminator.Crash("Child %s attempted on %s parent I/O unit", what,
+        parentIsUnformatted ? "unformatted" : "formatted");
+    return false;
+  } else if (parentIsInput != (direction == Direction::Input)) {
+    terminator.Crash("Child %s attempted on %s parent I/O unit", what,
+        parentIsInput ? "input" : "output");
+    return false;
+  } else {
+    return true;
+  }
+}
+
 } // namespace Fortran::runtime::io
