@@ -113,7 +113,7 @@ bool operator<(const JsModuleReference &LHS, const JsModuleReference &RHS) {
   // Empty URLs sort *last* (for export {...};).
   if (LHS.URL.empty() != RHS.URL.empty())
     return LHS.URL.empty() < RHS.URL.empty();
-  if (int Res = LHS.URL.compare_lower(RHS.URL))
+  if (int Res = LHS.URL.compare_insensitive(RHS.URL))
     return Res < 0;
   // '*' imports (with prefix) sort before {a, b, ...} imports.
   if (LHS.Prefix.empty() != RHS.Prefix.empty())
@@ -327,7 +327,7 @@ private:
     SmallVector<JsImportedSymbol, 1> Symbols = Reference.Symbols;
     llvm::stable_sort(
         Symbols, [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
-          return LHS.Symbol.compare_lower(RHS.Symbol) < 0;
+          return LHS.Symbol.compare_insensitive(RHS.Symbol) < 0;
         });
     if (!Reference.SymbolsMerged && Symbols == Reference.Symbols) {
       // Symbols didn't change, just emit the entire module reference.

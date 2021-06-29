@@ -48,7 +48,7 @@ int compareLabels(StringRef A, StringRef B) {
         return -1;
 
       // Two names within a group compare case-insensitively.
-      return NamesA[I].compare_lower(NamesB[I]);
+      return NamesA[I].compare_insensitive(NamesB[I]);
     }
 
     // I is the last index of NamesB and NamesB[I] is a non-namespace name.
@@ -57,7 +57,7 @@ int compareLabels(StringRef A, StringRef B) {
       return 1;
 
     // Two namespaces names within a group compare case-insensitively.
-    int C = NamesA[I].compare_lower(NamesB[I]);
+    int C = NamesA[I].compare_insensitive(NamesB[I]);
     if (C != 0)
       return C;
   }

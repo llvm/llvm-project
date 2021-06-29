@@ -610,17 +610,19 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   // rv64* -> lp64
   StringRef MArch = getRISCVArch(Args, Triple);
 
-  if (MArch.startswith_lower("rv32")) {
+  if (MArch.startswith_insensitive("rv32")) {
     // FIXME: parse `March` to find `D` extension properly
-    if (MArch.substr(4).contains_lower("d") || MArch.startswith_lower("rv32g"))
+    if (MArch.substr(4).contains_insensitive("d") ||
+        MArch.startswith_insensitive("rv32g"))
       return "ilp32d";
-    else if (MArch.startswith_lower("rv32e"))
+    else if (MArch.startswith_insensitive("rv32e"))
       return "ilp32e";
     else
       return "ilp32";
-  } else if (MArch.startswith_lower("rv64")) {
+  } else if (MArch.startswith_insensitive("rv64")) {
     // FIXME: parse `March` to find `D` extension properly
-    if (MArch.substr(4).contains_lower("d") || MArch.startswith_lower("rv64g"))
+    if (MArch.substr(4).contains_insensitive("d") ||
+        MArch.startswith_insensitive("rv64g"))
       return "lp64d";
     else
       return "lp64";
@@ -696,11 +698,11 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
     StringRef MABI = A->getValue();
 
-    if (MABI.equals_lower("ilp32e"))
+    if (MABI.equals_insensitive("ilp32e"))
       return "rv32e";
-    else if (MABI.startswith_lower("ilp32"))
+    else if (MABI.startswith_insensitive("ilp32"))
       return "rv32imafdc";
-    else if (MABI.startswith_lower("lp64"))
+    else if (MABI.startswith_insensitive("lp64"))
       return "rv64imafdc";
   }
 
