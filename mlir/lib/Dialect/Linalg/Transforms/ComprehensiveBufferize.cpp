@@ -1241,8 +1241,6 @@ static LogicalResult bufferize(OpBuilder &b, LinalgOp op,
   // Clone the newly bufferized op.
   SmallVector<Value> newOperands = newInputBuffers;
   newOperands.append(newOutputBuffers.begin(), newOutputBuffers.end());
-  auto otherOperands = op.getAssumedNonShapedOperands();
-  newOperands.append(otherOperands.begin(), otherOperands.end());
   op.clone(b, loc, /*resultTypes=*/TypeRange{}, newOperands);
 
   // Replace the results of the old op with the new output buffers.
