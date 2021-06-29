@@ -119,8 +119,6 @@ static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
   assert(!isa<linalg::GenericOp>(linalgOp.getOperation()));
   SmallVector<Value, 8> newOperands = inputs;
   newOperands.append(outputs.begin(), outputs.end());
-  auto otherOperands = linalgOp.getAssumedNonShapedOperands();
-  newOperands.append(otherOperands.begin(), otherOperands.end());
   linalgOp.clone(rewriter, linalgOp.getLoc(),
                  /*resultTypes=*/ArrayRef<Type>{}, newOperands);
   // Replace the results of the old op with the new output buffers.
