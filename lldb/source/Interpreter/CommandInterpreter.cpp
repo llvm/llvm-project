@@ -160,6 +160,16 @@ void CommandInterpreter::SetSaveSessionOnQuit(bool enable) {
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
 }
 
+FileSpec CommandInterpreter::GetSaveSessionDirectory() const {
+  const uint32_t idx = ePropertySaveSessionDirectory;
+  return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+}
+
+void CommandInterpreter::SetSaveSessionDirectory(llvm::StringRef path) {
+  const uint32_t idx = ePropertySaveSessionDirectory;
+  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
+}
+
 bool CommandInterpreter::GetEchoCommands() const {
   const uint32_t idx = ePropertyEchoCommands;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -2925,9 +2935,15 @@ bool CommandInterpreter::SaveTranscript(
     std::string now = llvm::to_string(std::chrono::system_clock::now());
     std::replace(now.begin(), now.end(), ' ', '_');
     const std::string file_name = "lldb_session_" + now + ".log";
-    FileSpec tmp = HostInfo::GetGlobalTempDir();
-    tmp.AppendPathComponent(file_name);
-    output_file = tmp.GetPath();
+
+    FileSpec save_location = GetSaveSessionDirectory();
+
+    if (!save_location)
+      save_location = HostInfo::GetGlobalTempDir();
+
+    FileSystem::Instance().Resolve(save_location);
+    save_location.AppendPathComponent(file_name);
+    output_file = save_location.GetPath();
   }
 
   auto error_out = [&](llvm::StringRef error_message, std::string description) {
@@ -2958,6 +2974,7 @@ bool CommandInterpreter::SaveTranscript(
     return error_out("Unable to write to destination file",
                      "Bytes written do not match transcript size.");
 
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
   result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
                                  output_file->c_str());
 

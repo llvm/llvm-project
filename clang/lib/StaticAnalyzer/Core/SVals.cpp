@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
@@ -21,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/Optional.h"
@@ -134,6 +136,63 @@ const MemRegion *SVal::getAsRegion() const {
     return X->getLoc().getAsRegion();
 
   return nullptr;
+}
+
+namespace {
+class TypeRetrievingVisitor
+    : public FullSValVisitor<TypeRetrievingVisitor, QualType> {
+private:
+  const ASTContext &Context;
+
+public:
+  TypeRetrievingVisitor(const ASTContext &Context) : Context(Context) {}
+
+  QualType VisitLocMemRegionVal(loc::MemRegionVal MRV) {
+    return Visit(MRV.getRegion());
+  }
+  QualType VisitLocGotoLabel(loc::GotoLabel GL) {
+    return QualType{Context.VoidPtrTy};
+  }
+  template <class ConcreteInt> QualType VisitConcreteInt(ConcreteInt CI) {
+    const llvm::APSInt &Value = CI.getValue();
+    return Context.getIntTypeForBitwidth(Value.getBitWidth(), Value.isSigned());
+  }
+  QualType VisitLocConcreteInt(loc::ConcreteInt CI) {
+    return VisitConcreteInt(CI);
+  }
+  QualType VisitNonLocConcreteInt(nonloc::ConcreteInt CI) {
+    return VisitConcreteInt(CI);
+  }
+  QualType VisitNonLocLocAsInteger(nonloc::LocAsInteger LI) {
+    QualType NestedType = Visit(LI.getLoc());
+    if (NestedType.isNull())
+      return NestedType;
+
+    return Context.getIntTypeForBitwidth(LI.getNumBits(),
+                                         NestedType->isSignedIntegerType());
+  }
+  QualType VisitNonLocCompoundVal(nonloc::CompoundVal CV) {
+    return CV.getValue()->getType();
+  }
+  QualType VisitNonLocLazyCompoundVal(nonloc::LazyCompoundVal LCV) {
+    return LCV.getRegion()->getValueType();
+  }
+  QualType VisitNonLocSymbolVal(nonloc::SymbolVal SV) {
+    return Visit(SV.getSymbol());
+  }
+  QualType VisitSymbolicRegion(const SymbolicRegion *SR) {
+    return Visit(SR->getSymbol());
+  }
+  QualType VisitTypedRegion(const TypedRegion *TR) {
+    return TR->getLocationType();
+  }
+  QualType VisitSymExpr(const SymExpr *SE) { return SE->getType(); }
+};
+} // end anonymous namespace
+
+QualType SVal::getType(const ASTContext &Context) const {
+  TypeRetrievingVisitor TRV{Context};
+  return TRV.Visit(*this);
 }
 
 const MemRegion *loc::MemRegionVal::stripCasts(bool StripBaseCasts) const {

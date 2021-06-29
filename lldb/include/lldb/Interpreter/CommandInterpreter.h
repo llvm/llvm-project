@@ -493,6 +493,9 @@ public:
   bool GetSaveSessionOnQuit() const;
   void SetSaveSessionOnQuit(bool enable);
 
+  FileSpec GetSaveSessionDirectory() const;
+  void SetSaveSessionDirectory(llvm::StringRef path);
+
   bool GetEchoCommands() const;
   void SetEchoCommands(bool enable);
 

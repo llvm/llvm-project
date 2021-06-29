@@ -11,8 +11,9 @@ add_clang_unittest(StaticAnalysisTests
   ParamRegionTest.cpp
   RangeSetTest.cpp
   RegisterCustomCheckersTest.cpp
-  StoreTest.cpp 
+  StoreTest.cpp
   SymbolReaperTest.cpp
+  SValTest.cpp
   TestReturnValueUnderConstruction.cpp
   )
 
