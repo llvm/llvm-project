@@ -514,6 +514,8 @@ void CloneOp::getEffects(
                        SideEffects::DefaultResource::get());
   effects.emplace_back(MemoryEffects::Write::get(), output(),
                        SideEffects::DefaultResource::get());
+  effects.emplace_back(MemoryEffects::Allocate::get(), output(),
+                       SideEffects::DefaultResource::get());
 }
 
 namespace {
