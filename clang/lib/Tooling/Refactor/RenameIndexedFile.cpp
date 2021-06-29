@@ -423,7 +423,7 @@ static void findInclusionDirectiveOccurrence(
       StringRef(RawTok.getLiteralData(), RawTok.getLength())
           .drop_front()
           .drop_back());
-  size_t NameOffset = Filename.rfind_lower(Symbol.Name[0]);
+  size_t NameOffset = Filename.rfind_insensitive(Symbol.Name[0]);
   if (NameOffset == StringRef::npos)
     return;
   OldSymbolOccurrence Result(
