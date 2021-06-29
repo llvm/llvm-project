@@ -8154,14 +8154,39 @@ void M68kTargetCodeGenInfo::setTargetAttributes(
 }
 
 //===----------------------------------------------------------------------===//
-// AVR ABI Implementation.
+// AVR ABI Implementation. Documented at
+// https://gcc.gnu.org/wiki/avr-gcc#Calling_Convention
+// https://gcc.gnu.org/wiki/avr-gcc#Reduced_Tiny
 //===----------------------------------------------------------------------===//
 
 namespace {
+class AVRABIInfo : public DefaultABIInfo {
+public:
+  AVRABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+
+  ABIArgInfo classifyReturnType(QualType Ty) const {
+    // A return struct with size less than or equal to 8 bytes is returned
+    // directly via registers R18-R25.
+    if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) <= 64)
+      return ABIArgInfo::getDirect();
+    else
+      return DefaultABIInfo::classifyReturnType(Ty);
+  }
+
+  // Just copy the original implementation of DefaultABIInfo::computeInfo(),
+  // since DefaultABIInfo::classify{Return,Argument}Type() are not virtual.
+  void computeInfo(CGFunctionInfo &FI) const override {
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    for (auto &I : FI.arguments())
+      I.info = classifyArgumentType(I.type);
+  }
+};
+
 class AVRTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   AVRTargetCodeGenInfo(CodeGenTypes &CGT)
-      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
+      : TargetCodeGenInfo(std::make_unique<AVRABIInfo>(CGT)) {}
 
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override {
