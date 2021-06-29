@@ -34,13 +34,17 @@ define void @f(i32* %p) {
 declare void @fn.fwd(i32)
 
 define void @f2(i32** %p) {
-; CHECK-LABEL: define {{[^@]+}}@f2(
-; CHECK-SAME: ptr {{%.*}}) {
+; CHECK-LABEL: define {{[^@]+}}@f2
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    unreachable
+;
   unreachable
 }
 
 define void @f3(i32 addrspace(1)* addrspace(2)* %p) {
-; CHECK-LABEL: define {{[^@]+}}@f3(
-; CHECK-SAME: ptr addrspace(2) {{%.*}}) {
+; CHECK-LABEL: define {{[^@]+}}@f3
+; CHECK-SAME: (ptr addrspace(2) [[P:%.*]]) {
+; CHECK-NEXT:    unreachable
+;
   unreachable
 }
