@@ -30,6 +30,7 @@ void *Use(void *arg) {
   // CHECK: ERROR: HWAddressSanitizer: tag-mismatch on address
   // CHECK: WRITE of size 1 {{.*}} in thread T3
   // CHECK: thread-uaf.c:[[@LINE-3]]
+  // CHECK: Cause: use-after-free
   // CHECK: freed by thread T2 here
   // CHECK: in Deallocate
   // CHECK: previously allocated here:

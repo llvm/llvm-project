@@ -3071,6 +3071,10 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
   if (!Latch)
     Latch = Header;
 
+  // Set the Builder to a valid Block pointer as the existing one could get
+  // deleted below.
+  Builder.SetInsertPoint(&*LoopVectorBody->getFirstInsertionPt());
+
   IRBuilder<>::InsertPointGuard Guard(Builder);
   Builder.SetInsertPoint(&*Header->getFirstInsertionPt());
 
@@ -7346,8 +7350,17 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         // relying on instcombine to remove them.
         // Load: Scalar load + broadcast
         // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
-        InstructionCost Cost = getUniformMemOpCost(&I, VF);
-        setWideningDecision(&I, VF, CM_Scalarize, Cost);
+        InstructionCost Cost;
+        if (isa<StoreInst>(&I) && VF.isScalable() &&
+            isLegalGatherOrScatter(&I)) {
+          Cost = getGatherScatterCost(&I, VF);
+          setWideningDecision(&I, VF, CM_GatherScatter, Cost);
+        } else {
+          assert((isa<LoadInst>(&I) || !VF.isScalable()) &&
+                 "Cannot yet scalarize uniform stores");
+          Cost = getUniformMemOpCost(&I, VF);
+          setWideningDecision(&I, VF, CM_Scalarize, Cost);
+        }
         continue;
       }
 
@@ -9030,6 +9043,24 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   // Dead instructions do not need sinking. Remove them from SinkAfter.
   for (Instruction *I : DeadInstructions)
     SinkAfter.erase(I);
+
+  // Cannot sink instructions after dead instructions (there won't be any
+  // recipes for them). Instead, find the first non-dead previous instruction.
+  for (auto &P : Legal->getSinkAfter()) {
+    Instruction *SinkTarget = P.second;
+    Instruction *FirstInst = &*SinkTarget->getParent()->begin();
+    (void)FirstInst;
+    while (DeadInstructions.contains(SinkTarget)) {
+      assert(
+          SinkTarget != FirstInst &&
+          "Must find a live instruction (at least the one feeding the "
+          "first-order recurrence PHI) before reaching beginning of the block");
+      SinkTarget = SinkTarget->getPrevNode();
+      assert(SinkTarget != P.first &&
+             "sink source equals target, no sinking required");
+    }
+    P.second = SinkTarget;
+  }
 
   auto MaxVFPlusOne = MaxVF.getWithIncrement(1);
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFPlusOne);) {

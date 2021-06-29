@@ -907,6 +907,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     UnitAttr:$constant,
     StrAttr:$sym_name,
     Linkage:$linkage,
+    UnitAttr:$dso_local,
     OptionalAttr<AnyAttr>:$value,
     OptionalAttr<I64Attr>:$alignment,
     DefaultValuedAttr<Confined<I32Attr, [IntNonNegative]>, "0">:$addr_space,
@@ -1017,6 +1018,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       "StringRef":$name, "Attribute":$value,
       CArg<"uint64_t", "0">:$alignment,
       CArg<"unsigned", "0">:$addrSpace,
+      CArg<"bool", "false">:$dsoLocal,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
@@ -1081,6 +1083,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
   }];
 
   let arguments = (ins DefaultValuedAttr<Linkage, "Linkage::External">:$linkage,
+                   UnitAttr:$dso_local,
                    OptionalAttr<FlatSymbolRefAttr>:$personality,
                    OptionalAttr<ArrayAttr>:$passthrough);
 
@@ -1091,6 +1094,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
   let builders = [
     OpBuilder<(ins "StringRef":$name, "Type":$type,
       CArg<"Linkage", "Linkage::External">:$linkage,
+      CArg<"bool", "false">:$dsoLocal,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>
   ];

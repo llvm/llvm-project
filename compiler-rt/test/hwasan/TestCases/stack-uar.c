@@ -30,9 +30,10 @@ int main() {
   return *p;
   // CHECK: READ of size 1 at
   // CHECK: #0 {{.*}} in main{{.*}}stack-uar.c:[[@LINE-2]]
+  // CHECK: Cause: stack tag-mismatch
   // CHECK: is located in stack of thread
   // CHECK: Potentially referenced stack objects:
-  // CHECK-NEXT: zzz in buggy {{.*}}stack-uar.c:[[@LINE-19]]
+  // CHECK-NEXT: zzz in buggy {{.*}}stack-uar.c:[[@LINE-20]]
   // CHECK-NEXT: Memory tags around the buggy address
 
   // NOSYM: Previously allocated frames:
