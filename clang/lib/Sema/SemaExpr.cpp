@@ -12224,11 +12224,30 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
 
   QualType LHSType = LHS.get()->getType();
 
-  // If AltiVec, the comparison results in a numeric type, i.e.
-  // bool for C++, int for C
-  if (getLangOpts().AltiVec &&
-      vType->castAs<VectorType>()->getVectorKind() == VectorType::AltiVecVector)
-    return Context.getLogicalOperationType();
+  // Determine the return type of a vector compare. By default clang will return
+  // a scalar for all vector compares except vector bool and vector pixel.
+  // With the gcc compiler we will always return a vector type and with the xl
+  // compiler we will always return a scalar type. This switch allows choosing
+  // which behavior is prefered.
+  if (getLangOpts().AltiVec) {
+    switch (getLangOpts().getAltivecSrcCompat()) {
+    case LangOptions::AltivecSrcCompatKind::Mixed:
+      // If AltiVec, the comparison results in a numeric type, i.e.
+      // bool for C++, int for C
+      if (vType->castAs<VectorType>()->getVectorKind() ==
+          VectorType::AltiVecVector)
+        return Context.getLogicalOperationType();
+      else
+        Diag(Loc, diag::warn_deprecated_altivec_src_compat);
+      break;
+    case LangOptions::AltivecSrcCompatKind::GCC:
+      // For GCC we always return the vector type.
+      break;
+    case LangOptions::AltivecSrcCompatKind::XL:
+      return Context.getLogicalOperationType();
+      break;
+    }
+  }
 
   // For non-floating point types, check for self-comparisons of the form
   // x == x, x != x, x < x, etc.  These always evaluate to a constant, and

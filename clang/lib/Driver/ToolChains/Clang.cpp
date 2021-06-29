@@ -5816,6 +5816,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       (Args.hasArg(options::OPT_mkernel) && types::isCXX(InputType)))
     CmdArgs.push_back("-fapple-kext");
 
+  Args.AddLastArg(CmdArgs, options::OPT_altivec_src_compat);
   Args.AddLastArg(CmdArgs, options::OPT_flax_vector_conversions_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_fobjc_sender_dependent_dispatch);
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_print_source_range_info);
