@@ -1019,27 +1019,6 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 #define KMP_MB() /* nothing to do */
 #endif
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
-#if KMP_COMPILER_ICC
-#define KMP_MFENCE_() _mm_mfence()
-#define KMP_SFENCE_() _mm_sfence()
-#elif KMP_COMPILER_MSVC
-#define KMP_MFENCE_() MemoryBarrier()
-#define KMP_SFENCE_() MemoryBarrier()
-#else
-#define KMP_MFENCE_() __sync_synchronize()
-#define KMP_SFENCE_() __sync_synchronize()
-#endif
-#define KMP_MFENCE()                                                           \
-  if (UNLIKELY(!__kmp_cpuinfo.initialized)) {                                  \
-    __kmp_query_cpuid(&__kmp_cpuinfo);                                         \
-  }                                                                            \
-  if (__kmp_cpuinfo.sse2) {                                                    \
-    KMP_MFENCE_();                                                             \
-  }
-#define KMP_SFENCE() KMP_SFENCE_()
-#endif
-
 #ifndef KMP_IMB
 #define KMP_IMB() /* nothing to do */
 #endif
