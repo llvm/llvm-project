@@ -18,9 +18,11 @@ func @create_value() -> !async.value<f32> {
 
 // CHECK-LABEL: @create_group
 func @create_group() -> !async.group {
-  // CHECK: %0 = async.runtime.create : !async.group
-  %0 = async.runtime.create : !async.group
-  // CHECK: return %0 : !async.group
+  // CHECK: %[[C:.*]] = constant 10 : index
+  %c = constant 10 : index
+  // CHECK: %[[V:.*]] = async.runtime.create_group %[[C]] : !async.group
+  %0 = async.runtime.create_group %c : !async.group
+  // CHECK: return %[[V]] : !async.group
   return %0 : !async.group
 }
 

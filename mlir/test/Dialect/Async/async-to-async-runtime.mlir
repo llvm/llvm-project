@@ -179,8 +179,10 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 
 // CHECK-LABEL: @async_group_await_all
 func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
-  // CHECK: %[[GROUP:.*]] = async.runtime.create : !async.group
-  %0 = async.create_group
+  // CHECK: %[[C:.*]] = constant 1 : index
+  %c = constant 1 : index
+  // CHECK: %[[GROUP:.*]] = async.runtime.create_group %[[C]] : !async.group
+  %0 = async.create_group %c : !async.group
 
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn
   %token = async.execute { async.yield }
