@@ -148,3 +148,138 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
   }
   return Changed;
 }
+
+/// If \p R is a region with a VPBranchOnMaskRecipe in the entry block, return
+/// the mask.
+VPValue *getPredicatedMask(VPRegionBlock *R) {
+  auto *EntryBB = dyn_cast<VPBasicBlock>(R->getEntry());
+  if (!EntryBB || EntryBB->size() != 1 ||
+      !isa<VPBranchOnMaskRecipe>(EntryBB->begin()))
+    return nullptr;
+
+  return cast<VPBranchOnMaskRecipe>(&*EntryBB->begin())->getOperand(0);
+}
+
+/// If \p R is a triangle region, return the 'then' block of the triangle.
+static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
+  auto *EntryBB = cast<VPBasicBlock>(R->getEntry());
+  if (EntryBB->getNumSuccessors() != 2)
+    return nullptr;
+
+  auto *Succ0 = dyn_cast<VPBasicBlock>(EntryBB->getSuccessors()[0]);
+  auto *Succ1 = dyn_cast<VPBasicBlock>(EntryBB->getSuccessors()[1]);
+  if (!Succ0 || !Succ1)
+    return nullptr;
+
+  if (Succ0->getNumSuccessors() + Succ1->getNumSuccessors() != 1)
+    return nullptr;
+  if (Succ0->getSingleSuccessor() == Succ1)
+    return Succ0;
+  if (Succ1->getSingleSuccessor() == Succ0)
+    return Succ1;
+  return nullptr;
+}
+
+bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
+  SetVector<VPRegionBlock *> DeletedRegions;
+  bool Changed = false;
+
+  // Collect region blocks to process up-front, to avoid iterator invalidation
+  // issues while merging regions.
+  SmallVector<VPRegionBlock *, 8> CandidateRegions(
+      VPBlockUtils::blocksOnly<VPRegionBlock>(depth_first(
+          VPBlockRecursiveTraversalWrapper<VPBlockBase *>(Plan.getEntry()))));
+
+  // Check if Base is a predicated triangle, followed by an empty block,
+  // followed by another predicate triangle. If that's the case, move the
+  // recipes from the first to the second triangle.
+  for (VPRegionBlock *Region1 : CandidateRegions) {
+    if (DeletedRegions.contains(Region1))
+      continue;
+    auto *MiddleBasicBlock =
+        dyn_cast_or_null<VPBasicBlock>(Region1->getSingleSuccessor());
+    if (!MiddleBasicBlock || !MiddleBasicBlock->empty())
+      continue;
+
+    auto *Region2 =
+        dyn_cast_or_null<VPRegionBlock>(MiddleBasicBlock->getSingleSuccessor());
+    if (!Region2)
+      continue;
+
+    VPValue *Mask1 = getPredicatedMask(Region1);
+    VPValue *Mask2 = getPredicatedMask(Region2);
+    if (!Mask1 || Mask1 != Mask2)
+      continue;
+    VPBasicBlock *Then1 = getPredicatedThenBlock(Region1);
+    VPBasicBlock *Then2 = getPredicatedThenBlock(Region2);
+    if (!Then1 || !Then2)
+      continue;
+
+    assert(Mask1 && Mask2 && "both region must have conditions");
+
+    // Note: No fusion-preventing memory dependencies are expected in either
+    // region. Such dependencies should be rejected during earlier dependence
+    // checks, which guarantee accesses can be re-ordered for vectorization.
+    //
+    // If a recipe is used by a first-order recurrence phi, we cannot move it at
+    // the moment: a recipe R feeding a first order recurrence phi must allow
+    // for a *vector* shuffle to be inserted immediately after it, and therefore
+    // if R is *scalarized and predicated* it must appear last in its basic
+    // block. In addition, other recipes may need to "sink after" R, so best if
+    // R not be moved at all.
+    auto IsImmovableRecipe = [](VPRecipeBase &R) {
+      assert(R.getNumDefinedValues() <= 1 &&
+             "no multi-defs are expected in predicated blocks");
+      for (VPUser *U : R.getVPValue()->users()) {
+        auto *UI = dyn_cast<VPRecipeBase>(U);
+        if (!UI)
+          continue;
+        auto *PhiR = dyn_cast<VPWidenPHIRecipe>(UI);
+        if (PhiR && !PhiR->getRecurrenceDescriptor())
+          return true;
+      }
+      return false;
+    };
+    if (any_of(*Then1, IsImmovableRecipe))
+      continue;
+
+    // Move recipes to the successor region.
+    for (VPRecipeBase &ToMove : make_early_inc_range(reverse(*Then1)))
+      ToMove.moveBefore(*Then2, Then2->getFirstNonPhi());
+
+    auto *Merge1 = cast<VPBasicBlock>(Then1->getSingleSuccessor());
+    auto *Merge2 = cast<VPBasicBlock>(Then2->getSingleSuccessor());
+
+    // Move VPPredInstPHIRecipes from the merge block to the successor region's
+    // merge block. Update all users inside the successor region to use the
+    // original values.
+    for (VPRecipeBase &Phi1ToMove : make_early_inc_range(reverse(*Merge1))) {
+      VPValue *PredInst1 =
+          cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
+      for (VPUser *U : Phi1ToMove.getVPValue()->users()) {
+        auto *UI = dyn_cast<VPRecipeBase>(U);
+        if (!UI || UI->getParent() != Then2)
+          continue;
+        for (unsigned I = 0, E = U->getNumOperands(); I != E; ++I) {
+          if (Phi1ToMove.getVPValue() != U->getOperand(I))
+            continue;
+          U->setOperand(I, PredInst1);
+        }
+      }
+
+      Phi1ToMove.moveBefore(*Merge2, Merge2->begin());
+    }
+
+    // Finally, remove the first region.
+    for (VPBlockBase *Pred : make_early_inc_range(Region1->getPredecessors())) {
+      VPBlockUtils::disconnectBlocks(Pred, Region1);
+      VPBlockUtils::connectBlocks(Pred, MiddleBasicBlock);
+    }
+    VPBlockUtils::disconnectBlocks(Region1, MiddleBasicBlock);
+    DeletedRegions.insert(Region1);
+  }
+
+  for (VPRegionBlock *ToDelete : DeletedRegions)
+    delete ToDelete;
+  return Changed;
+}
