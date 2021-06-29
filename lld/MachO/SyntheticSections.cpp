@@ -1152,6 +1152,45 @@ void BitcodeBundleSection::writeTo(uint8_t *buf) const {
   remove(xarPath);
 }
 
+CStringSection::CStringSection()
+    : SyntheticSection(segment_names::text, section_names::cString) {
+  flags = S_CSTRING_LITERALS;
+}
+
+void CStringSection::addInput(CStringInputSection *isec) {
+  isec->parent = this;
+  inputs.push_back(isec);
+  if (isec->align > align)
+    align = isec->align;
+}
+
+void CStringSection::writeTo(uint8_t *buf) const {
+  for (const CStringInputSection *isec : inputs) {
+    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
+      if (!isec->pieces[i].live)
+        continue;
+      StringRef string = isec->getStringRef(i);
+      memcpy(buf + isec->pieces[i].outSecOff, string.data(), string.size());
+    }
+  }
+}
+
+void CStringSection::finalizeContents() {
+  uint64_t offset = 0;
+  for (CStringInputSection *isec : inputs) {
+    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
+      if (!isec->pieces[i].live)
+        continue;
+      uint32_t pieceAlign = MinAlign(isec->pieces[i].inSecOff, align);
+      offset = alignTo(offset, pieceAlign);
+      isec->pieces[i].outSecOff = offset;
+      isec->isFinal = true;
+      StringRef string = isec->getStringRef(i);
+      offset += string.size();
+    }
+  }
+  size = offset;
+}
 // Mergeable cstring literals are found under the __TEXT,__cstring section. In
 // contrast to ELF, which puts strings that need different alignments into
 // different sections, clang's Mach-O backend puts them all in one section.
@@ -1176,19 +1215,10 @@ void BitcodeBundleSection::writeTo(uint8_t *buf) const {
 // deduplication of differently-aligned strings.  Finally, the overhead is not
 // huge: using 16-byte alignment (vs no alignment) is only a 0.5% size overhead
 // when linking chromium_framework on x86_64.
-CStringSection::CStringSection()
-    : SyntheticSection(segment_names::text, section_names::cString),
-      builder(StringTableBuilder::RAW, /*Alignment=*/16) {
-  align = 16;
-  flags = S_CSTRING_LITERALS;
-}
+DeduplicatedCStringSection::DeduplicatedCStringSection()
+    : builder(StringTableBuilder::RAW, /*Alignment=*/16) {}
 
-void CStringSection::addInput(CStringInputSection *isec) {
-  isec->parent = this;
-  inputs.push_back(isec);
-}
-
-void CStringSection::finalizeContents() {
+void DeduplicatedCStringSection::finalizeContents() {
   // Add all string pieces to the string table builder to create section
   // contents.
   for (const CStringInputSection *isec : inputs)

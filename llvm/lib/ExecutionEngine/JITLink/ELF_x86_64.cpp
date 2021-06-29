@@ -139,13 +139,6 @@ private:
   mutable Section *StubsSection = nullptr;
 };
 
-const char *const DwarfSectionNames[] = {
-#define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
-  ELF_NAME,
-#include "llvm/BinaryFormat/Dwarf.def"
-#undef HANDLE_DWARF_SECTION
-};
-
 } // namespace
 
 const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::NullGOTEntryContent[8] =
@@ -153,7 +146,6 @@ const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::NullGOTEntryContent[8] =
 const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::StubContent[6] = {
     0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
 
-static const char *CommonSectionName = "__common";
 static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
 
@@ -229,35 +221,13 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
   return Error::success();
 }
 
-static bool isDwarfSection(StringRef SectionName) {
-  return llvm::is_contained(DwarfSectionNames, SectionName);
-}
-
 namespace llvm {
 namespace jitlink {
 
 // This should become a template as the ELFFile is so a lot of this could become
 // generic
 class ELFLinkGraphBuilder_x86_64 : public ELFLinkGraphBuilder<object::ELF64LE> {
-
 private:
-  Section *CommonSection = nullptr;
-
-  // TODO hack to get this working
-  // Find a better way
-  using SymbolTable = object::ELFFile<object::ELF64LE>::Elf_Shdr;
-  // For now we just assume
-  using SymbolMap = std::map<int32_t, Symbol *>;
-  SymbolMap JITSymbolTable;
-
-  Section &getCommonSection() {
-    if (!CommonSection) {
-      auto Prot = static_cast<sys::Memory::ProtectionFlags>(
-          sys::Memory::MF_READ | sys::Memory::MF_WRITE);
-      CommonSection = &G->createSection(CommonSectionName, Prot);
-    }
-    return *CommonSection;
-  }
 
   static Expected<ELF_x86_64_Edges::ELFX86RelocationKind>
   getRelocationKind(const uint32_t Type) {
@@ -286,143 +256,11 @@ private:
                                     formatv("{0:d}", Type));
   }
 
-  // This could be a template
-  object::ELFFile<object::ELF64LE>::Elf_Shdr_Range sections;
-  SymbolTable SymTab;
-
-  bool isRelocatable() { return Obj.getHeader().e_type == llvm::ELF::ET_REL; }
-
-  support::endianness
-  getEndianness(const object::ELFFile<object::ELF64LE> &Obj) {
-    return Obj.isLE() ? support::little : support::big;
-  }
-
-  // This could also just become part of a template
-  unsigned getPointerSize(const object::ELFFile<object::ELF64LE> &Obj) {
-    return Obj.getHeader().getFileClass() == ELF::ELFCLASS64 ? 8 : 4;
-  }
-
-  // We don't technically need this right now
-  // But for now going to keep it as it helps me to debug things
-
-  Error createNormalizedSymbols() {
-    LLVM_DEBUG(dbgs() << "Creating normalized symbols...\n");
-
-    for (auto SecRef : sections) {
-      if (SecRef.sh_type != ELF::SHT_SYMTAB &&
-          SecRef.sh_type != ELF::SHT_DYNSYM)
-        continue;
-
-      auto Symbols = Obj.symbols(&SecRef);
-      // TODO: Currently I use this function to test things 
-      // I also want to leave it to see if its common between MACH and elf
-      // so for now I just want to continue even if there is an error
-      if (errorToBool(Symbols.takeError()))
-        continue;
-
-      auto StrTabSec = Obj.getSection(SecRef.sh_link);
-      if (!StrTabSec)
-        return StrTabSec.takeError();
-      auto StringTable = Obj.getStringTable(**StrTabSec);
-      if (!StringTable)
-        return StringTable.takeError();
-
-      for (auto SymRef : *Symbols) {
-        Optional<StringRef> Name;
-
-        if (auto NameOrErr = SymRef.getName(*StringTable))
-          Name = *NameOrErr;
-        else
-          return NameOrErr.takeError();
-
-        LLVM_DEBUG({
-          dbgs() << "  value = " << formatv("{0:x16}", SymRef.getValue())
-                 << ", type = " << formatv("{0:x2}", SymRef.getType())
-                 << ", binding = " << formatv("{0:x2}", SymRef.getBinding())
-                 << ", size = "
-                 << formatv("{0:x16}", static_cast<uint64_t>(SymRef.st_size))
-                 << ", info = " << formatv("{0:x2}", SymRef.st_info)
-                 << " :" << (Name ? *Name : "<anonymous symbol>") << "\n";
-        });
-      }
-    }
-    return Error::success();
-  }
-
-  Error createNormalizedSections() {
-    LLVM_DEBUG(dbgs() << "Creating normalized sections...\n");
-    for (auto &SecRef : sections) {
-      auto Name = Obj.getSectionName(SecRef);
-      if (!Name)
-        return Name.takeError();
-
-      // Skip Dwarf sections.
-      if (isDwarfSection(*Name)) {
-        LLVM_DEBUG({
-          dbgs() << *Name
-                 << " is a debug section: No graph section will be created.\n";
-        });
-        continue;
-      }
-
-      sys::Memory::ProtectionFlags Prot;
-      if (SecRef.sh_flags & ELF::SHF_EXECINSTR) {
-        Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
-                                                         sys::Memory::MF_EXEC);
-      } else {
-        Prot = static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
-                                                         sys::Memory::MF_WRITE);
-      }
-      uint64_t Address = SecRef.sh_addr;
-      uint64_t Size = SecRef.sh_size;
-      uint64_t Flags = SecRef.sh_flags;
-      uint64_t Alignment = SecRef.sh_addralign;
-      const char *Data = nullptr;
-      // for now we just use this to skip the "undefined" section, probably need
-      // to revist
-      if (Size == 0)
-        continue;
-
-      // FIXME: Use flags.
-      (void)Flags;
-
-      LLVM_DEBUG({
-        dbgs() << "  " << *Name << ": " << formatv("{0:x16}", Address) << " -- "
-               << formatv("{0:x16}", Address + Size) << ", align: " << Alignment
-               << " Flags: " << formatv("{0:x}", Flags) << "\n";
-      });
-
-      if (SecRef.sh_type != ELF::SHT_NOBITS) {
-        // .sections() already checks that the data is not beyond the end of
-        // file
-        auto contents = Obj.getSectionContentsAsArray<char>(SecRef);
-        if (!contents)
-          return contents.takeError();
-
-        Data = contents->data();
-        // TODO protection flags.
-        // for now everything is
-        auto &section = G->createSection(*Name, Prot);
-        // Do this here because we have it, but move it into graphify later
-        G->createContentBlock(section, ArrayRef<char>(Data, Size), Address,
-                              Alignment, 0);
-        if (SecRef.sh_type == ELF::SHT_SYMTAB)
-          // TODO: Dynamic?
-          SymTab = SecRef;
-      } else {
-        auto &Section = G->createSection(*Name, Prot);
-        G->createZeroFillBlock(Section, Size, Address, Alignment, 0);
-      }
-    }
-
-    return Error::success();
-  }
-
-  Error addRelocations() {
+  Error addRelocations() override {
     LLVM_DEBUG(dbgs() << "Adding relocations\n");
     // TODO a partern is forming of iterate some sections but only give me
     // ones I am interested, i should abstract that concept some where
-    for (auto &SecRef : sections) {
+    for (auto &SecRef : Sections) {
       if (SecRef.sh_type != ELF::SHT_RELA && SecRef.sh_type != ELF::SHT_REL)
         continue;
       // TODO can the elf obj file do this for me?
@@ -477,19 +315,20 @@ private:
                  << "Name: " << Obj.getRelocationTypeName(Type) << "\n";
         });
         auto SymbolIndex = Rela.getSymbol(false);
-        auto Symbol = Obj.getRelocationSymbol(Rela, &SymTab);
+        auto Symbol = Obj.getRelocationSymbol(Rela, SymTabSec);
         if (!Symbol)
           return Symbol.takeError();
 
         auto BlockToFix = *(JITSection->blocks().begin());
-        auto *TargetSymbol = JITSymbolTable[SymbolIndex];
+        auto *TargetSymbol = getGraphSymbol(SymbolIndex);
 
         if (!TargetSymbol) {
           return make_error<llvm::StringError>(
               "Could not find symbol at given index, did you add it to "
-              "JITSymbolTable? index: " + std::to_string(SymbolIndex)
-              + ", shndx: " + std::to_string((*Symbol)->st_shndx) +
-                  " Size of table: " + std::to_string(JITSymbolTable.size()),
+              "JITSymbolTable? index: " +
+                  std::to_string(SymbolIndex) +
+                  ", shndx: " + std::to_string((*Symbol)->st_shndx) +
+                  " Size of table: " + std::to_string(GraphSymbols.size()),
               llvm::inconvertibleErrorCode());
         }
         uint64_t Addend = Rela.r_addend;
@@ -518,201 +357,11 @@ private:
     return Error::success();
   }
 
-  Error graphifyRegularSymbols() {
-
-    // TODO: ELF supports beyond SHN_LORESERVE,
-    // need to perf test how a vector vs map handles those cases
-
-    std::vector<std::vector<object::ELFFile<object::ELF64LE>::Elf_Shdr_Range *>>
-        SecIndexToSymbols;
-
-    LLVM_DEBUG(dbgs() << "Creating graph symbols...\n");
-
-    for (auto SecRef : sections) {
-
-      if (SecRef.sh_type != ELF::SHT_SYMTAB &&
-          SecRef.sh_type != ELF::SHT_DYNSYM)
-        continue;
-      auto Symbols = Obj.symbols(&SecRef);
-      if (!Symbols)
-        return Symbols.takeError();
-
-      auto StrTabSec = Obj.getSection(SecRef.sh_link);
-      if (!StrTabSec)
-        return StrTabSec.takeError();
-      auto StringTable = Obj.getStringTable(**StrTabSec);
-      if (!StringTable)
-        return StringTable.takeError();
-      auto Name = Obj.getSectionName(SecRef);
-      if (!Name)
-        return Name.takeError();
-
-      LLVM_DEBUG(dbgs() << "Processing symbol section " << *Name << ":\n");
-
-      auto Section = G->findSectionByName(*Name);
-      if (!Section)
-        return make_error<llvm::StringError>("Could not find a section " +
-                                             *Name,
-                                             llvm::inconvertibleErrorCode());
-      // we only have one for now
-      auto blocks = Section->blocks();
-      if (blocks.empty())
-        return make_error<llvm::StringError>("Section has no block",
-                                             llvm::inconvertibleErrorCode());
-      int SymbolIndex = -1;
-      for (auto SymRef : *Symbols) {
-        ++SymbolIndex;
-        auto Type = SymRef.getType();
-
-        if (Type == ELF::STT_FILE || SymbolIndex == 0)
-          continue;
-        // these should do it for now
-        // if(Type != ELF::STT_NOTYPE &&
-        //   Type != ELF::STT_OBJECT &&
-        //   Type != ELF::STT_FUNC    &&
-        //   Type != ELF::STT_SECTION &&
-        //   Type != ELF::STT_COMMON) {
-        //     continue;
-        //   }
-        auto Name = SymRef.getName(*StringTable);
-        // I am not sure on If this is going to hold as an invariant. Revisit.
-        if (!Name)
-          return Name.takeError();
-
-        if (SymRef.isCommon()) {
-          // Symbols in SHN_COMMON refer to uninitialized data. The st_value
-          // field holds alignment constraints.
-          Symbol &S =
-              G->addCommonSymbol(*Name, Scope::Default, getCommonSection(), 0,
-                                 SymRef.st_size, SymRef.getValue(), false);
-          JITSymbolTable[SymbolIndex] = &S;
-          continue;
-        }
-
-        // Map Visibility and Binding to Scope and Linkage:
-        Linkage L = Linkage::Strong;
-        Scope S = Scope::Default;
-
-        switch (SymRef.getBinding()) {
-        case ELF::STB_LOCAL:
-          S = Scope::Local;
-          break;
-        case ELF::STB_GLOBAL:
-          // Nothing to do here.
-          break;
-        case ELF::STB_WEAK:
-          L = Linkage::Weak;
-          break;
-        default:
-          return make_error<StringError>("Unrecognized symbol binding for " +
-                                             *Name,
-                                         inconvertibleErrorCode());
-        }
-
-        switch (SymRef.getVisibility()) {
-        case ELF::STV_DEFAULT:
-        case ELF::STV_PROTECTED:
-          // FIXME: Make STV_DEFAULT symbols pre-emptible? This probably needs
-          // Orc support.
-          // Otherwise nothing to do here.
-          break;
-        case ELF::STV_HIDDEN:
-          // Default scope -> Hidden scope. No effect on local scope.
-          if (S == Scope::Default)
-            S = Scope::Hidden;
-          break;
-        case ELF::STV_INTERNAL:
-          return make_error<StringError>("Unrecognized symbol visibility for " +
-                                             *Name,
-                                         inconvertibleErrorCode());
-        }
-
-        if (SymRef.isDefined() &&
-            (Type == ELF::STT_NOTYPE || Type == ELF::STT_FUNC ||
-             Type == ELF::STT_OBJECT || Type == ELF::STT_SECTION)) {
-
-          auto DefinedSection = Obj.getSection(SymRef.st_shndx);
-          if (!DefinedSection)
-            return DefinedSection.takeError();
-          auto sectName = Obj.getSectionName(**DefinedSection);
-          if (!sectName)
-            return Name.takeError();
-
-          // Skip debug section symbols.
-          if (isDwarfSection(*sectName))
-            continue;
-
-          auto JitSection = G->findSectionByName(*sectName);
-          if (!JitSection)
-            return make_error<llvm::StringError>(
-                "Could not find the JitSection " + *sectName,
-                llvm::inconvertibleErrorCode());
-          auto bs = JitSection->blocks();
-          if (bs.empty())
-            return make_error<llvm::StringError>(
-                "Section has no block", llvm::inconvertibleErrorCode());
-
-          auto *B = *bs.begin();
-          LLVM_DEBUG({ dbgs() << "  " << *Name << " at index " << SymbolIndex << "\n"; });
-          if (SymRef.getType() == ELF::STT_SECTION)
-            *Name = *sectName;
-          auto &Sym = G->addDefinedSymbol(
-              *B, SymRef.getValue(), *Name, SymRef.st_size, L, S,
-              SymRef.getType() == ELF::STT_FUNC, false);
-          JITSymbolTable[SymbolIndex] = &Sym;
-        } else if (SymRef.isUndefined() && SymRef.isExternal()) {
-          auto &Sym = G->addExternalSymbol(*Name, SymRef.st_size, L);
-          JITSymbolTable[SymbolIndex] = &Sym;
-        } else
-          LLVM_DEBUG({
-              dbgs()
-                << "Not creating graph symbol for normalized symbol at index "
-                << SymbolIndex << ", \"" << *Name << "\"\n";
-            });
-
-        // TODO: The following has to be implmented.
-        // leaving commented out to save time for future patchs
-        /*
-          G->addAbsoluteSymbol(*Name, SymRef.getValue(), SymRef.st_size,
-          Linkage::Strong, Scope::Default, false);
-        */
-      }
-    }
-    return Error::success();
-  }
-
 public:
   ELFLinkGraphBuilder_x86_64(StringRef FileName,
                              const object::ELFFile<object::ELF64LE> &Obj)
       : ELFLinkGraphBuilder(Obj, Triple("x86_64-unknown-linux"), FileName,
                             getELFX86RelocationKindName) {}
-
-  Expected<std::unique_ptr<LinkGraph>> buildGraph() {
-    // Sanity check: we only operate on relocatable objects.
-    if (!isRelocatable())
-      return make_error<JITLinkError>("Object is not a relocatable ELF");
-
-    auto Secs = Obj.sections();
-
-    if (!Secs) {
-      return Secs.takeError();
-    }
-    sections = *Secs;
-
-    if (auto Err = createNormalizedSections())
-      return std::move(Err);
-
-    if (auto Err = createNormalizedSymbols())
-      return std::move(Err);
-
-    if (auto Err = graphifyRegularSymbols())
-      return std::move(Err);
-
-    if (auto Err = addRelocations())
-      return std::move(Err);
-
-    return std::move(G);
-  }
 };
 
 class ELFJITLinker_x86_64 : public JITLinker<ELFJITLinker_x86_64> {
