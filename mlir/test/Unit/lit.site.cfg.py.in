@@ -11,7 +11,6 @@ config.shlibdir = "@SHLIBDIR@"
 config.mlir_src_root = "@MLIR_SOURCE_DIR@"
 config.mlir_obj_root = "@MLIR_BINARY_DIR@"
 config.mlir_tools_dir = "@MLIR_TOOLS_DIR@"
-config.host_triple = "@LLVM_HOST_TRIPLE@"
 
 # Support substitution of the tools_dir and build_mode with user parameters.
 # This is used when we can't determine the tool dir at configuration time.
