@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "memtag.h"
 #include "tests/scudo_unit_test.h"
 
 #include <atomic>
@@ -107,6 +108,11 @@ static void stressNew() {
 }
 
 TEST(ScudoWrappersCppTest, ThreadedNew) {
+#if !SCUDO_ANDROID
+  // TODO: Investigate why libc sometimes crashes with tag missmatch in
+  // __pthread_clockjoin_ex.
+  scudo::ScopedDisableMemoryTagChecks NoTags;
+#endif
   Ready = false;
   std::thread Threads[32];
   for (size_t I = 0U; I < sizeof(Threads) / sizeof(Threads[0]); I++)
