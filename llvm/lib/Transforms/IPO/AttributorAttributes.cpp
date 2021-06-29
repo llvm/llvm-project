@@ -4512,6 +4512,32 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
 };
 
 /// ------------------ Value Simplify Attribute ----------------------------
+
+bool ValueSimplifyStateType::unionAssumed(Optional<Value *> Other) {
+  // FIXME: Add a typecast support.
+  if (!Other.hasValue())
+    return true;
+
+  if (!Other.getValue())
+    return false;
+
+  Value &QueryingValueSimplifiedUnwrapped = *Other.getValue();
+
+  if (SimplifiedAssociatedValue.hasValue() &&
+      !isa<UndefValue>(SimplifiedAssociatedValue.getValue()) &&
+      !isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
+    return SimplifiedAssociatedValue == Other;
+  if (SimplifiedAssociatedValue.hasValue() &&
+      isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
+    return true;
+
+  LLVM_DEBUG(dbgs() << "[ValueSimplify] is assumed to be "
+                    << QueryingValueSimplifiedUnwrapped << "\n");
+
+  SimplifiedAssociatedValue = Other;
+  return true;
+}
+
 struct AAValueSimplifyImpl : AAValueSimplify {
   AAValueSimplifyImpl(const IRPosition &IRP, Attributor &A)
       : AAValueSimplify(IRP, A) {}
@@ -4529,8 +4555,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       if (SimplifiedAssociatedValue)
         errs() << "SAV: " << **SimplifiedAssociatedValue << " ";
     });
-    return getAssumed() ? (getKnown() ? "simplified" : "maybe-simple")
-                        : "not-simple";
+    return isValidState() ? (isAtFixpoint() ? "simplified" : "maybe-simple")
+                          : "not-simple";
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -4538,45 +4564,19 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
   /// See AAValueSimplify::getAssumedSimplifiedValue()
   Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const override {
-    if (!getAssumed())
+    if (!isValidState())
       return const_cast<Value *>(&getAssociatedValue());
     return SimplifiedAssociatedValue;
   }
 
   /// Helper function for querying AAValueSimplify and updating candicate.
   /// \param IRP The value position we are trying to unify with SimplifiedValue
-  /// \param AccumulatedSimplifiedValue Current simplification result.
-  static bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
-                             const IRPosition &IRP,
-                             Optional<Value *> &AccumulatedSimplifiedValue) {
-    // FIXME: Add a typecast support.
+  bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
+                      const IRPosition &IRP) {
     bool UsedAssumedInformation = false;
     Optional<Value *> QueryingValueSimplified =
         A.getAssumedSimplified(IRP, QueryingAA, UsedAssumedInformation);
-
-    if (!QueryingValueSimplified.hasValue())
-      return true;
-
-    if (!QueryingValueSimplified.getValue())
-      return false;
-
-    Value &QueryingValueSimplifiedUnwrapped =
-        *QueryingValueSimplified.getValue();
-
-    if (AccumulatedSimplifiedValue.hasValue() &&
-        !isa<UndefValue>(AccumulatedSimplifiedValue.getValue()) &&
-        !isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
-      return AccumulatedSimplifiedValue == QueryingValueSimplified;
-    if (AccumulatedSimplifiedValue.hasValue() &&
-        isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
-      return true;
-
-    LLVM_DEBUG(dbgs() << "[ValueSimplify] " << IRP.getAssociatedValue()
-                      << " is assumed to be "
-                      << QueryingValueSimplifiedUnwrapped << "\n");
-
-    AccumulatedSimplifiedValue = QueryingValueSimplified;
-    return true;
+    return unionAssumed(QueryingValueSimplified);
   }
 
   /// Returns a candidate is found or not
@@ -4645,13 +4645,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     indicateOptimisticFixpoint();
     return ChangeStatus::CHANGED;
   }
-
-protected:
-  // An assumed simplified value. Initially, it is set to Optional::None, which
-  // means that the value is not clear under current assumption. If in the
-  // pessimistic state, getAssumedSimplifiedValue doesn't return this value but
-  // returns orignal associated value.
-  Optional<Value *> SimplifiedAssociatedValue;
 };
 
 struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
@@ -4711,7 +4704,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
         if (auto *C = dyn_cast<Constant>(&ArgOp))
           if (C->isThreadDependent())
             return false;
-      return checkAndUpdate(A, *this, ACSArgPos, SimplifiedAssociatedValue);
+      return checkAndUpdate(A, *this, ACSArgPos);
     };
 
     // Generate a answer specific to a call site context.
@@ -4749,8 +4742,7 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
 
     auto PredForReturned = [&](Value &V) {
       return checkAndUpdate(A, *this,
-                            IRPosition::value(V, getCallBaseContext()),
-                            SimplifiedAssociatedValue);
+                            IRPosition::value(V, getCallBaseContext()));
     };
 
     if (!A.checkForAllReturnedValues(PredForReturned, *this))
@@ -4906,8 +4898,7 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
         return false;
       }
       return checkAndUpdate(A, *this,
-                            IRPosition::value(V, getCallBaseContext()),
-                            SimplifiedAssociatedValue);
+                            IRPosition::value(V, getCallBaseContext()));
     };
 
     bool Dummy = false;

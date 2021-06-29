@@ -3341,10 +3341,86 @@ struct AANoCapture
   static const char ID;
 };
 
+struct ValueSimplifyStateType : public AbstractState {
+
+  ValueSimplifyStateType(Type *Ty) : Ty(Ty) {}
+
+  static ValueSimplifyStateType getBestState(Type *Ty) {
+    return ValueSimplifyStateType(Ty);
+  }
+  static ValueSimplifyStateType getBestState(const ValueSimplifyStateType &VS) {
+    return getBestState(VS.Ty);
+  }
+
+  /// Return the worst possible representable state.
+  static ValueSimplifyStateType getWorstState(Type *Ty) {
+    ValueSimplifyStateType DS(Ty);
+    DS.indicatePessimisticFixpoint();
+    return DS;
+  }
+  static ValueSimplifyStateType
+  getWorstState(const ValueSimplifyStateType &VS) {
+    return getWorstState(VS.Ty);
+  }
+
+  /// See AbstractState::isValidState(...)
+  bool isValidState() const override { return BS.isValidState(); }
+
+  /// See AbstractState::isAtFixpoint(...)
+  bool isAtFixpoint() const override { return BS.isAtFixpoint(); }
+
+  /// Return the assumed state encoding.
+  ValueSimplifyStateType getAssumed() { return *this; }
+  const ValueSimplifyStateType &getAssumed() const { return *this; }
+
+  /// See AbstractState::indicatePessimisticFixpoint(...)
+  ChangeStatus indicatePessimisticFixpoint() override {
+    return BS.indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractState::indicateOptimisticFixpoint(...)
+  ChangeStatus indicateOptimisticFixpoint() override {
+    return BS.indicateOptimisticFixpoint();
+  }
+
+  /// "Clamp" this state with \p PVS.
+  ValueSimplifyStateType operator^=(const ValueSimplifyStateType &VS) {
+    BS ^= VS.BS;
+    unionAssumed(VS.SimplifiedAssociatedValue);
+    return *this;
+  }
+
+  bool operator==(const ValueSimplifyStateType &RHS) const {
+    if (isValidState() != RHS.isValidState())
+      return false;
+    if (!isValidState() && !RHS.isValidState())
+      return true;
+    return SimplifiedAssociatedValue == RHS.SimplifiedAssociatedValue;
+  }
+
+protected:
+  /// The type of the original value.
+  Type *Ty;
+
+  /// Merge \p Other into the currently assumed simplified value
+  bool unionAssumed(Optional<Value *> Other);
+
+  /// Helper to track validity and fixpoint
+  BooleanState BS;
+
+  /// An assumed simplified value. Initially, it is set to Optional::None, which
+  /// means that the value is not clear under current assumption. If in the
+  /// pessimistic state, getAssumedSimplifiedValue doesn't return this value but
+  /// returns orignal associated value.
+  Optional<Value *> SimplifiedAssociatedValue;
+};
+
 /// An abstract interface for value simplify abstract attribute.
-struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAValueSimplify(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+struct AAValueSimplify
+    : public StateWrapper<ValueSimplifyStateType, AbstractAttribute, Type *> {
+  using Base = StateWrapper<ValueSimplifyStateType, AbstractAttribute, Type *>;
+  AAValueSimplify(const IRPosition &IRP, Attributor &A)
+      : Base(IRP, IRP.getAssociatedType()) {}
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAValueSimplify &createForPosition(const IRPosition &IRP,
