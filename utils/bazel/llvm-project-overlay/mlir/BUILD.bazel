@@ -1525,11 +1525,23 @@ cc_library(
         ":SCFDialect",
         ":SparseTensor",
         ":SparseTensorPassIncGen",
+        ":SparseTensorUtils",
         ":StandardOps",
         ":StandardOpsTransforms",
         ":TensorDialect",
         ":Transforms",
         ":VectorOps",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "SparseTensorUtils",
+    srcs = glob(["lib/Dialect/SparseTensor/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/SparseTensor/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
         "//llvm:Support",
     ],
 )
