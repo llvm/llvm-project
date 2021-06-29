@@ -1565,7 +1565,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     Register SrcReg = getOrCreateVReg(**AI);
     LLT SrcTy = MRI->getType(SrcReg);
     if (SrcTy.isPointer())
-      MinPtrSize = std::min<unsigned>(SrcTy.getSizeInBits(), MinPtrSize);
+      MinPtrSize = std::min(SrcTy.getSizeInBits(), MinPtrSize);
     SrcRegs.push_back(SrcReg);
   }
 
