@@ -3071,13 +3071,13 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
   if (!Latch)
     Latch = Header;
 
-  IRBuilder<> Builder(&*Header->getFirstInsertionPt());
+  IRBuilder<> B(&*Header->getFirstInsertionPt());
   Instruction *OldInst = getDebugLocFromInstOrOperands(OldInduction);
-  setDebugLocFromInst(Builder, OldInst);
-  auto *Induction = Builder.CreatePHI(Start->getType(), 2, "index");
+  setDebugLocFromInst(B, OldInst);
+  auto *Induction = B.CreatePHI(Start->getType(), 2, "index");
 
-  Builder.SetInsertPoint(Latch->getTerminator());
-  setDebugLocFromInst(Builder, OldInst);
+  B.SetInsertPoint(Latch->getTerminator());
+  setDebugLocFromInst(B, OldInst);
 
   // Create i+1 and fill the PHINode.
   //
@@ -3086,14 +3086,13 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
   // Start % Step == 0 and End % Step == 0. We exit the vector loop if %IV +
   // %Step == %End. Hence we must exit the loop before %IV + %Step unsigned
   // overflows and we can mark the induction increment as NUW.
-  Value *Next =
-      Builder.CreateAdd(Induction, Step, "index.next",
-                        /*NUW=*/!Cost->foldTailByMasking(), /*NSW=*/false);
+  Value *Next = B.CreateAdd(Induction, Step, "index.next",
+                            /*NUW=*/!Cost->foldTailByMasking(), /*NSW=*/false);
   Induction->addIncoming(Start, L->getLoopPreheader());
   Induction->addIncoming(Next, Latch);
   // Create the compare.
-  Value *ICmp = Builder.CreateICmpEQ(Next, End);
-  Builder.CreateCondBr(ICmp, L->getUniqueExitBlock(), Header);
+  Value *ICmp = B.CreateICmpEQ(Next, End);
+  B.CreateCondBr(ICmp, L->getUniqueExitBlock(), Header);
 
   // Now we have two terminators. Remove the old one from the block.
   Latch->getTerminator()->eraseFromParent();
