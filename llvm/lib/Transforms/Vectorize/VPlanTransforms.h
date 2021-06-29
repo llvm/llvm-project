@@ -30,6 +30,8 @@ struct VPlanTransforms {
       SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE);
 
   static bool sinkScalarOperands(VPlan &Plan);
+
+  static bool mergeReplicateRegions(VPlan &Plan);
 };
 
 } // namespace llvm

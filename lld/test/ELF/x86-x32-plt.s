@@ -23,17 +23,17 @@
 # DISASM:      Disassembly of section .plt:
 # DISASM-EMPTY:
 # DISASM-NEXT: <.plt>:
-# DISASM-NEXT: 2011e0:     pushq 8346(%rip)  # 203280
-# DISASM-NEXT:             jmpq *8348(%rip)  # 203288
+# DISASM-NEXT: 2011e0:     pushq 8346(%rip)  # 0x203280
+# DISASM-NEXT:             jmpq *8348(%rip)  # 0x203288
 # DISASM-NEXT:             nopl (%rax)
 # DISASM-EMPTY:
 # DISASM-NEXT: <bar@plt>:
-# DISASM-NEXT: 2011f0:     jmpq *8346(%rip)  # 203290
+# DISASM-NEXT: 2011f0:     jmpq *8346(%rip)  # 0x203290
 # DISASM-NEXT:             pushq $0
 # DISASM-NEXT:             jmp 0x2011e0 <.plt>
 # DISASM-EMPTY:
 # DISASM-NEXT: <weak@plt>:
-# DISASM-NEXT: 201200:     jmpq *8338(%rip)  # 203298
+# DISASM-NEXT: 201200:     jmpq *8338(%rip)  # 0x203298
 # DISASM-NEXT:             pushq $1
 # DISASM-NEXT:             jmp 0x2011e0 <.plt>
 # DISASM-NOT:  {{.}}
