@@ -108,6 +108,9 @@ define void @urem_cmp_constants() {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i16 [[UREM_2]], 1
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[UREM_3:%.*]] = urem i16 12704, 0
+; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i16 [[UREM_3]], 1
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    ret void
 ;
   %sel = select i1 false, i16 0, i16 12704
@@ -121,6 +124,9 @@ define void @urem_cmp_constants() {
   call void @use(i1 %c.3)
   %c.4 = icmp eq i16 %urem.2, 1
   call void @use(i1 %c.4)
+  %urem.3 = urem i16 %sel, 0
+  %c.5 = icmp eq i16 %urem.3, 1
+  call void @use(i1 %c.5)
   ret void
 }
 
@@ -136,6 +142,9 @@ define void @srem_cmp_constants() {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i16 [[SREM_2]], 1
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[SREM_3:%.*]] = srem i16 12704, 0
+; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i16 [[SREM_3]], 1
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    ret void
 ;
   %sel = select i1 false, i16 0, i16 12704
@@ -149,5 +158,8 @@ define void @srem_cmp_constants() {
   call void @use(i1 %c.3)
   %c.4 = icmp eq i16 %srem.2, 1
   call void @use(i1 %c.4)
+  %srem.3 = srem i16 %sel, 0
+  %c.5 = icmp eq i16 %srem.3, 1
+  call void @use(i1 %c.5)
   ret void
 }
