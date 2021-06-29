@@ -614,7 +614,7 @@ TEST_F(AArch64GISelMITest, TestVectorSignBitIsZero) {
   if (!TM)
     return;
 
-  const LLT V2S32 = LLT::vector(2, 32);
+  const LLT V2S32 = LLT::fixed_vector(2, 32);
   // Vector buildConstant makes splat G_BUILD_VECTOR instruction.
   auto SignBit = B.buildConstant(V2S32, 0x80000000);
   auto Zero = B.buildConstant(V2S32, 0);

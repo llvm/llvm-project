@@ -1729,7 +1729,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     return error(Loc, "expected <M x sN> or <M x pA> for vector type");
   lex();
 
-  Ty = LLT::vector(NumElements, Ty);
+  Ty = LLT::fixed_vector(NumElements, Ty);
   return false;
 }
 

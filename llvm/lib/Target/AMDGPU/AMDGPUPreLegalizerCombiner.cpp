@@ -130,7 +130,7 @@ void AMDGPUPreLegalizerCombinerHelper::applyClampI64ToI16(
 
   assert(MI.getOpcode() != AMDGPU::G_AMDGPU_CVT_PK_I16_I32);
 
-  const LLT V2S16 = LLT::vector(2, 16);
+  const LLT V2S16 = LLT::fixed_vector(2, 16);
   auto CvtPk =
       B.buildInstr(AMDGPU::G_AMDGPU_CVT_PK_I16_I32, {V2S16},
                    {Unmerge.getReg(0), Unmerge.getReg(1)}, MI.getFlags());
