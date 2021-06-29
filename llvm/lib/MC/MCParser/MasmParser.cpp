@@ -1133,8 +1133,8 @@ const AsmToken &MasmParser::Lex() {
       MutableArrayRef<AsmToken> Buf(NextTok);
       size_t ReadCount = Lexer.peekTokens(Buf);
       if (ReadCount && NextTok.is(AsmToken::Identifier) &&
-          (NextTok.getString().equals_lower("equ") ||
-           NextTok.getString().equals_lower("textequ"))) {
+          (NextTok.getString().equals_insensitive("equ") ||
+           NextTok.getString().equals_insensitive("textequ"))) {
         // This looks like an EQU or TEXTEQU directive; don't expand the
         // identifier, allowing for redefinitions.
         break;
@@ -1515,7 +1515,7 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       }
     }
     // Parse named bitwise negation.
-    if (Identifier.equals_lower("not")) {
+    if (Identifier.equals_insensitive("not")) {
       if (parsePrimaryExpr(Res, EndLoc, nullptr))
         return true;
       Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
@@ -2082,7 +2082,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     if (!IDVal.startswith("."))
       return Error(IDLoc, "unexpected token at start of statement");
   } else if (Lexer.is(AsmToken::Identifier) &&
-             getTok().getString().equals_lower("echo")) {
+             getTok().getString().equals_insensitive("echo")) {
     // Intercept echo early to avoid lexical substitution in its message, and
     // delegate all handling to the appropriate function.
     return parseDirectiveEcho();
@@ -2260,7 +2260,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
 
     // Special-case handling of structure-end directives at higher priority,
     // since ENDS is overloaded as a segment-end directive.
-    if (IDVal.equals_lower("ends") && StructInProgress.size() > 1 &&
+    if (IDVal.equals_insensitive("ends") && StructInProgress.size() > 1 &&
         getTok().is(AsmToken::EndOfStatement)) {
       return parseDirectiveNestedEnds();
     }
@@ -2496,7 +2496,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
 
   // Special-case handling of structure-end directives at higher priority, since
   // ENDS is overloaded as a segment-end directive.
-  if (nextVal.equals_lower("ends") && StructInProgress.size() == 1) {
+  if (nextVal.equals_insensitive("ends") && StructInProgress.size() == 1) {
     Lex();
     return parseDirectiveEnds(IDVal, IDLoc);
   }
@@ -2527,7 +2527,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     return parseDirectiveEquate(nextVal, IDVal, DirKind, IDLoc);
   case DK_BYTE:
     if (afterNextTok.is(AsmToken::Identifier) &&
-        afterNextTok.getString().equals_lower("ptr")) {
+        afterNextTok.getString().equals_insensitive("ptr")) {
       // Size directive; part of an instruction.
       break;
     }
@@ -2538,7 +2538,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     return parseDirectiveNamedValue(nextVal, 1, IDVal, IDLoc);
   case DK_WORD:
     if (afterNextTok.is(AsmToken::Identifier) &&
-        afterNextTok.getString().equals_lower("ptr")) {
+        afterNextTok.getString().equals_insensitive("ptr")) {
       // Size directive; part of an instruction.
       break;
     }
@@ -2549,7 +2549,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     return parseDirectiveNamedValue(nextVal, 2, IDVal, IDLoc);
   case DK_DWORD:
     if (afterNextTok.is(AsmToken::Identifier) &&
-        afterNextTok.getString().equals_lower("ptr")) {
+        afterNextTok.getString().equals_insensitive("ptr")) {
       // Size directive; part of an instruction.
       break;
     }
@@ -2560,7 +2560,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     return parseDirectiveNamedValue(nextVal, 4, IDVal, IDLoc);
   case DK_FWORD:
     if (afterNextTok.is(AsmToken::Identifier) &&
-        afterNextTok.getString().equals_lower("ptr")) {
+        afterNextTok.getString().equals_insensitive("ptr")) {
       // Size directive; part of an instruction.
       break;
     }
@@ -2570,7 +2570,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     return parseDirectiveNamedValue(nextVal, 6, IDVal, IDLoc);
   case DK_QWORD:
     if (afterNextTok.is(AsmToken::Identifier) &&
-        afterNextTok.getString().equals_lower("ptr")) {
+        afterNextTok.getString().equals_insensitive("ptr")) {
       // Size directive; part of an instruction.
       break;
     }
@@ -3594,7 +3594,7 @@ bool MasmParser::parseScalarInitializer(unsigned Size,
     if (parseExpression(Value))
       return true;
     if (getTok().is(AsmToken::Identifier) &&
-        getTok().getString().equals_lower("dup")) {
+        getTok().getString().equals_insensitive("dup")) {
       Lex(); // Eat 'dup'.
       const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(Value);
       if (!MCE)
@@ -3752,11 +3752,11 @@ bool MasmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
   APFloat Value(Semantics);
   StringRef IDVal = getTok().getString();
   if (getLexer().is(AsmToken::Identifier)) {
-    if (IDVal.equals_lower("infinity") || IDVal.equals_lower("inf"))
+    if (IDVal.equals_insensitive("infinity") || IDVal.equals_insensitive("inf"))
       Value = APFloat::getInf(Semantics);
-    else if (IDVal.equals_lower("nan"))
+    else if (IDVal.equals_insensitive("nan"))
       Value = APFloat::getNaN(Semantics, false, ~0);
-    else if (IDVal.equals_lower("?"))
+    else if (IDVal.equals_insensitive("?"))
       Value = APFloat::getZero(Semantics);
     else
       return TokError("invalid floating point literal");
@@ -3798,7 +3798,7 @@ bool MasmParser::parseRealInstList(const fltSemantics &Semantics,
           getTok().isNot(AsmToken::GreaterGreater))) {
     const AsmToken NextTok = peekTok();
     if (NextTok.is(AsmToken::Identifier) &&
-        NextTok.getString().equals_lower("dup")) {
+        NextTok.getString().equals_insensitive("dup")) {
       const MCExpr *Value;
       if (parseExpression(Value) || parseToken(AsmToken::Identifier))
         return true;
@@ -4162,7 +4162,7 @@ bool MasmParser::parseStructInstList(
           getTok().isNot(AsmToken::GreaterGreater))) {
     const AsmToken NextTok = peekTok();
     if (NextTok.is(AsmToken::Identifier) &&
-        NextTok.getString().equals_lower("dup")) {
+        NextTok.getString().equals_insensitive("dup")) {
       const MCExpr *Value;
       if (parseExpression(Value) || parseToken(AsmToken::Identifier))
         return true;
@@ -4445,7 +4445,7 @@ bool MasmParser::parseDirectiveStruct(StringRef Directive,
     QualifierLoc = getTok().getLoc();
     if (parseIdentifier(Qualifier))
       return addErrorSuffix(" in '" + Twine(Directive) + "' directive");
-    if (!Qualifier.equals_lower("nonunique"))
+    if (!Qualifier.equals_insensitive("nonunique"))
       return Error(QualifierLoc, "Unrecognized qualifier for '" +
                                      Twine(Directive) +
                                      "' directive; expected none or NONUNIQUE");
@@ -4489,7 +4489,7 @@ bool MasmParser::parseDirectiveEnds(StringRef Name, SMLoc NameLoc) {
     return Error(NameLoc, "ENDS directive without matching STRUC/STRUCT/UNION");
   if (StructInProgress.size() > 1)
     return Error(NameLoc, "unexpected name in nested ENDS directive");
-  if (StructInProgress.back().Name.compare_lower(Name))
+  if (StructInProgress.back().Name.compare_insensitive(Name))
     return Error(NameLoc, "mismatched name in ENDS directive; expected '" +
                               StructInProgress.back().Name + "'");
   StructInfo Structure = StructInProgress.pop_back_val();
@@ -5635,7 +5635,7 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
 
     // Emit an error if two (or more) named parameters share the same name.
     for (const MCAsmMacroParameter& CurrParam : Parameters)
-      if (CurrParam.Name.equals_lower(Parameter.Name))
+      if (CurrParam.Name.equals_insensitive(Parameter.Name))
         return TokError("macro '" + Name + "' has multiple parameters"
                         " named '" + Parameter.Name + "'");
 
@@ -5660,9 +5660,9 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
                                     Parameter.Name + "' in macro '" + Name +
                                     "'");
 
-        if (Qualifier.equals_lower("req"))
+        if (Qualifier.equals_insensitive("req"))
           Parameter.Required = true;
-        else if (Qualifier.equals_lower("vararg"))
+        else if (Qualifier.equals_insensitive("vararg"))
           Parameter.Vararg = true;
         else
           return Error(QualLoc,
@@ -5682,7 +5682,7 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
 
   std::vector<std::string> Locals;
   if (getTok().is(AsmToken::Identifier) &&
-      getTok().getIdentifier().equals_lower("local")) {
+      getTok().getIdentifier().equals_insensitive("local")) {
     Lex(); // Eat the LOCAL directive.
 
     StringRef ID;
@@ -5716,7 +5716,7 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
     // Otherwise, check whether we have reached the 'endm'... and determine if
     // this is a macro function.
     if (getLexer().is(AsmToken::Identifier)) {
-      if (getTok().getIdentifier().equals_lower("endm")) {
+      if (getTok().getIdentifier().equals_insensitive("endm")) {
         if (MacroDepth == 0) { // Outermost macro.
           EndToken = getTok();
           Lexer.Lex();
@@ -5728,7 +5728,7 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
           // Otherwise we just found the end of an inner macro.
           --MacroDepth;
         }
-      } else if (getTok().getIdentifier().equals_lower("exitm")) {
+      } else if (getTok().getIdentifier().equals_insensitive("exitm")) {
         if (MacroDepth == 0 && peekTok().isNot(AsmToken::EndOfStatement)) {
           IsMacroFunction = true;
         }
@@ -6053,7 +6053,7 @@ bool MasmParser::parseDirectiveIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
   TheCondState.TheCond = AsmCond::IfCond;
   if (CaseInsensitive)
     TheCondState.CondMet =
-        ExpectEqual == (StringRef(String1).equals_lower(String2));
+        ExpectEqual == (StringRef(String1).equals_insensitive(String2));
   else
     TheCondState.CondMet = ExpectEqual == (String1 == String2);
   TheCondState.Ignore = !TheCondState.CondMet;
@@ -6263,7 +6263,7 @@ bool MasmParser::parseDirectiveElseIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
 
     if (CaseInsensitive)
       TheCondState.CondMet =
-          ExpectEqual == (StringRef(String1).equals_lower(String2));
+          ExpectEqual == (StringRef(String1).equals_insensitive(String2));
     else
       TheCondState.CondMet = ExpectEqual == (String1 == String2);
     TheCondState.Ignore = !TheCondState.CondMet;
@@ -6443,13 +6443,13 @@ bool MasmParser::parseDirectiveErrorIfidn(SMLoc DirectiveLoc, bool ExpectEqual,
 
   if (CaseInsensitive)
     TheCondState.CondMet =
-        ExpectEqual == (StringRef(String1).equals_lower(String2));
+        ExpectEqual == (StringRef(String1).equals_insensitive(String2));
   else
     TheCondState.CondMet = ExpectEqual == (String1 == String2);
   TheCondState.Ignore = !TheCondState.CondMet;
 
   if ((CaseInsensitive &&
-       ExpectEqual == StringRef(String1).equals_lower(String2)) ||
+       ExpectEqual == StringRef(String1).equals_insensitive(String2)) ||
       (ExpectEqual == (String1 == String2)))
     return Error(DirectiveLoc, Message);
   return false;
@@ -6634,7 +6634,7 @@ bool MasmParser::isMacroLikeDirective() {
       return true;
   }
   if (peekTok().is(AsmToken::Identifier) &&
-      peekTok().getIdentifier().equals_lower("macro"))
+      peekTok().getIdentifier().equals_insensitive("macro"))
     return true;
 
   return false;
@@ -6656,7 +6656,7 @@ MCAsmMacro *MasmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
 
     // Otherwise, check whether we have reached the endm.
     if (Lexer.is(AsmToken::Identifier) &&
-        getTok().getIdentifier().equals_lower("endm")) {
+        getTok().getIdentifier().equals_insensitive("endm")) {
       if (NestLevel == 0) {
         EndToken = getTok();
         Lex();
@@ -6846,7 +6846,7 @@ bool MasmParser::parseDirectiveFor(SMLoc DirectiveLoc, StringRef Dir) {
                                   Parameter.Name + "' in '" + Dir +
                                   "' directive");
 
-      if (Qualifier.equals_lower("req"))
+      if (Qualifier.equals_insensitive("req"))
         Parameter.Required = true;
       else
         return Error(QualLoc,
@@ -7010,7 +7010,7 @@ bool MasmParser::parseDirectiveEcho() {
   // substitutions in the message. Assert that the next token is the directive,
   // then eat it without using the Parser's Lex method.
   assert(getTok().is(AsmToken::Identifier) &&
-         getTok().getString().equals_lower("echo"));
+         getTok().getString().equals_insensitive("echo"));
   Lexer.Lex();
 
   std::string Message = parseStringTo(AsmToken::EndOfStatement);

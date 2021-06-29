@@ -669,7 +669,7 @@ static bool isReservedName(StringRef path) {
 
   // Then compare against the list of ancient reserved names.
   for (size_t i = 0; i < array_lengthof(sReservedNames); ++i) {
-    if (path.equals_lower(sReservedNames[i]))
+    if (path.equals_insensitive(sReservedNames[i]))
       return true;
   }
 
