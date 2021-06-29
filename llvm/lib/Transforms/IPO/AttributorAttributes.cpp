@@ -7823,23 +7823,46 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
       return indicatePessimisticFixpoint();
 
-    // TODO: Use assumed simplified condition value
-    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
-                                                DepClassTy::REQUIRED);
-    if (!LHSAA.isValidState())
-      return indicatePessimisticFixpoint();
+    bool UsedAssumedInformation = false;
+    Optional<Constant *> C = A.getAssumedConstant(*SI->getCondition(), *this,
+                                                  UsedAssumedInformation);
 
-    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
-                                                DepClassTy::REQUIRED);
-    if (!RHSAA.isValidState())
-      return indicatePessimisticFixpoint();
+    // Check if we only need one operand.
+    bool OnlyLeft = false, OnlyRight = false;
+    if (C.hasValue() && *C && (*C)->isOneValue())
+      OnlyLeft = true;
+    else if (C.hasValue() && *C && (*C)->isZeroValue())
+      OnlyRight = true;
 
-    if (LHSAA.undefIsContained() && RHSAA.undefIsContained())
+    const AAPotentialValues *LHSAA = nullptr, *RHSAA = nullptr;
+    if (!OnlyRight) {
+      LHSAA = &A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
+                                             DepClassTy::REQUIRED);
+      if (!LHSAA->isValidState())
+        return indicatePessimisticFixpoint();
+    }
+    if (!OnlyLeft) {
+      RHSAA = &A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
+                                             DepClassTy::REQUIRED);
+      if (!RHSAA->isValidState())
+        return indicatePessimisticFixpoint();
+    }
+
+    if (!LHSAA || !RHSAA) {
+      // select (true/false), lhs, rhs
+      auto *OpAA = LHSAA ? LHSAA : RHSAA;
+
+      if (OpAA->undefIsContained())
+        unionAssumedWithUndef();
+      else
+        unionAssumed(*OpAA);
+
+    } else if (LHSAA->undefIsContained() && RHSAA->undefIsContained()) {
       // select i1 *, undef , undef => undef
       unionAssumedWithUndef();
-    else {
-      unionAssumed(LHSAA);
-      unionAssumed(RHSAA);
+    } else {
+      unionAssumed(*LHSAA);
+      unionAssumed(*RHSAA);
     }
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
                                          : ChangeStatus::CHANGED;
