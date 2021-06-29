@@ -102,34 +102,7 @@ define void @vabd_loop_s8(i8* nocapture readonly %x, i8* nocapture readonly %y, 
 ; CHECK-NEXT:    vldrb.u8 q0, [r1], #16
 ; CHECK-NEXT:    vldrb.u8 q1, [r0], #16
 ; CHECK-NEXT:    vabd.s8 q0, q1, q0
-; CHECK-NEXT:    vmov.u8 r12, q0[14]
-; CHECK-NEXT:    vmov.u8 r3, q0[12]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[15]
-; CHECK-NEXT:    vmov.u8 r3, q0[13]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[10]
-; CHECK-NEXT:    vmov.u8 r3, q0[8]
-; CHECK-NEXT:    vstrb.32 q1, [r2, #12]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[11]
-; CHECK-NEXT:    vmov.u8 r3, q0[9]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[6]
-; CHECK-NEXT:    vmov.u8 r3, q0[4]
-; CHECK-NEXT:    vstrb.32 q1, [r2, #8]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[7]
-; CHECK-NEXT:    vmov.u8 r3, q0[5]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[2]
-; CHECK-NEXT:    vmov.u8 r3, q0[0]
-; CHECK-NEXT:    vstrb.32 q1, [r2, #4]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[3]
-; CHECK-NEXT:    vmov.u8 r3, q0[1]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vstrb.32 q1, [r2], #16
+; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB6_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -173,20 +146,7 @@ define void @vabd_loop_s16(i16* nocapture readonly %x, i16* nocapture readonly %
 ; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
 ; CHECK-NEXT:    vabd.s16 q0, q1, q0
-; CHECK-NEXT:    vmov.u16 r12, q0[6]
-; CHECK-NEXT:    vmov.u16 r3, q0[4]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u16 r12, q0[7]
-; CHECK-NEXT:    vmov.u16 r3, q0[5]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vmov.u16 r12, q0[2]
-; CHECK-NEXT:    vmov.u16 r3, q0[0]
-; CHECK-NEXT:    vstrh.32 q1, [r2, #8]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u16 r12, q0[3]
-; CHECK-NEXT:    vmov.u16 r3, q0[1]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vstrh.32 q1, [r2], #16
+; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -330,34 +290,7 @@ define void @vabd_loop_u8(i8* nocapture readonly %x, i8* nocapture readonly %y, 
 ; CHECK-NEXT:    vldrb.u8 q0, [r1], #16
 ; CHECK-NEXT:    vldrb.u8 q1, [r0], #16
 ; CHECK-NEXT:    vabd.u8 q0, q1, q0
-; CHECK-NEXT:    vmov.u8 r12, q0[14]
-; CHECK-NEXT:    vmov.u8 r3, q0[12]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[15]
-; CHECK-NEXT:    vmov.u8 r3, q0[13]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[10]
-; CHECK-NEXT:    vmov.u8 r3, q0[8]
-; CHECK-NEXT:    vstrb.32 q1, [r2, #12]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[11]
-; CHECK-NEXT:    vmov.u8 r3, q0[9]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[6]
-; CHECK-NEXT:    vmov.u8 r3, q0[4]
-; CHECK-NEXT:    vstrb.32 q1, [r2, #8]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[7]
-; CHECK-NEXT:    vmov.u8 r3, q0[5]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[2]
-; CHECK-NEXT:    vmov.u8 r3, q0[0]
-; CHECK-NEXT:    vstrb.32 q1, [r2, #4]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u8 r12, q0[3]
-; CHECK-NEXT:    vmov.u8 r3, q0[1]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vstrb.32 q1, [r2], #16
+; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB9_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -401,20 +334,7 @@ define void @vabd_loop_u16(i16* nocapture readonly %x, i16* nocapture readonly %
 ; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r0], #16
 ; CHECK-NEXT:    vabd.u16 q0, q1, q0
-; CHECK-NEXT:    vmov.u16 r12, q0[6]
-; CHECK-NEXT:    vmov.u16 r3, q0[4]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u16 r12, q0[7]
-; CHECK-NEXT:    vmov.u16 r3, q0[5]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vmov.u16 r12, q0[2]
-; CHECK-NEXT:    vmov.u16 r3, q0[0]
-; CHECK-NEXT:    vstrh.32 q1, [r2, #8]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r12
-; CHECK-NEXT:    vmov.u16 r12, q0[3]
-; CHECK-NEXT:    vmov.u16 r3, q0[1]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r12
-; CHECK-NEXT:    vstrh.32 q1, [r2], #16
+; CHECK-NEXT:    vstrb.8 q0, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB10_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
