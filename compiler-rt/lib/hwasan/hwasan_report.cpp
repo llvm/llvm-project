@@ -672,8 +672,10 @@ void ReportRegisters(uptr *frame, uptr pc) {
        frame[20], frame[21], frame[22], frame[23]);
   Printf("    x24 %016llx  x25 %016llx  x26 %016llx  x27 %016llx\n",
        frame[24], frame[25], frame[26], frame[27]);
-  Printf("    x28 %016llx  x29 %016llx  x30 %016llx\n",
-       frame[28], frame[29], frame[30]);
+  // hwasan_check* reduces the stack pointer by 256, then __hwasan_tag_mismatch
+  // passes it to this function.
+  Printf("    x28 %016llx  x29 %016llx  x30 %016llx   sp %016llx\n", frame[28],
+         frame[29], frame[30], reinterpret_cast<u8 *>(frame) + 256);
 }
 
 }  // namespace __hwasan
