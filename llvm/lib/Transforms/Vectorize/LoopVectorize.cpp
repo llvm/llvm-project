@@ -7346,8 +7346,17 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         // relying on instcombine to remove them.
         // Load: Scalar load + broadcast
         // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
-        InstructionCost Cost = getUniformMemOpCost(&I, VF);
-        setWideningDecision(&I, VF, CM_Scalarize, Cost);
+        InstructionCost Cost;
+        if (isa<StoreInst>(&I) && VF.isScalable() &&
+            isLegalGatherOrScatter(&I)) {
+          Cost = getGatherScatterCost(&I, VF);
+          setWideningDecision(&I, VF, CM_GatherScatter, Cost);
+        } else {
+          assert((isa<LoadInst>(&I) || !VF.isScalable()) &&
+                 "Cannot yet scalarize uniform stores");
+          Cost = getUniformMemOpCost(&I, VF);
+          setWideningDecision(&I, VF, CM_Scalarize, Cost);
+        }
         continue;
       }
 
