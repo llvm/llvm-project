@@ -70,7 +70,7 @@ define void @may_overflow_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: may_overflow_mul_sub_i64: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
 ; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
-; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
   %mul = mul i64 %idx, 5
   %sub = sub i64 %mul, 1
@@ -115,7 +115,7 @@ define void @only_nuw_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: only_nuw_mul_sub_i64: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
 ; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
-; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
   %mul = mul nuw i64 %idx, 5
   %sub = sub nuw i64 %mul, 1
@@ -126,6 +126,8 @@ define void @only_nuw_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
   ret void
 }
 
+; Even though the mul and sub may overflow %gep.idx and %gep.3 cannot alias
+; because we multiply by a power-of-2.
 define void @may_overflow_mul_pow2_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: may_overflow_mul_pow2_sub_i64: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
@@ -259,7 +261,7 @@ define void @may_overflow_pointer_diff([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: may_overflow_pointer_diff: 3 pointers, 0 call sites
 ; CHECK-NEXT:  MayAlias: [16 x i8]* %ptr, i8* %gep.mul.1
 ; CHECK-NEXT:  MayAlias: [16 x i8]* %ptr, i8* %gep.sub.2
-; CHECK-NEXT:  NoAlias:  i8* %gep.mul.1, i8* %gep.sub.2
+; CHECK-NEXT:  MayAlias:  i8* %gep.mul.1, i8* %gep.sub.2
 ;
   %mul.1 = mul i64 %idx, 6148914691236517207
   %gep.mul.1  = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %mul.1
