@@ -3,8 +3,13 @@
 
 // CHECK-LABEL: @loop_1d
 func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
+  // CHECK: %[[C0:.*]] = constant 0 : index
   // CHECK: %[[GROUP:.*]] = async.create_group
-  // CHECK: call @async_dispatch_fn
+  // CHECK: scf.if {{.*}} {
+  // CHECK:   call @parallel_compute_fn(%[[C0]]
+  // CHECK: } else {
+  // CHECK:   call @async_dispatch_fn
+  // CHECK: }
   // CHECK: async.await_all %[[GROUP]]
   scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) {
     %one = constant 1.0 : f32
