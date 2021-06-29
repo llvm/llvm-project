@@ -325,6 +325,11 @@ private:
   bool AddModuleToReflectionContext(const lldb::ModuleSP &module_sp);
   /// \}
 
+  /// Add the contents of the object file to the reflection context.
+  /// \return true on success.
+  bool AddJitObjectFileToReflectionContext(
+      ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type);
+
   /// Cache for the debug-info-originating type infos.
   /// \{
   llvm::DenseMap<lldb::opaque_compiler_type_t,

@@ -117,7 +117,12 @@ public:
           lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
           uint32_t target_byte_size = 1);
 
-  ~Section();
+  virtual ~Section();
+
+  // LLVM RTTI support
+  static char ID;
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+  static bool classof(const Section *obj) { return obj->isA(&ID); }
 
   static int Compare(const Section &a, const Section &b);
 

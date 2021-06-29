@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticHandler.h"
@@ -18,6 +20,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/JITSection.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -347,6 +350,30 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     m_object_cache_up = std::make_unique<ObjectDumper>();
     m_execution_engine_up->setObjectCache(m_object_cache_up.get());
   }
+
+  /// Record the size of the sections discounting the extra space used 
+  /// by the JIT. This is a hack and should be removed when we switch
+  /// from MCJIT to ORCJIT.
+  struct JitSectionSizeRecorder : public llvm::JITEventListener {
+    llvm::StringMap<uint64_t> &m_section_size_map;
+    JitSectionSizeRecorder(llvm::StringMap<uint64_t> &section_size_map) : 
+      m_section_size_map(section_size_map) {}
+
+    void notifyObjectLoaded(ObjectKey K, const llvm::object::ObjectFile &Obj,
+                            const llvm::RuntimeDyld::LoadedObjectInfo &L) override {
+      for (llvm::object::SectionRef section: Obj.sections()) {
+        auto name = section.getName();
+        if (name)
+          m_section_size_map.insert({name.get(), section.getSize()});
+      }
+      
+    }
+  };
+
+  JitSectionSizeRecorder size_recorder(m_section_size_map);
+  m_execution_engine_up->RegisterJITEventListener(&size_recorder);
+  auto on_exit = llvm::make_scope_exit(
+      [&]() { m_execution_engine_up->UnregisterJITEventListener(&size_recorder); });
 
   // Make sure we see all sections, including ones that don't have
   // relocations...
@@ -1337,7 +1364,8 @@ void IRExecutionUnit::PopulateSectionList(
     lldb_private::SectionList &section_list) {
   for (AllocationRecord &record : m_records) {
     if (record.m_size > 0) {
-      lldb::SectionSP section_sp(new lldb_private::Section(
+      size_t non_jit_size = m_section_size_map.lookup(record.m_name);
+      lldb::SectionSP section_sp(new lldb_private::JITSection(
           obj_file->GetModule(), obj_file, record.m_section_id,
           ConstString(record.m_name), record.m_sect_type,
           record.m_process_address, record.m_size,
@@ -1345,7 +1373,8 @@ void IRExecutionUnit::PopulateSectionList(
                                  // the data)
           record.m_size,         // file_size
           0,
-          record.m_permissions)); // flags
+          record.m_permissions, // flags
+          non_jit_size)); 
       section_list.AddSection(section_sp);
     }
   }

@@ -17,6 +17,7 @@
 
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ADT/StringMap.h"
 
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -409,6 +410,8 @@ private:
   ///< defining no functions using that variable, would do this.)  If this
   ///< is true, any allocations need to be committed immediately -- no
   ///< opportunity for relocation.
+
+  llvm::StringMap<uint64_t> m_section_size_map;
 };
 
 } // namespace lldb_private

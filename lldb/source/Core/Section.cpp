@@ -25,6 +25,8 @@ class DataExtractor;
 using namespace lldb;
 using namespace lldb_private;
 
+char Section::ID;
+
 const char *Section::GetTypeAsCString() const {
   switch (m_type) {
   case eSectionTypeInvalid:
