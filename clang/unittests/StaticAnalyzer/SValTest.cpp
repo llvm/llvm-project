@@ -166,7 +166,7 @@ void foo(int *x) {
   SVal A = getByName("a");
   ASSERT_FALSE(A.getType(Context).isNull());
   // TODO: Turn it into signed long
-  EXPECT_EQ(Context.UnsignedLongTy, A.getType(Context));
+  EXPECT_EQ(Context.getUIntPtrType(), A.getType(Context));
 
   SVal B = getByName("b");
   ASSERT_FALSE(B.getType(Context).isNull());
