@@ -50,6 +50,53 @@
                 "path": "./syntaxes/disassembly.json"
             }
         ],
+        "breakpoints": [
+          {
+            "language": "ada"
+          },
+          {
+            "language": "arm"
+          },
+          {
+            "language": "asm"
+          },
+          {
+            "language": "c"
+          },
+          {
+            "language": "cpp"
+          },
+          {
+            "language": "crystal"
+          },
+          {
+            "language": "d"
+          },
+          {
+            "language": "fortan"
+          },
+          {
+            "language": "fortran-modern"
+          },
+          {
+            "language": "nim"
+          },
+          {
+            "language": "objective-c"
+          },
+          {
+            "language": "objectpascal"
+          },
+          {
+            "language": "pascal"
+          },
+          {
+            "language": "rust"
+          },
+          {
+            "language": "swift"
+          }
+        ],
 		"debuggers": [
 			{
 				"type": "lldb-vscode",
