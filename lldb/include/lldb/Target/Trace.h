@@ -137,18 +137,6 @@ public:
   ///     The JSON schema of this Trace plug-in.
   virtual llvm::StringRef GetSchema() = 0;
 
-  /// Each decoded thread contains a cursor to the current position the user is
-  /// stopped at. When reverse debugging, each operation like reverse-next or
-  /// reverse-continue will move this cursor, which is then picked by any
-  /// subsequent dump or reverse operation.
-  ///
-  /// The initial position for this cursor is the last element of the thread,
-  /// which is the most recent chronologically.
-  ///
-  /// \return
-  ///     The current position of the thread's trace or \b 0 if empty.
-  virtual size_t GetCursorPosition(Thread &thread) = 0;
-
   /// Dump \a count instructions of the given thread's trace ending at the
   /// given \a end_position position.
   ///
