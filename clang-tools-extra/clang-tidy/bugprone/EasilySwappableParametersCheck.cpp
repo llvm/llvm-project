@@ -62,6 +62,9 @@ static const std::string DefaultIgnoredParameterTypeSuffixes =
 /// The default value for the QualifiersMix check option.
 static constexpr bool DefaultQualifiersMix = false;
 
+/// The default value for the ModelImplicitConversions check option.
+static constexpr bool DefaultModelImplicitConversions = true;
+
 using namespace clang::ast_matchers;
 
 namespace clang {
@@ -80,16 +83,24 @@ namespace model {
 enum class MixFlags : unsigned char {
   Invalid = 0, //< Sentinel bit pattern. DO NOT USE!
 
-  None = 1,           //< Mix between the two parameters is not possible.
-  Trivial = 2,        //< The two mix trivially, and are the exact same type.
-  Canonical = 4,      //< The two mix because the types refer to the same
-                      // CanonicalType, but we do not elaborate as to how.
-  TypeAlias = 8,      //< The path from one type to the other involves
-                      // desugaring type aliases.
-  ReferenceBind = 16, //< The mix involves the binding power of "const &".
-  Qualifiers = 32,    //< The mix involves change in the qualifiers.
+  //< Certain constructs (such as pointers to noexcept/non-noexcept functions)
+  // have the same CanonicalType, which would result in false positives.
+  // During the recursive modelling call, this flag is set if a later diagnosed
+  // canonical type equivalence should be thrown away.
+  WorkaroundDisableCanonicalEquivalence = 1,
 
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue =*/Qualifiers)
+  None = 2,           //< Mix between the two parameters is not possible.
+  Trivial = 4,        //< The two mix trivially, and are the exact same type.
+  Canonical = 8,      //< The two mix because the types refer to the same
+                      // CanonicalType, but we do not elaborate as to how.
+  TypeAlias = 16,     //< The path from one type to the other involves
+                      // desugaring type aliases.
+  ReferenceBind = 32, //< The mix involves the binding power of "const &".
+  Qualifiers = 64,    //< The mix involves change in the qualifiers.
+  ImplicitConversion = 128, //< The mixing of the parameters is possible
+                            // through implicit conversions between the types.
+
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue =*/ImplicitConversion)
 };
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
@@ -114,7 +125,7 @@ static inline std::string formatMixFlags(MixFlags F) {
   if (F == MixFlags::Invalid)
     return "#Inv!";
 
-  SmallString<8> Str{"------"};
+  SmallString<8> Str{"-------"};
 
   if (hasFlag(F, MixFlags::None))
     // Shows the None bit explicitly, as it can be applied in the recursion
@@ -130,6 +141,11 @@ static inline std::string formatMixFlags(MixFlags F) {
     Str[4] = '&';
   if (hasFlag(F, MixFlags::Qualifiers))
     Str[5] = 'Q';
+  if (hasFlag(F, MixFlags::ImplicitConversion))
+    Str[6] = 'i';
+
+  if (hasFlag(F, MixFlags::WorkaroundDisableCanonicalEquivalence))
+    Str.append("(~C)");
 
   return Str.str().str();
 }
@@ -140,22 +156,253 @@ static inline std::string formatMixFlags(MixFlags F);
 
 #endif // NDEBUG
 
+/// The results of the steps of an Implicit Conversion Sequence is saved in
+/// an instance of this record.
+///
+/// A ConversionSequence maps the steps of the conversion with a member for
+/// each type involved in the conversion. Imagine going from a hypothetical
+/// Complex class to projecting it to the real part as a const double.
+///
+/// I.e., given:
+///
+///    struct Complex {
+///      operator double() const;
+///    };
+///
+///    void functionBeingAnalysed(Complex C, const double R);
+///
+/// we will get the following sequence:
+///
+/// (Begin=) Complex
+///
+///     The first standard conversion is a qualification adjustment.
+/// (AfterFirstStandard=) const Complex
+///
+///     Then the user-defined conversion is executed.
+/// (UDConvOp.ConversionOperatorResultType=) double
+///
+///     Then this 'double' is qualifier-adjusted to 'const double'.
+/// (AfterSecondStandard=) double
+///
+/// The conversion's result has now been calculated, so it ends here.
+/// (End=) double.
+///
+/// Explicit storing of Begin and End in this record is needed, because
+/// getting to what Begin and End here are needs further resolution of types,
+/// e.g. in the case of typedefs:
+///
+///     using Comp = Complex;
+///     using CD = const double;
+///     void functionBeingAnalysed2(Comp C, CD R);
+///
+/// In this case, the user will be diagnosed with a potential conversion
+/// between the two typedefs as written in the code, but to elaborate the
+/// reasoning behind this conversion, we also need to show what the typedefs
+/// mean. See FormattedConversionSequence towards the bottom of this file!
+struct ConversionSequence {
+  enum UserDefinedConversionKind { UDCK_None, UDCK_Ctor, UDCK_Oper };
+
+  struct UserDefinedConvertingConstructor {
+    const CXXConstructorDecl *Fun;
+    QualType ConstructorParameterType;
+    QualType UserDefinedType;
+  };
+
+  struct UserDefinedConversionOperator {
+    const CXXConversionDecl *Fun;
+    QualType UserDefinedType;
+    QualType ConversionOperatorResultType;
+  };
+
+  /// The type the conversion stared from.
+  QualType Begin;
+
+  /// The intermediate type after the first Standard Conversion Sequence.
+  QualType AfterFirstStandard;
+
+  /// The details of the user-defined conversion involved, as a tagged union.
+  union {
+    char None;
+    UserDefinedConvertingConstructor UDConvCtor;
+    UserDefinedConversionOperator UDConvOp;
+  };
+  UserDefinedConversionKind UDConvKind;
+
+  /// The intermediate type after performing the second Standard Conversion
+  /// Sequence.
+  QualType AfterSecondStandard;
+
+  /// The result type the conversion targeted.
+  QualType End;
+
+  ConversionSequence() : None(0), UDConvKind(UDCK_None) {}
+  ConversionSequence(QualType From, QualType To)
+      : Begin(From), None(0), UDConvKind(UDCK_None), End(To) {}
+
+  explicit operator bool() const {
+    return !AfterFirstStandard.isNull() || UDConvKind != UDCK_None ||
+           !AfterSecondStandard.isNull();
+  }
+
+  /// Returns all the "steps" (non-unique and non-similar) types involved in
+  /// the conversion sequence. This method does **NOT** return Begin and End.
+  SmallVector<QualType, 4> getInvolvedTypesInSequence() const {
+    SmallVector<QualType, 4> Ret;
+    auto EmplaceIfDifferent = [&Ret](QualType QT) {
+      if (QT.isNull())
+        return;
+      if (Ret.empty())
+        Ret.emplace_back(QT);
+      else if (Ret.back() != QT)
+        Ret.emplace_back(QT);
+    };
+
+    EmplaceIfDifferent(AfterFirstStandard);
+    switch (UDConvKind) {
+    case UDCK_Ctor:
+      EmplaceIfDifferent(UDConvCtor.ConstructorParameterType);
+      EmplaceIfDifferent(UDConvCtor.UserDefinedType);
+      break;
+    case UDCK_Oper:
+      EmplaceIfDifferent(UDConvOp.UserDefinedType);
+      EmplaceIfDifferent(UDConvOp.ConversionOperatorResultType);
+      break;
+    case UDCK_None:
+      break;
+    }
+    EmplaceIfDifferent(AfterSecondStandard);
+
+    return Ret;
+  }
+
+  /// Updates the steps of the conversion sequence with the steps from the
+  /// other instance.
+  ///
+  /// \note This method does not check if the resulting conversion sequence is
+  /// sensible!
+  ConversionSequence &update(const ConversionSequence &RHS) {
+    if (!RHS.AfterFirstStandard.isNull())
+      AfterFirstStandard = RHS.AfterFirstStandard;
+    switch (RHS.UDConvKind) {
+    case UDCK_Ctor:
+      UDConvKind = UDCK_Ctor;
+      UDConvCtor = RHS.UDConvCtor;
+      break;
+    case UDCK_Oper:
+      UDConvKind = UDCK_Oper;
+      UDConvOp = RHS.UDConvOp;
+      break;
+    case UDCK_None:
+      break;
+    }
+    if (!RHS.AfterSecondStandard.isNull())
+      AfterSecondStandard = RHS.AfterSecondStandard;
+
+    return *this;
+  }
+
+  /// Sets the user-defined conversion to the given constructor.
+  void setConversion(const UserDefinedConvertingConstructor &UDCC) {
+    UDConvKind = UDCK_Ctor;
+    UDConvCtor = UDCC;
+  }
+
+  /// Sets the user-defined conversion to the given operator.
+  void setConversion(const UserDefinedConversionOperator &UDCO) {
+    UDConvKind = UDCK_Oper;
+    UDConvOp = UDCO;
+  }
+
+  /// Returns the type in the conversion that's formally "in our hands" once
+  /// the user-defined conversion is executed.
+  QualType getTypeAfterUserDefinedConversion() const {
+    switch (UDConvKind) {
+    case UDCK_Ctor:
+      return UDConvCtor.UserDefinedType;
+    case UDCK_Oper:
+      return UDConvOp.ConversionOperatorResultType;
+    case UDCK_None:
+      return {};
+    }
+    llvm_unreachable("Invalid UDConv kind.");
+  }
+
+  const CXXMethodDecl *getUserDefinedConversionFunction() const {
+    switch (UDConvKind) {
+    case UDCK_Ctor:
+      return UDConvCtor.Fun;
+    case UDCK_Oper:
+      return UDConvOp.Fun;
+    case UDCK_None:
+      return {};
+    }
+    llvm_unreachable("Invalid UDConv kind.");
+  }
+
+  /// Returns the SourceRange in the text that corresponds to the interesting
+  /// part of the user-defined conversion. This is either the parameter type
+  /// in a converting constructor, or the conversion result type in a conversion
+  /// operator.
+  SourceRange getUserDefinedConversionHighlight() const {
+    switch (UDConvKind) {
+    case UDCK_Ctor:
+      return UDConvCtor.Fun->getParamDecl(0)->getSourceRange();
+    case UDCK_Oper:
+      // getReturnTypeSourceRange() does not work for CXXConversionDecls as the
+      // returned type is physically behind the declaration's name ("operator").
+      if (const FunctionTypeLoc FTL = UDConvOp.Fun->getFunctionTypeLoc())
+        if (const TypeLoc RetLoc = FTL.getReturnLoc())
+          return RetLoc.getSourceRange();
+      return {};
+    case UDCK_None:
+      return {};
+    }
+    llvm_unreachable("Invalid UDConv kind.");
+  }
+};
+
 /// Contains the metadata for the mixability result between two types,
 /// independently of which parameters they were calculated from.
 struct MixData {
   /// The flag bits of the mix indicating what language features allow for it.
-  MixFlags Flags;
+  MixFlags Flags = MixFlags::Invalid;
 
   /// A potentially calculated common underlying type after desugaring, that
   /// both sides of the mix can originate from.
   QualType CommonType;
 
+  /// The steps an implicit conversion performs to get from one type to the
+  /// other.
+  ConversionSequence Conversion, ConversionRTL;
+
+  /// True if the MixData was specifically created with only a one-way
+  /// conversion modelled.
+  bool CreatedFromOneWayConversion = false;
+
   MixData(MixFlags Flags) : Flags(Flags) {}
   MixData(MixFlags Flags, QualType CommonType)
       : Flags(Flags), CommonType(CommonType) {}
+  MixData(MixFlags Flags, ConversionSequence Conv)
+      : Flags(Flags), Conversion(Conv), CreatedFromOneWayConversion(true) {}
+  MixData(MixFlags Flags, ConversionSequence LTR, ConversionSequence RTL)
+      : Flags(Flags), Conversion(LTR), ConversionRTL(RTL) {}
+  MixData(MixFlags Flags, QualType CommonType, ConversionSequence LTR,
+          ConversionSequence RTL)
+      : Flags(Flags), CommonType(CommonType), Conversion(LTR),
+        ConversionRTL(RTL) {}
 
   void sanitize() {
     assert(Flags != MixFlags::Invalid && "sanitize() called on invalid bitvec");
+
+    MixFlags CanonicalAndWorkaround =
+        MixFlags::Canonical | MixFlags::WorkaroundDisableCanonicalEquivalence;
+    if ((Flags & CanonicalAndWorkaround) == CanonicalAndWorkaround) {
+      // A workaround for too eagerly equivalent canonical types was requested,
+      // and a canonical equivalence was proven. Fulfill the request and throw
+      // this result away.
+      Flags = MixFlags::None;
+      return;
+    }
 
     if (hasFlag(Flags, MixFlags::None)) {
       // If anywhere down the recursion a potential mix "path" is deemed
@@ -173,11 +420,34 @@ struct MixData {
       // recursion other bit(s) were set, remove the trivial bit, as it is not
       // trivial.
       Flags &= ~MixFlags::Trivial;
+
+    bool ShouldHaveImplicitConvFlag = false;
+    if (CreatedFromOneWayConversion && Conversion)
+      ShouldHaveImplicitConvFlag = true;
+    else if (!CreatedFromOneWayConversion && Conversion && ConversionRTL)
+      // Only say that we have implicit conversion mix possibility if it is
+      // bidirectional. Otherwise, the compiler would report an *actual* swap
+      // at a call site...
+      ShouldHaveImplicitConvFlag = true;
+
+    if (ShouldHaveImplicitConvFlag)
+      Flags |= MixFlags::ImplicitConversion;
+    else
+      Flags &= ~MixFlags::ImplicitConversion;
   }
+
+  bool isValid() const { return Flags >= MixFlags::None; }
+
+  bool indicatesMixability() const { return Flags > MixFlags::None; }
 
   /// Add the specified flag bits to the flags.
   MixData operator|(MixFlags EnableFlags) const {
-    return {Flags | EnableFlags, CommonType};
+    if (CreatedFromOneWayConversion) {
+      MixData M{Flags | EnableFlags, Conversion};
+      M.CommonType = CommonType;
+      return M;
+    }
+    return {Flags | EnableFlags, CommonType, Conversion, ConversionRTL};
   }
 
   /// Add the specified flag bits to the flags.
@@ -190,8 +460,14 @@ struct MixData {
   MixData qualify(Qualifiers Quals) const {
     SplitQualType Split = CommonType.split();
     Split.Quals.addQualifiers(Quals);
+    QualType CommonType{Split.Ty, Split.Quals.getAsOpaqueValue()};
 
-    return {Flags, QualType(Split.Ty, Split.Quals.getAsOpaqueValue())};
+    if (CreatedFromOneWayConversion) {
+      MixData M{Flags, Conversion};
+      M.CommonType = CommonType;
+      return M;
+    }
+    return {Flags, CommonType, Conversion, ConversionRTL};
   }
 };
 
@@ -206,7 +482,15 @@ struct Mix {
 
   void sanitize() { Data.sanitize(); }
   MixFlags flags() const { return Data.Flags; }
+  bool flagsValid() const { return Data.isValid(); }
+  bool mixable() const { return Data.indicatesMixability(); }
   QualType commonUnderlyingType() const { return Data.CommonType; }
+  const ConversionSequence &leftToRightConversionSequence() const {
+    return Data.Conversion;
+  }
+  const ConversionSequence &rightToLeftConversionSequence() const {
+    return Data.ConversionRTL;
+  }
 };
 
 // NOLINTNEXTLINE(misc-redundant-expression): Seems to be a bogus warning.
@@ -243,10 +527,34 @@ struct MixableParameterRange {
   }
 };
 
-static MixData isLRefEquallyBindingToType(const TheCheck &Check,
-                                          const LValueReferenceType *LRef,
-                                          QualType Ty, const ASTContext &Ctx,
-                                          bool IsRefRHS);
+/// Helper enum for the recursive calls in the modelling that toggle what kinds
+/// of implicit conversions are to be modelled.
+enum ImplicitConversionModellingMode : unsigned char {
+  //< No implicit conversions are modelled.
+  ICMM_None,
+
+  //< The full implicit conversion sequence is modelled.
+  ICMM_All,
+
+  //< Only model a unidirectional implicit conversion and within it only one
+  // standard conversion sequence.
+  ICMM_OneWaySingleStandardOnly
+};
+
+static MixData
+isLRefEquallyBindingToType(const TheCheck &Check,
+                           const LValueReferenceType *LRef, QualType Ty,
+                           const ASTContext &Ctx, bool IsRefRHS,
+                           ImplicitConversionModellingMode ImplicitMode);
+
+static MixData
+approximateImplicitConversion(const TheCheck &Check, QualType LType,
+                              QualType RType, const ASTContext &Ctx,
+                              ImplicitConversionModellingMode ImplicitMode);
+
+static inline bool isUselessSugar(const Type *T) {
+  return isa<DecayedType, ElaboratedType, ParenType>(T);
+}
 
 /// Approximate the way how LType and RType might refer to "essentially the
 /// same" type, in a sense that at a particular call site, an expression of
@@ -257,12 +565,18 @@ static MixData isLRefEquallyBindingToType(const TheCheck &Check,
 /// The returned data structure is not guaranteed to be properly set, as this
 /// function is potentially recursive. It is the caller's responsibility to
 /// call sanitize() on the result once the recursion is over.
-static MixData calculateMixability(const TheCheck &Check, const QualType LType,
-                                   const QualType RType,
-                                   const ASTContext &Ctx) {
+static MixData
+calculateMixability(const TheCheck &Check, QualType LType, QualType RType,
+                    const ASTContext &Ctx,
+                    ImplicitConversionModellingMode ImplicitMode) {
   LLVM_DEBUG(llvm::dbgs() << ">>> calculateMixability for LType:\n";
              LType.dump(llvm::dbgs(), Ctx); llvm::dbgs() << "\nand RType:\n";
              RType.dump(llvm::dbgs(), Ctx); llvm::dbgs() << '\n';);
+
+  // Certain constructs match on the last catch-all getCanonicalType() equality,
+  // which is perhaps something not what we want. If this variable is true,
+  // the canonical type equality will be ignored.
+  bool RecursiveReturnDiscardingCanonicalType = false;
 
   if (LType == RType) {
     LLVM_DEBUG(llvm::dbgs() << "<<< calculateMixability. Trivial equality.\n");
@@ -272,15 +586,17 @@ static MixData calculateMixability(const TheCheck &Check, const QualType LType,
   // Dissolve certain type sugars that do not affect the mixability of one type
   // with the other, and also do not require any sort of elaboration for the
   // user to understand.
-  if (isa<ParenType>(LType.getTypePtr())) {
-    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. LHS is ParenType.\n");
+  if (isUselessSugar(LType.getTypePtr())) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- calculateMixability. LHS is useless sugar.\n");
     return calculateMixability(Check, LType.getSingleStepDesugaredType(Ctx),
-                               RType, Ctx);
+                               RType, Ctx, ImplicitMode);
   }
-  if (isa<ParenType>(RType.getTypePtr())) {
-    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. RHS is ParenType.\n");
-    return calculateMixability(Check, LType,
-                               RType.getSingleStepDesugaredType(Ctx), Ctx);
+  if (isUselessSugar(RType.getTypePtr())) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- calculateMixability. RHS is useless sugar.\n");
+    return calculateMixability(
+        Check, LType, RType.getSingleStepDesugaredType(Ctx), Ctx, ImplicitMode);
   }
 
   // At a particular call site, what could be passed to a 'T' or 'const T' might
@@ -288,12 +604,14 @@ static MixData calculateMixability(const TheCheck &Check, const QualType LType,
   // side effect on the passed expressions.
   if (const auto *LRef = LType->getAs<LValueReferenceType>()) {
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. LHS is &.\n");
-    return isLRefEquallyBindingToType(Check, LRef, RType, Ctx, false) |
+    return isLRefEquallyBindingToType(Check, LRef, RType, Ctx, false,
+                                      ImplicitMode) |
            MixFlags::ReferenceBind;
   }
   if (const auto *RRef = RType->getAs<LValueReferenceType>()) {
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. RHS is &.\n");
-    return isLRefEquallyBindingToType(Check, RRef, LType, Ctx, true) |
+    return isLRefEquallyBindingToType(Check, RRef, LType, Ctx, true,
+                                      ImplicitMode) |
            MixFlags::ReferenceBind;
   }
 
@@ -301,13 +619,14 @@ static MixData calculateMixability(const TheCheck &Check, const QualType LType,
   if (LType->getAs<TypedefType>()) {
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. LHS is typedef.\n");
     return calculateMixability(Check, LType.getSingleStepDesugaredType(Ctx),
-                               RType, Ctx) |
+                               RType, Ctx, ImplicitMode) |
            MixFlags::TypeAlias;
   }
   if (RType->getAs<TypedefType>()) {
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. RHS is typedef.\n");
     return calculateMixability(Check, LType,
-                               RType.getSingleStepDesugaredType(Ctx), Ctx) |
+                               RType.getSingleStepDesugaredType(Ctx), Ctx,
+                               ImplicitMode) |
            MixFlags::TypeAlias;
   }
 
@@ -326,7 +645,8 @@ static MixData calculateMixability(const TheCheck &Check, const QualType LType,
     }
 
     return calculateMixability(Check, LType.getLocalUnqualifiedType(),
-                               RType.getLocalUnqualifiedType(), Ctx) |
+                               RType.getLocalUnqualifiedType(), Ctx,
+                               ImplicitMode) |
            MixFlags::Qualifiers;
   }
   if (LType.getLocalCVRQualifiers() == RType.getLocalCVRQualifiers() &&
@@ -336,38 +656,113 @@ static MixData calculateMixability(const TheCheck &Check, const QualType LType,
     // Apply the same qualifier back into the found common type if we found
     // a common type between the unqualified versions.
     return calculateMixability(Check, LType.getLocalUnqualifiedType(),
-                               RType.getLocalUnqualifiedType(), Ctx)
+                               RType.getLocalUnqualifiedType(), Ctx,
+                               ImplicitMode)
         .qualify(LType.getLocalQualifiers());
   }
 
   if (LType->isPointerType() && RType->isPointerType()) {
     // If both types are pointers, and pointed to the exact same type,
-    // LType == RType took care of that.
-    // Try to see if the pointee type has some other match.
+    // LType == RType took care of that. Try to see if the pointee type has
+    // some other match. However, this must not consider implicit conversions.
     LLVM_DEBUG(llvm::dbgs()
                << "--- calculateMixability. LHS and RHS are Ptrs.\n");
-    return calculateMixability(Check, LType->getPointeeType(),
-                               RType->getPointeeType(), Ctx);
+    MixData MixOfPointee =
+        calculateMixability(Check, LType->getPointeeType(),
+                            RType->getPointeeType(), Ctx, ICMM_None);
+    if (hasFlag(MixOfPointee.Flags,
+                MixFlags::WorkaroundDisableCanonicalEquivalence))
+      RecursiveReturnDiscardingCanonicalType = true;
+
+    MixOfPointee.sanitize();
+    if (MixOfPointee.indicatesMixability()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "<<< calculateMixability. Pointees are mixable.\n");
+      return MixOfPointee;
+    }
   }
+
+  if (ImplicitMode > ICMM_None) {
+    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. Start implicit...\n");
+    MixData MixLTR =
+        approximateImplicitConversion(Check, LType, RType, Ctx, ImplicitMode);
+    LLVM_DEBUG(
+        if (hasFlag(MixLTR.Flags, MixFlags::ImplicitConversion)) llvm::dbgs()
+            << "--- calculateMixability. Implicit Left -> Right found.\n";);
+
+    if (ImplicitMode == ICMM_OneWaySingleStandardOnly && MixLTR.Conversion &&
+        !MixLTR.Conversion.AfterFirstStandard.isNull() &&
+        MixLTR.Conversion.UDConvKind == ConversionSequence::UDCK_None &&
+        MixLTR.Conversion.AfterSecondStandard.isNull()) {
+      // The invoker of the method requested only modelling a single standard
+      // conversion, in only the forward direction, and they got just that.
+      LLVM_DEBUG(llvm::dbgs() << "<<< calculateMixability. Implicit "
+                                 "conversion, one-way, standard-only.\n");
+      return {MixFlags::ImplicitConversion, MixLTR.Conversion};
+    }
+
+    // Otherwise if the invoker requested a full modelling, do the other
+    // direction as well.
+    MixData MixRTL =
+        approximateImplicitConversion(Check, RType, LType, Ctx, ImplicitMode);
+    LLVM_DEBUG(
+        if (hasFlag(MixRTL.Flags, MixFlags::ImplicitConversion)) llvm::dbgs()
+            << "--- calculateMixability. Implicit Right -> Left found.\n";);
+
+    if (MixLTR.Conversion && MixRTL.Conversion) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "<<< calculateMixability. Implicit conversion, bidirectional.\n");
+      return {MixFlags::ImplicitConversion, MixLTR.Conversion,
+              MixRTL.Conversion};
+    }
+  }
+
+  if (RecursiveReturnDiscardingCanonicalType)
+    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. Before CanonicalType, "
+                               "Discard was enabled.\n");
+
+  // Certain kinds unfortunately need to be side-stepped for canonical type
+  // matching.
+  if (LType->getAs<FunctionProtoType>() || RType->getAs<FunctionProtoType>()) {
+    // Unfortunately, the canonical type of a function pointer becomes the
+    // same even if exactly one is "noexcept" and the other isn't, making us
+    // give a false positive report irrespective of implicit conversions.
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- calculateMixability. Discarding potential canonical "
+                  "equivalence on FunctionProtoTypes.\n");
+    RecursiveReturnDiscardingCanonicalType = true;
+  }
+
+  MixData MixToReturn{MixFlags::None};
 
   // If none of the previous logic found a match, try if Clang otherwise
   // believes the types to be the same.
-  if (LType.getCanonicalType() == RType.getCanonicalType()) {
+  QualType LCanonical = LType.getCanonicalType();
+  if (LCanonical == RType.getCanonicalType()) {
     LLVM_DEBUG(llvm::dbgs()
                << "<<< calculateMixability. Same CanonicalType.\n");
-    return {MixFlags::Canonical, LType.getCanonicalType()};
+    MixToReturn = {MixFlags::Canonical, LCanonical};
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "<<< calculateMixability. No match found.\n");
-  return {MixFlags::None};
+  if (RecursiveReturnDiscardingCanonicalType)
+    MixToReturn |= MixFlags::WorkaroundDisableCanonicalEquivalence;
+
+  LLVM_DEBUG(if (MixToReturn.Flags == MixFlags::None) llvm::dbgs()
+             << "<<< calculateMixability. No match found.\n");
+  return MixToReturn;
 }
 
 /// Calculates if the reference binds an expression of the given type. This is
 /// true iff 'LRef' is some 'const T &' type, and the 'Ty' is 'T' or 'const T'.
-static MixData isLRefEquallyBindingToType(const TheCheck &Check,
-                                          const LValueReferenceType *LRef,
-                                          QualType Ty, const ASTContext &Ctx,
-                                          bool IsRefRHS) {
+///
+/// \param ImplicitMode is forwarded in the possible recursive call to
+/// calculateMixability.
+static MixData
+isLRefEquallyBindingToType(const TheCheck &Check,
+                           const LValueReferenceType *LRef, QualType Ty,
+                           const ASTContext &Ctx, bool IsRefRHS,
+                           ImplicitConversionModellingMode ImplicitMode) {
   LLVM_DEBUG(llvm::dbgs() << ">>> isLRefEquallyBindingToType for LRef:\n";
              LRef->dump(llvm::dbgs(), Ctx); llvm::dbgs() << "\nand Type:\n";
              Ty.dump(llvm::dbgs(), Ctx); llvm::dbgs() << '\n';);
@@ -414,8 +809,464 @@ static MixData isLRefEquallyBindingToType(const TheCheck &Check,
   LLVM_DEBUG(
       llvm::dbgs()
       << "--- isLRefEquallyBindingToType. Checking mix for underlying type.\n");
-  return IsRefRHS ? calculateMixability(Check, Ty, NonConstReferredType, Ctx)
-                  : calculateMixability(Check, NonConstReferredType, Ty, Ctx);
+  return IsRefRHS ? calculateMixability(Check, Ty, NonConstReferredType, Ctx,
+                                        ImplicitMode)
+                  : calculateMixability(Check, NonConstReferredType, Ty, Ctx,
+                                        ImplicitMode);
+}
+
+static inline bool isDerivedToBase(const CXXRecordDecl *Derived,
+                                   const CXXRecordDecl *Base) {
+  return Derived && Base && Derived->isCompleteDefinition() &&
+         Base->isCompleteDefinition() && Derived->isDerivedFrom(Base);
+}
+
+static Optional<QualType>
+approximateStandardConversionSequence(const TheCheck &Check, QualType From,
+                                      QualType To, const ASTContext &Ctx) {
+  LLVM_DEBUG(llvm::dbgs() << ">>> approximateStdConv for LType:\n";
+             From.dump(llvm::dbgs(), Ctx); llvm::dbgs() << "\nand RType:\n";
+             To.dump(llvm::dbgs(), Ctx); llvm::dbgs() << '\n';);
+
+  // A standard conversion sequence consists of the following, in order:
+  //  * Maybe either LValue->RValue conv., Array->Ptr conv., Function->Ptr conv.
+  //  * Maybe Numeric promotion or conversion.
+  //  * Maybe function pointer conversion.
+  //  * Maybe qualifier adjustments.
+  QualType WorkType = From;
+  // Get out the qualifiers of the original type. This will always be
+  // re-applied to the WorkType to ensure it is the same qualification as the
+  // original From was.
+  auto QualifiersToApply = From.split().Quals.getAsOpaqueValue();
+
+  // LValue->RValue is irrelevant for the check, because it is a thing to be
+  // done at a call site, and will be performed if need be performed.
+
+  // Array->Ptr decay.
+  if (const auto *ArrayT = dyn_cast<ArrayType>(From)) {
+    LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. Array->Ptr decayed.\n");
+    WorkType = ArrayT->getPointeeType();
+  }
+
+  // Function->Pointer conversions are also irrelevant, because a
+  // "FunctionType" cannot be the type of a parameter variable, so this
+  // conversion is only meaningful at call sites.
+
+  // Numeric promotions and conversions.
+  const auto *FromBuiltin = WorkType->getAs<BuiltinType>();
+  const auto *ToBuiltin = To->getAs<BuiltinType>();
+  bool FromNumeric = FromBuiltin && (FromBuiltin->isIntegerType() ||
+                                     FromBuiltin->isFloatingType());
+  bool ToNumeric =
+      ToBuiltin && (ToBuiltin->isIntegerType() || ToBuiltin->isFloatingType());
+  if (FromNumeric && ToNumeric) {
+    // If both are integral types, the numeric conversion is performed.
+    // Reapply the qualifiers of the original type, however, so
+    // "const int -> double" in this case moves over to
+    // "const double -> double".
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- approximateStdConv. Conversion between numerics.\n");
+    WorkType = QualType{ToBuiltin, QualifiersToApply};
+  }
+
+  const auto *FromEnum = WorkType->getAs<EnumType>();
+  const auto *ToEnum = To->getAs<EnumType>();
+  if (FromEnum && ToNumeric && FromEnum->isUnscopedEnumerationType()) {
+    // Unscoped enumerations (or enumerations in C) convert to numerics.
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- approximateStdConv. Unscoped enum to numeric.\n");
+    WorkType = QualType{ToBuiltin, QualifiersToApply};
+  } else if (FromNumeric && ToEnum && ToEnum->isUnscopedEnumerationType()) {
+    // Numeric types convert to enumerations only in C.
+    if (Ctx.getLangOpts().CPlusPlus) {
+      LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Numeric to unscoped "
+                                 "enum, not possible in C++!\n");
+      return {};
+    }
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- approximateStdConv. Numeric to unscoped enum.\n");
+    WorkType = QualType{ToEnum, QualifiersToApply};
+  }
+
+  // Check for pointer conversions.
+  const auto *FromPtr = WorkType->getAs<PointerType>();
+  const auto *ToPtr = To->getAs<PointerType>();
+  if (FromPtr && ToPtr) {
+    if (ToPtr->isVoidPointerType()) {
+      LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. To void pointer.\n");
+      WorkType = QualType{ToPtr, QualifiersToApply};
+    }
+
+    const auto *FromRecordPtr = FromPtr->getPointeeCXXRecordDecl();
+    const auto *ToRecordPtr = ToPtr->getPointeeCXXRecordDecl();
+    if (isDerivedToBase(FromRecordPtr, ToRecordPtr)) {
+      LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. Derived* to Base*\n");
+      WorkType = QualType{ToPtr, QualifiersToApply};
+    }
+  }
+
+  // Model the slicing Derived-to-Base too, as "BaseT temporary = derived;"
+  // can also be compiled.
+  const auto *FromRecord = WorkType->getAsCXXRecordDecl();
+  const auto *ToRecord = To->getAsCXXRecordDecl();
+  if (isDerivedToBase(FromRecord, ToRecord)) {
+    LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. Derived To Base.\n");
+    WorkType = QualType{ToRecord->getTypeForDecl(), QualifiersToApply};
+  }
+
+  if (Ctx.getLangOpts().CPlusPlus17 && FromPtr && ToPtr) {
+    // Function pointer conversion: A noexcept function pointer can be passed
+    // to a non-noexcept one.
+    const auto *FromFunctionPtr =
+        FromPtr->getPointeeType()->getAs<FunctionProtoType>();
+    const auto *ToFunctionPtr =
+        ToPtr->getPointeeType()->getAs<FunctionProtoType>();
+    if (FromFunctionPtr && ToFunctionPtr &&
+        FromFunctionPtr->hasNoexceptExceptionSpec() &&
+        !ToFunctionPtr->hasNoexceptExceptionSpec()) {
+      LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. noexcept function "
+                                 "pointer to non-noexcept.\n");
+      WorkType = QualType{ToPtr, QualifiersToApply};
+    }
+  }
+
+  // Qualifier adjustments are modelled according to the user's request in
+  // the QualifiersMix check config.
+  LLVM_DEBUG(llvm::dbgs()
+             << "--- approximateStdConv. Trying qualifier adjustment...\n");
+  MixData QualConv = calculateMixability(Check, WorkType, To, Ctx, ICMM_None);
+  QualConv.sanitize();
+  if (hasFlag(QualConv.Flags, MixFlags::Qualifiers)) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "<<< approximateStdConv. Qualifiers adjusted.\n");
+    WorkType = To;
+  }
+
+  if (WorkType == To) {
+    LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Reached 'To' type.\n");
+    return {WorkType};
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Did not reach 'To'.\n");
+  return {};
+}
+
+namespace {
+
+/// Helper class for storing possible user-defined conversion calls that
+/// *could* take place in an implicit conversion, and selecting the one that
+/// most likely *does*, if any.
+class UserDefinedConversionSelector {
+public:
+  /// The conversion associated with a conversion function, together with the
+  /// mixability flags of the conversion function's parameter or return type
+  /// to the rest of the sequence the selector is used in, and the sequence
+  /// that applied through the conversion itself.
+  struct PreparedConversion {
+    const CXXMethodDecl *ConversionFun;
+    MixFlags Flags;
+    ConversionSequence Seq;
+
+    PreparedConversion(const CXXMethodDecl *CMD, MixFlags F,
+                       ConversionSequence S)
+        : ConversionFun(CMD), Flags(F), Seq(S) {}
+  };
+
+  UserDefinedConversionSelector(const TheCheck &Check) : Check(Check) {}
+
+  /// Adds the conversion between the two types for the given function into
+  /// the possible implicit conversion set. FromType and ToType is either:
+  ///   * the result of a standard sequence and a converting ctor parameter
+  ///   * the return type of a conversion operator and the expected target of
+  ///     an implicit conversion.
+  void addConversion(const CXXMethodDecl *ConvFun, QualType FromType,
+                     QualType ToType) {
+    // Try to go from the FromType to the ToType wiht only a single implicit
+    // conversion, to see if the conversion function is applicable.
+    MixData Mix =
+        calculateMixability(Check, FromType, ToType, ConvFun->getASTContext(),
+                            ICMM_OneWaySingleStandardOnly);
+    Mix.sanitize();
+    if (!Mix.indicatesMixability())
+      return;
+
+    LLVM_DEBUG(llvm::dbgs() << "--- tryConversion. Found viable with flags: "
+                            << formatMixFlags(Mix.Flags) << '\n');
+    FlaggedConversions.emplace_back(ConvFun, Mix.Flags, Mix.Conversion);
+  }
+
+  /// Selects the best conversion function that is applicable from the
+  /// prepared set of potential conversion functions taken.
+  Optional<PreparedConversion> operator()() const {
+    if (FlaggedConversions.empty()) {
+      LLVM_DEBUG(llvm::dbgs() << "--- selectUserDefinedConv. Empty.\n");
+      return {};
+    }
+    if (FlaggedConversions.size() == 1) {
+      LLVM_DEBUG(llvm::dbgs() << "--- selectUserDefinedConv. Single.\n");
+      return FlaggedConversions.front();
+    }
+
+    Optional<PreparedConversion> BestConversion;
+    unsigned short HowManyGoodConversions = 0;
+    for (const auto &Prepared : FlaggedConversions) {
+      LLVM_DEBUG(llvm::dbgs() << "--- selectUserDefinedConv. Candidate flags: "
+                              << formatMixFlags(Prepared.Flags) << '\n');
+      if (!BestConversion) {
+        BestConversion = Prepared;
+        ++HowManyGoodConversions;
+        continue;
+      }
+
+      bool BestConversionHasImplicit =
+          hasFlag(BestConversion->Flags, MixFlags::ImplicitConversion);
+      bool ThisConversionHasImplicit =
+          hasFlag(Prepared.Flags, MixFlags::ImplicitConversion);
+      if (!BestConversionHasImplicit && ThisConversionHasImplicit)
+        // This is a worse conversion, because a better one was found earlier.
+        continue;
+
+      if (BestConversionHasImplicit && !ThisConversionHasImplicit) {
+        // If the so far best selected conversion needs a previous implicit
+        // conversion to match the user-defined converting function, but this
+        // conversion does not, this is a better conversion, and we can throw
+        // away the previously selected conversion(s).
+        BestConversion = Prepared;
+        HowManyGoodConversions = 1;
+        continue;
+      }
+
+      if (BestConversionHasImplicit == ThisConversionHasImplicit)
+        // The current conversion is the same in term of goodness than the
+        // already selected one.
+        ++HowManyGoodConversions;
+    }
+
+    if (HowManyGoodConversions == 1) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "--- selectUserDefinedConv. Unique result. Flags: "
+                 << formatMixFlags(BestConversion->Flags) << '\n');
+      return BestConversion;
+    }
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- selectUserDefinedConv. No, or ambiguous.\n");
+    return {};
+  }
+
+private:
+  llvm::SmallVector<PreparedConversion, 2> FlaggedConversions;
+  const TheCheck &Check;
+};
+
+} // namespace
+
+static Optional<ConversionSequence>
+tryConversionOperators(const TheCheck &Check, const CXXRecordDecl *RD,
+                       QualType ToType) {
+  if (!RD || !RD->isCompleteDefinition())
+    return {};
+  RD = RD->getDefinition();
+
+  LLVM_DEBUG(llvm::dbgs() << ">>> tryConversionOperators: " << RD->getName()
+                          << " to:\n";
+             ToType.dump(llvm::dbgs(), RD->getASTContext());
+             llvm::dbgs() << '\n';);
+
+  UserDefinedConversionSelector ConversionSet{Check};
+
+  for (const NamedDecl *Method : RD->getVisibleConversionFunctions()) {
+    const auto *Con = dyn_cast<CXXConversionDecl>(Method);
+    if (!Con || Con->isExplicit())
+      continue;
+    LLVM_DEBUG(llvm::dbgs() << "--- tryConversionOperators. Trying:\n";
+               Con->dump(llvm::dbgs()); llvm::dbgs() << '\n';);
+
+    // Try to go from the result of conversion operator to the expected type,
+    // without calculating another user-defined conversion.
+    ConversionSet.addConversion(Con, Con->getConversionType(), ToType);
+  }
+
+  if (Optional<UserDefinedConversionSelector::PreparedConversion>
+          SelectedConversion = ConversionSet()) {
+    QualType RecordType{RD->getTypeForDecl(), 0};
+
+    ConversionSequence Result{RecordType, ToType};
+    // The conversion from the operator call's return type to ToType was
+    // modelled as a "pre-conversion" in the operator call, but it is the
+    // "post-conversion" from the point of view of the original conversion
+    // we are modelling.
+    Result.AfterSecondStandard = SelectedConversion->Seq.AfterFirstStandard;
+
+    ConversionSequence::UserDefinedConversionOperator ConvOp;
+    ConvOp.Fun = cast<CXXConversionDecl>(SelectedConversion->ConversionFun);
+    ConvOp.UserDefinedType = RecordType;
+    ConvOp.ConversionOperatorResultType = ConvOp.Fun->getConversionType();
+    Result.setConversion(ConvOp);
+
+    LLVM_DEBUG(llvm::dbgs() << "<<< tryConversionOperators. Found result.\n");
+    return Result;
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "<<< tryConversionOperators. No conversion.\n");
+  return {};
+}
+
+static Optional<ConversionSequence>
+tryConvertingConstructors(const TheCheck &Check, QualType FromType,
+                          const CXXRecordDecl *RD) {
+  if (!RD || !RD->isCompleteDefinition())
+    return {};
+  RD = RD->getDefinition();
+
+  LLVM_DEBUG(llvm::dbgs() << ">>> tryConveringConstructors: " << RD->getName()
+                          << " from:\n";
+             FromType.dump(llvm::dbgs(), RD->getASTContext());
+             llvm::dbgs() << '\n';);
+
+  UserDefinedConversionSelector ConversionSet{Check};
+
+  for (const CXXConstructorDecl *Con : RD->ctors()) {
+    if (Con->isCopyOrMoveConstructor() ||
+        !Con->isConvertingConstructor(/* AllowExplicit =*/false))
+      continue;
+    LLVM_DEBUG(llvm::dbgs() << "--- tryConvertingConstructors. Trying:\n";
+               Con->dump(llvm::dbgs()); llvm::dbgs() << '\n';);
+
+    // Try to go from the original FromType to the converting constructor's
+    // parameter type without another user-defined conversion.
+    ConversionSet.addConversion(Con, FromType, Con->getParamDecl(0)->getType());
+  }
+
+  if (Optional<UserDefinedConversionSelector::PreparedConversion>
+          SelectedConversion = ConversionSet()) {
+    QualType RecordType{RD->getTypeForDecl(), 0};
+
+    ConversionSequence Result{FromType, RecordType};
+    Result.AfterFirstStandard = SelectedConversion->Seq.AfterFirstStandard;
+
+    ConversionSequence::UserDefinedConvertingConstructor Ctor;
+    Ctor.Fun = cast<CXXConstructorDecl>(SelectedConversion->ConversionFun);
+    Ctor.ConstructorParameterType = Ctor.Fun->getParamDecl(0)->getType();
+    Ctor.UserDefinedType = RecordType;
+    Result.setConversion(Ctor);
+
+    LLVM_DEBUG(llvm::dbgs()
+               << "<<< tryConvertingConstructors. Found result.\n");
+    return Result;
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "<<< tryConvertingConstructors. No conversion.\n");
+  return {};
+}
+
+/// Returns whether an expression of LType can be used in an RType context, as
+/// per the implicit conversion rules.
+///
+/// Note: the result of this operation, unlike that of calculateMixability, is
+/// **NOT** symmetric.
+static MixData
+approximateImplicitConversion(const TheCheck &Check, QualType LType,
+                              QualType RType, const ASTContext &Ctx,
+                              ImplicitConversionModellingMode ImplicitMode) {
+  LLVM_DEBUG(llvm::dbgs() << ">>> approximateImplicitConversion for LType:\n";
+             LType.dump(llvm::dbgs(), Ctx); llvm::dbgs() << "\nand RType:\n";
+             RType.dump(llvm::dbgs(), Ctx);
+             llvm::dbgs() << "\nimplicit mode: " << ImplicitMode << '\n';);
+  if (LType == RType)
+    return {MixFlags::Trivial, LType};
+
+  // An implicit conversion sequence consists of the following, in order:
+  //  * Maybe standard conversion sequence.
+  //  * Maybe user-defined conversion.
+  //  * Maybe standard conversion sequence.
+  ConversionSequence ImplicitSeq{LType, RType};
+  QualType WorkType = LType;
+
+  Optional<QualType> AfterFirstStdConv =
+      approximateStandardConversionSequence(Check, LType, RType, Ctx);
+  if (AfterFirstStdConv) {
+    LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Standard "
+                               "Pre-Conversion found!\n");
+    ImplicitSeq.AfterFirstStandard = AfterFirstStdConv.getValue();
+    WorkType = ImplicitSeq.AfterFirstStandard;
+  }
+
+  if (ImplicitMode == ICMM_OneWaySingleStandardOnly)
+    // If the caller only requested modelling of a standard conversion, bail.
+    return {ImplicitSeq.AfterFirstStandard.isNull()
+                ? MixFlags::None
+                : MixFlags::ImplicitConversion,
+            ImplicitSeq};
+
+  if (Ctx.getLangOpts().CPlusPlus) {
+    bool FoundConversionOperator = false, FoundConvertingCtor = false;
+
+    if (const auto *LRD = WorkType->getAsCXXRecordDecl()) {
+      Optional<ConversionSequence> ConversionOperatorResult =
+          tryConversionOperators(Check, LRD, RType);
+      if (ConversionOperatorResult) {
+        LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Found "
+                                   "conversion operator.\n");
+        ImplicitSeq.update(ConversionOperatorResult.getValue());
+        WorkType = ImplicitSeq.getTypeAfterUserDefinedConversion();
+        FoundConversionOperator = true;
+      }
+    }
+
+    if (const auto *RRD = RType->getAsCXXRecordDecl()) {
+      // Use the original "LType" here, and not WorkType, because the
+      // conversion to the converting constructors' parameters will be
+      // modelled in the recursive call.
+      Optional<ConversionSequence> ConvCtorResult =
+          tryConvertingConstructors(Check, LType, RRD);
+      if (ConvCtorResult) {
+        LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Found "
+                                   "converting constructor.\n");
+        ImplicitSeq.update(ConvCtorResult.getValue());
+        WorkType = ImplicitSeq.getTypeAfterUserDefinedConversion();
+        FoundConvertingCtor = true;
+      }
+    }
+
+    if (FoundConversionOperator && FoundConvertingCtor) {
+      // If both an operator and a ctor matches, the sequence is ambiguous.
+      LLVM_DEBUG(llvm::dbgs()
+                 << "<<< approximateImplicitConversion. Found both "
+                    "user-defined conversion kinds in the same sequence!\n");
+      return {MixFlags::None};
+    }
+  }
+
+  // After the potential user-defined conversion, another standard conversion
+  // sequence might exist.
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "--- approximateImplicitConversion. Try to find post-conversion.\n");
+  MixData SecondStdConv = approximateImplicitConversion(
+      Check, WorkType, RType, Ctx, ICMM_OneWaySingleStandardOnly);
+  if (SecondStdConv.indicatesMixability()) {
+    LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Standard "
+                               "Post-Conversion found!\n");
+
+    // The single-step modelling puts the modelled conversion into the "PreStd"
+    // variable in the recursive call, but from the PoV of this function, it is
+    // the post-conversion.
+    ImplicitSeq.AfterSecondStandard =
+        SecondStdConv.Conversion.AfterFirstStandard;
+    WorkType = ImplicitSeq.AfterSecondStandard;
+  }
+
+  if (ImplicitSeq) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "<<< approximateImplicitConversion. Found a conversion.\n");
+    return {MixFlags::ImplicitConversion, ImplicitSeq};
+  }
+
+  LLVM_DEBUG(
+      llvm::dbgs() << "<<< approximateImplicitConversion. No match found.\n");
+  return {MixFlags::None};
 }
 
 static MixableParameterRange modelMixingRange(const TheCheck &Check,
@@ -447,16 +1298,18 @@ static MixableParameterRange modelMixingRange(const TheCheck &Check,
                  << "Check mix of #" << J << " against #" << I << "...\n");
 
       Mix M{Jth, Ith,
-            calculateMixability(Check, Jth->getType(), Ith->getType(), Ctx)};
+            calculateMixability(Check, Jth->getType(), Ith->getType(), Ctx,
+                                Check.ModelImplicitConversions ? ICMM_All
+                                                               : ICMM_None)};
       LLVM_DEBUG(llvm::dbgs() << "Mix flags (raw)           : "
                               << formatMixFlags(M.flags()) << '\n');
       M.sanitize();
       LLVM_DEBUG(llvm::dbgs() << "Mix flags (after sanitize): "
                               << formatMixFlags(M.flags()) << '\n');
 
-      assert(M.flags() != MixFlags::Invalid && "All flags decayed!");
+      assert(M.flagsValid() && "All flags decayed!");
 
-      if (M.flags() != MixFlags::None)
+      if (M.mixable())
         MixesOfIth.emplace_back(std::move(M));
     }
 
@@ -595,7 +1448,79 @@ static inline bool needsToPrintTypeInDiagnostic(const model::Mix &M) {
       (MixFlags::TypeAlias | MixFlags::ReferenceBind | MixFlags::Qualifiers));
 }
 
+/// Returns whether a particular Mix between the two parameters should have
+/// implicit conversions elaborated.
+static inline bool needsToElaborateImplicitConversion(const model::Mix &M) {
+  return hasFlag(M.flags(), model::MixFlags::ImplicitConversion);
+}
+
 namespace {
+
+/// This class formats a conversion sequence into a "Ty1 -> Ty2 -> Ty3" line
+/// that can be used in diagnostics.
+struct FormattedConversionSequence {
+  std::string DiagnosticText;
+
+  /// The formatted sequence is trivial if it is "Ty1 -> Ty2", but Ty1 and
+  /// Ty2 are the types that are shown in the code. A trivial diagnostic
+  /// does not need to be printed.
+  bool Trivial;
+
+  FormattedConversionSequence(const PrintingPolicy &PP,
+                              StringRef StartTypeAsDiagnosed,
+                              const model::ConversionSequence &Conv,
+                              StringRef DestinationTypeAsDiagnosed) {
+    Trivial = true;
+    llvm::raw_string_ostream OS{DiagnosticText};
+
+    // Print the type name as it is printed in other places in the diagnostic.
+    OS << '\'' << StartTypeAsDiagnosed << '\'';
+    std::string LastAddedType = StartTypeAsDiagnosed.str();
+    std::size_t NumElementsAdded = 1;
+
+    // However, the parameter's defined type might not be what the implicit
+    // conversion started with, e.g. if a typedef is found to convert.
+    std::string SeqBeginTypeStr = Conv.Begin.getAsString(PP);
+    std::string SeqEndTypeStr = Conv.End.getAsString(PP);
+    if (StartTypeAsDiagnosed != SeqBeginTypeStr) {
+      OS << " (as '" << SeqBeginTypeStr << "')";
+      LastAddedType = SeqBeginTypeStr;
+      Trivial = false;
+    }
+
+    auto AddType = [&](StringRef ToAdd) {
+      if (LastAddedType != ToAdd && ToAdd != SeqEndTypeStr) {
+        OS << " -> '" << ToAdd << "'";
+        LastAddedType = ToAdd.str();
+        ++NumElementsAdded;
+      }
+    };
+    for (QualType InvolvedType : Conv.getInvolvedTypesInSequence())
+      // Print every type that's unique in the sequence into the diagnosis.
+      AddType(InvolvedType.getAsString(PP));
+
+    if (LastAddedType != DestinationTypeAsDiagnosed) {
+      OS << " -> '" << DestinationTypeAsDiagnosed << "'";
+      LastAddedType = DestinationTypeAsDiagnosed.str();
+      ++NumElementsAdded;
+    }
+
+    // Same reasoning as with the Begin, e.g. if the converted-to type is a
+    // typedef, it will not be the same inside the conversion sequence (where
+    // the model already tore off typedefs) as in the code.
+    if (DestinationTypeAsDiagnosed != SeqEndTypeStr) {
+      OS << " (as '" << SeqEndTypeStr << "')";
+      LastAddedType = SeqEndTypeStr;
+      Trivial = false;
+    }
+
+    if (Trivial && NumElementsAdded > 2)
+      // If the thing is still marked trivial but we have more than the
+      // from and to types added, it should not be trivial, and elaborated
+      // when printing the diagnostic.
+      Trivial = false;
+  }
+};
 
 /// Retains the elements called with and returns whether the call is done with
 /// a new element.
@@ -677,7 +1602,9 @@ EasilySwappableParametersCheck::EasilySwappableParametersCheck(
       IgnoredParameterTypeSuffixes(optutils::parseStringList(
           Options.get("IgnoredParameterTypeSuffixes",
                       DefaultIgnoredParameterTypeSuffixes))),
-      QualifiersMix(Options.get("QualifiersMix", DefaultQualifiersMix)) {}
+      QualifiersMix(Options.get("QualifiersMix", DefaultQualifiersMix)),
+      ModelImplicitConversions(Options.get("ModelImplicitConversions",
+                                           DefaultModelImplicitConversions)) {}
 
 void EasilySwappableParametersCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -687,6 +1614,7 @@ void EasilySwappableParametersCheck::storeOptions(
   Options.store(Opts, "IgnoredParameterTypeSuffixes",
                 optutils::serializeStringList(IgnoredParameterTypeSuffixes));
   Options.store(Opts, "QualifiersMix", QualifiersMix);
+  Options.store(Opts, "ModelImplicitConversions", ModelImplicitConversions);
 }
 
 void EasilySwappableParametersCheck::registerMatchers(MatchFinder *Finder) {
@@ -740,12 +1668,17 @@ void EasilySwappableParametersCheck::check(
     }
 
     bool NeedsAnyTypeNote = llvm::any_of(R.Mixes, needsToPrintTypeInDiagnostic);
+    bool HasAnyImplicits =
+        llvm::any_of(R.Mixes, needsToElaborateImplicitConversion);
     const ParmVarDecl *First = R.getFirstParam(), *Last = R.getLastParam();
     std::string FirstParamTypeAsWritten = First->getType().getAsString(PP);
     {
       StringRef DiagText;
 
-      if (NeedsAnyTypeNote)
+      if (HasAnyImplicits)
+        DiagText = "%0 adjacent parameters of %1 of convertible types are "
+                   "easily swapped by mistake";
+      else if (NeedsAnyTypeNote)
         DiagText = "%0 adjacent parameters of %1 of similar type are easily "
                    "swapped by mistake";
       else
@@ -780,55 +1713,94 @@ void EasilySwappableParametersCheck::check(
     // too verbose.
     UniqueTypeAliasDiagnosticHelper UniqueTypeAlias;
     InsertOnce<SwappedEqualQualTypePair, 8> UniqueBindPower;
+    InsertOnce<SwappedEqualQualTypePair, 8> UniqueImplicitConversion;
 
-    for (const Mix &M : R.Mixes) {
-      assert(M.flags() >= MixFlags::Trivial &&
-             "Sentinel or false mix in result.");
+    for (const model::Mix &M : R.Mixes) {
+      assert(M.mixable() && "Sentinel or false mix in result.");
+      if (!needsToPrintTypeInDiagnostic(M) &&
+          !needsToElaborateImplicitConversion(M))
+        continue;
 
-      if (needsToPrintTypeInDiagnostic(M)) {
-        // Typedefs might result in the type of the variable needing to be
-        // emitted to a note diagnostic, so prepare it.
-        const ParmVarDecl *LVar = M.First;
-        const ParmVarDecl *RVar = M.Second;
-        QualType LType = LVar->getType();
-        QualType RType = RVar->getType();
-        QualType CommonType = M.commonUnderlyingType();
-        std::string LTypeStr = LType.getAsString(PP);
-        std::string RTypeStr = RType.getAsString(PP);
-        std::string CommonTypeStr = CommonType.getAsString(PP);
+      // Typedefs might result in the type of the variable needing to be
+      // emitted to a note diagnostic, so prepare it.
+      const ParmVarDecl *LVar = M.First;
+      const ParmVarDecl *RVar = M.Second;
+      QualType LType = LVar->getType();
+      QualType RType = RVar->getType();
+      QualType CommonType = M.commonUnderlyingType();
+      std::string LTypeStr = LType.getAsString(PP);
+      std::string RTypeStr = RType.getAsString(PP);
+      std::string CommonTypeStr = CommonType.getAsString(PP);
 
-        if (hasFlag(M.flags(), MixFlags::TypeAlias) &&
-            UniqueTypeAlias(LType, RType, CommonType)) {
-          StringRef DiagText;
-          bool ExplicitlyPrintCommonType = false;
-          if (LTypeStr == CommonTypeStr || RTypeStr == CommonTypeStr)
-            if (hasFlag(M.flags(), MixFlags::Qualifiers))
-              DiagText = "after resolving type aliases, '%0' and '%1' share a "
-                         "common type";
-            else
-              DiagText =
-                  "after resolving type aliases, '%0' and '%1' are the same";
-          else {
-            DiagText = "after resolving type aliases, the common type of '%0' "
-                       "and '%1' is '%2'";
-            ExplicitlyPrintCommonType = true;
-          }
+      if (hasFlag(M.flags(), MixFlags::TypeAlias) &&
+          UniqueTypeAlias(LType, RType, CommonType)) {
+        StringRef DiagText;
+        bool ExplicitlyPrintCommonType = false;
+        if (LTypeStr == CommonTypeStr || RTypeStr == CommonTypeStr)
+          if (hasFlag(M.flags(), MixFlags::Qualifiers))
+            DiagText = "after resolving type aliases, '%0' and '%1' share a "
+                       "common type";
+          else
+            DiagText =
+                "after resolving type aliases, '%0' and '%1' are the same";
+        else if (!CommonType.isNull()) {
+          DiagText = "after resolving type aliases, the common type of '%0' "
+                     "and '%1' is '%2'";
+          ExplicitlyPrintCommonType = true;
+        }
 
+        auto Diag =
+            diag(LVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
+            << LTypeStr << RTypeStr;
+        if (ExplicitlyPrintCommonType)
+          Diag << CommonTypeStr;
+      }
+
+      if ((hasFlag(M.flags(), MixFlags::ReferenceBind) ||
+           hasFlag(M.flags(), MixFlags::Qualifiers)) &&
+          UniqueBindPower({LType, RType})) {
+        StringRef DiagText = "'%0' and '%1' parameters accept and bind the "
+                             "same kind of values";
+        diag(RVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
+            << LTypeStr << RTypeStr;
+      }
+
+      if (needsToElaborateImplicitConversion(M) &&
+          UniqueImplicitConversion({LType, RType})) {
+        const model::ConversionSequence &LTR =
+            M.leftToRightConversionSequence();
+        const model::ConversionSequence &RTL =
+            M.rightToLeftConversionSequence();
+        FormattedConversionSequence LTRFmt{PP, LTypeStr, LTR, RTypeStr};
+        FormattedConversionSequence RTLFmt{PP, RTypeStr, RTL, LTypeStr};
+
+        StringRef DiagText = "'%0' and '%1' may be implicitly converted";
+        if (!LTRFmt.Trivial || !RTLFmt.Trivial)
+          DiagText = "'%0' and '%1' may be implicitly converted: %2, %3";
+
+        {
           auto Diag =
-              diag(LVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
+              diag(RVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
               << LTypeStr << RTypeStr;
-          if (ExplicitlyPrintCommonType)
-            Diag << CommonTypeStr;
+
+          if (!LTRFmt.Trivial || !RTLFmt.Trivial)
+            Diag << LTRFmt.DiagnosticText << RTLFmt.DiagnosticText;
         }
 
-        if ((hasFlag(M.flags(), MixFlags::ReferenceBind) ||
-             hasFlag(M.flags(), MixFlags::Qualifiers)) &&
-            UniqueBindPower({LType, RType})) {
-          StringRef DiagText = "'%0' and '%1' parameters accept and bind the "
-                               "same kind of values";
-          diag(RVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
-              << LTypeStr << RTypeStr;
-        }
+        StringRef ConversionFunctionDiagText =
+            "the implicit conversion involves the "
+            "%select{|converting constructor|conversion operator}0 "
+            "declared here";
+        if (const FunctionDecl *LFD = LTR.getUserDefinedConversionFunction())
+          diag(LFD->getLocation(), ConversionFunctionDiagText,
+               DiagnosticIDs::Note)
+              << static_cast<unsigned>(LTR.UDConvKind)
+              << LTR.getUserDefinedConversionHighlight();
+        if (const FunctionDecl *RFD = RTL.getUserDefinedConversionFunction())
+          diag(RFD->getLocation(), ConversionFunctionDiagText,
+               DiagnosticIDs::Note)
+              << static_cast<unsigned>(RTL.UDConvKind)
+              << RTL.getUserDefinedConversionHighlight();
       }
     }
   }

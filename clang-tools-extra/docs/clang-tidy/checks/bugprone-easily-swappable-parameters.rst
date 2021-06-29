@@ -57,8 +57,40 @@ report longer mixable ranges.
 
     .. code-block:: c++
 
-        void *memcpy(const void *Destination, void *Source, std::size_t N) {}
+        void *memcpy(const void *Destination, void *Source, std::size_t N) { /* ... */ }
 
+.. option:: ModelImplicitConversions
+
+    Whether to consider parameters of type ``T`` and ``U`` mixable if there
+    exists an implicit conversion from ``T`` to ``U`` and ``U`` to ``T``.
+    If `false`, the check will not consider implicitly convertible types for
+    mixability.
+    `True` turns warnings for implicit conversions on.
+    Defaults to `true`.
+
+    The following examples produce a diagnostic only if
+    `ModelImplicitConversions` is enabled:
+
+    .. code-block:: c++
+
+        void fun(int Int, double Double) { /* ... */ }
+        void compare(const char *CharBuf, std::string String) { /* ... */ }
+
+    .. note::
+
+        Changing the qualifiers of an expression's type (e.g. from ``int`` to
+        ``const int``) is defined as an *implicit conversion* in the C++
+        Standard.
+        However, the check separates this decision-making on the mixability of
+        differently qualified types based on whether `QualifiersMix` was
+        enabled.
+
+        For example, the following code snippet will only produce a diagnostic
+        if **both** `QualifiersMix` and `ModelImplicitConversions` are enabled:
+
+        .. code-block:: c++
+
+            void fun2(int Int, const double Double) { /* ... */ }
 
 Filtering options
 ^^^^^^^^^^^^^^^^^
@@ -133,7 +165,7 @@ None of the following cases produce a diagnostic:
     template <typename T, typename U>
     int add(T X, U Y) { return X + Y };
 
-    void TheseAreNotWarnedAbout() {
+    void theseAreNotWarnedAbout() {
         printf("%d %d\n", 1, 2);   // Two ints passed, they could be swapped.
         someOldCFunction(1, 2, 3); // Similarly, multiple ints passed.
 
@@ -153,14 +185,43 @@ not diagnosed.
 
     // Diagnosed: Explicit instantiation was done by the user, we can prove it
     // is the same type.
-    void Explicit(int A, Vector<int>::element_type B) { /* ... */ }
+    void instantiated(int A, Vector<int>::element_type B) { /* ... */ }
 
     // Diagnosed: The two parameter types are exactly the same.
     template <typename T>
-    void Exact(typename Vector<T>::element_type A,
+    void exact(typename Vector<T>::element_type A,
                typename Vector<T>::element_type B) { /* ... */ }
 
     // Skipped: The two parameters are both 'T' but we can not prove this
     // without actually instantiating.
     template <typename T>
-    void FalseNegative(T A, typename Vector<T>::element_type B) { /* ... */ }
+    void falseNegative(T A, typename Vector<T>::element_type B) { /* ... */ }
+
+In the context of *implicit conversions* (when `ModelImplicitConversions` is
+enabled), the modelling performed by the check
+warns if the parameters are swappable and the swapped order matches implicit
+conversions.
+It does not model whether there exists an unrelated third type from which
+*both* parameters can be given in a function call.
+This means that in the following example, even while ``strs()`` clearly carries
+the possibility to be called with swapped arguments (as long as the arguments
+are string literals), will not be warned about.
+
+.. code-block:: c++
+
+    struct String {
+        String(const char *Buf);
+    };
+
+    struct StringView {
+        StringView(const char *Buf);
+        operator const char *() const;
+    };
+
+    // Skipped: Directly swapping expressions of the two type cannot mix.
+    // (Note: StringView -> const char * -> String would be **two**
+    // user-defined conversions, which is disallowed by the language.)
+    void strs(String Str, StringView SV) { /* ... */ }
+
+    // Diagnosed: StringView implicitly converts to and from a buffer.
+    void cStr(StringView SV, const char *Buf() { /* ... */ }
