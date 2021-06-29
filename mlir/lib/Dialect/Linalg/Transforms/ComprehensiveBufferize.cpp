@@ -1605,6 +1605,7 @@ bufferizableInPlaceAnalysis(OpOperand &operand, OpResult result,
   Operation *op = result.getDefiningOp();
   assert(result && !isa<ExtractSliceOp>(op) &&
          "expected OpResult not coming from a ExtractSliceOp");
+  (void)op;
 
   int64_t resultNumber = result.getResultNumber();
   (void)resultNumber;
