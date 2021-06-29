@@ -9,6 +9,7 @@
 #include "TraceIntelPT.h"
 
 #include "CommandObjectTraceStartIntelPT.h"
+#include "DecodedThread.h"
 #include "TraceIntelPTConstants.h"
 #include "TraceIntelPTSessionFileParser.h"
 #include "lldb/Core/PluginManager.h"
@@ -88,44 +89,23 @@ TraceIntelPT::TraceIntelPT(
         thread.get(), std::make_unique<PostMortemThreadDecoder>(thread, *this));
 }
 
-const DecodedThread *TraceIntelPT::Decode(Thread &thread) {
+DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
   RefreshLiveProcessState();
-  if (m_failed_live_threads_decoder.hasValue())
-    return &*m_failed_live_threads_decoder;
+  if (m_live_refresh_error.hasValue())
+    return std::make_shared<DecodedThread>(
+        thread.shared_from_this(),
+        createStringError(inconvertibleErrorCode(), *m_live_refresh_error));
 
   auto it = m_thread_decoders.find(&thread);
   if (it == m_thread_decoders.end())
-    return nullptr;
-  return &it->second->Decode();
+    return std::make_shared<DecodedThread>(
+        thread.shared_from_this(),
+        createStringError(inconvertibleErrorCode(), "thread not traced"));
+  return it->second->Decode();
 }
 
 lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
-  // TODO: to implement
-  return nullptr;
-}
-
-void TraceIntelPT::TraverseInstructions(
-    Thread &thread, size_t position, TraceDirection direction,
-    std::function<bool(size_t index, Expected<lldb::addr_t> load_addr)>
-        callback) {
-  const DecodedThread *decoded_thread = Decode(thread);
-  if (!decoded_thread)
-    return;
-
-  ArrayRef<IntelPTInstruction> instructions = decoded_thread->GetInstructions();
-
-  ssize_t delta = direction == TraceDirection::Forwards ? 1 : -1;
-  for (ssize_t i = position; i < (ssize_t)instructions.size() && i >= 0;
-       i += delta)
-    if (!callback(i, instructions[i].GetLoadAddress()))
-      break;
-}
-
-Optional<size_t> TraceIntelPT::GetInstructionCount(Thread &thread) {
-  if (const DecodedThread *decoded_thread = Decode(thread))
-    return decoded_thread->GetInstructions().size();
-  else
-    return None;
+  return Decode(thread)->GetCursor();
 }
 
 Expected<pt_cpu> TraceIntelPT::GetCPUInfoForLiveProcess() {
@@ -195,7 +175,7 @@ void TraceIntelPT::DoRefreshLiveProcessState(
   m_thread_decoders.clear();
 
   if (!state) {
-    m_failed_live_threads_decoder = DecodedThread(state.takeError());
+    m_live_refresh_error = toString(state.takeError());
     return;
   }
 
