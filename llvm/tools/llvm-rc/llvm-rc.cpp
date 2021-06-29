@@ -347,7 +347,7 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
 
   // The tool prints nothing when invoked with no command-line arguments.
   if (InputArgs.hasArg(WINDRES_help)) {
-    T.PrintHelp(outs(), "windres [options] file...",
+    T.printHelp(outs(), "windres [options] file...",
                 "LLVM windres (GNU windres compatible)", false, true);
     exit(0);
   }
@@ -494,7 +494,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
 
   // The tool prints nothing when invoked with no command-line arguments.
   if (InputArgs.hasArg(OPT_help)) {
-    T.PrintHelp(outs(), "rc [options] file...", "Resource Converter", false);
+    T.printHelp(outs(), "rc [options] file...", "Resource Converter", false);
     exit(0);
   }
 

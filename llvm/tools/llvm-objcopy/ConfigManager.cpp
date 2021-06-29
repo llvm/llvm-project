@@ -459,7 +459,7 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
     HelpText = " [options] input";
     break;
   }
-  OptTable.PrintHelp(OS, (ToolName + HelpText).str().c_str(),
+  OptTable.printHelp(OS, (ToolName + HelpText).str().c_str(),
                      (ToolName + " tool").str().c_str());
   // TODO: Replace this with libOption call once it adds extrahelp support.
   // The CommandLine library has a cl::extrahelp class to support this,
