@@ -242,10 +242,6 @@ enum NodeType : unsigned {
   SRHADD,
   URHADD,
 
-  // Absolute difference
-  UABD,
-  SABD,
-
   // Unsigned Add Long Pairwise
   UADDLP,
 

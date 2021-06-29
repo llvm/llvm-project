@@ -579,14 +579,11 @@ def AArch64urhadd   : SDNode<"AArch64ISD::URHADD", SDT_AArch64binvec>;
 def AArch64shadd   : SDNode<"AArch64ISD::SHADD", SDT_AArch64binvec>;
 def AArch64uhadd   : SDNode<"AArch64ISD::UHADD", SDT_AArch64binvec>;
 
-def AArch64uabd_n   : SDNode<"AArch64ISD::UABD", SDT_AArch64binvec>;
-def AArch64sabd_n   : SDNode<"AArch64ISD::SABD", SDT_AArch64binvec>;
-
 def AArch64uabd     : PatFrags<(ops node:$lhs, node:$rhs),
-                               [(AArch64uabd_n node:$lhs, node:$rhs),
+                               [(abdu node:$lhs, node:$rhs),
                                 (int_aarch64_neon_uabd node:$lhs, node:$rhs)]>;
 def AArch64sabd     : PatFrags<(ops node:$lhs, node:$rhs),
-                               [(AArch64sabd_n node:$lhs, node:$rhs),
+                               [(abds node:$lhs, node:$rhs),
                                 (int_aarch64_neon_sabd node:$lhs, node:$rhs)]>;
 
 def AArch64uaddlp_n : SDNode<"AArch64ISD::UADDLP", SDT_AArch64uaddlp>;
