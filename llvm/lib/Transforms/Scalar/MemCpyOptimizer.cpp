@@ -1215,8 +1215,7 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *MemsetLen = Builder.CreateSelect(
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
   Instruction *NewMemSet = Builder.CreateMemSet(
-      Builder.CreateGEP(Dest->getType()->getPointerElementType(), Dest,
-                        SrcSize),
+      Builder.CreateGEP(Builder.getInt8Ty(), Dest, SrcSize),
       MemSet->getOperand(1), MemsetLen, MaybeAlign(Align));
 
   if (MSSAU) {
