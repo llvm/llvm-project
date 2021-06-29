@@ -188,18 +188,33 @@ define void @test_umed3_i32(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) {
   ret void
 }
 
-define amdgpu_ps float @test_minmax_f32(float %a, float %b, float %c) {
-; GFX11-LABEL: test_minmax_f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_maxmin_f32 v0, v0, v1, v2
-; GFX11-NEXT:    ; return to shader part epilog
+define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
+; SDAG-LABEL: test_minmax_f32_ieee_true:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+; SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; SDAG-NEXT:    v_maxmin_f32 v0, v0, v1, v2
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: test_minmax_f32_ieee_true:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; GISEL-NEXT:    v_maxmin_f32 v0, v0, v1, v2
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %max = call float @llvm.maxnum.f32(float %a, float %b)
   %minmax = call float @llvm.minnum.f32(float %max, float %c)
   ret float %minmax
 }
 
-define amdgpu_ps void @s_test_minmax_f32(float inreg %a, float inreg %b, float inreg %c, float addrspace(1)* inreg %out) {
-; SDAG-LABEL: s_test_minmax_f32:
+define amdgpu_ps void @s_test_minmax_f32_ieee_false(float inreg %a, float inreg %b, float inreg %c, float addrspace(1)* inreg %out) {
+; SDAG-LABEL: s_test_minmax_f32_ieee_false:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
@@ -209,7 +224,7 @@ define amdgpu_ps void @s_test_minmax_f32(float inreg %a, float inreg %b, float i
 ; SDAG-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; SDAG-NEXT:    s_endpgm
 ;
-; GISEL-LABEL: s_test_minmax_f32:
+; GISEL-LABEL: s_test_minmax_f32_ieee_false:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
@@ -224,8 +239,8 @@ define amdgpu_ps void @s_test_minmax_f32(float inreg %a, float inreg %b, float i
   ret void
 }
 
-define amdgpu_ps float @test_minmax_commuted_f32(float %a, float %b, float %c) {
-; GFX11-LABEL: test_minmax_commuted_f32:
+define amdgpu_ps float @test_minmax_commuted_f32_ieee_false(float %a, float %b, float %c) {
+; GFX11-LABEL: test_minmax_commuted_f32_ieee_false:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_maxmin_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -234,18 +249,33 @@ define amdgpu_ps float @test_minmax_commuted_f32(float %a, float %b, float %c) {
   ret float %minmax
 }
 
-define amdgpu_ps float @test_maxmin_f32(float %a, float %b, float %c) {
-; GFX11-LABEL: test_maxmin_f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_minmax_f32 v0, v0, v1, v2
-; GFX11-NEXT:    ; return to shader part epilog
+define float @test_maxmin_f32_ieee_true(float %a, float %b, float %c) {
+; SDAG-LABEL: test_maxmin_f32_ieee_true:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+; SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; SDAG-NEXT:    v_max_f32_e32 v2, v2, v2
+; SDAG-NEXT:    v_minmax_f32 v0, v0, v1, v2
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: test_maxmin_f32_ieee_true:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GISEL-NEXT:    v_max_f32_e32 v2, v2, v2
+; GISEL-NEXT:    v_minmax_f32 v0, v0, v1, v2
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minnum.f32(float %a, float %b)
   %maxmin = call float @llvm.maxnum.f32(float %min, float %c)
   ret float %maxmin
 }
 
-define amdgpu_ps float @test_maxmin_commuted_f32(float %a, float %b, float %c) {
-; GFX11-LABEL: test_maxmin_commuted_f32:
+define amdgpu_ps float @test_maxmin_commuted_f32_ieee_false(float %a, float %b, float %c) {
+; GFX11-LABEL: test_maxmin_commuted_f32_ieee_false:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_minmax_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -271,8 +301,8 @@ define void @test_med3_f32(float addrspace(1)* %arg, float %x, float %y, float %
   ret void
 }
 
-define amdgpu_ps half @test_minmax_f16(half %a, half %b, half %c) {
-; GFX11-LABEL: test_minmax_f16:
+define amdgpu_ps half @test_minmax_f16_ieee_false(half %a, half %b, half %c) {
+; GFX11-LABEL: test_minmax_f16_ieee_false:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_maxmin_f16 v0, v0, v1, v2
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -281,8 +311,8 @@ define amdgpu_ps half @test_minmax_f16(half %a, half %b, half %c) {
   ret half %minmax
 }
 
-define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inreg %c, half addrspace(1)* inreg %out) {
-; SDAG-LABEL: s_test_minmax_f16:
+define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b, half inreg %c, half addrspace(1)* inreg %out) {
+; SDAG-LABEL: s_test_minmax_f16_ieee_false:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
@@ -292,7 +322,7 @@ define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inre
 ; SDAG-NEXT:    global_store_b16 v1, v0, s[4:5]
 ; SDAG-NEXT:    s_endpgm
 ;
-; GISEL-LABEL: s_test_minmax_f16:
+; GISEL-LABEL: s_test_minmax_f16_ieee_false:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
@@ -307,18 +337,33 @@ define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inre
   ret void
 }
 
-define amdgpu_ps half @test_minmax_commuted_f16(half %a, half %b, half %c) {
-; GFX11-LABEL: test_minmax_commuted_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_maxmin_f16 v0, v0, v1, v2
-; GFX11-NEXT:    ; return to shader part epilog
+define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
+; SDAG-LABEL: test_minmax_commuted_f16_ieee_true:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+; SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
+; SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; SDAG-NEXT:    v_max_f16_e32 v2, v2, v2
+; SDAG-NEXT:    v_maxmin_f16 v0, v0, v1, v2
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: test_minmax_commuted_f16_ieee_true:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; GISEL-NEXT:    v_max_f16_e32 v1, v1, v1
+; GISEL-NEXT:    v_max_f16_e32 v2, v2, v2
+; GISEL-NEXT:    v_maxmin_f16 v0, v0, v1, v2
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %max = call half @llvm.maxnum.f16(half %a, half %b)
   %minmax = call half @llvm.minnum.f16(half %c, half %max)
   ret half %minmax
 }
 
-define amdgpu_ps half @test_maxmin_f16(half %a, half %b, half %c) {
-; GFX11-LABEL: test_maxmin_f16:
+define amdgpu_ps half @test_maxmin_f16_ieee_false(half %a, half %b, half %c) {
+; GFX11-LABEL: test_maxmin_f16_ieee_false:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_minmax_f16 v0, v0, v1, v2
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -327,11 +372,26 @@ define amdgpu_ps half @test_maxmin_f16(half %a, half %b, half %c) {
   ret half %maxmin
 }
 
-define amdgpu_ps half @test_maxmin_commuted_f16(half %a, half %b, half %c) {
-; GFX11-LABEL: test_maxmin_commuted_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_minmax_f16 v0, v0, v1, v2
-; GFX11-NEXT:    ; return to shader part epilog
+define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
+; SDAG-LABEL: test_maxmin_commuted_f16_ieee_true:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+; SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
+; SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; SDAG-NEXT:    v_max_f16_e32 v2, v2, v2
+; SDAG-NEXT:    v_minmax_f16 v0, v0, v1, v2
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: test_maxmin_commuted_f16_ieee_true:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; GISEL-NEXT:    v_max_f16_e32 v1, v1, v1
+; GISEL-NEXT:    v_max_f16_e32 v2, v2, v2
+; GISEL-NEXT:    v_minmax_f16 v0, v0, v1, v2
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half %a, half %b)
   %maxmin = call half @llvm.maxnum.f16(half %c, half %min)
   ret half %maxmin
