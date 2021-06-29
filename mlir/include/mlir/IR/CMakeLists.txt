@@ -9,6 +9,7 @@ add_public_tablegen_target(MLIRBuiltinAttributesIncGen)
 
 set(LLVM_TARGET_DEFINITIONS BuiltinDialect.td)
 mlir_tablegen(BuiltinDialect.h.inc -gen-dialect-decls)
+mlir_tablegen(BuiltinDialect.cpp.inc -gen-dialect-defs)
 add_public_tablegen_target(MLIRBuiltinDialectIncGen)
 
 set(LLVM_TARGET_DEFINITIONS BuiltinLocationAttributes.td)

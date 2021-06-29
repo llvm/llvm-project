@@ -16,6 +16,8 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // TensorDialect Attribute Methods.
 //===----------------------------------------------------------------------===//

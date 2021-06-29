@@ -36,6 +36,8 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
+#include "mlir/Dialect/Linalg/IR/LinalgOpsDialect.cpp.inc"
+
 /// Forward declarations.
 
 /// Generic entry point to create the block for the region of a LinalgOp.
