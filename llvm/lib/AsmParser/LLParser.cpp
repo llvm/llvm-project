@@ -2575,7 +2575,7 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   }
   }
 
-  if (Result->isPointerTy() && cast<PointerType>(Result)->isOpaque()) {
+  if (Result->isOpaquePointerTy()) {
     unsigned AddrSpace;
     if (parseOptionalAddrSpace(AddrSpace))
       return true;
