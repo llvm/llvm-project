@@ -865,7 +865,7 @@ public:
   handleRemovalFromIntersection(const FactSet &FSet, FactManager &FactMan,
                                 SourceLocation JoinLoc, LockErrorKind LEK,
                                 ThreadSafetyHandler &Handler) const override {
-    if (!managed() && !asserted() && !negative() && !isUniversal()) {
+    if (!asserted() && !negative() && !isUniversal()) {
       Handler.handleMutexHeldEndOfScope("mutex", toString(), loc(), JoinLoc,
                                         LEK);
     }
@@ -2239,7 +2239,7 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &FSet1,
     if (Iter1 != FSet1.end()) {
       if (join(FactMan[*Iter1], LDat2) && LEK1 == LEK_LockedSomePredecessors)
         *Iter1 = Fact;
-    } else {
+    } else if (!LDat2.managed()) {
       LDat2.handleRemovalFromIntersection(FSet2, FactMan, JoinLoc, LEK1,
                                           Handler);
     }
@@ -2251,8 +2251,9 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &FSet1,
     const FactEntry *LDat2 = FSet2.findLock(FactMan, *LDat1);
 
     if (!LDat2) {
-      LDat1->handleRemovalFromIntersection(FSet1Orig, FactMan, JoinLoc, LEK2,
-                                           Handler);
+      if (!LDat1->managed() || LEK2 == LEK_LockedSomeLoopIterations)
+        LDat1->handleRemovalFromIntersection(FSet1Orig, FactMan, JoinLoc, LEK2,
+                                             Handler);
       if (LEK2 == LEK_LockedSomePredecessors)
         FSet1.removeLock(FactMan, *LDat1);
     }
@@ -2528,7 +2529,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       CFGBlock *FirstLoopBlock = *SI;
       CFGBlockInfo *PreLoop = &BlockInfo[FirstLoopBlock->getBlockID()];
       CFGBlockInfo *LoopEnd = &BlockInfo[CurrBlockID];
-      intersectAndWarn(LoopEnd->ExitSet, PreLoop->EntrySet, PreLoop->EntryLoc,
+      intersectAndWarn(PreLoop->EntrySet, LoopEnd->ExitSet, PreLoop->EntryLoc,
                        LEK_LockedSomeLoopIterations);
     }
   }
