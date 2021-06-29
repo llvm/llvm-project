@@ -18,7 +18,7 @@ class MemoryTagTestCase(TestBase):
 
     def test_memory_tag_read_unsupported(self):
         """Test that "memory tag read" errors on unsupported platforms"""
-        if self.isAArch64MTE():
+        if not self.isAArch64MTE():
             self.skipTest("Requires a target without AArch64 MTE.")
 
         self.build()
