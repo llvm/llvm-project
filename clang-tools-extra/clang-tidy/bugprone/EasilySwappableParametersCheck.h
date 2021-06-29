@@ -38,6 +38,9 @@ public:
   /// The parameter typename suffixes (as written in the source code) to be
   /// ignored.
   const std::vector<std::string> IgnoredParameterTypeSuffixes;
+
+  /// Whether to consider an unqualified and a qualified type mixable.
+  const bool QualifiersMix;
 };
 
 } // namespace bugprone
