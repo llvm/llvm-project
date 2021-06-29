@@ -32,7 +32,7 @@ void FlushOutputOnCrash(const Terminator &terminator) {
   if (defaultOutput) {
     IoErrorHandler handler{terminator};
     handler.HasIoStat(); // prevent nested crash if flush has error
-    defaultOutput->Flush(handler);
+    defaultOutput->FlushOutput(handler);
   }
 }
 
@@ -118,7 +118,7 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
     }
     // Otherwise, OPEN on open unit with new FILE= implies CLOSE
     DoImpliedEndfile(handler);
-    Flush(handler);
+    FlushOutput(handler);
     Close(CloseStatus::Keep, handler);
   }
   set_path(std::move(newPath), newPathLength);
@@ -168,7 +168,7 @@ void ExternalFileUnit::OpenAnonymousUnit(std::optional<OpenStatus> status,
 
 void ExternalFileUnit::CloseUnit(CloseStatus status, IoErrorHandler &handler) {
   DoImpliedEndfile(handler);
-  Flush(handler);
+  FlushOutput(handler);
   Close(status, handler);
 }
 
@@ -462,12 +462,9 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         ok = ok && Emit("\n", 1, 1, handler); // TODO: Windows CR+LF
       }
     }
-    frameOffsetInFile_ +=
-        recordOffsetInFrame_ + recordLength.value_or(furthestPositionInRecord);
-    recordOffsetInFrame_ = 0;
+    CommitWrites();
     impliedEndfile_ = true;
     ++currentRecordNumber;
-    BeginRecord();
     return ok;
   }
 }
@@ -499,9 +496,24 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
   }
 }
 
+void ExternalFileUnit::FlushOutput(IoErrorHandler &handler) {
+  if (!mayPosition()) {
+    auto frameAt{FrameAt()};
+    if (frameOffsetInFile_ >= frameAt &&
+        frameOffsetInFile_ <
+            static_cast<std::int64_t>(frameAt + FrameLength())) {
+      // A Flush() that's about to happen to a non-positionable file
+      // needs to advance frameOffsetInFile_ to prevent attempts at
+      // impossible seeks
+      CommitWrites();
+    }
+  }
+  Flush(handler);
+}
+
 void ExternalFileUnit::FlushIfTerminal(IoErrorHandler &handler) {
   if (isTerminal()) {
-    Flush(handler);
+    FlushOutput(handler);
   }
 }
 
@@ -533,8 +545,6 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
 }
 
 void ExternalFileUnit::EndIoStatement() {
-  frameOffsetInFile_ += recordOffsetInFrame_;
-  recordOffsetInFrame_ = 0;
   io_.reset();
   u_.emplace<std::monostate>();
   lock_.Drop();
@@ -585,7 +595,7 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
 void ExternalFileUnit::BeginSequentialVariableFormattedInputRecord(
     IoErrorHandler &handler) {
   if (this == defaultInput && defaultOutput) {
-    defaultOutput->Flush(handler);
+    defaultOutput->FlushOutput(handler);
   }
   std::size_t length{0};
   do {
@@ -699,6 +709,13 @@ void ExternalFileUnit::DoEndfile(IoErrorHandler &handler) {
   Truncate(frameOffsetInFile_ + recordOffsetInFrame_, handler);
   BeginRecord();
   impliedEndfile_ = false;
+}
+
+void ExternalFileUnit::CommitWrites() {
+  frameOffsetInFile_ +=
+      recordOffsetInFrame_ + recordLength.value_or(furthestPositionInRecord);
+  recordOffsetInFrame_ = 0;
+  BeginRecord();
 }
 
 ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {

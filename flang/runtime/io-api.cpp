@@ -437,12 +437,13 @@ static bool YesOrNo(const char *keyword, std::size_t length, const char *what,
 bool IONAME(SetAdvance)(
     Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
-  connection.nonAdvancing =
-      !YesOrNo(keyword, length, "ADVANCE", io.GetIoErrorHandler());
-  if (connection.nonAdvancing && connection.access == Access::Direct) {
+  bool nonAdvancing{
+      !YesOrNo(keyword, length, "ADVANCE", io.GetIoErrorHandler())};
+  if (nonAdvancing && io.GetConnectionState().access == Access::Direct) {
     io.GetIoErrorHandler().SignalError(
         "Non-advancing I/O attempted on direct access file");
+  } else {
+    io.mutableModes().nonAdvancing = nonAdvancing;
   }
   return true;
 }

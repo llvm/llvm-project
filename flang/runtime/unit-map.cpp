@@ -67,7 +67,7 @@ void UnitMap::FlushAll(IoErrorHandler &handler) {
   CriticalSection critical{lock_};
   for (int j{0}; j < buckets_; ++j) {
     for (Chain *p{bucket_[j].get()}; p; p = p->next.get()) {
-      p->unit.Flush(handler);
+      p->unit.FlushOutput(handler);
     }
   }
 }

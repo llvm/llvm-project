@@ -35,6 +35,7 @@ struct MutableModes {
   char delim{'\0'}; // DELIM=
   short scale{0}; // kP
   bool inNamelist{false}; // skip ! comments
+  bool nonAdvancing{false}; // ADVANCE='NO', or $ or \ in FORMAT
 };
 
 // A single edit descriptor extracted from a FORMAT

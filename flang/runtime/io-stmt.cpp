@@ -203,9 +203,8 @@ MutableModes &ExternalIoStatementBase::mutableModes() { return unit_.modes; }
 ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 
 int ExternalIoStatementBase::EndIoStatement() {
-  if (unit_.nonAdvancing) {
+  if (mutableModes().nonAdvancing) {
     unit_.leftTabLimit = unit_.furthestPositionInRecord;
-    unit_.nonAdvancing = false;
   } else {
     unit_.leftTabLimit.reset();
   }
@@ -260,14 +259,20 @@ int NoUnitIoStatementState::EndIoStatement() {
   return result;
 }
 
+template <Direction DIR>
+ExternalIoStatementState<DIR>::ExternalIoStatementState(
+    ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
+    : ExternalIoStatementBase{unit, sourceFile, sourceLine}, mutableModes_{
+                                                                 unit.modes} {}
+
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
     BeginReadingRecord(); // in case there were no I/O items
-    if (!unit().nonAdvancing) {
+    if (!mutableModes().nonAdvancing) {
       FinishReadingRecord();
     }
   } else {
-    if (!unit().nonAdvancing) {
+    if (!mutableModes().nonAdvancing) {
       unit().AdvanceRecord(*this);
     }
     unit().FlushIfTerminal(*this);
@@ -375,7 +380,7 @@ ExternalFormattedIoStatementState<DIR, CHAR>::ExternalFormattedIoStatementState(
     ExternalFileUnit &unit, const CHAR *format, std::size_t formatLength,
     const char *sourceFile, int sourceLine)
     : ExternalIoStatementState<DIR>{unit, sourceFile, sourceLine},
-      mutableModes_{unit.modes}, format_{*this, format, formatLength} {}
+      format_{*this, format, formatLength} {}
 
 template <Direction DIR, typename CHAR>
 int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
@@ -558,7 +563,7 @@ std::optional<char32_t> IoStatementState::NextInField(
         return std::optional<char32_t>{' '};
       }
       IoErrorHandler &handler{GetIoErrorHandler()};
-      if (connection.nonAdvancing) {
+      if (mutableModes().nonAdvancing) {
         handler.SignalEor();
       } else {
         handler.SignalError(IostatRecordReadOverrun);
@@ -867,7 +872,7 @@ int ExternalMiscIoStatementState::EndIoStatement() {
   ExternalFileUnit &ext{unit()};
   switch (which_) {
   case Flush:
-    ext.Flush(*this);
+    ext.FlushOutput(*this);
     std::fflush(nullptr); // flushes C stdio output streams (12.9(2))
     break;
   case Backspace:

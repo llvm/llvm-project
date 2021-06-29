@@ -82,6 +82,7 @@ public:
   void FinishReadingRecord(IoErrorHandler &);
   bool AdvanceRecord(IoErrorHandler &);
   void BackspaceRecord(IoErrorHandler &);
+  void FlushOutput(IoErrorHandler &);
   void FlushIfTerminal(IoErrorHandler &);
   void Endfile(IoErrorHandler &);
   void Rewind(IoErrorHandler &);
@@ -107,6 +108,7 @@ private:
   bool SetSequentialVariableFormattedRecordLength();
   void DoImpliedEndfile(IoErrorHandler &);
   void DoEndfile(IoErrorHandler &);
+  void CommitWrites();
 
   int unitNumber_{-1};
   Direction direction_{Direction::Output};
