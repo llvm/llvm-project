@@ -199,13 +199,21 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       Type *IdxTy = IC.getDataLayout().getIntPtrType(AI.getType());
       Value *NullIdx = Constant::getNullValue(IdxTy);
       Value *Idx[2] = {NullIdx, NullIdx};
-      Instruction *GEP = GetElementPtrInst::CreateInBounds(
+      Instruction *NewI = GetElementPtrInst::CreateInBounds(
           NewTy, New, Idx, New->getName() + ".sub");
-      IC.InsertNewInstBefore(GEP, *It);
+      IC.InsertNewInstBefore(NewI, *It);
+
+      // Gracefully handle allocas in other address spaces.
+      if (AI.getType()->getPointerAddressSpace() !=
+          NewI->getType()->getPointerAddressSpace()) {
+        NewI =
+            CastInst::CreatePointerBitCastOrAddrSpaceCast(NewI, AI.getType());
+        IC.InsertNewInstBefore(NewI, *It);
+      }
 
       // Now make everything use the getelementptr instead of the original
       // allocation.
-      return IC.replaceInstUsesWith(AI, GEP);
+      return IC.replaceInstUsesWith(AI, NewI);
     }
   }
 
