@@ -1,7 +1,7 @@
 """
 Test the session save feature
 """
-
+import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -67,6 +67,23 @@ class SessionSaveTestCase(TestBase):
         raw += self.raw_transcript_builder(cmd, res)
 
         with open(output_file, "r") as file:
+          content = file.read()
+          # Exclude last line, since session won't record it's own output
+          lines = raw.splitlines()[:-1]
+          for line in lines:
+            self.assertIn(line, content)
+
+        td = tempfile.TemporaryDirectory()
+        res = lldb.SBCommandReturnObject()
+        interpreter.HandleCommand('settings set interpreter.save-session-directory ' + td.name, res)
+        self.assertTrue(res.Succeeded())
+
+        res = lldb.SBCommandReturnObject()
+        interpreter.HandleCommand('session save', res)
+        self.assertTrue(res.Succeeded())
+        raw += self.raw_transcript_builder(cmd, res)
+
+        with open(os.path.join(td.name, os.listdir(td.name)[0]), "r") as file:
           content = file.read()
           # Exclude last line, since session won't record it's own output
           lines = raw.splitlines()[:-1]
