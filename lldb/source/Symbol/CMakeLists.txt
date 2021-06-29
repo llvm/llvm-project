@@ -63,7 +63,6 @@ add_lldb_library(lldbSymbol
     lldbHost
     lldbTarget
     lldbUtility
-    lldbPluginObjCLanguage
     lldbPluginPlatformMacOSX
     ${SWIFT_LIBS}
 
