@@ -7,7 +7,7 @@ declare noalias i8* @malloc(i64) #1
 
 define i8* @realloc_null_ptr() #0 {
 ; CHECK-LABEL: @realloc_null_ptr(
-; CHECK-NEXT:    [[MALLOC:%.*]] = call dereferenceable_or_null(100) i8* @malloc(i64 100)
+; CHECK-NEXT:    [[MALLOC:%.*]] = call noalias noundef dereferenceable_or_null(100) i8* @malloc(i64 noundef 100) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret i8* [[MALLOC]]
 ;
   %call = call i8* @realloc(i8* null, i64 100) #2

@@ -20,7 +20,7 @@ define dso_local zeroext i1 @pr41917(%class.a* byval(%class.a) nocapture readonl
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[CLASS_A]], %class.a* [[P2:%.*]], i32 0, i32 1
 ; CHECK-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
 ; CHECK-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i32 8)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture [[CSTR]], i8* nocapture [[CSTR1]], i32 8) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[LAND_END6:%.*]]
 ; CHECK:       land.end6:
