@@ -261,7 +261,7 @@ void MachOWriter::writeSections() {
              Sec->Content.size());
       for (size_t Index = 0; Index < Sec->Relocations.size(); ++Index) {
         RelocationInfo RelocInfo = Sec->Relocations[Index];
-        if (!RelocInfo.Scattered) {
+        if (!RelocInfo.Scattered && !RelocInfo.IsAddend) {
           const uint32_t SymbolNum = RelocInfo.Extern
                                          ? (*RelocInfo.Symbol)->Index
                                          : (*RelocInfo.Sec)->Index;
