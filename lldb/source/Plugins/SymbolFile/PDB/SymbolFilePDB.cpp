@@ -84,8 +84,10 @@ bool ShouldAddLine(uint32_t requested_line, uint32_t actual_line,
 static bool ShouldUseNativeReader() {
 #if defined(_WIN32)
   llvm::StringRef use_native = ::getenv("LLDB_USE_NATIVE_PDB_READER");
-  return use_native.equals_lower("on") || use_native.equals_lower("yes") ||
-         use_native.equals_lower("1") || use_native.equals_lower("true");
+  return use_native.equals_insensitive("on") ||
+         use_native.equals_insensitive("yes") ||
+         use_native.equals_insensitive("1") ||
+         use_native.equals_insensitive("true");
 #else
   return true;
 #endif

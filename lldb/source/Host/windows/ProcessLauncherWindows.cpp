@@ -86,7 +86,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   const char *hide_console_var =
       getenv("LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE");
   if (hide_console_var &&
-      llvm::StringRef(hide_console_var).equals_lower("true")) {
+      llvm::StringRef(hide_console_var).equals_insensitive("true")) {
     startupinfo.dwFlags |= STARTF_USESHOWWINDOW;
     startupinfo.wShowWindow = SW_HIDE;
   }
