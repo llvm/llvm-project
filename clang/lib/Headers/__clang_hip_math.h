@@ -1341,10 +1341,7 @@ double __fma_rn(double __x, double __y, double __z) {
 #endif // !defined(__cplusplus) && __STDC_VERSION__ >= 201112L
 
 #if defined(__cplusplus)
-#ifdef __OPENMP_AMDGCN__
-using std::max;
-using std::min;
-#else
+#ifndef __OPENMP_AMDGCN__
 template <class T> __DEVICE__ T min(T __arg1, T __arg2) {
   return (__arg1 < __arg2) ? __arg1 : __arg2;
 }

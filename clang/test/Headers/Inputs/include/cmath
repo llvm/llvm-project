@@ -49,12 +49,16 @@ double fma(double, double, double);
 float fma(float, float, float);
 double fmax(double, double);
 float fmax(float, float);
+#ifndef __OPENMP_AMDGCN__
 float max(float, float);
 double max(double, double);
+#endif
 double fmin(double, double);
 float fmin(float, float);
+#ifndef __OPENMP_AMDGCN__
 float min(float, float);
 double min(double, double);
+#endif
 double fmod(double, double);
 float fmod(float, float);
 int fpclassify(double);
@@ -116,8 +120,10 @@ long lround(float);
 long long llround(float); // No llround(double).
 double modf(double, double *);
 float modf(float, float *);
+#ifndef __OPENMP_AMDGCN__
 double nan(const char *);
 float nanf(const char *);
+#endif
 double nearbyint(double);
 float nearbyint(float);
 double nextafter(double, double);

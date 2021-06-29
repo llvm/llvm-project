@@ -1,4 +1,3 @@
-// XFAIL: *
 // RUN: %clang_cc1 -x c++ -internal-isystem %S/Inputs/include -fopenmp -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -x c++ -internal-isystem %S/Inputs/include -fopenmp -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -x c++ -include __clang_openmp_device_functions.h -internal-isystem %S/../../lib/Headers/openmp_wrappers -internal-isystem %S/Inputs/include -fopenmp -triple nvptx64-nvidia-cuda -aux-triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=BOOL_RETURN
@@ -22,14 +21,14 @@
 double math(float f, double d) {
   double r = 0;
   // INT_RETURN: call i32 @__nv_isnanf(float
-  // AMD_INT_RETURN: call i32 @_{{.*}}isnanf(float
+  // AMD_INT_RETURN: call i32 @__ocml_isnan_f32(float
   // BOOL_RETURN: call i32 @__nv_isnanf(float
-  // AMD_BOOL_RETURN: call zeroext i1 @_{{.*}}isnanf(float
+  // AMD_BOOL_RETURN: call i32 @__ocml_isnan_f32(float
   r += std::isnan(f);
   // INT_RETURN: call i32 @__nv_isnand(double
-  // AMD_INT_RETURN: call i32 @_{{.*}}isnand(double
+  // AMD_INT_RETURN: call i32 @__ocml_isnan_f64(double
   // BOOL_RETURN: call i32 @__nv_isnand(double
-  // AMD_BOOL_RETURN: call zeroext i1 @_{{.*}}isnand(double
+  // AMD_BOOL_RETURN: call i32 @__ocml_isnan_f64(double
   r += std::isnan(d);
   return r;
 }
