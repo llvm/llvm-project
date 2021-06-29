@@ -2131,36 +2131,31 @@ class MVE_VABD_int<string suffix, bit U, bits<2> size,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VABD_m<MVEVectorVTInfo VTI,
-                      Intrinsic unpred_int, Intrinsic pred_int> {
+multiclass MVE_VABD_m<MVEVectorVTInfo VTI, SDNode Op,
+                      Intrinsic unpred_int, Intrinsic PredInt> {
   def "" : MVE_VABD_int<VTI.Suffix, VTI.Unsigned, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
 
   let Predicates = [HasMVEInt] in {
+    defm : MVE_TwoOpPattern<VTI, Op, PredInt, (? (i32 VTI.Unsigned)),
+                            !cast<Instruction>(NAME)>;
+
     // Unpredicated absolute difference
     def : Pat<(VTI.Vec (unpred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
                             (i32 VTI.Unsigned))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn)))>;
-
-    // Predicated absolute difference
-    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                            (i32 VTI.Unsigned), (VTI.Pred VCCR:$mask),
-                            (VTI.Vec MQPR:$inactive))),
-              (VTI.Vec (Inst (VTI.Vec MQPR:$Qm), (VTI.Vec MQPR:$Qn),
-                             ARMVCCThen, (VTI.Pred VCCR:$mask),
-                             (VTI.Vec MQPR:$inactive)))>;
   }
 }
 
-multiclass MVE_VABD<MVEVectorVTInfo VTI>
-  : MVE_VABD_m<VTI, int_arm_mve_vabd, int_arm_mve_abd_predicated>;
+multiclass MVE_VABD<MVEVectorVTInfo VTI, SDNode Op>
+  : MVE_VABD_m<VTI, Op, int_arm_mve_vabd, int_arm_mve_abd_predicated>;
 
-defm MVE_VABDs8  : MVE_VABD<MVE_v16s8>;
-defm MVE_VABDs16 : MVE_VABD<MVE_v8s16>;
-defm MVE_VABDs32 : MVE_VABD<MVE_v4s32>;
-defm MVE_VABDu8  : MVE_VABD<MVE_v16u8>;
-defm MVE_VABDu16 : MVE_VABD<MVE_v8u16>;
-defm MVE_VABDu32 : MVE_VABD<MVE_v4u32>;
+defm MVE_VABDs8  : MVE_VABD<MVE_v16s8, abds>;
+defm MVE_VABDs16 : MVE_VABD<MVE_v8s16, abds>;
+defm MVE_VABDs32 : MVE_VABD<MVE_v4s32, abds>;
+defm MVE_VABDu8  : MVE_VABD<MVE_v16u8, abdu>;
+defm MVE_VABDu16 : MVE_VABD<MVE_v8u16, abdu>;
+defm MVE_VABDu32 : MVE_VABD<MVE_v4u32, abdu>;
 
 class MVE_VRHADD_Base<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
   : MVE_int<"vrhadd", suffix, size, pattern> {

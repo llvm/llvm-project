@@ -281,6 +281,8 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::UADDSAT, VT, Legal);
     setOperationAction(ISD::SSUBSAT, VT, Legal);
     setOperationAction(ISD::USUBSAT, VT, Legal);
+    setOperationAction(ISD::ABDS, VT, Legal);
+    setOperationAction(ISD::ABDU, VT, Legal);
 
     // No native support for these.
     setOperationAction(ISD::UDIV, VT, Expand);
@@ -14616,6 +14618,8 @@ static SDValue FlattenVectorShuffle(ShuffleVectorSDNode *N, SelectionDAG &DAG) {
   case ARMISD::VQDMULH:
   case ISD::MULHS:
   case ISD::MULHU:
+  case ISD::ABDS:
+  case ISD::ABDU:
     break;
   default:
     return SDValue();
