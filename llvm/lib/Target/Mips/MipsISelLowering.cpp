@@ -4227,7 +4227,7 @@ MipsTargetLowering::parseRegForInlineAsmConstraintNM(StringRef C,
   const auto *RC = getRegClassFor(MVT::i32);
 
   for (const auto &V : *RC)
-    if (RegName.equals_lower(TRI->getRegAsmName(V)))
+    if (RegName.equals_insensitive(TRI->getRegAsmName(V)))
       return std::make_pair(V, RC);
 
   return std::make_pair(0U, nullptr);

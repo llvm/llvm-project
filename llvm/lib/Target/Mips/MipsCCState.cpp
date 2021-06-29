@@ -216,7 +216,7 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
 // because nanoMIPS needs to put those arguments in the even register (a0, a2,
 // a4 or a6). Higher parts will naturally come into the next register, so they
 // need no special handling. Assumes little-endian.
-void MipsCCState::preAnalyzeFormalArgumentsFor64BitLo(
+void MipsCCState::PreAnalyzeFormalArgumentsFor64BitLo(
     const SmallVectorImpl<ISD::InputArg> &Ins) {
   for (const auto &IArg : Ins) {
     OriginalArgWas64BitLo.push_back(
