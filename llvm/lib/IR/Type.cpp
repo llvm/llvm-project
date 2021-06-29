@@ -25,8 +25,8 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
 
@@ -689,6 +689,9 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
   assert(isValidElementType(EltTy) && "Invalid type for pointer element!");
 
   LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
+
+  if (CImpl->ForceOpaquePointers)
+    return get(EltTy->getContext(), AddressSpace);
 
   // Since AddressSpace #0 is the common case, we special case it.
   PointerType *&Entry = AddressSpace == 0 ? CImpl->PointerTypes[EltTy]
