@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx14_17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr1512 { // dr1512: 4
   void f(char *p) {
@@ -28,10 +28,10 @@ namespace dr1512 { // dr1512: 4
   template<typename A, typename B, typename C> void composite_pointer_type_is_ord() {
     composite_pointer_type_is_base<A, B, C>();
 
-    typedef __typeof(val<A>() < val<B>()) cmp;
-    typedef __typeof(val<A>() <= val<B>()) cmp;
-    typedef __typeof(val<A>() > val<B>()) cmp;
-    typedef __typeof(val<A>() >= val<B>()) cmp;
+    typedef __typeof(val<A>() < val<B>()) cmp;  // cxx17-warning 2 {{ordered comparison of function pointers}}
+    typedef __typeof(val<A>() <= val<B>()) cmp; // cxx17-warning 2 {{ordered comparison of function pointers}}
+    typedef __typeof(val<A>() > val<B>()) cmp;  // cxx17-warning 2 {{ordered comparison of function pointers}}
+    typedef __typeof(val<A>() >= val<B>()) cmp; // cxx17-warning 2 {{ordered comparison of function pointers}}
     typedef bool cmp;
   }
 
@@ -79,8 +79,8 @@ namespace dr1512 { // dr1512: 4
     no_composite_pointer_type<const int (A::*)(), volatile int (C::*)()>();
 
 #if __cplusplus > 201402
-    composite_pointer_type_is_ord<int (*)() noexcept, int (*)(), int (*)()>();
-    composite_pointer_type_is_ord<int (*)(), int (*)() noexcept, int (*)()>();
+    composite_pointer_type_is_ord<int (*)() noexcept, int (*)(), int (*)()>(); // expected-note {{requested here}}
+    composite_pointer_type_is_ord<int (*)(), int (*)() noexcept, int (*)()>(); // expected-note {{requested here}}
     composite_pointer_type_is_unord<int (A::*)() noexcept, int (A::*)(), int (A::*)()>();
     composite_pointer_type_is_unord<int (A::*)(), int (A::*)() noexcept, int (A::*)()>();
     // FIXME: This looks like a standard defect; these should probably all have type 'int (B::*)()'.
