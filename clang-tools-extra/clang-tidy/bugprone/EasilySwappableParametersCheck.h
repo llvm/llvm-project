@@ -47,6 +47,10 @@ public:
   /// during analysis and consider types that are implicitly convertible to
   /// one another mixable.
   const bool ModelImplicitConversions;
+
+  /// If enabled, diagnostics for parameters that are used together in a
+  /// similar way are not emitted.
+  const bool SuppressParametersUsedTogether;
 };
 
 } // namespace bugprone
