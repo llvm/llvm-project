@@ -22,6 +22,12 @@ extern "C" {
 // real kind.
 double RTNAME(CpuTime)();
 
+// Interface for the SYSTEM_CLOCK intrinsic. We break it up into 3 distinct
+// function calls, one for each of SYSTEM_CLOCK's optional output arguments.
+// Lowering will have to cast the results to whatever type it prefers.
+CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCount)();
+CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCountRate)();
+CppTypeFor<TypeCategory::Integer, 8> RTNAME(SystemClockCountMax)();
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TIME_INTRINSIC_H_
