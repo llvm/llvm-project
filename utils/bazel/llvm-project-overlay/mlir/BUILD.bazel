@@ -1497,8 +1497,26 @@ gentbl_cc_library(
 
 cc_library(
     name = "SparseTensor",
-    srcs = glob(["lib/Dialect/SparseTensor/IR/*.cpp"]),
+    srcs = glob([
+        "lib/Dialect/SparseTensor/IR/*.cpp",
+    ]),
     hdrs = ["include/mlir/Dialect/SparseTensor/IR/SparseTensor.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":SideEffectInterfaces",
+        ":SparseTensorAttrDefsIncGen",
+        ":SparseTensorOpsIncGen",
+        ":SparseTensorUtils",
+        ":StandardOps",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "SparseTensorUtils",
+    srcs = glob(["lib/Dialect/SparseTensor/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/SparseTensor/Utils/*.h"]),
     includes = ["include"],
     deps = [
         ":IR",
@@ -1531,17 +1549,6 @@ cc_library(
         ":TensorDialect",
         ":Transforms",
         ":VectorOps",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "SparseTensorUtils",
-    srcs = glob(["lib/Dialect/SparseTensor/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/SparseTensor/Utils/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":IR",
         "//llvm:Support",
     ],
 )
