@@ -8396,9 +8396,7 @@ AACallGraphNode *AACallEdgeIterator::operator*() const {
       &A.getOrCreateAAFor<AACallEdges>(IRPosition::function(**I))));
 }
 
-void AttributorCallGraph::print() {
-  llvm::WriteGraph(outs(), this);
-}
+void AttributorCallGraph::print() { llvm::WriteGraph(outs(), this); }
 
 const char AAReturnedValues::ID = 0;
 const char AANoUnwind::ID = 0;
