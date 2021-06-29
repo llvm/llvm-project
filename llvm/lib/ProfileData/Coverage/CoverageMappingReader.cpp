@@ -824,13 +824,13 @@ static const char *TestingFormatMagic = "llvmcovmtestdata";
 
 Expected<std::unique_ptr<BinaryCoverageReader>>
 BinaryCoverageReader::createCoverageReaderFromBuffer(
-    StringRef Coverage, std::string &&FuncRecords,
+    StringRef Coverage, FuncRecordsStorage &&FuncRecords,
     InstrProfSymtab &&ProfileNames, uint8_t BytesInAddress,
     support::endianness Endian, StringRef CompilationDir) {
   std::unique_ptr<BinaryCoverageReader> Reader(
       new BinaryCoverageReader(std::move(FuncRecords)));
   Reader->ProfileNames = std::move(ProfileNames);
-  StringRef FuncRecordsRef = Reader->FuncRecords;
+  StringRef FuncRecordsRef = Reader->FuncRecords->getBuffer();
   if (BytesInAddress == 4 && Endian == support::endianness::little) {
     if (Error E =
             readCoverageMappingData<uint32_t, support::endianness::little>(
@@ -895,11 +895,13 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
       Data.substr(0, sizeof(CovMapHeader)).data());
   CovMapVersion Version =
       (CovMapVersion)CovHeader->getVersion<support::endianness::little>();
-  StringRef CoverageMapping, CoverageRecords;
+  StringRef CoverageMapping;
+  BinaryCoverageReader::FuncRecordsStorage CoverageRecords;
   if (Version < CovMapVersion::Version4) {
     CoverageMapping = Data;
     if (CoverageMapping.empty())
       return make_error<CoverageMapError>(coveragemap_error::truncated);
+    CoverageRecords = MemoryBuffer::getMemBuffer("");
   } else {
     uint32_t FilenamesSize =
         CovHeader->getFilenamesSize<support::endianness::little>();
@@ -913,12 +915,12 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
     Pad = offsetToAlignedAddr(Data.data(), Align(8));
     if (Data.size() < Pad)
       return make_error<CoverageMapError>(coveragemap_error::malformed);
-    CoverageRecords = Data.substr(Pad);
-    if (CoverageRecords.empty())
+    CoverageRecords = MemoryBuffer::getMemBuffer(Data.substr(Pad));
+    if (CoverageRecords->getBufferSize() == 0)
       return make_error<CoverageMapError>(coveragemap_error::truncated);
   }
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
-      CoverageMapping, CoverageRecords.str(), std::move(ProfileNames),
+      CoverageMapping, std::move(CoverageRecords), std::move(ProfileNames),
       BytesInAddress, Endian, CompilationDir);
 }
 
@@ -1003,21 +1005,49 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
     return std::move(E);
 
   // Look for the coverage records section (Version4 only).
-  std::string FuncRecords;
   auto CoverageRecordsSections =
       lookupSections(*OF, getInstrProfSectionName(IPSK_covfun, ObjFormat,
                                                   /*AddSegmentInfo=*/false));
-  if (auto E = CoverageRecordsSections.takeError())
+
+  BinaryCoverageReader::FuncRecordsStorage FuncRecords;
+  if (auto E = CoverageRecordsSections.takeError()) {
     consumeError(std::move(E));
-  else {
+    FuncRecords = MemoryBuffer::getMemBuffer("");
+  } else {
+    // Compute the FuncRecordsBuffer of the buffer, taking into account the
+    // padding between each record, and making sure the first block is aligned
+    // in memory to maintain consistency between buffer address and size
+    // alignment.
+    const Align RecordAlignment(8);
+    uint64_t FuncRecordsSize = 0;
     for (SectionRef Section : *CoverageRecordsSections) {
       auto CoverageRecordsOrErr = Section.getContents();
       if (!CoverageRecordsOrErr)
         return CoverageRecordsOrErr.takeError();
-      FuncRecords += CoverageRecordsOrErr.get();
-      while (FuncRecords.size() % 8 != 0)
-        FuncRecords += '\0';
+      FuncRecordsSize += alignTo(CoverageRecordsOrErr->size(), RecordAlignment);
     }
+    auto WritableBuffer =
+        WritableMemoryBuffer::getNewUninitMemBuffer(FuncRecordsSize);
+    char *FuncRecordsBuffer = WritableBuffer->getBufferStart();
+    assert(isAddrAligned(RecordAlignment, FuncRecordsBuffer) &&
+           "Allocated memory is correctly aligned");
+
+    for (SectionRef Section : *CoverageRecordsSections) {
+      auto CoverageRecordsOrErr = Section.getContents();
+      if (!CoverageRecordsOrErr)
+        return CoverageRecordsOrErr.takeError();
+      const auto &CoverageRecords = CoverageRecordsOrErr.get();
+      FuncRecordsBuffer = std::copy(CoverageRecords.begin(),
+                                    CoverageRecords.end(), FuncRecordsBuffer);
+      FuncRecordsBuffer =
+          std::fill_n(FuncRecordsBuffer,
+                      alignAddr(FuncRecordsBuffer, RecordAlignment) -
+                          (uintptr_t)FuncRecordsBuffer,
+                      '\0');
+    }
+    assert(FuncRecordsBuffer == WritableBuffer->getBufferEnd() &&
+           "consistent init");
+    FuncRecords = std::move(WritableBuffer);
   }
 
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
