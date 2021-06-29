@@ -571,15 +571,19 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       CHECK(obj.getSectionStringTable(objSections), this);
 
   std::vector<ArrayRef<Elf_Word>> selectedGroups;
+  // SHT_LLVM_CALL_GRAPH_PROFILE Section Index.
+  size_t cgProfileSectionIndex = 0;
 
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
+    if (sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE) {
       cgProfile =
           check(obj.template getSectionContentsAsArray<Elf_CGProfile>(sec));
+      cgProfileSectionIndex = i;
+    }
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
@@ -664,6 +668,13 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
+
+    if (cgProfileSectionIndex && sec.sh_info == cgProfileSectionIndex) {
+      if (sec.sh_type == SHT_RELA)
+        cgProfileRela = CHECK(getObj().relas(sec), this);
+      else
+        warn(toString(this) + ": unsupported call graph section type");
+    }
 
     if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
       this->sections[i] = createInputSection(sec);
