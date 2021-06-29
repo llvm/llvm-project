@@ -834,6 +834,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
 
   case ARM::ArchKind::ARMV4T:
   case ARM::ArchKind::ARMV5T:
+  case ARM::ArchKind::XSCALE:
   case ARM::ArchKind::ARMV5TE:
   case ARM::ArchKind::ARMV6:
     setAttributeItem(ARM_ISA_use, Allowed, false);
