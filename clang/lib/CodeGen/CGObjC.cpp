@@ -2939,8 +2939,12 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
                                               ValueTransform doAfterCall,
                                               ValueTransform doFallback) {
   CGBuilderTy::InsertPoint ip = CGF.Builder.saveIP();
+  auto *callBase = dyn_cast<llvm::CallBase>(value);
 
-  if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
+  if (callBase && llvm::objcarc::hasAttachedCallOpBundle(callBase)) {
+    // Fall back if the call base has operand bundle "clang.arc.attachedcall".
+    value = doFallback(CGF, value);
+  } else if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
     // Place the retain immediately following the call.
     CGF.Builder.SetInsertPoint(call->getParent(),
                                ++llvm::BasicBlock::iterator(call));
