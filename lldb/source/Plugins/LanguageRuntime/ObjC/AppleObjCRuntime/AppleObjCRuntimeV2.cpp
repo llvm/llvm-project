@@ -668,7 +668,7 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
   static const ConstString g_gdb_object_getClass("gdb_object_getClass");
   m_has_object_getClass = HasSymbol(g_gdb_object_getClass);
   static const ConstString g_objc_copyRealizedClassList(
-      "objc_copyRealizedClassList_nolock");
+      "_ZL33objc_copyRealizedClassList_nolockPj");
   m_has_objc_copyRealizedClassList = HasSymbol(g_objc_copyRealizedClassList);
 
   RegisterObjCExceptionRecognizer(process);
