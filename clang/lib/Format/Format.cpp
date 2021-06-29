@@ -63,6 +63,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
     IO.enumCase(Value, "TableGen", FormatStyle::LK_TableGen);
     IO.enumCase(Value, "TextProto", FormatStyle::LK_TextProto);
     IO.enumCase(Value, "CSharp", FormatStyle::LK_CSharp);
+    IO.enumCase(Value, "Json", FormatStyle::LK_Json);
   }
 };
 
@@ -1132,6 +1133,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   // Defaults that differ when not C++.
   if (Language == FormatStyle::LK_TableGen) {
     LLVMStyle.SpacesInContainerLiterals = false;
+  }
+  if (LLVMStyle.isJson()) {
+    LLVMStyle.ColumnLimit = 0;
   }
 
   return LLVMStyle;
@@ -2825,6 +2829,25 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Expanded.Language == FormatStyle::LK_JavaScript && isMpegTS(Code))
     return {tooling::Replacements(), 0};
 
+  // JSON only needs the formatting passing.
+  if (Style.isJson()) {
+    std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
+    auto Env =
+        std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
+                                      NextStartColumn, LastStartColumn);
+    // Perform the actual formatting pass.
+    tooling::Replacements Replaces =
+        Formatter(*Env, Style, Status).process().first;
+    // add a replacement to remove the "x = " from the result.
+    if (!Replaces.add(tooling::Replacement(FileName, 0, 4, ""))) {
+      // apply the reformatting changes and the removal of "x = ".
+      if (applyAllReplacements(Code, Replaces)) {
+        return {Replaces, 0};
+      }
+    }
+    return {tooling::Replacements(), 0};
+  }
+
   typedef std::function<std::pair<tooling::Replacements, unsigned>(
       const Environment &)>
       AnalyzerPass;
@@ -2991,6 +3014,8 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
     return FormatStyle::LK_TableGen;
   if (FileName.endswith_insensitive(".cs"))
     return FormatStyle::LK_CSharp;
+  if (FileName.endswith_insensitive(".json"))
+    return FormatStyle::LK_Json;
   return FormatStyle::LK_Cpp;
 }
 
