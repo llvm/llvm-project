@@ -145,18 +145,17 @@ void PathMappingList::Clear(bool notify) {
 
 bool PathMappingList::RemapPath(ConstString path,
                                 ConstString &new_path) const {
-  std::string remapped;
-  if (RemapPath(path.GetStringRef(), remapped)) {
-    new_path.SetString(remapped);
+  if (llvm::Optional<FileSpec> remapped = RemapPath(path.GetStringRef())) {
+    new_path.SetString(remapped->GetPath());
     return true;
   }
   return false;
 }
 
-bool PathMappingList::RemapPath(llvm::StringRef path,
-                                std::string &new_path) const {
+llvm::Optional<FileSpec>
+PathMappingList::RemapPath(llvm::StringRef path) const {
   if (m_pairs.empty() || path.empty())
-    return false;
+    return {};
   LazyBool path_is_relative = eLazyBoolCalculate;
   for (const auto &it : m_pairs) {
     auto prefix = it.first.GetStringRef();
@@ -177,10 +176,9 @@ bool PathMappingList::RemapPath(llvm::StringRef path,
     }
     FileSpec remapped(it.second.GetStringRef());
     remapped.AppendPathComponent(path);
-    new_path = remapped.GetPath();
-    return true;
+    return remapped;
   }
-  return false;
+  return {};
 }
 
 bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const {
