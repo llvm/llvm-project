@@ -284,19 +284,6 @@ void GenerateLoopNest<TiledLoopOp>::doit(
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(loopRanges, lbs, ubs, steps);
 
-  auto dropNonShapedValues =
-      [](ArrayRef<OpOperand *> operands) -> SmallVector<Value, 2> {
-    SmallVector<Value, 2> filteredOperands;
-    for (OpOperand *operand : operands) {
-      Type type = operand->get().getType();
-      if (type.isa<ShapedType>())
-        filteredOperands.push_back(operand->get());
-    }
-    return filteredOperands;
-  };
-  auto inputOperands = dropNonShapedValues(linalgOp.getInputOperands());
-  auto outputOperands = dropNonShapedValues(linalgOp.getOutputOperands());
-
   auto wrappedBuilderFn = [&](OpBuilder &nestedBuilder, Location nestedLoc,
                               ValueRange ivs, ValueRange inputs,
                               ValueRange outputs) {
@@ -305,6 +292,9 @@ void GenerateLoopNest<TiledLoopOp>::doit(
         bodyBuilderFn(nestedBuilder, nestedLoc, ivs, outputTensors);
     nestedBuilder.create<linalg::YieldOp>(nestedLoc, results);
   };
+
+  SmallVector<Value> inputOperands = linalgOp.getInputOperands();
+  SmallVector<Value> outputOperands = linalgOp.getOutputOperands();
   auto tiledLoop =
       b.create<TiledLoopOp>(loc, lbs, ubs, steps, inputOperands, outputOperands,
                             b.getArrayAttr(iteratorTypes), wrappedBuilderFn);
