@@ -245,12 +245,10 @@ entry:
 define arm_aapcs_vfpcc void @ptr_v4i16_dup(i32 %v, <4 x i16*> %offs) {
 ; CHECK-LABEL: ptr_v4i16_dup:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    vmov r3, r12, d1
-; CHECK-NEXT:    strh r0, [r1]
-; CHECK-NEXT:    strh r0, [r2]
-; CHECK-NEXT:    strh r0, [r3]
-; CHECK-NEXT:    strh.w r0, [r12]
+; CHECK-NEXT:    vdup.32 q1, r0
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmovlb.u16 q1, q1
+; CHECK-NEXT:    vstrh.32 q1, [r1, q0]
 ; CHECK-NEXT:    bx lr
 entry:
   %ext = trunc i32 %v to i16
