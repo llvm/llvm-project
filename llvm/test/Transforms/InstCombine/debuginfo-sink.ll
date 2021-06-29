@@ -33,23 +33,25 @@ sink1:
 ; value range.
 
 ; CHECK-LABEL: define i32 @bar(
-; CHECK:       call void @llvm.dbg.value(metadata i32* undef,
+; CHECK:       call void @llvm.dbg.value(metadata <vscale x 4 x i32>* undef,
 ; CHECK-NEXT:  br label %sink2
 
-define i32 @bar(i32 *%a, i32 %b) !dbg !70 {
+define i32 @bar(<vscale x 4 x i32>* %a, i32 %b) !dbg !70 {
 entry:
-  %gep = getelementptr i32, i32 *%a, i32 %b
-  call void @llvm.dbg.value(metadata i32* %gep, metadata !73, metadata !12), !dbg !74
+  %gep = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %a, i32 %b
+  call void @llvm.dbg.value(metadata <vscale x 4 x i32>* %gep, metadata !73, metadata !12), !dbg !74
   br label %sink2
 
 sink2:
 ; CHECK-LABEL: sink2:
-; CHECK:       call void @llvm.dbg.value(metadata i32* %gep,
+; CHECK:       call void @llvm.dbg.value(metadata <vscale x 4 x i32>* %gep,
 ; CHECK-SAME:                    metadata !{{[0-9]+}}, metadata !DIExpression())
 ; CHECK-NEXT:  load
+; CHECK-NEXT:  extractelement
 ; CHECK-NEXT:  ret
-  %0 = load i32, i32* %gep
-  ret i32 %0
+  %0 = load <vscale x 4 x i32>, <vscale x 4 x i32>* %gep
+  %extract = extractelement <vscale x 4 x i32> %0, i32 1
+  ret i32 %extract
 }
 
 ; This GEP is sunk, and has multiple debug uses in the same block. Check that
