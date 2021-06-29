@@ -228,6 +228,14 @@ void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
   __builtin_unreachable();
 }
 
+Thread *GetCurrentThread() {
+  uptr *ThreadLongPtr = GetCurrentThreadLongPtr();
+  if (UNLIKELY(*ThreadLongPtr == 0))
+    return nullptr;
+  auto *R = (StackAllocationsRingBuffer *)ThreadLongPtr;
+  return hwasanThreadList().GetThreadByBufferAddress((uptr)R->Next());
+}
+
 } // namespace __hwasan
 
 using namespace __hwasan;
