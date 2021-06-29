@@ -487,11 +487,11 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 
 */
 
+#include <__algorithm/search.h>
 #include <__config>
 #include <__debug>
 #include <__functional_base>
 #include <__functional/hash.h>
-#include <__functional/search.h>
 #include <__functional/unary_function.h>
 #include <__functional/unwrap_ref.h>
 #include <__utility/forward.h>
