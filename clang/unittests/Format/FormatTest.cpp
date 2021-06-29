@@ -16272,6 +16272,52 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
   // clang-format on
 }
 
+TEST_F(FormatTest, AlignWithInitializerPeriods) {
+  auto Style = getLLVMStyleWithColumns(60);
+
+  verifyFormat("void foo1(void) {\n"
+               "  BYTE p[1] = 1;\n"
+               "  A B = {.one_foooooooooooooooo = 2,\n"
+               "         .two_fooooooooooooo = 3,\n"
+               "         .three_fooooooooooooo = 4};\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_None;
+  verifyFormat("void foo2(void) {\n"
+               "  BYTE p[1]    = 1;\n"
+               "  A B          = {.one_foooooooooooooooo = 2,\n"
+               "                  .two_fooooooooooooo    = 3,\n"
+               "                  .three_fooooooooooooo  = 4};\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_None;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("void foo3(void) {\n"
+               "  BYTE p[1] = 1;\n"
+               "  A    B = {.one_foooooooooooooooo = 2,\n"
+               "            .two_fooooooooooooo = 3,\n"
+               "            .three_fooooooooooooo = 4};\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("void foo4(void) {\n"
+               "  BYTE p[1]    = 1;\n"
+               "  A    B       = {.one_foooooooooooooooo = 2,\n"
+               "                  .two_fooooooooooooo    = 3,\n"
+               "                  .three_fooooooooooooo  = 4};\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, LinuxBraceBreaking) {
   FormatStyle LinuxBraceStyle = getLLVMStyle();
   LinuxBraceStyle.BreakBeforeBraces = FormatStyle::BS_Linux;
