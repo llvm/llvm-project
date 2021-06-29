@@ -820,10 +820,10 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 
   // Case mismatch, e.g. Foo vs FOO.
   for (auto &it : map)
-    if (name.equals_lower(it.first))
+    if (name.equals_insensitive(it.first))
       return it.second;
   for (Symbol *sym : symtab->symbols())
-    if (!sym->isUndefined() && name.equals_lower(sym->getName()))
+    if (!sym->isUndefined() && name.equals_insensitive(sym->getName()))
       return sym;
 
   // The reference may be a mangled name while the definition is not. Suggest a
