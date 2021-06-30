@@ -22,6 +22,7 @@
 #include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
 
 namespace llvm {
 
@@ -168,7 +169,11 @@ private:
   };
 
   MachinePointerInfo PtrInfo;
-  uint64_t Size;
+
+  /// Track the memory type of the access. An access size which is unknown or
+  /// too large to be represented by LLT should use the invalid LLT.
+  LLT MemoryType;
+
   Flags FlagVals;
   Align BaseAlign;
   MachineAtomicInfo AtomicInfo;
@@ -183,6 +188,12 @@ public:
   /// occur must also be specified.
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, uint64_t s,
                     Align a, const AAMDNodes &AAInfo = AAMDNodes(),
+                    const MDNode *Ranges = nullptr,
+                    SyncScope::ID SSID = SyncScope::System,
+                    AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LLT type, Align a,
+                    const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
@@ -217,11 +228,23 @@ public:
 
   unsigned getAddrSpace() const { return PtrInfo.getAddrSpace(); }
 
+  /// Return the memory type of the memory reference. This should only be relied
+  /// on for GlobalISel G_* operation legalization.
+  LLT getMemoryType() const { return MemoryType; }
+
   /// Return the size in bytes of the memory reference.
-  uint64_t getSize() const { return Size; }
+  uint64_t getSize() const {
+    return MemoryType.isValid() ? MemoryType.getSizeInBytes() : ~UINT64_C(0);
+  }
 
   /// Return the size in bits of the memory reference.
-  uint64_t getSizeInBits() const { return Size * 8; }
+  uint64_t getSizeInBits() const {
+    return MemoryType.isValid() ? MemoryType.getSizeInBits() : ~UINT64_C(0);
+  }
+
+  LLT getType() const {
+    return MemoryType;
+  }
 
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
