@@ -33,9 +33,9 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: 100100b4 <_start>:
-// CHECK-NEXT: 100100b4: b       #-4
-// CHECK-NEXT: 100100b8: bl      #-4
-// CHECK-NEXT: 100100bc: bl      #-4
+// CHECK-NEXT: 100100b4: b       {{.+}} @ imm = #-4
+// CHECK-NEXT: 100100b8: bl      {{.+}} @ imm = #-4
+// CHECK-NEXT: 100100bc: bl      {{.+}} @ imm = #-4
 // CHECK-NEXT: 100100c0: movt    r0, #0
 // CHECK-NEXT: 100100c4: movw    r0, #0
 // CHECK:      100100c8: 00 00 00 00     .word   0x00000000

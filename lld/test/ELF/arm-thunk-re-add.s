@@ -94,9 +94,9 @@ callers:
 // CHECK2-NEXT:  1100010:       fc 44   add     r12, pc
 // CHECK2-NEXT:  1100012:       60 47   bx      r12
 // CHECK2: <callers>:
-// CHECK2-NEXT:  1100014:       ff f6 f6 bf     b.w     #-1048596 <__ThumbV7PILongThunk_imported>
-// CHECK2-NEXT:  1100018:       3f f4 f6 af     beq.w   #-20 <__ThumbV7PILongThunk_imported>
-// CHECK2-NEXT:  110001c:       ff f6 f8 bf     b.w     #-1048592 <__ThumbV7PILongThunk_imported2>
+// CHECK2-NEXT:  1100014:       ff f6 f6 bf     b.w     0x1000004 <__ThumbV7PILongThunk_imported>
+// CHECK2-NEXT:  1100018:       3f f4 f6 af     beq.w   0x1100008 <__ThumbV7PILongThunk_imported>
+// CHECK2-NEXT:  110001c:       ff f6 f8 bf     b.w     0x1000010 <__ThumbV7PILongThunk_imported2>
 
 // CHECK3: Disassembly of section .plt:
 // CHECK3-EMPTY:

@@ -12,8 +12,8 @@ _func1:
 
 @ CHECK-ERROR: unsupported relocation on symbol
 
-@ CHECK-MACHO: ff f7 fe bf        b.w #-4
+@ CHECK-MACHO: ff f7 fe bf        b.w {{.+}} @ imm = #-4
 @ CHECK-MACHO-NEXT: ARM_THUMB_RELOC_BR22
 
-@ CHECK-ELF: ff f7 fe bf        b.w #-4
+@ CHECK-ELF: ff f7 fe bf        b.w {{.+}} @ imm = #-4
 @ CHECK-ELF-NEXT: R_ARM_THM_JUMP24 _func2

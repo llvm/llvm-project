@@ -38,13 +38,13 @@ preemptible:
 // CHECK1: Disassembly of section .text:
 // CHECK1-EMPTY:
 // CHECK1-NEXT: <sym1>:
-// CHECK1-NEXT:  2000000:       00 f0 00 d8     bl      #8388608
-// CHECK1-NEXT:  2000004:       00 f0 04 d8     bl      #8388616
+// CHECK1-NEXT:  2000000:       00 f0 00 d8     bl      0x2800004 <__ThumbV7PILongThunk_elsewhere>
+// CHECK1-NEXT:  2000004:       00 f0 04 d8     bl      0x2800010 <__ThumbV7PILongThunk_preemptible>
 // CHECK1-NEXT:  2000008:       70 47   bx      lr
 // CHECK1: <preemptible>:
-// CHECK1-NEXT:  200000a:       00 f0 07 d8     bl      #8388622
-// CHECK1-NEXT:  200000e:       00 f0 0b d8     bl      #8388630
-// CHECK1-NEXT:  2000012:       00 f0 09 d8     bl      #8388626
+// CHECK1-NEXT:  200000a:       00 f0 07 d8     bl      0x280001c <__ThumbV7PILongThunk_far_preemptible>
+// CHECK1-NEXT:  200000e:       00 f0 0b d8     bl      0x2800028 <__ThumbV7PILongThunk_far_nonpreemptible>
+// CHECK1-NEXT:  2000012:       00 f0 09 d8     bl      0x2800028 <__ThumbV7PILongThunk_far_nonpreemptible>
 // CHECK1-NEXT:  2000016:       70 47   bx      lr
 
  .section .text.2, "ax", %progbits
@@ -83,7 +83,7 @@ far_nonpreemptible_alias:
  bl elsewhere
 
 // CHECK3: <far_preemptible>:
-// CHECK3:  4000000:       00 f0 16 e8     blx     #44
+// CHECK3:  4000000:       00 f0 16 e8     blx     0x4000030
 
 // CHECK4: Disassembly of section .plt:
 // CHECK4-EMPTY:
