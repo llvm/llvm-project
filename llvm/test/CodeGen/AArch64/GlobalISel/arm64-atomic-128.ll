@@ -385,6 +385,7 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-LLSC-O0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-LLSC-O0-NEXT:    str x2, [sp, #48] // 8-byte Folded Spill
 ; CHECK-LLSC-O0-NEXT:    str x3, [sp, #56] // 8-byte Folded Spill
+; CHECK-LLSC-O0-NEXT:    b .LBB4_1
 ; CHECK-LLSC-O0-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-LLSC-O0-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-LLSC-O0-NEXT:    ldr x11, [sp, #48] // 8-byte Folded Reload
@@ -425,7 +426,8 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-LLSC-O0-NEXT:    csel x10, x9, x8, eq
 ; CHECK-LLSC-O0-NEXT:    stxp w8, x9, x10, [x11]
 ; CHECK-LLSC-O0-NEXT:    cbnz w8, .LBB4_1
-; CHECK-LLSC-O0-NEXT:  // %bb.2: // %atomicrmw.end
+; CHECK-LLSC-O0-NEXT:    b .LBB4_2
+; CHECK-LLSC-O0-NEXT:  .LBB4_2: // %atomicrmw.end
 ; CHECK-LLSC-O0-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; CHECK-LLSC-O0-NEXT:    ldr x8, [sp, #56] // 8-byte Folded Reload
 ; CHECK-LLSC-O0-NEXT:    str q0, [x8]
@@ -438,6 +440,7 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-CAS-O0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-CAS-O0-NEXT:    str x2, [sp, #48] // 8-byte Folded Spill
 ; CHECK-CAS-O0-NEXT:    str x3, [sp, #56] // 8-byte Folded Spill
+; CHECK-CAS-O0-NEXT:    b .LBB4_1
 ; CHECK-CAS-O0-NEXT:  .LBB4_1: // %atomicrmw.start
 ; CHECK-CAS-O0-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-CAS-O0-NEXT:    ldr x11, [sp, #48] // 8-byte Folded Reload
@@ -478,7 +481,8 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
 ; CHECK-CAS-O0-NEXT:    csel x10, x9, x8, eq
 ; CHECK-CAS-O0-NEXT:    stxp w8, x9, x10, [x11]
 ; CHECK-CAS-O0-NEXT:    cbnz w8, .LBB4_1
-; CHECK-CAS-O0-NEXT:  // %bb.2: // %atomicrmw.end
+; CHECK-CAS-O0-NEXT:    b .LBB4_2
+; CHECK-CAS-O0-NEXT:  .LBB4_2: // %atomicrmw.end
 ; CHECK-CAS-O0-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; CHECK-CAS-O0-NEXT:    ldr x8, [sp, #56] // 8-byte Folded Reload
 ; CHECK-CAS-O0-NEXT:    str q0, [x8]
