@@ -642,3 +642,38 @@ func @overlap_no_fwd(%N : index) -> f32 {
 // CHECK-NEXT:  return %{{.*}} : f32
 }
 
+// CHECK-LABEL: func @redundant_store_elim
+
+func @redundant_store_elim(%out : memref<512xf32>) {
+  %cf1 = constant 1.0 : f32
+  %cf2 = constant 2.0 : f32
+  affine.for %i = 0 to 16 {
+    affine.store %cf1, %out[32*%i] : memref<512xf32>
+    affine.store %cf2, %out[32*%i] : memref<512xf32>
+  }
+  return
+}
+
+// CHECK: affine.for
+// CHECK-NEXT:   affine.store
+// CHECK-NEXT: }
+
+// CHECK-LABEL: func @redundant_store_elim_fail
+
+func @redundant_store_elim_fail(%out : memref<512xf32>) {
+  %cf1 = constant 1.0 : f32
+  %cf2 = constant 2.0 : f32
+  affine.for %i = 0 to 16 {
+    affine.store %cf1, %out[32*%i] : memref<512xf32>
+    "test.use"(%out) : (memref<512xf32>) -> ()
+    affine.store %cf2, %out[32*%i] : memref<512xf32>
+  }
+  return
+}
+
+// CHECK: affine.for
+// CHECK-NEXT:   affine.store
+// CHECK-NEXT:   "test.use"
+// CHECK-NEXT:   affine.store
+// CHECK-NEXT: }
+

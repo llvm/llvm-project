@@ -510,7 +510,6 @@ int main() {
 // CHECK1-NEXT:    store %struct.S* [[S]], %struct.S** [[S_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load %struct.S*, %struct.S** [[S_ADDR]], align 8
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IV]], align 4
-// CHECK1-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[S1]])
 // CHECK1-NEXT:    call void @.omp_initializer.(%struct.S* [[S1]], %struct.S* [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK1:       omp.inner.for.cond:
@@ -790,7 +789,6 @@ int main() {
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    call void @.omp_initializer..3(float* [[T_VAR3]], float* [[TMP0]])
 // CHECK1-NEXT:    [[TMP7:%.*]] = load %struct.S.0*, %struct.S.0** [[_TMP1]], align 8
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[VAR4]])
 // CHECK1-NEXT:    [[TMP8:%.*]] = bitcast %struct.S.0* [[VAR4]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP8]], i64 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
@@ -799,7 +797,6 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = bitcast i8* [[ADD_PTR5]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP9]], %struct.BaseS1* [[TMP11]])
 // CHECK1-NEXT:    store %struct.S.0* [[VAR4]], %struct.S.0** [[_TMP6]], align 8
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[VAR17]])
 // CHECK1-NEXT:    call void @.omp_initializer..7(%struct.S.0* [[VAR17]], %struct.S.0* [[TMP2]])
 // CHECK1-NEXT:    [[TMP12:%.*]] = load float, float* @.init, align 4
 // CHECK1-NEXT:    store float [[TMP12]], float* [[T_VAR18]], align 4
@@ -1170,24 +1167,12 @@ int main() {
 // CHECK1-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], ptrtoint (%struct.S.0* getelementptr ([[STRUCT_S_0]], %struct.S.0* null, i32 1) to i64)
 // CHECK1-NEXT:    [[VLA16:%.*]] = alloca [[STRUCT_S_0]], i64 [[TMP28]], align 16
 // CHECK1-NEXT:    store i64 [[TMP28]], i64* [[__VLA_EXPR1]], align 8
-// CHECK1-NEXT:    [[ISEMPTY:%.*]] = icmp eq i64 [[TMP28]], 0
-// CHECK1-NEXT:    br i1 [[ISEMPTY]], label [[ARRAYCTOR_CONT:%.*]], label [[NEW_CTORLOOP:%.*]]
-// CHECK1:       new.ctorloop:
-// CHECK1-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[VLA16]], i64 [[TMP28]]
-// CHECK1-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK1:       arrayctor.loop:
-// CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[VLA16]], [[NEW_CTORLOOP]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK1-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT]], label [[ARRAYCTOR_LOOP]]
-// CHECK1:       arrayctor.cont:
 // CHECK1-NEXT:    [[TMP30:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[VLA16]], i64 [[TMP28]]
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY17:%.*]] = icmp eq %struct.S.0* [[VLA16]], [[TMP30]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY17]], label [[OMP_ARRAYINIT_DONE25:%.*]], label [[OMP_ARRAYINIT_BODY18:%.*]]
 // CHECK1:       omp.arrayinit.body18:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST19:%.*]] = phi %struct.S.0* [ [[ARRAYIDX10]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT22:%.*]], [[OMP_ARRAYINIT_BODY18]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST20:%.*]] = phi %struct.S.0* [ [[VLA16]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT23:%.*]], [[OMP_ARRAYINIT_BODY18]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST19:%.*]] = phi %struct.S.0* [ [[ARRAYIDX10]], [[OMP_ARRAYINIT_DONE]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT22:%.*]], [[OMP_ARRAYINIT_BODY18]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST20:%.*]] = phi %struct.S.0* [ [[VLA16]], [[OMP_ARRAYINIT_DONE]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT23:%.*]], [[OMP_ARRAYINIT_BODY18]] ]
 // CHECK1-NEXT:    [[TMP31:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST20]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP31]], i64 4
 // CHECK1-NEXT:    [[TMP32:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
@@ -1511,35 +1496,25 @@ int main() {
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK1:       omp.arrayinit.done:
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], [10 x [4 x %struct.S.0]]* [[ARRS5]], i32 0, i32 0, i32 0
-// CHECK1-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 40
-// CHECK1-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK1:       arrayctor.loop:
-// CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[OMP_ARRAYINIT_DONE]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK1-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK1:       arrayctor.cont:
-// CHECK1-NEXT:    [[ARRAY_BEGIN6:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], [10 x [4 x %struct.S.0]]* [[ARRS5]], i32 0, i32 0, i32 0
 // CHECK1-NEXT:    [[TMP9:%.*]] = bitcast [10 x [4 x %struct.S.0]]* [[TMP3]] to %struct.S.0*
-// CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN6]], i64 40
-// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY7:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN6]], [[TMP10]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY7]], label [[OMP_ARRAYINIT_DONE15:%.*]], label [[OMP_ARRAYINIT_BODY8:%.*]]
-// CHECK1:       omp.arrayinit.body8:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[TMP9]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT12:%.*]], [[OMP_ARRAYINIT_BODY8]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST10:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN6]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT13:%.*]], [[OMP_ARRAYINIT_BODY8]] ]
-// CHECK1-NEXT:    [[TMP11:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST10]] to i8*
+// CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 40
+// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY6:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN]], [[TMP10]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY6]], label [[OMP_ARRAYINIT_DONE14:%.*]], label [[OMP_ARRAYINIT_BODY7:%.*]]
+// CHECK1:       omp.arrayinit.body7:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST8:%.*]] = phi %struct.S.0* [ [[TMP9]], [[OMP_ARRAYINIT_DONE]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT11:%.*]], [[OMP_ARRAYINIT_BODY7]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[OMP_ARRAYINIT_DONE]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT12:%.*]], [[OMP_ARRAYINIT_BODY7]] ]
+// CHECK1-NEXT:    [[TMP11:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP11]], i64 4
 // CHECK1-NEXT:    [[TMP12:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP13:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST9]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds i8, i8* [[TMP13]], i64 4
-// CHECK1-NEXT:    [[TMP14:%.*]] = bitcast i8* [[ADD_PTR11]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP13:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR10:%.*]] = getelementptr inbounds i8, i8* [[TMP13]], i64 4
+// CHECK1-NEXT:    [[TMP14:%.*]] = bitcast i8* [[ADD_PTR10]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP12]], %struct.BaseS1* [[TMP14]])
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT12]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST9]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT13]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST10]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE14:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT13]], [[TMP10]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE14]], label [[OMP_ARRAYINIT_DONE15]], label [[OMP_ARRAYINIT_BODY8]]
-// CHECK1:       omp.arrayinit.done15:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT11]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT12]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE13:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT12]], [[TMP10]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYINIT_DONE14]], label [[OMP_ARRAYINIT_BODY7]]
+// CHECK1:       omp.arrayinit.done14:
 // CHECK1-NEXT:    [[LHS_BEGIN:%.*]] = bitcast [10 x [4 x %struct.S.0]]* [[TMP3]] to %struct.S.0*
 // CHECK1-NEXT:    [[RHS_BEGIN:%.*]] = bitcast [10 x [4 x %struct.S.0]]* [[ARRS5]] to %struct.S.0*
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -1562,8 +1537,8 @@ int main() {
 // CHECK1:       omp.inner.for.cond:
 // CHECK1-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[TMP21:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK1-NEXT:    [[CMP16:%.*]] = icmp sle i32 [[TMP20]], [[TMP21]]
-// CHECK1-NEXT:    br i1 [[CMP16]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK1-NEXT:    [[CMP15:%.*]] = icmp sle i32 [[TMP20]], [[TMP21]]
+// CHECK1-NEXT:    br i1 [[CMP15]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK1:       omp.inner.for.cond.cleanup:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
@@ -1575,17 +1550,17 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[VLA3]], i64 [[TMP23]]
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, i32* [[I]], align 4
 // CHECK1-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP24]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, i32* [[ARRAYIDX]], i64 [[IDXPROM]]
-// CHECK1-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARRAYIDX17]], align 4
+// CHECK1-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[ARRAYIDX]], i64 [[IDXPROM]]
+// CHECK1-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARRAYIDX16]], align 4
 // CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP25]], 1
-// CHECK1-NEXT:    store i32 [[INC]], i32* [[ARRAYIDX17]], align 4
+// CHECK1-NEXT:    store i32 [[INC]], i32* [[ARRAYIDX16]], align 4
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
 // CHECK1-NEXT:    [[TMP26:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK1-NEXT:    [[ADD18:%.*]] = add nsw i32 [[TMP26]], 1
-// CHECK1-NEXT:    store i32 [[ADD18]], i32* [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP26]], 1
+// CHECK1-NEXT:    store i32 [[ADD17]], i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -1613,88 +1588,88 @@ int main() {
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP39:%.*]] = getelementptr i32, i32* [[TMP2]], i64 [[TMP6]]
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq i32* [[TMP2]], [[TMP39]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE23:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE22:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK1:       omp.arraycpy.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST19:%.*]] = phi i32* [ [[VLA3]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST20:%.*]] = phi i32* [ [[TMP2]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT21:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    call void @.omp_combiner..10(i32* [[OMP_ARRAYCPY_DESTELEMENTPAST20]], i32* [[OMP_ARRAYCPY_SRCELEMENTPAST19]])
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT21]] = getelementptr i32, i32* [[OMP_ARRAYCPY_DESTELEMENTPAST20]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr i32, i32* [[OMP_ARRAYCPY_SRCELEMENTPAST19]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE22:%.*]] = icmp eq i32* [[OMP_ARRAYCPY_DEST_ELEMENT21]], [[TMP39]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE22]], label [[OMP_ARRAYCPY_DONE23]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK1:       omp.arraycpy.done23:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST18:%.*]] = phi i32* [ [[VLA3]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST19:%.*]] = phi i32* [ [[TMP2]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT20:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    call void @.omp_combiner..10(i32* [[OMP_ARRAYCPY_DESTELEMENTPAST19]], i32* [[OMP_ARRAYCPY_SRCELEMENTPAST18]])
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT20]] = getelementptr i32, i32* [[OMP_ARRAYCPY_DESTELEMENTPAST19]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr i32, i32* [[OMP_ARRAYCPY_SRCELEMENTPAST18]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE21:%.*]] = icmp eq i32* [[OMP_ARRAYCPY_DEST_ELEMENT20]], [[TMP39]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE21]], label [[OMP_ARRAYCPY_DONE22]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK1:       omp.arraycpy.done22:
 // CHECK1-NEXT:    [[TMP40:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[LHS_BEGIN]], i64 40
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY24:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP40]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY24]], label [[OMP_ARRAYCPY_DONE33:%.*]], label [[OMP_ARRAYCPY_BODY25:%.*]]
-// CHECK1:       omp.arraycpy.body25:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST26:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[OMP_ARRAYCPY_DONE23]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT31:%.*]], [[OMP_ARRAYCPY_BODY25]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST27:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[OMP_ARRAYCPY_DONE23]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT30:%.*]], [[OMP_ARRAYCPY_BODY25]] ]
-// CHECK1-NEXT:    [[TMP41:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST27]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR28:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
-// CHECK1-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR28]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP43:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST26]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR29:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
-// CHECK1-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR29]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY23:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP40]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY23]], label [[OMP_ARRAYCPY_DONE32:%.*]], label [[OMP_ARRAYCPY_BODY24:%.*]]
+// CHECK1:       omp.arraycpy.body24:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST25:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[OMP_ARRAYCPY_DONE22]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT30:%.*]], [[OMP_ARRAYCPY_BODY24]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST26:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[OMP_ARRAYCPY_DONE22]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT29:%.*]], [[OMP_ARRAYCPY_BODY24]] ]
+// CHECK1-NEXT:    [[TMP41:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST26]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR27:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
+// CHECK1-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR27]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP43:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST25]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR28:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
+// CHECK1-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR28]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP42]], %struct.BaseS1* [[TMP44]])
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT30]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST27]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT31]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST26]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE32:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT30]], [[TMP40]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE32]], label [[OMP_ARRAYCPY_DONE33]], label [[OMP_ARRAYCPY_BODY25]]
-// CHECK1:       omp.arraycpy.done33:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT29]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST26]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT30]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST25]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE31:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT29]], [[TMP40]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE31]], label [[OMP_ARRAYCPY_DONE32]], label [[OMP_ARRAYCPY_BODY24]]
+// CHECK1:       omp.arraycpy.done32:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP36]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr i32, i32* [[TMP2]], i64 [[TMP6]]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY34:%.*]] = icmp eq i32* [[TMP2]], [[TMP45]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY34]], label [[OMP_ARRAYCPY_DONE41:%.*]], label [[OMP_ARRAYCPY_BODY35:%.*]]
-// CHECK1:       omp.arraycpy.body35:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST36:%.*]] = phi i32* [ [[VLA3]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT39:%.*]], [[OMP_ARRAYCPY_BODY35]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST37:%.*]] = phi i32* [ [[TMP2]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT38:%.*]], [[OMP_ARRAYCPY_BODY35]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY33:%.*]] = icmp eq i32* [[TMP2]], [[TMP45]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY33]], label [[OMP_ARRAYCPY_DONE40:%.*]], label [[OMP_ARRAYCPY_BODY34:%.*]]
+// CHECK1:       omp.arraycpy.body34:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST35:%.*]] = phi i32* [ [[VLA3]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT38:%.*]], [[OMP_ARRAYCPY_BODY34]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST36:%.*]] = phi i32* [ [[TMP2]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT37:%.*]], [[OMP_ARRAYCPY_BODY34]] ]
 // CHECK1-NEXT:    [[TMP46:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP47:%.*]] = load i32, i32* [[TMP46]], align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP47]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    call void @.omp_combiner..10(i32* [[OMP_ARRAYCPY_DESTELEMENTPAST37]], i32* [[OMP_ARRAYCPY_SRCELEMENTPAST36]])
+// CHECK1-NEXT:    call void @.omp_combiner..10(i32* [[OMP_ARRAYCPY_DESTELEMENTPAST36]], i32* [[OMP_ARRAYCPY_SRCELEMENTPAST35]])
 // CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP47]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT38]] = getelementptr i32, i32* [[OMP_ARRAYCPY_DESTELEMENTPAST37]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT39]] = getelementptr i32, i32* [[OMP_ARRAYCPY_SRCELEMENTPAST36]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE40:%.*]] = icmp eq i32* [[OMP_ARRAYCPY_DEST_ELEMENT38]], [[TMP45]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE40]], label [[OMP_ARRAYCPY_DONE41]], label [[OMP_ARRAYCPY_BODY35]]
-// CHECK1:       omp.arraycpy.done41:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT37]] = getelementptr i32, i32* [[OMP_ARRAYCPY_DESTELEMENTPAST36]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT38]] = getelementptr i32, i32* [[OMP_ARRAYCPY_SRCELEMENTPAST35]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE39:%.*]] = icmp eq i32* [[OMP_ARRAYCPY_DEST_ELEMENT37]], [[TMP45]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE39]], label [[OMP_ARRAYCPY_DONE40]], label [[OMP_ARRAYCPY_BODY34]]
+// CHECK1:       omp.arraycpy.done40:
 // CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[LHS_BEGIN]], i64 40
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY42:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP48]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY42]], label [[OMP_ARRAYCPY_DONE51:%.*]], label [[OMP_ARRAYCPY_BODY43:%.*]]
-// CHECK1:       omp.arraycpy.body43:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST44:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[OMP_ARRAYCPY_DONE41]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT49:%.*]], [[OMP_ARRAYCPY_BODY43]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST45:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[OMP_ARRAYCPY_DONE41]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT48:%.*]], [[OMP_ARRAYCPY_BODY43]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY41:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP48]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY41]], label [[OMP_ARRAYCPY_DONE50:%.*]], label [[OMP_ARRAYCPY_BODY42:%.*]]
+// CHECK1:       omp.arraycpy.body42:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST43:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[OMP_ARRAYCPY_DONE40]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT48:%.*]], [[OMP_ARRAYCPY_BODY42]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST44:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[OMP_ARRAYCPY_DONE40]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT47:%.*]], [[OMP_ARRAYCPY_BODY42]] ]
 // CHECK1-NEXT:    [[TMP49:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP50:%.*]] = load i32, i32* [[TMP49]], align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP50]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[TMP51:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST45]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR46:%.*]] = getelementptr inbounds i8, i8* [[TMP51]], i64 4
-// CHECK1-NEXT:    [[TMP52:%.*]] = bitcast i8* [[ADD_PTR46]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP53:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST44]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR47:%.*]] = getelementptr inbounds i8, i8* [[TMP53]], i64 4
-// CHECK1-NEXT:    [[TMP54:%.*]] = bitcast i8* [[ADD_PTR47]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP51:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST44]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR45:%.*]] = getelementptr inbounds i8, i8* [[TMP51]], i64 4
+// CHECK1-NEXT:    [[TMP52:%.*]] = bitcast i8* [[ADD_PTR45]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP53:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST43]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR46:%.*]] = getelementptr inbounds i8, i8* [[TMP53]], i64 4
+// CHECK1-NEXT:    [[TMP54:%.*]] = bitcast i8* [[ADD_PTR46]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP52]], %struct.BaseS1* [[TMP54]])
 // CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP50]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT48]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST45]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT49]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST44]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE50:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT48]], [[TMP48]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE50]], label [[OMP_ARRAYCPY_DONE51]], label [[OMP_ARRAYCPY_BODY43]]
-// CHECK1:       omp.arraycpy.done51:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT47]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST44]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT48]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST43]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE49:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT47]], [[TMP48]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE49]], label [[OMP_ARRAYCPY_DONE50]], label [[OMP_ARRAYCPY_BODY42]]
+// CHECK1:       omp.arraycpy.done50:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP36]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
-// CHECK1-NEXT:    [[ARRAY_BEGIN52:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], [10 x [4 x %struct.S.0]]* [[ARRS5]], i32 0, i32 0, i32 0
-// CHECK1-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN52]], i64 40
+// CHECK1-NEXT:    [[ARRAY_BEGIN51:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], [10 x [4 x %struct.S.0]]* [[ARRS5]], i32 0, i32 0, i32 0
+// CHECK1-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN51]], i64 40
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP55]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN52]]
-// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE53:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK1:       arraydestroy.done53:
+// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN51]]
+// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE52:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK1:       arraydestroy.done52:
 // CHECK1-NEXT:    [[TMP56:%.*]] = load i8*, i8** [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    call void @llvm.stackrestore(i8* [[TMP56]])
 // CHECK1-NEXT:    [[TMP57:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -1806,24 +1781,12 @@ int main() {
 // CHECK1-NEXT:    store i8* [[TMP11]], i8** [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca [[STRUCT_S_0]], i64 [[TMP9]], align 16
 // CHECK1-NEXT:    store i64 [[TMP9]], i64* [[__VLA_EXPR0]], align 8
-// CHECK1-NEXT:    [[ISEMPTY:%.*]] = icmp eq i64 [[TMP9]], 0
-// CHECK1-NEXT:    br i1 [[ISEMPTY]], label [[ARRAYCTOR_CONT:%.*]], label [[NEW_CTORLOOP:%.*]]
-// CHECK1:       new.ctorloop:
-// CHECK1-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[VLA]], i64 [[TMP9]]
-// CHECK1-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK1:       arrayctor.loop:
-// CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[VLA]], [[NEW_CTORLOOP]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK1-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT]], label [[ARRAYCTOR_LOOP]]
-// CHECK1:       arrayctor.cont:
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[VLA]], i64 [[TMP9]]
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[VLA]], [[TMP12]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK1:       omp.arrayinit.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX1]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[VLA]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT5:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX1]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[VLA]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT5:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK1-NEXT:    [[TMP13:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP13]], i64 4
 // CHECK1-NEXT:    [[TMP14:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
@@ -2034,32 +1997,22 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[TMP0]], i64 0, i64 0
 // CHECK1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[TMP0]], i64 0, i64 4
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[VVAR22]], i32 0, i32 0
-// CHECK1-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 5
-// CHECK1-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK1:       arrayctor.loop:
-// CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK1-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK1:       arrayctor.cont:
-// CHECK1-NEXT:    [[ARRAY_BEGIN3:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[VVAR22]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN3]], i64 5
-// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN3]], [[TMP1]]
+// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 5
+// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN]], [[TMP1]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK1:       omp.arrayinit.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN3]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT5:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT4:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK1-NEXT:    [[TMP2:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
 // CHECK1-NEXT:    [[TMP4:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR4:%.*]] = getelementptr inbounds i8, i8* [[TMP4]], i64 4
-// CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ADD_PTR4]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, i8* [[TMP4]], i64 4
+// CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ADD_PTR3]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP3]], %struct.BaseS1* [[TMP5]])
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT5]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT5]], [[TMP1]]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT4]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT4]], [[TMP1]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK1:       omp.arrayinit.done:
 // CHECK1-NEXT:    [[TMP6:%.*]] = bitcast [5 x %struct.S.0]* [[TMP0]] to %struct.S.0*
@@ -2091,8 +2044,8 @@ int main() {
 // CHECK1:       omp.inner.for.cond:
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK1-NEXT:    [[CMP6:%.*]] = icmp sle i32 [[TMP19]], [[TMP20]]
-// CHECK1-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK1-NEXT:    [[CMP5:%.*]] = icmp sle i32 [[TMP19]], [[TMP20]]
+// CHECK1-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK1:       omp.inner.for.cond.cleanup:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
@@ -2105,8 +2058,8 @@ int main() {
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
 // CHECK1-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK1-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP22]], 1
-// CHECK1-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[ADD6:%.*]] = add nsw i32 [[TMP22]], 1
+// CHECK1-NEXT:    store i32 [[ADD6]], i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -2128,60 +2081,60 @@ int main() {
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP31:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAYIDX]], i64 5
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP31]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE14:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE13:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK1:       omp.arraycpy.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST8:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT12:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[TMP32:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR10:%.*]] = getelementptr inbounds i8, i8* [[TMP32]], i64 4
-// CHECK1-NEXT:    [[TMP33:%.*]] = bitcast i8* [[ADD_PTR10]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP34:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds i8, i8* [[TMP34]], i64 4
-// CHECK1-NEXT:    [[TMP35:%.*]] = bitcast i8* [[ADD_PTR11]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST7:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST8:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT11:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[TMP32:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST8]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds i8, i8* [[TMP32]], i64 4
+// CHECK1-NEXT:    [[TMP33:%.*]] = bitcast i8* [[ADD_PTR9]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP34:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST7]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR10:%.*]] = getelementptr inbounds i8, i8* [[TMP34]], i64 4
+// CHECK1-NEXT:    [[TMP35:%.*]] = bitcast i8* [[ADD_PTR10]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP33]], %struct.BaseS1* [[TMP35]])
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT12]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE13:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT12]], [[TMP31]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYCPY_DONE14]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK1:       omp.arraycpy.done14:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT11]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST8]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST7]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE12:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT11]], [[TMP31]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE12]], label [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK1:       omp.arraycpy.done13:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP28]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAYIDX]], i64 5
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY15:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP36]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY15]], label [[OMP_ARRAYCPY_DONE24:%.*]], label [[OMP_ARRAYCPY_BODY16:%.*]]
-// CHECK1:       omp.arraycpy.body16:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST17:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT22:%.*]], [[OMP_ARRAYCPY_BODY16]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST18:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT21:%.*]], [[OMP_ARRAYCPY_BODY16]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY14:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP36]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY14]], label [[OMP_ARRAYCPY_DONE23:%.*]], label [[OMP_ARRAYCPY_BODY15:%.*]]
+// CHECK1:       omp.arraycpy.body15:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST16:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT21:%.*]], [[OMP_ARRAYCPY_BODY15]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST17:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT20:%.*]], [[OMP_ARRAYCPY_BODY15]] ]
 // CHECK1-NEXT:    [[TMP37:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP38:%.*]] = load i32, i32* [[TMP37]], align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP38]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[TMP39:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST18]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR19:%.*]] = getelementptr inbounds i8, i8* [[TMP39]], i64 4
-// CHECK1-NEXT:    [[TMP40:%.*]] = bitcast i8* [[ADD_PTR19]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP41:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST17]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR20:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
-// CHECK1-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR20]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP39:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST17]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR18:%.*]] = getelementptr inbounds i8, i8* [[TMP39]], i64 4
+// CHECK1-NEXT:    [[TMP40:%.*]] = bitcast i8* [[ADD_PTR18]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP41:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST16]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR19:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
+// CHECK1-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR19]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP40]], %struct.BaseS1* [[TMP42]])
 // CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP38]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT21]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST18]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT22]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST17]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE23:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT21]], [[TMP36]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE23]], label [[OMP_ARRAYCPY_DONE24]], label [[OMP_ARRAYCPY_BODY16]]
-// CHECK1:       omp.arraycpy.done24:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT20]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST17]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT21]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST16]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE22:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT20]], [[TMP36]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE22]], label [[OMP_ARRAYCPY_DONE23]], label [[OMP_ARRAYCPY_BODY15]]
+// CHECK1:       omp.arraycpy.done23:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP28]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
-// CHECK1-NEXT:    [[ARRAY_BEGIN25:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[VVAR22]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN25]], i64 5
+// CHECK1-NEXT:    [[ARRAY_BEGIN24:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[VVAR22]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN24]], i64 5
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP43]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN25]]
-// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE26:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK1:       arraydestroy.done26:
+// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN24]]
+// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE25:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK1:       arraydestroy.done25:
 // CHECK1-NEXT:    [[TMP44:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP45:%.*]] = load i32, i32* [[TMP44]], align 4
 // CHECK1-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB4]], i32 [[TMP45]])
@@ -2241,7 +2194,7 @@ int main() {
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[VAR34:%.*]] = alloca [2 x %struct.S.0], align 16
-// CHECK1-NEXT:    [[_TMP8:%.*]] = alloca [4 x %struct.S.0]*, align 8
+// CHECK1-NEXT:    [[_TMP7:%.*]] = alloca [4 x %struct.S.0]*, align 8
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -2260,32 +2213,22 @@ int main() {
 // CHECK1-NEXT:    [[TMP3:%.*]] = load [4 x %struct.S.0]*, [4 x %struct.S.0]** [[_TMP1]], align 8
 // CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[TMP3]], i64 0, i64 2
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[VAR34]], i32 0, i32 0
-// CHECK1-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 2
-// CHECK1-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK1:       arrayctor.loop:
-// CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK1-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK1:       arrayctor.cont:
-// CHECK1-NEXT:    [[ARRAY_BEGIN5:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[VAR34]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN5]], i64 2
-// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN5]], [[TMP4]]
+// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 2
+// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN]], [[TMP4]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK1:       omp.arrayinit.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN5]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT7:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT6:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK1-NEXT:    [[TMP5:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP5]], i64 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
 // CHECK1-NEXT:    [[TMP7:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR6:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 4
-// CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ADD_PTR6]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[ADD_PTR5:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 4
+// CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ADD_PTR5]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP6]], %struct.BaseS1* [[TMP8]])
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT7]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT7]], [[TMP4]]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT6]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT6]], [[TMP4]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK1:       omp.arrayinit.done:
 // CHECK1-NEXT:    [[TMP9:%.*]] = load [4 x %struct.S.0]*, [4 x %struct.S.0]** [[_TMP1]], align 8
@@ -2297,7 +2240,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP15:%.*]] = bitcast [2 x %struct.S.0]* [[VAR34]] to %struct.S.0*
 // CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[TMP15]], i64 [[TMP14]]
 // CHECK1-NEXT:    [[TMP17:%.*]] = bitcast %struct.S.0* [[TMP16]] to [4 x %struct.S.0]*
-// CHECK1-NEXT:    store [4 x %struct.S.0]* [[TMP17]], [4 x %struct.S.0]** [[_TMP8]], align 8
+// CHECK1-NEXT:    store [4 x %struct.S.0]* [[TMP17]], [4 x %struct.S.0]** [[_TMP7]], align 8
 // CHECK1-NEXT:    [[RHS_BEGIN:%.*]] = bitcast [2 x %struct.S.0]* [[VAR34]] to %struct.S.0*
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP18]], align 4
@@ -2319,8 +2262,8 @@ int main() {
 // CHECK1:       omp.inner.for.cond:
 // CHECK1-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK1-NEXT:    [[CMP9:%.*]] = icmp sle i32 [[TMP23]], [[TMP24]]
-// CHECK1-NEXT:    br i1 [[CMP9]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK1-NEXT:    [[CMP8:%.*]] = icmp sle i32 [[TMP23]], [[TMP24]]
+// CHECK1-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK1:       omp.inner.for.cond.cleanup:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
@@ -2333,8 +2276,8 @@ int main() {
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
 // CHECK1-NEXT:    [[TMP26:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK1-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP26]], 1
-// CHECK1-NEXT:    store i32 [[ADD10]], i32* [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP26]], 1
+// CHECK1-NEXT:    store i32 [[ADD9]], i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -2356,60 +2299,60 @@ int main() {
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP35:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAYIDX]], i64 2
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP35]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE17:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE16:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK1:       omp.arraycpy.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST11:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST12:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT15:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[TMP36:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST12]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR13:%.*]] = getelementptr inbounds i8, i8* [[TMP36]], i64 4
-// CHECK1-NEXT:    [[TMP37:%.*]] = bitcast i8* [[ADD_PTR13]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP38:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST11]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR14:%.*]] = getelementptr inbounds i8, i8* [[TMP38]], i64 4
-// CHECK1-NEXT:    [[TMP39:%.*]] = bitcast i8* [[ADD_PTR14]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST10:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST11:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT14:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[TMP36:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST11]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds i8, i8* [[TMP36]], i64 4
+// CHECK1-NEXT:    [[TMP37:%.*]] = bitcast i8* [[ADD_PTR12]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP38:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST10]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR13:%.*]] = getelementptr inbounds i8, i8* [[TMP38]], i64 4
+// CHECK1-NEXT:    [[TMP39:%.*]] = bitcast i8* [[ADD_PTR13]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP37]], %struct.BaseS1* [[TMP39]])
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT15]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST12]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST11]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE16:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT15]], [[TMP35]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE16]], label [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK1:       omp.arraycpy.done17:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT14]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST11]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST10]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE15:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT14]], [[TMP35]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE15]], label [[OMP_ARRAYCPY_DONE16]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK1:       omp.arraycpy.done16:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP32]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP40:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAYIDX]], i64 2
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY18:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP40]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY18]], label [[OMP_ARRAYCPY_DONE27:%.*]], label [[OMP_ARRAYCPY_BODY19:%.*]]
-// CHECK1:       omp.arraycpy.body19:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST20:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT25:%.*]], [[OMP_ARRAYCPY_BODY19]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST21:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT24:%.*]], [[OMP_ARRAYCPY_BODY19]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY17:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP40]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY17]], label [[OMP_ARRAYCPY_DONE26:%.*]], label [[OMP_ARRAYCPY_BODY18:%.*]]
+// CHECK1:       omp.arraycpy.body18:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST19:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT24:%.*]], [[OMP_ARRAYCPY_BODY18]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST20:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT23:%.*]], [[OMP_ARRAYCPY_BODY18]] ]
 // CHECK1-NEXT:    [[TMP41:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP42:%.*]] = load i32, i32* [[TMP41]], align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP42]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[TMP43:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST21]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR22:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
-// CHECK1-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR22]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP45:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST20]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR23:%.*]] = getelementptr inbounds i8, i8* [[TMP45]], i64 4
-// CHECK1-NEXT:    [[TMP46:%.*]] = bitcast i8* [[ADD_PTR23]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP43:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST20]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR21:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
+// CHECK1-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR21]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP45:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST19]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR22:%.*]] = getelementptr inbounds i8, i8* [[TMP45]], i64 4
+// CHECK1-NEXT:    [[TMP46:%.*]] = bitcast i8* [[ADD_PTR22]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP44]], %struct.BaseS1* [[TMP46]])
 // CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP42]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT24]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST21]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT25]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST20]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE26:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT24]], [[TMP40]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE26]], label [[OMP_ARRAYCPY_DONE27]], label [[OMP_ARRAYCPY_BODY19]]
-// CHECK1:       omp.arraycpy.done27:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT23]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST20]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT24]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST19]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE25:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT23]], [[TMP40]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE25]], label [[OMP_ARRAYCPY_DONE26]], label [[OMP_ARRAYCPY_BODY18]]
+// CHECK1:       omp.arraycpy.done26:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP32]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
-// CHECK1-NEXT:    [[ARRAY_BEGIN28:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[VAR34]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN28]], i64 2
+// CHECK1-NEXT:    [[ARRAY_BEGIN27:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[VAR34]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN27]], i64 2
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP47]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN28]]
-// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE29:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK1:       arraydestroy.done29:
+// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN27]]
+// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE28:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK1:       arraydestroy.done28:
 // CHECK1-NEXT:    [[TMP48:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP49:%.*]] = load i32, i32* [[TMP48]], align 4
 // CHECK1-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB4]], i32 [[TMP49]])
@@ -2468,7 +2411,7 @@ int main() {
 // CHECK1-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[_TMP6:%.*]] = alloca [4 x %struct.S.0]*, align 8
+// CHECK1-NEXT:    [[_TMP5:%.*]] = alloca [4 x %struct.S.0]*, align 8
 // CHECK1-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -2488,36 +2431,26 @@ int main() {
 // CHECK1-NEXT:    [[DOTVAR3__VOID_ADDR:%.*]] = call i8* @__kmpc_alloc(i32 [[TMP4]], i64 48, i8* inttoptr (i64 6 to i8*))
 // CHECK1-NEXT:    [[DOTVAR3__ADDR:%.*]] = bitcast i8* [[DOTVAR3__VOID_ADDR]] to [4 x %struct.S.0]*
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[DOTVAR3__ADDR]], i32 0, i32 0
-// CHECK1-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 4
-// CHECK1-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK1:       arrayctor.loop:
-// CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK1-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK1:       arrayctor.cont:
-// CHECK1-NEXT:    [[ARRAY_BEGIN3:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[DOTVAR3__ADDR]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP5:%.*]] = bitcast [4 x %struct.S.0]* [[TMP2]] to %struct.S.0*
-// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN3]], i64 4
-// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN3]], [[TMP6]]
+// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 4
+// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK1:       omp.arrayinit.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP5]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN3]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT5:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP5]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT4:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK1-NEXT:    [[TMP7:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 4
 // CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
 // CHECK1-NEXT:    [[TMP9:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR4:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i64 4
-// CHECK1-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ADD_PTR4]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i64 4
+// CHECK1-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ADD_PTR3]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP8]], %struct.BaseS1* [[TMP10]])
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT5]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT5]], [[TMP6]]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT4]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT4]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK1:       omp.arrayinit.done:
-// CHECK1-NEXT:    store [4 x %struct.S.0]* [[DOTVAR3__ADDR]], [4 x %struct.S.0]** [[_TMP6]], align 8
+// CHECK1-NEXT:    store [4 x %struct.S.0]* [[DOTVAR3__ADDR]], [4 x %struct.S.0]** [[_TMP5]], align 8
 // CHECK1-NEXT:    [[LHS_BEGIN:%.*]] = bitcast [4 x %struct.S.0]* [[TMP2]] to %struct.S.0*
 // CHECK1-NEXT:    [[RHS_BEGIN:%.*]] = bitcast [4 x %struct.S.0]* [[DOTVAR3__ADDR]] to %struct.S.0*
 // CHECK1-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP4]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2538,8 +2471,8 @@ int main() {
 // CHECK1:       omp.inner.for.cond:
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK1-NEXT:    [[CMP7:%.*]] = icmp sle i32 [[TMP14]], [[TMP15]]
-// CHECK1-NEXT:    br i1 [[CMP7]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK1-NEXT:    [[CMP6:%.*]] = icmp sle i32 [[TMP14]], [[TMP15]]
+// CHECK1-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK1:       omp.inner.for.cond.cleanup:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
@@ -2552,8 +2485,8 @@ int main() {
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK1-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP17]], 1
-// CHECK1-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP17]], 1
+// CHECK1-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -2571,58 +2504,58 @@ int main() {
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[LHS_BEGIN]], i64 4
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP22]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE15:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE14:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK1:       omp.arraycpy.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST10:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT13:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[TMP23:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST10]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds i8, i8* [[TMP23]], i64 4
-// CHECK1-NEXT:    [[TMP24:%.*]] = bitcast i8* [[ADD_PTR11]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP25:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST9]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds i8, i8* [[TMP25]], i64 4
-// CHECK1-NEXT:    [[TMP26:%.*]] = bitcast i8* [[ADD_PTR12]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST8:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT12:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[TMP23:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR10:%.*]] = getelementptr inbounds i8, i8* [[TMP23]], i64 4
+// CHECK1-NEXT:    [[TMP24:%.*]] = bitcast i8* [[ADD_PTR10]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP25:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds i8, i8* [[TMP25]], i64 4
+// CHECK1-NEXT:    [[TMP26:%.*]] = bitcast i8* [[ADD_PTR11]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP24]], %struct.BaseS1* [[TMP26]])
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT13]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST10]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST9]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE14:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT13]], [[TMP22]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE14]], label [[OMP_ARRAYCPY_DONE15]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK1:       omp.arraycpy.done15:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT12]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE13:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT12]], [[TMP22]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYCPY_DONE14]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK1:       omp.arraycpy.done14:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP4]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP27:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[LHS_BEGIN]], i64 4
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY16:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP27]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY16]], label [[OMP_ARRAYCPY_DONE25:%.*]], label [[OMP_ARRAYCPY_BODY17:%.*]]
-// CHECK1:       omp.arraycpy.body17:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST18:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT23:%.*]], [[OMP_ARRAYCPY_BODY17]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST19:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT22:%.*]], [[OMP_ARRAYCPY_BODY17]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY15:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP27]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY15]], label [[OMP_ARRAYCPY_DONE24:%.*]], label [[OMP_ARRAYCPY_BODY16:%.*]]
+// CHECK1:       omp.arraycpy.body16:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST17:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT22:%.*]], [[OMP_ARRAYCPY_BODY16]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST18:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT21:%.*]], [[OMP_ARRAYCPY_BODY16]] ]
 // CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[TMP28:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST19]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR20:%.*]] = getelementptr inbounds i8, i8* [[TMP28]], i64 4
-// CHECK1-NEXT:    [[TMP29:%.*]] = bitcast i8* [[ADD_PTR20]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP30:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST18]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR21:%.*]] = getelementptr inbounds i8, i8* [[TMP30]], i64 4
-// CHECK1-NEXT:    [[TMP31:%.*]] = bitcast i8* [[ADD_PTR21]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP28:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST18]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR19:%.*]] = getelementptr inbounds i8, i8* [[TMP28]], i64 4
+// CHECK1-NEXT:    [[TMP29:%.*]] = bitcast i8* [[ADD_PTR19]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP30:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST17]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR20:%.*]] = getelementptr inbounds i8, i8* [[TMP30]], i64 4
+// CHECK1-NEXT:    [[TMP31:%.*]] = bitcast i8* [[ADD_PTR20]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP29]], %struct.BaseS1* [[TMP31]])
 // CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT22]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST19]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT23]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST18]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE24:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT22]], [[TMP27]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE24]], label [[OMP_ARRAYCPY_DONE25]], label [[OMP_ARRAYCPY_BODY17]]
-// CHECK1:       omp.arraycpy.done25:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT21]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST18]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT22]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST17]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE23:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT21]], [[TMP27]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE23]], label [[OMP_ARRAYCPY_DONE24]], label [[OMP_ARRAYCPY_BODY16]]
+// CHECK1:       omp.arraycpy.done24:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP4]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
-// CHECK1-NEXT:    [[ARRAY_BEGIN26:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[DOTVAR3__ADDR]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN26]], i64 4
+// CHECK1-NEXT:    [[ARRAY_BEGIN25:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[DOTVAR3__ADDR]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN25]], i64 4
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP32]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN26]]
-// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE27:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK1:       arraydestroy.done27:
+// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN25]]
+// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE26:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK1:       arraydestroy.done26:
 // CHECK1-NEXT:    [[TMP33:%.*]] = bitcast [4 x %struct.S.0]* [[DOTVAR3__ADDR]] to i8*
 // CHECK1-NEXT:    call void @__kmpc_free(i32 [[TMP4]], i8* [[TMP33]], i8* inttoptr (i64 6 to i8*))
 // CHECK1-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB4]], i32 [[TMP4]])
@@ -2843,7 +2776,6 @@ int main() {
 // CHECK1-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    call void @.omp_initializer..25(i32* [[T_VAR3]], i32* [[TMP0]])
 // CHECK1-NEXT:    [[TMP7:%.*]] = load %struct.S*, %struct.S** [[_TMP1]], align 8
-// CHECK1-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[VAR4]])
 // CHECK1-NEXT:    [[TMP8:%.*]] = bitcast %struct.S* [[VAR4]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP8]], i64 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
@@ -2852,7 +2784,6 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = bitcast i8* [[ADD_PTR5]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP9]], %struct.BaseS1* [[TMP11]])
 // CHECK1-NEXT:    store %struct.S* [[VAR4]], %struct.S** [[_TMP6]], align 8
-// CHECK1-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[VAR17]])
 // CHECK1-NEXT:    call void @.omp_initializer..27(%struct.S* [[VAR17]], %struct.S* [[TMP2]])
 // CHECK1-NEXT:    call void @.omp_initializer..29(i32* [[T_VAR18]], i32* [[TMP3]])
 // CHECK1-NEXT:    [[TMP12:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -3296,32 +3227,22 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [42 x %struct.S], [42 x %struct.S]* [[TMP0]], i64 0, i64 1
 // CHECK1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [42 x %struct.S], [42 x %struct.S]* [[TMP0]], i64 0, i64 40
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [40 x %struct.S], [40 x %struct.S]* [[ARR4]], i32 0, i32 0
-// CHECK1-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[ARRAY_BEGIN]], i64 40
-// CHECK1-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK1:       arrayctor.loop:
-// CHECK1-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK1-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK1-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAYCTOR_CUR]], i64 1
-// CHECK1-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK1-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK1:       arrayctor.cont:
-// CHECK1-NEXT:    [[ARRAY_BEGIN5:%.*]] = getelementptr inbounds [40 x %struct.S], [40 x %struct.S]* [[ARR4]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[ARRAY_BEGIN5]], i64 40
-// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S* [[ARRAY_BEGIN5]], [[TMP6]]
+// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S:%.*]], %struct.S* [[ARRAY_BEGIN]], i64 40
+// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S* [[ARRAY_BEGIN]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK1:       omp.arrayinit.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S* [ [[ARRAY_BEGIN5]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT7:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S* [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT6:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK1-NEXT:    [[TMP7:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK1-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 4
 // CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
 // CHECK1-NEXT:    [[TMP9:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR6:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i64 4
-// CHECK1-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ADD_PTR6]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[ADD_PTR5:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i64 4
+// CHECK1-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ADD_PTR5]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_initializer..37(%struct.BaseS1* [[TMP8]], %struct.BaseS1* [[TMP10]])
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT7]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT7]], [[TMP6]]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT6]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT6]], [[TMP6]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK1:       omp.arrayinit.done:
 // CHECK1-NEXT:    [[TMP11:%.*]] = bitcast [42 x %struct.S]* [[TMP0]] to %struct.S*
@@ -3353,8 +3274,8 @@ int main() {
 // CHECK1:       omp.inner.for.cond:
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK1-NEXT:    [[CMP8:%.*]] = icmp sle i32 [[TMP24]], [[TMP25]]
-// CHECK1-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK1-NEXT:    [[CMP7:%.*]] = icmp sle i32 [[TMP24]], [[TMP25]]
+// CHECK1-NEXT:    br i1 [[CMP7]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK1:       omp.inner.for.cond.cleanup:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK1:       omp.inner.for.body:
@@ -3365,20 +3286,20 @@ int main() {
 // CHECK1-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP2]], align 4
 // CHECK1-NEXT:    [[TMP28:%.*]] = load i32, i32* [[I]], align 4
 // CHECK1-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP28]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[TMP1]], i64 0, i64 [[IDXPROM]]
-// CHECK1-NEXT:    store i32 [[TMP27]], i32* [[ARRAYIDX9]], align 4
+// CHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[TMP1]], i64 0, i64 [[IDXPROM]]
+// CHECK1-NEXT:    store i32 [[TMP27]], i32* [[ARRAYIDX8]], align 4
 // CHECK1-NEXT:    [[TMP29:%.*]] = load %struct.S*, %struct.S** [[_TMP1]], align 8
 // CHECK1-NEXT:    [[TMP30:%.*]] = load i32, i32* [[I]], align 4
-// CHECK1-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[TMP30]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [2 x %struct.S], [2 x %struct.S]* [[TMP3]], i64 0, i64 [[IDXPROM10]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(12) %struct.S* @_ZN1SIiEaSERKS0_(%struct.S* nonnull align 4 dereferenceable(12) [[ARRAYIDX11]], %struct.S* nonnull align 4 dereferenceable(12) [[TMP29]])
+// CHECK1-NEXT:    [[IDXPROM9:%.*]] = sext i32 [[TMP30]] to i64
+// CHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [2 x %struct.S], [2 x %struct.S]* [[TMP3]], i64 0, i64 [[IDXPROM9]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(12) %struct.S* @_ZN1SIiEaSERKS0_(%struct.S* nonnull align 4 dereferenceable(12) [[ARRAYIDX10]], %struct.S* nonnull align 4 dereferenceable(12) [[TMP29]])
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
 // CHECK1-NEXT:    [[TMP31:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK1-NEXT:    [[ADD12:%.*]] = add nsw i32 [[TMP31]], 1
-// CHECK1-NEXT:    store i32 [[ADD12]], i32* [[DOTOMP_IV]], align 4
+// CHECK1-NEXT:    [[ADD11:%.*]] = add nsw i32 [[TMP31]], 1
+// CHECK1-NEXT:    store i32 [[ADD11]], i32* [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -3400,60 +3321,60 @@ int main() {
 // CHECK1:       .omp.reduction.case1:
 // CHECK1-NEXT:    [[TMP40:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[ARRAYIDX]], i64 40
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq %struct.S* [[ARRAYIDX]], [[TMP40]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE19:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE18:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK1:       omp.arraycpy.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST13:%.*]] = phi %struct.S* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST14:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT17:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK1-NEXT:    [[TMP41:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST14]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR15:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
-// CHECK1-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR15]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP43:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST13]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR16:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
-// CHECK1-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR16]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST12:%.*]] = phi %struct.S* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST13:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT16:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK1-NEXT:    [[TMP41:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST13]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR14:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
+// CHECK1-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR14]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP43:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST12]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR15:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
+// CHECK1-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR15]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..36(%struct.BaseS1* [[TMP42]], %struct.BaseS1* [[TMP44]])
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT17]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST14]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST13]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE18:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT17]], [[TMP40]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_DONE19]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK1:       omp.arraycpy.done19:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT16]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST13]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST12]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE17:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT16]], [[TMP40]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK1:       omp.arraycpy.done18:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP37]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[ARRAYIDX]], i64 40
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY20:%.*]] = icmp eq %struct.S* [[ARRAYIDX]], [[TMP45]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY20]], label [[OMP_ARRAYCPY_DONE29:%.*]], label [[OMP_ARRAYCPY_BODY21:%.*]]
-// CHECK1:       omp.arraycpy.body21:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST22:%.*]] = phi %struct.S* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT27:%.*]], [[OMP_ARRAYCPY_BODY21]] ]
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST23:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT26:%.*]], [[OMP_ARRAYCPY_BODY21]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY19:%.*]] = icmp eq %struct.S* [[ARRAYIDX]], [[TMP45]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY19]], label [[OMP_ARRAYCPY_DONE28:%.*]], label [[OMP_ARRAYCPY_BODY20:%.*]]
+// CHECK1:       omp.arraycpy.body20:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST21:%.*]] = phi %struct.S* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT26:%.*]], [[OMP_ARRAYCPY_BODY20]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST22:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT25:%.*]], [[OMP_ARRAYCPY_BODY20]] ]
 // CHECK1-NEXT:    [[TMP46:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP47:%.*]] = load i32, i32* [[TMP46]], align 4
 // CHECK1-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP47]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[TMP48:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST23]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR24:%.*]] = getelementptr inbounds i8, i8* [[TMP48]], i64 4
-// CHECK1-NEXT:    [[TMP49:%.*]] = bitcast i8* [[ADD_PTR24]] to %struct.BaseS1*
-// CHECK1-NEXT:    [[TMP50:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST22]] to i8*
-// CHECK1-NEXT:    [[ADD_PTR25:%.*]] = getelementptr inbounds i8, i8* [[TMP50]], i64 4
-// CHECK1-NEXT:    [[TMP51:%.*]] = bitcast i8* [[ADD_PTR25]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP48:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST22]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR23:%.*]] = getelementptr inbounds i8, i8* [[TMP48]], i64 4
+// CHECK1-NEXT:    [[TMP49:%.*]] = bitcast i8* [[ADD_PTR23]] to %struct.BaseS1*
+// CHECK1-NEXT:    [[TMP50:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST21]] to i8*
+// CHECK1-NEXT:    [[ADD_PTR24:%.*]] = getelementptr inbounds i8, i8* [[TMP50]], i64 4
+// CHECK1-NEXT:    [[TMP51:%.*]] = bitcast i8* [[ADD_PTR24]] to %struct.BaseS1*
 // CHECK1-NEXT:    call void @.omp_combiner..36(%struct.BaseS1* [[TMP49]], %struct.BaseS1* [[TMP51]])
 // CHECK1-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP47]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT26]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST23]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT27]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST22]], i32 1
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE28:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT26]], [[TMP45]]
-// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE28]], label [[OMP_ARRAYCPY_DONE29]], label [[OMP_ARRAYCPY_BODY21]]
-// CHECK1:       omp.arraycpy.done29:
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT25]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST22]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT26]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST21]], i32 1
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE27:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT25]], [[TMP45]]
+// CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE27]], label [[OMP_ARRAYCPY_DONE28]], label [[OMP_ARRAYCPY_BODY20]]
+// CHECK1:       omp.arraycpy.done28:
 // CHECK1-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP37]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
-// CHECK1-NEXT:    [[ARRAY_BEGIN30:%.*]] = getelementptr inbounds [40 x %struct.S], [40 x %struct.S]* [[ARR4]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAY_BEGIN30]], i64 40
+// CHECK1-NEXT:    [[ARRAY_BEGIN29:%.*]] = getelementptr inbounds [40 x %struct.S], [40 x %struct.S]* [[ARR4]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAY_BEGIN29]], i64 40
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ [[TMP52]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN1SIiED1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN30]]
-// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE31:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK1:       arraydestroy.done31:
+// CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN29]]
+// CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE30:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK1:       arraydestroy.done30:
 // CHECK1-NEXT:    [[TMP53:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP54:%.*]] = load i32, i32* [[TMP53]], align 4
 // CHECK1-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB4]], i32 [[TMP54]])
@@ -3581,7 +3502,6 @@ int main() {
 // CHECK2-NEXT:    store %struct.S* [[S]], %struct.S** [[S_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP0:%.*]] = load %struct.S*, %struct.S** [[S_ADDR]], align 8
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IV]], align 4
-// CHECK2-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[S1]])
 // CHECK2-NEXT:    call void @.omp_initializer.(%struct.S* [[S1]], %struct.S* [[TMP0]])
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK2:       omp.inner.for.cond:
@@ -3861,7 +3781,6 @@ int main() {
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
 // CHECK2-NEXT:    call void @.omp_initializer..3(float* [[T_VAR3]], float* [[TMP0]])
 // CHECK2-NEXT:    [[TMP7:%.*]] = load %struct.S.0*, %struct.S.0** [[_TMP1]], align 8
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[VAR4]])
 // CHECK2-NEXT:    [[TMP8:%.*]] = bitcast %struct.S.0* [[VAR4]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP8]], i64 4
 // CHECK2-NEXT:    [[TMP9:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
@@ -3870,7 +3789,6 @@ int main() {
 // CHECK2-NEXT:    [[TMP11:%.*]] = bitcast i8* [[ADD_PTR5]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP9]], %struct.BaseS1* [[TMP11]])
 // CHECK2-NEXT:    store %struct.S.0* [[VAR4]], %struct.S.0** [[_TMP6]], align 8
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[VAR17]])
 // CHECK2-NEXT:    call void @.omp_initializer..7(%struct.S.0* [[VAR17]], %struct.S.0* [[TMP2]])
 // CHECK2-NEXT:    [[TMP12:%.*]] = load float, float* @.init, align 4
 // CHECK2-NEXT:    store float [[TMP12]], float* [[T_VAR18]], align 4
@@ -4241,24 +4159,12 @@ int main() {
 // CHECK2-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], ptrtoint (%struct.S.0* getelementptr ([[STRUCT_S_0]], %struct.S.0* null, i32 1) to i64)
 // CHECK2-NEXT:    [[VLA16:%.*]] = alloca [[STRUCT_S_0]], i64 [[TMP28]], align 16
 // CHECK2-NEXT:    store i64 [[TMP28]], i64* [[__VLA_EXPR1]], align 8
-// CHECK2-NEXT:    [[ISEMPTY:%.*]] = icmp eq i64 [[TMP28]], 0
-// CHECK2-NEXT:    br i1 [[ISEMPTY]], label [[ARRAYCTOR_CONT:%.*]], label [[NEW_CTORLOOP:%.*]]
-// CHECK2:       new.ctorloop:
-// CHECK2-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[VLA16]], i64 [[TMP28]]
-// CHECK2-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK2:       arrayctor.loop:
-// CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[VLA16]], [[NEW_CTORLOOP]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK2-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT]], label [[ARRAYCTOR_LOOP]]
-// CHECK2:       arrayctor.cont:
 // CHECK2-NEXT:    [[TMP30:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[VLA16]], i64 [[TMP28]]
 // CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY17:%.*]] = icmp eq %struct.S.0* [[VLA16]], [[TMP30]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY17]], label [[OMP_ARRAYINIT_DONE25:%.*]], label [[OMP_ARRAYINIT_BODY18:%.*]]
 // CHECK2:       omp.arrayinit.body18:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST19:%.*]] = phi %struct.S.0* [ [[ARRAYIDX10]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT22:%.*]], [[OMP_ARRAYINIT_BODY18]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST20:%.*]] = phi %struct.S.0* [ [[VLA16]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT23:%.*]], [[OMP_ARRAYINIT_BODY18]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST19:%.*]] = phi %struct.S.0* [ [[ARRAYIDX10]], [[OMP_ARRAYINIT_DONE]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT22:%.*]], [[OMP_ARRAYINIT_BODY18]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST20:%.*]] = phi %struct.S.0* [ [[VLA16]], [[OMP_ARRAYINIT_DONE]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT23:%.*]], [[OMP_ARRAYINIT_BODY18]] ]
 // CHECK2-NEXT:    [[TMP31:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST20]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP31]], i64 4
 // CHECK2-NEXT:    [[TMP32:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
@@ -4582,35 +4488,25 @@ int main() {
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK2:       omp.arrayinit.done:
 // CHECK2-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], [10 x [4 x %struct.S.0]]* [[ARRS5]], i32 0, i32 0, i32 0
-// CHECK2-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 40
-// CHECK2-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK2:       arrayctor.loop:
-// CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[OMP_ARRAYINIT_DONE]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK2-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK2:       arrayctor.cont:
-// CHECK2-NEXT:    [[ARRAY_BEGIN6:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], [10 x [4 x %struct.S.0]]* [[ARRS5]], i32 0, i32 0, i32 0
 // CHECK2-NEXT:    [[TMP9:%.*]] = bitcast [10 x [4 x %struct.S.0]]* [[TMP3]] to %struct.S.0*
-// CHECK2-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN6]], i64 40
-// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY7:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN6]], [[TMP10]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY7]], label [[OMP_ARRAYINIT_DONE15:%.*]], label [[OMP_ARRAYINIT_BODY8:%.*]]
-// CHECK2:       omp.arrayinit.body8:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[TMP9]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT12:%.*]], [[OMP_ARRAYINIT_BODY8]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST10:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN6]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT13:%.*]], [[OMP_ARRAYINIT_BODY8]] ]
-// CHECK2-NEXT:    [[TMP11:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST10]] to i8*
+// CHECK2-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 40
+// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY6:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN]], [[TMP10]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY6]], label [[OMP_ARRAYINIT_DONE14:%.*]], label [[OMP_ARRAYINIT_BODY7:%.*]]
+// CHECK2:       omp.arrayinit.body7:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST8:%.*]] = phi %struct.S.0* [ [[TMP9]], [[OMP_ARRAYINIT_DONE]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT11:%.*]], [[OMP_ARRAYINIT_BODY7]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[OMP_ARRAYINIT_DONE]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT12:%.*]], [[OMP_ARRAYINIT_BODY7]] ]
+// CHECK2-NEXT:    [[TMP11:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP11]], i64 4
 // CHECK2-NEXT:    [[TMP12:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP13:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST9]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds i8, i8* [[TMP13]], i64 4
-// CHECK2-NEXT:    [[TMP14:%.*]] = bitcast i8* [[ADD_PTR11]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP13:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR10:%.*]] = getelementptr inbounds i8, i8* [[TMP13]], i64 4
+// CHECK2-NEXT:    [[TMP14:%.*]] = bitcast i8* [[ADD_PTR10]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP12]], %struct.BaseS1* [[TMP14]])
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT12]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST9]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT13]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST10]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE14:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT13]], [[TMP10]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE14]], label [[OMP_ARRAYINIT_DONE15]], label [[OMP_ARRAYINIT_BODY8]]
-// CHECK2:       omp.arrayinit.done15:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT11]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT12]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE13:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT12]], [[TMP10]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYINIT_DONE14]], label [[OMP_ARRAYINIT_BODY7]]
+// CHECK2:       omp.arrayinit.done14:
 // CHECK2-NEXT:    [[LHS_BEGIN:%.*]] = bitcast [10 x [4 x %struct.S.0]]* [[TMP3]] to %struct.S.0*
 // CHECK2-NEXT:    [[RHS_BEGIN:%.*]] = bitcast [10 x [4 x %struct.S.0]]* [[ARRS5]] to %struct.S.0*
 // CHECK2-NEXT:    [[TMP15:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -4633,8 +4529,8 @@ int main() {
 // CHECK2:       omp.inner.for.cond:
 // CHECK2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[TMP21:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK2-NEXT:    [[CMP16:%.*]] = icmp sle i32 [[TMP20]], [[TMP21]]
-// CHECK2-NEXT:    br i1 [[CMP16]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK2-NEXT:    [[CMP15:%.*]] = icmp sle i32 [[TMP20]], [[TMP21]]
+// CHECK2-NEXT:    br i1 [[CMP15]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK2:       omp.inner.for.cond.cleanup:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK2:       omp.inner.for.body:
@@ -4646,17 +4542,17 @@ int main() {
 // CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[VLA3]], i64 [[TMP23]]
 // CHECK2-NEXT:    [[TMP24:%.*]] = load i32, i32* [[I]], align 4
 // CHECK2-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP24]] to i64
-// CHECK2-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, i32* [[ARRAYIDX]], i64 [[IDXPROM]]
-// CHECK2-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARRAYIDX17]], align 4
+// CHECK2-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[ARRAYIDX]], i64 [[IDXPROM]]
+// CHECK2-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARRAYIDX16]], align 4
 // CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP25]], 1
-// CHECK2-NEXT:    store i32 [[INC]], i32* [[ARRAYIDX17]], align 4
+// CHECK2-NEXT:    store i32 [[INC]], i32* [[ARRAYIDX16]], align 4
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
 // CHECK2-NEXT:    [[TMP26:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK2-NEXT:    [[ADD18:%.*]] = add nsw i32 [[TMP26]], 1
-// CHECK2-NEXT:    store i32 [[ADD18]], i32* [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP26]], 1
+// CHECK2-NEXT:    store i32 [[ADD17]], i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -4684,88 +4580,88 @@ int main() {
 // CHECK2:       .omp.reduction.case1:
 // CHECK2-NEXT:    [[TMP39:%.*]] = getelementptr i32, i32* [[TMP2]], i64 [[TMP6]]
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq i32* [[TMP2]], [[TMP39]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE23:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE22:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK2:       omp.arraycpy.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST19:%.*]] = phi i32* [ [[VLA3]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST20:%.*]] = phi i32* [ [[TMP2]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT21:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    call void @.omp_combiner..10(i32* [[OMP_ARRAYCPY_DESTELEMENTPAST20]], i32* [[OMP_ARRAYCPY_SRCELEMENTPAST19]])
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT21]] = getelementptr i32, i32* [[OMP_ARRAYCPY_DESTELEMENTPAST20]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr i32, i32* [[OMP_ARRAYCPY_SRCELEMENTPAST19]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE22:%.*]] = icmp eq i32* [[OMP_ARRAYCPY_DEST_ELEMENT21]], [[TMP39]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE22]], label [[OMP_ARRAYCPY_DONE23]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK2:       omp.arraycpy.done23:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST18:%.*]] = phi i32* [ [[VLA3]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST19:%.*]] = phi i32* [ [[TMP2]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT20:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    call void @.omp_combiner..10(i32* [[OMP_ARRAYCPY_DESTELEMENTPAST19]], i32* [[OMP_ARRAYCPY_SRCELEMENTPAST18]])
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT20]] = getelementptr i32, i32* [[OMP_ARRAYCPY_DESTELEMENTPAST19]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr i32, i32* [[OMP_ARRAYCPY_SRCELEMENTPAST18]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE21:%.*]] = icmp eq i32* [[OMP_ARRAYCPY_DEST_ELEMENT20]], [[TMP39]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE21]], label [[OMP_ARRAYCPY_DONE22]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK2:       omp.arraycpy.done22:
 // CHECK2-NEXT:    [[TMP40:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[LHS_BEGIN]], i64 40
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY24:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP40]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY24]], label [[OMP_ARRAYCPY_DONE33:%.*]], label [[OMP_ARRAYCPY_BODY25:%.*]]
-// CHECK2:       omp.arraycpy.body25:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST26:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[OMP_ARRAYCPY_DONE23]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT31:%.*]], [[OMP_ARRAYCPY_BODY25]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST27:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[OMP_ARRAYCPY_DONE23]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT30:%.*]], [[OMP_ARRAYCPY_BODY25]] ]
-// CHECK2-NEXT:    [[TMP41:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST27]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR28:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
-// CHECK2-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR28]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP43:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST26]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR29:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
-// CHECK2-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR29]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY23:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP40]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY23]], label [[OMP_ARRAYCPY_DONE32:%.*]], label [[OMP_ARRAYCPY_BODY24:%.*]]
+// CHECK2:       omp.arraycpy.body24:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST25:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[OMP_ARRAYCPY_DONE22]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT30:%.*]], [[OMP_ARRAYCPY_BODY24]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST26:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[OMP_ARRAYCPY_DONE22]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT29:%.*]], [[OMP_ARRAYCPY_BODY24]] ]
+// CHECK2-NEXT:    [[TMP41:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST26]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR27:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
+// CHECK2-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR27]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP43:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST25]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR28:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
+// CHECK2-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR28]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP42]], %struct.BaseS1* [[TMP44]])
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT30]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST27]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT31]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST26]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE32:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT30]], [[TMP40]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE32]], label [[OMP_ARRAYCPY_DONE33]], label [[OMP_ARRAYCPY_BODY25]]
-// CHECK2:       omp.arraycpy.done33:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT29]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST26]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT30]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST25]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE31:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT29]], [[TMP40]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE31]], label [[OMP_ARRAYCPY_DONE32]], label [[OMP_ARRAYCPY_BODY24]]
+// CHECK2:       omp.arraycpy.done32:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP36]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.case2:
 // CHECK2-NEXT:    [[TMP45:%.*]] = getelementptr i32, i32* [[TMP2]], i64 [[TMP6]]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY34:%.*]] = icmp eq i32* [[TMP2]], [[TMP45]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY34]], label [[OMP_ARRAYCPY_DONE41:%.*]], label [[OMP_ARRAYCPY_BODY35:%.*]]
-// CHECK2:       omp.arraycpy.body35:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST36:%.*]] = phi i32* [ [[VLA3]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT39:%.*]], [[OMP_ARRAYCPY_BODY35]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST37:%.*]] = phi i32* [ [[TMP2]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT38:%.*]], [[OMP_ARRAYCPY_BODY35]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY33:%.*]] = icmp eq i32* [[TMP2]], [[TMP45]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY33]], label [[OMP_ARRAYCPY_DONE40:%.*]], label [[OMP_ARRAYCPY_BODY34:%.*]]
+// CHECK2:       omp.arraycpy.body34:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST35:%.*]] = phi i32* [ [[VLA3]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT38:%.*]], [[OMP_ARRAYCPY_BODY34]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST36:%.*]] = phi i32* [ [[TMP2]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT37:%.*]], [[OMP_ARRAYCPY_BODY34]] ]
 // CHECK2-NEXT:    [[TMP46:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP47:%.*]] = load i32, i32* [[TMP46]], align 4
 // CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP47]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    call void @.omp_combiner..10(i32* [[OMP_ARRAYCPY_DESTELEMENTPAST37]], i32* [[OMP_ARRAYCPY_SRCELEMENTPAST36]])
+// CHECK2-NEXT:    call void @.omp_combiner..10(i32* [[OMP_ARRAYCPY_DESTELEMENTPAST36]], i32* [[OMP_ARRAYCPY_SRCELEMENTPAST35]])
 // CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP47]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT38]] = getelementptr i32, i32* [[OMP_ARRAYCPY_DESTELEMENTPAST37]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT39]] = getelementptr i32, i32* [[OMP_ARRAYCPY_SRCELEMENTPAST36]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE40:%.*]] = icmp eq i32* [[OMP_ARRAYCPY_DEST_ELEMENT38]], [[TMP45]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE40]], label [[OMP_ARRAYCPY_DONE41]], label [[OMP_ARRAYCPY_BODY35]]
-// CHECK2:       omp.arraycpy.done41:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT37]] = getelementptr i32, i32* [[OMP_ARRAYCPY_DESTELEMENTPAST36]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT38]] = getelementptr i32, i32* [[OMP_ARRAYCPY_SRCELEMENTPAST35]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE39:%.*]] = icmp eq i32* [[OMP_ARRAYCPY_DEST_ELEMENT37]], [[TMP45]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE39]], label [[OMP_ARRAYCPY_DONE40]], label [[OMP_ARRAYCPY_BODY34]]
+// CHECK2:       omp.arraycpy.done40:
 // CHECK2-NEXT:    [[TMP48:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[LHS_BEGIN]], i64 40
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY42:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP48]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY42]], label [[OMP_ARRAYCPY_DONE51:%.*]], label [[OMP_ARRAYCPY_BODY43:%.*]]
-// CHECK2:       omp.arraycpy.body43:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST44:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[OMP_ARRAYCPY_DONE41]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT49:%.*]], [[OMP_ARRAYCPY_BODY43]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST45:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[OMP_ARRAYCPY_DONE41]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT48:%.*]], [[OMP_ARRAYCPY_BODY43]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY41:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP48]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY41]], label [[OMP_ARRAYCPY_DONE50:%.*]], label [[OMP_ARRAYCPY_BODY42:%.*]]
+// CHECK2:       omp.arraycpy.body42:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST43:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[OMP_ARRAYCPY_DONE40]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT48:%.*]], [[OMP_ARRAYCPY_BODY42]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST44:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[OMP_ARRAYCPY_DONE40]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT47:%.*]], [[OMP_ARRAYCPY_BODY42]] ]
 // CHECK2-NEXT:    [[TMP49:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP50:%.*]] = load i32, i32* [[TMP49]], align 4
 // CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP50]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[TMP51:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST45]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR46:%.*]] = getelementptr inbounds i8, i8* [[TMP51]], i64 4
-// CHECK2-NEXT:    [[TMP52:%.*]] = bitcast i8* [[ADD_PTR46]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP53:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST44]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR47:%.*]] = getelementptr inbounds i8, i8* [[TMP53]], i64 4
-// CHECK2-NEXT:    [[TMP54:%.*]] = bitcast i8* [[ADD_PTR47]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP51:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST44]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR45:%.*]] = getelementptr inbounds i8, i8* [[TMP51]], i64 4
+// CHECK2-NEXT:    [[TMP52:%.*]] = bitcast i8* [[ADD_PTR45]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP53:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST43]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR46:%.*]] = getelementptr inbounds i8, i8* [[TMP53]], i64 4
+// CHECK2-NEXT:    [[TMP54:%.*]] = bitcast i8* [[ADD_PTR46]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP52]], %struct.BaseS1* [[TMP54]])
 // CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP50]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT48]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST45]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT49]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST44]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE50:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT48]], [[TMP48]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE50]], label [[OMP_ARRAYCPY_DONE51]], label [[OMP_ARRAYCPY_BODY43]]
-// CHECK2:       omp.arraycpy.done51:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT47]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST44]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT48]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST43]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE49:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT47]], [[TMP48]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE49]], label [[OMP_ARRAYCPY_DONE50]], label [[OMP_ARRAYCPY_BODY42]]
+// CHECK2:       omp.arraycpy.done50:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP36]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.default:
-// CHECK2-NEXT:    [[ARRAY_BEGIN52:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], [10 x [4 x %struct.S.0]]* [[ARRS5]], i32 0, i32 0, i32 0
-// CHECK2-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN52]], i64 40
+// CHECK2-NEXT:    [[ARRAY_BEGIN51:%.*]] = getelementptr inbounds [10 x [4 x %struct.S.0]], [10 x [4 x %struct.S.0]]* [[ARRS5]], i32 0, i32 0, i32 0
+// CHECK2-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN51]], i64 40
 // CHECK2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK2:       arraydestroy.body:
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP55]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK2-NEXT:    call void @_ZN1SIfED1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN52]]
-// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE53:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK2:       arraydestroy.done53:
+// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN51]]
+// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE52:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK2:       arraydestroy.done52:
 // CHECK2-NEXT:    [[TMP56:%.*]] = load i8*, i8** [[SAVED_STACK]], align 8
 // CHECK2-NEXT:    call void @llvm.stackrestore(i8* [[TMP56]])
 // CHECK2-NEXT:    [[TMP57:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -4877,24 +4773,12 @@ int main() {
 // CHECK2-NEXT:    store i8* [[TMP11]], i8** [[SAVED_STACK]], align 8
 // CHECK2-NEXT:    [[VLA:%.*]] = alloca [[STRUCT_S_0]], i64 [[TMP9]], align 16
 // CHECK2-NEXT:    store i64 [[TMP9]], i64* [[__VLA_EXPR0]], align 8
-// CHECK2-NEXT:    [[ISEMPTY:%.*]] = icmp eq i64 [[TMP9]], 0
-// CHECK2-NEXT:    br i1 [[ISEMPTY]], label [[ARRAYCTOR_CONT:%.*]], label [[NEW_CTORLOOP:%.*]]
-// CHECK2:       new.ctorloop:
-// CHECK2-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[VLA]], i64 [[TMP9]]
-// CHECK2-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK2:       arrayctor.loop:
-// CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[VLA]], [[NEW_CTORLOOP]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK2-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT]], label [[ARRAYCTOR_LOOP]]
-// CHECK2:       arrayctor.cont:
 // CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[VLA]], i64 [[TMP9]]
 // CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[VLA]], [[TMP12]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK2:       omp.arrayinit.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX1]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[VLA]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT5:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX1]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[VLA]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT5:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK2-NEXT:    [[TMP13:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP13]], i64 4
 // CHECK2-NEXT:    [[TMP14:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
@@ -5105,32 +4989,22 @@ int main() {
 // CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[TMP0]], i64 0, i64 0
 // CHECK2-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[TMP0]], i64 0, i64 4
 // CHECK2-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[VVAR22]], i32 0, i32 0
-// CHECK2-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 5
-// CHECK2-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK2:       arrayctor.loop:
-// CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK2-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK2:       arrayctor.cont:
-// CHECK2-NEXT:    [[ARRAY_BEGIN3:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[VVAR22]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN3]], i64 5
-// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN3]], [[TMP1]]
+// CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 5
+// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN]], [[TMP1]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK2:       omp.arrayinit.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN3]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT5:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT4:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK2-NEXT:    [[TMP2:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP2]], i64 4
 // CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
 // CHECK2-NEXT:    [[TMP4:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR4:%.*]] = getelementptr inbounds i8, i8* [[TMP4]], i64 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ADD_PTR4]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, i8* [[TMP4]], i64 4
+// CHECK2-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ADD_PTR3]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP3]], %struct.BaseS1* [[TMP5]])
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT5]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT5]], [[TMP1]]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT4]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT4]], [[TMP1]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK2:       omp.arrayinit.done:
 // CHECK2-NEXT:    [[TMP6:%.*]] = bitcast [5 x %struct.S.0]* [[TMP0]] to %struct.S.0*
@@ -5162,8 +5036,8 @@ int main() {
 // CHECK2:       omp.inner.for.cond:
 // CHECK2-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK2-NEXT:    [[CMP6:%.*]] = icmp sle i32 [[TMP19]], [[TMP20]]
-// CHECK2-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK2-NEXT:    [[CMP5:%.*]] = icmp sle i32 [[TMP19]], [[TMP20]]
+// CHECK2-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK2:       omp.inner.for.cond.cleanup:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK2:       omp.inner.for.body:
@@ -5176,8 +5050,8 @@ int main() {
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
 // CHECK2-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK2-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP22]], 1
-// CHECK2-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[ADD6:%.*]] = add nsw i32 [[TMP22]], 1
+// CHECK2-NEXT:    store i32 [[ADD6]], i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -5199,60 +5073,60 @@ int main() {
 // CHECK2:       .omp.reduction.case1:
 // CHECK2-NEXT:    [[TMP31:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAYIDX]], i64 5
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP31]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE14:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE13:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK2:       omp.arraycpy.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST8:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT12:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[TMP32:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR10:%.*]] = getelementptr inbounds i8, i8* [[TMP32]], i64 4
-// CHECK2-NEXT:    [[TMP33:%.*]] = bitcast i8* [[ADD_PTR10]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP34:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds i8, i8* [[TMP34]], i64 4
-// CHECK2-NEXT:    [[TMP35:%.*]] = bitcast i8* [[ADD_PTR11]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST7:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST8:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT11:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[TMP32:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST8]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds i8, i8* [[TMP32]], i64 4
+// CHECK2-NEXT:    [[TMP33:%.*]] = bitcast i8* [[ADD_PTR9]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP34:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST7]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR10:%.*]] = getelementptr inbounds i8, i8* [[TMP34]], i64 4
+// CHECK2-NEXT:    [[TMP35:%.*]] = bitcast i8* [[ADD_PTR10]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP33]], %struct.BaseS1* [[TMP35]])
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT12]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE13:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT12]], [[TMP31]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYCPY_DONE14]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK2:       omp.arraycpy.done14:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT11]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST8]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST7]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE12:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT11]], [[TMP31]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE12]], label [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK2:       omp.arraycpy.done13:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP28]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.case2:
 // CHECK2-NEXT:    [[TMP36:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAYIDX]], i64 5
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY15:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP36]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY15]], label [[OMP_ARRAYCPY_DONE24:%.*]], label [[OMP_ARRAYCPY_BODY16:%.*]]
-// CHECK2:       omp.arraycpy.body16:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST17:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT22:%.*]], [[OMP_ARRAYCPY_BODY16]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST18:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT21:%.*]], [[OMP_ARRAYCPY_BODY16]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY14:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP36]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY14]], label [[OMP_ARRAYCPY_DONE23:%.*]], label [[OMP_ARRAYCPY_BODY15:%.*]]
+// CHECK2:       omp.arraycpy.body15:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST16:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT21:%.*]], [[OMP_ARRAYCPY_BODY15]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST17:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT20:%.*]], [[OMP_ARRAYCPY_BODY15]] ]
 // CHECK2-NEXT:    [[TMP37:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP38:%.*]] = load i32, i32* [[TMP37]], align 4
 // CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP38]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[TMP39:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST18]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR19:%.*]] = getelementptr inbounds i8, i8* [[TMP39]], i64 4
-// CHECK2-NEXT:    [[TMP40:%.*]] = bitcast i8* [[ADD_PTR19]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP41:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST17]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR20:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
-// CHECK2-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR20]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP39:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST17]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR18:%.*]] = getelementptr inbounds i8, i8* [[TMP39]], i64 4
+// CHECK2-NEXT:    [[TMP40:%.*]] = bitcast i8* [[ADD_PTR18]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP41:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST16]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR19:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
+// CHECK2-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR19]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP40]], %struct.BaseS1* [[TMP42]])
 // CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP38]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT21]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST18]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT22]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST17]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE23:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT21]], [[TMP36]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE23]], label [[OMP_ARRAYCPY_DONE24]], label [[OMP_ARRAYCPY_BODY16]]
-// CHECK2:       omp.arraycpy.done24:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT20]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST17]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT21]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST16]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE22:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT20]], [[TMP36]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE22]], label [[OMP_ARRAYCPY_DONE23]], label [[OMP_ARRAYCPY_BODY15]]
+// CHECK2:       omp.arraycpy.done23:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP28]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.default:
-// CHECK2-NEXT:    [[ARRAY_BEGIN25:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[VVAR22]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN25]], i64 5
+// CHECK2-NEXT:    [[ARRAY_BEGIN24:%.*]] = getelementptr inbounds [5 x %struct.S.0], [5 x %struct.S.0]* [[VVAR22]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN24]], i64 5
 // CHECK2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK2:       arraydestroy.body:
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP43]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK2-NEXT:    call void @_ZN1SIfED1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN25]]
-// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE26:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK2:       arraydestroy.done26:
+// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN24]]
+// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE25:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK2:       arraydestroy.done25:
 // CHECK2-NEXT:    [[TMP44:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP45:%.*]] = load i32, i32* [[TMP44]], align 4
 // CHECK2-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB4]], i32 [[TMP45]])
@@ -5312,7 +5186,7 @@ int main() {
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[VAR34:%.*]] = alloca [2 x %struct.S.0], align 16
-// CHECK2-NEXT:    [[_TMP8:%.*]] = alloca [4 x %struct.S.0]*, align 8
+// CHECK2-NEXT:    [[_TMP7:%.*]] = alloca [4 x %struct.S.0]*, align 8
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // CHECK2-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -5331,32 +5205,22 @@ int main() {
 // CHECK2-NEXT:    [[TMP3:%.*]] = load [4 x %struct.S.0]*, [4 x %struct.S.0]** [[_TMP1]], align 8
 // CHECK2-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[TMP3]], i64 0, i64 2
 // CHECK2-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[VAR34]], i32 0, i32 0
-// CHECK2-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 2
-// CHECK2-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK2:       arrayctor.loop:
-// CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK2-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK2:       arrayctor.cont:
-// CHECK2-NEXT:    [[ARRAY_BEGIN5:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[VAR34]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN5]], i64 2
-// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN5]], [[TMP4]]
+// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 2
+// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN]], [[TMP4]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK2:       omp.arrayinit.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN5]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT7:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT6:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK2-NEXT:    [[TMP5:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP5]], i64 4
 // CHECK2-NEXT:    [[TMP6:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
 // CHECK2-NEXT:    [[TMP7:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR6:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 4
-// CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ADD_PTR6]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[ADD_PTR5:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 4
+// CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ADD_PTR5]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP6]], %struct.BaseS1* [[TMP8]])
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT7]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT7]], [[TMP4]]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT6]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT6]], [[TMP4]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK2:       omp.arrayinit.done:
 // CHECK2-NEXT:    [[TMP9:%.*]] = load [4 x %struct.S.0]*, [4 x %struct.S.0]** [[_TMP1]], align 8
@@ -5368,7 +5232,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP15:%.*]] = bitcast [2 x %struct.S.0]* [[VAR34]] to %struct.S.0*
 // CHECK2-NEXT:    [[TMP16:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[TMP15]], i64 [[TMP14]]
 // CHECK2-NEXT:    [[TMP17:%.*]] = bitcast %struct.S.0* [[TMP16]] to [4 x %struct.S.0]*
-// CHECK2-NEXT:    store [4 x %struct.S.0]* [[TMP17]], [4 x %struct.S.0]** [[_TMP8]], align 8
+// CHECK2-NEXT:    store [4 x %struct.S.0]* [[TMP17]], [4 x %struct.S.0]** [[_TMP7]], align 8
 // CHECK2-NEXT:    [[RHS_BEGIN:%.*]] = bitcast [2 x %struct.S.0]* [[VAR34]] to %struct.S.0*
 // CHECK2-NEXT:    [[TMP18:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP18]], align 4
@@ -5390,8 +5254,8 @@ int main() {
 // CHECK2:       omp.inner.for.cond:
 // CHECK2-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[TMP24:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK2-NEXT:    [[CMP9:%.*]] = icmp sle i32 [[TMP23]], [[TMP24]]
-// CHECK2-NEXT:    br i1 [[CMP9]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK2-NEXT:    [[CMP8:%.*]] = icmp sle i32 [[TMP23]], [[TMP24]]
+// CHECK2-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK2:       omp.inner.for.cond.cleanup:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK2:       omp.inner.for.body:
@@ -5404,8 +5268,8 @@ int main() {
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
 // CHECK2-NEXT:    [[TMP26:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK2-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP26]], 1
-// CHECK2-NEXT:    store i32 [[ADD10]], i32* [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP26]], 1
+// CHECK2-NEXT:    store i32 [[ADD9]], i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -5427,60 +5291,60 @@ int main() {
 // CHECK2:       .omp.reduction.case1:
 // CHECK2-NEXT:    [[TMP35:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAYIDX]], i64 2
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP35]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE17:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE16:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK2:       omp.arraycpy.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST11:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST12:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT15:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[TMP36:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST12]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR13:%.*]] = getelementptr inbounds i8, i8* [[TMP36]], i64 4
-// CHECK2-NEXT:    [[TMP37:%.*]] = bitcast i8* [[ADD_PTR13]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP38:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST11]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR14:%.*]] = getelementptr inbounds i8, i8* [[TMP38]], i64 4
-// CHECK2-NEXT:    [[TMP39:%.*]] = bitcast i8* [[ADD_PTR14]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST10:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST11:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT14:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[TMP36:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST11]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds i8, i8* [[TMP36]], i64 4
+// CHECK2-NEXT:    [[TMP37:%.*]] = bitcast i8* [[ADD_PTR12]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP38:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST10]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR13:%.*]] = getelementptr inbounds i8, i8* [[TMP38]], i64 4
+// CHECK2-NEXT:    [[TMP39:%.*]] = bitcast i8* [[ADD_PTR13]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP37]], %struct.BaseS1* [[TMP39]])
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT15]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST12]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST11]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE16:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT15]], [[TMP35]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE16]], label [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK2:       omp.arraycpy.done17:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT14]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST11]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST10]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE15:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT14]], [[TMP35]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE15]], label [[OMP_ARRAYCPY_DONE16]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK2:       omp.arraycpy.done16:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP32]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.case2:
 // CHECK2-NEXT:    [[TMP40:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAYIDX]], i64 2
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY18:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP40]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY18]], label [[OMP_ARRAYCPY_DONE27:%.*]], label [[OMP_ARRAYCPY_BODY19:%.*]]
-// CHECK2:       omp.arraycpy.body19:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST20:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT25:%.*]], [[OMP_ARRAYCPY_BODY19]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST21:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT24:%.*]], [[OMP_ARRAYCPY_BODY19]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY17:%.*]] = icmp eq %struct.S.0* [[ARRAYIDX]], [[TMP40]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY17]], label [[OMP_ARRAYCPY_DONE26:%.*]], label [[OMP_ARRAYCPY_BODY18:%.*]]
+// CHECK2:       omp.arraycpy.body18:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST19:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT24:%.*]], [[OMP_ARRAYCPY_BODY18]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST20:%.*]] = phi %struct.S.0* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT23:%.*]], [[OMP_ARRAYCPY_BODY18]] ]
 // CHECK2-NEXT:    [[TMP41:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP42:%.*]] = load i32, i32* [[TMP41]], align 4
 // CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP42]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[TMP43:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST21]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR22:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
-// CHECK2-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR22]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP45:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST20]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR23:%.*]] = getelementptr inbounds i8, i8* [[TMP45]], i64 4
-// CHECK2-NEXT:    [[TMP46:%.*]] = bitcast i8* [[ADD_PTR23]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP43:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST20]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR21:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
+// CHECK2-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR21]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP45:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST19]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR22:%.*]] = getelementptr inbounds i8, i8* [[TMP45]], i64 4
+// CHECK2-NEXT:    [[TMP46:%.*]] = bitcast i8* [[ADD_PTR22]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP44]], %struct.BaseS1* [[TMP46]])
 // CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP42]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT24]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST21]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT25]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST20]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE26:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT24]], [[TMP40]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE26]], label [[OMP_ARRAYCPY_DONE27]], label [[OMP_ARRAYCPY_BODY19]]
-// CHECK2:       omp.arraycpy.done27:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT23]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST20]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT24]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST19]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE25:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT23]], [[TMP40]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE25]], label [[OMP_ARRAYCPY_DONE26]], label [[OMP_ARRAYCPY_BODY18]]
+// CHECK2:       omp.arraycpy.done26:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP32]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.default:
-// CHECK2-NEXT:    [[ARRAY_BEGIN28:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[VAR34]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN28]], i64 2
+// CHECK2-NEXT:    [[ARRAY_BEGIN27:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[VAR34]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN27]], i64 2
 // CHECK2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK2:       arraydestroy.body:
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP47]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK2-NEXT:    call void @_ZN1SIfED1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN28]]
-// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE29:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK2:       arraydestroy.done29:
+// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN27]]
+// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE28:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK2:       arraydestroy.done28:
 // CHECK2-NEXT:    [[TMP48:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP49:%.*]] = load i32, i32* [[TMP48]], align 4
 // CHECK2-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB4]], i32 [[TMP49]])
@@ -5539,7 +5403,7 @@ int main() {
 // CHECK2-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[_TMP6:%.*]] = alloca [4 x %struct.S.0]*, align 8
+// CHECK2-NEXT:    [[_TMP5:%.*]] = alloca [4 x %struct.S.0]*, align 8
 // CHECK2-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // CHECK2-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -5559,36 +5423,26 @@ int main() {
 // CHECK2-NEXT:    [[DOTVAR3__VOID_ADDR:%.*]] = call i8* @__kmpc_alloc(i32 [[TMP4]], i64 48, i8* inttoptr (i64 6 to i8*))
 // CHECK2-NEXT:    [[DOTVAR3__ADDR:%.*]] = bitcast i8* [[DOTVAR3__VOID_ADDR]] to [4 x %struct.S.0]*
 // CHECK2-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[DOTVAR3__ADDR]], i32 0, i32 0
-// CHECK2-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 4
-// CHECK2-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK2:       arrayctor.loop:
-// CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK2-NEXT:    call void @_ZN1SIfEC1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYCTOR_CUR]], i64 1
-// CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK2-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK2:       arrayctor.cont:
-// CHECK2-NEXT:    [[ARRAY_BEGIN3:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[DOTVAR3__ADDR]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP5:%.*]] = bitcast [4 x %struct.S.0]* [[TMP2]] to %struct.S.0*
-// CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN3]], i64 4
-// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN3]], [[TMP6]]
+// CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 4
+// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[ARRAY_BEGIN]], [[TMP6]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK2:       omp.arrayinit.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP5]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN3]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT5:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP5]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S.0* [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT4:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK2-NEXT:    [[TMP7:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 4
 // CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
 // CHECK2-NEXT:    [[TMP9:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR4:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i64 4
-// CHECK2-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ADD_PTR4]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i64 4
+// CHECK2-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ADD_PTR3]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP8]], %struct.BaseS1* [[TMP10]])
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT5]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT5]], [[TMP6]]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT4]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT4]], [[TMP6]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK2:       omp.arrayinit.done:
-// CHECK2-NEXT:    store [4 x %struct.S.0]* [[DOTVAR3__ADDR]], [4 x %struct.S.0]** [[_TMP6]], align 8
+// CHECK2-NEXT:    store [4 x %struct.S.0]* [[DOTVAR3__ADDR]], [4 x %struct.S.0]** [[_TMP5]], align 8
 // CHECK2-NEXT:    [[LHS_BEGIN:%.*]] = bitcast [4 x %struct.S.0]* [[TMP2]] to %struct.S.0*
 // CHECK2-NEXT:    [[RHS_BEGIN:%.*]] = bitcast [4 x %struct.S.0]* [[DOTVAR3__ADDR]] to %struct.S.0*
 // CHECK2-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB2]], i32 [[TMP4]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -5609,8 +5463,8 @@ int main() {
 // CHECK2:       omp.inner.for.cond:
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK2-NEXT:    [[CMP7:%.*]] = icmp sle i32 [[TMP14]], [[TMP15]]
-// CHECK2-NEXT:    br i1 [[CMP7]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK2-NEXT:    [[CMP6:%.*]] = icmp sle i32 [[TMP14]], [[TMP15]]
+// CHECK2-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK2:       omp.inner.for.cond.cleanup:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK2:       omp.inner.for.body:
@@ -5623,8 +5477,8 @@ int main() {
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
 // CHECK2-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP17]], 1
-// CHECK2-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP17]], 1
+// CHECK2-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -5642,58 +5496,58 @@ int main() {
 // CHECK2:       .omp.reduction.case1:
 // CHECK2-NEXT:    [[TMP22:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[LHS_BEGIN]], i64 4
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP22]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE15:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE14:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK2:       omp.arraycpy.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST10:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT13:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[TMP23:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST10]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds i8, i8* [[TMP23]], i64 4
-// CHECK2-NEXT:    [[TMP24:%.*]] = bitcast i8* [[ADD_PTR11]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP25:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST9]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR12:%.*]] = getelementptr inbounds i8, i8* [[TMP25]], i64 4
-// CHECK2-NEXT:    [[TMP26:%.*]] = bitcast i8* [[ADD_PTR12]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST8:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST9:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT12:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[TMP23:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR10:%.*]] = getelementptr inbounds i8, i8* [[TMP23]], i64 4
+// CHECK2-NEXT:    [[TMP24:%.*]] = bitcast i8* [[ADD_PTR10]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP25:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds i8, i8* [[TMP25]], i64 4
+// CHECK2-NEXT:    [[TMP26:%.*]] = bitcast i8* [[ADD_PTR11]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP24]], %struct.BaseS1* [[TMP26]])
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT13]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST10]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST9]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE14:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT13]], [[TMP22]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE14]], label [[OMP_ARRAYCPY_DONE15]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK2:       omp.arraycpy.done15:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT12]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST9]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST8]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE13:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT12]], [[TMP22]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE13]], label [[OMP_ARRAYCPY_DONE14]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK2:       omp.arraycpy.done14:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP4]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.case2:
 // CHECK2-NEXT:    [[TMP27:%.*]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[LHS_BEGIN]], i64 4
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY16:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP27]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY16]], label [[OMP_ARRAYCPY_DONE25:%.*]], label [[OMP_ARRAYCPY_BODY17:%.*]]
-// CHECK2:       omp.arraycpy.body17:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST18:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT23:%.*]], [[OMP_ARRAYCPY_BODY17]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST19:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT22:%.*]], [[OMP_ARRAYCPY_BODY17]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY15:%.*]] = icmp eq %struct.S.0* [[LHS_BEGIN]], [[TMP27]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY15]], label [[OMP_ARRAYCPY_DONE24:%.*]], label [[OMP_ARRAYCPY_BODY16:%.*]]
+// CHECK2:       omp.arraycpy.body16:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST17:%.*]] = phi %struct.S.0* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT22:%.*]], [[OMP_ARRAYCPY_BODY16]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST18:%.*]] = phi %struct.S.0* [ [[LHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT21:%.*]], [[OMP_ARRAYCPY_BODY16]] ]
 // CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[TMP28:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST19]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR20:%.*]] = getelementptr inbounds i8, i8* [[TMP28]], i64 4
-// CHECK2-NEXT:    [[TMP29:%.*]] = bitcast i8* [[ADD_PTR20]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP30:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST18]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR21:%.*]] = getelementptr inbounds i8, i8* [[TMP30]], i64 4
-// CHECK2-NEXT:    [[TMP31:%.*]] = bitcast i8* [[ADD_PTR21]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP28:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST18]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR19:%.*]] = getelementptr inbounds i8, i8* [[TMP28]], i64 4
+// CHECK2-NEXT:    [[TMP29:%.*]] = bitcast i8* [[ADD_PTR19]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP30:%.*]] = bitcast %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST17]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR20:%.*]] = getelementptr inbounds i8, i8* [[TMP30]], i64 4
+// CHECK2-NEXT:    [[TMP31:%.*]] = bitcast i8* [[ADD_PTR20]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..4(%struct.BaseS1* [[TMP29]], %struct.BaseS1* [[TMP31]])
 // CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT22]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST19]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT23]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST18]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE24:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT22]], [[TMP27]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE24]], label [[OMP_ARRAYCPY_DONE25]], label [[OMP_ARRAYCPY_BODY17]]
-// CHECK2:       omp.arraycpy.done25:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT21]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_DESTELEMENTPAST18]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT22]] = getelementptr [[STRUCT_S_0]], %struct.S.0* [[OMP_ARRAYCPY_SRCELEMENTPAST17]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE23:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT21]], [[TMP27]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE23]], label [[OMP_ARRAYCPY_DONE24]], label [[OMP_ARRAYCPY_BODY16]]
+// CHECK2:       omp.arraycpy.done24:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP4]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.default:
-// CHECK2-NEXT:    [[ARRAY_BEGIN26:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[DOTVAR3__ADDR]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN26]], i64 4
+// CHECK2-NEXT:    [[ARRAY_BEGIN25:%.*]] = getelementptr inbounds [4 x %struct.S.0], [4 x %struct.S.0]* [[DOTVAR3__ADDR]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAY_BEGIN25]], i64 4
 // CHECK2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK2:       arraydestroy.body:
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S.0* [ [[TMP32]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S_0]], %struct.S.0* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK2-NEXT:    call void @_ZN1SIfED1Ev(%struct.S.0* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN26]]
-// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE27:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK2:       arraydestroy.done27:
+// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S.0* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN25]]
+// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE26:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK2:       arraydestroy.done26:
 // CHECK2-NEXT:    [[TMP33:%.*]] = bitcast [4 x %struct.S.0]* [[DOTVAR3__ADDR]] to i8*
 // CHECK2-NEXT:    call void @__kmpc_free(i32 [[TMP4]], i8* [[TMP33]], i8* inttoptr (i64 6 to i8*))
 // CHECK2-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB4]], i32 [[TMP4]])
@@ -5914,7 +5768,6 @@ int main() {
 // CHECK2-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
 // CHECK2-NEXT:    call void @.omp_initializer..25(i32* [[T_VAR3]], i32* [[TMP0]])
 // CHECK2-NEXT:    [[TMP7:%.*]] = load %struct.S*, %struct.S** [[_TMP1]], align 8
-// CHECK2-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[VAR4]])
 // CHECK2-NEXT:    [[TMP8:%.*]] = bitcast %struct.S* [[VAR4]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP8]], i64 4
 // CHECK2-NEXT:    [[TMP9:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
@@ -5923,7 +5776,6 @@ int main() {
 // CHECK2-NEXT:    [[TMP11:%.*]] = bitcast i8* [[ADD_PTR5]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_initializer..5(%struct.BaseS1* [[TMP9]], %struct.BaseS1* [[TMP11]])
 // CHECK2-NEXT:    store %struct.S* [[VAR4]], %struct.S** [[_TMP6]], align 8
-// CHECK2-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[VAR17]])
 // CHECK2-NEXT:    call void @.omp_initializer..27(%struct.S* [[VAR17]], %struct.S* [[TMP2]])
 // CHECK2-NEXT:    call void @.omp_initializer..29(i32* [[T_VAR18]], i32* [[TMP3]])
 // CHECK2-NEXT:    [[TMP12:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
@@ -6367,32 +6219,22 @@ int main() {
 // CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [42 x %struct.S], [42 x %struct.S]* [[TMP0]], i64 0, i64 1
 // CHECK2-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [42 x %struct.S], [42 x %struct.S]* [[TMP0]], i64 0, i64 40
 // CHECK2-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [40 x %struct.S], [40 x %struct.S]* [[ARR4]], i32 0, i32 0
-// CHECK2-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[ARRAY_BEGIN]], i64 40
-// CHECK2-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
-// CHECK2:       arrayctor.loop:
-// CHECK2-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi %struct.S* [ [[ARRAY_BEGIN]], [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
-// CHECK2-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[ARRAYCTOR_CUR]])
-// CHECK2-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAYCTOR_CUR]], i64 1
-// CHECK2-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq %struct.S* [[ARRAYCTOR_NEXT]], [[ARRAYCTOR_END]]
-// CHECK2-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
-// CHECK2:       arrayctor.cont:
-// CHECK2-NEXT:    [[ARRAY_BEGIN5:%.*]] = getelementptr inbounds [40 x %struct.S], [40 x %struct.S]* [[ARR4]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[ARRAY_BEGIN5]], i64 40
-// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S* [[ARRAY_BEGIN5]], [[TMP6]]
+// CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_S:%.*]], %struct.S* [[ARRAY_BEGIN]], i64 40
+// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S* [[ARRAY_BEGIN]], [[TMP6]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK2:       omp.arrayinit.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S* [ [[ARRAY_BEGIN5]], [[ARRAYCTOR_CONT]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT7:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi %struct.S* [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT6:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK2-NEXT:    [[TMP7:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST]] to i8*
 // CHECK2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 4
 // CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ADD_PTR]] to %struct.BaseS1*
 // CHECK2-NEXT:    [[TMP9:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR6:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i64 4
-// CHECK2-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ADD_PTR6]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[ADD_PTR5:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i64 4
+// CHECK2-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ADD_PTR5]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_initializer..37(%struct.BaseS1* [[TMP8]], %struct.BaseS1* [[TMP10]])
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT7]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT7]], [[TMP6]]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT6]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT6]], [[TMP6]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK2:       omp.arrayinit.done:
 // CHECK2-NEXT:    [[TMP11:%.*]] = bitcast [42 x %struct.S]* [[TMP0]] to %struct.S*
@@ -6424,8 +6266,8 @@ int main() {
 // CHECK2:       omp.inner.for.cond:
 // CHECK2-NEXT:    [[TMP24:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    [[TMP25:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// CHECK2-NEXT:    [[CMP8:%.*]] = icmp sle i32 [[TMP24]], [[TMP25]]
-// CHECK2-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
+// CHECK2-NEXT:    [[CMP7:%.*]] = icmp sle i32 [[TMP24]], [[TMP25]]
+// CHECK2-NEXT:    br i1 [[CMP7]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]]
 // CHECK2:       omp.inner.for.cond.cleanup:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 // CHECK2:       omp.inner.for.body:
@@ -6436,20 +6278,20 @@ int main() {
 // CHECK2-NEXT:    [[TMP27:%.*]] = load i32, i32* [[TMP2]], align 4
 // CHECK2-NEXT:    [[TMP28:%.*]] = load i32, i32* [[I]], align 4
 // CHECK2-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP28]] to i64
-// CHECK2-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[TMP1]], i64 0, i64 [[IDXPROM]]
-// CHECK2-NEXT:    store i32 [[TMP27]], i32* [[ARRAYIDX9]], align 4
+// CHECK2-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[TMP1]], i64 0, i64 [[IDXPROM]]
+// CHECK2-NEXT:    store i32 [[TMP27]], i32* [[ARRAYIDX8]], align 4
 // CHECK2-NEXT:    [[TMP29:%.*]] = load %struct.S*, %struct.S** [[_TMP1]], align 8
 // CHECK2-NEXT:    [[TMP30:%.*]] = load i32, i32* [[I]], align 4
-// CHECK2-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[TMP30]] to i64
-// CHECK2-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [2 x %struct.S], [2 x %struct.S]* [[TMP3]], i64 0, i64 [[IDXPROM10]]
-// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(12) %struct.S* @_ZN1SIiEaSERKS0_(%struct.S* nonnull align 4 dereferenceable(12) [[ARRAYIDX11]], %struct.S* nonnull align 4 dereferenceable(12) [[TMP29]])
+// CHECK2-NEXT:    [[IDXPROM9:%.*]] = sext i32 [[TMP30]] to i64
+// CHECK2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [2 x %struct.S], [2 x %struct.S]* [[TMP3]], i64 0, i64 [[IDXPROM9]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(12) %struct.S* @_ZN1SIiEaSERKS0_(%struct.S* nonnull align 4 dereferenceable(12) [[ARRAYIDX10]], %struct.S* nonnull align 4 dereferenceable(12) [[TMP29]])
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
 // CHECK2-NEXT:    [[TMP31:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// CHECK2-NEXT:    [[ADD12:%.*]] = add nsw i32 [[TMP31]], 1
-// CHECK2-NEXT:    store i32 [[ADD12]], i32* [[DOTOMP_IV]], align 4
+// CHECK2-NEXT:    [[ADD11:%.*]] = add nsw i32 [[TMP31]], 1
+// CHECK2-NEXT:    store i32 [[ADD11]], i32* [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -6471,60 +6313,60 @@ int main() {
 // CHECK2:       .omp.reduction.case1:
 // CHECK2-NEXT:    [[TMP40:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[ARRAYIDX]], i64 40
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq %struct.S* [[ARRAYIDX]], [[TMP40]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE19:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE18:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK2:       omp.arraycpy.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST13:%.*]] = phi %struct.S* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST14:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT17:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// CHECK2-NEXT:    [[TMP41:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST14]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR15:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
-// CHECK2-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR15]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP43:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST13]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR16:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
-// CHECK2-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR16]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST12:%.*]] = phi %struct.S* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST13:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE1]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT16:%.*]], [[OMP_ARRAYCPY_BODY]] ]
+// CHECK2-NEXT:    [[TMP41:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST13]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR14:%.*]] = getelementptr inbounds i8, i8* [[TMP41]], i64 4
+// CHECK2-NEXT:    [[TMP42:%.*]] = bitcast i8* [[ADD_PTR14]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP43:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST12]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR15:%.*]] = getelementptr inbounds i8, i8* [[TMP43]], i64 4
+// CHECK2-NEXT:    [[TMP44:%.*]] = bitcast i8* [[ADD_PTR15]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..36(%struct.BaseS1* [[TMP42]], %struct.BaseS1* [[TMP44]])
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT17]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST14]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST13]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE18:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT17]], [[TMP40]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_DONE19]], label [[OMP_ARRAYCPY_BODY]]
-// CHECK2:       omp.arraycpy.done19:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT16]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST13]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST12]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE17:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT16]], [[TMP40]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_BODY]]
+// CHECK2:       omp.arraycpy.done18:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP37]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.case2:
 // CHECK2-NEXT:    [[TMP45:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[ARRAYIDX]], i64 40
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY20:%.*]] = icmp eq %struct.S* [[ARRAYIDX]], [[TMP45]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY20]], label [[OMP_ARRAYCPY_DONE29:%.*]], label [[OMP_ARRAYCPY_BODY21:%.*]]
-// CHECK2:       omp.arraycpy.body21:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST22:%.*]] = phi %struct.S* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT27:%.*]], [[OMP_ARRAYCPY_BODY21]] ]
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST23:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT26:%.*]], [[OMP_ARRAYCPY_BODY21]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY19:%.*]] = icmp eq %struct.S* [[ARRAYIDX]], [[TMP45]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY19]], label [[OMP_ARRAYCPY_DONE28:%.*]], label [[OMP_ARRAYCPY_BODY20:%.*]]
+// CHECK2:       omp.arraycpy.body20:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST21:%.*]] = phi %struct.S* [ [[RHS_BEGIN]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT26:%.*]], [[OMP_ARRAYCPY_BODY20]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST22:%.*]] = phi %struct.S* [ [[ARRAYIDX]], [[DOTOMP_REDUCTION_CASE2]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT25:%.*]], [[OMP_ARRAYCPY_BODY20]] ]
 // CHECK2-NEXT:    [[TMP46:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP47:%.*]] = load i32, i32* [[TMP46]], align 4
 // CHECK2-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP47]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[TMP48:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST23]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR24:%.*]] = getelementptr inbounds i8, i8* [[TMP48]], i64 4
-// CHECK2-NEXT:    [[TMP49:%.*]] = bitcast i8* [[ADD_PTR24]] to %struct.BaseS1*
-// CHECK2-NEXT:    [[TMP50:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST22]] to i8*
-// CHECK2-NEXT:    [[ADD_PTR25:%.*]] = getelementptr inbounds i8, i8* [[TMP50]], i64 4
-// CHECK2-NEXT:    [[TMP51:%.*]] = bitcast i8* [[ADD_PTR25]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP48:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST22]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR23:%.*]] = getelementptr inbounds i8, i8* [[TMP48]], i64 4
+// CHECK2-NEXT:    [[TMP49:%.*]] = bitcast i8* [[ADD_PTR23]] to %struct.BaseS1*
+// CHECK2-NEXT:    [[TMP50:%.*]] = bitcast %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST21]] to i8*
+// CHECK2-NEXT:    [[ADD_PTR24:%.*]] = getelementptr inbounds i8, i8* [[TMP50]], i64 4
+// CHECK2-NEXT:    [[TMP51:%.*]] = bitcast i8* [[ADD_PTR24]] to %struct.BaseS1*
 // CHECK2-NEXT:    call void @.omp_combiner..36(%struct.BaseS1* [[TMP49]], %struct.BaseS1* [[TMP51]])
 // CHECK2-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB1]], i32 [[TMP47]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT26]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST23]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT27]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST22]], i32 1
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE28:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT26]], [[TMP45]]
-// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE28]], label [[OMP_ARRAYCPY_DONE29]], label [[OMP_ARRAYCPY_BODY21]]
-// CHECK2:       omp.arraycpy.done29:
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT25]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_DESTELEMENTPAST22]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT26]] = getelementptr [[STRUCT_S]], %struct.S* [[OMP_ARRAYCPY_SRCELEMENTPAST21]], i32 1
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE27:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT25]], [[TMP45]]
+// CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_DONE27]], label [[OMP_ARRAYCPY_DONE28]], label [[OMP_ARRAYCPY_BODY20]]
+// CHECK2:       omp.arraycpy.done28:
 // CHECK2-NEXT:    call void @__kmpc_end_reduce(%struct.ident_t* @[[GLOB3]], i32 [[TMP37]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // CHECK2-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK2:       .omp.reduction.default:
-// CHECK2-NEXT:    [[ARRAY_BEGIN30:%.*]] = getelementptr inbounds [40 x %struct.S], [40 x %struct.S]* [[ARR4]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAY_BEGIN30]], i64 40
+// CHECK2-NEXT:    [[ARRAY_BEGIN29:%.*]] = getelementptr inbounds [40 x %struct.S], [40 x %struct.S]* [[ARR4]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAY_BEGIN29]], i64 40
 // CHECK2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK2:       arraydestroy.body:
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi %struct.S* [ [[TMP52]], [[DOTOMP_REDUCTION_DEFAULT]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK2-NEXT:    call void @_ZN1SIiED1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
-// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN30]]
-// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE31:%.*]], label [[ARRAYDESTROY_BODY]]
-// CHECK2:       arraydestroy.done31:
+// CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq %struct.S* [[ARRAYDESTROY_ELEMENT]], [[ARRAY_BEGIN29]]
+// CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE30:%.*]], label [[ARRAYDESTROY_BODY]]
+// CHECK2:       arraydestroy.done30:
 // CHECK2-NEXT:    [[TMP53:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP54:%.*]] = load i32, i32* [[TMP53]], align 4
 // CHECK2-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB4]], i32 [[TMP54]])
@@ -6627,7 +6469,6 @@ int main() {
 // CHECK3-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK3-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[S]])
 // CHECK3-NEXT:    store i32 0, i32* [[DOTOMP_IV]], align 4
-// CHECK3-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[S1]])
 // CHECK3-NEXT:    call void @.omp_initializer.(%struct.S* [[S1]], %struct.S* [[S]])
 // CHECK3-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK3:       omp.inner.for.cond:
@@ -7265,7 +7106,6 @@ int main() {
 // CHECK4-NEXT:    [[S1:%.*]] = alloca [[STRUCT_S]], align 4
 // CHECK4-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[S]])
 // CHECK4-NEXT:    store i32 0, i32* [[DOTOMP_IV]], align 4
-// CHECK4-NEXT:    call void @_ZN1SIiEC1Ev(%struct.S* nonnull align 4 dereferenceable(12) [[S1]])
 // CHECK4-NEXT:    call void @.omp_initializer.(%struct.S* [[S1]], %struct.S* [[S]])
 // CHECK4-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK4:       omp.inner.for.cond:
