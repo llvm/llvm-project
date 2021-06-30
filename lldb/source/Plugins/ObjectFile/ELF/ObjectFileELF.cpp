@@ -1880,7 +1880,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
           unified_section_list.AddSection(symtab_section_sp);
       }
     }
-  }  
+  }
 }
 
 std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
@@ -2813,31 +2813,37 @@ Symtab *ObjectFileELF::GetSymtab() {
       if (is_valid_entry_point && !m_symtab_up->FindSymbolContainingFileAddress(
                                       entry_point_file_addr)) {
         uint64_t symbol_id = m_symtab_up->GetNumSymbols();
-        Symbol symbol(symbol_id,
-                      GetNextSyntheticSymbolName().GetCString(), // Symbol name.
-                      eSymbolTypeCode, // Type of this symbol.
-                      true,            // Is this globally visible?
-                      false,           // Is this symbol debug info?
-                      false,           // Is this symbol a trampoline?
-                      true,            // Is this symbol artificial?
-                      entry_point_addr.GetSection(), // Section where this
-                                                     // symbol is defined.
-                      0,     // Offset in section or symbol value.
-                      0,     // Size.
-                      false, // Size is valid.
-                      false, // Contains linker annotations?
-                      0);    // Symbol flags.
-        m_symtab_up->AddSymbol(symbol);
+        // Don't set the name for any synthetic symbols, the Symbol
+        // object will generate one if needed when the name is accessed
+        // via accessors.
+        SectionSP section_sp = entry_point_addr.GetSection();
+        Symbol symbol(
+            /*symID=*/symbol_id,
+            /*name=*/llvm::StringRef(), // Name will be auto generated.
+            /*type=*/eSymbolTypeCode,
+            /*external=*/true,
+            /*is_debug=*/false,
+            /*is_trampoline=*/false,
+            /*is_artificial=*/true,
+            /*section_sp=*/section_sp,
+            /*offset=*/0,
+            /*size=*/0, // FDE can span multiple symbols so don't use its size.
+            /*size_is_valid=*/false,
+            /*contains_linker_annotations=*/false,
+            /*flags=*/0);
         // When the entry point is arm thumb we need to explicitly set its
         // class address to reflect that. This is important because expression
         // evaluation relies on correctly setting a breakpoint at this
         // address.
         if (arch.GetMachine() == llvm::Triple::arm &&
-            (entry_point_file_addr & 1))
+            (entry_point_file_addr & 1)) {
+          symbol.GetAddressRef().SetOffset(entry_point_addr.GetOffset() ^ 1);
           m_address_class_map[entry_point_file_addr ^ 1] =
               AddressClass::eCodeAlternateISA;
-        else
+        } else {
           m_address_class_map[entry_point_file_addr] = AddressClass::eCode;
+        }
+        m_symtab_up->AddSymbol(symbol);
       }
     }
 
@@ -2917,22 +2923,24 @@ void ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table,
           section_list->FindSectionContainingFileAddress(file_addr);
       if (section_sp) {
         addr_t offset = file_addr - section_sp->GetFileAddress();
-        const char *symbol_name = GetNextSyntheticSymbolName().GetCString();
         uint64_t symbol_id = ++last_symbol_id;
+        // Don't set the name for any synthetic symbols, the Symbol
+        // object will generate one if needed when the name is accessed
+        // via accessors.
         Symbol eh_symbol(
-            symbol_id,       // Symbol table index.
-            symbol_name,     // Symbol name.
-            eSymbolTypeCode, // Type of this symbol.
-            true,            // Is this globally visible?
-            false,           // Is this symbol debug info?
-            false,           // Is this symbol a trampoline?
-            true,            // Is this symbol artificial?
-            section_sp,      // Section in which this symbol is defined or null.
-            offset,          // Offset in section or symbol value.
-            0,     // Size:          Don't specify the size as an FDE can
-            false, // Size is valid: cover multiple symbols.
-            false, // Contains linker annotations?
-            0);    // Symbol flags.
+            /*symID=*/symbol_id,
+            /*name=*/llvm::StringRef(), // Name will be auto generated.
+            /*type=*/eSymbolTypeCode,
+            /*external=*/true,
+            /*is_debug=*/false,
+            /*is_trampoline=*/false,
+            /*is_artificial=*/true,
+            /*section_sp=*/section_sp,
+            /*offset=*/offset,
+            /*size=*/0, // FDE can span multiple symbols so don't use its size.
+            /*size_is_valid=*/false,
+            /*contains_linker_annotations=*/false,
+            /*flags=*/0);
         new_symbols.push_back(eh_symbol);
       }
     }
