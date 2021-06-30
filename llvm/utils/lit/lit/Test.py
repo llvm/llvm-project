@@ -408,5 +408,5 @@ class Test:
             BooleanExpression.tokenize(expr) for expr in
                 boolean_expressions if expr != '*'
         )
-        identifiers = set(filter(BooleanExpression.isIdentifier, tokens))
-        return identifiers
+        matchExpressions = set(filter(BooleanExpression.isMatchExpression, tokens))
+        return matchExpressions
