@@ -65,3 +65,15 @@ private:
 template <typename T> T varTemplate = 0;
 
 static_assert(true, "");
+
+// Concepts
+template<typename T> concept True = true;
+template<typename T> concept Concept = requires (T a) {
+  a;
+  { a() } noexcept -> True;
+  requires false || true;
+  typename T::type;
+};
+template<typename T> void constrained1() requires Concept<T>;
+template<Concept T> void constrained2();
+void constrained3(Concept auto x);
