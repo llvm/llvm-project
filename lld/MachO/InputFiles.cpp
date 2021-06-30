@@ -592,6 +592,12 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   symbols.resize(nList.size());
   for (uint32_t i = 0; i < nList.size(); ++i) {
     const NList &sym = nList[i];
+
+    // Ignore debug symbols for now.
+    // FIXME: may need special handling.
+    if (sym.n_type & N_STAB)
+      continue;
+
     StringRef name = strtab + sym.n_strx;
     if ((sym.n_type & N_TYPE) == N_SECT) {
       SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
