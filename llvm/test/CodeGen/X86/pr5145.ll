@@ -9,10 +9,10 @@ define void @atomic_maxmin_i8() {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpb $5, %al
+; CHECK-NEXT:    cmpb $6, %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movl $5, %ecx
-; CHECK-NEXT:    cmovgl %eax, %ecx
+; CHECK-NEXT:    cmovgel %eax, %ecx
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    lock cmpxchgb %cl, sc8(%rip)
 ; CHECK-NEXT:    jne .LBB0_1
@@ -33,10 +33,10 @@ define void @atomic_maxmin_i8() {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_5: # %atomicrmw.start8
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpb $7, %al
+; CHECK-NEXT:    cmpb $8, %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movl $7, %ecx
-; CHECK-NEXT:    cmoval %eax, %ecx
+; CHECK-NEXT:    cmovael %eax, %ecx
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    lock cmpxchgb %cl, sc8(%rip)
 ; CHECK-NEXT:    jne .LBB0_5

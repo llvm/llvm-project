@@ -55,7 +55,7 @@ define i32 @test_sub_1_cmov_sle(i64* %p, i32 %a0, i32 %a1) #0 {
 ; SLOWINCDEC-LABEL: test_sub_1_cmov_sle:
 ; SLOWINCDEC:       # %bb.0: # %entry
 ; SLOWINCDEC-NEXT:    movl %esi, %eax
-; SLOWINCDEC-NEXT:    lock addq $-1, (%rdi)
+; SLOWINCDEC-NEXT:    lock subq $1, (%rdi)
 ; SLOWINCDEC-NEXT:    cmovgel %edx, %eax
 ; SLOWINCDEC-NEXT:    retq
 entry:
@@ -298,16 +298,18 @@ entry:
   ret i8 %tmp2
 }
 
-; FIXME: This test canonicalizes in a way that hides the fact that the
-; comparison can be folded into the atomic subtract.
 define i8 @test_sub_1_cmp_1_setcc_sle(i64* %p) #0 {
-; CHECK-LABEL: test_sub_1_cmp_1_setcc_sle:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    cmpq $2, %rax
-; CHECK-NEXT:    setl %al
-; CHECK-NEXT:    retq
+; FASTINCDEC-LABEL: test_sub_1_cmp_1_setcc_sle:
+; FASTINCDEC:       # %bb.0: # %entry
+; FASTINCDEC-NEXT:    lock decq (%rdi)
+; FASTINCDEC-NEXT:    setle %al
+; FASTINCDEC-NEXT:    retq
+;
+; SLOWINCDEC-LABEL: test_sub_1_cmp_1_setcc_sle:
+; SLOWINCDEC:       # %bb.0: # %entry
+; SLOWINCDEC-NEXT:    lock subq $1, (%rdi)
+; SLOWINCDEC-NEXT:    setle %al
+; SLOWINCDEC-NEXT:    retq
 entry:
   %tmp0 = atomicrmw sub i64* %p, i64 1 seq_cst
   %tmp1 = icmp sle i64 %tmp0, 1
@@ -328,15 +330,11 @@ entry:
   ret i8 %tmp2
 }
 
-; FIXME: This test canonicalizes in a way that hides the fact that the
-; comparison can be folded into the atomic subtract.
 define i8 @test_sub_3_cmp_3_setcc_uge(i64* %p) #0 {
 ; CHECK-LABEL: test_sub_3_cmp_3_setcc_uge:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq $-3, %rax
-; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    cmpq $2, %rax
-; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    lock subq $3, (%rdi)
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %tmp0 = atomicrmw sub i64* %p, i64 3 seq_cst

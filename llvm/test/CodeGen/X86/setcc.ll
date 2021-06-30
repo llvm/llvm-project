@@ -6,8 +6,8 @@ define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpw $26, %di
-; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    cmpw $27, %di
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    shll $5, %eax
 ; CHECK-NEXT:    retq
   %t0 = icmp ugt i16 %x, 26
