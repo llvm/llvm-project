@@ -40,6 +40,14 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group(i8* %dest,
   ret void
 }
 
+; CHECK-LABEL: @memcpy_inline_flat_to_flat_replace_src_with_group(
+; CHECK: call void @llvm.memcpy.inline.p0i8.p3i8.i64(i8* align 4 %dest, i8 addrspace(3)* align 4 %src.group.ptr, i64 42, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+define amdgpu_kernel void @memcpy_inline_flat_to_flat_replace_src_with_group(i8* %dest, i8 addrspace(3)* %src.group.ptr) #0 {
+  %cast.src = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
+  call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 42, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+  ret void
+}
+
 ; CHECK-LABEL: @memcpy_flat_to_flat_replace_dest_with_group(
 ; CHECK: call void @llvm.memcpy.p3i8.p0i8.i64(i8 addrspace(3)* align 4 %dest.group.ptr, i8* align 4 %src.ptr, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_dest_with_group(i8 addrspace(3)* %dest.group.ptr, i8* %src.ptr, i64 %size) #0 {
@@ -118,6 +126,7 @@ define amdgpu_kernel void @memmove_flat_to_flat_replace_src_with_group(i8* %dest
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 declare void @llvm.memcpy.p0i8.p3i8.i32(i8* nocapture writeonly, i8 addrspace(3)* nocapture readonly, i32, i1) #1
 declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 

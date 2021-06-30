@@ -8,6 +8,14 @@ target triple = "i686-apple-darwin9"
 %0 = type { x86_fp80, x86_fp80 }
 %1 = type { i32, i32 }
 
+declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p1i8.i64(i8* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+
 define void @test1(%0* sret(%0)  %agg.result, x86_fp80 %z.0, x86_fp80 %z.1) nounwind  {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
@@ -71,7 +79,49 @@ define void @test2_memcpy(i8* noalias %P, i8* noalias %Q) nounwind  {
 
 }
 
+; Same as @test2_memcpy, but the remaining memcpy should remain non-inline even
+; if the one eliminated was inline.
+define void @test3_memcpy(i8* noalias %P, i8* noalias %Q) nounwind  {
+; CHECK-LABEL: @test3_memcpy(
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 [[Q:%.*]], i8* align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %memtmp = alloca %0, align 16
+  %R = bitcast %0* %memtmp to i8*
+  call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* align 16 %R, i8* align 16 %P, i32 32, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %Q, i8* align 16 %R, i32 32, i1 false)
+  ret void
 
+}
+
+; Same as @test2_memcpy, but the remaining memcpy should remain inline even
+; if the one eliminated was not inline.
+define void @test4_memcpy(i8* noalias %P, i8* noalias %Q) nounwind  {
+; CHECK-LABEL: @test4_memcpy(
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* align 16 [[Q:%.*]], i8* align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %memtmp = alloca %0, align 16
+  %R = bitcast %0* %memtmp to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %R, i8* align 16 %P, i32 32, i1 false)
+  call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* align 16 %Q, i8* align 16 %R, i32 32, i1 false)
+  ret void
+
+}
+
+; Same as @test2_memcpy, and the inline-ness should be preserved.
+define void @test5_memcpy(i8* noalias %P, i8* noalias %Q) nounwind  {
+; CHECK-LABEL: @test5_memcpy(
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* align 16 [[Q:%.*]], i8* align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %memtmp = alloca %0, align 16
+  %R = bitcast %0* %memtmp to i8*
+  call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* align 16 %R, i8* align 16 %P, i32 32, i1 false)
+  call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* align 16 %Q, i8* align 16 %R, i32 32, i1 false)
+  ret void
+
+}
 
 
 @x = external global %0
@@ -202,9 +252,6 @@ exit:
 }
 
 declare void @test4a(i8* align 1 byval(i8))
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p0i8.p1i8.i64(i8* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace(1)* nocapture, i64, i1) nounwind
 
 %struct.S = type { i128, [4 x i8]}
 
@@ -266,7 +313,6 @@ entry:
 
 declare i32 @g(%struct.p* align 8 byval(%struct.p))
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 ; PR11142 - When looking for a memcpy-memcpy dependency, don't get stuck on
 ; instructions between the memcpy's that only affect the destination pointer.
@@ -375,14 +421,5 @@ define void @test11([20 x i32] addrspace(1)* nocapture dereferenceable(80) %P) {
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
-declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture, i8* nocapture, i64, i1) nounwind
-
 declare void @f1(%struct.big* nocapture sret(%struct.big))
 declare void @f2(%struct.big*)
-
-; CHECK: attributes #1 = { argmemonly nofree nounwind willreturn }
-; CHECK: attributes #2 = { nounwind ssp }
-; CHECK: attributes #3 = { willreturn }
-; CHECK: attributes #4 = { nounwind ssp uwtable }
-; CHECK: attributes #5 = { argmemonly nofree nounwind willreturn writeonly }
