@@ -80,20 +80,44 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                        ? CSR_ATPCS_SplitPush_SwiftTail_SaveList
                                        : CSR_AAPCS_SwiftTail_SaveList);
   } else if (F.hasFnAttribute("interrupt")) {
+    bool SaveFP = F.hasFnAttribute("save-fp");
+    bool HasNEON = MF->getSubtarget<ARMSubtarget>().hasNEON();
+
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
       // function conforming to the AAPCS to function as a handler.
-      return PushPopSplit == ARMSubtarget::SplitR7
-                 ? CSR_ATPCS_SplitPush_SaveList
-                 : CSR_AAPCS_SaveList;
+      // Additionally, M Class has hardware support for saving VFP registers,
+      // but the option can be disabled
+      if (SaveFP) {
+        if (HasNEON) {
+          return UseSplitPush ? CSR_AAPCS_SplitPush_FP_NEON_SaveList
+                              : CSR_AAPCS_FP_NEON_SaveList;
+        } else {
+          return UseSplitPush ? CSR_AAPCS_SplitPush_FP_SaveList
+                              : CSR_AAPCS_FP_SaveList;
+        }
+      } else {
+        return PushPopSplit == ARMSubtarget::SplitR7
+          ? CSR_ATPCS_SplitPush_SaveList
+          : CSR_AAPCS_SaveList;
+      }
     } else if (F.getFnAttribute("interrupt").getValueAsString() == "FIQ") {
       // Fast interrupt mode gives the handler a private copy of R8-R14, so less
       // need to be saved to restore user-mode state.
-      return CSR_FIQ_SaveList;
+      if (SaveFP) {
+        return HasNEON ? CSR_FIQ_FP_NEON_SaveList : CSR_FIQ_FP_SaveList;
+      } else {
+        return CSR_FIQ_SaveList;
+      }
     } else {
       // Generally only R13-R14 (i.e. SP, LR) are automatically preserved by
       // exception handling.
-      return CSR_GenericInt_SaveList;
+      if (SaveFP) {
+        return HasNEON ? CSR_GenericInt_FP_NEON_SaveList
+                       : CSR_GenericInt_FP_SaveList;
+      } else {
+        return CSR_GenericInt_SaveList;
+      }
     }
   }
 

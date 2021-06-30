@@ -268,8 +268,17 @@ def CC_ARM_Win32_CFGuard_Check : CallingConv<[
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 def CSR_FPRegs : CalleeSavedRegs<(add (sequence "D%u", 0, 31))>;
 
+def CSR_FP_Interrupt_Regs : CalleeSavedRegs<(add (sequence "D%u", 7, 0))>;
+def CSR_FP_NEON_Interrupt_Regs : CalleeSavedRegs<(add CSR_FP_Interrupt_Regs, 
+                                                  (sequence "D%u", 31, 16))>;
+
 def CSR_AAPCS : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7, R6, R5, R4,
                                      (sequence "D%u", 15, 8))>;
+
+def CSR_AAPCS_FP : CalleeSavedRegs<(add CSR_AAPCS, CSR_FP_Interrupt_Regs)>;
+
+def CSR_AAPCS_FP_NEON : CalleeSavedRegs<(add CSR_AAPCS_FP, 
+                                         CSR_FP_NEON_Interrupt_Regs)>;
 
 // The Windows Control Flow Guard Check function preserves the same registers as
 // AAPCS, and also preserves all floating point registers.
@@ -293,6 +302,13 @@ def CSR_ATPCS_SplitPush : CalleeSavedRegs<(add LR, R7, R6, R5, R4,
 def CSR_Win_SplitFP : CalleeSavedRegs<(add R10, R9, R8, R7, R6, R5, R4,
                                                (sequence "D%u", 15, 8),
                                                LR, R11)>;
+
+def CSR_AAPCS_SplitPush_FP : CalleeSavedRegs<(add CSR_AAPCS_SplitPush, 
+                                              CSR_FP_Interrupt_Regs)>;
+
+def CSR_AAPCS_SplitPush_FP_NEON : CalleeSavedRegs<(add CSR_AAPCS_SplitPush_FP, 
+                                                   CSR_FP_NEON_Interrupt_Regs)>;
+
 
 // R8 is used to pass swifterror, remove it from CSR.
 def CSR_ATPCS_SplitPush_SwiftError : CalleeSavedRegs<(sub CSR_ATPCS_SplitPush,
@@ -361,6 +377,13 @@ def CSR_iOS_CXX_TLS_ViaCopy : CalleeSavedRegs<(sub CSR_iOS_CXX_TLS,
 // generally does rather than tracking its liveness as a normal register.
 def CSR_GenericInt : CalleeSavedRegs<(add LR, (sequence "R%u", 12, 0))>;
 
+def CSR_GenericInt_FP : CalleeSavedRegs<(add CSR_GenericInt, 
+                                         CSR_FP_Interrupt_Regs)>;
+
+def CSR_GenericInt_FP_NEON : CalleeSavedRegs<(add CSR_GenericInt_FP, 
+                                              CSR_FP_NEON_Interrupt_Regs)>;
+
+
 // The fast interrupt handlers have more private state and get their own copies
 // of R8-R12, in addition to SP and LR. As before, mark LR for saving too.
 
@@ -368,5 +391,10 @@ def CSR_GenericInt : CalleeSavedRegs<(add LR, (sequence "R%u", 12, 0))>;
 // current frame lowering expects to encounter it while processing callee-saved
 // registers.
 def CSR_FIQ : CalleeSavedRegs<(add LR, R11, (sequence "R%u", 7, 0))>;
+
+def CSR_FIQ_FP : CalleeSavedRegs<(add CSR_FIQ, CSR_FP_Interrupt_Regs)>;
+
+def CSR_FIQ_FP_NEON : CalleeSavedRegs<(add CSR_FIQ_FP, 
+                                       CSR_FP_NEON_Interrupt_Regs)>;
 
 
