@@ -2912,8 +2912,12 @@ LogicalResult mlir::generateCopyForMemRegion(
   if (failed(err))
     return err;
 
-  result.alloc =
-      fastBufferMap.find(memrefRegion.memref)->second.getDefiningOp();
+  const auto &en = fastBufferMap.find(memrefRegion.memref);
+  // In some cases (empty loops), no copy generation would have happened.
+  if (en == fastBufferMap.end())
+    return failure();
+  result.alloc = en->second.getDefiningOp();
+  assert(result.alloc && "fast buffer expected to be locally allocated");
   assert(copyNests.size() <= 1 && "At most one copy nest is expected.");
   result.copyNest = copyNests.empty() ? nullptr : *copyNests.begin();
   return success();
