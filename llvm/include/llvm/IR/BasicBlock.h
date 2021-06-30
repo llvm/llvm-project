@@ -40,6 +40,13 @@ class Module;
 class PHINode;
 class ValueSymbolTable;
 
+enum class Checkpoint {
+  ThreadStart,
+  ThreadEnd,
+  ExitPoint,
+  Virtual
+};
+
 /// LLVM Basic Block Representation
 ///
 /// This represents a single basic block in LLVM. A basic block is simply a
@@ -66,6 +73,7 @@ private:
 
   InstListType InstList;
   Function *Parent;
+  Checkpoint cp;
 
   void setParent(Function *parent);
 
@@ -85,6 +93,8 @@ public:
 
   /// Get the context in which this basic block lives.
   LLVMContext &getContext() const;
+  void setCheckpoint(Checkpoint);
+  Checkpoint getCheckpoint() const;
 
   /// Instruction iterators...
   using iterator = InstListType::iterator;

@@ -12,6 +12,28 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+//enum class Checkpoint {
+//  ThreadStart,
+//  ThreadEnd,
+//  ExitPoint,
+//  Virtual
+//};
+
+//class ScarrFuncInfo {
+//private:
+//  const BasicBlock *B;
+//  const Checkpoint cp;
+//public:
+//  ScarrFuncInfo(const BasicBlock *B, const Checkpoint cp): B(B), cp(cp){}
+//
+//  const BasicBlock *getBasicBlock() {
+//    return B;
+//  }
+//
+//  Checkpoint getCheckpoint() {
+//    return cp;
+//  }
+//};
 
 class MyCFGPass : public PassInfoMixin<MyCFGPass> {
 public:

@@ -147,6 +147,21 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     --I;
   }
 
+  static std::string cpToString(Checkpoint cp) {
+    switch(cp) {
+    case Checkpoint::ThreadStart:
+      return "ThreadStart";
+    case Checkpoint::ThreadEnd:
+      return "ThreadEnd";
+    case Checkpoint::ExitPoint:
+      return "ExitPoint";
+    case Checkpoint::Virtual:
+      return "Virtual";
+    default:
+      return "Unknown";
+    }
+  }
+
   static std::string getCompleteNodeLabel(
       const BasicBlock *Node, DOTFuncInfo *,
       llvm::function_ref<void(raw_string_ostream &, const BasicBlock &)>
@@ -160,6 +175,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
     if (Node->getName().empty()) {
       Node->printAsOperand(OS, false);
+      OS << cpToString(Node->getCheckpoint());
       OS << ":";
     }
 

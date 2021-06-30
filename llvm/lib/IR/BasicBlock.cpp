@@ -507,6 +507,14 @@ void BasicBlock::renumberInstructions() {
   setBasicBlockBits(Bits);
 }
 
+void BasicBlock::setCheckpoint(Checkpoint _cp) {
+  cp = _cp;
+}
+
+Checkpoint BasicBlock::getCheckpoint() const {
+  return cp;
+}
+
 #ifndef NDEBUG
 /// In asserts builds, this checks the numbering. In non-asserts builds, it
 /// is defined as a no-op inline function in BasicBlock.h.

@@ -21,19 +21,21 @@
 
 using namespace llvm;
 
+void findLoopHeader(Function &F);
+
 void traverseCFG(Function &F) {
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in df_iterator:\n";
-  auto counter = 0;
+//  auto counter = 0;
   for (auto iterator = df_begin(&F.getEntryBlock()),
            IE = df_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
 
-    std::string name = iterator->getName().str();
-    name.append("\\l df: ").append(std::to_string(counter));
-    iterator->setName(name);
-    counter++;
+//    std::string name = iterator->getName().str();
+//    name.append("\\l df: ").append(std::to_string(counter));
+//    iterator->setName(name);
+//    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -42,16 +44,16 @@ void traverseCFG(Function &F) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in idf_iterator:\n";
-  counter = 0;
+//  counter = 0;
   for (auto iterator = idf_begin(&F.getEntryBlock()),
            IE = idf_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
 
-    std::string name = iterator->getName().str();
-    name.append("\\l idf: ").append(std::to_string(counter));
-    iterator->setName(name);
-    counter++;
+//    std::string name = iterator->getName().str();
+//    name.append("\\l idf: ").append(std::to_string(counter));
+//    iterator->setName(name);
+//    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -60,16 +62,16 @@ void traverseCFG(Function &F) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in bf_iterator:\n";
-  counter = 0;
+//  counter = 0;
   for (auto iterator = bf_begin(&F.getEntryBlock()),
            IE = bf_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
 
-    std::string name = iterator->getName().str();
-    name.append("\\l bf: ").append(std::to_string(counter));
-    iterator->setName(name);
-    counter++;
+//    std::string name = iterator->getName().str();
+//    name.append("\\l bf: ").append(std::to_string(counter));
+//    iterator->setName(name);
+//    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -78,7 +80,7 @@ void traverseCFG(Function &F) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in scc_iterator:\n";
-  counter = 0;
+//  counter = 0;
   for (auto iterator = scc_begin(&F.getEntryBlock()),
            IE = scc_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
@@ -89,23 +91,23 @@ void traverseCFG(Function &F) {
 //    iterator->setName(name);
 //    counter++;
     for (auto &instruction : *iterator) {
-      outs() << instruction << "\n";
+      outs() << *instruction << "\n";
     }
   }
   outs() << "\n\n";
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in po_iterator:\n";
-  counter = 0;
+//  counter = 0;
   for (auto iterator = po_begin(&F.getEntryBlock()),
            IE = po_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
 
-    std::string name = iterator->getName().str();
-    name.append("\\l po: ").append(std::to_string(counter));
-    iterator->setName(name);
-    counter++;
+//    std::string name = iterator->getName().str();
+//    name.append("\\l po: ").append(std::to_string(counter));
+//    iterator->setName(name);
+//    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -125,16 +127,16 @@ void traverseCFG(Function &F) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in succ_iterator:\n";
-  counter = 0;
+//  counter = 0;
   for (auto iterator = succ_begin(&F.getEntryBlock()),
            IE = succ_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
 
-    std::string name = iterator->getName().str();
-    name.append(" \\l succ: ").append(std::to_string(counter));
-    iterator->setName(name);
-    counter++;
+//    std::string name = iterator->getName().str();
+//    name.append(" \\l succ: ").append(std::to_string(counter));
+//    iterator->setName(name);
+//    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -193,18 +195,23 @@ void traverseCheckpoints(Function &F, int nestedLevel) {
       outs() << prefix << "This basic block:'" << name << "' is thread start checkpoint\n";
       name.append(" - Thread Start");
       isThreadStartCheckpoint = false;
+      bb.setCheckpoint(Checkpoint::ThreadStart);
     } else if (isThreadEndCheckpoint) {
       name.append(" - Thread End");
       outs() << prefix << "This basic block:'" << name << "' is thread end checkpoint\n";
+      bb.setCheckpoint(Checkpoint::ThreadEnd);
     } else if (isExitPointCheckpoint) {
       name.append(" - Exit Point");
       outs() << prefix << "This basic block:'" << name << "' is exit-point checkpoint\n";
+      bb.setCheckpoint(Checkpoint::ExitPoint);
     }
-    bb.setName(name);
+//    bb.setName(name);
     if (!nestedLevel) {
       outs() << "\n\n";
     }
   }
+
+  findLoopHeader(F);
 }
 
 void findLoopHeader(Function &F) {
@@ -227,7 +234,8 @@ void findLoopHeader(Function &F) {
 
       std::string name = st.str();
       name.append(" - Virtual Checkpoint");
-      loopHeader->setName(name);
+//      loopHeader->setName(name);
+      loopHeader->setCheckpoint(Checkpoint::Virtual);
     }
   }
 }
@@ -239,7 +247,6 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   outs() << "Function '" << F.getName() << "'\n";
   traverseCheckpoints(F, 0);
 
-  findLoopHeader(F);
 
   traverseCFG(F);
   return PreservedAnalyses::all();
