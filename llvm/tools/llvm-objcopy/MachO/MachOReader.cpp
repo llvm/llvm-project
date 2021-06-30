@@ -28,7 +28,7 @@ void MachOReader::readHeader(Object &O) const {
 }
 
 template <typename SectionType>
-static Section constructSectionCommon(SectionType Sec, uint32_t Index) {
+static Section constructSectionCommon(const SectionType &Sec, uint32_t Index) {
   StringRef SegName(Sec.segname, strnlen(Sec.segname, sizeof(Sec.segname)));
   StringRef SectName(Sec.sectname, strnlen(Sec.sectname, sizeof(Sec.sectname)));
   Section S(SegName, SectName);
@@ -46,14 +46,11 @@ static Section constructSectionCommon(SectionType Sec, uint32_t Index) {
   return S;
 }
 
-template <typename SectionType>
-Section constructSection(SectionType Sec, uint32_t Index);
-
-template <> Section constructSection(MachO::section Sec, uint32_t Index) {
+Section constructSection(const MachO::section &Sec, uint32_t Index) {
   return constructSectionCommon(Sec, Index);
 }
 
-template <> Section constructSection(MachO::section_64 Sec, uint32_t Index) {
+Section constructSection(const MachO::section_64 &Sec, uint32_t Index) {
   Section S = constructSectionCommon(Sec, Index);
   S.Reserved3 = Sec.reserved3;
   return S;
@@ -63,21 +60,20 @@ template <typename SectionType, typename SegmentType>
 Expected<std::vector<std::unique_ptr<Section>>> static extractSections(
     const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
     const object::MachOObjectFile &MachOObj, uint32_t &NextSectionIndex) {
-  auto End = LoadCmd.Ptr + LoadCmd.C.cmdsize;
-  const SectionType *Curr =
-      reinterpret_cast<const SectionType *>(LoadCmd.Ptr + sizeof(SegmentType));
   std::vector<std::unique_ptr<Section>> Sections;
-  for (; reinterpret_cast<const void *>(Curr) < End; Curr++) {
-    if (MachOObj.isLittleEndian() != sys::IsLittleEndianHost) {
-      SectionType Sec;
-      memcpy((void *)&Sec, Curr, sizeof(SectionType));
+  for (auto Curr = reinterpret_cast<const SectionType *>(LoadCmd.Ptr +
+                                                         sizeof(SegmentType)),
+            End = reinterpret_cast<const SectionType *>(LoadCmd.Ptr +
+                                                        LoadCmd.C.cmdsize);
+       Curr < End; ++Curr) {
+    SectionType Sec;
+    memcpy((void *)&Sec, Curr, sizeof(SectionType));
+
+    if (MachOObj.isLittleEndian() != sys::IsLittleEndianHost)
       MachO::swapStruct(Sec);
-      Sections.push_back(
-          std::make_unique<Section>(constructSection(Sec, NextSectionIndex)));
-    } else {
-      Sections.push_back(
-          std::make_unique<Section>(constructSection(*Curr, NextSectionIndex)));
-    }
+
+    Sections.push_back(
+        std::make_unique<Section>(constructSection(Sec, NextSectionIndex)));
 
     Section &S = *Sections.back();
 
