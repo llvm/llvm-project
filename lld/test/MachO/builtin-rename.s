@@ -10,12 +10,15 @@
 # RUN: %lld                -o %t/ydata %t/main.o %t/renames.o -lSystem
 # RUN: %lld -no_data_const -o %t/ndata %t/main.o %t/renames.o -lSystem
 # RUN: %lld -no_pie        -o %t/nopie %t/main.o %t/renames.o -lSystem
+# RUN: %lld -platform_version macos 10.14 11.0 -o %t/old %t/main.o %t/renames.o -lSystem
 
 # RUN: llvm-objdump --syms %t/ydata | \
 # RUN:     FileCheck %s --check-prefixes=CHECK,YDATA
 # RUN: llvm-objdump --syms %t/ndata | \
 # RUN:     FileCheck %s --check-prefixes=CHECK,NDATA
 # RUN: llvm-objdump --syms %t/nopie | \
+# RUN:     FileCheck %s --check-prefixes=CHECK,NDATA
+# RUN: llvm-objdump --syms %t/old | \
 # RUN:     FileCheck %s --check-prefixes=CHECK,NDATA
 
 # CHECK-LABEL: {{^}}SYMBOL TABLE:
