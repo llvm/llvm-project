@@ -2825,6 +2825,36 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *FnAssume = CGM.getIntrinsic(Intrinsic::assume);
     return RValue::get(Builder.CreateCall(FnAssume, ArgValue));
   }
+  case Builtin::BI__arithmetic_fence: {
+    // Create the builtin call if FastMath is selected, and the target
+    // supports the builtin, otherwise just return the argument.
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
+    llvm::FastMathFlags FMF = Builder.getFastMathFlags();
+    bool isArithmeticFenceEnabled =
+        FMF.allowReassoc() &&
+        getContext().getTargetInfo().checkArithmeticFenceSupported();
+    QualType ArgType = E->getArg(0)->getType();
+    if (ArgType->isComplexType()) {
+      if (isArithmeticFenceEnabled) {
+        QualType ElementType = ArgType->castAs<ComplexType>()->getElementType();
+        ComplexPairTy ComplexVal = EmitComplexExpr(E->getArg(0));
+        Value *Real = Builder.CreateArithmeticFence(ComplexVal.first,
+                                                    ConvertType(ElementType));
+        Value *Imag = Builder.CreateArithmeticFence(ComplexVal.second,
+                                                    ConvertType(ElementType));
+        return RValue::getComplex(std::make_pair(Real, Imag));
+      }
+      ComplexPairTy ComplexVal = EmitComplexExpr(E->getArg(0));
+      Value *Real = ComplexVal.first;
+      Value *Imag = ComplexVal.second;
+      return RValue::getComplex(std::make_pair(Real, Imag));
+    }
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    if (isArithmeticFenceEnabled)
+      return RValue::get(
+          Builder.CreateArithmeticFence(ArgValue, ConvertType(ArgType)));
+    return RValue::get(ArgValue);
+  }
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64: {
