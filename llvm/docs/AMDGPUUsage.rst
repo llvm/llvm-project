@@ -6093,10 +6093,10 @@ For GFX90A:
     ensures a previous vector memory operation has completed before executing a
     subsequent vector memory or LDS operation and so can be used to meet the
     requirements of acquire and release.
-  * The L2 cache of one agent can be kept coherent with other agents by using
-    the MTYPE CC (cache-coherent) with the PTE C-bit for memory local to the L2,
-    and MTYPE UC (uncached) with the PTE C-bit set for memory not local to the
-    L2.
+  * The L2 cache of one agent can be kept coherent with other agents by:
+    using the MTYPE RW (read-write) or MTYPE CC (cache-coherent) with the PTE
+    C-bit for memory local to the L2; and using the MTYPE NC (non-coherent) with
+    the PTE C-bit set or MTYPE UC (uncached) for memory not local to the L2.
 
     * Any local memory cache lines will be automatically invalidated by writes
       from CUs associated with other L2 caches, or writes from the CPU, due to
@@ -6108,13 +6108,21 @@ For GFX90A:
       the CPU cache due to the L2 probe filter and and the PTE C-bit being set.
     * Since all work-groups on the same agent share the same L2, no L2
       invalidation or writeback is required for coherence.
-    * Since local memory reads and writes of work-groups in different agents
-      access memory using MTYPE CC, no L2 invalidate or writeback is required
-      for coherence. MTYPE CC causes write through to DRAM and local reads to be
-      invalidated by remote writes with with the PTE C-bit.
-    * Since remote memory reads and writes of work-groups in different agents
-      access memory using MTYPE UC, no L2 invalidate or writeback is required
-      for coherence. MTYPE UC causes direct accesses to DRAM.
+    * To ensure coherence of local and remote memory writes of work-groups in
+      different agents a ``buffer_wbl2`` is required. It will writeback dirty L2
+      cache lines of MTYPE RW (used for local coarse grain memory) and MTYPE NC
+      ()used for remote coarse grain memory). Note that MTYPE CC (used for local
+      fine grain memory) causes write through to DRAM, and MTYPE UC (used for
+      remote fine grain memory) bypasses the L2, so both will never result in
+      dirty L2 cache lines.
+    * To ensure coherence of local and remote memory reads of work-groups in
+      different agents a ``buffer_invl2`` is required. It will invalidate L2
+      cache lines with MTYPE NC (used for remote coarse grain memory). Note that
+      MTYPE CC (used for local fine grain memory) and MTYPE RW (used for local
+      coarse memory) cause local reads to be invalidated by remote writes with
+      with the PTE C-bit so these cache lines are not invalidated. Note that
+      MTYPE UC (used for remote fine grain memory) bypasses the L2, so will
+      never result in L2 cache lines that need to be invalidated.
 
   * PCIe access from the GPU to the CPU memory is kept coherent by using the
     MTYPE UC (uncached) which bypasses the L2.
@@ -6384,14 +6392,15 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                          2. s_waitcnt vmcnt(0)
 
                                                            - Must happen before
-                                                             following
+                                                             following buffer_invl2 and
                                                              buffer_wbinvl1_vol.
                                                            - Ensures the load
                                                              has completed
                                                              before invalidating
                                                              the cache.
 
-                                                         3. buffer_wbinvl1_vol
+                                                         3. buffer_invl2;
+                                                            buffer_wbinvl1_vol
 
                                                            - Must happen before
                                                              any following
@@ -6401,7 +6410,9 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                            - Ensures that
                                                              following
                                                              loads will not see
-                                                             stale L1 global data.
+                                                             stale L1 global data,
+                                                             nor see stale L2 MTYPE
+                                                             NC global data.
                                                              MTYPE RW and CC memory will
                                                              never be stale in L2 due to
                                                              the memory probes.
@@ -6444,13 +6455,15 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              lgkmcnt(0).
                                                            - Must happen before
                                                              following
+                                                             buffer_invl2 and
                                                              buffer_wbinvl1_vol.
                                                            - Ensures the flat_load
                                                              has completed
                                                              before invalidating
                                                              the caches.
 
-                                                         3. buffer_wbinvl1_vol
+                                                         3. buffer_invl2;
+                                                            buffer_wbinvl1_vol
 
                                                            - Must happen before
                                                              any following
@@ -6459,8 +6472,10 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              atomic/atomicrmw.
                                                            - Ensures that
                                                              following
-                                                             L1 loads will not see
-                                                             stale global data.
+                                                             loads will not see
+                                                             stale L1 global data,
+                                                             nor see stale L2 MTYPE
+                                                             NC global data.
                                                              MTYPE RW and CC memory will
                                                              never be stale in L2 due to
                                                              the memory probes.
@@ -6579,7 +6594,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                          2. s_waitcnt vmcnt(0)
 
                                                            - Must happen before
-                                                             following
+                                                             following buffer_invl2 and
                                                              buffer_wbinvl1_vol.
                                                            - Ensures the
                                                              atomicrmw has
@@ -6587,7 +6602,8 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         3. buffer_wbinvl1_vol
+                                                         3. buffer_invl2;
+                                                            buffer_wbinvl1_vol
 
                                                            - Must happen before
                                                              any following
@@ -6597,8 +6613,10 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                            - Ensures that
                                                              following
                                                              loads will not see
-                                                             stale L1 global data.
-                                                             MTYPE RW and CC L2 memory
+                                                             stale L1 global data,
+                                                             nor see stale L2 MTYPE
+                                                             NC global data.
+                                                             MTYPE RW and CC memory will
                                                              never be stale in L2 due to
                                                              the memory probes.
 
@@ -6641,6 +6659,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              lgkmcnt(0).
                                                            - Must happen before
                                                              following
+                                                             buffer_invl2 and
                                                              buffer_wbinvl1_vol.
                                                            - Ensures the
                                                              atomicrmw has
@@ -6648,7 +6667,8 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         3. buffer_wbinvl1_vol
+                                                         3. buffer_invl2;
+                                                            buffer_wbinvl1_vol
 
                                                            - Must happen before
                                                              any following
@@ -6658,7 +6678,9 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                            - Ensures that
                                                              following
                                                              loads will not see
-                                                             stale L1 global data.
+                                                             stale L1 global data,
+                                                             nor see stale L2 MTYPE
+                                                             NC global data.
                                                              MTYPE RW and CC memory will
                                                              never be stale in L2 due to
                                                              the memory probes.
@@ -6734,7 +6756,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              value read by the
                                                              fence-paired-atomic.
 
-                                                         3. buffer_wbinvl1_vol
+                                                         2. buffer_wbinvl1_vol
 
                                                            - If not TgSplit execution
                                                              mode, omit.
@@ -6872,7 +6894,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              termed the
                                                              fence-paired-atomic).
                                                            - Must happen before
-                                                             the following
+                                                             the following buffer_invl2 and
                                                              buffer_wbinvl1_vol.
                                                            - Ensures that the
                                                              fence-paired atomic
@@ -6887,7 +6909,8 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              the
                                                              fence-paired-atomic.
 
-                                                         2. buffer_wbinvl1_vol
+                                                         2. buffer_invl2;
+                                                            buffer_wbinvl1_vol
 
                                                            - Must happen before any
                                                              following global/generic
@@ -6897,7 +6920,9 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                            - Ensures that
                                                              following
                                                              loads will not see
-                                                             stale L1 global data.
+                                                             stale L1 global data,
+                                                             nor see stale L2 MTYPE
+                                                             NC global data.
                                                              MTYPE RW and CC memory will
                                                              never be stale in L2 due to
                                                              the memory probes.
@@ -6991,8 +7016,18 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              released.
 
                                                          2. buffer/global/flat_store
-     store atomic release      - system       - global   1. s_waitcnt lgkmcnt(0) &
-                                              - generic     vmcnt(0)
+     store atomic release      - system       - global   1. buffer_wbl2
+                                              - generic
+                                                           - Must happen before
+                                                             following s_waitcnt.
+                                                           - Performs L2 writeback to
+                                                             ensure previous
+                                                             global/generic
+                                                             store/atomicrmw are
+                                                             visible at system scope.
+
+                                                         2. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0)
 
                                                            - If TgSplit execution mode,
                                                              omit lgkmcnt(0).
@@ -7035,7 +7070,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              store that is being
                                                              released.
 
-                                                         2. buffer/global/flat_store
+                                                         3. buffer/global/flat_store
      atomicrmw    release      - singlethread - global   1. buffer/global/flat_atomic
                                - wavefront    - generic
      atomicrmw    release      - singlethread - local    *If TgSplit execution mode,
@@ -7123,8 +7158,18 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              is being released.
 
                                                          2. buffer/global/flat_atomic
-     atomicrmw    release      - system       - global   1. s_waitcnt lgkmcnt(0) &
-                                              - generic     vmcnt(0)
+     atomicrmw    release      - system       - global   1. buffer_wbl2
+                                              - generic
+                                                           - Must happen before
+                                                             following s_waitcnt.
+                                                           - Performs L2 writeback to
+                                                             ensure previous
+                                                             global/generic
+                                                             store/atomicrmw are
+                                                             visible at system scope.
+
+                                                         2. s_waitcnt lgkmcnt(0) &
+                                                            vmcnt(0)
 
                                                            - If TgSplit execution mode,
                                                              omit lgkmcnt(0).
@@ -7165,7 +7210,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              store that is being
                                                              released.
 
-                                                         2. buffer/global/flat_atomic
+                                                         3. buffer/global/flat_atomic
      fence        release      - singlethread *none*     *none*
                                - wavefront
      fence        release      - workgroup    *none*     1. s_waitcnt lgkm/vmcnt(0)
@@ -7298,7 +7343,20 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              following
                                                              fence-paired-atomic.
 
-     fence        release      - system       *none*     1. s_waitcnt lgkmcnt(0) &
+     fence        release      - system       *none*     1. buffer_wbl2
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit.
+                                                           - Must happen before
+                                                             following s_waitcnt.
+                                                           - Performs L2 writeback to
+                                                             ensure previous
+                                                             global/generic
+                                                             store/atomicrmw are
+                                                             visible at system scope.
+
+                                                         2. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0)
 
                                                            - If TgSplit execution mode,
@@ -7588,7 +7646,17 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              will not see stale
                                                              global data.
 
-     atomicrmw    acq_rel      - system       - global   1. s_waitcnt lgkmcnt(0) &
+     atomicrmw    acq_rel      - system       - global   1. buffer_wbl2
+
+                                                           - Must happen before
+                                                             following s_waitcnt.
+                                                           - Performs L2 writeback to
+                                                             ensure previous
+                                                             global/generic
+                                                             store/atomicrmw are
+                                                             visible at system scope.
+
+                                                         2. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0)
 
                                                            - If TgSplit execution mode,
@@ -7629,11 +7697,11 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         2. buffer/global_atomic
-                                                         3. s_waitcnt vmcnt(0)
+                                                         3. buffer/global_atomic
+                                                         4. s_waitcnt vmcnt(0)
 
                                                            - Must happen before
-                                                             following
+                                                             following buffer_invl2 and
                                                              buffer_wbinvl1_vol.
                                                            - Ensures the
                                                              atomicrmw has
@@ -7641,7 +7709,8 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         4. buffer_wbinvl1_vol
+                                                         5. buffer_invl2;
+                                                            buffer_wbinvl1_vol
 
                                                            - Must happen before
                                                              any following
@@ -7651,7 +7720,9 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                            - Ensures that
                                                              following
                                                              loads will not see
-                                                             stale L1 global data.
+                                                             stale L1 global data,
+                                                             nor see stale L2 MTYPE
+                                                             NC global data.
                                                              MTYPE RW and CC memory will
                                                              never be stale in L2 due to
                                                              the memory probes.
@@ -7726,7 +7797,17 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              will not see stale
                                                              global data.
 
-     atomicrmw    acq_rel      - system       - generic  1. s_waitcnt lgkmcnt(0) &
+     atomicrmw    acq_rel      - system       - generic  1. buffer_wbl2
+
+                                                           - Must happen before
+                                                             following s_waitcnt.
+                                                           - Performs L2 writeback to
+                                                             ensure previous
+                                                             global/generic
+                                                             store/atomicrmw are
+                                                             visible at system scope.
+
+                                                         2. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0)
 
                                                            - If TgSplit execution mode,
@@ -7767,8 +7848,8 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         2. flat_atomic
-                                                         3. s_waitcnt vmcnt(0) &
+                                                         3. flat_atomic
+                                                         4. s_waitcnt vmcnt(0) &
                                                             lgkmcnt(0)
 
                                                            - If TgSplit execution mode,
@@ -7776,7 +7857,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                            - If OpenCL, omit
                                                              lgkmcnt(0).
                                                            - Must happen before
-                                                             following
+                                                             following buffer_invl2 and
                                                              buffer_wbinvl1_vol.
                                                            - Ensures the
                                                              atomicrmw has
@@ -7784,7 +7865,8 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              invalidating the
                                                              caches.
 
-                                                         4. buffer_wbinvl1_vol
+                                                         5. buffer_invl2;
+                                                            buffer_wbinvl1_vol
 
                                                            - Must happen before
                                                              any following
@@ -7794,7 +7876,9 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                            - Ensures that
                                                              following
                                                              loads will not see
-                                                             stale L1 global data.
+                                                             stale L1 global data,
+                                                             nor see stale L2 MTYPE
+                                                             NC global data.
                                                              MTYPE RW and CC memory will
                                                              never be stale in L2 due to
                                                              the memory probes.
@@ -7902,7 +7986,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              the
                                                              acquire-fence-paired-atomic.
 
-                                                         3. buffer_wbinvl1_vol
+                                                         2. buffer_wbinvl1_vol
 
                                                            - If not TgSplit execution
                                                              mode, omit.
@@ -8007,7 +8091,20 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              requirements of
                                                              acquire.
 
-     fence        acq_rel      - system       *none*     1. s_waitcnt lgkmcnt(0) &
+     fence        acq_rel      - system       *none*     1. buffer_wbl2
+
+                                                           - If OpenCL and
+                                                             address space is
+                                                             local, omit.
+                                                           - Must happen before
+                                                             following s_waitcnt.
+                                                           - Performs L2 writeback to
+                                                             ensure previous
+                                                             global/generic
+                                                             store/atomicrmw are
+                                                             visible at system scope.
+
+                                                         2. s_waitcnt lgkmcnt(0) &
                                                             vmcnt(0)
 
                                                            - If TgSplit execution mode,
@@ -8048,7 +8145,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              atomic/store
                                                              atomic/atomicrmw.
                                                            - Must happen before
-                                                             the following
+                                                             the following buffer_invl2 and
                                                              buffer_wbinvl1_vol.
                                                            - Ensures that the
                                                              preceding
@@ -8087,7 +8184,8 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              requirements of
                                                              release.
 
-                                                         2.  buffer_wbinvl1_vol
+                                                         3.  buffer_invl2;
+                                                             buffer_wbinvl1_vol
 
                                                            - Must happen before
                                                              any following
@@ -8098,7 +8196,9 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                            - Ensures that
                                                              following
                                                              loads will not see
-                                                             stale L1 global data.
+                                                             stale L1 global data,
+                                                             nor see stale L2 MTYPE
+                                                             NC global data.
                                                              MTYPE RW and CC memory will
                                                              never be stale in L2 due to
                                                              the memory probes.
