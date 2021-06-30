@@ -52,6 +52,7 @@ public:
   void scanSymbols();
   template <class LP> void createOutputSections();
   template <class LP> void createLoadCommands();
+  void foldIdenticalLiterals();
   void foldIdenticalSections();
   void finalizeAddresses();
   void finalizeLinkEditSegment();
@@ -78,7 +79,10 @@ public:
 
   LCUuid *uuidCommand = nullptr;
   OutputSegment *linkEditSegment = nullptr;
-  DenseMap<NamePair, ConcatOutputSection *> concatOutputSections;
+
+  // Output sections are added to output segments in iteration order
+  // of ConcatOutputSection, so must have deterministic iteration order.
+  MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
@@ -942,6 +946,12 @@ template <class LP> void Writer::createOutputSections() {
   linkEditSegment = getOrCreateOutputSegment(segment_names::linkEdit);
 }
 
+void Writer::foldIdenticalLiterals() {
+  if (in.cStringSection)
+    in.cStringSection->finalizeContents();
+  // TODO: WordLiteralSection & CFStringSection should be finalized here too
+}
+
 void Writer::foldIdenticalSections() {
   if (config->icfLevel == ICFLevel::none)
     return;
@@ -973,8 +983,8 @@ void Writer::foldIdenticalSections() {
       else
         concatIsec->icfEqClass[0] = ++icfUniqueID;
     }
-    // FIXME: hash literal sections here?
   }
+  // FIXME: hash literal sections here too?
   parallelForEach(hashable,
                   [](ConcatInputSection *isec) { isec->hashForICF(); });
   // Now that every input section is either hashed or marked as unique,
@@ -1118,6 +1128,9 @@ template <class LP> void Writer::run() {
     in.stubHelper->setup();
   scanSymbols();
   createOutputSections<LP>();
+  // ICF assumes that all literals have been folded already, so we must run
+  // foldIdenticalLiterals before foldIdenticalSections.
+  foldIdenticalLiterals();
   foldIdenticalSections();
   // After this point, we create no new segments; HOWEVER, we might
   // yet create branch-range extension thunks for architectures whose

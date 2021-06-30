@@ -19,12 +19,12 @@
 # CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
 
 # CHECK:      <_main>:
-# CHECK-NEXT: movq  [[#]](%rip), %rax  # [[#%X,WEAK_DY_GOT_ADDR:]]
-# CHECK-NEXT: movq  [[#]](%rip), %rax  # [[#%X,WEAK_EXT_GOT_ADDR:]]
-# CHECK-NEXT: leaq  [[#]](%rip), %rax  # [[#%X,WEAK_INT_GOT_ADDR:]]
-# CHECK-NEXT: movq  [[#]](%rip), %rax  # [[#%X,WEAK_TLV_ADDR:]]
-# CHECK-NEXT: movq  [[#]](%rip), %rax  # [[#%X,WEAK_DY_TLV_ADDR:]]
-# CHECK-NEXT: leaq  [[#]](%rip), %rax  # [[#%X,WEAK_INT_TLV_ADDR:]]
+# CHECK-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_DY_GOT_ADDR:]]
+# CHECK-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_EXT_GOT_ADDR:]]
+# CHECK-NEXT: leaq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_INT_GOT_ADDR:]]
+# CHECK-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_TLV_ADDR:]]
+# CHECK-NEXT: movq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_DY_TLV_ADDR:]]
+# CHECK-NEXT: leaq  [[#]](%rip), %rax  ## 0x[[#%X,WEAK_INT_TLV_ADDR:]]
 # CHECK-NEXT: callq 0x{{[0-9a-f]*}}
 # CHECK-NEXT: callq 0x{{[0-9a-f]*}}
 # CHECK-NEXT: callq 0x{{[0-9a-f]*}}

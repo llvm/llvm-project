@@ -18,7 +18,6 @@ config.enable_shared            = @LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX@
 config.enable_32bit             = @LIBCXX_BUILD_32_BITS@
 config.cxx_abi                  = "@LIBCXX_CXX_ABI_LIBNAME@"
 config.use_sanitizer            = "@LLVM_USE_SANITIZER@"
-config.sanitizer_library        = "@LIBCXX_SANITIZER_LIBRARY@"
 config.configuration_variant    = "@LIBCXX_LIT_VARIANT@"
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
 if "@TARGET_TRIPLE@":

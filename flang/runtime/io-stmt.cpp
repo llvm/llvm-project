@@ -21,32 +21,64 @@ namespace Fortran::runtime::io {
 
 int IoStatementBase::EndIoStatement() { return GetIoStat(); }
 
+bool IoStatementBase::Emit(const char *, std::size_t, std::size_t) {
+  return false;
+}
+
+bool IoStatementBase::Emit(const char *, std::size_t) {
+  return false;
+}
+
+bool IoStatementBase::Emit(const char16_t *, std::size_t) {
+  return false;
+}
+
+bool IoStatementBase::Emit(const char32_t *, std::size_t) {
+  return false;
+}
+
+std::optional<char32_t> IoStatementBase::GetCurrentChar() {
+  return std::nullopt;
+}
+
+bool IoStatementBase::AdvanceRecord(int) { return false; }
+
+void IoStatementBase::BackspaceRecord() {}
+
+bool IoStatementBase::Receive(char *, std::size_t, std::size_t) {
+  return false;
+}
+
 std::optional<DataEdit> IoStatementBase::GetNextDataEdit(
     IoStatementState &, int) {
   return std::nullopt;
 }
 
+ExternalFileUnit *IoStatementBase::GetExternalFileUnit() const {
+  return nullptr;
+}
+
+bool IoStatementBase::BeginReadingRecord() { return true; }
+
+void IoStatementBase::FinishReadingRecord() {}
+
+void IoStatementBase::HandleAbsolutePosition(std::int64_t) {}
+
+void IoStatementBase::HandleRelativePosition(std::int64_t) {}
+
 bool IoStatementBase::Inquire(InquiryKeywordHash, char *, std::size_t) {
-  Crash(
-      "IoStatementBase::Inquire() called for I/O statement other than INQUIRE");
   return false;
 }
 
 bool IoStatementBase::Inquire(InquiryKeywordHash, bool &) {
-  Crash(
-      "IoStatementBase::Inquire() called for I/O statement other than INQUIRE");
   return false;
 }
 
 bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t, bool &) {
-  Crash(
-      "IoStatementBase::Inquire() called for I/O statement other than INQUIRE");
   return false;
 }
 
 bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t &) {
-  Crash(
-      "IoStatementBase::Inquire() called for I/O statement other than INQUIRE");
   return false;
 }
 
@@ -69,12 +101,12 @@ InternalIoStatementState<DIR, CHAR>::InternalIoStatementState(
 
 template <Direction DIR, typename CHAR>
 bool InternalIoStatementState<DIR, CHAR>::Emit(
-    const CharType *data, std::size_t chars, std::size_t /*elementBytes*/) {
+    const CharType *data, std::size_t chars) {
   if constexpr (DIR == Direction::Input) {
     Crash("InternalIoStatementState<Direction::Input>::Emit() called");
     return false;
   }
-  return unit_.Emit(data, chars, *this);
+  return unit_.Emit(data, chars * sizeof(CharType), *this);
 }
 
 template <Direction DIR, typename CHAR>
@@ -171,9 +203,8 @@ MutableModes &ExternalIoStatementBase::mutableModes() { return unit_.modes; }
 ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 
 int ExternalIoStatementBase::EndIoStatement() {
-  if (unit_.nonAdvancing) {
+  if (mutableModes().nonAdvancing) {
     unit_.leftTabLimit = unit_.furthestPositionInRecord;
-    unit_.nonAdvancing = false;
   } else {
     unit_.leftTabLimit.reset();
   }
@@ -228,14 +259,20 @@ int NoUnitIoStatementState::EndIoStatement() {
   return result;
 }
 
+template <Direction DIR>
+ExternalIoStatementState<DIR>::ExternalIoStatementState(
+    ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
+    : ExternalIoStatementBase{unit, sourceFile, sourceLine}, mutableModes_{
+                                                                 unit.modes} {}
+
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
   if constexpr (DIR == Direction::Input) {
     BeginReadingRecord(); // in case there were no I/O items
-    if (!unit().nonAdvancing) {
+    if (!mutableModes().nonAdvancing) {
       FinishReadingRecord();
     }
   } else {
-    if (!unit().nonAdvancing) {
+    if (!mutableModes().nonAdvancing) {
       unit().AdvanceRecord(*this);
     }
     unit().FlushIfTerminal(*this);
@@ -253,6 +290,14 @@ bool ExternalIoStatementState<DIR>::Emit(
 }
 
 template <Direction DIR>
+bool ExternalIoStatementState<DIR>::Emit(const char *data, std::size_t bytes) {
+  if constexpr (DIR == Direction::Input) {
+    Crash("ExternalIoStatementState::Emit(char) called for input statement");
+  }
+  return unit().Emit(data, bytes, 0, *this);
+}
+
+template <Direction DIR>
 bool ExternalIoStatementState<DIR>::Emit(
     const char16_t *data, std::size_t chars) {
   if constexpr (DIR == Direction::Input) {
@@ -261,7 +306,7 @@ bool ExternalIoStatementState<DIR>::Emit(
   }
   // TODO: UTF-8 encoding
   return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
-      static_cast<int>(sizeof *data), *this);
+      sizeof *data, *this);
 }
 
 template <Direction DIR>
@@ -273,7 +318,7 @@ bool ExternalIoStatementState<DIR>::Emit(
   }
   // TODO: UTF-8 encoding
   return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
-      static_cast<int>(sizeof *data), *this);
+      sizeof *data, *this);
 }
 
 template <Direction DIR>
@@ -335,7 +380,7 @@ ExternalFormattedIoStatementState<DIR, CHAR>::ExternalFormattedIoStatementState(
     ExternalFileUnit &unit, const CHAR *format, std::size_t formatLength,
     const char *sourceFile, int sourceLine)
     : ExternalIoStatementState<DIR>{unit, sourceFile, sourceLine},
-      mutableModes_{unit.modes}, format_{*this, format, formatLength} {}
+      format_{*this, format, formatLength} {}
 
 template <Direction DIR, typename CHAR>
 int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
@@ -354,6 +399,24 @@ bool IoStatementState::Emit(
       [=](auto &x) { return x.get().Emit(data, n, elementBytes); }, u_);
 }
 
+bool IoStatementState::Emit(const char *data, std::size_t n) {
+  return std::visit([=](auto &x) { return x.get().Emit(data, n); }, u_);
+}
+
+bool IoStatementState::Emit(const char16_t *data, std::size_t chars) {
+  return std::visit([=](auto &x) { return x.get().Emit(data, chars); }, u_);
+}
+
+bool IoStatementState::Emit(const char32_t *data, std::size_t chars) {
+  return std::visit([=](auto &x) { return x.get().Emit(data, chars); }, u_);
+}
+
+bool IoStatementState::Receive(
+    char *data, std::size_t n, std::size_t elementBytes) {
+  return std::visit(
+      [=](auto &x) { return x.get().Receive(data, n, elementBytes); }, u_);
+}
+
 std::optional<char32_t> IoStatementState::GetCurrentChar() {
   return std::visit([&](auto &x) { return x.get().GetCurrentChar(); }, u_);
 }
@@ -368,6 +431,10 @@ void IoStatementState::BackspaceRecord() {
 
 void IoStatementState::HandleRelativePosition(std::int64_t n) {
   std::visit([=](auto &x) { x.get().HandleRelativePosition(n); }, u_);
+}
+
+void IoStatementState::HandleAbsolutePosition(std::int64_t n) {
+  std::visit([=](auto &x) { x.get().HandleAbsolutePosition(n); }, u_);
 }
 
 int IoStatementState::EndIoStatement() {
@@ -496,7 +563,7 @@ std::optional<char32_t> IoStatementState::NextInField(
         return std::optional<char32_t>{' '};
       }
       IoErrorHandler &handler{GetIoErrorHandler()};
-      if (connection.nonAdvancing) {
+      if (mutableModes().nonAdvancing) {
         handler.SignalEor();
       } else {
         handler.SignalError(IostatRecordReadOverrun);
@@ -682,23 +749,100 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
 }
 
 template <Direction DIR>
-bool UnformattedIoStatementState<DIR>::Receive(
+bool ExternalUnformattedIoStatementState<DIR>::Receive(
     char *data, std::size_t bytes, std::size_t elementBytes) {
   if constexpr (DIR == Direction::Output) {
-    this->Crash(
-        "UnformattedIoStatementState::Receive() called for output statement");
+    this->Crash("ExternalUnformattedIoStatementState::Receive() called for "
+                "output statement");
   }
   return this->unit().Receive(data, bytes, elementBytes, *this);
 }
 
 template <Direction DIR>
-bool UnformattedIoStatementState<DIR>::Emit(
+ChildIoStatementState<DIR>::ChildIoStatementState(
+    ChildIo &child, const char *sourceFile, int sourceLine)
+    : IoStatementBase{sourceFile, sourceLine}, child_{child} {}
+
+template <Direction DIR>
+MutableModes &ChildIoStatementState<DIR>::mutableModes() {
+  return child_.parent().mutableModes();
+}
+
+template <Direction DIR>
+ConnectionState &ChildIoStatementState<DIR>::GetConnectionState() {
+  return child_.parent().GetConnectionState();
+}
+
+template <Direction DIR>
+ExternalFileUnit *ChildIoStatementState<DIR>::GetExternalFileUnit() const {
+  return child_.parent().GetExternalFileUnit();
+}
+
+template <Direction DIR> int ChildIoStatementState<DIR>::EndIoStatement() {
+  auto result{IoStatementBase::EndIoStatement()};
+  child_.EndIoStatement(); // annihilates *this in child_.u_
+  return result;
+}
+
+template <Direction DIR>
+bool ChildIoStatementState<DIR>::Emit(
     const char *data, std::size_t bytes, std::size_t elementBytes) {
-  if constexpr (DIR == Direction::Input) {
-    this->Crash(
-        "UnformattedIoStatementState::Emit() called for input statement");
-  }
-  return ExternalIoStatementState<DIR>::Emit(data, bytes, elementBytes);
+  return child_.parent().Emit(data, bytes, elementBytes);
+}
+
+template <Direction DIR>
+bool ChildIoStatementState<DIR>::Emit(const char *data, std::size_t bytes) {
+  return child_.parent().Emit(data, bytes);
+}
+
+template <Direction DIR>
+bool ChildIoStatementState<DIR>::Emit(const char16_t *data, std::size_t chars) {
+  return child_.parent().Emit(data, chars);
+}
+
+template <Direction DIR>
+bool ChildIoStatementState<DIR>::Emit(const char32_t *data, std::size_t chars) {
+  return child_.parent().Emit(data, chars);
+}
+
+template <Direction DIR>
+std::optional<char32_t> ChildIoStatementState<DIR>::GetCurrentChar() {
+  return child_.parent().GetCurrentChar();
+}
+
+template <Direction DIR>
+void ChildIoStatementState<DIR>::HandleAbsolutePosition(std::int64_t n) {
+  return child_.parent().HandleAbsolutePosition(n);
+}
+
+template <Direction DIR>
+void ChildIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
+  return child_.parent().HandleRelativePosition(n);
+}
+
+template <Direction DIR, typename CHAR>
+ChildFormattedIoStatementState<DIR, CHAR>::ChildFormattedIoStatementState(
+    ChildIo &child, const CHAR *format, std::size_t formatLength,
+    const char *sourceFile, int sourceLine)
+    : ChildIoStatementState<DIR>{child, sourceFile, sourceLine},
+      mutableModes_{child.parent().mutableModes()}, format_{*this, format,
+                                                        formatLength} {}
+
+template <Direction DIR, typename CHAR>
+int ChildFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
+  format_.Finish(*this);
+  return ChildIoStatementState<DIR>::EndIoStatement();
+}
+
+template <Direction DIR, typename CHAR>
+bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int) {
+  return false; // no can do in a child I/O
+}
+
+template <Direction DIR>
+bool ChildUnformattedIoStatementState<DIR>::Receive(
+    char *data, std::size_t bytes, std::size_t elementBytes) {
+  return this->child().parent().Receive(data, bytes, elementBytes);
 }
 
 template class InternalIoStatementState<Direction::Output>;
@@ -713,14 +857,22 @@ template class ExternalFormattedIoStatementState<Direction::Output>;
 template class ExternalFormattedIoStatementState<Direction::Input>;
 template class ExternalListIoStatementState<Direction::Output>;
 template class ExternalListIoStatementState<Direction::Input>;
-template class UnformattedIoStatementState<Direction::Output>;
-template class UnformattedIoStatementState<Direction::Input>;
+template class ExternalUnformattedIoStatementState<Direction::Output>;
+template class ExternalUnformattedIoStatementState<Direction::Input>;
+template class ChildIoStatementState<Direction::Output>;
+template class ChildIoStatementState<Direction::Input>;
+template class ChildFormattedIoStatementState<Direction::Output>;
+template class ChildFormattedIoStatementState<Direction::Input>;
+template class ChildListIoStatementState<Direction::Output>;
+template class ChildListIoStatementState<Direction::Input>;
+template class ChildUnformattedIoStatementState<Direction::Output>;
+template class ChildUnformattedIoStatementState<Direction::Input>;
 
 int ExternalMiscIoStatementState::EndIoStatement() {
   ExternalFileUnit &ext{unit()};
   switch (which_) {
   case Flush:
-    ext.Flush(*this);
+    ext.FlushOutput(*this);
     std::fflush(nullptr); // flushes C stdio output streams (12.9(2))
     break;
   case Backspace:
@@ -742,6 +894,12 @@ InquireUnitState::InquireUnitState(
 
 bool InquireUnitState::Inquire(
     InquiryKeywordHash inquiry, char *result, std::size_t length) {
+  if (unit().createdForInternalChildIo()) {
+    SignalError(IostatInquireInternalUnit,
+        "INQUIRE of unit created for defined derived type I/O of an internal "
+        "unit");
+    return false;
+  }
   const char *str{nullptr};
   switch (inquiry) {
   case HashInquiryKeyword("ACCESS"):
@@ -1160,11 +1318,5 @@ bool InquireUnconnectedFileState::Inquire(
 InquireIOLengthState::InquireIOLengthState(
     const char *sourceFile, int sourceLine)
     : NoUnitIoStatementState{sourceFile, sourceLine, *this} {}
-
-bool InquireIOLengthState::Emit(
-    const char *, std::size_t n, std::size_t /*elementBytes*/) {
-  bytes_ += n;
-  return true;
-}
 
 } // namespace Fortran::runtime::io

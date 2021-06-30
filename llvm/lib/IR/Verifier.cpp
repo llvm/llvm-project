@@ -699,8 +699,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
              "the third field of the element type is mandatory, "
              "specify i8* null to migrate from the obsoleted 2-field form");
       Type *ETy = STy->getTypeAtIndex(2);
+      Type *Int8Ty = Type::getInt8Ty(ETy->getContext());
       Assert(ETy->isPointerTy() &&
-                 cast<PointerType>(ETy)->getElementType()->isIntegerTy(8),
+                 cast<PointerType>(ETy)->isOpaqueOrPointeeTypeMatches(Int8Ty),
              "wrong type for intrinsic global variable", &GV);
     }
   }
@@ -3353,9 +3354,11 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   if (FoundAttachedCallBundle)
-    Assert(FTy->getReturnType()->isPointerTy(),
+    Assert((FTy->getReturnType()->isPointerTy() ||
+            (Call.doesNotReturn() && FTy->getReturnType()->isVoidTy())),
            "a call with operand bundle \"clang.arc.attachedcall\" must call a "
-           "function returning a pointer",
+           "function returning a pointer or a non-returning function that has "
+           "a void return type",
            Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a

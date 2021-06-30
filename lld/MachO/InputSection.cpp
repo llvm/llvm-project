@@ -62,9 +62,7 @@ bool ConcatInputSection::isHashableForICF(bool isText) const {
   case S_8BYTE_LITERALS:
   case S_16BYTE_LITERALS:
   case S_LITERAL_POINTERS:
-    // FIXME(jezng): We should not have any ConcatInputSections of these types
-    // when running ICF.
-    return false;
+    llvm_unreachable("found unexpected literal type in ConcatInputSection");
   case S_ZEROFILL:
   case S_GB_ZEROFILL:
   case S_NON_LAZY_SYMBOL_POINTERS:

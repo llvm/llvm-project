@@ -165,27 +165,21 @@ public:
     { this->init(__sb); }
     virtual ~basic_ostream();
 protected:
-#ifndef _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     basic_ostream(basic_ostream&& __rhs);
 
     // 27.7.2.3 Assign/swap
     inline _LIBCPP_INLINE_VISIBILITY
     basic_ostream& operator=(basic_ostream&& __rhs);
-#endif
+
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void swap(basic_ostream& __rhs)
     { basic_ios<char_type, traits_type>::swap(__rhs); }
 
-#ifndef _LIBCPP_CXX03_LANG
     basic_ostream           (const basic_ostream& __rhs) = delete;
     basic_ostream& operator=(const basic_ostream& __rhs) = delete;
-#else
-    basic_ostream           (const basic_ostream& __rhs); // not defined
-    basic_ostream& operator=(const basic_ostream& __rhs); // not defined
-#endif
-public:
 
+public:
     // 27.7.2.4 Prefix/suffix:
     class _LIBCPP_TEMPLATE_VIS sentry;
 
@@ -291,8 +285,6 @@ basic_ostream<_CharT, _Traits>::sentry::~sentry()
     }
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>::basic_ostream(basic_ostream&& __rhs)
 {
@@ -306,8 +298,6 @@ basic_ostream<_CharT, _Traits>::operator=(basic_ostream&& __rhs)
     swap(__rhs);
     return *this;
 }
-
-#endif // _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>::~basic_ostream()

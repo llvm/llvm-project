@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: opt %s -dce -S | FileCheck %s
 
 ; Tests the salvaging of GEP instructions, specifically struct indexing and

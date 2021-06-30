@@ -17,7 +17,6 @@ config.llvm_unwinder            = @LIBCXXABI_USE_LLVM_UNWINDER@
 config.builtins_library         = "@LIBCXXABI_BUILTINS_LIBRARY@"
 config.enable_threads           = @LIBCXXABI_ENABLE_THREADS@
 config.use_sanitizer            = "@LLVM_USE_SANITIZER@"
-config.sanitizer_library        = "@LIBCXXABI_SANITIZER_LIBRARY@"
 config.enable_32bit             = @LIBCXXABI_BUILD_32_BITS@
 config.target_info              = "@LIBCXXABI_TARGET_INFO@"
 config.executor                 = "@LIBCXXABI_EXECUTOR@"

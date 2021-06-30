@@ -15,7 +15,7 @@
 
 # CHECK: Disassembly of section __TEXT,__text
 # CHECK-LABEL: <_main>:
-# CHECK: leaq {{.*}}(%rip), %rsi   # [[ADDR]] <_goodbye_world>
+# CHECK: leaq {{.*}}(%rip), %rsi   ## 0x[[ADDR]] <_goodbye_world>
 
 .section __TEXT,__text
 .global _main

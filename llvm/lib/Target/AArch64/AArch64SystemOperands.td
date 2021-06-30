@@ -531,6 +531,14 @@ defm : TLBI<"RVAE3OS",      0b110, 0b1000, 0b0101, 0b001>;
 defm : TLBI<"RVALE3OS",     0b110, 0b1000, 0b0101, 0b101>;
 } //FeatureTLB_RMI
 
+// Armv9-A Realm Management Extention TLBI Instructions
+let Requires = ["AArch64::FeatureRME"] in {
+defm : TLBI<"RPAOS",        0b110, 0b1000, 0b0100, 0b011>;
+defm : TLBI<"RPALOS",       0b110, 0b1000, 0b0100, 0b111>;
+defm : TLBI<"PAALLOS",      0b110, 0b1000, 0b0001, 0b100, 0>;
+defm : TLBI<"PAALL",        0b110, 0b1000, 0b0111, 0b100, 0>;
+}
+
 // Armv8.5-A Prediction Restriction by Context instruction options:
 class PRCTX<string name, bits<4> crm> : SearchableTable {
   let SearchableFields = ["Name", "Encoding"];
@@ -741,6 +749,13 @@ def : RWSysReg<"SCXTNUM_EL1", 0b11, 0b000, 0b1101, 0b0000, 0b111>;
 def : RWSysReg<"SCXTNUM_EL2", 0b11, 0b100, 0b1101, 0b0000, 0b111>;
 def : RWSysReg<"SCXTNUM_EL3", 0b11, 0b110, 0b1101, 0b0000, 0b111>;
 def : RWSysReg<"SCXTNUM_EL12", 0b11, 0b101, 0b1101, 0b0000, 0b111>;
+}
+
+// v9a Realm Management Extension registers
+let Requires = [{ {AArch64::FeatureRME} }] in {
+def : RWSysReg<"MFAR_EL3",  0b11, 0b110, 0b0110, 0b0000, 0b101>;
+def : RWSysReg<"GPCCR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b110>;
+def : RWSysReg<"GPTBR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b100>;
 }
 
 //===----------------------

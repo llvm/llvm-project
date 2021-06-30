@@ -140,10 +140,6 @@ endfunction()
 
 # Get flags for setting the device's architecture for each compiler.
 function(_OPENMP_TARGET_DEVICE_ARCH_CANDIDATES LANG DEVICE DEVICE_FLAG)
-  # AMD requires the architecture, default to gfx908 if not provided.
-  if((NOT OpenMPTarget_${DEVICE}_ARCH) AND ("${DEVICE}" STREQUAL "AMDGCN"))
-    set(OpenMPTarget_${DEVICE}_ARCH "gfx908")
-  endif()
   if(OpenMPTarget_${DEVICE}_ARCH)
     # Only Clang supports selecting the architecture for now.
     set(OMPTarget_ARCH_Clang "-Xopenmp-target=${DEVICE_FLAG} -march=${OpenMPTarget_${DEVICE}_ARCH}")

@@ -14,23 +14,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%iv> vp<%0>
-; CHECK-NEXT: Successor(s): pred.load
-
-; CHECK:       <xVFxUF> pred.load: {
-; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
-; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
-
-; CHECK:       pred.load.if:
-; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
-; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
-; CHECK-NEXT:   Successor(s): pred.load.continue
-
-; CHECK:      pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%5> = ir<%lv.b>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): loop.0
 
 ; CHECK:      loop.0:
 ; CHECK-NEXT: Successor(s): pred.store
@@ -42,13 +26,16 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 
 ; CHECK:      pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%add> = add vp<%5>, ir<10>
+; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
+; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
+; CHECK-NEXT:     REPLICATE ir<%add> = add ir<%lv.b>, ir<10>
 ; CHECK-NEXT:     REPLICATE ir<%mul> = mul ir<2>, ir<%add>
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%iv>
 ; CHECK-NEXT:     REPLICATE store ir<%mul>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
 ; CHECK:      pred.store.continue:
+; CHECK-NEXT:   PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 
@@ -615,61 +602,12 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%iv>
-; CHECK-NEXT: Successor(s): pred.load
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.load: {
-; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
-; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.if:
-; CHECK-NEXT:     REPLICATE ir<%lv.a> = load ir<%gep.a>
-; CHECK-NEXT:   Successor(s): pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%5> = ir<%lv.a>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
-; CHECK-NEXT: Successor(s): pred.load
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.load: {
-; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
-; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.if:
-; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
-; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
-; CHECK-NEXT:   Successor(s): pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%lv.b>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1:
-; CHECK-NEXT: Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.store: {
-; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
-; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%gep.c> = getelementptr ir<@c>, ir<0>, ir<%iv>
-; CHECK-NEXT:     REPLICATE store vp<%5>, ir<%gep.c>
-; CHECK-NEXT:   Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.2:
@@ -682,10 +620,17 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE store vp<%8>, ir<%gep.a>
+; CHECK-NEXT:     REPLICATE ir<%lv.a> = load ir<%gep.a>
+; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr ir<@b>, ir<0>, ir<%iv>
+; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
+; CHECK-NEXT:     REPLICATE ir<%gep.c> = getelementptr ir<@c>, ir<0>, ir<%iv>
+; CHECK-NEXT:     REPLICATE store ir<%lv.a>, ir<%gep.c>
+; CHECK-NEXT:     REPLICATE store ir<%lv.b>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%10> = ir<%lv.a>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%11> = ir<%lv.b>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.3
@@ -695,7 +640,7 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0:
-; CHECK-NEXT:   WIDEN ir<%mul> = mul vp<%5>, vp<%8>
+; CHECK-NEXT:   WIDEN ir<%mul> = mul vp<%10>, vp<%11>
 ; CHECK-NEXT:   EMIT vp<%14> = select vp<%2> ir<%c.0> ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -764,41 +709,9 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
 ; CHECK-NEXT:   EMIT vp<%2> = icmp ule ir<%iv> vp<%0>
 ; CHECK-NEXT:   REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%iv>
-; CHECK-NEXT: Successor(s): pred.load
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.load: {
-; CHECK-NEXT:   pred.load.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
-; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.if:
-; CHECK-NEXT:     REPLICATE ir<%lv.a> = load ir<%gep.a>
-; CHECK-NEXT:   Successor(s): pred.load.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.load.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%5> = ir<%lv.a>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
-; CHECK-NEXT: Successor(s): pred.sdiv
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.sdiv: {
-; CHECK-NEXT:   pred.sdiv.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%2>
-; CHECK-NEXT:   Successor(s): pred.sdiv.if, pred.sdiv.continue
-; CHECK-NEXT:   CondBit: vp<%2> (loop)
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.sdiv.if:
-; CHECK-NEXT:     REPLICATE ir<%div> = sdiv vp<%5>, vp<%5>
-; CHECK-NEXT:   Successor(s): pred.sdiv.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.sdiv.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%7> = ir<%div>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1:
@@ -811,10 +724,14 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-NEXT:   CondBit: vp<%2> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE store vp<%7>, ir<%gep.a>
+; CHECK-NEXT:     REPLICATE ir<%lv.a> = load ir<%gep.a>
+; CHECK-NEXT:     REPLICATE ir<%div> = sdiv ir<%lv.a>, ir<%lv.a>
+; CHECK-NEXT:     REPLICATE store ir<%div>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%7> = ir<%lv.a>
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%div>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.2
@@ -871,22 +788,6 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT: Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.0:
-; CHECK-NEXT: Successor(s): pred.sdiv
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.sdiv: {
-; CHECK-NEXT:   pred.sdiv.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
-; CHECK-NEXT:   Successor(s): pred.sdiv.if, pred.sdiv.continue
-; CHECK-NEXT:   CondBit: vp<%3> (loop)
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.sdiv.if:
-; CHECK-NEXT:     REPLICATE ir<%div> = sdiv ir<%for>, vp<%6>
-; CHECK-NEXT:   Successor(s): pred.sdiv.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.sdiv.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%div>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1:
@@ -899,11 +800,20 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT:   CondBit: vp<%3> (loop)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE store vp<%8>, ir<%gep.a>
+; CHECK-NEXT:     REPLICATE ir<%div> = sdiv ir<%for>, vp<%6>
+; CHECK-NEXT:     REPLICATE store ir<%div>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%div>
 ; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): loop.2
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.2:
+; CHECK-NEXT:   CLONE ir<%large> = icmp ir<%iv>, ir<8>
+; CHECK-NEXT:   CLONE ir<%exitcond> = icmp ir<%iv>, ir<%k>
+; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
 entry:

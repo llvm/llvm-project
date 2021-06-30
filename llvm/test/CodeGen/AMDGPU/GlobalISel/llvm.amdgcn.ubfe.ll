@@ -983,8 +983,7 @@ define amdgpu_kernel void @lshr_and(i32 addrspace(1)* %out, i32 %a) #0 {
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_lshr_b32 s0, s0, 6
-; GFX6-NEXT:    s_and_b32 s0, s0, 7
+; GFX6-NEXT:    s_bfe_u32 s0, s0, 0x30006
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX6-NEXT:    s_endpgm

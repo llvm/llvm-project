@@ -16,13 +16,13 @@
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
 # DISASM-NEXT: <_start>:
-# DISASM-NEXT:   2011c8:       adcl  {{.*}}(%rip), %eax  # 202240
-# DISASM-NEXT:                 addl  {{.*}}(%rip), %ebx  # 202240
-# DISASM-NEXT:                 andl  {{.*}}(%rip), %ecx  # 202240
-# DISASM-NEXT:                 cmpl  {{.*}}(%rip), %edx  # 202240
-# DISASM-NEXT:                 orl   {{.*}}(%rip), %edi  # 202240
-# DISASM-NEXT:                 sbbl  {{.*}}(%rip), %esi  # 202240
-# DISASM-NEXT:                 subl  {{.*}}(%rip), %ebp  # 202240
+# DISASM-NEXT:   2011c8:       adcl  {{.*}}(%rip), %eax  # 0x202240
+# DISASM-NEXT:                 addl  {{.*}}(%rip), %ebx  # 0x202240
+# DISASM-NEXT:                 andl  {{.*}}(%rip), %ecx  # 0x202240
+# DISASM-NEXT:                 cmpl  {{.*}}(%rip), %edx  # 0x202240
+# DISASM-NEXT:                 orl   {{.*}}(%rip), %edi  # 0x202240
+# DISASM-NEXT:                 sbbl  {{.*}}(%rip), %esi  # 0x202240
+# DISASM-NEXT:                 subl  {{.*}}(%rip), %ebp  # 0x202240
 # DISASM-NEXT:                 xorl  $0x203248, %r8d
 # DISASM-NEXT:                 testl $0x203248, %r15d
 # DISASM-NEXT:   201200:       adcq  $0x203248, %rax
@@ -65,24 +65,24 @@
 # DISASM-PIC:      Disassembly of section .text:
 # DISASM-PIC-EMPTY:
 # DISASM-PIC-NEXT: <_start>:
-# DISASM-PIC-NEXT: 1268:       adcl  {{.*}}(%rip), %eax  # 2380
-# DISASM-PIC-NEXT:             addl  {{.*}}(%rip), %ebx  # 2380
-# DISASM-PIC-NEXT:             andl  {{.*}}(%rip), %ecx  # 2380
-# DISASM-PIC-NEXT:             cmpl  {{.*}}(%rip), %edx  # 2380
-# DISASM-PIC-NEXT:             orl   {{.*}}(%rip), %edi  # 2380
-# DISASM-PIC-NEXT:             sbbl  {{.*}}(%rip), %esi  # 2380
-# DISASM-PIC-NEXT:             subl  {{.*}}(%rip), %ebp  # 2380
-# DISASM-PIC-NEXT:             xorl  {{.*}}(%rip), %r8d  # 2380
-# DISASM-PIC-NEXT:             testl %r15d, {{.*}}(%rip) # 2380
-# DISASM-PIC-NEXT: 12a0:       adcq  {{.*}}(%rip), %rax  # 2380
-# DISASM-PIC-NEXT:             addq  {{.*}}(%rip), %rbx  # 2380
-# DISASM-PIC-NEXT:             andq  {{.*}}(%rip), %rcx  # 2380
-# DISASM-PIC-NEXT:             cmpq  {{.*}}(%rip), %rdx  # 2380
-# DISASM-PIC-NEXT:             orq   {{.*}}(%rip), %rdi  # 2380
-# DISASM-PIC-NEXT:             sbbq  {{.*}}(%rip), %rsi  # 2380
-# DISASM-PIC-NEXT:             subq  {{.*}}(%rip), %rbp  # 2380
-# DISASM-PIC-NEXT:             xorq  {{.*}}(%rip), %r8   # 2380
-# DISASM-PIC-NEXT:             testq %r15, {{.*}}(%rip)  # 2380
+# DISASM-PIC-NEXT: 1268:       adcl  {{.*}}(%rip), %eax  # 0x2380
+# DISASM-PIC-NEXT:             addl  {{.*}}(%rip), %ebx  # 0x2380
+# DISASM-PIC-NEXT:             andl  {{.*}}(%rip), %ecx  # 0x2380
+# DISASM-PIC-NEXT:             cmpl  {{.*}}(%rip), %edx  # 0x2380
+# DISASM-PIC-NEXT:             orl   {{.*}}(%rip), %edi  # 0x2380
+# DISASM-PIC-NEXT:             sbbl  {{.*}}(%rip), %esi  # 0x2380
+# DISASM-PIC-NEXT:             subl  {{.*}}(%rip), %ebp  # 0x2380
+# DISASM-PIC-NEXT:             xorl  {{.*}}(%rip), %r8d  # 0x2380
+# DISASM-PIC-NEXT:             testl %r15d, {{.*}}(%rip) # 0x2380
+# DISASM-PIC-NEXT: 12a0:       adcq  {{.*}}(%rip), %rax  # 0x2380
+# DISASM-PIC-NEXT:             addq  {{.*}}(%rip), %rbx  # 0x2380
+# DISASM-PIC-NEXT:             andq  {{.*}}(%rip), %rcx  # 0x2380
+# DISASM-PIC-NEXT:             cmpq  {{.*}}(%rip), %rdx  # 0x2380
+# DISASM-PIC-NEXT:             orq   {{.*}}(%rip), %rdi  # 0x2380
+# DISASM-PIC-NEXT:             sbbq  {{.*}}(%rip), %rsi  # 0x2380
+# DISASM-PIC-NEXT:             subq  {{.*}}(%rip), %rbp  # 0x2380
+# DISASM-PIC-NEXT:             xorq  {{.*}}(%rip), %r8   # 0x2380
+# DISASM-PIC-NEXT:             testq %r15, {{.*}}(%rip)  # 0x2380
 
 .data
 .type   bar, @object

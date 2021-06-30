@@ -7,8 +7,8 @@
 # CHECK-NEXT: {{^}} [[#%x,ADDR:]] {{.*}} 00000000
 
 # CHECK:      leal {{.*}}(%rip), %eax  # {{.*}} <foo>
-# CHECK-NEXT: movl {{.*}}(%rip), %eax  # [[#ADDR+4]]
-# CHECK-NEXT: movq {{.*}}(%rip), %rax  # [[#ADDR+1]]
+# CHECK-NEXT: movl {{.*}}(%rip), %eax  # 0x[[#ADDR+4]]
+# CHECK-NEXT: movq {{.*}}(%rip), %rax  # 0x[[#ADDR+1]]
 
 ## movl foo@GOTPCREL(%rip), %eax
   movl 0(%rip), %eax
