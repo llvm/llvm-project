@@ -90,14 +90,9 @@ public:
   /// \param[in] orig_spec
   ///     The original source file path to try and remap.
   ///
-  /// \param[out] new_spec
-  ///     The newly remapped filespec that is guaranteed to exist.
-  ///
   /// \return
-  ///     /b true if \a orig_spec was successfully located and
-  ///     \a new_spec is filled in with an existing file spec,
-  ///     \b false otherwise.
-  bool FindFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
+  ///     The newly remapped filespec that is guaranteed to exist.
+  llvm::Optional<FileSpec> FindFile(const FileSpec &orig_spec) const;
 
   uint32_t FindIndexForPath(ConstString path) const;
 

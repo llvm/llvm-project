@@ -1598,7 +1598,11 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
 bool Module::FindSourceFile(const FileSpec &orig_spec,
                             FileSpec &new_spec) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  return m_source_mappings.FindFile(orig_spec, new_spec);
+  if (auto remapped = m_source_mappings.FindFile(orig_spec)) {
+    new_spec = *remapped;
+    return true;
+  }
+  return false;
 }
 
 bool Module::RemapSourceFile(llvm::StringRef path,
