@@ -45,9 +45,9 @@ _start:
 // CHECK1: Disassembly of section .text:
 // CHECK1-EMPTY:
 // CHECK1-NEXT: <_start>:
-// CHECK1-NEXT:   100000:       ff f0 fe ff     bl      #1048572
-// CHECK1-NEXT:   100004:       ff f3 fc d7     bl      #16777208
-// CHECK1-NEXT:   100008:       ff f2 fc d7     bl      #15728632
+// CHECK1-NEXT:   100000:       ff f0 fe ff     bl      0x200000 <tfunc00>
+// CHECK1-NEXT:   100004:       ff f3 fc d7     bl      0x1100000 <tfunc15>
+// CHECK1-NEXT:   100008:       ff f2 fc d7     bl      0x1000004 <__Thumbv7ABSLongThunk_tfunc16>
 
  FUNCTION 00
 // CHECK2:  <tfunc00>:
@@ -61,7 +61,7 @@ _start:
         b.w tfunc28
 // CHECK4: <tfunc02>:
 // CHECK4-NEXT:   400000:       70 47   bx      lr
-// CHECK4-NEXT:   400002:       00 f0 01 90     b.w     #12582914 <__Thumbv7ABSLongThunk_tfunc28>
+// CHECK4-NEXT:   400002:       00 f0 01 90     b.w     0x1000008 <__Thumbv7ABSLongThunk_tfunc28>
  FUNCTION 03
  FUNCTION 04
  FUNCTION 05
@@ -76,9 +76,9 @@ _start:
  FUNCTION 14
 // Expect precreated ThunkSection here
 // CHECK5: <__Thumbv7ABSLongThunk_tfunc16>:
-// CHECK5-NEXT:  1000004:       ff f1 fc bf     b.w     #2097144 <tfunc16>
+// CHECK5-NEXT:  1000004:       ff f1 fc bf     b.w     0x1200000 <tfunc16>
 // CHECK5: <__Thumbv7ABSLongThunk_tfunc28>:
-// CHECK5-NEXT:  1000008:       ff f1 fa 97     b.w     #14680052 <tfunc28>
+// CHECK5-NEXT:  1000008:       ff f1 fa 97     b.w     0x1e00000 <tfunc28>
 // CHECK5: <__Thumbv7ABSLongThunk_tfunc32>:
 // CHECK5-NEXT:  100000c:       40 f2 01 0c     movw    r12, #1
 // CHECK5-NEXT:  1000010:       c0 f2 20 2c     movt    r12, #544
@@ -88,7 +88,7 @@ _start:
 // CHECK5-NEXT:  100001a:       c0 f2 30 2c     movt    r12, #560
 // CHECK5-NEXT:  100001e:       60 47   bx      r12
 // CHECK5: <__Thumbv7ABSLongThunk_tfunc02>:
-// CHECK5-NEXT:  1000020:       ff f7 ee 97     b.w     #-12582948 <tfunc02>
+// CHECK5-NEXT:  1000020:       ff f7 ee 97     b.w     0x400000 <tfunc02>
  FUNCTION 15
 // tfunc00 and tfunc01 are < 16Mb away, expect no range extension thunks
  bl tfunc00
@@ -99,18 +99,18 @@ _start:
  bl tfunc33
 // CHECK6:  <tfunc15>:
 // CHECK6-NEXT:  1100000:       70 47   bx      lr
-// CHECK6-NEXT:  1100002:       ff f4 fd d7     bl      #-15728646
-// CHECK6-NEXT:  1100006:       ff f5 fb d7     bl      #-14680074
-// CHECK6-NEXT:  110000a:       ff f6 ff ff     bl      #-1048578
-// CHECK6-NEXT:  110000e:       00 f7 02 f8     bl      #-1048572
+// CHECK6-NEXT:  1100002:       ff f4 fd d7     bl      0x200000 <tfunc00>
+// CHECK6-NEXT:  1100006:       ff f5 fb d7     bl      0x300000 <tfunc01>
+// CHECK6-NEXT:  110000a:       ff f6 ff ff     bl      0x100000c <__Thumbv7ABSLongThunk_tfunc32>
+// CHECK6-NEXT:  110000e:       00 f7 02 f8     bl      0x1000016 <__Thumbv7ABSLongThunk_tfunc33>
  FUNCTION 16
  FUNCTION 17
  FUNCTION 18
 // Expect another precreated thunk section here
 // CHECK7: <__Thumbv7ABSLongThunk_tfunc15>:
-// CHECK7-NEXT:  1400004:       ff f4 fc bf     b.w     #-3145736 <tfunc15>
+// CHECK7-NEXT:  1400004:       ff f4 fc bf     b.w     0x1100000 <tfunc15>
 // CHECK7: <__Thumbv7ABSLongThunk_tfunc16>:
-// CHECK7-NEXT:  1400008:       ff f5 fa bf     b.w     #-2097164 <tfunc16>
+// CHECK7-NEXT:  1400008:       ff f5 fa bf     b.w     0x1200000 <tfunc16>
  FUNCTION 19
  FUNCTION 20
  FUNCTION 21
@@ -125,7 +125,7 @@ _start:
 // section
 // CHECK8:  <tfunc28>:
 // CHECK8-NEXT:  1e00000:       70 47   bx      lr
-// CHECK8-NEXT:  1e00002:       00 f6 0d 90     b.w     #-14680038 <__Thumbv7ABSLongThunk_tfunc02>
+// CHECK8-NEXT:  1e00002:       00 f6 0d 90     b.w     0x1000020 <__Thumbv7ABSLongThunk_tfunc02>
 
  b.w tfunc02
  FUNCTION 29
@@ -138,13 +138,13 @@ _start:
  bl tfunc16
 // CHECK9: <tfunc32>:
 // CHECK9:  2200000:    70 47   bx      lr
-// CHECK9-NEXT:  2200002:       ff f5 ff d7     bl      #-14680066
-// CHECK9-NEXT:  2200006:       ff f5 ff d7     bl      #-14680066
+// CHECK9-NEXT:  2200002:       ff f5 ff d7     bl      0x1400004 <__Thumbv7ABSLongThunk_tfunc15>
+// CHECK9-NEXT:  2200006:       ff f5 ff d7     bl      0x1400008 <__Thumbv7ABSLongThunk_tfunc16>
 
  FUNCTION 33
  bl tfunc15
  bl tfunc16
 // CHECK10: <tfunc33>:
 // CHECK10:  2300000:   70 47   bx      lr
-// CHECK10-NEXT:  2300002:      ff f4 ff d7     bl      #-15728642
-// CHECK10-NEXT:  2300006:      ff f4 ff d7     bl      #-15728642
+// CHECK10-NEXT:  2300002:      ff f4 ff d7     bl      0x1400004 <__Thumbv7ABSLongThunk_tfunc15>
+// CHECK10-NEXT:  2300006:      ff f4 ff d7     bl      0x1400008 <__Thumbv7ABSLongThunk_tfunc16>

@@ -17,6 +17,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -346,6 +347,20 @@ void ARMInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       break;
     }
   }
+}
+
+void ARMInstPrinter::printOperand(const MCInst *MI, uint64_t Address,
+                                  unsigned OpNum, const MCSubtargetInfo &STI,
+                                  raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNum);
+  if (!Op.isImm() || !PrintBranchImmAsAddress || getUseMarkup())
+    return printOperand(MI, OpNum, STI, O);
+  uint64_t Target = ARM_MC::evaluateBranchTarget(MII.get(MI->getOpcode()),
+                                                 Address, Op.getImm());
+  Target &= 0xffffffff;
+  O << formatHex(Target);
+  if (CommentStream)
+    *CommentStream << "imm = #" << formatImm(Op.getImm()) << '\n';
 }
 
 void ARMInstPrinter::printThumbLdrLabelOperand(const MCInst *MI, unsigned OpNum,

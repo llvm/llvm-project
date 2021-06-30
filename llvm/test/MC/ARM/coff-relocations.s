@@ -18,28 +18,28 @@ branch24t_0:
 	b target
 
 @ CHECK-ENCODING-LABEL: <branch24t_0>:
-@ CHECK-ENCODING-NEXT: b.w #0
+@ CHECK-ENCODING-NEXT: b.w {{.+}} @ imm = #0
 
 	.thumb_func
 branch24t_1:
 	bl target
 
 @ CHECK-ENCODING-LABEL: <branch24t_1>:
-@ CHECK-ENCODING-NEXR: bl #0
+@ CHECK-ENCODING-NEXR: bl {{.+}} @ imm = #0
 
 	.thumb_func
 branch20t:
 	bcc target
 
 @ CHECK-ENCODING-LABEL: <branch20t>:
-@ CHECK-ENCODING-NEXT: blo.w #0
+@ CHECK-ENCODING-NEXT: blo.w {{.+}} @ imm = #0
 
 	.thumb_func
 blx23t:
 	blx target
 
 @ CHECK-ENCODING-LABEL: <blx23t>:
-@ CHECK-ENCODING-NEXT: blx #0
+@ CHECK-ENCODING-NEXT: blx {{.+}} @ imm = #0
 
 	.thumb_func
 mov32t:

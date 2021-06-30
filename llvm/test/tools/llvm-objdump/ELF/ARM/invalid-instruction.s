@@ -5,5 +5,5 @@
   .inst 0xffffffff
 l0:
 
-@CHECK:            0: 00 00 00 ea   b #0 <l0>
+@CHECK:            0: 00 00 00 ea   b 0x8 <l0> @ imm = #0
 @CHECK-NEXT:       4: ff ff ff ff  <unknown>
