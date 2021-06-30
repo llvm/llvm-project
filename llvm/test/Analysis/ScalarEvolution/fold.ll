@@ -132,6 +132,6 @@ define i64 @test11(i64 %a) {
 ; CHECK-LABEL: @test11
   %t0 = udiv i64 0, %a
 ; CHECK: %t0
-; CHECK-NEXT: -->  (0 /u %a)
+; CHECK-NEXT: -->  0
   ret i64 %t0
 }
