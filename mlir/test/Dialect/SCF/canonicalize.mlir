@@ -948,3 +948,72 @@ func @execute_region_elim() {
 // CHECK-NEXT:       "test.bar"(%[[VAL]]) : (i64) -> ()
 // CHECK-NEXT:     }
 
+
+// -----
+
+// CHECK-LABEL: func @func_execute_region_elim
+func @func_execute_region_elim() {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 {
+      %c = "test.cmp"() : () -> i1
+      cond_br %c, ^bb2, ^bb3
+    ^bb2:
+      %x = "test.val1"() : () -> i64
+      br ^bb4(%x : i64)
+    ^bb3:
+      %y = "test.val2"() : () -> i64
+      br ^bb4(%y : i64)
+    ^bb4(%z : i64):
+      scf.yield %z : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  return
+}
+
+// CHECK-NOT: execute_region
+// CHECK:     "test.foo"
+// CHECK:     %[[cmp:.+]] = "test.cmp"
+// CHECK:     cond_br %[[cmp]], ^[[bb1:.+]], ^[[bb2:.+]]
+// CHECK:   ^[[bb1]]:
+// CHECK:     %[[x:.+]] = "test.val1"
+// CHECK:     br ^[[bb3:.+]](%[[x]] : i64)
+// CHECK:   ^[[bb2]]:
+// CHECK:     %[[y:.+]] = "test.val2"
+// CHECK:     br ^[[bb3]](%[[y:.+]] : i64)
+// CHECK:   ^[[bb3]](%[[z:.+]]: i64):
+// CHECK:     "test.bar"(%[[z]])
+// CHECK:     return
+
+
+// -----
+
+// CHECK-LABEL: func @func_execute_region_elim_multi_yield
+func @func_execute_region_elim_multi_yield() {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 {
+      %c = "test.cmp"() : () -> i1
+      cond_br %c, ^bb2, ^bb3
+    ^bb2:
+      %x = "test.val1"() : () -> i64
+      scf.yield %x : i64
+    ^bb3:
+      %y = "test.val2"() : () -> i64
+      scf.yield %y : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  return
+}
+
+// CHECK-NOT: execute_region
+// CHECK:     "test.foo"
+// CHECK:     %[[cmp:.+]] = "test.cmp"
+// CHECK:     cond_br %[[cmp]], ^[[bb1:.+]], ^[[bb2:.+]]
+// CHECK:   ^[[bb1]]:
+// CHECK:     %[[x:.+]] = "test.val1"
+// CHECK:     br ^[[bb3:.+]](%[[x]] : i64)
+// CHECK:   ^[[bb2]]:
+// CHECK:     %[[y:.+]] = "test.val2"
+// CHECK:     br ^[[bb3]](%[[y:.+]] : i64)
+// CHECK:   ^[[bb3]](%[[z:.+]]: i64):
+// CHECK:     "test.bar"(%[[z]])
+// CHECK:     return
