@@ -1477,6 +1477,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMMOVE: {
     ArrayRef<MachineMemOperand *> MMOs = MI->memoperands();
@@ -1507,6 +1508,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (SrcPtrTy.getAddressSpace() != MMOs[1]->getAddrSpace())
       report("inconsistent load address space", MI);
 
+    if (Opc != TargetOpcode::G_MEMCPY_INLINE)
+      if (!MI->getOperand(3).isImm() || (MI->getOperand(3).getImm() & ~1LL))
+        report("'tail' flag (operand 3) must be an immediate 0 or 1", MI);
+
     break;
   }
   case TargetOpcode::G_BZERO:
@@ -1531,6 +1536,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     if (DstPtrTy.getAddressSpace() != MMOs[0]->getAddrSpace())
       report("inconsistent " + Twine(Name, " address space"), MI);
+
+    if (!MI->getOperand(MI->getNumOperands() - 1).isImm() ||
+        (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
+      report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
 
     break;
   }

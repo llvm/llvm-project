@@ -1218,7 +1218,7 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
 }
 
 bool CombinerHelper::optimizeMemset(MachineInstr &MI, Register Dst,
-                                    Register Val, unsigned KnownLen,
+                                    Register Val, uint64_t KnownLen,
                                     Align Alignment, bool IsVolatile) {
   auto &MF = *MI.getParent()->getParent();
   const auto &TLI = *MF.getSubtarget().getTargetLowering();
@@ -1330,10 +1330,51 @@ bool CombinerHelper::optimizeMemset(MachineInstr &MI, Register Dst,
   return true;
 }
 
+bool CombinerHelper::tryEmitMemcpyInline(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_MEMCPY_INLINE);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Len = MI.getOperand(2).getReg();
+
+  const auto *MMOIt = MI.memoperands_begin();
+  const MachineMemOperand *MemOp = *MMOIt;
+  bool IsVolatile = MemOp->isVolatile();
+
+  // See if this is a constant length copy
+  auto LenVRegAndVal = getConstantVRegValWithLookThrough(Len, MRI);
+  // FIXME: support dynamically sized G_MEMCPY_INLINE
+  assert(LenVRegAndVal.hasValue() &&
+         "inline memcpy with dynamic size is not yet supported");
+  uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
+  if (KnownLen == 0) {
+    MI.eraseFromParent();
+    return true;
+  }
+
+  const auto &DstMMO = **MI.memoperands_begin();
+  const auto &SrcMMO = **std::next(MI.memoperands_begin());
+  Align DstAlign = DstMMO.getBaseAlign();
+  Align SrcAlign = SrcMMO.getBaseAlign();
+
+  return tryEmitMemcpyInline(MI, Dst, Src, KnownLen, DstAlign, SrcAlign,
+                             IsVolatile);
+}
+
+bool CombinerHelper::tryEmitMemcpyInline(MachineInstr &MI, Register Dst,
+                                         Register Src, uint64_t KnownLen,
+                                         Align DstAlign, Align SrcAlign,
+                                         bool IsVolatile) {
+  assert(MI.getOpcode() == TargetOpcode::G_MEMCPY_INLINE);
+  return optimizeMemcpy(MI, Dst, Src, KnownLen,
+                        std::numeric_limits<uint64_t>::max(), DstAlign,
+                        SrcAlign, IsVolatile);
+}
+
 bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
-                                    Register Src, unsigned KnownLen,
-                                    Align DstAlign, Align SrcAlign,
-                                    bool IsVolatile) {
+                                    Register Src, uint64_t KnownLen,
+                                    uint64_t Limit, Align DstAlign,
+                                    Align SrcAlign, bool IsVolatile) {
   auto &MF = *MI.getParent()->getParent();
   const auto &TLI = *MF.getSubtarget().getTargetLowering();
   auto &DL = MF.getDataLayout();
@@ -1343,7 +1384,6 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
 
   bool DstAlignCanChange = false;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool OptSize = shouldLowerMemFuncForSize(MF);
   Align Alignment = commonAlignment(DstAlign, SrcAlign);
 
   MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
@@ -1354,7 +1394,6 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
   // FIXME: also use the equivalent of isMemSrcFromConstant and alwaysinlining
   // if the memcpy is in a tail call position.
 
-  unsigned Limit = TLI.getMaxStoresPerMemcpy(OptSize);
   std::vector<LLT> MemOps;
 
   const auto &DstMMO = **MI.memoperands_begin();
@@ -1437,7 +1476,7 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
 }
 
 bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
-                                     Register Src, unsigned KnownLen,
+                                     Register Src, uint64_t KnownLen,
                                      Align DstAlign, Align SrcAlign,
                                      bool IsVolatile) {
   auto &MF = *MI.getParent()->getParent();
@@ -1550,10 +1589,6 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
 
   auto MMOIt = MI.memoperands_begin();
   const MachineMemOperand *MemOp = *MMOIt;
-  bool IsVolatile = MemOp->isVolatile();
-  // Don't try to optimize volatile.
-  if (IsVolatile)
-    return false;
 
   Align DstAlign = MemOp->getBaseAlign();
   Align SrcAlign;
@@ -1571,18 +1606,33 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   auto LenVRegAndVal = getConstantVRegValWithLookThrough(Len, MRI);
   if (!LenVRegAndVal)
     return false; // Leave it to the legalizer to lower it to a libcall.
-  unsigned KnownLen = LenVRegAndVal->Value.getZExtValue();
+  uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
 
   if (KnownLen == 0) {
     MI.eraseFromParent();
     return true;
   }
 
+  bool IsVolatile = MemOp->isVolatile();
+  if (Opc == TargetOpcode::G_MEMCPY_INLINE)
+    return tryEmitMemcpyInline(MI, Dst, Src, KnownLen, DstAlign, SrcAlign,
+                               IsVolatile);
+
+  // Don't try to optimize volatile.
+  if (IsVolatile)
+    return false;
+
   if (MaxLen && KnownLen > MaxLen)
     return false;
 
-  if (Opc == TargetOpcode::G_MEMCPY)
-    return optimizeMemcpy(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile);
+  if (Opc == TargetOpcode::G_MEMCPY) {
+    auto &MF = *MI.getParent()->getParent();
+    const auto &TLI = *MF.getSubtarget().getTargetLowering();
+    bool OptSize = shouldLowerMemFuncForSize(MF);
+    uint64_t Limit = TLI.getMaxStoresPerMemcpy(OptSize);
+    return optimizeMemcpy(MI, Dst, Src, KnownLen, Limit, DstAlign, SrcAlign,
+                          IsVolatile);
+  }
   if (Opc == TargetOpcode::G_MEMMOVE)
     return optimizeMemmove(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile);
   if (Opc == TargetOpcode::G_MEMSET)
