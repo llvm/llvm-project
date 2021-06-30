@@ -274,8 +274,6 @@ public:
   template<int shift>
   void printMveAddrModeRQOperand(const MCInst *MI, unsigned OpNum,
                                  const MCSubtargetInfo &STI, raw_ostream &O);
-  void printMveAddrModeQOperand(const MCInst *MI, unsigned OpNum,
-                                const MCSubtargetInfo &STI, raw_ostream &O);
   void printMveSaturateOp(const MCInst *MI, unsigned OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
 private:

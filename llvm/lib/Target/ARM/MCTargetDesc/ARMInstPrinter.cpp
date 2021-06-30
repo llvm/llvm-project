@@ -622,22 +622,6 @@ void ARMInstPrinter::printMveAddrModeRQOperand(const MCInst *MI, unsigned OpNum,
   O << "]" << markup(">");
 }
 
-void ARMInstPrinter::printMveAddrModeQOperand(const MCInst *MI, unsigned OpNum,
-                                               const MCSubtargetInfo &STI,
-                                               raw_ostream &O) {
-  const MCOperand &MO1 = MI->getOperand(OpNum);
-  const MCOperand &MO2 = MI->getOperand(OpNum + 1);
-
-  O << markup("<mem:") << "[";
-  printRegName(O, MO1.getReg());
-
-  int64_t Imm = MO2.getImm();
-  if (Imm != 0)
-    O << ", " << markup("<imm:") << '#' << Imm << markup(">");
-
-  O << "]" << markup(">");
-}
-
 void ARMInstPrinter::printLdStmModeOperand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
