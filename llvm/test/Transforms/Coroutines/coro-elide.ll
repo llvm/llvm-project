@@ -1,8 +1,8 @@
 ; Tests that the coro.destroy and coro.resume are devirtualized where possible,
 ; SCC pipeline restarts and inlines the direct calls.
 ; RUN: opt < %s -S \
-; RUN:   -passes='cgscc(repeat<2>(inline,function(coro-elide,dce)))' \
-; RUN:   | FileCheck %s
+; RUN:   -passes='cgscc(repeat<2>(inline,function(coro-elide,dce)))' -stats \
+; RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK,STATS
 
 declare void @print(i32) nounwind
 
@@ -165,3 +165,4 @@ declare i8* @llvm.coro.begin(token, i8*)
 declare i8* @llvm.coro.frame()
 declare i8* @llvm.coro.subfn.addr(i8*, i8)
 declare i1 @llvm.coro.alloc(token)
+; STATS: 2 coro-elide  - The # of coroutine get elided.
