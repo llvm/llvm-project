@@ -366,6 +366,7 @@ private:
     }
   }
 
+public:
   uint64_t getUniqueRAWLLTData() const {
     return ((uint64_t)RawData) << 2 | ((uint64_t)IsPointer) << 1 |
            ((uint64_t)IsVector);
