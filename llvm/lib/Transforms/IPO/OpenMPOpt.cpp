@@ -2634,6 +2634,8 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   KernelSet Kernels = getDeviceKernels(M);
 
   auto IsCalled = [&](Function &F) {
@@ -2645,14 +2647,27 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     return false;
   };
 
+  auto EmitRemark = [&](Function &F) {
+    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    ORE.emit([&]() {
+      OptimizationRemarkMissed ORM(DEBUG_TYPE, "InternalizationFailure", &F);
+      return ORM << "Could not internalize function. "
+                 << "Some optimizations may not be possible.";
+    });
+  };
+
   // Create internal copies of each function if this is a kernel Module. This
   // allows iterprocedural passes to see every call edge.
   DenseSet<const Function *> InternalizedFuncs;
   if (isOpenMPDevice(M))
     for (Function &F : M)
-      if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F))
-        if (Attributor::internalizeFunction(F, /* Force */ true))
+      if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F)) {
+        if (Attributor::internalizeFunction(F, /* Force */ true)) {
           InternalizedFuncs.insert(&F);
+        } else if (!F.hasLocalLinkage()) {
+          EmitRemark(F);
+        }
+      }
 
   // Look at every function in the Module unless it was internalized.
   SmallVector<Function *, 16> SCC;
@@ -2662,9 +2677,6 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   if (SCC.empty())
     return PreservedAnalyses::all();
-
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
   AnalysisGetter AG(FAM);
 

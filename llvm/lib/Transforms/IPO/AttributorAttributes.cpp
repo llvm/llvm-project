@@ -5200,8 +5200,9 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
           auto Remark = [&](OptimizationRemarkMissed ORM) {
             return ORM << "Could not move globalized variable to the stack. "
                        << "Variable is potentially "
-                       << ((!NoCaptureAA.isAssumedNoCapture()) ? "captured."
-                                                               : "freed.");
+                       << (!NoCaptureAA.isAssumedNoCapture() ? "captured. "
+                                                             : "freed. ")
+                       << "Mark as noescape to override.";
           };
 
           LibFunc IsAllocShared;
