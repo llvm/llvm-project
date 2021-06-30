@@ -337,6 +337,11 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
       Idx == 1)
     return 0;
 
+  // Leave any gep offsets for the CodeGenPrepare, which will do a better job at
+  // splitting any large offsets.
+  if (Opcode == Instruction::GetElementPtr && Idx != 0)
+    return 0;
+
   if (Opcode == Instruction::And) {
     // UXTB/UXTH
     if (Imm == 255 || Imm == 65535)
