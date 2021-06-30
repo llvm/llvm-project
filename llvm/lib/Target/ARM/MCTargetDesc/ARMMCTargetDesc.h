@@ -57,6 +57,9 @@ bool isLDMBaseRegInList(const Inst &MI) {
   return false;
 }
 
+uint64_t evaluateBranchTarget(const MCInstrDesc &InstDesc, uint64_t Addr,
+                              int64_t Imm);
+
 /// Create a ARM MCSubtargetInfo instance. This is exposed so Asm parser, etc.
 /// do not need to go through TargetRegistry.
 MCSubtargetInfo *createARMMCSubtargetInfo(const Triple &TT, StringRef CPU,

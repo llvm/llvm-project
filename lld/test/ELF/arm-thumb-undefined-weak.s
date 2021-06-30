@@ -37,11 +37,11 @@ _start:
  .reloc 0x1c, R_ARM_THM_PC12, target
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK:         200b4: {{.*}} beq.w   #0 <_start+0x4>
-// CHECK-NEXT:    200b8: {{.*}} b.w     #0 <_start+0x8>
-// CHECK-NEXT:    200bc: {{.*}} bl      #0
+// CHECK:         200b4: {{.*}} beq.w   0x200b8 <_start+0x4>  @ imm = #0
+// CHECK-NEXT:    200b8: {{.*}} b.w     0x200bc <_start+0x8>  @ imm = #0
+// CHECK-NEXT:    200bc: {{.*}} bl      0x200c0 <_start+0xc>  @ imm = #0
 /// blx is transformed into bl so we don't change state
-// CHECK-NEXT:    200c0: {{.*}} bl      #0
+// CHECK-NEXT:    200c0: {{.*}} bl      0x200c4 <_start+0x10> @ imm = #0
 // CHECK-NEXT:    200c4: {{.*}} movt    r0, #0
 // CHECK-NEXT:    200c8: {{.*}} movw    r0, #0
 // CHECK-NEXT:    200cc: {{.*}} adr.w   r0, #-4

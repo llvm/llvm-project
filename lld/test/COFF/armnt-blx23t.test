@@ -12,20 +12,20 @@
 # BEFORE:        4: 2d e9 00 48   push.w {r11, lr}
 # BEFORE:        8: eb 46         mov r11, sp
 # BEFORE:        a: 20 20         movs r0, #32
-# BEFORE:        c: 00 f0 00 f8   bl #0
+# BEFORE:        c: 00 f0 00 f8   bl {{.+}} @ imm = #0
 # BEFORE:       10: 01 30         adds r0, #1
 # BEFORE:       12: bd e8 00 88   pop.w {r11, pc}
 
 # AFTER: Disassembly of section .text:
 # AFTER-EMPTY:
-# AFTER:     1000: 70 47         bx lr
-# AFTER:     1002: 00 bf         nop
-# AFTER:     1004: 2d e9 00 48   push.w {r11, lr}
-# AFTER:     1008: eb 46         mov r11, sp
-# AFTER:     100a: 20 20         movs r0, #32
-# AFTER:     100c: ff f7 f8 ff   bl #-16
-# AFTER:     1010: 01 30         adds r0, #1
-# AFTER:     1012: bd e8 00 88   pop.w {r11, pc}
+# AFTER:   401000: 70 47         bx lr
+# AFTER:   401002: 00 bf         nop
+# AFTER:   401004: 2d e9 00 48   push.w {r11, lr}
+# AFTER:   401008: eb 46         mov r11, sp
+# AFTER:   40100a: 20 20         movs r0, #32
+# AFTER:   40100c: ff f7 f8 ff   bl 0x401000 <.text>
+# AFTER:   401010: 01 30         adds r0, #1
+# AFTER:   401012: bd e8 00 88   pop.w {r11, pc}
 
 --- !COFF
 header:

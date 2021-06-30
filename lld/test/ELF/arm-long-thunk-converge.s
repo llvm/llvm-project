@@ -10,7 +10,7 @@
 // CHECK1-NEXT:        4:       00 c2 40 e3     movt    r12, #512
 // CHECK1-NEXT:        8:       1c ff 2f e1     bx      r12
 // CHECK1: <foo>:
-// CHECK1-NEXT:        c:       fb ff ff eb     bl      #-20
+// CHECK1-NEXT:        c:       fb ff ff eb     bl      0x0 <__ARMv7ABSLongThunk_bar>
 
 .section .foo,"ax",%progbits,unique,1
 foo:
@@ -21,7 +21,7 @@ bl bar
 // CHECK2-NEXT:  2000004:       00 c0 40 e3     movt    r12, #0
 // CHECK2-NEXT:  2000008:       1c ff 2f e1     bx      r12
 // CHECK2: <bar>:
-// CHECK2-NEXT:  200000c:       fb ff ff eb     bl      #-20 <__ARMv7ABSLongThunk_foo>
+// CHECK2-NEXT:  200000c:       fb ff ff eb     bl      0x2000000 <__ARMv7ABSLongThunk_foo>
 
 .section .bar,"ax",%progbits,unique,1
 bar:

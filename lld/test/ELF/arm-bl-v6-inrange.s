@@ -34,8 +34,8 @@ thumbfunc:
 // CHECK-NEXT: Disassembly of section .caller:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:   500000:       00 f4 00 f8     bl      #-4194304
-// CHECK-NEXT:   500004:       ff f3 fe ef     blx     #4194300
+// CHECK-NEXT:   500000:       00 f4 00 f8     bl     0x100004 <thumbfunc>
+// CHECK-NEXT:   500004:       ff f3 fe ef     blx    0x900004 <armfunc>
 // CHECK-NEXT:   500008:       70 47   bx      lr
 
   .arm
