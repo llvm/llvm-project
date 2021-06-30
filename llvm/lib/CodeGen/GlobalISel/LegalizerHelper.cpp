@@ -1063,38 +1063,81 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     return Legalized;
   }
   case TargetOpcode::G_ICMP: {
-    uint64_t SrcSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
-    if (NarrowSize * 2 != SrcSize)
-      return UnableToLegalize;
-
-    Observer.changingInstr(MI);
-    Register LHSL = MRI.createGenericVirtualRegister(NarrowTy);
-    Register LHSH = MRI.createGenericVirtualRegister(NarrowTy);
-    MIRBuilder.buildUnmerge({LHSL, LHSH}, MI.getOperand(2));
-
-    Register RHSL = MRI.createGenericVirtualRegister(NarrowTy);
-    Register RHSH = MRI.createGenericVirtualRegister(NarrowTy);
-    MIRBuilder.buildUnmerge({RHSL, RHSH}, MI.getOperand(3));
-
+    Register LHS = MI.getOperand(2).getReg();
+    LLT SrcTy = MRI.getType(LHS);
+    uint64_t SrcSize = SrcTy.getSizeInBits();
     CmpInst::Predicate Pred =
         static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
-    LLT ResTy = MRI.getType(MI.getOperand(0).getReg());
 
-    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) {
-      MachineInstrBuilder XorL = MIRBuilder.buildXor(NarrowTy, LHSL, RHSL);
-      MachineInstrBuilder XorH = MIRBuilder.buildXor(NarrowTy, LHSH, RHSH);
-      MachineInstrBuilder Or = MIRBuilder.buildOr(NarrowTy, XorL, XorH);
-      MachineInstrBuilder Zero = MIRBuilder.buildConstant(NarrowTy, 0);
-      MIRBuilder.buildICmp(Pred, MI.getOperand(0), Or, Zero);
+    // TODO: Handle the non-equality case for weird sizes.
+    if (NarrowSize * 2 != SrcSize && !ICmpInst::isEquality(Pred))
+      return UnableToLegalize;
+
+    LLT LeftoverTy; // Example: s88 -> s64 (NarrowTy) + s24 (leftover)
+    SmallVector<Register, 4> LHSPartRegs, LHSLeftoverRegs;
+    if (!extractParts(LHS, SrcTy, NarrowTy, LeftoverTy, LHSPartRegs,
+                      LHSLeftoverRegs))
+      return UnableToLegalize;
+
+    LLT Unused; // Matches LeftoverTy; G_ICMP LHS and RHS are the same type.
+    SmallVector<Register, 4> RHSPartRegs, RHSLeftoverRegs;
+    if (!extractParts(MI.getOperand(3).getReg(), SrcTy, NarrowTy, Unused,
+                      RHSPartRegs, RHSLeftoverRegs))
+      return UnableToLegalize;
+
+    // We now have the LHS and RHS of the compare split into narrow-type
+    // registers, plus potentially some leftover type.
+    Register Dst = MI.getOperand(0).getReg();
+    LLT ResTy = MRI.getType(Dst);
+    if (ICmpInst::isEquality(Pred)) {
+      // For each part on the LHS and RHS, keep track of the result of XOR-ing
+      // them together. For each equal part, the result should be all 0s. For
+      // each non-equal part, we'll get at least one 1.
+      auto Zero = MIRBuilder.buildConstant(NarrowTy, 0);
+      SmallVector<Register, 4> Xors;
+      for (auto LHSAndRHS : zip(LHSPartRegs, RHSPartRegs)) {
+        auto LHS = std::get<0>(LHSAndRHS);
+        auto RHS = std::get<1>(LHSAndRHS);
+        auto Xor = MIRBuilder.buildXor(NarrowTy, LHS, RHS).getReg(0);
+        Xors.push_back(Xor);
+      }
+
+      // Build a G_XOR for each leftover register. Each G_XOR must be widened
+      // to the desired narrow type so that we can OR them together later.
+      SmallVector<Register, 4> WidenedXors;
+      for (auto LHSAndRHS : zip(LHSLeftoverRegs, RHSLeftoverRegs)) {
+        auto LHS = std::get<0>(LHSAndRHS);
+        auto RHS = std::get<1>(LHSAndRHS);
+        auto Xor = MIRBuilder.buildXor(LeftoverTy, LHS, RHS).getReg(0);
+        LLT GCDTy = extractGCDType(WidenedXors, NarrowTy, LeftoverTy, Xor);
+        buildLCMMergePieces(LeftoverTy, NarrowTy, GCDTy, WidenedXors,
+                            /* PadStrategy = */ TargetOpcode::G_ZEXT);
+        Xors.insert(Xors.end(), WidenedXors.begin(), WidenedXors.end());
+      }
+
+      // Now, for each part we broke up, we know if they are equal/not equal
+      // based off the G_XOR. We can OR these all together and compare against
+      // 0 to get the result.
+      assert(Xors.size() >= 2 && "Should have gotten at least two Xors?");
+      auto Or = MIRBuilder.buildOr(NarrowTy, Xors[0], Xors[1]);
+      for (unsigned I = 2, E = Xors.size(); I < E; ++I)
+        Or = MIRBuilder.buildOr(NarrowTy, Or, Xors[I]);
+      MIRBuilder.buildICmp(Pred, Dst, Or, Zero);
     } else {
+      // TODO: Handle non-power-of-two types.
+      assert(LHSPartRegs.size() == 2 && "Expected exactly 2 LHS part regs?");
+      assert(RHSPartRegs.size() == 2 && "Expected exactly 2 RHS part regs?");
+      Register LHSL = LHSPartRegs[0];
+      Register LHSH = LHSPartRegs[1];
+      Register RHSL = RHSPartRegs[0];
+      Register RHSH = RHSPartRegs[1];
       MachineInstrBuilder CmpH = MIRBuilder.buildICmp(Pred, ResTy, LHSH, RHSH);
       MachineInstrBuilder CmpHEQ =
           MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, ResTy, LHSH, RHSH);
       MachineInstrBuilder CmpLU = MIRBuilder.buildICmp(
           ICmpInst::getUnsignedPredicate(Pred), ResTy, LHSL, RHSL);
-      MIRBuilder.buildSelect(MI.getOperand(0), CmpHEQ, CmpLU, CmpH);
+      MIRBuilder.buildSelect(Dst, CmpHEQ, CmpLU, CmpH);
     }
-    Observer.changedInstr(MI);
     MI.eraseFromParent();
     return Legalized;
   }
