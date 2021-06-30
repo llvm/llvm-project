@@ -141,3 +141,8 @@ cleanup:
     cleanup
   ret void
 }
+
+; CHECK: define void @byval(ptr byval({ i32, i32 }) %0)
+define void @byval(ptr byval({ i32, i32 }) %0) {
+  ret void
+}
