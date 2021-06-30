@@ -1605,14 +1605,11 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return false;
 }
 
-bool Module::RemapSourceFile(llvm::StringRef path,
-                             std::string &new_path) const {
+llvm::Optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (auto remapped = m_source_mappings.RemapPath(path)) {
-    new_path = remapped->GetPath();
-    return true;
-  }
-  return false;
+  if (auto remapped = m_source_mappings.RemapPath(path))
+    return remapped->GetPath();
+  return {};
 }
 
 void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot) {
