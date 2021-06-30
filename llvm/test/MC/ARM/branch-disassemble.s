@@ -7,8 +7,8 @@
 @ RUN:   | FileCheck %s -check-prefix CHECK-THUMB
 
 b.w .Lbranch
-@ CHECK-ARM: b #4 <$a.0+0xc>
-@ CHECK-THUMB: b.w #8 <$t.0+0xc>
+@ CHECK-ARM: b 0xc <$a.0+0xc> @ imm = #4
+@ CHECK-THUMB: b.w 0xc <$t.0+0xc> @ imm = #8
 adds r0, r1, #42
 adds r1, r2, #42
 .Lbranch:

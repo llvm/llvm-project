@@ -45,19 +45,19 @@ target:
 /// Expect erratum patch inserted here
 // CHECK: 00110ffa <target>:
 // CHECK-NEXT: 110ffa: nop.w
-// CHECK-NEXT:         bl      #2
+// CHECK-NEXT:         bl      0x111004 <__CortexA8657417_110FFE>
 // CHECK: 00111004 <__CortexA8657417_110FFE>:
-// CHECK-NEXT: 111004: b.w     #-14
+// CHECK-NEXT: 111004: b.w     0x110ffa <target>
 
 /// Expect range extension thunk here.
 // CHECK: 00111008 <__ThumbV7PILongThunk_early>:
-// CHECK-NEXT: 111008: b.w     #-1048582
+// CHECK-NEXT: 111008: b.w     0x11006 <early>
 
  .section .text.04, "ax", %progbits
 /// The erratum patch will push this branch out of range, so another
 /// range extension thunk will be needed.
         beq.w early
-// CHECK:   11100c:            beq.w   #-8
+// CHECK:   11100c:            beq.w   0x111008 <__ThumbV7PILongThunk_early>
 
  .section .text.05, "ax", %progbits
  .arm
