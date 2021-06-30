@@ -7,11 +7,10 @@
 #include <libelf.h>
 
 #include <cassert>
-#include <cstdarg>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <set>
+#include <sstream>
 #include <string>
 
 #include "internal.h"
@@ -999,7 +998,7 @@ hsa_status_t RegisterModuleFromMemory(
       if (atmi_err != HSA_STATUS_SUCCESS) {
         printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
                "Error in deserialized_data callback",
-               get_atmi_error_string(atmi_err));
+               get_error_string(atmi_err));
         return atmi_err;
       }
 

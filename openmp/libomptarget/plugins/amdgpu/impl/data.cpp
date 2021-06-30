@@ -10,7 +10,6 @@
 #include <cassert>
 #include <hsa.h>
 #include <hsa_ext_amd.h>
-#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include <thread>

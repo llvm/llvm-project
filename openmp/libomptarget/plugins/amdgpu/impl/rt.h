@@ -8,7 +8,6 @@
 
 #include "atmi_runtime.h"
 #include "hsa.h"
-#include <cstdarg>
 #include <string>
 
 namespace core {
