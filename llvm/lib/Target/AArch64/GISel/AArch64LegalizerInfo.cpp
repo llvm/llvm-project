@@ -168,6 +168,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SMULH, G_UMULH}).legalFor({s32, s64});
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
       .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
 
   getActionDefinitionsBuilder(
