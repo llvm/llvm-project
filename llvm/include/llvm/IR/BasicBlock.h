@@ -41,6 +41,7 @@ class PHINode;
 class ValueSymbolTable;
 
 enum class Checkpoint {
+  Unknown,
   ThreadStart,
   ThreadEnd,
   ExitPoint,
