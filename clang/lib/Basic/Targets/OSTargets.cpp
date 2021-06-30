@@ -55,6 +55,8 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   } else {
     Triple.getOSVersion(Maj, Min, Rev);
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
+    if (PlatformName == "ios" && Triple.isMacCatalystEnvironment())
+      PlatformName = "maccatalyst";
   }
 
   // If -target arch-pc-win32-macho option specified, we're
