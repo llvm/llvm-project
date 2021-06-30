@@ -16,6 +16,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
+#include "swift/SymbolGraphGen/SymbolGraphOptions.h"
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
@@ -209,6 +210,8 @@ public:
   swift::SourceManager &GetSourceManager();
 
   swift::LangOptions &GetLanguageOptions();
+
+  swift::symbolgraphgen::SymbolGraphOptions &GetSymbolGraphOptions();
 
   swift::TypeCheckerOptions &GetTypeCheckerOptions();
 
