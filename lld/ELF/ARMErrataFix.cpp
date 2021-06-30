@@ -164,6 +164,15 @@ static uint64_t getThumbDestAddr(uint64_t sourceAddr, uint32_t instr) {
     offset = target->getImplicitAddend(buf, R_ARM_THM_JUMP24);
   else
     offset = target->getImplicitAddend(buf, R_ARM_THM_CALL);
+  // A BLX instruction from Thumb to Arm may have an address that is
+  // not 4-byte aligned. As Arm instructions are always 4-byte aligned
+  // the instruction is calculated (from Arm ARM):
+  // targetAddress = Align(PC, 4) + imm32
+  // where
+  //   Align(x, y) = y * (x Div y)
+  // which corresponds to alignDown.
+  if (isBLX(instr))
+    sourceAddr = alignDown(sourceAddr, 4);
   return sourceAddr + offset + 4;
 }
 
@@ -185,7 +194,11 @@ void Patch657417Section::writeTo(uint8_t *buf) {
   // We cannot use the instruction in the patchee section as this will have
   // been altered to point to us!
   uint64_t s = getThumbDestAddr(getBranchAddr(), instr);
-  uint64_t p = getVA(4);
+  // A BLX changes the state of the branch in the patch to Arm state, which
+  // has a PC Bias of 8, whereas in all other cases the branch is in Thumb
+  // state with a PC Bias of 4.
+  uint64_t pcBias = isBLX(instr) ? 8 : 4;
+  uint64_t p = getVA(pcBias);
   target->relocateNoSym(buf, isARM ? R_ARM_JUMP24 : R_ARM_THM_JUMP24, s - p);
 }
 
