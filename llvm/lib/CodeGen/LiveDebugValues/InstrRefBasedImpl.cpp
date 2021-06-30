@@ -161,6 +161,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -185,6 +186,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SSAUpdaterImpl.h"
 #include <algorithm>
 #include <cassert>
@@ -960,18 +962,20 @@ public:
 class TransferTracker {
 public:
   const TargetInstrInfo *TII;
+  const TargetLowering *TLI;
   /// This machine location tracker is assumed to always contain the up-to-date
   /// value mapping for all machine locations. TransferTracker only reads
   /// information from it. (XXX make it const?)
   MLocTracker *MTracker;
   MachineFunction &MF;
+  bool ShouldEmitDebugEntryValues;
 
   /// Record of all changes in variable locations at a block position. Awkwardly
   /// we allow inserting either before or after the point: MBB != nullptr
   /// indicates it's before, otherwise after.
   struct Transfer {
-    MachineBasicBlock::iterator Pos; /// Position to insert DBG_VALUes
-    MachineBasicBlock *MBB;          /// non-null if we should insert after.
+    MachineBasicBlock::instr_iterator Pos; /// Position to insert DBG_VALUes
+    MachineBasicBlock *MBB; /// non-null if we should insert after.
     SmallVector<MachineInstr *, 4> Insts; /// Vector of DBG_VALUEs to insert.
   };
 
@@ -1028,9 +1032,13 @@ public:
 
   TransferTracker(const TargetInstrInfo *TII, MLocTracker *MTracker,
                   MachineFunction &MF, const TargetRegisterInfo &TRI,
-                  const BitVector &CalleeSavedRegs)
+                  const BitVector &CalleeSavedRegs, const TargetPassConfig &TPC)
       : TII(TII), MTracker(MTracker), MF(MF), TRI(TRI),
-        CalleeSavedRegs(CalleeSavedRegs) {}
+        CalleeSavedRegs(CalleeSavedRegs) {
+    TLI = MF.getSubtarget().getTargetLowering();
+    auto &TM = TPC.getTM<TargetMachine>();
+    ShouldEmitDebugEntryValues = TM.Options.ShouldEmitDebugEntryValues();
+  }
 
   /// Load object with live-in variable values. \p mlocs contains the live-in
   /// values in each machine location, while \p vlocs the live-in variable
@@ -1098,6 +1106,8 @@ public:
         // use-before-def to be resolved as we step through the block.
         if (Num.getBlock() == (unsigned)MBB.getNumber() && !Num.isPHI())
           addUseBeforeDef(Var.first, Var.second.Properties, Num);
+        else
+          recoverAsEntryValue(Var.first, Var.second.Properties, Num);
         continue;
       }
 
@@ -1153,10 +1163,73 @@ public:
 
   /// Helper to move created DBG_VALUEs into Transfers collection.
   void flushDbgValues(MachineBasicBlock::iterator Pos, MachineBasicBlock *MBB) {
-    if (PendingDbgValues.size() > 0) {
-      Transfers.push_back({Pos, MBB, PendingDbgValues});
-      PendingDbgValues.clear();
-    }
+    if (PendingDbgValues.size() == 0)
+      return;
+
+    // Pick out the instruction start position.
+    MachineBasicBlock::instr_iterator BundleStart;
+    if (MBB && Pos == MBB->begin())
+      BundleStart = MBB->instr_begin();
+    else
+      BundleStart = getBundleStart(Pos->getIterator());
+
+    Transfers.push_back({BundleStart, MBB, PendingDbgValues});
+    PendingDbgValues.clear();
+  }
+
+  bool isEntryValueVariable(const DebugVariable &Var,
+                            const DIExpression *Expr) const {
+    if (!Var.getVariable()->isParameter())
+      return false;
+
+    if (Var.getInlinedAt())
+      return false;
+
+    if (Expr->getNumElements() > 0)
+      return false;
+
+    return true;
+  }
+
+  bool isEntryValueValue(const ValueIDNum &Val) const {
+    // Must be in entry block (block number zero), and be a PHI / live-in value.
+    if (Val.getBlock() || !Val.isPHI())
+      return false;
+
+    // Entry values must enter in a register.
+    if (MTracker->isSpill(Val.getLoc()))
+      return false;
+
+    Register SP = TLI->getStackPointerRegisterToSaveRestore();
+    Register FP = TRI.getFrameRegister(MF);
+    Register Reg = MTracker->LocIdxToLocID[Val.getLoc()];
+    return Reg != SP && Reg != FP;
+  }
+
+  bool recoverAsEntryValue(const DebugVariable &Var, DbgValueProperties &Prop,
+                           const ValueIDNum &Num) {
+    // Is this variable location a candidate to be an entry value. First,
+    // should we be trying this at all?
+    if (!ShouldEmitDebugEntryValues)
+      return false;
+
+    // Is the variable appropriate for entry values (i.e., is a parameter).
+    if (!isEntryValueVariable(Var, Prop.DIExpr))
+      return false;
+
+    // Is the value assigned to this variable still the entry value?
+    if (!isEntryValueValue(Num))
+      return false;
+
+    // Emit a variable location using an entry value expression.
+    DIExpression *NewExpr =
+        DIExpression::prepend(Prop.DIExpr, DIExpression::EntryValue);
+    Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
+    MachineOperand MO = MachineOperand::CreateReg(Reg, false);
+    MO.setIsDebug(true);
+
+    PendingDbgValues.push_back(emitMOLoc(MO, Var, {NewExpr, Prop.Indirect}));
+    return true;
   }
 
   /// Change a variable value after encountering a DBG_VALUE inside a block.
@@ -1248,8 +1321,15 @@ public:
 
     // If there is no location, and we weren't asked to make the variable
     // explicitly undef, then stop here.
-    if (!NewLoc && !MakeUndef)
+    if (!NewLoc && !MakeUndef) {
+      // Try and recover a few more locations with entry values.
+      for (auto &Var : ActiveMLocIt->second) {
+        auto &Prop = ActiveVLocs.find(Var)->second.Properties;
+        recoverAsEntryValue(Var, Prop, OldValue);
+      }
+      flushDbgValues(Pos, nullptr);
       return;
+    }
 
     // Examine all the variables based on this location.
     DenseSet<DebugVariable> NewMLocs;
@@ -1603,7 +1683,8 @@ private:
   /// that we can compare explictly against VarLocBasedImpl.
   void emitLocations(MachineFunction &MF, LiveInsT SavedLiveIns,
                      ValueIDNum **MOutLocs, ValueIDNum **MInLocs,
-                     DenseMap<DebugVariable, unsigned> &AllVarsNumbering);
+                     DenseMap<DebugVariable, unsigned> &AllVarsNumbering,
+                     const TargetPassConfig &TPC);
 
   /// Boilerplate computation of some initial sets, artifical blocks and
   /// RPOT block ordering.
@@ -3302,8 +3383,9 @@ void InstrRefBasedLDV::dump_mloc_transfer(
 
 void InstrRefBasedLDV::emitLocations(
     MachineFunction &MF, LiveInsT SavedLiveIns, ValueIDNum **MOutLocs,
-    ValueIDNum **MInLocs, DenseMap<DebugVariable, unsigned> &AllVarsNumbering) {
-  TTracker = new TransferTracker(TII, MTracker, MF, *TRI, CalleeSavedRegs);
+    ValueIDNum **MInLocs, DenseMap<DebugVariable, unsigned> &AllVarsNumbering,
+    const TargetPassConfig &TPC) {
+  TTracker = new TransferTracker(TII, MTracker, MF, *TRI, CalleeSavedRegs, TPC);
   unsigned NumLocs = MTracker->getNumLocs();
 
   // For each block, load in the machine value locations and variable value
@@ -3351,9 +3433,14 @@ void InstrRefBasedLDV::emitLocations(
         MBB.insert(P.Pos, MI);
       }
     } else {
+      // Terminators, like tail calls, can clobber things. Don't try and place
+      // transfers after them.
+      if (P.Pos->isTerminator())
+        continue;
+
       MachineBasicBlock &MBB = *P.Pos->getParent();
       for (auto *MI : P.Insts) {
-        MBB.insertAfter(P.Pos, MI);
+        MBB.insertAfterBundle(P.Pos, MI);
       }
     }
   }
@@ -3520,7 +3607,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   // Using the computed value locations and variable values for each block,
   // create the DBG_VALUE instructions representing the extended variable
   // locations.
-  emitLocations(MF, SavedLiveIns, MOutLocs, MInLocs, AllVarsNumbering);
+  emitLocations(MF, SavedLiveIns, MOutLocs, MInLocs, AllVarsNumbering, *TPC);
 
   for (int Idx = 0; Idx < MaxNumBlocks; ++Idx) {
     delete[] MOutLocs[Idx];
