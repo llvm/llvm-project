@@ -855,7 +855,7 @@ static void sortSegmentsAndSections() {
   }
 }
 
-static NamePair maybeRenameSection(NamePair key) {
+NamePair macho::maybeRenameSection(NamePair key) {
   auto newNames = config->sectionRenameMap.find(key);
   if (newNames != config->sectionRenameMap.end())
     return newNames->second;
