@@ -645,7 +645,7 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
     return 0; // Not a synthetic symbol name
 
   // Extract the user ID from the symbol name
-  user_id_t uid = 0;
+  unsigned long long uid = 0;
   if (getAsUnsignedInteger(name, /*Radix=*/10, uid))
     return 0; // Failed to extract the user ID as an integer
   Symbol *symbol = FindSymbolByID(uid);
