@@ -1,0 +1,5 @@
+# RUN: OrcV2CBindingsLazy 2>&1 | FileCheck -check-prefix=THIS %s
+# RUN: OrcV2CBindingsLazy 0 2>&1 | FileCheck -check-prefix=OTHER %s
+
+# THIS: entry(1) = 1
+# OTHER: entry(2) = 2
