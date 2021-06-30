@@ -30,4 +30,4 @@ _start:
 // CHECK-PATCH:         21ffa:          nop.w
 // CHECK-PATCH-NEXT:    21ffe:          blx     0x22004 <__CortexA8657417_21FFE>
 // CHECK-PATCH:      00022004 <__CortexA8657417_21FFE>:
-// CHECK-PATCH-NEXT:    22004:          b       0x21004 <{{.+}}> @ imm = #-4104
+// CHECK-PATCH-NEXT:    22004:          b       0x21000 <_start>
