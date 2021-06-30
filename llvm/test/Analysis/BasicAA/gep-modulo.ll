@@ -282,8 +282,8 @@ define void @may_overflow_mul_scale_neg([200 x [ 6 x i8]]* %ptr, i64 %idx.1,i64 
 ; CHECK-NEXT:  PartialAlias (off 6):    [200 x [6 x i8]]* %ptr, i8* %gep.1
 ; CHECK-NEXT:  NoAlias: i8* %bc, i8* %gep.1
 ; CHECK-NEXT:  MayAlias:    [200 x [6 x i8]]* %ptr, i8* %gep.idx
-; CHECK-NEXT:  NoAlias: i8* %bc, i8* %gep.idx
-; CHECK-NEXT:  NoAlias: i8* %gep.1, i8* %gep.idx
+; CHECK-NEXT:  MayAlias: i8* %bc, i8* %gep.idx
+; CHECK-NEXT:  MayAlias: i8* %gep.1, i8* %gep.idx
 ;
   %idx.1.pos = icmp sge i64 %idx.1, 0
   call void @llvm.assume(i1 %idx.1.pos)
