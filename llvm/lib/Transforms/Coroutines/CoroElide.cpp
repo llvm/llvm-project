@@ -9,7 +9,6 @@
 #include "llvm/Transforms/Coroutines/CoroElide.h"
 #include "CoroInternal.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/Dominators.h"
@@ -21,8 +20,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-elide"
-
-STATISTIC(NumOfCoroElided, "The # of coroutine get elided.");
 
 namespace {
 // Created on demand if the coro-elide pass has work to do.
@@ -347,7 +344,6 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
     elideHeapAllocations(CoroId->getFunction(), FrameSizeAndAlign.first,
                          FrameSizeAndAlign.second, AA);
     coro::replaceCoroFree(CoroId, /*Elide=*/true);
-    NumOfCoroElided++;
   }
 
   return true;
