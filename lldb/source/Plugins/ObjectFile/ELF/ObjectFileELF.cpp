@@ -2826,22 +2826,24 @@ Symtab *ObjectFileELF::GetSymtab() {
             /*is_trampoline=*/false,
             /*is_artificial=*/true,
             /*section_sp=*/section_sp,
-            /*offset=*/entry_point_addr.GetOffset(),
+            /*offset=*/0,
             /*size=*/0, // FDE can span multiple symbols so don't use its size.
             /*size_is_valid=*/false,
             /*contains_linker_annotations=*/false,
             /*flags=*/0);
-        m_symtab_up->AddSymbol(symbol);
         // When the entry point is arm thumb we need to explicitly set its
         // class address to reflect that. This is important because expression
         // evaluation relies on correctly setting a breakpoint at this
         // address.
         if (arch.GetMachine() == llvm::Triple::arm &&
-            (entry_point_file_addr & 1))
+            (entry_point_file_addr & 1)) {
+          symbol.GetAddressRef().SetOffset(entry_point_addr.GetOffset() ^ 1);
           m_address_class_map[entry_point_file_addr ^ 1] =
               AddressClass::eCodeAlternateISA;
-        else
+        } else {
           m_address_class_map[entry_point_file_addr] = AddressClass::eCode;
+        }
+        m_symtab_up->AddSymbol(symbol);
       }
     }
 

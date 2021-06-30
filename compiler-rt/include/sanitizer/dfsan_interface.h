@@ -141,6 +141,12 @@ size_t dfsan_sprint_stack_trace(char *out_buf, size_t out_buf_size);
 /// Retrieves the very first origin associated with the data at the given
 /// address.
 dfsan_origin dfsan_get_init_origin(const void *addr);
+
+/// Returns the value of -dfsan-track-origins.
+/// * 0: do not track origins.
+/// * 1: track origins at memory store operations.
+/// * 2: track origins at memory load and store operations.
+int dfsan_get_track_origins(void);
 #ifdef __cplusplus
 }  // extern "C"
 

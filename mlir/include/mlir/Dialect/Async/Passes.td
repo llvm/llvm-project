@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AsyncParallelFor : Pass<"async-parallel-for"> {
+def AsyncParallelFor : Pass<"async-parallel-for", "ModuleOp"> {
   let summary = "Convert scf.parallel operations to multiple async compute ops "
                 "executed concurrently for non-overlapping iteration ranges";
   let constructor = "mlir::createAsyncParallelForPass()";
@@ -63,6 +63,38 @@ def AsyncRuntimeRefCountingOpt : Pass<"async-runtime-ref-counting-opt"> {
   let summary = "Optimize automatic reference counting operations for the"
                 "Async runtime by removing redundant operations";
   let constructor = "mlir::createAsyncRuntimeRefCountingOptPass()";
+  let dependentDialects = ["async::AsyncDialect"];
+}
+
+def AsyncRuntimePolicyBasedRefCounting
+    : Pass<"async-runtime-policy-based-ref-counting"> {
+  let summary = "Policy based reference counting for Async runtime operations";
+  let description = [{
+    This pass works at the async runtime abtraction level, after all
+    `async.execute` and `async.await` operations are lowered to the async
+    runtime API calls, and async coroutine operations.
+
+    This pass doesn't rely on reference counted values liveness analysis, and
+    instead uses simple policy to create reference counting operations. If the
+    program violates any of the assumptions, then this pass might lead to
+    memory leaks or runtime errors.
+
+    The default reference counting policy assumptions:
+      1. Async token can be awaited or added to the group only once.
+      2. Async value or group can be awaited only once.
+
+    Under these assumptions reference counting only needs to drop reference:
+      1. After `async.runtime.await` operation for async tokens and groups
+         (until error handling is not implemented for the sync await).
+      2. After `async.runtime.is_error` operation for async tokens and groups
+         (this is the last operation in the coroutine resume function).
+      3. After `async.runtime.load` operation for async values.
+
+    This pass introduces significanly less runtime overhead compared to the
+    automatic reference counting.
+  }];
+
+  let constructor = "mlir::createAsyncRuntimePolicyBasedRefCountingPass()";
   let dependentDialects = ["async::AsyncDialect"];
 }
 

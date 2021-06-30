@@ -425,6 +425,14 @@ static bool shouldDropGlobalInitializer(llvm::GlobalValue::LinkageTypes linkage,
          linkage == llvm::GlobalVariable::ExternalWeakLinkage;
 }
 
+/// Sets the runtime preemption specifier of `gv` to dso_local if
+/// `dsoLocalRequested` is true, otherwise it is left unchanged.
+static void addRuntimePreemptionSpecifier(bool dsoLocalRequested,
+                                          llvm::GlobalValue *gv) {
+  if (dsoLocalRequested)
+    gv->setDSOLocal(true);
+}
+
 /// Create named global variables that correspond to llvm.mlir.global
 /// definitions.
 LogicalResult ModuleTranslation::convertGlobals() {
@@ -457,6 +465,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
 
     if (op.section().hasValue())
       var->setSection(*op.section());
+
+    addRuntimePreemptionSpecifier(op.dso_local(), var);
 
     Optional<uint64_t> alignment = op.alignment();
     if (alignment.hasValue())
@@ -687,6 +697,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     llvm::Function *llvmFunc = cast<llvm::Function>(llvmFuncCst.getCallee());
     llvmFunc->setLinkage(convertLinkageToLLVM(function.linkage()));
     mapFunction(function.getName(), llvmFunc);
+    addRuntimePreemptionSpecifier(function.dso_local(), llvmFunc);
 
     // Forward the pass-through attributes to LLVM.
     if (failed(forwardPassthroughAttributes(function.getLoc(),

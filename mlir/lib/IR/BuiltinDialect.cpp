@@ -27,6 +27,8 @@ using namespace mlir;
 // Builtin Dialect
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinDialect.cpp.inc"
+
 namespace {
 struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;

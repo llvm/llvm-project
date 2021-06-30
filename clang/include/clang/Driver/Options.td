@@ -3207,8 +3207,8 @@ defm aapcs_bitfield_width : BoolOption<"f", "aapcs-bitfield-width",
             " volatile bit-field width is dictated by the field container type. (ARM only).">>,
   Group<m_arm_Features_Group>;
 
-def mgeneral_regs_only : Flag<["-"], "mgeneral-regs-only">, Group<m_aarch64_Features_Group>,
-  HelpText<"Generate code which only uses the general purpose registers (AArch64 only)">;
+def mgeneral_regs_only : Flag<["-"], "mgeneral-regs-only">, Group<m_Group>,
+  HelpText<"Generate code which only uses the general purpose registers (AArch64/x86 only)">;
 def mfix_cortex_a53_835769 : Flag<["-"], "mfix-cortex-a53-835769">,
   Group<m_aarch64_Features_Group>,
   HelpText<"Workaround Cortex-A53 erratum 835769 (AArch64 only)">;
@@ -3823,6 +3823,18 @@ def u : JoinedOrSeparate<["-"], "u">, Group<u_Group>;
 def v : Flag<["-"], "v">, Flags<[CC1Option, CoreOption]>,
   HelpText<"Show commands to run and use verbose output">,
   MarshallingInfoFlag<HeaderSearchOpts<"Verbose">>;
+def altivec_src_compat : Joined<["-"], "faltivec-src-compat=">,
+  Flags<[CC1Option]>, Group<f_Group>,
+  HelpText<"Source-level compatibility for Altivec vectors (for PowerPC "
+           "targets). This includes results of vector comparison (scalar for "
+           "'xl', vector for 'gcc') as well as behavior when initializing with "
+           "a scalar (splatting for 'xl', element zero only for 'gcc'). For "
+           "'mixed', the compatibility is as 'gcc' for 'vector bool/vector "
+           "pixel' and as 'xl' for other types. Current default is 'mixed'.">,
+  Values<"mixed,gcc,xl">,
+  NormalizedValuesScope<"LangOptions::AltivecSrcCompatKind">,
+  NormalizedValues<["Mixed", "GCC", "XL"]>,
+  MarshallingInfoEnum<LangOpts<"AltivecSrcCompat">, "Mixed">;
 def verify_debug_info : Flag<["--"], "verify-debug-info">, Flags<[NoXarchOption]>,
   HelpText<"Verify the binary representation of debug output">;
 def weak_l : Joined<["-"], "weak-l">, Flags<[LinkerInput]>;

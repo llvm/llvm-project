@@ -2,11 +2,11 @@
 ; RUN: opt %s -S -loop-vectorize -force-vector-interleave=2 | FileCheck %s
 
 ; Demonstrate a case where we unroll a loop, but don't vectorize it.
-; This currently reveals a miscompile.  The original loop runs stores in
-; the latch block on iterations 0 to 1022, and exits when %indvars.iv = 1023.
-; Currently, the unrolled loop produced by the vectorizer runs the iteration
-; where %indvar.iv = 1023 in the vector.body loop before exiting.  This results
-; in an out of bounds access..
+; The original loop runs stores in the latch block on iterations 0 to 1022,
+; and exits when %indvars.iv = 1023. (That is, it actually runs the stores
+; for an odd number of iterations.)  If we unroll by two in the "vector.body"
+; loop, we must exit to the epilogue on iteration with %indvars.iv = 1022 to
+; avoid an out of bounds access.
 
 define void @test(double* %data) {
 ; CHECK-LABEL: @test(
@@ -31,13 +31,13 @@ define void @test(double* %data) {
 ; CHECK-NEXT:    store double [[TMP8]], double* [[TMP4]], align 8
 ; CHECK-NEXT:    store double [[TMP9]], double* [[TMP5]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1022
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1022
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1022, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_LATCH:%.*]] ]

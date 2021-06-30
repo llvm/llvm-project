@@ -1,5 +1,7 @@
 @AUTO_GEN_COMMENT@
 
+@SERIALIZED_LIT_PARAMS@
+
 import os
 import site
 
@@ -14,7 +16,6 @@ config.cxx_library_root         = "@LIBUNWIND_LIBCXX_LIBRARY_PATH@"
 config.llvm_unwinder            = True
 config.builtins_library         = "@LIBUNWIND_BUILTINS_LIBRARY@"
 config.enable_threads           = @LIBUNWIND_ENABLE_THREADS@
-config.use_sanitizer            = "@LLVM_USE_SANITIZER@"
 config.enable_32bit             = @LIBUNWIND_BUILD_32_BITS@
 config.target_info              = "@LIBUNWIND_TARGET_INFO@"
 config.test_linker_flags        = "@LIBUNWIND_TEST_LINKER_FLAGS@"
@@ -24,12 +25,9 @@ config.libunwind_shared         = @LIBUNWIND_ENABLE_SHARED@
 config.enable_shared            = @LIBCXX_ENABLE_SHARED@
 config.arm_ehabi                = @LIBUNWIND_USES_ARM_EHABI@
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
-if "@TARGET_TRIPLE@":
-    config.target_triple        = "@TARGET_TRIPLE@"
 config.sysroot                  = "@LIBUNWIND_SYSROOT@"
 config.gcc_toolchain            = "@LIBUNWIND_GCC_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBUNWIND_BUILD_EXTERNAL_THREAD_LIBRARY@
-config.enable_experimental      = False
 
 site.addsitedir(os.path.join(config.libunwind_src_root, 'test'))
 site.addsitedir(os.path.join(config.libcxx_src_root, 'utils'))

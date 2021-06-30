@@ -116,6 +116,9 @@ private:
     // Context instruction to use when querying information about this index.
     const Instruction *CxtI;
 
+    /// True if all operations in this expression are NSW.
+    bool IsNSW;
+
     void dump() const {
       print(dbgs());
       dbgs() << "\n";

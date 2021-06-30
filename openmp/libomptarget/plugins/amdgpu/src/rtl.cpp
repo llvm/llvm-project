@@ -70,6 +70,10 @@ hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t device_id) {
 }
 }
 
+// Heuristic parameters used for kernel launch
+// Number of teams per CU to allow scheduling flexibility
+static const unsigned DefaultTeamsPerCU = 4;
+
 int print_kernel_trace;
 
 #ifdef OMPTARGET_DEBUG
@@ -1083,7 +1087,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
        DeviceInfo.EnvNumTeams);
   } else {
     char *TeamsPerCUEnvStr = getenv("OMP_TARGET_TEAMS_PER_PROC");
-    int TeamsPerCU = 1; // default number of teams per CU is 1
+    int TeamsPerCU = DefaultTeamsPerCU;
     if (TeamsPerCUEnvStr) {
       TeamsPerCU = std::stoi(TeamsPerCUEnvStr);
     }
@@ -1707,10 +1711,9 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       // Get ExecMode
       ExecModeVal = KernDescVal.Mode;
       DP("ExecModeVal %d\n", ExecModeVal);
-      if (KernDescVal.WG_Size == 0) {
-        KernDescVal.WG_Size = RTLDeviceInfoTy::Default_WG_Size;
-        DP("Setting KernDescVal.WG_Size to default %d\n", KernDescVal.WG_Size);
-      }
+      // If KernDescVal.WG_Size is 0, it is equivalent to not
+      // specified. Hence, max_flat_workgroup_size is filtered out in
+      // getLaunchVals
       WGSizeVal = KernDescVal.WG_Size;
       DP("WGSizeVal %d\n", WGSizeVal);
       check("Loading KernDesc computation property", err);
@@ -1920,7 +1923,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
     }
   }
   // check flat_max_work_group_size attr here
-  if (threadsPerGroup > ConstWGSize) {
+  if (ConstWGSize > 0 && threadsPerGroup > ConstWGSize) {
     threadsPerGroup = ConstWGSize;
     DP("Reduced threadsPerGroup to flat-attr-group-size limit %d\n",
        threadsPerGroup);

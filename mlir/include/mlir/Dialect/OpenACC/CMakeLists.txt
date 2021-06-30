@@ -4,6 +4,7 @@ add_public_tablegen_target(acc_common_td)
 
 set(LLVM_TARGET_DEFINITIONS OpenACCOps.td)
 mlir_tablegen(OpenACCOpsDialect.h.inc -gen-dialect-decls -dialect=acc)
+mlir_tablegen(OpenACCOpsDialect.cpp.inc -gen-dialect-defs -dialect=acc)
 mlir_tablegen(OpenACCOps.h.inc -gen-op-decls)
 mlir_tablegen(OpenACCOps.cpp.inc -gen-op-defs)
 mlir_tablegen(OpenACCOpsEnums.h.inc -gen-enum-decls)

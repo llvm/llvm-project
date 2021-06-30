@@ -22,6 +22,8 @@
 using namespace mlir;
 using namespace arm_sve;
 
+#include "mlir/Dialect/ArmSVE/ArmSVEDialect.cpp.inc"
+
 static Type getI1SameShape(Type type);
 static void buildScalableCmpIOp(OpBuilder &build, OperationState &result,
                                 CmpIPredicate predicate, Value lhs, Value rhs);

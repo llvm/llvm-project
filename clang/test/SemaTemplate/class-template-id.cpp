@@ -9,9 +9,9 @@ A<int, FLOAT> *foo(A<int> *ptr, A<int> const *ptr2, A<int, double> *ptr3) {
   if (ptr)
     return ptr; // okay
   else if (ptr2)
-    return ptr2; // expected-error{{cannot initialize return object of type 'A<int> *' with an lvalue of type 'const A<int> *'}}
+    return ptr2; // expected-error{{cannot initialize return object of type 'A<int, FLOAT> *' (aka 'A<int, float> *') with an lvalue of type 'const A<int> *'}}
   else {
-    return ptr3; // expected-error{{cannot initialize return object of type 'A<int> *' with an lvalue of type 'A<int, double> *'}}
+    return ptr3; // expected-error{{cannot initialize return object of type 'A<int, FLOAT> *' (aka 'A<int, float> *') with an lvalue of type 'A<int, double> *'}}
   }
 }
 

@@ -12,6 +12,8 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
+#include "mlir/Dialect/Tensor/IR/TensorOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // TensorDialect Dialect Interfaces
 //===----------------------------------------------------------------------===//

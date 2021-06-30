@@ -2939,8 +2939,12 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
                                               ValueTransform doAfterCall,
                                               ValueTransform doFallback) {
   CGBuilderTy::InsertPoint ip = CGF.Builder.saveIP();
+  auto *callBase = dyn_cast<llvm::CallBase>(value);
 
-  if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
+  if (callBase && llvm::objcarc::hasAttachedCallOpBundle(callBase)) {
+    // Fall back if the call base has operand bundle "clang.arc.attachedcall".
+    value = doFallback(CGF, value);
+  } else if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
     // Place the retain immediately following the call.
     CGF.Builder.SetInsertPoint(call->getParent(),
                                ++llvm::BasicBlock::iterator(call));
@@ -3694,12 +3698,18 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
       FunctionTy, nullptr, SC_Static, false, false);
 
   FunctionArgList args;
-  ImplicitParamDecl DstDecl(C, FD, SourceLocation(), /*Id=*/nullptr, DestTy,
-                            ImplicitParamDecl::Other);
-  args.push_back(&DstDecl);
-  ImplicitParamDecl SrcDecl(C, FD, SourceLocation(), /*Id=*/nullptr, SrcTy,
-                            ImplicitParamDecl::Other);
-  args.push_back(&SrcDecl);
+  ParmVarDecl *Params[2];
+  ParmVarDecl *DstDecl = ParmVarDecl::Create(
+      C, FD, SourceLocation(), SourceLocation(), nullptr, DestTy,
+      C.getTrivialTypeSourceInfo(DestTy, SourceLocation()), SC_None,
+      /*DefArg=*/nullptr);
+  args.push_back(Params[0] = DstDecl);
+  ParmVarDecl *SrcDecl = ParmVarDecl::Create(
+      C, FD, SourceLocation(), SourceLocation(), nullptr, SrcTy,
+      C.getTrivialTypeSourceInfo(SrcTy, SourceLocation()), SC_None,
+      /*DefArg=*/nullptr);
+  args.push_back(Params[1] = SrcDecl);
+  FD->setParams(Params);
 
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
@@ -3715,12 +3725,12 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
 
   StartFunction(FD, ReturnTy, Fn, FI, args);
 
-  DeclRefExpr DstExpr(C, &DstDecl, false, DestTy, VK_PRValue, SourceLocation());
+  DeclRefExpr DstExpr(C, DstDecl, false, DestTy, VK_PRValue, SourceLocation());
   UnaryOperator *DST = UnaryOperator::Create(
       C, &DstExpr, UO_Deref, DestTy->getPointeeType(), VK_LValue, OK_Ordinary,
       SourceLocation(), false, FPOptionsOverride());
 
-  DeclRefExpr SrcExpr(C, &SrcDecl, false, SrcTy, VK_PRValue, SourceLocation());
+  DeclRefExpr SrcExpr(C, SrcDecl, false, SrcTy, VK_PRValue, SourceLocation());
   UnaryOperator *SRC = UnaryOperator::Create(
       C, &SrcExpr, UO_Deref, SrcTy->getPointeeType(), VK_LValue, OK_Ordinary,
       SourceLocation(), false, FPOptionsOverride());
@@ -3778,12 +3788,18 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
       FunctionTy, nullptr, SC_Static, false, false);
 
   FunctionArgList args;
-  ImplicitParamDecl DstDecl(C, FD, SourceLocation(), /*Id=*/nullptr, DestTy,
-                            ImplicitParamDecl::Other);
-  args.push_back(&DstDecl);
-  ImplicitParamDecl SrcDecl(C, FD, SourceLocation(), /*Id=*/nullptr, SrcTy,
-                            ImplicitParamDecl::Other);
-  args.push_back(&SrcDecl);
+  ParmVarDecl *Params[2];
+  ParmVarDecl *DstDecl = ParmVarDecl::Create(
+      C, FD, SourceLocation(), SourceLocation(), nullptr, DestTy,
+      C.getTrivialTypeSourceInfo(DestTy, SourceLocation()), SC_None,
+      /*DefArg=*/nullptr);
+  args.push_back(Params[0] = DstDecl);
+  ParmVarDecl *SrcDecl = ParmVarDecl::Create(
+      C, FD, SourceLocation(), SourceLocation(), nullptr, SrcTy,
+      C.getTrivialTypeSourceInfo(SrcTy, SourceLocation()), SC_None,
+      /*DefArg=*/nullptr);
+  args.push_back(Params[1] = SrcDecl);
+  FD->setParams(Params);
 
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
@@ -3798,7 +3814,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
 
   StartFunction(FD, ReturnTy, Fn, FI, args);
 
-  DeclRefExpr SrcExpr(getContext(), &SrcDecl, false, SrcTy, VK_PRValue,
+  DeclRefExpr SrcExpr(getContext(), SrcDecl, false, SrcTy, VK_PRValue,
                       SourceLocation());
 
   UnaryOperator *SRC = UnaryOperator::Create(
@@ -3825,7 +3841,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                              CXXConstExpr->getConstructionKind(),
                              SourceRange());
 
-  DeclRefExpr DstExpr(getContext(), &DstDecl, false, DestTy, VK_PRValue,
+  DeclRefExpr DstExpr(getContext(), DstDecl, false, DestTy, VK_PRValue,
                       SourceLocation());
 
   RValue DV = EmitAnyExpr(&DstExpr);

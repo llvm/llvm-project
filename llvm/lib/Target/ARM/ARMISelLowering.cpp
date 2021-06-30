@@ -14659,6 +14659,13 @@ static SDValue PerformExtractEltCombine(SDNode *N,
       return X;
   }
 
+  // extract ARM_BUILD_VECTOR -> x
+  if (Op0->getOpcode() == ARMISD::BUILD_VECTOR &&
+      isa<ConstantSDNode>(N->getOperand(1)) &&
+      N->getConstantOperandVal(1) < Op0.getNumOperands()) {
+    return Op0.getOperand(N->getConstantOperandVal(1));
+  }
+
   // extract(bitcast(BUILD_VECTOR(VMOVDRR(a, b), ..))) -> a or b
   if (Op0.getValueType() == MVT::v4i32 &&
       isa<ConstantSDNode>(N->getOperand(1)) &&
