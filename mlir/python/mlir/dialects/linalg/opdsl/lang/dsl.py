@@ -132,3 +132,11 @@ def linalg_structured_op(dsl_func=None,
 
 def implements(*interfaces: OpInterfaceDef):
   current_op_def().metadata.implements.extend(interfaces)
+
+
+def domain(*dimensions: DimDef):
+  if current_op_def().domain:
+    raise ValueError(f"Expected only one set of domain dimensions per operator")
+  if any(not isinstance(dim, DimDef) for dim in dimensions):
+    raise ValueError(f"Expected dimensions of type DimDef but got {dimensions}")
+  current_op_def().domain.extend(dimensions)
