@@ -1147,11 +1147,18 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
   //
-  // The behavior of an undefined weak reference is implementation defined. If
-  // the relocation is to a weak undef, and we are producing an executable, let
-  // relocate{,Non}Alloc() resolve it.
+  // The behavior of an undefined weak reference is implementation defined. For
+  // non-link-time constants, we resolve relocations statically (let
+  // relocate{,Non}Alloc() resolve them) for -no-pie and try producing dynamic
+  // relocations for -pie and -shared.
+  //
+  // The general expectation of -no-pie static linking is that there is no
+  // dynamic relocation (except IRELATIVE). Emitting dynamic relocations for
+  // -shared matches the spirit of its -z undefs default. -pie has freedom on
+  // choices, and we choose dynamic relocations to be consistent with the
+  // handling of GOT-generating relocations.
   if (isStaticLinkTimeConstant(expr, type, sym, sec, offset) ||
-      (!config->shared && sym.isUndefWeak())) {
+      (!config->isPic && sym.isUndefWeak())) {
     sec.relocations.push_back({expr, type, offset, addend, &sym});
     return;
   }

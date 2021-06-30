@@ -556,6 +556,42 @@ public:
     return true;
   }
 
+  // Objective-C allows you to use property syntax `self.prop` as sugar for
+  // `[self prop]` and `[self setProp:]` when there's no explicit `@property`
+  // for `prop` as well as for class properties. We treat this like a property
+  // even though semantically it's equivalent to a method expression.
+  void highlightObjCImplicitPropertyRef(const ObjCMethodDecl *OMD,
+                                        SourceLocation Loc) {
+    auto &Tok = H.addToken(Loc, HighlightingKind::Field)
+                    .addModifier(HighlightingModifier::ClassScope);
+    if (OMD->isClassMethod())
+      Tok.addModifier(HighlightingModifier::Static);
+    if (isDefaultLibrary(OMD))
+      Tok.addModifier(HighlightingModifier::DefaultLibrary);
+  }
+
+  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *OPRE) {
+    // We need to handle implicit properties here since they will appear to
+    // reference `ObjCMethodDecl` via an implicit `ObjCMessageExpr`, so normal
+    // highlighting will not work.
+    if (!OPRE->isImplicitProperty())
+      return true;
+    // A single property expr can reference both a getter and setter, but we can
+    // only provide a single semantic token, so prefer the getter. In most cases
+    // the end result should be the same, although it's technically possible
+    // that the user defines a setter for a system SDK.
+    if (OPRE->isMessagingGetter()) {
+      highlightObjCImplicitPropertyRef(OPRE->getImplicitPropertyGetter(),
+                                       OPRE->getLocation());
+      return true;
+    }
+    if (OPRE->isMessagingSetter()) {
+      highlightObjCImplicitPropertyRef(OPRE->getImplicitPropertySetter(),
+                                       OPRE->getLocation());
+    }
+    return true;
+  }
+
   bool VisitOverloadExpr(OverloadExpr *E) {
     if (!E->decls().empty())
       return true; // handled by findExplicitReferences.

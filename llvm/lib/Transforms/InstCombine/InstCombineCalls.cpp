@@ -956,8 +956,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     break;
   }
-  case Intrinsic::umax:
   case Intrinsic::umin: {
+    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+    // umin(x, 1) == zext(x != 0)
+    if (match(I1, m_One())) {
+      Value *Zero = Constant::getNullValue(I0->getType());
+      Value *Cmp = Builder.CreateICmpNE(I0, Zero);
+      return CastInst::Create(Instruction::ZExt, Cmp, II->getType());
+    }
+    LLVM_FALLTHROUGH;
+  }
+  case Intrinsic::umax: {
     Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
     Value *X, *Y;
     if (match(I0, m_ZExt(m_Value(X))) && match(I1, m_ZExt(m_Value(Y))) &&

@@ -696,11 +696,16 @@ sizeof...($TemplateParameter[[Elements]]);
           int $Field_decl[[_someProperty]];
         }
         @property(nonatomic, assign) int $Field_decl[[someProperty]];
+        @property(readonly, class) $Class[[Foo]] *$Field_decl_readonly_static[[sharedInstance]];
         @end
         @implementation $Class_decl[[Foo]]
         @synthesize someProperty = _someProperty;
+        - (int)$Method_decl[[otherMethod]] {
+          return 0;
+        }
         - (int)$Method_decl[[doSomething]] {
-          self.$Field[[someProperty]] = self.$Field[[someProperty]] + 1;
+          $Class[[Foo]].$Field_static[[sharedInstance]].$Field[[someProperty]] = 1;
+          self.$Field[[someProperty]] = self.$Field[[someProperty]] + self.$Field[[otherMethod]] + 1;
           self->$Field[[_someProperty]] = $Field[[_someProperty]] + 1;
         }
         @end
