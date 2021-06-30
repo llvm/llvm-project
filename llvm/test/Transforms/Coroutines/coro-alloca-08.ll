@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { i8* }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }
