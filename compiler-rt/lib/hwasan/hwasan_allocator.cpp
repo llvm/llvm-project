@@ -196,6 +196,7 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
                            : tagged_ptr;
   void *aligned_ptr = reinterpret_cast<void *>(
       RoundDownTo(reinterpret_cast<uptr>(untagged_ptr), kShadowAlignment));
+  tag_t pointer_tag = GetTagFromPointer(reinterpret_cast<uptr>(tagged_ptr));
   Metadata *meta =
       reinterpret_cast<Metadata *>(allocator.GetMetaData(aligned_ptr));
   uptr orig_size = meta->get_requested_size();
@@ -236,7 +237,8 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
       // The tag can be zero if tagging is disabled on this thread.
       do {
         tag = t->GenerateRandomTag(/*num_bits=*/8);
-      } while (UNLIKELY(tag < kShadowAlignment && tag != 0));
+      } while (
+          UNLIKELY((tag < kShadowAlignment || tag == pointer_tag) && tag != 0));
     } else {
       static_assert(kFallbackFreeTag >= kShadowAlignment,
                     "fallback tag must not be a short granule tag.");
