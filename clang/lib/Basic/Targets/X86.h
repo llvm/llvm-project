@@ -357,6 +357,8 @@ public:
     case CC_IntelOclBicc:
     case CC_OpenCLKernel:
       return CCCR_OK;
+    case CC_SwiftAsync:
+      return checkSwiftAsyncCCSupported();
     default:
       return CCCR_Warning;
     }
@@ -725,6 +727,8 @@ public:
     case CC_X86RegCall:
     case CC_OpenCLKernel:
       return CCCR_OK;
+    case CC_SwiftAsync:
+      return checkSwiftAsyncCCSupported();
     default:
       return CCCR_Warning;
     }
@@ -801,6 +805,8 @@ public:
     case CC_X86RegCall:
     case CC_OpenCLKernel:
       return CCCR_OK;
+    case CC_SwiftAsync:
+      return checkSwiftAsyncCCSupported();
     default:
       return CCCR_Warning;
     }
