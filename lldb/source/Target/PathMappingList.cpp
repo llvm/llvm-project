@@ -152,6 +152,18 @@ bool PathMappingList::RemapPath(ConstString path,
   return false;
 }
 
+/// Append components to path, applying style.
+static void AppendPathComponents(FileSpec &path, llvm::StringRef components,
+                                 llvm::sys::path::Style style) {
+    auto component = llvm::sys::path::begin(components, style);
+    auto e = llvm::sys::path::end(components);
+    while (component != e &&
+        llvm::sys::path::is_separator(*component->data(), style))
+      ++component;
+    for (; component != e; ++component)
+      path.AppendPathComponent(*component);
+}
+
 llvm::Optional<FileSpec>
 PathMappingList::RemapPath(llvm::StringRef path) const {
   if (m_pairs.empty() || path.empty())
@@ -175,7 +187,9 @@ PathMappingList::RemapPath(llvm::StringRef path) const {
         continue;
     }
     FileSpec remapped(it.second.GetStringRef());
-    remapped.AppendPathComponent(path);
+    auto orig_style = FileSpec::GuessPathStyle(prefix).getValueOr(
+        llvm::sys::path::Style::native);
+    AppendPathComponents(remapped, path, orig_style);
     return remapped;
   }
   return {};
@@ -187,8 +201,11 @@ bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) co
   for (const auto &it : m_pairs) {
     if (!path_ref.consume_front(it.second.GetStringRef()))
       continue;
-    fixed.SetFile(it.first.GetStringRef(), FileSpec::Style::native);
-    fixed.AppendPathComponent(path_ref);
+    auto orig_file = it.first.GetStringRef();
+    auto orig_style = FileSpec::GuessPathStyle(orig_file).getValueOr(
+        llvm::sys::path::Style::native);
+    fixed.SetFile(orig_file, orig_style);
+    AppendPathComponents(fixed, path_ref, orig_style);
     return true;
   }
   return false;
