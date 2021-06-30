@@ -999,7 +999,9 @@ void __llvm_profile_initialize_file(void) {
   ProfileNameSpecifier PNS = PNS_unknown;
   int hasCommandLineOverrider = (INSTR_PROF_PROFILE_NAME_VAR[0] != 0);
 
-  if (__llvm_profile_counter_bias != -1)
+  /* This symbol is defined by the compiler when runtime counter relocation is
+   * used and runtime provides a weak external reference so we can check it. */
+  if (&__llvm_profile_counter_bias)
     lprofSetRuntimeCounterRelocation(1);
 
   EnvFilenamePat = getFilenamePatFromEnv();
