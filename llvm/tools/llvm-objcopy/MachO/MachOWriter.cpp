@@ -107,6 +107,16 @@ size_t MachOWriter::totalSize() const {
                      LinkEditDataCommand.datasize);
   }
 
+  if (O.LinkerOptimizationHintCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.LinkerOptimizationHintCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Ends.push_back(LinkEditDataCommand.dataoff +
+                     LinkEditDataCommand.datasize);
+  }
+
   if (O.FunctionStartsCommandIndex) {
     const MachO::linkedit_data_command &LinkEditDataCommand =
         O.LoadCommands[*O.FunctionStartsCommandIndex]
@@ -421,6 +431,11 @@ void MachOWriter::writeDataInCodeData() {
   return writeLinkData(O.DataInCodeCommandIndex, O.DataInCode);
 }
 
+void MachOWriter::writeLinkerOptimizationHint() {
+  return writeLinkData(O.LinkerOptimizationHintCommandIndex,
+                       O.LinkerOptimizationHint);
+}
+
 void MachOWriter::writeFunctionStartsData() {
   return writeLinkData(O.FunctionStartsCommandIndex, O.FunctionStarts);
 }
@@ -488,6 +503,16 @@ void MachOWriter::writeTail() {
     if (LinkEditDataCommand.dataoff)
       Queue.emplace_back(LinkEditDataCommand.dataoff,
                          &MachOWriter::writeDataInCodeData);
+  }
+
+  if (O.LinkerOptimizationHintCommandIndex) {
+    const MachO::linkedit_data_command &LinkEditDataCommand =
+        O.LoadCommands[*O.LinkerOptimizationHintCommandIndex]
+            .MachOLoadCommand.linkedit_data_command_data;
+
+    if (LinkEditDataCommand.dataoff)
+      Queue.emplace_back(LinkEditDataCommand.dataoff,
+                         &MachOWriter::writeLinkerOptimizationHint);
   }
 
   if (O.FunctionStartsCommandIndex) {
