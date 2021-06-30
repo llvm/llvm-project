@@ -1,4 +1,5 @@
 ; RUN: opt -passes=openmp-opt -debug-only=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=openmp-opt -pass-remarks-missed=openmp-opt -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REMARKS
 ; REQUIRES: asserts
 ; ModuleID = 'single_threaded_exeuction.c'
 
@@ -8,6 +9,8 @@ define weak void @kernel() {
   call void @amdgcn()
   ret void
 }
+
+; REMARKS: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
 
 ; CHECK-NOT: [openmp-opt] Basic block @nvptx entry is executed by a single thread.
 ; CHECK: [openmp-opt] Basic block @nvptx if.then is executed by a single thread.
@@ -22,6 +25,7 @@ entry:
 if.then:
   call void @foo()
   call void @bar()
+  call void @baz()
   br label %if.end
 
 if.end:
@@ -41,6 +45,7 @@ entry:
 if.then:
   call void @foo()
   call void @bar()
+  call void @baz()
   br label %if.end
 
 if.end:
@@ -57,6 +62,13 @@ entry:
 ; CHECK: [openmp-opt] Basic block @bar.internalized entry is executed by a single thread.
 ; Function Attrs: noinline
 define void @bar() {
+entry:
+  ret void
+}
+
+; CHECK-NOT: [openmp-opt] Basic block @baz entry is executed by a single thread.
+; Function Attrs: noinline
+define weak void @baz() !dbg !8 {
 entry:
   ret void
 }
@@ -80,3 +92,6 @@ declare void @__kmpc_kernel_init(i32, i16)
 !5 = !{i32 7, !"openmp", i32 50}
 !6 = !{i32 7, !"openmp-device", i32 50}
 !7 = !{void ()* @kernel, !"kernel", i32 1}
+!8 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 8, type: !9, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!9 = !DISubroutineType(types: !2)
+!10 = !DILocation(line: 5, column: 7, scope: !8)
