@@ -700,6 +700,10 @@ protected:
     SmallVector<StringRef, 8> Argv = {Clang, File, "-D", File};
     llvm::SplitString(Flags, Argv);
 
+    // Trim double quotation from the argumnets if any.
+    for (auto *It = Argv.begin(); It != Argv.end(); ++It)
+      *It = It->trim("\"");
+
     SmallString<32> Dir;
     llvm::sys::path::system_temp_directory(false, Dir);
 
@@ -960,6 +964,13 @@ TEST_F(ExpandResponseFilesTest, ExpandResponseFiles) {
   add("bar.cpp", "clang", "-Dflag");
   EXPECT_EQ(getCommand("foo.cpp"), "clang foo.cpp -D foo.cpp -Dflag");
   EXPECT_EQ(getCommand("bar.cpp"), "clang bar.cpp -D bar.cpp -Dflag");
+}
+
+TEST_F(ExpandResponseFilesTest, ExpandResponseFilesEmptyArgument) {
+  addFile(path(StringRef("rsp1.rsp")), "-Dflag");
+
+  add("foo.cpp", "clang", "@rsp1.rsp \"\"");
+  EXPECT_EQ(getCommand("foo.cpp"), "clang foo.cpp -D foo.cpp -Dflag ");
 }
 
 } // end namespace tooling
