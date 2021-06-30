@@ -167,10 +167,6 @@ static inline std::string formatMixFlags(MixFlags F) {
   return Str.str().str();
 }
 
-#else
-
-static inline std::string formatMixFlags(MixFlags F);
-
 #endif // NDEBUG
 
 /// The results of the steps of an Implicit Conversion Sequence is saved in
