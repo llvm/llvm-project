@@ -9,15 +9,15 @@ from mlir.dialects.linalg.opdsl.lang import *
 # CHECK:     name: A
 # CHECK:     usage: InputOperand
 # CHECK:     type_var: T
-# CHECK:     shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
+# CHECK:     shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
 # CHECK:     name: B
 # CHECK:     usage: InputOperand
 # CHECK:     type_var: T
-# CHECK:     shape_map: affine_map<()[s0, s1, s2] -> (s2, s1)>
+# CHECK:     shape_map: affine_map<()[s0, s1, s2] -> (s1, s2)>
 # CHECK:     name: C
 # CHECK:     usage: OutputOperand
 # CHECK:     type_var: U
-# CHECK:     shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
+# CHECK:     shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
 @linalg_structured_op
 def matmul(
     A=TensorDef(T, S.M, S.K),
@@ -44,11 +44,11 @@ def fill(value=ScalarDef(T), O=TensorDef(T, S.M, S.K, output=True)):
 # CHECK:     name: I
 # CHECK:     usage: InputOperand
 # CHECK:     type_var: T
-# CHECK:     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s2, s3)>
+# CHECK:     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1)>
 # CHECK:     name: O
 # CHECK:     usage: OutputOperand
 # CHECK:     type_var: T
-# CHECK:     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s0, s1)>
+# CHECK:     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5] -> (s2, s3)>
 # CHECK:     name: strides
 # CHECK:     usage: IndexAttribute
 # CHECK:     type_var: I64
@@ -58,4 +58,4 @@ def strided_copy(
     I=TensorDef(T, S.IH, S.IW),
     O=TensorDef(T, S.OH, S.OW, output=True),
     strides=AttributeDef(S.SH, S.SW)):
-  O[D.oh, D.ow] = I[D.h * S.SH, D.w * S.SW]
+  O[D.oh, D.ow] = I[D.oh * S.SH, D.ow * S.SW]

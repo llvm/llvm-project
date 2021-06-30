@@ -115,6 +115,7 @@ class LinalgStructuredOpConfig(YAMLObject):
 
   def __init__(self,
                comprehension: Comprehension,
+               domain: Sequence[DimDef],
                registered_operands: Sequence[OperandDef],
                context: Optional[_ir.Context] = None):
     self.context = context if context is not None else _ir.Context()
@@ -123,10 +124,11 @@ class LinalgStructuredOpConfig(YAMLObject):
     self.operands = dict()  # type: Dict[OperandDef, OperandDefConfig]
     self.uses = dict()  # type: Dict[TensorUse, TensorUseConfig]
 
-    # Compute the ordered set of writes and collect the tensor, capture, and
-    # index uses.
+    # Compute the ordered set of writes and collect the tensor, capture, dims,
+    # and index uses.
     collected_tensor_uses = set()
     collected_scalar_uses = set()
+    collected_dim_uses = set()
     collected_indices = set()
     for write_use, read_use in zip(comprehension.definitions,
                                    comprehension.values):
@@ -136,7 +138,27 @@ class LinalgStructuredOpConfig(YAMLObject):
       collected_tensor_uses.add(write_use)
       read_use.collect_tensor_uses(collected_tensor_uses)
       read_use.collect_scalar_uses(collected_scalar_uses)
+      read_use.collect_dim_uses(collected_dim_uses)
+      write_use.collect_dim_uses(collected_dim_uses)
       read_use.collect_indices(collected_indices)
+
+    # Set domain to the sorted list of uses if no domain annotation is given.
+    if not domain:
+      domain = sorted(collected_dim_uses, key=lambda dim: dim.dimname)
+
+    # Verify the domain dimensions match the used dimensions.
+    if (len(domain) != len(collected_dim_uses) or
+        any(dim not in collected_dim_uses for dim in domain)):
+      raise ValueError(f"Expected the annotated domain dimensions {domain} to "
+                       f"match the set of dimension used by the tensor "
+                       f"comprehension {collected_dim_uses}")
+
+    # Instantiate the dimensions in the given order.
+    with self.context:
+      local_state = AffineBuildState(
+          global_state=self.affine_state, allow_new_symbols=False)
+      for dim in domain:
+        dim.build(state=local_state)
 
     # Collect all attribute definitions.
     collected_attr_defs = list()
@@ -148,18 +170,32 @@ class LinalgStructuredOpConfig(YAMLObject):
     collected_index_defs = list()
     for operand in registered_operands:
       if operand.index_dims:
+        if any(dim not in collected_dim_uses for dim in operand.index_dims):
+          raise ValueError(f"Expected all index dims {operand.index_dims} of "
+                           f"operand {operand.name} to have uses.")
         collected_index_defs.append(operand)
 
-    # Add all definitions before uses, so process twice.
+    # Collect the operand definitions of all tensor/scalar uses, attributes, and
+    # shape-only tensors.
+    all_operand_defs = list()
     for use in collected_tensor_uses:
-      self.add_operand(use.operand_def)
+      all_operand_defs.append(use.operand_def)
     for use in collected_scalar_uses:
-      self.add_operand(use.operand_def)
+      all_operand_defs.append(use.operand_def)
     for definition in collected_attr_defs:
-      self.add_operand(definition)
+      all_operand_defs.append(definition)
     for definition in collected_index_defs:
-      if definition not in self.operands:
-        self.add_operand(definition)
+      all_operand_defs.append(definition)
+
+    # Add all operands in registration order to ensure the symbols are
+    # registered in the order they appear.
+    all_operand_defs = sorted(
+        all_operand_defs, key=lambda operand_def: operand_def.registered_index)
+    for operand_def in all_operand_defs:
+      self.add_operand(operand_def)
+
+    # Add all shape-only tensor index_dim annotations and all tensor uses.
+    for definition in collected_index_defs:
       self.add_indexed_operand(definition)
     for use in collected_tensor_uses:
       self.add_tensor_use(use)
@@ -396,7 +432,7 @@ class LinalgOpConfig(YAMLObject):
         LinalgOpConfig(
             tc_op_def.metadata,
             structured_op=LinalgStructuredOpConfig(
-                tc_op_def.comprehensions[0],
+                tc_op_def.comprehensions[0], tc_op_def.domain,
                 tc_op_def.registered_operands.values(), context)),
     ]
 
