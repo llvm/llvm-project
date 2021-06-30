@@ -372,27 +372,49 @@ define i32 @masks4(<4 x i1> %in) {
 }
 
 define void @sitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
-; SSE-LABEL: 'sitofp4'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %A1 = sitofp <4 x i1> %a to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %A2 = sitofp <4 x i1> %a to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <4 x i8> %b to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %B2 = sitofp <4 x i8> %b to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %D1 = sitofp <4 x i32> %d to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; SSE2-LABEL: 'sitofp4'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %A1 = sitofp <4 x i1> %a to <4 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %A2 = sitofp <4 x i1> %a to <4 x double>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <4 x i8> %b to <4 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %B2 = sitofp <4 x i8> %b to <4 x double>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %D1 = sitofp <4 x i32> %d to <4 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-; AVX-LABEL: 'sitofp4'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A1 = sitofp <4 x i1> %a to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A2 = sitofp <4 x i1> %a to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B1 = sitofp <4 x i8> %b to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B2 = sitofp <4 x i8> %b to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D1 = sitofp <4 x i32> %d to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; SSE41-LABEL: 'sitofp4'
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A1 = sitofp <4 x i1> %a to <4 x float>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A2 = sitofp <4 x i1> %a to <4 x double>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <4 x i8> %b to <4 x float>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %B2 = sitofp <4 x i8> %b to <4 x double>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D1 = sitofp <4 x i32> %d to <4 x float>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX1-LABEL: 'sitofp4'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A1 = sitofp <4 x i1> %a to <4 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A2 = sitofp <4 x i1> %a to <4 x double>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B1 = sitofp <4 x i8> %b to <4 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B2 = sitofp <4 x i8> %b to <4 x double>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D1 = sitofp <4 x i32> %d to <4 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX2-LABEL: 'sitofp4'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A1 = sitofp <4 x i1> %a to <4 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A2 = sitofp <4 x i1> %a to <4 x double>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B1 = sitofp <4 x i8> %b to <4 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B2 = sitofp <4 x i8> %b to <4 x double>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D1 = sitofp <4 x i32> %d to <4 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'sitofp4'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A1 = sitofp <4 x i1> %a to <4 x float>
@@ -417,19 +439,33 @@ define void @sitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 }
 
 define void @sitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
-; SSE-LABEL: 'sitofp8'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; SSE2-LABEL: 'sitofp8'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-; AVX-LABEL: 'sitofp8'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; SSE41-LABEL: 'sitofp8'
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX1-LABEL: 'sitofp8'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX2-LABEL: 'sitofp8'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'sitofp8'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
@@ -457,16 +493,27 @@ define void @uitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %D2 = uitofp <4 x i32> %d to <4 x double>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-; AVX-LABEL: 'uitofp4'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A1 = uitofp <4 x i1> %a to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A2 = uitofp <4 x i1> %a to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %B1 = uitofp <4 x i8> %b to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %B2 = uitofp <4 x i8> %b to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C1 = uitofp <4 x i16> %c to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C2 = uitofp <4 x i16> %c to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %D1 = uitofp <4 x i32> %d to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %D2 = uitofp <4 x i32> %d to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; AVX1-LABEL: 'uitofp4'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A1 = uitofp <4 x i1> %a to <4 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A2 = uitofp <4 x i1> %a to <4 x double>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %B1 = uitofp <4 x i8> %b to <4 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %B2 = uitofp <4 x i8> %b to <4 x double>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C1 = uitofp <4 x i16> %c to <4 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C2 = uitofp <4 x i16> %c to <4 x double>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %D1 = uitofp <4 x i32> %d to <4 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %D2 = uitofp <4 x i32> %d to <4 x double>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX2-LABEL: 'uitofp4'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A1 = uitofp <4 x i1> %a to <4 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A2 = uitofp <4 x i1> %a to <4 x double>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %B1 = uitofp <4 x i8> %b to <4 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %B2 = uitofp <4 x i8> %b to <4 x double>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C1 = uitofp <4 x i16> %c to <4 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C2 = uitofp <4 x i16> %c to <4 x double>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D1 = uitofp <4 x i32> %d to <4 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D2 = uitofp <4 x i32> %d to <4 x double>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'uitofp4'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %A1 = uitofp <4 x i1> %a to <4 x float>
@@ -509,7 +556,7 @@ define void @uitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A1 = uitofp <8 x i1> %a to <8 x float>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %B1 = uitofp <8 x i8> %b to <8 x float>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %C1 = uitofp <8 x i16> %c to <8 x float>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %D1 = uitofp <8 x i32> %d to <8 x float>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D1 = uitofp <8 x i32> %d to <8 x float>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'uitofp8'
