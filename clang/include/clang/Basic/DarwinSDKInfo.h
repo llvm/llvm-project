@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_DRIVER_DARWIN_SDK_INFO_H
-#define LLVM_CLANG_DRIVER_DARWIN_SDK_INFO_H
+#ifndef LLVM_CLANG_BASIC_DARWIN_SDK_INFO_H
+#define LLVM_CLANG_BASIC_DARWIN_SDK_INFO_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/Support/Error.h"
@@ -15,7 +15,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
-namespace driver {
 
 /// The information about the darwin SDK that was used during this compilation.
 class DarwinSDKInfo {
@@ -35,7 +34,6 @@ private:
 Expected<Optional<DarwinSDKInfo>> parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS,
                                                      StringRef SDKRootPath);
 
-} // end namespace driver
 } // end namespace clang
 
-#endif // LLVM_CLANG_DRIVER_DARWIN_SDK_INFO_H
+#endif // LLVM_CLANG_BASIC_DARWIN_SDK_INFO_H

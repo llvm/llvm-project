@@ -6,17 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Driver/DarwinSDKInfo.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
-using namespace clang::driver;
 using namespace clang;
 
 Expected<Optional<DarwinSDKInfo>>
-driver::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
+clang::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
   llvm::SmallString<256> Filepath = SDKRootPath;
   llvm::sys::path::append(Filepath, "SDKSettings.json");
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
