@@ -67,8 +67,8 @@ define double @foo_fmf(double %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsmuldp 0, 0, 4
 ; CHECK-P9-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call arcp reassoc double @llvm.sqrt.f64(double %b)
-  %r = fdiv arcp reassoc double %a, %x
+  %x = call arcp contract reassoc double @llvm.sqrt.f64(double %b)
+  %r = fdiv arcp contract reassoc double %a, %x
   ret double %r
 }
 
@@ -160,9 +160,9 @@ define double @foof_fmf(double %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmulsp 0, 0, 3
 ; CHECK-P9-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp float @llvm.sqrt.f32(float %b)
+  %x = call contract reassoc arcp float @llvm.sqrt.f32(float %b)
   %y = fpext float %x to double
-  %r = fdiv reassoc arcp double %a, %y
+  %r = fdiv contract reassoc arcp double %a, %y
   ret double %r
 }
 
@@ -249,9 +249,9 @@ define float @food_fmf(float %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsrsp 0, 0
 ; CHECK-P9-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp double @llvm.sqrt.f64(double %b)
+  %x = call contract reassoc arcp double @llvm.sqrt.f64(double %b)
   %y = fptrunc double %x to float
-  %r = fdiv reassoc arcp float %a, %y
+  %r = fdiv contract reassoc arcp float %a, %y
   ret float %r
 }
 
@@ -324,8 +324,8 @@ define float @goo_fmf(float %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmulsp 0, 0, 3
 ; CHECK-P9-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp float @llvm.sqrt.f32(float %b)
-  %r = fdiv reassoc arcp float %a, %x
+  %x = call contract reassoc arcp float @llvm.sqrt.f32(float %b)
+  %r = fdiv contract reassoc arcp float %a, %x
   ret float %r
 }
 
@@ -429,9 +429,9 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-P9-NEXT:    xsmaddasp 4, 1, 0
 ; CHECK-P9-NEXT:    xsmulsp 1, 3, 4
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp nsz float @llvm.sqrt.f32(float %a)
-  %y = fmul reassoc nsz float %x, %b
-  %z = fdiv reassoc arcp nsz ninf float %c, %y
+  %x = call contract reassoc arcp nsz float @llvm.sqrt.f32(float %a)
+  %y = fmul contract reassoc nsz float %x, %b
+  %z = fdiv contract reassoc arcp nsz ninf float %c, %y
   ret float %z
 }
 
@@ -512,8 +512,8 @@ define <4 x float> @hoo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P9-NEXT:    xvmulsp 0, 0, 2
 ; CHECK-P9-NEXT:    xvmulsp 34, 34, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
-  %r = fdiv reassoc arcp <4 x float> %a, %x
+  %x = call contract reassoc arcp <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
+  %r = fdiv contract reassoc arcp <4 x float> %a, %x
   ret <4 x float> %r
 }
 
@@ -602,7 +602,7 @@ define double @foo2_fmf(double %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsmaddadp 0, 3, 1
 ; CHECK-P9-NEXT:    fmr 1, 0
 ; CHECK-P9-NEXT:    blr
-  %r = fdiv reassoc arcp nsz ninf double %a, %b
+  %r = fdiv contract reassoc arcp nsz ninf double %a, %b
   ret double %r
 }
 
@@ -651,7 +651,7 @@ define float @goo2_fmf(float %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmaddasp 0, 3, 1
 ; CHECK-P9-NEXT:    fmr 1, 0
 ; CHECK-P9-NEXT:    blr
-  %r = fdiv reassoc arcp nsz ninf float %a, %b
+  %r = fdiv contract reassoc arcp nsz ninf float %a, %b
   ret float %r
 }
 
@@ -702,7 +702,7 @@ define <4 x float> @hoo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P9-NEXT:    xvmaddasp 0, 1, 34
 ; CHECK-P9-NEXT:    xxlor 34, 0, 0
 ; CHECK-P9-NEXT:    blr
-  %r = fdiv reassoc arcp nsz ninf <4 x float> %a, %b
+  %r = fdiv contract reassoc arcp nsz ninf <4 x float> %a, %b
   ret <4 x float> %r
 }
 
@@ -817,7 +817,7 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-P9-NEXT:  .LBB20_2:
 ; CHECK-P9-NEXT:    xssqrtdp 1, 1
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn double @llvm.sqrt.f64(double %a)
+  %r = call contract reassoc ninf afn double @llvm.sqrt.f64(double %a)
   ret double %r
 }
 
@@ -901,7 +901,7 @@ define double @foo3_fmf_crbits_off(double %a) #2 {
 ; CHECK-P9-NEXT:  .LBB21_2:
 ; CHECK-P9-NEXT:    xssqrtdp 1, 1
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn double @llvm.sqrt.f64(double %a)
+  %r = call contract reassoc ninf afn double @llvm.sqrt.f64(double %a)
   ret double %r
 }
 
@@ -991,7 +991,7 @@ define float @goo3_fmf(float %a) nounwind {
 ; CHECK-P9-NEXT:  .LBB23_2:
 ; CHECK-P9-NEXT:    fmr 1, 0
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn float @llvm.sqrt.f32(float %a)
+  %r = call contract reassoc ninf afn float @llvm.sqrt.f32(float %a)
   ret float %r
 }
 
@@ -1076,7 +1076,7 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-P9-NEXT:  .LBB25_2:
 ; CHECK-P9-NEXT:    xvsqrtsp 34, 34
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
+  %r = call contract reassoc ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
   ret <4 x float> %r
 }
 
@@ -1207,7 +1207,7 @@ define <2 x double> @hoo4_fmf(<2 x double> %a) #1 {
 ; CHECK-P9-NEXT:  .LBB27_2:
 ; CHECK-P9-NEXT:    xvsqrtdp 34, 34
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn <2 x double> @llvm.sqrt.v2f64(<2 x double> %a)
+  %r = call contract reassoc ninf afn <2 x double> @llvm.sqrt.v2f64(<2 x double> %a)
   ret <2 x double> %r
 }
 
@@ -1260,7 +1260,7 @@ define fp128 @hoo5_fmf(fp128 %a) #1 {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    xssqrtqp 2, 2
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn fp128 @llvm.sqrt.f128(fp128 %a)
+  %r = call contract reassoc ninf afn fp128 @llvm.sqrt.f128(fp128 %a)
   ret fp128 %r
 }
 

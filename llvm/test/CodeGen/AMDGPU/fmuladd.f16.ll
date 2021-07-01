@@ -66,7 +66,7 @@ define amdgpu_kernel void @fmul_fadd_contract_f16(half addrspace(1)* %out, half 
   %r0 = load half, half addrspace(1)* %in1
   %r1 = load half, half addrspace(1)* %in2
   %r2 = load half, half addrspace(1)* %in3
-  %mul = fmul half %r0, %r1
+  %mul = fmul contract half %r0, %r1
   %add = fadd contract half %mul, %r2
   store half %add, half addrspace(1)* %out
   ret void

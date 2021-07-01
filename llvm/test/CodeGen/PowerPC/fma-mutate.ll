@@ -29,7 +29,7 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    xssqrtdp 1, 1
 ; CHECK-NEXT:    blr
-  %r = call reassoc afn ninf double @llvm.sqrt.f64(double %a)
+  %r = call contract reassoc afn ninf double @llvm.sqrt.f64(double %a)
   ret double %r
 }
 
