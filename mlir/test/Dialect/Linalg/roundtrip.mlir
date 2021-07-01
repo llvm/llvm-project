@@ -781,9 +781,9 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
   %c2 = constant 2 : index
   %c4 = constant 4 : index
   %c8 = constant 8 : index
-  %X = memref.dim %input_3d, %c0 : tensor<16x24x32xf32>
-  %Y = memref.dim %input_3d, %c1 : tensor<16x24x32xf32>
-  %Z = memref.dim %input_3d, %c2 : tensor<16x24x32xf32>
+  %X = tensor.dim %input_3d, %c0 : tensor<16x24x32xf32>
+  %Y = tensor.dim %input_3d, %c1 : tensor<16x24x32xf32>
+  %Z = tensor.dim %input_3d, %c2 : tensor<16x24x32xf32>
   %result = linalg.tiled_loop (%i, %j, %k)
       = (%c0, %c0, %c0) to (%X, %Y, %Z) step (%c2, %c4, %c8)
       ins(%i3d_ = %input_3d: tensor<16x24x32xf32>,

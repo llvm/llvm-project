@@ -365,7 +365,6 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
                 "dialect";
   let constructor = "mlir::createConvertShapeToStandardPass()";
   let dependentDialects = [
-    "memref::MemRefDialect",
     "StandardOpsDialect",
     "scf::SCFDialect",
     "tensor::TensorDialect"

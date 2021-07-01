@@ -10,9 +10,9 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
   %c0 = constant 0 : index
   %c3 = constant 3 : index
   %c1 = constant 1 : index
-  %0 = memref.dim %t0, %c0 : tensor<?x?xf32>
-  %1 = memref.dim %t0, %c1 : tensor<?x?xf32>
-  %2 = memref.dim %arg1, %c1 : tensor<?x?xf32>
+  %0 = tensor.dim %t0, %c0 : tensor<?x?xf32>
+  %1 = tensor.dim %t0, %c1 : tensor<?x?xf32>
+  %2 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %3 = scf.for %arg3 = %c0 to %0 step %c2 iter_args(%arg4 = %arg2) -> (tensor<?x?xf32>) {
     %4 = scf.for %arg5 = %c0 to %2 step %c3 iter_args(%arg6 = %arg4) -> (tensor<?x?xf32>) {
       %5 = scf.for %arg7 = %c0 to %1 step %c4 iter_args(%arg8 = %arg6) -> (tensor<?x?xf32>) {
@@ -40,12 +40,12 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
 
 //   CHECK-DAG: %[[C0:.*]] = constant 0 : index
 //   CHECK-DAG: %[[C1:.*]] = constant 1 : index
-//   CHECK-DAG: %[[dA0:.*]] = memref.dim %[[A]], %[[C0]] : tensor<?x?xf32>
-//   CHECK-DAG: %[[dA1:.*]] = memref.dim %[[A]], %[[C1]] : tensor<?x?xf32>
-//   CHECK-DAG: %[[dB0:.*]] = memref.dim %[[B]], %[[C0]] : tensor<?x?xf32>
-//   CHECK-DAG: %[[dB1:.*]] = memref.dim %[[B]], %[[C1]] : tensor<?x?xf32>
-//   CHECK-DAG: %[[dC0:.*]] = memref.dim %[[C]], %[[C0]] : tensor<?x?xf32>
-//   CHECK-DAG: %[[dC1:.*]] = memref.dim %[[C]], %[[C1]] : tensor<?x?xf32>
+//   CHECK-DAG: %[[dA0:.*]] = tensor.dim %[[A]], %[[C0]] : tensor<?x?xf32>
+//   CHECK-DAG: %[[dA1:.*]] = tensor.dim %[[A]], %[[C1]] : tensor<?x?xf32>
+//   CHECK-DAG: %[[dB0:.*]] = tensor.dim %[[B]], %[[C0]] : tensor<?x?xf32>
+//   CHECK-DAG: %[[dB1:.*]] = tensor.dim %[[B]], %[[C1]] : tensor<?x?xf32>
+//   CHECK-DAG: %[[dC0:.*]] = tensor.dim %[[C]], %[[C0]] : tensor<?x?xf32>
+//   CHECK-DAG: %[[dC1:.*]] = tensor.dim %[[C]], %[[C1]] : tensor<?x?xf32>
 //       CHECK: scf.for %[[I:[0-9a-z]*]]
 //       CHECK:   %[[sizeA0:.*]] = affine.min #[[BOUND2_MAP]](%[[I]])[%[[dA0]]]
 //       CHECK:   %[[stA:.*]] = tensor.extract_slice %[[A]][%[[I]], 0] [%[[sizeA0]], %[[dA1]]] [1, 1]  : tensor<?x?xf32> to tensor<?x?xf32>
@@ -153,10 +153,10 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
   %c8 = constant 8 : index
   %c16 = constant 16 : index
 
-  %n = memref.dim %elementwise, %c0 : tensor<?x?x?x?xf32>
-  %oh = memref.dim %elementwise, %c1 : tensor<?x?x?x?xf32>
-  %ow = memref.dim %elementwise, %c2 : tensor<?x?x?x?xf32>
-  %oc = memref.dim %elementwise, %c3 : tensor<?x?x?x?xf32>
+  %n = tensor.dim %elementwise, %c0 : tensor<?x?x?x?xf32>
+  %oh = tensor.dim %elementwise, %c1 : tensor<?x?x?x?xf32>
+  %ow = tensor.dim %elementwise, %c2 : tensor<?x?x?x?xf32>
+  %oc = tensor.dim %elementwise, %c3 : tensor<?x?x?x?xf32>
 
   %init = linalg.init_tensor [%n, %oh, %ow, %oc] : tensor<?x?x?x?xf32>
   %fill = linalg.fill(%cst, %init) : f32, tensor<?x?x?x?xf32> -> tensor<?x?x?x?xf32>
@@ -222,26 +222,26 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 //  CHECK-DAG:   %[[C2:.+]] = constant 2 : index
 //  CHECK-DAG:   %[[C3:.+]] = constant 3 : index
 
-//  CHECK-DAG:   %[[ELEM_N:.+]] = memref.dim %[[ELEM]], %[[C0]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[ELEM_OH:.+]] = memref.dim %[[ELEM]], %[[C1]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[ELEM_OW:.+]] = memref.dim %[[ELEM]], %[[C2]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[ELEM_OC:.+]] = memref.dim %[[ELEM]], %[[C3]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[ELEM_N:.+]] = tensor.dim %[[ELEM]], %[[C0]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[ELEM_OH:.+]] = tensor.dim %[[ELEM]], %[[C1]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[ELEM_OW:.+]] = tensor.dim %[[ELEM]], %[[C2]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[ELEM_OC:.+]] = tensor.dim %[[ELEM]], %[[C3]] : tensor<?x?x?x?xf32>
 
 //      CHECK:   %[[INIT:.+]] = linalg.init_tensor [%[[ELEM_N]], %[[ELEM_OH]], %[[ELEM_OW]], %[[ELEM_OC]]] : tensor<?x?x?x?xf32>
 //      CHECK:   %[[FILL:.+]] = linalg.fill(%cst, %[[INIT]]) : f32, tensor<?x?x?x?xf32> -> tensor<?x?x?x?xf32>
 
-//  CHECK-DAG:   %[[FILTER_H:.+]] = memref.dim %[[FILTER]], %[[C0]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[FILTER_W:.+]] = memref.dim %[[FILTER]], %[[C1]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[INPUT_N:.+]] = memref.dim %[[INPUT]], %[[C0]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[INPUT_H:.+]] = memref.dim %[[INPUT]], %[[C1]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[INPUT_W:.+]] = memref.dim %[[INPUT]], %[[C2]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[INPUT_C:.+]] = memref.dim %[[INPUT]], %[[C3]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[FILTER_IC:.+]] = memref.dim %[[FILTER]], %[[C2]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[FILTER_OC:.+]] = memref.dim %[[FILTER]], %[[C3]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[FILL_N:.+]] = memref.dim %[[FILL]], %[[C0]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[FILL_H:.+]] = memref.dim %[[FILL]], %[[C1]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[FILL_W:.+]] = memref.dim %[[FILL]], %[[C2]] : tensor<?x?x?x?xf32>
-//  CHECK-DAG:   %[[FILL_C:.+]] = memref.dim %[[FILL]], %[[C3]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[FILTER_H:.+]] = tensor.dim %[[FILTER]], %[[C0]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[FILTER_W:.+]] = tensor.dim %[[FILTER]], %[[C1]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[INPUT_N:.+]] = tensor.dim %[[INPUT]], %[[C0]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[INPUT_H:.+]] = tensor.dim %[[INPUT]], %[[C1]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[INPUT_W:.+]] = tensor.dim %[[INPUT]], %[[C2]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[INPUT_C:.+]] = tensor.dim %[[INPUT]], %[[C3]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[FILTER_IC:.+]] = tensor.dim %[[FILTER]], %[[C2]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[FILTER_OC:.+]] = tensor.dim %[[FILTER]], %[[C3]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[FILL_N:.+]] = tensor.dim %[[FILL]], %[[C0]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[FILL_H:.+]] = tensor.dim %[[FILL]], %[[C1]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[FILL_W:.+]] = tensor.dim %[[FILL]], %[[C2]] : tensor<?x?x?x?xf32>
+//  CHECK-DAG:   %[[FILL_C:.+]] = tensor.dim %[[FILL]], %[[C3]] : tensor<?x?x?x?xf32>
 
 //      CHECK:   scf.for %[[IV0:.+]] = %{{.+}} to %[[ELEM_N]] step %{{.+}} iter_args(%{{.+}} = %[[FILL]])
 // CHECK-NEXT:     %[[SIZE_ELEM_N:.+]] = affine.min #[[BOUND8_MAP]](%[[IV0]])[%[[ELEM_N]]]
@@ -311,8 +311,8 @@ func @pad_generic_static(%small_input: tensor<58x1xf32>, %large_input: tensor<64
   %c32 = constant 32 : index
   %zero = constant 0.0 : f32
 
-  %d0 = memref.dim %large_input, %c0 : tensor<64x128xf32>
-  %d1 = memref.dim %large_input, %c1 : tensor<64x128xf32>
+  %d0 = tensor.dim %large_input, %c0 : tensor<64x128xf32>
+  %d1 = tensor.dim %large_input, %c1 : tensor<64x128xf32>
 
   %pad = linalg.pad_tensor %small_input low[4, 60] high[2, 67] {
   ^bb0(%arg0: index, %arg1: index):

@@ -34,6 +34,10 @@ SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
 /// Given an operation, retrieves the value of each dynamic dimension through
 /// constructing the necessary DimOp operators.
 SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
+
+// Helper function that creates a memref::DimOp or tensor::DimOp depending on
+// the type of `source`.
+Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
