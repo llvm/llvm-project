@@ -547,9 +547,10 @@ public:
                                   VPValue *Def, VPValue *Addr,
                                   VPValue *StoredValue, VPValue *BlockInMask);
 
-  /// Set the debug location in the builder using the debug location in
-  /// the instruction.
-  void setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr);
+  /// Set the debug location in the builder \p Ptr using the debug location in
+  /// \p V. If \p Ptr is None then it uses the class member's Builder.
+  void setDebugLocFromInst(const Value *V,
+                           Optional<IRBuilder<> *> CustomBuilder = None);
 
   /// Fix the non-induction PHIs in the OrigPHIsToFix vector.
   void fixNonInductionPHIs(VPTransformState &State);
@@ -1040,8 +1041,10 @@ static Instruction *getDebugLocFromInstOrOperands(Instruction *I) {
   return I;
 }
 
-void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) {
-  if (const Instruction *Inst = dyn_cast_or_null<Instruction>(Ptr)) {
+void InnerLoopVectorizer::setDebugLocFromInst(
+    const Value *V, Optional<IRBuilder<> *> CustomBuilder) {
+  IRBuilder<> *B = (CustomBuilder == None) ? &Builder : *CustomBuilder;
+  if (const Instruction *Inst = dyn_cast_or_null<Instruction>(V)) {
     const DILocation *DIL = Inst->getDebugLoc();
 
     // When a FSDiscriminator is enabled, we don't need to add the multiply
@@ -1052,15 +1055,15 @@ void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) 
       auto NewDIL =
           DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
       if (NewDIL)
-        B.SetCurrentDebugLocation(NewDIL.getValue());
+        B->SetCurrentDebugLocation(NewDIL.getValue());
       else
         LLVM_DEBUG(dbgs()
                    << "Failed to create new discriminator: "
                    << DIL->getFilename() << " Line: " << DIL->getLine());
     } else
-      B.SetCurrentDebugLocation(DIL);
+      B->SetCurrentDebugLocation(DIL);
   } else
-    B.SetCurrentDebugLocation(DebugLoc());
+    B->SetCurrentDebugLocation(DebugLoc());
 }
 
 /// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
@@ -2718,7 +2721,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
 
   for (unsigned Part = 0; Part < UF; Part++) {
     Value *AddrPart = State.get(Addr, VPIteration(Part, 0));
-    setDebugLocFromInst(Builder, AddrPart);
+    setDebugLocFromInst(AddrPart);
 
     // Notice current instruction could be any index. Need to adjust the address
     // to the member of index 0.
@@ -2744,7 +2747,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     AddrParts.push_back(Builder.CreateBitCast(AddrPart, PtrTy));
   }
 
-  setDebugLocFromInst(Builder, Instr);
+  setDebugLocFromInst(Instr);
   Value *PoisonVec = PoisonValue::get(VecTy);
 
   Value *MaskForGaps = nullptr;
@@ -2949,7 +2952,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
 
   // Handle Stores:
   if (SI) {
-    setDebugLocFromInst(Builder, SI);
+    setDebugLocFromInst(SI);
 
     for (unsigned Part = 0; Part < UF; ++Part) {
       Instruction *NewSI = nullptr;
@@ -2981,7 +2984,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
 
   // Handle loads.
   assert(LI && "Must have a load instruction");
-  setDebugLocFromInst(Builder, LI);
+  setDebugLocFromInst(LI);
   for (unsigned Part = 0; Part < UF; ++Part) {
     Value *NewLI;
     if (CreateGatherScatter) {
@@ -3023,7 +3026,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPValue *Def,
     if (!Instance.isFirstIteration())
       return;
 
-  setDebugLocFromInst(Builder, Instr);
+  setDebugLocFromInst(Instr);
 
   // Does this instruction return a value ?
   bool IsVoidRetTy = Instr->getType()->isVoidTy();
@@ -3073,11 +3076,11 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
 
   IRBuilder<> B(&*Header->getFirstInsertionPt());
   Instruction *OldInst = getDebugLocFromInstOrOperands(OldInduction);
-  setDebugLocFromInst(B, OldInst);
+  setDebugLocFromInst(OldInst, &B);
   auto *Induction = B.CreatePHI(Start->getType(), 2, "index");
 
   B.SetInsertPoint(Latch->getTerminator());
-  setDebugLocFromInst(B, OldInst);
+  setDebugLocFromInst(OldInst, &B);
 
   // Create i+1 and fill the PHINode.
   //
@@ -4322,7 +4325,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   RecurKind RK = RdxDesc.getRecurrenceKind();
   TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
   Instruction *LoopExitInst = RdxDesc.getLoopExitInstr();
-  setDebugLocFromInst(Builder, ReductionStartValue);
+  setDebugLocFromInst(ReductionStartValue);
   bool IsInLoopReductionPhi = Cost->isInLoopReduction(OrigPhi);
 
   VPValue *LoopExitInstDef = State.Plan->getVPValue(LoopExitInst);
@@ -4357,7 +4360,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   // instructions.
   Builder.SetInsertPoint(&*LoopMiddleBlock->getFirstInsertionPt());
 
-  setDebugLocFromInst(Builder, LoopExitInst);
+  setDebugLocFromInst(LoopExitInst);
 
   Type *PhiTy = OrigPhi->getType();
   // If tail is folded by masking, the vector value to leave the loop should be
@@ -4436,7 +4439,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   // conditional branch, and (c) other passes may add new predecessors which
   // terminate on this line. This is the easiest way to ensure we don't
   // accidentally cause an extra step back into the loop while debugging.
-  setDebugLocFromInst(Builder, LoopMiddleBlock->getTerminator());
+  setDebugLocFromInst(LoopMiddleBlock->getTerminator());
   if (IsOrdered)
     ReducedPartRdx = State.get(LoopExitInstDef, UF - 1);
   else {
@@ -4809,7 +4812,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
   assert(!Legal->isReductionVariable(P) &&
          "reductions should be handled above");
 
-  setDebugLocFromInst(Builder, P);
+  setDebugLocFromInst(P);
 
   // This PHINode must be an induction variable.
   // Make sure that we know about it.
@@ -4976,7 +4979,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
   case Instruction::Or:
   case Instruction::Xor: {
     // Just widen unops and binops.
-    setDebugLocFromInst(Builder, &I);
+    setDebugLocFromInst(&I);
 
     for (unsigned Part = 0; Part < UF; ++Part) {
       SmallVector<Value *, 2> Ops;
@@ -5000,7 +5003,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
     // Widen compares. Generate vector compares.
     bool FCmp = (I.getOpcode() == Instruction::FCmp);
     auto *Cmp = cast<CmpInst>(&I);
-    setDebugLocFromInst(Builder, Cmp);
+    setDebugLocFromInst(Cmp);
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *A = State.get(User.getOperand(0), Part);
       Value *B = State.get(User.getOperand(1), Part);
@@ -5033,7 +5036,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPValue *Def,
   case Instruction::FPTrunc:
   case Instruction::BitCast: {
     auto *CI = cast<CastInst>(&I);
-    setDebugLocFromInst(Builder, CI);
+    setDebugLocFromInst(CI);
 
     /// Vectorize casts.
     Type *DestTy =
@@ -5059,7 +5062,7 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
                                                VPTransformState &State) {
   assert(!isa<DbgInfoIntrinsic>(I) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
-  setDebugLocFromInst(Builder, &I);
+  setDebugLocFromInst(&I);
 
   Module *M = I.getParent()->getParent()->getParent();
   auto *CI = cast<CallInst>(&I);
@@ -5131,7 +5134,7 @@ void InnerLoopVectorizer::widenSelectInstruction(SelectInst &I, VPValue *VPDef,
                                                  VPUser &Operands,
                                                  bool InvariantCond,
                                                  VPTransformState &State) {
-  setDebugLocFromInst(Builder, &I);
+  setDebugLocFromInst(&I);
 
   // The condition can be loop invariant  but still defined inside the
   // loop. This means that we can't just use the original 'cond' value.
@@ -9484,7 +9487,7 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
 }
 
 void VPBlendRecipe::execute(VPTransformState &State) {
-  State.ILV->setDebugLocFromInst(State.Builder, Phi);
+  State.ILV->setDebugLocFromInst(Phi, &State.Builder);
   // We know that all PHIs in non-header blocks are converted into
   // selects, so we don't have to worry about the insertion order and we
   // can just use the builder.

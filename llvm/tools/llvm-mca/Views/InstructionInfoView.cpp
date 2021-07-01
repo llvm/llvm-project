@@ -147,7 +147,7 @@ json::Value InstructionInfoView::toJSON() const {
     JO.try_emplace("Instruction", (unsigned)I.index());
     InstInfo.push_back(std::move(JO));
   }
-  return json::Value(std::move(InstInfo));
+  return json::Object({{"InstructionList", json::Value(std::move(InstInfo))}});
 }
 } // namespace mca.
 } // namespace llvm
