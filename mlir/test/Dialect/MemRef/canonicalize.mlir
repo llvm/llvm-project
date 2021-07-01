@@ -420,3 +420,13 @@ func @alloc_const_fold_with_symbols2() -> memref<?xi32, #map0> {
   %0 = memref.alloc(%c1)[%c1, %c1] : memref<?xi32, #map0>
   return %0 : memref<?xi32, #map0>
 }
+
+// -----
+// CHECK-LABEL: func @allocator
+// CHECK:   %[[alloc:.+]] = memref.alloc
+// CHECK:   memref.store %[[alloc:.+]], %arg0
+func @allocator(%arg0 : memref<memref<?xi32>>, %arg1 : index)  {
+  %0 = memref.alloc(%arg1) : memref<?xi32>
+  memref.store %0, %arg0[] : memref<memref<?xi32>>
+  return 
+}

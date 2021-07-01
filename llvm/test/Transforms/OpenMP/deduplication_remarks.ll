@@ -30,7 +30,7 @@ declare !dbg !4 void @useI32(i32) local_unnamed_addr
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!8, !9, !10, !11, !12}
+!llvm.module.flags = !{!8, !9, !10, !11, !12, !29}
 !llvm.ident = !{!13}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
@@ -62,3 +62,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !26 = !DILocation(line: 9, column: 10, scope: !14)
 !27 = !DILocation(line: 10, column: 2, scope: !14)
 !28 = !DILocation(line: 13, column: 1, scope: !14)
+!29 = !{i32 7, !"openmp", i32 50}

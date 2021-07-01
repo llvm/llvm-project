@@ -76,6 +76,12 @@ namespace std::ranges {
   template<class T>
   concept bidirectional_range = see below;
 
+  template<class T>
+  concept random_access_range = see below;
+
+  template<class T>
+  concept contiguous_range = see below;
+
   template <class _Tp>
     concept common_range = see below;
 
@@ -88,6 +94,13 @@ namespace std::ranges {
   template<class T>
     requires is_object_v<T>
   class empty_view;
+
+  // [range.drop], drop view
+  template<view V>
+    class drop_view;
+
+  template<class T>
+    inline constexpr bool enable_borrowed_range<drop_view<T>> = enable_borrowed_range<T>;
 }
 
 */

@@ -1,5 +1,4 @@
 ; Tests that allocas escaped through function calls will live on the frame.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 define i8* @f() "coroutine.presplit"="1" {

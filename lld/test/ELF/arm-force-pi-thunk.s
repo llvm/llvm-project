@@ -35,9 +35,9 @@ low_target2:
 // CHECK-NEXT: <_start>:
 // CHECK-NEXT:       94:        70 47   bx      lr
 // CHECK: <low_target>:
-// CHECK-NEXT:       96:        00 f0 03 f8     bl      #6
-// CHECK-NEXT:       9a:        00 f0 07 f8     bl      #14
-// CHECK-NEXT:       9e:        d4 d4   bmi     #-88
+// CHECK-NEXT:       96:        00 f0 03 f8     bl      0xa0 <__ThumbV7PILongThunk_high_target>
+// CHECK-NEXT:       9a:        00 f0 07 f8     bl      0xac <__ThumbV7PILongThunk_high_target2>
+// CHECK-NEXT:       9e:        d4 d4
 // CHECK: <__ThumbV7PILongThunk_high_target>:
 // CHECK-NEXT:       a0:        4f f6 55 7c     movw    r12, #65365
 // CHECK-NEXT:       a4:        c0 f2 ff 1c     movt    r12, #511
@@ -49,8 +49,8 @@ low_target2:
 // CHECK-NEXT:       b4:        fc 44   add     r12, pc
 // CHECK-NEXT:       b6:        60 47   bx      r12
 // CHECK: <low_target2>:
-// CHECK-NEXT:       b8:        ff f7 f2 ff     bl      #-28
-// CHECK-NEXT:       bc:        ff f7 f6 ff     bl      #-20
+// CHECK-NEXT:       b8:        ff f7 f2 ff     bl      0xa0 <__ThumbV7PILongThunk_high_target>
+// CHECK-NEXT:       bc:        ff f7 f6 ff     bl      0xac <__ThumbV7PILongThunk_high_target2>
 
 
  .section .text_high, "ax", %progbits
@@ -72,8 +72,8 @@ high_target2:
 // CHECK: Disassembly of section .text_high:
 // CHECK-EMPTY:
 // CHECK-NEXT: <high_target>:
-// CHECK-NEXT:  2000000:        00 f0 02 f8     bl      #4
-// CHECK-NEXT:  2000004:        00 f0 06 f8     bl      #12
+// CHECK-NEXT:  2000000:        00 f0 02 f8     bl      0x2000008 <__ThumbV7PILongThunk_low_target>
+// CHECK-NEXT:  2000004:        00 f0 06 f8     bl      0x2000014 <__ThumbV7PILongThunk_low_target2>
 // CHECK: <__ThumbV7PILongThunk_low_target>:
 // CHECK-NEXT:  2000008:        40 f2 83 0c     movw    r12, #131
 // CHECK-NEXT:  200000c:        cf f6 00 6c     movt    r12, #65024
@@ -85,5 +85,5 @@ high_target2:
 // CHECK-NEXT:  200001c:        fc 44   add     r12, pc
 // CHECK-NEXT:  200001e:        60 47   bx      r12
 // CHECK: <high_target2>:
-// CHECK-NEXT:  2000020:        ff f7 f2 ff     bl      #-28
-// CHECK-NEXT:  2000024:        ff f7 f6 ff     bl      #-20
+// CHECK-NEXT:  2000020:        ff f7 f2 ff     bl      0x2000008 <__ThumbV7PILongThunk_low_target>
+// CHECK-NEXT:  2000024:        ff f7 f6 ff     bl      0x2000014 <__ThumbV7PILongThunk_low_target2>

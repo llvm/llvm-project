@@ -64,14 +64,18 @@ for.end:
 ; instead scalarized if Cost-Model so decided as part of its
 ; sink-scalar-operands optimization for predicated instructions.
 ;
-; SINK-GATHER: vector.body:
-; SINK-GATHER: pred.load.if:
-; SINK-GATHER:   %[[T0:.+]] = load i32, i32* %{{.*}}, align 4
-; SINK-GATHER: pred.load.continue:
-; SINK-GATHER:   %[[T1:.+]] = phi i32 [ poison, %vector.body ], [ %[[T0]], %pred.load.if ]
-; SINK-GATHER: pred.udiv.if:
-; SINK-GATHER:   %{{.*}} = udiv i32 %[[T1]], %{{.*}}
-; SINK-GATHER: pred.udiv.continue:
+; SINK-GATHER-LABEL: @scalarize_and_sink_gather
+; SINK-GATHER:      vector.body:
+; SINK-GATHER-LABEL: pred.udiv.if:                                     ; preds = %vector.body
+; SINK-GATHER-NEXT:   [[EXT:%.+]] = extractelement <8 x i64> {{.*}}, i32 0
+; SINK-GATHER-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, i32* %a, i64 [[EXT]]
+; SINK-GATHER-NEXT:   [[LV:%.+]] = load i32, i32* [[GEP]], align 4
+; SINK-GATHER-NEXT:   [[UDIV:%.+]] = udiv i32 [[LV]], %x
+; SINK-GATHER-NEXT:   [[INS:%.+]] = insertelement <8 x i32> poison, i32 [[UDIV]], i32 0
+; SINK-GATHER-NEXT:   br label %pred.udiv.continue
+; SINK-GATHER:      pred.udiv.continue:
+; SINK-GATHER-NEXT:   phi i32 [ poison, %vector.body ], [ [[LV]], %pred.udiv.if ]
+; SINK-GATHER-NEXT:   phi <8 x i32> [ poison, %vector.body ], [ [[INS]], %pred.udiv.if ]
 define i32 @scalarize_and_sink_gather(i32* %a, i1 %c, i32 %x, i64 %n) {
 entry:
   br label %for.body

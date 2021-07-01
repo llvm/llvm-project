@@ -34,13 +34,13 @@
 # HEADER: MH_HAS_TLV_DESCRIPTORS
 
 # REG:       <_main>:
-# REG-NEXT:  leaq    {{.*}}(%rip), %rax  # {{.*}} <_foo>
-# REG-NEXT:  leaq    {{.*}}(%rip), %rax  # {{.*}} <_bar>
+# REG-NEXT:  leaq    {{.*}}(%rip), %rax  ## {{.*}} <_foo>
+# REG-NEXT:  leaq    {{.*}}(%rip), %rax  ## {{.*}} <_bar>
 # REG-NEXT:  retq
 
 # TBSS:       <_f>:
-# TBSS-NEXT:  leaq    {{.*}}(%rip), %rax  # {{.*}} <_baz>
-# TBSS-NEXT:  leaq    {{.*}}(%rip), %rax  # {{.*}} <_qux>
+# TBSS-NEXT:  leaq    {{.*}}(%rip), %rax  ## {{.*}} <_baz>
+# TBSS-NEXT:  leaq    {{.*}}(%rip), %rax  ## {{.*}} <_qux>
 # TBSS-NEXT:  retq
 
 # REG-TLVP:      00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00

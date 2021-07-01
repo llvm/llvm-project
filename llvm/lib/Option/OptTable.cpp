@@ -184,9 +184,8 @@ static unsigned matchOption(const OptTable::Info *I, StringRef Str,
     StringRef Prefix(*Pre);
     if (Str.startswith(Prefix)) {
       StringRef Rest = Str.substr(Prefix.size());
-      bool Matched = IgnoreCase
-          ? Rest.startswith_lower(I->Name)
-          : Rest.startswith(I->Name);
+      bool Matched = IgnoreCase ? Rest.startswith_insensitive(I->Name)
+                                : Rest.startswith(I->Name);
       if (Matched)
         return Prefix.size() + StringRef(I->Name).size();
     }
@@ -619,13 +618,13 @@ static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
   return getOptionHelpGroup(Opts, GroupID);
 }
 
-void OptTable::PrintHelp(raw_ostream &OS, const char *Usage, const char *Title,
+void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                          bool ShowHidden, bool ShowAllAliases) const {
-  PrintHelp(OS, Usage, Title, /*Include*/ 0, /*Exclude*/
+  printHelp(OS, Usage, Title, /*Include*/ 0, /*Exclude*/
             (ShowHidden ? 0 : HelpHidden), ShowAllAliases);
 }
 
-void OptTable::PrintHelp(raw_ostream &OS, const char *Usage, const char *Title,
+void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                          unsigned FlagsToInclude, unsigned FlagsToExclude,
                          bool ShowAllAliases) const {
   OS << "OVERVIEW: " << Title << "\n\n";

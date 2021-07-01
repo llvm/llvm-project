@@ -348,24 +348,27 @@ entry:
 define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-MVE-LABEL: vector_add_f32:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-MVE-NEXT:    push {r4, r5, r7, lr}
-; CHECK-MVE-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-MVE-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-MVE-NEXT:    vmov d13, r2, r3
-; CHECK-MVE-NEXT:    vmov d12, r0, r1
-; CHECK-MVE-NEXT:    add r1, sp, #64
-; CHECK-MVE-NEXT:    vldrw.u32 q5, [r1]
-; CHECK-MVE-NEXT:    vmov r4, r0, d13
-; CHECK-MVE-NEXT:    vmov r5, r1, d11
+; CHECK-MVE-NEXT:    .save {r4, r5, r6, r7, lr}
+; CHECK-MVE-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-MVE-NEXT:    .pad #4
+; CHECK-MVE-NEXT:    sub sp, #4
+; CHECK-MVE-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-MVE-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-MVE-NEXT:    mov r4, r0
+; CHECK-MVE-NEXT:    add r0, sp, #56
+; CHECK-MVE-NEXT:    vldrw.u32 q5, [r0]
+; CHECK-MVE-NEXT:    mov r6, r1
+; CHECK-MVE-NEXT:    mov r0, r3
+; CHECK-MVE-NEXT:    mov r5, r2
+; CHECK-MVE-NEXT:    vmov r7, r1, d11
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
 ; CHECK-MVE-NEXT:    vmov s19, r0
-; CHECK-MVE-NEXT:    mov r0, r4
-; CHECK-MVE-NEXT:    mov r1, r5
+; CHECK-MVE-NEXT:    mov r0, r5
+; CHECK-MVE-NEXT:    mov r1, r7
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
-; CHECK-MVE-NEXT:    vmov s18, r0
-; CHECK-MVE-NEXT:    vmov r4, r0, d12
 ; CHECK-MVE-NEXT:    vmov r5, r1, d10
+; CHECK-MVE-NEXT:    vmov s18, r0
+; CHECK-MVE-NEXT:    mov r0, r6
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
 ; CHECK-MVE-NEXT:    vmov s17, r0
 ; CHECK-MVE-NEXT:    mov r0, r4
@@ -374,8 +377,9 @@ define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-MVE-NEXT:    vmov s16, r0
 ; CHECK-MVE-NEXT:    vmov r2, r3, d9
 ; CHECK-MVE-NEXT:    vmov r0, r1, d8
-; CHECK-MVE-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-MVE-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-MVE-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-MVE-NEXT:    add sp, #4
+; CHECK-MVE-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
 ; CHECK-BE-LABEL: vector_add_f32:
 ; CHECK-BE:       @ %bb.0: @ %entry
@@ -432,10 +436,10 @@ define <2 x double> @vector_add_f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK-MVE-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-MVE-NEXT:    .pad #4
 ; CHECK-MVE-NEXT:    sub sp, #4
-; CHECK-MVE-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-MVE-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-MVE-NEXT:    .vsave {d8, d9}
+; CHECK-MVE-NEXT:    vpush {d8, d9}
 ; CHECK-MVE-NEXT:    mov r5, r0
-; CHECK-MVE-NEXT:    add r0, sp, #56
+; CHECK-MVE-NEXT:    add r0, sp, #40
 ; CHECK-MVE-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-MVE-NEXT:    mov r4, r2
 ; CHECK-MVE-NEXT:    mov r6, r3
@@ -445,14 +449,14 @@ define <2 x double> @vector_add_f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK-MVE-NEXT:    mov r1, r6
 ; CHECK-MVE-NEXT:    bl __aeabi_dadd
 ; CHECK-MVE-NEXT:    vmov r2, r3, d8
-; CHECK-MVE-NEXT:    vmov d11, r0, r1
+; CHECK-MVE-NEXT:    mov r4, r0
+; CHECK-MVE-NEXT:    mov r6, r1
 ; CHECK-MVE-NEXT:    mov r0, r5
 ; CHECK-MVE-NEXT:    mov r1, r7
 ; CHECK-MVE-NEXT:    bl __aeabi_dadd
-; CHECK-MVE-NEXT:    vmov d10, r0, r1
-; CHECK-MVE-NEXT:    vmov r2, r3, d11
-; CHECK-MVE-NEXT:    vmov r0, r1, d10
-; CHECK-MVE-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-MVE-NEXT:    mov r2, r4
+; CHECK-MVE-NEXT:    mov r3, r6
+; CHECK-MVE-NEXT:    vpop {d8, d9}
 ; CHECK-MVE-NEXT:    add sp, #4
 ; CHECK-MVE-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
@@ -462,10 +466,10 @@ define <2 x double> @vector_add_f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK-BE-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
-; CHECK-BE-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-BE-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-BE-NEXT:    .vsave {d8, d9}
+; CHECK-BE-NEXT:    vpush {d8, d9}
 ; CHECK-BE-NEXT:    mov r5, r0
-; CHECK-BE-NEXT:    add r0, sp, #56
+; CHECK-BE-NEXT:    add r0, sp, #40
 ; CHECK-BE-NEXT:    vldrb.u8 q0, [r0]
 ; CHECK-BE-NEXT:    mov r6, r2
 ; CHECK-BE-NEXT:    mov r4, r3
@@ -476,14 +480,14 @@ define <2 x double> @vector_add_f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r4
 ; CHECK-BE-NEXT:    bl __aeabi_dadd
 ; CHECK-BE-NEXT:    vmov r3, r2, d8
-; CHECK-BE-NEXT:    vmov d11, r1, r0
+; CHECK-BE-NEXT:    mov r4, r0
+; CHECK-BE-NEXT:    mov r6, r1
 ; CHECK-BE-NEXT:    mov r0, r5
 ; CHECK-BE-NEXT:    mov r1, r7
 ; CHECK-BE-NEXT:    bl __aeabi_dadd
-; CHECK-BE-NEXT:    vmov d10, r1, r0
-; CHECK-BE-NEXT:    vmov r3, r2, d11
-; CHECK-BE-NEXT:    vmov r1, r0, d10
-; CHECK-BE-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-BE-NEXT:    mov r2, r4
+; CHECK-BE-NEXT:    mov r3, r6
+; CHECK-BE-NEXT:    vpop {d8, d9}
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    pop {r4, r5, r6, r7, pc}
 ;
@@ -495,24 +499,22 @@ define <2 x double> @vector_add_f64(<2 x double> %lhs, <2 x double> %rhs) {
 ; CHECK-FP-NEXT:    sub sp, #4
 ; CHECK-FP-NEXT:    .vsave {d8, d9}
 ; CHECK-FP-NEXT:    vpush {d8, d9}
-; CHECK-FP-NEXT:    mov r5, r0
-; CHECK-FP-NEXT:    add r0, sp, #40
-; CHECK-FP-NEXT:    vldrw.u32 q4, [r0]
-; CHECK-FP-NEXT:    mov r4, r2
-; CHECK-FP-NEXT:    mov r6, r3
-; CHECK-FP-NEXT:    mov r7, r1
-; CHECK-FP-NEXT:    vmov r2, r3, d9
-; CHECK-FP-NEXT:    mov r0, r4
-; CHECK-FP-NEXT:    mov r1, r6
-; CHECK-FP-NEXT:    bl __aeabi_dadd
+; CHECK-FP-NEXT:    mov r5, r2
+; CHECK-FP-NEXT:    add r2, sp, #40
+; CHECK-FP-NEXT:    vldrw.u32 q4, [r2]
+; CHECK-FP-NEXT:    mov r4, r3
 ; CHECK-FP-NEXT:    vmov r2, r3, d8
-; CHECK-FP-NEXT:    vmov d9, r0, r1
-; CHECK-FP-NEXT:    mov r0, r5
-; CHECK-FP-NEXT:    mov r1, r7
 ; CHECK-FP-NEXT:    bl __aeabi_dadd
-; CHECK-FP-NEXT:    vmov d8, r0, r1
 ; CHECK-FP-NEXT:    vmov r2, r3, d9
-; CHECK-FP-NEXT:    vmov r0, r1, d8
+; CHECK-FP-NEXT:    mov r6, r0
+; CHECK-FP-NEXT:    mov r7, r1
+; CHECK-FP-NEXT:    mov r0, r5
+; CHECK-FP-NEXT:    mov r1, r4
+; CHECK-FP-NEXT:    bl __aeabi_dadd
+; CHECK-FP-NEXT:    mov r2, r0
+; CHECK-FP-NEXT:    mov r3, r1
+; CHECK-FP-NEXT:    mov r0, r6
+; CHECK-FP-NEXT:    mov r1, r7
 ; CHECK-FP-NEXT:    vpop {d8, d9}
 ; CHECK-FP-NEXT:    add sp, #4
 ; CHECK-FP-NEXT:    pop {r4, r5, r6, r7, pc}

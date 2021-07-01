@@ -983,7 +983,7 @@ def : InstRW<[Zn2WriteFPU03], (instregex "FICOM(P?)(16|32)m")>;
 def : InstRW<[Zn2WriteFPU0Lat1], (instregex "TST_F")>;
 
 // FXAM.
-def : InstRW<[Zn2WriteFPU3Lat1], (instrs FXAM)>;
+def : InstRW<[Zn2WriteFPU3Lat1], (instrs XAM_F)>;
 
 // FPREM.
 def : InstRW<[WriteMicrocoded], (instrs FPREM)>;

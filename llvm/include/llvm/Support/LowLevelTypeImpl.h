@@ -67,7 +67,7 @@ public:
     assert(!EC.isScalar() && "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
     return LLT{ScalarTy.isPointer(), /*isVector=*/true, EC,
-               ScalarTy.getSizeInBits(),
+               ScalarTy.getSizeInBits().getFixedSize(),
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 
@@ -96,18 +96,18 @@ public:
     return vector(ElementCount::getScalable(MinNumElements), ScalarTy);
   }
 
-  static LLT scalarOrVector(uint16_t NumElements, LLT ScalarTy) {
-    // FIXME: Migrate interface to use ElementCount
-    return NumElements == 1 ? ScalarTy
-                            : LLT::fixed_vector(NumElements, ScalarTy);
+  static LLT scalarOrVector(ElementCount EC, LLT ScalarTy) {
+    return EC.isScalar() ? ScalarTy : LLT::vector(EC, ScalarTy);
   }
 
-  static LLT scalarOrVector(uint16_t NumElements, unsigned ScalarSize) {
-    return scalarOrVector(NumElements, LLT::scalar(ScalarSize));
+  static LLT scalarOrVector(ElementCount EC, uint64_t ScalarSize) {
+    assert(ScalarSize <= std::numeric_limits<unsigned>::max() &&
+           "Not enough bits in LLT to represent size");
+    return scalarOrVector(EC, LLT::scalar(static_cast<unsigned>(ScalarSize)));
   }
 
   explicit LLT(bool isPointer, bool isVector, ElementCount EC,
-               unsigned SizeInBits, unsigned AddressSpace) {
+               uint64_t SizeInBits, unsigned AddressSpace) {
     init(isPointer, isVector, EC, SizeInBits, AddressSpace);
   }
   explicit LLT() : IsPointer(false), IsVector(false), RawData(0) {}
@@ -150,18 +150,19 @@ public:
   }
 
   /// Returns the total size of the type. Must only be called on sized types.
-  unsigned getSizeInBits() const {
+  TypeSize getSizeInBits() const {
     if (isPointer() || isScalar())
-      return getScalarSizeInBits();
-    // FIXME: This should return a TypeSize in order to work for scalable
-    // vectors.
-    return getScalarSizeInBits() * getElementCount().getKnownMinValue();
+      return TypeSize::Fixed(getScalarSizeInBits());
+    auto EC = getElementCount();
+    return TypeSize(getScalarSizeInBits() * EC.getKnownMinValue(),
+                    EC.isScalable());
   }
 
   /// Returns the total size of the type in bytes, i.e. number of whole bytes
   /// needed to represent the size in bits. Must only be called on sized types.
-  unsigned getSizeInBytes() const {
-    return (getSizeInBits() + 7) / 8;
+  TypeSize getSizeInBytes() const {
+    TypeSize BaseSize = getSizeInBits();
+    return {(BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable()};
   }
 
   LLT getScalarType() const {
@@ -184,12 +185,10 @@ public:
                       : LLT::scalar(NewEltSize);
   }
 
-  /// Return a vector or scalar with the same element type and the new number of
-  /// elements.
-  LLT changeNumElements(unsigned NewNumElts) const {
-    assert((!isVector() || !isScalable()) &&
-           "Cannot use changeNumElements on a scalable vector");
-    return LLT::scalarOrVector(NewNumElts, getScalarType());
+  /// Return a vector or scalar with the same element type and the new element
+  /// count.
+  LLT changeElementCount(ElementCount EC) const {
+    return LLT::scalarOrVector(EC, getScalarType());
   }
 
   /// Return a type that is \p Factor times smaller. Reduces the number of
@@ -198,15 +197,16 @@ public:
   LLT divide(int Factor) const {
     assert(Factor != 1);
     if (isVector()) {
-      assert(getNumElements() % Factor == 0);
-      return scalarOrVector(getNumElements() / Factor, getElementType());
+      assert(getElementCount().isKnownMultipleOf(Factor));
+      return scalarOrVector(getElementCount().divideCoefficientBy(Factor),
+                            getElementType());
     }
 
-    assert(getSizeInBits() % Factor == 0);
-    return scalar(getSizeInBits() / Factor);
+    assert(getScalarSizeInBits() % Factor == 0);
+    return scalar(getScalarSizeInBits() / Factor);
   }
 
-  bool isByteSized() const { return (getSizeInBits() & 7) == 0; }
+  bool isByteSized() const { return getSizeInBits().isKnownMultipleOf(8); }
 
   unsigned getScalarSizeInBits() const {
     assert(RawData != 0 && "Invalid Type");
@@ -336,8 +336,10 @@ private:
     return getMask(FieldInfo) & (RawData >> FieldInfo[1]);
   }
 
-  void init(bool IsPointer, bool IsVector, ElementCount EC, unsigned SizeInBits,
+  void init(bool IsPointer, bool IsVector, ElementCount EC, uint64_t SizeInBits,
             unsigned AddressSpace) {
+    assert(SizeInBits <= std::numeric_limits<unsigned>::max() &&
+           "Not enough bits in LLT to represent size");
     this->IsPointer = IsPointer;
     this->IsVector = IsVector;
     if (!IsVector) {
@@ -364,6 +366,7 @@ private:
     }
   }
 
+public:
   uint64_t getUniqueRAWLLTData() const {
     return ((uint64_t)RawData) << 2 | ((uint64_t)IsPointer) << 1 |
            ((uint64_t)IsVector);

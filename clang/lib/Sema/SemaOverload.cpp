@@ -8466,7 +8466,7 @@ public:
   //        bool       operator==(T, T);
   //        bool       operator!=(T, T);
   //           R       operator<=>(T, T)
-  void addGenericBinaryPointerOrEnumeralOverloads() {
+  void addGenericBinaryPointerOrEnumeralOverloads(bool IsSpaceship) {
     // C++ [over.match.oper]p3:
     //   [...]the built-in candidates include all of the candidate operator
     //   functions defined in 13.6 that, compared to the given operator, [...]
@@ -8524,6 +8524,8 @@ public:
       for (QualType PtrTy : CandidateTypes[ArgIdx].pointer_types()) {
         // Don't add the same builtin candidate twice.
         if (!AddedTypes.insert(S.Context.getCanonicalType(PtrTy)).second)
+          continue;
+        if (IsSpaceship && PtrTy->isFunctionPointerType())
           continue;
 
         QualType ParamTypes[2] = {PtrTy, PtrTy};
@@ -8715,7 +8717,7 @@ public:
   //
   //   where LR is the result of the usual arithmetic conversions
   //   between types L and R.
-  void addBinaryBitwiseArithmeticOverloads(OverloadedOperatorKind Op) {
+  void addBinaryBitwiseArithmeticOverloads() {
     if (!HasArithmeticOrEnumeralCandidateType)
       return;
 
@@ -9221,18 +9223,20 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
   case OO_EqualEqual:
   case OO_ExclaimEqual:
     OpBuilder.addEqualEqualOrNotEqualMemberPointerOrNullptrOverloads();
-    LLVM_FALLTHROUGH;
+    OpBuilder.addGenericBinaryPointerOrEnumeralOverloads(/*IsSpaceship=*/false);
+    OpBuilder.addGenericBinaryArithmeticOverloads();
+    break;
 
   case OO_Less:
   case OO_Greater:
   case OO_LessEqual:
   case OO_GreaterEqual:
-    OpBuilder.addGenericBinaryPointerOrEnumeralOverloads();
+    OpBuilder.addGenericBinaryPointerOrEnumeralOverloads(/*IsSpaceship=*/false);
     OpBuilder.addGenericBinaryArithmeticOverloads();
     break;
 
   case OO_Spaceship:
-    OpBuilder.addGenericBinaryPointerOrEnumeralOverloads();
+    OpBuilder.addGenericBinaryPointerOrEnumeralOverloads(/*IsSpaceship=*/true);
     OpBuilder.addThreeWayArithmeticOverloads();
     break;
 
@@ -9241,7 +9245,7 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
   case OO_Pipe:
   case OO_LessLess:
   case OO_GreaterGreater:
-    OpBuilder.addBinaryBitwiseArithmeticOverloads(Op);
+    OpBuilder.addBinaryBitwiseArithmeticOverloads();
     break;
 
   case OO_Amp: // '&' is either unary or binary
@@ -9251,7 +9255,7 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
       //      operator '->', the built-in candidates set is empty.
       break;
 
-    OpBuilder.addBinaryBitwiseArithmeticOverloads(Op);
+    OpBuilder.addBinaryBitwiseArithmeticOverloads();
     break;
 
   case OO_Tilde:

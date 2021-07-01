@@ -55,9 +55,22 @@ cleanup:
   ret i8* %retval.0
 }
 
+; CHECK-LABEL: define void @test3(
+; CHECK: call void @foo2() #[[ATTR1:.*]] [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK-NEXT: ret void
+
+define void @test3() {
+  call void @foo2() #0 [ "clang.arc.attachedcall"(i64 0) ]
+  ret void
+}
+
 declare i8* @foo()
+declare void @foo2()
 declare i32 @__gxx_personality_v0(...)
 
 !llvm.module.flags = !{!0}
+
+; CHECK: attributes #[[ATTR1]] = { noreturn }
+attributes #0 = { noreturn }
 
 !0 = !{i32 1, !"clang.arc.retainAutoreleasedReturnValueMarker", !"mov\09fp, fp\09\09// marker for objc_retainAutoreleaseReturnValue"}

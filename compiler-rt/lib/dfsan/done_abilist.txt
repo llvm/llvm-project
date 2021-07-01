@@ -38,7 +38,8 @@ fun:dfsan_get_origin=uninstrumented
 fun:dfsan_get_origin=custom
 fun:dfsan_get_init_origin=uninstrumented
 fun:dfsan_get_init_origin=discard
-
+fun:dfsan_get_track_origins=uninstrumented
+fun:dfsan_get_track_origins=discard
 
 ###############################################################################
 # glibc

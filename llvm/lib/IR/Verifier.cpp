@@ -699,8 +699,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
              "the third field of the element type is mandatory, "
              "specify i8* null to migrate from the obsoleted 2-field form");
       Type *ETy = STy->getTypeAtIndex(2);
+      Type *Int8Ty = Type::getInt8Ty(ETy->getContext());
       Assert(ETy->isPointerTy() &&
-                 cast<PointerType>(ETy)->getElementType()->isIntegerTy(8),
+                 cast<PointerType>(ETy)->isOpaqueOrPointeeTypeMatches(Int8Ty),
              "wrong type for intrinsic global variable", &GV);
     }
   }
@@ -3353,9 +3354,11 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   if (FoundAttachedCallBundle)
-    Assert(FTy->getReturnType()->isPointerTy(),
+    Assert((FTy->getReturnType()->isPointerTy() ||
+            (Call.doesNotReturn() && FTy->getReturnType()->isVoidTy())),
            "a call with operand bundle \"clang.arc.attachedcall\" must call a "
-           "function returning a pointer",
+           "function returning a pointer or a non-returning function that has "
+           "a void return type",
            Call);
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
@@ -5066,15 +5069,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Assert(Alignment->getValue().isPowerOf2(),
            "masked_load: alignment must be a power of 2", Call);
 
-    // DataTy is the overloaded type
-    Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
-    Assert(DataTy == Call.getType(),
+    PointerType *PtrTy = cast<PointerType>(Ptr->getType());
+    Assert(PtrTy->isOpaqueOrPointeeTypeMatches(Call.getType()),
            "masked_load: return must match pointer type", Call);
-    Assert(PassThru->getType() == DataTy,
-           "masked_load: pass through and data type must match", Call);
+    Assert(PassThru->getType() == Call.getType(),
+           "masked_load: pass through and return type must match", Call);
     Assert(cast<VectorType>(Mask->getType())->getElementCount() ==
-               cast<VectorType>(DataTy)->getElementCount(),
-           "masked_load: vector mask must be same length as data", Call);
+               cast<VectorType>(Call.getType())->getElementCount(),
+           "masked_load: vector mask must be same length as return", Call);
     break;
   }
   case Intrinsic::masked_store: {
@@ -5087,13 +5089,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Assert(Alignment->getValue().isPowerOf2(),
            "masked_store: alignment must be a power of 2", Call);
 
-    // DataTy is the overloaded type
-    Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
-    Assert(DataTy == Val->getType(),
+    PointerType *PtrTy = cast<PointerType>(Ptr->getType());
+    Assert(PtrTy->isOpaqueOrPointeeTypeMatches(Val->getType()),
            "masked_store: storee must match pointer type", Call);
     Assert(cast<VectorType>(Mask->getType())->getElementCount() ==
-               cast<VectorType>(DataTy)->getElementCount(),
-           "masked_store: vector mask must be same length as data", Call);
+               cast<VectorType>(Val->getType())->getElementCount(),
+           "masked_store: vector mask must be same length as value", Call);
     break;
   }
 

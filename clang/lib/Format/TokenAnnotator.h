@@ -195,6 +195,11 @@ private:
   FormatToken *calculateInitializerColumnList(AnnotatedLine &Line,
                                               FormatToken *CurrentToken,
                                               unsigned Depth);
+  FormatStyle::PointerAlignmentStyle
+  getTokenReferenceAlignment(const FormatToken &PointerOrReference);
+
+  FormatStyle::PointerAlignmentStyle
+  getTokenPointerOrReferenceAlignment(const FormatToken &PointerOrReference);
 
   const FormatStyle &Style;
 

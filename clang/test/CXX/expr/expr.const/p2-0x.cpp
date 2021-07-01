@@ -515,6 +515,7 @@ namespace UnspecifiedRelations {
 
   constexpr void (*pf)() = &f, (*pg)() = &g;
   constexpr bool u13 = pf < pg; // expected-error {{constant expression}} expected-note {{comparison has unspecified value}}
+                                // expected-warning@-1 {{ordered comparison of function pointers}}
   constexpr bool u14 = pf == pg;
 
   // If two pointers point to non-static data members of the same object with

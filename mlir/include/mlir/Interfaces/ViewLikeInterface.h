@@ -13,6 +13,7 @@
 #ifndef MLIR_INTERFACES_VIEWLIKEINTERFACE_H_
 #define MLIR_INTERFACES_VIEWLIKEINTERFACE_H_
 
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -29,8 +30,6 @@ struct Range {
 };
 
 class OffsetSizeAndStrideOpInterface;
-
-bool isEqualConstantInt(OpFoldResult ofr, int64_t value);
 
 namespace detail {
 LogicalResult verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op);

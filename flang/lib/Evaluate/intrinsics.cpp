@@ -1355,6 +1355,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
 
   // Check the ranks of the arguments against the intrinsic's interface.
   const ActualArgument *arrayArg{nullptr};
+  const char *arrayArgName{nullptr};
   const ActualArgument *knownArg{nullptr};
   std::optional<int> shapeArgSize;
   int elementalRank{0};
@@ -1411,6 +1412,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         argOk = rank > 0;
         if (!arrayArg) {
           arrayArg = arg;
+          arrayArgName = d.keyword;
         } else {
           argOk &= rank == arrayArg->Rank();
         }
@@ -1424,9 +1426,22 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       case Rank::anyOrAssumedRank:
         argOk = true;
         break;
-      case Rank::conformable:
+      case Rank::conformable: // arg must be conformable with previous arrayArg
         CHECK(arrayArg);
-        argOk = rank == 0 || rank == arrayArg->Rank();
+        CHECK(arrayArgName);
+        if (const std::optional<Shape> &arrayArgShape{
+                GetShape(context, *arrayArg)}) {
+          if (const std::optional<Shape> &argShape{GetShape(context, *arg)}) {
+            std::string arrayArgMsg{"'"};
+            arrayArgMsg = arrayArgMsg + arrayArgName + "='" + " argument";
+            std::string argMsg{"'"};
+            argMsg = argMsg + d.keyword + "='" + " argument";
+            CheckConformance(context.messages(), *arrayArgShape, *argShape,
+                CheckConformanceFlags::RightScalarExpandable,
+                arrayArgMsg.c_str(), argMsg.c_str());
+          }
+        }
+        argOk = true; // Avoid an additional error message
         break;
       case Rank::dimReduced:
       case Rank::dimRemovedOrScalar:

@@ -327,7 +327,7 @@ OperandMatchResultTy MSP430AsmParser::tryParseRegister(unsigned &RegNo,
 bool MSP430AsmParser::parseJccInstruction(ParseInstructionInfo &Info,
                                           StringRef Name, SMLoc NameLoc,
                                           OperandVector &Operands) {
-  if (!Name.startswith_lower("j"))
+  if (!Name.startswith_insensitive("j"))
     return true;
 
   auto CC = Name.drop_front().lower();
@@ -390,7 +390,7 @@ bool MSP430AsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                        StringRef Name, SMLoc NameLoc,
                                        OperandVector &Operands) {
   // Drop .w suffix
-  if (Name.endswith_lower(".w"))
+  if (Name.endswith_insensitive(".w"))
     Name = Name.drop_back(2);
 
   if (!parseJccInstruction(Info, Name, NameLoc, Operands))

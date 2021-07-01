@@ -4,6 +4,7 @@
 declare void @g()
 declare %0* @foo0()
 declare i8 @foo1()
+declare void @noreturn_func()
 
 ; Operand bundles uses are like regular uses, and need to be dominated
 ; by their defs.
@@ -69,9 +70,15 @@ define void @f_clang_arc_attachedcall() {
 ; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i64 0), "clang.arc.attachedcall"(i64 0) ]
 ; CHECK-NEXT: must call a function returning a pointer
 ; CHECK-NEXT: call i8 @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK-NEXT: or a non-returning function
+; CHECK-NEXT: call void @g() [ "clang.arc.attachedcall"(i64 0) ]
 
   call %0* @foo0() [ "clang.arc.attachedcall"(i64 0) ]
   call %0* @foo0() [ "clang.arc.attachedcall"(i64 0), "clang.arc.attachedcall"(i64 0) ]
   call i8 @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+  call void @noreturn_func() #0 [ "clang.arc.attachedcall"(i64 0) ]
+  call void @g() [ "clang.arc.attachedcall"(i64 0) ]
   ret void
 }
+
+attributes #0 = { noreturn }

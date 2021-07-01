@@ -156,7 +156,7 @@ private:
       return false;
 
     StringRef Name = getSimpleName(*Callee);
-    if (!Name.startswith_lower("set"))
+    if (!Name.startswith_insensitive("set"))
       return false;
 
     // In addition to checking that the function has one parameter and its
@@ -168,10 +168,10 @@ private:
     // This currently doesn't handle cases where params use snake_case
     // and functions don't, e.g.
     //   void setExceptionHandler(EHFunc exception_handler);
-    // We could improve this by replacing `equals_lower` with some
+    // We could improve this by replacing `equals_insensitive` with some
     // `sloppy_equals` which ignores case and also skips underscores.
     StringRef WhatItIsSetting = Name.substr(3).ltrim("_");
-    return WhatItIsSetting.equals_lower(ParamNames[0]);
+    return WhatItIsSetting.equals_insensitive(ParamNames[0]);
   }
 
   bool shouldHint(const Expr *Arg, StringRef ParamName) {

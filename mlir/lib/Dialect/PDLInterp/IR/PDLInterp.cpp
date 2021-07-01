@@ -14,6 +14,8 @@
 using namespace mlir;
 using namespace mlir::pdl_interp;
 
+#include "mlir/Dialect/PDLInterp/IR/PDLInterpOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // PDLInterp Dialect
 //===----------------------------------------------------------------------===//

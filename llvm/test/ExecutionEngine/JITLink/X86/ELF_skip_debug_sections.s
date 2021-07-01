@@ -4,7 +4,7 @@
 #
 # Check that debug sections are not emitted.
 #
-# CHECK: .debug_info is a debug section: No graph section will be created.
+# CHECK: ".debug_info" is a debug section: No graph section will be created.
 
 	.text
 	.file	"ELF_skip_debug_sections.c"

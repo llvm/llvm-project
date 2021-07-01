@@ -224,7 +224,7 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
     Optional<StringRef> Key = getString(B.Key);
     if (LLVM_UNLIKELY(!Key))
       continue;
-    if (!Filename.equals_lower(*Key))
+    if (!Filename.equals_insensitive(*Key))
       continue;
 
     // If so, we have a match in the hash table.  Construct the destination

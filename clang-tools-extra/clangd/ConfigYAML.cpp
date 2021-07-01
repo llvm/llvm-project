@@ -169,7 +169,7 @@ private:
 
   void parse(Fragment::IndexBlock::ExternalBlock &F,
              Located<std::string> ExternalVal) {
-    if (!llvm::StringRef(*ExternalVal).equals_lower("none")) {
+    if (!llvm::StringRef(*ExternalVal).equals_insensitive("none")) {
       error("Only scalar value supported for External is 'None'",
             ExternalVal.Range);
       return;

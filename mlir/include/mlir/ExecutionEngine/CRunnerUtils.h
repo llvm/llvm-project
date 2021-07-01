@@ -331,6 +331,13 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+// Small runtime support library for memref.copy lowering during codegen.
+//===----------------------------------------------------------------------===//
+extern "C" MLIR_CRUNNERUTILS_EXPORT void
+memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *src,
+           UnrankedMemRefType<char> *dst);
+
+//===----------------------------------------------------------------------===//
 // Small runtime support library for vector.print lowering during codegen.
 //===----------------------------------------------------------------------===//
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printI64(int64_t i);

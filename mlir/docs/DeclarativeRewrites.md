@@ -11,8 +11,8 @@ compiler build time.
 This manual explains in detail all of the available mechanisms for defining
 rewrite rules in such a declarative manner. It aims to be a specification
 instead of a tutorial. Please refer to
-[Quickstart tutorial to adding MLIR graph
-rewrite](Tutorials/QuickstartRewrites.md) for the latter.
+[Quickstart tutorial to adding MLIR graph rewrite](Tutorials/QuickstartRewrites.md)
+for the latter.
 
 Given that declarative rewrite rules depend on op definition specification, this
 manual assumes knowledge of the [ODS](OpDefinitions.md) doc.
@@ -51,8 +51,8 @@ features:
 *   Matching multi-result ops in nested patterns.
 *   Matching and generating variadic operand/result ops in nested patterns.
 *   Packing and unpacking variadic operands/results during generation.
-*   [`NativeCodeCall`](#nativecodecall-transforming-the-generated-op)
-    returning more than one results.
+*   [`NativeCodeCall`](#nativecodecall-transforming-the-generated-op) returning
+    more than one results.
 
 ## Rule Definition
 
@@ -93,9 +93,9 @@ Each pattern is specified as a TableGen `dag` object with the syntax of
 [directives](#rewrite-directives). `argN` is for matching (if used in source
 pattern) or generating (if used in result pattern) the `N`-th argument for
 `operator`. If the `operator` is some MLIR operation, it means the `N`-th
-argument as specified in the `arguments` list of the op's definition.
-Therefore, we say op argument specification in pattern is **position-based**:
-the position where they appear matters.
+argument as specified in the `arguments` list of the op's definition. Therefore,
+we say op argument specification in pattern is **position-based**: the position
+where they appear matters.
 
 `argN` can be a `dag` object itself, thus we can have nested `dag` tree to model
 the def-use relationship between ops.
@@ -245,15 +245,15 @@ the pattern by following the exact same order as the ODS `arguments` definition.
 Otherwise, a custom `build()` method that matches the argument list is required.
 
 Right now all ODS-generated `build()` methods require specifying the result
-type(s), unless the op has known traits like `SameOperandsAndResultType` that
-we can use to auto-generate a `build()` method with result type deduction.
-When generating an op to replace the result of the matched root op, we can use
-the matched root op's result type when calling the ODS-generated builder.
-Otherwise (e.g., generating an [auxiliary op](#supporting-auxiliary-ops) or
-generating an op with a nested result pattern), DRR will not be able to deduce
-the result type(s). The pattern author will need to define a custom builder
-that has result type deduction ability via `OpBuilder` in ODS. For example,
-in the following pattern
+type(s), unless the op has known traits like `SameOperandsAndResultType` that we
+can use to auto-generate a `build()` method with result type deduction. When
+generating an op to replace the result of the matched root op, we can use the
+matched root op's result type when calling the ODS-generated builder. Otherwise
+(e.g., generating an [auxiliary op](#supporting-auxiliary-ops) or generating an
+op with a nested result pattern), DRR will not be able to deduce the result
+type(s). The pattern author will need to define a custom builder that has result
+type deduction ability via `OpBuilder` in ODS. For example, in the following
+pattern
 
 ```tablegen
 def : Pat<(AOp $input, $attr), (COp (AOp $input, $attr) $attr)>;
@@ -295,8 +295,8 @@ to replace the matched `AOp`.
 
 In the result pattern, we can bind to the result(s) of a newly built op by
 attaching symbols to the op. (But we **cannot** bind to op arguments given that
-they are referencing previously bound symbols.) This is useful for reusing
-newly created results where suitable. For example,
+they are referencing previously bound symbols.) This is useful for reusing newly
+created results where suitable. For example,
 
 ```tablegen
 def DOp : Op<"d_op"> {
@@ -373,18 +373,18 @@ And make sure the generated C++ code from the above pattern has access to the
 definition of the C++ helper function.
 
 In the above example, we are using a string to specialize the `NativeCodeCall`
-template. The string can be an arbitrary C++ expression that evaluates into
-some C++ object expected at the `NativeCodeCall` site (here it would be
-expecting an array attribute). Typically the string should be a function call.
+template. The string can be an arbitrary C++ expression that evaluates into some
+C++ object expected at the `NativeCodeCall` site (here it would be expecting an
+array attribute). Typically the string should be a function call.
 
 Note that currently `NativeCodeCall` must return no more than one value or
 attribute. This might change in the future.
 
 ##### `NativeCodeCall` placeholders
 
-In `NativeCodeCall`, we can use placeholders like `$_builder`, `$N`. The former
-is called _special placeholder_, while the latter is called _positional
-placeholder_.
+In `NativeCodeCall`, we can use placeholders like `$_builder`, `$N` and `$N...`.
+The former is called _special placeholder_, while the latter is called
+_positional placeholder_ and _positional range placeholder_.
 
 `NativeCodeCall` right now only supports three special placeholders:
 `$_builder`, `$_loc`, and `$_self`:
@@ -422,6 +422,11 @@ Positional placeholders will be substituted by the `dag` object parameters at
 the `NativeCodeCall` use site. For example, if we define `SomeCall :
 NativeCodeCall<"someFn($1, $2, $0)">` and use it like `(SomeCall $in0, $in1,
 $in2)`, then this will be translated into C++ call `someFn($in1, $in2, $in0)`.
+
+Positional range placeholders will be substituted by multiple `dag` object
+parameters at the `NativeCodeCall` use site. For example, if we define
+`SomeCall : NativeCodeCall<"someFn($1...)">` and use it like `(SomeCall $in0,
+$in1, $in2)`, then this will be translated into C++ call `someFn($in1, $in2)`.
 
 ##### Customizing entire op building
 
@@ -490,8 +495,8 @@ matched op.
 
 Multi-result ops bring extra complexity to declarative rewrite rules. We use
 TableGen `dag` objects to represent ops in patterns; there is no native way to
-indicate that an op generates multiple results. The approach adopted is based
-on **naming convention**: a `__N` suffix is added to a symbol to indicate the
+indicate that an op generates multiple results. The approach adopted is based on
+**naming convention**: a `__N` suffix is added to a symbol to indicate the
 `N`-th result.
 
 #### `__N` suffix
@@ -541,12 +546,12 @@ The above example also shows how to replace a matched multi-result op.
 
 To replace an `N`-result op, the result patterns must generate at least `N`
 declared values (see [Declared vs. actual value](#declared-vs-actual-value) for
-definition). If there are more than `N` declared values generated, only the
-last `N` declared values will be used to replace the matched op. Note that
-because of the existence of multi-result op, one result pattern **may** generate
-multiple declared values. So it means we do not necessarily need `N` result
-patterns to replace an `N`-result op. For example, to replace an op with three
-results, you can have
+definition). If there are more than `N` declared values generated, only the last
+`N` declared values will be used to replace the matched op. Note that because of
+the existence of multi-result op, one result pattern **may** generate multiple
+declared values. So it means we do not necessarily need `N` result patterns to
+replace an `N`-result op. For example, to replace an op with three results, you
+can have
 
 ```tablegen
 // ThreeResultOp/TwoResultOp/OneResultOp generates three/two/one result(s),
@@ -590,8 +595,8 @@ regarding an op's values.
 *   _Actual operand/result/value_: an operand/result/value of an op instance at
     runtime
 
-The above terms are needed because ops can have multiple results, and some of the
-results can also be variadic. For example,
+The above terms are needed because ops can have multiple results, and some of
+the results can also be variadic. For example,
 
 ```tablegen
 def MultiVariadicOp : Op<"multi_variadic_op"> {
@@ -611,8 +616,8 @@ def MultiVariadicOp : Op<"multi_variadic_op"> {
 
 We say the above op has 3 declared operands and 3 declared results. But at
 runtime, an instance can have 3 values corresponding to `$input2` and 2 values
-correspond to `$output2`; we say it has 5 actual operands and 4 actual
-results. A variadic operand/result is a considered as a declared value that can
+correspond to `$output2`; we say it has 5 actual operands and 4 actual results.
+A variadic operand/result is a considered as a declared value that can
 correspond to multiple actual values.
 
 [TODO]
@@ -651,17 +656,16 @@ You can
 
 ### Adjusting benefits
 
-The benefit of a `Pattern` is an integer value indicating the benefit of matching
-the pattern. It determines the priorities of patterns inside the pattern rewrite
-driver. A pattern with a higher benefit is applied before one with a lower
-benefit.
+The benefit of a `Pattern` is an integer value indicating the benefit of
+matching the pattern. It determines the priorities of patterns inside the
+pattern rewrite driver. A pattern with a higher benefit is applied before one
+with a lower benefit.
 
 In DRR, a rule is set to have a benefit of the number of ops in the source
 pattern. This is based on the heuristics and assumptions that:
 
 *   Larger matches are more beneficial than smaller ones.
 *   If a smaller one is applied first the larger one may not apply anymore.
-
 
 The fourth parameter to `Pattern` (and `Pat`) allows to manually tweak a
 pattern's benefit. Just supply `(addBenefit N)` to add `N` to the benefit value.
@@ -696,8 +700,8 @@ def : Pat<(LocSrc1Op:$src1 (LocSrc2Op:$src2 ...),
           (LocDst1Op (LocDst2Op ..., (location $src2)), (location "outer"))>;
 ```
 
-In the above pattern, the generated `LocDst2Op` will use the matched location
-of `LocSrc2Op` while the root `LocDst1Op` node will used the named location
+In the above pattern, the generated `LocDst2Op` will use the matched location of
+`LocSrc2Op` while the root `LocDst1Op` node will used the named location
 `outer`.
 
 ### `replaceWithValue`
@@ -724,8 +728,8 @@ The above pattern removes the `Foo` and replaces all uses of `Foo` with
 
 ### Run `mlir-tblgen` to see the generated content
 
-TableGen syntax sometimes can be obscure; reading the generated content can be
-a very helpful way to understand and debug issues. To build `mlir-tblgen`, run
+TableGen syntax sometimes can be obscure; reading the generated content can be a
+very helpful way to understand and debug issues. To build `mlir-tblgen`, run
 `cmake --build . --target mlir-tblgen` in your build directory and find the
 `mlir-tblgen` binary in the `bin/` subdirectory. All the supported generators
 can be found via `mlir-tblgen --help`.

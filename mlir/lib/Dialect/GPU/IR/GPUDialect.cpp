@@ -29,6 +29,8 @@
 using namespace mlir;
 using namespace mlir::gpu;
 
+#include "mlir/Dialect/GPU/GPUOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // MMAMatrixType
 //===----------------------------------------------------------------------===//

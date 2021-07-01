@@ -662,10 +662,8 @@ protected:
 
     _LIBCPP_INLINE_VISIBILITY
     void move(basic_ios& __rhs);
-#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void move(basic_ios&& __rhs) {move(__rhs);}
-#endif
     _LIBCPP_INLINE_VISIBILITY
     void swap(basic_ios& __rhs) _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY

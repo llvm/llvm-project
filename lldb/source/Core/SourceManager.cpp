@@ -441,13 +441,17 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
       }
       // Try remapping if m_file_spec does not correspond to an existing file.
       if (!FileSystem::Instance().Exists(m_file_spec)) {
-        FileSpec new_file_spec;
-        // Check target specific source remappings first, then fall back to
-        // modules objects can have individual path remappings that were
-        // detected when the debug info for a module was found. then
-        if (target->GetSourcePathMap().FindFile(m_file_spec, new_file_spec) ||
-            target->GetImages().FindSourceFile(m_file_spec, new_file_spec)) {
-          m_file_spec = new_file_spec;
+        // Check target specific source remappings (i.e., the
+        // target.source-map setting), then fall back to the module
+        // specific remapping (i.e., the .dSYM remapping dictionary).
+        auto remapped = target->GetSourcePathMap().FindFile(m_file_spec);
+        if (!remapped) {
+          FileSpec new_spec;
+          if (target->GetImages().FindSourceFile(m_file_spec, new_spec))
+            remapped = new_spec;
+        }
+        if (remapped) {
+          m_file_spec = *remapped;
           m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
         }
       }

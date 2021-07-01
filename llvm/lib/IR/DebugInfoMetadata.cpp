@@ -1053,6 +1053,7 @@ DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope,
 DIExpression *DIExpression::getImpl(LLVMContext &Context,
                                     ArrayRef<uint64_t> Elements,
                                     StorageType Storage, bool ShouldCreate) {
+  assert(Storage != Distinct && "DIExpression cannot be distinct");
   DEFINE_GETIMPL_LOOKUP(DIExpression, (Elements));
   DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
 }
@@ -1583,6 +1584,7 @@ DIMacroFile *DIMacroFile::getImpl(LLVMContext &Context, unsigned MIType,
 DIArgList *DIArgList::getImpl(LLVMContext &Context,
                               ArrayRef<ValueAsMetadata *> Args,
                               StorageType Storage, bool ShouldCreate) {
+  assert(Storage != Distinct && "DIArgList cannot be distinct");
   DEFINE_GETIMPL_LOOKUP(DIArgList, (Args));
   DEFINE_GETIMPL_STORE_NO_OPS(DIArgList, (Args));
 }

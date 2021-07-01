@@ -191,13 +191,13 @@ Ldebug_info_start0:
   .long  Lset3
   .byte  0                       ## End Of Children Mark
 Ldebug_info_end0:
-.subsections_via_symbols
-.section  __DWARF,__debug_line,regular,debug
 
 .section OTHER,more_text,regular,pure_instructions
 .globl _fun
 _fun:
   ret
+
+.subsections_via_symbols
 
 #--- foo.s
 .text
@@ -240,12 +240,12 @@ Ldebug_info_start0:
   .long  Lset3
   .byte  0                       ## End Of Children Mark
 Ldebug_info_end0:
-.subsections_via_symbols
-.section  __DWARF,__debug_line,regular,debug
 
 .section  __DWARF,__debug_aranges,regular,debug
 ltmp1:
   .byte 0
+
+.subsections_via_symbols
 
 #--- no-debug.s
 ## This file has no debug info.

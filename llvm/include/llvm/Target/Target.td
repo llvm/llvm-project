@@ -1176,6 +1176,13 @@ def PSEUDO_PROBE : StandardPseudoInstruction {
   let AsmString = "PSEUDO_PROBE";
   let hasSideEffects = 1;
 }
+def ARITH_FENCE : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let Constraints = "$src = $dst";
+}
 
 def STACKMAP : StandardPseudoInstruction {
   let OutOperandList = (outs);

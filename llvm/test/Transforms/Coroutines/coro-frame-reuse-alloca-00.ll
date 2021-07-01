@@ -1,5 +1,4 @@
 ; Check that we can handle spills of array allocas
-; RUN: opt < %s -coro-split -reuse-storage-in-coroutine-frame -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -reuse-storage-in-coroutine-frame -S | FileCheck %s
 
 %struct.big_structure = type { [500 x i8] }

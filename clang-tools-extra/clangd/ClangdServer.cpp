@@ -637,8 +637,8 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       Effect = T.takeError();
     }
     assert(Effect.hasValue() && "Expected at least one selection");
-    if (*Effect) {
-      // Tweaks don't apply clang-format, do that centrally here.
+    if (*Effect && (*Effect)->FormatEdits) {
+      // Format tweaks that require it centrally here.
       for (auto &It : (*Effect)->ApplyEdits) {
         Edit &E = It.second;
         format::FormatStyle Style =

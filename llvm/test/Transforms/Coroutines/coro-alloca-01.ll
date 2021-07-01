@@ -1,6 +1,5 @@
 ; Tests that CoroSplit can succesfully determine allocas should live on the frame
 ; if their aliases are used across suspension points through PHINode.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 define i8* @f(i1 %n) "coroutine.presplit"="1" {

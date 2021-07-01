@@ -32,13 +32,13 @@ class TensorExpression:
     """Visits all tensor expression reachable by the expression."""
     callback(self)
 
-  def _get_all_dim_defs(self) -> Set[DimDef]:
-    """Recursively gets all DimDef affine expressions that are referenced."""
+  def collect_dim_uses(self, uses: Set["DimDef"]):
+    """Collects all DimDefs reachable through this expression."""
     results = set()
 
     def visit_dim_def(dim_def):
       if isinstance(dim_def, DimDef):
-        results.add(dim_def)
+        uses.add(dim_def)
 
     def visit_affine_exprs(expr):
       if isinstance(expr, TensorUse):
@@ -49,7 +49,6 @@ class TensorExpression:
           ind.visit_affine_exprs(visit_dim_def)
 
     self.visit_tensor_exprs(visit_affine_exprs)
-    return results
 
   def collect_tensor_uses(self, uses: Set["TensorUse"]):
     """Collects all TensorUses reachable through this expression."""
@@ -126,8 +125,10 @@ class TensorUse(TensorExpression):
     reduced into. Any indices referenced on the rhs and not in self are
     considered reduction dims and will be ordered as encountered on the rhs.
     """
-    rhs_dims = rhs._get_all_dim_defs()
-    lhs_dims = self._get_all_dim_defs()
+    rhs_dims = set()
+    lhs_dims = set()
+    rhs.collect_dim_uses(rhs_dims)
+    self.collect_dim_uses(lhs_dims)
     return rhs_dims - lhs_dims
 
   def __repr__(self):
@@ -151,13 +152,15 @@ class OperandDef:
   def __init__(self,
                kind: OperandKind,
                type_var: TypeVar,
-               size_exprs: Optional[Sequence[AffineExprDef]] = None):
+               size_exprs: Optional[Sequence[AffineExprDef]] = None,
+               index_dims: Optional[Sequence[DimDef]] = None):
     if not isinstance(type_var, TypeVar):
       raise ValueError(
           f"OperandDef requires a TypeVar but got {repr(type_var)}")
     self.owner = None  # type: Optional["LinalgOpDef"]
     self.type_var = type_var
     self.size_exprs = size_exprs
+    self.index_dims = index_dims
     self.kind = kind
     self.name = None  # type: Optional[str]
     self.registered_index = -1  # type: int
@@ -174,7 +177,8 @@ class OperandDef:
 
   def __repr__(self):
     return (f"{self.name}:OperandDef(kind={self.kind.name}, "
-            f"type={repr(self.type_var)}, size_exprs={self.size_exprs})")
+            f"type={repr(self.type_var)}, size_exprs={self.size_exprs}), "
+            f"index_dims={self.index_dims})")
 
 
 class TensorDef:
@@ -184,15 +188,25 @@ class TensorDef:
   to the body of the structured op. A unique name identifies the tensor operands
   and an index determines their position in the operation's parameter list. A
   tensor definition takes type, a shape, and an optional flag to mark output
-  tensors.
+  tensors. Additionally, a tuple of index dimensions may be used to map the
+  tensor to the loop dimensions of the operation. This mapping is needed to
+  compute the indexing map of shape-only tensors that have no uses.
   """
 
   def __init__(self,
                type_var: TypeVar,
                *shape: AffineExprDef,
+               index_dims: Optional[Sequence[DimDef]] = None,
                output: bool = False):
+    if index_dims and len(shape) != len(index_dims):
+      raise ValueError(f"Expected the shape rank {len(shape)} to match the "
+                       f"number of index_dims {len(index_dims)}")
+    if index_dims and any(not isinstance(dim, DimDef) for dim in index_dims):
+      raise ValueError(f"TensorDef requires index dims of type DimDef but "
+                       f"got {index_dims}")
     kind = OperandKind.OutputTensor if output else OperandKind.InputTensor
-    self.operand_def = OperandDef(kind, type_var, size_exprs=shape)
+    self.operand_def = OperandDef(
+        kind, type_var, size_exprs=shape, index_dims=index_dims)
 
   def __getitem__(self, dims) -> TensorUse:
     assert self.operand_def.owner, "TensorDef is not attached to an op"
@@ -260,7 +274,7 @@ class AttributeDef:
   def __init__(self, *sizes: SymbolDef):
     if any(not isinstance(size, SymbolDef) for size in sizes):
       raise ValueError(f"AttributeDef requires sizes of type SymbolDef but got "
-                       f"{type(sizes)}")
+                       f"{sizes}")
     self.operand_def = OperandDef(OperandKind.Attribute, I64, size_exprs=sizes)
 
 
@@ -503,6 +517,7 @@ class LinalgOpDef:
     self.metadata = OpMetadataDef(
         name=name, cpp_class_name=cpp_class_name, doc=doc)
     self.registered_operands = dict()  # type: Dict[str, OperandDef]
+    self.domain = list()  # type: List[DimDef]
     self.comprehensions = list()  # type: List[Comprehension]
     self._affine_state = AffineBuildState()
 

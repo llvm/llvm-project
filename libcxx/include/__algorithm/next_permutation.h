@@ -14,7 +14,7 @@
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/reverse.h>
 #include <__iterator/iterator_traits.h>
-#include <type_traits> // swap
+#include <__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

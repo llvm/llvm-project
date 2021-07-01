@@ -522,3 +522,7 @@ declare dso_local i32 @rand(...)
 
 ; CHECK: declare void @__tgt_target_data_begin_mapper_issue(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**, %struct.__tgt_async_info*)
 ; CHECK: declare void @__tgt_target_data_begin_mapper_wait(i64, %struct.__tgt_async_info*)
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 7, !"openmp", i32 50}

@@ -410,19 +410,18 @@ protected:
   bool visitUnreachableInst(UnreachableInst &I);
 
 public:
-  CallAnalyzer(
-      Function &Callee, CallBase &Call, const TargetTransformInfo &TTI,
-      function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-      function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
-      ProfileSummaryInfo *PSI = nullptr,
-      OptimizationRemarkEmitter *ORE = nullptr)
+  CallAnalyzer(Function &Callee, CallBase &Call, const TargetTransformInfo &TTI,
+               function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
+               function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
+               ProfileSummaryInfo *PSI = nullptr,
+               OptimizationRemarkEmitter *ORE = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         PSI(PSI), F(Callee), DL(F.getParent()->getDataLayout()), ORE(ORE),
         CandidateCall(Call), EnableLoadElimination(true) {}
 
   InlineResult analyze();
 
-  Optional<Constant*> getSimplifiedValue(Instruction *I) {
+  Optional<Constant *> getSimplifiedValue(Instruction *I) {
     if (SimplifiedValues.find(I) != SimplifiedValues.end())
       return SimplifiedValues[I];
     return None;
@@ -950,8 +949,8 @@ void CallAnalyzer::disableSROAForArg(AllocaInst *SROAArg) {
   disableLoadElimination();
 }
 
-void InlineCostAnnotationWriter::emitInstructionAnnot(const Instruction *I,
-                                                formatted_raw_ostream &OS) {
+void InlineCostAnnotationWriter::emitInstructionAnnot(
+    const Instruction *I, formatted_raw_ostream &OS) {
   // The cost of inlining of the given instruction is printed always.
   // The threshold delta is printed only when it is non-zero. It happens
   // when we decided to give a bonus at a particular instruction.
@@ -1056,8 +1055,8 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
       // is needed to track stack usage during inlining.
       Type *Ty = I.getAllocatedType();
       AllocatedSize = SaturatingMultiplyAdd(
-          AllocSize->getLimitedValue(), DL.getTypeAllocSize(Ty).getKnownMinSize(),
-          AllocatedSize);
+          AllocSize->getLimitedValue(),
+          DL.getTypeAllocSize(Ty).getKnownMinSize(), AllocatedSize);
       if (AllocatedSize > InlineConstants::MaxSimplifiedDynamicAllocaToInline)
         HasDynamicAlloca = true;
       return false;
@@ -1210,11 +1209,11 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
 
   if (!DisableGEPConstOperand)
     if (simplifyInstruction(I, [&](SmallVectorImpl<Constant *> &COps) {
-        SmallVector<Constant *, 2> Indices;
-        for (unsigned int Index = 1 ; Index < COps.size() ; ++Index)
+          SmallVector<Constant *, 2> Indices;
+          for (unsigned int Index = 1; Index < COps.size(); ++Index)
             Indices.push_back(COps[Index]);
-        return ConstantExpr::getGetElementPtr(I.getSourceElementType(), COps[0],
-                                              Indices, I.isInBounds());
+          return ConstantExpr::getGetElementPtr(
+              I.getSourceElementType(), COps[0], Indices, I.isInBounds());
         }))
       return true;
 
@@ -1949,9 +1948,9 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
   }
 
   // Select condition is a constant.
-  Value *SelectedV = CondC->isAllOnesValue()
-                         ? TrueVal
-                         : (CondC->isNullValue()) ? FalseVal : nullptr;
+  Value *SelectedV = CondC->isAllOnesValue()  ? TrueVal
+                     : (CondC->isNullValue()) ? FalseVal
+                                              : nullptr;
   if (!SelectedV) {
     // Condition is a vector constant that is not all 1s or all 0s.  If all
     // operands are constants, ConstantExpr::getSelect() can handle the cases
@@ -2416,9 +2415,7 @@ void InlineCostCallAnalyzer::print() {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Dump stats about this call's analysis.
-LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() {
-  print();
-}
+LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(); }
 #endif
 
 /// Test that there are no attribute conflicts between Caller and Callee
@@ -2772,8 +2769,8 @@ PreservedAnalyses
 InlineCostAnnotationPrinterPass::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   PrintInstructionComments = true;
-  std::function<AssumptionCache &(Function &)> GetAssumptionCache = [&](
-      Function &F) -> AssumptionCache & {
+  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+      [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
   Module *M = F.getParent();

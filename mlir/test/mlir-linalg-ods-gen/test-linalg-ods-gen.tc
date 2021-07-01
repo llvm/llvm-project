@@ -24,7 +24,7 @@
 //  IMPL-NEXT: return {{.+}}.getAffineMapArrayAttr({ map0, map1, map2 });
 //
 //       IMPL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
-//       IMPL:    Block &block, ValueRange captures) {
+//       IMPL:    Block &block) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
 //       IMPL:  Value [[d:.*]] = b.create<MulFOp>([[a]], [[b]]);
 //       IMPL:  Value [[e:.*]] = b.create<AddFOp>([[c]], [[d]]);
@@ -49,7 +49,7 @@ def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
 //       IMPL:  AffineMap::get(3, 3, {d0, d1}, context)
 //
 //       IMPL:  Test2Op::regionBuilder(ImplicitLocOpBuilder &b,
-//       IMPL:    Block &block, ValueRange captures) {
+//       IMPL:    Block &block) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
 //       IMPL:  Value [[d:.*]] = b.create<MulFOp>([[a]], [[b]]);
 //       IMPL:  Value [[e:.*]] = b.create<AddFOp>([[c]], [[d]]);
@@ -74,7 +74,7 @@ def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
 //       IMPL:  AffineMap::get(4, 4, {d0, d1, d2}, context)
 //
 //       IMPL:  Test3Op::regionBuilder(ImplicitLocOpBuilder &b,
-//       IMPL:    Block &block, ValueRange captures) {
+//       IMPL:    Block &block) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
 //       IMPL:  Value [[d:.*]] = b.create<MulFOp>([[a]], [[b]]);
 //       IMPL:  Value [[e:.*]] = b.create<AddFOp>([[c]], [[d]]);
@@ -182,7 +182,7 @@ def test7(A: f32(M, K), B: f32(K)) -> (C: f32(M))
 
 // Test output arg order.
 // IMPL-LABEL:  void Test8Op::regionBuilder(ImplicitLocOpBuilder &b,
-//       IMPL:    Block &block, ValueRange captures) {
+//       IMPL:    Block &block) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
 //       IMPL:  Value [[d:.*]] = b.create<MulFOp>([[a]], [[b]]);
 //       IMPL:  Value [[e:.*]] = b.create<SubFOp>([[d]], [[c]]);
@@ -199,7 +199,7 @@ def test8(A: f32(M, K), B: f32(K)) -> (C: f32(M))
 //       IMPL:    auto map1 = AffineMap::get(2, 2, {d1}, context);
 //       IMPL:    auto map2 = AffineMap::get(2, 2, {d0}, context);
 // IMPL-LABEL:  void Test9Op::regionBuilder(ImplicitLocOpBuilder &b,
-//       IMPL:    Block &block, ValueRange captures) {
+//       IMPL:    Block &block) {
 //       IMPL:  Value [[a:.*]](args[0]), [[c:.*]](args[2]);
 ods_def<Test9Op>:
 def test9(A: f32(M, K), B: f32(K)) -> (C: f32(M))

@@ -464,7 +464,7 @@ static const ArchDefinition *FindArchDefinition(ArchitectureType arch_type) {
 // Get an architecture definition by name.
 static const CoreDefinition *FindCoreDefinition(llvm::StringRef name) {
   for (unsigned int i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
-    if (name.equals_lower(g_core_definitions[i].name))
+    if (name.equals_insensitive(g_core_definitions[i].name))
       return &g_core_definitions[i];
   }
   return nullptr;

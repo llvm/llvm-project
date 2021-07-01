@@ -25,7 +25,7 @@ StringRef::size_type llvm::StrInStrNoCase(StringRef s1, StringRef s2) {
   if (N > M)
     return StringRef::npos;
   for (size_t i = 0, e = M - N + 1; i != e; ++i)
-    if (s1.substr(i, N).equals_lower(s2))
+    if (s1.substr(i, N).equals_insensitive(s2))
       return i;
   return StringRef::npos;
 }

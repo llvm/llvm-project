@@ -144,7 +144,7 @@ public:
     public:
         reference(const reference&) noexcept;
         operator bool() const noexcept;
-        reference& operator=(const bool x) noexcept;
+        reference& operator=(bool x) noexcept;
         reference& operator=(const reference& x) noexcept;
         iterator operator&() const noexcept;
         void flip() noexcept;
@@ -275,7 +275,9 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__bit_reference>
 #include <__debug>
 #include <__functional_base>
+#include <__iterator/wrap_iter.h>
 #include <__split_buffer>
+#include <__utility/forward.h>
 #include <algorithm>
 #include <climits>
 #include <compare>

@@ -353,6 +353,10 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         if (Changes[i].Tok->is(TT_ConditionalExpr))
           return true;
 
+        // Period Initializer .XXX = 1.
+        if (Changes[i].Tok->is(TT_DesignatedInitializerPeriod))
+          return true;
+
         // Continued ternary operator
         if (Changes[i].Tok->Previous &&
             Changes[i].Tok->Previous->is(TT_ConditionalExpr))

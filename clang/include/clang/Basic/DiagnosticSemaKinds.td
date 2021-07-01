@@ -6794,9 +6794,14 @@ def ext_typecheck_compare_complete_incomplete_pointers : Extension<
   "%0 is %select{|in}2complete and "
   "%1 is %select{|in}3complete">,
   InGroup<C11>;
+def warn_typecheck_ordered_comparison_of_function_pointers : Warning<
+  "ordered comparison of function pointers (%0 and %1)">,
+  InGroup<OrderedCompareFunctionPointers>;
 def ext_typecheck_ordered_comparison_of_function_pointers : ExtWarn<
   "ordered comparison of function pointers (%0 and %1)">,
-  InGroup<DiagGroup<"ordered-compare-function-pointers">>;
+  InGroup<OrderedCompareFunctionPointers>;
+def err_typecheck_ordered_comparison_of_function_pointers : Error<
+  "ordered comparison of function pointers (%0 and %1)">;
 def ext_typecheck_comparison_of_fptr_to_void : Extension<
   "equality comparison between function pointer and void pointer (%0 and %1)">;
 def err_typecheck_comparison_of_fptr_to_void : Error<
@@ -7435,6 +7440,12 @@ def warn_deprecated_volatile_param : Warning<
 def warn_deprecated_volatile_structured_binding : Warning<
   "volatile qualifier in structured binding declaration is deprecated">,
   InGroup<DeprecatedVolatile>;
+
+def warn_deprecated_altivec_src_compat : Warning<
+  "Current handling of vector bool and vector pixel types in this context are "
+  "deprecated. The default behaviour will soon change to that implied by the "
+  "'-altivec-compat=xl' option">,
+  InGroup<DiagGroup<"deprecated-altivec-src-compat">>;
 
 def err_catch_incomplete_ptr : Error<
   "cannot catch pointer to incomplete type %0">;
@@ -8519,6 +8530,9 @@ def err_typecheck_expect_scalar_operand : Error<
   "operand of type %0 where arithmetic or pointer type is required">;
 def err_typecheck_cond_incompatible_operands : Error<
   "incompatible operand types%diff{ ($ and $)|}0,1">;
+def err_typecheck_expect_flt_or_vector : Error<
+  "invalid operand of type %0 where floating, complex or "
+  "a vector of such types is required">;
 def err_cast_selector_expr : Error<
   "cannot type cast @selector expression">;
 def ext_typecheck_cond_incompatible_pointers : ExtWarn<
@@ -9143,9 +9157,6 @@ def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
   "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
-def note_defaulted_comparison_selected_invalid : Note<
-  "would compare %select{|member|base class}0 %1 "
-  "as %2, which does not support relational comparisons">;
 def err_incorrect_defaulted_comparison_constexpr : Error<
   "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
   "three-way comparison operator}0 "

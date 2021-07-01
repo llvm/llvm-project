@@ -34,5 +34,5 @@ _start:
 
 // GCC may relocate DW_AT_GNU_call_site_value with R_386_GOTOFF.
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98946
-.section .debug_info
+.section .debug_random
   .long .L0@gotoff

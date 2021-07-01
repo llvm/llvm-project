@@ -87,6 +87,9 @@ public:
   Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
                                size_t &bytes_read);
 
+  virtual Status ReadMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
+                                std::vector<uint8_t> &tags);
+
   /// Reads a null terminated string from memory.
   ///
   /// Reads up to \p max_size bytes of memory until it finds a '\0'.
@@ -243,8 +246,9 @@ public:
     pass_signals = (1u << 3),
     auxv = (1u << 4),
     libraries_svr4 = (1u << 5),
+    memory_tagging = (1u << 6),
 
-    LLVM_MARK_AS_BITMASK_ENUM(libraries_svr4)
+    LLVM_MARK_AS_BITMASK_ENUM(memory_tagging)
   };
 
   class Factory {

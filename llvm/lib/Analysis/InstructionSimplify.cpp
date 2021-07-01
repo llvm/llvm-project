@@ -4536,6 +4536,11 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx,
       return UndefValue::get(VecVTy->getElementType());
   }
 
+  // An undef extract index can be arbitrarily chosen to be an out-of-range
+  // index value, which would result in the instruction being poison.
+  if (Q.isUndefValue(Idx))
+    return PoisonValue::get(VecVTy->getElementType());
+
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx)) {
@@ -4550,12 +4555,6 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx,
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
   }
-
-  // An undef extract index can be arbitrarily chosen to be an out-of-range
-  // index value, which would result in the instruction being poison.
-  if (Q.isUndefValue(Idx))
-    return PoisonValue::get(VecVTy->getElementType());
-
   return nullptr;
 }
 

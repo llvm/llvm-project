@@ -35,7 +35,7 @@ entry:
   %cmp = icmp eq i32 %tid, 0
   br i1 %cmp, label %master, label %exit
 master:
-  %x = call i8* @__kmpc_alloc_shared(i64 16), !dbg !9
+  %x = call i8* @__kmpc_alloc_shared(i64 16), !dbg !11
   %x_on_stack = bitcast i8* %x to [4 x i32]*
   %0 = bitcast [4 x i32]* %x_on_stack to i8*
   call void @use(i8* %0)
@@ -58,7 +58,7 @@ entry:
   %3 = icmp eq i32 %tid, %master_tid
   br i1 %3, label %master, label %exit
 master:
-  %y = call i8* @__kmpc_alloc_shared(i64 4), !dbg !10
+  %y = call i8* @__kmpc_alloc_shared(i64 4), !dbg !12
   %y_on_stack = bitcast i8* %y to [4 x i32]*
   %4 = bitcast [4 x i32]* %y_on_stack to i8*
   call void @use(i8* %4)
@@ -87,18 +87,19 @@ declare i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4}
-!nvvm.annotations = !{!5, !6}
-
+!llvm.module.flags = !{!3, !4, !5, !6}
+!nvvm.annotations = !{!7, !8}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "replace_globalization.c", directory: "/tmp/replace_globalization.c")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
-!5 = !{void ()* @foo, !"kernel", i32 1}
-!6 = !{void ()* @bar, !"kernel", i32 1}
-!7 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-!8 = !DISubroutineType(types: !2)
-!9 = !DILocation(line: 5, column: 7, scope: !7)
-!10 = !DILocation(line: 5, column: 14, scope: !7)
+!5 = !{i32 7, !"openmp", i32 50}
+!6 = !{i32 7, !"openmp-device", i32 50}
+!7 = !{void ()* @foo, !"kernel", i32 1}
+!8 = !{void ()* @bar, !"kernel", i32 1}
+!9 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!10 = !DISubroutineType(types: !2)
+!11 = !DILocation(line: 5, column: 7, scope: !9)
+!12 = !DILocation(line: 5, column: 14, scope: !9)

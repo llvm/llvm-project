@@ -1,6 +1,5 @@
 ; Tests that variables of different type in a Corotuine whose lifetime range is not overlapping each other
 ; re-use the same slot in Coroutine frame.
-; RUN: opt < %s -coro-split -reuse-storage-in-coroutine-frame -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -reuse-storage-in-coroutine-frame -S | FileCheck %s
 %"struct.task::promise_type" = type { i8 }
 %struct.awaitable = type { i8 }

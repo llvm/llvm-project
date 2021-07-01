@@ -30,7 +30,7 @@ entry:
   ret i32 %add
 }
 ;; CHECK-LABEL: f2:
-;; CHECK:       paciasp
+;; CHECK:       pacia x30, sp
 ;; CHECK:       retaa
 
 define i32 @f3(i32 %x) #3 {
@@ -40,7 +40,7 @@ entry:
   ret i32 %add
 }
 ;; CHECK-LABEL: f3:
-;; CHECK:       pacibsp
+;; CHECK:       pacib x30, sp
 ;; CHECK:       retab
 
 define i32 @f4(i32 %x) #4 {
@@ -48,7 +48,7 @@ entry:
   ret i32 1
 }
 ;; CHECK-LABEL: f4:
-;; CHECK:       paciasp
+;; CHECK:       pacia x30, sp
 ;; CHECK:       retaa
 
 define i32 @f5(i32 %x) #5 {
@@ -58,7 +58,7 @@ entry:
   ret i32 %add
 }
 ;; CHECK-LABEL: f5:
-;; CHECK:       paciasp
+;; CHECK:       pacia x30, sp
 ;; CHECK:       retaa
 
 attributes #0 = { nounwind "branch-target-enforcement"="false" "sign-return-address"="none" }

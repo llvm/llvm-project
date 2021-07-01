@@ -8,7 +8,7 @@
 #===------------------------------------------------------------------------===#
 
 wd=$(cd $(dirname "$0")/.. && pwd)
-opts="-module-suffix .f18.mod "
+opts="-fno-analyzed-objects-for-unparse -module-suffix .f18.mod "
 if ! $wd/bin/f18 $opts "$@"
 then status=$?
      echo flang: in $PWD, f18 failed with exit status $status: $wd/bin/f18 $opts "$@" >&2

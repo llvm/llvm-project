@@ -63,8 +63,7 @@ static GenericOp createGenericOpFromNamedOp(LinalgOp namedOp,
       iterators,
       [&regionBuilder](OpBuilder &bodyBuilder, Location loc, ValueRange) {
         ImplicitLocOpBuilder b(loc, bodyBuilder);
-        regionBuilder(b, *bodyBuilder.getBlock(),
-                      /*captures=*/{});
+        regionBuilder(b, *bodyBuilder.getBlock());
       });
 }
 

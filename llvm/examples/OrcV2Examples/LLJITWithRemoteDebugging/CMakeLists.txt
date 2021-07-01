@@ -10,10 +10,15 @@ set(LLVM_LINK_COMPONENTS
   nativecodegen
   )
 
-add_llvm_example(LLJITWithRemoteDebugging
-  LLJITWithRemoteDebugging.cpp
-  RemoteJITUtils.cpp
+if (LLVM_INCLUDE_UTILS AND NOT LLVM_INCLUDE_UTILS)
+  add_llvm_example(LLJITWithRemoteDebugging
+    LLJITWithRemoteDebugging.cpp
+    RemoteJITUtils.cpp
 
-  DEPENDS
-    llvm-jitlink-executor
+    DEPENDS
+      llvm-jitlink-executor
   )
+else()
+  # Use a temporary no-op target until D104694 lands.
+  add_custom_target(LLJITWithRemoteDebugging)
+endif()

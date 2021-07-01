@@ -104,8 +104,8 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
 
     StringRef FalseMacroName =
         Lexer::getImmediateMacroName(FalseLiteralLoc, SM, Opts);
-    if (FalseMacroName.compare_lower("false") == 0 ||
-        FalseMacroName.compare_lower("null") == 0)
+    if (FalseMacroName.compare_insensitive("false") == 0 ||
+        FalseMacroName.compare_insensitive("null") == 0)
       return;
   }
 

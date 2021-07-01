@@ -4013,6 +4013,36 @@ bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
   return true;
 }
 
+/// Form a G_SBFX from a G_SEXT_INREG fed by a right shift.
+bool CombinerHelper::matchBitfieldExtractFromSExtInReg(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(Src);
+  LLT ExtractTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+  if (!LI || !LI->isLegalOrCustom({TargetOpcode::G_SBFX, {Ty, ExtractTy}}))
+    return false;
+  int64_t Width = MI.getOperand(2).getImm();
+  Register ShiftSrc;
+  int64_t ShiftImm;
+  if (!mi_match(
+          Src, MRI,
+          m_OneNonDBGUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
+                                  m_GLShr(m_Reg(ShiftSrc), m_ICst(ShiftImm))))))
+    return false;
+  if (ShiftImm < 0 || ShiftImm + Width > Ty.getScalarSizeInBits())
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Cst1 = B.buildConstant(ExtractTy, ShiftImm);
+    auto Cst2 = B.buildConstant(ExtractTy, Width);
+    B.buildSbfx(Dst, ShiftSrc, Cst1, Cst2);
+  };
+  return true;
+}
+
+/// Form a G_UBFX from "(a srl b) & mask", where b and mask are constants.
 bool CombinerHelper::matchBitfieldExtractFromAnd(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_AND);
@@ -4039,10 +4069,11 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(
   if (static_cast<uint64_t>(LSBImm) >= Size)
     return false;
 
+  LLT ExtractTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
   uint64_t Width = APInt(Size, AndImm).countTrailingOnes();
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto WidthCst = B.buildConstant(Ty, Width);
-    auto LSBCst = B.buildConstant(Ty, LSBImm);
+    auto WidthCst = B.buildConstant(ExtractTy, Width);
+    auto LSBCst = B.buildConstant(ExtractTy, LSBImm);
     B.buildInstr(TargetOpcode::G_UBFX, {Dst}, {ShiftSrc, LSBCst, WidthCst});
   };
   return true;

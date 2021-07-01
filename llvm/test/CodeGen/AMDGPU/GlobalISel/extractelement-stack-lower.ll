@@ -312,8 +312,7 @@ define i16 @v_extract_v128i16_varidx(<128 x i16> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    v_mov_b32_e32 v5, s4
 ; GCN-NEXT:    v_add_co_u32_e32 v60, vcc, v0, v5
 ; GCN-NEXT:    v_addc_co_u32_e32 v61, vcc, v1, v6, vcc
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, 1, v2
-; GCN-NEXT:    v_and_b32_e32 v0, 63, v0
+; GCN-NEXT:    v_bfe_u32 v0, v2, 1, 6
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    v_and_b32_e32 v1, 1, v2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 4, v1

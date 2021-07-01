@@ -78,6 +78,7 @@ public:
     const bool HasScopAsTopLevelRegion =
         SD.ValidRegions.count(RI.getTopLevelRegion()) > 0;
 
+    bool Changed = false;
     if (HasScopAsTopLevelRegion) {
       LLVM_DEBUG(dbgs() << "Skipping " << F->getName()
                         << " has scop as top level region");
@@ -90,13 +91,15 @@ public:
       MPM.addPass(AlwaysInlinerPass());
       Module *M = F->getParent();
       assert(M && "Function has illegal module");
-      MPM.run(*M, MAM);
+      PreservedAnalyses PA = MPM.run(*M, MAM);
+      if (!PA.areAllPreserved())
+        Changed = true;
     } else {
       LLVM_DEBUG(dbgs() << F->getName()
                         << " does NOT have scop as top level region\n");
     }
 
-    return false;
+    return Changed;
   };
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

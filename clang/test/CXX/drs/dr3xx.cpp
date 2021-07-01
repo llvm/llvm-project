@@ -18,9 +18,9 @@ namespace dr301 { // dr301: yes
   void operator-(S, S);
 
   void f() {
-    bool a = (void(*)(S, S))operator+<S> <
+    bool a = (void(*)(S, S))operator+<S> < // expected-warning {{ordered comparison of function pointers}}
              (void(*)(S, S))operator+<S>;
-    bool b = (void(*)(S, S))operator- < // cxx20_2b-note {{to match this '<'}}
+    bool b = (void(*)(S, S))operator- < // cxx20_2b-note {{to match this '<'}} cxx98_17-warning {{ordered comparison of function pointers}}
              (void(*)(S, S))operator-; // cxx20_2b-error {{expected '>'}}
     bool c = (void(*)(S, S))operator+ < // expected-note {{to match this '<'}}
              (void(*)(S, S))operator-; // expected-error {{expected '>'}}

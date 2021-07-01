@@ -1616,9 +1616,6 @@ def HasAtomicPkFaddNoRtnInsts
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
-def HasOffset3fBug : Predicate<"!Subtarget->hasOffset3fBug()">,
-  AssemblerPredicate<(all_of FeatureOffset3fBug)>;
-
 def EnableLateCFGStructurize : Predicate<
   "EnableLateStructurizeCFG">;
 

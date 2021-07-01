@@ -1797,9 +1797,15 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec *derivedType,
 void CheckHelper::CheckDioDummyIsDerived(
     const Symbol &subp, const Symbol &arg, GenericKind::DefinedIo ioKind) {
   if (const DeclTypeSpec * type{arg.GetType()}) {
-    const DerivedTypeSpec *derivedType{type->AsDerived()};
-    if (derivedType) {
+    if (const DerivedTypeSpec * derivedType{type->AsDerived()}) {
       CheckAlreadySeenDefinedIo(derivedType, ioKind, subp);
+      bool isPolymorphic{type->IsPolymorphic()};
+      if (isPolymorphic != IsExtensibleType(derivedType)) {
+        messages_.Say(arg.name(),
+            "Dummy argument '%s' of a defined input/output procedure must be %s when the derived type is %s"_err_en_US,
+            arg.name(), isPolymorphic ? "TYPE()" : "CLASS()",
+            isPolymorphic ? "not extensible" : "extensible");
+      }
     } else {
       messages_.Say(arg.name(),
           "Dummy argument '%s' of a defined input/output procedure must have a"

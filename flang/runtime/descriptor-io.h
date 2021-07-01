@@ -10,6 +10,9 @@
 #define FORTRAN_RUNTIME_DESCRIPTOR_IO_H_
 
 // Implementation of I/O data list item transfers based on descriptors.
+// (All I/O items come through here so that the code is exercised for test;
+// some scalar I/O data transfer APIs could be changed to bypass their use
+// of descriptors in the future for better efficiency.)
 
 #include "cpp-type.h"
 #include "descriptor.h"
@@ -18,6 +21,7 @@
 #include "io-stmt.h"
 #include "terminator.h"
 #include "type-info.h"
+#include "unit.h"
 #include "flang/Common/uint128.h"
 
 namespace Fortran::runtime::io::descr {
@@ -243,40 +247,108 @@ static bool DefaultFormattedComponentIO(IoStatementState &io,
   }
 }
 
+std::optional<bool> DefinedFormattedIo(
+    IoStatementState &, const Descriptor &, const typeInfo::SpecialBinding &);
+
 template <Direction DIR>
 static bool FormattedDerivedTypeIO(
     IoStatementState &io, const Descriptor &descriptor) {
-  Terminator &terminator{io.GetIoErrorHandler()};
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  // Derived type information must be present for formatted I/O.
   const DescriptorAddendum *addendum{descriptor.Addendum()};
-  RUNTIME_CHECK(terminator, addendum != nullptr);
+  RUNTIME_CHECK(handler, addendum != nullptr);
   const typeInfo::DerivedType *type{addendum->derivedType()};
-  RUNTIME_CHECK(terminator, type != nullptr);
-  if (false) {
-    // TODO: user-defined derived type formatted I/O
-  } else {
-    // Default derived type formatting
-    const Descriptor &compArray{type->component()};
-    RUNTIME_CHECK(terminator, compArray.rank() == 1);
-    std::size_t numComponents{compArray.Elements()};
-    std::size_t numElements{descriptor.Elements()};
-    SubscriptValue subscripts[maxRank];
-    descriptor.GetLowerBounds(subscripts);
-    for (std::size_t j{0}; j < numElements;
-         ++j, descriptor.IncrementSubscripts(subscripts)) {
-      SubscriptValue at[maxRank];
-      compArray.GetLowerBounds(at);
-      for (std::size_t k{0}; k < numComponents;
-           ++k, compArray.IncrementSubscripts(at)) {
-        const typeInfo::Component &component{
-            *compArray.Element<typeInfo::Component>(at)};
-        if (!DefaultFormattedComponentIO<DIR>(
-                io, component, descriptor, subscripts, terminator)) {
-          return false;
-        }
+  RUNTIME_CHECK(handler, type != nullptr);
+  if (const typeInfo::SpecialBinding *
+      special{type->FindSpecialBinding(DIR == Direction::Input
+              ? typeInfo::SpecialBinding::Which::ReadFormatted
+              : typeInfo::SpecialBinding::Which::WriteFormatted)}) {
+    if (std::optional<bool> wasDefined{
+            DefinedFormattedIo(io, descriptor, *special)}) {
+      return *wasDefined; // user-defined I/O was applied
+    }
+  }
+  // Default componentwise derived type formatting
+  const Descriptor &compArray{type->component()};
+  RUNTIME_CHECK(handler, compArray.rank() == 1);
+  std::size_t numComponents{compArray.Elements()};
+  std::size_t numElements{descriptor.Elements()};
+  SubscriptValue subscripts[maxRank];
+  descriptor.GetLowerBounds(subscripts);
+  for (std::size_t j{0}; j < numElements;
+       ++j, descriptor.IncrementSubscripts(subscripts)) {
+    SubscriptValue at[maxRank];
+    compArray.GetLowerBounds(at);
+    for (std::size_t k{0}; k < numComponents;
+         ++k, compArray.IncrementSubscripts(at)) {
+      const typeInfo::Component &component{
+          *compArray.Element<typeInfo::Component>(at)};
+      if (!DefaultFormattedComponentIO<DIR>(
+              io, component, descriptor, subscripts, handler)) {
+        return false;
       }
     }
   }
   return true;
+}
+
+bool DefinedUnformattedIo(
+    IoStatementState &, const Descriptor &, const typeInfo::SpecialBinding &);
+
+// Unformatted I/O
+template <Direction DIR>
+static bool UnformattedDescriptorIO(
+    IoStatementState &io, const Descriptor &descriptor) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  const DescriptorAddendum *addendum{descriptor.Addendum()};
+  const typeInfo::DerivedType *type{
+      addendum ? addendum->derivedType() : nullptr};
+  if (const typeInfo::SpecialBinding *
+      special{type
+              ? type->FindSpecialBinding(DIR == Direction::Input
+                        ? typeInfo::SpecialBinding::Which::ReadUnformatted
+                        : typeInfo::SpecialBinding::Which::WriteUnformatted)
+              : nullptr}) {
+    // User-defined derived type unformatted I/O
+    return DefinedUnformattedIo(io, descriptor, *special);
+  } else {
+    // Regular derived type unformatted I/O, not user-defined
+    auto *externalUnf{io.get_if<ExternalUnformattedIoStatementState<DIR>>()};
+    auto *childUnf{io.get_if<ChildUnformattedIoStatementState<DIR>>()};
+    RUNTIME_CHECK(handler, externalUnf != nullptr || childUnf != nullptr);
+    std::size_t elementBytes{descriptor.ElementBytes()};
+    std::size_t numElements{descriptor.Elements()};
+    SubscriptValue subscripts[maxRank];
+    descriptor.GetLowerBounds(subscripts);
+    using CharType =
+        std::conditional_t<DIR == Direction::Output, const char, char>;
+    auto Transfer{[=](CharType &x, std::size_t totalBytes,
+                      std::size_t elementBytes) -> bool {
+      if constexpr (DIR == Direction::Output) {
+        return externalUnf ? externalUnf->Emit(&x, totalBytes, elementBytes)
+                           : childUnf->Emit(&x, totalBytes, elementBytes);
+      } else {
+        return externalUnf ? externalUnf->Receive(&x, totalBytes, elementBytes)
+                           : childUnf->Receive(&x, totalBytes, elementBytes);
+      }
+    }};
+    if (descriptor.IsContiguous()) { // contiguous unformatted I/O
+      char &x{ExtractElement<char>(io, descriptor, subscripts)};
+      return Transfer(x, numElements * elementBytes, elementBytes);
+    } else { // non-contiguous unformatted I/O
+      for (std::size_t j{0}; j < numElements; ++j) {
+        char &x{ExtractElement<char>(io, descriptor, subscripts)};
+        if (!Transfer(x, elementBytes, elementBytes)) {
+          return false;
+        }
+        if (!descriptor.IncrementSubscripts(subscripts) &&
+            j + 1 < numElements) {
+          handler.Crash("DescriptorIO: subscripts out of bounds");
+        }
+      }
+      return true;
+    }
+  }
 }
 
 template <Direction DIR>
@@ -291,44 +363,14 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       return false;
     }
   }
-  if (auto *unf{io.get_if<UnformattedIoStatementState<DIR>>()}) {
-    std::size_t elementBytes{descriptor.ElementBytes()};
-    SubscriptValue subscripts[maxRank];
-    descriptor.GetLowerBounds(subscripts);
-    std::size_t numElements{descriptor.Elements()};
-    if (false) {
-      // TODO: user-defined derived type unformatted I/O
-    } else if (descriptor.IsContiguous()) { // contiguous unformatted I/O
-      char &x{ExtractElement<char>(io, descriptor, subscripts)};
-      auto totalBytes{numElements * elementBytes};
-      if constexpr (DIR == Direction::Output) {
-        return unf->Emit(&x, totalBytes, elementBytes);
-      } else {
-        return unf->Receive(&x, totalBytes, elementBytes);
-      }
-    } else { // non-contiguous unformatted I/O
-      for (std::size_t j{0}; j < numElements; ++j) {
-        char &x{ExtractElement<char>(io, descriptor, subscripts)};
-        if constexpr (DIR == Direction::Output) {
-          if (!unf->Emit(&x, elementBytes, elementBytes)) {
-            return false;
-          }
-        } else {
-          if (!unf->Receive(&x, elementBytes, elementBytes)) {
-            return false;
-          }
-        }
-        if (!descriptor.IncrementSubscripts(subscripts) &&
-            j + 1 < numElements) {
-          io.GetIoErrorHandler().Crash(
-              "DescriptorIO: subscripts out of bounds");
-        }
-      }
-      return true;
-    }
-  } else if (auto catAndKind{descriptor.type().GetCategoryAndKind()}) {
+  if (!io.get_if<FormattedIoStatementState>()) {
+    return UnformattedDescriptorIO<DIR>(io, descriptor);
+  }
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  if (auto catAndKind{descriptor.type().GetCategoryAndKind()}) {
+    TypeCategory cat{catAndKind->first};
     int kind{catAndKind->second};
-    switch (catAndKind->first) {
+    switch (cat) {
     case TypeCategory::Integer:
       switch (kind) {
       case 1:
@@ -347,7 +389,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
         return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 16>, DIR>(
             io, descriptor);
       default:
-        io.GetIoErrorHandler().Crash(
+        handler.Crash(
             "DescriptorIO: Unimplemented INTEGER kind (%d) in descriptor",
             kind);
         return false;
@@ -368,7 +410,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       case 16:
         return FormattedRealIO<16, DIR>(io, descriptor);
       default:
-        io.GetIoErrorHandler().Crash(
+        handler.Crash(
             "DescriptorIO: Unimplemented REAL kind (%d) in descriptor", kind);
         return false;
       }
@@ -388,7 +430,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       case 16:
         return FormattedComplexIO<16, DIR>(io, descriptor);
       default:
-        io.GetIoErrorHandler().Crash(
+        handler.Crash(
             "DescriptorIO: Unimplemented COMPLEX kind (%d) in descriptor",
             kind);
         return false;
@@ -399,7 +441,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
         return FormattedCharacterIO<char, DIR>(io, descriptor);
       // TODO cases 2, 4
       default:
-        io.GetIoErrorHandler().Crash(
+        handler.Crash(
             "DescriptorIO: Unimplemented CHARACTER kind (%d) in descriptor",
             kind);
         return false;
@@ -419,7 +461,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
         return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 8>, DIR>(
             io, descriptor);
       default:
-        io.GetIoErrorHandler().Crash(
+        handler.Crash(
             "DescriptorIO: Unimplemented LOGICAL kind (%d) in descriptor",
             kind);
         return false;
@@ -428,7 +470,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       return FormattedDerivedTypeIO<DIR>(io, descriptor);
     }
   }
-  io.GetIoErrorHandler().Crash("DescriptorIO: Bad type code (%d) in descriptor",
+  handler.Crash("DescriptorIO: Bad type code (%d) in descriptor",
       static_cast<int>(descriptor.type().raw()));
   return false;
 }

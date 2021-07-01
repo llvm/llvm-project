@@ -60,7 +60,8 @@ getNarrowTypeBreakDown(LLT OrigTy, LLT NarrowTy, LLT &LeftoverTy) {
     unsigned EltSize = OrigTy.getScalarSizeInBits();
     if (LeftoverSize % EltSize != 0)
       return {-1, -1};
-    LeftoverTy = LLT::scalarOrVector(LeftoverSize / EltSize, EltSize);
+    LeftoverTy = LLT::scalarOrVector(
+        ElementCount::getFixed(LeftoverSize / EltSize), EltSize);
   } else {
     LeftoverTy = LLT::scalar(LeftoverSize);
   }
@@ -178,7 +179,8 @@ bool LegalizerHelper::extractParts(Register Reg, LLT RegTy,
     unsigned EltSize = MainTy.getScalarSizeInBits();
     if (LeftoverSize % EltSize != 0)
       return false;
-    LeftoverTy = LLT::scalarOrVector(LeftoverSize / EltSize, EltSize);
+    LeftoverTy = LLT::scalarOrVector(
+        ElementCount::getFixed(LeftoverSize / EltSize), EltSize);
   } else {
     LeftoverTy = LLT::scalar(LeftoverSize);
   }
@@ -2025,6 +2027,21 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
 
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX:
+    Observer.changingInstr(MI);
+
+    if (TypeIdx == 0) {
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+      widenScalarDst(MI, WideTy);
+    } else {
+      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
+      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ZEXT);
+    }
+
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_SHL:
     Observer.changingInstr(MI);
 
@@ -2572,7 +2589,8 @@ LegalizerHelper::bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
 
     // Type of the intermediate result vector.
     const unsigned NewEltsPerOldElt = NewNumElts / OldNumElts;
-    LLT MidTy = LLT::scalarOrVector(NewEltsPerOldElt, NewEltTy);
+    LLT MidTy =
+        LLT::scalarOrVector(ElementCount::getFixed(NewEltsPerOldElt), NewEltTy);
 
     auto NewEltsPerOldEltK = MIRBuilder.buildConstant(IdxTy, NewEltsPerOldElt);
 
@@ -3300,9 +3318,6 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
     return UnableToLegalize;
 
   const LLT NarrowTy0 = NarrowTyArg;
-  const unsigned NewNumElts =
-      NarrowTy0.isVector() ? NarrowTy0.getNumElements() : 1;
-
   const Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT LeftoverTy0;
@@ -3322,7 +3337,9 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
   for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
     Register SrcReg = MI.getOperand(I).getReg();
     LLT SrcTyI = MRI.getType(SrcReg);
-    LLT NarrowTyI = LLT::scalarOrVector(NewNumElts, SrcTyI.getScalarType());
+    const auto NewEC = NarrowTy0.isVector() ? NarrowTy0.getElementCount()
+                                            : ElementCount::getFixed(1);
+    LLT NarrowTyI = LLT::scalarOrVector(NewEC, SrcTyI.getScalarType());
     LLT LeftoverTyI;
 
     // Split this operand into the requested typed registers, and any leftover
@@ -3685,7 +3702,7 @@ LegalizerHelper::fewerElementsVectorMulo(MachineInstr &MI, unsigned TypeIdx,
 
   LLT ElementType = SrcTy.getElementType();
   LLT OverflowElementTy = MRI.getType(Overflow).getElementType();
-  const int NumResult = SrcTy.getNumElements();
+  const ElementCount NumResult = SrcTy.getElementCount();
   LLT GCDTy = getGCDType(SrcTy, NarrowTy);
 
   // Unmerge the operands to smaller parts of GCD type.
@@ -3693,7 +3710,7 @@ LegalizerHelper::fewerElementsVectorMulo(MachineInstr &MI, unsigned TypeIdx,
   auto UnmergeRHS = MIRBuilder.buildUnmerge(GCDTy, RHS);
 
   const int NumOps = UnmergeLHS->getNumOperands() - 1;
-  const int PartsPerUnmerge = NumResult / NumOps;
+  const ElementCount PartsPerUnmerge = NumResult.divideCoefficientBy(NumOps);
   LLT OverflowTy = LLT::scalarOrVector(PartsPerUnmerge, OverflowElementTy);
   LLT ResultTy = LLT::scalarOrVector(PartsPerUnmerge, ElementType);
 
@@ -3711,7 +3728,7 @@ LegalizerHelper::fewerElementsVectorMulo(MachineInstr &MI, unsigned TypeIdx,
 
   LLT ResultLCMTy = buildLCMMergePieces(SrcTy, NarrowTy, GCDTy, ResultParts);
   LLT OverflowLCMTy =
-      LLT::scalarOrVector(ResultLCMTy.getNumElements(), OverflowElementTy);
+      LLT::scalarOrVector(ResultLCMTy.getElementCount(), OverflowElementTy);
 
   // Recombine the pieces to the original result and overflow registers.
   buildWidenedRemergeToDst(Result, ResultLCMTy, ResultParts);
@@ -3957,8 +3974,6 @@ LegalizerHelper::reduceOperationWidth(MachineInstr &MI, unsigned int TypeIdx,
   SmallVector<Register, 8> ExtractedRegs[3];
   SmallVector<Register, 8> Parts;
 
-  unsigned NarrowElts = NarrowTy.isVector() ? NarrowTy.getNumElements() : 1;
-
   // Break down all the sources into NarrowTy pieces we can operate on. This may
   // involve creating merges to a wider type, padded with undef.
   for (int I = 0; I != NumSrcOps; ++I) {
@@ -3979,7 +3994,9 @@ LegalizerHelper::reduceOperationWidth(MachineInstr &MI, unsigned int TypeIdx,
         SrcReg = MIRBuilder.buildBitcast(SrcTy, SrcReg).getReg(0);
       }
     } else {
-      OpNarrowTy = LLT::scalarOrVector(NarrowElts, SrcTy.getScalarType());
+      auto NarrowEC = NarrowTy.isVector() ? NarrowTy.getElementCount()
+                                          : ElementCount::getFixed(1);
+      OpNarrowTy = LLT::scalarOrVector(NarrowEC, SrcTy.getScalarType());
     }
 
     LLT GCDTy = extractGCDType(ExtractedRegs[I], SrcTy, OpNarrowTy, SrcReg);
@@ -4235,7 +4252,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
 
   // We only support splitting a shuffle into 2, so adjust NarrowTy accordingly.
   // Further legalization attempts will be needed to do split further.
-  NarrowTy = DstTy.changeNumElements(DstTy.getNumElements() / 2);
+  NarrowTy =
+      DstTy.changeElementCount(DstTy.getElementCount().divideCoefficientBy(2));
   unsigned NewElts = NarrowTy.getNumElements();
 
   SmallVector<Register> SplitSrc1Regs, SplitSrc2Regs;

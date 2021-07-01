@@ -55,39 +55,44 @@ SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32
 // Instrumented code may set this value in terms of -dfsan-track-origins.
 // * undefined or 0: do not track origins.
 // * 1: track origins at memory store operations.
-// * 2: TODO: track origins at memory store operations and callsites.
+// * 2: track origins at memory load and store operations.
+//      TODO: track callsites.
 extern "C" SANITIZER_WEAK_ATTRIBUTE const int __dfsan_track_origins;
 
-int __dfsan_get_track_origins() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE int dfsan_get_track_origins() {
   return &__dfsan_track_origins ? __dfsan_track_origins : 0;
 }
 
 // On Linux/x86_64, memory is laid out as follows:
 //
-// +--------------------+ 0x800000000000 (top of memory)
-// | application memory |
-// +--------------------+ 0x700000008000 (kAppAddr)
-// |                    |
-// |       unused       |
-// |                    |
-// +--------------------+ 0x300000000000 (kUnusedAddr)
-// |       origin       |
-// +--------------------+ 0x200000008000 (kOriginAddr)
-// |       unused       |
-// +--------------------+ 0x200000000000
-// |   shadow memory    |
-// +--------------------+ 0x100000008000 (kShadowAddr)
-// |       unused       |
-// +--------------------+ 0x000000010000
-// | reserved by kernel |
-// +--------------------+ 0x000000000000
+//  +--------------------+ 0x800000000000 (top of memory)
+//  |    application 3   |
+//  +--------------------+ 0x700000000000
+//  |      invalid       |
+//  +--------------------+ 0x610000000000
+//  |      origin 1      |
+//  +--------------------+ 0x600000000000
+//  |    application 2   |
+//  +--------------------+ 0x510000000000
+//  |      shadow 1      |
+//  +--------------------+ 0x500000000000
+//  |      invalid       |
+//  +--------------------+ 0x400000000000
+//  |      origin 3      |
+//  +--------------------+ 0x300000000000
+//  |      shadow 3      |
+//  +--------------------+ 0x200000000000
+//  |      origin 2      |
+//  +--------------------+ 0x110000000000
+//  |      invalid       |
+//  +--------------------+ 0x100000000000
+//  |      shadow 2      |
+//  +--------------------+ 0x010000000000
+//  |    application 1   |
+//  +--------------------+ 0x000000000000
 //
-// To derive a shadow memory address from an application memory address, bits
-// 45-46 are cleared to bring the address into the range
-// [0x100000008000,0x200000000000).  See the function shadow_for below.
-//
-//
-
+//  MEM_TO_SHADOW(mem) = mem ^ 0x500000000000
+//  SHADOW_TO_ORIGIN(shadow) = shadow + 0x100000000000
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union_load(const dfsan_label *ls, uptr n) {
@@ -160,14 +165,12 @@ static uptr OriginAlignDown(uptr u) { return u & kOriginAlignMask; }
 static dfsan_origin GetOriginIfTainted(uptr addr, uptr size) {
   for (uptr i = 0; i < size; ++i, ++addr) {
     dfsan_label *s = shadow_for((void *)addr);
-    if (!is_shadow_addr_valid((uptr)s)) {
-      // The current DFSan memory layout is not always correct. For example,
-      // addresses (0, 0x10000) are mapped to (0, 0x10000). Before fixing the
-      // issue, we ignore such addresses.
-      continue;
-    }
-    if (*s)
+
+    if (*s) {
+      // Validate address region.
+      CHECK(MEM_IS_SHADOW(s));
       return *(dfsan_origin *)origin_for((void *)addr);
+    }
   }
   return 0;
 }
@@ -317,10 +320,12 @@ static void ReverseCopyOrigin(const void *dst, const void *src, uptr size,
 // operation.
 static void MoveOrigin(const void *dst, const void *src, uptr size,
                        StackTrace *stack) {
-  if (!has_valid_shadow_addr(dst) ||
-      !has_valid_shadow_addr((void *)((uptr)dst + size)) ||
-      !has_valid_shadow_addr(src) ||
-      !has_valid_shadow_addr((void *)((uptr)src + size))) {
+  // Validate address regions.
+  if (!MEM_IS_SHADOW(shadow_for(dst)) ||
+      !MEM_IS_SHADOW(shadow_for((void *)((uptr)dst + size))) ||
+      !MEM_IS_SHADOW(shadow_for(src)) ||
+      !MEM_IS_SHADOW(shadow_for((void *)((uptr)src + size)))) {
+    CHECK(false);
     return;
   }
   // If destination origin range overlaps with source origin range, move
@@ -442,7 +447,7 @@ void dfsan_copy_memory(void *dst, const void *src, uptr size) {
   internal_memcpy(dst, src, size);
   internal_memcpy((void *)shadow_for(dst), (const void *)shadow_for(src),
                   size * sizeof(dfsan_label));
-  if (__dfsan_get_track_origins())
+  if (dfsan_get_track_origins())
     dfsan_mem_origin_transfer(dst, src, size);
 }
 
@@ -510,12 +515,12 @@ void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
   if (0 != label) {
     const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
     WriteShadowWithSize(label, beg_shadow_addr, size);
-    if (__dfsan_get_track_origins())
+    if (dfsan_get_track_origins())
       SetOrigin(addr, size, origin);
     return;
   }
 
-  if (__dfsan_get_track_origins())
+  if (dfsan_get_track_origins())
     ReleaseOrigins(addr, size);
 
   ReleaseOrClearShadows(addr, size);
@@ -529,7 +534,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
 SANITIZER_INTERFACE_ATTRIBUTE
 void dfsan_set_label(dfsan_label label, void *addr, uptr size) {
   dfsan_origin init_origin = 0;
-  if (label && __dfsan_get_track_origins()) {
+  if (label && dfsan_get_track_origins()) {
     GET_CALLER_PC_BP;
     GET_STORE_STACK_TRACE_PC_BP(pc, bp);
     init_origin = ChainOrigin(0, &stack, true);
@@ -542,7 +547,7 @@ void dfsan_add_label(dfsan_label label, void *addr, uptr size) {
   if (0 == label)
     return;
 
-  if (__dfsan_get_track_origins()) {
+  if (dfsan_get_track_origins()) {
     GET_CALLER_PC_BP;
     GET_STORE_STACK_TRACE_PC_BP(pc, bp);
     dfsan_origin init_origin = ChainOrigin(0, &stack, true);
@@ -644,7 +649,7 @@ void PrintInvalidOriginWarning(dfsan_label label, const void *address) {
 bool PrintOriginTraceToStr(const void *addr, const char *description,
                            InternalScopedString *out) {
   CHECK(out);
-  CHECK(__dfsan_get_track_origins());
+  CHECK(dfsan_get_track_origins());
   Decorator d;
 
   const dfsan_label label = *__dfsan::shadow_for(addr);
@@ -683,7 +688,7 @@ bool PrintOriginTraceToStr(const void *addr, const char *description,
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_print_origin_trace(
     const void *addr, const char *description) {
-  if (!__dfsan_get_track_origins()) {
+  if (!dfsan_get_track_origins()) {
     PrintNoOriginTrackingWarning();
     return;
   }
@@ -709,7 +714,7 @@ dfsan_sprint_origin_trace(const void *addr, const char *description,
                           char *out_buf, size_t out_buf_size) {
   CHECK(out_buf);
 
-  if (!__dfsan_get_track_origins()) {
+  if (!dfsan_get_track_origins()) {
     PrintNoOriginTrackingWarning();
     return 0;
   }
@@ -738,7 +743,7 @@ dfsan_sprint_origin_trace(const void *addr, const char *description,
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
 dfsan_get_init_origin(const void *addr) {
-  if (!__dfsan_get_track_origins())
+  if (!dfsan_get_track_origins())
     return 0;
 
   const dfsan_label label = *__dfsan::shadow_for(addr);
@@ -825,7 +830,7 @@ void dfsan_clear_thread_local_state() {
   internal_memset(__dfsan_arg_tls, 0, sizeof(__dfsan_arg_tls));
   internal_memset(__dfsan_retval_tls, 0, sizeof(__dfsan_retval_tls));
 
-  if (__dfsan_get_track_origins()) {
+  if (dfsan_get_track_origins()) {
     internal_memset(__dfsan_arg_origin_tls, 0, sizeof(__dfsan_arg_origin_tls));
     internal_memset(&__dfsan_retval_origin_tls, 0,
                     sizeof(__dfsan_retval_origin_tls));
@@ -833,8 +838,149 @@ void dfsan_clear_thread_local_state() {
 }
 
 extern "C" void dfsan_flush() {
-  if (!MmapFixedSuperNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
-    Die();
+  const uptr maxVirtualAddress = GetMaxUserVirtualAddress();
+  for (unsigned i = 0; i < kMemoryLayoutSize; ++i) {
+    uptr start = kMemoryLayout[i].start;
+    uptr end = kMemoryLayout[i].end;
+    uptr size = end - start;
+    MappingDesc::Type type = kMemoryLayout[i].type;
+
+    if (type != MappingDesc::SHADOW && type != MappingDesc::ORIGIN)
+      continue;
+
+    // Check if the segment should be mapped based on platform constraints.
+    if (start >= maxVirtualAddress)
+      continue;
+
+    if (!MmapFixedSuperNoReserve(start, size, kMemoryLayout[i].name)) {
+      Printf("FATAL: DataFlowSanitizer: failed to clear memory region\n");
+      Die();
+    }
+  }
+}
+
+// TODO: CheckMemoryLayoutSanity is based on msan.
+// Consider refactoring these into a shared implementation.
+static void CheckMemoryLayoutSanity() {
+  uptr prev_end = 0;
+  for (unsigned i = 0; i < kMemoryLayoutSize; ++i) {
+    uptr start = kMemoryLayout[i].start;
+    uptr end = kMemoryLayout[i].end;
+    MappingDesc::Type type = kMemoryLayout[i].type;
+    CHECK_LT(start, end);
+    CHECK_EQ(prev_end, start);
+    CHECK(addr_is_type(start, type));
+    CHECK(addr_is_type((start + end) / 2, type));
+    CHECK(addr_is_type(end - 1, type));
+    if (type == MappingDesc::APP) {
+      uptr addr = start;
+      CHECK(MEM_IS_SHADOW(MEM_TO_SHADOW(addr)));
+      CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
+      CHECK_EQ(MEM_TO_ORIGIN(addr), SHADOW_TO_ORIGIN(MEM_TO_SHADOW(addr)));
+
+      addr = (start + end) / 2;
+      CHECK(MEM_IS_SHADOW(MEM_TO_SHADOW(addr)));
+      CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
+      CHECK_EQ(MEM_TO_ORIGIN(addr), SHADOW_TO_ORIGIN(MEM_TO_SHADOW(addr)));
+
+      addr = end - 1;
+      CHECK(MEM_IS_SHADOW(MEM_TO_SHADOW(addr)));
+      CHECK(MEM_IS_ORIGIN(MEM_TO_ORIGIN(addr)));
+      CHECK_EQ(MEM_TO_ORIGIN(addr), SHADOW_TO_ORIGIN(MEM_TO_SHADOW(addr)));
+    }
+    prev_end = end;
+  }
+}
+
+// TODO: CheckMemoryRangeAvailability is based on msan.
+// Consider refactoring these into a shared implementation.
+static bool CheckMemoryRangeAvailability(uptr beg, uptr size) {
+  if (size > 0) {
+    uptr end = beg + size - 1;
+    if (!MemoryRangeIsAvailable(beg, end)) {
+      Printf("FATAL: Memory range %p - %p is not available.\n", beg, end);
+      return false;
+    }
+  }
+  return true;
+}
+
+// TODO: ProtectMemoryRange is based on msan.
+// Consider refactoring these into a shared implementation.
+static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
+  if (size > 0) {
+    void *addr = MmapFixedNoAccess(beg, size, name);
+    if (beg == 0 && addr) {
+      // Depending on the kernel configuration, we may not be able to protect
+      // the page at address zero.
+      uptr gap = 16 * GetPageSizeCached();
+      beg += gap;
+      size -= gap;
+      addr = MmapFixedNoAccess(beg, size, name);
+    }
+    if ((uptr)addr != beg) {
+      uptr end = beg + size - 1;
+      Printf("FATAL: Cannot protect memory range %p - %p (%s).\n", beg, end,
+             name);
+      return false;
+    }
+  }
+  return true;
+}
+
+// TODO: InitShadow is based on msan.
+// Consider refactoring these into a shared implementation.
+bool InitShadow(bool init_origins) {
+  // Let user know mapping parameters first.
+  VPrintf(1, "dfsan_init %p\n", &__dfsan::dfsan_init);
+  for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
+    VPrintf(1, "%s: %zx - %zx\n", kMemoryLayout[i].name, kMemoryLayout[i].start,
+            kMemoryLayout[i].end - 1);
+
+  CheckMemoryLayoutSanity();
+
+  if (!MEM_IS_APP(&__dfsan::dfsan_init)) {
+    Printf("FATAL: Code %p is out of application range. Non-PIE build?\n",
+           (uptr)&__dfsan::dfsan_init);
+    return false;
+  }
+
+  const uptr maxVirtualAddress = GetMaxUserVirtualAddress();
+
+  for (unsigned i = 0; i < kMemoryLayoutSize; ++i) {
+    uptr start = kMemoryLayout[i].start;
+    uptr end = kMemoryLayout[i].end;
+    uptr size = end - start;
+    MappingDesc::Type type = kMemoryLayout[i].type;
+
+    // Check if the segment should be mapped based on platform constraints.
+    if (start >= maxVirtualAddress)
+      continue;
+
+    bool map = type == MappingDesc::SHADOW ||
+               (init_origins && type == MappingDesc::ORIGIN);
+    bool protect = type == MappingDesc::INVALID ||
+                   (!init_origins && type == MappingDesc::ORIGIN);
+    CHECK(!(map && protect));
+    if (!map && !protect)
+      CHECK(type == MappingDesc::APP);
+    if (map) {
+      if (!CheckMemoryRangeAvailability(start, size))
+        return false;
+      if (!MmapFixedSuperNoReserve(start, size, kMemoryLayout[i].name))
+        return false;
+      if (common_flags()->use_madv_dontdump)
+        DontDumpShadowMemory(start, size);
+    }
+    if (protect) {
+      if (!CheckMemoryRangeAvailability(start, size))
+        return false;
+      if (!ProtectMemoryRange(start, size, kMemoryLayout[i].name))
+        return false;
+    }
+  }
+
+  return true;
 }
 
 static void DFsanInit(int argc, char **argv, char **envp) {
@@ -848,18 +994,9 @@ static void DFsanInit(int argc, char **argv, char **envp) {
 
   InitializeFlags();
 
-  dfsan_flush();
-  if (common_flags()->use_madv_dontdump)
-    DontDumpShadowMemory(ShadowAddr(), UnusedAddr() - ShadowAddr());
+  CheckASLR();
 
-  // Protect the region of memory we don't use, to preserve the one-to-one
-  // mapping from application to shadow memory. But if ASLR is disabled, Linux
-  // will load our executable in the middle of our unused region. This mostly
-  // works so long as the program doesn't use too much memory. We support this
-  // case by disabling memory protection when ASLR is disabled.
-  uptr init_addr = (uptr)&DFsanInit;
-  if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
-    MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
+  InitShadow(dfsan_get_track_origins());
 
   initialize_interceptors();
 

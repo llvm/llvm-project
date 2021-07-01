@@ -42,20 +42,12 @@ define float @v_sitofp_i32_to_f32_mask255(i32 %arg0) nounwind {
 }
 
 define float @v_uitofp_to_f32_lshr7_mask255(i32 %arg0) nounwind {
-; SI-LABEL: v_uitofp_to_f32_lshr7_mask255:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 7, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_uitofp_to_f32_lshr7_mask255:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v0, 7, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_uitofp_to_f32_lshr7_mask255:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_bfe_u32 v0, v0, 7, 8
+; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %lshr.7 = lshr i32 %arg0, 7
   %masked = and i32 %lshr.7, 255
   %cvt = uitofp i32 %masked to float
@@ -66,16 +58,14 @@ define float @v_uitofp_to_f32_lshr8_mask255(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_to_f32_lshr8_mask255:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; SI-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_to_f32_lshr8_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
   %masked = and i32 %lshr.8, 255
@@ -116,17 +106,14 @@ define float @v_uitofp_to_f32_lshr16_mask255(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_to_f32_lshr16_mask255:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; SI-NEXT:    v_bfe_u32 v0, v0, 16, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_to_f32_lshr16_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, 0xff
-; VI-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.16 = lshr i32 %arg0, 16
   %masked = and i32 %lshr.16, 255
@@ -167,20 +154,19 @@ define <2 x float> @v_uitofp_v2i8_to_v2f32(i16 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_v2i8_to_v2f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; SI-NEXT:    s_movk_i32 s4, 0xff
-; SI-NEXT:    v_and_b32_e32 v0, s4, v0
-; SI-NEXT:    v_and_b32_e32 v1, s4, v1
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
+; SI-NEXT:    v_and_b32_e32 v1, 0xff, v0
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v1
+; SI-NEXT:    v_bfe_u32 v0, v0, 8, 8
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v0
+; SI-NEXT:    v_mov_b32_e32 v0, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_v2i8_to_v2f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; VI-NEXT:    v_mov_b32_e32 v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %val = bitcast i16 %arg0 to <2 x i8>
   %cvt = uitofp <2 x i8> %val to <2 x float>
@@ -191,27 +177,21 @@ define <3 x float> @v_uitofp_v3i8_to_v3f32(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_v3i8_to_v3f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; SI-NEXT:    s_movk_i32 s4, 0xff
-; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; SI-NEXT:    v_and_b32_e32 v0, s4, v0
-; SI-NEXT:    v_and_b32_e32 v1, s4, v1
-; SI-NEXT:    v_and_b32_e32 v2, s4, v2
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; SI-NEXT:    v_and_b32_e32 v1, 0xff, v0
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v3, v1
+; SI-NEXT:    v_bfe_u32 v1, v0, 8, 8
+; SI-NEXT:    v_bfe_u32 v0, v0, 16, 8
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v3
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_v3i8_to_v3f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_movk_i32 s4, 0xff
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
 ; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; VI-NEXT:    v_and_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; VI-NEXT:    v_mov_b32_e32 v0, v3
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %trunc = trunc i32 %arg0 to i24
@@ -224,13 +204,10 @@ define <4 x float> @v_uitofp_v4i8_to_v4f32(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_v4i8_to_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_movk_i32 s4, 0xff
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; SI-NEXT:    v_and_b32_e32 v3, s4, v0
-; SI-NEXT:    v_and_b32_e32 v1, s4, v1
-; SI-NEXT:    v_and_b32_e32 v2, s4, v2
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v3
+; SI-NEXT:    v_and_b32_e32 v1, 0xff, v0
+; SI-NEXT:    v_bfe_u32 v2, v0, 16, 8
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v1
+; SI-NEXT:    v_bfe_u32 v1, v0, 8, 8
 ; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
@@ -240,14 +217,10 @@ define <4 x float> @v_uitofp_v4i8_to_v4f32(i32 %arg0) nounwind {
 ; VI-LABEL: v_uitofp_v4i8_to_v4f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_movk_i32 s4, 0xff
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; VI-NEXT:    v_and_b32_sdwa v2, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; VI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
 ; VI-NEXT:    v_mov_b32_e32 v0, v4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %val = bitcast i32 %arg0 to <4 x i8>
@@ -259,13 +232,10 @@ define <4 x float> @v_uitofp_unpack_i32_to_v4f32(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_unpack_i32_to_v4f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_movk_i32 s4, 0xff
-; SI-NEXT:    v_and_b32_e32 v1, s4, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; SI-NEXT:    v_and_b32_e32 v1, 0xff, v0
+; SI-NEXT:    v_bfe_u32 v2, v0, 16, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; SI-NEXT:    v_and_b32_e32 v1, s4, v1
-; SI-NEXT:    v_and_b32_e32 v2, s4, v2
+; SI-NEXT:    v_bfe_u32 v1, v0, 8, 8
 ; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
@@ -275,14 +245,10 @@ define <4 x float> @v_uitofp_unpack_i32_to_v4f32(i32 %arg0) nounwind {
 ; VI-LABEL: v_uitofp_unpack_i32_to_v4f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_movk_i32 s4, 0xff
-; VI-NEXT:    v_mov_b32_e32 v2, s4
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; VI-NEXT:    v_and_b32_sdwa v2, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; VI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
 ; VI-NEXT:    v_mov_b32_e32 v0, v4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %mask.arg0 = and i32 %arg0, 255
@@ -351,8 +317,7 @@ define half @v_uitofp_to_f16_lshr8_mask255(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_to_f16_lshr8_mask255:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; SI-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -360,8 +325,7 @@ define half @v_uitofp_to_f16_lshr8_mask255(i32 %arg0) nounwind {
 ; VI-LABEL: v_uitofp_to_f16_lshr8_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
 ; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
@@ -374,8 +338,7 @@ define half @v_uitofp_to_f16_lshr16_mask255(i32 %arg0) nounwind {
 ; SI-LABEL: v_uitofp_to_f16_lshr16_mask255:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; SI-NEXT:    v_bfe_u32 v0, v0, 16, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -383,9 +346,7 @@ define half @v_uitofp_to_f16_lshr16_mask255(i32 %arg0) nounwind {
 ; VI-LABEL: v_uitofp_to_f16_lshr16_mask255:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, 0xff
-; VI-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.16 = lshr i32 %arg0, 16
@@ -442,8 +403,7 @@ define double @v_uitofp_to_f64_lshr8_mask255(i32 %arg0) nounwind {
 ; GCN-LABEL: v_uitofp_to_f64_lshr8_mask255:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; GCN-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GCN-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; GCN-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
@@ -453,21 +413,12 @@ define double @v_uitofp_to_f64_lshr8_mask255(i32 %arg0) nounwind {
 }
 
 define double @v_uitofp_to_f64_lshr16_mask255(i32 %arg0) nounwind {
-; SI-LABEL: v_uitofp_to_f64_lshr16_mask255:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; SI-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_uitofp_to_f64_lshr16_mask255:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, 0xff
-; VI-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_uitofp_to_f64_lshr16_mask255:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_bfe_u32 v0, v0, 16, 8
+; GCN-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %lshr.16 = lshr i32 %arg0, 16
   %masked = and i32 %lshr.16, 255
   %cvt = uitofp i32 %masked to double
@@ -952,8 +903,7 @@ define amdgpu_kernel void @extract_byte1_to_f32(float addrspace(1)* noalias %out
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; SI-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -970,8 +920,7 @@ define amdgpu_kernel void @extract_byte1_to_f32(float addrspace(1)* noalias %out
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -1000,8 +949,7 @@ define amdgpu_kernel void @extract_byte2_to_f32(float addrspace(1)* noalias %out
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; SI-NEXT:    v_bfe_u32 v0, v0, 16, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -1017,10 +965,8 @@ define amdgpu_kernel void @extract_byte2_to_f32(float addrspace(1)* noalias %out
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v1, 0xff
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v0
+; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_store_dword v[0:1], v2

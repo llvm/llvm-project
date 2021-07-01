@@ -3145,9 +3145,10 @@ static SymbolRef findFailedReallocSymbol(ProgramStateRef currState,
 static bool isReferenceCountingPointerDestructor(const CXXDestructorDecl *DD) {
   if (const IdentifierInfo *II = DD->getParent()->getIdentifier()) {
     StringRef N = II->getName();
-    if (N.contains_lower("ptr") || N.contains_lower("pointer")) {
-      if (N.contains_lower("ref") || N.contains_lower("cnt") ||
-          N.contains_lower("intrusive") || N.contains_lower("shared")) {
+    if (N.contains_insensitive("ptr") || N.contains_insensitive("pointer")) {
+      if (N.contains_insensitive("ref") || N.contains_insensitive("cnt") ||
+          N.contains_insensitive("intrusive") ||
+          N.contains_insensitive("shared")) {
         return true;
       }
     }

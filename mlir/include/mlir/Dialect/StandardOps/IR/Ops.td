@@ -1454,6 +1454,7 @@ def SelectOp : Std_Op<"select", [NoSideEffect,
       Value getFalseValue() { return false_value(); }
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

@@ -322,11 +322,11 @@ bool COFFMasmParser::ParseDirectiveProc(StringRef Directive, SMLoc Loc) {
   if (getLexer().is(AsmToken::Identifier)) {
     StringRef nextVal = getTok().getString();
     SMLoc nextLoc = getTok().getLoc();
-    if (nextVal.equals_lower("far")) {
+    if (nextVal.equals_insensitive("far")) {
       // TODO(epastor): Handle far procedure definitions.
       Lex();
       return Error(nextLoc, "far procedure definitions not yet supported");
-    } else if (nextVal.equals_lower("near")) {
+    } else if (nextVal.equals_insensitive("near")) {
       Lex();
       nextVal = getTok().getString();
       nextLoc = getTok().getLoc();
@@ -340,7 +340,7 @@ bool COFFMasmParser::ParseDirectiveProc(StringRef Directive, SMLoc Loc) {
 
   bool Framed = false;
   if (getLexer().is(AsmToken::Identifier) &&
-      getTok().getString().equals_lower("frame")) {
+      getTok().getString().equals_insensitive("frame")) {
     Lex();
     Framed = true;
     getStreamer().EmitWinCFIStartProc(Sym, Loc);

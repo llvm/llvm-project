@@ -1,9 +1,9 @@
-# This file introduces a templates for running clang-tblgen.
+# This file introduces a template for running clang-tblgen.
 #
 # Parameters:
 #
 #   args (required)
-#       [list of strings] Flags to pass to llvm-tblgen.
+#       [list of strings] Flags to pass to clang-tblgen.
 #
 #   output_name (optional)
 #       Basename of the generated output file.

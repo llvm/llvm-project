@@ -23,12 +23,14 @@ RangedConstraintManager::~RangedConstraintManager() {}
 ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
                                                    SymbolRef Sym,
                                                    bool Assumption) {
+  Sym = simplify(State, Sym);
+
   // Handle SymbolData.
-  if (isa<SymbolData>(Sym)) {
+  if (isa<SymbolData>(Sym))
     return assumeSymUnsupported(State, Sym, Assumption);
 
-    // Handle symbolic expression.
-  } else if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(Sym)) {
+  // Handle symbolic expression.
+  if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(Sym)) {
     // We can only simplify expressions whose RHS is an integer.
 
     BinaryOperator::Opcode op = SIE->getOpcode();
@@ -93,6 +95,9 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
 ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
     ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
+
+  Sym = simplify(State, Sym);
+
   // Get the type used for calculating wraparound.
   BasicValueFactory &BVF = getBasicVals();
   APSIntType WraparoundType = BVF.getAPSIntType(Sym->getType());
@@ -121,6 +126,8 @@ ProgramStateRef RangedConstraintManager::assumeSymInclusiveRange(
 ProgramStateRef
 RangedConstraintManager::assumeSymUnsupported(ProgramStateRef State,
                                               SymbolRef Sym, bool Assumption) {
+  Sym = simplify(State, Sym);
+
   BasicValueFactory &BVF = getBasicVals();
   QualType T = Sym->getType();
 
@@ -217,6 +224,14 @@ void RangedConstraintManager::computeAdjustment(SymbolRef &Sym,
         Adjustment = -Adjustment;
     }
   }
+}
+
+SymbolRef simplify(ProgramStateRef State, SymbolRef Sym) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  SVal SimplifiedVal = SVB.simplifySVal(State, SVB.makeSymbolVal(Sym));
+  if (SymbolRef SimplifiedSym = SimplifiedVal.getAsSymbol())
+    return SimplifiedSym;
+  return Sym;
 }
 
 } // end of namespace ento

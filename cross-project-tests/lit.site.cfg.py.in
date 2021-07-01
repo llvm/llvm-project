@@ -1,0 +1,38 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+import lit.util
+
+config.targets_to_build = "@TARGETS_TO_BUILD@".split()
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
+config.llvm_shlib_dir = "@SHLIBDIR@"
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
+config.cross_project_tests_obj_root = "@CROSS_PROJECT_TESTS_BINARY_DIR@"
+config.cross_project_tests_src_root = "@CROSS_PROJECT_TESTS_SOURCE_DIR@"
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+config.target_triple = "@TARGET_TRIPLE@"
+config.is_msvc = lit.util.pythonize_bool("@MSVC@")
+config.llvm_enabled_projects = "@LLVM_ENABLE_PROJECTS@".split(";")
+
+config.mlir_src_root = "@MLIR_SOURCE_DIR@"
+
+config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
+
+# Support substitution of the tools_dir with user parameters. This is
+# used when we can't determine the tool dir at configuration time.
+try:
+    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
+    config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
+except KeyError:
+    e = sys.exc_info()[1]
+    key, = e.args
+    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@CROSS_PROJECT_TESTS_SOURCE_DIR@/lit.cfg.py")

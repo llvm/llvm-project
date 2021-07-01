@@ -101,6 +101,8 @@
 ! HELP-FC1-NEXT:                        Specify where to find the compiled intrinsic modules
 ! HELP-FC1-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! HELP-FC1-NEXT: -flogical-abbreviations Enable logical abbreviations
+! HELP-FC1-NEXT: -fno-analyzed-objects-for-unparse
+! HELP-FC1-NEXT:                        Do not use the analyzed objects when unparsing
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.

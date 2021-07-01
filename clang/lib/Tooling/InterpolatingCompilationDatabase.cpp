@@ -256,7 +256,7 @@ private:
 
     // Otherwise just check the clang executable file name.
     return !CmdLine.empty() &&
-           llvm::sys::path::stem(CmdLine.front()).endswith_lower("cl");
+           llvm::sys::path::stem(CmdLine.front()).endswith_insensitive("cl");
   }
 
   // Map the language from the --std flag to that of the -x flag.

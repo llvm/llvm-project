@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple amdgcn-- -mcpu gfx900 %s -o - | llvm-readobj -t -r - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple amdgcn-- -mcpu gfx900 %s -o - | llvm-readobj -r --syms - | FileCheck %s
 
 	.text
 	.globl test_kernel

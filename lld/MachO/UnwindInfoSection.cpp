@@ -153,7 +153,9 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     Reloc &rFunc = isec->relocs[++i];
     assert(r.offset ==
            rFunc.offset + offsetof(CompactUnwindEntry<Ptr>, personality));
-    rFunc.referent.get<InputSection *>()->hasPersonality = true;
+    auto *referentIsec =
+        cast<ConcatInputSection>(rFunc.referent.get<InputSection *>());
+    referentIsec->hasPersonality = true;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {
@@ -229,7 +231,7 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
     memcpy(buf, isec->data.data(), isec->data.size());
 
     for (const Reloc &r : isec->relocs) {
-      uint64_t referentVA = 0;
+      uint64_t referentVA = UINT64_MAX; // Tombstone value
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
           assert(referentSym->isInGot());
@@ -240,14 +242,12 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
           // that we can distinguish the null pointer case.
           referentVA = referentSym->gotIndex + 1;
         }
-      } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+      } else {
+        auto *referentIsec = r.referent.get<InputSection *>();
         ConcatInputSection *concatIsec = checkTextSegment(referentIsec);
-        if (concatIsec->shouldOmitFromOutput())
-          referentVA = UINT64_MAX; // Tombstone value
-        else
+        if (!concatIsec->shouldOmitFromOutput())
           referentVA = referentIsec->getVA(r.addend);
       }
-
       writeAddress(buf + r.offset, referentVA, r.length);
     }
   }
@@ -314,6 +314,31 @@ static void addEntriesForFunctionsWithoutUnwindInfo(
             markNoUnwindInfo(d);
 }
 
+static bool canFoldEncoding(compact_unwind_encoding_t encoding) {
+  // From compact_unwind_encoding.h:
+  //  UNWIND_X86_64_MODE_STACK_IND:
+  //  A "frameless" (RBP not used as frame pointer) function large constant
+  //  stack size.  This case is like the previous, except the stack size is too
+  //  large to encode in the compact unwind encoding.  Instead it requires that
+  //  the function contains "subq $nnnnnnnn,RSP" in its prolog.  The compact
+  //  encoding contains the offset to the nnnnnnnn value in the function in
+  //  UNWIND_X86_64_FRAMELESS_STACK_SIZE.
+  // Since this means the unwinder has to look at the `subq` in the function
+  // of the unwind info's unwind address, two functions that have identical
+  // unwind info can't be folded if it's using this encoding since both
+  // entries need unique addresses.
+  static_assert(UNWIND_X86_64_MODE_MASK == UNWIND_X86_MODE_MASK, "");
+  static_assert(UNWIND_X86_64_MODE_STACK_IND == UNWIND_X86_MODE_STACK_IND, "");
+  if ((target->cpuType == CPU_TYPE_X86_64 || target->cpuType == CPU_TYPE_X86) &&
+      (encoding & UNWIND_X86_64_MODE_MASK) == UNWIND_X86_64_MODE_STACK_IND) {
+    // FIXME: Consider passing in the two function addresses and getting
+    // their two stack sizes off the `subq` and only returning false if they're
+    // actually different.
+    return false;
+  }
+  return true;
+}
+
 // Scan the __LD,__compact_unwind entries and compute the space needs of
 // __TEXT,__unwind_info and __TEXT,__eh_frame
 template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
@@ -375,7 +400,8 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
     while (++foldEnd < cuPtrVector.end() &&
            (*foldBegin)->encoding == (*foldEnd)->encoding &&
            (*foldBegin)->personality == (*foldEnd)->personality &&
-           (*foldBegin)->lsda == (*foldEnd)->lsda)
+           (*foldBegin)->lsda == (*foldEnd)->lsda &&
+           canFoldEncoding((*foldEnd)->encoding))
       ;
     *foldWrite++ = *foldBegin;
     foldBegin = foldEnd;

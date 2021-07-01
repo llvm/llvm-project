@@ -726,25 +726,37 @@ define i1 @t11() {
 ;
 ; THUMB1-LABEL: t11:
 ; THUMB1:       @ %bb.0: @ %entry
-; THUMB1-NEXT:    .pad #4
-; THUMB1-NEXT:    sub sp, #4
+; THUMB1-NEXT:    .save {r4, r5, r7, lr}
+; THUMB1-NEXT:    push {r4, r5, r7, lr}
+; THUMB1-NEXT:    .pad #8
+; THUMB1-NEXT:    sub sp, #8
+; THUMB1-NEXT:    movs r4, #33
+; THUMB1-NEXT:    ldr r0, [sp, #4]
+; THUMB1-NEXT:    orrs r0, r4
+; THUMB1-NEXT:    ldr r1, .LCPI10_0
+; THUMB1-NEXT:    ands r1, r0
 ; THUMB1-NEXT:    movs r0, #5
 ; THUMB1-NEXT:    lsls r0, r0, #13
-; THUMB1-NEXT:    ldr r1, [sp]
-; THUMB1-NEXT:    orrs r1, r0
-; THUMB1-NEXT:    ldr r0, .LCPI10_0
-; THUMB1-NEXT:    ands r0, r1
-; THUMB1-NEXT:    adds r0, r0, #3
-; THUMB1-NEXT:    str r0, [sp]
-; THUMB1-NEXT:    movs r1, #0
+; THUMB1-NEXT:    adds r5, r1, r0
+; THUMB1-NEXT:    movs r1, #10
+; THUMB1-NEXT:    mov r0, r4
+; THUMB1-NEXT:    bl __aeabi_uidivmod
+; THUMB1-NEXT:    bics r5, r4
+; THUMB1-NEXT:    orrs r5, r1
+; THUMB1-NEXT:    str r5, [sp, #4]
+; THUMB1-NEXT:    ldr r0, .LCPI10_1
+; THUMB1-NEXT:    ands r0, r5
+; THUMB1-NEXT:    subs r1, r0, #3
 ; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
-; THUMB1-NEXT:    add sp, #4
-; THUMB1-NEXT:    bx lr
+; THUMB1-NEXT:    add sp, #8
+; THUMB1-NEXT:    pop {r4, r5, r7, pc}
 ; THUMB1-NEXT:    .p2align 2
 ; THUMB1-NEXT:  @ %bb.1:
 ; THUMB1-NEXT:  .LCPI10_0:
-; THUMB1-NEXT:    .long 4261453824 @ 0xfe00a000
+; THUMB1-NEXT:    .long 4261412897 @ 0xfe000021
+; THUMB1-NEXT:  .LCPI10_1:
+; THUMB1-NEXT:    .long 4095 @ 0xfff
 ;
 ; THUMB2-LABEL: t11:
 ; THUMB2:       @ %bb.0: @ %entry
@@ -779,13 +791,12 @@ define i1 @t11() {
 ; V8MBASE:       @ %bb.0: @ %entry
 ; V8MBASE-NEXT:    .pad #4
 ; V8MBASE-NEXT:    sub sp, #4
-; V8MBASE-NEXT:    movw r0, #40960
+; V8MBASE-NEXT:    movs r0, #127
+; V8MBASE-NEXT:    lsls r0, r0, #25
 ; V8MBASE-NEXT:    ldr r1, [sp]
-; V8MBASE-NEXT:    orrs r1, r0
-; V8MBASE-NEXT:    movw r0, #40960
-; V8MBASE-NEXT:    movt r0, #65024
-; V8MBASE-NEXT:    ands r0, r1
-; V8MBASE-NEXT:    adds r0, r0, #3
+; V8MBASE-NEXT:    ands r1, r0
+; V8MBASE-NEXT:    movw r0, #40963
+; V8MBASE-NEXT:    adds r0, r1, r0
 ; V8MBASE-NEXT:    str r0, [sp]
 ; V8MBASE-NEXT:    movs r1, #0
 ; V8MBASE-NEXT:    rsbs r0, r1, #0

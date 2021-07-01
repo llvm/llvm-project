@@ -341,8 +341,8 @@ private:
   void initializeHVXLowering();
   unsigned getPreferredHvxVectorAction(MVT VecTy) const;
 
-  void validateConstPtrAlignment(SDValue Ptr, const SDLoc &dl,
-                                 unsigned NeedAlign) const;
+  void validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
+                                 const SDLoc &dl) const;
 
   std::pair<SDValue,int> getBaseAndOffset(SDValue Addr) const;
 

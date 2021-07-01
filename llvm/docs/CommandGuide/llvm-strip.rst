@@ -74,7 +74,7 @@ multiple file formats.
  Remove all symbols, debug sections and relocations from the output. This option
  is equivalent to GNU :program:`strip`'s ``--strip-all`` switch.
 
-.. option:: --strip-all, -S
+.. option:: --strip-all, -s
 
  For ELF objects, remove from the output all symbols and non-alloc sections not
  within segments, except for .gnu.warning, .ARM.attribute sections and the
@@ -83,7 +83,7 @@ multiple file formats.
  For COFF objects, remove all symbols, debug sections, and relocations from the
  output.
 
-.. option:: --strip-debug, -g
+.. option:: --strip-debug, -d, -g, -S
 
  Remove all debug sections from the output.
 

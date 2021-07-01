@@ -1022,41 +1022,31 @@ ELFDumper<ELFT>::dumpCallGraphProfileSection(const Elf_Shdr *Shdr) {
   if (!ContentOrErr)
     return ContentOrErr.takeError();
   ArrayRef<uint8_t> Content = *ContentOrErr;
-
+  const uint32_t SizeOfEntry = ELFYAML::getDefaultShEntSize<ELFT>(
+      Obj.getHeader().e_machine, S->Type, S->Name);
   // Dump the section by using the Content key when it is truncated.
   // There is no need to create either "Content" or "Entries" fields when the
   // section is empty.
-  if (Content.empty() || Content.size() % 16 != 0) {
+  if (Content.empty() || Content.size() % SizeOfEntry != 0) {
     if (!Content.empty())
       S->Content = yaml::BinaryRef(Content);
     return S.release();
   }
 
-  std::vector<ELFYAML::CallGraphEntry> Entries(Content.size() / 16);
+  std::vector<ELFYAML::CallGraphEntryWeight> Entries(Content.size() /
+                                                     SizeOfEntry);
   DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
   DataExtractor::Cursor Cur(0);
-  auto ReadEntry = [&](ELFYAML::CallGraphEntry &E) {
-    uint32_t FromSymIndex = Data.getU32(Cur);
-    uint32_t ToSymIndex = Data.getU32(Cur);
+  auto ReadEntry = [&](ELFYAML::CallGraphEntryWeight &E) {
     E.Weight = Data.getU64(Cur);
     if (!Cur) {
       consumeError(Cur.takeError());
       return false;
     }
-
-    Expected<StringRef> From = getSymbolName(Shdr->sh_link, FromSymIndex);
-    Expected<StringRef> To = getSymbolName(Shdr->sh_link, ToSymIndex);
-    if (From && To) {
-      E.From = *From;
-      E.To = *To;
-      return true;
-    }
-    consumeError(From.takeError());
-    consumeError(To.takeError());
-    return false;
+    return true;
   };
 
-  for (ELFYAML::CallGraphEntry &E : Entries) {
+  for (ELFYAML::CallGraphEntryWeight &E : Entries) {
     if (ReadEntry(E))
       continue;
     S->Content = yaml::BinaryRef(Content);

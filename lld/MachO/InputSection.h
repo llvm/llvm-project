@@ -45,6 +45,7 @@ public:
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
+  virtual InputSection *canonical() { return this; }
 
   InputFile *file = nullptr;
   StringRef name;
@@ -58,17 +59,6 @@ public:
 
   // is address assigned?
   bool isFinal = false;
-
-  bool isHashableForICF(bool isText) const;
-  void hashForICF();
-  InputSection *canonical() { return replacement ? replacement : this; }
-
-  // ICF can't fold functions with LSDA+personality
-  bool hasPersonality = false;
-  // Points to the surviving section after this one is folded by ICF
-  InputSection *replacement = nullptr;
-  // Equivalence-class ID for ICF
-  uint64_t icfEqClass[2] = {0, 0};
 
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
@@ -105,13 +95,25 @@ public:
   void markLive(uint64_t off) override { live = true; }
   bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
+  bool isHashableForICF(bool isText) const;
+  void hashForICF();
   void writeTo(uint8_t *buf);
+
+  void foldIdentical(ConcatInputSection *redundant);
+  InputSection *canonical() override {
+    return replacement ? replacement : this;
+  }
 
   static bool classof(const InputSection *isec) {
     return isec->kind() == ConcatKind;
   }
 
-  void foldIdentical(ConcatInputSection *redundant);
+  // ICF can't fold functions with LSDA+personality
+  bool hasPersonality = false;
+  // Points to the surviving section after this one is folded by ICF
+  InputSection *replacement = nullptr;
+  // Equivalence-class ID for ICF
+  uint64_t icfEqClass[2] = {0, 0};
 
   // With subsections_via_symbols, most symbols have their own InputSection,
   // and for weak symbols (e.g. from inline functions), only the
@@ -143,6 +145,7 @@ struct StringPiece {
   // Offset from the start of the containing input section.
   uint32_t inSecOff;
   uint32_t live : 1;
+  // Only set if deduplicating literals
   uint32_t hash : 31;
   // Offset from the start of the containing output section.
   uint64_t outSecOff = 0;
@@ -178,14 +181,20 @@ public:
   // Split at each null byte.
   void splitIntoPieces();
 
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  StringRef getStringRef(size_t i) const {
+    size_t begin = pieces[i].inSecOff;
+    size_t end =
+        (pieces.size() - 1 == i) ? data.size() : pieces[i + 1].inSecOff;
+    return toStringRef(data.slice(begin, end - begin));
+  }
+
   // Returns i'th piece as a CachedHashStringRef. This function is very hot when
   // string merging is enabled, so we want to inline.
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   llvm::CachedHashStringRef getCachedHashStringRef(size_t i) const {
-    size_t begin = pieces[i].inSecOff;
-    size_t end =
-        (pieces.size() - 1 == i) ? data.size() : pieces[i + 1].inSecOff;
-    return {toStringRef(data.slice(begin, end - begin)), pieces[i].hash};
+    assert(config->dedupLiterals);
+    return {getStringRef(i), pieces[i].hash};
   }
 
   static bool classof(const InputSection *isec) {

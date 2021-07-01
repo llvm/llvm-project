@@ -63,9 +63,8 @@ public:
       requires sized_range<_Range>
     { return ranges::size(*__range_); }
 
-    // TODO: This needs to use contiguous_range.
     constexpr auto data() const
-      requires contiguous_iterator<iterator_t<_Range>>
+      requires contiguous_range<_Range>
     { return ranges::data(*__range_); }
   };
 

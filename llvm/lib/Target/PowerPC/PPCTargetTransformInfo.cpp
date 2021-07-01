@@ -371,7 +371,7 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
       InlineAsm::ConstraintInfo &C = CIV[i];
       if (C.Type != InlineAsm::isInput)
         for (unsigned j = 0, je = C.Codes.size(); j < je; ++j)
-          if (StringRef(C.Codes[j]).equals_lower("{ctr}"))
+          if (StringRef(C.Codes[j]).equals_insensitive("{ctr}"))
             return true;
     }
     return false;

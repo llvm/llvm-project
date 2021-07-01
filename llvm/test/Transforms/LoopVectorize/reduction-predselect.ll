@@ -32,7 +32,7 @@ entry:
 
 define i32 @reduction_sum(i32* noalias nocapture %A, i32* noalias nocapture %B) {
 ; CHECK-LABEL: @reduction_sum(
-; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP47:%.*]], %pred.load.continue14 ]
+; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP47:%.*]], %pred.load.continue6 ]
 ; CHECK:         [[TMP44:%.*]] = add <4 x i32> [[VEC_PHI]], [[VEC_IND:%.*]]
 ; CHECK:         [[TMP45:%.*]] = add <4 x i32> [[TMP44]], [[TMP23:%.*]]
 ; CHECK:         [[TMP46:%.*]] = add <4 x i32> [[TMP45]], [[TMP43:%.*]]
@@ -65,7 +65,7 @@ entry:
 define i32 @reduction_prod(i32* noalias nocapture %A, i32* noalias nocapture %B) {
 ; CHECK-LABEL: @reduction_prod(
 ; CHECK:       vector.body:
-; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 1, i32 1, i32 1, i32 1>, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue14 ]
+; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 1, i32 1, i32 1, i32 1>, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue6 ]
 ; CHECK:         [[TMP44:%.*]] = mul <4 x i32> [[VEC_PHI]], [[TMP23:%.*]]
 ; CHECK:         [[TMP45:%.*]] = mul <4 x i32> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP45]], <4 x i32> [[VEC_PHI]]
@@ -96,7 +96,7 @@ entry:
 define i32 @reduction_and(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK-LABEL: @reduction_and(
 ; CHECK:       vector.body:
-; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 -1, i32 -1, i32 -1, i32 -1>, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue14 ]
+; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 -1, i32 -1, i32 -1, i32 -1>, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue6 ]
 ; CHECK:         [[TMP44:%.*]] = and <4 x i32> [[VEC_PHI]], [[TMP23:%.*]]
 ; CHECK:         [[TMP45:%.*]] = and <4 x i32> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP45]], <4 x i32> [[VEC_PHI]]
@@ -127,7 +127,7 @@ for.end:                                          ; preds = %for.body, %entry
 define i32 @reduction_or(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK-LABEL: @reduction_or(
 ; CHECK:       vector.body:
-; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue14 ]
+; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue6 ]
 ; CHECK:         [[TMP45:%.*]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP44:%.*]], <4 x i32> zeroinitializer
 ; CHECK:         [[TMP46]] = or <4 x i32> [[VEC_PHI]], [[TMP45]]
 ; CHECK:       middle.block:
@@ -157,7 +157,7 @@ for.end:                                          ; preds = %for.body, %entry
 define i32 @reduction_xor(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK-LABEL: @reduction_xor(
 ; CHECK:       vector.body:
-; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue14 ]
+; CHECK:         [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue6 ]
 ; CHECK:         [[TMP45:%.*]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP44:%.*]], <4 x i32> zeroinitializer
 ; CHECK:         [[TMP46]] = xor <4 x i32> [[VEC_PHI]], [[TMP45]]
 ; CHECK:       middle.block:
@@ -187,7 +187,7 @@ for.end:                                          ; preds = %for.body, %entry
 define float @reduction_fadd(float* nocapture %A, float* nocapture %B) {
 ; CHECK-LABEL: @reduction_fadd(
 ; CHECK:       vector.body:
-; CHECK:         [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue14 ]
+; CHECK:         [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue6 ]
 ; CHECK:         [[TMP44:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[TMP23:%.*]]
 ; CHECK:         [[TMP45:%.*]] = fadd fast <4 x float> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x float> [[TMP45]], <4 x float> [[VEC_PHI]]
@@ -218,7 +218,7 @@ for.end:                                          ; preds = %for.body, %entry
 define float @reduction_fmul(float* nocapture %A, float* nocapture %B) {
 ; CHECK-LABEL: @reduction_fmul(
 ; CHECK:       vector.body:
-; CHECK:         [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue14 ]
+; CHECK:         [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %vector.ph ], [ [[TMP46:%.*]], %pred.load.continue6 ]
 ; CHECK:         [[TMP44:%.*]] = fmul fast <4 x float> [[VEC_PHI]], [[TMP23:%.*]]
 ; CHECK:         [[TMP45:%.*]] = fmul fast <4 x float> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x float> [[TMP45]], <4 x float> [[VEC_PHI]]

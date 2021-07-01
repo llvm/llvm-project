@@ -1439,6 +1439,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoSync;
   case bitc::ATTR_KIND_NOCF_CHECK:
     return Attribute::NoCfCheck;
+  case bitc::ATTR_KIND_NO_PROFILE:
+    return Attribute::NoProfile;
   case bitc::ATTR_KIND_NO_UNWIND:
     return Attribute::NoUnwind;
   case bitc::ATTR_KIND_NO_SANITIZE_COVERAGE:
@@ -3329,6 +3331,9 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
     for (Attribute::AttrKind Kind : {Attribute::ByVal, Attribute::StructRet,
                                      Attribute::InAlloca}) {
       if (!Func->hasParamAttribute(i, Kind))
+        continue;
+
+      if (Func->getParamAttribute(i, Kind).getValueAsType())
         continue;
 
       Func->removeParamAttr(i, Kind);

@@ -275,5 +275,8 @@ declare void @__kmpc_kernel_end_parallel()
 
 
 !nvvm.annotations = !{!1}
+!llvm.module.flags = !{!2, !3}
 
 !1 = !{void ()* @__omp_offloading_50_6dfa0f01_foo_l6, !"kernel", i32 1}
+!2 = !{i32 7, !"openmp", i32 50}
+!3 = !{i32 7, !"openmp-device", i32 50}

@@ -172,7 +172,7 @@ static const char *g_get_dynamic_class_info2_body = R"(
 extern "C" {
     int printf(const char * format, ...);
     void free(void *ptr);
-    Class* objc_copyRealizedClassList(unsigned int *outCount);
+    Class* objc_copyRealizedClassList_nolock(unsigned int *outCount);
     const char* objc_debug_class_getNameRaw(Class cls);
 }
 
@@ -199,7 +199,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
     ClassInfo *class_infos = (ClassInfo *)class_infos_ptr;
 
     uint32_t count = 0;
-    Class* realized_class_list = objc_copyRealizedClassList(&count);
+    Class* realized_class_list = objc_copyRealizedClassList_nolock(&count);
     DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
@@ -668,7 +668,7 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
   static const ConstString g_gdb_object_getClass("gdb_object_getClass");
   m_has_object_getClass = HasSymbol(g_gdb_object_getClass);
   static const ConstString g_objc_copyRealizedClassList(
-      "objc_copyRealizedClassList");
+      "_ZL33objc_copyRealizedClassList_nolockPj");
   m_has_objc_copyRealizedClassList = HasSymbol(g_objc_copyRealizedClassList);
 
   RegisterObjCExceptionRecognizer(process);

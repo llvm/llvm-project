@@ -57,8 +57,16 @@ macro(archive_aix_libatomic name)
   if(shared_libraries_to_archive)
     set(output_dir "")
     set(install_dir "")
-    get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
-    get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir)
+    # If LLVM defines top level library directory, we want to deliver
+    # libatomic.a at top level. See `llvm/cmake/modules/AddLLVM.cmake'
+    # setting _install_rpath on AIX for reference.
+    if(LLVM_LIBRARY_OUTPUT_INTDIR AND CMAKE_INSTALL_PREFIX)
+      set(output_dir "${LLVM_LIBRARY_OUTPUT_INTDIR}")
+      set(install_dir "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
+    else()
+      get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
+      get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir)
+    endif()
     add_custom_command(OUTPUT "${output_dir}/libatomic.a"
                        COMMAND ${CMAKE_AR} -X32_64 r "${output_dir}/libatomic.a"
                        ${shared_libraries_to_archive}

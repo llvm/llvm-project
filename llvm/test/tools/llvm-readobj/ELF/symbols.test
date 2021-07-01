@@ -70,17 +70,13 @@
 # RUN: llvm-readobj --symbols %t64 > %t.symbols
 # RUN: llvm-readobj --syms %t64 > %t.syms
 # RUN: cmp %t.symbols %t.syms
-# RUN: llvm-readobj -t %t64 > %t.t
-# RUN: cmp %t.symbols %t.t
-# RUN: llvm-readelf -s --elf-output-style=LLVM %t64 > %t.lowers
-# RUN: cmp %t.symbols %t.lowers
+# RUN: llvm-readobj -s %t64 | diff %t.symbols -
+# RUN: llvm-readelf -s --elf-output-style=LLVM %t64 | diff %t.symbols -
 
 # RUN: llvm-readelf --symbols %t64 > %t.symbols.gnu
 # RUN: llvm-readelf --syms %t64 > %t.syms.gnu
 # RUN: cmp %t.symbols.gnu %t.syms.gnu
-
-## -s is an llvm-readobj option to dump sections.
-# RUN: llvm-readobj -s --elf-output-style=GNU %t64 | FileCheck %s --implicit-check-not="Symbol table"
+# RUN: llvm-readelf -s %t64 | diff %t.symbols.gnu -
 
 ## Case 3: Test that both regular and dynamic symbols are dumped when `--symbols` and `--dyn-symbols`
 ##         are specified together. Note that the order is different for different styles.

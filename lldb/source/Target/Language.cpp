@@ -196,7 +196,7 @@ static uint32_t num_languages =
 
 LanguageType Language::GetLanguageTypeFromString(llvm::StringRef string) {
   for (const auto &L : language_names) {
-    if (string.equals_lower(L.name))
+    if (string.equals_insensitive(L.name))
       return static_cast<LanguageType>(L.type);
   }
 

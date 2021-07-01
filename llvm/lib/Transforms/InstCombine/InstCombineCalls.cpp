@@ -19,6 +19,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
@@ -955,8 +956,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     break;
   }
-  case Intrinsic::umax:
   case Intrinsic::umin: {
+    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+    // umin(x, 1) == zext(x != 0)
+    if (match(I1, m_One())) {
+      Value *Zero = Constant::getNullValue(I0->getType());
+      Value *Cmp = Builder.CreateICmpNE(I0, Zero);
+      return CastInst::Create(Instruction::ZExt, Cmp, II->getType());
+    }
+    LLVM_FALLTHROUGH;
+  }
+  case Intrinsic::umax: {
     Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
     Value *X, *Y;
     if (match(I0, m_ZExt(m_Value(X))) && match(I1, m_ZExt(m_Value(Y))) &&
@@ -1040,6 +1050,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (Instruction *Sel = foldClampRangeOfTwo(II, Builder))
       return Sel;
+
+    if (match(I1, m_ImmConstant()))
+      if (auto *Sel = dyn_cast<SelectInst>(I0))
+        if (Instruction *R = FoldOpIntoSelect(*II, Sel))
+          return R;
 
     break;
   }
@@ -1978,6 +1993,46 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         replaceInstUsesWith(CI, Res);
         return eraseInstFromFunction(CI);
       }
+    LLVM_FALLTHROUGH;
+  }
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul: {
+    bool CanBeReassociated = (IID != Intrinsic::vector_reduce_fadd &&
+                              IID != Intrinsic::vector_reduce_fmul) ||
+                             II->hasAllowReassoc();
+    const unsigned ArgIdx = (IID == Intrinsic::vector_reduce_fadd ||
+                             IID == Intrinsic::vector_reduce_fmul)
+                                ? 1
+                                : 0;
+    Value *Arg = II->getArgOperand(ArgIdx);
+    Value *V;
+    ArrayRef<int> Mask;
+    if (!isa<FixedVectorType>(Arg->getType()) || !CanBeReassociated ||
+        !match(Arg, m_Shuffle(m_Value(V), m_Undef(), m_Mask(Mask))) ||
+        !cast<ShuffleVectorInst>(Arg)->isSingleSource())
+      break;
+    int Sz = Mask.size();
+    SmallBitVector UsedIndices(Sz);
+    for (int Idx : Mask) {
+      if (Idx == UndefMaskElem || UsedIndices.test(Idx))
+        break;
+      UsedIndices.set(Idx);
+    }
+    // Can remove shuffle iff just shuffled elements, no repeats, undefs, or
+    // other changes.
+    if (UsedIndices.all()) {
+      replaceUse(II->getOperandUse(ArgIdx), V);
+      return nullptr;
+    }
     break;
   }
   default: {
@@ -2031,20 +2086,27 @@ static bool isSafeToEliminateVarargsCast(const CallBase &Call,
       isa<GCResultInst>(Call))
     return false;
 
+  // Opaque pointers are compatible with any byval types.
+  PointerType *SrcTy = cast<PointerType>(CI->getOperand(0)->getType());
+  if (SrcTy->isOpaque())
+    return true;
+
   // The size of ByVal or InAlloca arguments is derived from the type, so we
   // can't change to a type with a different size.  If the size were
   // passed explicitly we could avoid this check.
   if (!Call.isPassPointeeByValueArgument(ix))
     return true;
 
-  Type* SrcTy =
-            cast<PointerType>(CI->getOperand(0)->getType())->getElementType();
-  Type *DstTy = Call.isByValArgument(ix)
-                    ? Call.getParamByValType(ix)
-                    : cast<PointerType>(CI->getType())->getElementType();
-  if (!SrcTy->isSized() || !DstTy->isSized())
+  // The transform currently only handles type replacement for byval, not other
+  // type-carrying attributes.
+  if (!Call.isByValArgument(ix))
     return false;
-  if (DL.getTypeAllocSize(SrcTy) != DL.getTypeAllocSize(DstTy))
+
+  Type *SrcElemTy = SrcTy->getElementType();
+  Type *DstElemTy = Call.getParamByValType(ix);
+  if (!SrcElemTy->isSized() || !DstElemTy->isSized())
+    return false;
+  if (DL.getTypeAllocSize(SrcElemTy) != DL.getTypeAllocSize(DstElemTy))
     return false;
   return true;
 }
@@ -2310,6 +2372,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(Call, *II);
 
+  // TODO: Drop this transform once opaque pointer transition is done.
   FunctionType *FTy = Call.getFunctionType();
   if (FTy->isVarArg()) {
     int ix = FTy->getNumParams();
@@ -2321,13 +2384,14 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       if (CI && isSafeToEliminateVarargsCast(Call, DL, CI, ix)) {
         replaceUse(*I, CI->getOperand(0));
 
-        // Update the byval type to match the argument type.
-        if (Call.isByValArgument(ix)) {
+        // Update the byval type to match the pointer type.
+        // Not necessary for opaque pointers.
+        PointerType *NewTy = cast<PointerType>(CI->getOperand(0)->getType());
+        if (!NewTy->isOpaque() && Call.isByValArgument(ix)) {
           Call.removeParamAttr(ix, Attribute::ByVal);
           Call.addParamAttr(
               ix, Attribute::getWithByValType(
-                      Call.getContext(),
-                      CI->getOperand(0)->getType()->getPointerElementType()));
+                      Call.getContext(), NewTy->getElementType()));
         }
         Changed = true;
       }

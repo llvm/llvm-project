@@ -20,9 +20,9 @@ static const typeInfo::SpecialBinding *FindFinal(
   for (std::size_t j{0}; j < totalSpecialBindings; ++j) {
     const auto &special{
         *specialDesc.ZeroBasedIndexedElement<typeInfo::SpecialBinding>(j)};
-    switch (special.which) {
+    switch (special.which()) {
     case typeInfo::SpecialBinding::Which::Final:
-      if (special.rank == rank) {
+      if (special.rank() == rank) {
         return &special;
       }
       break;
@@ -40,20 +40,20 @@ static const typeInfo::SpecialBinding *FindFinal(
 static void CallFinalSubroutine(
     const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
   if (const auto *special{FindFinal(derived, descriptor.rank())}) {
-    if (special->which == typeInfo::SpecialBinding::Which::ElementalFinal) {
+    if (special->which() == typeInfo::SpecialBinding::Which::ElementalFinal) {
       std::size_t byteStride{descriptor.ElementBytes()};
-      auto p{reinterpret_cast<void (*)(char *)>(special->proc)};
+      auto *p{special->GetProc<void (*)(char *)>()};
       // Finalizable objects must be contiguous.
       std::size_t elements{descriptor.Elements()};
       for (std::size_t j{0}; j < elements; ++j) {
         p(descriptor.OffsetElement<char>(j * byteStride));
       }
-    } else if (special->isArgDescriptorSet & 1) {
-      auto p{reinterpret_cast<void (*)(const Descriptor &)>(special->proc)};
+    } else if (special->IsArgDescriptor(0)) {
+      auto *p{special->GetProc<void (*)(const Descriptor &)>()};
       p(descriptor);
     } else {
       // Finalizable objects must be contiguous.
-      auto p{reinterpret_cast<void (*)(char *)>(special->proc)};
+      auto *p{special->GetProc<void (*)(char *)>()};
       p(descriptor.OffsetElement<char>());
     }
   }

@@ -1,6 +1,5 @@
 ; Tests that allocas after coro.begin are properly that do not need to
 ; live on the frame are properly moved to the .resume function.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 define i8* @f() "coroutine.presplit"="1" {

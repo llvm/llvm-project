@@ -259,26 +259,73 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
     DWOId = debug_info.getU64(offset_ptr, &Err);
 
-  if (errorToBool(std::move(Err)))
+  if (Err) {
+    Context.getWarningHandler()(joinErrors(
+        createStringError(
+            errc::invalid_argument,
+            "DWARF unit at 0x%8.8" PRIx64 " cannot be parsed:", Offset),
+        std::move(Err)));
     return false;
+  }
 
   // Header fields all parsed, capture the size of this unit header.
   assert(*offset_ptr - Offset <= 255 && "unexpected header size");
   Size = uint8_t(*offset_ptr - Offset);
+  uint64_t NextCUOffset = Offset + getUnitLengthFieldByteSize() + getLength();
+
+  if (!debug_info.isValidOffset(getNextUnitOffset() - 1)) {
+    Context.getWarningHandler()(
+        createStringError(errc::invalid_argument,
+                          "DWARF unit from offset 0x%8.8" PRIx64 " incl. "
+                          "to offset  0x%8.8" PRIx64 " excl. "
+                          "extends past section size 0x%8.8zx",
+                          Offset, NextCUOffset, debug_info.size()));
+    return false;
+  }
+
+  if (!DWARFContext::isSupportedVersion(getVersion())) {
+    Context.getWarningHandler()(createStringError(
+        errc::invalid_argument,
+        "DWARF unit at offset 0x%8.8" PRIx64 " "
+        "has unsupported version %" PRIu16 ", supported are 2-%u",
+        Offset, getVersion(), DWARFContext::getMaxSupportedVersion()));
+    return false;
+  }
 
   // Type offset is unit-relative; should be after the header and before
   // the end of the current unit.
-  bool TypeOffsetOK =
-      !isTypeUnit()
-          ? true
-          : TypeOffset >= Size &&
-                TypeOffset < getLength() + getUnitLengthFieldByteSize();
-  bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
-  bool VersionOK = DWARFContext::isSupportedVersion(getVersion());
-  bool AddrSizeOK = DWARFContext::isAddressSizeSupported(getAddressByteSize());
-
-  if (!LengthOK || !VersionOK || !AddrSizeOK || !TypeOffsetOK)
+  if (isTypeUnit() && TypeOffset < Size) {
+    Context.getWarningHandler()(
+        createStringError(errc::invalid_argument,
+                          "DWARF type unit at offset "
+                          "0x%8.8" PRIx64 " "
+                          "has its relocated type_offset 0x%8.8" PRIx64 " "
+                          "pointing inside the header",
+                          Offset, Offset + TypeOffset));
     return false;
+  }
+  if (isTypeUnit() &&
+      TypeOffset >= getUnitLengthFieldByteSize() + getLength()) {
+    Context.getWarningHandler()(createStringError(
+        errc::invalid_argument,
+        "DWARF type unit from offset 0x%8.8" PRIx64 " incl. "
+        "to offset 0x%8.8" PRIx64 " excl. has its "
+        "relocated type_offset 0x%8.8" PRIx64 " pointing past the unit end",
+        Offset, NextCUOffset, Offset + TypeOffset));
+    return false;
+  }
+
+  if (!DWARFContext::isAddressSizeSupported(getAddressByteSize())) {
+    SmallVector<std::string, 3> Sizes;
+    for (auto Size : DWARFContext::getSupportedAddressSizes())
+      Sizes.push_back(std::to_string(Size));
+    Context.getWarningHandler()(createStringError(
+        errc::invalid_argument,
+        "DWARF unit at offset 0x%8.8" PRIx64 " "
+        "has unsupported address size %" PRIu8 ", supported are %s",
+        Offset, getAddressByteSize(), llvm::join(Sizes, ", ").c_str()));
+    return false;
+  }
 
   // Keep track of the highest DWARF version we encounter across all units.
   Context.setMaxVersionIfGreater(getVersion());
@@ -361,6 +408,8 @@ void DWARFUnit::extractDIEsToVector(
   uint64_t NextCUOffset = getNextUnitOffset();
   DWARFDebugInfoEntry DIE;
   DWARFDataExtractor DebugInfoData = getDebugInfoExtractor();
+  // The end offset has been already checked by DWARFUnitHeader::extract.
+  assert(DebugInfoData.isValidOffset(NextCUOffset - 1));
   uint32_t Depth = 0;
   bool IsCUDie = true;
 
@@ -385,6 +434,8 @@ void DWARFUnit::extractDIEsToVector(
       // Normal DIE
       if (AbbrDecl->hasChildren())
         ++Depth;
+      else if (Depth == 0)
+        break; // This unit has a single DIE with no children.
     } else {
       // NULL DIE.
       if (Depth > 0)
@@ -393,17 +444,6 @@ void DWARFUnit::extractDIEsToVector(
         break;  // We are done with this compile unit!
     }
   }
-
-  // Give a little bit of info if we encounter corrupt DWARF (our offset
-  // should always terminate at or before the start of the next compilation
-  // unit header).
-  if (DIEOffset > NextCUOffset)
-    Context.getWarningHandler()(
-        createStringError(errc::invalid_argument,
-                          "DWARF compile unit extends beyond its "
-                          "bounds cu 0x%8.8" PRIx64 " "
-                          "at 0x%8.8" PRIx64 "\n",
-                          getOffset(), DIEOffset));
 }
 
 void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
@@ -794,7 +834,7 @@ DWARFDie DWARFUnit::getLastChild(const DWARFDebugInfoEntry *Die) {
 
 const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   if (!Abbrevs)
-    Abbrevs = Abbrev->getAbbreviationDeclarationSet(Header.getAbbrOffset());
+    Abbrevs = Abbrev->getAbbreviationDeclarationSet(getAbbreviationsOffset());
   return Abbrevs;
 }
 

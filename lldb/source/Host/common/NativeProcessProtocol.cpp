@@ -52,6 +52,12 @@ NativeProcessProtocol::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return Status("not implemented");
 }
 
+lldb_private::Status
+NativeProcessProtocol::ReadMemoryTags(int32_t type, lldb::addr_t addr,
+                                      size_t len, std::vector<uint8_t> &tags) {
+  return Status("not implemented");
+}
+
 llvm::Optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
   if (m_state == lldb::eStateExited)
     return m_exit_status;

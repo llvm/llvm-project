@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // <string>
 
 // template<class charT, class traits, class Allocator>
@@ -35,13 +33,13 @@ int main(int, char**)
         assert(s == L" abc");
     }
     {
-        typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
+        typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
         S s("initial text");
         getline(std::istringstream(" abc\n  def\n   ghij"), s);
         assert(s == " abc");
     }
     {
-        typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t>> S;
+        typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t> > S;
         S s(L"initial text");
         getline(std::wistringstream(L" abc\n  def\n   ghij"), s);
         assert(s == L" abc");

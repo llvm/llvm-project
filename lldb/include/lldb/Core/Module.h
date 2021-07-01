@@ -850,13 +850,10 @@ public:
   /// \param[in] path
   ///     The original source file path to try and remap.
   ///
-  /// \param[out] new_path
-  ///     The newly remapped filespec that is may or may not exist.
-  ///
   /// \return
-  ///     /b true if \a path was successfully located and \a new_path
-  ///     is filled in with a new source path, \b false otherwise.
-  bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
+  ///     The newly remapped filespec that is may or may not exist if
+  ///     \a path was successfully located.
+  llvm::Optional<std::string> RemapSourceFile(llvm::StringRef path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
   /// Update the ArchSpec to a more specific variant.

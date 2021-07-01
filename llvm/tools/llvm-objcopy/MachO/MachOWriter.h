@@ -48,6 +48,7 @@ class MachOWriter {
   void writeLinkData(Optional<size_t> LCIndex, const LinkData &LD);
   void writeCodeSignatureData();
   void writeDataInCodeData();
+  void writeLinkerOptimizationHint();
   void writeFunctionStartsData();
   void writeTail();
 

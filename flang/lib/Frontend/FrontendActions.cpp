@@ -242,28 +242,27 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
 }
 
 void DebugUnparseNoSemaAction::ExecuteAction() {
+  auto &invoc = this->instance().invocation();
   auto &parseTree{instance().parsing().parseTree()};
-
-  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
-      Fortran::frontend::getBasicAsFortran();
 
   // TODO: Options should come from CompilerInvocation
   Unparse(llvm::outs(), *parseTree,
       /*encoding=*/Fortran::parser::Encoding::UTF_8,
       /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
-      /*preStatement=*/nullptr, &asFortran);
+      /*preStatement=*/nullptr,
+      invoc.useAnalyzedObjectsForUnparse() ? &invoc.asFortran() : nullptr);
 }
 
 void DebugUnparseAction::ExecuteAction() {
+  auto &invoc = this->instance().invocation();
   auto &parseTree{instance().parsing().parseTree()};
-  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
-      Fortran::frontend::getBasicAsFortran();
 
   // TODO: Options should come from CompilerInvocation
   Unparse(llvm::outs(), *parseTree,
       /*encoding=*/Fortran::parser::Encoding::UTF_8,
       /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
-      /*preStatement=*/nullptr, &asFortran);
+      /*preStatement=*/nullptr,
+      invoc.useAnalyzedObjectsForUnparse() ? &invoc.asFortran() : nullptr);
 
   // Report fatal semantic errors
   reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
@@ -310,12 +309,11 @@ void DebugDumpAllAction::ExecuteAction() {
 
   // Dump parse tree
   auto &parseTree{instance().parsing().parseTree()};
-  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
-      Fortran::frontend::getBasicAsFortran();
   llvm::outs() << "========================";
   llvm::outs() << " Flang: parse tree dump ";
   llvm::outs() << "========================\n";
-  Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
+  Fortran::parser::DumpTree(
+      llvm::outs(), parseTree, &ci.invocation().asFortran());
 
   auto &semantics = this->semantics();
   auto tables{Fortran::semantics::BuildRuntimeDerivedTypeTables(
@@ -343,20 +341,19 @@ void DebugDumpAllAction::ExecuteAction() {
 
 void DebugDumpParseTreeNoSemaAction::ExecuteAction() {
   auto &parseTree{instance().parsing().parseTree()};
-  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
-      Fortran::frontend::getBasicAsFortran();
 
   // Dump parse tree
-  Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
+  Fortran::parser::DumpTree(
+      llvm::outs(), parseTree, &this->instance().invocation().asFortran());
 }
 
 void DebugDumpParseTreeAction::ExecuteAction() {
   auto &parseTree{instance().parsing().parseTree()};
-  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
-      Fortran::frontend::getBasicAsFortran();
 
   // Dump parse tree
-  Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
+  Fortran::parser::DumpTree(
+      llvm::outs(), parseTree, &this->instance().invocation().asFortran());
+
   // Report fatal semantic errors
   reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
       GetCurrentFileOrBufferName());

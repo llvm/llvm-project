@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // Make sure the rvalue overload of operator>> isn't part of the overload set
 // when the type is not input streamable from a lvalue stream.
 

@@ -16,6 +16,8 @@
 #include <__ranges/concepts.h>
 #include <__ranges/ref_view.h>
 #include <__ranges/subrange.h>
+#include <__utility/__decay_copy.h>
+#include <__utility/forward.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

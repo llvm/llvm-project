@@ -516,6 +516,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <__config>
 #include <__debug>
 #include <__functional_base>
+#include <__iterator/wrap_iter.h>
 #include <algorithm>
 #include <compare>
 #include <cstdio>  // EOF
@@ -4438,8 +4439,6 @@ basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>& __is,
         basic_string<_CharT, _Traits, _Allocator>& __str);
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template<class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 basic_istream<_CharT, _Traits>&
@@ -4451,8 +4450,6 @@ inline _LIBCPP_INLINE_VISIBILITY
 basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>&& __is,
         basic_string<_CharT, _Traits, _Allocator>& __str);
-
-#endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 17
 template <class _CharT, class _Traits, class _Allocator, class _Up>

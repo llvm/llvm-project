@@ -49,9 +49,9 @@ define zeroext i32 @func32z(i32 zeroext %p) {
 define signext i16 @func16s(i16 signext %p) {
 ; CHECK-LABEL: func16s:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bswp %s0, %s0, 1
-; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    srl %s1, %s0, 12
+; CHECK-NEXT:    brv %s0, %s0
+; CHECK-NEXT:    sra.l %s0, %s0, 48
+; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.bitreverse.i16(i16 %p)
   ret i16 %r
 }
@@ -59,9 +59,9 @@ define signext i16 @func16s(i16 signext %p) {
 define zeroext i16 @func16z(i16 zeroext %p) {
 ; CHECK-LABEL: func16z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bswp %s0, %s0, 1
-; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    srl %s1, %s0, 12
+; CHECK-NEXT:    brv %s0, %s0
+; CHECK-NEXT:    srl %s0, %s0, 48
+; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.bitreverse.i16(i16 %p)
   ret i16 %r
 }
@@ -69,6 +69,9 @@ define zeroext i16 @func16z(i16 zeroext %p) {
 define signext i8 @func8s(i8 signext %p) {
 ; CHECK-LABEL: func8s:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    brv %s0, %s0
+; CHECK-NEXT:    sra.l %s0, %s0, 56
+; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.bitreverse.i8(i8 %p)
   ret i8 %r
 }
@@ -76,6 +79,9 @@ define signext i8 @func8s(i8 signext %p) {
 define zeroext i8 @func8z(i8 zeroext %p) {
 ; CHECK-LABEL: func8z:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    brv %s0, %s0
+; CHECK-NEXT:    srl %s0, %s0, 56
+; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.bitreverse.i8(i8 %p)
   ret i8 %r
 }

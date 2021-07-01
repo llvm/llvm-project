@@ -252,9 +252,9 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
 
 void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
   if (target_sp) {
-    // Apply any file remappings to our file
-    FileSpec new_file_spec;
-    if (target_sp->GetSourcePathMap().FindFile(original_file, new_file_spec))
-      file = new_file_spec;
+    // Apply any file remappings to our file.
+    if (auto new_file_spec =
+            target_sp->GetSourcePathMap().FindFile(original_file))
+      file = *new_file_spec;
   }
 }

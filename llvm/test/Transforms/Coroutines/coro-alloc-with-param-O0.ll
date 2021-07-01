@@ -1,6 +1,5 @@
 ; Check that we can handle the case when both alloc function and
 ; the user body consume the same argument.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 ; using copy of this (as it would happen under -O0)

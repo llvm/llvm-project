@@ -1381,6 +1381,7 @@ public:
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS) HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)
 #include "llvm/IR/Metadata.def"
 
   // Optional map for looking up composite types by identifier.
@@ -1447,6 +1448,7 @@ public:
   DenseMap<std::pair<Type *, ElementCount>, VectorType*> VectorTypes;
   // TODO: clean up the following after we no longer support non-opaque pointer
   // types.
+  bool ForceOpaquePointers;
   DenseMap<Type*, PointerType*> PointerTypes;  // Pointers in AddrSpace = 0
   DenseMap<std::pair<Type*, unsigned>, PointerType*> ASPointerTypes;
 

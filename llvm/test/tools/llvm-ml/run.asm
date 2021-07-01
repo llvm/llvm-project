@@ -1,3 +1,3 @@
-# RUN: llvm-ml --help | FileCheck %s
+; RUN: llvm-ml --help | FileCheck %s
 
-# CHECK: USAGE: llvm-ml
+; CHECK: USAGE: llvm-ml

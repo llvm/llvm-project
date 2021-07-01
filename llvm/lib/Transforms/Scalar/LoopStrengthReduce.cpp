@@ -533,6 +533,7 @@ void Formula::canonicalize(const Loop &L) {
     if (I != BaseRegs.end())
       std::swap(ScaledReg, *I);
   }
+  assert(isCanonical(L) && "Failed to canonicalize?");
 }
 
 /// Get rid of the scale in the formula.

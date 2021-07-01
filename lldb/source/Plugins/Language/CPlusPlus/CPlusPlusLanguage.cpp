@@ -1152,7 +1152,7 @@ bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   const auto suffixes = {".cpp", ".cxx", ".c++", ".cc",  ".c",
                          ".h",   ".hh",  ".hpp", ".hxx", ".h++"};
   for (auto suffix : suffixes) {
-    if (file_path.endswith_lower(suffix))
+    if (file_path.endswith_insensitive(suffix))
       return true;
   }
 

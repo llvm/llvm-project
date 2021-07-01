@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ArrayRef.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/FileSpec.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "gtest/gtest.h"
 #include <utility>
 
@@ -19,6 +19,8 @@ struct Matches {
   FileSpec original;
   FileSpec remapped;
   Matches(const char *o, const char *r) : original(o), remapped(r) {}
+  Matches(const char *o, llvm::sys::path::Style style, const char *r)
+      : original(o, style), remapped(r) {}
 };
 } // namespace
 
@@ -112,3 +114,27 @@ TEST(PathMappingListTest, RemapRoot) {
   };
   TestPathMappings(map, matches, fails);
 }
+
+#ifndef _WIN32
+TEST(PathMappingListTest, CrossPlatformTests) {
+  PathMappingList map;
+  map.Append(ConstString(R"(C:\old)"), ConstString("/new"), false);
+  Matches matches[] = {
+    {R"(C:\old)", llvm::sys::path::Style::windows, "/new"},
+    {R"(C:\old\)", llvm::sys::path::Style::windows, "/new"},
+    {R"(C:\old\foo\.)", llvm::sys::path::Style::windows, "/new/foo"},
+    {R"(C:\old\foo.c)", llvm::sys::path::Style::windows, "/new/foo.c"},
+    {R"(C:\old\foo.c\.)", llvm::sys::path::Style::windows, "/new/foo.c"},
+    {R"(C:\old\.\foo.c)", llvm::sys::path::Style::windows, "/new/foo.c"},
+  };
+  ConstString fails[] = {
+    ConstString("/foo"),
+    ConstString("/"),
+    ConstString("foo.c"),
+    ConstString("./foo.c"),
+    ConstString("../foo.c"),
+    ConstString("../bar/foo.c"),
+  };
+  TestPathMappings(map, matches, fails);
+}
+#endif

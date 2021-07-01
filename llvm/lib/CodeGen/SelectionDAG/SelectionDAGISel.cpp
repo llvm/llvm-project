@@ -2325,6 +2325,11 @@ void SelectionDAGISel::Select_FREEZE(SDNode *N) {
                        N->getOperand(0));
 }
 
+void SelectionDAGISel::Select_ARITH_FENCE(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::ARITH_FENCE, N->getValueType(0),
+                       N->getOperand(0));
+}
+
 /// GetVBR - decode a vbr encoding whose top bit is set.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static uint64_t
 GetVBR(uint64_t Val, const unsigned char *MatcherTable, unsigned &Idx) {
@@ -2875,6 +2880,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::FREEZE:
     Select_FREEZE(NodeToMatch);
+    return;
+  case ISD::ARITH_FENCE:
+    Select_ARITH_FENCE(NodeToMatch);
     return;
   }
 

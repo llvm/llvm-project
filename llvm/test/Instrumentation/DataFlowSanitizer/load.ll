@@ -23,8 +23,8 @@ define i8 @load8(i8* %p) {
   ; CHECK-LABEL:           @load8.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i8* %p to i64
-  ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#SHADOW:]] = load i[[#SBITS]], i[[#SBITS]]* %[[#SHADOW_PTR]]
   ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i[[#SBITS]] %[[#SHADOW]], %[[#PS]]
   ; CHECK-NEXT:            %a = load i8, i8* %p
@@ -39,8 +39,8 @@ define i16 @load16(i16* %p) {
   ; CHECK-LABEL:           @load16.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i16* %p to i64
-  ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#SHADOW_PTR+1]] = getelementptr i[[#SBITS]], i[[#SBITS]]* %[[#SHADOW_PTR]], i64 1
   ; CHECK-NEXT:            %[[#SHADOW:]]  = load i[[#SBITS]], i[[#SBITS]]* %[[#SHADOW_PTR]]
   ; CHECK-NEXT:            %[[#SHADOW+1]] = load i[[#SBITS]], i[[#SBITS]]* %[[#SHADOW_PTR+1]]
@@ -59,8 +59,8 @@ define i32 @load32(i32* %p) {
   ; CHECK-LABEL:           @load32.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i32* %p to i64
-  ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#WSBITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i[[#WSBITS]], i[[#WSBITS]]* %[[#WIDE_SHADOW_PTR]], align [[#SBYTES]]
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i[[#WSBITS]] %[[#WIDE_SHADOW]], [[#mul(SBITS,2)]]
@@ -81,8 +81,8 @@ define i64 @load64(i64* %p) {
   ; CHECK-LABEL:           @load64.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i64* %p to i64
-  ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i64*
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i64, i64* %[[#WIDE_SHADOW_PTR]], align [[#SBYTES]]
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
@@ -105,8 +105,8 @@ define i128 @load128(i128* %p) {
   ; CHECK-LABEL:           @load128.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i128* %p to i64
-  ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i64*
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i64, i64* %[[#WIDE_SHADOW_PTR]], align [[#SBYTES]]
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR2:]] = getelementptr i64, i64* %[[#WIDE_SHADOW_PTR]], i64 1
@@ -133,8 +133,8 @@ define i17 @load17(i17* %p) {
   ; CHECK-LABEL:           @load17.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i17* %p to i64
-  ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
+  ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
+  ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#SHADOW:]] = call zeroext i8 @__dfsan_union_load(i[[#SBITS]]* %[[#SHADOW_PTR]], i64 3)
   ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i[[#SBITS]] %[[#SHADOW]], %[[#PS]]
   ; CHECK-NEXT:            %a = load i17, i17* %p

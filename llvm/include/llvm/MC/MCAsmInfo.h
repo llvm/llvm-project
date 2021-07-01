@@ -153,6 +153,9 @@ protected:
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
 
+  /// Emit labels in purely upper case. Defaults to false.
+  bool EmitLabelsInUpperCase = false;
+
   // Print the EH begin symbol with an assignment. Defaults to false.
   bool UseAssignmentForEHBegin = false;
 
@@ -637,6 +640,7 @@ public:
     return EmitGNUAsmStartIndentationMarker;
   }
   const char *getLabelSuffix() const { return LabelSuffix; }
+  bool shouldEmitLabelsInUpperCase() const { return EmitLabelsInUpperCase; }
 
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }

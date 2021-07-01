@@ -1629,7 +1629,7 @@ private:
     for (auto *F : SCC) {
       if (!F->isDeclaration())
         A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(*F));
-      if (!OMPInfoCache.Kernels.empty())
+      if (isOpenMPDevice(M))
         A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(*F));
     }
   }
@@ -2629,21 +2629,47 @@ AAHeapToShared &AAHeapToShared::createForPosition(const IRPosition &IRP,
 }
 
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!containsOpenMP(M, OMPInModule))
+  if (!containsOpenMP(M))
     return PreservedAnalyses::all();
-
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
-  // Create internal copies of each function if this is a kernel Module.
-  DenseSet<const Function *> InternalizedFuncs;
-  if (!OMPInModule.getKernels().empty())
-    for (Function &F : M)
-      if (!F.isDeclaration() && !OMPInModule.getKernels().contains(&F))
-        if (Attributor::internalizeFunction(F, /* Force */ true))
-          InternalizedFuncs.insert(&F);
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  KernelSet Kernels = getDeviceKernels(M);
 
-  // Look at every function definition in the Module that wasn't internalized.
+  auto IsCalled = [&](Function &F) {
+    if (Kernels.contains(&F))
+      return true;
+    for (const User *U : F.users())
+      if (!isa<BlockAddress>(U))
+        return true;
+    return false;
+  };
+
+  auto EmitRemark = [&](Function &F) {
+    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    ORE.emit([&]() {
+      OptimizationRemarkAnalysis ORA(DEBUG_TYPE, "InternalizationFailure", &F);
+      return ORA << "Could not internalize function. "
+                 << "Some optimizations may not be possible.";
+    });
+  };
+
+  // Create internal copies of each function if this is a kernel Module. This
+  // allows iterprocedural passes to see every call edge.
+  DenseSet<const Function *> InternalizedFuncs;
+  if (isOpenMPDevice(M))
+    for (Function &F : M)
+      if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F)) {
+        if (Attributor::internalizeFunction(F, /* Force */ true)) {
+          InternalizedFuncs.insert(&F);
+        } else if (!F.hasLocalLinkage() && !F.hasFnAttribute(Attribute::Cold)) {
+          EmitRemark(F);
+        }
+      }
+
+  // Look at every function in the Module unless it was internalized.
   SmallVector<Function *, 16> SCC;
   for (Function &F : M)
     if (!F.isDeclaration() && !InternalizedFuncs.contains(&F))
@@ -2651,9 +2677,6 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   if (SCC.empty())
     return PreservedAnalyses::all();
-
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
   AnalysisGetter AG(FAM);
 
@@ -2665,12 +2688,11 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   CallGraphUpdater CGUpdater;
 
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
-  OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions,
-                                OMPInModule.getKernels());
+  OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions, Kernels);
 
-  unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
-  Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false, MaxFixponitIterations, OREGetter,
-               DEBUG_TYPE);
+  unsigned MaxFixpointIterations = (isOpenMPDevice(M)) ? 128 : 32;
+  Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false,
+               MaxFixpointIterations, OREGetter, DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(true);
@@ -2684,29 +2706,24 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
                                           CGSCCAnalysisManager &AM,
                                           LazyCallGraph &CG,
                                           CGSCCUpdateResult &UR) {
-  if (!containsOpenMP(*C.begin()->getFunction().getParent(), OMPInModule))
+  if (!containsOpenMP(*C.begin()->getFunction().getParent()))
     return PreservedAnalyses::all();
-
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
   SmallVector<Function *, 16> SCC;
   // If there are kernels in the module, we have to run on all SCC's.
-  bool SCCIsInteresting = !OMPInModule.getKernels().empty();
   for (LazyCallGraph::Node &N : C) {
     Function *Fn = &N.getFunction();
     SCC.push_back(Fn);
-
-    // Do we already know that the SCC contains kernels,
-    // or that OpenMP functions are called from this SCC?
-    if (SCCIsInteresting)
-      continue;
-    // If not, let's check that.
-    SCCIsInteresting |= OMPInModule.containsOMPRuntimeCalls(Fn);
   }
 
-  if (!SCCIsInteresting || SCC.empty())
+  if (SCC.empty())
     return PreservedAnalyses::all();
+
+  Module &M = *C.begin()->getFunction().getParent();
+
+  KernelSet Kernels = getDeviceKernels(M);
 
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
@@ -2723,11 +2740,11 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
 
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
-                                /*CGSCC*/ Functions, OMPInModule.getKernels());
+                                /*CGSCC*/ Functions, Kernels);
 
-  unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
-  Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true, MaxFixponitIterations, OREGetter,
-               DEBUG_TYPE);
+  unsigned MaxFixpointIterations = (isOpenMPDevice(M)) ? 128 : 32;
+  Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true,
+               MaxFixpointIterations, OREGetter, DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(false);
@@ -2741,7 +2758,6 @@ namespace {
 
 struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
   CallGraphUpdater CGUpdater;
-  OpenMPInModule OMPInModule;
   static char ID;
 
   OpenMPOptCGSCCLegacyPass() : CallGraphSCCPass(ID) {
@@ -2752,37 +2768,26 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
     CallGraphSCCPass::getAnalysisUsage(AU);
   }
 
-  bool doInitialization(CallGraph &CG) override {
-    // Disable the pass if there is no OpenMP (runtime call) in the module.
-    containsOpenMP(CG.getModule(), OMPInModule);
-    return false;
-  }
-
   bool runOnSCC(CallGraphSCC &CGSCC) override {
-    if (!containsOpenMP(CGSCC.getCallGraph().getModule(), OMPInModule))
+    if (!containsOpenMP(CGSCC.getCallGraph().getModule()))
       return false;
     if (DisableOpenMPOptimizations || skipSCC(CGSCC))
       return false;
 
     SmallVector<Function *, 16> SCC;
     // If there are kernels in the module, we have to run on all SCC's.
-    bool SCCIsInteresting = !OMPInModule.getKernels().empty();
     for (CallGraphNode *CGN : CGSCC) {
       Function *Fn = CGN->getFunction();
       if (!Fn || Fn->isDeclaration())
         continue;
       SCC.push_back(Fn);
-
-      // Do we already know that the SCC contains kernels,
-      // or that OpenMP functions are called from this SCC?
-      if (SCCIsInteresting)
-        continue;
-      // If not, let's check that.
-      SCCIsInteresting |= OMPInModule.containsOMPRuntimeCalls(Fn);
     }
 
-    if (!SCCIsInteresting || SCC.empty())
+    if (SCC.empty())
       return false;
+
+    Module &M = CGSCC.getCallGraph().getModule();
+    KernelSet Kernels = getDeviceKernels(M);
 
     CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
     CGUpdater.initialize(CG, CGSCC);
@@ -2799,13 +2804,13 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
     AnalysisGetter AG;
     SetVector<Function *> Functions(SCC.begin(), SCC.end());
     BumpPtrAllocator Allocator;
-    OMPInformationCache InfoCache(
-        *(Functions.back()->getParent()), AG, Allocator,
-        /*CGSCC*/ Functions, OMPInModule.getKernels());
+    OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG,
+                                  Allocator,
+                                  /*CGSCC*/ Functions, Kernels);
 
-    unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
+    unsigned MaxFixpointIterations = (isOpenMPDevice(M)) ? 128 : 32;
     Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true,
-                 MaxFixponitIterations, OREGetter, DEBUG_TYPE);
+                 MaxFixpointIterations, OREGetter, DEBUG_TYPE);
 
     OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
     return OMPOpt.run(false);
@@ -2816,11 +2821,13 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
 
 } // end anonymous namespace
 
-void OpenMPInModule::identifyKernels(Module &M) {
-
+KernelSet llvm::omp::getDeviceKernels(Module &M) {
+  // TODO: Create a more cross-platform way of determining device kernels.
   NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+  KernelSet Kernels;
+
   if (!MD)
-    return;
+    return Kernels;
 
   for (auto *Op : MD->operands()) {
     if (Op->getNumOperands() < 2)
@@ -2838,38 +2845,24 @@ void OpenMPInModule::identifyKernels(Module &M) {
 
     Kernels.insert(KernelFn);
   }
+
+  return Kernels;
 }
 
-bool llvm::omp::containsOpenMP(Module &M, OpenMPInModule &OMPInModule) {
-  if (OMPInModule.isKnown())
-    return OMPInModule;
+bool llvm::omp::containsOpenMP(Module &M) {
+  Metadata *MD = M.getModuleFlag("openmp");
+  if (!MD)
+    return false;
 
-  auto RecordFunctionsContainingUsesOf = [&](Function *F) {
-    for (User *U : F->users())
-      if (auto *I = dyn_cast<Instruction>(U))
-        OMPInModule.FuncsWithOMPRuntimeCalls.insert(I->getFunction());
-  };
+  return true;
+}
 
-  // MSVC doesn't like long if-else chains for some reason and instead just
-  // issues an error. Work around it..
-  do {
-#define OMP_RTL(_Enum, _Name, ...)                                             \
-  if (Function *F = M.getFunction(_Name)) {                                    \
-    RecordFunctionsContainingUsesOf(F);                                        \
-    OMPInModule = true;                                                        \
-  }
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-  } while (false);
+bool llvm::omp::isOpenMPDevice(Module &M) {
+  Metadata *MD = M.getModuleFlag("openmp-device");
+  if (!MD)
+    return false;
 
-  // Identify kernels once. TODO: We should split the OMPInformationCache into a
-  // module and an SCC part. The kernel information, among other things, could
-  // go into the module part.
-  if (OMPInModule.isKnown() && OMPInModule) {
-    OMPInModule.identifyKernels(M);
-    return true;
-  }
-
-  return OMPInModule = false;
+  return true;
 }
 
 char OpenMPOptCGSCCLegacyPass::ID = 0;

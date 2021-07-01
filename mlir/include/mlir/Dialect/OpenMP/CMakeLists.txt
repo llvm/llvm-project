@@ -4,6 +4,7 @@ add_public_tablegen_target(omp_common_td)
 
 set(LLVM_TARGET_DEFINITIONS OpenMPOps.td)
 mlir_tablegen(OpenMPOpsDialect.h.inc -gen-dialect-decls -dialect=omp)
+mlir_tablegen(OpenMPOpsDialect.cpp.inc -gen-dialect-defs -dialect=omp)
 mlir_tablegen(OpenMPOps.h.inc -gen-op-decls)
 mlir_tablegen(OpenMPOps.cpp.inc -gen-op-defs)
 mlir_tablegen(OpenMPOpsEnums.h.inc -gen-enum-decls)

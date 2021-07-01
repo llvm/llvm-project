@@ -15,4 +15,4 @@ __device__ float foo(float x) {
 // CHECK: attributes [[ATTR1]] = { convergent
 // CHECK: attributes [[ATTR2]] = {
 // CHECK-NOT: convergent
-// CHECK: }
+// CHECK-SAME: }

@@ -108,3 +108,87 @@ define i5 @umin_umin_common_op_10_uses(i1 %cond, i5 %x, i5 %y, i5 %z, i5* %p1, i
   %sel = select i1 %cond, i5 %m1, i5 %m2
   ret i5 %sel
 }
+
+define i5 @smin_select_const_const(i1 %b) {
+; CHECK-LABEL: @smin_select_const_const(
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i5 -3, i5 5
+; CHECK-NEXT:    ret i5 [[C]]
+;
+  %s = select i1 %b, i5 -3, i5 8
+  %c = call i5 @llvm.smin.i5(i5 %s, i5 5)
+  ret i5 %c
+}
+
+define <2 x i8> @smax_select_const_const(<2 x i1> %b) {
+; CHECK-LABEL: @smax_select_const_const(
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> <i8 1, i8 42>, <2 x i8> <i8 5, i8 43>
+; CHECK-NEXT:    ret <2 x i8> [[C]]
+;
+  %s = select <2 x i1> %b, <2 x i8> <i8 1, i8 3>, <2 x i8> <i8 5, i8 43>
+  %c = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %s, <2 x i8> <i8 0, i8 42>)
+  ret <2 x i8> %c
+}
+
+define i5 @umin_select_const_const(i1 %b) {
+; CHECK-LABEL: @umin_select_const_const(
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i5 4, i5 3
+; CHECK-NEXT:    ret i5 [[C]]
+;
+  %s = select i1 %b, i5 8, i5 3
+  %c = call i5 @llvm.umin.i5(i5 4, i5 %s)
+  ret i5 %c
+}
+
+define <3 x i5> @umax_select_const_const(<3 x i1> %b) {
+; CHECK-LABEL: @umax_select_const_const(
+; CHECK-NEXT:    [[C:%.*]] = select <3 x i1> [[B:%.*]], <3 x i5> <i5 5, i5 8, i5 -16>, <3 x i5> <i5 7, i5 8, i5 -16>
+; CHECK-NEXT:    ret <3 x i5> [[C]]
+;
+  %s = select <3 x i1> %b, <3 x i5> <i5 2, i5 3, i5 4>, <3 x i5> <i5 7, i5 8, i5 9>
+  %c = call <3 x i5> @llvm.umax.v3i5(<3 x i5> <i5 5, i5 8, i5 16>, <3 x i5> %s)
+  ret <3 x i5> %c
+}
+
+define i5 @smin_select_const(i1 %b, i5 %x) {
+; CHECK-LABEL: @smin_select_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.smin.i5(i5 [[X:%.*]], i5 5)
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i5 -3, i5 [[TMP1]]
+; CHECK-NEXT:    ret i5 [[C]]
+;
+  %s = select i1 %b, i5 -3, i5 %x
+  %c = call i5 @llvm.smin.i5(i5 %s, i5 5)
+  ret i5 %c
+}
+
+define <2 x i8> @smax_select_const(<2 x i1> %b, <2 x i8> %x) {
+; CHECK-LABEL: @smax_select_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 0, i8 42>)
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> [[TMP1]], <2 x i8> <i8 5, i8 43>
+; CHECK-NEXT:    ret <2 x i8> [[C]]
+;
+  %s = select <2 x i1> %b, <2 x i8> %x, <2 x i8> <i8 5, i8 43>
+  %c = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %s, <2 x i8> <i8 0, i8 42>)
+  ret <2 x i8> %c
+}
+
+define i5 @umin_select_const(i1 %b, i5 %x) {
+; CHECK-LABEL: @umin_select_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umin.i5(i5 [[X:%.*]], i5 4)
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i5 [[TMP1]], i5 3
+; CHECK-NEXT:    ret i5 [[C]]
+;
+  %s = select i1 %b, i5 %x, i5 3
+  %c = call i5 @llvm.umin.i5(i5 4, i5 %s)
+  ret i5 %c
+}
+
+define <3 x i5> @umax_select_const(<3 x i1> %b, <3 x i5> %x) {
+; CHECK-LABEL: @umax_select_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i5> @llvm.umax.v3i5(<3 x i5> [[X:%.*]], <3 x i5> <i5 5, i5 8, i5 1>)
+; CHECK-NEXT:    [[C:%.*]] = select <3 x i1> [[B:%.*]], <3 x i5> <i5 5, i5 8, i5 4>, <3 x i5> [[TMP1]]
+; CHECK-NEXT:    ret <3 x i5> [[C]]
+;
+  %s = select <3 x i1> %b, <3 x i5> <i5 2, i5 3, i5 4>, <3 x i5> %x
+  %c = call <3 x i5> @llvm.umax.v3i5(<3 x i5> <i5 5, i5 8, i5 1>, <3 x i5> %s)
+  ret <3 x i5> %c
+}

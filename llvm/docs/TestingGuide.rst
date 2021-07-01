@@ -107,7 +107,7 @@ The test are written in C based languages or in LLVM assembly language.
 These tests are compiled and run under a debugger. The debugger output
 is checked to validate of debugging information. See README.txt in the
 test suite for more information. This test suite is located in the
-``debuginfo-tests`` Subversion module.
+``cross-project-tests/debuginfo-tests`` directory.
 
 Quick start
 ===========
@@ -459,8 +459,12 @@ will be a failure if its execution succeeds.
 ``REQUIRES`` and ``UNSUPPORTED`` and ``XFAIL`` all accept a comma-separated
 list of boolean expressions. The values in each expression may be:
 
-- Features added to ``config.available_features`` by
-  configuration files such as ``lit.cfg``.
+- Features added to ``config.available_features`` by configuration files such as ``lit.cfg``.
+  String comparison of features is case-sensitive. Furthermore, a boolean expression can
+  contain any Python regular expression enclosed in ``{{ }}``, in which case the boolean
+  expression is satisfied if any feature matches the regular expression. Regular
+  expressions can appear inside an identifier, so for example ``he{{l+}}o`` would match
+  ``helo``, ``hello``, ``helllo``, and so on.
 - Substrings of the target triple (``UNSUPPORTED`` and ``XFAIL`` only).
 
 | ``REQUIRES`` enables the test if all expressions are true.

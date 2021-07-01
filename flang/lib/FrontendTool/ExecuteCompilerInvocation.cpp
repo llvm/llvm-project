@@ -103,7 +103,7 @@ std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &ci) {
 bool ExecuteCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->frontendOpts().showHelp_) {
-    clang::driver::getDriverOptTable().PrintHelp(llvm::outs(),
+    clang::driver::getDriverOptTable().printHelp(llvm::outs(),
         "flang-new -fc1 [options] file...", "LLVM 'Flang' Compiler",
         /*Include=*/clang::driver::options::FC1Option,
         /*Exclude=*/llvm::opt::DriverFlag::HelpHidden,

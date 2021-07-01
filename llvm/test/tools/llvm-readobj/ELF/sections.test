@@ -10,16 +10,12 @@
 # RUN: llvm-readobj --sections %t64 > %t64.llvm.sections
 # RUN: llvm-readobj -S %t64 > %t64.llvm.upper.s
 # RUN: cmp %t64.llvm.sections %t64.llvm.upper.s
-# RUN: llvm-readobj -s %t64 > %t64.llvm.lower.s
-# RUN: cmp %t64.llvm.sections %t64.llvm.lower.s
 # RUN: llvm-readobj --section-headers %t64 > %t64.llvm.section-headers
 # RUN: cmp %t64.llvm.sections %t64.llvm.section-headers
 
 # RUN: llvm-readobj --sections %t32 > %t32.llvm.sections
 # RUN: llvm-readobj -S %t32 > %t32.llvm.upper.s
 # RUN: cmp %t32.llvm.sections %t32.llvm.upper.s
-# RUN: llvm-readobj -s %t32 > %t32.llvm.lower.s
-# RUN: cmp %t32.llvm.sections %t32.llvm.lower.s
 # RUN: llvm-readobj --section-headers %t32 > %t32.llvm.section-headers
 # RUN: cmp %t32.llvm.sections %t32.llvm.section-headers
 

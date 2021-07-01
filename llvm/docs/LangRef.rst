@@ -1635,7 +1635,11 @@ example:
     memory on it's behalf.  As a result, perhaps surprisingly, a ``nofree``
     function can return a pointer to a previously deallocated memory object.
 ``noimplicitfloat``
-    This attributes disables implicit floating-point instructions.
+    Disallows implicit floating-point code. This inhibits optimizations that
+    use floating-point code and floating-point/SIMD/vector registers for
+    operations that are not nominally floating-point. LLVM instructions that
+    perform floating-point operations or require access to floating-point
+    registers may still cause floating-point code to be generated.
 ``noinline``
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
@@ -1652,6 +1656,10 @@ example:
     This attribute suppresses lazy symbol binding for the function. This
     may make calls to the function faster, at the cost of extra program
     startup time if the function is not called during program startup.
+``noprofile``
+    This function attribute prevents instrumentation based profiling, used for
+    coverage or profile based optimization, from being added to a function,
+    even when inlined.
 ``noredzone``
     This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.
@@ -1918,7 +1926,8 @@ example:
     A function with the ``ssp`` attribute but without the ``alwaysinline``
     attribute cannot be inlined into a function without a
     ``ssp/sspreq/sspstrong`` attribute. If inlined, the caller will get the
-    ``ssp`` attribute.
+    ``ssp`` attribute. ``call``, ``invoke``, and ``callbr`` instructions with
+    the ``alwaysinline`` attribute force inlining.
 ``sspstrong``
     This attribute indicates that the function should emit a stack smashing
     protector. This attribute causes a strong heuristic to be used when
@@ -1946,7 +1955,9 @@ example:
     A function with the ``sspstrong`` attribute but without the
     ``alwaysinline`` attribute cannot be inlined into a function without a
     ``ssp/sspstrong/sspreq`` attribute. If inlined, the caller will get the
-    ``sspstrong`` attribute unless the ``sspreq`` attribute exists.
+    ``sspstrong`` attribute unless the ``sspreq`` attribute exists.  ``call``,
+    ``invoke``, and ``callbr`` instructions with the ``alwaysinline`` attribute
+    force inlining.
 ``sspreq``
     This attribute indicates that the function should *always* emit a stack
     smashing protector. This overrides the ``ssp`` and ``sspstrong`` function
@@ -1966,7 +1977,8 @@ example:
     A function with the ``sspreq`` attribute but without the ``alwaysinline``
     attribute cannot be inlined into a function without a
     ``ssp/sspstrong/sspreq`` attribute. If inlined, the caller will get the
-    ``sspreq`` attribute.
+    ``sspreq`` attribute.  ``call``, ``invoke``, and ``callbr`` instructions
+    with the ``alwaysinline`` attribute force inlining.
 
 ``strictfp``
     This attribute indicates that the function was called from a scope that
@@ -2094,7 +2106,7 @@ attributes are supported:
     determined by the rules of the Vector Function ABI (VFABI)
     specifications of the target. For Arm and X86, the VFABI can be
     found at https://github.com/ARM-software/abi-aa and
-    https://software.intel.com/en-us/articles/vector-simd-function-abi,
+    https://software.intel.com/content/www/us/en/develop/download/vector-simd-function-abi.html,
     respectively.
 
     For X86 and Arm targets, the values of the tokens in the standard
@@ -2402,8 +2414,10 @@ A ``"clang.arc.attachedcall`` operand bundle on a call indicates the call is
 implicitly followed by a marker instruction and a call to an ObjC runtime
 function that uses the result of the call. If the argument passed to the operand
 bundle is 0, ``@objc_retainAutoreleasedReturnValue`` is called. If 1 is passed,
-``@objc_unsafeClaimAutoreleasedReturnValue`` is called. A call with this bundle
-implicitly uses its return value.
+``@objc_unsafeClaimAutoreleasedReturnValue`` is called. The return value of a
+call with this bundle is used by a call to ``@llvm.objc.clang.arc.noop.use``
+unless the called function's return type is void, in which case the operand
+bundle is ignored.
 
 The operand bundle is needed to ensure the call is immediately followed by the
 marker instruction or the ObjC runtime call in the final output.
@@ -5084,21 +5098,22 @@ metadata nodes are related to debug info.
 DICompileUnit
 """""""""""""
 
-``DICompileUnit`` nodes represent a compile unit. The ``enums:``,
-``retainedTypes:``, ``globals:``, ``imports:`` and ``macros:`` fields are tuples
-containing the debug info to be emitted along with the compile unit, regardless
-of code optimizations (some nodes are only emitted if there are references to
-them from instructions). The ``debugInfoForProfiling:`` field is a boolean
-indicating whether or not line-table discriminators are updated to provide
-more-accurate debug info for profiling results.
+``DICompileUnit`` nodes represent a compile unit. ``DICompileUnit`` nodes must
+be ``distinct``. The ``enums:``, ``retainedTypes:``, ``globals:``, ``imports:``
+and ``macros:`` fields are tuples containing the debug info to be emitted along
+with the compile unit, regardless of code optimizations (some nodes are only
+emitted if there are references to them from instructions). The
+``debugInfoForProfiling:`` field is a boolean indicating whether or not
+line-table discriminators are updated to provide more-accurate debug info for
+profiling results.
 
 .. code-block:: text
 
-    !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
-                        isOptimized: true, flags: "-O2", runtimeVersion: 2,
-                        splitDebugFilename: "abc.debug", emissionKind: FullDebug,
-                        enums: !2, retainedTypes: !3, globals: !4, imports: !5,
-                        macros: !6, dwoId: 0x0abcd)
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
+                                 isOptimized: true, flags: "-O2", runtimeVersion: 2,
+                                 splitDebugFilename: "abc.debug", emissionKind: FullDebug,
+                                 enums: !2, retainedTypes: !3, globals: !4, imports: !5,
+                                 macros: !6, dwoId: 0x0abcd)
 
 Compile unit descriptors provide the root scope for objects declared in a
 specific compilation unit. File descriptors are defined using this scope.  These
@@ -5509,12 +5524,14 @@ DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
-(such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
-referenced LLVM variable relates to the source language variable. Debug
-intrinsics are interpreted left-to-right: start by pushing the value/address
-operand of the intrinsic onto a stack, then repeatedly push and evaluate
-opcodes from the DIExpression until the final variable description is produced.
+expression language. ``DIExpression`` nodes must not be ``distinct``, and are
+canonically printed inline at each use. They are used in :ref:`debug
+intrinsics<dbg_intrinsics>` (such as ``llvm.dbg.declare`` and
+``llvm.dbg.value``) to describe how the referenced LLVM variable relates to the
+source language variable. Debug intrinsics are interpreted left-to-right: start
+by pushing the value/address operand of the intrinsic onto a stack, then
+repeatedly push and evaluate opcodes from the DIExpression until the final
+variable description is produced.
 
 The current supported opcode vocabulary is limited:
 
@@ -5592,23 +5609,23 @@ The current supported opcode vocabulary is limited:
 
     IR for "*ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
+    call void @llvm.dbg.value(metadata i32 4, metadata !17,
+                              metadata !DIExpression(DW_OP_LLVM_implicit_pointer)))
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
 
     IR for "**ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
+    call void @llvm.dbg.value(metadata i32 4, metadata !17,
+                              metadata !DIExpression(DW_OP_LLVM_implicit_pointer,
+                                                     DW_OP_LLVM_implicit_pointer)))
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
     !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
-                        DW_OP_LLVM_implicit_pointer))
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -5649,12 +5666,13 @@ valid debug intrinsic.
 DIArgList
 """"""""""""
 
-``DIArgList`` nodes hold a list of constant or SSA value references. These are
-used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
+``DIArgList`` nodes hold a list of constant or SSA value references.
+``DIArgList`` must not be ``distinct``, must only be used as an argument to a
+function call, and must appear inline at each use. ``DIArgList`` may refer to
+function-local values of the containing function. ``DIArgList`` nodes are used
+in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
 ``llvm.dbg.value``) in combination with a ``DIExpression`` that uses the
-``DW_OP_LLVM_arg`` operator. Because a DIArgList may refer to local values
-within a function, it must only be used as a function argument, must always be
-inlined, and cannot appear in named metadata.
+``DW_OP_LLVM_arg`` operator.
 
 .. code-block:: text
 
@@ -21447,6 +21465,42 @@ element is true, the following rules apply to the first element:
 
 If the function's return value's second element is false, the value of the
 first element is undefined.
+
+
+'``llvm.arithmetic.fence``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.arithmetic.fence(<type> <op>)
+
+Overview:
+"""""""""
+
+The purpose of the ``llvm.arithmetic.fence`` intrinsic
+is to prevent the optimizer from performaing fast-math optimizations,
+particularly reassociation,
+between the argument and the expression that contains the argument.
+It can be used to preserve the parentheses in the source language.
+
+Arguments:
+""""""""""
+
+The ``llvm.arithmetic.fence`` intrinsic takes only one argument.
+The argument and the return value are floating-point numbers,
+or vector floating-point numbers, of the same type.
+
+Semantics:
+""""""""""
+
+This intrinsic returns the value of its operand. The optimizer can optimize
+the argument, but the optimizer cannot hoist any component of the operand
+to the containing context, and the optimizer cannot move the calculation of
+any expression in the containing context into the operand.
 
 
 '``llvm.donothing``' Intrinsic

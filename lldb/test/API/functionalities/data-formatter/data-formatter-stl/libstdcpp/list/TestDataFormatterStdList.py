@@ -25,6 +25,7 @@ class StdListDataFormatterTestCase(TestBase):
             'main.cpp', '// Set final break point at this line.')
 
     @add_test_categories(["libstdcxx"])
+    @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

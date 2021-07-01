@@ -1073,6 +1073,37 @@ b:
   ret i1 %cmp2
 }
 
+define i32 @test_select(i32 %c) {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test_select
+; IS__TUNIT____-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32 @select() #[[ATTR1]]
+; IS__TUNIT____-NEXT:    ret i32 [[CALL]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test_select
+; IS__CGSCC____-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-NEXT:    ret i32 42
+;
+  %call = call i32 @select(i1 1, i32 42, i32 %c)
+  ret i32 %call
+}
+
+define internal i32 @select(i1 %a, i32 %b, i32 %c) {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@select
+; IS__TUNIT____-SAME: () #[[ATTR1]] {
+; IS__TUNIT____-NEXT:    ret i32 42
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@select
+; IS__CGSCC____-SAME: () #[[ATTR1]] {
+; IS__CGSCC____-NEXT:    ret i32 undef
+;
+  %s = select i1 %a, i32 %b, i32 %c
+  ret i32 %s
+}
+
 define i1 @icmp() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@icmp

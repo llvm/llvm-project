@@ -141,8 +141,6 @@ PIPE_OPERATOR(AAFunctionReachability)
 #undef PIPE_OPERATOR
 } // namespace llvm
 
-namespace {
-
 /// Get pointer operand of memory accessing instruction. If \p I is
 /// not a memory accessing instruction, return nullptr. If \p AllowVolatile,
 /// is set to false and the instruction is volatile, return nullptr.
@@ -4514,6 +4512,32 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
 };
 
 /// ------------------ Value Simplify Attribute ----------------------------
+
+bool ValueSimplifyStateType::unionAssumed(Optional<Value *> Other) {
+  // FIXME: Add a typecast support.
+  if (!Other.hasValue())
+    return true;
+
+  if (!Other.getValue())
+    return false;
+
+  Value &QueryingValueSimplifiedUnwrapped = *Other.getValue();
+
+  if (SimplifiedAssociatedValue.hasValue() &&
+      !isa<UndefValue>(SimplifiedAssociatedValue.getValue()) &&
+      !isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
+    return SimplifiedAssociatedValue == Other;
+  if (SimplifiedAssociatedValue.hasValue() &&
+      isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
+    return true;
+
+  LLVM_DEBUG(dbgs() << "[ValueSimplify] is assumed to be "
+                    << QueryingValueSimplifiedUnwrapped << "\n");
+
+  SimplifiedAssociatedValue = Other;
+  return true;
+}
+
 struct AAValueSimplifyImpl : AAValueSimplify {
   AAValueSimplifyImpl(const IRPosition &IRP, Attributor &A)
       : AAValueSimplify(IRP, A) {}
@@ -4531,8 +4555,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       if (SimplifiedAssociatedValue)
         errs() << "SAV: " << **SimplifiedAssociatedValue << " ";
     });
-    return getAssumed() ? (getKnown() ? "simplified" : "maybe-simple")
-                        : "not-simple";
+    return isValidState() ? (isAtFixpoint() ? "simplified" : "maybe-simple")
+                          : "not-simple";
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -4540,45 +4564,19 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
   /// See AAValueSimplify::getAssumedSimplifiedValue()
   Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const override {
-    if (!getAssumed())
+    if (!isValidState())
       return const_cast<Value *>(&getAssociatedValue());
     return SimplifiedAssociatedValue;
   }
 
   /// Helper function for querying AAValueSimplify and updating candicate.
   /// \param IRP The value position we are trying to unify with SimplifiedValue
-  /// \param AccumulatedSimplifiedValue Current simplification result.
-  static bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
-                             const IRPosition &IRP,
-                             Optional<Value *> &AccumulatedSimplifiedValue) {
-    // FIXME: Add a typecast support.
+  bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
+                      const IRPosition &IRP) {
     bool UsedAssumedInformation = false;
     Optional<Value *> QueryingValueSimplified =
         A.getAssumedSimplified(IRP, QueryingAA, UsedAssumedInformation);
-
-    if (!QueryingValueSimplified.hasValue())
-      return true;
-
-    if (!QueryingValueSimplified.getValue())
-      return false;
-
-    Value &QueryingValueSimplifiedUnwrapped =
-        *QueryingValueSimplified.getValue();
-
-    if (AccumulatedSimplifiedValue.hasValue() &&
-        !isa<UndefValue>(AccumulatedSimplifiedValue.getValue()) &&
-        !isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
-      return AccumulatedSimplifiedValue == QueryingValueSimplified;
-    if (AccumulatedSimplifiedValue.hasValue() &&
-        isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
-      return true;
-
-    LLVM_DEBUG(dbgs() << "[ValueSimplify] " << IRP.getAssociatedValue()
-                      << " is assumed to be "
-                      << QueryingValueSimplifiedUnwrapped << "\n");
-
-    AccumulatedSimplifiedValue = QueryingValueSimplified;
-    return true;
+    return unionAssumed(QueryingValueSimplified);
   }
 
   /// Returns a candidate is found or not
@@ -4647,13 +4645,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     indicateOptimisticFixpoint();
     return ChangeStatus::CHANGED;
   }
-
-protected:
-  // An assumed simplified value. Initially, it is set to Optional::None, which
-  // means that the value is not clear under current assumption. If in the
-  // pessimistic state, getAssumedSimplifiedValue doesn't return this value but
-  // returns orignal associated value.
-  Optional<Value *> SimplifiedAssociatedValue;
 };
 
 struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
@@ -4713,7 +4704,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
         if (auto *C = dyn_cast<Constant>(&ArgOp))
           if (C->isThreadDependent())
             return false;
-      return checkAndUpdate(A, *this, ACSArgPos, SimplifiedAssociatedValue);
+      return checkAndUpdate(A, *this, ACSArgPos);
     };
 
     // Generate a answer specific to a call site context.
@@ -4751,8 +4742,7 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
 
     auto PredForReturned = [&](Value &V) {
       return checkAndUpdate(A, *this,
-                            IRPosition::value(V, getCallBaseContext()),
-                            SimplifiedAssociatedValue);
+                            IRPosition::value(V, getCallBaseContext()));
     };
 
     if (!A.checkForAllReturnedValues(PredForReturned, *this))
@@ -4908,8 +4898,7 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
         return false;
       }
       return checkAndUpdate(A, *this,
-                            IRPosition::value(V, getCallBaseContext()),
-                            SimplifiedAssociatedValue);
+                            IRPosition::value(V, getCallBaseContext()));
     };
 
     bool Dummy = false;
@@ -5211,8 +5200,9 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
           auto Remark = [&](OptimizationRemarkMissed ORM) {
             return ORM << "Could not move globalized variable to the stack. "
                        << "Variable is potentially "
-                       << ((!NoCaptureAA.isAssumedNoCapture()) ? "captured."
-                                                               : "freed.");
+                       << (!NoCaptureAA.isAssumedNoCapture() ? "captured. "
+                                                             : "freed. ")
+                       << "Mark as noescape to override.";
           };
 
           LibFunc IsAllocShared;
@@ -6467,8 +6457,6 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
   if (UserI->mayWriteToMemory())
     removeAssumedBits(NO_WRITES);
 }
-
-} // namespace
 
 /// -------------------- Memory Locations Attributes ---------------------------
 /// Includes read-none, argmemonly, inaccessiblememonly,
@@ -7823,23 +7811,46 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
       return indicatePessimisticFixpoint();
 
-    // TODO: Use assumed simplified condition value
-    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
-                                                DepClassTy::REQUIRED);
-    if (!LHSAA.isValidState())
-      return indicatePessimisticFixpoint();
+    bool UsedAssumedInformation = false;
+    Optional<Constant *> C = A.getAssumedConstant(*SI->getCondition(), *this,
+                                                  UsedAssumedInformation);
 
-    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
-                                                DepClassTy::REQUIRED);
-    if (!RHSAA.isValidState())
-      return indicatePessimisticFixpoint();
+    // Check if we only need one operand.
+    bool OnlyLeft = false, OnlyRight = false;
+    if (C.hasValue() && *C && (*C)->isOneValue())
+      OnlyLeft = true;
+    else if (C.hasValue() && *C && (*C)->isZeroValue())
+      OnlyRight = true;
 
-    if (LHSAA.undefIsContained() && RHSAA.undefIsContained())
+    const AAPotentialValues *LHSAA = nullptr, *RHSAA = nullptr;
+    if (!OnlyRight) {
+      LHSAA = &A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS),
+                                             DepClassTy::REQUIRED);
+      if (!LHSAA->isValidState())
+        return indicatePessimisticFixpoint();
+    }
+    if (!OnlyLeft) {
+      RHSAA = &A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS),
+                                             DepClassTy::REQUIRED);
+      if (!RHSAA->isValidState())
+        return indicatePessimisticFixpoint();
+    }
+
+    if (!LHSAA || !RHSAA) {
+      // select (true/false), lhs, rhs
+      auto *OpAA = LHSAA ? LHSAA : RHSAA;
+
+      if (OpAA->undefIsContained())
+        unionAssumedWithUndef();
+      else
+        unionAssumed(*OpAA);
+
+    } else if (LHSAA->undefIsContained() && RHSAA->undefIsContained()) {
       // select i1 *, undef , undef => undef
       unionAssumedWithUndef();
-    else {
-      unionAssumed(LHSAA);
-      unionAssumed(RHSAA);
+    } else {
+      unionAssumed(*LHSAA);
+      unionAssumed(*RHSAA);
     }
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
                                          : ChangeStatus::CHANGED;
@@ -8396,9 +8407,7 @@ AACallGraphNode *AACallEdgeIterator::operator*() const {
       &A.getOrCreateAAFor<AACallEdges>(IRPosition::function(**I))));
 }
 
-void AttributorCallGraph::print() {
-  llvm::WriteGraph(outs(), this);
-}
+void AttributorCallGraph::print() { llvm::WriteGraph(outs(), this); }
 
 const char AAReturnedValues::ID = 0;
 const char AANoUnwind::ID = 0;

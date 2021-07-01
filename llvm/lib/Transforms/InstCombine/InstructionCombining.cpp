@@ -942,13 +942,16 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
     assert(canConstantFoldCallTo(II, cast<Function>(II->getCalledOperand())) &&
            "Expected constant-foldable intrinsic");
     Intrinsic::ID IID = II->getIntrinsicID();
-    SmallVector<Value *, 2> Args = {SO};
+    if (II->getNumArgOperands() == 1)
+      return Builder.CreateUnaryIntrinsic(IID, SO);
 
-    // Propagate the zero-is-undef argument to the new instruction.
-    if (IID == Intrinsic::ctlz || IID == Intrinsic::cttz)
-      Args.push_back(II->getArgOperand(1));
-
-    return Builder.CreateIntrinsic(IID, I.getType(), Args);
+    // This works for real binary ops like min/max (where we always expect the
+    // constant operand to be canonicalized as op1) and unary ops with a bonus
+    // constant argument like ctlz/cttz.
+    // TODO: Handle non-commutative binary intrinsics as below for binops.
+    assert(II->getNumArgOperands() == 2 && "Expected binary intrinsic");
+    assert(isa<Constant>(II->getArgOperand(1)) && "Expected constant operand");
+    return Builder.CreateBinaryIntrinsic(IID, SO, II->getArgOperand(1));
   }
 
   assert(I.isBinaryOp() && "Unexpected opcode for select folding");
@@ -3083,13 +3086,36 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
         return BinaryOperator::Create(BinOp, LHS, RHS);
       }
 
-      // If the normal result of the add is dead, and the RHS is a constant,
-      // we can transform this into a range comparison.
-      // overflow = uadd a, -4  -->  overflow = icmp ugt a, 3
-      if (WO->getIntrinsicID() == Intrinsic::uadd_with_overflow)
+      assert(*EV.idx_begin() == 1 &&
+             "unexpected extract index for overflow inst");
+
+      // If the normal result of the computation is dead, and the RHS is a
+      // constant, we can transform this into a range comparison for many cases.
+      // TODO: We can generalize these for non-constant rhs when the newly
+      // formed expressions are known to simplify.  Constants are merely one
+      // such case.
+      // TODO: Handle vector splats.
+      switch (WO->getIntrinsicID()) {
+      default:
+        break;
+      case Intrinsic::uadd_with_overflow:
+        // overflow = uadd a, -4  -->  overflow = icmp ugt a, 3
         if (ConstantInt *CI = dyn_cast<ConstantInt>(WO->getRHS()))
           return new ICmpInst(ICmpInst::ICMP_UGT, WO->getLHS(),
                               ConstantExpr::getNot(CI));
+        break;
+      case Intrinsic::umul_with_overflow:
+        // overflow for umul a, C  --> a > UINT_MAX udiv C
+        // (unless C == 0, in which case no overflow ever occurs)
+        if (ConstantInt *CI = dyn_cast<ConstantInt>(WO->getRHS())) {
+          assert(!CI->isZero() && "handled by instruction simplify");
+          auto UMax = APInt::getMaxValue(CI->getType()->getBitWidth());
+          auto *Op =
+            ConstantExpr::getUDiv(ConstantInt::get(CI->getType(), UMax), CI);
+          return new ICmpInst(ICmpInst::ICMP_UGT, WO->getLHS(), Op);
+        }
+        break;
+      };
     }
   }
   if (LoadInst *L = dyn_cast<LoadInst>(Agg))

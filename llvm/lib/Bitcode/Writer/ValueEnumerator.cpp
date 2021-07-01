@@ -365,18 +365,23 @@ ValueEnumerator::ValueEnumerator(const Module &M,
     UseListOrders = predictUseListOrder(M);
 
   // Enumerate the global variables.
-  for (const GlobalVariable &GV : M.globals())
+  for (const GlobalVariable &GV : M.globals()) {
     EnumerateValue(&GV);
+    EnumerateType(GV.getValueType());
+  }
 
   // Enumerate the functions.
   for (const Function & F : M) {
     EnumerateValue(&F);
+    EnumerateType(F.getValueType());
     EnumerateAttributes(F.getAttributes());
   }
 
   // Enumerate the aliases.
-  for (const GlobalAlias &GA : M.aliases())
+  for (const GlobalAlias &GA : M.aliases()) {
     EnumerateValue(&GA);
+    EnumerateType(GA.getValueType());
+  }
 
   // Enumerate the ifuncs.
   for (const GlobalIFunc &GIF : M.ifuncs())
@@ -466,6 +471,8 @@ ValueEnumerator::ValueEnumerator(const Module &M,
           EnumerateType(SVI->getShuffleMaskForBitcode()->getType());
         if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
           EnumerateType(GEP->getSourceElementType());
+        if (auto *AI = dyn_cast<AllocaInst>(&I))
+          EnumerateType(AI->getAllocatedType());
         EnumerateType(I.getType());
         if (const auto *Call = dyn_cast<CallBase>(&I)) {
           EnumerateAttributes(Call->getAttributes());
@@ -1038,6 +1045,11 @@ void ValueEnumerator::EnumerateAttributes(AttributeList PAL) {
     if (Entry == 0) {
       AttributeGroups.push_back(Pair);
       Entry = AttributeGroups.size();
+
+      for (Attribute Attr : AS) {
+        if (Attr.isTypeAttribute())
+          EnumerateType(Attr.getValueAsType());
+      }
     }
   }
 }

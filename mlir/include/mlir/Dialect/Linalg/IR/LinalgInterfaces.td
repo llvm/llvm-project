@@ -253,7 +253,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return getNumInputs() + getNumOutputs();
+        return this->getOperation()->getNumOperands();
       }]
     >,
     //===------------------------------------------------------------------===//
@@ -346,8 +346,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         result.reserve(numOutputs);
         llvm::transform(
           this->getOperation()->getOpOperands()
-            .drop_front(getNumInputs())
-            .take_front(numOutputs),
+            .take_back(numOutputs),
           std::back_inserter(result),
           [](OpOperand &opOperand) { return &opOperand; });
         return result;
@@ -458,8 +457,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         OpOperandVector result;
         result.reserve(numInputsAndOutputs);
         llvm::transform(
-          this->getOperation()->getOpOperands()
-            .take_front(numInputsAndOutputs),
+          this->getOperation()->getOpOperands(),
           std::back_inserter(result),
           [](OpOperand &opOperand) { return &opOperand; });
         return result;
@@ -901,7 +899,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Returns a null function if this named op does not define a region
         builder.
       }],
-      /*retTy=*/"std::function<void(ImplicitLocOpBuilder &, Block &, ValueRange)>",
+      /*retTy=*/"std::function<void(ImplicitLocOpBuilder &, Block &)>",
       /*methodName=*/"getRegionBuilder",
       (ins),
       [{ return ConcreteOp::getRegionBuilder(); }]
@@ -927,22 +925,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     /// This is done by applying `getShapesToLoopsMap` to
     /// `createFlatListOfOperandStaticDims`.
     SmallVector<int64_t, 4> computeStaticLoopSizes();
-
-    /// Returns all the operands past the inputs, output_buffers and
-    /// init_tensors operands. Asserts that these operands are value types to
-    /// allow transformations like tiling to just use the values when cloning
-    /// `linalgOp`.
-    Operation::operand_range getAssumedNonShapedOperands() {
-      Operation::operand_range res{
-        getOperation()->getOperands().begin() + getNumInputsAndOutputs(),
-        getOperation()->getOperands().end()};
-      for (Type t : TypeRange{res}) {
-        (void)t;
-        assert((t.isSignlessIntOrIndexOrFloat() || t.template isa<VectorType>())
-               &&"expected scalar or vector type");
-      }
-      return res;
-    }
 
     /// Returns the value that expresses the shape of the output in terms of
     /// shape of the input operands where possible

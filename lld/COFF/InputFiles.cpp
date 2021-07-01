@@ -500,12 +500,15 @@ void ObjFile::handleComdatSelection(
   // symbol in `Sym` should be discarded, produce a duplicate symbol
   // error, etc.
 
-  SectionChunk *leaderChunk = nullptr;
-  COMDATType leaderSelection = IMAGE_COMDAT_SELECT_ANY;
+  SectionChunk *leaderChunk = leader->getChunk();
+  COMDATType leaderSelection = leaderChunk->selection;
 
   assert(leader->data && "Comdat leader without SectionChunk?");
-  leaderChunk = leader->getChunk();
-  leaderSelection = leaderChunk->selection;
+  if (isa<BitcodeFile>(leader->file)) {
+    // If the leader is only a LTO symbol, we don't know e.g. its final size
+    // yet, so we can't do the full strict comdat selection checking yet.
+    selection = leaderSelection = IMAGE_COMDAT_SELECT_ANY;
+  }
 
   if ((selection == IMAGE_COMDAT_SELECT_ANY &&
        leaderSelection == IMAGE_COMDAT_SELECT_LARGEST) ||
@@ -558,8 +561,10 @@ void ObjFile::handleComdatSelection(
       if (!config->mingw) {
         symtab->reportDuplicate(leader, this);
       } else {
-        const coff_aux_section_definition *leaderDef = findSectionDef(
-            leaderChunk->file->getCOFFObj(), leaderChunk->getSectionNumber());
+        const coff_aux_section_definition *leaderDef = nullptr;
+        if (leaderChunk->file)
+          leaderDef = findSectionDef(leaderChunk->file->getCOFFObj(),
+                                     leaderChunk->getSectionNumber());
         if (!leaderDef || leaderDef->Length != def->Length)
           symtab->reportDuplicate(leader, this);
       }
@@ -1050,8 +1055,9 @@ public:
 class FakeSectionChunk {
 public:
   FakeSectionChunk(const coff_section *section) : chunk(nullptr, section) {
-    // FIXME: comdats from LTO files don't know their selection; treat them
-    // as "any".
+    // Comdats from LTO files can't be fully treated as regular comdats
+    // at this point; we don't know what size or contents they are going to
+    // have, so we can't do proper checking of such aspects of them.
     chunk.selection = IMAGE_COMDAT_SELECT_ANY;
   }
 

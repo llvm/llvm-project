@@ -75,9 +75,9 @@
 # DIS3-COUNT-3: int3
 # DIS3-NEXT:    callq 0x1390 <foo@plt>
 # DIS3-LABEL: <foo@plt>:
-# DIS3-NEXT:    jmpq *{{.*}}(%rip) # 34a8
+# DIS3-NEXT:    jmpq *{{.*}}(%rip) # 0x34a8
 # DIS3-LABEL: <foo@plt>:
-# DIS3-NEXT:    jmpq *{{.*}}(%rip) # 34b0
+# DIS3-NEXT:    jmpq *{{.*}}(%rip) # 0x34b0
 
 ## Then, test the interaction with versioned definitions in shared objects.
 

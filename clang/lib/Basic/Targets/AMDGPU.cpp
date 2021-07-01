@@ -202,6 +202,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["gfx10-insts"] = true;
       Features["gfx10-3-insts"] = true;
       break;
+    case GK_GFX1035:
     case GK_GFX1034:
     case GK_GFX1033:
     case GK_GFX1032:
@@ -375,8 +376,8 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
 }
 
-void AMDGPUTargetInfo::adjust(LangOptions &Opts) {
-  TargetInfo::adjust(Opts);
+void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+  TargetInfo::adjust(Diags, Opts);
   // ToDo: There are still a few places using default address space as private
   // address space in OpenCL, which needs to be cleaned up, then Opts.OpenCL
   // can be removed from the following line.

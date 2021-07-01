@@ -1906,12 +1906,12 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
                                            LineState &State, bool AllowBreak) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
   if (Current.isStringLiteral()) {
-    // FIXME: String literal breaking is currently disabled for C#, Java and
-    // JavaScript, as it requires strings to be merged using "+" which we
+    // FIXME: String literal breaking is currently disabled for C#, Java, Json
+    // and JavaScript, as it requires strings to be merged using "+" which we
     // don't support.
     if (Style.Language == FormatStyle::LK_Java ||
         Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp() ||
-        !Style.BreakStringLiterals || !AllowBreak)
+        Style.isJson() || !Style.BreakStringLiterals || !AllowBreak)
       return nullptr;
 
     // Don't break string literals inside preprocessor directives (except for

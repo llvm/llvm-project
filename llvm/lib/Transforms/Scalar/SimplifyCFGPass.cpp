@@ -94,10 +94,15 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
 
     auto *Term = BB.getTerminator();
 
-    // Fow now only support `ret` function terminators.
+    // Fow now only support `ret`/`resume` function terminators.
     // FIXME: lift this restriction.
-    if (Term->getOpcode() != Instruction::Ret)
+    switch (Term->getOpcode()) {
+    case Instruction::Ret:
+    case Instruction::Resume:
+      break;
+    default:
       continue;
+    }
 
     // We can't tail-merge block that contains a musttail call.
     if (BB.getTerminatingMustTailCall())

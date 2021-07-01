@@ -285,7 +285,8 @@ private:
     Line = Line.ltrim();
     if (!Line.startswith("error"))
       return false;
-    return Line.contains_lower("includ"); // Matches "include" or "including".
+    return Line.contains_insensitive(
+        "includ"); // Matches "include" or "including".
   }
 
   // Heuristically headers that only want to be included via an umbrella.

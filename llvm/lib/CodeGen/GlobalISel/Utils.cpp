@@ -816,7 +816,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
       if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
         int GCD = greatestCommonDivisor(OrigTy.getNumElements(),
                                         TargetTy.getNumElements());
-        return LLT::scalarOrVector(GCD, OrigElt);
+        return LLT::scalarOrVector(ElementCount::getFixed(GCD), OrigElt);
       }
     } else {
       // If the source is a vector of pointers, return a pointer element.

@@ -434,7 +434,7 @@ LLVM-specific variables
   This feature allows to have one build for only LLVM and another for clang+llvm
   using the same source checkout.
   The full list is:
-  ``clang;clang-tools-extra;compiler-rt;debuginfo-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;openmp;parallel-libs;polly;pstl``
+  ``clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;openmp;parallel-libs;polly;pstl``
 
 **LLVM_ENABLE_RTTI**:BOOL
   Build LLVM with run-time type information. Defaults to OFF.

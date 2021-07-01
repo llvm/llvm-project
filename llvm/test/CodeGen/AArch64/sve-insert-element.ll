@@ -352,3 +352,179 @@ define <vscale x 2 x double> @test_insert_with_index_nxv2f64(double %d, i64 %idx
   %res = insertelement <vscale x 2 x double> undef, double %d, i64 %idx
   ret <vscale x 2 x double> %res
 }
+
+;Predicate insert
+define <vscale x 2 x i1> @test_predicate_insert_2xi1_immediate (<vscale x 2 x i1> %val, i1 %elt) {
+; CHECK-LABEL: test_predicate_insert_2xi1_immediate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    mov z0.d, p0/m, x0
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x i1> %val, i1 %elt, i32 0
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 4 x i1> @test_predicate_insert_4xi1_immediate (<vscale x 4 x i1> %val, i1 %elt) {
+; CHECK-LABEL: test_predicate_insert_4xi1_immediate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #2
+; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.s, p2/m, w0
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p0.s, p1/z, z0.s, #0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x i1> %val, i1 %elt, i32 2
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 8 x i1> @test_predicate_insert_8xi1_immediate (<vscale x 8 x i1> %val, i32 %idx) {
+; CHECK-LABEL: test_predicate_insert_8xi1_immediate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    index z0.h, #0, #1
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mov z1.h, p0/z, #1 // =0x1
+; CHECK-NEXT:    cmpeq p0.h, p1/z, z0.h, z2.h
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov z1.h, p0/m, w8
+; CHECK-NEXT:    and z1.h, z1.h, #0x1
+; CHECK-NEXT:    cmpne p0.h, p1/z, z1.h, #0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 8 x i1> %val, i1 1, i32 %idx
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 16 x i1> @test_predicate_insert_16xi1_immediate (<vscale x 16 x i1> %val) {
+; CHECK-LABEL: test_predicate_insert_16xi1_immediate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w9, #4
+; CHECK-NEXT:    index z0.b, #0, #1
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    mov z1.b, w9
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.b, p2/m, w8
+; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    cmpne p0.b, p1/z, z0.b, #0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 16 x i1> %val, i1 0, i32 4
+  ret <vscale x 16 x i1> %res
+}
+
+
+define <vscale x 2 x i1> @test_predicate_insert_2xi1(<vscale x 2 x i1> %val, i1 %elt, i32 %idx) {
+; CHECK-LABEL: test_predicate_insert_2xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    cmpeq p2.d, p1/z, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    mov z0.d, p2/m, x0
+; CHECK-NEXT:    and z0.d, z0.d, #0x1
+; CHECK-NEXT:    cmpne p0.d, p1/z, z0.d, #0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x i1> %val, i1 %elt, i32 %idx
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 4 x i1> @test_predicate_insert_4xi1(<vscale x 4 x i1> %val, i1 %elt, i32 %idx) {
+; CHECK-LABEL: test_predicate_insert_4xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    cmpeq p2.s, p1/z, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.s, p2/m, w0
+; CHECK-NEXT:    and z0.s, z0.s, #0x1
+; CHECK-NEXT:    cmpne p0.s, p1/z, z0.s, #0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x i1> %val, i1 %elt, i32 %idx
+  ret <vscale x 4 x i1> %res
+}
+define <vscale x 8 x i1> @test_predicate_insert_8xi1(<vscale x 8 x i1> %val, i1 %elt, i32 %idx) {
+; CHECK-LABEL: test_predicate_insert_8xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    index z0.h, #0, #1
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    cmpeq p2.h, p1/z, z0.h, z1.h
+; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.h, p2/m, w0
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    cmpne p0.h, p1/z, z0.h, #0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 8 x i1> %val, i1 %elt, i32 %idx
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 16 x i1> @test_predicate_insert_16xi1(<vscale x 16 x i1> %val, i1 %elt, i32 %idx) {
+; CHECK-LABEL: test_predicate_insert_16xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    index z0.b, #0, #1
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    mov z1.b, w8
+; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov z0.b, p2/m, w0
+; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    cmpne p0.b, p1/z, z0.b, #0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 16 x i1> %val, i1 %elt, i32 %idx
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, i1 %elt, i32 %idx) {
+; CHECK-LABEL: test_predicate_insert_32xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    sub x10, x10, #1 // =1
+; CHECK-NEXT:    cmp x9, x10
+; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    csel x9, x9, x10, lo
+; CHECK-NEXT:    st1b { z0.b }, p1, [x8, #1, mul vl]
+; CHECK-NEXT:    st1b { z1.b }, p1, [sp]
+; CHECK-NEXT:    strb w0, [x8, x9]
+; CHECK-NEXT:    ld1b { z0.b }, p1/z, [sp]
+; CHECK-NEXT:    ld1b { z1.b }, p1/z, [x8, #1, mul vl]
+; CHECK-NEXT:    and z0.b, z0.b, #0x1
+; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    cmpne p0.b, p1/z, z0.b, #0
+; CHECK-NEXT:    cmpne p1.b, p1/z, z1.b, #0
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 32 x i1> %val, i1 %elt, i32 %idx
+  ret <vscale x 32 x i1> %res
+}

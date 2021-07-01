@@ -27,8 +27,8 @@ _start:
  b.w arm_target
 // arm_target is in range but needs an interworking thunk
 // CHECK1: <_start>:
-// CHECK1-NEXT:   100002:       00 f3 06 d0     bl      #15728652
-// CHECK1-NEXT:   100006:       ff f2 ff 97     b.w     #15728638 <__Thumbv7ABSLongThunk_arm_target>
+// CHECK1-NEXT:   100002:       00 f3 06 d0     bl      0x1000012 <__Thumbv7ABSLongThunk_target>
+// CHECK1-NEXT:   100006:       ff f2 ff 97     b.w     0x1000008 <__Thumbv7ABSLongThunk_arm_target>
  nop
  nop
  nop
@@ -64,9 +64,9 @@ arm_target:
 // CHECK2-NEXT:  100000c:       c0 f2 00 1c     movt    r12, #256
 // CHECK2-NEXT:  1000010:       60 47   bx      r12
 // CHECK2: <__Thumbv7ABSLongThunk_target>:
-// CHECK2-NEXT:  1000012:       ff f0 ff bf     b.w     #1048574 <target>
+// CHECK2-NEXT:  1000012:       ff f0 ff bf     b.w     0x1100014 <target>
 // CHECK2: <__Thumbv7ABSLongThunk_target2>:
-// CHECK2-NEXT:  1000016:       ff f4 fc 97     b.w     #-15728648 <target2>
+// CHECK2-NEXT:  1000016:       ff f4 fc 97     b.w     0x100012 <target2>
 
  .section .text.17, "ax", %progbits
 // Just enough space so that bl target is in range if no extension thunks are
@@ -86,7 +86,7 @@ target:
  nop
  bx lr
 // CHECK3: <target>:
-// CHECK3-NEXT:  1100014:       ff f6 ff ff     bl      #-1048578
+// CHECK3-NEXT:  1100014:       ff f6 ff ff     bl      0x1000016 <__Thumbv7ABSLongThunk_target2>
 // CHECK3-NEXT:  1100018:       00 bf   nop
 // CHECK3-NEXT:  110001a:       00 bf   nop
 // CHECK3-NEXT:  110001c:       70 47   bx      lr

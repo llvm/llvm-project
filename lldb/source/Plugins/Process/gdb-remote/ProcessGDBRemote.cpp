@@ -2767,6 +2767,29 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
   return 0;
 }
 
+bool ProcessGDBRemote::SupportsMemoryTagging() {
+  return m_gdb_comm.GetMemoryTaggingSupported();
+}
+
+llvm::Expected<std::vector<uint8_t>>
+ProcessGDBRemote::DoReadMemoryTags(lldb::addr_t addr, size_t len,
+                                   int32_t type) {
+  // By this point ReadMemoryTags has validated that tagging is enabled
+  // for this target/process/address.
+  DataBufferSP buffer_sp = m_gdb_comm.ReadMemoryTags(addr, len, type);
+  if (!buffer_sp) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Error reading memory tags from remote");
+  }
+
+  // Return the raw tag data
+  llvm::ArrayRef<uint8_t> tag_data = buffer_sp->GetData();
+  std::vector<uint8_t> got;
+  got.reserve(tag_data.size());
+  std::copy(tag_data.begin(), tag_data.end(), std::back_inserter(got));
+  return got;
+}
+
 Status ProcessGDBRemote::WriteObjectFile(
     std::vector<ObjectFile::LoadableData> entries) {
   Status error;

@@ -30,6 +30,8 @@
 using namespace mlir;
 using namespace NVVM;
 
+#include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // Printing/parsing for NVVM ops
 //===----------------------------------------------------------------------===//

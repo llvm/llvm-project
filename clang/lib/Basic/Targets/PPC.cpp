@@ -97,6 +97,17 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__dcbtst", "__builtin_ppc_dcbtst");
   Builder.defineMacro("__dcbz", "__builtin_ppc_dcbz");
   Builder.defineMacro("__icbt", "__builtin_ppc_icbt");
+  Builder.defineMacro("__compare_and_swap", "__builtin_ppc_compare_and_swap");
+  Builder.defineMacro("__compare_and_swaplp",
+                      "__builtin_ppc_compare_and_swaplp");
+  Builder.defineMacro("__fetch_and_add", "__builtin_ppc_fetch_and_add");
+  Builder.defineMacro("__fetch_and_addlp", "__builtin_ppc_fetch_and_addlp");
+  Builder.defineMacro("__fetch_and_and", "__builtin_ppc_fetch_and_and");
+  Builder.defineMacro("__fetch_and_andlp", "__builtin_ppc_fetch_and_andlp");
+  Builder.defineMacro("__fetch_and_or", "__builtin_ppc_fetch_and_or");
+  Builder.defineMacro("__fetch_and_orlp", "__builtin_ppc_fetch_and_orlp");
+  Builder.defineMacro("__fetch_and_swap", "__builtin_ppc_fetch_and_swap");
+  Builder.defineMacro("__fetch_and_swaplp", "__builtin_ppc_fetch_and_swaplp");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
@@ -603,10 +614,10 @@ void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
-void PPCTargetInfo::adjust(LangOptions &Opts) {
+void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   if (HasAltivec)
     Opts.AltiVec = 1;
-  TargetInfo::adjust(Opts);
+  TargetInfo::adjust(Diags, Opts);
   if (LongDoubleFormat != &llvm::APFloat::IEEEdouble())
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()

@@ -273,3 +273,81 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
   //     CHECK: return %[[RES]]
   return %r0: tensor<4xf32>
 }
+
+//===----------------------------------------------------------------------===//
+// Simple loop cases
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: func @scf_for_yield_only
+func @scf_for_yield_only(%A : tensor<?xf32>,
+                         %B : tensor<?xf32> {linalg.inplaceable = true},
+                         %lb : index, %ub : index, %step : index)
+  -> (tensor<?xf32>, tensor<?xf32>)
+{
+  //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
+  //     CHECK:   %[[BUFFER_CAST_A:.*]] = memref.buffer_cast
+  //     CHECK:   %[[BUFFER_CAST_B:.*]] = memref.buffer_cast
+  //     CHECK:   linalg.copy(%[[BUFFER_CAST_A]], %[[ALLOC_FOR_A]])
+
+  // The first scf.for remains but just turns into dead code.
+  %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
+    scf.yield %t : tensor<?xf32>
+  }
+
+  // The second scf.for remains but just turns into dead code.
+  %r1 = scf.for %i = %lb to %ub step %step iter_args(%t = %B) -> (tensor<?xf32>) {
+    scf.yield %t : tensor<?xf32>
+  }
+
+  // Cross function call alloc/dealloc pattern must be hoist out.
+  //     CHECK:   memref.dealloc %[[ALLOC_FOR_A]] : memref<?xf32>
+  //     CHECK:   %[[rA:.*]] = memref.tensor_load %[[ALLOC_FOR_A]]
+  // Returning tensor_load of the buffer cast makes the %r1 loop dead.
+  //     CHECK:   %[[rB:.*]] = memref.tensor_load %[[BUFFER_CAST_B:.*]]
+  //     CHECK:   return %[[rA]], %[[rB]] : tensor<?xf32>, tensor<?xf32>
+  return %r0, %r1: tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_for_with_tensor.insert_slice
+func @scf_for_with_tensor.insert_slice(
+   %A : tensor<?xf32>,
+              %B : tensor<?xf32> {linalg.inplaceable = true},
+              %C : tensor<4xf32>,
+              %lb : index, %ub : index, %step : index)
+  -> (tensor<?xf32>, tensor<?xf32>)
+{
+  //     CHECK:   %[[ALLOC_FOR_A:.*]] = memref.alloc
+  //     CHECK:   %[[BUFFER_CAST_A:.*]] = memref.buffer_cast
+  //     CHECK:   %[[BUFFER_CAST_B:.*]] = memref.buffer_cast
+  //     CHECK:   %[[BUFFER_CAST_C:.*]] = memref.buffer_cast
+  //     CHECK:   linalg.copy(%[[BUFFER_CAST_A]], %[[ALLOC_FOR_A]])
+
+  //     CHECK:   scf.for {{.*}} iter_args(%[[bbA:.*]] = %{{.*}}, %[[bbB:.*]] = %{{.*}})
+  %r0:2 = scf.for %i = %lb to %ub step %step iter_args(%tA = %A, %tB = %B)
+      -> (tensor<?xf32>, tensor<?xf32>)
+  {
+    //     CHECK: %[[svA:.*]] = memref.subview %[[ALLOC_FOR_A]][0] [4] [1]
+    // %ttA bufferizes to direct copy of %BUFFER_CAST_C into %svA
+    //     CHECK: linalg.copy(%[[BUFFER_CAST_C]], %[[svA]])
+    %ttA = tensor.insert_slice %C into %tA[0][4][1] : tensor<4xf32> into tensor<?xf32>
+
+    // %ttB bufferizes to direct copy of %BUFFER_CAST_C into %BUFFER_CAST_B
+    //     CHECK:   %[[svB:.*]] = memref.subview %[[BUFFER_CAST_B]][0] [4] [1]
+    //     CHECK:   linalg.copy(%[[BUFFER_CAST_C]], %[[svB]])
+    %ttB = tensor.insert_slice %C into %tB[0][4][1] : tensor<4xf32> into tensor<?xf32>
+
+    // Yielding bbA and bbB will canonicalize away into oblivion.
+    //     CHECK:   scf.yield %[[bbA]], %[[bbB]] : tensor<?xf32>, tensor<?xf32>
+    scf.yield %ttA, %ttB : tensor<?xf32>, tensor<?xf32>
+  }
+
+  //     CHECK:  memref.dealloc %[[ALLOC_FOR_A]] : memref<?xf32>
+  //     CHECK:  %[[rA:.*]] = memref.tensor_load %[[ALLOC_FOR_A]] : memref<?xf32>
+  //     CHECK:  %[[rB:.*]] = memref.tensor_load %[[BUFFER_CAST_B]] : memref<?xf32, #map>
+  //     CHECK:  return %[[rA]], %[[rB]] : tensor<?xf32>, tensor<?xf32>
+  return %r0#0, %r0#1: tensor<?xf32>, tensor<?xf32>
+}

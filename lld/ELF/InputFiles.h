@@ -249,8 +249,10 @@ public:
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
 
-  // SHT_LLVM_CALL_GRAPH_PROFILE table
+  // SHT_LLVM_CALL_GRAPH_PROFILE table.
   ArrayRef<Elf_CGProfile> cgProfile;
+  // SHT_LLVM_CALL_GRAPH_PROFILE relocations, always in the REL format.
+  ArrayRef<Elf_Rel> cgProfileRel;
 
   // Get cached DWARF information.
   DWARFCache *getDwarf();

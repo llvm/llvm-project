@@ -1450,7 +1450,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
             } else {
               vnew.p.ub -= 1; // steal 1 chunk of 1..7 remaining
             }
-            KMP_DEBUG_ASSERT((vnew.p.ub - 1) * (UT)chunk <= trip);
+            KMP_DEBUG_ASSERT(vnew.p.ub * (UT)chunk <= trip);
             if (KMP_COMPARE_AND_STORE_REL64(
                     (volatile kmp_int64 *)&v->u.p.count,
                     *VOLATILE_CAST(kmp_int64 *) & vold.b,

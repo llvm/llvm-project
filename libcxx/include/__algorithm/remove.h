@@ -11,8 +11,8 @@
 
 #include <__config>
 #include <__algorithm/find.h>
-#include <utility>
-#include <type_traits>
+#include <__algorithm/find_if.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

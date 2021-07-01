@@ -99,7 +99,7 @@ static bool stripQuotes(StringRef &Str, bool &IsLongString) {
     return false;
 
   // Just take the contents of the string, checking if it's been marked long.
-  IsLongString = Str.startswith_lower("L");
+  IsLongString = Str.startswith_insensitive("L");
   if (IsLongString)
     Str = Str.drop_front();
 

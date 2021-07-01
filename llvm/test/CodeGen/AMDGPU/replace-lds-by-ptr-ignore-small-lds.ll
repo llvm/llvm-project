@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-replace-lds-use-with-pointer < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn--  -amdgpu-replace-lds-use-with-pointer -amdgpu-enable-lds-replace-with-pointer=true < %s | FileCheck %s
 
 ; DESCRIPTION ;
 ;

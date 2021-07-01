@@ -150,11 +150,11 @@ llvm::Optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
   unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
     if (IgnoreCase) {
-      if (Value.equals_lower(NameAndEnum.second))
+      if (Value.equals_insensitive(NameAndEnum.second))
         return NameAndEnum.first;
     } else if (Value.equals(NameAndEnum.second)) {
       return NameAndEnum.first;
-    } else if (Value.equals_lower(NameAndEnum.second)) {
+    } else if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;
       EditDistance = 0;
       continue;

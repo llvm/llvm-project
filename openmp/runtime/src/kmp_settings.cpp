@@ -1684,8 +1684,6 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
   const char *var;
   /* ---------- Barrier method control ------------ */
 
-  static int dist_req = 0, non_dist_req = 0;
-  static bool warn = 1;
   for (int i = bs_plain_barrier; i < bs_last_barrier; i++) {
     var = __kmp_barrier_pattern_env_name[i];
 
@@ -1697,11 +1695,6 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
       for (j = bp_linear_bar; j < bp_last_bar; j++) {
         if (__kmp_match_with_sentinel(__kmp_barrier_pattern_name[j], value, 1,
                                       ',')) {
-          if (j == bp_dist_bar) {
-            dist_req++;
-          } else {
-            non_dist_req++;
-          }
           __kmp_barrier_gather_pattern[i] = (kmp_bar_pat_e)j;
           break;
         }
@@ -1716,11 +1709,6 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
       if (comma != NULL) {
         for (j = bp_linear_bar; j < bp_last_bar; j++) {
           if (__kmp_str_match(__kmp_barrier_pattern_name[j], 1, comma + 1)) {
-            if (j == bp_dist_bar) {
-              dist_req++;
-            } else {
-              non_dist_req++;
-            }
             __kmp_barrier_release_pattern[i] = (kmp_bar_pat_e)j;
             break;
           }
@@ -1733,28 +1721,6 @@ static void __kmp_stg_parse_barrier_pattern(char const *name, char const *value,
                      __kmp_barrier_pattern_name[bp_linear_bar]);
         }
       }
-    }
-  }
-  if ((dist_req == 0) && (non_dist_req != 0)) {
-    // Something was set to a barrier other than dist; set all others to hyper
-    for (int i = bs_plain_barrier; i < bs_last_barrier; i++) {
-      if (__kmp_barrier_release_pattern[i] == bp_dist_bar)
-        __kmp_barrier_release_pattern[i] = bp_hyper_bar;
-      if (__kmp_barrier_gather_pattern[i] == bp_dist_bar)
-        __kmp_barrier_gather_pattern[i] = bp_hyper_bar;
-    }
-  } else if (non_dist_req != 0) {
-    // some requests for dist, plus requests for others; set all to dist
-    if (non_dist_req > 0 && dist_req > 0 && warn) {
-      KMP_INFORM(BarrierPatternOverride, name,
-                 __kmp_barrier_pattern_name[bp_dist_bar]);
-      warn = 0;
-    }
-    for (int i = bs_plain_barrier; i < bs_last_barrier; i++) {
-      if (__kmp_barrier_release_pattern[i] != bp_dist_bar)
-        __kmp_barrier_release_pattern[i] = bp_dist_bar;
-      if (__kmp_barrier_gather_pattern[i] != bp_dist_bar)
-        __kmp_barrier_gather_pattern[i] = bp_dist_bar;
     }
   }
 } // __kmp_stg_parse_barrier_pattern
@@ -1773,7 +1739,7 @@ static void __kmp_stg_print_barrier_pattern(kmp_str_buf_t *buffer,
         __kmp_str_buf_print(buffer, "   %s='",
                             __kmp_barrier_pattern_env_name[i]);
       }
-      KMP_DEBUG_ASSERT(j < bp_last_bar && k < bp_last_bar);
+      KMP_DEBUG_ASSERT(j < bs_last_barrier && k < bs_last_barrier);
       __kmp_str_buf_print(buffer, "%s,%s'\n", __kmp_barrier_pattern_name[j],
                           __kmp_barrier_pattern_name[k]);
     }

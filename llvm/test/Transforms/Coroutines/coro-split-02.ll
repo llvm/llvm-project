@@ -1,7 +1,6 @@
 ; Tests that coro-split can handle the case when a code after coro.suspend uses
 ; a value produces between coro.save and coro.suspend (%Result.i19)
 ; and checks whether stray coro.saves are properly removed
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { i8* }

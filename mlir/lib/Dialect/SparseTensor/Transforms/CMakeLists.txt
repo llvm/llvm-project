@@ -19,6 +19,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   MLIRSCF
   MLIRStandard
   MLIRSparseTensor
+  MLIRSparseTensorUtils
   MLIRTensor
   MLIRTransforms
   MLIRVector

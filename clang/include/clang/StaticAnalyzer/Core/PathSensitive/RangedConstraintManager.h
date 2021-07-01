@@ -213,6 +213,9 @@ public:
     ///             where N = size(What)
     RangeSet negate(RangeSet What);
 
+    /// Return associated value factory.
+    BasicValueFactory &getValueFactory() const { return ValueFactory; }
+
   private:
     /// Return a persistent version of the given container.
     RangeSet makePersistent(ContainerType &&From);
@@ -383,6 +386,11 @@ protected:
 private:
   static void computeAdjustment(SymbolRef &Sym, llvm::APSInt &Adjustment);
 };
+
+/// Try to simplify a given symbolic expression's associated value based on the
+/// constraints in State. This is needed because the Environment bindings are
+/// not getting updated when a new constraint is added to the State.
+SymbolRef simplify(ProgramStateRef State, SymbolRef Sym);
 
 } // namespace ento
 } // namespace clang

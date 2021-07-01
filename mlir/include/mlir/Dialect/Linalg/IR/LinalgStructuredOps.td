@@ -153,10 +153,8 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
     Value getSource() { return input();}
     Value getTarget() { return output(); }
 
-    static void regionBuilder(
-      ImplicitLocOpBuilder &b, Block &block, ValueRange captures);
-    static std::function<
-      void(ImplicitLocOpBuilder &b, Block &block, ValueRange captures)>
+    static void regionBuilder(ImplicitLocOpBuilder &b, Block &block);
+    static std::function<void(ImplicitLocOpBuilder &b, Block &block)>
     getRegionBuilder() {
       return &regionBuilder;
     }
@@ -200,10 +198,8 @@ def FillOp : LinalgStructured_Op<"fill", []> {
           extractOrIdentityMap(llvm::None, getNumParallelLoops(), context)});
     }
 
-    static void regionBuilder(
-      ImplicitLocOpBuilder &b, Block &block, ValueRange captures);
-    static std::function<
-      void(ImplicitLocOpBuilder &b, Block &block, ValueRange captures)>
+    static void regionBuilder(ImplicitLocOpBuilder &b, Block &block);
+    static std::function<void(ImplicitLocOpBuilder &b, Block &block)>
     getRegionBuilder() {
       return &regionBuilder;
     }
@@ -291,8 +287,7 @@ class PoolingBase_Op<string mnemonic, list<OpTrait> props>
       return padding().getValue().getValue<int64_t>({i, 1});
     }
 
-    static std::function<
-      void(ImplicitLocOpBuilder &b, Block &block, ValueRange captures)>
+    static std::function<void(ImplicitLocOpBuilder &b, Block &block)>
     getRegionBuilder() {
       return nullptr;
     }
@@ -533,8 +528,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, [
         library_call()->str() : "op_has_no_registered_library_name";
     }
 
-    static std::function<
-      void(ImplicitLocOpBuilder &b, Block &block, ValueRange captures)>
+    static std::function<void(ImplicitLocOpBuilder &b, Block &block)>
     getRegionBuilder() {
       return nullptr;
     }

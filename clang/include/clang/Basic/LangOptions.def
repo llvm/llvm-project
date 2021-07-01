@@ -126,6 +126,8 @@ LANGOPT(WritableStrings   , 1, 0, "writable string support")
 LANGOPT(ConstStrings      , 1, 0, "const-qualified string support")
 ENUM_LANGOPT(LaxVectorConversions, LaxVectorConversionKind, 2,
              LaxVectorConversionKind::All, "lax vector conversions")
+ENUM_LANGOPT(AltivecSrcCompat, AltivecSrcCompatKind, 2,
+             AltivecSrcCompatKind::Default, "Altivec source compatibility")
 LANGOPT(ConvergentFunctions, 1, 1, "Assume convergent functions")
 LANGOPT(AltiVec           , 1, 0, "AltiVec-style vector initializers")
 LANGOPT(ZVector           , 1, 0, "System z vector extensions")
@@ -197,6 +199,8 @@ COMPATIBLE_LANGOPT(Deprecated        , 1, 0, "__DEPRECATED predefined macro")
 COMPATIBLE_LANGOPT(FastMath          , 1, 0, "fast FP math optimizations, and __FAST_MATH__ predefined macro")
 COMPATIBLE_LANGOPT(FiniteMathOnly    , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 COMPATIBLE_LANGOPT(UnsafeFPMath      , 1, 0, "Unsafe Floating Point Math")
+COMPATIBLE_LANGOPT(ProtectParens     , 1, 0, "optimizer honors parentheses "
+                   "when floating-point expressions are evaluated")
 BENIGN_LANGOPT(AllowFPReassoc    , 1, 0, "Permit Floating Point reassociation")
 BENIGN_LANGOPT(NoHonorNaNs       , 1, 0, "Permit Floating Point optimization without regard to NaN")
 BENIGN_LANGOPT(NoHonorInfs       , 1, 0, "Permit Floating Point optimization without regard to infinities")

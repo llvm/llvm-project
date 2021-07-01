@@ -4,11 +4,6 @@ import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
-config("Config_config") {
-  visibility = [ ":Config" ]
-  include_dirs = [ "$target_gen_dir/clang/include" ]
-}
-
 write_cmake_config("Config") {
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
@@ -70,7 +65,4 @@ write_cmake_config("Config") {
   } else {
     values += [ "HOST_LINK_VERSION=" ]
   }
-
-  # Let targets depending on this find the generated file.
-  public_configs = [ ":Config_config" ]
 }

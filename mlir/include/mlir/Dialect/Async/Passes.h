@@ -19,13 +19,17 @@ namespace mlir {
 
 std::unique_ptr<Pass> createAsyncParallelForPass();
 
-std::unique_ptr<Pass> createAsyncParallelForPass(int numWorkerThreads);
+std::unique_ptr<Pass> createAsyncParallelForPass(bool asyncDispatch,
+                                                 int32_t numWorkerThreads,
+                                                 int32_t targetBlockSize);
 
 std::unique_ptr<OperationPass<ModuleOp>> createAsyncToAsyncRuntimePass();
 
 std::unique_ptr<Pass> createAsyncRuntimeRefCountingPass();
 
 std::unique_ptr<Pass> createAsyncRuntimeRefCountingOptPass();
+
+std::unique_ptr<Pass> createAsyncRuntimePolicyBasedRefCountingPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

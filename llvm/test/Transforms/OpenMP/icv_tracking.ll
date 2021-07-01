@@ -675,5 +675,8 @@ define i32 @test6(i32 %0) {
 
 declare i32 @__gxx_personality_v0(...)
 
+!llvm.module.flags = !{!2}
+
 !0 = !{!1}
 !1 = !{i64 2, i64 -1, i64 -1, i1 true}
+!2 = !{i32 7, !"openmp", i32 50}

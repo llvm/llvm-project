@@ -14,6 +14,7 @@
 
 #include <utility>
 #include <cassert>
+#include <cstdint>
 #include <limits>
 
 #include "test_macros.h"

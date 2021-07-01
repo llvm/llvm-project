@@ -13692,6 +13692,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       Result.changeSign();
     return true;
 
+  case Builtin::BI__arithmetic_fence:
+    return EvaluateFloat(E->getArg(0), Result, Info);
+
   // FIXME: Builtin::BI__builtin_powi
   // FIXME: Builtin::BI__builtin_powif
   // FIXME: Builtin::BI__builtin_powil

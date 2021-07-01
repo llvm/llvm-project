@@ -1609,4 +1609,41 @@ let HasMask = false, HasVL = false, HasNoMaskedOverloaded = false,
       def vlmul_ext_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUv", "csil">;
     }
   }
+
+  let Name = "vget_v",
+      ManualCodegen = [{
+      {
+        ID = Intrinsic::experimental_vector_extract;
+        ScalableVectorType *VecTy = cast<ScalableVectorType>(ResultType);
+        Ops[1] = Builder.CreateMul(Ops[1],
+                                   ConstantInt::get(Ops[1]->getType(),
+                                                    VecTy->getMinNumElements()));
+        IntrinsicTypes = {ResultType, Ops[0]->getType()};
+        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+      }
+      }] in {
+    foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilfd">;
+      def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil">;
+    }
+  }
+
+  let Name = "vset_v", Log2LMUL = [0, 1, 2],
+      ManualCodegen = [{
+      {
+        ID = Intrinsic::experimental_vector_insert;
+        IntrinsicTypes = {ResultType, Ops[2]->getType()};
+        ScalableVectorType *VecTy = cast<ScalableVectorType>(Ops[2]->getType());
+        Ops[1] = Builder.CreateMul(Ops[1],
+                                   ConstantInt::get(Ops[1]->getType(),
+                                                    VecTy->getMinNumElements()));
+        std::swap(Ops[1], Ops[2]);
+        return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
+      }
+      }] in {
+    foreach dst_lmul = ["(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "v" # dst_lmul # "vKzv", "csilfd">;
+      def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "Uv" # dst_lmul #"UvKzUv", "csil">;
+    }
+  }
 }

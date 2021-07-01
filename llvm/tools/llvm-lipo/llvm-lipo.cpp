@@ -159,14 +159,14 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
                 " option");
 
   if (InputArgs.size() == 0) {
-    // PrintHelp does not accept Twine.
-    T.PrintHelp(errs(), "llvm-lipo input[s] option[s]", "llvm-lipo");
+    // printHelp does not accept Twine.
+    T.printHelp(errs(), "llvm-lipo input[s] option[s]", "llvm-lipo");
     exit(EXIT_FAILURE);
   }
 
   if (InputArgs.hasArg(LIPO_help)) {
-    // PrintHelp does not accept Twine.
-    T.PrintHelp(outs(), "llvm-lipo input[s] option[s]", "llvm-lipo");
+    // printHelp does not accept Twine.
+    T.printHelp(outs(), "llvm-lipo input[s] option[s]", "llvm-lipo");
     exit(EXIT_SUCCESS);
   }
 

@@ -18,6 +18,8 @@
 using namespace mlir;
 using namespace mlir::scf;
 
+#include "mlir/Dialect/SCF/SCFOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // SCFDialect Dialect Interfaces
 //===----------------------------------------------------------------------===//
@@ -73,6 +75,19 @@ void mlir::scf::buildTerminatedBody(OpBuilder &builder, Location loc) {
 // ExecuteRegionOp
 //===----------------------------------------------------------------------===//
 
+/// Replaces the given op with the contents of the given single-block region,
+/// using the operands of the block terminator to replace operation results.
+static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
+                                Region &region, ValueRange blockArgs = {}) {
+  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  Block *block = &region.front();
+  Operation *terminator = block->getTerminator();
+  ValueRange results = terminator->getOperands();
+  rewriter.mergeBlockBefore(block, op, blockArgs);
+  rewriter.replaceOp(op, results);
+  rewriter.eraseOp(terminator);
+}
+
 ///
 /// (ssa-id `=`)? `execute_region` `->` function-result-type `{`
 ///    block+
@@ -116,6 +131,108 @@ static LogicalResult verify(ExecuteRegionOp op) {
   if (op.region().front().getNumArguments() > 0)
     return op.emitOpError("region cannot have any arguments");
   return success();
+}
+
+// Inline an ExecuteRegionOp if it only contains one block.
+//     "test.foo"() : () -> ()
+//      %v = scf.execute_region -> i64 {
+//        %x = "test.val"() : () -> i64
+//        scf.yield %x : i64
+//      }
+//      "test.bar"(%v) : (i64) -> ()
+//
+//  becomes
+//
+//     "test.foo"() : () -> ()
+//     %x = "test.val"() : () -> i64
+//     "test.bar"(%x) : (i64) -> ()
+//
+struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
+  using OpRewritePattern<ExecuteRegionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExecuteRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!llvm::hasSingleElement(op.region()))
+      return failure();
+    replaceOpWithRegion(rewriter, op, op.region());
+    return success();
+  }
+};
+
+// Inline an ExecuteRegionOp if its parent can contain multiple blocks.
+// TODO generalize the conditions for operations which can be inlined into.
+// func @func_execute_region_elim() {
+//     "test.foo"() : () -> ()
+//     %v = scf.execute_region -> i64 {
+//       %c = "test.cmp"() : () -> i1
+//       cond_br %c, ^bb2, ^bb3
+//     ^bb2:
+//       %x = "test.val1"() : () -> i64
+//       br ^bb4(%x : i64)
+//     ^bb3:
+//       %y = "test.val2"() : () -> i64
+//       br ^bb4(%y : i64)
+//     ^bb4(%z : i64):
+//       scf.yield %z : i64
+//     }
+//     "test.bar"(%v) : (i64) -> ()
+//   return
+// }
+//
+//  becomes
+//
+// func @func_execute_region_elim() {
+//    "test.foo"() : () -> ()
+//    %c = "test.cmp"() : () -> i1
+//    cond_br %c, ^bb1, ^bb2
+//  ^bb1:  // pred: ^bb0
+//    %x = "test.val1"() : () -> i64
+//    br ^bb3(%x : i64)
+//  ^bb2:  // pred: ^bb0
+//    %y = "test.val2"() : () -> i64
+//    br ^bb3(%y : i64)
+//  ^bb3(%z: i64):  // 2 preds: ^bb1, ^bb2
+//    "test.bar"(%z) : (i64) -> ()
+//    return
+//  }
+//
+struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
+  using OpRewritePattern<ExecuteRegionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExecuteRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!isa<FuncOp, ExecuteRegionOp>(op->getParentOp()))
+      return failure();
+
+    Block *prevBlock = op->getBlock();
+    Block *postBlock = rewriter.splitBlock(prevBlock, op->getIterator());
+    rewriter.setInsertionPointToEnd(prevBlock);
+
+    rewriter.create<BranchOp>(op.getLoc(), &op.region().front());
+
+    for (Block &blk : op.region()) {
+      if (YieldOp yieldOp = dyn_cast<YieldOp>(blk.getTerminator())) {
+        rewriter.setInsertionPoint(yieldOp);
+        rewriter.create<BranchOp>(yieldOp.getLoc(), postBlock,
+                                  yieldOp.results());
+        rewriter.eraseOp(yieldOp);
+      }
+    }
+
+    rewriter.inlineRegionBefore(op.region(), postBlock);
+    SmallVector<Value> blockArgs;
+
+    for (auto res : op.getResults())
+      blockArgs.push_back(postBlock->addArgument(res.getType()));
+
+    rewriter.replaceOp(op, blockArgs);
+    return success();
+  }
+};
+
+void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<SingleBlockExecuteInliner, MultiBlockExecuteInliner>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -442,19 +559,6 @@ LoopNest mlir::scf::buildLoopNest(
                            bodyBuilder(nestedBuilder, nestedLoc, ivs);
                          return {};
                        });
-}
-
-/// Replaces the given op with the contents of the given single-block region,
-/// using the operands of the block terminator to replace operation results.
-static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
-                                Region &region, ValueRange blockArgs = {}) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
-  Block *block = &region.front();
-  Operation *terminator = block->getTerminator();
-  ValueRange results = terminator->getOperands();
-  rewriter.mergeBlockBefore(block, op, blockArgs);
-  rewriter.replaceOp(op, results);
-  rewriter.eraseOp(terminator);
 }
 
 namespace {

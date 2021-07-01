@@ -22,7 +22,7 @@ define void @store8(i8 %v, i8* %p) {
   ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i[[#SBITS]]
   ; CHECK:             ptrtoint i8* {{.*}} i64
-  ; CHECK-NEXT:        and i64
+  ; CHECK-NEXT:        xor i64
   ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
   ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
   ; CHECK-NEXT:        store i[[#SBITS]]
@@ -39,7 +39,7 @@ define void @store16(i16 %v, i16* %p) {
   ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i[[#SBITS]]
   ; CHECK:             ptrtoint i16* {{.*}} i64
-  ; CHECK-NEXT:        and i64
+  ; CHECK-NEXT:        xor i64
   ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
   ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
   ; CHECK-NEXT:        store i[[#SBITS]]
@@ -58,7 +58,7 @@ define void @store32(i32 %v, i32* %p) {
   ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i[[#SBITS]]
   ; CHECK:             ptrtoint i32* {{.*}} i64
-  ; CHECK-NEXT:        and i64
+  ; CHECK-NEXT:        xor i64
   ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
   ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
   ; CHECK-NEXT:        store i[[#SBITS]]
@@ -81,7 +81,7 @@ define void @store64(i64 %v, i64* %p) {
   ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
   ; COMBINE_PTR_LABEL: or i[[#SBITS]]
   ; CHECK:             ptrtoint i64* {{.*}} i64
-  ; CHECK-NEXT:        and i64
+  ; CHECK-NEXT:        xor i64
   ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
   ; CHECK-COUNT-8:     insertelement {{.*}} i[[#SBITS]]
   ; CHECK-NEXT:        bitcast i[[#SBITS]]* {{.*}} <8 x i[[#SBITS]]>*

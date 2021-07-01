@@ -91,9 +91,7 @@ define void @masked_store_v8f32(<8 x float>* %ap, <8 x float>* %bp) #0 {
 ; CHECK-NEXT: ld1w { [[Z0:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; CHECK-NEXT: ld1w { [[Z1:z[0-9]+]].s }, [[PG0]]/z, [x1]
 ; CHECK-NEXT: fcmeq [[PG1:p[0-9]+]].s, [[PG0]]/z, [[Z0]].s, [[Z1]].s
-; CHECK-NEXT: mov [[Z2:z[0-9]+]].s, [[PG1]]/z, #-1
-; CHECK-NEXT: cmpne [[PG2:p[0-9]+]].s, [[PG0]]/z, [[Z2]].s, #0
-; CHECK-NEXT: st1w { z0.s }, [[PG2]], [x{{[0-9]+}}]
+; CHECK-NEXT: st1w { z0.s }, [[PG1]], [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
   %a = load <8 x float>, <8 x float>* %ap
   %b = load <8 x float>, <8 x float>* %bp
@@ -108,9 +106,7 @@ define void @masked_store_v16f32(<16 x float>* %ap, <16 x float>* %bp) #0 {
 ; VBITS_GE_512-NEXT: ld1w { [[Z0:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_512-NEXT: ld1w { [[Z1:z[0-9]+]].s }, [[PG0]]/z, [x1]
 ; VBITS_GE_512-NEXT: fcmeq [[PG1:p[0-9]+]].s, [[PG0]]/z, [[Z0]].s, [[Z1]].s
-; VBITS_GE_512-NEXT: mov [[Z2:z[0-9]+]].s, [[PG1]]/z, #-1
-; VBITS_GE_512-NEXT: cmpne [[PG2:p[0-9]+]].s, [[PG0]]/z, [[Z1]].s, #0
-; VBITS_GE_512-NEXT: st1w { z0.s }, [[PG2]], [x{{[0-9]+}}]
+; VBITS_GE_512-NEXT: st1w { z0.s }, [[PG1]], [x{{[0-9]+}}]
 ; VBITS_GE_512-NEXT: ret
   %a = load <16 x float>, <16 x float>* %ap
   %b = load <16 x float>, <16 x float>* %bp
@@ -125,9 +121,7 @@ define void @masked_store_v32f32(<32 x float>* %ap, <32 x float>* %bp) #0 {
 ; VBITS_GE_1024-NEXT: ld1w { [[Z0:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ld1w { [[Z1:z[0-9]+]].s }, [[PG0]]/z, [x1]
 ; VBITS_GE_1024-NEXT: fcmeq [[PG1:p[0-9]+]].s, [[PG0]]/z, [[Z0]].s, [[Z1]].s
-; VBITS_GE_1024-NEXT: mov [[Z1:z[0-9]+]].s, [[PG1]]/z, #-1
-; VBITS_GE_1024-NEXT: cmpne [[PG2:p[0-9]+]].s, [[PG0]]/z, [[Z1]].s, #0
-; VBITS_GE_1024-NEXT: st1w { z0.s }, [[PG2]], [x{{[0-9]+}}]
+; VBITS_GE_1024-NEXT: st1w { z0.s }, [[PG1]], [x{{[0-9]+}}]
 ; VBITS_GE_1024-NEXT: ret
   %a = load <32 x float>, <32 x float>* %ap
   %b = load <32 x float>, <32 x float>* %bp
@@ -142,9 +136,7 @@ define void @masked_store_v64f32(<64 x float>* %ap, <64 x float>* %bp) #0 {
 ; VBITS_GE_2048-NEXT: ld1w { [[Z0:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ld1w { [[Z1:z[0-9]+]].s }, [[PG0]]/z, [x1]
 ; VBITS_GE_2048-NEXT: fcmeq [[PG1:p[0-9]+]].s, [[PG0]]/z, [[Z0]].s, [[Z1]].s
-; VBITS_GE_2048-NEXT: mov [[Z1:z[0-9]+]].s, [[PG1]]/z, #-1
-; VBITS_GE_2048-NEXT: cmpne [[PG2:p[0-9]+]].s, [[PG0]]/z, [[Z1]].s, #0
-; VBITS_GE_2048-NEXT: st1w { z0.s }, [[PG2]], [x{{[0-9]+}}]
+; VBITS_GE_2048-NEXT: st1w { z0.s }, [[PG1]], [x{{[0-9]+}}]
 ; VBITS_GE_2048-NEXT: ret
   %a = load <64 x float>, <64 x float>* %ap
   %b = load <64 x float>, <64 x float>* %bp

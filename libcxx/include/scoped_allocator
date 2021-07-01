@@ -106,6 +106,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 */
 
 #include <__config>
+#include <__utility/forward.h>
 #include <memory>
 #include <version>
 

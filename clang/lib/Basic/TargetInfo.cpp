@@ -346,7 +346,7 @@ bool TargetInfo::isTypeSigned(IntType T) {
 /// Apply changes to the target information with respect to certain
 /// language options which change the target configuration and adjust
 /// the language based on the target options where applicable.
-void TargetInfo::adjust(LangOptions &Opts) {
+void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   if (Opts.NoBitFieldTypeAlign)
     UseBitFieldTypeAlignment = false;
 
@@ -430,6 +430,11 @@ void TargetInfo::adjust(LangOptions &Opts) {
   // its corresponding signed type.
   PaddingOnUnsignedFixedPoint |= Opts.PaddingOnUnsignedFixedPoint;
   CheckFixedPointBits();
+
+  if (Opts.ProtectParens && !checkArithmeticFenceSupported()) {
+    Diags.Report(diag::err_opt_not_valid_on_target) << "-fprotect-parens";
+    Opts.ProtectParens = false;
+  }
 }
 
 bool TargetInfo::initFeatureMap(

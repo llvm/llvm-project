@@ -739,6 +739,8 @@ declare void @readonly() readonly
 
 declare void @readnone() readnone
 
+!llvm.module.flags = !{!8}
+
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!"clang"}
 !2 = !{!3}
@@ -747,3 +749,4 @@ declare void @readnone() readnone
 !5 = !{!"int", !6, i64 0}
 !6 = !{!"omnipotent char", !7, i64 0}
 !7 = !{!"Simple C/C++ TBAA"}
+!8 = !{i32 7, !"openmp", i32 50}

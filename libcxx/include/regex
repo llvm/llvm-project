@@ -764,7 +764,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 
 #include <__config>
 #include <__debug>
-#include <__functional/search.h>
+#include <__iterator/wrap_iter.h>
 #include <__locale>
 #include <compare>
 #include <deque>

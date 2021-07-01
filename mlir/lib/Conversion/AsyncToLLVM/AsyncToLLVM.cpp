@@ -89,7 +89,8 @@ struct AsyncAPI {
   }
 
   static FunctionType createGroupFunctionType(MLIRContext *ctx) {
-    return FunctionType::get(ctx, {}, {GroupType::get(ctx)});
+    auto i64 = IntegerType::get(ctx, 64);
+    return FunctionType::get(ctx, {i64}, {GroupType::get(ctx)});
   }
 
   static FunctionType getValueStorageFunctionType(MLIRContext *ctx) {
@@ -543,11 +544,10 @@ public:
     TypeConverter *converter = getTypeConverter();
     Type resultType = op->getResultTypes()[0];
 
-    // Tokens and Groups lowered to function calls without arguments.
-    if (resultType.isa<TokenType>() || resultType.isa<GroupType>()) {
-      rewriter.replaceOpWithNewOp<CallOp>(
-          op, resultType.isa<TokenType>() ? kCreateToken : kCreateGroup,
-          converter->convertType(resultType));
+    // Tokens creation maps to a simple function call.
+    if (resultType.isa<TokenType>()) {
+      rewriter.replaceOpWithNewOp<CallOp>(op, kCreateToken,
+                                          converter->convertType(resultType));
       return success();
     }
 
@@ -578,6 +578,29 @@ public:
     }
 
     return rewriter.notifyMatchFailure(op, "unsupported async type");
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// Convert async.runtime.create_group to the corresponding runtime API call.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class RuntimeCreateGroupOpLowering
+    : public OpConversionPattern<RuntimeCreateGroupOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(RuntimeCreateGroupOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    TypeConverter *converter = getTypeConverter();
+    Type resultType = op.getResult().getType();
+
+    rewriter.replaceOpWithNewOp<CallOp>(
+        op, kCreateGroup, converter->convertType(resultType), operands);
+    return success();
   }
 };
 } // namespace
@@ -967,8 +990,9 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
 
   // Lower async.runtime operations that rely on LLVM type converter to convert
   // from async value payload type to the LLVM type.
-  patterns.add<RuntimeCreateOpLowering, RuntimeStoreOpLowering,
-               RuntimeLoadOpLowering>(llvmConverter, ctx);
+  patterns.add<RuntimeCreateOpLowering, RuntimeCreateGroupOpLowering,
+               RuntimeStoreOpLowering, RuntimeLoadOpLowering>(llvmConverter,
+                                                              ctx);
 
   // Lower async coroutine operations to LLVM coroutine intrinsics.
   patterns

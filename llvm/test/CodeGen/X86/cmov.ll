@@ -198,6 +198,19 @@ define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
   ret i8 %d
 }
 
+define i64 @test8(i64 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    movabsq $-2147483649, %rcx # imm = 0xFFFFFFFF7FFFFFFF
+; CHECK-NEXT:    cmpq %rcx, %rdi
+; CHECK-NEXT:    cmovleq %rdx, %rax
+; CHECK-NEXT:    retq
+  %4 = icmp sgt i64 %0, -2147483649
+  %5 = select i1 %4, i64 %1, i64 %2
+  ret i64 %5
+}
+
 define i32 @smin(i32 %x) {
 ; CHECK-LABEL: smin:
 ; CHECK:       # %bb.0:

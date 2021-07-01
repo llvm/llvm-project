@@ -378,7 +378,7 @@ static llvm::Optional<llvm::StringRef>
 wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
   if (ContextWords)
     for (const auto &Word : ContextWords->keys())
-      if (Name.contains_lower(Word))
+      if (Name.contains_insensitive(Word))
         return Word;
   return llvm::None;
 }
@@ -552,7 +552,7 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
   int NumMatch = 0;
   if (Relevance.ContextWords) {
     for (const auto &Word : Relevance.ContextWords->keys()) {
-      if (Relevance.Name.contains_lower(Word)) {
+      if (Relevance.Name.contains_insensitive(Word)) {
         ++NumMatch;
       }
     }

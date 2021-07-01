@@ -468,14 +468,20 @@ def UACCRC : RegisterClass<"PPC", [v512i1], 128,
   let Size = 512;
 }
 
-// Allocate in the same order as the underlying VSX registers.
+// FIXME: This allocation order may increase stack frame size when allocating
+// non-volatile registers.
+//
+// Placing Altivec registers first and allocate the rest as underlying VSX
+// ones, to reduce interference with accumulator registers (lower 32 VSRs).
+// This reduces copies when loading for accumulators, which is common use for
+// paired VSX registers.
 def VSRpRC :
   RegisterClass<"PPC", [v256i1], 128,
-                (add (sequence "VSRp%u", 0, 6),
-                     (sequence "VSRp%u", 15, 7), VSRp17, VSRp18,
-                     VSRp16, VSRp19, VSRp20, VSRp21, VSRp22, VSRp23,
-                     VSRp24, VSRp25, VSRp31, VSRp30, VSRp29, VSRp28,
-                     VSRp27, VSRp26)> {
+                (add VSRp17, VSRp18, VSRp16, VSRp19, VSRp20, VSRp21,
+                     VSRp22, VSRp23, VSRp24, VSRp25, VSRp31, VSRp30,
+                     VSRp29, VSRp28, VSRp27, VSRp26,
+                     (sequence "VSRp%u", 0, 6),
+                     (sequence "VSRp%u", 15, 7))> {
   let Size = 256;
 }
 

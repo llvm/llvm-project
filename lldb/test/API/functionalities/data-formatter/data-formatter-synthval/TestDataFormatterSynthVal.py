@@ -21,6 +21,7 @@ class DataFormatterSynthValueTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', 'break here')
 
+    @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")
     def test_with_run_command(self):
         """Test using Python synthetic children provider to provide a value."""
         self.build()

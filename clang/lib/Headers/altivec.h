@@ -312,16 +312,20 @@ vec_add_u128(vector unsigned char __a, vector unsigned char __b) {
 #elif defined(__VSX__)
 static __inline__ vector signed long long __ATTRS_o_ai
 vec_add(vector signed long long __a, vector signed long long __b) {
+#ifdef __LITTLE_ENDIAN__
+  // Little endian systems on CPU's prior to Power8 don't really exist
+  // so scalarizing is fine.
+  return __a + __b;
+#else
   vector unsigned int __res =
       (vector unsigned int)__a + (vector unsigned int)__b;
   vector unsigned int __carry = __builtin_altivec_vaddcuw(
       (vector unsigned int)__a, (vector unsigned int)__b);
-#ifdef __LITTLE_ENDIAN__
-  __carry = __builtin_shufflevector(__carry, __carry, 3, 0, 1, 2);
-#else
-  __carry = __builtin_shufflevector(__carry, __carry, 1, 2, 3, 0);
-#endif
+  __carry = __builtin_shufflevector((vector unsigned char)__carry,
+                                    (vector unsigned char)__carry, 0, 0, 0, 7,
+                                    0, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0);
   return (vector signed long long)(__res + __carry);
+#endif
 }
 
 static __inline__ vector unsigned long long __ATTRS_o_ai

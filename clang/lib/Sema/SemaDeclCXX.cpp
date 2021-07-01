@@ -7869,15 +7869,6 @@ private:
         assert(Best->BuiltinParamTypes[2].isNull() &&
                "invalid builtin comparison");
 
-        // The builtin operator for relational comparisons on function
-        // pointers is the only known case which cannot be used.
-        if (OO != OO_EqualEqual && T->isFunctionPointerType()) {
-          if (Diagnose == ExplainDeleted)
-            S.Diag(Subobj.Loc, diag::note_defaulted_comparison_selected_invalid)
-                << Subobj.Kind << Subobj.Decl << T;
-          return Result::deleted();
-        }
-
         if (NeedsDeducing) {
           Optional<ComparisonCategoryType> Cat =
               getComparisonCategoryForBuiltinCmp(T);

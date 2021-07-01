@@ -1,0 +1,55 @@
+//===--- Features.cpp - Compile-time configuration ------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "Features.h"
+#include "clang/Basic/Version.h"
+#include "llvm/Support/Compiler.h"
+
+namespace clang {
+namespace clangd {
+
+std::string versionString() { return clang::getClangToolFullVersion("clangd"); }
+
+std::string featureString() {
+  return
+#if defined(_WIN32)
+      "windows"
+#elif defined(__APPLE__)
+      "mac"
+#elif defined(__linux__)
+      "linux"
+#elif defined(LLVM_ON_UNIX)
+      "unix"
+#else
+      "unknown"
+#endif
+
+#ifndef NDEBUG
+      "+debug"
+#endif
+#if LLVM_ADDRESS_SANITIZER_BUILD
+      "+asan"
+#endif
+#if LLVM_THREAD_SANITIZER_BUILD
+      "+tsan"
+#endif
+#if LLVM_MEMORY_SANITIZER_BUILD
+      "+msan"
+#endif
+
+#if CLANGD_ENABLE_REMOTE
+      "+grpc"
+#endif
+#if CLANGD_BUILD_XPC
+      "+xpc"
+#endif
+      ;
+}
+
+} // namespace clangd
+} // namespace clang

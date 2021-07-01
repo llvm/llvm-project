@@ -38,7 +38,7 @@ static void handleHVXWarnings(const Driver &D, const ArgList &Args) {
   // Handle the unsupported values passed to mhvx-length.
   if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_length_EQ)) {
     StringRef Val = A->getValue();
-    if (!Val.equals_lower("64b") && !Val.equals_lower("128b"))
+    if (!Val.equals_insensitive("64b") && !Val.equals_insensitive("128b"))
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getOption().getName() << Val;
   }
@@ -218,8 +218,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseG0 = false;
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
-  bool UseLLD = (llvm::sys::path::filename(Exec).equals_lower("ld.lld") ||
-                 llvm::sys::path::stem(Exec).equals_lower("ld.lld"));
+  bool UseLLD = (llvm::sys::path::filename(Exec).equals_insensitive("ld.lld") ||
+                 llvm::sys::path::stem(Exec).equals_insensitive("ld.lld"));
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 

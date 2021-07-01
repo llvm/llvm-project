@@ -223,6 +223,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qMemoryRegionInfoSupported;
       if (PACKET_STARTS_WITH("qModuleInfo:"))
         return eServerPacketType_qModuleInfo;
+      if (PACKET_STARTS_WITH("qMemTags:"))
+        return eServerPacketType_qMemTags;
       break;
 
     case 'P':

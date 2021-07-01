@@ -451,6 +451,11 @@ public:
 
   bool GetSharedCacheInfoSupported();
 
+  bool GetMemoryTaggingSupported();
+
+  lldb::DataBufferSP ReadMemoryTags(lldb::addr_t addr, size_t len,
+                                    int32_t type);
+
   /// Use qOffsets to query the offset used when relocating the target
   /// executable. If successful, the returned structure will contain at least
   /// one value in the offsets field.
@@ -558,6 +563,7 @@ protected:
   LazyBool m_supports_QPassSignals = eLazyBoolCalculate;
   LazyBool m_supports_error_string_reply = eLazyBoolCalculate;
   LazyBool m_supports_multiprocess = eLazyBoolCalculate;
+  LazyBool m_supports_memory_tagging = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

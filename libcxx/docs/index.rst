@@ -178,12 +178,6 @@ Design Documents
    DesignDocs/UniquePtrTrivialAbi
    DesignDocs/VisibilityMacros
 
-* `<atomic> design <http://libcxx.llvm.org/atomic_design.html>`_
-* `<type_traits> design <http://libcxx.llvm.org/type_traits_design.html>`_
-* `Notes by Marshall Clow`__
-
-.. __: https://cplusplusmusings.wordpress.com/2012/07/05/clang-and-standard-libraries-on-mac-os-x/
-
 Build Bots and Test Coverage
 ----------------------------
 

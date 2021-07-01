@@ -93,7 +93,7 @@ getNewSuffix(llvm::StringRef OldSuffix,
   // Else, find matching suffix, case-*insensitive*ly.
   auto NewSuffix = llvm::find_if(
       NewSuffixes, [OldSuffix](const std::string &PotentialNewSuffix) {
-        return OldSuffix.equals_lower(PotentialNewSuffix);
+        return OldSuffix.equals_insensitive(PotentialNewSuffix);
       });
   // Have a match, return it.
   if (NewSuffix != NewSuffixes.end())

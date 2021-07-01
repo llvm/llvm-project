@@ -137,7 +137,7 @@ define i1 @test11(i32 %C) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i16 1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9216
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i16 [[TMP4]], 0
-; CHECK-NEXT:    [[MEMCHR:%.*]] = and i1 [[MEMCHR_BOUNDS]], [[MEMCHR_BITS]]
+; CHECK-NEXT:    [[MEMCHR:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false
 ; CHECK-NEXT:    ret i1 [[MEMCHR]]
 ;
   %dst = call i8* @memchr(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @newlines, i64 0, i64 0), i32 %C, i32 2)
@@ -164,7 +164,7 @@ define i1 @test13(i32 %C) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 1, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], -2147483647
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[MEMCHR:%.*]] = and i1 [[MEMCHR_BOUNDS]], [[MEMCHR_BITS]]
+; CHECK-NEXT:    [[MEMCHR:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false
 ; CHECK-NEXT:    ret i1 [[MEMCHR]]
 ;
   %dst = call i8* @memchr(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @single, i64 0, i64 0), i32 %C, i32 2)

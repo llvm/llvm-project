@@ -7,6 +7,12 @@
 // RUN: %clang -### -target amdgcn-amd-amdhsa-opencl -x cl -c -emit-llvm -mcpu=fiji -Og %s 2>&1 | FileCheck -check-prefix=CHECK_Og %s
 // RUN: %clang -### -target amdgcn-amd-amdhsa-opencl -x cl -c -emit-llvm -mcpu=fiji -Ofast %s 2>&1 | FileCheck -check-prefix=CHECK_Ofast %s
 // RUN: %clang -### -target amdgcn-amd-amdhsa-opencl -x cl -c -emit-llvm -mcpu=fiji %s 2>&1 | FileCheck -check-prefix=CHECK_O_DEFAULT %s
+
+// Check default include file is not included for preprocessor output.
+
+// RUN: %clang -### -target amdgcn-amd-amdhsa-opencl -x cl -c -emit-llvm -mcpu=fiji %s 2>&1 | FileCheck -check-prefix=CHK-INC %s
+// RUN: %clang -### -target amdgcn-amd-amdhsa-opencl -x cl -c -emit-llvm -mcpu=fiji -save-temps %s 2>&1 | FileCheck -check-prefix=CHK-INC %s
+
 // CHECK_O0: clang{{.*}} "-O0"
 // CHECK_O1: clang{{.*}} "-O1"
 // CHECK_O2: clang{{.*}} "-O2"
@@ -17,3 +23,5 @@
 // CHECK_Ofast: {{.*}}clang{{.*}} "-Ofast"
 // CHECK_O_DEFAULT: clang{{.*}} "-O3"
 
+// CHK-INC: clang{{.*}} "-cc1" {{.*}}"-finclude-default-header" "-fdeclare-opencl-builtins" {{.*}}"-x" "cl"
+// CHK-INC-NOT: clang{{.*}} "-cc1" {{.*}}"-finclude-default-header" "-fdeclare-opencl-builtins" {{.*}}"-x" "cpp-output"

@@ -269,13 +269,13 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // Return true if low padding is guaranteed to be 0.
     bool hasZeroLowPad() {
       return llvm::all_of(getMixedLowPad(), [](OpFoldResult ofr) {
-        return mlir::isEqualConstantInt(ofr, 0);
+        return getConstantIntValue(ofr) == static_cast<int64_t>(0);
       });
     }
     // Return true if high padding is guaranteed to be 0.
     bool hasZeroHighPad() {
       return llvm::all_of(getMixedHighPad(), [](OpFoldResult ofr) {
-        return mlir::isEqualConstantInt(ofr, 0);
+        return getConstantIntValue(ofr) == static_cast<int64_t>(0);
       });
     }
   }];

@@ -168,15 +168,6 @@ def build_vector_to_dup : GICombineRule<
 
 def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;
 
-def bitfield_extract_from_sext_inreg : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$info),
-  (match (wip_match_opcode G_SEXT_INREG):$root,
-    [{ return matchBitfieldExtractFromSExtInReg(*${root}, MRI, ${info}); }]),
-  (apply [{ return Helper.applyBuildFn(*${root}, ${info}); }])>;
-
-def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
-                                            bitfield_extract_from_and]>;
-
 def lower_vector_fcmp : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_FCMP):$root,

@@ -607,12 +607,12 @@ AbstractInterpreter::createJIT(const char *Argv0, std::string &Message,
 
 static bool IsARMArchitecture(std::vector<StringRef> Args) {
   for (size_t I = 0; I < Args.size(); ++I) {
-    if (!Args[I].equals_lower("-arch"))
+    if (!Args[I].equals_insensitive("-arch"))
       continue;
     ++I;
     if (I == Args.size())
       break;
-    if (Args[I].startswith_lower("arm"))
+    if (Args[I].startswith_insensitive("arm"))
       return true;
   }
 

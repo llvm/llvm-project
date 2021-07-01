@@ -15,33 +15,29 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include <cassert>
 #include <utility>
 
 using namespace llvm;
 
+static cl::opt<bool>
+    ForceOpaquePointersCL("force-opaque-pointers",
+                          cl::desc("Force all pointers to be opaque pointers"),
+                          cl::init(false));
+
 LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
-  : DiagHandler(std::make_unique<DiagnosticHandler>()),
-    VoidTy(C, Type::VoidTyID),
-    LabelTy(C, Type::LabelTyID),
-    HalfTy(C, Type::HalfTyID),
-    BFloatTy(C, Type::BFloatTyID),
-    FloatTy(C, Type::FloatTyID),
-    DoubleTy(C, Type::DoubleTyID),
-    MetadataTy(C, Type::MetadataTyID),
-    TokenTy(C, Type::TokenTyID),
-    X86_FP80Ty(C, Type::X86_FP80TyID),
-    FP128Ty(C, Type::FP128TyID),
-    PPC_FP128Ty(C, Type::PPC_FP128TyID),
-    X86_MMXTy(C, Type::X86_MMXTyID),
-    X86_AMXTy(C, Type::X86_AMXTyID),
-    Int1Ty(C, 1),
-    Int8Ty(C, 8),
-    Int16Ty(C, 16),
-    Int32Ty(C, 32),
-    Int64Ty(C, 64),
-    Int128Ty(C, 128) {}
+    : DiagHandler(std::make_unique<DiagnosticHandler>()),
+      VoidTy(C, Type::VoidTyID), LabelTy(C, Type::LabelTyID),
+      HalfTy(C, Type::HalfTyID), BFloatTy(C, Type::BFloatTyID),
+      FloatTy(C, Type::FloatTyID), DoubleTy(C, Type::DoubleTyID),
+      MetadataTy(C, Type::MetadataTyID), TokenTy(C, Type::TokenTyID),
+      X86_FP80Ty(C, Type::X86_FP80TyID), FP128Ty(C, Type::FP128TyID),
+      PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_MMXTy(C, Type::X86_MMXTyID),
+      X86_AMXTy(C, Type::X86_AMXTyID), Int1Ty(C, 1), Int8Ty(C, 8),
+      Int16Ty(C, 16), Int32Ty(C, 32), Int64Ty(C, 64), Int128Ty(C, 128),
+      ForceOpaquePointers(ForceOpaquePointersCL) {}
 
 LLVMContextImpl::~LLVMContextImpl() {
   // NOTE: We need to delete the contents of OwnedModules, but Module's dtor
@@ -64,6 +60,7 @@ LLVMContextImpl::~LLVMContextImpl() {
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   for (auto *I : CLASS##s)                                                     \
     I->dropAllReferences();
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS) HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)
 #include "llvm/IR/Metadata.def"
 
   // Also drop references that come from the Value bridges.
@@ -78,6 +75,7 @@ LLVMContextImpl::~LLVMContextImpl() {
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   for (CLASS * I : CLASS##s)                                                   \
     delete I;
+#define HANDLE_MDNODE_LEAF_UNIQUED(CLASS) HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)
 #include "llvm/IR/Metadata.def"
 
   // Free the constants.

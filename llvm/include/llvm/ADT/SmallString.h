@@ -93,8 +93,8 @@ public:
   }
 
   /// Check for string equality, ignoring case.
-  bool equals_lower(StringRef RHS) const {
-    return str().equals_lower(RHS);
+  bool equals_insensitive(StringRef RHS) const {
+    return str().equals_insensitive(RHS);
   }
 
   /// Compare two strings; the result is -1, 0, or 1 if this string is
@@ -103,9 +103,9 @@ public:
     return str().compare(RHS);
   }
 
-  /// compare_lower - Compare two strings, ignoring case.
-  int compare_lower(StringRef RHS) const {
-    return str().compare_lower(RHS);
+  /// compare_insensitive - Compare two strings, ignoring case.
+  int compare_insensitive(StringRef RHS) const {
+    return str().compare_insensitive(RHS);
   }
 
   /// compare_numeric - Compare two strings, treating sequences of digits as

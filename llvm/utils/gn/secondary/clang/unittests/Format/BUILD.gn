@@ -17,6 +17,7 @@ unittest("FormatTests") {
     "FormatTestComments.cpp",
     "FormatTestJS.cpp",
     "FormatTestJava.cpp",
+    "FormatTestJson.cpp",
     "FormatTestObjC.cpp",
     "FormatTestProto.cpp",
     "FormatTestRawStrings.cpp",

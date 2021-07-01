@@ -210,12 +210,12 @@ TEST_F(SmallStringTest, Comparisons) {
   EXPECT_EQ( 1, SmallString<10>("aab").compare("aa"));
   EXPECT_EQ( 1, SmallString<10>("\xFF").compare("\1"));
 
-  EXPECT_EQ(-1, SmallString<10>("AaB").compare_lower("aAd"));
-  EXPECT_EQ( 0, SmallString<10>("AaB").compare_lower("aab"));
-  EXPECT_EQ( 1, SmallString<10>("AaB").compare_lower("AAA"));
-  EXPECT_EQ(-1, SmallString<10>("AaB").compare_lower("aaBb"));
-  EXPECT_EQ( 1, SmallString<10>("AaB").compare_lower("aA"));
-  EXPECT_EQ( 1, SmallString<10>("\xFF").compare_lower("\1"));
+  EXPECT_EQ(-1, SmallString<10>("AaB").compare_insensitive("aAd"));
+  EXPECT_EQ( 0, SmallString<10>("AaB").compare_insensitive("aab"));
+  EXPECT_EQ( 1, SmallString<10>("AaB").compare_insensitive("AAA"));
+  EXPECT_EQ(-1, SmallString<10>("AaB").compare_insensitive("aaBb"));
+  EXPECT_EQ( 1, SmallString<10>("AaB").compare_insensitive("aA"));
+  EXPECT_EQ( 1, SmallString<10>("\xFF").compare_insensitive("\1"));
 
   EXPECT_EQ(-1, SmallString<10>("aab").compare_numeric("aad"));
   EXPECT_EQ( 0, SmallString<10>("aab").compare_numeric("aab"));

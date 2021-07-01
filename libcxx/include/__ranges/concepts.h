@@ -17,6 +17,7 @@
 #include <__iterator/readable_traits.h>
 #include <__ranges/access.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/data.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
 #include <concepts>
@@ -100,6 +101,14 @@ namespace ranges {
   template <class _Tp>
   concept random_access_range =
       bidirectional_range<_Tp> && random_access_iterator<iterator_t<_Tp> >;
+
+  template<class _Tp>
+  concept contiguous_range =
+    random_access_range<_Tp> &&
+    contiguous_iterator<iterator_t<_Tp>> &&
+    requires(_Tp& __t) {
+      { ranges::data(__t) } -> same_as<add_pointer_t<range_reference_t<_Tp>>>;
+    };
 
   template <class _Tp>
   concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;

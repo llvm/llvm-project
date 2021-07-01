@@ -82,6 +82,21 @@ const Component *DerivedType::FindDataComponent(
                   : nullptr;
 }
 
+const SpecialBinding *DerivedType::FindSpecialBinding(
+    SpecialBinding::Which which) const {
+  const Descriptor &specialDesc{special()};
+  std::size_t n{specialDesc.Elements()};
+  SubscriptValue at[maxRank];
+  specialDesc.GetLowerBounds(at);
+  for (std::size_t j{0}; j < n; ++j, specialDesc.IncrementSubscripts(at)) {
+    const SpecialBinding &special{*specialDesc.Element<SpecialBinding>(at)};
+    if (special.which() == which) {
+      return &special;
+    }
+  }
+  return nullptr;
+}
+
 static void DumpScalarCharacter(
     FILE *f, const Descriptor &desc, const char *what) {
   if (desc.raw().version == CFI_VERSION &&
@@ -103,7 +118,7 @@ FILE *DerivedType::Dump(FILE *f) const {
     int offset{j * static_cast<int>(sizeof *uints)};
     std::fprintf(f, "    [+%3d](0x%p) %#016jx", offset,
         reinterpret_cast<const void *>(&uints[j]),
-        static_cast<std::intmax_t>(uints[j]));
+        static_cast<std::uintmax_t>(uints[j]));
     if (offset == offsetof(DerivedType, binding_)) {
       std::fputs(" <-- binding_\n", f);
     } else if (offset == offsetof(DerivedType, name_)) {
@@ -151,6 +166,15 @@ FILE *DerivedType::Dump(FILE *f) const {
     std::fputs("    bad descriptor: ", f);
     compDesc.Dump(f);
   }
+  const Descriptor &specialDesc{special()};
+  std::fprintf(
+      f, "\n  special descriptor (byteSize 0x%zx): ", special_.byteSize);
+  specialDesc.Dump(f);
+  std::size_t specials{specialDesc.Elements()};
+  for (std::size_t j{0}; j < specials; ++j) {
+    std::fprintf(f, "  [%3zd] ", j);
+    specialDesc.ZeroBasedIndexedElement<SpecialBinding>(j)->Dump(f);
+  }
   return f;
 }
 
@@ -171,6 +195,48 @@ FILE *Component::Dump(FILE *f) const {
   }
   std::fprintf(f, " category %d  kind %d  rank %d  offset 0x%zx\n", category_,
       kind_, rank_, static_cast<std::size_t>(offset_));
+  return f;
+}
+
+FILE *SpecialBinding::Dump(FILE *f) const {
+  std::fprintf(
+      f, "SpecialBinding @ 0x%p:\n", reinterpret_cast<const void *>(this));
+  switch (which_) {
+  case Which::Assignment:
+    std::fputs("    Assignment", f);
+    break;
+  case Which::ElementalAssignment:
+    std::fputs("    ElementalAssignment", f);
+    break;
+  case Which::Final:
+    std::fputs("    Final", f);
+    break;
+  case Which::ElementalFinal:
+    std::fputs("    ElementalFinal", f);
+    break;
+  case Which::AssumedRankFinal:
+    std::fputs("    AssumedRankFinal", f);
+    break;
+  case Which::ReadFormatted:
+    std::fputs("    ReadFormatted", f);
+    break;
+  case Which::ReadUnformatted:
+    std::fputs("    ReadUnformatted", f);
+    break;
+  case Which::WriteFormatted:
+    std::fputs("    WriteFormatted", f);
+    break;
+  case Which::WriteUnformatted:
+    std::fputs("    WriteUnformatted", f);
+    break;
+  default:
+    std::fprintf(
+        f, "    Unknown which: 0x%x", static_cast<std::uint8_t>(which_));
+    break;
+  }
+  std::fprintf(f, "\n    rank: %d\n", rank_);
+  std::fprintf(f, "    isArgDescriptoSetr: 0x%x\n", isArgDescriptorSet_);
+  std::fprintf(f, "    proc: 0x%p\n", reinterpret_cast<void *>(proc_));
   return f;
 }
 

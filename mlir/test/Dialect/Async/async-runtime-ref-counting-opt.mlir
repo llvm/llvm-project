@@ -53,3 +53,17 @@ func @cancellable_operations_3(%arg0: !async.token) {
   // CHECK: return
   return
 }
+
+// CHECK-LABEL: @not_cancellable_operations_0
+func @not_cancellable_operations_0(%arg0: !async.token) {
+  // CHECK: add_ref
+  async.runtime.add_ref %arg0 {count = 1 : i32} : !async.token
+  // CHECK: call @consume_toke
+  call @consume_token(%arg0): (!async.token) -> ()
+  // CHECK: async.runtime.await
+  async.runtime.await %arg0 : !async.token
+  // CHECK: async.runtime.drop_ref
+  async.runtime.drop_ref %arg0 {count = 1 : i32} : !async.token
+  // CHECK: return
+  return
+}

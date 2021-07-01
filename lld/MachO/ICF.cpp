@@ -104,14 +104,22 @@ static bool equalsVariable(const ConcatInputSection *ia,
       if (isa<Defined>(sa)) {
         const auto *da = dyn_cast<Defined>(sa);
         const auto *db = dyn_cast<Defined>(sb);
-        if (da->value != db->value)
-          return false;
-        if (da->isAbsolute() != db->isAbsolute())
-          return false;
-        if (da->isec)
-          if (da->isec->icfEqClass[icfPass % 2] !=
-              db->isec->icfEqClass[icfPass % 2])
+        if (da->isec && db->isec) {
+          if (da->isec->kind() != db->isec->kind())
             return false;
+          if (const auto *isecA = dyn_cast<ConcatInputSection>(da->isec)) {
+            const auto *isecB = cast<ConcatInputSection>(db->isec);
+            return da->value == db->value && isecA->icfEqClass[icfPass % 2] ==
+                                                 isecB->icfEqClass[icfPass % 2];
+          }
+          // Else we have two literal sections. References to them are
+          // constant-equal if their offsets in the output section are equal.
+          return da->isec->parent == db->isec->parent &&
+                 da->isec->getOffset(da->value) ==
+                     db->isec->getOffset(db->value);
+        }
+        assert(da->isAbsolute() && db->isAbsolute());
+        return da->value == db->value;
       } else if (isa<DylibSymbol>(sa)) {
         // There is one DylibSymbol per gotIndex and we already checked for
         // symbol equality, thus we know that these must be different.
@@ -122,10 +130,17 @@ static bool equalsVariable(const ConcatInputSection *ia,
     } else {
       const auto *sa = ra.referent.get<InputSection *>();
       const auto *sb = rb.referent.get<InputSection *>();
-      if (sa->icfEqClass[icfPass % 2] != sb->icfEqClass[icfPass % 2])
+      if (sa->kind() != sb->kind())
         return false;
+      if (const auto *isecA = dyn_cast<ConcatInputSection>(sa)) {
+        const auto *isecB = cast<ConcatInputSection>(sb);
+        return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
+      } else {
+        assert(isa<CStringInputSection>(sa) ||
+               isa<WordLiteralInputSection>(sa));
+        return sa->getOffset(ra.addend) == sb->getOffset(rb.addend);
+      }
     }
-    return true;
   };
   return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
                     f);
@@ -183,17 +198,23 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> func) {
 void ICF::run() {
   // Into each origin-section hash, combine all reloc referent section hashes.
   for (icfPass = 0; icfPass < 2; ++icfPass) {
-    parallelForEach(icfInputs, [&](InputSection *isec) {
+    parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
       uint64_t hash = isec->icfEqClass[icfPass % 2];
       for (const Reloc &r : isec->relocs) {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
           if (auto *dylibSym = dyn_cast<DylibSymbol>(sym))
             hash += dylibSym->stubsHelperIndex;
-          else if (auto *defined = dyn_cast<Defined>(sym))
-            hash +=
-                defined->value +
-                (defined->isec ? defined->isec->icfEqClass[icfPass % 2] : 0);
-          else
+          else if (auto *defined = dyn_cast<Defined>(sym)) {
+            if (defined->isec) {
+              if (auto isec = dyn_cast<ConcatInputSection>(defined->isec))
+                hash += defined->value + isec->icfEqClass[icfPass % 2];
+              else
+                hash += defined->isec->kind() +
+                        defined->isec->getOffset(defined->value);
+            } else {
+              hash += defined->value;
+            }
+          } else
             llvm_unreachable("foldIdenticalSections symbol kind");
         }
       }
@@ -202,10 +223,10 @@ void ICF::run() {
     });
   }
 
-  llvm::stable_sort(icfInputs,
-                    [](const InputSection *a, const InputSection *b) {
-                      return a->icfEqClass[0] < b->icfEqClass[0];
-                    });
+  llvm::stable_sort(
+      icfInputs, [](const ConcatInputSection *a, const ConcatInputSection *b) {
+        return a->icfEqClass[0] < b->icfEqClass[0];
+      });
   forEachClass(
       [&](size_t begin, size_t end) { segregate(begin, end, equalsConstant); });
 

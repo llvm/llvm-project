@@ -14,11 +14,11 @@
 
 # CHECK-LABEL: image lookup -v -a 0
 # CHECK: Variable: {{.*}}, name = "x0", type = "int", location = DW_OP_reg5 RDI,
-# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = ,
+# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = <empty>,
 
 # CHECK-LABEL: image lookup -v -a 2
 # CHECK: Variable: {{.*}}, name = "x0", type = "int", location = DW_OP_reg0 RAX,
-# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = ,
+# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = <empty>,
 # CHECK: Variable: {{.*}}, name = "x3", type = "int", location = DW_OP_reg1 RDX,
 
 # CHECK-LABEL: image dump symfile

@@ -140,10 +140,15 @@ static int sectionOrder(OutputSection *osec) {
 }
 
 void OutputSegment::sortOutputSections() {
-  llvm::sort(sections, compareByOrder<OutputSection *>(sectionOrder));
+  // Must be stable_sort() to keep special sections such as
+  // S_THREAD_LOCAL_REGULAR in input order.
+  llvm::stable_sort(sections, compareByOrder<OutputSection *>(sectionOrder));
 }
 
 void macho::sortOutputSegments() {
+  // sort() instead of stable_sort() is fine because segmentOrder() is
+  // name-based and getOrCreateOutputSegment() makes there's only a single
+  // segment for every name.
   llvm::sort(outputSegments, compareByOrder<OutputSegment *>(segmentOrder));
 }
 

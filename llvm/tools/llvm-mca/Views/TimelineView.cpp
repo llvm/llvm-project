@@ -21,8 +21,8 @@ TimelineView::TimelineView(const MCSubtargetInfo &sti, MCInstPrinter &Printer,
                            llvm::ArrayRef<llvm::MCInst> S, unsigned Iterations,
                            unsigned Cycles)
     : InstructionView(sti, Printer, S), CurrentCycle(0),
-      MaxCycle(Cycles == 0 ? 80 : Cycles), LastCycle(0), WaitTime(S.size()),
-      UsedBuffer(S.size()) {
+      MaxCycle(Cycles == 0 ? std::numeric_limits<unsigned>::max() : Cycles),
+      LastCycle(0), WaitTime(S.size()), UsedBuffer(S.size()) {
   unsigned NumInstructions = getSource().size();
   assert(Iterations && "Invalid number of iterations specified!");
   NumInstructions *= Iterations;

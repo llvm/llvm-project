@@ -2319,21 +2319,15 @@ void test_p8overloads_backwards_compat() {
   res_vsll = vec_add(vsll, vsll);
   // CHECK: add <4 x i32>
   // CHECK: call <4 x i32> @llvm.ppc.altivec.vaddcuw
-  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: shufflevector <16 x i8> {{%.*}}, <16 x i8> {{%.*}}, <16 x i32> <i32 0, i32 0, i32 0, i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 15, i32 0, i32 0, i32 0, i32 0>
   // CHECK: add <4 x i32>
-  // CHECK-LE: add <4 x i32>
-  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vaddcuw
-  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
-  // CHECK-LE: add <4 x i32>
+  // CHECK-LE: add <2 x i64>
   res_vull = vec_add(vull, vull);
   // CHECK: add <4 x i32>
   // CHECK: call <4 x i32> @llvm.ppc.altivec.vaddcuw
-  // CHECK: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+  // CHECK: shufflevector <16 x i8> {{%.*}}, <16 x i8> {{%.*}}, <16 x i32> <i32 0, i32 0, i32 0, i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 15, i32 0, i32 0, i32 0, i32 0>
   // CHECK: add <4 x i32>
-  // CHECK-LE: add <4 x i32>
-  // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vaddcuw
-  // CHECK-LE: shufflevector <4 x i32> {{%.*}}, <4 x i32> {{%.*}}, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
-  // CHECK-LE: add <4 x i32>
+  // CHECK-LE: add <2 x i64>
   dummy();
   // CHECK: call void @dummy()
   // CHECK-LE: call void @dummy()

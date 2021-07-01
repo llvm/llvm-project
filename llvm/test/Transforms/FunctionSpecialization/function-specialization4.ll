@@ -43,7 +43,7 @@ entry:
 
 ; CHECK:        define internal i32 @foo.1(i32 %x, i32* %b, i32* %c) {
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:     %0 = load i32, i32* @B, align 4
+; CHECK-NEXT:     %0 = load i32, i32* @A, align 4
 ; CHECK-NEXT:     %add = add nsw i32 %x, %0
 ; CHECK-NEXT:     %1 = load i32, i32* %c, align 4
 ; CHECK-NEXT:     %add1 = add nsw i32 %add, %1
@@ -52,7 +52,7 @@ entry:
 
 ; CHECK: define internal i32 @foo.2(i32 %x, i32* %b, i32* %c) {
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:     %0 = load i32, i32* @A, align 4
+; CHECK-NEXT:     %0 = load i32, i32* @B, align 4
 ; CHECK-NEXT:     %add = add nsw i32 %x, %0
 ; CHECK-NEXT:     %1 = load i32, i32* %c, align 4
 ; CHECK-NEXT:     %add1 = add nsw i32 %add, %1

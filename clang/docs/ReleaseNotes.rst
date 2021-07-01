@@ -278,6 +278,8 @@ clang-format
 - Option ``AlignArrayOfStructure`` has been added to allow for ordering array-like
   initializers.
 
+- Support for formatting JSON file (\*.json) has been added to clang-format.
+
 libclang
 --------
 

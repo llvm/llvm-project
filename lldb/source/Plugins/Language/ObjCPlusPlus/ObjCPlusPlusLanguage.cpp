@@ -19,7 +19,7 @@ LLDB_PLUGIN_DEFINE(ObjCPlusPlusLanguage)
 bool ObjCPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   const auto suffixes = {".h", ".mm"};
   for (auto suffix : suffixes) {
-    if (file_path.endswith_lower(suffix))
+    if (file_path.endswith_insensitive(suffix))
       return true;
   }
   return false;

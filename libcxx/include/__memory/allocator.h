@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__memory/allocator_traits.h>
+#include <__utility/forward.h>
 #include <cstddef>
 #include <new>
 #include <stdexcept>

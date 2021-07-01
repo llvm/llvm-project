@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include <cstddef>
 
+#include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
 
 using namespace mlir;

@@ -81,6 +81,9 @@ TEST(LowLevelTypeTest, Vector) {
       EXPECT_EQ(EC, VTy.getElementCount());
       if (!EC.isScalable())
         EXPECT_EQ(S * EC.getFixedValue(), VTy.getSizeInBits());
+      else
+        EXPECT_EQ(TypeSize::Scalable(S * EC.getKnownMinValue()),
+                  VTy.getSizeInBits());
 
       // Test equality operators.
       EXPECT_TRUE(VTy == VTy);
@@ -100,17 +103,25 @@ TEST(LowLevelTypeTest, Vector) {
 
 TEST(LowLevelTypeTest, ScalarOrVector) {
   // Test version with number of bits for scalar type.
-  EXPECT_EQ(LLT::scalar(32), LLT::scalarOrVector(1, 32));
-  EXPECT_EQ(LLT::fixed_vector(2, 32), LLT::scalarOrVector(2, 32));
+  EXPECT_EQ(LLT::scalar(32),
+            LLT::scalarOrVector(ElementCount::getFixed(1), 32));
+  EXPECT_EQ(LLT::fixed_vector(2, 32),
+            LLT::scalarOrVector(ElementCount::getFixed(2), 32));
+  EXPECT_EQ(LLT::scalable_vector(1, 32),
+            LLT::scalarOrVector(ElementCount::getScalable(1), 32));
 
   // Test version with LLT for scalar type.
-  EXPECT_EQ(LLT::scalar(32), LLT::scalarOrVector(1, LLT::scalar(32)));
-  EXPECT_EQ(LLT::fixed_vector(2, 32), LLT::scalarOrVector(2, LLT::scalar(32)));
+  EXPECT_EQ(LLT::scalar(32),
+            LLT::scalarOrVector(ElementCount::getFixed(1), LLT::scalar(32)));
+  EXPECT_EQ(LLT::fixed_vector(2, 32),
+            LLT::scalarOrVector(ElementCount::getFixed(2), LLT::scalar(32)));
 
   // Test with pointer elements.
-  EXPECT_EQ(LLT::pointer(1, 32), LLT::scalarOrVector(1, LLT::pointer(1, 32)));
-  EXPECT_EQ(LLT::fixed_vector(2, LLT::pointer(1, 32)),
-            LLT::scalarOrVector(2, LLT::pointer(1, 32)));
+  EXPECT_EQ(LLT::pointer(1, 32), LLT::scalarOrVector(ElementCount::getFixed(1),
+                                                     LLT::pointer(1, 32)));
+  EXPECT_EQ(
+      LLT::fixed_vector(2, LLT::pointer(1, 32)),
+      LLT::scalarOrVector(ElementCount::getFixed(2), LLT::pointer(1, 32)));
 }
 
 TEST(LowLevelTypeTest, ChangeElementType) {
@@ -171,17 +182,35 @@ TEST(LowLevelTypeTest, ChangeNumElements) {
   const LLT V3S64 = LLT::fixed_vector(3, 64);
 
   // Vector to scalar
-  EXPECT_EQ(S64, V2S64.changeNumElements(1));
+  EXPECT_EQ(S64, V2S64.changeElementCount(ElementCount::getFixed(1)));
 
   // Vector to vector
-  EXPECT_EQ(V3S64, V2S64.changeNumElements(3));
+  EXPECT_EQ(V3S64, V2S64.changeElementCount(ElementCount::getFixed(3)));
 
   // Scalar to vector
-  EXPECT_EQ(V2S64, S64.changeNumElements(2));
+  EXPECT_EQ(V2S64, S64.changeElementCount(ElementCount::getFixed(2)));
 
-  EXPECT_EQ(P0, V2P0.changeNumElements(1));
-  EXPECT_EQ(V3P0, V2P0.changeNumElements(3));
-  EXPECT_EQ(V2P0, P0.changeNumElements(2));
+  EXPECT_EQ(P0, V2P0.changeElementCount(ElementCount::getFixed(1)));
+  EXPECT_EQ(V3P0, V2P0.changeElementCount(ElementCount::getFixed(3)));
+  EXPECT_EQ(V2P0, P0.changeElementCount(ElementCount::getFixed(2)));
+
+  const LLT NXV2S64 = LLT::scalable_vector(2, 64);
+  const LLT NXV3S64 = LLT::scalable_vector(3, 64);
+  const LLT NXV2P0 = LLT::scalable_vector(2, P0);
+
+  // Scalable vector to scalar
+  EXPECT_EQ(S64, NXV2S64.changeElementCount(ElementCount::getFixed(1)));
+  EXPECT_EQ(P0, NXV2P0.changeElementCount(ElementCount::getFixed(1)));
+
+  // Fixed-width vector to scalable vector
+  EXPECT_EQ(NXV3S64, V2S64.changeElementCount(ElementCount::getScalable(3)));
+
+  // Scalable vector to fixed-width vector
+  EXPECT_EQ(V3P0, NXV2P0.changeElementCount(ElementCount::getFixed(3)));
+
+  // Scalar to scalable vector
+  EXPECT_EQ(NXV2S64, S64.changeElementCount(ElementCount::getScalable(2)));
+  EXPECT_EQ(NXV2P0, P0.changeElementCount(ElementCount::getScalable(2)));
 }
 
 #ifdef GTEST_HAS_DEATH_TEST

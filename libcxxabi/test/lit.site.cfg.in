@@ -1,5 +1,7 @@
 @AUTO_GEN_COMMENT@
 
+@SERIALIZED_LIT_PARAMS@
+
 import os
 import site
 
@@ -16,21 +18,15 @@ config.cxx_library_root         = "@LIBCXXABI_LIBCXX_LIBRARY_PATH@"
 config.llvm_unwinder            = @LIBCXXABI_USE_LLVM_UNWINDER@
 config.builtins_library         = "@LIBCXXABI_BUILTINS_LIBRARY@"
 config.enable_threads           = @LIBCXXABI_ENABLE_THREADS@
-config.use_sanitizer            = "@LLVM_USE_SANITIZER@"
-config.sanitizer_library        = "@LIBCXXABI_SANITIZER_LIBRARY@"
 config.enable_32bit             = @LIBCXXABI_BUILD_32_BITS@
 config.target_info              = "@LIBCXXABI_TARGET_INFO@"
 config.executor                 = "@LIBCXXABI_EXECUTOR@"
 config.libcxxabi_shared         = @LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI@
 config.enable_shared            = @LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX@
-config.enable_exceptions        = @LIBCXXABI_ENABLE_EXCEPTIONS@
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
-if "@TARGET_TRIPLE@":
-    config.target_triple        = "@TARGET_TRIPLE@"
 config.sysroot                  = "@LIBCXXABI_SYSROOT@"
 config.gcc_toolchain            = "@LIBCXXABI_GCC_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY@
-config.enable_experimental      = False
 
 config.pstl_src_root            = "@ParallelSTL_SOURCE_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
 config.pstl_obj_root            = "@ParallelSTL_BINARY_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None

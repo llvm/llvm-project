@@ -755,7 +755,7 @@ bool clang::operator<(const CodeCompletionResult &X,
   std::string XSaved, YSaved;
   StringRef XStr = X.getOrderedName(XSaved);
   StringRef YStr = Y.getOrderedName(YSaved);
-  int cmp = XStr.compare_lower(YStr);
+  int cmp = XStr.compare_insensitive(YStr);
   if (cmp)
     return cmp < 0;
 

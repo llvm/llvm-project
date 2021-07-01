@@ -1609,6 +1609,7 @@ public:
     case Intrinsic::lifetime_end:
     case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
+    case Intrinsic::arithmetic_fence:
       return 0;
     case Intrinsic::masked_store: {
       Type *Ty = Tys[0];

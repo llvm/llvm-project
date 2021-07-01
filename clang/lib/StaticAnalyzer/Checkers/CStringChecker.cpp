@@ -2039,7 +2039,7 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
         RightStrRef = RightStrRef.substr(0, s2Term);
 
       // Use StringRef's comparison methods to compute the actual result.
-      int compareRes = IgnoreCase ? LeftStrRef.compare_lower(RightStrRef)
+      int compareRes = IgnoreCase ? LeftStrRef.compare_insensitive(RightStrRef)
                                   : LeftStrRef.compare(RightStrRef);
 
       // The strcmp function returns an integer greater than, equal to, or less

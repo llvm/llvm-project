@@ -328,8 +328,8 @@ findTestSelectionRanges(StringRef Filename) {
     // Try to detect mistyped 'range:' comments to ensure tests don't miss
     // anything.
     auto DetectMistypedCommand = [&]() -> bool {
-      if (Comment.contains_lower("range") && Comment.contains("=") &&
-          !Comment.contains_lower("run") && !Comment.contains("CHECK")) {
+      if (Comment.contains_insensitive("range") && Comment.contains("=") &&
+          !Comment.contains_insensitive("run") && !Comment.contains("CHECK")) {
         llvm::errs() << "error: suspicious comment '" << Comment
                      << "' that "
                         "resembles the range command found\n";

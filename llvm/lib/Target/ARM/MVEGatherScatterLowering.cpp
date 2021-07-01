@@ -639,6 +639,19 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
       InputTy = PreTruncTy;
     }
   }
+  bool ExtendInput = false;
+  if (InputTy->getPrimitiveSizeInBits() < 128 &&
+      InputTy->isIntOrIntVectorTy()) {
+    // If we can't find a trunc to incorporate into the instruction, create an
+    // implicit one with a zext, so that we can still create a scatter. We know
+    // that the input type is 4x/8x/16x and of type i8/i16/i32, so any type
+    // smaller than 128 bits will divide evenly into a 128bit vector.
+    InputTy = InputTy->getWithNewBitWidth(
+        128 / cast<FixedVectorType>(InputTy)->getNumElements());
+    ExtendInput = true;
+    LLVM_DEBUG(dbgs() << "masked scatters: Small input type, will extend:\n"
+                      << *Input << "\n");
+  }
   if (InputTy->getPrimitiveSizeInBits() != 128) {
     LLVM_DEBUG(dbgs() << "masked scatters: cannot create scatters for "
                          "non-standard input types. Expanding.\n");
@@ -652,6 +665,8 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
   if (!BasePtr)
     return nullptr;
 
+  if (ExtendInput)
+    Input = Builder.CreateZExt(Input, InputTy);
   if (!match(Mask, m_One()))
     return Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vstr_scatter_offset_predicated,
@@ -937,25 +952,23 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     Phi = cast<PHINode>(Offs->getOperand(1));
     OffsSecondOp = 0;
   } else {
-    bool Changed = true;
+    bool Changed = false;
     if (isa<Instruction>(Offs->getOperand(0)) &&
         L->contains(cast<Instruction>(Offs->getOperand(0))))
       Changed |= optimiseOffsets(Offs->getOperand(0), BB, LI);
     if (isa<Instruction>(Offs->getOperand(1)) &&
         L->contains(cast<Instruction>(Offs->getOperand(1))))
       Changed |= optimiseOffsets(Offs->getOperand(1), BB, LI);
-    if (!Changed) {
+    if (!Changed)
       return false;
+    if (isa<PHINode>(Offs->getOperand(0))) {
+      Phi = cast<PHINode>(Offs->getOperand(0));
+      OffsSecondOp = 1;
+    } else if (isa<PHINode>(Offs->getOperand(1))) {
+      Phi = cast<PHINode>(Offs->getOperand(1));
+      OffsSecondOp = 0;
     } else {
-      if (isa<PHINode>(Offs->getOperand(0))) {
-        Phi = cast<PHINode>(Offs->getOperand(0));
-        OffsSecondOp = 1;
-      } else if (isa<PHINode>(Offs->getOperand(1))) {
-        Phi = cast<PHINode>(Offs->getOperand(1));
-        OffsSecondOp = 0;
-      } else {
-        return false;
-      }
+      return false;
     }
   }
   // A phi node we want to perform this function on should be from the

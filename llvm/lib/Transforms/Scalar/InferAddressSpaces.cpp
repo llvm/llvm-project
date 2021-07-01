@@ -471,7 +471,7 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
     } else if (auto *I2P = dyn_cast<IntToPtrInst>(&I)) {
       if (isNoopPtrIntCastPair(cast<Operator>(I2P), *DL, TTI))
         PushPtrOperand(
-            cast<PtrToIntInst>(I2P->getOperand(0))->getPointerOperand());
+            cast<Operator>(I2P->getOperand(0))->getOperand(0));
     }
   }
 

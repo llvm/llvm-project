@@ -22,14 +22,18 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Object/Archive.h"
+#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -82,6 +86,7 @@ static cl::opt<std::string>
                        "  bc  - llvm-bc\n"
                        "  s   - assembler\n"
                        "  o   - object\n"
+                       "  a   - archive of objects\n"
                        "  gch - precompiled-header\n"
                        "  ast - clang AST file"),
               cl::cat(ClangOffloadBundlerCategory));
@@ -123,20 +128,49 @@ static bool AllowNoHost = false;
 /// Path to the current binary.
 static std::string BundlerExecutable;
 
-/// Obtain the offload kind and real machine triple out of the target
-/// information specified by the user.
-static void getOffloadKindAndTriple(StringRef Target, StringRef &OffloadKind,
-                                    StringRef &Triple) {
-  auto KindTriplePair = Target.split('-');
-  OffloadKind = KindTriplePair.first;
-  Triple = KindTriplePair.second;
-}
-static bool hasHostKind(StringRef Target) {
+/// Obtain the offload kind, real machine triple, and an optional GPUArch
+/// out of the target information specified by the user.
+/// Bundle Entry ID (or, Offload Target String) has following components:
+///  * Offload Kind - Host, OpenMP, or HIP
+///  * Triple - Standard LLVM Triple
+///  * GPUArch (Optional) - Processor name, like gfx906 or sm_30
+/// In presence of Proc, the Triple should contain separator "-" for all
+/// standard four components, even if they are empty.
+struct OffloadTargetInfo {
   StringRef OffloadKind;
-  StringRef Triple;
-  getOffloadKindAndTriple(Target, OffloadKind, Triple);
-  return OffloadKind == "host";
-}
+  llvm::Triple Triple;
+  StringRef GPUArch;
+
+  OffloadTargetInfo(const StringRef Target) {
+    SmallVector<StringRef, 6> Components;
+    Target.split(Components, '-', 5);
+    Components.resize(6);
+    this->OffloadKind = Components[0];
+    this->Triple = llvm::Triple(Components[1], Components[2], Components[3],
+                                Components[4]);
+    this->GPUArch = Components[5];
+  }
+
+  bool hasHostKind() const { return this->OffloadKind == "host"; }
+
+  bool isOffloadKindValid() const {
+    return OffloadKind == "host" || OffloadKind == "openmp" ||
+           OffloadKind == "hip" || OffloadKind == "hipv4";
+  }
+
+  bool isTripleValid() const {
+    return !Triple.str().empty() && Triple.getArch() != Triple::UnknownArch;
+  }
+
+  bool operator==(const OffloadTargetInfo &Target) const {
+    return OffloadKind == Target.OffloadKind &&
+           Triple.isCompatibleWith(Target.Triple) && GPUArch == Target.GPUArch;
+  }
+
+  std::string str() {
+    return Twine(OffloadKind + "-" + Triple.str() + "-" + GPUArch).str();
+  }
+};
 
 /// Generic file handler interface.
 class FileHandler {
@@ -163,7 +197,7 @@ public:
   virtual Error ReadBundleEnd(MemoryBuffer &Input) = 0;
 
   /// Read the current bundle and write the result into the stream \a OS.
-  virtual Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) = 0;
+  virtual Error ReadBundle(raw_ostream &OS, MemoryBuffer &Input) = 0;
 
   /// Write the header of the bundled file to \a OS based on the information
   /// gathered from \a Inputs.
@@ -378,7 +412,7 @@ public:
     return Error::success();
   }
 
-  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error ReadBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     assert(CurBundleInfo != BundlesInfo.end() && "Invalid reader info!");
     StringRef FC = Input.getBuffer();
     OS.write(FC.data() + CurBundleInfo->second.Offset,
@@ -541,7 +575,7 @@ public:
 
   Error ReadBundleEnd(MemoryBuffer &Input) final { return Error::success(); }
 
-  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error ReadBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     Expected<StringRef> ContentOrErr = CurrentSection->getContents();
     if (!ContentOrErr)
       return ContentOrErr.takeError();
@@ -717,7 +751,7 @@ protected:
     return Error::success();
   }
 
-  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error ReadBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     StringRef FC = Input.getBuffer();
     size_t BundleStart = ReadChars;
 
@@ -811,6 +845,8 @@ CreateFileHandler(MemoryBuffer &FirstInput) {
   if (FilesType == "s")
     return std::make_unique<TextFileHandler>(/*Comment=*/"#");
   if (FilesType == "o")
+    return CreateObjectFileHandler(FirstInput);
+  if (FilesType == "a")
     return CreateObjectFileHandler(FirstInput);
   if (FilesType == "gch")
     return std::make_unique<BinaryFileHandler>();
@@ -956,7 +992,8 @@ static Error UnbundleFiles() {
     Worklist.erase(Output);
 
     // Record if we found the host bundle.
-    if (hasHostKind(CurTriple))
+    auto OffloadInfo = OffloadTargetInfo(CurTriple);
+    if (OffloadInfo.hasHostKind())
       FoundHostBundle = true;
   }
 
@@ -989,7 +1026,8 @@ static Error UnbundleFiles() {
         return createFileError(E.second, EC);
 
       // If this entry has a host kind, copy the input file to the output file.
-      if (hasHostKind(E.first()))
+      auto OffloadInfo = OffloadTargetInfo(E.getKey());
+      if (OffloadInfo.hasHostKind())
         OutputFile.write(Input.getBufferStart(), Input.getBufferSize());
     }
     return Error::success();
@@ -1007,6 +1045,241 @@ static Error UnbundleFiles() {
     raw_fd_ostream OutputFile(E.second, EC, sys::fs::OF_None);
     if (EC)
       return createFileError(E.second, EC);
+  }
+
+  return Error::success();
+}
+
+static Archive::Kind getDefaultArchiveKindForHost() {
+  return Triple(sys::getDefaultTargetTriple()).isOSDarwin() ? Archive::K_DARWIN
+                                                            : Archive::K_GNU;
+}
+
+/// @brief Checks if a code object \p CodeObjectInfo is compatible with a given
+/// target \p TargetInfo.
+/// @link https://clang.llvm.org/docs/ClangOffloadBundler.html#bundle-entry-id
+bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
+                            OffloadTargetInfo &TargetInfo) {
+
+  // Compatible in case of exact match.
+  if (CodeObjectInfo == TargetInfo) {
+    DEBUG_WITH_TYPE(
+        "CodeObjectCompatibility",
+        dbgs() << "Compatible: Exact match: " << CodeObjectInfo.str() << "\n");
+    return true;
+  }
+
+  // Incompatible if Kinds or Triples mismatch.
+  if (CodeObjectInfo.OffloadKind != TargetInfo.OffloadKind ||
+      !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
+    DEBUG_WITH_TYPE(
+        "CodeObjectCompatibility",
+        dbgs() << "Incompatible: Kind/Triple mismatch \t[CodeObject: "
+               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+               << "]\n");
+    return false;
+  }
+
+  // Incompatible if GPUArch mismatch.
+  if (CodeObjectInfo.GPUArch != TargetInfo.GPUArch) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "Incompatible: GPU Arch mismatch \t[CodeObject: "
+                           << CodeObjectInfo.str()
+                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+    return false;
+  }
+
+  DEBUG_WITH_TYPE(
+      "CodeObjectCompatibility",
+      dbgs() << "Compatible: Code Objects are compatible \t[CodeObject: "
+             << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+             << "]\n");
+  return true;
+}
+
+/// @brief Computes a list of targets among all given targets which are
+/// compatible with this code object
+/// @param [in] Code Object \p CodeObject
+/// @param [out] List of all compatible targets \p CompatibleTargets among all
+/// given targets
+/// @return false, if no compatible target is found.
+static bool
+getCompatibleOffloadTargets(OffloadTargetInfo &CodeObjectInfo,
+                            SmallVectorImpl<StringRef> &CompatibleTargets) {
+  if (!CompatibleTargets.empty()) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "CompatibleTargets list should be empty\n");
+    return false;
+  }
+  for (auto &Target : TargetNames) {
+    auto TargetInfo = OffloadTargetInfo(Target);
+    if (isCodeObjectCompatible(CodeObjectInfo, TargetInfo))
+      CompatibleTargets.push_back(Target);
+  }
+  return !CompatibleTargets.empty();
+}
+
+/// UnbundleArchive takes an archive file (".a") as input containing bundled
+/// code object files, and a list of offload targets (not host), and extracts
+/// the code objects into a new archive file for each offload target. Each
+/// resulting archive file contains all code object files corresponding to that
+/// particular offload target. The created archive file does not
+/// contain an index of the symbols and code object files are named as
+/// <<Parent Bundle Name>-<CodeObject's GPUArch>>, with ':' replaced with '_'.
+static Error UnbundleArchive() {
+  std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
+
+  /// Map of target names with list of object files that will form the device
+  /// specific archive for that target
+  StringMap<std::vector<NewArchiveMember>> OutputArchivesMap;
+
+  // Map of target names and output archive filenames
+  StringMap<StringRef> TargetOutputFileNameMap;
+
+  auto Output = OutputFileNames.begin();
+  for (auto &Target : TargetNames) {
+    TargetOutputFileNameMap[Target] = *Output;
+    ++Output;
+  }
+
+  StringRef IFName = InputFileNames.front();
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(IFName, -1, false);
+  if (std::error_code EC = BufOrErr.getError())
+    return createFileError(InputFileNames.front(), EC);
+
+  ArchiveBuffers.push_back(std::move(*BufOrErr));
+  Expected<std::unique_ptr<llvm::object::Archive>> LibOrErr =
+      Archive::create(ArchiveBuffers.back()->getMemBufferRef());
+  if (!LibOrErr)
+    return LibOrErr.takeError();
+
+  auto Archive = std::move(*LibOrErr);
+
+  Error ArchiveErr = Error::success();
+  auto ChildEnd = Archive->child_end();
+
+  /// Iterate over all bundled code object files in the input archive.
+  for (auto ArchiveIter = Archive->child_begin(ArchiveErr);
+       ArchiveIter != ChildEnd; ++ArchiveIter) {
+    if (ArchiveErr)
+      return ArchiveErr;
+    auto ArchiveChildNameOrErr = (*ArchiveIter).getName();
+    if (!ArchiveChildNameOrErr)
+      return ArchiveChildNameOrErr.takeError();
+
+    StringRef BundledObjectFile = sys::path::filename(*ArchiveChildNameOrErr);
+
+    auto CodeObjectBufferRefOrErr = (*ArchiveIter).getMemoryBufferRef();
+    if (!CodeObjectBufferRefOrErr)
+      return CodeObjectBufferRefOrErr.takeError();
+
+    auto CodeObjectBuffer =
+        MemoryBuffer::getMemBuffer(*CodeObjectBufferRefOrErr, false);
+
+    Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+        CreateFileHandler(*CodeObjectBuffer);
+    if (!FileHandlerOrErr)
+      return FileHandlerOrErr.takeError();
+
+    std::unique_ptr<FileHandler> &FileHandler = *FileHandlerOrErr;
+    assert(FileHandler &&
+           "FileHandle creation failed for file in the archive!");
+
+    if (Error ReadErr = FileHandler.get()->ReadHeader(*CodeObjectBuffer))
+      return ReadErr;
+
+    Expected<Optional<StringRef>> CurBundleIDOrErr =
+        FileHandler->ReadBundleStart(*CodeObjectBuffer);
+    if (!CurBundleIDOrErr)
+      return CurBundleIDOrErr.takeError();
+
+    Optional<StringRef> OptionalCurBundleID = *CurBundleIDOrErr;
+    // No device code in this child, skip.
+    if (!OptionalCurBundleID.hasValue())
+      continue;
+    StringRef CodeObject = *OptionalCurBundleID;
+
+    // Process all bundle entries (CodeObjects) found in this child of input
+    // archive.
+    while (!CodeObject.empty()) {
+      SmallVector<StringRef> CompatibleTargets;
+      auto CodeObjectInfo = OffloadTargetInfo(CodeObject);
+      if (CodeObjectInfo.hasHostKind()) {
+        // Do nothing, we don't extract host code yet.
+      } else if (getCompatibleOffloadTargets(CodeObjectInfo,
+                                             CompatibleTargets)) {
+        std::string BundleData;
+        raw_string_ostream DataStream(BundleData);
+        if (Error Err =
+                FileHandler.get()->ReadBundle(DataStream, *CodeObjectBuffer))
+          return Err;
+
+        for (auto &CompatibleTarget : CompatibleTargets) {
+          SmallString<128> BundledObjectFileName;
+          BundledObjectFileName.assign(BundledObjectFile);
+          auto OutputBundleName =
+              Twine(llvm::sys::path::stem(BundledObjectFileName) + "-" +
+                    CodeObject)
+                  .str();
+          // Replace ':' in optional target feature list with '_' to ensure
+          // cross-platform validity.
+          std::replace(OutputBundleName.begin(), OutputBundleName.end(), ':',
+                       '_');
+
+          std::unique_ptr<MemoryBuffer> MemBuf = MemoryBuffer::getMemBufferCopy(
+              DataStream.str(), OutputBundleName);
+          ArchiveBuffers.push_back(std::move(MemBuf));
+          llvm::MemoryBufferRef MemBufRef =
+              MemoryBufferRef(*(ArchiveBuffers.back()));
+
+          // For inserting <CompatibleTarget, list<CodeObject>> entry in
+          // OutputArchivesMap.
+          if (OutputArchivesMap.find(CompatibleTarget) ==
+              OutputArchivesMap.end()) {
+
+            std::vector<NewArchiveMember> ArchiveMembers;
+            ArchiveMembers.push_back(NewArchiveMember(MemBufRef));
+            OutputArchivesMap.insert_or_assign(CompatibleTarget,
+                                               std::move(ArchiveMembers));
+          } else {
+            OutputArchivesMap[CompatibleTarget].push_back(
+                NewArchiveMember(MemBufRef));
+          }
+        }
+      }
+
+      if (Error Err = FileHandler.get()->ReadBundleEnd(*CodeObjectBuffer))
+        return Err;
+
+      Expected<Optional<StringRef>> NextTripleOrErr =
+          FileHandler->ReadBundleStart(*CodeObjectBuffer);
+      if (!NextTripleOrErr)
+        return NextTripleOrErr.takeError();
+
+      CodeObject = ((*NextTripleOrErr).hasValue()) ? **NextTripleOrErr : "";
+    } // End of processing of all bundle entries of this child of input archive.
+  }   // End of while over children of input archive.
+
+  assert(!ArchiveErr && "Error occured while reading archive!");
+
+  /// Write out an archive for each target
+  for (auto &Target : TargetNames) {
+    StringRef FileName = TargetOutputFileNameMap[Target];
+    StringMapIterator<std::vector<llvm::NewArchiveMember>> CurArchiveMembers =
+        OutputArchivesMap.find(Target);
+    if (CurArchiveMembers != OutputArchivesMap.end()) {
+      if (Error WriteErr = writeArchive(FileName, CurArchiveMembers->getValue(),
+                                        true, getDefaultArchiveKindForHost(),
+                                        true, false, nullptr))
+        return WriteErr;
+    } else if (!AllowMissingBundles) {
+      std::string ErrMsg =
+          Twine("no compatible code object found for the target '" + Target +
+                "' in heterogenous archive library: " + IFName)
+              .str();
+      return createStringError(inconvertibleErrorCode(), ErrMsg);
+    }
   }
 
   return Error::success();
@@ -1096,6 +1369,11 @@ int main(int argc, const char **argv) {
                                     "match in unbundling mode"));
     }
   } else {
+    if (FilesType == "a") {
+      reportError(createStringError(errc::invalid_argument,
+                                    "Archive files are only supported "
+                                    "for unbundling"));
+    }
     if (OutputFileNames.size() != 1) {
       reportError(createStringError(
           errc::invalid_argument,
@@ -1121,40 +1399,28 @@ int main(int argc, const char **argv) {
     }
     ParsedTargets.insert(Target);
 
-    StringRef Kind;
-    StringRef Triple;
-    getOffloadKindAndTriple(Target, Kind, Triple);
-
-    bool KindIsValid = !Kind.empty();
-    KindIsValid = KindIsValid && StringSwitch<bool>(Kind)
-                                     .Case("host", true)
-                                     .Case("openmp", true)
-                                     .Case("hip", true)
-                                     .Case("hipv4", true)
-                                     .Default(false);
-
-    bool TripleIsValid = !Triple.empty();
-    llvm::Triple T(Triple);
-    TripleIsValid &= T.getArch() != Triple::UnknownArch;
+    auto OffloadInfo = OffloadTargetInfo(Target);
+    bool KindIsValid = OffloadInfo.isOffloadKindValid();
+    bool TripleIsValid = OffloadInfo.isTripleValid();
 
     if (!KindIsValid || !TripleIsValid) {
       SmallVector<char, 128u> Buf;
       raw_svector_ostream Msg(Buf);
       Msg << "invalid target '" << Target << "'";
       if (!KindIsValid)
-        Msg << ", unknown offloading kind '" << Kind << "'";
+        Msg << ", unknown offloading kind '" << OffloadInfo.OffloadKind << "'";
       if (!TripleIsValid)
-        Msg << ", unknown target triple '" << Triple << "'";
+        Msg << ", unknown target triple '" << OffloadInfo.Triple.str() << "'";
       reportError(createStringError(errc::invalid_argument, Msg.str()));
     }
 
-    if (KindIsValid && Kind == "host") {
+    if (KindIsValid && OffloadInfo.hasHostKind()) {
       ++HostTargetNum;
       // Save the index of the input that refers to the host.
       HostInputIndex = Index;
     }
 
-    if (Kind != "hip" && Kind != "hipv4")
+    if (OffloadInfo.OffloadKind != "hip" && OffloadInfo.OffloadKind != "hipv4")
       HIPOnly = false;
 
     ++Index;
@@ -1174,6 +1440,14 @@ int main(int argc, const char **argv) {
                                       Twine(HostTargetNum)));
   }
 
-  doWork([]() { return Unbundle ? UnbundleFiles() : BundleFiles(); });
+  doWork([]() {
+    if (Unbundle) {
+      if (FilesType == "a")
+        return UnbundleArchive();
+      else
+        return UnbundleFiles();
+    } else
+      return BundleFiles();
+  });
   return 0;
 }

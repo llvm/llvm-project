@@ -1038,7 +1038,8 @@ public:
         },
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          LLT NewTy = LLT::scalarOrVector(MaxElements, VecTy.getElementType());
+          LLT NewTy = LLT::scalarOrVector(ElementCount::getFixed(MaxElements),
+                                          VecTy.getElementType());
           return std::make_pair(TypeIdx, NewTy);
         });
   }

@@ -1554,6 +1554,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     Diag(TheCall->getBeginLoc(), diag::warn_alloca)
         << TheCall->getDirectCallee();
     break;
+  case Builtin::BI__arithmetic_fence:
+    if (SemaBuiltinArithmeticFence(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume:
     if (SemaBuiltinAssume(TheCall))
@@ -3488,6 +3492,132 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCV::BI__builtin_rvv_vsetvlimax:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
            CheckRISCVLMUL(TheCall, 1);
+  case RISCV::BI__builtin_rvv_vget_v_i8m2_i8m1:
+  case RISCV::BI__builtin_rvv_vget_v_i16m2_i16m1:
+  case RISCV::BI__builtin_rvv_vget_v_i32m2_i32m1:
+  case RISCV::BI__builtin_rvv_vget_v_i64m2_i64m1:
+  case RISCV::BI__builtin_rvv_vget_v_f32m2_f32m1:
+  case RISCV::BI__builtin_rvv_vget_v_f64m2_f64m1:
+  case RISCV::BI__builtin_rvv_vget_v_u8m2_u8m1:
+  case RISCV::BI__builtin_rvv_vget_v_u16m2_u16m1:
+  case RISCV::BI__builtin_rvv_vget_v_u32m2_u32m1:
+  case RISCV::BI__builtin_rvv_vget_v_u64m2_u64m1:
+  case RISCV::BI__builtin_rvv_vget_v_i8m4_i8m2:
+  case RISCV::BI__builtin_rvv_vget_v_i16m4_i16m2:
+  case RISCV::BI__builtin_rvv_vget_v_i32m4_i32m2:
+  case RISCV::BI__builtin_rvv_vget_v_i64m4_i64m2:
+  case RISCV::BI__builtin_rvv_vget_v_f32m4_f32m2:
+  case RISCV::BI__builtin_rvv_vget_v_f64m4_f64m2:
+  case RISCV::BI__builtin_rvv_vget_v_u8m4_u8m2:
+  case RISCV::BI__builtin_rvv_vget_v_u16m4_u16m2:
+  case RISCV::BI__builtin_rvv_vget_v_u32m4_u32m2:
+  case RISCV::BI__builtin_rvv_vget_v_u64m4_u64m2:
+  case RISCV::BI__builtin_rvv_vget_v_i8m8_i8m4:
+  case RISCV::BI__builtin_rvv_vget_v_i16m8_i16m4:
+  case RISCV::BI__builtin_rvv_vget_v_i32m8_i32m4:
+  case RISCV::BI__builtin_rvv_vget_v_i64m8_i64m4:
+  case RISCV::BI__builtin_rvv_vget_v_f32m8_f32m4:
+  case RISCV::BI__builtin_rvv_vget_v_f64m8_f64m4:
+  case RISCV::BI__builtin_rvv_vget_v_u8m8_u8m4:
+  case RISCV::BI__builtin_rvv_vget_v_u16m8_u16m4:
+  case RISCV::BI__builtin_rvv_vget_v_u32m8_u32m4:
+  case RISCV::BI__builtin_rvv_vget_v_u64m8_u64m4:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case RISCV::BI__builtin_rvv_vget_v_i8m4_i8m1:
+  case RISCV::BI__builtin_rvv_vget_v_i16m4_i16m1:
+  case RISCV::BI__builtin_rvv_vget_v_i32m4_i32m1:
+  case RISCV::BI__builtin_rvv_vget_v_i64m4_i64m1:
+  case RISCV::BI__builtin_rvv_vget_v_f32m4_f32m1:
+  case RISCV::BI__builtin_rvv_vget_v_f64m4_f64m1:
+  case RISCV::BI__builtin_rvv_vget_v_u8m4_u8m1:
+  case RISCV::BI__builtin_rvv_vget_v_u16m4_u16m1:
+  case RISCV::BI__builtin_rvv_vget_v_u32m4_u32m1:
+  case RISCV::BI__builtin_rvv_vget_v_u64m4_u64m1:
+  case RISCV::BI__builtin_rvv_vget_v_i8m8_i8m2:
+  case RISCV::BI__builtin_rvv_vget_v_i16m8_i16m2:
+  case RISCV::BI__builtin_rvv_vget_v_i32m8_i32m2:
+  case RISCV::BI__builtin_rvv_vget_v_i64m8_i64m2:
+  case RISCV::BI__builtin_rvv_vget_v_f32m8_f32m2:
+  case RISCV::BI__builtin_rvv_vget_v_f64m8_f64m2:
+  case RISCV::BI__builtin_rvv_vget_v_u8m8_u8m2:
+  case RISCV::BI__builtin_rvv_vget_v_u16m8_u16m2:
+  case RISCV::BI__builtin_rvv_vget_v_u32m8_u32m2:
+  case RISCV::BI__builtin_rvv_vget_v_u64m8_u64m2:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 3);
+  case RISCV::BI__builtin_rvv_vget_v_i8m8_i8m1:
+  case RISCV::BI__builtin_rvv_vget_v_i16m8_i16m1:
+  case RISCV::BI__builtin_rvv_vget_v_i32m8_i32m1:
+  case RISCV::BI__builtin_rvv_vget_v_i64m8_i64m1:
+  case RISCV::BI__builtin_rvv_vget_v_f32m8_f32m1:
+  case RISCV::BI__builtin_rvv_vget_v_f64m8_f64m1:
+  case RISCV::BI__builtin_rvv_vget_v_u8m8_u8m1:
+  case RISCV::BI__builtin_rvv_vget_v_u16m8_u16m1:
+  case RISCV::BI__builtin_rvv_vget_v_u32m8_u32m1:
+  case RISCV::BI__builtin_rvv_vget_v_u64m8_u64m1:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 7);
+  case RISCV::BI__builtin_rvv_vset_v_i8m1_i8m2:
+  case RISCV::BI__builtin_rvv_vset_v_i16m1_i16m2:
+  case RISCV::BI__builtin_rvv_vset_v_i32m1_i32m2:
+  case RISCV::BI__builtin_rvv_vset_v_i64m1_i64m2:
+  case RISCV::BI__builtin_rvv_vset_v_f32m1_f32m2:
+  case RISCV::BI__builtin_rvv_vset_v_f64m1_f64m2:
+  case RISCV::BI__builtin_rvv_vset_v_u8m1_u8m2:
+  case RISCV::BI__builtin_rvv_vset_v_u16m1_u16m2:
+  case RISCV::BI__builtin_rvv_vset_v_u32m1_u32m2:
+  case RISCV::BI__builtin_rvv_vset_v_u64m1_u64m2:
+  case RISCV::BI__builtin_rvv_vset_v_i8m2_i8m4:
+  case RISCV::BI__builtin_rvv_vset_v_i16m2_i16m4:
+  case RISCV::BI__builtin_rvv_vset_v_i32m2_i32m4:
+  case RISCV::BI__builtin_rvv_vset_v_i64m2_i64m4:
+  case RISCV::BI__builtin_rvv_vset_v_f32m2_f32m4:
+  case RISCV::BI__builtin_rvv_vset_v_f64m2_f64m4:
+  case RISCV::BI__builtin_rvv_vset_v_u8m2_u8m4:
+  case RISCV::BI__builtin_rvv_vset_v_u16m2_u16m4:
+  case RISCV::BI__builtin_rvv_vset_v_u32m2_u32m4:
+  case RISCV::BI__builtin_rvv_vset_v_u64m2_u64m4:
+  case RISCV::BI__builtin_rvv_vset_v_i8m4_i8m8:
+  case RISCV::BI__builtin_rvv_vset_v_i16m4_i16m8:
+  case RISCV::BI__builtin_rvv_vset_v_i32m4_i32m8:
+  case RISCV::BI__builtin_rvv_vset_v_i64m4_i64m8:
+  case RISCV::BI__builtin_rvv_vset_v_f32m4_f32m8:
+  case RISCV::BI__builtin_rvv_vset_v_f64m4_f64m8:
+  case RISCV::BI__builtin_rvv_vset_v_u8m4_u8m8:
+  case RISCV::BI__builtin_rvv_vset_v_u16m4_u16m8:
+  case RISCV::BI__builtin_rvv_vset_v_u32m4_u32m8:
+  case RISCV::BI__builtin_rvv_vset_v_u64m4_u64m8:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case RISCV::BI__builtin_rvv_vset_v_i8m1_i8m4:
+  case RISCV::BI__builtin_rvv_vset_v_i16m1_i16m4:
+  case RISCV::BI__builtin_rvv_vset_v_i32m1_i32m4:
+  case RISCV::BI__builtin_rvv_vset_v_i64m1_i64m4:
+  case RISCV::BI__builtin_rvv_vset_v_f32m1_f32m4:
+  case RISCV::BI__builtin_rvv_vset_v_f64m1_f64m4:
+  case RISCV::BI__builtin_rvv_vset_v_u8m1_u8m4:
+  case RISCV::BI__builtin_rvv_vset_v_u16m1_u16m4:
+  case RISCV::BI__builtin_rvv_vset_v_u32m1_u32m4:
+  case RISCV::BI__builtin_rvv_vset_v_u64m1_u64m4:
+  case RISCV::BI__builtin_rvv_vset_v_i8m2_i8m8:
+  case RISCV::BI__builtin_rvv_vset_v_i16m2_i16m8:
+  case RISCV::BI__builtin_rvv_vset_v_i32m2_i32m8:
+  case RISCV::BI__builtin_rvv_vset_v_i64m2_i64m8:
+  case RISCV::BI__builtin_rvv_vset_v_f32m2_f32m8:
+  case RISCV::BI__builtin_rvv_vset_v_f64m2_f64m8:
+  case RISCV::BI__builtin_rvv_vset_v_u8m2_u8m8:
+  case RISCV::BI__builtin_rvv_vset_v_u16m2_u16m8:
+  case RISCV::BI__builtin_rvv_vset_v_u32m2_u32m8:
+  case RISCV::BI__builtin_rvv_vset_v_u64m2_u64m8:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 3);
+  case RISCV::BI__builtin_rvv_vset_v_i8m1_i8m8:
+  case RISCV::BI__builtin_rvv_vset_v_i16m1_i16m8:
+  case RISCV::BI__builtin_rvv_vset_v_i32m1_i32m8:
+  case RISCV::BI__builtin_rvv_vset_v_i64m1_i64m8:
+  case RISCV::BI__builtin_rvv_vset_v_f32m1_f32m8:
+  case RISCV::BI__builtin_rvv_vset_v_f64m1_f64m8:
+  case RISCV::BI__builtin_rvv_vset_v_u8m1_u8m8:
+  case RISCV::BI__builtin_rvv_vset_v_u16m1_u16m8:
+  case RISCV::BI__builtin_rvv_vset_v_u32m1_u32m8:
+  case RISCV::BI__builtin_rvv_vset_v_u64m1_u64m8:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 7);
   }
 
   return false;
@@ -6423,6 +6553,29 @@ bool Sema::SemaBuiltinPrefetch(CallExpr *TheCall) {
   return false;
 }
 
+/// SemaBuiltinArithmeticFence - Handle __arithmetic_fence.
+bool Sema::SemaBuiltinArithmeticFence(CallExpr *TheCall) {
+  if (!Context.getTargetInfo().checkArithmeticFenceSupported())
+    return Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+  if (checkArgCount(*this, TheCall, 1))
+    return true;
+  Expr *Arg = TheCall->getArg(0);
+  if (Arg->isInstantiationDependent())
+    return false;
+
+  QualType ArgTy = Arg->getType();
+  if (!ArgTy->hasFloatingRepresentation())
+    return Diag(TheCall->getEndLoc(), diag::err_typecheck_expect_flt_or_vector)
+           << ArgTy;
+  if (Arg->isLValue()) {
+    ExprResult FirstArg = DefaultLvalueConversion(Arg);
+    TheCall->setArg(0, FirstArg.get());
+  }
+  TheCall->setType(TheCall->getArg(0)->getType());
+  return false;
+}
+
 /// SemaBuiltinAssume - Handle __assume (MS Extension).
 // __assume does not evaluate its arguments, and should warn if its argument
 // has side effects.
@@ -6971,18 +7124,18 @@ bool Sema::SemaBuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
 
     bool ValidString = true;
     if (IsARMBuiltin) {
-      ValidString &= Fields[0].startswith_lower("cp") ||
-                     Fields[0].startswith_lower("p");
+      ValidString &= Fields[0].startswith_insensitive("cp") ||
+                     Fields[0].startswith_insensitive("p");
       if (ValidString)
-        Fields[0] =
-          Fields[0].drop_front(Fields[0].startswith_lower("cp") ? 2 : 1);
+        Fields[0] = Fields[0].drop_front(
+            Fields[0].startswith_insensitive("cp") ? 2 : 1);
 
-      ValidString &= Fields[2].startswith_lower("c");
+      ValidString &= Fields[2].startswith_insensitive("c");
       if (ValidString)
         Fields[2] = Fields[2].drop_front(1);
 
       if (FiveFields) {
-        ValidString &= Fields[3].startswith_lower("c");
+        ValidString &= Fields[3].startswith_insensitive("c");
         if (ValidString)
           Fields[3] = Fields[3].drop_front(1);
       }

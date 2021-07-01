@@ -139,7 +139,7 @@ static Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
-  using Element = Scalar<T>; // pmk: was typename Constant<T>::Element;
+  using Element = Scalar<T>;
   std::optional<ConstantSubscript> dim;
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,

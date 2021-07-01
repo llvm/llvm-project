@@ -555,6 +555,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1032, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1033, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1034, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1035, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1100, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1101, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1102, EF_AMDGPU_MACH);
@@ -1837,11 +1838,9 @@ void MappingTraits<ELFYAML::LinkerOption>::mapping(IO &IO,
   IO.mapRequired("Value", Opt.Value);
 }
 
-void MappingTraits<ELFYAML::CallGraphEntry>::mapping(
-    IO &IO, ELFYAML::CallGraphEntry &E) {
+void MappingTraits<ELFYAML::CallGraphEntryWeight>::mapping(
+    IO &IO, ELFYAML::CallGraphEntryWeight &E) {
   assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapRequired("From", E.From);
-  IO.mapRequired("To", E.To);
   IO.mapRequired("Weight", E.Weight);
 }
 

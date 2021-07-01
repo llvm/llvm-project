@@ -85,7 +85,8 @@ func @main() {
   // Check error propagation from a token to the group.
   // ------------------------------------------------------------------------ //
 
-  %group0 = async.create_group
+  %c2 = constant 2 : index
+  %group0 = async.create_group %c2 : !async.group
 
   %token4 = async.execute {
     async.yield

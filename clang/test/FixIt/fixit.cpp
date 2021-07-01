@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++98 %s
+// RUN: %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++98 -Wno-c++14-extensions %s
 // RUN: cp %s %t-98
-// RUN: not %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++98 %t-98
-// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Wno-unused-but-set-variable -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++98 %t-98
-// RUN: not %clang_cc1 -fsyntax-only -pedantic -fdiagnostics-parseable-fixits -x c++ -std=c++11 %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++11 %s
+// RUN: not %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++98 -Wno-c++14-extensions %t-98
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Wno-unused-but-set-variable -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++98 -Wno-c++14-extensions %t-98
+// RUN: not %clang_cc1 -fsyntax-only -pedantic -fdiagnostics-parseable-fixits -x c++ -std=c++11 -Wno-c++14-extensions %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -verify -fcxx-exceptions -x c++ -std=c++11 -Wno-c++14-extensions %s
 // RUN: cp %s %t-11
-// RUN: not %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++11 %t-11
-// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Wno-unused-but-set-variable -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++11 %t-11
+// RUN: not %clang_cc1 -pedantic -Wall -Wno-unused-but-set-variable -Wno-comment -fcxx-exceptions -fixit -x c++ -std=c++11 -Wno-c++14-extensions %t-11
+// RUN: %clang_cc1 -fsyntax-only -pedantic -Wall -Wno-unused-but-set-variable -Werror -Wno-comment -fcxx-exceptions -x c++ -std=c++11 -Wno-c++14-extensions %t-11
 
 /* This is a test of the various code modification hints that are
    provided as part of warning or extension diagnostics. All of the
@@ -292,21 +292,21 @@ namespace greatergreater {
 
   template<template<typename>> struct TemplateTemplateParam; // expected-error {{requires 'class'}}
 
-  template<typename T> void t();
+  template <typename T> int t = 0;
   void g() {
-    void (*p)() = &t<int>;
-    (void)(&t<int>==p); // expected-error {{use '> ='}}
-    (void)(&t<int>>=p); // expected-error {{use '> >'}}
+    int p = 0;
+    (void)(t<int>==p); // expected-error {{use '> ='}}
+    (void)(t<int>>=p); // expected-error {{use '> >'}}
 #if __cplusplus < 201103L
-    (void)(&t<S<int>>>=p); // expected-error {{use '> >'}}
-    (Shr)&t<S<int>>>>=p; // expected-error {{use '> >'}}
+    (void)(t<S<int>>>=p); // expected-error {{use '> >'}}
+    (Shr)t<S<int>>>>=p; // expected-error {{use '> >'}}
 #endif
 
-    // FIXME: We correct this to '&t<int> > >= p;' not '&t<int> >>= p;'
-    //(Shr)&t<int>>>=p;
+    // FIXME: We correct this to 't<int> > >= p;' not 't<int> >>= p;'
+    //(Shr)t<int>>>=p;
 
     // FIXME: The fix-its here overlap.
-    //(void)(&t<S<int>>==p);
+    //(void)(t<S<int>>==p);
   }
 }
 

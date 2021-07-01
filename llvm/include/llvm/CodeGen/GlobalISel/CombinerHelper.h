@@ -522,6 +522,8 @@ public:
   /// or false constant based off of KnownBits information.
   bool matchICmpToTrueFalseKnownBits(MachineInstr &MI, int64_t &MatchInfo);
 
+  bool matchBitfieldExtractFromSExtInReg(
+      MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);
   /// Match: and (lshr x, cst), mask -> ubfx x, cst, width
   bool matchBitfieldExtractFromAnd(
       MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo);

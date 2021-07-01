@@ -785,6 +785,9 @@ static const TableEntry OpcodeTable[] = {
   { X86::UCOM_Fpr32   , X86::UCOM_Fr   },
   { X86::UCOM_Fpr64   , X86::UCOM_Fr   },
   { X86::UCOM_Fpr80   , X86::UCOM_Fr   },
+  { X86::XAM_Fp32     , X86::XAM_F     },
+  { X86::XAM_Fp64     , X86::XAM_F     },
+  { X86::XAM_Fp80     , X86::XAM_F     },
 };
 
 static unsigned getConcreteOpcode(unsigned Opcode) {

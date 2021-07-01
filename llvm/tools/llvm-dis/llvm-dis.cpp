@@ -151,10 +151,11 @@ int main(int argc, char **argv) {
 
   ExitOnErr.setBanner(std::string(argv[0]) + ": error: ");
 
+  cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
+
   LLVMContext Context;
   Context.setDiagnosticHandler(
       std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
-  cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
   if (InputFilenames.size() < 1) {
     InputFilenames.push_back("-");

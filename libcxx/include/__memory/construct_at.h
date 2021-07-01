@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__debug>
+#include <__utility/forward.h>
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

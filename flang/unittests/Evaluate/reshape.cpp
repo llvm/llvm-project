@@ -53,10 +53,22 @@ int main() {
   MATCH(2, pad.GetDimension(0).Extent());
   MATCH(2, pad.GetDimension(1).Extent());
   MATCH(3, pad.GetDimension(2).Extent());
+  StaticDescriptor<1> orderDescriptor;
+  Descriptor &order{orderDescriptor.descriptor()};
+  static const std::int32_t orderData[]{1, 2};
+  static const SubscriptValue orderExtent[]{2};
+  order.Establish(TypeCategory::Integer, static_cast<int>(sizeof orderData[0]),
+      const_cast<void *>(reinterpret_cast<const void *>(orderData)), 1,
+      orderExtent, CFI_attribute_pointer);
+  orderDescriptor.Check();
+  order.Check();
+  MATCH(1, order.rank());
+  MATCH(2, order.GetDimension(0).Extent());
 
-  auto result{
-      RTNAME(Reshape)(*source, *shape, &pad, nullptr, __FILE__, __LINE__)};
+  auto result{Descriptor::Create(TypeCategory::Integer, sizeof(std::int32_t),
+      nullptr, 2, nullptr, CFI_attribute_allocatable)};
   TEST(result.get() != nullptr);
+  RTNAME(Reshape)(*result, *source, *shape, &pad, &order, __FILE__, __LINE__);
   result->Check();
   MATCH(sizeof(std::int32_t), result->ElementBytes());
   MATCH(2, result->rank());
@@ -68,8 +80,6 @@ int main() {
     SubscriptValue ss[2]{1 + (j % 8), 1 + (j / 8)};
     MATCH(j, *result->Element<std::int32_t>(ss));
   }
-
-  // TODO: test ORDER=
 
   return testing::Complete();
 }

@@ -850,7 +850,8 @@ bool AArch64LegalizerInfo::legalizeVectorTrunc(
          isPowerOf2_32(SrcTy.getSizeInBits()));
 
   // Split input type.
-  LLT SplitSrcTy = SrcTy.changeNumElements(SrcTy.getNumElements() / 2);
+  LLT SplitSrcTy =
+      SrcTy.changeElementCount(SrcTy.getElementCount().divideCoefficientBy(2));
   // First, split the source into two smaller vectors.
   SmallVector<Register, 2> SplitSrcs;
   extractParts(SrcReg, MRI, MIRBuilder, SplitSrcTy, 2, SplitSrcs);
@@ -1006,7 +1007,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
   auto List = MIRBuilder.buildLoad(
       PtrTy, ListPtr,
       *MF.getMachineMemOperand(MachinePointerInfo(), MachineMemOperand::MOLoad,
-                               PtrSize, PtrAlign));
+                               PtrTy, PtrAlign));
 
   MachineInstrBuilder DstPtr;
   if (Alignment > PtrAlign) {
@@ -1018,11 +1019,12 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
   } else
     DstPtr = List;
 
-  uint64_t ValSize = MRI.getType(Dst).getSizeInBits() / 8;
+  LLT ValTy = MRI.getType(Dst);
+  uint64_t ValSize = ValTy.getSizeInBits() / 8;
   MIRBuilder.buildLoad(
       Dst, DstPtr,
       *MF.getMachineMemOperand(MachinePointerInfo(), MachineMemOperand::MOLoad,
-                               ValSize, std::max(Alignment, PtrAlign)));
+                               ValTy, std::max(Alignment, PtrAlign)));
 
   auto Size = MIRBuilder.buildConstant(IntPtrTy, alignTo(ValSize, PtrAlign));
 
@@ -1031,7 +1033,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
   MIRBuilder.buildStore(NewList, ListPtr,
                         *MF.getMachineMemOperand(MachinePointerInfo(),
                                                  MachineMemOperand::MOStore,
-                                                 PtrSize, PtrAlign));
+                                                 PtrTy, PtrAlign));
 
   MI.eraseFromParent();
   return true;

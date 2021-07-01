@@ -117,7 +117,20 @@ bool X86TargetInfo::initFeatureMap(
   for (auto &F : CPUFeatures)
     setFeatureEnabled(Features, F, true);
 
-  if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec))
+  std::vector<std::string> UpdatedFeaturesVec;
+  for (const auto &Feature : FeaturesVec) {
+    // Expand general-regs-only to -x86, -mmx and -sse
+    if (Feature == "+general-regs-only") {
+      UpdatedFeaturesVec.push_back("-x87");
+      UpdatedFeaturesVec.push_back("-mmx");
+      UpdatedFeaturesVec.push_back("-sse");
+      continue;
+    }
+
+    UpdatedFeaturesVec.push_back(Feature);
+  }
+
+  if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
     return false;
 
   // Can't do this earlier because we need to be able to explicitly enable
@@ -126,20 +139,20 @@ bool X86TargetInfo::initFeatureMap(
   // Enable popcnt if sse4.2 is enabled and popcnt is not explicitly disabled.
   auto I = Features.find("sse4.2");
   if (I != Features.end() && I->getValue() &&
-      llvm::find(FeaturesVec, "-popcnt") == FeaturesVec.end())
+      llvm::find(UpdatedFeaturesVec, "-popcnt") == UpdatedFeaturesVec.end())
     Features["popcnt"] = true;
 
   // Additionally, if SSE is enabled and mmx is not explicitly disabled,
   // then enable MMX.
   I = Features.find("sse");
   if (I != Features.end() && I->getValue() &&
-      llvm::find(FeaturesVec, "-mmx") == FeaturesVec.end())
+      llvm::find(UpdatedFeaturesVec, "-mmx") == UpdatedFeaturesVec.end())
     Features["mmx"] = true;
 
   // Enable xsave if avx is enabled and xsave is not explicitly disabled.
   I = Features.find("avx");
   if (I != Features.end() && I->getValue() &&
-      llvm::find(FeaturesVec, "-xsave") == FeaturesVec.end())
+      llvm::find(UpdatedFeaturesVec, "-xsave") == UpdatedFeaturesVec.end())
     Features["xsave"] = true;
 
   return true;
@@ -866,6 +879,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("fma4", true)
       .Case("fsgsbase", true)
       .Case("fxsr", true)
+      .Case("general-regs-only", true)
       .Case("gfni", true)
       .Case("hreset", true)
       .Case("invpcid", true)

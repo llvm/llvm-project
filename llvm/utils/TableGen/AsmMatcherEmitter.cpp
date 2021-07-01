@@ -612,7 +612,7 @@ struct MatchableInfo {
   /// operator< - Compare two matchables.
   bool operator<(const MatchableInfo &RHS) const {
     // The primary comparator is the instruction mnemonic.
-    if (int Cmp = Mnemonic.compare_lower(RHS.Mnemonic))
+    if (int Cmp = Mnemonic.compare_insensitive(RHS.Mnemonic))
       return Cmp == -1;
 
     if (AsmOperands.size() != RHS.AsmOperands.size())
@@ -2749,10 +2749,14 @@ static void emitMnemonicAliasVariant(raw_ostream &OS,const AsmMatcherInfo &Info,
       // If this unconditionally matches, remember it for later and diagnose
       // duplicates.
       if (FeatureMask.empty()) {
-        if (AliasWithNoPredicate != -1) {
-          // We can't have two aliases from the same mnemonic with no predicate.
-          PrintError(ToVec[AliasWithNoPredicate]->getLoc(),
-                     "two MnemonicAliases with the same 'from' mnemonic!");
+        if (AliasWithNoPredicate != -1 &&
+            R->getValueAsString("ToMnemonic") !=
+                ToVec[AliasWithNoPredicate]->getValueAsString("ToMnemonic")) {
+          // We can't have two different aliases from the same mnemonic with no
+          // predicate.
+          PrintError(
+              ToVec[AliasWithNoPredicate]->getLoc(),
+              "two different MnemonicAliases with the same 'from' mnemonic!");
           PrintFatalError(R->getLoc(), "this is the other MnemonicAlias.");
         }
 

@@ -132,7 +132,7 @@ OPTIONS
 .. option:: --debug-vars-indent=<width>
 
   Distance to indent the source-level variable display, relative to the start
-  of the disassembly. Defaults to 40 characters.
+  of the disassembly. Defaults to 52 characters.
 
 .. option:: -j, --section=<section1[,section2,...]>
 
@@ -168,6 +168,10 @@ OPTIONS
 .. option:: --no-leading-addr
 
   When disassembling, do not print leading addresses.
+
+.. option:: --no-print-imm-hex
+
+  Do not use hex format for immediate values in disassembly output (default).
 
 .. option:: --no-show-raw-insn
 

@@ -1,5 +1,4 @@
 ; Check that we should not reuse alloca sotrage in O0.
-; RUN: opt < %s -coro-split  -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 %struct.big_structure = type { [500 x i8] }

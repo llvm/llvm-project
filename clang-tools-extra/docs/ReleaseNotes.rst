@@ -108,6 +108,13 @@ New checks
   Finds inner loops that have not been unrolled, as well as fully unrolled
   loops with unknown loops bounds or a large number of iterations.
 
+- New :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone-easily-swappable-parameters>` check.
+
+  Finds function definitions where parameters of convertible types follow each
+  other directly, making call sites prone to calling the function with
+  swapped (or badly ordered) arguments.
+
 - New :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
 

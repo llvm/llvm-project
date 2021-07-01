@@ -1,6 +1,5 @@
 ; Tests that coro-split removes cleanup code after coro.end in resume functions
 ; and retains it in the start function.
-; RUN: opt < %s -coro-split -S | FileCheck %s
 ; RUN: opt < %s -passes=coro-split -S | FileCheck %s
 
 define i8* @f(i1 %val) "coroutine.presplit"="1" personality i32 3 {

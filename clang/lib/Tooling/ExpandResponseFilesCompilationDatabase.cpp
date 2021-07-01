@@ -54,7 +54,8 @@ private:
       Argv.reserve(Cmd.CommandLine.size());
       for (auto &Arg : Cmd.CommandLine) {
         Argv.push_back(Arg.c_str());
-        SeenRSPFile |= Arg.front() == '@';
+        if (!Arg.empty())
+          SeenRSPFile |= Arg.front() == '@';
       }
       if (!SeenRSPFile)
         continue;

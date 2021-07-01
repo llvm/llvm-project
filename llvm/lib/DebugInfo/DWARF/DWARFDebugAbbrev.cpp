@@ -67,6 +67,35 @@ DWARFAbbreviationDeclarationSet::getAbbreviationDeclaration(
   return &Decls[AbbrCode - FirstAbbrCode];
 }
 
+std::string DWARFAbbreviationDeclarationSet::getCodeRange() const {
+  // Create a sorted list of all abbrev codes.
+  std::vector<uint32_t> Codes;
+  Codes.reserve(Decls.size());
+  for (const auto &Decl : Decls)
+    Codes.push_back(Decl.getCode());
+
+  std::string Buffer = "";
+  raw_string_ostream Stream(Buffer);
+  // Each iteration through this loop represents a single contiguous range in
+  // the set of codes.
+  for (auto Current = Codes.begin(), End = Codes.end(); Current != End;) {
+    uint32_t RangeStart = *Current;
+    // Add the current range start.
+    Stream << *Current;
+    uint32_t RangeEnd = RangeStart;
+    // Find the end of the current range.
+    while (++Current != End && *Current == RangeEnd + 1)
+      ++RangeEnd;
+    // If there is more than one value in the range, add the range end too.
+    if (RangeStart != RangeEnd)
+      Stream << "-" << RangeEnd;
+    // If there is at least one more range, add a separator.
+    if (Current != End)
+      Stream << ", ";
+  }
+  return Buffer;
+}
+
 DWARFDebugAbbrev::DWARFDebugAbbrev() { clear(); }
 
 void DWARFDebugAbbrev::clear() {

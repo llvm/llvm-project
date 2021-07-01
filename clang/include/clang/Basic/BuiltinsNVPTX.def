@@ -759,6 +759,29 @@ TARGET_BUILTIN(__imma_m8n8k32_mma_s4, "vi*iC*iC*iC*IiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__imma_m8n8k32_mma_u4, "vi*iC*iC*iC*IiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__imma_m8n8k32_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 
+// Builtins to support double and alternate float WMMA instructions on sm_80
+TARGET_BUILTIN(__dmma_m8n8k4_ld_a, "vd*dC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__dmma_m8n8k4_ld_b, "vd*dC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__dmma_m8n8k4_ld_c, "vd*dC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__dmma_m8n8k4_st_c_f64, "vd*dC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__dmma_m8n8k4_mma_f64, "vd*dC*dC*dC*IiIi", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__mma_bf16_m16n16k16_ld_a, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m16n16k16_ld_b, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m16n16k16_mma_f32, "vf*iC*iC*fC*IiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m8n32k16_ld_a, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m8n32k16_ld_b, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m8n32k16_mma_f32, "vf*iC*iC*fC*IiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m32n8k16_ld_a, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m32n8k16_ld_b, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m32n8k16_mma_f32, "vf*iC*iC*fC*IiIi", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__mma_tf32_m16n16k8_ld_a, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_tf32_m16n16k8_ld_b, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_tf32_m16n16k8_ld_c, "vf*fC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_m16n16k8_st_c_f32, "vf*fC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_tf32_m16n16k8_mma_f32, "vf*iC*iC*fC*IiIi", "", AND(SM_80,PTX70))
+
 // Async Copy
 TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive, "vWi*", "", AND(SM_80,PTX70))
 TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_shared, "vWi*3", "", AND(SM_80,PTX70))

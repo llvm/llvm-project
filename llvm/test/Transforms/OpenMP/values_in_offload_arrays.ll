@@ -70,3 +70,8 @@ declare void @__tgt_target_data_begin_mapper(%struct.ident_t*, i64, i32, i8**, i
 declare void @__tgt_target_data_end_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 declare dso_local i32 @rand(...)
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 7, !"openmp", i32 50}
+

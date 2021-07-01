@@ -5,9 +5,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Test predication of non-void instructions, specifically (i) that these
 ; instructions permit vectorization and (ii) the creation of an insertelement
-; and a Phi node. We check the full 2-element sequence for the first
-; instruction; For the rest we'll just make sure they get predicated based
-; on the code generated for the first element.
+; and a Phi node. We check the full 2-element sequence for all predicate instructions.
 define void @test(i32* nocapture %asd, i32* nocapture %aud,
                   i32* nocapture %asr, i32* nocapture %aur) {
 entry:
@@ -25,53 +23,50 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %[[SDA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SD0:[a-zA-Z0-9]+]] = sdiv i32 %[[SDA0]], %[[SDA1]]
 ; CHECK:   %[[SD1:[a-zA-Z0-9]+]] = insertelement <2 x i32> poison, i32 %[[SD0]], i32 0
-; CHECK:   br label %[[ESD]]
-; CHECK: [[ESD]]:
-; CHECK:   %[[SDR:[a-zA-Z0-9]+]] = phi <2 x i32> [ poison, %vector.body ], [ %[[SD1]], %[[CSD]] ]
-; CHECK:   %[[SDEEH:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 1
-; CHECK:   br i1 %[[SDEEH]], label %[[CSDH:[a-zA-Z0-9.]+]], label %[[ESDH:[a-zA-Z0-9.]+]]
-; CHECK: [[CSDH]]:
-; CHECK:   %[[SDA0H:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
-; CHECK:   %[[SDA1H:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
-; CHECK:   %[[SD0H:[a-zA-Z0-9]+]] = sdiv i32 %[[SDA0H]], %[[SDA1H]]
-; CHECK:   %[[SD1H:[a-zA-Z0-9]+]] = insertelement <2 x i32> %[[SDR]], i32 %[[SD0H]], i32 1
-; CHECK:   br label %[[ESDH]]
-; CHECK: [[ESDH]]:
-; CHECK:   %{{.*}} = phi <2 x i32> [ %[[SDR]], %[[ESD]] ], [ %[[SD1H]], %[[CSDH]] ]
-
-; CHECK:   %[[UDEE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   br i1 %[[UDEE]], label %[[CUD:[a-zA-Z0-9.]+]], label %[[EUD:[a-zA-Z0-9.]+]]
-; CHECK: [[CUD]]:
 ; CHECK:   %[[UDA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[UDA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[UD0:[a-zA-Z0-9]+]] = udiv i32 %[[UDA0]], %[[UDA1]]
 ; CHECK:   %[[UD1:[a-zA-Z0-9]+]] = insertelement <2 x i32> poison, i32 %[[UD0]], i32 0
-; CHECK:   br label %[[EUD]]
-; CHECK: [[EUD]]:
-; CHECK:   %{{.*}} = phi <2 x i32> [ poison, %{{.*}} ], [ %[[UD1]], %[[CUD]] ]
-
-; CHECK:   %[[SREE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   br i1 %[[SREE]], label %[[CSR:[a-zA-Z0-9.]+]], label %[[ESR:[a-zA-Z0-9.]+]]
-; CHECK: [[CSR]]:
 ; CHECK:   %[[SRA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SRA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SR0:[a-zA-Z0-9]+]] = srem i32 %[[SRA0]], %[[SRA1]]
 ; CHECK:   %[[SR1:[a-zA-Z0-9]+]] = insertelement <2 x i32> poison, i32 %[[SR0]], i32 0
-; CHECK:   br label %[[ESR]]
-; CHECK: [[ESR]]:
-; CHECK:   %{{.*}} = phi <2 x i32> [ poison, %{{.*}} ], [ %[[SR1]], %[[CSR]] ]
-
-; CHECK:   %[[UREE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
-; CHECK:   br i1 %[[UREE]], label %[[CUR:[a-zA-Z0-9.]+]], label %[[EUR:[a-zA-Z0-9.]+]]
-; CHECK: [[CUR]]:
 ; CHECK:   %[[URA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[URA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[UR0:[a-zA-Z0-9]+]] = urem i32 %[[URA0]], %[[URA1]]
 ; CHECK:   %[[UR1:[a-zA-Z0-9]+]] = insertelement <2 x i32> poison, i32 %[[UR0]], i32 0
-; CHECK:   br label %[[EUR]]
-; CHECK: [[EUR]]:
-; CHECK:   %{{.*}} = phi <2 x i32> [ poison, %{{.*}} ], [ %[[UR1]], %[[CUR]] ]
-
+; CHECK:   br label %[[ESD]]
+; CHECK: [[ESD]]:
+; CHECK:   [[SDR:%[a-zA-Z0-9]+]] = phi <2 x i32> [ poison, %vector.body ], [ %[[SD1]], %[[CSD]] ]
+; CHECK:   [[UDR:%.+]] = phi <2 x i32> [ poison, %{{.*}} ], [ %[[UD1]], %[[CSD]] ]
+; CHECK:   [[SRR:%.+]] = phi <2 x i32> [ poison, %{{.*}} ], [ %[[SR1]], %[[CSD]] ]
+; CHECK:   [[URR:%.+]] = phi <2 x i32> [ poison, %{{.*}} ], [ %[[UR1]], %[[CSD]] ]
+; CHECK:   %[[SDEEH:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 1
+; CHECK:   br i1 %[[SDEEH]], label %[[CSDH:[a-zA-Z0-9.]+]], label %[[ESDH:[a-zA-Z0-9.]+]]
+; CHECK: [[CSDH]]:
+; CHECK:   %[[SD1_A0H:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
+; CHECK:   %[[SD1_A1H:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
+; CHECK:   %[[SD1_0H:[a-zA-Z0-9]+]] = sdiv i32 %[[SD1_A0H]], %[[SD1_A1H]]
+; CHECK:   %[[SD1_1H:[a-zA-Z0-9]+]] = insertelement <2 x i32> [[SDR]], i32 %[[SD1_0H]], i32 1
+; CHECK:   %[[UD1_A0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
+; CHECK:   %[[UD1_A1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
+; CHECK:   %[[UD1_0:[a-zA-Z0-9]+]] = udiv i32 %[[UD1_A0]], %[[UD1_A1]]
+; CHECK:   %[[UD1_1:[a-zA-Z0-9]+]] = insertelement <2 x i32> [[UDR]], i32 %[[UD1_0]], i32 1
+; CHECK:   %[[SR1_A0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
+; CHECK:   %[[SR1_A1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
+; CHECK:   %[[SR1_0:[a-zA-Z0-9]+]] = srem i32 %[[SR1_A0]], %[[SR1_A1]]
+; CHECK:   %[[SR1_1:[a-zA-Z0-9]+]] = insertelement <2 x i32> [[SRR]], i32 %[[SR1_0]], i32 1
+; CHECK:   %[[UR1_A0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
+; CHECK:   %[[UR1_A1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 1
+; CHECK:   %[[UR1_0:[a-zA-Z0-9]+]] = urem i32 %[[UR1_A0]], %[[UR1_A1]]
+; CHECK:   %[[UR1_1:[a-zA-Z0-9]+]] = insertelement <2 x i32> [[URR]], i32 %[[UR1_0]], i32 1
+; CHECK:   br label %[[ESDH]]
+; CHECK: [[ESDH]]:
+; CHECK:   [[SDR1:%[a-zA-Z0-9]+]] = phi <2 x i32> [ [[SDR]], %[[ESD]] ], [ %[[SD1_1H]], %[[CSDH]] ]
+; CHECK:   [[UDR1:%.+]] = phi <2 x i32> [ [[UDR]], %{{.*}} ], [ %[[UD1_1]], %[[CSDH]] ]
+; CHECK:   [[SRR1:%.+]] = phi <2 x i32> [ [[SRR]], %{{.*}} ], [ %[[SR1_1]], %[[CSDH]] ]
+; CHECK:   [[URR1:%.+]] = phi <2 x i32> [ [[URR]], %{{.*}} ], [ %[[UR1_1]], %[[CSDH]] ]
+;
 for.body:                                         ; preds = %if.end, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end ]
   %isd = getelementptr inbounds i32, i32* %asd, i64 %indvars.iv

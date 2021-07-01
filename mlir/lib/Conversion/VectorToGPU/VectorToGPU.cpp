@@ -18,6 +18,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
@@ -113,13 +114,34 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
   return true;
 }
 
+/// Return true if the constant is a splat to a 2D vector so that it can be
+/// converted to a MMA constant matrix op.
+static bool constantSupportsMMAMatrixType(ConstantOp constantOp) {
+  auto vecType = constantOp.getType().dyn_cast<VectorType>();
+  if (!vecType || vecType.getRank() != 2)
+    return false;
+  return constantOp.value().isa<SplatElementsAttr>();
+}
+
+/// Return true if this is a broadcast from scalar to a 2D vector.
+static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
+  return broadcastOp.getVectorType().getRank() == 2 &&
+         broadcastOp.source().getType().isa<FloatType>();
+}
+
 static bool supportsMMaMatrixType(Operation *op) {
+  if (isa<scf::ForOp, scf::YieldOp>(op))
+    return true;
   if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
     return transferReadSupportsMMAMatrixType(transferRead);
   if (auto transferWrite = dyn_cast<vector::TransferWriteOp>(op))
     return transferWriteSupportsMMAMatrixType(transferWrite);
   if (auto contract = dyn_cast<vector::ContractionOp>(op))
     return contractSupportsMMAMatrixType(contract);
+  if (auto constant = dyn_cast<ConstantOp>(op))
+    return constantSupportsMMAMatrixType(constant);
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
+    return broadcastSupportsMMAMatrixType(broadcast);
   return false;
 }
 
@@ -127,8 +149,11 @@ static bool supportsMMaMatrixType(Operation *op) {
 // slice can be converted to MMA operations.
 static SetVector<Operation *> getOpToConvert(mlir::Operation *op) {
   auto hasVectorDest = [](Operation *op) {
-    return op->getNumResults() == 0 ||
-           llvm::any_of(op->getResultTypes(),
+    return llvm::any_of(op->getResultTypes(),
+                        [](Type t) { return t.isa<VectorType>(); });
+  };
+  auto hasVectorSrc = [](Operation *op) {
+    return llvm::any_of(op->getOperandTypes(),
                         [](Type t) { return t.isa<VectorType>(); });
   };
   SetVector<Operation *> opToConvert;
@@ -136,7 +161,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op) {
     if (opToConvert.contains(contract.getOperation()))
       return;
     SetVector<Operation *> dependentOps =
-        getSlice(contract, hasVectorDest, hasVectorDest);
+        getSlice(contract, hasVectorDest, hasVectorSrc);
     // If any instruction cannot use MMA matrix type drop the whole
     // chaine. MMA matrix are stored in an opaque type so they cannot be used
     // by all operations.
@@ -241,10 +266,11 @@ struct CombineTransferReadOpTranspose final
 } // namespace
 
 // MMA types have different layout based on how they are used in matmul ops.
-// Figure the right layout to use by looking at Transfer op uses.
+// Figure the right layout to use by looking at op uses.
 // TODO: Change the GPU dialect to abstract the layout at the this level and
 // only care about it during lowering to NVVM.
-static const char *inferFragType(vector::TransferReadOp op) {
+template <typename OpTy>
+static const char *inferFragType(OpTy op) {
   for (Operation *users : op->getUsers()) {
     auto contract = dyn_cast<vector::ContractionOp>(users);
     if (!contract)
@@ -297,6 +323,105 @@ static void convertContractOp(vector::ContractionOp op,
   valueMapping[op.getResult()] = matmul;
 }
 
+/// Convert a 2D splat ConstantOp to a SubgroupMmaConstantMatrix op.
+static void convertConstantOp(ConstantOp op,
+                              llvm::DenseMap<Value, Value> &valueMapping) {
+  assert(constantSupportsMMAMatrixType(op));
+  OpBuilder b(op);
+  Attribute splat = op.getValue().cast<SplatElementsAttr>().getSplatValue();
+  auto scalarConstant =
+      b.create<ConstantOp>(op.getLoc(), splat.getType(), splat);
+  const char *fragType = inferFragType(op);
+  auto vecType = op.getType().cast<VectorType>();
+  gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
+      vecType.getShape(), vecType.getElementType(), llvm::StringRef(fragType));
+  auto matrix = b.create<gpu::SubgroupMmaConstantMatrixOp>(op.getLoc(), type,
+                                                           scalarConstant);
+  valueMapping[op.getResult()] = matrix;
+}
+
+/// Convert a vector.broadcast from scalar to a SubgroupMmaConstantMatrix op.
+static void convertBroadcastOp(vector::BroadcastOp op,
+                               llvm::DenseMap<Value, Value> &valueMapping) {
+  assert(broadcastSupportsMMAMatrixType(op));
+  OpBuilder b(op);
+  const char *fragType = inferFragType(op);
+  auto vecType = op.getVectorType();
+  gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
+      vecType.getShape(), vecType.getElementType(), llvm::StringRef(fragType));
+  auto matrix = b.create<gpu::SubgroupMmaConstantMatrixOp>(op.getLoc(), type,
+                                                           op.source());
+  valueMapping[op.getResult()] = matrix;
+}
+
+// Replace ForOp with a new ForOp with extra operands. The YieldOp is not
+// updated and needs to be updated separatly for the loop to be correct.
+static scf::ForOp replaceForOpWithNewSignature(OpBuilder &b, scf::ForOp loop,
+                                               ValueRange newIterOperands) {
+  // Create a new loop before the existing one, with the extra operands.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(loop);
+  auto operands = llvm::to_vector<4>(loop.getIterOperands());
+  operands.append(newIterOperands.begin(), newIterOperands.end());
+  scf::ForOp newLoop =
+      b.create<scf::ForOp>(loop.getLoc(), loop.lowerBound(), loop.upperBound(),
+                           loop.step(), operands);
+  newLoop.getBody()->erase();
+  newLoop.getLoopBody().getBlocks().splice(
+      newLoop.getLoopBody().getBlocks().begin(),
+      loop.getLoopBody().getBlocks());
+  for (auto operand : newIterOperands)
+    newLoop.getBody()->addArgument(operand.getType());
+
+  for (auto it : llvm::zip(loop.getResults(), newLoop.getResults().take_front(
+                                                  loop.getNumResults())))
+    std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
+  loop.erase();
+  return newLoop;
+}
+
+static void convertForOp(scf::ForOp op,
+                         llvm::DenseMap<Value, Value> &valueMapping) {
+  SmallVector<Value> newOperands;
+  SmallVector<std::pair<size_t, size_t>> argMapping;
+  for (auto operand : llvm::enumerate(op.getIterOperands())) {
+    auto it = valueMapping.find(operand.value());
+    if (it == valueMapping.end())
+      continue;
+    argMapping.push_back(std::make_pair(
+        operand.index(), op.getNumIterOperands() + newOperands.size()));
+    newOperands.push_back(it->second);
+  }
+  OpBuilder b(op);
+  scf::ForOp newForOp = replaceForOpWithNewSignature(b, op, newOperands);
+  Block &loopBody = *newForOp.getBody();
+  for (auto mapping : argMapping) {
+    valueMapping[newForOp.getResult(mapping.first)] =
+        newForOp.getResult(mapping.second);
+    valueMapping[loopBody.getArgument(mapping.first +
+                                      newForOp.getNumInductionVars())] =
+        loopBody.getArgument(mapping.second + newForOp.getNumInductionVars());
+  }
+}
+
+static void convertYieldOp(scf::YieldOp op,
+                           llvm::DenseMap<Value, Value> &valueMapping) {
+  OpBuilder b(op);
+  auto loop = cast<scf::ForOp>(op->getParentOp());
+  auto yieldOperands = llvm::to_vector<4>(op.getOperands());
+  for (auto operand : llvm::enumerate(op.getOperands())) {
+    auto it = valueMapping.find(operand.value());
+    if (it == valueMapping.end())
+      continue;
+    // Replace the yield of old value with the for op argument to make it easier
+    // to remove the dead code.
+    yieldOperands[operand.index()] = loop.getIterOperands()[operand.index()];
+    yieldOperands.push_back(it->second);
+  }
+  b.create<scf::YieldOp>(op.getLoc(), yieldOperands);
+  op.erase();
+}
+
 namespace mlir {
 
 void populatePrepareVectorToMMAPatterns(RewritePatternSet &patterns) {
@@ -314,6 +439,14 @@ void convertVectorToMMAOps(FuncOp funcOp) {
       convertTransferWriteOp(transferWrite, valueMapping);
     } else if (auto contractOp = dyn_cast<vector::ContractionOp>(op)) {
       convertContractOp(contractOp, valueMapping);
+    } else if (auto constantOp = dyn_cast<ConstantOp>(op)) {
+      convertConstantOp(constantOp, valueMapping);
+    } else if (auto broadcastOp = dyn_cast<vector::BroadcastOp>(op)) {
+      convertBroadcastOp(broadcastOp, valueMapping);
+    } else if (auto forOp = dyn_cast<scf::ForOp>(op)) {
+      convertForOp(forOp, valueMapping);
+    } else if (auto yiledOp = dyn_cast<scf::YieldOp>(op)) {
+      convertYieldOp(yiledOp, valueMapping);
     }
   }
 }

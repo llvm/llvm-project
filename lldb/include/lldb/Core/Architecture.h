@@ -10,6 +10,7 @@
 #define LLDB_CORE_ARCHITECTURE_H
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Target/MemoryTagManager.h"
 
 namespace lldb_private {
 
@@ -96,6 +97,17 @@ public:
   virtual lldb::addr_t GetBreakableLoadAddress(lldb::addr_t addr,
                                                Target &target) const {
     return addr;
+  }
+
+  // Returns a pointer to an object that can manage memory tags for this
+  // Architecture E.g. masking out tags, unpacking tag streams etc. Returns
+  // nullptr if the architecture does not have a memory tagging extension.
+  //
+  // The return pointer being valid does not mean that the current process has
+  // memory tagging enabled, just that a tagging technology exists for this
+  // architecture.
+  virtual const MemoryTagManager *GetMemoryTagManager() const {
+    return nullptr;
   }
 };
 

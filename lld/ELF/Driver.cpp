@@ -856,12 +856,23 @@ static void readCallGraph(MemoryBufferRef mb) {
 }
 
 template <class ELFT> static void readCallGraphsFromObjectFiles() {
+  auto getIndex = [&](ObjFile<ELFT> *obj, uint32_t index) {
+    const Elf_Rel_Impl<ELFT, false> &rel = obj->cgProfileRel[index];
+    return rel.getSymbol(config->isMips64EL);
+  };
+
   for (auto file : objectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file);
-
-    for (const Elf_CGProfile_Impl<ELFT> &cgpe : obj->cgProfile) {
-      auto *fromSym = dyn_cast<Defined>(&obj->getSymbol(cgpe.cgp_from));
-      auto *toSym = dyn_cast<Defined>(&obj->getSymbol(cgpe.cgp_to));
+    if (obj->cgProfileRel.empty())
+      continue;
+    if (obj->cgProfileRel.size() != obj->cgProfile.size() * 2)
+      fatal("number of relocations doesn't match Weights");
+    for (uint32_t i = 0, size = obj->cgProfile.size(); i < size; ++i) {
+      const Elf_CGProfile_Impl<ELFT> &cgpe = obj->cgProfile[i];
+      uint32_t fromIndex = getIndex(obj, i * 2);
+      uint32_t toIndex = getIndex(obj, i * 2 + 1);
+      auto *fromSym = dyn_cast<Defined>(&obj->getSymbol(fromIndex));
+      auto *toSym = dyn_cast<Defined>(&obj->getSymbol(toIndex));
       if (!fromSym || !toSym)
         continue;
 

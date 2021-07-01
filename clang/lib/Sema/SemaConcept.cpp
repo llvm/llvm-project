@@ -43,9 +43,12 @@ public:
       LHS = BO->getLHS();
       RHS = BO->getRHS();
     } else if (auto *OO = dyn_cast<CXXOperatorCallExpr>(E)) {
-      Op = OO->getOperator();
-      LHS = OO->getArg(0);
-      RHS = OO->getArg(1);
+      // If OO is not || or && it might not have exactly 2 arguments.
+      if (OO->getNumArgs() == 2) {
+        Op = OO->getOperator();
+        LHS = OO->getArg(0);
+        RHS = OO->getArg(1);
+      }
     }
   }
 

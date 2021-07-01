@@ -13,6 +13,7 @@
 # CHECK:       [[#%x,A]]     g   F __TEXT,__text _a2
 # CHECK:       [[#%x,A]]     g   F __TEXT,__text _a3
 # CHECK:       [[#%x,B:]]    g   F __TEXT,__text _b
+# CHECK:       [[#%x,B2:]]   g   F __TEXT,__text _b2
 # CHECK:       [[#%x,C:]]    g   F __TEXT,__text _c
 # CHECK:       [[#%x,D:]]    g   F __TEXT,__text _d
 # CHECK:       [[#%x,E:]]    g   F __TEXT,__text _e
@@ -34,6 +35,7 @@
 # CHECK-NEXT:  callq 0x[[#%x,A]]  <_a3>
 # CHECK-NEXT:  callq 0x[[#%x,A]]  <_a3>
 # CHECK-NEXT:  callq 0x[[#%x,B]]  <_b>
+# CHECK-NEXT:  callq 0x[[#%x,B2]] <_b2>
 # CHECK-NEXT:  callq 0x[[#%x,C]]  <_c>
 # CHECK-NEXT:  callq 0x[[#%x,D]]  <_d>
 # CHECK-NEXT:  callq 0x[[#%x,E]]  <_e>
@@ -53,14 +55,20 @@
 ### TODO:
 ### * Fold: funcs only differ in alignment
 ### * No fold: func is weak? preemptable?
+### * Test that we hash things appropriately w/ minimal collisions
 
 #--- abs.s
 .subsections_via_symbols
 
-.globl _abs1a, _abs1b, _abs2
-_abs1a = 0xfeedfac3
-_abs1b = 0xfeedfac3
-_abs2 =  0xfeedf00d
+.globl _abs1a, _abs1b, _abs2, _not_abs
+_abs1a = 0xfac3
+_abs1b = 0xfac3
+_abs2 =  0xf00d
+
+.data
+.space 0xfac3
+## _not_abs has the same Defined::value as _abs1{a,b}
+_not_abs:
 
 #--- main.s
 .subsections_via_symbols
@@ -113,6 +121,18 @@ _b:
   mov ___nan@GOTPCREL(%rip), %rax
   callq ___isnan
   movabs $_abs2, %rdx
+  movl $0, %eax
+  ret
+
+### No fold: _not_abs has the same value as _abs1{a,b}, but is not absolute.
+
+.globl _b2
+.p2align 2
+_b2:
+  callq _d
+  mov ___nan@GOTPCREL(%rip), %rax
+  callq ___isnan
+  movabs $_not_abs, %rdx
   movl $0, %eax
   ret
 
@@ -282,6 +302,7 @@ _main:
   callq _a2
   callq _a3
   callq _b
+  callq _b2
   callq _c
   callq _d
   callq _e
