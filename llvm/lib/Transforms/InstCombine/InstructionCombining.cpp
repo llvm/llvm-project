@@ -3089,33 +3089,32 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       assert(*EV.idx_begin() == 1 &&
              "unexpected extract index for overflow inst");
 
-      // If the normal result of the computation is dead, and the RHS is a
-      // constant, we can transform this into a range comparison for many cases.
-      // TODO: We can generalize these for non-constant rhs when the newly
-      // formed expressions are known to simplify.  Constants are merely one
-      // such case.
-      // TODO: Handle vector splats.
-      switch (WO->getIntrinsicID()) {
-      default:
-        break;
-      case Intrinsic::uadd_with_overflow:
-        // overflow = uadd a, -4  -->  overflow = icmp ugt a, 3
-        if (ConstantInt *CI = dyn_cast<ConstantInt>(WO->getRHS()))
-          return new ICmpInst(ICmpInst::ICMP_UGT, WO->getLHS(),
-                              ConstantExpr::getNot(CI));
-        break;
-      case Intrinsic::umul_with_overflow:
-        // overflow for umul a, C  --> a > UINT_MAX udiv C
-        // (unless C == 0, in which case no overflow ever occurs)
-        if (ConstantInt *CI = dyn_cast<ConstantInt>(WO->getRHS())) {
-          assert(!CI->isZero() && "handled by instruction simplify");
-          auto UMax = APInt::getMaxValue(CI->getType()->getBitWidth());
-          auto *Op =
-            ConstantExpr::getUDiv(ConstantInt::get(CI->getType(), UMax), CI);
-          return new ICmpInst(ICmpInst::ICMP_UGT, WO->getLHS(), Op);
+      // If only the overflow result is used, and the right hand side is a
+      // constant (or constant splat), we can remove the intrinsic by directly
+      // checking for overflow.
+      const APInt *C;
+      if (match(WO->getRHS(), m_APInt(C))) {
+        // Compute the no-wrap range [X,Y) for LHS given RHS=C, then
+        // check for the inverted range using range offset trick (i.e.
+        // use a subtract to shift the range to bottom of either the
+        // signed or unsigned domain and then use a single compare to
+        // check range membership).
+        ConstantRange NWR =
+          ConstantRange::makeExactNoWrapRegion(WO->getBinaryOp(), *C,
+                                               WO->getNoWrapKind());
+        APInt Min = WO->isSigned() ? NWR.getSignedMin() : NWR.getUnsignedMin();
+        NWR = NWR.subtract(Min);
+
+        CmpInst::Predicate Pred;
+        APInt NewRHSC;
+        if (NWR.getEquivalentICmp(Pred, NewRHSC)) {
+          auto *OpTy = WO->getRHS()->getType();
+          auto *NewLHS = Builder.CreateSub(WO->getLHS(),
+                                           ConstantInt::get(OpTy, Min));
+          return new ICmpInst(ICmpInst::getInversePredicate(Pred), NewLHS,
+                              ConstantInt::get(OpTy, NewRHSC));
         }
-        break;
-      };
+      }
     }
   }
   if (LoadInst *L = dyn_cast<LoadInst>(Agg))
