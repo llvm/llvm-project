@@ -236,7 +236,7 @@ func @load_from_buffer_cast(%arg0: index, %arg1: index, %arg2: tensor<?x?xf32>) 
 // -----
 
 
-// Test case: Basic folding of memref.dim(memref.tensor_load(m)) -> memref.dim(m).
+// Test case: Basic folding of tensor.dim(memref.tensor_load(m)) -> memref.dim(m).
 // CHECK-LABEL: func @dim_of_tensor_load(
 //  CHECK-SAME:     %[[MEMREF:[0-9a-z]*]]: memref<?xf32>
 //       CHECK:   %[[C0:.*]] = constant 0
@@ -245,24 +245,7 @@ func @load_from_buffer_cast(%arg0: index, %arg1: index, %arg2: tensor<?x?xf32>) 
 func @dim_of_tensor_load(%arg0: memref<?xf32>) -> index {
   %c0 = constant 0 : index
   %0 = memref.tensor_load %arg0 : memref<?xf32>
-  %1 = memref.dim %0, %c0 : tensor<?xf32>
-  return %1 : index
-}
-
-// -----
-
-// Test case: Folding of memref.dim(tensor.generate %idx) -> %idx
-// CHECK-LABEL: func @dim_of_tensor.generate(
-//  CHECK-SAME:     %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
-//   CHECK-NOT:   memref.dim
-//       CHECK:   return %[[IDX1]] : index
-func @dim_of_tensor.generate(%arg0: index, %arg1: index) -> index {
-  %c3 = constant 3 : index
-  %0 = tensor.generate %arg0, %arg1 {
-  ^bb0(%arg2: index, %arg3: index, %arg4: index, %arg5: index, %arg6: index):
-    tensor.yield %c3 : index
-  } : tensor<2x?x4x?x5xindex>
-  %1 = memref.dim %0, %c3 : tensor<2x?x4x?x5xindex>
+  %1 = tensor.dim %0, %c0 : tensor<?xf32>
   return %1 : index
 }
 
@@ -334,24 +317,6 @@ func @dim_of_memref_reshape_i32(%arg0: memref<*xf32>, %arg1: memref<?xi32>)
       : (memref<*xf32>, memref<?xi32>) -> memref<*xf32>
   %1 = memref.dim %0, %c3 : memref<*xf32>
   return %1 : index
-}
-
-// -----
-
-// Test case: Folding memref.dim(tensor.cast %0, %idx) -> memref.dim %0, %idx
-// CHECK-LABEL: func @fold_dim_of_tensor.cast
-//  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: tensor<4x?xf32>
-//   CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//   CHECK-DAG:   %[[C4:.+]] = constant 4 : index
-//       CHECK:   %[[T0:.+]] = memref.dim %[[ARG0]], %[[C1]]
-//  CHECK-NEXT:   return %[[C4]], %[[T0]]
-func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %0 = tensor.cast %arg0 : tensor<4x?xf32> to tensor<?x?xf32>
-  %1 = memref.dim %0, %c0 : tensor<?x?xf32>
-  %2 = memref.dim %0, %c1 : tensor<?x?xf32>
-  return %1, %2: index, index
 }
 
 // -----

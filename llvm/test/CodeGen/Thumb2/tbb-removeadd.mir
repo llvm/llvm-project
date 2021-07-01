@@ -102,7 +102,7 @@ body:             |
   
     $r0, dead $cpsr = tMOVi8 0, 14, $noreg
     $r2, dead $cpsr = tMOVi8 1, 14, $noreg
-    tSTRi killed $r0, $r1, 0, 14, $noreg :: (store 4 into %ir.p)
+    tSTRi killed $r0, $r1, 0, 14, $noreg :: (store (s32) into %ir.p)
     t2B %bb.5.sw.epilog.sink.split, 14, $noreg
   
   bb.4.sw.bb3:
@@ -115,7 +115,7 @@ body:             |
     successors: %bb.6.sw.epilog(0x80000000)
     liveins: $r1, $r2
   
-    tSTRi killed $r2, killed $r1, 0, 14, $noreg :: (store 4 into %ir.p)
+    tSTRi killed $r2, killed $r1, 0, 14, $noreg :: (store (s32) into %ir.p)
   
   bb.6.sw.epilog:
     tBX_RET 14, $noreg

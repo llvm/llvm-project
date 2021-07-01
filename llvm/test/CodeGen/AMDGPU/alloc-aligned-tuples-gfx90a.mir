@@ -73,7 +73,7 @@ body:             |
 
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = COPY $vgpr2
-    %2:vreg_160_align2 = IMAGE_LOAD_V5_V1 %1, undef %3:sgpr_256, 0, 0, 0, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load 4, addrspace 4)
+    %2:vreg_160_align2 = IMAGE_LOAD_V5_V1 %1, undef %3:sgpr_256, 0, 0, 0, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
     GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
 ...
@@ -94,7 +94,7 @@ body:             |
     %1:vgpr_32 = COPY $vgpr2
     %3:sgpr_256 = IMPLICIT_DEF
     %2:vreg_256_align2 = COPY %3:sgpr_256
-    %4:vreg_128_align2 = IMAGE_SAMPLE_C_CL_O_V4_V8 %2, %3:sgpr_256, undef %5:sgpr_128, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4, addrspace 4)
+    %4:vreg_128_align2 = IMAGE_SAMPLE_C_CL_O_V4_V8 %2, %3:sgpr_256, undef %5:sgpr_128, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
     GLOBAL_STORE_DWORD %0, %1, 0, 0, implicit $exec
 ...

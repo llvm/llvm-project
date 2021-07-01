@@ -1,4 +1,4 @@
-//===------ TargetProcessControl.cpp -- Target process control APIs -------===//
+//===------- EPCIndirectionUtils.cpp -- EPC based indirection APIs --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/TPCIndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <future>
@@ -19,14 +19,14 @@ using namespace llvm::orc;
 namespace llvm {
 namespace orc {
 
-class TPCIndirectionUtilsAccess {
+class EPCIndirectionUtilsAccess {
 public:
-  using IndirectStubInfo = TPCIndirectionUtils::IndirectStubInfo;
-  using IndirectStubInfoVector = TPCIndirectionUtils::IndirectStubInfoVector;
+  using IndirectStubInfo = EPCIndirectionUtils::IndirectStubInfo;
+  using IndirectStubInfoVector = EPCIndirectionUtils::IndirectStubInfoVector;
 
   static Expected<IndirectStubInfoVector>
-  getIndirectStubs(TPCIndirectionUtils &TPCIU, unsigned NumStubs) {
-    return TPCIU.getIndirectStubs(NumStubs);
+  getIndirectStubs(EPCIndirectionUtils &EPCIU, unsigned NumStubs) {
+    return EPCIU.getIndirectStubs(NumStubs);
   };
 };
 
@@ -35,9 +35,9 @@ public:
 
 namespace {
 
-class TPCTrampolinePool : public TrampolinePool {
+class EPCTrampolinePool : public TrampolinePool {
 public:
-  TPCTrampolinePool(TPCIndirectionUtils &TPCIU);
+  EPCTrampolinePool(EPCIndirectionUtils &EPCIU);
   Error deallocatePool();
 
 protected:
@@ -45,16 +45,16 @@ protected:
 
   using Allocation = jitlink::JITLinkMemoryManager::Allocation;
 
-  TPCIndirectionUtils &TPCIU;
+  EPCIndirectionUtils &EPCIU;
   unsigned TrampolineSize = 0;
   unsigned TrampolinesPerPage = 0;
   std::vector<std::unique_ptr<Allocation>> TrampolineBlocks;
 };
 
-class TPCIndirectStubsManager : public IndirectStubsManager,
-                                private TPCIndirectionUtilsAccess {
+class EPCIndirectStubsManager : public IndirectStubsManager,
+                                private EPCIndirectionUtilsAccess {
 public:
-  TPCIndirectStubsManager(TPCIndirectionUtils &TPCIU) : TPCIU(TPCIU) {}
+  EPCIndirectStubsManager(EPCIndirectionUtils &EPCIU) : EPCIU(EPCIU) {}
 
   Error deallocateStubs();
 
@@ -73,43 +73,43 @@ private:
   using StubInfo = std::pair<IndirectStubInfo, JITSymbolFlags>;
 
   std::mutex ISMMutex;
-  TPCIndirectionUtils &TPCIU;
+  EPCIndirectionUtils &EPCIU;
   StringMap<StubInfo> StubInfos;
 };
 
-TPCTrampolinePool::TPCTrampolinePool(TPCIndirectionUtils &TPCIU)
-    : TPCIU(TPCIU) {
-  auto &TPC = TPCIU.getTargetProcessControl();
-  auto &ABI = TPCIU.getABISupport();
+EPCTrampolinePool::EPCTrampolinePool(EPCIndirectionUtils &EPCIU)
+    : EPCIU(EPCIU) {
+  auto &EPC = EPCIU.getExecutorProcessControl();
+  auto &ABI = EPCIU.getABISupport();
 
   TrampolineSize = ABI.getTrampolineSize();
   TrampolinesPerPage =
-      (TPC.getPageSize() - ABI.getPointerSize()) / TrampolineSize;
+      (EPC.getPageSize() - ABI.getPointerSize()) / TrampolineSize;
 }
 
-Error TPCTrampolinePool::deallocatePool() {
+Error EPCTrampolinePool::deallocatePool() {
   Error Err = Error::success();
   for (auto &Alloc : TrampolineBlocks)
     Err = joinErrors(std::move(Err), Alloc->deallocate());
   return Err;
 }
 
-Error TPCTrampolinePool::grow() {
+Error EPCTrampolinePool::grow() {
   assert(AvailableTrampolines.empty() &&
          "Grow called with trampolines still available");
 
-  auto ResolverAddress = TPCIU.getResolverBlockAddress();
+  auto ResolverAddress = EPCIU.getResolverBlockAddress();
   assert(ResolverAddress && "Resolver address can not be null");
 
-  auto &TPC = TPCIU.getTargetProcessControl();
+  auto &EPC = EPCIU.getExecutorProcessControl();
   constexpr auto TrampolinePagePermissions =
       static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
                                                 sys::Memory::MF_EXEC);
-  auto PageSize = TPC.getPageSize();
+  auto PageSize = EPC.getPageSize();
   jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
   Request[TrampolinePagePermissions] = {PageSize, static_cast<size_t>(PageSize),
                                         0};
-  auto Alloc = TPC.getMemMgr().allocate(nullptr, Request);
+  auto Alloc = EPC.getMemMgr().allocate(nullptr, Request);
 
   if (!Alloc)
     return Alloc.takeError();
@@ -119,7 +119,7 @@ Error TPCTrampolinePool::grow() {
   auto WorkingMemory = (*Alloc)->getWorkingMemory(TrampolinePagePermissions);
   auto TargetAddress = (*Alloc)->getTargetMemory(TrampolinePagePermissions);
 
-  TPCIU.getABISupport().writeTrampolines(WorkingMemory.data(), TargetAddress,
+  EPCIU.getABISupport().writeTrampolines(WorkingMemory.data(), TargetAddress,
                                          ResolverAddress, NumTrampolines);
 
   auto TargetAddr = (*Alloc)->getTargetMemory(TrampolinePagePermissions);
@@ -134,7 +134,7 @@ Error TPCTrampolinePool::grow() {
   return Error::success();
 }
 
-Error TPCIndirectStubsManager::createStub(StringRef StubName,
+Error EPCIndirectStubsManager::createStub(StringRef StubName,
                                           JITTargetAddress StubAddr,
                                           JITSymbolFlags StubFlags) {
   StubInitsMap SIM;
@@ -142,8 +142,8 @@ Error TPCIndirectStubsManager::createStub(StringRef StubName,
   return createStubs(SIM);
 }
 
-Error TPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
-  auto AvailableStubInfos = getIndirectStubs(TPCIU, StubInits.size());
+Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
+  auto AvailableStubInfos = getIndirectStubs(EPCIU, StubInits.size());
   if (!AvailableStubInfos)
     return AvailableStubInfos.takeError();
 
@@ -156,8 +156,8 @@ Error TPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     }
   }
 
-  auto &MemAccess = TPCIU.getTargetProcessControl().getMemoryAccess();
-  switch (TPCIU.getABISupport().getPointerSize()) {
+  auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
+  switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
     unsigned ASIdx = 0;
     std::vector<tpctypes::UInt32Write> PtrUpdates;
@@ -180,7 +180,7 @@ Error TPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
   }
 }
 
-JITEvaluatedSymbol TPCIndirectStubsManager::findStub(StringRef Name,
+JITEvaluatedSymbol EPCIndirectStubsManager::findStub(StringRef Name,
                                                      bool ExportedStubsOnly) {
   std::lock_guard<std::mutex> Lock(ISMMutex);
   auto I = StubInfos.find(Name);
@@ -189,7 +189,7 @@ JITEvaluatedSymbol TPCIndirectStubsManager::findStub(StringRef Name,
   return {I->second.first.StubAddress, I->second.second};
 }
 
-JITEvaluatedSymbol TPCIndirectStubsManager::findPointer(StringRef Name) {
+JITEvaluatedSymbol EPCIndirectStubsManager::findPointer(StringRef Name) {
   std::lock_guard<std::mutex> Lock(ISMMutex);
   auto I = StubInfos.find(Name);
   if (I == StubInfos.end())
@@ -197,7 +197,7 @@ JITEvaluatedSymbol TPCIndirectStubsManager::findPointer(StringRef Name) {
   return {I->second.first.PointerAddress, I->second.second};
 }
 
-Error TPCIndirectStubsManager::updatePointer(StringRef Name,
+Error EPCIndirectStubsManager::updatePointer(StringRef Name,
                                              JITTargetAddress NewAddr) {
 
   JITTargetAddress PtrAddr = 0;
@@ -210,8 +210,8 @@ Error TPCIndirectStubsManager::updatePointer(StringRef Name,
     PtrAddr = I->second.first.PointerAddress;
   }
 
-  auto &MemAccess = TPCIU.getTargetProcessControl().getMemoryAccess();
-  switch (TPCIU.getABISupport().getPointerSize()) {
+  auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
+  switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
     tpctypes::UInt32Write PUpdate(PtrAddr, NewAddr);
     return MemAccess.writeUInt32s(PUpdate);
@@ -231,42 +231,42 @@ Error TPCIndirectStubsManager::updatePointer(StringRef Name,
 namespace llvm {
 namespace orc {
 
-TPCIndirectionUtils::ABISupport::~ABISupport() {}
+EPCIndirectionUtils::ABISupport::~ABISupport() {}
 
-Expected<std::unique_ptr<TPCIndirectionUtils>>
-TPCIndirectionUtils::Create(TargetProcessControl &TPC) {
-  const auto &TT = TPC.getTargetTriple();
+Expected<std::unique_ptr<EPCIndirectionUtils>>
+EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
+  const auto &TT = EPC.getTargetTriple();
   switch (TT.getArch()) {
   default:
     return make_error<StringError>(
-        std::string("No TPCIndirectionUtils available for ") + TT.str(),
+        std::string("No EPCIndirectionUtils available for ") + TT.str(),
         inconvertibleErrorCode());
   case Triple::aarch64:
   case Triple::aarch64_32:
-    return CreateWithABI<OrcAArch64>(TPC);
+    return CreateWithABI<OrcAArch64>(EPC);
 
   case Triple::x86:
-    return CreateWithABI<OrcI386>(TPC);
+    return CreateWithABI<OrcI386>(EPC);
 
   case Triple::mips:
-    return CreateWithABI<OrcMips32Be>(TPC);
+    return CreateWithABI<OrcMips32Be>(EPC);
 
   case Triple::mipsel:
-    return CreateWithABI<OrcMips32Le>(TPC);
+    return CreateWithABI<OrcMips32Le>(EPC);
 
   case Triple::mips64:
   case Triple::mips64el:
-    return CreateWithABI<OrcMips64>(TPC);
+    return CreateWithABI<OrcMips64>(EPC);
 
   case Triple::x86_64:
     if (TT.getOS() == Triple::OSType::Win32)
-      return CreateWithABI<OrcX86_64_Win32>(TPC);
+      return CreateWithABI<OrcX86_64_Win32>(EPC);
     else
-      return CreateWithABI<OrcX86_64_SysV>(TPC);
+      return CreateWithABI<OrcX86_64_SysV>(EPC);
   }
 }
 
-Error TPCIndirectionUtils::cleanup() {
+Error EPCIndirectionUtils::cleanup() {
   Error Err = Error::success();
 
   for (auto &A : IndirectStubAllocs)
@@ -274,7 +274,7 @@ Error TPCIndirectionUtils::cleanup() {
 
   if (TP)
     Err = joinErrors(std::move(Err),
-                     static_cast<TPCTrampolinePool &>(*TP).deallocatePool());
+                     static_cast<EPCTrampolinePool &>(*TP).deallocatePool());
 
   if (ResolverBlock)
     Err = joinErrors(std::move(Err), ResolverBlock->deallocate());
@@ -283,7 +283,7 @@ Error TPCIndirectionUtils::cleanup() {
 }
 
 Expected<JITTargetAddress>
-TPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
+EPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
                                         JITTargetAddress ReentryCtxAddr) {
   assert(ABI && "ABI can not be null");
   constexpr auto ResolverBlockPermissions =
@@ -292,9 +292,9 @@ TPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
   auto ResolverSize = ABI->getResolverCodeSize();
 
   jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
-  Request[ResolverBlockPermissions] = {TPC.getPageSize(),
+  Request[ResolverBlockPermissions] = {EPC.getPageSize(),
                                        static_cast<size_t>(ResolverSize), 0};
-  auto Alloc = TPC.getMemMgr().allocate(nullptr, Request);
+  auto Alloc = EPC.getMemMgr().allocate(nullptr, Request);
   if (!Alloc)
     return Alloc.takeError();
 
@@ -311,17 +311,17 @@ TPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
 }
 
 std::unique_ptr<IndirectStubsManager>
-TPCIndirectionUtils::createIndirectStubsManager() {
-  return std::make_unique<TPCIndirectStubsManager>(*this);
+EPCIndirectionUtils::createIndirectStubsManager() {
+  return std::make_unique<EPCIndirectStubsManager>(*this);
 }
 
-TrampolinePool &TPCIndirectionUtils::getTrampolinePool() {
+TrampolinePool &EPCIndirectionUtils::getTrampolinePool() {
   if (!TP)
-    TP = std::make_unique<TPCTrampolinePool>(*this);
+    TP = std::make_unique<EPCTrampolinePool>(*this);
   return *TP;
 }
 
-LazyCallThroughManager &TPCIndirectionUtils::createLazyCallThroughManager(
+LazyCallThroughManager &EPCIndirectionUtils::createLazyCallThroughManager(
     ExecutionSession &ES, JITTargetAddress ErrorHandlerAddr) {
   assert(!LCTM &&
          "createLazyCallThroughManager can not have been called before");
@@ -330,24 +330,24 @@ LazyCallThroughManager &TPCIndirectionUtils::createLazyCallThroughManager(
   return *LCTM;
 }
 
-TPCIndirectionUtils::TPCIndirectionUtils(TargetProcessControl &TPC,
+EPCIndirectionUtils::EPCIndirectionUtils(ExecutorProcessControl &EPC,
                                          std::unique_ptr<ABISupport> ABI)
-    : TPC(TPC), ABI(std::move(ABI)) {
+    : EPC(EPC), ABI(std::move(ABI)) {
   assert(this->ABI && "ABI can not be null");
 
-  assert(TPC.getPageSize() > getABISupport().getStubSize() &&
+  assert(EPC.getPageSize() > getABISupport().getStubSize() &&
          "Stubs larger than one page are not supported");
 }
 
-Expected<TPCIndirectionUtils::IndirectStubInfoVector>
-TPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
+Expected<EPCIndirectionUtils::IndirectStubInfoVector>
+EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
 
-  std::lock_guard<std::mutex> Lock(TPCUIMutex);
+  std::lock_guard<std::mutex> Lock(EPCUIMutex);
 
   // If there aren't enough stubs available then allocate some more.
   if (NumStubs > AvailableIndirectStubs.size()) {
     auto NumStubsToAllocate = NumStubs;
-    auto PageSize = TPC.getPageSize();
+    auto PageSize = EPC.getPageSize();
     auto StubBytes = alignTo(NumStubsToAllocate * ABI->getStubSize(), PageSize);
     NumStubsToAllocate = StubBytes / ABI->getStubSize();
     auto PointerBytes =
@@ -364,7 +364,7 @@ TPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     Request[StubPagePermissions] = {PageSize, static_cast<size_t>(StubBytes),
                                     0};
     Request[PointerPagePermissions] = {PageSize, 0, PointerBytes};
-    auto Alloc = TPC.getMemMgr().allocate(nullptr, Request);
+    auto Alloc = EPC.getMemMgr().allocate(nullptr, Request);
     if (!Alloc)
       return Alloc.takeError();
 
@@ -411,9 +411,9 @@ static JITTargetAddress reentry(JITTargetAddress LCTMAddr,
   return LandingAddrF.get();
 }
 
-Error setUpInProcessLCTMReentryViaTPCIU(TPCIndirectionUtils &TPCIU) {
-  auto &LCTM = TPCIU.getLazyCallThroughManager();
-  return TPCIU
+Error setUpInProcessLCTMReentryViaEPCIU(EPCIndirectionUtils &EPCIU) {
+  auto &LCTM = EPCIU.getLazyCallThroughManager();
+  return EPCIU
       .writeResolverBlock(pointerToJITTargetAddress(&reentry),
                           pointerToJITTargetAddress(&LCTM))
       .takeError();

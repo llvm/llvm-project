@@ -16,11 +16,8 @@ add_header_library(
     ${LONG_DOUBLE_HDR}
     ${FENV_IMPL}
     BasicOperations.h
-    BitPatterns.h
-    ClassificationFunctions.h
     DivisionAndRemainderOperations.h
     FEnv.h
-    FloatOperations.h
     FloatProperties.h
     FPBits.h
     BasicOperations.h

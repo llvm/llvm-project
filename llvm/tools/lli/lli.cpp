@@ -22,12 +22,14 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/Interpreter.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
@@ -35,8 +37,6 @@
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
-#include "llvm/ExecutionEngine/Orc/TPCDebugObjectRegistrar.h"
-#include "llvm/ExecutionEngine/Orc/TPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
@@ -936,18 +936,18 @@ int runOrcJIT(const char *ProgName) {
     }
   }
 
-  std::unique_ptr<orc::TargetProcessControl> TPC = nullptr;
+  std::unique_ptr<orc::ExecutorProcessControl> EPC = nullptr;
   if (JITLinker == JITLinkerKind::JITLink) {
-    TPC = ExitOnErr(orc::SelfTargetProcessControl::Create(
+    EPC = ExitOnErr(orc::SelfExecutorProcessControl::Create(
         std::make_shared<orc::SymbolStringPool>()));
 
-    Builder.setObjectLinkingLayerCreator([&TPC](orc::ExecutionSession &ES,
+    Builder.setObjectLinkingLayerCreator([&EPC](orc::ExecutionSession &ES,
                                                 const Triple &) {
-      auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, TPC->getMemMgr());
+      auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, EPC->getMemMgr());
       L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
-          ES, ExitOnErr(orc::TPCEHFrameRegistrar::Create(*TPC))));
+          ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(*EPC))));
       L->addPlugin(std::make_unique<orc::DebugObjectManagerPlugin>(
-          ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(*TPC))));
+          ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(*EPC))));
       return L;
     });
   }
@@ -1069,9 +1069,9 @@ int runOrcJIT(const char *ProgName) {
   JITEvaluatedSymbol MainSym = ExitOnErr(J->lookup(EntryFunc));
   int Result;
 
-  if (TPC) {
-    // TargetProcessControl-based execution with JITLink.
-    Result = ExitOnErr(TPC->runAsMain(MainSym.getAddress(), InputArgv));
+  if (EPC) {
+    // ExecutorProcessControl-based execution with JITLink.
+    Result = ExitOnErr(EPC->runAsMain(MainSym.getAddress(), InputArgv));
   } else {
     // Manual in-process execution with RuntimeDyld.
     using MainFnTy = int(int, char *[]);

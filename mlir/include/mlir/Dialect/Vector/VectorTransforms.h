@@ -251,26 +251,6 @@ Optional<DistributeOps>
 distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
                            ArrayRef<Value> id, ArrayRef<int64_t> multiplicity,
                            const AffineMap &map);
-/// Canonicalize an extra element using the result of a pointwise operation.
-/// Transforms:
-/// %v = addf %a, %b : vector32xf32>
-/// %dv = vector.extract_map %v, %id, 32 : vector<32xf32> into vector<1xf32>
-/// to:
-/// %da = vector.extract_map %a, %id, 32 : vector<32xf32> into vector<1xf32>
-/// %db = vector.extract_map %a, %id, 32 : vector<32xf32> into vector<1xf32>
-/// %dv = addf %da, %db : vector<1xf32>
-struct PointwiseExtractPattern : public OpRewritePattern<ExtractMapOp> {
-  using FilterConstraintType = std::function<LogicalResult(ExtractMapOp op)>;
-  PointwiseExtractPattern(
-      MLIRContext *context, FilterConstraintType constraint =
-                                [](ExtractMapOp op) { return success(); })
-      : OpRewritePattern<ExtractMapOp>(context), filter(constraint) {}
-  LogicalResult matchAndRewrite(ExtractMapOp extract,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  FilterConstraintType filter;
-};
 
 /// Implements transfer op write to read forwarding and dead transfer write
 /// optimizations.

@@ -157,8 +157,8 @@ body:             |
 
     $sp = ADDiu $sp, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SW killed $ra, $sp, 28 :: (store 4 into %stack.1)
-    SW killed $s0, $sp, 24 :: (store 4 into %stack.2)
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.1)
+    SW killed $s0, $sp, 24 :: (store (s32) into %stack.2)
     CFI_INSTRUCTION offset $ra_64, -4
     CFI_INSTRUCTION offset $s0_64, -8
     DBG_VALUE $a0, $noreg, !12, !DIExpression(), debug-location !17
@@ -168,7 +168,7 @@ body:             |
     JAL @set_cond, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit-def $sp, debug-location !20 {
       renamable $a1 = LEA_ADDiu $sp, 20
     }
-    renamable $at = LW $sp, 20, debug-location !21 :: (dereferenceable load 4 from %ir.condition, !tbaa !23)
+    renamable $at = LW $sp, 20, debug-location !21 :: (dereferenceable load (s32) from %ir.condition, !tbaa !23)
     DBG_VALUE $at, $noreg, !13, !DIExpression(), debug-location !19
     BEQ killed renamable $at, $zero, %bb.2, implicit-def $at, debug-location !27 {
       NOP debug-location !27
@@ -182,8 +182,8 @@ body:             |
     }
 
   bb.2.if.end:
-    $s0 = LW $sp, 24, debug-location !29 :: (load 4 from %stack.2)
-    $ra = LW $sp, 28, debug-location !29 :: (load 4 from %stack.1)
+    $s0 = LW $sp, 24, debug-location !29 :: (load (s32) from %stack.2)
+    $ra = LW $sp, 28, debug-location !29 :: (load (s32) from %stack.1)
     PseudoReturn undef $ra, debug-location !29 {
       $sp = ADDiu $sp, 32
     }

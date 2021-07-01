@@ -420,12 +420,12 @@ body:             |
   bb.0.bb:
     successors: %bb.1(0x80000000), %bb.21(0x00000000)
 
-    %0:gr64 = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load 8 from `i8 addrspace(1)* addrspace(3)* null`, addrspace 3)
-    %2:gr32 = MOV32rm undef %29:gr64, 1, $noreg, 0, $noreg :: (load 4 from `i32 addrspace(3)* undef`, addrspace 3)
+    %0:gr64 = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(3)* null`, addrspace 3)
+    %2:gr32 = MOV32rm undef %29:gr64, 1, $noreg, 0, $noreg :: (load (s32) from `i32 addrspace(3)* undef`, addrspace 3)
     %1:gr32 = COPY %2
-    %4:gr32 = MOV32rm $noreg, 1, $noreg, 0, $noreg :: (load 4 from `i32 addrspace(3)* null`, addrspace 3)
+    %4:gr32 = MOV32rm $noreg, 1, $noreg, 0, $noreg :: (load (s32) from `i32 addrspace(3)* null`, addrspace 3)
     %3:gr32 = COPY %4
-    %9:gr64 = MOV64rm undef %30:gr64, 1, $noreg, 0, $noreg :: (load 8 from `i8 addrspace(1)* addrspace(3)* undef`, addrspace 3)
+    %9:gr64 = MOV64rm undef %30:gr64, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(3)* undef`, addrspace 3)
     %5:gr64 = COPY %9
     %31:gr32 = MOV32r0 implicit-def dead $eflags
     %32:gr8 = COPY killed %31.sub_8bit
@@ -436,7 +436,7 @@ body:             |
   bb.1.bb12:
     successors: %bb.2(0x80000000), %bb.16(0x00000000)
 
-    %52:gr32 = MOV32rm undef %53:gr64, 1, $noreg, 0, $noreg :: (load unordered 4 from `i32 addrspace(1)* undef`, addrspace 1)
+    %52:gr32 = MOV32rm undef %53:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `i32 addrspace(1)* undef`, addrspace 1)
     %54:gr32 = COPY killed %52
     %54:gr32 = AND32ri %54, 33554431, implicit-def dead $eflags
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
@@ -542,7 +542,7 @@ body:             |
     successors: %bb.9(0x40000000), %bb.8(0x40000000)
 
     %12:gr64 = COPY %114
-    %126:gr64 = MOV64rm %114, 1, $noreg, 904, $noreg :: (load unordered 8 from %ir.tmp44, addrspace 1)
+    %126:gr64 = MOV64rm %114, 1, $noreg, 904, $noreg :: (load unordered (s64) from %ir.tmp44, addrspace 1)
     %127:gr64 = COPY killed %126
     dead %127:gr64 = NEG64r %127, implicit-def $eflags
     %14:gr64 = SETB_C64r implicit-def dead $eflags, implicit killed $eflags
@@ -665,7 +665,7 @@ body:             |
 
     EH_LABEL <mcsymbol .Ltmp18>
     %19:gr64 = COPY killed %104
-    %20:gr64 = MOV64rm $noreg, 1, $noreg, 8, $gs :: (load 8 from `i8 addrspace(1)* addrspace(256)* inttoptr (i64 8 to i8 addrspace(1)* addrspace(256)*)`, addrspace 256)
+    %20:gr64 = MOV64rm $noreg, 1, $noreg, 8, $gs :: (load (s64) from `i8 addrspace(1)* addrspace(256)* inttoptr (i64 8 to i8 addrspace(1)* addrspace(256)*)`, addrspace 256)
     %163:gr64 = IMPLICIT_DEF
     %164:gr64 = COPY killed %19
     %165:gr64 = IMPLICIT_DEF
@@ -710,7 +710,7 @@ body:             |
 
   bb.22.bb95:
     %23:gr64 = COPY killed %162
-    MOV64mr killed %23, 1, $noreg, 928, $noreg, undef %158:gr64 :: (store unordered 8 into %ir.tmp98, addrspace 1)
+    MOV64mr killed %23, 1, $noreg, 928, $noreg, undef %158:gr64 :: (store unordered (s64) into %ir.tmp98, addrspace 1)
     RET 0, undef $xmm0
 
   bb.23.bb99:
@@ -720,7 +720,7 @@ body:             |
     %26:gr64 = COPY killed %165
     %25:gr64 = COPY killed %164
     %24:gr64 = COPY killed %163
-    %143:gr64 = MOV64rm %24, 1, $noreg, 904, $noreg :: (load unordered 8 from %ir.1, addrspace 1)
+    %143:gr64 = MOV64rm %24, 1, $noreg, 904, $noreg :: (load unordered (s64) from %ir.1, addrspace 1)
     %144:gr64 = COPY killed %143
     dead %144:gr64 = NEG64r %144, implicit-def $eflags
     %145:gr64 = SETB_C64r implicit-def dead $eflags, implicit killed $eflags

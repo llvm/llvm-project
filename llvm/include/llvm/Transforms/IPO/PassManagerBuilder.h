@@ -218,8 +218,8 @@ private:
   void addLateLTOOptimizationPasses(legacy::PassManagerBase &PM);
   void addPGOInstrPasses(legacy::PassManagerBase &MPM, bool IsCS);
   void addFunctionSimplificationPasses(legacy::PassManagerBase &MPM);
-  void addVectorPasses(legacy::PassManagerBase &PM, bool IsLTO);
-  
+  void addVectorPasses(legacy::PassManagerBase &PM, bool IsFullLTO);
+
 public:
   /// populateFunctionPassManager - This fills in the function pass manager,
   /// which is expected to be run on each function immediately as it is

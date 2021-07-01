@@ -69,12 +69,13 @@ static Value getResultDimFromShapeInterface(OpBuilder &builder, OpResult result,
 
 namespace {
 /// Fold dim of an operation that implements the InferShapedTypeOpInterface
-struct DimOfShapedTypeOpInterface : public OpRewritePattern<memref::DimOp> {
-  using OpRewritePattern<memref::DimOp>::OpRewritePattern;
+template <typename OpTy>
+struct DimOfShapedTypeOpInterface : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(memref::DimOp dimOp,
+  LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    OpResult dimValue = dimOp.memrefOrTensor().dyn_cast<OpResult>();
+    OpResult dimValue = dimOp.source().template dyn_cast<OpResult>();
     if (!dimValue)
       return failure();
     auto shapedTypeOp =
@@ -111,7 +112,10 @@ struct ResolveShapedTypeResultDimsPass final
 
 void memref::populateResolveShapedTypeResultDimsPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<DimOfShapedTypeOpInterface>(patterns.getContext());
+  // TODO: Move tensor::DimOp pattern to the Tensor dialect.
+  patterns.add<DimOfShapedTypeOpInterface<memref::DimOp>,
+               DimOfShapedTypeOpInterface<tensor::DimOp>>(
+      patterns.getContext());
 }
 
 void ResolveShapedTypeResultDimsPass::runOnOperation() {

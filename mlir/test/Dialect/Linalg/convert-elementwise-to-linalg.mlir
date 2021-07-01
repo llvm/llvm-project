@@ -93,11 +93,11 @@ func @cmpf(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<i1> {
 //  CHECK-SAME:   %[[ARG1:[0-9a-zA-Z]*]]: tensor<4x?x?x8x2x?xf32>
 func @cmpf(%arg0: tensor<4x?x?x8x2x?xf32>, %arg1: tensor<4x?x?x8x2x?xf32>) -> tensor<4x?x?x8x2x?xi1> {
   // CHECK: %[[C1:.*]] = constant 1 : index
-  // CHECK: %[[D1:.*]] = memref.dim %[[ARG0]], %[[C1]] : tensor<4x?x?x8x2x?xf32>
+  // CHECK: %[[D1:.*]] = tensor.dim %[[ARG0]], %[[C1]] : tensor<4x?x?x8x2x?xf32>
   // CHECK: %[[C2:.*]] = constant 2 : index
-  // CHECK: %[[D2:.*]] = memref.dim %[[ARG0]], %[[C2]] : tensor<4x?x?x8x2x?xf32>
+  // CHECK: %[[D2:.*]] = tensor.dim %[[ARG0]], %[[C2]] : tensor<4x?x?x8x2x?xf32>
   // CHECK: %[[C5:.*]] = constant 5 : index
-  // CHECK: %[[D5:.*]] = memref.dim %[[ARG0]], %[[C5]] : tensor<4x?x?x8x2x?xf32>
+  // CHECK: %[[D5:.*]] = tensor.dim %[[ARG0]], %[[C5]] : tensor<4x?x?x8x2x?xf32>
   // CHECK: %[[INIT:.*]] = linalg.init_tensor [4, %[[D1]], %[[D2]], 8, 2, %[[D5]]] : tensor<4x?x?x8x2x?xi1>
   // CHECK: linalg.generic
   // CHECK-SAME:  ins(%[[ARG0]], %[[ARG1]]

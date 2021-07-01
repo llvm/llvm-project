@@ -5,7 +5,7 @@
 
 @b = external global i64*
 
-; CHECK: Formed {{.*}} t2LDRD{{.*}} (load 4 from %ir.0), (load 4 from %ir.0 + 4)
+; CHECK: Formed {{.*}} t2LDRD{{.*}} (load (s32) from %ir.0), (load (s32) from %ir.0 + 4)
 define i64 @t(i64 %a) nounwind readonly {
 entry:
 	%0 = load i64*, i64** @b, align 4

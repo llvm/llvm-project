@@ -41,8 +41,8 @@
 # CHECK-NEXT: CALLpcrel32 @good, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
 # CHECK-NEXT: ADJCALLSTACKUP32 16, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
 # CHECK-NEXT: ADJCALLSTACKDOWN32 20, 0, 20, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
-# CHECK-NEXT: %1:gr32 = MOV32rm %stack.2.s, 1, $noreg, 0, $noreg :: (load 4 from %stack.2.s, align 8)
-# CHECK-NEXT: %2:gr32 = MOV32rm %stack.2.s, 1, $noreg, 4, $noreg :: (load 4 from %stack.2.s + 4)
+# CHECK-NEXT: %1:gr32 = MOV32rm %stack.2.s, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2.s, align 8)
+# CHECK-NEXT: %2:gr32 = MOV32rm %stack.2.s, 1, $noreg, 4, $noreg :: (load (s32) from %stack.2.s + 4)
 # CHECK-NEXT: %4:gr32 = LEA32r %stack.0.p, 1, $noreg, 0, $noreg
 # CHECK-NEXT: %5:gr32 = LEA32r %stack.1.q, 1, $noreg, 0, $noreg
 # CHECK-NEXT: PUSH32r %4, implicit-def $esp, implicit $esp
@@ -104,23 +104,23 @@ body:             |
   bb.0.entry:
     ADJCALLSTACKDOWN32 16, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     %0 = COPY $esp
-    MOV32mi %0, 1, $noreg, 12, $noreg, 4 :: (store 4 into stack + 12)
-    MOV32mi %0, 1, $noreg, 8, $noreg, 3 :: (store 4 into stack + 8)
-    MOV32mi %0, 1, $noreg, 4, $noreg, 2 :: (store 4 into stack + 4)
-    MOV32mi %0, 1, $noreg, 0, $noreg, 1 :: (store 4 into stack)
+    MOV32mi %0, 1, $noreg, 12, $noreg, 4 :: (store (s32) into stack + 12)
+    MOV32mi %0, 1, $noreg, 8, $noreg, 3 :: (store (s32) into stack + 8)
+    MOV32mi %0, 1, $noreg, 4, $noreg, 2 :: (store (s32) into stack + 4)
+    MOV32mi %0, 1, $noreg, 0, $noreg, 1 :: (store (s32) into stack)
     CALLpcrel32 @good, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
     ADJCALLSTACKUP32 16, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     ADJCALLSTACKDOWN32 20, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
-    %1 = MOV32rm %stack.2.s, 1, $noreg, 0, $noreg :: (load 4 from %stack.2.s, align 8)
-    %2 = MOV32rm %stack.2.s, 1, $noreg, 4, $noreg :: (load 4 from %stack.2.s + 4)
+    %1 = MOV32rm %stack.2.s, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2.s, align 8)
+    %2 = MOV32rm %stack.2.s, 1, $noreg, 4, $noreg :: (load (s32) from %stack.2.s + 4)
     %3 = COPY $esp
-    MOV32mr %3, 1, $noreg, 4, $noreg, killed %2 :: (store 4)
-    MOV32mr %3, 1, $noreg, 0, $noreg, killed %1 :: (store 4)
+    MOV32mr %3, 1, $noreg, 4, $noreg, killed %2 :: (store (s32))
+    MOV32mr %3, 1, $noreg, 0, $noreg, killed %1 :: (store (s32))
     %4 = LEA32r %stack.0.p, 1, $noreg, 0, $noreg
-    MOV32mr %3, 1, $noreg, 16, $noreg, killed %4 :: (store 4 into stack + 16)
+    MOV32mr %3, 1, $noreg, 16, $noreg, killed %4 :: (store (s32) into stack + 16)
     %5 = LEA32r %stack.1.q, 1, $noreg, 0, $noreg
-    MOV32mr %3, 1, $noreg, 12, $noreg, killed %5 :: (store 4 into stack + 12)
-    MOV32mi %3, 1, $noreg, 8, $noreg, 6 :: (store 4 into stack + 8)
+    MOV32mr %3, 1, $noreg, 12, $noreg, killed %5 :: (store (s32) into stack + 12)
+    MOV32mi %3, 1, $noreg, 8, $noreg, 6 :: (store (s32) into stack + 8)
     CALLpcrel32 @struct, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp,
     ADJCALLSTACKUP32 20, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     RET 0

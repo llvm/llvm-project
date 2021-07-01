@@ -702,7 +702,7 @@ struct GenericPadTensorOpVectorizationPattern
     SmallVector<int64_t> staticSizes;
     for (unsigned dim = 0; dim < resultType.getRank(); ++dim) {
       if (resultType.isDynamicDim(dim)) {
-        auto srcSize = rewriter.createOrFold<memref::DimOp>(
+        auto srcSize = rewriter.createOrFold<tensor::DimOp>(
             padOp.getLoc(), padOp.source(), dim);
         // Add low and high padding value.
         auto plusLow = rewriter.createOrFold<AddIOp>(
@@ -732,7 +732,7 @@ struct GenericPadTensorOpVectorizationPattern
     SmallVector<OpFoldResult> srcSizes;
     for (unsigned dim = 0; dim < sourceType.getRank(); ++dim) {
       if (sourceType.isDynamicDim(dim)) {
-        srcSizes.push_back(rewriter.createOrFold<memref::DimOp>(
+        srcSizes.push_back(rewriter.createOrFold<tensor::DimOp>(
             padOp.getLoc(), padOp.source(), dim));
       } else {
         srcSizes.push_back(rewriter.getIndexAttr(sourceType.getDimSize(dim)));

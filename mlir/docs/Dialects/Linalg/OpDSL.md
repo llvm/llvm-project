@@ -1,12 +1,12 @@
-# linalg_opdsl tool
+# Linalg OpDSL
 
 Python based DSL for authoring Linalg op definitions and generating
 `linalg.generic` IR based on them for samples.
 
-The tool `linalg_opdsl` provides a high level DSL for constructing structured op
-definitions in a way that can be exported to built-in, named structured ops via
-the above YAML-based definitions or used interactively to emit corresponding
-`linalg.generic` IR for the composition.
+The Linalg OpDSL is a high level DSL for constructing structured op definitions
+in a way that can be exported to built-in, named structured ops via
+[YAML-based definitions](_index.md/#yaml-gen) or used interactively to emit
+corresponding `linalg.generic` IR for the composition.
 
 ## Basic usage
 

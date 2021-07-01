@@ -329,7 +329,7 @@ func @fold_slice(
 func @unit_dim_for_reduction(%arg0: tensor<1x?x1x?xf32>) -> tensor<1x?xf32> {
   %cst = constant 1.000000e+00 : f32
   %c3 = constant 3 : index
-  %0 = memref.dim %arg0, %c3 : tensor<1x?x1x?xf32>
+  %0 = tensor.dim %arg0, %c3 : tensor<1x?x1x?xf32>
   %1 = linalg.init_tensor [1, %0] : tensor<1x?xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<1x?xf32> -> tensor<1x?xf32>
   %3 = linalg.generic {
@@ -398,7 +398,7 @@ func @unit_dim_for_reduction_keep_one(%arg0: tensor<1x?x1x1xf32>) -> tensor<1x1x
 func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x1xf32> {
   %cst = constant 1.000000e+00 : f32
   %c2 = constant 2 : index
-  %0 = memref.dim %arg0, %c2 : tensor<?x1x?x1xf32>
+  %0 = tensor.dim %arg0, %c2 : tensor<?x1x?x1xf32>
   %1 = linalg.init_tensor [%0, 1] : tensor<?x1xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<?x1xf32> -> tensor<?x1xf32>
   %3 = linalg.generic {

@@ -31,6 +31,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -697,6 +698,13 @@ void MCELFStreamer::emitBundleUnlock() {
 }
 
 void MCELFStreamer::finishImpl() {
+  // Emit the .gnu attributes section if any attributes have been added.
+  if (!GNUAttributes.empty()) {
+    MCSection *DummyAttributeSection = nullptr;
+    createAttributesSection("gnu", ".gnu.attributes", ELF::SHT_GNU_ATTRIBUTES,
+                            DummyAttributeSection, GNUAttributes);
+  }
+
   // Ensure the last section gets aligned if necessary.
   MCSection *CurSection = getCurrentSectionOnly();
   setSectionAlignmentForBundling(getAssembler(), CurSection);
@@ -724,6 +732,156 @@ void MCELFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 void MCELFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                    uint64_t Size, unsigned ByteAlignment) {
   llvm_unreachable("ELF doesn't support this directive");
+}
+
+void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
+                                     bool OverwriteExisting) {
+  // Look for existing attribute item
+  if (AttributeItem *Item = getAttributeItem(Attribute)) {
+    if (!OverwriteExisting)
+      return;
+    Item->Type = AttributeItem::NumericAttribute;
+    Item->IntValue = Value;
+    return;
+  }
+
+  // Create new attribute item
+  AttributeItem Item = {AttributeItem::NumericAttribute, Attribute, Value,
+                        std::string(StringRef(""))};
+  Contents.push_back(Item);
+}
+
+void MCELFStreamer::setAttributeItem(unsigned Attribute, StringRef Value,
+                                     bool OverwriteExisting) {
+  // Look for existing attribute item
+  if (AttributeItem *Item = getAttributeItem(Attribute)) {
+    if (!OverwriteExisting)
+      return;
+    Item->Type = AttributeItem::TextAttribute;
+    Item->StringValue = std::string(Value);
+    return;
+  }
+
+  // Create new attribute item
+  AttributeItem Item = {AttributeItem::TextAttribute, Attribute, 0,
+                        std::string(Value)};
+  Contents.push_back(Item);
+}
+
+void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
+                                      StringRef StringValue,
+                                      bool OverwriteExisting) {
+  // Look for existing attribute item
+  if (AttributeItem *Item = getAttributeItem(Attribute)) {
+    if (!OverwriteExisting)
+      return;
+    Item->Type = AttributeItem::NumericAndTextAttributes;
+    Item->IntValue = IntValue;
+    Item->StringValue = std::string(StringValue);
+    return;
+  }
+
+  // Create new attribute item
+  AttributeItem Item = {AttributeItem::NumericAndTextAttributes, Attribute,
+                        IntValue, std::string(StringValue)};
+  Contents.push_back(Item);
+}
+
+MCELFStreamer::AttributeItem *
+MCELFStreamer::getAttributeItem(unsigned Attribute) {
+  for (size_t I = 0; I < Contents.size(); ++I)
+    if (Contents[I].Tag == Attribute)
+      return &Contents[I];
+  return nullptr;
+}
+
+size_t
+MCELFStreamer::calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) {
+  size_t Result = 0;
+  for (size_t I = 0; I < AttrsVec.size(); ++I) {
+    AttributeItem Item = AttrsVec[I];
+    switch (Item.Type) {
+    case AttributeItem::HiddenAttribute:
+      break;
+    case AttributeItem::NumericAttribute:
+      Result += getULEB128Size(Item.Tag);
+      Result += getULEB128Size(Item.IntValue);
+      break;
+    case AttributeItem::TextAttribute:
+      Result += getULEB128Size(Item.Tag);
+      Result += Item.StringValue.size() + 1; // string + '\0'
+      break;
+    case AttributeItem::NumericAndTextAttributes:
+      Result += getULEB128Size(Item.Tag);
+      Result += getULEB128Size(Item.IntValue);
+      Result += Item.StringValue.size() + 1; // string + '\0';
+      break;
+    }
+  }
+  return Result;
+}
+
+void MCELFStreamer::createAttributesSection(
+    StringRef Vendor, const Twine &Section, unsigned Type,
+    MCSection *&AttributeSection, SmallVector<AttributeItem, 64> &AttrsVec) {
+  // <format-version>
+  // [ <section-length> "vendor-name"
+  // [ <file-tag> <size> <attribute>*
+  //   | <section-tag> <size> <section-number>* 0 <attribute>*
+  //   | <symbol-tag> <size> <symbol-number>* 0 <attribute>*
+  //   ]+
+  // ]*
+
+  // Switch section to AttributeSection or get/create the section.
+  if (AttributeSection) {
+    SwitchSection(AttributeSection);
+  } else {
+    AttributeSection = getContext().getELFSection(Section, Type, 0);
+    SwitchSection(AttributeSection);
+
+    // Format version
+    emitInt8(0x41);
+  }
+
+  // Vendor size + Vendor name + '\0'
+  const size_t VendorHeaderSize = 4 + Vendor.size() + 1;
+
+  // Tag + Tag Size
+  const size_t TagHeaderSize = 1 + 4;
+
+  const size_t ContentsSize = calculateContentSize(AttrsVec);
+
+  emitInt32(VendorHeaderSize + TagHeaderSize + ContentsSize);
+  emitBytes(Vendor);
+  emitInt8(0); // '\0'
+
+  emitInt8(ARMBuildAttrs::File);
+  emitInt32(TagHeaderSize + ContentsSize);
+
+  // Size should have been accounted for already, now
+  // emit each field as its type (ULEB or String)
+  for (size_t I = 0; I < AttrsVec.size(); ++I) {
+    AttributeItem Item = AttrsVec[I];
+    emitULEB128IntValue(Item.Tag);
+    switch (Item.Type) {
+    default:
+      llvm_unreachable("Invalid attribute type");
+    case AttributeItem::NumericAttribute:
+      emitULEB128IntValue(Item.IntValue);
+      break;
+    case AttributeItem::TextAttribute:
+      emitBytes(Item.StringValue);
+      emitInt8(0); // '\0'
+      break;
+    case AttributeItem::NumericAndTextAttributes:
+      emitULEB128IntValue(Item.IntValue);
+      emitBytes(Item.StringValue);
+      emitInt8(0); // '\0'
+      break;
+    }
+  }
+
+  AttrsVec.clear();
 }
 
 MCStreamer *llvm::createELFStreamer(MCContext &Context,

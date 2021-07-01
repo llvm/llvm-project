@@ -288,10 +288,10 @@ body:             |
   ; CHECK: bb.5.vector.body:
   ; CHECK:   successors: %bb.5(0x7c000000), %bb.11(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2
-  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRBU8_post killed renamable $r1, 16, 0, $noreg :: (load 16 from %ir.lsr.iv46, align 1)
-  ; CHECK:   renamable $r2, renamable $q1 = MVE_VLDRBU8_post killed renamable $r2, 16, 0, $noreg :: (load 16 from %ir.lsr.iv4749, align 1)
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRBU8_post killed renamable $r1, 16, 0, $noreg :: (load (s128) from %ir.lsr.iv46, align 1)
+  ; CHECK:   renamable $r2, renamable $q1 = MVE_VLDRBU8_post killed renamable $r2, 16, 0, $noreg :: (load (s128) from %ir.lsr.iv4749, align 1)
   ; CHECK:   renamable $q0 = MVE_VADDi8 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
-  ; CHECK:   renamable $r0 = MVE_VSTRBU8_post killed renamable $q0, killed renamable $r0, 16, 0, killed $noreg :: (store 16 into %ir.lsr.iv5052, align 1)
+  ; CHECK:   renamable $r0 = MVE_VSTRBU8_post killed renamable $q0, killed renamable $r0, 16, 0, killed $noreg :: (store (s128) into %ir.lsr.iv5052, align 1)
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.5
   ; CHECK:   tB %bb.11, 14 /* CC::al */, $noreg
   ; CHECK: bb.6.for.body.preheader.new:
@@ -304,26 +304,26 @@ body:             |
   ; CHECK: bb.7.for.body:
   ; CHECK:   successors: %bb.7(0x7c000000), %bb.8(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r12
-  ; CHECK:   renamable $r4 = tLDRBr renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load 1 from %ir.scevgep2453)
+  ; CHECK:   renamable $r4 = tLDRBr renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load (s8) from %ir.scevgep2453)
   ; CHECK:   renamable $r9 = t2ADDrr renamable $r1, renamable $r3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   renamable $r5 = tLDRBr renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load 1 from %ir.scevgep2854)
+  ; CHECK:   renamable $r5 = tLDRBr renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load (s8) from %ir.scevgep2854)
   ; CHECK:   renamable $r6, dead $cpsr = tADDrr renamable $r2, renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r4 = tADDhirr killed renamable $r4, killed renamable $r5, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRBr killed renamable $r4, renamable $r0, $r3, 14 /* CC::al */, $noreg :: (store 1 into %ir.scevgep3255)
-  ; CHECK:   renamable $r8 = t2LDRBi12 renamable $r9, 1, 14 /* CC::al */, $noreg :: (load 1 from %ir.scevgep40)
-  ; CHECK:   renamable $r5 = tLDRBi renamable $r6, 1, 14 /* CC::al */, $noreg :: (load 1 from %ir.scevgep42)
+  ; CHECK:   tSTRBr killed renamable $r4, renamable $r0, $r3, 14 /* CC::al */, $noreg :: (store (s8) into %ir.scevgep3255)
+  ; CHECK:   renamable $r8 = t2LDRBi12 renamable $r9, 1, 14 /* CC::al */, $noreg :: (load (s8) from %ir.scevgep40)
+  ; CHECK:   renamable $r5 = tLDRBi renamable $r6, 1, 14 /* CC::al */, $noreg :: (load (s8) from %ir.scevgep42)
   ; CHECK:   renamable $r8 = tADDhirr killed renamable $r8, killed renamable $r5, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r5, dead $cpsr = tADDrr renamable $r0, renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = nuw tADDi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   t2STRBi12 killed renamable $r8, renamable $r5, 1, 14 /* CC::al */, $noreg :: (store 1 into %ir.scevgep44)
-  ; CHECK:   renamable $r8 = t2LDRBi12 renamable $r9, 2, 14 /* CC::al */, $noreg :: (load 1 from %ir.scevgep34)
-  ; CHECK:   renamable $r4 = tLDRBi renamable $r6, 2, 14 /* CC::al */, $noreg :: (load 1 from %ir.scevgep36)
+  ; CHECK:   t2STRBi12 killed renamable $r8, renamable $r5, 1, 14 /* CC::al */, $noreg :: (store (s8) into %ir.scevgep44)
+  ; CHECK:   renamable $r8 = t2LDRBi12 renamable $r9, 2, 14 /* CC::al */, $noreg :: (load (s8) from %ir.scevgep34)
+  ; CHECK:   renamable $r4 = tLDRBi renamable $r6, 2, 14 /* CC::al */, $noreg :: (load (s8) from %ir.scevgep36)
   ; CHECK:   renamable $r4 = tADDhirr killed renamable $r4, killed renamable $r8, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRBi killed renamable $r4, renamable $r5, 2, 14 /* CC::al */, $noreg :: (store 1 into %ir.scevgep38)
-  ; CHECK:   renamable $r4 = t2LDRBi12 killed renamable $r9, 3, 14 /* CC::al */, $noreg :: (load 1 from %ir.scevgep22)
-  ; CHECK:   renamable $r6 = tLDRBi killed renamable $r6, 3, 14 /* CC::al */, $noreg :: (load 1 from %ir.scevgep26)
+  ; CHECK:   tSTRBi killed renamable $r4, renamable $r5, 2, 14 /* CC::al */, $noreg :: (store (s8) into %ir.scevgep38)
+  ; CHECK:   renamable $r4 = t2LDRBi12 killed renamable $r9, 3, 14 /* CC::al */, $noreg :: (load (s8) from %ir.scevgep22)
+  ; CHECK:   renamable $r6 = tLDRBi killed renamable $r6, 3, 14 /* CC::al */, $noreg :: (load (s8) from %ir.scevgep26)
   ; CHECK:   renamable $r4 = tADDhirr killed renamable $r4, killed renamable $r6, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRBi killed renamable $r4, killed renamable $r5, 3, 14 /* CC::al */, $noreg :: (store 1 into %ir.scevgep30)
+  ; CHECK:   tSTRBi killed renamable $r4, killed renamable $r5, 3, 14 /* CC::al */, $noreg :: (store (s8) into %ir.scevgep30)
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.7
   ; CHECK: bb.8.for.cond.cleanup.loopexit.unr-lcssa:
   ; CHECK:   successors: %bb.11(0x30000000), %bb.9(0x50000000)
@@ -333,21 +333,21 @@ body:             |
   ; CHECK: bb.9.for.body.epil:
   ; CHECK:   successors: %bb.11(0x40000000), %bb.10(0x40000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r12
-  ; CHECK:   renamable $r6 = tLDRBr renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load 1 from %ir.arrayidx.epil)
+  ; CHECK:   renamable $r6 = tLDRBr renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load (s8) from %ir.arrayidx.epil)
   ; CHECK:   t2CMPri renamable $r12, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   renamable $r5 = tLDRBr renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load 1 from %ir.arrayidx1.epil)
+  ; CHECK:   renamable $r5 = tLDRBr renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load (s8) from %ir.arrayidx1.epil)
   ; CHECK:   renamable $r6 = tADDhirr killed renamable $r6, killed renamable $r5, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRBr killed renamable $r6, renamable $r0, $r3, 14 /* CC::al */, $noreg :: (store 1 into %ir.arrayidx4.epil)
+  ; CHECK:   tSTRBr killed renamable $r6, renamable $r0, $r3, 14 /* CC::al */, $noreg :: (store (s8) into %ir.arrayidx4.epil)
   ; CHECK:   tBcc %bb.11, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.10.for.body.epil.1:
   ; CHECK:   successors: %bb.11(0x40000000), %bb.12(0x40000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r12
   ; CHECK:   renamable $r6, dead $cpsr = nuw tADDi3 renamable $r3, 1, 14 /* CC::al */, $noreg
   ; CHECK:   t2CMPri killed renamable $r12, 2, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   renamable $r5 = tLDRBr renamable $r1, $r6, 14 /* CC::al */, $noreg :: (load 1 from %ir.arrayidx.epil.1)
-  ; CHECK:   renamable $r4 = tLDRBr renamable $r2, $r6, 14 /* CC::al */, $noreg :: (load 1 from %ir.arrayidx1.epil.1)
+  ; CHECK:   renamable $r5 = tLDRBr renamable $r1, $r6, 14 /* CC::al */, $noreg :: (load (s8) from %ir.arrayidx.epil.1)
+  ; CHECK:   renamable $r4 = tLDRBr renamable $r2, $r6, 14 /* CC::al */, $noreg :: (load (s8) from %ir.arrayidx1.epil.1)
   ; CHECK:   renamable $r5 = tADDhirr killed renamable $r5, killed renamable $r4, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRBr killed renamable $r5, renamable $r0, killed $r6, 14 /* CC::al */, $noreg :: (store 1 into %ir.arrayidx4.epil.1)
+  ; CHECK:   tSTRBr killed renamable $r5, renamable $r0, killed $r6, 14 /* CC::al */, $noreg :: (store (s8) into %ir.arrayidx4.epil.1)
   ; CHECK:   tBcc %bb.12, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.11.for.cond.cleanup:
   ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r8, def $r9, def $r11
@@ -355,10 +355,10 @@ body:             |
   ; CHECK: bb.12.for.body.epil.2:
   ; CHECK:   liveins: $r0, $r1, $r2, $r3
   ; CHECK:   renamable $r3, dead $cpsr = nuw tADDi8 killed renamable $r3, 2, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r1 = tLDRBr killed renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load 1 from %ir.arrayidx.epil.2)
-  ; CHECK:   renamable $r2 = tLDRBr killed renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load 1 from %ir.arrayidx1.epil.2)
+  ; CHECK:   renamable $r1 = tLDRBr killed renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load (s8) from %ir.arrayidx.epil.2)
+  ; CHECK:   renamable $r2 = tLDRBr killed renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load (s8) from %ir.arrayidx1.epil.2)
   ; CHECK:   renamable $r1 = tADDhirr killed renamable $r1, killed renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRBr killed renamable $r1, killed renamable $r0, killed $r3, 14 /* CC::al */, $noreg :: (store 1 into %ir.arrayidx4.epil.2)
+  ; CHECK:   tSTRBr killed renamable $r1, killed renamable $r0, killed $r3, 14 /* CC::al */, $noreg :: (store (s8) into %ir.arrayidx4.epil.2)
   ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r8, def $r9, def $r11
   ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc
   bb.0.entry:
@@ -437,12 +437,12 @@ body:             |
     renamable $vpr = MVE_VCTP8 renamable $r3, 0, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 16, 14, $noreg
     MVE_VPST 4, implicit $vpr
-    renamable $r1, renamable $q0 = MVE_VLDRBU8_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv46, align 1)
-    renamable $r2, renamable $q1 = MVE_VLDRBU8_post killed renamable $r2, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv4749, align 1)
+    renamable $r1, renamable $q0 = MVE_VLDRBU8_post killed renamable $r1, 16, 1, renamable $vpr :: (load (s128) from %ir.lsr.iv46, align 1)
+    renamable $r2, renamable $q1 = MVE_VLDRBU8_post killed renamable $r2, 16, 1, renamable $vpr :: (load (s128) from %ir.lsr.iv4749, align 1)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $q0 = MVE_VADDi8 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
     MVE_VPST 8, implicit $vpr
-    renamable $r0 = MVE_VSTRBU8_post killed renamable $q0, killed renamable $r0, 16, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv5052, align 1)
+    renamable $r0 = MVE_VSTRBU8_post killed renamable $q0, killed renamable $r0, 16, 1, killed renamable $vpr :: (store (s128) into %ir.lsr.iv5052, align 1)
     t2LoopEnd renamable $lr, %bb.5, implicit-def dead $cpsr
     tB %bb.11, 14, $noreg
 
@@ -460,27 +460,27 @@ body:             |
     successors: %bb.7(0x7c000000), %bb.8(0x04000000)
     liveins: $lr, $r0, $r1, $r2, $r3, $r12
 
-    renamable $r4 = tLDRBr renamable $r1, $r3, 14, $noreg :: (load 1 from %ir.scevgep2453)
+    renamable $r4 = tLDRBr renamable $r1, $r3, 14, $noreg :: (load (s8) from %ir.scevgep2453)
     renamable $r9 = t2ADDrr renamable $r1, renamable $r3, 14, $noreg, $noreg
-    renamable $r5 = tLDRBr renamable $r2, $r3, 14, $noreg :: (load 1 from %ir.scevgep2854)
+    renamable $r5 = tLDRBr renamable $r2, $r3, 14, $noreg :: (load (s8) from %ir.scevgep2854)
     renamable $r6, dead $cpsr = tADDrr renamable $r2, renamable $r3, 14, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r4 = tADDhirr killed renamable $r4, killed renamable $r5, 14, $noreg
-    tSTRBr killed renamable $r4, renamable $r0, $r3, 14, $noreg :: (store 1 into %ir.scevgep3255)
-    renamable $r8 = t2LDRBi12 renamable $r9, 1, 14, $noreg :: (load 1 from %ir.scevgep40)
-    renamable $r5 = tLDRBi renamable $r6, 1, 14, $noreg :: (load 1 from %ir.scevgep42)
+    tSTRBr killed renamable $r4, renamable $r0, $r3, 14, $noreg :: (store (s8) into %ir.scevgep3255)
+    renamable $r8 = t2LDRBi12 renamable $r9, 1, 14, $noreg :: (load (s8) from %ir.scevgep40)
+    renamable $r5 = tLDRBi renamable $r6, 1, 14, $noreg :: (load (s8) from %ir.scevgep42)
     renamable $r8 = tADDhirr killed renamable $r8, killed renamable $r5, 14, $noreg
     renamable $r5, dead $cpsr = tADDrr renamable $r0, renamable $r3, 14, $noreg
     renamable $r3, dead $cpsr = nuw tADDi8 killed renamable $r3, 4, 14, $noreg
-    t2STRBi12 killed renamable $r8, renamable $r5, 1, 14, $noreg :: (store 1 into %ir.scevgep44)
-    renamable $r8 = t2LDRBi12 renamable $r9, 2, 14, $noreg :: (load 1 from %ir.scevgep34)
-    renamable $r4 = tLDRBi renamable $r6, 2, 14, $noreg :: (load 1 from %ir.scevgep36)
+    t2STRBi12 killed renamable $r8, renamable $r5, 1, 14, $noreg :: (store (s8) into %ir.scevgep44)
+    renamable $r8 = t2LDRBi12 renamable $r9, 2, 14, $noreg :: (load (s8) from %ir.scevgep34)
+    renamable $r4 = tLDRBi renamable $r6, 2, 14, $noreg :: (load (s8) from %ir.scevgep36)
     renamable $r4 = tADDhirr killed renamable $r4, killed renamable $r8, 14, $noreg
-    tSTRBi killed renamable $r4, renamable $r5, 2, 14, $noreg :: (store 1 into %ir.scevgep38)
-    renamable $r4 = t2LDRBi12 killed renamable $r9, 3, 14, $noreg :: (load 1 from %ir.scevgep22)
-    renamable $r6 = tLDRBi killed renamable $r6, 3, 14, $noreg :: (load 1 from %ir.scevgep26)
+    tSTRBi killed renamable $r4, renamable $r5, 2, 14, $noreg :: (store (s8) into %ir.scevgep38)
+    renamable $r4 = t2LDRBi12 killed renamable $r9, 3, 14, $noreg :: (load (s8) from %ir.scevgep22)
+    renamable $r6 = tLDRBi killed renamable $r6, 3, 14, $noreg :: (load (s8) from %ir.scevgep26)
     renamable $r4 = tADDhirr killed renamable $r4, killed renamable $r6, 14, $noreg
-    tSTRBi killed renamable $r4, killed renamable $r5, 3, 14, $noreg :: (store 1 into %ir.scevgep30)
+    tSTRBi killed renamable $r4, killed renamable $r5, 3, 14, $noreg :: (store (s8) into %ir.scevgep30)
     t2LoopEnd renamable $lr, %bb.7, implicit-def dead $cpsr
     tB %bb.8, 14, $noreg
 
@@ -495,11 +495,11 @@ body:             |
     successors: %bb.11(0x40000000), %bb.10(0x40000000)
     liveins: $r0, $r1, $r2, $r3, $r12
 
-    renamable $r6 = tLDRBr renamable $r1, $r3, 14, $noreg :: (load 1 from %ir.arrayidx.epil)
+    renamable $r6 = tLDRBr renamable $r1, $r3, 14, $noreg :: (load (s8) from %ir.arrayidx.epil)
     t2CMPri renamable $r12, 1, 14, $noreg, implicit-def $cpsr
-    renamable $r5 = tLDRBr renamable $r2, $r3, 14, $noreg :: (load 1 from %ir.arrayidx1.epil)
+    renamable $r5 = tLDRBr renamable $r2, $r3, 14, $noreg :: (load (s8) from %ir.arrayidx1.epil)
     renamable $r6 = tADDhirr killed renamable $r6, killed renamable $r5, 14, $noreg
-    tSTRBr killed renamable $r6, renamable $r0, $r3, 14, $noreg :: (store 1 into %ir.arrayidx4.epil)
+    tSTRBr killed renamable $r6, renamable $r0, $r3, 14, $noreg :: (store (s8) into %ir.arrayidx4.epil)
     tBcc %bb.11, 0, killed $cpsr
 
   bb.10.for.body.epil.1:
@@ -508,10 +508,10 @@ body:             |
 
     renamable $r6, dead $cpsr = nuw tADDi3 renamable $r3, 1, 14, $noreg
     t2CMPri killed renamable $r12, 2, 14, $noreg, implicit-def $cpsr
-    renamable $r5 = tLDRBr renamable $r1, $r6, 14, $noreg :: (load 1 from %ir.arrayidx.epil.1)
-    renamable $r4 = tLDRBr renamable $r2, $r6, 14, $noreg :: (load 1 from %ir.arrayidx1.epil.1)
+    renamable $r5 = tLDRBr renamable $r1, $r6, 14, $noreg :: (load (s8) from %ir.arrayidx.epil.1)
+    renamable $r4 = tLDRBr renamable $r2, $r6, 14, $noreg :: (load (s8) from %ir.arrayidx1.epil.1)
     renamable $r5 = tADDhirr killed renamable $r5, killed renamable $r4, 14, $noreg
-    tSTRBr killed renamable $r5, renamable $r0, killed $r6, 14, $noreg :: (store 1 into %ir.arrayidx4.epil.1)
+    tSTRBr killed renamable $r5, renamable $r0, killed $r6, 14, $noreg :: (store (s8) into %ir.arrayidx4.epil.1)
     tBcc %bb.12, 1, killed $cpsr
 
   bb.11.for.cond.cleanup:
@@ -522,10 +522,10 @@ body:             |
     liveins: $r0, $r1, $r2, $r3
 
     renamable $r3, dead $cpsr = nuw tADDi8 killed renamable $r3, 2, 14, $noreg
-    renamable $r1 = tLDRBr killed renamable $r1, $r3, 14, $noreg :: (load 1 from %ir.arrayidx.epil.2)
-    renamable $r2 = tLDRBr killed renamable $r2, $r3, 14, $noreg :: (load 1 from %ir.arrayidx1.epil.2)
+    renamable $r1 = tLDRBr killed renamable $r1, $r3, 14, $noreg :: (load (s8) from %ir.arrayidx.epil.2)
+    renamable $r2 = tLDRBr killed renamable $r2, $r3, 14, $noreg :: (load (s8) from %ir.arrayidx1.epil.2)
     renamable $r1 = tADDhirr killed renamable $r1, killed renamable $r2, 14, $noreg
-    tSTRBr killed renamable $r1, killed renamable $r0, killed $r3, 14, $noreg :: (store 1 into %ir.arrayidx4.epil.2)
+    tSTRBr killed renamable $r1, killed renamable $r0, killed $r3, 14, $noreg :: (store (s8) into %ir.arrayidx4.epil.2)
     $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r8, def $r9, def $r11
     tPOP_RET 14, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc
 

@@ -173,6 +173,7 @@ define void @uadd_with_overflow(i32 %lhs, i32 %rhs, i32* %padd, i1* %pcarry_flag
 ; MIPS32-NEXT:    addu $1, $4, $5
 ; MIPS32-NEXT:    sltu $2, $1, $5
 ; MIPS32-NEXT:    andi $2, $2, 1
+; MIPS32-NEXT:    andi $2, $2, 1
 ; MIPS32-NEXT:    sb $2, 0($7)
 ; MIPS32-NEXT:    sw $1, 0($6)
 ; MIPS32-NEXT:    jr $ra

@@ -60,13 +60,14 @@ remainsLegalAfterInline(Value value, Region *src, Region *dest,
   if (value.isa<BlockArgument>())
     return legalityCheck(mapping.lookup(value), dest);
 
-  // If it's a top-level value beacuse it's defined in the region,
+  // If it's a top-level value because it's defined in the region,
   // it can only be inlined if the defining op is a constant or a
   // `dim`, which can appear anywhere and be valid, since the defining
   // op won't be top-level anymore after inlining.
   Attribute operandCst;
   return matchPattern(value.getDefiningOp(), m_Constant(&operandCst)) ||
-         value.getDefiningOp<memref::DimOp>();
+         value.getDefiningOp<memref::DimOp>() ||
+         value.getDefiningOp<tensor::DimOp>();
 }
 
 /// Checks if all values known to be legal affine dimensions or symbols in `src`
@@ -298,7 +299,9 @@ bool mlir::isValidDim(Value value, Region *region) {
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
   if (auto dimOp = dyn_cast<memref::DimOp>(op))
-    return isTopLevelValue(dimOp.memrefOrTensor());
+    return isTopLevelValue(dimOp.source());
+  if (auto dimOp = dyn_cast<tensor::DimOp>(op))
+    return isTopLevelValue(dimOp.source());
   return false;
 }
 
@@ -319,14 +322,15 @@ static bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index,
 }
 
 /// Returns true if the result of the dim op is a valid symbol for `region`.
-static bool isDimOpValidSymbol(memref::DimOp dimOp, Region *region) {
-  // The dim op is okay if its operand memref is defined at the top level.
-  if (isTopLevelValue(dimOp.memrefOrTensor()))
+template <typename OpTy>
+static bool isDimOpValidSymbol(OpTy dimOp, Region *region) {
+  // The dim op is okay if its source is defined at the top level.
+  if (isTopLevelValue(dimOp.source()))
     return true;
 
   // Conservatively handle remaining BlockArguments as non-valid symbols.
   // E.g. scf.for iterArgs.
-  if (dimOp.memrefOrTensor().isa<BlockArgument>())
+  if (dimOp.source().template isa<BlockArgument>())
     return false;
 
   // The dim op is also okay if its operand memref is a view/subview whose
@@ -335,7 +339,7 @@ static bool isDimOpValidSymbol(memref::DimOp dimOp, Region *region) {
   assert(index.hasValue() &&
          "expect only `dim` operations with a constant index");
   int64_t i = index.getValue();
-  return TypeSwitch<Operation *, bool>(dimOp.memrefOrTensor().getDefiningOp())
+  return TypeSwitch<Operation *, bool>(dimOp.source().getDefiningOp())
       .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
       .Default([](Operation *) { return false; });
@@ -364,7 +368,7 @@ bool mlir::isValidSymbol(Value value) {
   return false;
 }
 
-/// A value can be used as a symbol for `region` iff it meets onf of the the
+/// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
 /// *) It is the result of an affine apply operation with symbol arguments.
@@ -406,6 +410,8 @@ bool mlir::isValidSymbol(Value value, Region *region) {
 
   // Dim op results could be valid symbols at any level.
   if (auto dimOp = dyn_cast<memref::DimOp>(defOp))
+    return isDimOpValidSymbol(dimOp, region);
+  if (auto dimOp = dyn_cast<tensor::DimOp>(defOp))
     return isDimOpValidSymbol(dimOp, region);
 
   // Check for values dominating `region`'s parent op.

@@ -266,7 +266,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; GFX900:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX900:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
-  ; GFX900:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; GFX900:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX900:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; GFX900:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; GFX900:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -351,7 +351,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; GFX908:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX908:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
-  ; GFX908:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; GFX908:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX908:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; GFX908:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; GFX908:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -480,7 +480,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900:   [[COPY34:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; GFX900:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX900:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY34]], [[C1]](s32)
-  ; GFX900:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; GFX900:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX900:   [[COPY35:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX900:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY35]](<4 x s32>)
   ; GFX900:   $sgpr4_sgpr5 = COPY [[COPY26]](p4)
@@ -605,7 +605,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908:   [[COPY34:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; GFX908:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX908:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY34]], [[C1]](s32)
-  ; GFX908:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; GFX908:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GFX908:   [[COPY35:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX908:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY35]](<4 x s32>)
   ; GFX908:   $sgpr4_sgpr5 = COPY [[COPY26]](p4)

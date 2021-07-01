@@ -53,15 +53,15 @@ body:             |
   ; CHECK:   successors: %bb.1, %bb.2
   ; CHECK:   liveins: $q0, $q22, $q23, $q20, $q21, $q18, $q19, $q16, $q17, $q14, $q15, $q12, $q13, $q10, $q11, $q8, $q9, $lr, $fp
   ; CHECK:   $sp = frame-setup SUBXri $sp, 304, 0
-  ; CHECK:   frame-setup STPQi killed $q23, killed $q22, $sp, 2 :: (store 16 into %stack.19), (store 16 into %stack.18)
-  ; CHECK:   frame-setup STPQi killed $q21, killed $q20, $sp, 4 :: (store 16 into %stack.17), (store 16 into %stack.16)
-  ; CHECK:   frame-setup STPQi killed $q19, killed $q18, $sp, 6 :: (store 16 into %stack.15), (store 16 into %stack.14)
-  ; CHECK:   frame-setup STPQi killed $q17, killed $q16, $sp, 8 :: (store 16 into %stack.13), (store 16 into %stack.12)
-  ; CHECK:   frame-setup STPQi killed $q15, killed $q14, $sp, 10 :: (store 16 into %stack.11), (store 16 into %stack.10)
-  ; CHECK:   frame-setup STPQi killed $q13, killed $q12, $sp, 12 :: (store 16 into %stack.9), (store 16 into %stack.8)
-  ; CHECK:   frame-setup STPQi killed $q11, killed $q10, $sp, 14 :: (store 16 into %stack.7), (store 16 into %stack.6)
-  ; CHECK:   frame-setup STPQi killed $q9, killed $q8, $sp, 16 :: (store 16 into %stack.5), (store 16 into %stack.4)
-  ; CHECK:   frame-setup STPXi killed $fp, killed $lr, $sp, 36 :: (store 8 into %stack.3), (store 8 into %stack.2)
+  ; CHECK:   frame-setup STPQi killed $q23, killed $q22, $sp, 2 :: (store (s128) into %stack.19), (store (s128) into %stack.18)
+  ; CHECK:   frame-setup STPQi killed $q21, killed $q20, $sp, 4 :: (store (s128) into %stack.17), (store (s128) into %stack.16)
+  ; CHECK:   frame-setup STPQi killed $q19, killed $q18, $sp, 6 :: (store (s128) into %stack.15), (store (s128) into %stack.14)
+  ; CHECK:   frame-setup STPQi killed $q17, killed $q16, $sp, 8 :: (store (s128) into %stack.13), (store (s128) into %stack.12)
+  ; CHECK:   frame-setup STPQi killed $q15, killed $q14, $sp, 10 :: (store (s128) into %stack.11), (store (s128) into %stack.10)
+  ; CHECK:   frame-setup STPQi killed $q13, killed $q12, $sp, 12 :: (store (s128) into %stack.9), (store (s128) into %stack.8)
+  ; CHECK:   frame-setup STPQi killed $q11, killed $q10, $sp, 14 :: (store (s128) into %stack.7), (store (s128) into %stack.6)
+  ; CHECK:   frame-setup STPQi killed $q9, killed $q8, $sp, 16 :: (store (s128) into %stack.5), (store (s128) into %stack.4)
+  ; CHECK:   frame-setup STPXi killed $fp, killed $lr, $sp, 36 :: (store (s64) into %stack.3), (store (s64) into %stack.2)
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 304
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $w30, -8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $w29, -16
@@ -81,38 +81,38 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $b21, -240
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $b22, -256
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $b23, -272
-  ; CHECK:   STRQui $q0, $sp, 0 :: (store 16 into %stack.1)
+  ; CHECK:   STRQui $q0, $sp, 0 :: (store (s128) into %stack.1)
   ; CHECK:   EH_LABEL <mcsymbol .Ltmp0>
   ; CHECK:   BL @may_throw_neon, csr_aarch64_aavpcs, implicit-def dead $lr, implicit $sp, implicit killed $q0, implicit-def $q0
-  ; CHECK:   STRQui killed $q0, $sp, 1 :: (store 16 into %stack.0)
+  ; CHECK:   STRQui killed $q0, $sp, 1 :: (store (s128) into %stack.0)
   ; CHECK:   EH_LABEL <mcsymbol .Ltmp1>
   ; CHECK:   B %bb.1
   ; CHECK: bb.1..Lcontinue:
-  ; CHECK:   $q0 = LDRQui $sp, 1 :: (load 16 from %stack.0)
-  ; CHECK:   $fp, $lr = frame-destroy LDPXi $sp, 36 :: (load 8 from %stack.3), (load 8 from %stack.2)
-  ; CHECK:   $q9, $q8 = frame-destroy LDPQi $sp, 16 :: (load 16 from %stack.5), (load 16 from %stack.4)
-  ; CHECK:   $q11, $q10 = frame-destroy LDPQi $sp, 14 :: (load 16 from %stack.7), (load 16 from %stack.6)
-  ; CHECK:   $q13, $q12 = frame-destroy LDPQi $sp, 12 :: (load 16 from %stack.9), (load 16 from %stack.8)
-  ; CHECK:   $q15, $q14 = frame-destroy LDPQi $sp, 10 :: (load 16 from %stack.11), (load 16 from %stack.10)
-  ; CHECK:   $q17, $q16 = frame-destroy LDPQi $sp, 8 :: (load 16 from %stack.13), (load 16 from %stack.12)
-  ; CHECK:   $q19, $q18 = frame-destroy LDPQi $sp, 6 :: (load 16 from %stack.15), (load 16 from %stack.14)
-  ; CHECK:   $q21, $q20 = frame-destroy LDPQi $sp, 4 :: (load 16 from %stack.17), (load 16 from %stack.16)
-  ; CHECK:   $q23, $q22 = frame-destroy LDPQi $sp, 2 :: (load 16 from %stack.19), (load 16 from %stack.18)
+  ; CHECK:   $q0 = LDRQui $sp, 1 :: (load (s128) from %stack.0)
+  ; CHECK:   $fp, $lr = frame-destroy LDPXi $sp, 36 :: (load (s64) from %stack.3), (load (s64) from %stack.2)
+  ; CHECK:   $q9, $q8 = frame-destroy LDPQi $sp, 16 :: (load (s128) from %stack.5), (load (s128) from %stack.4)
+  ; CHECK:   $q11, $q10 = frame-destroy LDPQi $sp, 14 :: (load (s128) from %stack.7), (load (s128) from %stack.6)
+  ; CHECK:   $q13, $q12 = frame-destroy LDPQi $sp, 12 :: (load (s128) from %stack.9), (load (s128) from %stack.8)
+  ; CHECK:   $q15, $q14 = frame-destroy LDPQi $sp, 10 :: (load (s128) from %stack.11), (load (s128) from %stack.10)
+  ; CHECK:   $q17, $q16 = frame-destroy LDPQi $sp, 8 :: (load (s128) from %stack.13), (load (s128) from %stack.12)
+  ; CHECK:   $q19, $q18 = frame-destroy LDPQi $sp, 6 :: (load (s128) from %stack.15), (load (s128) from %stack.14)
+  ; CHECK:   $q21, $q20 = frame-destroy LDPQi $sp, 4 :: (load (s128) from %stack.17), (load (s128) from %stack.16)
+  ; CHECK:   $q23, $q22 = frame-destroy LDPQi $sp, 2 :: (load (s128) from %stack.19), (load (s128) from %stack.18)
   ; CHECK:   $sp = frame-destroy ADDXri $sp, 304, 0
   ; CHECK:   RET_ReallyLR implicit killed $q0
   ; CHECK: bb.2..Lunwind (landing-pad):
   ; CHECK:   liveins: $x0, $x1
   ; CHECK:   EH_LABEL <mcsymbol .Ltmp2>
-  ; CHECK:   $q0 = LDRQui $sp, 0 :: (load 16 from %stack.1)
-  ; CHECK:   $fp, $lr = frame-destroy LDPXi $sp, 36 :: (load 8 from %stack.3), (load 8 from %stack.2)
-  ; CHECK:   $q9, $q8 = frame-destroy LDPQi $sp, 16 :: (load 16 from %stack.5), (load 16 from %stack.4)
-  ; CHECK:   $q11, $q10 = frame-destroy LDPQi $sp, 14 :: (load 16 from %stack.7), (load 16 from %stack.6)
-  ; CHECK:   $q13, $q12 = frame-destroy LDPQi $sp, 12 :: (load 16 from %stack.9), (load 16 from %stack.8)
-  ; CHECK:   $q15, $q14 = frame-destroy LDPQi $sp, 10 :: (load 16 from %stack.11), (load 16 from %stack.10)
-  ; CHECK:   $q17, $q16 = frame-destroy LDPQi $sp, 8 :: (load 16 from %stack.13), (load 16 from %stack.12)
-  ; CHECK:   $q19, $q18 = frame-destroy LDPQi $sp, 6 :: (load 16 from %stack.15), (load 16 from %stack.14)
-  ; CHECK:   $q21, $q20 = frame-destroy LDPQi $sp, 4 :: (load 16 from %stack.17), (load 16 from %stack.16)
-  ; CHECK:   $q23, $q22 = frame-destroy LDPQi $sp, 2 :: (load 16 from %stack.19), (load 16 from %stack.18)
+  ; CHECK:   $q0 = LDRQui $sp, 0 :: (load (s128) from %stack.1)
+  ; CHECK:   $fp, $lr = frame-destroy LDPXi $sp, 36 :: (load (s64) from %stack.3), (load (s64) from %stack.2)
+  ; CHECK:   $q9, $q8 = frame-destroy LDPQi $sp, 16 :: (load (s128) from %stack.5), (load (s128) from %stack.4)
+  ; CHECK:   $q11, $q10 = frame-destroy LDPQi $sp, 14 :: (load (s128) from %stack.7), (load (s128) from %stack.6)
+  ; CHECK:   $q13, $q12 = frame-destroy LDPQi $sp, 12 :: (load (s128) from %stack.9), (load (s128) from %stack.8)
+  ; CHECK:   $q15, $q14 = frame-destroy LDPQi $sp, 10 :: (load (s128) from %stack.11), (load (s128) from %stack.10)
+  ; CHECK:   $q17, $q16 = frame-destroy LDPQi $sp, 8 :: (load (s128) from %stack.13), (load (s128) from %stack.12)
+  ; CHECK:   $q19, $q18 = frame-destroy LDPQi $sp, 6 :: (load (s128) from %stack.15), (load (s128) from %stack.14)
+  ; CHECK:   $q21, $q20 = frame-destroy LDPQi $sp, 4 :: (load (s128) from %stack.17), (load (s128) from %stack.16)
+  ; CHECK:   $q23, $q22 = frame-destroy LDPQi $sp, 2 :: (load (s128) from %stack.19), (load (s128) from %stack.18)
   ; CHECK:   $sp = frame-destroy ADDXri $sp, 304, 0
   ; CHECK:   RET_ReallyLR implicit killed $q0
   bb.0 (%ir-block.0):

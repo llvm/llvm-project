@@ -11,10 +11,10 @@
 ; MIR-DAG: ![[SET1:[0-9]+]] = !{![[SCOPE1]]}
 
 ; MIR-LABEL: name: test_memcpy
-; MIR:      %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store 8 into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store 8 into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store (s64) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memcpy(i32* nocapture %p, i32* nocapture readonly %q) {
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
@@ -28,10 +28,10 @@ define i32 @test_memcpy(i32* nocapture %p, i32* nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_memcpy_inline
-; MIR:      %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store 8 into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store 8 into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store (s64) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memcpy_inline(i32* nocapture %p, i32* nocapture readonly %q) {
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
@@ -45,10 +45,10 @@ define i32 @test_memcpy_inline(i32* nocapture %p, i32* nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_memmove
-; MIR:      %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store 8 into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store 8 into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store (s64) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memmove(i32* nocapture %p, i32* nocapture readonly %q) {
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4
@@ -63,8 +63,8 @@ define i32 @test_memmove(i32* nocapture %p, i32* nocapture readonly %q) {
 
 ; MIR-LABEL: name: test_memset
 ; MIR:      %2:gr64 = MOV64ri -6148914691236517206
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, %2 :: (store 8 into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, %2 :: (store 8 into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, %2 :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, %2 :: (store (s64) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_memset(i32* nocapture %p, i32* nocapture readonly %q) {
   %p0 = bitcast i32* %p to i8*
   tail call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(16) %p0, i8 170, i64 16, i1 false), !alias.scope !2, !noalias !4
@@ -76,10 +76,10 @@ define i32 @test_memset(i32* nocapture %p, i32* nocapture readonly %q) {
 }
 
 ; MIR-LABEL: name: test_mempcpy
-; MIR:      %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store 8 into %ir.p0 + 8, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
-; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store 8 into %ir.p0, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR:      %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store (s64) into %ir.p0 + 8, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
+; MIR-NEXT: MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store (s64) into %ir.p0, align 1, !alias.scope ![[SET0]], !noalias ![[SET1]])
 define i32 @test_mempcpy(i32* nocapture %p, i32* nocapture readonly %q) {
   %p0 = bitcast i32* %p to i8*
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 4

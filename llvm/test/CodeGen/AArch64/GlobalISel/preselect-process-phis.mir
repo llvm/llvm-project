@@ -29,7 +29,7 @@ body:             |
   ; CHECK:   [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
   ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, [[FCVTHSr]], %subreg.hsub
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
-  ; CHECK:   STRHHui [[PHI]], [[DEF1]], 0 :: (store 2 into `half* undef`)
+  ; CHECK:   STRHHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
   ; CHECK:   B %bb.2
   bb.0:
     successors: %bb.1(0x80000000)
@@ -50,7 +50,7 @@ body:             |
 
     %3:gpr(s16) = G_PHI %1(s16), %bb.1, %5(s16), %bb.2
     %5:fpr(s16) = G_FPTRUNC %8(s32)
-    G_STORE %3(s16), %4(p0) :: (store 2 into `half* undef`)
+    G_STORE %3(s16), %4(p0) :: (store (s16) into `half* undef`)
     G_BR %bb.2
 
 ...
@@ -83,7 +83,7 @@ body:             |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[PHI:%[0-9]+]]:fpr16 = PHI %7, %bb.2, [[COPY2]], %bb.1
   ; CHECK:   [[FCVTHSr:%[0-9]+]]:fpr16 = FCVTHSr [[COPY]]
-  ; CHECK:   STRHui [[PHI]], [[DEF1]], 0 :: (store 2 into `half* undef`)
+  ; CHECK:   STRHui [[PHI]], [[DEF1]], 0 :: (store (s16) into `half* undef`)
   ; CHECK:   B %bb.2
   bb.0:
     successors: %bb.1(0x80000000)
@@ -104,7 +104,7 @@ body:             |
 
     %3:fpr(s16) = G_PHI %5(s16), %bb.2, %1(s16), %bb.1
     %5:fpr(s16) = G_FPTRUNC %8(s32)
-    G_STORE %3(s16), %4(p0) :: (store 2 into `half* undef`)
+    G_STORE %3(s16), %4(p0) :: (store (s16) into `half* undef`)
     G_BR %bb.2
 
 ...
@@ -154,10 +154,10 @@ body:             |
   ; CHECK:   %use_gp_phi1:gpr32 = PHI %gpr_1, %bb.0, %gp_phi1, %bb.4
   ; CHECK:   %use_gp_phi2:gpr32 = PHI %gpr_1, %bb.0, %gp_phi2, %bb.4
   ; CHECK:   %use_gp_phi3:gpr32 = PHI %gpr_1, %bb.0, %gp_phi3, %bb.4
-  ; CHECK:   STRHHui %use_fp_phi, %ptr, 0 :: (store 2)
-  ; CHECK:   STRHHui %use_gp_phi1, %ptr, 0 :: (store 2)
-  ; CHECK:   STRHHui %use_gp_phi2, %ptr, 0 :: (store 2)
-  ; CHECK:   STRHHui %use_gp_phi3, %ptr, 0 :: (store 2)
+  ; CHECK:   STRHHui %use_fp_phi, %ptr, 0 :: (store (s16))
+  ; CHECK:   STRHHui %use_gp_phi1, %ptr, 0 :: (store (s16))
+  ; CHECK:   STRHHui %use_gp_phi2, %ptr, 0 :: (store (s16))
+  ; CHECK:   STRHHui %use_gp_phi3, %ptr, 0 :: (store (s16))
   ; CHECK:   RET_ReallyLR
   bb.1:
     successors: %bb.2, %bb.6
@@ -187,9 +187,9 @@ body:             |
     %use_gp_phi1:gpr(s16) = G_PHI %gpr_1(s16), %bb.1, %gp_phi1(s16), %bb.5
     %use_gp_phi2:gpr(s16) = G_PHI %gpr_1(s16), %bb.1, %gp_phi2(s16), %bb.5
     %use_gp_phi3:gpr(s16) = G_PHI %gpr_1(s16), %bb.1, %gp_phi3(s16), %bb.5
-    G_STORE %use_fp_phi(s16), %ptr(p0) :: (store 2)
-    G_STORE %use_gp_phi1(s16), %ptr(p0) :: (store 2)
-    G_STORE %use_gp_phi2(s16), %ptr(p0) :: (store 2)
-    G_STORE %use_gp_phi3(s16), %ptr(p0) :: (store 2)
+    G_STORE %use_fp_phi(s16), %ptr(p0) :: (store (s16))
+    G_STORE %use_gp_phi1(s16), %ptr(p0) :: (store (s16))
+    G_STORE %use_gp_phi2(s16), %ptr(p0) :: (store (s16))
+    G_STORE %use_gp_phi3(s16), %ptr(p0) :: (store (s16))
     RET_ReallyLR
 ...

@@ -13,10 +13,10 @@ define void @test_v16f(<16 x i32> %x) {
   ; CHECK:   [[AVX_SET0_:%[0-9]+]]:vr256 = AVX_SET0
   ; CHECK:   [[VPCMPEQDYrr:%[0-9]+]]:vr256 = VPCMPEQDYrr [[COPY]], [[AVX_SET0_]]
   ; CHECK:   [[VPCMPEQDYrr1:%[0-9]+]]:vr256 = VPCMPEQDYrr [[COPY1]], [[AVX_SET0_]]
-  ; CHECK:   [[VMASKMOVPSYrm:%[0-9]+]]:vr256 = VMASKMOVPSYrm [[VPCMPEQDYrr1]], %stack.0.stack_input_vec, 1, $noreg, 0, $noreg :: (load 32 from %ir.stack_input_vec, align 4)
-  ; CHECK:   [[VMASKMOVPSYrm1:%[0-9]+]]:vr256 = VMASKMOVPSYrm [[VPCMPEQDYrr]], %stack.0.stack_input_vec, 1, $noreg, 32, $noreg :: (load 32 from %ir.stack_input_vec + 32, align 4)
-  ; CHECK:   VMASKMOVPSYmr %stack.1.stack_output_vec, 1, $noreg, 32, $noreg, [[VPCMPEQDYrr]], killed [[VMASKMOVPSYrm1]] :: (store 32 into %ir.stack_output_vec + 32, align 4)
-  ; CHECK:   VMASKMOVPSYmr %stack.1.stack_output_vec, 1, $noreg, 0, $noreg, [[VPCMPEQDYrr1]], killed [[VMASKMOVPSYrm]] :: (store 32 into %ir.stack_output_vec, align 4)
+  ; CHECK:   [[VMASKMOVPSYrm:%[0-9]+]]:vr256 = VMASKMOVPSYrm [[VPCMPEQDYrr1]], %stack.0.stack_input_vec, 1, $noreg, 0, $noreg :: (load (s256) from %ir.stack_input_vec, align 4)
+  ; CHECK:   [[VMASKMOVPSYrm1:%[0-9]+]]:vr256 = VMASKMOVPSYrm [[VPCMPEQDYrr]], %stack.0.stack_input_vec, 1, $noreg, 32, $noreg :: (load (s256) from %ir.stack_input_vec + 32, align 4)
+  ; CHECK:   VMASKMOVPSYmr %stack.1.stack_output_vec, 1, $noreg, 32, $noreg, [[VPCMPEQDYrr]], killed [[VMASKMOVPSYrm1]] :: (store (s256) into %ir.stack_output_vec + 32, align 4)
+  ; CHECK:   VMASKMOVPSYmr %stack.1.stack_output_vec, 1, $noreg, 0, $noreg, [[VPCMPEQDYrr1]], killed [[VMASKMOVPSYrm]] :: (store (s256) into %ir.stack_output_vec, align 4)
   ; CHECK:   RET 0
 bb:
   %stack_input_vec = alloca <16 x float>, align 64
@@ -39,10 +39,10 @@ define void @test_v8d(<8 x i64> %x) {
   ; CHECK:   [[AVX_SET0_:%[0-9]+]]:vr256 = AVX_SET0
   ; CHECK:   [[VPCMPEQQYrr:%[0-9]+]]:vr256 = VPCMPEQQYrr [[COPY]], [[AVX_SET0_]]
   ; CHECK:   [[VPCMPEQQYrr1:%[0-9]+]]:vr256 = VPCMPEQQYrr [[COPY1]], [[AVX_SET0_]]
-  ; CHECK:   [[VMASKMOVPDYrm:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VPCMPEQQYrr1]], %stack.0.stack_input_vec, 1, $noreg, 0, $noreg :: (load 32 from %ir.stack_input_vec, align 4)
-  ; CHECK:   [[VMASKMOVPDYrm1:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VPCMPEQQYrr]], %stack.0.stack_input_vec, 1, $noreg, 32, $noreg :: (load 32 from %ir.stack_input_vec + 32, align 4)
-  ; CHECK:   VMASKMOVPDYmr %stack.1.stack_output_vec, 1, $noreg, 32, $noreg, [[VPCMPEQQYrr]], killed [[VMASKMOVPDYrm1]] :: (store 32 into %ir.stack_output_vec + 32, align 4)
-  ; CHECK:   VMASKMOVPDYmr %stack.1.stack_output_vec, 1, $noreg, 0, $noreg, [[VPCMPEQQYrr1]], killed [[VMASKMOVPDYrm]] :: (store 32 into %ir.stack_output_vec, align 4)
+  ; CHECK:   [[VMASKMOVPDYrm:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VPCMPEQQYrr1]], %stack.0.stack_input_vec, 1, $noreg, 0, $noreg :: (load (s256) from %ir.stack_input_vec, align 4)
+  ; CHECK:   [[VMASKMOVPDYrm1:%[0-9]+]]:vr256 = VMASKMOVPDYrm [[VPCMPEQQYrr]], %stack.0.stack_input_vec, 1, $noreg, 32, $noreg :: (load (s256) from %ir.stack_input_vec + 32, align 4)
+  ; CHECK:   VMASKMOVPDYmr %stack.1.stack_output_vec, 1, $noreg, 32, $noreg, [[VPCMPEQQYrr]], killed [[VMASKMOVPDYrm1]] :: (store (s256) into %ir.stack_output_vec + 32, align 4)
+  ; CHECK:   VMASKMOVPDYmr %stack.1.stack_output_vec, 1, $noreg, 0, $noreg, [[VPCMPEQQYrr1]], killed [[VMASKMOVPDYrm]] :: (store (s256) into %ir.stack_output_vec, align 4)
   ; CHECK:   RET 0
 bb:
   %stack_input_vec = alloca <8 x double>, align 64
@@ -59,7 +59,7 @@ define <2 x double> @mload_constmask_v2f64(<2 x double>* %addr, <2 x double> %ds
   ; CHECK:   liveins: $rdi, $xmm0
   ; CHECK:   [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
   ; CHECK:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK:   [[VMOVHPDrm:%[0-9]+]]:vr128 = VMOVHPDrm [[COPY]], [[COPY1]], 1, $noreg, 8, $noreg :: (load 8 from %ir.addr + 8, align 4)
+  ; CHECK:   [[VMOVHPDrm:%[0-9]+]]:vr128 = VMOVHPDrm [[COPY]], [[COPY1]], 1, $noreg, 8, $noreg :: (load (s64) from %ir.addr + 8, align 4)
   ; CHECK:   $xmm0 = COPY [[VMOVHPDrm]]
   ; CHECK:   RET 0, $xmm0
   %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1> <i1 0, i1 1>, <2 x double> %dst)
@@ -72,7 +72,7 @@ define void @one_mask_bit_set2(<4 x float>* %addr, <4 x float> %val) {
   ; CHECK:   liveins: $rdi, $xmm0
   ; CHECK:   [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
   ; CHECK:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK:   VEXTRACTPSmr [[COPY1]], 1, $noreg, 8, $noreg, [[COPY]], 2 :: (store 4 into %ir.addr + 8)
+  ; CHECK:   VEXTRACTPSmr [[COPY1]], 1, $noreg, 8, $noreg, [[COPY]], 2 :: (store (s32) into %ir.addr + 8)
   ; CHECK:   RET 0
   call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %val, <4 x float>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
   ret void

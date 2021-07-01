@@ -1,4 +1,4 @@
-//===-- TPCEHFrameRegistrar.h - TPC based eh-frame registration -*- C++ -*-===//
+//===-- EPCEHFrameRegistrar.h - EPC based eh-frame registration -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,35 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TargetProcessControl based eh-frame registration.
+// ExecutorProcessControl based eh-frame registration.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_TPCEHFRAMEREGISTRAR_H
-#define LLVM_EXECUTIONENGINE_ORC_TPCEHFRAMEREGISTRAR_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_EPCEHFRAMEREGISTRAR_H
+#define LLVM_EXECUTIONENGINE_ORC_EPCEHFRAMEREGISTRAR_H
 
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 
 namespace llvm {
 namespace orc {
 
 /// Register/Deregisters EH frames in a remote process via a
-/// TargetProcessControl instance.
-class TPCEHFrameRegistrar : public jitlink::EHFrameRegistrar {
+/// ExecutorProcessControl instance.
+class EPCEHFrameRegistrar : public jitlink::EHFrameRegistrar {
 public:
-  /// Create from a TargetProcessControl instance alone. This will use
-  /// the TPC's lookupSymbols method to find the registration/deregistration
+  /// Create from a ExecutorProcessControl instance alone. This will use
+  /// the EPC's lookupSymbols method to find the registration/deregistration
   /// funciton addresses by name.
-  static Expected<std::unique_ptr<TPCEHFrameRegistrar>>
-  Create(TargetProcessControl &TPC);
+  static Expected<std::unique_ptr<EPCEHFrameRegistrar>>
+  Create(ExecutorProcessControl &EPC);
 
-  /// Create a TPCEHFrameRegistrar with the given TargetProcessControl
+  /// Create a EPCEHFrameRegistrar with the given ExecutorProcessControl
   /// object and registration/deregistration function addresses.
-  TPCEHFrameRegistrar(TargetProcessControl &TPC,
+  EPCEHFrameRegistrar(ExecutorProcessControl &EPC,
                       JITTargetAddress RegisterEHFrameWrapperFnAddr,
                       JITTargetAddress DeregisterEHFRameWrapperFnAddr)
-      : TPC(TPC), RegisterEHFrameWrapperFnAddr(RegisterEHFrameWrapperFnAddr),
+      : EPC(EPC), RegisterEHFrameWrapperFnAddr(RegisterEHFrameWrapperFnAddr),
         DeregisterEHFrameWrapperFnAddr(DeregisterEHFRameWrapperFnAddr) {}
 
   Error registerEHFrames(JITTargetAddress EHFrameSectionAddr,
@@ -43,7 +43,7 @@ public:
                            size_t EHFrameSectionSize) override;
 
 private:
-  TargetProcessControl &TPC;
+  ExecutorProcessControl &EPC;
   JITTargetAddress RegisterEHFrameWrapperFnAddr;
   JITTargetAddress DeregisterEHFrameWrapperFnAddr;
 };
@@ -51,4 +51,4 @@ private:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_TPCEHFRAMEREGISTRAR_H
+#endif // LLVM_EXECUTIONENGINE_ORC_EPCEHFRAMEREGISTRAR_H

@@ -35,7 +35,7 @@ body:             |
     ; CHECK_NOPIC64: RET 0, implicit $xmm0
     ; CHECK_LARGE64-LABEL: name: test_float
     ; CHECK_LARGE64: [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri %const.0
-    ; CHECK_LARGE64: [[MOVSSrm_alt:%[0-9]+]]:fr32 = MOVSSrm_alt [[MOV64ri]], 1, $noreg, 0, $noreg :: (load 8 from constant-pool, align 4)
+    ; CHECK_LARGE64: [[MOVSSrm_alt:%[0-9]+]]:fr32 = MOVSSrm_alt [[MOV64ri]], 1, $noreg, 0, $noreg :: (load (s64) from constant-pool, align 4)
     ; CHECK_LARGE64: [[COPY:%[0-9]+]]:vr128 = COPY [[MOVSSrm_alt]]
     ; CHECK_LARGE64: $xmm0 = COPY [[COPY]]
     ; CHECK_LARGE64: RET 0, implicit $xmm0
@@ -82,7 +82,7 @@ body:             |
     ; CHECK_NOPIC64: RET 0, implicit $xmm0
     ; CHECK_LARGE64-LABEL: name: test_double
     ; CHECK_LARGE64: [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri %const.0
-    ; CHECK_LARGE64: [[MOVSDrm_alt:%[0-9]+]]:fr64 = MOVSDrm_alt [[MOV64ri]], 1, $noreg, 0, $noreg :: (load 8 from constant-pool)
+    ; CHECK_LARGE64: [[MOVSDrm_alt:%[0-9]+]]:fr64 = MOVSDrm_alt [[MOV64ri]], 1, $noreg, 0, $noreg :: (load (s64) from constant-pool)
     ; CHECK_LARGE64: [[COPY:%[0-9]+]]:vr128 = COPY [[MOVSDrm_alt]]
     ; CHECK_LARGE64: $xmm0 = COPY [[COPY]]
     ; CHECK_LARGE64: RET 0, implicit $xmm0

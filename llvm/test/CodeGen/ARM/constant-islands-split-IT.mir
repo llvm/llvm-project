@@ -70,7 +70,7 @@ body:             |
   ; CHECK-LABEL: name: h
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   renamable $d0 = VLDRD %const.3, 0, 14 /* CC::al */, $noreg :: (load 8 from constant-pool)
+  ; CHECK:   renamable $d0 = VLDRD %const.3, 0, 14 /* CC::al */, $noreg :: (load (s64) from constant-pool)
   ; CHECK:   dead renamable $r0 = SPACE 40, undef renamable $r0
   ; CHECK:   tB %bb.4, 14 /* CC::al */, $noreg
   ; CHECK: bb.1 (align 8):
@@ -90,9 +90,9 @@ body:             |
   ; CHECK:   t2CMPri $r0, 32, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   renamable $r0 = SPACE 200, undef renamable $r0
   ; CHECK:   t2IT 0, 1, implicit-def $itstate
-  ; CHECK:   renamable $d0 = VLDRD %const.7, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load 8 from constant-pool)
-  ; CHECK:   renamable $d1 = VLDRD %const.5, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load 8 from constant-pool)
-  ; CHECK:   renamable $d2 = VLDRD %const.6, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load 8 from constant-pool)
+  ; CHECK:   renamable $d0 = VLDRD %const.7, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
+  ; CHECK:   renamable $d1 = VLDRD %const.5, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
+  ; CHECK:   renamable $d2 = VLDRD %const.6, 0, 0 /* CC::eq */, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
   ; CHECK:   $r0 = t2SUBri $r0, 12, 0 /* CC::eq */, $cpsr, $noreg, implicit killed $itstate
   ; CHECK:   t2B %bb.7, 14 /* CC::al */, $noreg
   ; CHECK: bb.6 (align 8):
@@ -114,7 +114,7 @@ body:             |
   bb.0:
     successors: %bb.1(0x80000000)
 
-    renamable $d0 = VLDRD %const.0, 0, 14, $noreg :: (load 8 from constant-pool)
+    renamable $d0 = VLDRD %const.0, 0, 14, $noreg :: (load (s64) from constant-pool)
     dead renamable $r0 = SPACE 40, undef renamable $r0
 
   bb.1:
@@ -129,9 +129,9 @@ body:             |
     t2CMPri $r0, 32, 14, $noreg, implicit-def $cpsr
     renamable $r0 = SPACE 200, undef renamable $r0
     t2IT 0, 1, implicit-def $itstate
-    renamable $d0 = VLDRD %const.1, 0, 0, $cpsr, implicit $itstate :: (load 8 from constant-pool)
-    renamable $d1 = VLDRD %const.2, 0, 0, $cpsr, implicit $itstate :: (load 8 from constant-pool)
-    renamable $d2 = VLDRD %const.0, 0, 0, $cpsr, implicit $itstate :: (load 8 from constant-pool)
+    renamable $d0 = VLDRD %const.1, 0, 0, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
+    renamable $d1 = VLDRD %const.2, 0, 0, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
+    renamable $d2 = VLDRD %const.0, 0, 0, $cpsr, implicit $itstate :: (load (s64) from constant-pool)
     $r0 = t2SUBri $r0, 12, 0, $cpsr, $noreg, implicit killed $itstate
     t2IT 0, 4, implicit-def $itstate
     $sp = tMOVr $r0, 0, $cpsr, implicit $itstate

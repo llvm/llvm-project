@@ -47,7 +47,7 @@ body:             |
     %1:addr64bit = LARL @g_193
     %2:gr32bit = IIFMux 2899813578
     %3:gr32bit = COPY killed %2
-    %3:gr32bit = O %3, killed %1, 0, $noreg, implicit-def dead $cc :: (dereferenceable load 4 from @g_193)
+    %3:gr32bit = O %3, killed %1, 0, $noreg, implicit-def dead $cc :: (dereferenceable load (s32) from @g_193)
     %4:gr64bit = LGFI -1395153718
     undef %5.subreg_l64:gr128bit = COPY killed %4
     %6:gr128bit = COPY killed %5
@@ -59,7 +59,7 @@ body:             |
   
   bb.1 (%ir-block.4):
     %8:gr32bit = LHIMux -9
-    STRL killed %8, @g_74 :: (store 4 into @g_74)
+    STRL killed %8, @g_74 :: (store (s32) into @g_74)
     Return
   
   bb.2 (%ir-block.5):

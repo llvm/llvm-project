@@ -10,16 +10,16 @@ declare dso_local i32* @personality_function()
 define i64 addrspace(1)* @test_basic_invoke(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1)
 ; CHECK-LABEL:    name: test_basic_invoke
 ; CHECK:          bb.0.entry:
-; CHECK:          MOV64mr %stack.1, 1, $noreg, 0, $noreg, renamable $rdi :: (store 8 into %stack.1)
-; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rsi :: (store 8 into %stack.0)
-; CHECK:          STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1)
+; CHECK:          MOV64mr %stack.1, 1, $noreg, 0, $noreg, renamable $rdi :: (store (s64) into %stack.1)
+; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rsi :: (store (s64) into %stack.0)
+; CHECK:          STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0), (volatile load store (s64) on %stack.1)
 ; CHECK:          JMP_1 %bb.1
 ; CHECK:          bb.1.safepoint_normal_dest:
-; CHECK:          renamable $rax = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
+; CHECK:          renamable $rax = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
 ; CHECK:          bb.2.normal_return:
 ; CHECK:          RET 0, $rax
 ; CHECK:          bb.3.exceptional_return (landing-pad):
-; CHECK:          renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+; CHECK:          renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          RET 0, $rax
   gc "statepoint-example" personality i32* ()* @"personality_function" {
 entry:
@@ -52,30 +52,30 @@ define i64 addrspace(1)* @test_invoke_same_val(i1 %cond, i64 addrspace(1)* %val1
 ; CHECK:          JCC_1 %bb.3, 4, implicit killed $eflags
 ; CHECK:          JMP_1 %bb.1
 ; CHECK:          bb.1.left:
-; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, renamable $rsi :: (store 8 into %stack.0)
+; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, renamable $rsi :: (store (s64) into %stack.0)
 ; CHECK:          $rdi = COPY killed renamable $rsi
-; CHECK:          renamable $rbp = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbp(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK:          renamable $rbp = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbp(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
 ; CHECK:          JMP_1 %bb.2
 ; CHECK:          bb.2.left.relocs:
-; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          JMP_1 %bb.5
 ; CHECK:          bb.3.right:
-; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rbp :: (store 8 into %stack.0)
+; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rbp :: (store (s64) into %stack.0)
 ; CHECK:          $rdi = COPY killed renamable $rsi
-; CHECK:          renamable $rbx = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbx(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK:          renamable $rbx = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbx(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
 ; CHECK:          JMP_1 %bb.4
 ; CHECK:          bb.4.right.relocs:
-; CHECK:          renamable $rbp = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+; CHECK:          renamable $rbp = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          bb.5.normal_return:
 ; CHECK:          TEST8ri renamable $r14b, 1, implicit-def $eflags, implicit killed $r14d
 ; CHECK:          renamable $rbx = CMOV64rr killed renamable $rbx, killed renamable $rbp, 4, implicit killed $eflags
 ; CHECK:          $rax = COPY killed renamable $rbx
 ; CHECK:          RET 0, $rax
 ; CHECK:          bb.6.exceptional_return.left (landing-pad):
-; CHECK:          renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+; CHECK:          renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          RET 0, $rax
 ; CHECK:          bb.7.exceptional_return.right (landing-pad):
-; CHECK:          renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+; CHECK:          renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          RET 0, $rax
   gc "statepoint-example" personality i32* ()* @"personality_function" {
 entry:
@@ -121,16 +121,16 @@ exceptional_return.right:
 define void @test_duplicate_ir_values() gc "statepoint-example" personality i32* ()* @personality_function {
 ; CHECK-LABEL:    name: test_duplicate_ir_values
 ; CHECK:          bb.0.entry:
-; CHECK:          renamable $rax = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg :: (load 8 from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
-; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rax :: (store 8 into %stack.0)
-; CHECK:          STATEPOINT 1, 16, 5, undef renamable $rax, undef $edi, undef $rsi, undef $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store 8 on %stack.0)
+; CHECK:          renamable $rax = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(1)* undef`, addrspace 1)
+; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rax :: (store (s64) into %stack.0)
+; CHECK:          STATEPOINT 1, 16, 5, undef renamable $rax, undef $edi, undef $rsi, undef $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s64) on %stack.0)
 ; CHECK:          JMP_1 %bb.1
 ; CHECK:          bb.1.normal_continue:
-; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          $edi = MOV32ri 10
 ; CHECK:          dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, killed $edi, 2, 0, 2, 2, 2, 2, killed renamable $rbx, renamable $rbx, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK:          bb.2.exceptional_return (landing-pad):
-; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          $edi = MOV32ri -271
 ; CHECK:          dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, killed $edi, 2, 0, 2, 0, 2, 1, killed renamable $rbx, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 entry:

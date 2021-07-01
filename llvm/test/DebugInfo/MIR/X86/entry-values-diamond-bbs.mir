@@ -1,4 +1,5 @@
 # RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
 #
 # The test case was artificially adjusted, in order to make proper diamond basic
 # block structure relevant to the debug entry values propagation.

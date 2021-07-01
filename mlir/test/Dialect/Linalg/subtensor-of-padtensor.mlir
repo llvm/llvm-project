@@ -133,7 +133,7 @@ func @static_mixed_data_low_high_pad(%arg0 : tensor<4x5xf32>, %pad : f32)
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x5xf32>
 //   CHECK-NOT:   linalg.pad_tensor
 //       CHECK:   %[[C0:.*]] = constant 0 : index
-//       CHECK:   memref.dim %[[ARG0]], %[[C0]]
+//       CHECK:   tensor.dim %[[ARG0]], %[[C0]]
 //       CHECK:   %[[RESULT:.*]] = scf.if %{{.*}} -> (tensor<3x4xf32>) {
 //       CHECK:     %[[GEN:.*]] = tensor.generate
 //       CHECK:     scf.yield %[[GEN]]

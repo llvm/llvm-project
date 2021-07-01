@@ -102,9 +102,9 @@ body:             |
     DBG_VALUE $a1_64, $noreg, !19, !DIExpression(), debug-location !20
     $sp_64 = DADDiu $sp_64, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SD killed $ra_64, $sp_64, 24 :: (store 8 into %stack.0)
-    SD killed $s1_64, $sp_64, 16 :: (store 8 into %stack.1)
-    SD killed $s0_64, $sp_64, 8 :: (store 8 into %stack.2)
+    SD killed $ra_64, $sp_64, 24 :: (store (s64) into %stack.0)
+    SD killed $s1_64, $sp_64, 16 :: (store (s64) into %stack.1)
+    SD killed $s0_64, $sp_64, 8 :: (store (s64) into %stack.2)
     CFI_INSTRUCTION offset $ra_64, -8
     CFI_INSTRUCTION offset $s1_64, -16
     CFI_INSTRUCTION offset $s0_64, -24

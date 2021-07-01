@@ -232,7 +232,7 @@ static LegalityPredicate isWideScalarExtLoadTruncStore(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
     return !Ty.isVector() && Ty.getSizeInBits() > 32 &&
-           Query.MMODescrs[0].SizeInBits < Ty.getSizeInBits();
+           Query.MMODescrs[0].MemoryTy.getSizeInBits() < Ty.getSizeInBits();
   };
 }
 
@@ -272,7 +272,7 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   const bool IsLoad = Query.Opcode != AMDGPU::G_STORE;
 
   unsigned RegSize = Ty.getSizeInBits();
-  unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+  unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
   unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
   unsigned AS = Query.Types[1].getAddressSpace();
 
@@ -361,23 +361,28 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 /// Return true if a load or store of the type should be lowered with a bitcast
 /// to a different type.
 static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
-                                       const unsigned MemSizeInBits) {
+                                       const LLT MemTy) {
+  const unsigned MemSizeInBits = MemTy.getSizeInBits();
   const unsigned Size = Ty.getSizeInBits();
   if (Size != MemSizeInBits)
     return Size <= 32 && Ty.isVector();
 
   if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
     return true;
-  return Ty.isVector() && (Size <= 32 || isRegisterSize(Size)) &&
+
+  // Don't try to handle bitcasting vector ext loads for now.
+  return Ty.isVector() && (!MemTy.isVector() || MemTy == Ty) &&
+         (Size <= 32 || isRegisterSize(Size)) &&
          !isRegisterVectorElementType(Ty.getElementType());
 }
 
 /// Return true if we should legalize a load by widening an odd sized memory
 /// access up to the alignment. Note this case when the memory access itself
 /// changes, not the size of the result register.
-static bool shouldWidenLoad(const GCNSubtarget &ST, unsigned SizeInBits,
+static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
                             unsigned AlignInBits, unsigned AddrSpace,
                             unsigned Opcode) {
+  unsigned SizeInBits = MemoryTy.getSizeInBits();
   // We don't want to widen cases that are naturally legal.
   if (isPowerOf2_32(SizeInBits))
     return false;
@@ -413,7 +418,7 @@ static bool shouldWidenLoad(const GCNSubtarget &ST, const LegalityQuery &Query,
   if (Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic)
     return false;
 
-  return shouldWidenLoad(ST, Query.MMODescrs[0].SizeInBits,
+  return shouldWidenLoad(ST, Query.MMODescrs[0].MemoryTy,
                          Query.MMODescrs[0].AlignInBits,
                          Query.Types[1].getAddressSpace(), Opcode);
 }
@@ -1044,7 +1049,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     const LLT DstTy = Query.Types[0];
 
     // Split vector extloads.
-    unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+    unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
     unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
 
     if (MemSize < DstTy.getSizeInBits())
@@ -1093,32 +1098,32 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     auto &Actions = getActionDefinitionsBuilder(Op);
     // Explicitly list some common cases.
     // TODO: Does this help compile time at all?
-    Actions.legalForTypesWithMemDesc({{S32, GlobalPtr, 32, GlobalAlign32},
-                                      {V2S32, GlobalPtr, 64, GlobalAlign32},
-                                      {V4S32, GlobalPtr, 128, GlobalAlign32},
-                                      {S64, GlobalPtr, 64, GlobalAlign32},
-                                      {V2S64, GlobalPtr, 128, GlobalAlign32},
-                                      {V2S16, GlobalPtr, 32, GlobalAlign32},
-                                      {S32, GlobalPtr, 8, GlobalAlign8},
-                                      {S32, GlobalPtr, 16, GlobalAlign16},
+    Actions.legalForTypesWithMemDesc({{S32, GlobalPtr, S32, GlobalAlign32},
+                                      {V2S32, GlobalPtr, V2S32, GlobalAlign32},
+                                      {V4S32, GlobalPtr, V4S32, GlobalAlign32},
+                                      {S64, GlobalPtr, S64, GlobalAlign32},
+                                      {V2S64, GlobalPtr, V2S64, GlobalAlign32},
+                                      {V2S16, GlobalPtr, V2S16, GlobalAlign32},
+                                      {S32, GlobalPtr, S8, GlobalAlign8},
+                                      {S32, GlobalPtr, S16, GlobalAlign16},
 
-                                      {S32, LocalPtr, 32, 32},
-                                      {S64, LocalPtr, 64, 32},
-                                      {V2S32, LocalPtr, 64, 32},
-                                      {S32, LocalPtr, 8, 8},
-                                      {S32, LocalPtr, 16, 16},
-                                      {V2S16, LocalPtr, 32, 32},
+                                      {S32, LocalPtr, S32, 32},
+                                      {S64, LocalPtr, S64, 32},
+                                      {V2S32, LocalPtr, V2S32, 32},
+                                      {S32, LocalPtr, S8, 8},
+                                      {S32, LocalPtr, S16, 16},
+                                      {V2S16, LocalPtr, S32, 32},
 
-                                      {S32, PrivatePtr, 32, 32},
-                                      {S32, PrivatePtr, 8, 8},
-                                      {S32, PrivatePtr, 16, 16},
-                                      {V2S16, PrivatePtr, 32, 32},
+                                      {S32, PrivatePtr, S32, 32},
+                                      {S32, PrivatePtr, S8, 8},
+                                      {S32, PrivatePtr, S16, 16},
+                                      {V2S16, PrivatePtr, S32, 32},
 
-                                      {S32, ConstantPtr, 32, GlobalAlign32},
-                                      {V2S32, ConstantPtr, 64, GlobalAlign32},
-                                      {V4S32, ConstantPtr, 128, GlobalAlign32},
-                                      {S64, ConstantPtr, 64, GlobalAlign32},
-                                      {V2S32, ConstantPtr, 32, GlobalAlign32}});
+                                      {S32, ConstantPtr, S32, GlobalAlign32},
+                                      {V2S32, ConstantPtr, V2S32, GlobalAlign32},
+                                      {V4S32, ConstantPtr, V4S32, GlobalAlign32},
+                                      {S64, ConstantPtr, S64, GlobalAlign32},
+                                      {V2S32, ConstantPtr, V2S32, GlobalAlign32}});
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
         return isLoadStoreLegal(ST, Query);
@@ -1140,7 +1145,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Actions.bitcastIf(
       [=](const LegalityQuery &Query) -> bool {
         return shouldBitcastLoadStoreType(ST, Query.Types[0],
-                                          Query.MMODescrs[0].SizeInBits);
+                                          Query.MMODescrs[0].MemoryTy);
       }, bitcastToRegisterType(0));
 
     if (!IsStore) {
@@ -1163,7 +1168,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               const LLT PtrTy = Query.Types[1];
 
               const unsigned DstSize = DstTy.getSizeInBits();
-              unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+              unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
 
               // Split extloads.
               if (DstSize > MemSize)
@@ -1211,7 +1216,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // FIXME: 3 element stores scalarized on SI
 
               // Split if it's too large for the address space.
-              if (Query.MMODescrs[0].SizeInBits > MaxSize) {
+              unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+              if (MemSize > MaxSize) {
                 unsigned NumElts = DstTy.getNumElements();
                 unsigned EltSize = EltTy.getSizeInBits();
 
@@ -1221,7 +1227,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                              ElementCount::getFixed(MaxSize / EltSize), EltTy));
                 }
 
-                unsigned NumPieces = Query.MMODescrs[0].SizeInBits / MaxSize;
+                unsigned NumPieces = MemSize / MaxSize;
 
                 // FIXME: Refine when odd breakdowns handled
                 // The scalars will need to be re-legalized.
@@ -1234,7 +1240,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               }
 
               // FIXME: We could probably handle weird extending loads better.
-              unsigned MemSize = Query.MMODescrs[0].SizeInBits;
               if (DstTy.getSizeInBits() > MemSize)
                 return std::make_pair(0, EltTy);
 
@@ -1270,14 +1275,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   auto &ExtLoads = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-                       .legalForTypesWithMemDesc({{S32, GlobalPtr, 8, 8},
-                                                  {S32, GlobalPtr, 16, 2 * 8},
-                                                  {S32, LocalPtr, 8, 8},
-                                                  {S32, LocalPtr, 16, 16},
-                                                  {S32, PrivatePtr, 8, 8},
-                                                  {S32, PrivatePtr, 16, 16},
-                                                  {S32, ConstantPtr, 8, 8},
-                                                  {S32, ConstantPtr, 16, 2 * 8}})
+                       .legalForTypesWithMemDesc({{S32, GlobalPtr, S8, 8},
+                                                  {S32, GlobalPtr, S16, 2 * 8},
+                                                  {S32, LocalPtr, S8, 8},
+                                                  {S32, LocalPtr, S16, 16},
+                                                  {S32, PrivatePtr, S8, 8},
+                                                  {S32, PrivatePtr, S16, 16},
+                                                  {S32, ConstantPtr, S8, 8},
+                                                  {S32, ConstantPtr, S16, 2 * 8}})
                        .legalIf(
                          [=](const LegalityQuery &Query) -> bool {
                            return isLoadStoreLegal(ST, Query);
@@ -1285,7 +1290,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasFlatAddressSpace()) {
     ExtLoads.legalForTypesWithMemDesc(
-        {{S32, FlatPtr, 8, 8}, {S32, FlatPtr, 16, 16}});
+        {{S32, FlatPtr, S8, 8}, {S32, FlatPtr, S16, 16}});
   }
 
   // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
@@ -2484,12 +2489,13 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
 
   MachineMemOperand *MMO = *MI.memoperands_begin();
   const unsigned ValSize = ValTy.getSizeInBits();
-  const unsigned MemSize = 8 * MMO->getSize();
+  const LLT MemTy = MMO->getMemoryType();
   const Align MemAlign = MMO->getAlign();
+  const unsigned MemSize = MemTy.getSizeInBits();
   const unsigned AlignInBits = 8 * MemAlign.value();
 
   // Widen non-power-of-2 loads to the alignment if needed
-  if (shouldWidenLoad(ST, MemSize, AlignInBits, AddrSpace, MI.getOpcode())) {
+  if (shouldWidenLoad(ST, MemTy, AlignInBits, AddrSpace, MI.getOpcode())) {
     const unsigned WideMemSize = PowerOf2Ceil(MemSize);
 
     // This was already the correct extending load result type, so just adjust
@@ -4611,7 +4617,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
 
   Observer.changingInstr(MI);
 
-  if (shouldBitcastLoadStoreType(ST, Ty, Size)) {
+  if (shouldBitcastLoadStoreType(ST, Ty, LLT::scalar(Size))) {
     Ty = getBitcastRegisterType(Ty);
     Helper.bitcastDst(MI, Ty, 0);
     Dst = MI.getOperand(0).getReg();

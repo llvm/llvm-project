@@ -1186,8 +1186,7 @@ static Value createNewAllocDeallocPairForShapedValue(OpBuilder &b, Location loc,
   SmallVector<Value> dynShape;
   for (auto dim : enumerate(memRefType.getShape()))
     if (dim.value() == ShapedType::kDynamicSize)
-      dynShape.push_back(
-          b.create<memref::DimOp>(loc, shapedValue, dim.index()));
+      dynShape.push_back(createOrFoldDimOp(b, loc, shapedValue, dim.index()));
 
   Value allocated = b.create<memref::AllocOp>(loc, allocMemRefType, dynShape);
   Value casted = allocated;
@@ -1304,14 +1303,14 @@ static LogicalResult bufferize(OpBuilder &b, LinalgOp op,
 
 /// DimOp tensor operand is modified inplace. This allows leaving dead
 /// tensors behind that will get DCE'd.
-static LogicalResult bufferize(OpBuilder &b, memref::DimOp dimOp,
+static LogicalResult bufferize(OpBuilder &b, tensor::DimOp dimOp,
                                BlockAndValueMapping &bvm,
                                const BufferizationAliasInfo &aliasInfo) {
-  if (dimOp.memrefOrTensor().getType().isa<RankedTensorType>()) {
-    Value v = lookup(bvm, dimOp.memrefOrTensor());
+  if (dimOp.source().getType().isa<RankedTensorType>()) {
+    Value v = lookup(bvm, dimOp.source());
     if (!v)
       return failure();
-    dimOp.memrefOrTensorMutable().assign(v);
+    dimOp.sourceMutable().assign(v);
   }
   return success();
 }
@@ -1814,8 +1813,8 @@ bufferizeFuncOpInternals(FuncOp funcOp, BlockAndValueMapping &bvm,
             .Case<memref::BufferCastOp,
                   memref::TensorLoadOp>(
                 [&](auto) { return success(); })
-            .Case<memref::DimOp,
-                  scf::ForOp,
+            .Case<scf::ForOp,
+                  tensor::DimOp,
                   LinalgOp,
                   ReturnOp,
                   ExtractSliceOp,

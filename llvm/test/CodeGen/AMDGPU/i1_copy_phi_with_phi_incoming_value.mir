@@ -11,7 +11,7 @@ body:             |
   ; GCN:   liveins: $vgpr0, $sgpr4_sgpr5
   ; GCN:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GCN:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-  ; GCN:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load 4, align 16, addrspace 4)
+  ; GCN:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; GCN:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORD_IMM]]
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]](s32)
   ; GCN:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[COPY1]](s32), [[S_LOAD_DWORD_IMM]], implicit $exec
@@ -65,7 +65,7 @@ body:             |
 
     %1:sgpr_64(p4) = COPY $sgpr4_sgpr5
     %2:vgpr_32(s32) = COPY $vgpr0
-    %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1:sgpr_64(p4), 0, 0 :: (dereferenceable invariant load 4, align 16, addrspace 4)
+    %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1:sgpr_64(p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     %8:sreg_32 = COPY %3:sreg_32_xm0_xexec
     %14:vgpr_32 = COPY %2:vgpr_32(s32)
     %9:sreg_64 = V_CMP_LT_I32_e64 %2:vgpr_32(s32), %3:sreg_32_xm0_xexec, implicit $exec

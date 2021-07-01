@@ -172,17 +172,16 @@ private:
 namespace detail {
 
 template <typename SPSArgListT, typename... ArgTs>
-Expected<WrapperFunctionResult>
+WrapperFunctionResult
 serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
   WrapperFunctionResult Result;
   char *DataPtr =
       WrapperFunctionResult::allocate(Result, SPSArgListT::size(Args...));
   SPSOutputBuffer OB(DataPtr, Result.size());
   if (!SPSArgListT::serialize(OB, Args...))
-    return make_error<StringError>(
-        "Error serializing arguments to blob in call",
-        inconvertibleErrorCode());
-  return std::move(Result);
+    return WrapperFunctionResult::createOutOfBandError(
+        "Error serializing arguments to blob in call");
+  return Result;
 }
 
 template <typename RetT> class WrapperFunctionHandlerCaller {
@@ -230,12 +229,8 @@ public:
     auto HandlerResult = WrapperFunctionHandlerCaller<RetT>::call(
         std::forward<HandlerT>(H), Args, ArgIndices{});
 
-    if (auto Result = ResultSerializer<decltype(HandlerResult)>::serialize(
-            std::move(HandlerResult)))
-      return std::move(*Result);
-    else
-      return WrapperFunctionResult::createOutOfBandError(
-          toString(Result.takeError()));
+    return ResultSerializer<decltype(HandlerResult)>::serialize(
+        std::move(HandlerResult));
   }
 
 private:
@@ -247,10 +242,10 @@ private:
   }
 };
 
-// Map function references to function types.
+// Map function pointers to function types.
 template <typename RetT, typename... ArgTs,
           template <typename> class ResultSerializer, typename... SPSTagTs>
-class WrapperFunctionHandlerHelper<RetT (&)(ArgTs...), ResultSerializer,
+class WrapperFunctionHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
                                    SPSTagTs...>
     : public WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                           SPSTagTs...> {};
@@ -271,9 +266,87 @@ class WrapperFunctionHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
     : public WrapperFunctionHandlerHelper<RetT(ArgTs...), ResultSerializer,
                                           SPSTagTs...> {};
 
+template <typename WrapperFunctionImplT,
+          template <typename> class ResultSerializer, typename... SPSTagTs>
+class WrapperFunctionAsyncHandlerHelper
+    : public WrapperFunctionAsyncHandlerHelper<
+          decltype(&std::remove_reference_t<WrapperFunctionImplT>::operator()),
+          ResultSerializer, SPSTagTs...> {};
+
+template <typename RetT, typename SendResultT, typename... ArgTs,
+          template <typename> class ResultSerializer, typename... SPSTagTs>
+class WrapperFunctionAsyncHandlerHelper<RetT(SendResultT, ArgTs...),
+                                        ResultSerializer, SPSTagTs...> {
+public:
+  using ArgTuple = std::tuple<std::decay_t<ArgTs>...>;
+  using ArgIndices = std::make_index_sequence<std::tuple_size<ArgTuple>::value>;
+
+  template <typename HandlerT, typename SendWrapperFunctionResultT>
+  static void applyAsync(HandlerT &&H,
+                         SendWrapperFunctionResultT &&SendWrapperFunctionResult,
+                         const char *ArgData, size_t ArgSize) {
+    ArgTuple Args;
+    if (!deserialize(ArgData, ArgSize, Args, ArgIndices{})) {
+      SendWrapperFunctionResult(WrapperFunctionResult::createOutOfBandError(
+          "Could not deserialize arguments for wrapper function call"));
+      return;
+    }
+
+    auto SendResult =
+        [SendWFR = std::move(SendWrapperFunctionResult)](auto Result) mutable {
+          using ResultT = decltype(Result);
+          SendWFR(ResultSerializer<ResultT>::serialize(std::move(Result)));
+        };
+
+    callAsync(std::forward<HandlerT>(H), std::move(SendResult), Args,
+              ArgIndices{});
+  }
+
+private:
+  template <std::size_t... I>
+  static bool deserialize(const char *ArgData, size_t ArgSize, ArgTuple &Args,
+                          std::index_sequence<I...>) {
+    SPSInputBuffer IB(ArgData, ArgSize);
+    return SPSArgList<SPSTagTs...>::deserialize(IB, std::get<I>(Args)...);
+  }
+
+  template <typename HandlerT, typename SerializeAndSendResultT,
+            typename ArgTupleT, std::size_t... I>
+  static void callAsync(HandlerT &&H,
+                        SerializeAndSendResultT &&SerializeAndSendResult,
+                        ArgTupleT &Args, std::index_sequence<I...>) {
+    return std::forward<HandlerT>(H)(std::move(SerializeAndSendResult),
+                                     std::get<I>(Args)...);
+  }
+};
+
+// Map function pointers to function types.
+template <typename RetT, typename... ArgTs,
+          template <typename> class ResultSerializer, typename... SPSTagTs>
+class WrapperFunctionAsyncHandlerHelper<RetT (*)(ArgTs...), ResultSerializer,
+                                        SPSTagTs...>
+    : public WrapperFunctionAsyncHandlerHelper<RetT(ArgTs...), ResultSerializer,
+                                               SPSTagTs...> {};
+
+// Map non-const member function types to function types.
+template <typename ClassT, typename RetT, typename... ArgTs,
+          template <typename> class ResultSerializer, typename... SPSTagTs>
+class WrapperFunctionAsyncHandlerHelper<RetT (ClassT::*)(ArgTs...),
+                                        ResultSerializer, SPSTagTs...>
+    : public WrapperFunctionAsyncHandlerHelper<RetT(ArgTs...), ResultSerializer,
+                                               SPSTagTs...> {};
+
+// Map const member function types to function types.
+template <typename ClassT, typename RetT, typename... ArgTs,
+          template <typename> class ResultSerializer, typename... SPSTagTs>
+class WrapperFunctionAsyncHandlerHelper<RetT (ClassT::*)(ArgTs...) const,
+                                        ResultSerializer, SPSTagTs...>
+    : public WrapperFunctionAsyncHandlerHelper<RetT(ArgTs...), ResultSerializer,
+                                               SPSTagTs...> {};
+
 template <typename SPSRetTagT, typename RetT> class ResultSerializer {
 public:
-  static Expected<WrapperFunctionResult> serialize(RetT Result) {
+  static WrapperFunctionResult serialize(RetT Result) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
         Result);
   }
@@ -281,7 +354,7 @@ public:
 
 template <typename SPSRetTagT> class ResultSerializer<SPSRetTagT, Error> {
 public:
-  static Expected<WrapperFunctionResult> serialize(Error Err) {
+  static WrapperFunctionResult serialize(Error Err) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(Err)));
   }
@@ -290,7 +363,7 @@ public:
 template <typename SPSRetTagT, typename T>
 class ResultSerializer<SPSRetTagT, Expected<T>> {
 public:
-  static Expected<WrapperFunctionResult> serialize(Expected<T> E) {
+  static WrapperFunctionResult serialize(Expected<T> E) {
     return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
         toSPSSerializable(std::move(E)));
   }
@@ -298,6 +371,7 @@ public:
 
 template <typename SPSRetTagT, typename RetT> class ResultDeserializer {
 public:
+  static RetT makeValue() { return RetT(); }
   static void makeSafe(RetT &Result) {}
 
   static Error deserialize(RetT &Result, const char *ArgData, size_t ArgSize) {
@@ -312,6 +386,7 @@ public:
 
 template <> class ResultDeserializer<SPSError, Error> {
 public:
+  static Error makeValue() { return Error::success(); }
   static void makeSafe(Error &Err) { cantFail(std::move(Err)); }
 
   static Error deserialize(Error &Err, const char *ArgData, size_t ArgSize) {
@@ -329,6 +404,7 @@ public:
 template <typename SPSTagT, typename T>
 class ResultDeserializer<SPSExpected<SPSTagT>, Expected<T>> {
 public:
+  static Expected<T> makeValue() { return T(); }
   static void makeSafe(Expected<T> &E) { cantFail(E.takeError()); }
 
   static Error deserialize(Expected<T> &E, const char *ArgData,
@@ -344,6 +420,10 @@ public:
   }
 };
 
+template <typename SPSRetTagT, typename RetT> class AsyncCallResultHelper {
+  // Did you forget to use Error / Expected in your handler?
+};
+
 } // end namespace detail
 
 template <typename SPSSignature> class WrapperFunction;
@@ -355,7 +435,7 @@ private:
   using ResultSerializer = detail::ResultSerializer<SPSRetTagT, RetT>;
 
 public:
-  /// Call a wrapper function. Callere should be callable as
+  /// Call a wrapper function. Caller should be callable as
   /// WrapperFunctionResult Fn(const char *ArgData, size_t ArgSize);
   template <typename CallerFn, typename RetT, typename... ArgTs>
   static Error call(const CallerFn &Caller, RetT &Result,
@@ -369,18 +449,56 @@ public:
     auto ArgBuffer =
         detail::serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSTagTs...>>(
             Args...);
-    if (!ArgBuffer)
-      return ArgBuffer.takeError();
+    if (const char *ErrMsg = ArgBuffer.getOutOfBandError())
+      return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
 
-    Expected<WrapperFunctionResult> ResultBuffer =
-        Caller(ArgBuffer->data(), ArgBuffer->size());
-    if (!ResultBuffer)
-      return ResultBuffer.takeError();
-    if (auto ErrMsg = ResultBuffer->getOutOfBandError())
+    WrapperFunctionResult ResultBuffer =
+        Caller(ArgBuffer.data(), ArgBuffer.size());
+    if (auto ErrMsg = ResultBuffer.getOutOfBandError())
       return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
 
     return detail::ResultDeserializer<SPSRetTagT, RetT>::deserialize(
-        Result, ResultBuffer->data(), ResultBuffer->size());
+        Result, ResultBuffer.data(), ResultBuffer.size());
+  }
+
+  /// Call an async wrapper function.
+  /// Caller should be callable as
+  /// void Fn(unique_function<void(WrapperFunctionResult)> SendResult,
+  ///         WrapperFunctionResult ArgBuffer);
+  template <typename AsyncCallerFn, typename SendDeserializedResultFn,
+            typename... ArgTs>
+  static void callAsync(AsyncCallerFn &&Caller,
+                        SendDeserializedResultFn &&SendDeserializedResult,
+                        const ArgTs &...Args) {
+    using RetT = typename std::tuple_element<
+        1, typename detail::WrapperFunctionHandlerHelper<
+               std::remove_reference_t<SendDeserializedResultFn>,
+               ResultSerializer, SPSRetTagT>::ArgTuple>::type;
+
+    auto ArgBuffer =
+        detail::serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSTagTs...>>(
+            Args...);
+    if (auto *ErrMsg = ArgBuffer.getOutOfBandError()) {
+      SendDeserializedResult(
+          make_error<StringError>(ErrMsg, inconvertibleErrorCode()),
+          detail::ResultDeserializer<SPSRetTagT, RetT>::makeValue());
+      return;
+    }
+
+    auto SendSerializedResult = [SDR = std::move(SendDeserializedResult)](
+                                    WrapperFunctionResult R) {
+      RetT RetVal = detail::ResultDeserializer<SPSRetTagT, RetT>::makeValue();
+      detail::ResultDeserializer<SPSRetTagT, RetT>::makeSafe(RetVal);
+
+      SPSInputBuffer IB(R.data(), R.size());
+      if (auto Err = detail::ResultDeserializer<SPSRetTagT, RetT>::deserialize(
+              RetVal, R.data(), R.size()))
+        SDR(std::move(Err), std::move(RetVal));
+
+      SDR(Error::success(), std::move(RetVal));
+    };
+
+    Caller(std::move(SendSerializedResult), ArgBuffer.data(), ArgBuffer.size());
   }
 
   /// Handle a call to a wrapper function.
@@ -388,9 +506,19 @@ public:
   static WrapperFunctionResult handle(const char *ArgData, size_t ArgSize,
                                       HandlerT &&Handler) {
     using WFHH =
-        detail::WrapperFunctionHandlerHelper<HandlerT, ResultSerializer,
-                                             SPSTagTs...>;
+        detail::WrapperFunctionHandlerHelper<std::remove_reference_t<HandlerT>,
+                                             ResultSerializer, SPSTagTs...>;
     return WFHH::apply(std::forward<HandlerT>(Handler), ArgData, ArgSize);
+  }
+
+  /// Handle a call to an async wrapper function.
+  template <typename HandlerT, typename SendResultT>
+  static void handleAsync(const char *ArgData, size_t ArgSize,
+                          HandlerT &&Handler, SendResultT &&SendResult) {
+    using WFAHH = detail::WrapperFunctionAsyncHandlerHelper<
+        std::remove_reference_t<HandlerT>, ResultSerializer, SPSTagTs...>;
+    WFAHH::applyAsync(std::forward<HandlerT>(Handler),
+                      std::forward<SendResultT>(SendResult), ArgData, ArgSize);
   }
 
 private:
@@ -411,6 +539,7 @@ private:
 template <typename... SPSTagTs>
 class WrapperFunction<void(SPSTagTs...)>
     : private WrapperFunction<SPSEmpty(SPSTagTs...)> {
+
 public:
   template <typename CallerFn, typename... ArgTs>
   static Error call(const CallerFn &Caller, const ArgTs &...Args) {
@@ -419,6 +548,7 @@ public:
   }
 
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handle;
+  using WrapperFunction<SPSEmpty(SPSTagTs...)>::handleAsync;
 };
 
 } // end namespace shared

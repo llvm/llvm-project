@@ -5,7 +5,7 @@
 ;
 ; Check that some debug output is printed without problems.
 ; CHECK: SystemZAddressingMode
-; CHECK: Base t5: i64,ch = load<(load 8 from %ir.0)>
+; CHECK: Base t5: i64,ch = load<(load (s64) from %ir.0)>
 ; CHECK: Index
 ; CHECK: Disp
 

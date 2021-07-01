@@ -50,8 +50,8 @@ body:             |
     $v0 = SllX16 killed $v0, 16
     $v0 = AdduRxRyRz16 killed $v1, killed $v0
   ; CHECK-LABEL: name: test
-  ; CHECK: $v1 = LwRxRyOffMemX16 $v0, @foo :: (load 4 from call-entry @foo)
-    $v1 = LwRxRyOffMemX16 $v0, @foo :: (load 4 from call-entry @foo)
+  ; CHECK: $v1 = LwRxRyOffMemX16 $v0, @foo :: (load (s32) from call-entry @foo)
+    $v1 = LwRxRyOffMemX16 $v0, @foo :: (load (s32) from call-entry @foo)
     $t9 = COPY $v1
     $gp = COPY killed $v0
     JumpLinkReg16 killed $v1, csr_o32, implicit-def $ra, implicit killed $t9, implicit $a0, implicit killed $gp, implicit-def $sp, implicit-def dead $v0
@@ -87,13 +87,13 @@ body:             |
     $v0, $v1 = GotPrologue16 &_gp_disp, &_gp_disp
     $v0 = SllX16 killed $v0, 16
     $s0 = AdduRxRyRz16 killed $v1, killed $v0
-    $v0 = LwRxRyOffMemX16 $s0, @g :: (load 4 from call-entry @g)
+    $v0 = LwRxRyOffMemX16 $s0, @g :: (load (s32) from call-entry @g)
   ; CHECK-LABEL: test2
-  ; CHECK: $v1 = LwRxRyOffMemX16 $s0, &__mips16_call_stub_sf_0 :: (load 4 from call-entry &__mips16_call_stub_sf_0)
-    $v1 = LwRxRyOffMemX16 $s0, &__mips16_call_stub_sf_0 :: (load 4 from call-entry &__mips16_call_stub_sf_0)
+  ; CHECK: $v1 = LwRxRyOffMemX16 $s0, &__mips16_call_stub_sf_0 :: (load (s32) from call-entry &__mips16_call_stub_sf_0)
+    $v1 = LwRxRyOffMemX16 $s0, &__mips16_call_stub_sf_0 :: (load (s32) from call-entry &__mips16_call_stub_sf_0)
     $gp = COPY $s0
     JumpLinkReg16 killed $v1, csr_o32, implicit-def $ra, implicit $v0, implicit killed $gp, implicit-def $sp, implicit-def $v0
-    $v1 = LwRxRyOffMemX16 $s0, @__mips16_ret_sf :: (load 4 from call-entry @__mips16_ret_sf)
+    $v1 = LwRxRyOffMemX16 $s0, @__mips16_ret_sf :: (load (s32) from call-entry @__mips16_ret_sf)
     $t9 = COPY $v1
     $gp = COPY killed $s0
     JumpLinkReg16 killed $v1, csr_mips16rethelper, implicit-def $ra, implicit killed $t9, implicit $v0, implicit killed $gp, implicit-def $sp

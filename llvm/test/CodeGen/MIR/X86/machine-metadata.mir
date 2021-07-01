@@ -76,22 +76,22 @@ body:             |
     ; CHECK-LABEL: name: test_memcpy
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK: [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 4, !alias.scope !5, !noalias !8)
-    ; CHECK: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 4, !alias.scope !5, !noalias !8)
-    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store 8 into %ir.p0 + 8, align 4, !alias.scope !10, !noalias !11)
-    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store 8 into %ir.p0, align 4, !alias.scope !10, !noalias !11)
-    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    ; CHECK: [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !5, !noalias !8)
+    ; CHECK: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !5, !noalias !8)
+    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !10, !noalias !11)
+    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !10, !noalias !11)
+    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    ; CHECK: [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     ; CHECK: $eax = COPY [[ADD32rm]]
     ; CHECK: RET 0, $eax
     %1:gr64 = COPY $rsi
     %0:gr64 = COPY $rdi
-    %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 4, !alias.scope !5, !noalias !8)
-    %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 4, !alias.scope !5, !noalias !8)
-    MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store 8 into %ir.p0 + 8, align 4, !alias.scope !10, !noalias !11)
-    MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store 8 into %ir.p0, align 4, !alias.scope !10, !noalias !11)
-    %4:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    %5:gr32 = ADD32rm %4, %1, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !5, !noalias !8)
+    %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !5, !noalias !8)
+    MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !10, !noalias !11)
+    MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store (s64) into %ir.p0, align 4, !alias.scope !10, !noalias !11)
+    %4:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    %5:gr32 = ADD32rm %4, %1, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     $eax = COPY %5
     RET 0, $eax
 
@@ -113,22 +113,22 @@ body:             |
     ; CHECK-LABEL: name: test_memcpy_inline
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK: [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 4, !alias.scope !5, !noalias !8)
-    ; CHECK: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 4, !alias.scope !5, !noalias !8)
-    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store 8 into %ir.p0 + 8, align 4, !alias.scope !10, !noalias !11)
-    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store 8 into %ir.p0, align 4, !alias.scope !10, !noalias !11)
-    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    ; CHECK: [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !5, !noalias !8)
+    ; CHECK: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !5, !noalias !8)
+    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !10, !noalias !11)
+    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 4, !alias.scope !10, !noalias !11)
+    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    ; CHECK: [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     ; CHECK: $eax = COPY [[ADD32rm]]
     ; CHECK: RET 0, $eax
     %1:gr64 = COPY $rsi
     %0:gr64 = COPY $rdi
-    %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 4, !alias.scope !5, !noalias !8)
-    %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 4, !alias.scope !5, !noalias !8)
-    MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store 8 into %ir.p0 + 8, align 4, !alias.scope !10, !noalias !11)
-    MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store 8 into %ir.p0, align 4, !alias.scope !10, !noalias !11)
-    %4:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    %5:gr32 = ADD32rm %4, %1, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 4, !alias.scope !5, !noalias !8)
+    %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 4, !alias.scope !5, !noalias !8)
+    MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store (s64) into %ir.p0 + 8, align 4, !alias.scope !10, !noalias !11)
+    MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store (s64) into %ir.p0, align 4, !alias.scope !10, !noalias !11)
+    %4:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    %5:gr32 = ADD32rm %4, %1, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     $eax = COPY %5
     RET 0, $eax
 
@@ -150,22 +150,22 @@ body:             |
     ; CHECK-LABEL: name: test_mempcpy
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK: [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 1, !alias.scope !5, !noalias !8)
-    ; CHECK: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 1, !alias.scope !5, !noalias !8)
-    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store 8 into %ir.p0 + 8, align 1, !alias.scope !10, !noalias !11)
-    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store 8 into %ir.p0, align 1, !alias.scope !10, !noalias !11)
-    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    ; CHECK: [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 1, !alias.scope !5, !noalias !8)
+    ; CHECK: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 1, !alias.scope !5, !noalias !8)
+    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 8, $noreg, killed [[MOV64rm1]] :: (store (s64) into %ir.p0 + 8, align 1, !alias.scope !10, !noalias !11)
+    ; CHECK: MOV64mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV64rm]] :: (store (s64) into %ir.p0, align 1, !alias.scope !10, !noalias !11)
+    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    ; CHECK: [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     ; CHECK: $eax = COPY [[ADD32rm]]
     ; CHECK: RET 0, $eax
     %1:gr64 = COPY $rsi
     %0:gr64 = COPY $rdi
-    %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load 8 from %ir.p1, align 1, !alias.scope !5, !noalias !8)
-    %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load 8 from %ir.p1 + 8, align 1, !alias.scope !5, !noalias !8)
-    MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store 8 into %ir.p0 + 8, align 1, !alias.scope !10, !noalias !11)
-    MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store 8 into %ir.p0, align 1, !alias.scope !10, !noalias !11)
-    %4:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    %5:gr32 = ADD32rm %4, %1, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load (s64) from %ir.p1, align 1, !alias.scope !5, !noalias !8)
+    %3:gr64 = MOV64rm %0, 1, $noreg, 24, $noreg :: (load (s64) from %ir.p1 + 8, align 1, !alias.scope !5, !noalias !8)
+    MOV64mr %0, 1, $noreg, 8, $noreg, killed %3 :: (store (s64) into %ir.p0 + 8, align 1, !alias.scope !10, !noalias !11)
+    MOV64mr %0, 1, $noreg, 0, $noreg, killed %2 :: (store (s64) into %ir.p0, align 1, !alias.scope !10, !noalias !11)
+    %4:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    %5:gr32 = ADD32rm %4, %1, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     $eax = COPY %5
     RET 0, $eax
 

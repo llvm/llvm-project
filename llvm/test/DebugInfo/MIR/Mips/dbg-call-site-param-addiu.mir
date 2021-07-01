@@ -108,8 +108,8 @@ body:             |
     DBG_VALUE $a0, $noreg, !16, !DIExpression(), debug-location !18
     $sp = ADDiu $sp, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW killed $ra, $sp, 20 :: (store 4 into %stack.0)
-    SW killed $s0, $sp, 16 :: (store 4 into %stack.1)
+    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
+    SW killed $s0, $sp, 16 :: (store (s32) into %stack.1)
     CFI_INSTRUCTION offset $ra_64, -4
     CFI_INSTRUCTION offset $s0_64, -8
     DBG_VALUE $s0, $noreg, !16, !DIExpression(), debug-location !18
@@ -125,8 +125,8 @@ body:             |
     renamable $at = SLTi renamable $v0, 11, debug-location !18
     renamable $v1 = nsw ADDiu renamable $v0, 10, debug-location !18
     renamable $v0 = MOVZ_I_I killed renamable $v1, killed renamable $at, killed renamable $v0, debug-location !18
-    $s0 = LW $sp, 16, debug-location !18 :: (load 4 from %stack.1)
-    $ra = LW $sp, 20, debug-location !18 :: (load 4 from %stack.0)
+    $s0 = LW $sp, 16, debug-location !18 :: (load (s32) from %stack.1)
+    $ra = LW $sp, 20, debug-location !18 :: (load (s32) from %stack.0)
     PseudoReturn undef $ra, implicit $v0, debug-location !18 {
       $sp = ADDiu $sp, 24
     }

@@ -221,7 +221,7 @@ body:             |
     liveins: $x0
 
   %0:gpr64common = COPY $x0
-  %1:gpr32 = LDRWui %0, 0 :: (load 4 from %ir.p)
+  %1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p)
 ...
 )MIR";
 
@@ -255,7 +255,7 @@ body:             |
   MachineModuleSlotTracker MST(MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
-  EXPECT_EQ("%1:gpr32 = LDRWui %0, 0 :: (load 4 from %ir.p, "
+  EXPECT_EQ("%1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p, "
             "!alias.scope !0, !noalias !3)",
             print([&](raw_ostream &OS) {
               MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
@@ -285,7 +285,7 @@ CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}
 CHECK-DAG: ![[MMSET1:[0-9]+]] = !{![[MMSCOPE1]]}
 CHECK: body:
-CHECK: %1:gpr32 = LDRWui %0, 0 :: (load 4 from %ir.p, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
+CHECK: %1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
 )";
   EXPECT_TRUE(checkOutput(CheckString, Output));
 }
@@ -311,7 +311,7 @@ body:             |
     liveins: $rdi
 
   %0:gr64 = COPY $rdi
-  %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load 4 from %ir.p)
+  %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p)
 ...
 )MIR";
 
@@ -346,7 +346,7 @@ body:             |
   MachineModuleSlotTracker MST(MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
-  EXPECT_EQ("%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load 4 from %ir.p, "
+  EXPECT_EQ("%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, "
             "!alias.scope !0, !noalias !3)",
             print([&](raw_ostream &OS) {
               MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
@@ -376,7 +376,7 @@ CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}
 CHECK-DAG: ![[MMSET1:[0-9]+]] = !{![[MMSCOPE1]]}
 CHECK: body:
-CHECK: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load 4 from %ir.p, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
+CHECK: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
 )";
   EXPECT_TRUE(checkOutput(CheckString, Output));
 }
@@ -409,7 +409,7 @@ body:             |
     %0:vgpr_32 = COPY $vgpr0
     %8:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
     %6:vreg_64 = COPY %8
-    %5:vgpr_32 = FLAT_LOAD_DWORD killed %6, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.p)
+    %5:vgpr_32 = FLAT_LOAD_DWORD killed %6, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.p)
 ...
 )MIR";
 
@@ -446,7 +446,7 @@ body:             |
   // assigned.
   EXPECT_EQ(
       "%5:vgpr_32 = FLAT_LOAD_DWORD killed %4, 0, 0, implicit $exec, implicit "
-      "$flat_scr :: (load 4 from %ir.p, !alias.scope !0, !noalias !3)",
+      "$flat_scr :: (load (s32) from %ir.p, !alias.scope !0, !noalias !3)",
       print([&](raw_ostream &OS) {
         MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
                  /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
@@ -475,7 +475,7 @@ CHECK-DAG: ![[MMSCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[MMDOMAIN]], !"scope
 CHECK-DAG: ![[MMSET0:[0-9]+]] = !{![[MMSCOPE0]]}
 CHECK-DAG: ![[MMSET1:[0-9]+]] = !{![[MMSCOPE1]]}
 CHECK: body:
-CHECK: %5:vgpr_32 = FLAT_LOAD_DWORD killed %4, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.p, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
+CHECK: %5:vgpr_32 = FLAT_LOAD_DWORD killed %4, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.p, !alias.scope ![[MMSET0]], !noalias ![[MMSET1]])
 )";
   EXPECT_TRUE(checkOutput(CheckString, Output));
 }

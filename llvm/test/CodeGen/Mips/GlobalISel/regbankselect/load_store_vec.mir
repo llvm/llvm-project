@@ -23,13 +23,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:fprb(<16 x s8>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
-    ; P5600: G_STORE [[LOAD]](<16 x s8>), [[COPY]](p0) :: (store 16 into %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:fprb(<16 x s8>) = G_LOAD [[COPY1]](p0) :: (load (<16 x s8>) from %ir.b)
+    ; P5600: G_STORE [[LOAD]](<16 x s8>), [[COPY]](p0) :: (store (<16 x s8>) into %ir.a)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<16 x s8>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<16 x s8>), %0(p0) :: (store 16 into %ir.a)
+    %2:_(<16 x s8>) = G_LOAD %1(p0) :: (load (<16 x s8>) from %ir.b)
+    G_STORE %2(<16 x s8>), %0(p0) :: (store (<16 x s8>) into %ir.a)
     RetRA
 
 ...
@@ -46,13 +46,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:fprb(<8 x s16>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
-    ; P5600: G_STORE [[LOAD]](<8 x s16>), [[COPY]](p0) :: (store 16 into %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:fprb(<8 x s16>) = G_LOAD [[COPY1]](p0) :: (load (<8 x s16>) from %ir.b)
+    ; P5600: G_STORE [[LOAD]](<8 x s16>), [[COPY]](p0) :: (store (<8 x s16>) into %ir.a)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<8 x s16>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<8 x s16>), %0(p0) :: (store 16 into %ir.a)
+    %2:_(<8 x s16>) = G_LOAD %1(p0) :: (load (<8 x s16>) from %ir.b)
+    G_STORE %2(<8 x s16>), %0(p0) :: (store (<8 x s16>) into %ir.a)
     RetRA
 
 ...
@@ -69,13 +69,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:fprb(<4 x s32>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
-    ; P5600: G_STORE [[LOAD]](<4 x s32>), [[COPY]](p0) :: (store 16 into %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:fprb(<4 x s32>) = G_LOAD [[COPY1]](p0) :: (load (<4 x s32>) from %ir.b)
+    ; P5600: G_STORE [[LOAD]](<4 x s32>), [[COPY]](p0) :: (store (<4 x s32>) into %ir.a)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<4 x s32>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<4 x s32>), %0(p0) :: (store 16 into %ir.a)
+    %2:_(<4 x s32>) = G_LOAD %1(p0) :: (load (<4 x s32>) from %ir.b)
+    G_STORE %2(<4 x s32>), %0(p0) :: (store (<4 x s32>) into %ir.a)
     RetRA
 
 ...
@@ -92,13 +92,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:fprb(<2 x s64>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
-    ; P5600: G_STORE [[LOAD]](<2 x s64>), [[COPY]](p0) :: (store 16 into %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:fprb(<2 x s64>) = G_LOAD [[COPY1]](p0) :: (load (<2 x s64>) from %ir.b)
+    ; P5600: G_STORE [[LOAD]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>) into %ir.a)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<2 x s64>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<2 x s64>), %0(p0) :: (store 16 into %ir.a)
+    %2:_(<2 x s64>) = G_LOAD %1(p0) :: (load (<2 x s64>) from %ir.b)
+    G_STORE %2(<2 x s64>), %0(p0) :: (store (<2 x s64>) into %ir.a)
     RetRA
 
 ...
@@ -115,13 +115,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:fprb(<4 x s32>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
-    ; P5600: G_STORE [[LOAD]](<4 x s32>), [[COPY]](p0) :: (store 16 into %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:fprb(<4 x s32>) = G_LOAD [[COPY1]](p0) :: (load (<4 x s32>) from %ir.b)
+    ; P5600: G_STORE [[LOAD]](<4 x s32>), [[COPY]](p0) :: (store (<4 x s32>) into %ir.a)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<4 x s32>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<4 x s32>), %0(p0) :: (store 16 into %ir.a)
+    %2:_(<4 x s32>) = G_LOAD %1(p0) :: (load (<4 x s32>) from %ir.b)
+    G_STORE %2(<4 x s32>), %0(p0) :: (store (<4 x s32>) into %ir.a)
     RetRA
 
 ...
@@ -138,13 +138,13 @@ body:             |
     ; P5600: liveins: $a0, $a1
     ; P5600: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; P5600: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; P5600: [[LOAD:%[0-9]+]]:fprb(<2 x s64>) = G_LOAD [[COPY1]](p0) :: (load 16 from %ir.b)
-    ; P5600: G_STORE [[LOAD]](<2 x s64>), [[COPY]](p0) :: (store 16 into %ir.a)
+    ; P5600: [[LOAD:%[0-9]+]]:fprb(<2 x s64>) = G_LOAD [[COPY1]](p0) :: (load (<2 x s64>) from %ir.b)
+    ; P5600: G_STORE [[LOAD]](<2 x s64>), [[COPY]](p0) :: (store (<2 x s64>) into %ir.a)
     ; P5600: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(<2 x s64>) = G_LOAD %1(p0) :: (load 16 from %ir.b)
-    G_STORE %2(<2 x s64>), %0(p0) :: (store 16 into %ir.a)
+    %2:_(<2 x s64>) = G_LOAD %1(p0) :: (load (<2 x s64>) from %ir.b)
+    G_STORE %2(<2 x s64>), %0(p0) :: (store (<2 x s64>) into %ir.a)
     RetRA
 
 ...
