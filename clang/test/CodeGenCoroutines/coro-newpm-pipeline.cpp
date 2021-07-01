@@ -10,12 +10,6 @@
 //
 // CHECK-ALL: Running pass:{{.*}}CoroEarlyPass
 //
-// The first coro-split pass enqueues a second run of the entire CGSCC pipeline.
-// CHECK-ALL: Running pass: CoroSplitPass on (_Z3foov)
-// CHECK-OPT: Running pass:{{.*}}CoroElidePass{{.*}} on {{.*}}_Z3foov{{.*}}
-//
-// The second coro-split pass splits coroutine 'foo' into funclets
-// 'foo.resume', 'foo.destroy', and 'foo.cleanup'.
 // CHECK-ALL: Running pass: CoroSplitPass on (_Z3foov)
 // CHECK-OPT: Running pass:{{.*}}CoroElidePass{{.*}} on {{.*}}_Z3foov{{.*}}
 //
@@ -27,7 +21,7 @@ namespace experimental {
 struct handle {};
 
 struct awaitable {
-  bool await_ready() noexcept { return true; }
+  bool await_ready() noexcept { return false; }
   void await_suspend(handle) noexcept {}
   bool await_resume() noexcept { return true; }
 };

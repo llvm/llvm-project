@@ -1,0 +1,3 @@
+# RUN: OrcV2CBindingsReflectProcessSymbols 2>&1 | FileCheck %s
+
+# CHECK: 3 * 4 + 5 = 17

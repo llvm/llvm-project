@@ -17,7 +17,7 @@ if (NOT WIN32)
     PluginsTest.cpp
     )
   export_executable_symbols_for_plugins(PluginsTests)
-  target_link_libraries(PluginsTests PRIVATE LLVMTestingSupport)
+  target_link_libraries(PluginsTests PRIVATE LLVMAsmParser LLVMTestingSupport)
 
   set(LLVM_LINK_COMPONENTS)
   foreach(PLUGIN TestPlugin DoublerPlugin)

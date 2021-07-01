@@ -66,7 +66,7 @@ static void *__kmpc_alloc_for_warp(AllocTy Alloc, unsigned Bytes,
 
 EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
   Bytes = Bytes + (Bytes % MinBytes);
-  if (IsMasterThread(isSPMDMode())) {
+  if (IsMasterThread(__kmpc_is_spmd_exec_mode())) {
     // Main thread alone, use shared memory if space is available.
     if (MainSharedStack.Usage[0] + Bytes <= MainSharedStack.MaxSize) {
       void *Ptr = &MainSharedStack.Data[MainSharedStack.Usage[0]];

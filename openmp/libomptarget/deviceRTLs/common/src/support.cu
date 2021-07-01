@@ -26,8 +26,6 @@ void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode) {
 
 bool isGenericMode() { return (execution_param & ModeMask) == Generic; }
 
-bool isSPMDMode() { return (execution_param & ModeMask) == Spmd; }
-
 bool isRuntimeUninitialized() {
   return (execution_param & RuntimeMask) == RuntimeUninitialized;
 }
@@ -42,7 +40,7 @@ bool isRuntimeInitialized() {
 
 bool checkSPMDMode(kmp_Ident *loc) {
   if (!loc)
-    return isSPMDMode();
+    return __kmpc_is_spmd_exec_mode();
 
   // If SPMD is true then we are not in the UNDEFINED state so
   // we can return immediately.
@@ -55,7 +53,7 @@ bool checkSPMDMode(kmp_Ident *loc) {
     return false;
 
   // We are in underfined state.
-  return isSPMDMode();
+  return __kmpc_is_spmd_exec_mode();
 }
 
 bool checkGenericMode(kmp_Ident *loc) { return !checkSPMDMode(loc); }

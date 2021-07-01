@@ -508,7 +508,7 @@ public:
     PRINT(LD_LOOP,
           "Got sched: active %d, total %d: lb %lld, ub %lld, stride = %lld, "
           "last %d\n",
-          (int)GetNumberOfOmpThreads(isSPMDMode()),
+          (int)GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode()),
           (int)GetNumberOfWorkersInTeam(), (long long)*plower,
           (long long)*pupper, (long long)*pstride, (int)*plast);
     return DISPATCH_NOTFINISHED;

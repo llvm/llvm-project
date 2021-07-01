@@ -338,7 +338,7 @@ typedef struct LLVMOrcOpaqueIRTransformLayer *LLVMOrcIRTransformLayerRef;
  * management.
  *
  * Clients can call LLVMOrcLLJITGetIRTransformLayer to obtain the transform
- * layer of a LLJIT instance, and use LLVMOrcLLJITIRTransformLayerSetTransform
+ * layer of a LLJIT instance, and use LLVMOrcIRTransformLayerSetTransform
  * to set the function. This can be used to override the default transform
  * layer.
  */
@@ -783,7 +783,7 @@ void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer);
  * Set the transform function of the provided transform layer, passing through a
  * pointer to user provided context.
  */
-void LLVMOrcLLJITIRTransformLayerSetTransform(
+void LLVMOrcIRTransformLayerSetTransform(
     LLVMOrcIRTransformLayerRef IRTransformLayer,
     LLVMOrcIRTransformLayerTransformFunction TransformFunction, void *Ctx);
 

@@ -124,8 +124,6 @@ def Tosa_Tensor5D : TensorRankOf<[Tosa_AnyNumber], [5]>;
 def Tosa_Tensor1Dto4D : TensorRankOf<[Tosa_AnyNumber], [1,2,3,4]>;
 def Tosa_Tensor1Dto6D : TensorRankOf<[Tosa_AnyNumber], [1,2,3,4,5,6]>;
 
-def Tosa_Tensor2Dto3D : TensorRankOf<[Tosa_AnyNumber], [2,3]>;
-
 def Tosa_TensorUpto4D : TensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>;
 
 def Tosa_Int32TensorUpto4D : TensorRankOf<[Tosa_Int32], [0,1,2,3,4]>;

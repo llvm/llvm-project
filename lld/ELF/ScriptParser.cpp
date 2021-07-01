@@ -596,9 +596,12 @@ void ScriptParser::readSections() {
   else if (!consume("BEFORE"))
     setError("expected AFTER/BEFORE, but got '" + next() + "'");
   StringRef where = next();
+  std::vector<StringRef> names;
   for (BaseCommand *cmd : v)
     if (auto *os = dyn_cast<OutputSection>(cmd))
-      script->insertCommands.push_back({os->name, isAfter, where});
+      names.push_back(os->name);
+  if (!names.empty())
+    script->insertCommands.push_back({std::move(names), isAfter, where});
 }
 
 void ScriptParser::readTarget() {

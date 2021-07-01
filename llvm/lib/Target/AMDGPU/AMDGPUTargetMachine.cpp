@@ -208,6 +208,11 @@ static cl::opt<bool, true> EnableLowerModuleLDS(
     cl::location(AMDGPUTargetMachine::EnableLowerModuleLDS), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool> EnablePreRAOptimizations(
+    "amdgpu-enable-pre-ra-optimizations",
+    cl::desc("Enable Pre-RA optimizations pass"), cl::init(true),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -278,6 +283,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUSimplifyLibCallsPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeGCNNSAReassignPass(*PR);
+  initializeGCNPreRAOptimizationsPass(*PR);
   initializeSIInsertScratchBoundsPass(*PR);
   initializeSIFixScratchSizePass(*PR);
 }
@@ -1210,6 +1216,11 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
+
+  if (EnablePreRAOptimizations.getNumOccurrences()
+          ? EnablePreRAOptimizations
+          : TM->getOptLevel() > CodeGenOpt::Less)
+    insertPass(&RenameIndependentSubregsID, &GCNPreRAOptimizationsID);
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
