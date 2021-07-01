@@ -1192,6 +1192,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
     }
 
+    // Legalize unpacked bitcasts to REINTERPRET_CAST.
+    for (auto VT : {MVT::nxv2i32, MVT::nxv2f32})
+      setOperationAction(ISD::BITCAST, VT, Custom);
+
     for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1}) {
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::SELECT, VT, Custom);
@@ -3508,17 +3512,30 @@ SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
   return CallResult.first;
 }
 
+static MVT getSVEContainerType(EVT ContentTy);
+
 SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT OpVT = Op.getValueType();
+  EVT ArgVT = Op.getOperand(0).getValueType();
 
   if (useSVEForFixedLengthVectorVT(OpVT))
     return LowerFixedLengthBitcastToSVE(Op, DAG);
 
+  if (OpVT == MVT::nxv2f32) {
+    if (ArgVT.isInteger()) {
+      SDValue ExtResult =
+          DAG.getNode(ISD::ANY_EXTEND, SDLoc(Op), getSVEContainerType(ArgVT),
+                      Op.getOperand(0));
+      return getSVESafeBitCast(MVT::nxv2f32, ExtResult, DAG);
+    }
+    return getSVESafeBitCast(MVT::nxv2f32, Op.getOperand(0), DAG);
+  }
+
   if (OpVT != MVT::f16 && OpVT != MVT::bf16)
     return SDValue();
 
-  assert(Op.getOperand(0).getValueType() == MVT::i16);
+  assert(ArgVT == MVT::i16);
   SDLoc DL(Op);
 
   Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op.getOperand(0));
@@ -16866,10 +16883,17 @@ bool AArch64TargetLowering::getPostIndexedAddressParts(
   return true;
 }
 
-static void ReplaceBITCASTResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
-                                  SelectionDAG &DAG) {
+void AArch64TargetLowering::ReplaceBITCASTResults(
+    SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   SDLoc DL(N);
   SDValue Op = N->getOperand(0);
+
+  if (N->getValueType(0) == MVT::nxv2i32 &&
+      Op.getValueType().isFloatingPoint()) {
+    SDValue CastResult = getSVESafeBitCast(MVT::nxv2i64, Op, DAG);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::nxv2i32, CastResult));
+    return;
+  }
 
   if (N->getValueType(0) != MVT::i16 ||
       (Op.getValueType() != MVT::f16 && Op.getValueType() != MVT::bf16))
@@ -18428,8 +18452,6 @@ SDValue AArch64TargetLowering::getSVESafeBitCast(EVT VT, SDValue Op,
 
   EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
   EVT PackedInVT = getPackedSVEVectorVT(InVT.getVectorElementType());
-  assert((VT == PackedVT || InVT == PackedInVT) &&
-         "Cannot cast between unpacked scalable vector types!");
 
   // Pack input if required.
   if (InVT != PackedInVT)

@@ -15,6 +15,21 @@
 
 include "mlir/Pass/PassBase.td"
 
+def TosaInferShapes : FunctionPass<"tosa-infer-shapes"> {
+  let summary = "Propagate shapes across TOSA operations";
+  let description = [{
+    Pass that uses operand types and propagates shapes to TOSA operations.
+    This includes legalizing rankless and dynamic shapes towards static.
+  }];
+
+  let constructor = "createTosaInferShapesPass()";
+  let dependentDialects = [
+    "StandardOpsDialect",
+    "tensor::TensorDialect",
+    "tosa::TosaDialect",
+  ];
+}
+
 def TosaMakeBroadcastable : FunctionPass<"tosa-make-broadcastable"> {
   let summary = "TOSA rank Reshape to enable Broadcasting";
   let description = [{

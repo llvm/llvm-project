@@ -38,11 +38,27 @@ class StorageUniquer;
 /// a very generic name ("Context") and because it is uncommon for clients to
 /// interact with it.
 ///
+/// The context wrap some multi-threading facilities, and in particular by
+/// default it will implicitly create a thread pool.
+/// This can be undesirable if multiple context exists at the same time or if a
+/// process will be long-lived and create and destroy contexts.
+/// To control better thread spawning, an externally owned ThreadPool can be
+/// injected in the context. For example:
+///
+///  llvm::ThreadPool myThreadPool;
+///  while (auto *request = nextCompilationRequests()) {
+///    MLIRContext ctx(registry, MLIRContext::Threading::DISABLED);
+///    ctx.setThreadPool(myThreadPool);
+///    processRequest(request, cxt);
+///  }
+///
 class MLIRContext {
 public:
+  enum class Threading { DISABLED, ENABLED };
   /// Create a new Context.
-  explicit MLIRContext();
-  explicit MLIRContext(const DialectRegistry &registry);
+  explicit MLIRContext(Threading multithreading = Threading::ENABLED);
+  explicit MLIRContext(const DialectRegistry &registry,
+                       Threading multithreading = Threading::ENABLED);
   ~MLIRContext();
 
   /// Return information about all IR dialects loaded in the context.
@@ -118,7 +134,15 @@ public:
     disableMultithreading(!enable);
   }
 
-  /// Return the thread pool owned by this context. This method requires that
+  /// Set a new thread pool to be used in this context. This method requires
+  /// that multithreading is disabled for this context prior to the call. This
+  /// allows to share a thread pool across multiple contexts, as well as
+  /// decoupling the lifetime of the threads from the contexts. The thread pool
+  /// must outlive the context. Multi-threading will be enabled as part of this
+  /// method.
+  void setThreadPool(llvm::ThreadPool &pool);
+
+  /// Return the thread pool used by this context. This method requires that
   /// multithreading be enabled within the context, and should generally not be
   /// used directly. Users should instead prefer the threading utilities within
   /// Threading.h.
