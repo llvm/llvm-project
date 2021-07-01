@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/MyCFG/MyCFG.h"
+#include "llvm/Transforms/Scarr/ScarrCpMarker.h"
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -14,14 +14,14 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Analysis/HeatUtils.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstIterator.h"
 #include <sstream>
 
 using namespace llvm;
 
-void findLoopHeader(Function &F);
+void findVirtualCheckpoint(Function &F);
 
 void traverseCFG(Function &F) {
   outs() << "===============================================\n";
@@ -144,7 +144,7 @@ void traverseCFG(Function &F) {
   outs() << "\n\n";
 }
 
-void traverseCheckpoints(Function &F, int nestedLevel) {
+void findCheckpoints(Function &F, int nestedLevel) {
   std::string prefix = "";
   for (int i = 0; i < nestedLevel; i++) {
     prefix.append(">>");
@@ -175,7 +175,7 @@ void traverseCheckpoints(Function &F, int nestedLevel) {
             continue;
           }
           outs() << prefix << "Traversing nestedLevel function " << calledFunction << " Instruction '" << i << "'\n";
-          traverseCheckpoints(*(call->getCalledFunction()), nestedLevel + 1);
+          findCheckpoints(*(call->getCalledFunction()), nestedLevel + 1);
           outs() << prefix << "Finished traversing nestedLevel function " << call->getCalledFunction()->getName() << "\n";
         } else {
           // The function is outside of the translation unit, hence it is an exit point
@@ -186,35 +186,23 @@ void traverseCheckpoints(Function &F, int nestedLevel) {
       }
     }
 
-    // Get Identifier from the BB address
-    std::ostringstream st;
-    st << &bb;
-
-    std::string name = st.str();
     if (isThreadStartCheckpoint) {
-      outs() << prefix << "This basic block:'" << name << "' is thread start checkpoint\n";
-      name.append(" - Thread Start");
       isThreadStartCheckpoint = false;
       bb.setCheckpoint(Checkpoint::ThreadStart);
     } else if (isThreadEndCheckpoint) {
-      name.append(" - Thread End");
-      outs() << prefix << "This basic block:'" << name << "' is thread end checkpoint\n";
       bb.setCheckpoint(Checkpoint::ThreadEnd);
     } else if (isExitPointCheckpoint) {
-      name.append(" - Exit Point");
-      outs() << prefix << "This basic block:'" << name << "' is exit-point checkpoint\n";
       bb.setCheckpoint(Checkpoint::ExitPoint);
     }
-//    bb.setName(name);
     if (!nestedLevel) {
       outs() << "\n\n";
     }
   }
 
-  findLoopHeader(F);
+  findVirtualCheckpoint(F);
 }
 
-void findLoopHeader(Function &F) {
+void findVirtualCheckpoint(Function &F) {
   outs() << "==================================================\n";
   outs() << "Analyzing loop\n";
   DominatorTree* DT = new DominatorTree();
@@ -224,29 +212,22 @@ void findLoopHeader(Function &F) {
   KLoop->releaseMemory();
   KLoop->analyze(*DT);
   for (auto &bb : F) {
-    auto loop = KLoop->getLoopFor(&bb);
-    if (loop != nullptr) {
-      auto loopHeader = loop->getHeader();
-      outs() << "Loop header: '" << loopHeader << "' Instructions: '" << *loopHeader << "'\n";
-
-      std::ostringstream st;
-      st << &bb;
-
-      std::string name = st.str();
-      name.append(" - Virtual Checkpoint");
-//      loopHeader->setName(name);
-      loopHeader->setCheckpoint(Checkpoint::Virtual);
+    // Since the BasicBlock would have been inlined, just traverse from main function
+    if (F.getName() == "main") {
+      auto loop = KLoop->getLoopFor(&bb);
+      if (loop != nullptr) {
+        loop->getHeader()->setCheckpoint(Checkpoint::Virtual);
+      }
     }
   }
 }
 
-PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
+PreservedAnalyses ScarrCpMarkerPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (F.getName() == "main") {
     outs() << "==================================================\n";
   }
   outs() << "Function '" << F.getName() << "'\n";
-  traverseCheckpoints(F, 0);
-
+  findCheckpoints(F, 0);
 
   traverseCFG(F);
   return PreservedAnalyses::all();

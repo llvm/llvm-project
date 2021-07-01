@@ -1,5 +1,5 @@
 add_llvm_component_library(LLVMMyCFG
-        MyCFG.cpp
+        ScarrCpMarker.cpp
         TopoSorter.cpp
 
         DEPENDS
