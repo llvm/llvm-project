@@ -18,8 +18,11 @@ static const u64 kh_Linux64bit_ShadowOffset =
 
 #define MEM_TO_SHADOW(mem_addr) (((mem_addr) >> ASAN_SHADOW) + kh_Linux64bit_ShadowOffset)
 
+#define NO_SANITIZE_ADDR __attribute__((no_sanitize("address")))
+
 //address are atleast SHADOW_GRANULARITY aligned
 //true, when given byte is accessible false otherwise
+NO_SANITIZE_ADDR
 static bool
 is_address_poisoned(uptr addr)
 {
@@ -33,6 +36,7 @@ is_address_poisoned(uptr addr)
 }
 
 //check all application bytes in [beg,beg+size) range are accessible
+NO_SANITIZE_ADDR
 static bool
 is_region_poisoned(uptr beg, uptr size)
 {

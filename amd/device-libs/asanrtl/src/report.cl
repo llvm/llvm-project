@@ -61,6 +61,7 @@ void __asan_report_ ## type ## _n_noabort(uptr addr, uptr size) {  \
 ASAN_REPORT_ERROR_N(store,1)
 ASAN_REPORT_ERROR_N(load,0)
 
+NO_SANITIZE_ADDR
 static bool
 asan_map_check(uptr addr, uptr size)
 {
@@ -76,14 +77,14 @@ asan_map_check(uptr addr, uptr size)
 }
 
 #define ASAN_ERROR(type, size, is_write)                     \
-OPT_NONE                                                     \
+OPT_NONE NO_SANITIZE_ADDR                                    \
 void __asan_ ## type ## size(uptr addr) {                    \
     uptr caller_pc = GET_CALLER_PC();                        \
     if (asan_map_check(addr, size)) {                        \
         REPORT_IMPL(caller_pc, addr, is_write, size, false)  \
     }                                                        \
 }                                                            \
-OPT_NONE                                                     \
+OPT_NONE NO_SANITIZE_ADDR                                    \
 void __asan_ ## type ## size ## _noabort(uptr addr) {        \
     uptr caller_pc = GET_CALLER_PC();                        \
     if (asan_map_check(addr, size)) {                        \
@@ -104,14 +105,14 @@ ASAN_ERROR(store, 8, 1)
 ASAN_ERROR(store, 16,1)
 
 #define ASAN_ERROR_N(type, is_write)                         \
-OPT_NONE                                                     \
+OPT_NONE NO_SANITIZE_ADDR                                    \
 void __asan_ ## type ## _n(uptr addr, uptr size) {           \
     uptr caller_pc = GET_CALLER_PC();                        \
     if (is_region_poisoned(addr, size)) {                    \
         REPORT_IMPL(caller_pc, addr, is_write, size, false)  \
     }                                                        \
 }                                                            \
-OPT_NONE                                                     \
+OPT_NONE NO_SANITIZE_ADDR                                    \
 void __asan_ ## type ## _n_noabort(uptr addr, uptr size) {   \
     uptr caller_pc = GET_CALLER_PC();                        \
     if (is_region_poisoned(addr, size)) {                    \
