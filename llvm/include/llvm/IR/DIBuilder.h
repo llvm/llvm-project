@@ -182,7 +182,7 @@ namespace llvm {
 
     /// Create a single enumerator value.
     DIEnumerator *createEnumerator(StringRef Name, APSInt Value);
-    DIEnumerator *createEnumerator(StringRef Name, int64_t Val,
+    DIEnumerator *createEnumerator(StringRef Name, uint64_t Val,
                                    bool IsUnsigned = false);
 
     /// Create a DWARF unspecified type.
