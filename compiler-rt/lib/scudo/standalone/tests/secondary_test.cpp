@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "memtag.h"
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
@@ -20,7 +21,11 @@
 #include <vector>
 
 template <typename Config> static scudo::Options getOptionsForConfig() {
-  return {};
+  if (!Config::MaySupportMemoryTagging || !scudo::archSupportsMemoryTagging())
+    return {};
+  scudo::AtomicOptions AO;
+  AO.set(scudo::OptionBit::UseMemoryTagging);
+  return AO.load();
 }
 
 template <typename Config> static void testSecondaryBasic(void) {
