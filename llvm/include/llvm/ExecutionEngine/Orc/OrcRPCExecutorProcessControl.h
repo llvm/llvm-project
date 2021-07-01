@@ -1,4 +1,4 @@
-//===--- OrcRPCTargetProcessControl.h - Remote target control ---*- C++ -*-===//
+//===-- OrcRPCExecutorProcessControl.h - Remote target control --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Utilities for interacting with target processes.
+// Executor control via ORC RPC.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_ORCRPCTARGETPROCESSCONTROL_H
-#define LLVM_EXECUTIONENGINE_ORC_ORCRPCTARGETPROCESSCONTROL_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_ORCRPCEXECUTORPROCESSCONTROL_H
+#define LLVM_EXECUTIONENGINE_ORC_ORCRPCEXECUTORPROCESSCONTROL_H
 
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/RPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/RawByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRPCTPCServer.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
 namespace llvm {
@@ -24,8 +24,8 @@ namespace orc {
 
 /// JITLinkMemoryManager implementation for a process connected via an ORC RPC
 /// endpoint.
-template <typename OrcRPCTPCImplT>
-class OrcRPCTPCJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
+template <typename OrcRPCEPCImplT>
+class OrcRPCEPCJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
 private:
   struct HostAlloc {
     std::unique_ptr<char[]> Mem;
@@ -43,7 +43,7 @@ private:
 public:
   class OrcRPCAllocation : public Allocation {
   public:
-    OrcRPCAllocation(OrcRPCTPCJITLinkMemoryManager<OrcRPCTPCImplT> &Parent,
+    OrcRPCAllocation(OrcRPCEPCJITLinkMemoryManager<OrcRPCEPCImplT> &Parent,
                      HostAllocMap HostAllocs, TargetAllocMap TargetAllocs)
         : Parent(Parent), HostAllocs(std::move(HostAllocs)),
           TargetAllocs(std::move(TargetAllocs)) {
@@ -140,12 +140,12 @@ public:
     }
 
   private:
-    OrcRPCTPCJITLinkMemoryManager<OrcRPCTPCImplT> &Parent;
+    OrcRPCEPCJITLinkMemoryManager<OrcRPCEPCImplT> &Parent;
     HostAllocMap HostAllocs;
     TargetAllocMap TargetAllocs;
   };
 
-  OrcRPCTPCJITLinkMemoryManager(OrcRPCTPCImplT &Parent) : Parent(Parent) {}
+  OrcRPCEPCJITLinkMemoryManager(OrcRPCEPCImplT &Parent) : Parent(Parent) {}
 
   Expected<std::unique_ptr<Allocation>>
   allocate(const jitlink::JITLinkDylib *JD,
@@ -216,19 +216,19 @@ public:
 private:
   void reportError(Error Err) { Parent.reportError(std::move(Err)); }
 
-  decltype(std::declval<OrcRPCTPCImplT>().getEndpoint()) getEndpoint() {
+  decltype(std::declval<OrcRPCEPCImplT>().getEndpoint()) getEndpoint() {
     return Parent.getEndpoint();
   }
 
-  OrcRPCTPCImplT &Parent;
+  OrcRPCEPCImplT &Parent;
 };
 
-/// TargetProcessControl::MemoryAccess implementation for a process connected
+/// ExecutorProcessControl::MemoryAccess implementation for a process connected
 /// via an ORC RPC endpoint.
-template <typename OrcRPCTPCImplT>
-class OrcRPCTPCMemoryAccess : public TargetProcessControl::MemoryAccess {
+template <typename OrcRPCEPCImplT>
+class OrcRPCEPCMemoryAccess : public ExecutorProcessControl::MemoryAccess {
 public:
-  OrcRPCTPCMemoryAccess(OrcRPCTPCImplT &Parent) : Parent(Parent) {}
+  OrcRPCEPCMemoryAccess(OrcRPCEPCImplT &Parent) : Parent(Parent) {}
 
   void writeUInt8s(ArrayRef<tpctypes::UInt8Write> Ws,
                    WriteResultFn OnWriteComplete) override {
@@ -269,20 +269,20 @@ private:
     }
   }
 
-  OrcRPCTPCImplT &Parent;
+  OrcRPCEPCImplT &Parent;
 };
 
-// TargetProcessControl for a process connected via an ORC RPC Endpoint.
+// ExecutorProcessControl for a process connected via an ORC RPC Endpoint.
 template <typename RPCEndpointT>
-class OrcRPCTargetProcessControlBase : public TargetProcessControl {
+class OrcRPCExecutorProcessControlBase : public ExecutorProcessControl {
 public:
   using ErrorReporter = unique_function<void(Error)>;
 
   using OnCloseConnectionFunction = unique_function<Error(Error)>;
 
-  OrcRPCTargetProcessControlBase(std::shared_ptr<SymbolStringPool> SSP,
-                                 RPCEndpointT &EP, ErrorReporter ReportError)
-      : TargetProcessControl(std::move(SSP)),
+  OrcRPCExecutorProcessControlBase(std::shared_ptr<SymbolStringPool> SSP,
+                                   RPCEndpointT &EP, ErrorReporter ReportError)
+      : ExecutorProcessControl(std::move(SSP)),
         ReportError(std::move(ReportError)), EP(EP) {}
 
   void reportError(Error Err) { ReportError(std::move(Err)); }
@@ -391,7 +391,7 @@ public:
 protected:
   /// Subclasses must call this during construction to initialize the
   /// TargetTriple and PageSize members.
-  Error initializeORCRPCTPCBase() {
+  Error initializeORCRPCEPCBase() {
     if (auto TripleOrErr = EP.template callB<orcrpctpc::GetTargetTriple>())
       TargetTriple = Triple(*TripleOrErr);
     else
@@ -413,4 +413,4 @@ private:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_ORCRPCTARGETPROCESSCONTROL_H
+#endif // LLVM_EXECUTIONENGINE_ORC_ORCRPCEXECUTORPROCESSCONTROL_H

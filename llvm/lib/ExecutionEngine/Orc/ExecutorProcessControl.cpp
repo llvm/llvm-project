@@ -1,4 +1,4 @@
-//===------ TargetProcessControl.cpp -- Target process control APIs -------===//
+//===---- ExecutorProcessControl.cpp -- Executor process control APIs -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
@@ -18,14 +18,14 @@
 namespace llvm {
 namespace orc {
 
-TargetProcessControl::MemoryAccess::~MemoryAccess() {}
+ExecutorProcessControl::MemoryAccess::~MemoryAccess() {}
 
-TargetProcessControl::~TargetProcessControl() {}
+ExecutorProcessControl::~ExecutorProcessControl() {}
 
-SelfTargetProcessControl::SelfTargetProcessControl(
+SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, Triple TargetTriple,
     unsigned PageSize, std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr)
-    : TargetProcessControl(std::move(SSP)) {
+    : ExecutorProcessControl(std::move(SSP)) {
 
   OwnedMemMgr = std::move(MemMgr);
   if (!OwnedMemMgr)
@@ -39,8 +39,8 @@ SelfTargetProcessControl::SelfTargetProcessControl(
     GlobalManglingPrefix = '_';
 }
 
-Expected<std::unique_ptr<SelfTargetProcessControl>>
-SelfTargetProcessControl::Create(
+Expected<std::unique_ptr<SelfExecutorProcessControl>>
+SelfExecutorProcessControl::Create(
     std::shared_ptr<SymbolStringPool> SSP,
     std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr) {
   auto PageSize = sys::Process::getPageSize();
@@ -49,12 +49,12 @@ SelfTargetProcessControl::Create(
 
   Triple TT(sys::getProcessTriple());
 
-  return std::make_unique<SelfTargetProcessControl>(
+  return std::make_unique<SelfExecutorProcessControl>(
       std::move(SSP), std::move(TT), *PageSize, std::move(MemMgr));
 }
 
 Expected<tpctypes::DylibHandle>
-SelfTargetProcessControl::loadDylib(const char *DylibPath) {
+SelfExecutorProcessControl::loadDylib(const char *DylibPath) {
   std::string ErrMsg;
   auto Dylib = std::make_unique<sys::DynamicLibrary>(
       sys::DynamicLibrary::getPermanentLibrary(DylibPath, &ErrMsg));
@@ -65,7 +65,7 @@ SelfTargetProcessControl::loadDylib(const char *DylibPath) {
 }
 
 Expected<std::vector<tpctypes::LookupResult>>
-SelfTargetProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
+SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
   std::vector<tpctypes::LookupResult> R;
 
   for (auto &Elem : Request) {
@@ -96,53 +96,53 @@ SelfTargetProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
 }
 
 Expected<int32_t>
-SelfTargetProcessControl::runAsMain(JITTargetAddress MainFnAddr,
-                                    ArrayRef<std::string> Args) {
+SelfExecutorProcessControl::runAsMain(JITTargetAddress MainFnAddr,
+                                      ArrayRef<std::string> Args) {
   using MainTy = int (*)(int, char *[]);
   return orc::runAsMain(jitTargetAddressToFunction<MainTy>(MainFnAddr), Args);
 }
 
 Expected<shared::WrapperFunctionResult>
-SelfTargetProcessControl::runWrapper(JITTargetAddress WrapperFnAddr,
-                                     ArrayRef<char> ArgBuffer) {
+SelfExecutorProcessControl::runWrapper(JITTargetAddress WrapperFnAddr,
+                                       ArrayRef<char> ArgBuffer) {
   using WrapperFnTy = shared::detail::CWrapperFunctionResult (*)(
       const char *Data, uint64_t Size);
   auto *WrapperFn = jitTargetAddressToFunction<WrapperFnTy>(WrapperFnAddr);
   return WrapperFn(ArgBuffer.data(), ArgBuffer.size());
 }
 
-Error SelfTargetProcessControl::disconnect() { return Error::success(); }
+Error SelfExecutorProcessControl::disconnect() { return Error::success(); }
 
-void SelfTargetProcessControl::writeUInt8s(ArrayRef<tpctypes::UInt8Write> Ws,
-                                           WriteResultFn OnWriteComplete) {
+void SelfExecutorProcessControl::writeUInt8s(ArrayRef<tpctypes::UInt8Write> Ws,
+                                             WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     *jitTargetAddressToPointer<uint8_t *>(W.Address) = W.Value;
   OnWriteComplete(Error::success());
 }
 
-void SelfTargetProcessControl::writeUInt16s(ArrayRef<tpctypes::UInt16Write> Ws,
-                                            WriteResultFn OnWriteComplete) {
+void SelfExecutorProcessControl::writeUInt16s(
+    ArrayRef<tpctypes::UInt16Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     *jitTargetAddressToPointer<uint16_t *>(W.Address) = W.Value;
   OnWriteComplete(Error::success());
 }
 
-void SelfTargetProcessControl::writeUInt32s(ArrayRef<tpctypes::UInt32Write> Ws,
-                                            WriteResultFn OnWriteComplete) {
+void SelfExecutorProcessControl::writeUInt32s(
+    ArrayRef<tpctypes::UInt32Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     *jitTargetAddressToPointer<uint32_t *>(W.Address) = W.Value;
   OnWriteComplete(Error::success());
 }
 
-void SelfTargetProcessControl::writeUInt64s(ArrayRef<tpctypes::UInt64Write> Ws,
-                                            WriteResultFn OnWriteComplete) {
+void SelfExecutorProcessControl::writeUInt64s(
+    ArrayRef<tpctypes::UInt64Write> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     *jitTargetAddressToPointer<uint64_t *>(W.Address) = W.Value;
   OnWriteComplete(Error::success());
 }
 
-void SelfTargetProcessControl::writeBuffers(ArrayRef<tpctypes::BufferWrite> Ws,
-                                            WriteResultFn OnWriteComplete) {
+void SelfExecutorProcessControl::writeBuffers(
+    ArrayRef<tpctypes::BufferWrite> Ws, WriteResultFn OnWriteComplete) {
   for (auto &W : Ws)
     memcpy(jitTargetAddressToPointer<char *>(W.Address), W.Buffer.data(),
            W.Buffer.size());
