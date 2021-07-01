@@ -2650,8 +2650,8 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto EmitRemark = [&](Function &F) {
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     ORE.emit([&]() {
-      OptimizationRemarkMissed ORM(DEBUG_TYPE, "InternalizationFailure", &F);
-      return ORM << "Could not internalize function. "
+      OptimizationRemarkAnalysis ORA(DEBUG_TYPE, "InternalizationFailure", &F);
+      return ORA << "Could not internalize function. "
                  << "Some optimizations may not be possible.";
     });
   };
@@ -2664,7 +2664,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
       if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F)) {
         if (Attributor::internalizeFunction(F, /* Force */ true)) {
           InternalizedFuncs.insert(&F);
-        } else if (!F.hasLocalLinkage()) {
+        } else if (!F.hasLocalLinkage() && !F.hasFnAttribute(Attribute::Cold)) {
           EmitRemark(F);
         }
       }
