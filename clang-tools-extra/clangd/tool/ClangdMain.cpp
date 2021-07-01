@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Must be before Transport.h include.
+#include "Features.h"
+
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
 #include "Config.h"
 #include "ConfigProvider.h"
-#include "Features.h"
 #include "PathMapping.h"
 #include "Protocol.h"
 #include "TidyProvider.h"
