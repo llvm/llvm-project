@@ -1,4 +1,5 @@
-# LLVM_TARGET_DEFINITIONS must contain the name of the .td file to process.
+# LLVM_TARGET_DEFINITIONS must contain the name of the .td file to process,
+# while LLVM_TARGET_DEPENDS may contain additional file dependencies.
 # Extra parameters for `tblgen' may come after `ofn' parameter.
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 
@@ -104,6 +105,7 @@ function(tablegen project ofn)
     DEPENDS ${${project}_TABLEGEN_TARGET} ${${project}_TABLEGEN_EXE}
       ${local_tds} ${global_tds}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
+    ${LLVM_TARGET_DEPENDS}
     COMMENT "Building ${ofn}..."
     )
 
