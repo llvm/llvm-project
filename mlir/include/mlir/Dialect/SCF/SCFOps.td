@@ -62,16 +62,13 @@ def ConditionOp : SCF_Op<"condition",
 def ExecuteRegionOp : SCF_Op<"execute_region"> {
   let summary = "operation that executes its region exactly once";
   let description = [{
-    The `execute_region` operation executes the region held exactly once. The op
-    cannot have any operands, nor does its region have any arguments. All SSA
-    values that dominate the op can be accessed inside. The op's region can have
-    multiple blocks and the blocks can have terminators the same way as FuncOp.
-    The values returned from this op's region define the op's results.  The op
-    primarily provides control flow encapsulation and isolation from a parent
-    op's control flow restrictions if any; for example, it allows representation
-    of inlined calls in the inside of structured control flow ops with
-    restrictions like affine.for/if, scf.for/if ops, and thus the optimization
-    of IR in such a mixed form.
+    The `execute_region` operation is used to allow multiple blocks within SCF
+    and other operations which can hold only one block.  The `execute_region`
+    operation executes the region held exactly once and cannot have any operands.
+    As such, its region has no arguments. All SSA values that dominate the op can
+    be accessed inside the op. The op's region can have multiple blocks and the
+    blocks can have multiple distinct terminators. Values returned from this op's
+    region define the op's results.
 
     Example:
 
@@ -108,14 +105,8 @@ def ExecuteRegionOp : SCF_Op<"execute_region"> {
 
   let regions = (region AnyRegion:$region);
 
-  // TODO: If the parent is a func like op (which would be the case if all other
-  // ops are from the std dialect), the inliner logic could be readily used to
-  // inline.
   let hasCanonicalizer = 1;
 
-  // TODO: can fold if it returns a constant.
-  // TODO: Single block execute_region ops can be readily inlined irrespective
-  // of which op is a parent. Add a fold for this.
   let hasFolder = 0;
 }
 

@@ -86,6 +86,7 @@ static_library("clangd") {
     "ExpectedTypes.cpp",
     "FS.cpp",
     "FeatureModule.cpp",
+    "Features.cpp",
     "FileDistance.cpp",
     "FindSymbols.cpp",
     "FindTarget.cpp",

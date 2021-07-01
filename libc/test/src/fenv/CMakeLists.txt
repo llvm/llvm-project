@@ -60,6 +60,17 @@ add_libc_unittest(
     libc.utils.FPUtil.fputil
 )
 
+add_libc_unittest(
+  feclearexcept_test
+  SUITE
+    libc_fenv_unittests
+  SRCS
+    feclearexcept_test.cpp
+  DEPENDS
+    libc.src.fenv.feclearexcept
+    libc.utils.FPUtil.fputil
+)
+
 if (NOT LLVM_USE_SANITIZER)
   # Sanitizers don't like SIGFPE. So, we will run the 
   # tests which raise SIGFPE only in non-sanitizer builds.

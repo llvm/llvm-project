@@ -1,3 +1,4 @@
+
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: matmul
@@ -15,17 +16,17 @@ structured_op: !LinalgStructuredOpConfig
     name: A
     usage: InputOperand
     type_var: T1
-    shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
+    shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: B
     usage: InputOperand
     type_var: T2
-    shape_map: affine_map<()[s0, s1, s2] -> (s2, s1)>
+    shape_map: affine_map<()[s0, s1, s2] -> (s1, s2)>
   - !LinalgOperandDefConfig
     name: C
     usage: OutputOperand
     type_var: U
-    shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
+    shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
@@ -77,17 +78,17 @@ structured_op: !LinalgStructuredOpConfig
     name: A
     usage: InputOperand
     type_var: T1
-    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s3)>
+    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s2)>
   - !LinalgOperandDefConfig
     name: B
     usage: InputOperand
     type_var: T2
-    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s3, s2)>
+    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s2, s3)>
   - !LinalgOperandDefConfig
     name: C
     usage: OutputOperand
     type_var: U
-    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s2)>
+    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s3)>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0, d1, d3)>
@@ -201,17 +202,17 @@ structured_op: !LinalgStructuredOpConfig
     name: y
     usage: InputOperand
     type_var: T1
-    shape_map: affine_map<()[s0, s1] -> (s1)>
+    shape_map: affine_map<()[s0, s1] -> (s0)>
   - !LinalgOperandDefConfig
     name: A
     usage: InputOperand
     type_var: T2
-    shape_map: affine_map<()[s0, s1] -> (s1, s0)>
+    shape_map: affine_map<()[s0, s1] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: x
     usage: OutputOperand
     type_var: U
-    shape_map: affine_map<()[s0, s1] -> (s0)>
+    shape_map: affine_map<()[s0, s1] -> (s1)>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1)[s0, s1] -> (d1)>
@@ -321,19 +322,19 @@ structured_op: !LinalgStructuredOpConfig
     usage: InputOperand
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
-      (s0, s4, s5, s3)>
+      (s0, s1, s2, s3)>
   - !LinalgOperandDefConfig
     name: K
     usage: InputOperand
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
-      (s6, s7, s3)>
+      (s4, s5, s3)>
   - !LinalgOperandDefConfig
     name: O
     usage: OutputOperand
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
-      (s0, s1, s2, s3)>
+      (s0, s6, s7, s3)>
   - !LinalgOperandDefConfig
     name: strides
     usage: IndexAttribute
@@ -349,18 +350,18 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9,
-      s10, s11] -> (d0, d1 * s8 + d4 * s10, d2 * s9 + d5 * s11, d3)>
+      s10, s11] -> (d0, d1 * s8 + d3 * s10, d2 * s9 + d4 * s11, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9,
-      s10, s11] -> (d4, d5, d3)>
+      s10, s11] -> (d3, d4, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9,
-      s10, s11] -> (d0, d1, d2, d3)>
+      s10, s11] -> (d0, d1, d2, d5)>
   iterator_types:
   - parallel
   - parallel
   - parallel
+  - reduction
+  - reduction
   - parallel
-  - reduction
-  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -402,45 +403,45 @@ structured_op: !LinalgStructuredOpConfig
     usage: InputOperand
     type_var: T1
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
-      (s0, s4, s5, s3)>
+      (s0, s1, s2, s3)>
   - !LinalgOperandDefConfig
     name: K
     usage: InputOperand
     type_var: T2
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
-      (s10, s11)>
+      (s4, s5)>
   - !LinalgOperandDefConfig
     name: O
     usage: OutputOperand
     type_var: U
     shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] ->
-      (s0, s1, s2, s3)>
+      (s0, s6, s7, s3)>
   - !LinalgOperandDefConfig
     name: strides
     usage: IndexAttribute
     type_var: I64
     attribute_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11]
-      -> (s6, s7)>
+      -> (s8, s9)>
   - !LinalgOperandDefConfig
     name: dilations
     usage: IndexAttribute
     type_var: I64
     attribute_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11]
-      -> (s8, s9)>
+      -> (s10, s11)>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9,
-      s10, s11] -> (d2, d3 * s6 + d0 * s8, d4 * s7 + d1 * s9, d5)>
+      s10, s11] -> (d0, d1 * s8 + d3 * s10, d2 * s9 + d4 * s11, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9,
-      s10, s11] -> (d0, d1)>
+      s10, s11] -> (d3, d4)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9,
-      s10, s11] -> (d2, d3, d4, d5)>
+      s10, s11] -> (d0, d1, d2, d5)>
   iterator_types:
+  - parallel
+  - parallel
+  - parallel
   - reduction
   - reduction
-  - parallel
-  - parallel
-  - parallel
   - parallel
   assignments:
   - !ScalarAssign

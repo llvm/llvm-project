@@ -362,6 +362,8 @@ public:
     }
   }
 
+  bool checkArithmeticFenceSupported() const override { return true; }
+
   CallingConv getDefaultCallingConv() const override {
     return CC_C;
   }

@@ -16,6 +16,7 @@ def matmul(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  domain(D.m, D.n, D.k)
   implements(ContractionOpInterface)
   C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
 
@@ -30,6 +31,7 @@ def batch_matmul(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  domain(D.b, D.m, D.n, D.k)
   implements(ContractionOpInterface)
   C[D.b, D.m, D.n] += cast(U, A[D.b, D.m, D.k]) * cast(U, B[D.b, D.k, D.n])
 
@@ -44,6 +46,7 @@ def matvec(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  domain(D.m, D.n)
   implements(ContractionOpInterface)
   x[D.m] += cast(U, A[D.m, D.n]) * cast(U, y[D.n])
 
@@ -58,6 +61,7 @@ def vecmat(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  domain(D.n, D.m)
   implements(ContractionOpInterface)
   x[D.n] += cast(U, y[D.m]) * cast(U, A[D.m, D.n])
 
@@ -86,6 +90,7 @@ def depthwise_conv_2d_input_nhwc_filter_hwc_poly(
   Numeric casting is performed on the operands to the inner multiply, promoting
   them to the same data type as the accumulator/output.
   """
+  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.c] += cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
            D.c]) * cast(U, K[D.kh, D.kw, D.c])
@@ -103,6 +108,7 @@ def pooling_nhwc_sum_poly(
   Numeric casting is performed on the input operand, promoting it to the same
   data type as the accumulator/output.
   """
+  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.c] += cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
 
@@ -123,6 +129,7 @@ def fill_rng_2d(
   element seed the random number generation. The min and max operands limit
   the range of the generated random numbers.
   """
+  domain(D.m, D.n)
   multiplier = cast(I32, const(1103515245))
   increment = cast(I32, const(12345))
   rand1 = (cast(I32, index(D.m)) + seed) * multiplier + increment

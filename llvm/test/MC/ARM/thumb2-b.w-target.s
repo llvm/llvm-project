@@ -3,8 +3,8 @@
 .syntax unified
 
 // CHECK-LABEL: start
-// CHECK-NEXT:	b.w	#16777208
-// CHECK-NEXT:  b.w	#2
+// CHECK-NEXT:	b.w	{{.+}} @ imm = #16777208
+// CHECK-NEXT:  b.w	{{.+}} @ imm = #2
 start:
   b.w start - 1f + 0x1000000
 1:

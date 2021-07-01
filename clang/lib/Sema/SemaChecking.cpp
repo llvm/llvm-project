@@ -1554,6 +1554,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     Diag(TheCall->getBeginLoc(), diag::warn_alloca)
         << TheCall->getDirectCallee();
     break;
+  case Builtin::BI__arithmetic_fence:
+    if (SemaBuiltinArithmeticFence(TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume:
     if (SemaBuiltinAssume(TheCall))
@@ -6546,6 +6550,29 @@ bool Sema::SemaBuiltinPrefetch(CallExpr *TheCall) {
     if (SemaBuiltinConstantArgRange(TheCall, i, 0, i == 1 ? 1 : 3))
       return true;
 
+  return false;
+}
+
+/// SemaBuiltinArithmeticFence - Handle __arithmetic_fence.
+bool Sema::SemaBuiltinArithmeticFence(CallExpr *TheCall) {
+  if (!Context.getTargetInfo().checkArithmeticFenceSupported())
+    return Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+  if (checkArgCount(*this, TheCall, 1))
+    return true;
+  Expr *Arg = TheCall->getArg(0);
+  if (Arg->isInstantiationDependent())
+    return false;
+
+  QualType ArgTy = Arg->getType();
+  if (!ArgTy->hasFloatingRepresentation())
+    return Diag(TheCall->getEndLoc(), diag::err_typecheck_expect_flt_or_vector)
+           << ArgTy;
+  if (Arg->isLValue()) {
+    ExprResult FirstArg = DefaultLvalueConversion(Arg);
+    TheCall->setArg(0, FirstArg.get());
+  }
+  TheCall->setType(TheCall->getArg(0)->getType());
   return false;
 }
 

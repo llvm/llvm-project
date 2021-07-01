@@ -42,7 +42,7 @@ body:  |
 
     $rbx = COPY killed $rax, debug-location !17
     $rax = MOV64ri 1, debug-location !17
-    ; Presently, this COPY isn't followed. Dealing with that is future work.
+    ; CHECK: DBG_VALUE $rbx, $noreg
 
     DBG_INSTR_REF 2, 0, !16, !DIExpression(), debug-location !17
     ; No instruction is labelled with the number "2". This should produce an

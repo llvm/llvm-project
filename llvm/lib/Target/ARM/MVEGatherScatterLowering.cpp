@@ -952,25 +952,23 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     Phi = cast<PHINode>(Offs->getOperand(1));
     OffsSecondOp = 0;
   } else {
-    bool Changed = true;
+    bool Changed = false;
     if (isa<Instruction>(Offs->getOperand(0)) &&
         L->contains(cast<Instruction>(Offs->getOperand(0))))
       Changed |= optimiseOffsets(Offs->getOperand(0), BB, LI);
     if (isa<Instruction>(Offs->getOperand(1)) &&
         L->contains(cast<Instruction>(Offs->getOperand(1))))
       Changed |= optimiseOffsets(Offs->getOperand(1), BB, LI);
-    if (!Changed) {
+    if (!Changed)
       return false;
+    if (isa<PHINode>(Offs->getOperand(0))) {
+      Phi = cast<PHINode>(Offs->getOperand(0));
+      OffsSecondOp = 1;
+    } else if (isa<PHINode>(Offs->getOperand(1))) {
+      Phi = cast<PHINode>(Offs->getOperand(1));
+      OffsSecondOp = 0;
     } else {
-      if (isa<PHINode>(Offs->getOperand(0))) {
-        Phi = cast<PHINode>(Offs->getOperand(0));
-        OffsSecondOp = 1;
-      } else if (isa<PHINode>(Offs->getOperand(1))) {
-        Phi = cast<PHINode>(Offs->getOperand(1));
-        OffsSecondOp = 0;
-      } else {
-        return false;
-      }
+      return false;
     }
   }
   // A phi node we want to perform this function on should be from the

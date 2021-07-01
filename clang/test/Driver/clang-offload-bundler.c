@@ -46,6 +46,7 @@
 // CK-HELP: {{.*}}bc {{.*}}- llvm-bc
 // CK-HELP: {{.*}}s {{.*}}- assembler
 // CK-HELP: {{.*}}o {{.*}}- object
+// CK-HELP: {{.*}}a {{.*}}- archive of objects
 // CK-HELP: {{.*}}gch {{.*}}- precompiled-header
 // CK-HELP: {{.*}}ast {{.*}}- clang AST file
 // CK-HELP: {{.*}}-unbundle {{.*}}- Unbundle bundled file into several output files.
@@ -102,6 +103,9 @@
 
 // RUN: not clang-offload-bundler -type=i -targets=host-%itanium_abi_triple,host-%itanium_abi_triple,openmp-x86_64-pc-linux-gnu -inputs=%t.i,%t.tgt1,%t.tgt2 -outputs=%t.bundle.i 2>&1 | FileCheck %s --check-prefix CK-ERR9B
 // CK-ERR9B: error: Duplicate targets are not allowed
+
+// RUN: not clang-offload-bundler -type=a -targets=hxst-powerpcxxle-ibm-linux-gnu,openxp-pxxerpc64le-ibm-linux-gnu,xpenmp-x86_xx-pc-linux-gnu -inputs=%t.i,%t.tgt1,%t.tgt2 -outputs=%t.bundle.i 2>&1 | FileCheck %s --check-prefix CK-ERR10A
+// CK-ERR10A: error: Archive files are only supported for unbundling
 
 //
 // Check text bundle. This is a readable format, so we check for the format we expect to find.
@@ -313,30 +317,30 @@
 //
 // Check error due to missing bundles
 //
-// RUN: clang-offload-bundler -type=bc -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa-gfx900 -inputs=%t.bc,%t.tgt1 -outputs=%t.hip.bundle.bc
+// RUN: clang-offload-bundler -type=bc -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx900 -inputs=%t.bc,%t.tgt1 -outputs=%t.hip.bundle.bc
 // RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906 \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   2>&1 | FileCheck -check-prefix=MISS1 %s
 // RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc,%t.tmp2.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906,hip-amdgcn-amd-amdhsa-gfx900 \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx900 \
 // RUN:   2>&1 | FileCheck -check-prefix=MISS1 %s
-// MISS1: error: Can't find bundles for hip-amdgcn-amd-amdhsa-gfx906
+// MISS1: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx906
 // RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc,%t.tmp2.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906,hip-amdgcn-amd-amdhsa-gfx803 \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx803 \
 // RUN:   2>&1 | FileCheck -check-prefix=MISS2 %s
-// MISS2: error: Can't find bundles for hip-amdgcn-amd-amdhsa-gfx803 and hip-amdgcn-amd-amdhsa-gfx906
+// MISS2: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx803 and hip-amdgcn-amd-amdhsa--gfx906
 // RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc,%t.tmp2.bc,%t.tmp3.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906,hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx1010 \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx803,hip-amdgcn-amd-amdhsa--gfx1010 \
 // RUN:   2>&1 | FileCheck -check-prefix=MISS3 %s
-// MISS3: error: Can't find bundles for hip-amdgcn-amd-amdhsa-gfx1010, hip-amdgcn-amd-amdhsa-gfx803, and hip-amdgcn-amd-amdhsa-gfx906
+// MISS3: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx1010, hip-amdgcn-amd-amdhsa--gfx803, and hip-amdgcn-amd-amdhsa--gfx906
 
 //
 // Check error due to duplicate targets
 //
-// RUN: not clang-offload-bundler -type=bc -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa-gfx900,hip-amdgcn-amd-amdhsa-gfx900 \
+// RUN: not clang-offload-bundler -type=bc -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx900 \
 // RUN:   -inputs=%t.bc,%t.tgt1,%t.tgt1 -outputs=%t.hip.bundle.bc 2>&1 | FileCheck -check-prefix=DUP %s
 // RUN: not clang-offload-bundler -type=bc -inputs=%t.hip.bundle.bc -outputs=%t.tmp.bc,%t.tmp2.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa-gfx906,hip-amdgcn-amd-amdhsa-gfx906 \
+// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   2>&1 | FileCheck -check-prefix=DUP %s
 // DUP: error: Duplicate targets are not allowed
 //
@@ -364,17 +368,29 @@
 //
 // Check bundling without host target is allowed for HIP.
 //
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa-gfx900,hip-amdgcn-amd-amdhsa-gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -inputs=%t.tgt1,%t.tgt2 -outputs=%t.hip.bundle.bc
 // RUN: clang-offload-bundler -type=bc -list -inputs=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST %s
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa-gfx900,hip-amdgcn-amd-amdhsa-gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -outputs=%t.res.tgt1,%t.res.tgt2 -inputs=%t.hip.bundle.bc -unbundle
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 //
 // NOHOST-NOT: host-
-// NOHOST-DAG: hip-amdgcn-amd-amdhsa-gfx900
-// NOHOST-DAG: hip-amdgcn-amd-amdhsa-gfx906
+// NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx900
+// NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx906
+// Check archive unbundling
+//
+// Create few code object bundles and archive them to create an input archive
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -inputs=%t.o,%t.tgt1,%t.tgt2 -outputs=%t.simple.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-amdgcn-amd-amdhsa--gfx903 -inputs=%t.o,%t.tgt1 -outputs=%t.simple1.bundle
+// RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.simple1.bundle
+
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -inputs=%t.input-archive.a -outputs=%t-archive-gfx906-simple.a,%t-archive-gfx908-simple.a
+// RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906
+// GFX906: simple-openmp-amdgcn-amd-amdhsa--gfx906
+// RUN: llvm-ar t %t-archive-gfx908-simple.a | FileCheck %s -check-prefix=GFX908
+// GFX908-NOT: {{gfx906}}
 
 // Some code so that we can create a binary out of this file.
 int A = 0;

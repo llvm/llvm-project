@@ -44,22 +44,14 @@ callee_high:
  bx lr
 
 // CHECK: 00010000 <_start>:
-/// S(callee_low) = 0xb4; P = 0x10000; A = -8; S + A - P = -0xff54 = -65364
-// CHECK-NEXT:   10000:       bl      #-65364 <callee_low>
-/// S(callee_low) = 0xb4; P = 0x10004; A = -8; S + A - P = -0xff58 = -65368
-// CHECK-NEXT:   10004:       b       #-65368 <callee_low>
-/// S(callee_low) = 0xb4; P = 0x10008; A = -8; S + A - P = -0xff5c = -65372
-// CHECK-NEXT:   10008:       beq     #-65372 <callee_low>
-/// S(callee_high) = 0x10028; P = 0x1000c; A = -8; S + A - P = 0x14 = 20
-// CHECK-NEXT:   1000c:       bl      #20 <callee_high>
-/// S(callee_high) = 0x10028; P = 0x10010; A = -8; S + A - P = 0x10 = 16
-// CHECK-NEXT:   10010:       b       #16 <callee_high>
-/// S(callee_high) = 0x10028; P = 0x10014; A = -8; S + A - P = 0x0c = 12
-// CHECK-NEXT:   10014:       bne     #12 <callee_high>
-/// S(far) = 0x201001c; P = 0x10018; A = -8; S + A - P = 0x1fffffc = 33554428
-// CHECK-NEXT:   10018:       bl      #33554428
-/// S(far) = 0x201001c; P = 0x1001c; A = -8; S + A - P = 0x1fffff8 = 33554424
-// CHECK-NEXT:   1001c:       b       #33554424
-/// S(far) = 0x201001c; P = 0x10020; A = -8; S + A - P = 0x1fffff4 = 33554420
-// CHECK-NEXT:   10020:       bgt     #33554420
+// CHECK-NEXT:   10000:       bl      0xb4 <callee_low>
+// CHECK-NEXT:   10004:       b       0xb4 <callee_low>
+// CHECK-NEXT:   10008:       beq     0xb4 <callee_low>
+// CHECK-NEXT:   1000c:       bl      0x10028 <callee_high>
+// CHECK-NEXT:   10010:       b       0x10028 <callee_high>
+// CHECK-NEXT:   10014:       bne     0x10028 <callee_high>
+/// 0x201001c = far
+// CHECK-NEXT:   10018:       bl      0x201001c
+// CHECK-NEXT:   1001c:       b       0x201001c
+// CHECK-NEXT:   10020:       bgt     0x201001c
 // CHECK-NEXT:   10024:       bx      lr

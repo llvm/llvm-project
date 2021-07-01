@@ -2825,6 +2825,36 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *FnAssume = CGM.getIntrinsic(Intrinsic::assume);
     return RValue::get(Builder.CreateCall(FnAssume, ArgValue));
   }
+  case Builtin::BI__arithmetic_fence: {
+    // Create the builtin call if FastMath is selected, and the target
+    // supports the builtin, otherwise just return the argument.
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
+    llvm::FastMathFlags FMF = Builder.getFastMathFlags();
+    bool isArithmeticFenceEnabled =
+        FMF.allowReassoc() &&
+        getContext().getTargetInfo().checkArithmeticFenceSupported();
+    QualType ArgType = E->getArg(0)->getType();
+    if (ArgType->isComplexType()) {
+      if (isArithmeticFenceEnabled) {
+        QualType ElementType = ArgType->castAs<ComplexType>()->getElementType();
+        ComplexPairTy ComplexVal = EmitComplexExpr(E->getArg(0));
+        Value *Real = Builder.CreateArithmeticFence(ComplexVal.first,
+                                                    ConvertType(ElementType));
+        Value *Imag = Builder.CreateArithmeticFence(ComplexVal.second,
+                                                    ConvertType(ElementType));
+        return RValue::getComplex(std::make_pair(Real, Imag));
+      }
+      ComplexPairTy ComplexVal = EmitComplexExpr(E->getArg(0));
+      Value *Real = ComplexVal.first;
+      Value *Imag = ComplexVal.second;
+      return RValue::getComplex(std::make_pair(Real, Imag));
+    }
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    if (isArithmeticFenceEnabled)
+      return RValue::get(
+          Builder.CreateArithmeticFence(ArgValue, ConvertType(ArgType)));
+    return RValue::get(ArgValue);
+  }
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64: {
@@ -15820,6 +15850,23 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     CI->setConvergent();
     return CI;
   }
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray:
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_h:
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_l:
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_lh: {
+    llvm::Value *NodePtr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *RayExtent = EmitScalarExpr(E->getArg(1));
+    llvm::Value *RayOrigin = EmitScalarExpr(E->getArg(2));
+    llvm::Value *RayDir = EmitScalarExpr(E->getArg(3));
+    llvm::Value *RayInverseDir = EmitScalarExpr(E->getArg(4));
+    llvm::Value *TextureDescr = EmitScalarExpr(E->getArg(5));
+
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_image_bvh_intersect_ray,
+                                   {NodePtr->getType(), RayDir->getType()});
+    return Builder.CreateCall(F, {NodePtr, RayExtent, RayOrigin, RayDir,
+                                  RayInverseDir, TextureDescr});
+  }
+
   // amdgcn workitem
   case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
     return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_x, 0, 1024);

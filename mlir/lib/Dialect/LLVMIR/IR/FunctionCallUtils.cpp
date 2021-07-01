@@ -35,7 +35,7 @@ static constexpr llvm::StringRef kPrintNewline = "printNewline";
 static constexpr llvm::StringRef kMalloc = "malloc";
 static constexpr llvm::StringRef kAlignedAlloc = "aligned_alloc";
 static constexpr llvm::StringRef kFree = "free";
-static constexpr llvm::StringRef kMemRefCopy = "memref_copy";
+static constexpr llvm::StringRef kMemRefCopy = "memrefCopy";
 
 /// Generic print function lookupOrCreate helper.
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFn(ModuleOp moduleOp, StringRef name,

@@ -1920,7 +1920,7 @@ HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
     return;
   unsigned Addr = CA->getZExtValue();
   Align HaveAlign =
-      Addr != 0 ? Align(1u << countTrailingZeros(Addr)) : NeedAlign;
+      Addr != 0 ? Align(1ull << countTrailingZeros(Addr)) : NeedAlign;
   if (HaveAlign < NeedAlign) {
     std::string ErrMsg;
     raw_string_ostream O(ErrMsg);

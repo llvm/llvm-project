@@ -123,6 +123,12 @@ static bool constantSupportsMMAMatrixType(ConstantOp constantOp) {
   return constantOp.value().isa<SplatElementsAttr>();
 }
 
+/// Return true if this is a broadcast from scalar to a 2D vector.
+static bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
+  return broadcastOp.getVectorType().getRank() == 2 &&
+         broadcastOp.source().getType().isa<FloatType>();
+}
+
 static bool supportsMMaMatrixType(Operation *op) {
   if (isa<scf::ForOp, scf::YieldOp>(op))
     return true;
@@ -134,6 +140,8 @@ static bool supportsMMaMatrixType(Operation *op) {
     return contractSupportsMMAMatrixType(contract);
   if (auto constant = dyn_cast<ConstantOp>(op))
     return constantSupportsMMAMatrixType(constant);
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
+    return broadcastSupportsMMAMatrixType(broadcast);
   return false;
 }
 
@@ -141,8 +149,11 @@ static bool supportsMMaMatrixType(Operation *op) {
 // slice can be converted to MMA operations.
 static SetVector<Operation *> getOpToConvert(mlir::Operation *op) {
   auto hasVectorDest = [](Operation *op) {
-    return op->getNumResults() == 0 ||
-           llvm::any_of(op->getResultTypes(),
+    return llvm::any_of(op->getResultTypes(),
+                        [](Type t) { return t.isa<VectorType>(); });
+  };
+  auto hasVectorSrc = [](Operation *op) {
+    return llvm::any_of(op->getOperandTypes(),
                         [](Type t) { return t.isa<VectorType>(); });
   };
   SetVector<Operation *> opToConvert;
@@ -150,7 +161,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op) {
     if (opToConvert.contains(contract.getOperation()))
       return;
     SetVector<Operation *> dependentOps =
-        getSlice(contract, hasVectorDest, hasVectorDest);
+        getSlice(contract, hasVectorDest, hasVectorSrc);
     // If any instruction cannot use MMA matrix type drop the whole
     // chaine. MMA matrix are stored in an opaque type so they cannot be used
     // by all operations.
@@ -329,6 +340,20 @@ static void convertConstantOp(ConstantOp op,
   valueMapping[op.getResult()] = matrix;
 }
 
+/// Convert a vector.broadcast from scalar to a SubgroupMmaConstantMatrix op.
+static void convertBroadcastOp(vector::BroadcastOp op,
+                               llvm::DenseMap<Value, Value> &valueMapping) {
+  assert(broadcastSupportsMMAMatrixType(op));
+  OpBuilder b(op);
+  const char *fragType = inferFragType(op);
+  auto vecType = op.getVectorType();
+  gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
+      vecType.getShape(), vecType.getElementType(), llvm::StringRef(fragType));
+  auto matrix = b.create<gpu::SubgroupMmaConstantMatrixOp>(op.getLoc(), type,
+                                                           op.source());
+  valueMapping[op.getResult()] = matrix;
+}
+
 // Replace ForOp with a new ForOp with extra operands. The YieldOp is not
 // updated and needs to be updated separatly for the loop to be correct.
 static scf::ForOp replaceForOpWithNewSignature(OpBuilder &b, scf::ForOp loop,
@@ -416,6 +441,8 @@ void convertVectorToMMAOps(FuncOp funcOp) {
       convertContractOp(contractOp, valueMapping);
     } else if (auto constantOp = dyn_cast<ConstantOp>(op)) {
       convertConstantOp(constantOp, valueMapping);
+    } else if (auto broadcastOp = dyn_cast<vector::BroadcastOp>(op)) {
+      convertBroadcastOp(broadcastOp, valueMapping);
     } else if (auto forOp = dyn_cast<scf::ForOp>(op)) {
       convertForOp(forOp, valueMapping);
     } else if (auto yiledOp = dyn_cast<scf::YieldOp>(op)) {

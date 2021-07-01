@@ -32,8 +32,8 @@ low_target2:
 // CHECK1-NEXT: <_start>:
 // CHECK1-NEXT:       94:       70 47   bx      lr
 // CHECK1: <low_target>:
-// CHECK1-NEXT:       96:       00 f0 03 f8     bl      #6
-// CHECK1-NEXT:       9a:       00 f0 06 f8     bl      #12
+// CHECK1-NEXT:       96:       00 f0 03 f8     bl      0xa0 <__Thumbv7ABSLongThunk_high_target>
+// CHECK1-NEXT:       9a:       00 f0 06 f8     bl      0xaa <__Thumbv7ABSLongThunk_high_target2>
 // CHECK1: <__Thumbv7ABSLongThunk_high_target>:
 // CHECK1-NEXT:       a0:       40 f2 bd 0c     movw    r12, #189
 // CHECK1-NEXT:       a4:       c0 f2 00 2c     movt    r12, #512
@@ -43,8 +43,8 @@ low_target2:
 // CHECK1-NEXT:       ae:       c0 f2 00 2c     movt    r12, #512
 // CHECK1-NEXT:       b2:       60 47   bx      r12
 // CHECK1: <low_target2>:
-// CHECK1-NEXT:       b4:       ff f7 f4 ff     bl      #-24
-// CHECK1-NEXT:       b8:       ff f7 f7 ff     bl      #-18
+// CHECK1-NEXT:       b4:       ff f7 f4 ff     bl      0xa0 <__Thumbv7ABSLongThunk_high_target>
+// CHECK1-NEXT:       b8:       ff f7 f7 ff     bl      0xaa <__Thumbv7ABSLongThunk_high_target2>
 
  .section .text_high, "ax", %progbits
  .thumb
@@ -63,8 +63,8 @@ high_target2:
  bl low_target2
 
 // CHECK2: <high_target>:
-// CHECK2-NEXT:  20000bc:       00 f0 02 f8     bl      #4
-// CHECK2-NEXT:  20000c0:       00 f0 05 f8     bl      #10
+// CHECK2-NEXT:  20000bc:       00 f0 02 f8     bl      0x20000c4 <__Thumbv7ABSLongThunk_low_target>
+// CHECK2-NEXT:  20000c0:       00 f0 05 f8     bl      0x20000ce <__Thumbv7ABSLongThunk_low_target2>
 // CHECK2: <__Thumbv7ABSLongThunk_low_target>:
 // CHECK2-NEXT:  20000c4:       40 f2 97 0c     movw    r12, #151
 // CHECK2-NEXT:  20000c8:       c0 f2 00 0c     movt    r12, #0
@@ -74,5 +74,5 @@ high_target2:
 // CHECK2-NEXT:  20000d2:       c0 f2 00 0c     movt    r12, #0
 // CHECK2-NEXT:  20000d6:       60 47   bx      r12
 // CHECK2: <high_target2>:
-// CHECK2-NEXT:  20000d8:       ff f7 f4 ff     bl      #-24
-// CHECK2-NEXT:  20000dc:       ff f7 f7 ff     bl      #-18
+// CHECK2-NEXT:  20000d8:       ff f7 f4 ff     bl      0x20000c4 <__Thumbv7ABSLongThunk_low_target>
+// CHECK2-NEXT:  20000dc:       ff f7 f7 ff     bl      0x20000ce <__Thumbv7ABSLongThunk_low_target2>

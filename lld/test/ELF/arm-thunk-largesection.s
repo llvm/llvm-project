@@ -22,7 +22,7 @@ _start:
 
 
 // CHECK2:      <__Thumbv7ABSLongThunk__start>:
-// CHECK2-NEXT:    22004: b.w     #-4104 <_start>
+// CHECK2-NEXT:    22004: b.w     0x21000 <_start>
 
 /// Gigantic section where we need a ThunkSection either side of it
  .section .text.large1, "ax", %progbits
@@ -32,8 +32,8 @@ _start:
  .space (16 * 1024 * 1024) - 4
  bl _start
  .space (16 * 1024 * 1024) - 16
-// CHECK3: 1021ff8: bl      #-16777208
-// CHECK4: 2021ff8: bl      #16777200
+// CHECK3: 1021ff8: bl      0x22004 <__Thumbv7ABSLongThunk__start>
+// CHECK4: 2021ff8: bl      0x3021fec <__Thumbv7ABSLongThunk__start>
 
 // CHECK5:      <__Thumbv7ABSLongThunk__start>:
 // CHECK5-NEXT:  3021fec: movw    r12, #4097

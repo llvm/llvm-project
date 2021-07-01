@@ -42,4 +42,15 @@ TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlag) {
     // Cleanup
     __llvm_libc::fputil::clearExcept(e);
   }
+
+  // Next, we will raise one exception and save the flags.
+  __llvm_libc::fputil::raiseExcept(FE_INVALID);
+  fexcept_t eflags;
+  __llvm_libc::fegetexceptflag(&eflags, FE_ALL_EXCEPT);
+  // Clear all exceptions and raise two other exceptions.
+  __llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT);
+  __llvm_libc::fputil::raiseExcept(FE_OVERFLOW | FE_INEXACT);
+  // When we set the flags and test, we should only see FE_INVALID.
+  __llvm_libc::fesetexceptflag(&eflags, FE_ALL_EXCEPT);
+  EXPECT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT), FE_INVALID);
 }

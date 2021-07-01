@@ -485,7 +485,7 @@ void PrintAddressDescription(
   if (num_descriptions_printed > 1) {
     Printf(
         "There are %d potential causes, printed above in order "
-        "of likeliness.",
+        "of likeliness.\n",
         num_descriptions_printed);
   }
 }
