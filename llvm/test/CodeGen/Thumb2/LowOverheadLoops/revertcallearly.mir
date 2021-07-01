@@ -67,7 +67,7 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x50000000), %bb.4(0x30000000)
   ; CHECK:   [[t2MOVi32imm:%[0-9]+]]:rgpr = t2MOVi32imm @d
-  ; CHECK:   [[t2LDRi12_:%[0-9]+]]:gprnopc = t2LDRi12 [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from @d)
+  ; CHECK:   [[t2LDRi12_:%[0-9]+]]:gprnopc = t2LDRi12 [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
   ; CHECK:   t2CMPri [[t2LDRi12_]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2Bcc %bb.4, 4 /* CC::mi */, $cpsr
   ; CHECK:   t2B %bb.1, 14 /* CC::al */, $noreg
@@ -94,7 +94,7 @@ body:             |
   ; CHECK: bb.3.for.cond.for.end9_crit_edge:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   [[t2MOVi1:%[0-9]+]]:rgpr = t2MOVi -1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2STRi12 killed [[t2MOVi1]], [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (store 4 into @d)
+  ; CHECK:   t2STRi12 killed [[t2MOVi1]], [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (store (s32) into @d)
   ; CHECK: bb.4.for.end9:
   ; CHECK:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
   ; CHECK:   $r0 = COPY [[DEF]]
@@ -103,7 +103,7 @@ body:             |
     successors: %bb.1(0x50000000), %bb.4(0x30000000)
 
     %4:rgpr = t2MOVi32imm @d
-    %0:gprnopc = t2LDRi12 %4, 0, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from @d)
+    %0:gprnopc = t2LDRi12 %4, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @d)
     t2CMPri %0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
     t2Bcc %bb.4, 4 /* CC::mi */, $cpsr
     t2B %bb.1, 14 /* CC::al */, $noreg
@@ -135,7 +135,7 @@ body:             |
     successors: %bb.4(0x80000000)
 
     %12:rgpr = t2MOVi -1, 14 /* CC::al */, $noreg, $noreg
-    t2STRi12 killed %12, %4, 0, 14 /* CC::al */, $noreg :: (store 4 into @d)
+    t2STRi12 killed %12, %4, 0, 14 /* CC::al */, $noreg :: (store (s32) into @d)
 
   bb.4.for.end9:
     %13:gpr = IMPLICIT_DEF

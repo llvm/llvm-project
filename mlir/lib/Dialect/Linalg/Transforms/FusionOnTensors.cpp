@@ -1344,7 +1344,7 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
         for (auto dim : llvm::enumerate(operandType.getShape())) {
           if (dim.value() != ShapedType::kDynamicSize)
             continue;
-          dynamicDims.push_back(rewriter.createOrFold<memref::DimOp>(
+          dynamicDims.push_back(rewriter.createOrFold<tensor::DimOp>(
               loc, operandVal, dim.index()));
         }
         Value initTensor = rewriter.create<InitTensorOp>(

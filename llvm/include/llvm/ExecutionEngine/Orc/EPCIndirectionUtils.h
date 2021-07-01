@@ -1,4 +1,4 @@
-//===--- TPCIndirectionUtils.h - TPC based indirection utils ----*- C++ -*-===//
+//===--- EPCIndirectionUtils.h - EPC based indirection utils ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // Indirection utilities (stubs, trampolines, lazy call-throughs) that use the
-// TargetProcessControl API to interact with the target process.
+// ExecutorProcessControl API to interact with the executor process.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_TPCINDIRECTIONUTILS_H
-#define LLVM_EXECUTIONENGINE_ORC_TPCINDIRECTIONUTILS_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_EPCINDIRECTIONUTILS_H
+#define LLVM_EXECUTIONENGINE_ORC_EPCINDIRECTIONUTILS_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
@@ -23,12 +23,12 @@
 namespace llvm {
 namespace orc {
 
-class TargetProcessControl;
+class ExecutorProcessControl;
 
-/// Provides TargetProcessControl based indirect stubs, trampoline pool and
+/// Provides ExecutorProcessControl based indirect stubs, trampoline pool and
 /// lazy call through manager.
-class TPCIndirectionUtils {
-  friend class TPCIndirectionUtilsAccess;
+class EPCIndirectionUtils {
+  friend class EPCIndirectionUtilsAccess;
 
 public:
   /// ABI support base class. Used to write resolver, stub, and trampoline
@@ -79,15 +79,15 @@ public:
 
   /// Create using the given ABI class.
   template <typename ORCABI>
-  static std::unique_ptr<TPCIndirectionUtils>
-  CreateWithABI(TargetProcessControl &TPC);
+  static std::unique_ptr<EPCIndirectionUtils>
+  CreateWithABI(ExecutorProcessControl &EPC);
 
-  /// Create based on the TargetProcessControl triple.
-  static Expected<std::unique_ptr<TPCIndirectionUtils>>
-  Create(TargetProcessControl &TPC);
+  /// Create based on the ExecutorProcessControl triple.
+  static Expected<std::unique_ptr<EPCIndirectionUtils>>
+  Create(ExecutorProcessControl &EPC);
 
-  /// Return a reference to the TargetProcessControl object.
-  TargetProcessControl &getTargetProcessControl() const { return TPC; }
+  /// Return a reference to the ExecutorProcessControl object.
+  ExecutorProcessControl &getExecutorProcessControl() const { return EPC; }
 
   /// Return a reference to the ABISupport object for this instance.
   ABISupport &getABISupport() const { return *ABI; }
@@ -96,7 +96,7 @@ public:
   /// prior to destruction of the class.
   Error cleanup();
 
-  /// Write resolver code to the target process and return its address.
+  /// Write resolver code to the executor process and return its address.
   /// This must be called before any call to createTrampolinePool or
   /// createLazyCallThroughManager.
   Expected<JITTargetAddress>
@@ -107,10 +107,10 @@ public:
   /// writeResolverBlock method has not previously been called.
   JITTargetAddress getResolverBlockAddress() const { return ResolverBlockAddr; }
 
-  /// Create an IndirectStubsManager for the target process.
+  /// Create an IndirectStubsManager for the executor process.
   std::unique_ptr<IndirectStubsManager> createIndirectStubsManager();
 
-  /// Create a TrampolinePool for the target process.
+  /// Create a TrampolinePool for the executor process.
   TrampolinePool &getTrampolinePool();
 
   /// Create a LazyCallThroughManager.
@@ -119,7 +119,7 @@ public:
   createLazyCallThroughManager(ExecutionSession &ES,
                                JITTargetAddress ErrorHandlerAddr);
 
-  /// Create a LazyCallThroughManager for the target process.
+  /// Create a LazyCallThroughManager for the executor process.
   LazyCallThroughManager &getLazyCallThroughManager() {
     assert(LCTM && "createLazyCallThroughManager must be called first");
     return *LCTM;
@@ -139,14 +139,14 @@ private:
 
   using IndirectStubInfoVector = std::vector<IndirectStubInfo>;
 
-  /// Create a TPCIndirectionUtils instance.
-  TPCIndirectionUtils(TargetProcessControl &TPC,
+  /// Create an EPCIndirectionUtils instance.
+  EPCIndirectionUtils(ExecutorProcessControl &EPC,
                       std::unique_ptr<ABISupport> ABI);
 
   Expected<IndirectStubInfoVector> getIndirectStubs(unsigned NumStubs);
 
-  std::mutex TPCUIMutex;
-  TargetProcessControl &TPC;
+  std::mutex EPCUIMutex;
+  ExecutorProcessControl &EPC;
   std::unique_ptr<ABISupport> ABI;
   JITTargetAddress ResolverBlockAddr;
   std::unique_ptr<jitlink::JITLinkMemoryManager::Allocation> ResolverBlock;
@@ -157,23 +157,23 @@ private:
   std::vector<std::unique_ptr<Allocation>> IndirectStubAllocs;
 };
 
-/// This will call writeResolver on the given TPCIndirectionUtils instance
+/// This will call writeResolver on the given EPCIndirectionUtils instance
 /// to set up re-entry via a function that will directly return the trampoline
 /// landing address.
 ///
-/// The TPCIndirectionUtils' LazyCallThroughManager must have been previously
-/// created via TPCIndirectionUtils::createLazyCallThroughManager.
+/// The EPCIndirectionUtils' LazyCallThroughManager must have been previously
+/// created via EPCIndirectionUtils::createLazyCallThroughManager.
 ///
-/// The TPCIndirectionUtils' writeResolver method must not have been previously
+/// The EPCIndirectionUtils' writeResolver method must not have been previously
 /// called.
 ///
 /// This function is experimental and likely subject to revision.
-Error setUpInProcessLCTMReentryViaTPCIU(TPCIndirectionUtils &TPCIU);
+Error setUpInProcessLCTMReentryViaEPCIU(EPCIndirectionUtils &EPCIU);
 
 namespace detail {
 
 template <typename ORCABI>
-class ABISupportImpl : public TPCIndirectionUtils::ABISupport {
+class ABISupportImpl : public EPCIndirectionUtils::ABISupport {
 public:
   ABISupportImpl()
       : ABISupport(ORCABI::PointerSize, ORCABI::TrampolineSize,
@@ -210,13 +210,13 @@ public:
 } // end namespace detail
 
 template <typename ORCABI>
-std::unique_ptr<TPCIndirectionUtils>
-TPCIndirectionUtils::CreateWithABI(TargetProcessControl &TPC) {
-  return std::unique_ptr<TPCIndirectionUtils>(new TPCIndirectionUtils(
-      TPC, std::make_unique<detail::ABISupportImpl<ORCABI>>()));
+std::unique_ptr<EPCIndirectionUtils>
+EPCIndirectionUtils::CreateWithABI(ExecutorProcessControl &EPC) {
+  return std::unique_ptr<EPCIndirectionUtils>(new EPCIndirectionUtils(
+      EPC, std::make_unique<detail::ABISupportImpl<ORCABI>>()));
 }
 
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_TPCINDIRECTIONUTILS_H
+#endif // LLVM_EXECUTIONENGINE_ORC_EPCINDIRECTIONUTILS_H

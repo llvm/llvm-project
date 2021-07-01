@@ -18,7 +18,6 @@ add_mlir_conversion_library(MLIRShapeToStandard
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRMemRef
   MLIRShape
   MLIRTensor
   MLIRPass

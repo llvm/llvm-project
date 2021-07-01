@@ -243,7 +243,13 @@ public:
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
-    if (isa<FixedVectorType>(DataType) || !ST->hasSVE())
+    if (!ST->hasSVE())
+      return false;
+
+    // For fixed vectors, scalarize if not using SVE for them.
+    auto *DataTypeFVTy = dyn_cast<FixedVectorType>(DataType);
+    if (DataTypeFVTy && (!ST->useSVEForFixedLengthVectors() ||
+                         DataTypeFVTy->getNumElements() < 2))
       return false;
 
     return isLegalElementTypeForSVE(DataType->getScalarType());

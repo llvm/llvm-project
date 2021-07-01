@@ -250,12 +250,12 @@ body:             |
     successors: %bb.5(0x07e00000), %bb.8(0x78200000)
     liveins: $lr, $r0, $r1, $r3, $r5, $r6, $r7, $r8, $r9, $r10, $r12
   
-    renamable $r4 = tLDRr renamable $r3, $r6, 14, $noreg :: (load 4 from %ir.uglygep12)
-    renamable $r2 = tLDRr renamable $r5, $r6, 14, $noreg :: (load 4 from %ir.uglygep34)
+    renamable $r4 = tLDRr renamable $r3, $r6, 14, $noreg :: (load (s32) from %ir.uglygep12)
+    renamable $r2 = tLDRr renamable $r5, $r6, 14, $noreg :: (load (s32) from %ir.uglygep34)
     tCMPr renamable $r2, renamable $r4, 14, $noreg, implicit-def $cpsr
     t2IT 12, 1, implicit-def $itstate
-    tSTRr killed renamable $r4, renamable $r5, $r6, 12, $cpsr, implicit $itstate :: (store 4 into %ir.5)
-    tSTRr killed renamable $r2, renamable $r3, $r6, 12, $cpsr, implicit $itstate :: (store 4 into %ir.uglygep6)
+    tSTRr killed renamable $r4, renamable $r5, $r6, 12, $cpsr, implicit $itstate :: (store (s32) into %ir.5)
+    tSTRr killed renamable $r2, renamable $r3, $r6, 12, $cpsr, implicit $itstate :: (store (s32) into %ir.uglygep6)
     renamable $r6 = tADDhirr killed renamable $r6, renamable $r10, 12, $cpsr, implicit $r6, implicit $itstate
     renamable $r7 = nsw t2SUBrr killed renamable $r7, renamable $r9, 12, $cpsr, $noreg, implicit $r7, implicit killed $itstate
     t2IT 12, 8, implicit-def $itstate

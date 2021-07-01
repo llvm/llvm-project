@@ -43,9 +43,9 @@ body:             |
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   $r0 = t2MOVi16 target-flags(arm-lo16) @b, 14 /* CC::al */, $noreg
   ; CHECK:   $r0 = t2MOVTi16 killed $r0, target-flags(arm-hi16) @b, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r1 = tLDRi renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from @b)
+  ; CHECK:   renamable $r1 = tLDRi renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @b)
   ; CHECK:   renamable $r1, dead $cpsr = nsw tADDi8 killed renamable $r1, 1, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRi killed renamable $r1, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 4 into @b)
+  ; CHECK:   tSTRi killed renamable $r1, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into @b)
   ; CHECK: bb.3.if.end:
   ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit undef $r0
   bb.0.entry:
@@ -66,9 +66,9 @@ body:             |
 
     $r0 = t2MOVi16 target-flags(arm-lo16) @b, 14 /* CC::al */, $noreg
     $r0 = t2MOVTi16 killed $r0, target-flags(arm-hi16) @b, 14 /* CC::al */, $noreg
-    renamable $r1 = tLDRi renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from @b)
+    renamable $r1 = tLDRi renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from @b)
     renamable $r1, dead $cpsr = nsw tADDi8 killed renamable $r1, 1, 14 /* CC::al */, $noreg
-    tSTRi killed renamable $r1, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 4 into @b)
+    tSTRi killed renamable $r1, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into @b)
 
   bb.3.if.end:
     tBX_RET 14 /* CC::al */, $noreg, implicit undef $r0

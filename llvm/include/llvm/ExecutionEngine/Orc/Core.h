@@ -216,6 +216,18 @@ public:
       add(Name, Flags);
   }
 
+  /// Construct a SymbolLookupSet from DenseMap keys.
+  template <typename KeyT>
+  static SymbolLookupSet
+  fromMapKeys(const DenseMap<SymbolStringPtr, KeyT> &M,
+              SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
+    SymbolLookupSet Result;
+    Result.Symbols.reserve(M.size());
+    for (const auto &KV : M)
+      Result.add(KV.first, Flags);
+    return Result;
+  }
+
   /// Add an element to the set. The client is responsible for checking that
   /// duplicates are not added.
   SymbolLookupSet &

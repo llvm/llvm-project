@@ -602,17 +602,17 @@ LogicalResult DeallocOp::fold(ArrayRef<Attribute> cstOperands,
 // DimOp
 //===----------------------------------------------------------------------===//
 
-void DimOp::build(OpBuilder &builder, OperationState &result, Value memref,
+void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
                   int64_t index) {
   auto loc = result.location;
   Value indexValue = builder.create<ConstantIndexOp>(loc, index);
-  build(builder, result, memref, indexValue);
+  build(builder, result, source, indexValue);
 }
 
-void DimOp::build(OpBuilder &builder, OperationState &result, Value memref,
+void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
                   Value index) {
   auto indexTy = builder.getIndexType();
-  build(builder, result, indexTy, memref, index);
+  build(builder, result, indexTy, source, index);
 }
 
 Optional<int64_t> DimOp::getConstantIndex() {
@@ -628,14 +628,11 @@ static LogicalResult verify(DimOp op) {
     return success();
 
   // Check that constant index is not knowingly out of range.
-  auto type = op.memrefOrTensor().getType();
+  auto type = op.source().getType();
   if (auto memrefType = type.dyn_cast<MemRefType>()) {
     if (index.getValue() >= memrefType.getRank())
       return op.emitOpError("index is out of range");
-  } else if (auto tensorType = type.dyn_cast<RankedTensorType>()) {
-    if (index.getValue() >= tensorType.getRank())
-      return op.emitOpError("index is out of range");
-  } else if (type.isa<UnrankedMemRefType>() || type.isa<UnrankedTensorType>()) {
+  } else if (type.isa<UnrankedMemRefType>()) {
     // Assume index to be in range.
   } else {
     llvm_unreachable("expected operand with memref type");
@@ -644,63 +641,27 @@ static LogicalResult verify(DimOp op) {
 }
 
 OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
-  auto index = operands[1].dyn_cast_or_null<IntegerAttr>();
-
   // All forms of folding require a known index.
+  auto index = operands[1].dyn_cast_or_null<IntegerAttr>();
   if (!index)
     return {};
 
-  auto argTy = memrefOrTensor().getType();
+  // Folding for unranked types (UnrankedMemRefType) is not supported.
+  auto memrefType = source().getType().dyn_cast<MemRefType>();
+  if (!memrefType)
+    return {};
+
   // Fold if the shape extent along the given index is known.
-  if (auto shapedTy = argTy.dyn_cast<ShapedType>()) {
-    // Folding for unranked types (UnrankedMemRefType) is not supported.
-    if (!shapedTy.hasRank())
-      return {};
-    if (!shapedTy.isDynamicDim(index.getInt())) {
-      Builder builder(getContext());
-      return builder.getIndexAttr(shapedTy.getShape()[index.getInt()]);
-    }
-  }
-
-  Operation *definingOp = memrefOrTensor().getDefiningOp();
-
-  // dim(memref.tensor_load(memref)) -> dim(memref)
-  if (auto tensorLoadOp = dyn_cast_or_null<TensorLoadOp>(definingOp)) {
-    setOperand(0, tensorLoadOp.memref());
-    return getResult();
-  }
-
-  // Fold dim to the operand of tensor.generate.
-  if (auto fromElements = dyn_cast_or_null<tensor::GenerateOp>(definingOp)) {
-    auto resultType =
-        fromElements.getResult().getType().cast<RankedTensorType>();
-    // The case where the type encodes the size of the dimension is handled
-    // above.
-    assert(resultType.getShape()[index.getInt()] ==
-           RankedTensorType::kDynamicSize);
-
-    // Find the operand of the fromElements that corresponds to this index.
-    auto dynExtents = fromElements.dynamicExtents().begin();
-    for (auto dim : resultType.getShape().take_front(index.getInt()))
-      if (dim == RankedTensorType::kDynamicSize)
-        dynExtents++;
-
-    return Value{*dynExtents};
+  if (!memrefType.isDynamicDim(index.getInt())) {
+    Builder builder(getContext());
+    return builder.getIndexAttr(memrefType.getShape()[index.getInt()]);
   }
 
   // The size at the given index is now known to be a dynamic size.
   unsigned unsignedIndex = index.getValue().getZExtValue();
 
-  if (auto sliceOp = dyn_cast_or_null<tensor::ExtractSliceOp>(definingOp)) {
-    assert(sliceOp.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic slice size");
-    return sliceOp.getDynamicSize(unsignedIndex);
-  }
-
   // Fold dim to the size argument for an `AllocOp`, `ViewOp`, or `SubViewOp`.
-  auto memrefType = argTy.dyn_cast<MemRefType>();
-  if (!memrefType)
-    return {};
+  Operation *definingOp = source().getDefiningOp();
 
   if (auto alloc = dyn_cast_or_null<AllocOp>(definingOp))
     return *(alloc.getDynamicSizes().begin() +
@@ -736,7 +697,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
 
   LogicalResult matchAndRewrite(DimOp dim,
                                 PatternRewriter &rewriter) const override {
-    auto reshape = dim.memrefOrTensor().getDefiningOp<ReshapeOp>();
+    auto reshape = dim.source().getDefiningOp<ReshapeOp>();
 
     if (!reshape)
       return failure();
@@ -753,18 +714,17 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
   }
 };
 
-/// Fold dim of a dim of a cast into the dim of the source of the tensor cast.
-template <typename CastOpTy>
+/// Fold dim of a cast into the dim of the source of the memref cast.
 struct DimOfCastOp : public OpRewritePattern<DimOp> {
   using OpRewritePattern<DimOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto castOp = dimOp.memrefOrTensor().getDefiningOp<CastOpTy>();
+    auto castOp = dimOp.source().getDefiningOp<BufferCastOp>();
     if (!castOp)
       return failure();
     Value newSource = castOp.getOperand();
-    rewriter.replaceOpWithNewOp<DimOp>(dimOp, newSource, dimOp.index());
+    rewriter.replaceOpWithNewOp<tensor::DimOp>(dimOp, newSource, dimOp.index());
     return success();
   }
 };
@@ -772,8 +732,7 @@ struct DimOfCastOp : public OpRewritePattern<DimOp> {
 
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<DimOfMemRefReshape, DimOfCastOp<BufferCastOp>,
-              DimOfCastOp<tensor::CastOp>>(context);
+  results.add<DimOfMemRefReshape, DimOfCastOp>(context);
 }
 
 // ---------------------------------------------------------------------------
@@ -1954,6 +1913,28 @@ OpFoldResult TensorLoadOp::fold(ArrayRef<Attribute>) {
         bufferCast->getNextNode() == this->getOperation())
       return bufferCast.tensor();
   return {};
+}
+
+namespace {
+struct DimOfTensorLoadFolder : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto tensorLoadOp = dimOp.source().getDefiningOp<TensorLoadOp>();
+    if (!tensorLoadOp)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<DimOp>(dimOp, tensorLoadOp.memref(),
+                                       dimOp.index());
+    return success();
+  }
+};
+} // namespace
+
+void TensorLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<DimOfTensorLoadFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//

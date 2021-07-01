@@ -67,7 +67,7 @@ func @tensor.from_elements(%arg0: index, %arg1: index) -> tensor<2xindex> {
 // CHECK:           %[[C0:.*]] = constant 0 : index
 // CHECK:           %[[C1:.*]] = constant 1 : index
 // CHECK:           scf.parallel (%[[I:.*]]) = (%[[C0]]) to (%[[DYNAMIC_EXTENT]]) step (%[[C1]]) {
-// CHECK:             %[[ELEM:.*]] = memref.dim %[[ARG]], %[[I]] : tensor<*xf32>
+// CHECK:             %[[ELEM:.*]] = tensor.dim %[[ARG]], %[[I]] : tensor<*xf32>
 // CHECK:             store %[[ELEM]], %[[MEMREF]][%[[I]]] : memref<?xindex>
 // CHECK:             scf.yield
 // CHECK:           }
@@ -77,7 +77,7 @@ func @tensor.from_elements(%arg0: index, %arg1: index) -> tensor<2xindex> {
 func @tensor.generate(%arg: tensor<*xf32>, %dynamic_extent: index) -> tensor<?xindex> {
   %result = tensor.generate %dynamic_extent {
   ^bb0(%i : index):
-    %elem = memref.dim %arg, %i : tensor<*xf32>
+    %elem = tensor.dim %arg, %i : tensor<*xf32>
     tensor.yield %elem : index
   } : tensor<?xindex>
   return %result : tensor<?xindex>

@@ -20,7 +20,7 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   successors:
   ; CHECK: bb.2:
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p0) :: (load 4 from `i32* undef`, align 8)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p0) :: (load (s32) from `i32* undef`, align 8)
   ; CHECK:   [[MUL:%[0-9]+]]:_(s32) = nsw G_MUL [[C]], [[LOAD]]
   ; CHECK:   [[MUL1:%[0-9]+]]:_(s32) = nsw G_MUL [[MUL]], [[C1]]
   ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
@@ -45,7 +45,7 @@ body:             |
 
 
   bb.3:
-    %2:_(s32) = G_LOAD %3(p0) :: (load 4 from `i32* undef`, align 8)
+    %2:_(s32) = G_LOAD %3(p0) :: (load (s32) from `i32* undef`, align 8)
     %5:_(s32) = nsw G_MUL %4, %2
     %7:_(s32) = nsw G_MUL %5, %6
     %9:_(s32) = nsw G_MUL %7, %8

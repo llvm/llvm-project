@@ -105,6 +105,10 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 // a sequence of vector.reduction ops.
 void populateVectorMultiReductionLoweringPatterns(RewritePatternSet &patterns);
 
+/// Collect a set of patterns to propagate insert_map/extract_map in the ssa
+/// chain.
+void populatePropagateVectorDistributionPatterns(RewritePatternSet &patterns);
+
 /// An attribute that specifies the combining function for `vector.contract`,
 /// and `vector.reduction`.
 class CombiningKindAttr

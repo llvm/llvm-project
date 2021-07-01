@@ -18,14 +18,14 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load 16 from constant-pool)
-    ; CHECK: STRQui [[LDRQui]], [[COPY]], 0 :: (store 16)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
+    ; CHECK: STRQui [[LDRQui]], [[COPY]], 0 :: (store (<2 x s64>))
     ; CHECK: RET_ReallyLR
     %0:gpr(p0) = COPY $x0
     %3:fpr(s64) = G_FCONSTANT double 5.000000e-01
     %2:fpr(s64) = G_FCONSTANT double 1.600000e+01
     %1:fpr(<2 x s64>) = G_BUILD_VECTOR %2(s64), %3(s64)
-    G_STORE %1(<2 x s64>), %0(p0) :: (store 16)
+    G_STORE %1(<2 x s64>), %0(p0) :: (store (<2 x s64>))
     RET_ReallyLR
 
 ...

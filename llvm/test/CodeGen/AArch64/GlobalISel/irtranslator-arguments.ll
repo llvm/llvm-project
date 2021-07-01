@@ -18,12 +18,12 @@ declare void @use_s128(i128 %a, i128 %b)
 ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY $w5
 ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY $w6
 ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.2, align 16)
+; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64)  from %fixed-stack.2, align 16)
 ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-; CHECK:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 8 from %fixed-stack.1)
+; CHECK:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s64)  from %fixed-stack.1)
 ; CHECK:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD]](s64), [[LOAD1]](s64)
 ; CHECK:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load 4 from %fixed-stack.0, align 16)
+; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (invariant load (s32) from %fixed-stack.0, align 16)
 ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
 ; CHECK:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[MV]](s128)

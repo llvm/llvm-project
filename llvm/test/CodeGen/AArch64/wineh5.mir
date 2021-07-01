@@ -160,9 +160,9 @@ body:             |
     successors: %bb.2(0x40000000), %bb.3(0x40000000)
     liveins: $w0, $x28, $fp, $lr
 
-    early-clobber $sp = frame-setup STRXpre killed $x28, $sp, -32 :: (store 8 into %stack.9)
+    early-clobber $sp = frame-setup STRXpre killed $x28, $sp, -32 :: (store (s64) into %stack.9)
     frame-setup SEH_SaveReg_X 28, -256
-    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.7), (store 8 into %stack.8)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.7), (store (s64) into %stack.8)
     frame-setup SEH_SaveFPLR 16
     $x15 = frame-setup MOVi64imm 187081
     frame-setup SEH_Nop
@@ -174,16 +174,16 @@ body:             |
     $x8 = ADDXri $sp, 730, 12
     $x8 = ADDXri $x8, 3208, 0
     renamable $w9 = MOVi32imm 2
-    STRWui killed renamable $w0, renamable $x8, 0 :: (store 4 into %ir.i.addr)
-    renamable $w0 = LDRWui renamable $x8, 0 :: (load 4 from %ir.i.addr)
+    STRWui killed renamable $w0, renamable $x8, 0 :: (store (s32) into %ir.i.addr)
+    renamable $w0 = LDRWui renamable $x8, 0 :: (load (s32) from %ir.i.addr)
     renamable $w0 = ADDWri killed renamable $w0, 2, 0
-    STRWui killed renamable $w0, $sp, 128 :: (store 4 into %ir.a)
-    STRXui killed $x8, $sp, 1 :: (store 8 into %stack.5)
-    STRWui killed $w9, $sp, 1 :: (store 4 into %stack.6)
+    STRWui killed renamable $w0, $sp, 128 :: (store (s32) into %ir.a)
+    STRXui killed $x8, $sp, 1 :: (store (s64) into %stack.5)
+    STRWui killed $w9, $sp, 1 :: (store (s32) into %stack.6)
     BL @"?func2@@YAHXZ", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
-    $x8 = LDRXui $sp, 1 :: (load 8 from %stack.5)
-    renamable $w9 = LDRWui killed renamable $x8, 0 :: (load 4 from %ir.i.addr)
-    $w10 = LDRWui $sp, 1 :: (load 4 from %stack.6)
+    $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.5)
+    renamable $w9 = LDRWui killed renamable $x8, 0 :: (load (s32) from %ir.i.addr)
+    $w10 = LDRWui $sp, 1 :: (load (s32) from %stack.6)
     $wzr = SUBSWrr killed renamable $w9, killed renamable $w10, implicit-def $nzcv
     renamable $w9 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     TBNZW killed renamable $w9, 0, %bb.2
@@ -193,8 +193,8 @@ body:             |
     successors: %bb.4(0x80000000)
 
     BL @"?func2@@YAHXZ", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
-    $x8 = LDRXui $sp, 1 :: (load 8 from %stack.5)
-    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store 4 into %ir.retval)
+    $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.5)
+    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store (s32) into %ir.retval)
     B %bb.4
 
   bb.3.if.else:
@@ -203,20 +203,20 @@ body:             |
     $x8 = ADDXri $sp, 20, 0
     $x0 = COPY killed renamable $x8
     BL @"?func3@@YAHPEAH@Z", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit killed $x0, implicit-def $w0
-    $x8 = LDRXui $sp, 1 :: (load 8 from %stack.5)
-    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store 4 into %ir.retval)
+    $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.5)
+    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store (s32) into %ir.retval)
 
   bb.4.return:
-    $x8 = LDRXui $sp, 1 :: (load 8 from %stack.5)
-    renamable $w0 = LDRWui killed renamable $x8, 1 :: (load 4 from %ir.retval)
+    $x8 = LDRXui $sp, 1 :: (load (s64) from %stack.5)
+    renamable $w0 = LDRWui killed renamable $x8, 1 :: (load (s32) from %ir.retval)
     frame-destroy SEH_EpilogStart
     $sp = frame-destroy ADDXri $sp, 730, 12
     frame-destroy SEH_StackAlloc 2990080
     $sp = frame-destroy ADDXri $sp, 3216, 0
     frame-destroy SEH_StackAlloc 3216
-    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.7), (load 8 from %stack.8)
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.7), (load (s64) from %stack.8)
     frame-destroy SEH_SaveFPLR 16
-    early-clobber $sp, $x28 = frame-destroy LDRXpost $sp, 32 :: (load 8 from %stack.9)
+    early-clobber $sp, $x28 = frame-destroy LDRXpost $sp, 32 :: (load (s64) from %stack.9)
     frame-destroy SEH_SaveReg_X 28, -256
     frame-destroy SEH_EpilogEnd
     RET_ReallyLR implicit killed $w0

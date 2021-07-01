@@ -451,11 +451,24 @@ public:
   /// Pair of instruction number and operand number.
   using DebugInstrOperandPair = std::pair<unsigned, unsigned>;
 
-  /// Substitution map: from one <inst,operand> pair to another. Used to
-  /// record changes in where a value is defined, so that debug variable
-  /// locations can find it later.
-  std::map<DebugInstrOperandPair, DebugInstrOperandPair>
-      DebugValueSubstitutions;
+  /// Replacement definition for a debug instruction reference. Made up of an
+  /// instruction / operand pair, and a qualifying subregister indicating what
+  /// bits in the operand make up the substitution. For example, a debug user
+  /// of %1:
+  ///    %0:gr32 = someinst, debug-instr-number 2
+  ///    %1:gr16 = %0.some_16_bit_subreg
+  /// Would receive the substitution {{2, 0}, $subreg}, where $subreg is the
+  /// subregister number for some_16_bit_subreg.
+  struct DebugSubstitution {
+    DebugInstrOperandPair Dest; ///< Replacement instruction / operand pair.
+    unsigned Subreg;            ///< Qualifier for which part of Dest is read.
+  };
+
+  /// Substitution map: from one <inst,operand> pair identifying a value,
+  /// to a DebugSubstitution identifying another. Used to record changes in
+  /// where a value is defined, so that debug variable locations can find it
+  /// later.
+  std::map<DebugInstrOperandPair, DebugSubstitution> DebugValueSubstitutions;
 
   /// Location of a PHI instruction that is also a debug-info variable value,
   /// for the duration of register allocation. Loaded by the PHI-elimination
@@ -477,7 +490,8 @@ public:
 
   /// Create a substitution between one <instr,operand> value to a different,
   /// new value.
-  void makeDebugValueSubstitution(DebugInstrOperandPair, DebugInstrOperandPair);
+  void makeDebugValueSubstitution(DebugInstrOperandPair, DebugInstrOperandPair,
+                                  unsigned SubReg = 0);
 
   /// Create substitutions for any tracked values in \p Old, to point at
   /// \p New. Needed when we re-create an instruction during optimization,

@@ -53,10 +53,10 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_extload
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: $w0 = COPY [[LOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_LOAD %0 :: (load 1)
+    %1:_(s32) = G_LOAD %0 :: (load (s8))
     $w0 = COPY %1
 ...
 ---
@@ -67,11 +67,11 @@ body:             |
 
     ; CHECK-LABEL: name: sext_i32_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load 4 from %ir.ptr)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s32) from %ir.ptr)
     ; CHECK: $x0 = COPY [[SEXTLOAD]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load 4 from %ir.ptr)
+    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s32) from %ir.ptr)
     $x0 = COPY %2(s64)
     RET_ReallyLR implicit $x0
 
@@ -84,11 +84,11 @@ body:             |
 
     ; CHECK-LABEL: name: sext_i16_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load 2 from %ir.ptr)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16) from %ir.ptr)
     ; CHECK: $x0 = COPY [[SEXTLOAD]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load 2 from %ir.ptr)
+    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s16) from %ir.ptr)
     $x0 = COPY %2(s64)
     RET_ReallyLR implicit $x0
 
@@ -101,11 +101,11 @@ body:             |
 
     ; CHECK-LABEL: name: sext_i8_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load 1 from %ir.ptr)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.ptr)
     ; CHECK: $x0 = COPY [[SEXTLOAD]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load 1 from %ir.ptr)
+    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s8) from %ir.ptr)
     $x0 = COPY %2(s64)
     RET_ReallyLR implicit $x0
 
@@ -118,11 +118,11 @@ body:             |
 
     ; CHECK-LABEL: name: zext_i32_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load 4 from %ir.ptr)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s32) from %ir.ptr)
     ; CHECK: $x0 = COPY [[ZEXTLOAD]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load 4 from %ir.ptr)
+    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s32) from %ir.ptr)
     $x0 = COPY %2(s64)
     RET_ReallyLR implicit $x0
 
@@ -135,11 +135,11 @@ body:             |
 
     ; CHECK-LABEL: name: zext_i16_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load 2 from %ir.ptr)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16) from %ir.ptr)
     ; CHECK: $x0 = COPY [[ZEXTLOAD]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load 2 from %ir.ptr)
+    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s16) from %ir.ptr)
     $x0 = COPY %2(s64)
     RET_ReallyLR implicit $x0
 
@@ -152,11 +152,11 @@ body:             |
 
     ; CHECK-LABEL: name: zext_i8_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load 1 from %ir.ptr)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.ptr)
     ; CHECK: $x0 = COPY [[ZEXTLOAD]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load 1 from %ir.ptr)
+    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s8) from %ir.ptr)
     $x0 = COPY %2(s64)
     RET_ReallyLR implicit $x0
 

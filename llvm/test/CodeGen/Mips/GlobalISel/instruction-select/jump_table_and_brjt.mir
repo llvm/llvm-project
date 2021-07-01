@@ -92,7 +92,7 @@ body:             |
   ; MIPS32:   [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) %jump-table.0
   ; MIPS32:   [[SLL:%[0-9]+]]:gpr32 = SLL [[SUBu]], 2
   ; MIPS32:   [[ADDu:%[0-9]+]]:gpr32 = ADDu [[LUi]], [[SLL]]
-  ; MIPS32:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-abs-lo) %jump-table.0 :: (load 4)
+  ; MIPS32:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-abs-lo) %jump-table.0 :: (load (s32))
   ; MIPS32:   PseudoIndirectBranch [[LW]]
   ; MIPS32: bb.2.sw.bb:
   ; MIPS32:   $v0 = COPY [[ORi4]]
@@ -120,7 +120,7 @@ body:             |
   ; MIPS32:   [[LUi1:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) %jump-table.1
   ; MIPS32:   [[SLL1:%[0-9]+]]:gpr32 = SLL [[SUBu1]], 2
   ; MIPS32:   [[ADDu1:%[0-9]+]]:gpr32 = ADDu [[LUi1]], [[SLL1]]
-  ; MIPS32:   [[LW1:%[0-9]+]]:gpr32 = LW [[ADDu1]], target-flags(mips-abs-lo) %jump-table.1 :: (load 4)
+  ; MIPS32:   [[LW1:%[0-9]+]]:gpr32 = LW [[ADDu1]], target-flags(mips-abs-lo) %jump-table.1 :: (load (s32))
   ; MIPS32:   PseudoIndirectBranch [[LW1]]
   ; MIPS32: bb.9.sw.bb4:
   ; MIPS32:   $v0 = COPY [[ORi4]]
@@ -156,10 +156,10 @@ body:             |
   ; MIPS32_PIC:   BNE [[ANDi]], $zero, %bb.6, implicit-def $at
   ; MIPS32_PIC: bb.1.entry:
   ; MIPS32_PIC:   successors: %bb.2(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
-  ; MIPS32_PIC:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-got) %jump-table.0 :: (load 4 from got)
+  ; MIPS32_PIC:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-got) %jump-table.0 :: (load (s32) from got)
   ; MIPS32_PIC:   [[SLL:%[0-9]+]]:gpr32 = SLL [[SUBu]], 2
   ; MIPS32_PIC:   [[ADDu1:%[0-9]+]]:gpr32 = ADDu [[LW]], [[SLL]]
-  ; MIPS32_PIC:   [[LW1:%[0-9]+]]:gpr32 = LW [[ADDu1]], target-flags(mips-abs-lo) %jump-table.0 :: (load 4)
+  ; MIPS32_PIC:   [[LW1:%[0-9]+]]:gpr32 = LW [[ADDu1]], target-flags(mips-abs-lo) %jump-table.0 :: (load (s32))
   ; MIPS32_PIC:   [[ADDu2:%[0-9]+]]:gpr32 = ADDu [[LW1]], [[ADDu]]
   ; MIPS32_PIC:   PseudoIndirectBranch [[ADDu2]]
   ; MIPS32_PIC: bb.2.sw.bb:
@@ -185,10 +185,10 @@ body:             |
   ; MIPS32_PIC:   BNE [[ANDi1]], $zero, %bb.13, implicit-def $at
   ; MIPS32_PIC: bb.8.sw.epilog:
   ; MIPS32_PIC:   successors: %bb.9(0x20000000), %bb.10(0x20000000), %bb.11(0x20000000), %bb.12(0x20000000)
-  ; MIPS32_PIC:   [[LW2:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-got) %jump-table.1 :: (load 4 from got)
+  ; MIPS32_PIC:   [[LW2:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-got) %jump-table.1 :: (load (s32) from got)
   ; MIPS32_PIC:   [[SLL1:%[0-9]+]]:gpr32 = SLL [[SUBu1]], 2
   ; MIPS32_PIC:   [[ADDu3:%[0-9]+]]:gpr32 = ADDu [[LW2]], [[SLL1]]
-  ; MIPS32_PIC:   [[LW3:%[0-9]+]]:gpr32 = LW [[ADDu3]], target-flags(mips-abs-lo) %jump-table.1 :: (load 4)
+  ; MIPS32_PIC:   [[LW3:%[0-9]+]]:gpr32 = LW [[ADDu3]], target-flags(mips-abs-lo) %jump-table.1 :: (load (s32))
   ; MIPS32_PIC:   [[ADDu4:%[0-9]+]]:gpr32 = ADDu [[LW3]], [[ADDu]]
   ; MIPS32_PIC:   PseudoIndirectBranch [[ADDu4]]
   ; MIPS32_PIC: bb.9.sw.bb4:

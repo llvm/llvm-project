@@ -29,7 +29,7 @@ func @dim(%arg0: tensor<8x4xf32>) -> index {
 
   // CHECK: %c4 = constant 4 : index
   %c1 = constant 1 : index
-  %0 = memref.dim %arg0, %c1 : tensor<8x4xf32>
+  %0 = tensor.dim %arg0, %c1 : tensor<8x4xf32>
 
   // CHECK-NEXT: return %c4
   return %0 : index
@@ -53,7 +53,7 @@ func @test_commutative(%arg0: i32) -> (i32, i32) {
 // CHECK-LABEL: func @trivial_dce
 func @trivial_dce(%arg0: tensor<8x4xf32>) {
   %c1 = constant 1 : index
-  %0 = memref.dim %arg0, %c1 : tensor<8x4xf32>
+  %0 = tensor.dim %arg0, %c1 : tensor<8x4xf32>
   // CHECK-NEXT: return
   return
 }

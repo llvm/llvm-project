@@ -57,13 +57,13 @@ body:             |
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; CHECK: [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK: [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[MV1]](p0) :: (load 8 from %ir.1, align 4)
-    ; CHECK: G_STORE [[LOAD]](s64), [[MV]](p0) :: (store 8 into %ir.0, align 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[MV1]](p0) :: (load (s64) from %ir.1, align 4)
+    ; CHECK: G_STORE [[LOAD]](s64), [[MV]](p0) :: (store (s64) into %ir.0, align 4)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV1]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load 8 from %ir.1 + 5, align 1, basealign 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64) from %ir.1 + 5, align 1, basealign 4)
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV]], [[C]](s64)
-    ; CHECK: G_STORE [[LOAD1]](s64), [[PTR_ADD1]](p0) :: (store 8 into %ir.0 + 5, align 1, basealign 4)
+    ; CHECK: G_STORE [[LOAD1]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %ir.0 + 5, align 1, basealign 4)
     ; CHECK: [[COPY5:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY4]]
     ; CHECK: S_SETPC_B64_return [[COPY5]]
     %3:_(s32) = COPY $vgpr0
@@ -74,7 +74,7 @@ body:             |
     %1:_(p0) = G_MERGE_VALUES %5(s32), %6(s32)
     %2:sgpr_64 = COPY $sgpr30_sgpr31
     %7:_(s64) = G_CONSTANT i64 13
-    G_MEMCPY_INLINE %0(p0), %1(p0), %7(s64) :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY_INLINE %0(p0), %1(p0), %7(s64) :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     %8:ccr_sgpr_64 = COPY %2
     S_SETPC_B64_return %8
 

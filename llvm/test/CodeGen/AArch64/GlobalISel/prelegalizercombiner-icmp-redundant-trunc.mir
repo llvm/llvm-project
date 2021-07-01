@@ -12,14 +12,14 @@ body:             |
     ; CHECK-LABEL: name: icmp_trunc_sextload
     ; CHECK: liveins: $x0
     ; CHECK: %v:_(p0) = COPY $x0
-    ; CHECK: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load 4)
+    ; CHECK: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load (s32))
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: %cmp:_(s1) = G_ICMP intpred(ne), %load(s64), [[C]]
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %cmp(s1)
     ; CHECK: $w0 = COPY [[ANYEXT]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %v:_(p0) = COPY $x0
-    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load 4)
+    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load (s32))
     %trunc:_(s32) = G_TRUNC %load(s64)
     %zero:_(s32) = G_CONSTANT i32 0
     %cmp:_(s1) = G_ICMP intpred(ne), %trunc(s32), %zero
@@ -37,14 +37,14 @@ body:             |
     ; CHECK-LABEL: name: icmp_trunc_sextload_eq
     ; CHECK: liveins: $x0
     ; CHECK: %v:_(p0) = COPY $x0
-    ; CHECK: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load 4)
+    ; CHECK: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load (s32))
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: %cmp:_(s1) = G_ICMP intpred(eq), %load(s64), [[C]]
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT %cmp(s1)
     ; CHECK: $w0 = COPY [[ANYEXT]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %v:_(p0) = COPY $x0
-    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load 4)
+    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load (s32))
     %trunc:_(s32) = G_TRUNC %load(s64)
     %zero:_(s32) = G_CONSTANT i32 0
     %cmp:_(s1) = G_ICMP intpred(eq), %trunc(s32), %zero
@@ -62,7 +62,7 @@ body:             |
     ; CHECK-LABEL: name: icmp_trunc_sextload_wrongpred
     ; CHECK: liveins: $x0
     ; CHECK: %v:_(p0) = COPY $x0
-    ; CHECK: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load 4)
+    ; CHECK: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load (s32))
     ; CHECK: %trunc:_(s32) = G_TRUNC %load(s64)
     ; CHECK: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK: %cmp:_(s1) = G_ICMP intpred(slt), %trunc(s32), %zero
@@ -70,7 +70,7 @@ body:             |
     ; CHECK: $w0 = COPY [[ANYEXT]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %v:_(p0) = COPY $x0
-    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load 4)
+    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load (s32))
     %trunc:_(s32) = G_TRUNC %load(s64)
     %zero:_(s32) = G_CONSTANT i32 0
     %cmp:_(s1) = G_ICMP intpred(slt), %trunc(s32), %zero
@@ -88,7 +88,7 @@ body:             |
     ; CHECK-LABEL: name: icmp_trunc_sextload_extend_mismatch
     ; CHECK: liveins: $x0
     ; CHECK: %v:_(p0) = COPY $x0
-    ; CHECK: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load 4)
+    ; CHECK: %load:_(s64) = G_SEXTLOAD %v(p0) :: (load (s32))
     ; CHECK: %trunc:_(s16) = G_TRUNC %load(s64)
     ; CHECK: %zero:_(s16) = G_CONSTANT i16 0
     ; CHECK: %cmp:_(s1) = G_ICMP intpred(ne), %trunc(s16), %zero
@@ -96,7 +96,7 @@ body:             |
     ; CHECK: $w0 = COPY [[ANYEXT]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %v:_(p0) = COPY $x0
-    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load 4)
+    %load:_(s64) = G_SEXTLOAD %v:_(p0) :: (load (s32))
     %trunc:_(s16) = G_TRUNC %load(s64)
     %zero:_(s16) = G_CONSTANT i16 0
     %cmp:_(s1) = G_ICMP intpred(ne), %trunc(s16), %zero

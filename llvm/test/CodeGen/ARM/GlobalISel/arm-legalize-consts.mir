@@ -28,28 +28,31 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_CONSTANT i32 42
 
     %1(s16) = G_CONSTANT i16 21
-    G_STORE %1(s16), %4(p0) :: (store 2)
+    G_STORE %1(s16), %4(p0) :: (store (s16))
     ; CHECK-NOT: G_CONSTANT i16
     ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 21
     ; CHECK: {{%[0-9]+}}:_(s16) = G_TRUNC [[EXT]](s32)
     ; CHECK-NOT: G_CONSTANT i16
 
     %2(s8) = G_CONSTANT i8 10
-    G_STORE %2(s8), %4(p0) :: (store 1)
+    G_STORE %2(s8), %4(p0) :: (store (s8))
     ; CHECK-NOT: G_CONSTANT i8
     ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
     ; CHECK: {{%[0-9]+}}:_(s8) = G_TRUNC [[EXT]](s32)
     ; CHECK-NOT: G_CONSTANT i8
 
-    %3(s1) = G_CONSTANT i1 1
-    G_STORE %3(s1), %4(p0) :: (store 1)
+    %3:_(s1) = G_CONSTANT i1 1
+    %6:_(s32) = G_CONSTANT i32 99
+    %7:_(s32) = G_SELECT %3, %0, %6
+    G_STORE %7(s32), %4(p0) :: (store (s32))
     ; CHECK-NOT: G_CONSTANT i1
     ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: {{%[0-9]+}}:_(s1) = G_TRUNC [[EXT]](s32)
     ; CHECK-NOT: G_CONSTANT i1
 
     %5(p0) = G_CONSTANT i32 0
-    G_STORE %5(p0), %4(p0) :: (store 4)
+
+    G_STORE %5(p0), %4(p0) :: (store (p0))
     ; CHECK: {{%[0-9]+}}:_(p0) = G_CONSTANT i32 0
 
     $r0 = COPY %0(s32)

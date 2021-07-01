@@ -925,7 +925,7 @@ PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
   assert(rankedTensorType.hasStaticShape());
   int rank = rankedTensorType.getRank();
   for (int i = 0; i < rank; ++i) {
-    auto dimOp = builder.createOrFold<memref::DimOp>(loc, source, i);
+    auto dimOp = builder.createOrFold<tensor::DimOp>(loc, source, i);
     auto resultDimSize = builder.createOrFold<ConstantIndexOp>(
         loc, rankedTensorType.getDimSize(i));
     auto highValue = builder.createOrFold<SubIOp>(loc, resultDimSize, dimOp);
@@ -945,7 +945,7 @@ LogicalResult PadTensorOp::reifyReturnTypeShapesPerResultDim(
   for (auto dim : llvm::seq<int64_t>(0, getSourceType().getRank())) {
     // Shape along each dimension is source dim + low pad + high pad.
     SmallVector<Value> mapOperands;
-    mapOperands.push_back(b.createOrFold<memref::DimOp>(loc, source(), dim));
+    mapOperands.push_back(b.createOrFold<tensor::DimOp>(loc, source(), dim));
     AffineExpr expr = b.getAffineDimExpr(0);
     unsigned numSymbols = 0;
     auto addOpFoldResult = [&](OpFoldResult valueOrAttr) {
@@ -1545,7 +1545,7 @@ getCollapsedOutputDimFromInputShape(OpBuilder &builder, Location loc,
   AffineExpr expr;
   SmallVector<Value, 2> dynamicDims;
   for (auto dim : llvm::seq(startPos, endPos + 1)) {
-    dynamicDims.push_back(builder.createOrFold<memref::DimOp>(loc, src, dim));
+    dynamicDims.push_back(builder.createOrFold<tensor::DimOp>(loc, src, dim));
     AffineExpr currExpr = builder.getAffineSymbolExpr(dim - startPos);
     expr = (expr ? expr * currExpr : currExpr);
   }
@@ -1614,7 +1614,7 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
            "dimensions");
     linearizedStaticDim *= d.value();
   }
-  Value sourceDim = builder.create<memref::DimOp>(loc, src, sourceDimPos);
+  Value sourceDim = builder.create<tensor::DimOp>(loc, src, sourceDimPos);
   return applyMapToValues(
       builder, loc,
       AffineMap::get(

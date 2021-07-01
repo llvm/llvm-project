@@ -101,7 +101,7 @@ continue:
 ; CHECK:   [[BAD]].{{[a-z]+}} (landing-pad):
 ; CHECK:     [[PHI_ELEVEN:%[0-9]+]]:_(s32) = G_PHI [[ELEVEN]](s32), %bb.1
 ; CHECK:     EH_LABEL
-; CHECK:     G_STORE [[PHI_ELEVEN]](s32), {{%[0-9]+}}(p0) :: (store 4 into @global_var)
+; CHECK:     G_STORE [[PHI_ELEVEN]](s32), {{%[0-9]+}}(p0) :: (store (s32) into @global_var)
 
 ; CHECK:   [[GOOD]].{{[a-z]+}}:
 ; CHECK:     [[SEL:%[0-9]+]]:_(s32) = G_PHI

@@ -8,13 +8,13 @@ define i128 @func1({ i128, i8* } %struct) {
 ; so we expect the LD8 to load from the address used in the original HIBITS
 ; load.
 ; CHECK-LABEL: Initial selection DAG:
-; CHECK:     [[LOBITS:t[0-9]+]]: i64,ch = load<(load 8)>
-; CHECK:     [[HIBITS:t[0-9]+]]: i64,ch = load<(load 8)>
+; CHECK:     [[LOBITS:t[0-9]+]]: i64,ch = load<(load (s64))>
+; CHECK:     [[HIBITS:t[0-9]+]]: i64,ch = load<(load (s64))>
 ; CHECK: Combining: t{{[0-9]+}}: i128 = build_pair [[LOBITS]], [[HIBITS]]
 ; CHECK-NEXT: Creating new node
-; CHECK-SAME: load<(load 16, align 8)>
+; CHECK-SAME: load<(load (s128), align 8)>
 ; CHECK-NEXT: into
-; CHECK-SAME: load<(load 16, align 8)>
+; CHECK-SAME: load<(load (s128), align 8)>
 ; CHECK-LABEL: Optimized lowered selection DAG:
   %result = extractvalue {i128, i8* } %struct, 0
   ret i128 %result

@@ -1,5 +1,5 @@
 # Bazel artifacts
-/bazel-*
+**/bazel-*
 
 # Per-user bazelrc files
 user.bazelrc

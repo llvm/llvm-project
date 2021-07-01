@@ -34,7 +34,7 @@ body: |
     liveins: $x3
 
     %0 = COPY $x3
-    %1 = LWZ 0, %0 :: (load 4 from %ir.p)
+    %1 = LWZ 0, %0 :: (load (s32) from %ir.p)
     %2 = LI 0
     %3 = RLWIMI %2, killed %1, 0, 0, 31
     %4 = EXTSW_32_64 killed %3

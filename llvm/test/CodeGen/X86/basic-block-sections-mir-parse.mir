@@ -97,25 +97,25 @@ body:             |
     $rbp = frame-setup MOV64rr $rsp
     CFI_INSTRUCTION def_cfa_register $rbp
     renamable $dil = AND8ri renamable $dil, 1, implicit-def dead $eflags, implicit killed $edi, implicit-def $edi
-    MOV8mr $rbp, 1, $noreg, -1, $noreg, renamable $dil, implicit killed $edi :: (store 1 into %ir.3)
-    TEST8mi $rbp, 1, $noreg, -1, $noreg, 1, implicit-def $eflags :: (load 1 from %ir.3)
+    MOV8mr $rbp, 1, $noreg, -1, $noreg, renamable $dil, implicit killed $edi :: (store (s8) into %ir.3)
+    TEST8mi $rbp, 1, $noreg, -1, $noreg, 1, implicit-def $eflags :: (load (s8) from %ir.3)
     JCC_1 %bb.2, 4, implicit killed $eflags
     JMP_1 %bb.1
   
   bb.1 (%ir-block.7, bbsections 1):
     successors: %bb.3(0x80000000)
   
-    MOV32mi $rbp, 1, $noreg, -8, $noreg, 1 :: (store 4 into %ir.2)
+    MOV32mi $rbp, 1, $noreg, -8, $noreg, 1 :: (store (s32) into %ir.2)
     JMP_1 %bb.3
   
   bb.2 (%ir-block.8, bbsections 2):
     successors: %bb.3(0x80000000)
   
-    MOV32mi $rbp, 1, $noreg, -8, $noreg, 0 :: (store 4 into %ir.2)
+    MOV32mi $rbp, 1, $noreg, -8, $noreg, 0 :: (store (s32) into %ir.2)
     JMP_1 %bb.3
   
   bb.3 (%ir-block.9, bbsections 3):
-    renamable $eax = MOV32rm $rbp, 1, $noreg, -8, $noreg :: (load 4 from %ir.2)
+    renamable $eax = MOV32rm $rbp, 1, $noreg, -8, $noreg :: (load (s32) from %ir.2)
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa $rsp, 8
     RETQ implicit $eax

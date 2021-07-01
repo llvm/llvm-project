@@ -656,6 +656,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     frexp_test.cpp
+  HDRS
+    FrexpTest.h
   DEPENDS
     libc.include.math
     libc.src.math.frexp
@@ -669,6 +671,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     frexpf_test.cpp
+  HDRS
+    FrexpTest.h
   DEPENDS
     libc.include.math
     libc.src.math.frexpf
@@ -682,6 +686,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     frexpl_test.cpp
+  HDRS
+    FrexpTest.h
   DEPENDS
     libc.include.math
     libc.src.math.frexpl
@@ -802,6 +808,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     logbl_test.cpp
+  HDRS
+    LogbTest.h
   DEPENDS
     libc.include.math
     libc.src.math.logbl
@@ -814,6 +822,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     modf_test.cpp
+  HDRS
+    ModfTest.h
   DEPENDS
     libc.include.math
     libc.src.math.modf
@@ -826,6 +836,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     modff_test.cpp
+  HDRS
+    ModfTest.h
   DEPENDS
     libc.include.math
     libc.src.math.modff
@@ -838,6 +850,8 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     modfl_test.cpp
+  HDRS
+    ModfTest.h
   DEPENDS
     libc.include.math
     libc.src.math.modfl

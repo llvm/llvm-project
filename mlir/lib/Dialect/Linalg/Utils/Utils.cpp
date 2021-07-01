@@ -176,8 +176,8 @@ IntegerAttr getSmallestBoundingIndex(Value size) {
                          .getResult(0)
                          .dyn_cast<AffineConstantExpr>())
       boundingConst = cExpr.getValue();
-  } else if (auto dimOp = size.getDefiningOp<memref::DimOp>()) {
-    auto shape = dimOp.memrefOrTensor().getType().dyn_cast<ShapedType>();
+  } else if (auto dimOp = size.getDefiningOp<tensor::DimOp>()) {
+    auto shape = dimOp.source().getType().dyn_cast<ShapedType>();
     if (auto constOp = dimOp.index().getDefiningOp<ConstantOp>()) {
       if (auto indexAttr = constOp.value().dyn_cast<IntegerAttr>()) {
         auto dimIndex = indexAttr.getInt();
@@ -566,7 +566,7 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for dim#" << r);
       if (!isTiled(map.getSubMap({r}), tileSizes)) {
         offsets.push_back(b.getIndexAttr(0));
-        Value dim = b.createOrFold<memref::DimOp>(loc, shapedOp, r);
+        Value dim = createOrFoldDimOp(b, loc, shapedOp, r);
         sizes.push_back(dim);
         strides.push_back(b.getIndexAttr(1));
         LLVM_DEBUG(llvm::dbgs() << ": not tiled: use size: " << dim << "\n");
@@ -603,7 +603,7 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
             AffineMap::inferFromExprList(
                 ArrayRef<ArrayRef<AffineExpr>>{{dim0, dim1 - dim2}})
                 .front();
-        Value d = b.create<memref::DimOp>(loc, shapedOp, r);
+        Value d = createOrFoldDimOp(b, loc, shapedOp, r);
         SmallVector<Value, 4> operands{size, d, offset};
         fullyComposeAffineMapAndOperands(&minMap, &operands);
         size = b.create<AffineMinOp>(loc, b.getIndexType(), minMap, operands);

@@ -436,6 +436,39 @@ inline Error joinErrors(Error E1, Error E2) {
 /// Error cannot be copied, this class replaces getError() with
 /// takeError(). It also adds an bool errorIsA<ErrT>() method for testing the
 /// error class type.
+///
+/// Example usage of 'Expected<T>' as a function return type:
+///
+///   @code{.cpp}
+///     Expected<int> myDivide(int A, int B) {
+///       if (B == 0) {
+///         // return an Error
+///         return createStringError(inconvertibleErrorCode(),
+///                                  "B must not be zero!");
+///       }
+///       // return an integer
+///       return A / B;
+///     }
+///   @endcode
+///
+///   Checking the results of to a function returning 'Expected<T>':
+///   @code{.cpp}
+///     if (auto E = Result.takeError()) {
+///       // We must consume the error. Typically one of:
+///       // - return the error to our caller
+///       // - toString(), when logging
+///       // - consumeError(), to silently swallow the error
+///       // - handleErrors(), to distinguish error types
+///       errs() << "Problem with division " << toString(std::move(E)) << "\n";
+///       return;
+///     }
+///     // use the result
+///     outs() << "The answer is " << *Result << "\n";
+///   @endcode
+///
+///  For unit-testing a function returning an 'Expceted<T>', see the
+///  'EXPECT_THAT_EXPECTED' macros in llvm/Testing/Support/Error.h
+
 template <class T> class LLVM_NODISCARD Expected {
   template <class T1> friend class ExpectedAsOutParameter;
   template <class OtherT> friend class Expected;

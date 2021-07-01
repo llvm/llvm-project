@@ -17,8 +17,8 @@ liveins:
 body: |
   bb.0.entry:
     liveins: $rdi
-  ; CHECK: [[@LINE+1]]:60: use of undefined IR value '%ir.c'
-    $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load 4 from %ir.c)
+  ; CHECK: [[@LINE+1]]:64: use of undefined IR value '%ir.c'
+    $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load (s32) from %ir.c)
     RETQ $eax
 ...
 

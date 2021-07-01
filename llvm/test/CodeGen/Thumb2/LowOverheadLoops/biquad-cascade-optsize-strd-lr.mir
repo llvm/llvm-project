@@ -213,44 +213,44 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -36
   ; CHECK:   $sp = frame-setup tSUBspi $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 68
-  ; CHECK:   $r6, $r4 = t2LDRDi8 $r0, 8, 14 /* CC::al */, $noreg :: (load 4 from %ir.i7), (load 4 from %ir.i10)
-  ; CHECK:   $r7, $r5 = t2LDRDi8 killed $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.i), (load 4 from %ir.i5)
+  ; CHECK:   $r6, $r4 = t2LDRDi8 $r0, 8, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i7), (load (s32) from %ir.i10)
+  ; CHECK:   $r7, $r5 = t2LDRDi8 killed $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i), (load (s32) from %ir.i5)
   ; CHECK:   renamable $r0 = t2RSBri killed renamable $r6, 31, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2STMIA $sp, 14 /* CC::al */, $noreg, killed $r0, $r2, $r3 :: (store 4 into %stack.7), (store 4 into %stack.6), (store 4 into %stack.5)
+  ; CHECK:   t2STMIA $sp, 14 /* CC::al */, $noreg, killed $r0, $r2, $r3 :: (store (s32) into %stack.7), (store (s32) into %stack.6), (store (s32) into %stack.5)
   ; CHECK:   $r12 = tMOVr killed $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r2 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.7)
+  ; CHECK:   renamable $r2 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.7)
   ; CHECK: bb.1.bb12 (align 4):
   ; CHECK:   successors: %bb.2(0x40000000), %bb.5(0x40000000)
   ; CHECK:   liveins: $r1, $r2, $r3, $r4, $r5, $r7, $r12
-  ; CHECK:   $r10, $r0 = t2LDRDi8 $r7, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.i14), (load 4 from %ir.i20)
-  ; CHECK:   $r6, $r8 = t2LDRDi8 $r7, 8, 14 /* CC::al */, $noreg :: (load 4 from %ir.i22), (load 4 from %ir.i24)
+  ; CHECK:   $r10, $r0 = t2LDRDi8 $r7, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i14), (load (s32) from %ir.i20)
+  ; CHECK:   $r6, $r8 = t2LDRDi8 $r7, 8, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i22), (load (s32) from %ir.i24)
   ; CHECK:   $lr = t2WLS renamable $r3, %bb.5
   ; CHECK: bb.2.bb27:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r4, $r5, $r6, $r7, $r8, $r10, $r12
-  ; CHECK:   renamable $r3 = tLDRi renamable $r5, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.i13)
-  ; CHECK:   t2STRDi8 killed $r7, killed $r4, $sp, 12, 14 /* CC::al */, $noreg :: (store 4 into %stack.4), (store 4 into %stack.3)
-  ; CHECK:   tSTRspi killed renamable $r3, $sp, 7, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
-  ; CHECK:   renamable $r3 = tLDRi renamable $r5, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.i34)
-  ; CHECK:   renamable $r4 = tLDRi renamable $r5, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.i28)
-  ; CHECK:   tSTRspi killed renamable $r3, $sp, 6, 14 /* CC::al */, $noreg :: (store 4 into %stack.1)
-  ; CHECK:   $r9, $r3 = t2LDRDi8 $r5, 8, 14 /* CC::al */, $noreg :: (load 4 from %ir.i32), (load 4 from %ir.i30)
-  ; CHECK:   tSTRspi killed renamable $r5, $sp, 5, 14 /* CC::al */, $noreg :: (store 4 into %stack.2)
+  ; CHECK:   renamable $r3 = tLDRi renamable $r5, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i13)
+  ; CHECK:   t2STRDi8 killed $r7, killed $r4, $sp, 12, 14 /* CC::al */, $noreg :: (store (s32) into %stack.4), (store (s32) into %stack.3)
+  ; CHECK:   tSTRspi killed renamable $r3, $sp, 7, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
+  ; CHECK:   renamable $r3 = tLDRi renamable $r5, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i34)
+  ; CHECK:   renamable $r4 = tLDRi renamable $r5, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i28)
+  ; CHECK:   tSTRspi killed renamable $r3, $sp, 6, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
+  ; CHECK:   $r9, $r3 = t2LDRDi8 $r5, 8, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i32), (load (s32) from %ir.i30)
+  ; CHECK:   tSTRspi killed renamable $r5, $sp, 5, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
   ; CHECK: bb.3.bb37 (align 4):
   ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r6, $r8, $r9, $r10, $r12
   ; CHECK:   $r7 = tMOVr killed $r6, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r6 = tLDRspi $sp, 6, 14 /* CC::al */, $noreg :: (load 4 from %stack.1)
+  ; CHECK:   renamable $r6 = tLDRspi $sp, 6, 14 /* CC::al */, $noreg :: (load (s32) from %stack.1)
   ; CHECK:   $r5 = tMOVr $r10, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r6, renamable $r11 = t2SMULL killed $r10, killed renamable $r6, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r6, renamable $r11 = t2SMLAL killed renamable $r0, renamable $r9, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r10, renamable $r1 = t2LDR_POST killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.i38)
+  ; CHECK:   renamable $r10, renamable $r1 = t2LDR_POST killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i38)
   ; CHECK:   renamable $r6, renamable $r11 = t2SMLAL renamable $r7, renamable $r3, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r0 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
+  ; CHECK:   renamable $r0 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
   ; CHECK:   renamable $r6, renamable $r11 = t2SMLAL killed renamable $r8, renamable $r4, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r6, renamable $r11 = t2SMLAL renamable $r10, killed renamable $r0, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
   ; CHECK:   early-clobber renamable $r6, dead early-clobber renamable $r11 = MVE_ASRLr killed renamable $r6, killed renamable $r11, renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   early-clobber renamable $r12 = t2STR_POST renamable $r6, killed renamable $r12, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.i39)
+  ; CHECK:   early-clobber renamable $r12 = t2STR_POST renamable $r6, killed renamable $r12, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.i39)
   ; CHECK:   $r8 = tMOVr $r7, 14 /* CC::al */, $noreg
   ; CHECK:   $r0 = tMOVr $r5, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3
@@ -259,15 +259,15 @@ body:             |
   ; CHECK:   liveins: $r2, $r5, $r6, $r7, $r10
   ; CHECK:   $r0 = tMOVr killed $r5, 14 /* CC::al */, $noreg
   ; CHECK:   $r8 = tMOVr killed $r7, 14 /* CC::al */, $noreg
-  ; CHECK:   $r12, $r3 = t2LDRDi8 $sp, 4, 14 /* CC::al */, $noreg :: (load 4 from %stack.6), (load 4 from %stack.5)
-  ; CHECK:   renamable $r5 = tLDRspi $sp, 5, 14 /* CC::al */, $noreg :: (load 4 from %stack.2)
-  ; CHECK:   $r7, $r4 = t2LDRDi8 $sp, 12, 14 /* CC::al */, $noreg :: (load 4 from %stack.4), (load 4 from %stack.3)
+  ; CHECK:   $r12, $r3 = t2LDRDi8 $sp, 4, 14 /* CC::al */, $noreg :: (load (s32) from %stack.6), (load (s32) from %stack.5)
+  ; CHECK:   renamable $r5 = tLDRspi $sp, 5, 14 /* CC::al */, $noreg :: (load (s32) from %stack.2)
+  ; CHECK:   $r7, $r4 = t2LDRDi8 $sp, 12, 14 /* CC::al */, $noreg :: (load (s32) from %stack.4), (load (s32) from %stack.3)
   ; CHECK: bb.5.bb74:
   ; CHECK:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
   ; CHECK:   liveins: $r0, $r3, $r4, $r5, $r6, $r7, $r8, $r10, $r12, $r2
   ; CHECK:   renamable $r5, dead $cpsr = nuw tADDi8 killed renamable $r5, 20, 14 /* CC::al */, $noreg
-  ; CHECK:   t2STRDi8 killed $r10, killed $r0, $r7, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.i14), (store 4 into %ir.i81)
-  ; CHECK:   t2STRDi8 killed $r6, killed $r8, $r7, 8, 14 /* CC::al */, $noreg :: (store 4 into %ir.i84), (store 4 into %ir.i88)
+  ; CHECK:   t2STRDi8 killed $r10, killed $r0, $r7, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.i14), (store (s32) into %ir.i81)
+  ; CHECK:   t2STRDi8 killed $r6, killed $r8, $r7, 8, 14 /* CC::al */, $noreg :: (store (s32) into %ir.i84), (store (s32) into %ir.i88)
   ; CHECK:   renamable $r7, dead $cpsr = nuw tADDi8 killed renamable $r7, 16, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r4, $cpsr = tSUBi8 killed renamable $r4, 1, 14 /* CC::al */, $noreg
   ; CHECK:   $r1 = tMOVr $r12, 14 /* CC::al */, $noreg
@@ -292,19 +292,19 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r4, -36
     $sp = frame-setup tSUBspi $sp, 8, 14 /* CC::al */, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 68
-    $r6, $r4 = t2LDRDi8 $r0, 8, 14 /* CC::al */, $noreg :: (load 4 from %ir.i7), (load 4 from %ir.i10)
-    $r7, $r5 = t2LDRDi8 killed $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.i), (load 4 from %ir.i5)
+    $r6, $r4 = t2LDRDi8 $r0, 8, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i7), (load (s32) from %ir.i10)
+    $r7, $r5 = t2LDRDi8 killed $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i), (load (s32) from %ir.i5)
     renamable $r0 = t2RSBri killed renamable $r6, 31, 14 /* CC::al */, $noreg, $noreg
-    t2STMIA $sp, 14 /* CC::al */, $noreg, killed $r0, $r2, $r3 :: (store 4 into %stack.7), (store 4 into %stack.6), (store 4 into %stack.5)
+    t2STMIA $sp, 14 /* CC::al */, $noreg, killed $r0, $r2, $r3 :: (store (s32) into %stack.7), (store (s32) into %stack.6), (store (s32) into %stack.5)
     $r12 = tMOVr killed $r2, 14 /* CC::al */, $noreg
-    renamable $r2 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.7)
+    renamable $r2 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.7)
 
   bb.1.bb12 (align 4):
     successors: %bb.2(0x40000000), %bb.5(0x40000000)
     liveins: $r1, $r3, $r4, $r5, $r7, $r12, $r2
 
-    $r10, $r0 = t2LDRDi8 $r7, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.i14), (load 4 from %ir.i20)
-    $r6, $r8 = t2LDRDi8 $r7, 8, 14 /* CC::al */, $noreg :: (load 4 from %ir.i22), (load 4 from %ir.i24)
+    $r10, $r0 = t2LDRDi8 $r7, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i14), (load (s32) from %ir.i20)
+    $r6, $r8 = t2LDRDi8 $r7, 8, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i22), (load (s32) from %ir.i24)
     renamable $lr = t2WhileLoopStartLR renamable $r3, %bb.5, implicit-def dead $cpsr
     tB %bb.2, 14 /* CC::al */, $noreg
 
@@ -312,31 +312,31 @@ body:             |
     successors: %bb.3(0x80000000)
     liveins: $lr, $r0, $r1, $r4, $r5, $r6, $r7, $r8, $r10, $r12, $r2
 
-    renamable $r3 = tLDRi renamable $r5, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.i13)
-    t2STRDi8 killed $r7, killed $r4, $sp, 12, 14 /* CC::al */, $noreg :: (store 4 into %stack.4), (store 4 into %stack.3)
-    tSTRspi killed renamable $r3, $sp, 7, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
-    renamable $r3 = tLDRi renamable $r5, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.i34)
-    renamable $r4 = tLDRi renamable $r5, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.i28)
-    tSTRspi killed renamable $r3, $sp, 6, 14 /* CC::al */, $noreg :: (store 4 into %stack.1)
-    $r9, $r3 = t2LDRDi8 $r5, 8, 14 /* CC::al */, $noreg :: (load 4 from %ir.i32), (load 4 from %ir.i30)
-    tSTRspi killed renamable $r5, $sp, 5, 14 /* CC::al */, $noreg :: (store 4 into %stack.2)
+    renamable $r3 = tLDRi renamable $r5, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i13)
+    t2STRDi8 killed $r7, killed $r4, $sp, 12, 14 /* CC::al */, $noreg :: (store (s32) into %stack.4), (store (s32) into %stack.3)
+    tSTRspi killed renamable $r3, $sp, 7, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
+    renamable $r3 = tLDRi renamable $r5, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i34)
+    renamable $r4 = tLDRi renamable $r5, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i28)
+    tSTRspi killed renamable $r3, $sp, 6, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
+    $r9, $r3 = t2LDRDi8 $r5, 8, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i32), (load (s32) from %ir.i30)
+    tSTRspi killed renamable $r5, $sp, 5, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
 
   bb.3.bb37 (align 4):
     successors: %bb.3(0x7c000000), %bb.4(0x04000000)
     liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r6, $r8, $r9, $r10, $r12
 
     $r7 = tMOVr killed $r6, 14 /* CC::al */, $noreg
-    renamable $r6 = tLDRspi $sp, 6, 14 /* CC::al */, $noreg :: (load 4 from %stack.1)
+    renamable $r6 = tLDRspi $sp, 6, 14 /* CC::al */, $noreg :: (load (s32) from %stack.1)
     $r5 = tMOVr $r10, 14 /* CC::al */, $noreg
     renamable $r6, renamable $r11 = t2SMULL killed $r10, killed renamable $r6, 14 /* CC::al */, $noreg
     renamable $r6, renamable $r11 = t2SMLAL killed renamable $r0, renamable $r9, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
-    renamable $r10, renamable $r1 = t2LDR_POST killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.i38)
+    renamable $r10, renamable $r1 = t2LDR_POST killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.i38)
     renamable $r6, renamable $r11 = t2SMLAL renamable $r7, renamable $r3, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
-    renamable $r0 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
+    renamable $r0 = tLDRspi $sp, 7, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
     renamable $r6, renamable $r11 = t2SMLAL killed renamable $r8, renamable $r4, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
     renamable $r6, renamable $r11 = t2SMLAL renamable $r10, killed renamable $r0, killed renamable $r6, killed renamable $r11, 14 /* CC::al */, $noreg
     early-clobber renamable $r6, dead early-clobber renamable $r11 = MVE_ASRLr killed renamable $r6, killed renamable $r11, renamable $r2, 14 /* CC::al */, $noreg
-    early-clobber renamable $r12 = t2STR_POST renamable $r6, killed renamable $r12, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.i39)
+    early-clobber renamable $r12 = t2STR_POST renamable $r6, killed renamable $r12, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.i39)
     $r8 = tMOVr $r7, 14 /* CC::al */, $noreg
     $r0 = tMOVr $r5, 14 /* CC::al */, $noreg
     renamable $lr = t2LoopEndDec killed renamable $lr, %bb.3, implicit-def dead $cpsr
@@ -348,17 +348,17 @@ body:             |
 
     $r0 = tMOVr killed $r5, 14 /* CC::al */, $noreg
     $r8 = tMOVr killed $r7, 14 /* CC::al */, $noreg
-    $r12, $r3 = t2LDRDi8 $sp, 4, 14 /* CC::al */, $noreg :: (load 4 from %stack.6), (load 4 from %stack.5)
-    renamable $r5 = tLDRspi $sp, 5, 14 /* CC::al */, $noreg :: (load 4 from %stack.2)
-    $r7, $r4 = t2LDRDi8 $sp, 12, 14 /* CC::al */, $noreg :: (load 4 from %stack.4), (load 4 from %stack.3)
+    $r12, $r3 = t2LDRDi8 $sp, 4, 14 /* CC::al */, $noreg :: (load (s32) from %stack.6), (load (s32) from %stack.5)
+    renamable $r5 = tLDRspi $sp, 5, 14 /* CC::al */, $noreg :: (load (s32) from %stack.2)
+    $r7, $r4 = t2LDRDi8 $sp, 12, 14 /* CC::al */, $noreg :: (load (s32) from %stack.4), (load (s32) from %stack.3)
 
   bb.5.bb74:
     successors: %bb.6(0x04000000), %bb.1(0x7c000000)
     liveins: $r0, $r3, $r4, $r5, $r6, $r7, $r8, $r10, $r12, $r2
 
     renamable $r5, dead $cpsr = nuw tADDi8 killed renamable $r5, 20, 14 /* CC::al */, $noreg
-    t2STRDi8 killed $r10, killed $r0, $r7, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.i14), (store 4 into %ir.i81)
-    t2STRDi8 killed $r6, killed $r8, $r7, 8, 14 /* CC::al */, $noreg :: (store 4 into %ir.i84), (store 4 into %ir.i88)
+    t2STRDi8 killed $r10, killed $r0, $r7, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.i14), (store (s32) into %ir.i81)
+    t2STRDi8 killed $r6, killed $r8, $r7, 8, 14 /* CC::al */, $noreg :: (store (s32) into %ir.i84), (store (s32) into %ir.i88)
     renamable $r7, dead $cpsr = nuw tADDi8 killed renamable $r7, 16, 14 /* CC::al */, $noreg
     renamable $r4, $cpsr = tSUBi8 killed renamable $r4, 1, 14 /* CC::al */, $noreg
     $r1 = tMOVr $r12, 14 /* CC::al */, $noreg

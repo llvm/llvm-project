@@ -19,7 +19,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[CMP:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[CST:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[RES:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[CMP]], [[CST]] :: (load store monotonic 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[CMP]], [[CST]] :: (load store monotonic (s64) on %ir.addr)
     ; CHECK: [[SRES:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[RES]](s32), [[CMP]]
     ; CHECK: [[SRES32:%[0-9]+]]:_(s32) = COPY [[SRES]]
     ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[RES]], [[SRES32]]
@@ -27,7 +27,7 @@ body:             |
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(s32) = G_CONSTANT i32 1
-    %3:_(s32), %4:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS %0, %1, %2 :: (load store monotonic 8 on %ir.addr)
+    %3:_(s32), %4:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS %0, %1, %2 :: (load store monotonic (s64) on %ir.addr)
     %5:_(s32) = G_ANYEXT %4
     %6:_(s32) = G_MUL %3, %5
     $w0 = COPY %6(s32)
@@ -44,7 +44,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[CMP:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[RES:%[0-9]+]]:_(s64) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[CMP]], [[CST]] :: (load store monotonic 8 on %ir.addr)
+    ; CHECK: [[RES:%[0-9]+]]:_(s64) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[CMP]], [[CST]] :: (load store monotonic (s64) on %ir.addr)
     ; CHECK: [[SRES:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[RES]](s64), [[CMP]]
     ; CHECK: [[SRES64:%[0-9]+]]:_(s64) = G_ANYEXT [[SRES]]
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[RES]], [[SRES64]]
@@ -52,7 +52,7 @@ body:             |
     %0:_(p0) = COPY $x0
     %1:_(s64) = G_CONSTANT i64 0
     %2:_(s64) = G_CONSTANT i64 1
-    %3:_(s64), %4:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS %0, %1, %2 :: (load store monotonic 8 on %ir.addr)
+    %3:_(s64), %4:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS %0, %1, %2 :: (load store monotonic (s64) on %ir.addr)
     %5:_(s64) = G_ANYEXT %4
     %6:_(s64) = G_MUL %3, %5
     $x0 = COPY %6(s64)

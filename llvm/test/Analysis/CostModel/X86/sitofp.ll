@@ -79,7 +79,7 @@ define i32 @sitofp_i32_double() {
 ; SSE42-LABEL: 'sitofp_i32_double'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i32_f64 = sitofp i32 undef to double
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_v2i32_v2f64 = sitofp <2 x i32> undef to <2 x double>
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_v4i32_v4f64 = sitofp <4 x i32> undef to <4 x double>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v4i32_v4f64 = sitofp <4 x i32> undef to <4 x double>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cvt_v8i32_v8f64 = sitofp <8 x i32> undef to <8 x double>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;

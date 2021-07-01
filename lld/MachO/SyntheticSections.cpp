@@ -47,7 +47,8 @@ InStruct macho::in;
 std::vector<SyntheticSection *> macho::syntheticSections;
 
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
-    : OutputSection(SyntheticKind, name), segname(segname) {
+    : OutputSection(SyntheticKind, name) {
+  std::tie(this->segname, this->name) = maybeRenameSection({segname, name});
   isec = make<ConcatInputSection>(segname, name);
   isec->parent = this;
   syntheticSections.push_back(this);

@@ -275,8 +275,7 @@ struct TestVectorDistributePatterns
         }
       }
     });
-    patterns.add<PointwiseExtractPattern>(ctx);
-    populateVectorToVectorTransformationPatterns(patterns);
+    populatePropagateVectorDistributionPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
@@ -339,8 +338,7 @@ struct TestVectorToLoopPatterns
       }
       return mlir::WalkResult::interrupt();
     });
-    patterns.add<PointwiseExtractPattern>(ctx);
-    populateVectorToVectorTransformationPatterns(patterns);
+    populatePropagateVectorDistributionPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };

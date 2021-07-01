@@ -1,7 +1,13 @@
 # RUN: llc -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
 # RUN: llvm-dwarfdump %t | FileCheck %s
 
+# RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
+# RUN: llvm-dwarfdump %t | FileCheck %s
+
 # RUN: llc -start-before=livedebugvalues -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
+# RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
+
+# RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=livedebugvalues -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
 # RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
 
 ## Based on:
@@ -79,7 +85,7 @@ body:             |
     DBG_VALUE $esi, $noreg, !16, !DIExpression(), debug-location !18
     DBG_VALUE $edx, $noreg, !17, !DIExpression(), debug-location !18
     renamable $edi = nsw INC32r killed renamable $edi, implicit-def dead $eflags, debug-location !18
-    MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !18 :: (store 4 into @global)
+    MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !18 :: (store (s32) into @global)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $edi, 12, implicit-def dead early-clobber $esi, 12, implicit-def dead early-clobber $edx, 12, implicit-def dead early-clobber $df, 12, implicit-def dead early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, !19, debug-location !18
     $eax = MOV32ri 123, debug-location !18
     RETQ killed $eax, debug-location !18

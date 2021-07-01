@@ -214,7 +214,7 @@ body:             |
   ; CHECK:   liveins: $lr, $q0, $r0, $r2
   ; CHECK:   DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
   ; CHECK:   DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, debug-location !32 :: (load 16 from %ir.lsr.iv12, align 4, !tbaa !34)
+  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, debug-location !32 :: (load (s128) from %ir.lsr.iv12, align 4, !tbaa !34)
   ; CHECK:   DBG_VALUE $r0, $noreg, !24, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !29
   ; CHECK:   MVE_VPTv4f32 8, renamable $q1, renamable $q0, 12, implicit-def $vpr, debug-location !40
   ; CHECK:   renamable $q0 = MVE_VORR killed renamable $q1, killed renamable $q1, 1, killed renamable $vpr, killed renamable $q0, debug-location !40
@@ -236,12 +236,12 @@ body:             |
   ; CHECK:   DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
   ; CHECK:   DBG_VALUE $r1, $noreg, !25, !DIExpression(), debug-location !29
   ; CHECK:   DBG_VALUE $r0, $noreg, !24, !DIExpression(), debug-location !29
-  ; CHECK:   renamable $s0 = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load 4 from constant-pool)
+  ; CHECK:   renamable $s0 = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
   ; CHECK: bb.5.while.end:
   ; CHECK:   liveins: $r2, $s0
   ; CHECK:   DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
   ; CHECK:   DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
-  ; CHECK:   VSTRS killed renamable $s0, killed renamable $r2, 0, 14 /* CC::al */, $noreg, debug-location !45 :: (store 4 into %ir.pResult, !tbaa !34)
+  ; CHECK:   VSTRS killed renamable $s0, killed renamable $r2, 0, 14 /* CC::al */, $noreg, debug-location !45 :: (store (s32) into %ir.pResult, !tbaa !34)
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, debug-location !46
   ; CHECK: bb.6 (align 4):
   ; CHECK:   CONSTPOOL_ENTRY 0, %const.0, 4
@@ -286,7 +286,7 @@ body:             |
     DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
     renamable $vpr = MVE_VCTP32 renamable $r1, 0, $noreg
     MVE_VPST 2, implicit $vpr, debug-location !32
-    renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr, debug-location !32 :: (load 16 from %ir.lsr.iv12, align 4, !tbaa !34)
+    renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr, debug-location !32 :: (load (s128) from %ir.lsr.iv12, align 4, !tbaa !34)
     DBG_VALUE $r0, $noreg, !24, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !29
     renamable $vpr = MVE_VCMPf32 renamable $q1, renamable $q0, 12, 1, killed renamable $vpr, debug-location !40
     renamable $q0 = MVE_VORR killed renamable $q1, renamable $q1, 1, killed renamable $vpr, killed renamable $q0, debug-location !40
@@ -314,14 +314,14 @@ body:             |
     DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
     DBG_VALUE $r1, $noreg, !25, !DIExpression(), debug-location !29
     DBG_VALUE $r0, $noreg, !24, !DIExpression(), debug-location !29
-    renamable $s0 = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load 4 from constant-pool)
+    renamable $s0 = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
 
   bb.5.while.end:
     liveins: $r2, $s0
 
     DBG_VALUE float 0x3810000000000000, $noreg, !27, !DIExpression(), debug-location !29
     DBG_VALUE $r2, $noreg, !26, !DIExpression(), debug-location !29
-    VSTRS killed renamable $s0, killed renamable $r2, 0, 14 /* CC::al */, $noreg, debug-location !45 :: (store 4 into %ir.pResult, !tbaa !34)
+    VSTRS killed renamable $s0, killed renamable $r2, 0, 14 /* CC::al */, $noreg, debug-location !45 :: (store (s32) into %ir.pResult, !tbaa !34)
     frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, debug-location !46
 
   bb.6 (align 4):
