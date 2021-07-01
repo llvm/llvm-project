@@ -76,7 +76,7 @@ namespace {
     // OrigAlignments - Alignments of stack objects before coloring.
     SmallVector<Align, 16> OrigAlignments;
 
-    // OrigSizes - Sizess of stack objects before coloring.
+    // OrigSizes - Sizes of stack objects before coloring.
     SmallVector<unsigned, 16> OrigSizes;
 
     // AllColors - If index is set, it's a spill slot, i.e. color.

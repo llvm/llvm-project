@@ -586,7 +586,7 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
 
 /// Checks if a function is scalarizable according to the TLI, in
 /// the sense that it should be vectorized and then expanded in
-/// multiple scalarcalls. This is represented in the
+/// multiple scalar calls. This is represented in the
 /// TLI via mappings that do not specify a vector name, as in the
 /// following example:
 ///
@@ -885,6 +885,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
                                         "loop not vectorized: ", *LAR);
     });
   }
+
   if (!LAI->canVectorizeMemory())
     return false;
 
@@ -894,9 +895,9 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
         "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
     return false;
   }
+
   Requirements->addRuntimePointerChecks(LAI->getNumRuntimePointerChecks());
   PSE.addPredicate(LAI->getPSE().getUnionPredicate());
-
   return true;
 }
 
