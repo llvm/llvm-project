@@ -391,7 +391,7 @@ define void @sitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %C1 = sitofp <4 x i16> %c to <4 x float>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %C2 = sitofp <4 x i16> %c to <4 x double>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D1 = sitofp <4 x i32> %d to <4 x float>
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D2 = sitofp <4 x i32> %d to <4 x double>
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX1-LABEL: 'sitofp4'

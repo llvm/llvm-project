@@ -1519,9 +1519,11 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return Cost;
   };
 
+  // The cost tables include both specific, custom (non-legal) src/dst type
+  // conversions and generic, legalized types. We test for customs first, before
+  // falling back to legalization.
   // FIXME: Need a better design of the cost table to handle non-simple types of
   // potential massive combinations (elem_num x src_type x dst_type).
-
   static const TypeConversionCostTblEntry AVX512BWConversionTbl[] {
     { ISD::SIGN_EXTEND, MVT::v32i16, MVT::v32i8, 1 },
     { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i8, 1 },
@@ -2173,6 +2175,74 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v2i32,  MVT::v2i64,  1 }, // PSHUFD
   };
 
+  // Attempt to map directly to (simple) MVT types to let us match custom entries.
+  EVT SrcTy = TLI->getValueType(DL, Src);
+  EVT DstTy = TLI->getValueType(DL, Dst);
+
+  // The function getSimpleVT only handles simple value types.
+  if (SrcTy.isSimple() && DstTy.isSimple()) {
+    MVT SimpleSrcTy = SrcTy.getSimpleVT();
+    MVT SimpleDstTy = DstTy.getSimpleVT();
+
+    if (ST->useAVX512Regs()) {
+      if (ST->hasBWI())
+        if (const auto *Entry = ConvertCostTableLookup(
+                AVX512BWConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
+          return AdjustCost(Entry->Cost);
+
+      if (ST->hasDQI())
+        if (const auto *Entry = ConvertCostTableLookup(
+                AVX512DQConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
+          return AdjustCost(Entry->Cost);
+
+      if (ST->hasAVX512())
+        if (const auto *Entry = ConvertCostTableLookup(
+                AVX512FConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
+          return AdjustCost(Entry->Cost);
+    }
+
+    if (ST->hasBWI())
+      if (const auto *Entry = ConvertCostTableLookup(
+              AVX512BWVLConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
+        return AdjustCost(Entry->Cost);
+
+    if (ST->hasDQI())
+      if (const auto *Entry = ConvertCostTableLookup(
+              AVX512DQVLConversionTbl, ISD, SimpleDstTy, SimpleSrcTy))
+        return AdjustCost(Entry->Cost);
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = ConvertCostTableLookup(AVX512VLConversionTbl, ISD,
+                                                     SimpleDstTy, SimpleSrcTy))
+        return AdjustCost(Entry->Cost);
+
+    if (ST->hasAVX2()) {
+      if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
+                                                     SimpleDstTy, SimpleSrcTy))
+        return AdjustCost(Entry->Cost);
+    }
+
+    if (ST->hasAVX()) {
+      if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
+                                                     SimpleDstTy, SimpleSrcTy))
+        return AdjustCost(Entry->Cost);
+    }
+
+    if (ST->hasSSE41()) {
+      if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
+                                                     SimpleDstTy, SimpleSrcTy))
+        return AdjustCost(Entry->Cost);
+    }
+
+    if (ST->hasSSE2()) {
+      if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
+                                                     SimpleDstTy, SimpleSrcTy))
+        return AdjustCost(Entry->Cost);
+    }
+  }
+
+  // Fall back to legalized types.
+  // TODO: Add AVX support.
   std::pair<InstructionCost, MVT> LTSrc = TLI->getTypeLegalizationCost(DL, Src);
   std::pair<InstructionCost, MVT> LTDest =
       TLI->getTypeLegalizationCost(DL, Dst);
@@ -2186,72 +2256,6 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
       return AdjustCost(LTSrc.first * Entry->Cost);
-
-  EVT SrcTy = TLI->getValueType(DL, Src);
-  EVT DstTy = TLI->getValueType(DL, Dst);
-
-  // The function getSimpleVT only handles simple value types.
-  if (!SrcTy.isSimple() || !DstTy.isSimple())
-    return AdjustCost(BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind));
-
-  MVT SimpleSrcTy = SrcTy.getSimpleVT();
-  MVT SimpleDstTy = DstTy.getSimpleVT();
-
-  if (ST->useAVX512Regs()) {
-    if (ST->hasBWI())
-      if (const auto *Entry = ConvertCostTableLookup(AVX512BWConversionTbl, ISD,
-                                                     SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
-
-    if (ST->hasDQI())
-      if (const auto *Entry = ConvertCostTableLookup(AVX512DQConversionTbl, ISD,
-                                                     SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
-
-    if (ST->hasAVX512())
-      if (const auto *Entry = ConvertCostTableLookup(AVX512FConversionTbl, ISD,
-                                                     SimpleDstTy, SimpleSrcTy))
-        return AdjustCost(Entry->Cost);
-  }
-
-  if (ST->hasBWI())
-    if (const auto *Entry = ConvertCostTableLookup(AVX512BWVLConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return AdjustCost(Entry->Cost);
-
-  if (ST->hasDQI())
-    if (const auto *Entry = ConvertCostTableLookup(AVX512DQVLConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return AdjustCost(Entry->Cost);
-
-  if (ST->hasAVX512())
-    if (const auto *Entry = ConvertCostTableLookup(AVX512VLConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return AdjustCost(Entry->Cost);
-
-  if (ST->hasAVX2()) {
-    if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return AdjustCost(Entry->Cost);
-  }
-
-  if (ST->hasAVX()) {
-    if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return AdjustCost(Entry->Cost);
-  }
-
-  if (ST->hasSSE41()) {
-    if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return AdjustCost(Entry->Cost);
-  }
-
-  if (ST->hasSSE2()) {
-    if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
-                                                   SimpleDstTy, SimpleSrcTy))
-      return AdjustCost(Entry->Cost);
-  }
 
   return AdjustCost(
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
