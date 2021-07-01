@@ -43,7 +43,7 @@ double gc[100];
 
 // CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
-// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64 24]
+// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
 // CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK1-LABEL: _Z3fooi
@@ -135,16 +135,19 @@ void foo(int arg) {
   {++arg;}
 
   // Region 04
-  // CK1-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE04]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** null)
+  // CK1-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%[^,]+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** null)
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+  // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]]
 
   // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK1-DAG: [[PS0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
   // CK1-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double***
   // CK1-DAG: store [[ST]]* @gb, [[ST]]** [[CBP0]]
   // CK1-DAG: store double** getelementptr inbounds ([[ST]], [[ST]]* @gb, i32 0, i32 1), double*** [[CP0]]
+  // CK1-DAG: store i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64* [[PS0]],
 
 
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
@@ -206,6 +209,7 @@ struct ST {
   }
 };
 
+// CK2: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
 // CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710674]
 
 // CK2-LABEL: _Z3bari
@@ -217,21 +221,21 @@ int bar(int arg){
 // Region 00
 // CK2: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK2: [[IFTHEN]]
-// CK2-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 [[DEV:%[^,]+]], i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz:64|32]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
+// CK2-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 [[DEV:%[^,]+]], i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
 // CK2-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK2-DAG: [[DEVi32]] = load i32, i32* %{{[^,]+}},
 // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-// CK2-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
+// CK2-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]]
 
 // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK2-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
+// CK2-DAG: [[PS0:%.+]] = getelementptr inbounds {{.+}}[[PS]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
 // CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double***
 // CK2-DAG: store [[ST]]* [[VAR0:%[^,]+]], [[ST]]** [[CBP0]]
 // CK2-DAG: store double** [[SEC0:%[^,]+]], double*** [[CP0]]
-// CK2-DAG: store i[[sz]] {{%.+}}, i[[sz]]* [[S0]]
+// CK2-DAG: store i64 {{%.+}}, i64* [[PS0]],
 // CK2-DAG: [[SEC0]] = getelementptr inbounds {{.*}}[[ST]]* [[VAR0]], i32 0, i32 1
 
 
@@ -536,6 +540,7 @@ struct S {
   double *p;
 };
 
+// CK9: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 8]
 // CK9: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK9-LABEL: lvalue
@@ -548,12 +553,10 @@ void lvalue(struct S *s, int l, int e) {
   //
   // CK9-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK9-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK9-DAG: [[SIZE0:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 1
   // CK9-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to double***
   // CK9-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to double**
   // CK9-DAG: store double** [[P:%.+]], double*** [[BPC0]]
   // CK9-DAG: store double* [[P_VAL:%.+]], double** [[PC0]]
-  // CK9-DAG: store i{{.+}} 8, i{{.+}}* [[SIZE0]]
   // CK9-DAG: [[P]] = getelementptr inbounds [[STRUCT_S:%.+]], [[STRUCT_S]]* [[S_VAL:%.+]], i32 0, i32 0
   // CK9-DAG: [[S_VAL]] = load [[STRUCT_S]]*, [[STRUCT_S]]** [[S_ADDR:%.+]]
   // CK9-DAG: [[P_VAL]] = load double*, double** [[P_1:%.+]],
@@ -586,6 +589,7 @@ struct S {
   double *p;
 };
 
+// CK10: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 8]
 // CK10: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK10-LABEL: lvalue
@@ -598,12 +602,10 @@ void lvalue(struct S *s, int l, int e) {
   //
   // CK10-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK10-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK10-DAG: [[SIZE0:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 1
   // CK10-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to double***
   // CK10-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to double**
   // CK10-DAG: store double** [[P_VAL:%.+]], double*** [[BPC0]]
   // CK10-DAG: store double* [[ADD_PTR:%.+]], double** [[PC0]]
-  // CK10-DAG: store i{{.+}} 8, i{{.+}}* [[SIZE0]]
   // CK10-64-DAG: [[ADD_PTR]] = getelementptr inbounds double, double* [[S_P:%.+]], i{{.+}} [[IDX_EXT:%.+]]
   // CK10-32-DAG: [[ADD_PTR]] = getelementptr inbounds double, double* [[S_P:%.+]], i{{.+}} [[L_VAL:%.+]]
   // CK10-64-DAG: [[IDX_EXT]] = sext i32 [[L_VAL:%.+]] to i64
@@ -636,6 +638,7 @@ void lvalue(struct S *s, int l, int e) {
 struct S {
   double *p;
 };
+// CK11: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 8]
 // CK11: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK11-LABEL: lvalue
@@ -648,12 +651,10 @@ void lvalue(struct S *s, int l, int e) {
   //
   // CK11-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK11-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK11-DAG: [[SIZE0:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 1
   // CK11-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to double***
   // CK11-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to double**
   // CK11-DAG: store double** [[P:%.+]], double*** [[BPC0]]
   // CK11-DAG: store double* [[ARRAY_IDX:%.+]], double** [[PC0]]
-  // CK11-DAG: store i{{.+}} 8, i{{.+}} [[SIZE0]]
   // CK11-DAG: [[P]] = getelementptr inbounds [[STRUCT_S:%.+]], [[STRUCT_S]]* [[SS_1:%.+]], i32 0, i32 0
   // CK11-DAG: [[ARRAY_IDX]] = getelementptr inbounds double, double* [[ADD_PTR:%.+]], i{{.+}} 3
   // CK11-64-DAG: [[ADD_PTR]] = getelementptr inbounds double, double* [[S_P:%.+]], i{{.+}} [[IDX_EXT:%.+]]
@@ -688,6 +689,7 @@ struct S {
   double *p;
   struct S *sp;
 };
+// CK12: [[SIZE00:@.+]] = {{.+}}constant [3 x i64] [i64 0, i64 {{4|8}}, i64 8]
 // CK12: [[MTYPE00:@.+]] = {{.+}}constant [3 x i64] [i64 0, i64 281474976710672, i64 17]
 
 // CK12-LABEL: lvalue
@@ -700,20 +702,16 @@ void lvalue(struct S *s, int l, int e) {
   //
   // CK12-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK12-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-  // CK12-DAG: [[SIZE2:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 2
   // CK12-DAG: [[BPC2:%.+]] = bitcast i8** [[BP2]] to double***
   // CK12-DAG: [[PC2:%.+]] = bitcast i8** [[P2]] to double**
   // CK12-DAG: store double** [[P_VAL:%.+]], double*** [[BPC2]]
   // CK12-DAG: store double* [[SIX:%.+]], double** [[PC2]]
-  // CK12-DAG: store i{{.+}} 8, i{{.+}}* [[SIZE2]]
   // CK12-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK12-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK12-DAG: [[SIZE1:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 1
   // CK12-DAG: [[BPC1:%.+]] = bitcast i8** [[BP1]] to [[STRUCT_S:%.+]]***
   // CK12-DAG: [[PC1:%.+]] = bitcast i8** [[P1]] to double***
   // CK12-DAG: store [[STRUCT_S]]** [[SP:%.+]], [[STRUCT_S]]*** [[BPC1]]
   // CK12-DAG: store double** [[P_VAL:%.+]], double*** [[PC1]]
-  // CK12-DAG: store i{{.+}} {{4|8}}, i{{.+}}* [[SIZE1]]
   // CK12-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK12-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
   // CK12-DAG: [[SIZE0:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 0
@@ -797,6 +795,7 @@ void lvalue(int **BB, int a, int b) {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK14
 
+// CK14: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 8]
 // CK14: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 struct SSA {
@@ -821,12 +820,10 @@ struct SSB {
 
     // CK14-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
     // CK14-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-    // CK14-DAG: [[SIZE1:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 1
     // CK14-DAG: [[BPC1:%.+]] = bitcast i8** [[BP1]] to double***
     // CK14-DAG: [[PC1:%.+]] = bitcast i8** [[P1]] to double**
     // CK14-DAG: store double** [[D_VAL:%.+]], double*** [[BPC1]]
     // CK14-DAG: store double* [[ADD_PTR:%.+]], double** [[PC1]]
-    // CK14-DAG: store i64 8, i64* [[SIZE1]]
     // CK14-DAG: [[ADD_PTR]] = getelementptr inbounds double, double* [[ZERO:%.+]], i{{.+}} 1
     // CK14-DAG: [[ZERO]] = load double*, double** [[D_VAL_2:%.+]]
     // CK14-DAG: [[D_VAL]] = getelementptr inbounds [[SSB:%.+]], [[SSB:%.+]]* [[THIS:%.+]], i32 0, i32 0
@@ -870,6 +867,7 @@ void lvalue_member(SSA *sap) {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK15
 
+// CK15: [[SIZE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 {{8|4}}]
 // CK15: [[MTYPE00:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 struct SSA {
@@ -888,12 +886,10 @@ void lvalue_member(SSA *sap) {
 
   // CK15-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK15-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK15-DAG: [[SIZE1:%.+]] = getelementptr inbounds {{.+}}[[SIZE]], i{{.+}} 0, i{{.+}} 1
   // CK15-DAG: [[BPC1:%.+]] = bitcast i8** [[BP1]] to double***
   // CK15-DAG: [[PC1:%.+]] = bitcast i8** [[P1]] to double**
   // CK15-DAG: store double** [[P_VAL:%.+]], double*** [[BPC1]]
   // CK15-DAG: store double* [[ADD_PTR:%.+]], double** [[PC1]]
-  // CK15-DAG: store i64 {{4|8}}, i64* [[SIZE1]]
   // CK15-DAG: [[ADD_PTR]] = getelementptr inbounds double, double* [[THREE:%.+]], i{{.+}} 3
   // CK15-DAG: [[THREE]] = load double*, double** [[P_VAL_1:%.+]]
   // CK15-DAG: [[P_VAL]] = getelementptr inbounds [[SSA:%.+]], [[SSA:%.+]]* [[THIS:%.+]], i32 0, i32 0
@@ -1255,6 +1251,7 @@ void foo(int arg) {
 // CK21: [[STRUCT_ST:%.+]] = type { [10 x [10 x [10 x double*]]] }
 // CK21: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
 
+// CK21: [[SIZE:@.+]] = private unnamed_addr constant [2 x i64] zeroinitializer
 // CK21: [[MTYPE:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 299067162755073]
 
 struct ST {

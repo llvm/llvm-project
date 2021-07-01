@@ -37,6 +37,7 @@
 // CK30-DAG: [[STRUCT:%.+]] = type { [[BASE]], i32*, i32*, i32, i32* }
 
 // CK30-LABEL: @.__omp_offloading_{{.*}}map_with_deep_copy{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK30: [[SIZE00:@.+]] = private unnamed_addr constant [4 x i64] [i64 0, i64 {{56|28}}, i64 4, i64 4]
 // The first element: 0x20 - OMP_MAP_TARGET_PARAM
 // 2: 0x1000000000003 - OMP_MAP_MEMBER_OF(0) | OMP_MAP_TO | OMP_MAP_FROM - copies all the data in structs excluding deep-copied elements (from &s to end of s).
 // 3-4: 0x1000000000013 - OMP_MAP_MEMBER_OF(0) | OMP_MAP_PTR_AND_OBJ | OMP_MAP_TO | OMP_MAP_FROM - deep copy of the pointers + pointee.
@@ -82,8 +83,6 @@ typedef struct StructWithPtrTag : public Base {
 // CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[PTRS]], i32 0, i32 1
 // CK30-DAG: [[BC:%.+]] = bitcast i8** [[PTR]] to [[STRUCT]]**
 // CK30-DAG: store [[STRUCT]]* [[S]], [[STRUCT]]** [[BC]],
-// CK30-DAG: [[SIZE:%.+]] = getelementptr inbounds [4 x i64], [4 x i64]* [[SIZES]], i32 0, i32 1
-// CK30-DAG: store i64 {{56|28}}, i64* [[SIZE]],
 
 // CK30-DAG: [[BASE_PTR:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BASES]], i32 0, i32 2
 // CK30-DAG: [[BC:%.+]] = bitcast i8** [[BASE_PTR]] to i32***
@@ -91,8 +90,6 @@ typedef struct StructWithPtrTag : public Base {
 // CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[PTRS]], i32 0, i32 2
 // CK30-DAG: [[BC:%.+]] = bitcast i8** [[PTR]] to i32**
 // CK30-DAG: store i32* [[S_PTR1_BEGIN:%.+]], i32** [[BC]],
-// CK30-DAG: [[SIZE:%.+]] = getelementptr inbounds [4 x i64], [4 x i64]* [[SIZES]], i32 0, i32 2
-// CK30-DAG: store i64 4, i64* [[SIZE]],
 // CK30-DAG: [[S_PTR1]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[S]], i32 0, i32 4
 // CK30-DAG: [[S_PTR1_BEGIN]] = getelementptr inbounds i32, i32* [[S_PTR1_BEGIN_REF:%.+]], i{{64|32}} 0
 // CK30-DAG: [[S_PTR1_BEGIN_REF]] = load i32*, i32** [[S_PTR1:%.+]],
@@ -104,8 +101,6 @@ typedef struct StructWithPtrTag : public Base {
 // CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[PTRS]], i32 0, i32 3
 // CK30-DAG: [[BC:%.+]] = bitcast i8** [[PTR]] to i32**
 // CK30-DAG: store i32* [[S_PTRBASE1_BEGIN:%.+]], i32** [[BC]],
-// CK30-DAG: [[SIZE:%.+]] = getelementptr inbounds [4 x i{{64|32}}], [4 x i{{64|32}}]* [[SIZES]], i32 0, i32 3
-// CK30-DAG: store i{{64|32}} 4, i{{64|32}}* [[SIZE]],
 // CK30-DAG: [[S_PTRBASE1]] = getelementptr inbounds [[BASE]], [[BASE]]* [[S_BASE:%.+]], i32 0, i32 2
 // CK30-DAG: [[S_BASE]] = bitcast [[STRUCT]]* [[S]] to [[BASE]]*
 // CK30-DAG: [[S_PTRBASE1_BEGIN]] = getelementptr inbounds i32, i32* [[S_PTRBASE1_BEGIN_REF:%.+]], i{{64|32}} 0
