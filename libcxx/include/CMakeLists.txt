@@ -103,12 +103,32 @@ set(files
   __format/format_error.h
   __format/format_parse_context.h
   __function_like.h
-  __functional_03
   __functional_base
-  __functional_base_03
+  __functional/binary_function.h
+  __functional/binary_negate.h
+  __functional/bind_front.h
+  __functional/bind.h
+  __functional/binder1st.h
+  __functional/binder2nd.h
+  __functional/default_searcher.h
+  __functional/function.h
   __functional/hash.h
+  __functional/identity.h
+  __functional/invoke.h
+  __functional/is_transparent.h
+  __functional/mem_fn.h
+  __functional/mem_fun_ref.h
+  __functional/not_fn.h
+  __functional/operations.h
+  __functional/perfect_forward.h
+  __functional/pointer_to_binary_function.h
+  __functional/pointer_to_unary_function.h
+  __functional/ranges_operations.h
+  __functional/reference_wrapper.h
   __functional/unary_function.h
+  __functional/unary_negate.h
   __functional/unwrap_ref.h
+  __functional/weak_result_type.h
   __hash_table
   __iterator/advance.h
   __iterator/back_insert_iterator.h
@@ -137,6 +157,7 @@ set(files
   __memory/addressof.h
   __memory/allocation_guard.h
   __memory/allocator.h
+  __memory/allocator_arg_t.h
   __memory/allocator_traits.h
   __memory/auto_ptr.h
   __memory/compressed_pair.h
@@ -148,6 +169,7 @@ set(files
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
+  __memory/uses_allocator.h
   __mutex_base
   __node_handle
   __nullptr

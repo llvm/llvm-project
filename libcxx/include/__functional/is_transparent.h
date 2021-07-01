@@ -7,26 +7,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FUNCTIONAL_BASE
-#define _LIBCPP_FUNCTIONAL_BASE
+#ifndef _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
+#define _LIBCPP___FUNCTIONAL_IS_TRANSPARENT
 
 #include <__config>
-#include <__functional/binary_function.h>
-#include <__functional/invoke.h>
-#include <__functional/operations.h>
-#include <__functional/reference_wrapper.h>
-#include <__functional/unary_function.h>
-#include <__functional/weak_result_type.h>
-#include <__memory/allocator_arg_t.h>
-#include <__memory/uses_allocator.h>
-#include <exception>
-#include <new>
 #include <type_traits>
-#include <typeinfo>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_FUNCTIONAL_BASE
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 11
+
+template <class _Tp, class, class = void>
+struct __is_transparent : false_type {};
+
+template <class _Tp, class _Up>
+struct __is_transparent<_Tp, _Up,
+                        typename __void_t<typename _Tp::is_transparent>::type>
+   : true_type {};
+
+#endif
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP___FUNCTIONAL_IS_TRANSPARENT

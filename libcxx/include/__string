@@ -11,11 +11,20 @@
 #define _LIBCPP___STRING
 
 #include <__config>
-#include <algorithm>  // for search and min
-#include <cstdio>     // for EOF
-#include <cstring>    // for memcpy
-#include <cwchar>     // for wmemcpy
-#include <memory>     // for __murmur2_or_cityhash
+#include <__algorithm/copy.h>
+#include <__algorithm/copy_backward.h>
+#include <__algorithm/copy_n.h>
+#include <__algorithm/fill_n.h>
+#include <__algorithm/find_first_of.h>
+#include <__algorithm/find_end.h>
+#include <__algorithm/min.h>
+#include <__functional/hash.h>     // for __murmur2_or_cityhash
+#include <__iterator/iterator_traits.h>
+#include <cstdio>      // for EOF
+#include <cstdint>     // for uint_least16_t
+#include <cstring>     // for memcpy
+#include <cwchar>      // for wmemcpy
+#include <type_traits> // for __libcpp_is_constant_evaluated
 
 #include <__debug>
 
