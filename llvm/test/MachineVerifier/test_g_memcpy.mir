@@ -47,4 +47,9 @@ body:             |
     ; CHECK: *** Bad machine code: memory instruction operand must be a pointer ***
     G_MEMCPY %0, %2, %2, 0 :: (store 4), (load 4)
 
+    ; CHECK: *** Bad machine code: 'tail' flag (operand 3) must be an immediate 0 or 1 ***
+    G_MEMCPY %0, %0, %2, %0 :: (store 4), (load 4)
+
+    ; CHECK: *** Bad machine code: 'tail' flag (operand 3) must be an immediate 0 or 1 ***
+    G_MEMCPY %0, %0, %2, 2 :: (store 4), (load 4)
 ...

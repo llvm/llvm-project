@@ -1134,17 +1134,6 @@ static void postSplitCleanup(Function &F) {
   // pass to FPM below because it will also verify all the global data.
   if (verifyFunction(F, &errs()))
     report_fatal_error("Broken function");
-
-  legacy::FunctionPassManager FPM(F.getParent());
-
-  FPM.add(createSCCPPass());
-  FPM.add(createCFGSimplificationPass());
-  FPM.add(createEarlyCSEPass());
-  FPM.add(createCFGSimplificationPass());
-
-  FPM.doInitialization();
-  FPM.run(F);
-  FPM.doFinalization();
 }
 
 // Assuming we arrived at the block NewBlock from Prev instruction, store
@@ -2119,28 +2108,21 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   // Split all the coroutines.
   for (LazyCallGraph::Node *N : Coroutines) {
     Function &F = N->getFunction();
-    Attribute Attr = F.getFnAttribute(CORO_PRESPLIT_ATTR);
-    StringRef Value = Attr.getValueAsString();
     LLVM_DEBUG(dbgs() << "CoroSplit: Processing coroutine '" << F.getName()
-                      << "' state: " << Value << "\n");
-    if (Value == UNPREPARED_FOR_SPLIT) {
-      // Enqueue a second iteration of the CGSCC pipeline on this SCC.
-      UR.CWorklist.insert(&C);
-      F.addFnAttr(CORO_PRESPLIT_ATTR, PREPARED_FOR_SPLIT);
-      continue;
-    }
+                      << "' state: "
+                      << F.getFnAttribute(CORO_PRESPLIT_ATTR).getValueAsString()
+                      << "\n");
     F.removeFnAttr(CORO_PRESPLIT_ATTR);
 
     SmallVector<Function *, 4> Clones;
     const coro::Shape Shape = splitCoroutine(F, Clones, ReuseFrameSlot);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
 
-    if ((Shape.ABI == coro::ABI::Async || Shape.ABI == coro::ABI::Retcon ||
-         Shape.ABI == coro::ABI::RetconOnce) &&
-        !Shape.CoroSuspends.empty()) {
-      // Run the CGSCC pipeline on the newly split functions.
-      // All clones will be in the same RefSCC, so choose a random clone.
-      UR.RCWorklist.insert(CG.lookupRefSCC(CG.get(*Clones[0])));
+    if (!Shape.CoroSuspends.empty()) {
+      // Run the CGSCC pipeline on the original and newly split functions.
+      UR.CWorklist.insert(&C);
+      for (Function *Clone : Clones)
+        UR.CWorklist.insert(CG.lookupSCC(CG.get(*Clone)));
     }
   }
 

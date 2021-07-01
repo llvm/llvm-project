@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
 %promise_type = type { i8 }
 %struct.A = type <{ i64, i64, i32, [4 x i8] }>
 

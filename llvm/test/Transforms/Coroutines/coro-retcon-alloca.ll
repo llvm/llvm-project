@@ -6,11 +6,11 @@ target datalayout = "p:64:64:64"
 declare {i8*, i8*, i32} @prototype_f(i8*, i1)
 define {i8*, i8*, i32} @f(i8* %buffer, i32 %n) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = getelementptr inbounds i8, i8* [[BUFFER:%.*]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[N_VAL_SPILL_ADDR]] to i32*
 ; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8* @allocate(i32 [[N]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8* @allocate(i32 [[N]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[DOTSPILL_ADDR:%.*]] = bitcast i8* [[BUFFER]] to i8**
 ; CHECK-NEXT:    store i8* [[TMP1]], i8** [[DOTSPILL_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8*, i8*, i32 } { i8* bitcast ({ i8*, i8*, i32 } (i8*, i1)* @f.resume.0 to i8*), i8* undef, i32 undef }, i8* [[TMP1]], 1
@@ -44,12 +44,12 @@ cleanup:
 declare {i8*, i32} @prototype_g(i8*, i1)
 define {i8*, i32} @g(i8* %buffer, i32 %n) {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32*
 ; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, i64 [[TMP0]], align 8
-; CHECK-NEXT:    call void @use(i8* nonnull [[TMP1]])
+; CHECK-NEXT:    tail call void @use(i8* nonnull [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8*, i32 } { i8* bitcast ({ i8*, i32 } (i8*, i1)* @g.resume.0 to i8*), i32 undef }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { i8*, i32 } [[TMP2]]
 ;
@@ -81,9 +81,9 @@ cleanup:
 declare {i8*, i32} @prototype_h(i8*, i1)
 define {i8*, i32} @h(i8* %buffer, i32 %n) {
 ; CHECK-LABEL: @h(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32*
-; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_VAL_SPILL_ADDR]], align 4
+; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:    [[N_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32*
+; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i8*, i32 } { i8* bitcast ({ i8*, i32 } (i8*, i1)* @h.resume.0 to i8*), i32 undef }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { i8*, i32 } [[TMP0]]
 ;
@@ -115,7 +115,7 @@ cleanup:
 declare {i8*, i32} @prototype_i(i8*)
 define {i8*, i32} @i(i8* %buffer, i32 %n) {
 ; CHECK-LABEL: @i(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32*
 ; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i8*, i32 } { i8* bitcast ({ i8*, i32 } (i8*)* @i.resume.0 to i8*), i32 undef }, i32 [[N]], 1
@@ -148,7 +148,7 @@ loop2:
 declare {i8*, i32} @prototype_j(i8*)
 define {i8*, i32} @j(i8* %buffer, i32 %n) {
 ; CHECK-LABEL: @j(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32*
 ; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i8*, i32 } { i8* bitcast ({ i8*, i32 } (i8*)* @j.resume.0 to i8*), i32 undef }, i32 [[N]], 1
@@ -183,7 +183,7 @@ end:
 declare i32 @getSize()
 define {i8*, i32} @k(i8* %buffer, i32 %n, i1 %cond) {
 ; CHECK-LABEL: @k(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  PostSpill:
 ; CHECK-NEXT:    [[SIZE:%.*]] = tail call i32 @getSize()
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ALLOCA_BLOCK:%.*]], label [[CORO_RETURN:%.*]]
 ; CHECK:       coro.return:
@@ -192,7 +192,7 @@ define {i8*, i32} @k(i8* %buffer, i32 %n, i1 %cond) {
 ; CHECK:       alloca_block:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i8, i64 [[TMP1]], align 8
-; CHECK-NEXT:    call void @use(i8* nonnull [[TMP2]])
+; CHECK-NEXT:    tail call void @use(i8* nonnull [[TMP2]])
 ; CHECK-NEXT:    br label [[CORO_RETURN]]
 ;
 entry:

@@ -33,7 +33,6 @@ enum RuntimeMode {
 
 void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode);
 bool isGenericMode();
-bool isSPMDMode();
 bool isRuntimeUninitialized();
 bool isRuntimeInitialized();
 

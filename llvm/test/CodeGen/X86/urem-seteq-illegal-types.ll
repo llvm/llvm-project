@@ -66,8 +66,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; X86-NEXT:    leal (%eax,%eax,2), %ecx
 ; X86-NEXT:    leal (%eax,%ecx,4), %eax
 ; X86-NEXT:    andb $15, %al
-; X86-NEXT:    cmpb $3, %al
-; X86-NEXT:    seta %al
+; X86-NEXT:    cmpb $4, %al
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_odd_setne:
@@ -76,8 +76,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; X64-NEXT:    leal (%rdi,%rdi,2), %eax
 ; X64-NEXT:    leal (%rdi,%rax,4), %eax
 ; X64-NEXT:    andb $15, %al
-; X64-NEXT:    cmpb $3, %al
-; X64-NEXT:    seta %al
+; X64-NEXT:    cmpb $4, %al
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %urem = urem i4 %X, 5
   %cmp = icmp ne i4 %urem, 0
@@ -89,16 +89,16 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    imull $307, {{[0-9]+}}(%esp), %eax # imm = 0x133
 ; X86-NEXT:    andl $511, %eax # imm = 0x1FF
-; X86-NEXT:    cmpw $1, %ax
-; X86-NEXT:    seta %al
+; X86-NEXT:    cmpw $2, %ax
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_negative_odd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    imull $307, %edi, %eax # imm = 0x133
 ; X64-NEXT:    andl $511, %eax # imm = 0x1FF
-; X64-NEXT:    cmpw $1, %ax
-; X64-NEXT:    seta %al
+; X64-NEXT:    cmpw $2, %ax
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %urem = urem i9 %X, -5
   %cmp = icmp ne i9 %urem, 0
@@ -115,18 +115,18 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    andl $2047, %eax # imm = 0x7FF
-; X86-NEXT:    cmpl $341, %eax # imm = 0x155
-; X86-NEXT:    seta %al
+; X86-NEXT:    cmpl $342, %eax # imm = 0x156
+; X86-NEXT:    setae %al
 ; X86-NEXT:    imull $1463, {{[0-9]+}}(%esp), %ecx # imm = 0x5B7
 ; X86-NEXT:    addl $-1463, %ecx # imm = 0xFA49
 ; X86-NEXT:    andl $2047, %ecx # imm = 0x7FF
-; X86-NEXT:    cmpl $292, %ecx # imm = 0x124
-; X86-NEXT:    seta %dl
+; X86-NEXT:    cmpl $293, %ecx # imm = 0x125
+; X86-NEXT:    setae %dl
 ; X86-NEXT:    imull $819, {{[0-9]+}}(%esp), %ecx # imm = 0x333
 ; X86-NEXT:    addl $-1638, %ecx # imm = 0xF99A
 ; X86-NEXT:    andl $2047, %ecx # imm = 0x7FF
-; X86-NEXT:    cmpw $1, %cx
-; X86-NEXT:    seta %cl
+; X86-NEXT:    cmpw $2, %cx
+; X86-NEXT:    setae %cl
 ; X86-NEXT:    retl
 ;
 ; SSE2-LABEL: test_urem_vec:

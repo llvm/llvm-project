@@ -13,10 +13,10 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    cmpl $1, %edx
+; X86-NEXT:    cmpl $2, %edx
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    movl $1, %esi
-; X86-NEXT:    jg .LBB0_2
+; X86-NEXT:    jge .LBB0_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:  .LBB0_2:
@@ -188,10 +188,10 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X64-HSW-LABEL: mult:
 ; X64-HSW:       # %bb.0:
 ; X64-HSW-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-HSW-NEXT:    cmpl $1, %esi
+; X64-HSW-NEXT:    cmpl $2, %esi
 ; X64-HSW-NEXT:    movl $1, %ecx
 ; X64-HSW-NEXT:    movl %esi, %eax
-; X64-HSW-NEXT:    cmovgl %ecx, %eax
+; X64-HSW-NEXT:    cmovgel %ecx, %eax
 ; X64-HSW-NEXT:    testl %esi, %esi
 ; X64-HSW-NEXT:    cmovel %ecx, %eax
 ; X64-HSW-NEXT:    decl %edi

@@ -145,6 +145,7 @@ add_llvm_target(AMDGPUCodeGen
   GCNILPSched.cpp
   GCNNSAReassign.cpp
   GCNDPPCombine.cpp
+  GCNPreRAOptimizations.cpp
   SIModeRegister.cpp
 
   LINK_COMPONENTS
