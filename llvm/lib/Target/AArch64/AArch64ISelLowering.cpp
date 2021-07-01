@@ -1211,15 +1211,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::SINT_TO_FP, VT, Custom);
         setOperationAction(ISD::UINT_TO_FP, VT, Custom);
       }
+    }
 
-      // NEON doesn't support masked loads or stores, but SVE does
-      for (auto VT :
-           {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v1f64,
-            MVT::v2f64, MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16,
-            MVT::v2i32, MVT::v4i32, MVT::v1i64, MVT::v2i64}) {
-        setOperationAction(ISD::MLOAD, VT, Custom);
-        setOperationAction(ISD::MSTORE, VT, Custom);
-      }
+    // NEON doesn't support masked loads/stores/gathers/scatters, but SVE does
+    for (auto VT : {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v1f64,
+                    MVT::v2f64, MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16,
+                    MVT::v2i32, MVT::v4i32, MVT::v1i64, MVT::v2i64}) {
+      setOperationAction(ISD::MLOAD, VT, Custom);
+      setOperationAction(ISD::MSTORE, VT, Custom);
+      setOperationAction(ISD::MGATHER, VT, Custom);
+      setOperationAction(ISD::MSCATTER, VT, Custom);
     }
 
     for (MVT VT : MVT::fp_scalable_vector_valuetypes()) {
@@ -1513,7 +1514,9 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FSUB, VT, Custom);
   setOperationAction(ISD::FTRUNC, VT, Custom);
   setOperationAction(ISD::LOAD, VT, Custom);
+  setOperationAction(ISD::MGATHER, VT, Custom);
   setOperationAction(ISD::MLOAD, VT, Custom);
+  setOperationAction(ISD::MSCATTER, VT, Custom);
   setOperationAction(ISD::MSTORE, VT, Custom);
   setOperationAction(ISD::MUL, VT, Custom);
   setOperationAction(ISD::MULHS, VT, Custom);
@@ -2227,6 +2230,13 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
 //===----------------------------------------------------------------------===//
 // Lowering Code
 //===----------------------------------------------------------------------===//
+
+// Forward declarations of SVE fixed length lowering helpers
+static EVT getContainerForFixedLengthVector(SelectionDAG &DAG, EVT VT);
+static SDValue convertToScalableVector(SelectionDAG &DAG, EVT VT, SDValue V);
+static SDValue convertFromScalableVector(SelectionDAG &DAG, EVT VT, SDValue V);
+static SDValue convertFixedMaskToScalableVector(SDValue Mask,
+                                                SelectionDAG &DAG);
 
 /// isZerosVector - Check whether SDNode N is a zero-filled vector.
 static bool isZerosVector(const SDNode *N) {
@@ -4232,6 +4242,12 @@ void selectGatherScatterAddrMode(SDValue &BasePtr, SDValue &Index, EVT MemVT,
   if (!isNullConstant(BasePtr))
     return;
 
+  // FIXME: This will not match for fixed vector type codegen as the nodes in
+  // question will have fixed<->scalable conversions around them. This should be
+  // moved to a DAG combine or complex pattern so that is executes after all of
+  // the fixed vector insert and extracts have been removed. This deficiency
+  // will result in a sub-optimal addressing mode being used, i.e. an ADD not
+  // being folded into the scatter/gather.
   ConstantSDNode *Offset = nullptr;
   if (Index.getOpcode() == ISD::ADD)
     if (auto SplatVal = DAG.getSplatValue(Index.getOperand(1))) {
@@ -4276,6 +4292,8 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   MaskedGatherSDNode *MGT = cast<MaskedGatherSDNode>(Op);
   assert(MGT && "Can only custom lower gather load nodes");
 
+  bool IsFixedLength = MGT->getMemoryVT().isFixedLengthVector();
+
   SDValue Index = MGT->getIndex();
   SDValue Chain = MGT->getChain();
   SDValue PassThru = MGT->getPassThru();
@@ -4294,6 +4312,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   bool ResNeedsSignExtend = ExtTy == ISD::EXTLOAD || ExtTy == ISD::SEXTLOAD;
 
   EVT VT = PassThru.getSimpleValueType();
+  EVT IndexVT = Index.getSimpleValueType();
   EVT MemVT = MGT->getMemoryVT();
   SDValue InputVT = DAG.getValueType(MemVT);
 
@@ -4301,14 +4320,27 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
       !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
     return SDValue();
 
-  // Handle FP data by using an integer gather and casting the result.
-  if (VT.isFloatingPoint()) {
-    EVT PassThruVT = getPackedSVEVectorVT(VT.getVectorElementCount());
-    PassThru = getSVESafeBitCast(PassThruVT, PassThru, DAG);
+  if (IsFixedLength) {
+    assert(Subtarget->useSVEForFixedLengthVectors() &&
+           "Cannot lower when not using SVE for fixed vectors");
+    IndexVT = getContainerForFixedLengthVector(DAG, IndexVT);
+    MemVT = IndexVT.changeVectorElementType(MemVT.getVectorElementType());
+    InputVT = DAG.getValueType(MemVT.changeTypeToInteger());
+  }
+
+  if (PassThru->isUndef() || isZerosVector(PassThru.getNode()))
+    PassThru = SDValue();
+
+  if (VT.isFloatingPoint() && !IsFixedLength) {
+    // Handle FP data by using an integer gather and casting the result.
+    if (PassThru) {
+      EVT PassThruVT = getPackedSVEVectorVT(VT.getVectorElementCount());
+      PassThru = getSVESafeBitCast(PassThruVT, PassThru, DAG);
+    }
     InputVT = DAG.getValueType(MemVT.changeVectorElementTypeToInteger());
   }
 
-  SDVTList VTs = DAG.getVTList(PassThru.getSimpleValueType(), MVT::Other);
+  SDVTList VTs = DAG.getVTList(IndexVT, MVT::Other);
 
   if (getGatherScatterIndexIsExtended(Index))
     Index = Index.getOperand(0);
@@ -4320,15 +4352,36 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   if (ResNeedsSignExtend)
     Opcode = getSignExtendedGatherOpcode(Opcode);
 
-  SDValue Ops[] = {Chain, Mask, BasePtr, Index, InputVT, PassThru};
-  SDValue Gather = DAG.getNode(Opcode, DL, VTs, Ops);
-
-  if (VT.isFloatingPoint()) {
-    SDValue Cast = getSVESafeBitCast(VT, Gather, DAG);
-    return DAG.getMergeValues({Cast, Gather.getValue(1)}, DL);
+  if (IsFixedLength) {
+    if (Index.getSimpleValueType().isFixedLengthVector())
+      Index = convertToScalableVector(DAG, IndexVT, Index);
+    if (BasePtr.getSimpleValueType().isFixedLengthVector())
+      BasePtr = convertToScalableVector(DAG, IndexVT, BasePtr);
+    Mask = convertFixedMaskToScalableVector(Mask, DAG);
   }
 
-  return Gather;
+  SDValue Ops[] = {Chain, Mask, BasePtr, Index, InputVT};
+  SDValue Result = DAG.getNode(Opcode, DL, VTs, Ops);
+  Chain = Result.getValue(1);
+
+  if (IsFixedLength) {
+    Result = convertFromScalableVector(
+        DAG, VT.changeVectorElementType(IndexVT.getVectorElementType()),
+        Result);
+    Result = DAG.getNode(ISD::TRUNCATE, DL, VT.changeTypeToInteger(), Result);
+    Result = DAG.getNode(ISD::BITCAST, DL, VT, Result);
+
+    if (PassThru)
+      Result = DAG.getSelect(DL, VT, MGT->getMask(), Result, PassThru);
+  } else {
+    if (PassThru)
+      Result = DAG.getSelect(DL, IndexVT, Mask, Result, PassThru);
+
+    if (VT.isFloatingPoint())
+      Result = getSVESafeBitCast(VT, Result, DAG);
+  }
+
+  return DAG.getMergeValues({Result, Chain}, DL);
 }
 
 SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
@@ -4336,6 +4389,8 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
   SDLoc DL(Op);
   MaskedScatterSDNode *MSC = cast<MaskedScatterSDNode>(Op);
   assert(MSC && "Can only custom lower scatter store nodes");
+
+  bool IsFixedLength = MSC->getMemoryVT().isFixedLengthVector();
 
   SDValue Index = MSC->getIndex();
   SDValue Chain = MSC->getChain();
@@ -4353,6 +4408,7 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
       Index.getSimpleValueType().getVectorElementType() == MVT::i32;
 
   EVT VT = StoreVal.getSimpleValueType();
+  EVT IndexVT = Index.getSimpleValueType();
   SDVTList VTs = DAG.getVTList(MVT::Other);
   EVT MemVT = MSC->getMemoryVT();
   SDValue InputVT = DAG.getValueType(MemVT);
@@ -4361,8 +4417,21 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
       !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
     return SDValue();
 
-  // Handle FP data by casting the data so an integer scatter can be used.
-  if (VT.isFloatingPoint()) {
+  if (IsFixedLength) {
+    assert(Subtarget->useSVEForFixedLengthVectors() &&
+           "Cannot lower when not using SVE for fixed vectors");
+    IndexVT = getContainerForFixedLengthVector(DAG, IndexVT);
+    MemVT = IndexVT.changeVectorElementType(MemVT.getVectorElementType());
+    InputVT = DAG.getValueType(MemVT.changeTypeToInteger());
+
+    StoreVal =
+        DAG.getNode(ISD::BITCAST, DL, VT.changeTypeToInteger(), StoreVal);
+    StoreVal = DAG.getNode(
+        ISD::ANY_EXTEND, DL,
+        VT.changeVectorElementType(IndexVT.getVectorElementType()), StoreVal);
+    StoreVal = convertToScalableVector(DAG, IndexVT, StoreVal);
+  } else if (VT.isFloatingPoint()) {
+    // Handle FP data by casting the data so an integer scatter can be used.
     EVT StoreValVT = getPackedSVEVectorVT(VT.getVectorElementCount());
     StoreVal = getSVESafeBitCast(StoreValVT, StoreVal, DAG);
     InputVT = DAG.getValueType(MemVT.changeVectorElementTypeToInteger());
@@ -4374,6 +4443,14 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
   unsigned Opcode = getScatterVecOpcode(IsScaled, IsSigned, NeedsExtend);
   selectGatherScatterAddrMode(BasePtr, Index, MemVT, Opcode,
                               /*isGather=*/false, DAG);
+
+  if (IsFixedLength) {
+    if (Index.getSimpleValueType().isFixedLengthVector())
+      Index = convertToScalableVector(DAG, IndexVT, Index);
+    if (BasePtr.getSimpleValueType().isFixedLengthVector())
+      BasePtr = convertToScalableVector(DAG, IndexVT, BasePtr);
+    Mask = convertFixedMaskToScalableVector(Mask, DAG);
+  }
 
   SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, InputVT};
   return DAG.getNode(Opcode, DL, VTs, Ops);
