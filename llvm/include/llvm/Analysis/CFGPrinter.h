@@ -139,6 +139,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     raw_string_ostream OS(Str);
 
     Node->printAsOperand(OS, false);
+    OS << " " << cpToString(Node->getCheckpoint());
     return OS.str();
   }
 
@@ -149,6 +150,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
   static std::string cpToString(Checkpoint cp) {
     switch(cp) {
+    case Checkpoint::NA:
+      return "";
     case Checkpoint::ThreadStart:
       return "ThreadStart";
     case Checkpoint::ThreadEnd:
@@ -175,7 +178,9 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
     if (Node->getName().empty()) {
       Node->printAsOperand(OS, false);
-      OS << cpToString(Node->getCheckpoint());
+      if (Node->getCheckpoint() != Checkpoint::NA) {
+        OS << " " << cpToString(Node->getCheckpoint());
+      }
       OS << ":";
     }
 

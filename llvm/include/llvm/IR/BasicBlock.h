@@ -40,8 +40,10 @@ class Module;
 class PHINode;
 class ValueSymbolTable;
 
+// https://www.usenix.org/system/files/raid2019-toffalini.pdf
 enum class Checkpoint {
-  Unknown,
+  // Not a checkpoint
+  NA,
   ThreadStart,
   ThreadEnd,
   ExitPoint,
