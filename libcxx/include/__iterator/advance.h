@@ -16,6 +16,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <cstdlib>
 #include <concepts>
 #include <limits>
 #include <type_traits>

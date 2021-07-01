@@ -11,8 +11,9 @@
 // result_of<Fn(ArgTypes...)>
 
 #include <type_traits>
-#include <memory>
 #include <cassert>
+#include <functional>
+#include <memory>
 #include "test_macros.h"
 
 struct S

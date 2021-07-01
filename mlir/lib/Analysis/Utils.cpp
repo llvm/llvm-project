@@ -35,9 +35,8 @@ void mlir::getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops) {
   AffineForOp currAffineForOp;
   // Traverse up the hierarchy collecting all 'affine.for' operation while
   // skipping over 'affine.if' operations.
-  while (currOp && ((currAffineForOp = dyn_cast<AffineForOp>(currOp)) ||
-                    isa<AffineIfOp>(currOp))) {
-    if (currAffineForOp)
+  while (currOp) {
+    if (AffineForOp currAffineForOp = dyn_cast<AffineForOp>(currOp))
       loops->push_back(currAffineForOp);
     currOp = currOp->getParentOp();
   }
@@ -54,8 +53,9 @@ void mlir::getEnclosingAffineForAndIfOps(Operation &op,
 
   // Traverse up the hierarchy collecting all `affine.for` and `affine.if`
   // operations.
-  while (currOp && (isa<AffineIfOp, AffineForOp>(currOp))) {
-    ops->push_back(currOp);
+  while (currOp) {
+    if (isa<AffineIfOp, AffineForOp>(currOp))
+      ops->push_back(currOp);
     currOp = currOp->getParentOp();
   }
   std::reverse(ops->begin(), ops->end());

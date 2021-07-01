@@ -10,10 +10,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // Throwing bad_variant_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9 && !no-exceptions
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}} && !no-exceptions
 
 // <variant>
 // template <class R, class Visitor, class... Variants>

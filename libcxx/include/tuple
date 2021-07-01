@@ -150,11 +150,13 @@ template <class... Types>
 */
 
 #include <__config>
-#include <__functional_base>
 #include <__functional/unwrap_ref.h>
+#include <__functional_base>
+#include <__memory/allocator_arg_t.h>
+#include <__memory/uses_allocator.h>
+#include <__tuple>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <__tuple>
 #include <compare>
 #include <cstddef>
 #include <type_traits>
