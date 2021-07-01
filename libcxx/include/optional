@@ -906,7 +906,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr
     const value_type&
-    operator*() const&
+    operator*() const& noexcept
     {
         _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
         return this->__get();
@@ -915,7 +915,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr
     value_type&
-    operator*() &
+    operator*() & noexcept
     {
         _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
         return this->__get();
@@ -924,7 +924,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr
     value_type&&
-    operator*() &&
+    operator*() && noexcept
     {
         _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
         return _VSTD::move(this->__get());
@@ -933,7 +933,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     constexpr
     const value_type&&
-    operator*() const&&
+    operator*() const&& noexcept
     {
         _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
         return _VSTD::move(this->__get());
