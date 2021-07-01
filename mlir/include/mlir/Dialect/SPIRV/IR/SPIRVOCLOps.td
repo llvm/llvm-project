@@ -78,6 +78,36 @@ class SPV_OCLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
 
 // -----
 
+def SPV_OCLCosOp : SPV_OCLUnaryArithmeticOp<"cos", 14, SPV_Float> {
+  let summary = "Compute the cosine of x radians.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    abs-op ::= ssa-id `=` `spv.OCL.cos` ssa-use `:`
+               float-scalar-vector-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %2 = spv.OCL.cos %0 : f32
+    %3 = spv.OCL.cos %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_OCLExpOp : SPV_OCLUnaryArithmeticOp<"exp", 19, SPV_Float> {
   let summary = "Exponentiation of Operand 1";
 
@@ -132,6 +162,96 @@ def SPV_OCLFAbsOp : SPV_OCLUnaryArithmeticOp<"fabs", 23, SPV_Float> {
     ```mlir
     %2 = spv.OCL.fabs %0 : f32
     %3 = spv.OCL.fabs %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_OCLLogOp : SPV_OCLUnaryArithmeticOp<"log", 37, SPV_Float> {
+  let summary = "Compute the natural logarithm of x.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    abs-op ::= ssa-id `=` `spv.OCL.log` ssa-use `:`
+               float-scalar-vector-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %2 = spv.OCL.log %0 : f32
+    %3 = spv.OCL.log %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_OCLSinOp : SPV_OCLUnaryArithmeticOp<"sin", 57, SPV_Float> {
+  let summary = "Compute sine of x radians.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    abs-op ::= ssa-id `=` `spv.OCL.sin` ssa-use `:`
+               float-scalar-vector-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %2 = spv.OCL.sin %0 : f32
+    %3 = spv.OCL.sin %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_OCLSqrtOp : SPV_OCLUnaryArithmeticOp<"sqrt", 61, SPV_Float> {
+  let summary = "Compute square root of x.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    abs-op ::= ssa-id `=` `spv.OCL.sqrt` ssa-use `:`
+               float-scalar-vector-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %2 = spv.OCL.sqrt %0 : f32
+    %3 = spv.OCL.sqrt %1 : vector<3xf16>
     ```
   }];
 }

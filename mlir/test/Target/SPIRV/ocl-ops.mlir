@@ -6,6 +6,14 @@ spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Addresses], []> {
     %0 = spv.OCL.exp %arg0 : f32
     // CHECK: {{%.*}} = spv.OCL.fabs {{%.*}} : f32
     %1 = spv.OCL.fabs %arg0 : f32
+    // CHECK: {{%.*}} = spv.OCL.sin {{%.*}} : f32
+    %2 = spv.OCL.sin %arg0 : f32
+    // CHECK: {{%.*}} = spv.OCL.cos {{%.*}} : f32
+    %3 = spv.OCL.cos %arg0 : f32
+    // CHECK: {{%.*}} = spv.OCL.log {{%.*}} : f32
+    %4 = spv.OCL.log %arg0 : f32
+    // CHECK: {{%.*}} = spv.OCL.sqrt {{%.*}} : f32
+    %5 = spv.OCL.sqrt %arg0 : f32
     spv.Return
   }
 
