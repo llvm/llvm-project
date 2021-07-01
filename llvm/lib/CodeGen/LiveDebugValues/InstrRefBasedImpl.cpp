@@ -1830,8 +1830,8 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // the instruction / operand number in this DBG_INSTR_REF.
   auto Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
   while (Sub != MF.DebugValueSubstitutions.end()) {
-    InstNo = Sub->second.first;
-    OpNo = Sub->second.second;
+    InstNo = Sub->second.Dest.first;
+    OpNo = Sub->second.Dest.second;
     Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
   }
 
