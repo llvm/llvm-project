@@ -68,8 +68,9 @@ TEST(Hover, Structured) {
       // Field
       {R"cpp(
           namespace ns1 { namespace ns2 {
-            struct Foo {
+            class Foo {
               char [[b^ar]];
+              double y[2];
             };
           }}
           )cpp",
@@ -82,6 +83,41 @@ TEST(Hover, Structured) {
          HI.Type = "char";
          HI.Offset = 0;
          HI.Size = 1;
+         HI.Padding = 7;
+         HI.AccessSpecifier = "private";
+       }},
+      // Union field
+      {R"cpp(
+            union Foo {
+              char [[b^ar]];
+              double y[2];
+            };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.LocalScope = "Foo::";
+         HI.Name = "bar";
+         HI.Kind = index::SymbolKind::Field;
+         HI.Definition = "char bar";
+         HI.Type = "char";
+         HI.Size = 1;
+         HI.Padding = 15;
+         HI.AccessSpecifier = "public";
+       }},
+      // Bitfield
+      {R"cpp(
+            struct Foo {
+              int [[^x]] : 1;
+              int y : 1;
+            };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.LocalScope = "Foo::";
+         HI.Name = "x";
+         HI.Kind = index::SymbolKind::Field;
+         HI.Definition = "int x : 1";
+         HI.Type = "int";
          HI.AccessSpecifier = "public";
        }},
       // Local to class method.
@@ -2558,13 +2594,14 @@ template <typename T, typename C = bool> class Foo {})",
             HI.Definition = "def";
             HI.Size = 4;
             HI.Offset = 12;
+            HI.Padding = 4;
           },
           R"(field foo
 
 Type: type
 Value = value
 Offset: 12 bytes
-Size: 4 bytes
+Size: 4 bytes (+4 padding)
 
 // In test::Bar
 def)",
