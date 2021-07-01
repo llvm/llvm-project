@@ -142,10 +142,6 @@ const char PPTimerDescription[] = "Pseudo Probe Emission";
 const char PPGroupName[] = "pseudo probe";
 const char PPGroupDescription[] = "Pseudo Probe Emission";
 
-// A basic block index value used in the bb_addr_map to indicate that there
-// is no correspoinding IR block for the given machine basic block.
-const uint64_t NO_BB = UINT64_MAX;
-
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
 char AsmPrinter::ID = 0;
@@ -1341,6 +1337,35 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->emitULEB128IntValue(MF.size());
   const MCSymbol *PrevMBBEndSymbol = FunctionSymbol;
   const Function &F = MF.getFunction();
+
+  // LLVM's codegen can can merge multiple BasicBlocks into a single
+  // MachineBasicBlock. Unfortunately, MachineBasicBlock::getBasicBlock() only
+  // returns the first BasicBlock in the merged sequence, so we have to find
+  // the other corresponding BasicBlock(s) (if any) in the merged sequence
+  // another way. We do so in two steps:
+  //
+  //   1. We create a set, MergedBBs, which is the set of BasicBlocks that are
+  //   *not* returned by MachineBasicBlock::getBasicBlock(MBB) for any
+  //   MachineBasicBlock, MBB, in the parent MachineFunction -- in other words,
+  //   it's the set of BasicBlocks that have been merged into a predecessor
+  //   during codegen.
+  //
+  //   2. For each BasicBlock BBX returned by
+  //   MachineBasicBlock::getBasicBlock() we check if it is terminated by an
+  //   unconditional branch. If so and that unconditional branch transfers to a
+  //   block BBY, and BBY is a member of MergedBBs, then we know that BBX and
+  //   BBY were merged during codegen. [Note that we then see if another BBZ
+  //   was also merged into BBY and so on]
+  std::set<const BasicBlock *> MergedBBs;
+  for (const BasicBlock &BB : F) {
+    MergedBBs.insert(&BB);
+  }
+  for (const MachineBasicBlock &MBB : MF) {
+    const BasicBlock *BB = MBB.getBasicBlock();
+    if (BB != nullptr) {
+      MergedBBs.erase(BB);
+    }
+  }
   // Emit BB Information for each basic block in the funciton.
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
@@ -1353,27 +1378,43 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
-    // Emit the index of the corresponding LLVMIR basic block.
-    size_t BBIdx = 0;
-    bool found = false;
-    const BasicBlock *FindBB = MBB.getBasicBlock();
-    if (FindBB == nullptr) {
-      found = true;
-      BBIdx = NO_BB;
-    } else {
-      for (auto It = F.begin(); It != F.end(); It++) {
-        const BasicBlock *BB = &*It;
-        if (BB == FindBB) {
-            found = true;
-            break;
+    // Find BBs corresponding with this MBB as described above.
+    const BasicBlock *CorrBB = MBB.getBasicBlock();
+    std::vector<const BasicBlock *> CorrBBs;
+    while (CorrBB != nullptr) {
+      CorrBBs.push_back(CorrBB);
+      const Instruction *Term = CorrBB->getTerminator();
+      assert(Term != nullptr);
+      if ((isa<BranchInst>(Term)) &&
+          (!(dyn_cast<const BranchInst>(Term))->isConditional()))
+      {
+        CorrBB = CorrBB->getUniqueSuccessor();
+        assert(CorrBB != nullptr);
+        if (MergedBBs.count(CorrBB) == 0) {
+          CorrBB = nullptr;
         }
-        BBIdx++;
-        assert(BBIdx != NO_BB); // Or we are out of encoding space.
+      } else {
+        CorrBB = nullptr;
       }
     }
-    if (!found)
-      OutContext.reportError(SMLoc(), "Couldn't find the block's index");
-    OutStreamer->emitULEB128IntValue(BBIdx);
+    // Emit the number of corresponding BasicBlocks.
+    OutStreamer->emitULEB128IntValue(CorrBBs.size());
+    // Emit the corresponding block indices.
+    for (auto CorrBB : CorrBBs) {
+      size_t I = 0;
+      bool Found = false;
+      for (auto It = F.begin(); It != F.end(); It++) {
+        const BasicBlock *BB = &*It;
+        if (BB == CorrBB) {
+          Found = true;
+          break;
+        }
+        I++;
+      }
+      if (!Found)
+        OutContext.reportError(SMLoc(), "Couldn't find the block's index");
+      OutStreamer->emitULEB128IntValue(I);
+    }
   }
   OutStreamer->popSection();
 }
