@@ -61,7 +61,7 @@ Section,Description,Dependencies,Assignee,Complete
 | indirectly_copyable
 | indirectly_copyable_storable",[iterator.concepts],Zoe Carver,In progress
 [common.alg.req]: pt. 2,indirectly_swappable,"| [iterator.concepts]
-| [iterator.cust.swap]",Louis Dionne,Not started
+| [iterator.cust.swap]",Zoe Carver,✅
 [common.alg.req]: pt. 3,indirectly_comparable,[projected],Louis Dionne,Not started
 [common.alg.req]: pt. 4,"| permutable
 | mergeable
