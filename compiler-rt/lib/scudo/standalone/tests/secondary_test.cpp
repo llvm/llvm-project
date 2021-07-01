@@ -19,19 +19,24 @@
 #include <thread>
 #include <vector>
 
+template <typename Config> static scudo::Options getOptionsForConfig() {
+  return {};
+}
+
 template <typename Config> static void testSecondaryBasic(void) {
   using SecondaryT = scudo::MapAllocator<Config>;
+  scudo::Options Options = getOptionsForConfig<Config>();
 
   scudo::GlobalStats S;
   S.init();
   std::unique_ptr<SecondaryT> L(new SecondaryT);
   L->init(&S);
   const scudo::uptr Size = 1U << 16;
-  void *P = L->allocate(scudo::Options{}, Size);
+  void *P = L->allocate(Options, Size);
   EXPECT_NE(P, nullptr);
   memset(P, 'A', Size);
   EXPECT_GE(SecondaryT::getBlockSize(P), Size);
-  L->deallocate(scudo::Options{}, P);
+  L->deallocate(Options, P);
 
   // If the Secondary can't cache that pointer, it will be unmapped.
   if (!L->canCache(Size)) {
@@ -40,8 +45,8 @@ template <typename Config> static void testSecondaryBasic(void) {
           // Repeat few time to avoid missing crash if it's mmaped by unrelated
           // code.
           for (int i = 0; i < 10; ++i) {
-            P = L->allocate(scudo::Options{}, Size);
-            L->deallocate(scudo::Options{}, P);
+            P = L->allocate(Options, Size);
+            L->deallocate(Options, P);
             memset(P, 'A', Size);
           }
         },
@@ -49,19 +54,19 @@ template <typename Config> static void testSecondaryBasic(void) {
   }
 
   const scudo::uptr Align = 1U << 16;
-  P = L->allocate(scudo::Options{}, Size + Align, Align);
+  P = L->allocate(Options, Size + Align, Align);
   EXPECT_NE(P, nullptr);
   void *AlignedP = reinterpret_cast<void *>(
       scudo::roundUpTo(reinterpret_cast<scudo::uptr>(P), Align));
   memset(AlignedP, 'A', Size);
-  L->deallocate(scudo::Options{}, P);
+  L->deallocate(Options, P);
 
   std::vector<void *> V;
   for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(L->allocate(scudo::Options{}, Size));
+    V.push_back(L->allocate(Options, Size));
   std::shuffle(V.begin(), V.end(), std::mt19937(std::random_device()()));
   while (!V.empty()) {
-    L->deallocate(scudo::Options{}, V.back());
+    L->deallocate(Options, V.back());
     V.pop_back();
   }
   scudo::ScopedString Str;
@@ -92,16 +97,17 @@ TEST(ScudoSecondaryTest, SecondaryBasic) {
   testSecondaryBasic<TestConfig>();
 }
 
-using LargeAllocator = scudo::MapAllocator<scudo::DefaultConfig>;
-
 struct MapAllocatorTest : public Test {
+  using Config = scudo::DefaultConfig;
+  using LargeAllocator = scudo::MapAllocator<Config>;
+
   void SetUp() override { Allocator->init(nullptr); }
 
   void TearDown() override { Allocator->unmapTestOnly(); }
 
   std::unique_ptr<LargeAllocator> Allocator =
       std::make_unique<LargeAllocator>();
-  scudo::Options Options = {};
+  scudo::Options Options = getOptionsForConfig<Config>();
 };
 
 // This exercises a variety of combinations of size and alignment for the
