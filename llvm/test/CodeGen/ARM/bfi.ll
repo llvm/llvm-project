@@ -397,23 +397,21 @@ define void @bfi3_uses(i32 %a, i32 %b) {
 define i32 @bfi4(i32 %A, i2 zeroext %BB, i32* %d) {
 ; CHECK-LABEL: bfi4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    lsr r3, r0, #1
-; CHECK-NEXT:    mov r12, #96
-; CHECK-NEXT:    bfi r1, r3, #2, #1
-; CHECK-NEXT:    tst r0, #32
-; CHECK-NEXT:    movweq r12, #32
-; CHECK-NEXT:    bfi r1, r3, #9, #1
-; CHECK-NEXT:    lsr r3, r0, #2
-; CHECK-NEXT:    bfi r1, r3, #3, #1
-; CHECK-NEXT:    bfi r1, r3, #10, #1
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    lsr r12, r0, #1
 ; CHECK-NEXT:    and r3, r0, #8
+; CHECK-NEXT:    bfi r1, r12, #2, #2
+; CHECK-NEXT:    mov lr, #96
+; CHECK-NEXT:    tst r0, #32
+; CHECK-NEXT:    bfi r1, r12, #9, #2
+; CHECK-NEXT:    movweq lr, #32
 ; CHECK-NEXT:    orr r1, r1, r3, lsl #8
 ; CHECK-NEXT:    and r3, r0, #64
 ; CHECK-NEXT:    and r0, r0, #128
-; CHECK-NEXT:    orr r1, r1, r12
+; CHECK-NEXT:    orr r1, r1, lr
 ; CHECK-NEXT:    orr r1, r1, r3, lsl #1
 ; CHECK-NEXT:    str r1, [r2]
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    pop {r11, pc}
 entry:
   %B = zext i2 %BB to i32
   %and = and i32 %A, 2
