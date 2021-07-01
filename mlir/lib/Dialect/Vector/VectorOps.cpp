@@ -32,6 +32,7 @@
 #include "llvm/ADT/bit.h"
 #include <numeric>
 
+#include "mlir/Dialect/Vector/VectorOpsDialect.cpp.inc"
 // Pull in all enum type and utility function definitions.
 #include "mlir/Dialect/Vector/VectorOpsEnums.cpp.inc"
 

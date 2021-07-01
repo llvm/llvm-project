@@ -409,7 +409,6 @@ module std [system] {
     export *
     module __functional {
       module hash           { header "__functional/hash.h"           }
-      module search         { header "__functional/search.h"         }
       module unary_function { header "__functional/unary_function.h" }
       module unwrap_ref     { header "__functional/unwrap_ref.h"     }
     }

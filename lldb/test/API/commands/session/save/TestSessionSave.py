@@ -1,6 +1,8 @@
 """
 Test the session save feature
 """
+import os
+import tempfile
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -57,7 +59,6 @@ class SessionSaveTestCase(TestBase):
         self.assertFalse(res.Succeeded())
         raw += self.raw_transcript_builder(cmd, res)
 
-        import tempfile
         tf = tempfile.NamedTemporaryFile()
         output_file = tf.name
 
@@ -72,3 +73,54 @@ class SessionSaveTestCase(TestBase):
           lines = raw.splitlines()[:-1]
           for line in lines:
             self.assertIn(line, content)
+
+        td = tempfile.TemporaryDirectory()
+        res = lldb.SBCommandReturnObject()
+        interpreter.HandleCommand('settings set interpreter.save-session-directory ' + td.name, res)
+        self.assertTrue(res.Succeeded())
+
+        res = lldb.SBCommandReturnObject()
+        interpreter.HandleCommand('session save', res)
+        self.assertTrue(res.Succeeded())
+        raw += self.raw_transcript_builder(cmd, res)
+
+        with open(os.path.join(td.name, os.listdir(td.name)[0]), "r") as file:
+          content = file.read()
+          # Exclude last line, since session won't record it's own output
+          lines = raw.splitlines()[:-1]
+          for line in lines:
+            self.assertIn(line, content)
+
+    @skipIfWindows
+    @skipIfReproducer
+    @no_debug_info_test
+    def test_session_save_on_quit(self):
+        raw = ""
+        interpreter = self.dbg.GetCommandInterpreter()
+
+        td = tempfile.TemporaryDirectory()
+
+        settings = [
+          'settings set interpreter.echo-commands true',
+          'settings set interpreter.echo-comment-commands true',
+          'settings set interpreter.stop-command-source-on-error false',
+          'settings set interpreter.save-session-on-quit true',
+          'settings set interpreter.save-session-directory ' + td.name,
+        ]
+
+        for setting in settings:
+          res = lldb.SBCommandReturnObject()
+          interpreter.HandleCommand(setting, res)
+          raw += self.raw_transcript_builder(setting, res)
+
+        self.dbg.Destroy(self.dbg)
+
+        with open(os.path.join(td.name, os.listdir(td.name)[0]), "r") as file:
+          content = file.read()
+          # Exclude last line, since session won't record it's own output
+          lines = raw.splitlines()[:-1]
+          for line in lines:
+            self.assertIn(line, content)
+
+
+

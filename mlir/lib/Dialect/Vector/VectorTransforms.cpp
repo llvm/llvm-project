@@ -37,6 +37,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -3915,42 +3916,33 @@ struct InnerDimReductionConversion
     auto loc = multiReductionOp.getLoc();
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
 
-    auto reductionDims = llvm::to_vector<4>(
-        llvm::map_range(multiReductionOp.reduction_dims().cast<ArrayAttr>(),
-                        [](Attribute attr) -> int64_t {
-                          return attr.cast<IntegerAttr>().getInt();
-                        }));
-    llvm::sort(reductionDims);
-
-    int64_t reductionSize = multiReductionOp.reduction_dims().size();
-
-    // Fails if already inner most reduction.
-    bool innerMostReduction = true;
-    for (int i = 0; i < reductionSize; ++i) {
-      if (reductionDims[reductionSize - i - 1] != srcRank - i - 1) {
-        innerMostReduction = false;
-      }
+    // Separate reduction and parallel dims
+    auto reductionDimsRange =
+        multiReductionOp.reduction_dims().getAsValueRange<IntegerAttr>();
+    auto reductionDims = llvm::to_vector<4>(llvm::map_range(
+        reductionDimsRange, [](APInt a) { return a.getZExtValue(); }));
+    llvm::SmallDenseSet<int64_t> reductionDimsSet(reductionDims.begin(),
+                                                  reductionDims.end());
+    int64_t reductionSize = reductionDims.size();
+    SmallVector<int64_t, 4> parallelDims;
+    for (int64_t i = 0; i < srcRank; i++) {
+      if (!reductionDimsSet.contains(i))
+        parallelDims.push_back(i);
     }
-    if (innerMostReduction)
+
+    // Add transpose only if inner-most dimensions are not reductions
+    if (parallelDims ==
+        llvm::to_vector<4>(llvm::seq<int64_t>(0, parallelDims.size())))
       return failure();
 
-    // Permutes the indices so reduction dims are inner most dims.
-    SmallVector<int64_t> indices;
-    for (int i = 0; i < srcRank; ++i) {
-      indices.push_back(i);
-    }
-    int ir = reductionSize - 1;
-    int id = srcRank - 1;
-    while (ir >= 0) {
-      std::swap(indices[reductionDims[ir--]], indices[id--]);
-    }
-
-    // Sets inner most dims as reduction.
+    SmallVector<int64_t, 4> indices;
+    indices.append(parallelDims.begin(), parallelDims.end());
+    indices.append(reductionDims.begin(), reductionDims.end());
+    auto transposeOp = rewriter.create<vector::TransposeOp>(loc, src, indices);
     SmallVector<bool> reductionMask(srcRank, false);
     for (int i = 0; i < reductionSize; ++i) {
       reductionMask[srcRank - i - 1] = true;
     }
-    auto transposeOp = rewriter.create<vector::TransposeOp>(loc, src, indices);
     rewriter.replaceOpWithNewOp<vector::MultiDimReductionOp>(
         multiReductionOp, transposeOp.result(), reductionMask,
         multiReductionOp.kind());

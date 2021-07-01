@@ -18,6 +18,8 @@ unittest("StaticAnalysisTests") {
     "ParamRegionTest.cpp",
     "RangeSetTest.cpp",
     "RegisterCustomCheckersTest.cpp",
+    "SValTest.cpp",
+    "StoreTest.cpp",
     "SymbolReaperTest.cpp",
     "TestReturnValueUnderConstruction.cpp",
   ]

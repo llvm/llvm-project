@@ -1,5 +1,4 @@
 add_subdirectory(CAPI)
-add_subdirectory(SDBM)
 add_subdirectory(lib)
 
 if(MLIR_ENABLE_BINDINGS_PYTHON)
@@ -75,7 +74,6 @@ set(MLIR_TEST_DEPENDS
   mlir-lsp-server
   mlir-opt
   mlir-reduce
-  mlir-sdbm-api-test
   mlir-tblgen
   mlir-translate
   mlir_runner_utils

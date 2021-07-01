@@ -472,14 +472,10 @@ template <class Derived> struct GenFuncBase {
     F->setVisibility(llvm::GlobalValue::HiddenVisibility);
     CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
-    IdentifierInfo *II = &Ctx.Idents.get(FuncName);
-    FunctionDecl *FD = FunctionDecl::Create(
-        Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-        II, Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {}), nullptr,
-        SC_PrivateExtern, false, false);
     CodeGenFunction NewCGF(CGM);
     setCGF(&NewCGF);
-    CGF->StartFunction(FD, Ctx.VoidTy, F, FI, Args);
+    CGF->StartFunction(GlobalDecl(), Ctx.VoidTy, F, FI, Args);
+    auto AL = ApplyDebugLocation::CreateArtificial(*CGF);
     std::array<Address, N> Addrs =
         getParamAddrs<N>(std::make_index_sequence<N>{}, Alignments, Args, CGF);
     asDerived().visitStructFields(QT, CharUnits::Zero(), Addrs);

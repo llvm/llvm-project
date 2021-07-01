@@ -152,6 +152,18 @@ bool PathMappingList::RemapPath(ConstString path,
   return false;
 }
 
+/// Append components to path, applying style.
+static void AppendPathComponents(FileSpec &path, llvm::StringRef components,
+                                 llvm::sys::path::Style style) {
+    auto component = llvm::sys::path::begin(components, style);
+    auto e = llvm::sys::path::end(components);
+    while (component != e &&
+        llvm::sys::path::is_separator(*component->data(), style))
+      ++component;
+    for (; component != e; ++component)
+      path.AppendPathComponent(*component);
+}
+
 llvm::Optional<FileSpec>
 PathMappingList::RemapPath(llvm::StringRef path) const {
   if (m_pairs.empty() || path.empty())
@@ -175,7 +187,9 @@ PathMappingList::RemapPath(llvm::StringRef path) const {
         continue;
     }
     FileSpec remapped(it.second.GetStringRef());
-    remapped.AppendPathComponent(path);
+    auto orig_style = FileSpec::GuessPathStyle(prefix).getValueOr(
+        llvm::sys::path::Style::native);
+    AppendPathComponents(remapped, path, orig_style);
     return remapped;
   }
   return {};
@@ -187,56 +201,23 @@ bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) co
   for (const auto &it : m_pairs) {
     if (!path_ref.consume_front(it.second.GetStringRef()))
       continue;
-    fixed.SetFile(it.first.GetStringRef(), FileSpec::Style::native);
-    fixed.AppendPathComponent(path_ref);
+    auto orig_file = it.first.GetStringRef();
+    auto orig_style = FileSpec::GuessPathStyle(orig_file).getValueOr(
+        llvm::sys::path::Style::native);
+    fixed.SetFile(orig_file, orig_style);
+    AppendPathComponents(fixed, path_ref, orig_style);
     return true;
   }
   return false;
 }
 
-bool PathMappingList::FindFile(const FileSpec &orig_spec,
-                               FileSpec &new_spec) const {
-  if (m_pairs.empty())
-    return false;
-  
-  std::string orig_path = orig_spec.GetPath();
-    
-  if (orig_path.empty())
-    return false;
-      
-  bool orig_is_relative = orig_spec.IsRelative();
 
-  for (auto entry : m_pairs) {
-    llvm::StringRef orig_ref(orig_path);
-    llvm::StringRef prefix_ref = entry.first.GetStringRef();
-    if (orig_ref.size() < prefix_ref.size())
-      continue;
-    // We consider a relative prefix or one of just "." to
-    // mean "only apply to relative paths".
-    bool prefix_is_relative = false;
-    
-    if (prefix_ref == ".") {
-      prefix_is_relative = true;
-      // Remove the "." since it will have been removed from the
-      // FileSpec paths already.
-      prefix_ref = prefix_ref.drop_front();
-    } else {
-      FileSpec prefix_spec(prefix_ref, FileSpec::Style::native);
-      prefix_is_relative = prefix_spec.IsRelative();
-    }
-    if (prefix_is_relative != orig_is_relative)
-      continue;
+llvm::Optional<FileSpec> PathMappingList::FindFile(const FileSpec &orig_spec) const {
+  if (auto remapped = RemapPath(orig_spec.GetPath()))
+    if (FileSystem::Instance().Exists(*remapped))
+      return remapped;
 
-    if (orig_ref.consume_front(prefix_ref)) {
-      new_spec.SetFile(entry.second.GetCString(), FileSpec::Style::native);
-      new_spec.AppendPathComponent(orig_ref);
-      if (FileSystem::Instance().Exists(new_spec))
-        return true;
-    }
-  }
-  
-  new_spec.Clear();
-  return false;
+  return {};
 }
 
 bool PathMappingList::Replace(ConstString path,

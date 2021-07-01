@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=WITHOUTATEXIT %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fregister-global-dtors-with-atexit -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CXAATEXIT --check-prefix=WITHATEXIT %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fregister-global-dtors-with-atexit -debug-info-kind=line-tables-only -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CXAATEXIT --check-prefix=WITHATEXIT %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fno-use-cxa-atexit -fregister-global-dtors-with-atexit -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ATEXIT --check-prefix=WITHATEXIT %s
 
 // WITHOUTATEXIT: global_ctors{{.*}}@A{{.*}}@C
@@ -19,8 +19,9 @@
 // CHECK: define internal i32 @foo()
 // WITHOUTATEXIT-NOT: define
 
-// WITHATEXIT: define internal void @__GLOBAL_init_123(){{.*}}section "__TEXT,__StaticInit,regular,pure_instructions"
-// CXAATEXIT: call i32 @__cxa_atexit(void (i8*)* bitcast (void ()* @E to void (i8*)*), i8* null, i8* @__dso_handle)
+// CXAATEXIT: define internal void @__GLOBAL_init_123(){{.*}}section "__TEXT,__StaticInit,regular,pure_instructions" !dbg ![[GLOBAL_INIT_SP:.*]] {
+// ATEXIT: define internal void @__GLOBAL_init_123(){{.*}}section "__TEXT,__StaticInit,regular,pure_instructions"
+// CXAATEXIT: call i32 @__cxa_atexit(void (i8*)* bitcast (void ()* @E to void (i8*)*), i8* null, i8* @__dso_handle) {{.*}}, !dbg ![[GLOBAL_INIT_LOC:.*]]
 // CXAATEXIT: call i32 @__cxa_atexit(void (i8*)* bitcast (void ()* @G to void (i8*)*), i8* null, i8* @__dso_handle)
 // ATEXIT: call i32 @atexit(void ()* @E)
 // ATEXIT: call i32 @atexit(void ()* @G)
@@ -82,3 +83,6 @@ static void D() {
 int main() {
   return 0;
 }
+
+// CXAATEXIT: ![[GLOBAL_INIT_SP]] = distinct !DISubprogram(linkageName: "__GLOBAL_init_123",
+// CXAATEXIT: ![[GLOBAL_INIT_LOC]] = !DILocation(line: 0, scope: ![[GLOBAL_INIT_SP]])

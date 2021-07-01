@@ -164,7 +164,6 @@ if (current_toolchain == default_toolchain) {
       "__format/format_parse_context.h",
       "__function_like.h",
       "__functional/hash.h",
-      "__functional/search.h",
       "__functional/unary_function.h",
       "__functional/unwrap_ref.h",
       "__functional_03",

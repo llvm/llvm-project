@@ -19,6 +19,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
@@ -1983,6 +1984,46 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         replaceInstUsesWith(CI, Res);
         return eraseInstFromFunction(CI);
       }
+    LLVM_FALLTHROUGH;
+  }
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul: {
+    bool CanBeReassociated = (IID != Intrinsic::vector_reduce_fadd &&
+                              IID != Intrinsic::vector_reduce_fmul) ||
+                             II->hasAllowReassoc();
+    const unsigned ArgIdx = (IID == Intrinsic::vector_reduce_fadd ||
+                             IID == Intrinsic::vector_reduce_fmul)
+                                ? 1
+                                : 0;
+    Value *Arg = II->getArgOperand(ArgIdx);
+    Value *V;
+    ArrayRef<int> Mask;
+    if (!isa<FixedVectorType>(Arg->getType()) || !CanBeReassociated ||
+        !match(Arg, m_Shuffle(m_Value(V), m_Undef(), m_Mask(Mask))) ||
+        !cast<ShuffleVectorInst>(Arg)->isSingleSource())
+      break;
+    int Sz = Mask.size();
+    SmallBitVector UsedIndices(Sz);
+    for (int Idx : Mask) {
+      if (Idx == UndefMaskElem || UsedIndices.test(Idx))
+        break;
+      UsedIndices.set(Idx);
+    }
+    // Can remove shuffle iff just shuffled elements, no repeats, undefs, or
+    // other changes.
+    if (UsedIndices.all()) {
+      replaceUse(II->getOperandUse(ArgIdx), V);
+      return nullptr;
+    }
     break;
   }
   default: {

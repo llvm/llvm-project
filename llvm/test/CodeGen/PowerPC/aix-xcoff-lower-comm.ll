@@ -4,7 +4,7 @@
 ; RUN:   FileCheck --check-prefixes=CHECK,ASM64 %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t.o < %s
-; RUN: llvm-readobj -r --expand-relocs -t %t.o | FileCheck --check-prefixes=RELOC,SYM %s
+; RUN: llvm-readobj -r --expand-relocs --syms %t.o | FileCheck --check-prefixes=RELOC,SYM %s
 
 ; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN: -data-sections=false -filetype=obj < %s 2>&1 | \

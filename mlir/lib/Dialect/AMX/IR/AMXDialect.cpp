@@ -18,6 +18,8 @@
 
 using namespace mlir;
 
+#include "mlir/Dialect/AMX/AMXDialect.cpp.inc"
+
 void amx::AMXDialect::initialize() {
   addOperations<
 #define GET_OP_LIST

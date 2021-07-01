@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputSection.h"
+#include "Config.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
 #include "Symbols.h"
@@ -156,7 +157,8 @@ void CStringInputSection::splitIntoPieces() {
     if (end == StringRef::npos)
       fatal(toString(this) + ": string is not null terminated");
     size_t size = end + 1;
-    pieces.emplace_back(off, xxHash64(s.substr(0, size)));
+    uint32_t hash = config->dedupLiterals ? xxHash64(s.substr(0, size)) : 0;
+    pieces.emplace_back(off, hash);
     s = s.substr(size);
     off += size;
   }

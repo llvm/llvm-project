@@ -18,6 +18,8 @@
 using namespace mlir;
 using namespace mlir::scf;
 
+#include "mlir/Dialect/SCF/SCFOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // SCFDialect Dialect Interfaces
 //===----------------------------------------------------------------------===//

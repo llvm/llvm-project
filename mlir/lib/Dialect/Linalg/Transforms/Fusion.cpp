@@ -205,10 +205,6 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
                                       getTiledOperands(b, producer), ivs,
                                       tileSizes, sizeBounds));
 
-  // Append the other operands.
-  auto operands = producer.getAssumedNonShapedOperands();
-  clonedShapes.append(operands.begin(), operands.end());
-
   // Iterate over the results in order.
   // Extract the subtensor type from the linearized range.
   // Since we do not enforce any canonicalizations on the fly, this is always

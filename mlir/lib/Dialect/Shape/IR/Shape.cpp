@@ -24,6 +24,8 @@
 using namespace mlir;
 using namespace mlir::shape;
 
+#include "mlir/Dialect/Shape/IR/ShapeOpsDialect.cpp.inc"
+
 namespace {
 #include "ShapeCanonicalization.inc"
 }

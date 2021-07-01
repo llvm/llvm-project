@@ -23,6 +23,8 @@
 using namespace mlir;
 using namespace mlir::tosa;
 
+#include "mlir/Dialect/Tosa/IR/TosaOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // Tosa dialect structs and interface includes.
 //===----------------------------------------------------------------------===//

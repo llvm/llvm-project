@@ -375,6 +375,10 @@ public:
   /// attribute that was erased, or nullptr if there was no attribute with such
   /// name.
   Attribute removeArgAttr(unsigned index, Identifier name);
+  Attribute removeArgAttr(unsigned index, StringRef name) {
+    return removeArgAttr(
+        index, Identifier::get(name, this->getOperation()->getContext()));
+  }
 
   //===--------------------------------------------------------------------===//
   // Result Attributes

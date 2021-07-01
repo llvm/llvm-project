@@ -51,6 +51,12 @@ Sections:
   - Name:  .debug_info
     Type:  SHT_PROGBITS
     Flags: [ SHF_WRITE, SHF_ALLOC ]
+ 
+## Check that --section-headers and --headers are aliases for -h.
+# RUN: llvm-objdump --section-headers --show-lma %t-whitespace.o \
+# RUN:   | FileCheck %s --check-prefix=WHITESPACE --strict-whitespace
+# RUN: llvm-objdump --headers --show-lma %t-whitespace.o \
+# RUN:   | FileCheck %s --check-prefix=WHITESPACE --strict-whitespace
 
 ## The name field automatically expands past the default 13 columns when a
 ## section name is longer than that.

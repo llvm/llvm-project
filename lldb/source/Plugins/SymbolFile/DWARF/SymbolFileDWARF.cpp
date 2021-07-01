@@ -240,9 +240,12 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
   const size_t number_of_files = prologue.FileNames.size();
   for (size_t idx = first_file; idx <= number_of_files; ++idx) {
     std::string remapped_file;
-    if (auto file_path = GetFileByIndex(prologue, idx, compile_dir, style))
-      if (!module->RemapSourceFile(llvm::StringRef(*file_path), remapped_file))
+    if (auto file_path = GetFileByIndex(prologue, idx, compile_dir, style)) {
+      if (auto remapped = module->RemapSourceFile(llvm::StringRef(*file_path)))
+        remapped_file = *remapped;
+      else
         remapped_file = std::move(*file_path);
+    }
 
     // Unconditionally add an entry, so the indices match up.
     support_files.EmplaceBack(remapped_file, style);
@@ -681,9 +684,8 @@ static void MakeAbsoluteAndRemap(FileSpec &file_spec, DWARFUnit &dwarf_cu,
   // files are NFS mounted.
   file_spec.MakeAbsolute(dwarf_cu.GetCompilationDirectory());
 
-  std::string remapped_file;
-  if (module_sp->RemapSourceFile(file_spec.GetPath(), remapped_file))
-    file_spec.SetFile(remapped_file, FileSpec::Style::native);
+  if (auto remapped_file = module_sp->RemapSourceFile(file_spec.GetPath()))
+    file_spec.SetFile(*remapped_file, FileSpec::Style::native);
 }
 
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {

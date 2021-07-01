@@ -80,6 +80,13 @@ llvm.mlir.global private local_unnamed_addr constant @local_unnamed_addr(42 : i6
 llvm.mlir.global private unnamed_addr constant @unnamed_addr(42 : i64) : i64
 
 //
+// dso_local attribute.
+//
+
+llvm.mlir.global @has_dso_local(42 : i64) {dso_local} : i64
+// CHECK: @has_dso_local = dso_local global i64 42
+
+//
 // Section attribute.
 //
 
@@ -425,6 +432,15 @@ llvm.func @more_imperfectly_nested_loops() {
 
 // CHECK: define internal void @func_internal
 llvm.func internal @func_internal() {
+  llvm.return
+}
+
+//
+// dso_local attribute.
+//
+
+// CHECK: define dso_local void @dso_local_func
+llvm.func @dso_local_func() attributes {dso_local} {
   llvm.return
 }
 

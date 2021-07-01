@@ -55,10 +55,11 @@ SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32
 // Instrumented code may set this value in terms of -dfsan-track-origins.
 // * undefined or 0: do not track origins.
 // * 1: track origins at memory store operations.
-// * 2: TODO: track origins at memory store operations and callsites.
+// * 2: track origins at memory load and store operations.
+//      TODO: track callsites.
 extern "C" SANITIZER_WEAK_ATTRIBUTE const int __dfsan_track_origins;
 
-int __dfsan_get_track_origins() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE int dfsan_get_track_origins() {
   return &__dfsan_track_origins ? __dfsan_track_origins : 0;
 }
 
@@ -446,7 +447,7 @@ void dfsan_copy_memory(void *dst, const void *src, uptr size) {
   internal_memcpy(dst, src, size);
   internal_memcpy((void *)shadow_for(dst), (const void *)shadow_for(src),
                   size * sizeof(dfsan_label));
-  if (__dfsan_get_track_origins())
+  if (dfsan_get_track_origins())
     dfsan_mem_origin_transfer(dst, src, size);
 }
 
@@ -514,12 +515,12 @@ void SetShadow(dfsan_label label, void *addr, uptr size, dfsan_origin origin) {
   if (0 != label) {
     const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
     WriteShadowWithSize(label, beg_shadow_addr, size);
-    if (__dfsan_get_track_origins())
+    if (dfsan_get_track_origins())
       SetOrigin(addr, size, origin);
     return;
   }
 
-  if (__dfsan_get_track_origins())
+  if (dfsan_get_track_origins())
     ReleaseOrigins(addr, size);
 
   ReleaseOrClearShadows(addr, size);
@@ -533,7 +534,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
 SANITIZER_INTERFACE_ATTRIBUTE
 void dfsan_set_label(dfsan_label label, void *addr, uptr size) {
   dfsan_origin init_origin = 0;
-  if (label && __dfsan_get_track_origins()) {
+  if (label && dfsan_get_track_origins()) {
     GET_CALLER_PC_BP;
     GET_STORE_STACK_TRACE_PC_BP(pc, bp);
     init_origin = ChainOrigin(0, &stack, true);
@@ -546,7 +547,7 @@ void dfsan_add_label(dfsan_label label, void *addr, uptr size) {
   if (0 == label)
     return;
 
-  if (__dfsan_get_track_origins()) {
+  if (dfsan_get_track_origins()) {
     GET_CALLER_PC_BP;
     GET_STORE_STACK_TRACE_PC_BP(pc, bp);
     dfsan_origin init_origin = ChainOrigin(0, &stack, true);
@@ -648,7 +649,7 @@ void PrintInvalidOriginWarning(dfsan_label label, const void *address) {
 bool PrintOriginTraceToStr(const void *addr, const char *description,
                            InternalScopedString *out) {
   CHECK(out);
-  CHECK(__dfsan_get_track_origins());
+  CHECK(dfsan_get_track_origins());
   Decorator d;
 
   const dfsan_label label = *__dfsan::shadow_for(addr);
@@ -687,7 +688,7 @@ bool PrintOriginTraceToStr(const void *addr, const char *description,
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_print_origin_trace(
     const void *addr, const char *description) {
-  if (!__dfsan_get_track_origins()) {
+  if (!dfsan_get_track_origins()) {
     PrintNoOriginTrackingWarning();
     return;
   }
@@ -713,7 +714,7 @@ dfsan_sprint_origin_trace(const void *addr, const char *description,
                           char *out_buf, size_t out_buf_size) {
   CHECK(out_buf);
 
-  if (!__dfsan_get_track_origins()) {
+  if (!dfsan_get_track_origins()) {
     PrintNoOriginTrackingWarning();
     return 0;
   }
@@ -742,7 +743,7 @@ dfsan_sprint_origin_trace(const void *addr, const char *description,
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_origin
 dfsan_get_init_origin(const void *addr) {
-  if (!__dfsan_get_track_origins())
+  if (!dfsan_get_track_origins())
     return 0;
 
   const dfsan_label label = *__dfsan::shadow_for(addr);
@@ -829,7 +830,7 @@ void dfsan_clear_thread_local_state() {
   internal_memset(__dfsan_arg_tls, 0, sizeof(__dfsan_arg_tls));
   internal_memset(__dfsan_retval_tls, 0, sizeof(__dfsan_retval_tls));
 
-  if (__dfsan_get_track_origins()) {
+  if (dfsan_get_track_origins()) {
     internal_memset(__dfsan_arg_origin_tls, 0, sizeof(__dfsan_arg_origin_tls));
     internal_memset(&__dfsan_retval_origin_tls, 0,
                     sizeof(__dfsan_retval_origin_tls));
@@ -995,7 +996,7 @@ static void DFsanInit(int argc, char **argv, char **envp) {
 
   CheckASLR();
 
-  InitShadow(__dfsan_get_track_origins());
+  InitShadow(dfsan_get_track_origins());
 
   initialize_interceptors();
 

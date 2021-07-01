@@ -17,6 +17,8 @@
 using namespace mlir;
 using namespace acc;
 
+#include "mlir/Dialect/OpenACC/OpenACCOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // OpenACC operations
 //===----------------------------------------------------------------------===//

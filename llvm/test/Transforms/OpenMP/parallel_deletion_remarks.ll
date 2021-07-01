@@ -23,9 +23,9 @@ target triple = "x86_64-pc-linux-gnu"
 ;
 ; This will delete all but the first parallel region
 
-; CHECK: remark: parallel_deletion_remarks.c:14:1: Parallel region in delete_parallel deleted
-; CHECK: remark: parallel_deletion_remarks.c:12:1: Parallel region in delete_parallel deleted
 ; CHECK: remark: parallel_deletion_remarks.c:10:1: Parallel region in delete_parallel deleted
+; CHECK: remark: parallel_deletion_remarks.c:12:1: Parallel region in delete_parallel deleted
+; CHECK: remark: parallel_deletion_remarks.c:14:1: Parallel region in delete_parallel deleted
 define dso_local void @delete_parallel() local_unnamed_addr !dbg !15 {
   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*)), !dbg !18
   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..2 to void (i32*, i32*, ...)*)), !dbg !19

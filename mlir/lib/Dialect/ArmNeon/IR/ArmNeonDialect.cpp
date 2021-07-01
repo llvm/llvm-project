@@ -18,6 +18,8 @@
 
 using namespace mlir;
 
+#include "mlir/Dialect/ArmNeon/ArmNeonDialect.cpp.inc"
+
 void arm_neon::ArmNeonDialect::initialize() {
   addOperations<
 #define GET_OP_LIST

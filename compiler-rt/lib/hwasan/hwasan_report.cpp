@@ -296,6 +296,75 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
   return 0;
 }
 
+static void ShowCandidate(uptr untagged_addr, tag_t *candidate, tag_t *left,
+                          tag_t *right) {
+  Decorator d;
+  uptr mem = ShadowToMem(reinterpret_cast<uptr>(candidate));
+  HwasanChunkView chunk = FindHeapChunkByAddress(mem);
+  if (chunk.IsAllocated()) {
+    uptr offset;
+    const char *whence;
+    if (untagged_addr < chunk.End() && untagged_addr >= chunk.Beg()) {
+      offset = untagged_addr - chunk.Beg();
+      whence = "inside";
+    } else if (candidate == left) {
+      offset = untagged_addr - chunk.End();
+      whence = "to the right of";
+    } else {
+      offset = chunk.Beg() - untagged_addr;
+      whence = "to the left of";
+    }
+    Printf("%s", d.Error());
+    Printf("\nCause: heap-buffer-overflow\n");
+    Printf("%s", d.Default());
+    Printf("%s", d.Location());
+    Printf("%p is located %zd bytes %s %zd-byte region [%p,%p)\n",
+           untagged_addr, offset, whence, chunk.UsedSize(), chunk.Beg(),
+           chunk.End());
+    Printf("%s", d.Allocation());
+    Printf("allocated here:\n");
+    Printf("%s", d.Default());
+    GetStackTraceFromId(chunk.GetAllocStackId()).Print();
+    return;
+  }
+  // Check whether the address points into a loaded library. If so, this is
+  // most likely a global variable.
+  const char *module_name;
+  uptr module_address;
+  Symbolizer *sym = Symbolizer::GetOrInit();
+  if (sym->GetModuleNameAndOffsetForPC(mem, &module_name, &module_address)) {
+    Printf("%s", d.Error());
+    Printf("\nCause: global-overflow\n");
+    Printf("%s", d.Default());
+    DataInfo info;
+    Printf("%s", d.Location());
+    if (sym->SymbolizeData(mem, &info) && info.start) {
+      Printf(
+          "%p is located %zd bytes to the %s of %zd-byte global variable "
+          "%s [%p,%p) in %s\n",
+          untagged_addr,
+          candidate == left ? untagged_addr - (info.start + info.size)
+                            : info.start - untagged_addr,
+          candidate == left ? "right" : "left", info.size, info.name,
+          info.start, info.start + info.size, module_name);
+    } else {
+      uptr size = GetGlobalSizeFromDescriptor(mem);
+      if (size == 0)
+        // We couldn't find the size of the global from the descriptors.
+        Printf("%p is located to the %s of a global variable in (%s+0x%x)\n",
+               untagged_addr, candidate == left ? "right" : "left", module_name,
+               module_address);
+      else
+        Printf(
+            "%p is located to the %s of a %zd-byte global variable in "
+            "(%s+0x%x)\n",
+            untagged_addr, candidate == left ? "right" : "left", size,
+            module_name, module_address);
+    }
+    Printf("%s", d.Default());
+  }
+}
+
 void PrintAddressDescription(
     uptr tagged_addr, uptr access_size,
     StackAllocationsRingBuffer *current_stack_allocations) {
@@ -324,7 +393,8 @@ void PrintAddressDescription(
   tag_t addr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
   tag_t *candidate = nullptr, *left = tag_ptr, *right = tag_ptr;
-  for (int i = 0; i < 1000; i++) {
+  uptr candidate_distance = 0;
+  for (; candidate_distance < 1000; candidate_distance++) {
     if (TagsEqual(addr_tag, left)) {
       candidate = left;
       break;
@@ -337,68 +407,32 @@ void PrintAddressDescription(
     ++right;
   }
 
-  if (candidate) {
-    uptr mem = ShadowToMem(reinterpret_cast<uptr>(candidate));
-    HwasanChunkView chunk = FindHeapChunkByAddress(mem);
-    if (chunk.IsAllocated()) {
-      uptr offset;
-      const char *whence;
-      if (untagged_addr < chunk.End() && untagged_addr >= chunk.Beg()) {
-        offset = untagged_addr - chunk.Beg();
-        whence = "inside";
-      } else if (candidate == left) {
-        offset = untagged_addr - chunk.End();
-        whence = "to the right of";
-      } else {
-        offset = chunk.Beg() - untagged_addr;
-        whence = "to the left of";
-      }
-      Printf("%s", d.Location());
-      Printf("%p is located %zd bytes %s %zd-byte region [%p,%p)\n",
-             untagged_addr, offset, whence, chunk.UsedSize(), chunk.Beg(),
-             chunk.End());
-      Printf("%s", d.Allocation());
-      Printf("allocated here:\n");
-      Printf("%s", d.Default());
-      GetStackTraceFromId(chunk.GetAllocStackId()).Print();
-      num_descriptions_printed++;
-    } else {
-      // Check whether the address points into a loaded library. If so, this is
-      // most likely a global variable.
-      const char *module_name;
-      uptr module_address;
-      Symbolizer *sym = Symbolizer::GetOrInit();
-      if (sym->GetModuleNameAndOffsetForPC(mem, &module_name,
-                                           &module_address)) {
-        DataInfo info;
-        if (sym->SymbolizeData(mem, &info) && info.start) {
-          Printf(
-              "%p is located %zd bytes to the %s of %zd-byte global variable "
-              "%s [%p,%p) in %s\n",
-              untagged_addr,
-              candidate == left ? untagged_addr - (info.start + info.size)
-                                : info.start - untagged_addr,
-              candidate == left ? "right" : "left", info.size, info.name,
-              info.start, info.start + info.size, module_name);
-        } else {
-          uptr size = GetGlobalSizeFromDescriptor(mem);
-          if (size == 0)
-            // We couldn't find the size of the global from the descriptors.
-            Printf(
-                "%p is located to the %s of a global variable in (%s+0x%x)\n",
-                untagged_addr, candidate == left ? "right" : "left",
-                module_name, module_address);
-          else
-            Printf(
-                "%p is located to the %s of a %zd-byte global variable in "
-                "(%s+0x%x)\n",
-                untagged_addr, candidate == left ? "right" : "left", size,
-                module_name, module_address);
-        }
-        num_descriptions_printed++;
-      }
-    }
+  constexpr auto kCloseCandidateDistance = 1;
+
+  if (candidate && candidate_distance <= kCloseCandidateDistance) {
+    ShowCandidate(untagged_addr, candidate, left, right);
+    num_descriptions_printed++;
   }
+
+  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
+    if (t->AddrIsInStack(untagged_addr)) {
+      // TODO(fmayer): figure out how to distinguish use-after-return and
+      // stack-buffer-overflow.
+      Printf("%s", d.Error());
+      Printf("\nCause: stack tag-mismatch\n");
+      Printf("%s", d.Location());
+      Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
+             t->unique_id());
+      Printf("%s", d.Default());
+      t->Announce();
+
+      auto *sa = (t == GetCurrentThread() && current_stack_allocations)
+                     ? current_stack_allocations
+                     : t->stack_allocations();
+      PrintStackAllocations(sa, addr_tag, untagged_addr);
+      num_descriptions_printed++;
+    }
+  });
 
   hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
     // Scan all threads' ring buffers to find if it's a heap-use-after-free.
@@ -407,6 +441,8 @@ void PrintAddressDescription(
     if (FindHeapAllocation(t->heap_allocations(), tagged_addr, &har,
                            &ring_index, &num_matching_addrs,
                            &num_matching_addrs_4b)) {
+      Printf("%s", d.Error());
+      Printf("\nCause: use-after-free\n");
       Printf("%s", d.Location());
       Printf("%p is located %zd bytes inside of %zd-byte region [%p,%p)\n",
              untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
@@ -433,22 +469,12 @@ void PrintAddressDescription(
       t->Announce();
       num_descriptions_printed++;
     }
-
-    // Very basic check for stack memory.
-    if (t->AddrIsInStack(untagged_addr)) {
-      Printf("%s", d.Location());
-      Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
-             t->unique_id());
-      Printf("%s", d.Default());
-      t->Announce();
-
-      auto *sa = (t == GetCurrentThread() && current_stack_allocations)
-                     ? current_stack_allocations
-                     : t->stack_allocations();
-      PrintStackAllocations(sa, addr_tag, untagged_addr);
-      num_descriptions_printed++;
-    }
   });
+
+  if (candidate && num_descriptions_printed == 0) {
+    ShowCandidate(untagged_addr, candidate, left, right);
+    num_descriptions_printed++;
+  }
 
   // Print the remaining threads, as an extra information, 1 line per thread.
   hwasanThreadList().VisitAllLiveThreads([&](Thread *t) { t->Announce(); });
@@ -456,6 +482,12 @@ void PrintAddressDescription(
   if (!num_descriptions_printed)
     // We exhausted our possibilities. Bail out.
     Printf("HWAddressSanitizer can not describe address in more detail.\n");
+  if (num_descriptions_printed > 1) {
+    Printf(
+        "There are %d potential causes, printed above in order "
+        "of likeliness.",
+        num_descriptions_printed);
+  }
 }
 
 void ReportStats() {}
@@ -630,24 +662,9 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
   Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem) in thread T%zd\n",
          is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
          mem_tag, t->unique_id());
-  if (mem_tag < kShadowAlignment) {
-    tag_t *granule_ptr = reinterpret_cast<tag_t *>((untagged_addr + offset) &
-                                                   ~(kShadowAlignment - 1));
-    // If offset is 0, (untagged_addr + offset) is not aligned to granules.
-    // This is the offset of the leftmost accessed byte within the bad granule.
-    u8 in_granule_offset = (untagged_addr + offset) & (kShadowAlignment - 1);
-    // The first mismatch was a short granule that matched the ptr_tag.
-    if (granule_ptr[kShadowAlignment - 1] == ptr_tag) {
-      // If the access starts after the end of the short granule, then the first
-      // bad byte is the first byte of the access; otherwise it is the first
-      // byte past the end of the short granule
-      if (mem_tag > in_granule_offset) {
-        offset += mem_tag - in_granule_offset;
-      }
-    }
-  }
   if (offset != 0)
-    Printf("Invalid access starting at offset %zu\n", offset);
+    Printf("Invalid access starting at offset [%zu, %zu)\n", offset,
+           Min(access_size, static_cast<uptr>(offset) + (1 << kShadowScale)));
   Printf("%s", d.Default());
 
   stack->Print();

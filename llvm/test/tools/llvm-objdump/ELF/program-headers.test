@@ -1,0 +1,324 @@
+## Check that program headers are output correctly
+
+# RUN: yaml2obj --docnum=1 -DBITS=32 -DMACHINE=EM_386 %s -o %t32.elf
+# RUN: llvm-objdump --private-headers %t32.elf | FileCheck %s --check-prefixes=ELF32 
+
+# ELF32:      Program Header:
+# ELF32-NEXT:    PHDR off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags -w-
+# ELF32-NEXT:    PHDR off    0x00000317 vaddr 0x00002000 paddr 0x00002000 align 2**0
+# ELF32-NEXT:         filesz 0x00000007 memsz 0x00000007 flags --x
+# ELF32-NEXT: UNKNOWN off    0x00000317 vaddr 0x00002000 paddr 0x00002000 align 2**0
+# ELF32-NEXT:         filesz 0x00000007 memsz 0x00000007 flags --x
+# ELF32-NEXT: DYNAMIC off    0x00000324 vaddr 0x00006000 paddr 0x00006000 align 2**0
+# ELF32-NEXT:         filesz 0x00000010 memsz 0x00000010 flags rwx
+# ELF32-NEXT:  INTERP off    0x0000031e vaddr 0x00003000 paddr 0x00003000 align 2**0
+# ELF32-NEXT:         filesz 0x00000004 memsz 0x00000004 flags rw-
+# ELF32-NEXT:    NOTE off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000001 memsz 0x00000001 flags ---
+# ELF32-NEXT:    TLS off    0x00000322 vaddr 0x00004000 paddr 0x00004000 align 2**0
+# ELF32-NEXT:         filesz 0x00000001 memsz 0x00000001 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT:EH_FRAME off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT:   STACK off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT:   RELRO off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT:PROPERTY off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: OPENBSD_RANDOMIZE off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: OPENBSD_WXNEEDED off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: OPENBSD_BOOTDATA off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-NEXT: UNKNOWN off    0x00000314 vaddr 0x00001000 paddr 0x00001000 align 2**0
+# ELF32-NEXT:         filesz 0x00000003 memsz 0x00000003 flags ---
+# ELF32-EMPTY:
+
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 %s -o %t64.elf
+# RUN: llvm-objdump --private-headers %t64.elf | FileCheck %s --check-prefixes=ELF64
+
+# ELF64:      Program Header:
+# ELF64-NEXT:    PHDR off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags -w-
+# ELF64-NEXT:    PHDR off    0x000000000000054b vaddr 0x0000000000002000 paddr 0x0000000000002000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000007 memsz 0x0000000000000007 flags --x
+# ELF64-NEXT: UNKNOWN off    0x000000000000054b vaddr 0x0000000000002000 paddr 0x0000000000002000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000007 memsz 0x0000000000000007 flags --x
+# ELF64-NEXT: DYNAMIC off    0x0000000000000558 vaddr 0x0000000000006000 paddr 0x0000000000006000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000020 memsz 0x0000000000000020 flags rwx
+# ELF64-NEXT:  INTERP off    0x0000000000000552 vaddr 0x0000000000003000 paddr 0x0000000000003000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000004 memsz 0x0000000000000004 flags rw-
+# ELF64-NEXT:    NOTE off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000001 memsz 0x0000000000000001 flags ---
+# ELF64-NEXT:    TLS off    0x0000000000000556 vaddr 0x0000000000004000 paddr 0x0000000000004000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000001 memsz 0x0000000000000001 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT:EH_FRAME off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT:   STACK off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT:   RELRO off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT:   PROPERTY off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: OPENBSD_RANDOMIZE off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: OPENBSD_WXNEEDED off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: OPENBSD_BOOTDATA off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-NEXT: UNKNOWN off    0x0000000000000548 vaddr 0x0000000000001000 paddr 0x0000000000001000 align 2**0
+# ELF64-NEXT:         filesz 0x0000000000000003 memsz 0x0000000000000003 flags ---
+# ELF64-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: [[MACHINE]]
+Sections:
+  - Name:    .foo.begin
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Size:    0x1
+  - Name:    .foo.end
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x2
+  - Name:    .bar.begin
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x2000
+    Size:    0x3
+  - Name:    .bar.end
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x4
+  - Name:    .interp
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x3000
+    Content: "41424300" ## "ABC"
+  - Name:    .tls
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_TLS ]
+    Address: 0x4000
+    Size:    0x1
+  - Name:    .unused
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_TLS ]
+    Address: 0x5000
+    Size:    0x1
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x6000
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_NULL
+       Value: 0x0
+ProgramHeaders:
+## Case 1: an arbitrary segment with sections.
+  - Type:     PT_PHDR
+    Flags:    [ PF_W ]
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 2: another segment with different sections.
+  - Type:     PT_PHDR
+    Flags:    [ PF_X ]
+    VAddr:    0x2000
+    FirstSec: .bar.begin
+    LastSec:  .bar.end
+## Case 3: the PT_NULL segment.
+  - Type:     PT_NULL
+    Flags:    [ PF_X ]
+    VAddr:    0x2000
+    FirstSec: .bar.begin
+    LastSec:  .bar.end
+## Case 4: the PT_DYNAMIC segment.
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_R, PF_W, PF_X ]
+    VAddr:    0x6000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+## Case 5: the PT_INTERP segment.
+  - Type:     PT_INTERP
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x3000
+    FirstSec: .interp
+    LastSec:  .interp
+## Case 6: the PT_NOTE segment.
+  - Type:     PT_NOTE
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 7: the PT_SHLIB segment.
+  - Type:     PT_SHLIB
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.begin
+## Case 8: the PT_TLS segment.
+  - Type:     PT_TLS
+    VAddr:    0x4000
+    FirstSec: .tls
+    LastSec:  .tls
+## Case 9: the PT_LOOS segment.
+  - Type:     0x60000000 ## PT_LOOS
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 10: the PT_GNU_EH_FRAME segment.
+  - Type:     PT_GNU_EH_FRAME
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 11: the PT_SUNW_UNWIND segment.
+  - Type:     0x6464e550 ## PT_SUNW_UNWIND
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 12: the PT_GNU_STACK segment.
+  - Type:     PT_GNU_STACK
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 13: the PT_GNU_RELRO segment.
+  - Type:     PT_GNU_RELRO
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 14: the PT_GNU_PROPERTY segment.
+  - Type:     PT_GNU_PROPERTY
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 15: the PT_OPENBSD_RANDOMIZE segment.
+  - Type:     0x65a3dbe6 ## PT_OPENBSD_RANDOMIZE
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 16: the PT_OPENBSD_WXNEEDED segment.
+  - Type:     0x65a3dbe7 ## PT_OPENBSD_WXNEEDED
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 17: the PT_OPENBSD_BOOTDATA segment.
+  - Type:     0x65a41be6 ## PT_OPENBSD_BOOTDATA
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 18: the PT_HIOS segment.
+  - Type:     0x6fffffff ## PT_HIOS
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 19: the PT_LOPROC/PT_ARM_ARCHEXT/PT_MIPS_REGINFO segment.
+  - Type:     0x70000000 ## PT_LOPROC/PT_ARM_ARCHEXT/PT_MIPS_REGINFO
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 20: the PT_ARM_EXIDX/PT_MIPS_RTPROC segment.
+  - Type:     0x70000001 ## PT_ARM_EXIDX, PT_MIPS_RTPROC
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 20: the PT_MIPS_OPTIONS segment.
+  - Type:     0x70000002 ## PT_MIPS_OPTIONS
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 21: the PT_MIPS_ABIFLAGS segment.
+  - Type:     0x70000003 ## PT_MIPS_ABIFLAGS
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
+## Case 22: the PT_HIPROC segment.
+  - Type:     0x7fffffff ## PT_HIPROC
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec: .foo.end
+
+## Check we report an error / warning when we are unable to read program headers.
+## Case A: the e_phentsize field is invalid.
+# RUN: yaml2obj --docnum=2 -DPHENTSIZE=1 %s -o %t.phdr.err
+# RUN: not llvm-objdump --private-headers %t.phdr.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=PHENTSIZE
+
+# PHENTSIZE:      Program Header:
+# PHENTSIZE-NEXT: warning: '[[FILE]]': unable to read program headers: invalid e_phentsize: 1
+# PHENTSIZE-NEXT: error: '[[FILE]]': invalid e_phentsize: 1
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  EPhEntSize: [[PHENTSIZE=<none>]]
+  EPhOff:     [[PHOFF=<none>]]
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+ProgramHeaders:
+  - Type:     PT_PHDR
+    FirstSec: .foo
+    LastSec:  .foo
+
+## Case B: the value of the e_phoff field is invalid.
+
+## Check that we do not report a warning when the program header table ends right before the end of the file.
+## 0x160 + size of headers (56) == file size.
+# RUN: yaml2obj --docnum=2 -DPHOFF=0x160 %s -o %t.phdr.no.err2
+# RUN: llvm-objdump %t.phdr.no.err2 --private-headers 2>&1 | FileCheck %s --implicit-check-not=warning:
+
+## Check we report a warning / error when e_phoff goes 1 byte past the end of the file.
+# RUN: yaml2obj --docnum=2 -DPHOFF=0x161 %s -o %t.phdr.err2
+# RUN: not llvm-objdump --private-headers %t.phdr.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=PHOFF -DOFF=0x161
+
+# PHOFF:      Program Header:
+# PHOFF-NEXT: warning: '[[FILE]]': unable to read program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+# PHOFF-NEXT: error: '[[FILE]]': program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+
+
+## Check we report a warning / error when the value of e_phoff is so large that
+## e_phoff + e_phnum * e_phentsize > UINT64_MAX.
+# RUN: yaml2obj --docnum=2 -DPHOFF=0xffffffffffffffff %s -o %t.phdr.err3
+# RUN: not llvm-objdump --private-headers %t.phdr.err3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err3 --check-prefix=PHOFF -DOFF=0xffffffffffffffff

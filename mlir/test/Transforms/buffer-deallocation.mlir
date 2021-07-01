@@ -1207,3 +1207,18 @@ func @noRegionBranchOpInterface() {
   }) : () -> (i32)
   "test.terminator"() : () -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func @dealloc_existing_clones
+// CHECK: (%[[ARG0:.*]]: memref<?x?xf64>, %[[ARG1:.*]]: memref<?x?xf64>)
+// CHECK: %[[RES0:.*]] = memref.clone %[[ARG0]]
+// CHECK: %[[RES1:.*]] = memref.clone %[[ARG1]]
+// CHECK-NOT: memref.dealloc %[[RES0]]
+// CHECK: memref.dealloc %[[RES1]]
+// CHECK: return %[[RES0]]
+func @dealloc_existing_clones(%arg0: memref<?x?xf64>, %arg1: memref<?x?xf64>) -> memref<?x?xf64> {
+  %0 = memref.clone %arg0 : memref<?x?xf64> to memref<?x?xf64>
+  %1 = memref.clone %arg1 : memref<?x?xf64> to memref<?x?xf64>
+  return %0 : memref<?x?xf64>
+}

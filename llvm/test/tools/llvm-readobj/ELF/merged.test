@@ -52,7 +52,7 @@ DynamicSymbols:
 ## llvm-readobj does not support merged args, because it also supports some old
 ## flags (-st, -sd, etc.), and it would be confusing if only some merged args
 ## were supported.
-# RUN: not llvm-readobj -aeWhSrnudlVgIs %t.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not llvm-readobj -aeWhSsrnudlVgIS %t.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 
 # CHECK-NOT: Unknown command line argument
 # UNKNOWN:   for the --section-headers option: may only occur zero or one times!

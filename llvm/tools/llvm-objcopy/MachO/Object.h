@@ -180,6 +180,9 @@ struct RelocationInfo {
   Optional<const Section *> Sec;
   // True if Info is a scattered_relocation_info.
   bool Scattered;
+  // True if the type is an ADDEND. r_symbolnum holds the addend instead of a
+  // symbol index.
+  bool IsAddend;
   // True if the r_symbolnum points to a section number (i.e. r_extern=0).
   bool Extern;
   MachO::any_relocation_info Info;

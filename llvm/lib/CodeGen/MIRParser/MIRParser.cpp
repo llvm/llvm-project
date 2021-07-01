@@ -143,6 +143,10 @@ public:
   bool initializeJumpTableInfo(PerFunctionMIParsingState &PFS,
                                const yaml::MachineJumpTable &YamlJTI);
 
+  bool parseMachineMetadataNodes(PerFunctionMIParsingState &PFS,
+                                 MachineFunction &MF,
+                                 const yaml::MachineFunction &YMF);
+
 private:
   bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
                    const yaml::StringValue &Source);
@@ -150,6 +154,9 @@ private:
   bool parseMBBReference(PerFunctionMIParsingState &PFS,
                          MachineBasicBlock *&MBB,
                          const yaml::StringValue &Source);
+
+  bool parseMachineMetadata(PerFunctionMIParsingState &PFS,
+                            const yaml::StringValue &Source);
 
   /// Return a MIR diagnostic converted from an MI string diagnostic.
   SMDiagnostic diagFromMIStringDiag(const SMDiagnostic &Error,
@@ -457,6 +464,9 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     if (initializeConstantPool(PFS, *ConstantPool, YamlMF))
       return true;
   }
+  if (!YamlMF.MachineMetadataNodes.empty() &&
+      parseMachineMetadataNodes(PFS, MF, YamlMF))
+    return true;
 
   StringRef BlockStr = YamlMF.Body.Value.Value;
   SMDiagnostic Error;
@@ -917,6 +927,29 @@ bool MIRParserImpl::parseMBBReference(PerFunctionMIParsingState &PFS,
   SMDiagnostic Error;
   if (llvm::parseMBBReference(PFS, MBB, Source.Value, Error))
     return error(Error, Source.SourceRange);
+  return false;
+}
+
+bool MIRParserImpl::parseMachineMetadata(PerFunctionMIParsingState &PFS,
+                                         const yaml::StringValue &Source) {
+  SMDiagnostic Error;
+  if (llvm::parseMachineMetadata(PFS, Source.Value, Source.SourceRange, Error))
+    return error(Error, Source.SourceRange);
+  return false;
+}
+
+bool MIRParserImpl::parseMachineMetadataNodes(
+    PerFunctionMIParsingState &PFS, MachineFunction &MF,
+    const yaml::MachineFunction &YMF) {
+  for (auto &MDS : YMF.MachineMetadataNodes) {
+    if (parseMachineMetadata(PFS, MDS))
+      return true;
+  }
+  // Report missing definitions from forward referenced nodes.
+  if (!PFS.MachineForwardRefMDNodes.empty())
+    return error(PFS.MachineForwardRefMDNodes.begin()->second.second,
+                 "use of undefined metadata '!" +
+                     Twine(PFS.MachineForwardRefMDNodes.begin()->first) + "'");
   return false;
 }
 

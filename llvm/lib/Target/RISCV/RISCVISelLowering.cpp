@@ -2432,11 +2432,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::UREM:
     return lowerToScalableOp(Op, DAG, RISCVISD::UREM_VL);
   case ISD::SHL:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SHL_VL);
   case ISD::SRA:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SRA_VL);
   case ISD::SRL:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SRL_VL);
+    if (Op.getSimpleValueType().isFixedLengthVector())
+      return lowerFixedLengthVectorShiftToRVV(Op, DAG);
+    // This can be called for an i32 shift amount that needs to be promoted.
+    assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    return SDValue();
   case ISD::FADD:
     return lowerToScalableOp(Op, DAG, RISCVISD::FADD_VL);
   case ISD::FSUB:
@@ -4288,6 +4291,20 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorLogicOpToRVV(
     return lowerToScalableOp(Op, DAG, MaskOpc, /*HasMask*/ false);
 
   return lowerToScalableOp(Op, DAG, VecOpc, /*HasMask*/ true);
+}
+
+SDValue
+RISCVTargetLowering::lowerFixedLengthVectorShiftToRVV(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  unsigned Opc;
+  switch (Op.getOpcode()) {
+  default: llvm_unreachable("Unexpected opcode!");
+  case ISD::SHL: Opc = RISCVISD::SHL_VL; break;
+  case ISD::SRA: Opc = RISCVISD::SRA_VL; break;
+  case ISD::SRL: Opc = RISCVISD::SRL_VL; break;
+  }
+
+  return lowerToScalableOp(Op, DAG, Opc);
 }
 
 // Lower vector ABS to smax(X, sub(0, X)).

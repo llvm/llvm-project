@@ -28,6 +28,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "mlir/Dialect/StandardOps/IR/OpsDialect.cpp.inc"
+
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/StandardOps/IR/OpsEnums.cpp.inc"
 

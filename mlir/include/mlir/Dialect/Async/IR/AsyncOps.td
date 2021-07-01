@@ -177,6 +177,8 @@ def Async_CreateGroupOp : Async_Op<"create_group", [NoSideEffect]> {
   let arguments = (ins Index:$size);
   let results = (outs Async_GroupType:$result);
 
+  let hasCanonicalizeMethod = 1;
+
   let assemblyFormat = "$size `:` type($result) attr-dict";
 }
 

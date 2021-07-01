@@ -6,7 +6,7 @@
 #
 # CHECK:       0x0000004d:       DW_TAG_formal_parameter
 # CHECK-NEXT:      DW_AT_location   (0x00000000
-# CHECK-NEXT:           [0x0000000000000000,  0x0000000000000008): )
+# CHECK-NEXT:           [0x0000000000000000,  0x0000000000000008): <empty>)
 # CHECK-NEXT:      DW_AT_name   ("self")
 
 import sys

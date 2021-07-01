@@ -107,7 +107,6 @@ set(files
   __functional_base
   __functional_base_03
   __functional/hash.h
-  __functional/search.h
   __functional/unary_function.h
   __functional/unwrap_ref.h
   __hash_table

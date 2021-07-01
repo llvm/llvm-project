@@ -62,6 +62,14 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToAffineLoopsPass();
 ///   b) whose buffer uses would be free of memory hazards.
 std::unique_ptr<Pass> createLinalgComprehensiveFuncBufferizePass();
 
+/// This pass implements a cross-dialect bufferization approach and performs an
+/// analysis to determine which op operands and results may be bufferized in the
+/// same buffers. The analysis is performed on topologically sorted CallOp and
+/// FuncOp within a module. It provides analyses and bufferization across
+/// function boundaries. Within a single function body, the bufferization used
+/// is that provided by `LinalgComprehensiveFuncBufferizePass`.
+std::unique_ptr<Pass> createLinalgComprehensiveModuleBufferizePass();
+
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgBufferizePass();

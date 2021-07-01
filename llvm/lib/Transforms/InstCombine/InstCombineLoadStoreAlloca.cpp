@@ -204,8 +204,10 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       IC.InsertNewInstBefore(NewI, *It);
 
       // Gracefully handle allocas in other address spaces.
-      if (AI.getType()->getPointerAddressSpace() != NewI->getType()->getPointerAddressSpace()) {
-        NewI = CastInst::CreatePointerBitCastOrAddrSpaceCast(NewI, AI.getType());
+      if (AI.getType()->getPointerAddressSpace() !=
+          NewI->getType()->getPointerAddressSpace()) {
+        NewI =
+            CastInst::CreatePointerBitCastOrAddrSpaceCast(NewI, AI.getType());
         IC.InsertNewInstBefore(NewI, *It);
       }
 

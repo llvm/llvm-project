@@ -26,6 +26,8 @@ using namespace mlir;
 
 #define DEBUG_TYPE "affine-analysis"
 
+#include "mlir/Dialect/Affine/IR/AffineOpsDialect.cpp.inc"
+
 /// A utility function to check if a value is defined at the top level of
 /// `region` or is an argument of `region`. A value of index type defined at the
 /// top level of a `AffineScope` region is always a valid symbol for all

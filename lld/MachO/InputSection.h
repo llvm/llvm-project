@@ -145,6 +145,7 @@ struct StringPiece {
   // Offset from the start of the containing input section.
   uint32_t inSecOff;
   uint32_t live : 1;
+  // Only set if deduplicating literals
   uint32_t hash : 31;
   // Offset from the start of the containing output section.
   uint64_t outSecOff = 0;
@@ -180,14 +181,20 @@ public:
   // Split at each null byte.
   void splitIntoPieces();
 
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  StringRef getStringRef(size_t i) const {
+    size_t begin = pieces[i].inSecOff;
+    size_t end =
+        (pieces.size() - 1 == i) ? data.size() : pieces[i + 1].inSecOff;
+    return toStringRef(data.slice(begin, end - begin));
+  }
+
   // Returns i'th piece as a CachedHashStringRef. This function is very hot when
   // string merging is enabled, so we want to inline.
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   llvm::CachedHashStringRef getCachedHashStringRef(size_t i) const {
-    size_t begin = pieces[i].inSecOff;
-    size_t end =
-        (pieces.size() - 1 == i) ? data.size() : pieces[i + 1].inSecOff;
-    return {toStringRef(data.slice(begin, end - begin)), pieces[i].hash};
+    assert(config->dedupLiterals);
+    return {getStringRef(i), pieces[i].hash};
   }
 
   static bool classof(const InputSection *isec) {

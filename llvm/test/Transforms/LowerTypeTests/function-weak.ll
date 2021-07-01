@@ -55,11 +55,11 @@ define i1 @foo(i8* %p) {
 
 ; CHECK: define internal void @__cfi_global_var_init() section ".text.startup" {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: store { void ()*, void ()*, i32 } { void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), i32 42 }, { void ()*, void ()*, i32 }* @s, align 8
-; CHECK-NEXT: store void ()* bitcast (i8* getelementptr (i8, i8* bitcast (void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null) to i8*), i64 42) to void ()*), void ()** @x4, align 8
-; CHECK-NEXT: store void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()** @x3, align 8
-; CHECK-NEXT: store void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()** @x2, align 8
 ; CHECK-NEXT: store void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()** @x, align 8
+; CHECK-NEXT: store void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()** @x2, align 8
+; CHECK-NEXT: store void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()** @x3, align 8
+; CHECK-NEXT: store void ()* bitcast (i8* getelementptr (i8, i8* bitcast (void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null) to i8*), i64 42) to void ()*), void ()** @x4, align 8
+; CHECK-NEXT: store { void ()*, void ()*, i32 } { void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), i32 42 }, { void ()*, void ()*, i32 }* @s, align 8
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
 

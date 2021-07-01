@@ -185,8 +185,10 @@ predictValueUseListOrder(const Value *V, unsigned ID, const OrderMap &OM) {
     // We may have lost some users.
     return {};
 
-  bool GetsReversed =
-      !isa<GlobalVariable>(V) && !isa<Function>(V) && !isa<BasicBlock>(V);
+  // When referencing a value before its declaration, a temporary value is
+  // created, which will later be RAUWed with the actual value. This reverses
+  // the use list. This happens for all values apart from basic blocks.
+  bool GetsReversed = !isa<BasicBlock>(V);
   if (auto *BA = dyn_cast<BlockAddress>(V))
     ID = OM.lookup(BA->getBasicBlock());
   llvm::sort(List, [&](const Entry &L, const Entry &R) {

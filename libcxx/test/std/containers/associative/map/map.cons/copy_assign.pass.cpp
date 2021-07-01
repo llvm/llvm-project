@@ -40,12 +40,12 @@ public:
     template <class U> bool operator==(const counting_allocatorT<U>& other) const noexcept { return foo == other.foo; }
     template <class U> bool operator!=(const counting_allocatorT<U>& other) const noexcept { return foo != other.foo; }
 
-    T * allocate(const size_t n) const {
+    T* allocate(size_t n) const {
         ca_allocs.push_back(foo);
         void * const pv = ::malloc(n * sizeof(T));
         return static_cast<T *>(pv);
     }
-    void deallocate(T * const p, size_t) const noexcept {
+    void deallocate(T* p, size_t) const noexcept {
         ca_deallocs.push_back(foo);
         free(p);
     }
@@ -63,12 +63,12 @@ public:
     template <class U> bool operator==(const counting_allocatorF<U>& other) const noexcept { return foo == other.foo; }
     template <class U> bool operator!=(const counting_allocatorF<U>& other) const noexcept { return foo != other.foo; }
 
-    T * allocate(const size_t n) const {
+    T* allocate(size_t n) const {
         ca_allocs.push_back(foo);
         void * const pv = ::malloc(n * sizeof(T));
         return static_cast<T *>(pv);
     }
-    void deallocate(T * const p, size_t) const noexcept {
+    void deallocate(T* p, size_t) const noexcept {
         ca_deallocs.push_back(foo);
         free(p);
     }

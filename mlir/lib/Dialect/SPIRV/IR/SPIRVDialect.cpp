@@ -33,6 +33,8 @@
 using namespace mlir;
 using namespace mlir::spirv;
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVOpsDialect.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // InlinerInterface
 //===----------------------------------------------------------------------===//

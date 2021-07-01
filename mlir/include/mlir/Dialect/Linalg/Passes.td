@@ -32,7 +32,7 @@ def LinalgComprehensiveFuncBufferize :
     This pass implements a cross-dialect bufferization approach and performs an
     analysis to determine which op operands and results may be bufferized in the
     same buffers. The analysis is performed on SSA use-def chains starting from
-    function operands that are annotated with the 'inplaceable' attribute
+    function operands that are annotated with the 'inplaceable' attribute.
   }];
   let options = [
     Option<"testAnalysisOnly", "test-analysis-only", "bool",
@@ -40,6 +40,25 @@ def LinalgComprehensiveFuncBufferize :
            "Only runs inplaceability analysis (for testing purposes only)">
   ];
   let constructor = "mlir::createLinalgComprehensiveFuncBufferizePass()";
+}
+
+def LinalgComprehensiveModuleBufferize :
+    Pass<"linalg-comprehensive-module-bufferize", "ModuleOp"> {
+  let summary = "Bufferize (tensor into memref) for a Module.";
+  let description = [{
+    This pass implements a cross-dialect bufferization approach and performs an
+    analysis to determine which op operands and results may be bufferized in the
+    same buffers. The analysis is performed on topologically sorted CallOp and
+    FuncOp within a module. It provides analyses and bufferization across
+    function boundaries. Within a single function body, the bufferization used
+    is that provided by `-linalg-comprehensive-func-bufferize`.
+  }];
+  let options = [
+    Option<"testAnalysisOnly", "test-analysis-only", "bool",
+            /*default=*/"false",
+           "Only runs inplaceability analysis (for testing purposes only)">
+  ];
+  let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }
 
 def LinalgFoldUnitExtentDims : FunctionPass<"linalg-fold-unit-extent-dims"> {

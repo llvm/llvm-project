@@ -1686,10 +1686,10 @@ define void @test_f128_v2f64(<2 x double>* %p, fp128* %q) {
 ; SOFT-NEXT:    sub sp, sp, #16
 ; SOFT-NEXT:    vld1.64 {d16, d17}, [r0]
 ; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bl test_f128_v2f64_helper
 ; SOFT-NEXT:    stm sp, {r0, r1, r2, r3}
 ; SOFT-NEXT:    bl __addtf3
@@ -2272,10 +2272,10 @@ define void @test_v2i64_v2f64(<2 x double>* %p, <2 x i64>* %q) {
 ; SOFT-NEXT:    push {r4, lr}
 ; SOFT-NEXT:    vld1.64 {d16, d17}, [r0]
 ; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bl test_v2i64_v2f64_helper
 ; SOFT-NEXT:    vmov d17, r3, r2
 ; SOFT-NEXT:    vmov d16, r1, r0
@@ -2528,10 +2528,10 @@ define void @test_v4f32_v2f64(<2 x double>* %p, <4 x float>* %q) {
 ; SOFT-NEXT:    push {r4, lr}
 ; SOFT-NEXT:    vld1.64 {d16, d17}, [r0]
 ; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bl test_v4f32_v2f64_helper
 ; SOFT-NEXT:    vmov d17, r3, r2
 ; SOFT-NEXT:    vmov d16, r1, r0
@@ -2800,10 +2800,10 @@ define void @test_v4i32_v2f64(<2 x double>* %p, <4 x i32>* %q) {
 ; SOFT-NEXT:    push {r4, lr}
 ; SOFT-NEXT:    vld1.64 {d16, d17}, [r0]
 ; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bl test_v4i32_v2f64_helper
 ; SOFT-NEXT:    vmov d17, r3, r2
 ; SOFT-NEXT:    vmov d16, r1, r0
@@ -3072,10 +3072,10 @@ define void @test_v8i16_v2f64(<2 x double>* %p, <8 x i16>* %q) {
 ; SOFT-NEXT:    push {r4, lr}
 ; SOFT-NEXT:    vld1.64 {d16, d17}, [r0]
 ; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bl test_v8i16_v2f64_helper
 ; SOFT-NEXT:    vmov d17, r3, r2
 ; SOFT-NEXT:    vmov d16, r1, r0
@@ -3344,10 +3344,10 @@ define void @test_v16i8_v2f64(<2 x double>* %p, <16 x i8>* %q) {
 ; SOFT-NEXT:    push {r4, lr}
 ; SOFT-NEXT:    vld1.64 {d16, d17}, [r0]
 ; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    vadd.f64 d19, d17, d17
 ; SOFT-NEXT:    vadd.f64 d18, d16, d16
+; SOFT-NEXT:    vadd.f64 d16, d17, d17
 ; SOFT-NEXT:    vmov r1, r0, d18
-; SOFT-NEXT:    vmov r3, r2, d19
+; SOFT-NEXT:    vmov r3, r2, d16
 ; SOFT-NEXT:    bl test_v16i8_v2f64_helper
 ; SOFT-NEXT:    vmov d17, r3, r2
 ; SOFT-NEXT:    vmov d16, r1, r0
