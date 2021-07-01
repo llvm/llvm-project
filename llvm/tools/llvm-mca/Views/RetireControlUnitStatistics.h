@@ -55,6 +55,7 @@ public:
   StringRef getNameAsString() const override {
     return "RetireControlUnitStatistics";
   }
+  bool isSerializable() const override { return false; }
 };
 
 } // namespace mca

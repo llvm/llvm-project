@@ -43,6 +43,7 @@ public:
   virtual ~View() = default;
   virtual StringRef getNameAsString() const = 0;
   virtual json::Value toJSON() const { return "not implemented"; }
+  virtual bool isSerializable() const { return true; }
   void anchor() override;
 };
 } // namespace mca

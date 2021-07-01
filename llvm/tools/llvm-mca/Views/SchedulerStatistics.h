@@ -89,6 +89,7 @@ public:
 
   void printView(llvm::raw_ostream &OS) const override;
   StringRef getNameAsString() const override { return "SchedulerStatistics"; }
+  bool isSerializable() const override { return false; }
 };
 } // namespace mca
 } // namespace llvm

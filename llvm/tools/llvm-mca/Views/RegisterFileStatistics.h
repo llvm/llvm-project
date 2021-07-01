@@ -76,6 +76,7 @@ public:
   StringRef getNameAsString() const override {
     return "RegisterFileStatistics";
   }
+  bool isSerializable() const override { return false; }
 };
 } // namespace mca
 } // namespace llvm

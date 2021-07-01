@@ -84,5 +84,16 @@ void DispatchStatistics::printDispatchStalls(raw_ostream &OS) const {
   OS << Buffer;
 }
 
+json::Value DispatchStatistics::toJSON() const {
+  json::Object JO({{"RAT", HWStalls[HWStallEvent::RegisterFileStall]},
+                   {"RCU", HWStalls[HWStallEvent::RetireControlUnitStall]},
+                   {"SCHEDQ", HWStalls[HWStallEvent::SchedulerQueueFull]},
+                   {"LQ", HWStalls[HWStallEvent::LoadQueueFull]},
+                   {"SQ", HWStalls[HWStallEvent::StoreQueueFull]},
+                   {"GROUP", HWStalls[HWStallEvent::DispatchGroupStall]},
+                   {"USH", HWStalls[HWStallEvent::CustomBehaviourStall]}});
+  return JO;
+}
+
 } // namespace mca
 } // namespace llvm
