@@ -161,43 +161,12 @@ define <8 x i32> @sext_zext(<8 x i16> %a) {
 }
 
 define <8 x float> @sitofp_4i32_8i16(<4 x i32> %a, <8 x i16> %b) {
-; SSE-LABEL: @sitofp_4i32_8i16(
-; SSE-NEXT:    [[B0:%.*]] = extractelement <8 x i16> [[B:%.*]], i32 0
-; SSE-NEXT:    [[B1:%.*]] = extractelement <8 x i16> [[B]], i32 1
-; SSE-NEXT:    [[B2:%.*]] = extractelement <8 x i16> [[B]], i32 2
-; SSE-NEXT:    [[B3:%.*]] = extractelement <8 x i16> [[B]], i32 3
-; SSE-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
-; SSE-NEXT:    [[AB4:%.*]] = sitofp i16 [[B0]] to float
-; SSE-NEXT:    [[AB5:%.*]] = sitofp i16 [[B1]] to float
-; SSE-NEXT:    [[AB6:%.*]] = sitofp i16 [[B2]] to float
-; SSE-NEXT:    [[AB7:%.*]] = sitofp i16 [[B3]] to float
-; SSE-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; SSE-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R31]], float [[AB4]], i32 4
-; SSE-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
-; SSE-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[AB6]], i32 6
-; SSE-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[AB7]], i32 7
-; SSE-NEXT:    ret <8 x float> [[R7]]
-;
-; SLM-LABEL: @sitofp_4i32_8i16(
-; SLM-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
-; SLM-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SLM-NEXT:    [[TMP3:%.*]] = sitofp <4 x i16> [[TMP2]] to <4 x float>
-; SLM-NEXT:    [[R72:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SLM-NEXT:    ret <8 x float> [[R72]]
-;
-; AVX-LABEL: @sitofp_4i32_8i16(
-; AVX-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX-NEXT:    [[TMP3:%.*]] = sitofp <4 x i16> [[TMP2]] to <4 x float>
-; AVX-NEXT:    [[R72:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    ret <8 x float> [[R72]]
-;
-; AVX512-LABEL: @sitofp_4i32_8i16(
-; AVX512-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
-; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX512-NEXT:    [[TMP3:%.*]] = sitofp <4 x i16> [[TMP2]] to <4 x float>
-; AVX512-NEXT:    [[R72:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX512-NEXT:    ret <8 x float> [[R72]]
+; CHECK-LABEL: @sitofp_4i32_8i16(
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <4 x i16> [[TMP2]] to <4 x float>
+; CHECK-NEXT:    [[R72:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x float> [[R72]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
   %a1 = extractelement <4 x i32> %a, i32 1
@@ -228,24 +197,81 @@ define <8 x float> @sitofp_4i32_8i16(<4 x i32> %a, <8 x i16> %b) {
 
 ; Inspired by PR38154
 define <8 x float> @sitofp_uitofp_4i32_8i16_16i8(<4 x i32> %a, <8 x i16> %b, <16 x i8> %c) {
-; CHECK-LABEL: @sitofp_uitofp_4i32_8i16_16i8(
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <8 x i16> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <8 x i16> [[B]], i32 1
-; CHECK-NEXT:    [[C0:%.*]] = extractelement <16 x i8> [[C:%.*]], i32 0
-; CHECK-NEXT:    [[C1:%.*]] = extractelement <16 x i8> [[C]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
-; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[A]] to <4 x float>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[AB4:%.*]] = sitofp i16 [[B0]] to float
-; CHECK-NEXT:    [[AB5:%.*]] = uitofp i16 [[B1]] to float
-; CHECK-NEXT:    [[AB6:%.*]] = sitofp i8 [[C0]] to float
-; CHECK-NEXT:    [[AB7:%.*]] = uitofp i8 [[C1]] to float
-; CHECK-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R31]], float [[AB4]], i32 4
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
-; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[AB6]], i32 6
-; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[AB7]], i32 7
-; CHECK-NEXT:    ret <8 x float> [[R7]]
+; SSE-LABEL: @sitofp_uitofp_4i32_8i16_16i8(
+; SSE-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
+; SSE-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[A]] to <4 x float>
+; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> undef, <2 x i32> <i32 0, i32 1>
+; SSE-NEXT:    [[TMP5:%.*]] = sitofp <2 x i16> [[TMP4]] to <2 x float>
+; SSE-NEXT:    [[TMP6:%.*]] = uitofp <2 x i16> [[TMP4]] to <2 x float>
+; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP6]], <2 x i32> <i32 0, i32 3>
+; SSE-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[C:%.*]], <16 x i8> undef, <2 x i32> <i32 0, i32 1>
+; SSE-NEXT:    [[TMP9:%.*]] = sitofp <2 x i8> [[TMP8]] to <2 x float>
+; SSE-NEXT:    [[TMP10:%.*]] = uitofp <2 x i8> [[TMP8]] to <2 x float>
+; SSE-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
+; SSE-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE-NEXT:    [[R53:%.*]] = shufflevector <8 x float> [[R31]], <8 x float> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 undef, i32 undef>
+; SSE-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE-NEXT:    [[R72:%.*]] = shufflevector <8 x float> [[R53]], <8 x float> [[TMP13]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; SSE-NEXT:    ret <8 x float> [[R72]]
+;
+; SLM-LABEL: @sitofp_uitofp_4i32_8i16_16i8(
+; SLM-NEXT:    [[B0:%.*]] = extractelement <8 x i16> [[B:%.*]], i32 0
+; SLM-NEXT:    [[B1:%.*]] = extractelement <8 x i16> [[B]], i32 1
+; SLM-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
+; SLM-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[A]] to <4 x float>
+; SLM-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; SLM-NEXT:    [[AB4:%.*]] = sitofp i16 [[B0]] to float
+; SLM-NEXT:    [[AB5:%.*]] = uitofp i16 [[B1]] to float
+; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i8> [[C:%.*]], <16 x i8> undef, <2 x i32> <i32 0, i32 1>
+; SLM-NEXT:    [[TMP5:%.*]] = sitofp <2 x i8> [[TMP4]] to <2 x float>
+; SLM-NEXT:    [[TMP6:%.*]] = uitofp <2 x i8> [[TMP4]] to <2 x float>
+; SLM-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP6]], <2 x i32> <i32 0, i32 3>
+; SLM-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; SLM-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R31]], float [[AB4]], i32 4
+; SLM-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
+; SLM-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SLM-NEXT:    [[R72:%.*]] = shufflevector <8 x float> [[R5]], <8 x float> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; SLM-NEXT:    ret <8 x float> [[R72]]
+;
+; AVX-LABEL: @sitofp_uitofp_4i32_8i16_16i8(
+; AVX-NEXT:    [[B0:%.*]] = extractelement <8 x i16> [[B:%.*]], i32 0
+; AVX-NEXT:    [[B1:%.*]] = extractelement <8 x i16> [[B]], i32 1
+; AVX-NEXT:    [[C0:%.*]] = extractelement <16 x i8> [[C:%.*]], i32 0
+; AVX-NEXT:    [[C1:%.*]] = extractelement <16 x i8> [[C]], i32 1
+; AVX-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
+; AVX-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[A]] to <4 x float>
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; AVX-NEXT:    [[AB4:%.*]] = sitofp i16 [[B0]] to float
+; AVX-NEXT:    [[AB5:%.*]] = uitofp i16 [[B1]] to float
+; AVX-NEXT:    [[AB6:%.*]] = sitofp i8 [[C0]] to float
+; AVX-NEXT:    [[AB7:%.*]] = uitofp i8 [[C1]] to float
+; AVX-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R31]], float [[AB4]], i32 4
+; AVX-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
+; AVX-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[AB6]], i32 6
+; AVX-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[AB7]], i32 7
+; AVX-NEXT:    ret <8 x float> [[R7]]
+;
+; AVX512-LABEL: @sitofp_uitofp_4i32_8i16_16i8(
+; AVX512-NEXT:    [[B0:%.*]] = extractelement <8 x i16> [[B:%.*]], i32 0
+; AVX512-NEXT:    [[B1:%.*]] = extractelement <8 x i16> [[B]], i32 1
+; AVX512-NEXT:    [[C0:%.*]] = extractelement <16 x i8> [[C:%.*]], i32 0
+; AVX512-NEXT:    [[C1:%.*]] = extractelement <16 x i8> [[C]], i32 1
+; AVX512-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[A:%.*]] to <4 x float>
+; AVX512-NEXT:    [[TMP2:%.*]] = uitofp <4 x i32> [[A]] to <4 x float>
+; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; AVX512-NEXT:    [[AB4:%.*]] = sitofp i16 [[B0]] to float
+; AVX512-NEXT:    [[AB5:%.*]] = uitofp i16 [[B1]] to float
+; AVX512-NEXT:    [[AB6:%.*]] = sitofp i8 [[C0]] to float
+; AVX512-NEXT:    [[AB7:%.*]] = uitofp i8 [[C1]] to float
+; AVX512-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX512-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R31]], float [[AB4]], i32 4
+; AVX512-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
+; AVX512-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[AB6]], i32 6
+; AVX512-NEXT:    [[R7:%.*]] = insertelement <8 x float> [[R6]], float [[AB7]], i32 7
+; AVX512-NEXT:    ret <8 x float> [[R7]]
 ;
   %a0 = extractelement <4 x i32> %a, i32 0
   %a1 = extractelement <4 x i32> %a, i32 1
