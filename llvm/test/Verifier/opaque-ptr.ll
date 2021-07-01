@@ -52,10 +52,12 @@ define void @intrinsic_calls(ptr %a) {
 ; CHECK-LABEL: @intrinsic_calls(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr [[A:%.*]], i32 4, <2 x i1> zeroinitializer, <2 x i32> zeroinitializer)
 ; CHECK-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> zeroinitializer, ptr [[A]], i32 4, <2 x i1> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> zeroinitializer, i32 4, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret void
 ;
   call <2 x i32> @llvm.masked.load.v2i32.p0(ptr %a, i32 4, <2 x i1> zeroinitializer, <2 x i32> zeroinitializer)
   call void @llvm.masked.store.v2i32.p0(<2 x i32> zeroinitializer, ptr %a, i32 4, <2 x i1> zeroinitializer)
+  call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> zeroinitializer, i32 4, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
   ret void
 }
 
@@ -66,3 +68,4 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
 declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)
+declare <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i64>)
