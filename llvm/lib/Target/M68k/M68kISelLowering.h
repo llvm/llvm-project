@@ -171,6 +171,9 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
 
+  CCAssignFn *getCCAssignFnForCall(CallingConv::ID CC, bool Return,
+                                   bool IsVarArg) const;
+
 private:
   unsigned GetAlignedArgumentStackSize(unsigned StackSize,
                                        SelectionDAG &DAG) const;
