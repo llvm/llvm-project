@@ -3935,7 +3935,7 @@ bb:
 
 define i1 @thread_cmp_over_select_with_poison_trueval(i1 %b) {
 ; CHECK-LABEL: @thread_cmp_over_select_with_poison_trueval(
-; CHECK-NEXT:    ret i1 poison
+; CHECK-NEXT:    ret i1 false
 ;
   %s = select i1 %b, i32 poison, i32 0
   %tobool = icmp ne i32 %s, 0
@@ -3944,7 +3944,7 @@ define i1 @thread_cmp_over_select_with_poison_trueval(i1 %b) {
 
 define i1 @thread_cmp_over_select_with_poison_falseval(i1 %b) {
 ; CHECK-LABEL: @thread_cmp_over_select_with_poison_falseval(
-; CHECK-NEXT:    ret i1 poison
+; CHECK-NEXT:    ret i1 true
 ;
   %s = select i1 %b, i32 1, i32 poison
   %tobool = icmp ne i32 %s, 0
