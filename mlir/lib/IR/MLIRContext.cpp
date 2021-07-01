@@ -261,8 +261,15 @@ public:
   // Other
   //===--------------------------------------------------------------------===//
 
-  /// The thread pool to use when processing MLIR tasks in parallel.
-  llvm::Optional<llvm::ThreadPool> threadPool;
+  /// This points to the ThreadPool used when processing MLIR tasks in parallel.
+  /// It can't be nullptr when multi-threading is enabled. Otherwise if
+  /// multi-threading is disabled, and the threadpool wasn't externally provided
+  /// using `setThreadPool`, this will be nullptr.
+  llvm::ThreadPool *threadPool = nullptr;
+
+  /// In case where the thread pool is owned by the context, this ensures
+  /// destruction with the context.
+  std::unique_ptr<llvm::ThreadPool> ownedThreadPool;
 
   /// This is a list of dialects that are created referring to this context.
   /// The MLIRContext owns the objects.
@@ -334,9 +341,13 @@ public:
   StringAttr emptyStringAttr;
 
 public:
-  MLIRContextImpl() : identifiers(identifierAllocator) {
-    if (threadingIsEnabled)
-      threadPool.emplace();
+  MLIRContextImpl(bool threadingIsEnabled)
+      : threadingIsEnabled(threadingIsEnabled),
+        identifiers(identifierAllocator) {
+    if (threadingIsEnabled) {
+      ownedThreadPool = std::make_unique<llvm::ThreadPool>();
+      threadPool = ownedThreadPool.get();
+    }
   }
   ~MLIRContextImpl() {
     for (auto typeMapping : registeredTypes)
@@ -347,10 +358,11 @@ public:
 };
 } // end namespace mlir
 
-MLIRContext::MLIRContext() : MLIRContext(DialectRegistry()) {}
+MLIRContext::MLIRContext(Threading setting)
+    : MLIRContext(DialectRegistry(), setting) {}
 
-MLIRContext::MLIRContext(const DialectRegistry &registry)
-    : impl(new MLIRContextImpl) {
+MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
+    : impl(new MLIRContextImpl(setting == Threading::ENABLED)) {
   // Initialize values based on the command line flags if they were provided.
   if (clOptions.isConstructed()) {
     disableMultithreading(clOptions->disableThreading);
@@ -579,15 +591,36 @@ void MLIRContext::disableMultithreading(bool disable) {
 
   // Destroy thread pool (stop all threads) if it is no longer needed, or create
   // a new one if multithreading was re-enabled.
-  if (!impl->threadingIsEnabled)
-    impl->threadPool.reset();
-  else if (!impl->threadPool.hasValue())
-    impl->threadPool.emplace();
+  if (disable) {
+    // If the thread pool is owned, explicitly set it to nullptr to avoid
+    // keeping a dangling pointer around. If the thread pool is externally
+    // owned, we don't do anything.
+    if (impl->ownedThreadPool) {
+      assert(impl->threadPool);
+      impl->threadPool = nullptr;
+      impl->ownedThreadPool.reset();
+    }
+  } else if (!impl->threadPool) {
+    // The thread pool isn't externally provided.
+    assert(!impl->ownedThreadPool);
+    impl->ownedThreadPool = std::make_unique<llvm::ThreadPool>();
+    impl->threadPool = impl->ownedThreadPool.get();
+  }
+}
+
+void MLIRContext::setThreadPool(llvm::ThreadPool &pool) {
+  assert(!isMultithreadingEnabled() &&
+         "expected multi-threading to be disabled when setting a ThreadPool");
+  impl->threadPool = &pool;
+  impl->ownedThreadPool.reset();
+  enableMultithreading();
 }
 
 llvm::ThreadPool &MLIRContext::getThreadPool() {
   assert(isMultithreadingEnabled() &&
          "expected multi-threading to be enabled within the context");
+  assert(impl->threadPool &&
+         "multi-threading is enabled but threadpool not set");
   return *impl->threadPool;
 }
 
