@@ -511,6 +511,13 @@ def _str_to_bool(s):
   else:
     raise ValueError("Got string '{}', which isn't a valid boolean".format(s))
 
+def _parse_parameter(s, type):
+  if type is bool and isinstance(s, str):
+    return _str_to_bool(s)
+  elif type is list and isinstance(s, str):
+    return [x.strip() for x in s.split(',') if x.strip()]
+  return type(s)
+
 
 class Parameter(object):
   """
@@ -554,7 +561,8 @@ class Parameter(object):
     - type
         A callable that can be used to parse the value of the parameter given
         on the command-line. As a special case, using the type `bool` also
-        allows parsing strings with boolean-like contents.
+        allows parsing strings with boolean-like contents, and the type `list`
+        will parse a string delimited by commas into a list of the substrings.
 
     - help
         A string explaining the parameter, for documentation purposes.
@@ -584,8 +592,7 @@ class Parameter(object):
     else:
       self._choices = None
 
-    self._parse = lambda x: (_str_to_bool(x) if type is bool and isinstance(x, str)
-                                             else type(x))
+    self._parse = lambda x: _parse_parameter(x, type)
     self._help = help
     self._actions = actions
     self._default = default
@@ -599,10 +606,16 @@ class Parameter(object):
     if param is None and self._default is None:
       raise ValueError("Parameter {} doesn't have a default value, but it was not specified in the Lit parameters or in the Lit config".format(self.name))
     getDefault = lambda: self._default(config) if callable(self._default) else self._default
-    value = self._parse(param) if param is not None else getDefault()
+
+    if param is not None:
+      (pretty, value) = (param, self._parse(param))
+    else:
+      value = getDefault()
+      pretty = '{} (default)'.format(value)
+
     if self._choices and value not in self._choices:
       raise ValueError("Got value '{}' for parameter '{}', which is not in the provided set of possible choices: {}".format(value, self.name, self._choices))
-    return value
+    return (pretty, value)
 
   @property
   def name(self):
@@ -618,10 +631,12 @@ class Parameter(object):
     """
     Return the list of actions associated to this value of the parameter.
     """
-    return self._actions(self._getValue(config, litParams))
+    (_, parameterValue) = self._getValue(config, litParams)
+    return self._actions(parameterValue)
 
   def pretty(self, config, litParams):
     """
     Return a pretty representation of the parameter's name and value.
     """
-    return "{}={}".format(self.name, self._getValue(config, litParams))
+    (prettyParameterValue, _) = self._getValue(config, litParams)
+    return "{}={}".format(self.name, prettyParameterValue)

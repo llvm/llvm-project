@@ -14,6 +14,10 @@
 namespace mlir {
 namespace sparse_tensor {
 
+//
+// Lattice methods.
+//
+
 unsigned Merger::addExp(Kind k, unsigned e0, unsigned e1, Value v) {
   unsigned e = tensorExps.size();
   tensorExps.push_back(TensorExp(k, e0, e1, v));
@@ -68,7 +72,7 @@ unsigned Merger::optimizeSet(unsigned s0) {
     if (p0 != p1) {
       // Is this a straightforward copy?
       unsigned e = latPoints[p1].exp;
-      if (exp(e).kind == Kind::kTensor && exp(e).e0 == outTensor)
+      if (tensorExps[e].kind == Kind::kTensor && tensorExps[e].e0 == outTensor)
         continue;
       // Conjunction already covered?
       for (unsigned p2 : latSets[s]) {
@@ -137,33 +141,6 @@ bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
   return false;
 }
 
-unsigned Merger::buildLattices(unsigned e, unsigned idx) {
-  Kind kind = exp(e).kind;
-  if (kind == Kind::kTensor || kind == Kind::kInvariant) {
-    // Either the index is really used in the tensor expression, or it is
-    // set to the undefined index in that dimension. An invariant expression
-    // is set to a synthetic tensor with undefined indices only.
-    unsigned s = addSet();
-    unsigned t = kind == Kind::kTensor ? exp(e).e0 : syntheticTensor;
-    set(s).push_back(addLat(t, idx, e));
-    return s;
-  }
-  unsigned s0 = buildLattices(exp(e).e0, idx);
-  unsigned s1 = buildLattices(exp(e).e1, idx);
-  switch (kind) {
-  case Kind::kTensor:
-  case Kind::kInvariant:
-    llvm_unreachable("handled above");
-  case Kind::kMulF:
-  case Kind::kMulI:
-    return takeConj(kind, s0, s1);
-  case Kind::kAddF:
-  case Kind::kAddI:
-    return takeDisj(kind, s0, s1);
-  }
-  llvm_unreachable("unexpected expression kind");
-}
-
 #ifndef NDEBUG
 
 //
@@ -173,6 +150,10 @@ unsigned Merger::buildLattices(unsigned e, unsigned idx) {
 void Merger::dumpExp(unsigned e) const {
   switch (tensorExps[e].kind) {
   case Kind::kTensor:
+    if (tensorExps[e].e0 == syntheticTensor)
+      llvm::dbgs() << "synthetic_";
+    else if (tensorExps[e].e0 == outTensor)
+      llvm::dbgs() << "output_";
     llvm::dbgs() << "tensor_" << tensorExps[e].e0;
     break;
   case Kind::kInvariant:
@@ -241,6 +222,83 @@ void Merger::dumpBits(const llvm::BitVector &bits) const {
 }
 
 #endif // NDEBUG
+
+//
+// Builder methods.
+//
+
+unsigned Merger::buildLattices(unsigned e, unsigned idx) {
+  Kind kind = tensorExps[e].kind;
+  if (kind == Kind::kTensor || kind == Kind::kInvariant) {
+    // Either the index is really used in the tensor expression, or it is
+    // set to the undefined index in that dimension. An invariant expression
+    // is set to a synthetic tensor with undefined indices only.
+    unsigned s = addSet();
+    unsigned t = kind == Kind::kTensor ? tensorExps[e].e0 : syntheticTensor;
+    latSets[s].push_back(addLat(t, idx, e));
+    return s;
+  }
+  unsigned s0 = buildLattices(tensorExps[e].e0, idx);
+  unsigned s1 = buildLattices(tensorExps[e].e1, idx);
+  switch (kind) {
+  case Kind::kTensor:
+  case Kind::kInvariant:
+    llvm_unreachable("handled above");
+  case Kind::kMulF:
+  case Kind::kMulI:
+    return takeConj(kind, s0, s1);
+  case Kind::kAddF:
+  case Kind::kAddI:
+    return takeDisj(kind, s0, s1);
+  }
+  llvm_unreachable("unexpected expression kind");
+}
+
+Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
+  Operation *yield = op.region().front().getTerminator();
+  return buildTensorExp(op, yield->getOperand(0));
+}
+
+Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
+  if (auto arg = val.dyn_cast<BlockArgument>()) {
+    unsigned argN = arg.getArgNumber();
+    // Any argument of the generic op that is not marked as a scalar
+    // argument is considered a tensor, indexed by the implicit loop
+    // bounds. This includes rank-0 tensor arguments.
+    if (arg.getOwner()->getParentOp() == op) {
+      OpOperand *t = op.getInputAndOutputOperands()[argN];
+      if (!op.isScalar(t))
+        return addExp(Kind::kTensor, argN);
+      val = t->get(); // get scalar value
+    }
+    // Any other argument (marked as scalar argument for the generic op
+    // or belonging to an enveloping op) is considered invariant.
+    return addExp(Kind::kInvariant, val);
+  }
+  // Something defined outside is invariant.
+  Operation *def = val.getDefiningOp();
+  if (def->getBlock() != &op.region().front())
+    return addExp(Kind::kInvariant, val);
+  // Construct binary operations if subexpressions could be built.
+  if (def->getNumOperands() == 2) {
+    auto x = buildTensorExp(op, def->getOperand(0));
+    auto y = buildTensorExp(op, def->getOperand(1));
+    if (x.hasValue() && y.hasValue()) {
+      unsigned e0 = x.getValue();
+      unsigned e1 = y.getValue();
+      if (isa<MulFOp>(def))
+        return addExp(Kind::kMulF, e0, e1);
+      if (isa<MulIOp>(def))
+        return addExp(Kind::kMulI, e0, e1);
+      if (isa<AddFOp>(def))
+        return addExp(Kind::kAddF, e0, e1);
+      if (isa<AddIOp>(def))
+        return addExp(Kind::kAddI, e0, e1);
+    }
+  }
+  // Cannot build.
+  return None;
+}
 
 } // namespace sparse_tensor
 } // namespace mlir

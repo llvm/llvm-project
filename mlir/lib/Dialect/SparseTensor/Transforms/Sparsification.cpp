@@ -208,51 +208,6 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   return true;
 }
 
-/// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
-/// This simplifies constructing (sub)expressions during iteration lattice
-/// building (compared to using the SSA representation everywhere).
-static Optional<unsigned> buildTensorExp(Merger &merger, linalg::GenericOp op,
-                                         Value val) {
-  if (auto arg = val.dyn_cast<BlockArgument>()) {
-    unsigned argN = arg.getArgNumber();
-    // Any argument of the generic op that is not marked as a scalar
-    // argument is considered a tensor, indexed by the implicit loop
-    // bounds. This includes rank-0 tensor arguments.
-    if (arg.getOwner()->getParentOp() == op) {
-      OpOperand *t = op.getInputAndOutputOperands()[argN];
-      if (!op.isScalar(t))
-        return merger.addExp(Kind::kTensor, argN);
-      val = t->get(); // get scalar value
-    }
-    // Any other argument (marked as scalar argument for the generic op
-    // or belonging to an enveloping op) is considered invariant.
-    return merger.addExp(Kind::kInvariant, val);
-  }
-  Operation *def = val.getDefiningOp();
-  if (def->getBlock() != &op.region().front()) {
-    // Something defined outside is invariant.
-    return merger.addExp(Kind::kInvariant, val);
-  } else if (def->getNumOperands() == 2) {
-    // Construct binary operations if subexpressions could be built.
-    auto x = buildTensorExp(merger, op, def->getOperand(0));
-    auto y = buildTensorExp(merger, op, def->getOperand(1));
-    if (x.hasValue() && y.hasValue()) {
-      unsigned e0 = x.getValue();
-      unsigned e1 = y.getValue();
-      if (isa<MulFOp>(def))
-        return merger.addExp(Kind::kMulF, e0, e1);
-      if (isa<MulIOp>(def))
-        return merger.addExp(Kind::kMulI, e0, e1);
-      if (isa<AddFOp>(def))
-        return merger.addExp(Kind::kAddF, e0, e1);
-      if (isa<AddIOp>(def))
-        return merger.addExp(Kind::kAddI, e0, e1);
-    }
-  }
-  // Cannot build (yet).
-  return None;
-}
-
 /// Returns true if given tensor co-iterates with conjunction only.
 /// For the output tensor, this defines a "simply dynamic" operation.
 /// For instance: A(I) = A(I) * B(I) * C(I)
@@ -1224,14 +1179,12 @@ public:
         !computeIterationGraph(merger, op, topSort, /*sparseOnly=*/true))
       return failure();
 
-    // Finds the terminating yield statement and builds the tensor
-    // expression for the Linalg operation in SSA form.
-    Operation *yield = op.region().front().getTerminator();
-    Optional<unsigned> exp = buildTensorExp(merger, op, yield->getOperand(0));
+    // Builds the tensor expression for the Linalg operation in SSA form.
+    Optional<unsigned> exp = merger.buildTensorExpFromLinalg(op);
     if (!exp.hasValue())
-      return failure(); // build failure
+      return failure();
 
-    // Reject an inadmissable tensor expression.
+    // Rejects an inadmissable tensor expression.
     if (!isAdmissableTensorExp(merger, op, exp.getValue()))
       return failure();
 

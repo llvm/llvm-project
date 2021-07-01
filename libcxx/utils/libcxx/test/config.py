@@ -232,11 +232,6 @@ class Configuration(object):
                 self.libcxx_obj_root = self.project_obj_root
 
     def configure_features(self):
-        additional_features = self.get_lit_conf('additional_features')
-        if additional_features:
-            for f in additional_features.split(','):
-                self.config.available_features.add(f.strip())
-
         if self.target_info.is_windows():
             if self.cxx_stdlib_under_test == 'libc++':
                 # LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
