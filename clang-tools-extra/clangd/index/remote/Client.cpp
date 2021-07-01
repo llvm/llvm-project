@@ -9,12 +9,12 @@
 #include <grpc++/grpc++.h>
 
 #include "Client.h"
+#include "Features.h"
 #include "Service.grpc.pb.h"
 #include "index/Index.h"
 #include "marshalling/Marshalling.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
-#include "clang/Basic/Version.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -72,7 +72,8 @@ class IndexClient : public clangd::SymbolIndex {
     const auto RPCRequest = ProtobufMarshaller->toProtobuf(Request);
     SPAN_ATTACH(Tracer, "Request", RPCRequest.DebugString());
     grpc::ClientContext Context;
-    Context.AddMetadata("version", clang::getClangToolFullVersion("clangd"));
+    Context.AddMetadata("version", versionString());
+    Context.AddMetadata("features", featureString());
     std::chrono::system_clock::time_point StartTime =
         std::chrono::system_clock::now();
     auto Deadline = StartTime + DeadlineWaitingTime;
