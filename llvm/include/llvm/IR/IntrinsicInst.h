@@ -403,20 +403,33 @@ public:
   // Whether \p ID is a VP intrinsic ID.
   static bool isVPIntrinsic(Intrinsic::ID);
 
-  /// \return the mask parameter or nullptr.
+  /// \return The mask parameter or nullptr.
   Value *getMaskParam() const;
   void setMaskParam(Value *);
 
-  /// \return the vector length parameter or nullptr.
+  /// \return The vector length parameter or nullptr.
   Value *getVectorLengthParam() const;
   void setVectorLengthParam(Value *);
 
-  /// \return whether the vector length param can be ignored.
+  /// \return Whether the vector length param can be ignored.
   bool canIgnoreVectorLengthParam() const;
 
-  /// \return the static element count (vector number of elements) the vector
+  /// \return The static element count (vector number of elements) the vector
   /// length parameter applies to.
   ElementCount getStaticVectorLength() const;
+
+  /// \return The alignment of the pointer used by this load/store/gather or
+  /// scatter.
+  MaybeAlign getPointerAlignment() const;
+  // MaybeAlign setPointerAlignment(Align NewAlign); // TODO
+
+  /// \return The pointer operand of this load,store, gather or scatter.
+  Value *getMemoryPointerParam() const;
+  static Optional<unsigned> getMemoryPointerParamPos(Intrinsic::ID);
+
+  /// \return The data (payload) operand of this store or scatter.
+  Value *getMemoryDataParam() const;
+  static Optional<unsigned> getMemoryDataParamPos(Intrinsic::ID);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {

@@ -1,4 +1,4 @@
-//===-- InstrinsicInst.cpp - Intrinsic Instruction Wrappers ---------------===//
+//===-- IntrinsicInst.cpp - Intrinsic Instruction Wrappers ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -340,6 +340,53 @@ VPIntrinsic::getVectorLengthParamPos(Intrinsic::ID IntrinsicID) {
   }
 }
 
+/// \return the alignment of the pointer used by this load/store/gather or
+/// scatter.
+MaybeAlign VPIntrinsic::getPointerAlignment() const {
+  Optional<unsigned> PtrParamOpt = getMemoryPointerParamPos(getIntrinsicID());
+  assert(PtrParamOpt.hasValue() && "no pointer argument!");
+  return getParamAlign(PtrParamOpt.getValue());
+}
+
+/// \return The pointer operand of this load,store, gather or scatter.
+Value *VPIntrinsic::getMemoryPointerParam() const {
+  if (auto PtrParamOpt = getMemoryPointerParamPos(getIntrinsicID()))
+    return getArgOperand(PtrParamOpt.getValue());
+  return nullptr;
+}
+
+Optional<unsigned> VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
+  switch (VPID) {
+  default:
+    return None;
+
+#define HANDLE_VP_IS_MEMOP(VPID, POINTERPOS, DATAPOS)                          \
+  case Intrinsic::VPID:                                                        \
+    return POINTERPOS;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+}
+
+/// \return The data (payload) operand of this store or scatter.
+Value *VPIntrinsic::getMemoryDataParam() const {
+  auto DataParamOpt = getMemoryDataParamPos(getIntrinsicID());
+  if (!DataParamOpt.hasValue())
+    return nullptr;
+  return getArgOperand(DataParamOpt.getValue());
+}
+
+Optional<unsigned> VPIntrinsic::getMemoryDataParamPos(Intrinsic::ID VPID) {
+  switch (VPID) {
+  default:
+    return None;
+
+#define HANDLE_VP_IS_MEMOP(VPID, POINTERPOS, DATAPOS)                          \
+  case Intrinsic::VPID:                                                        \
+    return DATAPOS;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+}
+
 bool VPIntrinsic::isVPIntrinsic(Intrinsic::ID ID) {
   switch (ID) {
   default:
@@ -424,10 +471,35 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
 Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
                                                ArrayRef<Value *> Params) {
   assert(isVPIntrinsic(VPID) && "not a VP intrinsic");
-
-  // TODO: Extend this for other VP intrinsics as they are upstreamed. This
-  // works for binary arithmetic VP intrinsics.
-  auto *VPFunc = Intrinsic::getDeclaration(M, VPID, Params[0]->getType());
+  Function *VPFunc;
+  switch (VPID) {
+  default:
+    VPFunc = Intrinsic::getDeclaration(M, VPID, Params[0]->getType());
+    break;
+  case Intrinsic::vp_load:
+    VPFunc = Intrinsic::getDeclaration(
+        M, VPID,
+        {Params[0]->getType()->getPointerElementType(), Params[0]->getType()});
+    break;
+  case Intrinsic::vp_gather:
+    VPFunc = Intrinsic::getDeclaration(
+        M, VPID,
+        {VectorType::get(cast<VectorType>(Params[0]->getType())
+                             ->getElementType()
+                             ->getPointerElementType(),
+                         cast<VectorType>(Params[0]->getType())),
+         Params[0]->getType()});
+    break;
+  case Intrinsic::vp_store:
+    VPFunc = Intrinsic::getDeclaration(
+        M, VPID,
+        {Params[1]->getType()->getPointerElementType(), Params[1]->getType()});
+    break;
+  case Intrinsic::vp_scatter:
+    VPFunc = Intrinsic::getDeclaration(
+        M, VPID, {Params[0]->getType(), Params[1]->getType()});
+    break;
+  }
   assert(VPFunc && "Could not declare VP intrinsic");
   return VPFunc;
 }
