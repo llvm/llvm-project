@@ -49,8 +49,8 @@ define void @store8(<8 x i8>* %ptr, <8 x i8> %val) {
 
 define <4 x i8> @load4(<4 x i8>* %ptr) {
 ; CHECK: 'Cost Model Analysis' for function 'load4':
-; CHECK-NEON: Cost Model: Found an estimated cost of 64 for instruction:
-; CHECK-SVE-128: Cost Model: Found an estimated cost of 64 for instruction:
+; CHECK-NEON: Cost Model: Found an estimated cost of 2 for instruction:
+; CHECK-SVE-128: Cost Model: Found an estimated cost of 2 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-512: Cost Model: Found an estimated cost of 1 for instruction:
   %out = load <4 x i8>, <4 x i8>* %ptr
@@ -59,8 +59,8 @@ define <4 x i8> @load4(<4 x i8>* %ptr) {
 
 define void @store4(<4 x i8>* %ptr, <4 x i8> %val) {
 ; CHECK: 'Cost Model Analysis' for function 'store4':
-; CHECK-NEON: Cost Model: Found an estimated cost of 1 for instruction:
-; CHECK-SVE-128: Cost Model: Found an estimated cost of 1 for instruction:
+; CHECK-NEON: Cost Model: Found an estimated cost of 2 for instruction:
+; CHECK-SVE-128: Cost Model: Found an estimated cost of 2 for instruction:
 ; CHECK-SVE-256: Cost Model: Found an estimated cost of 1 for instruction:
 ; CHECK-SVE-512: Cost Model: Found an estimated cost of 1 for instruction:
   store <4 x i8> %val, <4 x i8>* %ptr
