@@ -26,24 +26,39 @@ enum class Kind { kTensor, kInvariant, kMulF, kMulI, kAddF, kAddI };
 /// Dimension level type for a tensor (undef means index does not appear).
 enum class Dim { kSparse, kDense, kSingle, kUndef };
 
+/// Children expressions of a binary TensorExp.
+struct Children {
+  unsigned e0;
+  unsigned e1;
+};
+
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
 /// For tensors, e0 denotes the tensor index. For invariants, the IR value is
 /// stored directly. For binary operations, e0 and e1 denote the index of the
 /// children tensor expressions.
 struct TensorExp {
-  TensorExp(Kind k, unsigned x, unsigned y, Value v)
-      : kind(k), e0(x), e1(y), val(v) {
-    assert((kind == Kind::kTensor && e0 != -1u && e1 == -1u && !val) ||
-           (kind == Kind::kInvariant && e0 == -1u && e1 == -1u && val) ||
-           (kind >= Kind::kMulF && e0 != -1u && e1 != -1u && !val));
+  TensorExp(Kind k, unsigned x, unsigned y, Value v) : kind(k), val(v) {
+    assert((kind == Kind::kTensor && x != -1u && y == -1u && !val) ||
+           (kind == Kind::kInvariant && x == -1u && y == -1u && val) ||
+           (kind >= Kind::kMulF && x != -1u && y != -1u && !val));
+    if (kind == Kind::kTensor) {
+      tensor = x;
+    } else if (kind >= Kind::kMulF) {
+      children.e0 = x;
+      children.e1 = y;
+    }
   }
 
   /// Tensor expression kind.
   Kind kind;
 
-  /// Indices of children expression(s).
-  unsigned e0;
-  unsigned e1;
+  union {
+    /// Expressions representing tensors simply have a tensor number.
+    unsigned tensor;
+
+    /// Binary operations hold the indices of their child expressions.
+    Children children;
+  };
 
   /// Direct link to IR for an invariant. During code generation,
   /// field is used to cache "hoisted" loop invariant tensor loads.

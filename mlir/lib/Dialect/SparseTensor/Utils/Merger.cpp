@@ -72,7 +72,8 @@ unsigned Merger::optimizeSet(unsigned s0) {
     if (p0 != p1) {
       // Is this a straightforward copy?
       unsigned e = latPoints[p1].exp;
-      if (tensorExps[e].kind == Kind::kTensor && tensorExps[e].e0 == outTensor)
+      if (tensorExps[e].kind == Kind::kTensor &&
+          tensorExps[e].tensor == outTensor)
         continue;
       // Conjunction already covered?
       for (unsigned p2 : latSets[s]) {
@@ -150,11 +151,11 @@ bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
 void Merger::dumpExp(unsigned e) const {
   switch (tensorExps[e].kind) {
   case Kind::kTensor:
-    if (tensorExps[e].e0 == syntheticTensor)
+    if (tensorExps[e].tensor == syntheticTensor)
       llvm::dbgs() << "synthetic_";
-    else if (tensorExps[e].e0 == outTensor)
+    else if (tensorExps[e].tensor == outTensor)
       llvm::dbgs() << "output_";
-    llvm::dbgs() << "tensor_" << tensorExps[e].e0;
+    llvm::dbgs() << "tensor_" << tensorExps[e].tensor;
     break;
   case Kind::kInvariant:
     llvm::dbgs() << "invariant";
@@ -162,17 +163,17 @@ void Merger::dumpExp(unsigned e) const {
   default:
   case Kind::kMulI:
     llvm::dbgs() << "(";
-    dumpExp(tensorExps[e].e0);
+    dumpExp(tensorExps[e].children.e0);
     llvm::dbgs() << " * ";
-    dumpExp(tensorExps[e].e1);
+    dumpExp(tensorExps[e].children.e1);
     llvm::dbgs() << ")";
     break;
   case Kind::kAddF:
   case Kind::kAddI:
     llvm::dbgs() << "(";
-    dumpExp(tensorExps[e].e0);
+    dumpExp(tensorExps[e].children.e0);
     llvm::dbgs() << " + ";
-    dumpExp(tensorExps[e].e1);
+    dumpExp(tensorExps[e].children.e1);
     llvm::dbgs() << ")";
     break;
   }
@@ -234,12 +235,13 @@ unsigned Merger::buildLattices(unsigned e, unsigned idx) {
     // set to the undefined index in that dimension. An invariant expression
     // is set to a synthetic tensor with undefined indices only.
     unsigned s = addSet();
-    unsigned t = kind == Kind::kTensor ? tensorExps[e].e0 : syntheticTensor;
+    unsigned t =
+        kind == Kind::kTensor ? tensorExps[e].children.e0 : syntheticTensor;
     latSets[s].push_back(addLat(t, idx, e));
     return s;
   }
-  unsigned s0 = buildLattices(tensorExps[e].e0, idx);
-  unsigned s1 = buildLattices(tensorExps[e].e1, idx);
+  unsigned s0 = buildLattices(tensorExps[e].children.e0, idx);
+  unsigned s1 = buildLattices(tensorExps[e].children.e1, idx);
   switch (kind) {
   case Kind::kTensor:
   case Kind::kInvariant:

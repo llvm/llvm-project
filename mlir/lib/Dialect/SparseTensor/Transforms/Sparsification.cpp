@@ -214,11 +214,11 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
 static unsigned isConjunction(Merger &merger, unsigned tensor, unsigned exp) {
   switch (merger.exp(exp).kind) {
   case Kind::kTensor:
-    return merger.exp(exp).e0 == tensor;
+    return merger.exp(exp).tensor == tensor;
   case Kind::kMulF:
   case Kind::kMulI:
-    return isConjunction(merger, tensor, merger.exp(exp).e0) ||
-           isConjunction(merger, tensor, merger.exp(exp).e1);
+    return isConjunction(merger, tensor, merger.exp(exp).children.e0) ||
+           isConjunction(merger, tensor, merger.exp(exp).children.e1);
   default:
     return false;
   }
@@ -455,7 +455,7 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
   }
   // Actual load.
   SmallVector<Value, 4> args;
-  OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).e0];
+  OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
   unsigned tensor = t->getOperandNumber();
   auto map = op.getTiedIndexingMap(t);
   auto enc = getSparseTensorEncoding(t->get().getType());
@@ -628,8 +628,8 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
     return genTensorLoad(merger, codegen, rewriter, op, exp);
   else if (merger.exp(exp).kind == Kind::kInvariant)
     return genInvariantValue(merger, codegen, rewriter, exp);
-  Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).e0);
-  Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).e1);
+  Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0);
+  Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1);
   switch (merger.exp(exp).kind) {
   case Kind::kTensor:
   case Kind::kInvariant:
@@ -653,7 +653,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
   if (merger.exp(exp).kind == Kind::kTensor) {
     // Inspect tensor indices.
     bool atLevel = ldx == -1u;
-    OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).e0];
+    OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
     auto map = op.getTiedIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
@@ -675,8 +675,8 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.
-    unsigned e0 = merger.exp(exp).e0;
-    unsigned e1 = merger.exp(exp).e1;
+    unsigned e0 = merger.exp(exp).children.e0;
+    unsigned e1 = merger.exp(exp).children.e1;
     genInvariants(merger, codegen, rewriter, op, e0, ldx, hoist);
     genInvariants(merger, codegen, rewriter, op, e1, ldx, hoist);
   }
