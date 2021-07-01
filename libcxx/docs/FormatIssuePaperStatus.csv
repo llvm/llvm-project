@@ -22,3 +22,5 @@ Number,Name,Assignee,Patch,Status,First released version
 `LWG-3270 <https://wg21.link/LWG3270>`_,"Parsing and formatting %j with durations",,,,
 `LWG-3272 <https://wg21.link/LWG3272>`_,"%I%p should parse/format duration since midnight",,,,
 `LWG-3332 <https://wg21.link/LWG3332>`_,"Issue in [time.format]",,,,
+
+`P2216 <https://wg21.link/P2216>`_,"std::format improvements",,,,
