@@ -12,6 +12,7 @@
 #define lldb_NativeRegisterContextLinux_arm64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
+#include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
@@ -90,7 +91,7 @@ private:
       m_fpr; // floating-point registers including extended register sets.
 
   SVEState m_sve_state;
-  struct user_sve_header m_sve_header;
+  struct sve::user_sve_header m_sve_header;
   std::vector<uint8_t> m_sve_ptrace_payload;
 
   bool m_refresh_hwdebug_info;
