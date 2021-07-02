@@ -354,9 +354,9 @@ public:
     return Result;
   }
 
-  Expected<shared::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr,
-             ArrayRef<char> ArgBuffer) override {
+  void runWrapperAsync(SendResultFunction OnComplete,
+                       JITTargetAddress WrapperFnAddr,
+                       ArrayRef<char> ArgBuffer) override {
     DEBUG_WITH_TYPE("orc", {
       dbgs() << "Running as wrapper function "
              << formatv("{0:x16}", WrapperFnAddr) << " with "
@@ -366,7 +366,11 @@ public:
         WrapperFnAddr,
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(ArgBuffer.data()),
                           ArgBuffer.size()));
-    return Result;
+
+    if (!Result)
+      OnComplete(shared::WrapperFunctionResult::createOutOfBandError(
+          toString(Result.takeError())));
+    OnComplete(std::move(*Result));
   }
 
   Error closeConnection(OnCloseConnectionFunction OnCloseConnection) {

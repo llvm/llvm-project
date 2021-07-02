@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "gtest/gtest.h"
+
+#include <future>
 
 using namespace llvm;
 using namespace llvm::orc::shared;
@@ -65,13 +68,54 @@ static WrapperFunctionResult addWrapper(const char *ArgData, size_t ArgSize) {
       ArgData, ArgSize, [](int32_t X, int32_t Y) -> int32_t { return X + Y; });
 }
 
-TEST(WrapperFunctionUtilsTest, WrapperFunctionCallVoidNoopAndHandle) {
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandleVoid) {
   EXPECT_FALSE(!!WrapperFunction<void()>::call(voidNoopWrapper));
 }
 
-TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandle) {
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandleRet) {
   int32_t Result;
   EXPECT_FALSE(!!WrapperFunction<int32_t(int32_t, int32_t)>::call(
       addWrapper, Result, 1, 2));
+  EXPECT_EQ(Result, (int32_t)3);
+}
+
+static void voidNoopAsync(unique_function<void(SPSEmpty)> SendResult) {
+  SendResult(SPSEmpty());
+}
+
+static WrapperFunctionResult voidNoopAsyncWrapper(const char *ArgData,
+                                                  size_t ArgSize) {
+  std::promise<WrapperFunctionResult> RP;
+  auto RF = RP.get_future();
+
+  WrapperFunction<void()>::handleAsync(
+      ArgData, ArgSize, voidNoopAsync,
+      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); });
+
+  return RF.get();
+}
+
+static WrapperFunctionResult addAsyncWrapper(const char *ArgData,
+                                             size_t ArgSize) {
+  std::promise<WrapperFunctionResult> RP;
+  auto RF = RP.get_future();
+
+  WrapperFunction<int32_t(int32_t, int32_t)>::handleAsync(
+      ArgData, ArgSize,
+      [](unique_function<void(int32_t)> SendResult, int32_t X, int32_t Y) {
+        SendResult(X + Y);
+      },
+      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); });
+  return RF.get();
+}
+
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandleAsyncVoid) {
+  EXPECT_FALSE(!!WrapperFunction<void()>::call(voidNoopAsyncWrapper));
+}
+
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandleAsyncRet) {
+  int32_t Result;
+  EXPECT_FALSE(!!WrapperFunction<int32_t(int32_t, int32_t)>::call(
+      addAsyncWrapper, Result, 1, 2));
   EXPECT_EQ(Result, (int32_t)3);
 }
