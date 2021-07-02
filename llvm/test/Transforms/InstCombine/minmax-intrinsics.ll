@@ -817,3 +817,44 @@ define i8 @clamp_two_vals_smin_smax_edge(i8 %x) {
   %r = call i8 @llvm.smax.i8(i8 %m, i8 127)
   ret i8 %r
 }
+
+
+define i8 @umin_non_zero_idiom1(i8 %a) {
+; CHECK-LABEL: @umin_non_zero_idiom1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[A:%.*]], 0
+; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.umin.i8(i8 %a, i8 1)
+  ret i8 %res
+}
+
+define i8 @umin_non_zero_idiom2(i8 %a) {
+; CHECK-LABEL: @umin_non_zero_idiom2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[A:%.*]], 0
+; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %res = call i8 @llvm.umin.i8(i8 1, i8 %a)
+  ret i8 %res
+}
+
+define <3 x i8> @umin_non_zero_idiom3(<3 x i8> %a) {
+; CHECK-LABEL: @umin_non_zero_idiom3(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <3 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = zext <3 x i1> [[TMP1]] to <3 x i8>
+; CHECK-NEXT:    ret <3 x i8> [[RES]]
+;
+  %res = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %a, <3 x i8> <i8 1, i8 1, i8 1>)
+  ret <3 x i8> %res
+}
+
+define <3 x i8> @umin_non_zero_idiom4(<3 x i8> %a) {
+; CHECK-LABEL: @umin_non_zero_idiom4(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <3 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = zext <3 x i1> [[TMP1]] to <3 x i8>
+; CHECK-NEXT:    ret <3 x i8> [[RES]]
+;
+  %res = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %a, <3 x i8> <i8 1, i8 undef, i8 undef>)
+  ret <3 x i8> %res
+}
