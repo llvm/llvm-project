@@ -148,9 +148,9 @@ body:             |
   bb.1.for.cond.preheader:
     successors: %bb.2(0x80000000)
   
-    $esi = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0)
+    $esi = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
     DBG_VALUE $esi, $noreg, !13, !DIExpression(), debug-location !19
-    $edi = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.1)
+    $edi = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
     DBG_VALUE $edi, $noreg, !14, !DIExpression(), debug-location !20
     $edi = DEC32r killed $edi, implicit-def dead $eflags, debug-location !30
     $ebx = LEA32r %fixed-stack.1, 1, $noreg, 0, $noreg

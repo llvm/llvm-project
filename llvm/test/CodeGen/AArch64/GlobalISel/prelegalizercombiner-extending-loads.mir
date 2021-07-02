@@ -7,10 +7,10 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_anyext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: $w0 = COPY [[LOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ANYEXT %1
     $w0 = COPY %2
 ...
@@ -22,10 +22,10 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_anyext_with_copy
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: $w0 = COPY [[LOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s8) = COPY %1
     %3:_(s32) = G_ANYEXT %1
     $w0 = COPY %3
@@ -38,10 +38,10 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_signext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: $w0 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_SEXT %1
     $w0 = COPY %2
 ...
@@ -53,10 +53,10 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_zeroext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: $w0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ZEXT %1
     $w0 = COPY %2
 ...
@@ -68,11 +68,11 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_2anyext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: $w0 = COPY [[LOAD]](s32)
     ; CHECK: $w1 = COPY [[LOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ANYEXT %1
     %3:_(s32) = G_ANYEXT %1
     $w0 = COPY %2
@@ -86,11 +86,11 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_1anyext_1signext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: $w0 = COPY [[SEXTLOAD]](s32)
     ; CHECK: $w1 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ANYEXT %1
     %3:_(s32) = G_SEXT %1
     $w0 = COPY %2
@@ -104,7 +104,7 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_1xor_1signext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
     ; CHECK: [[XOR:%[0-9]+]]:_(s8) = G_XOR [[TRUNC]], [[C]]
@@ -112,7 +112,7 @@ body: |
     ; CHECK: $w0 = COPY [[ANYEXT]](s32)
     ; CHECK: $w1 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s8) = G_CONSTANT i8 -1
     %3:_(s8) = G_XOR %1, %2
     %5:_(s32) = G_ANYEXT %3
@@ -128,11 +128,11 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_1anyext_1zeroext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: $w0 = COPY [[ZEXTLOAD]](s32)
     ; CHECK: $w1 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ANYEXT %1
     %3:_(s32) = G_ZEXT %1
     $w0 = COPY %2
@@ -146,13 +146,13 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_1signext_1zeroext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s32)
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
     ; CHECK: $w0 = COPY [[ZEXT]](s32)
     ; CHECK: $w1 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ZEXT %1
     %3:_(s32) = G_SEXT %1
     $w0 = COPY %2
@@ -166,12 +166,12 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_1anyext64_1signext32
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SEXTLOAD]](s32)
     ; CHECK: $x0 = COPY [[ANYEXT]](s64)
     ; CHECK: $w1 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s64) = G_ANYEXT %1
     %3:_(s32) = G_SEXT %1
     $x0 = COPY %2
@@ -185,13 +185,13 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_1anyext32_1signext64
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
     ; CHECK: $w0 = COPY [[ANYEXT]](s32)
     ; CHECK: $x1 = COPY [[SEXTLOAD]](s64)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ANYEXT %1
     %3:_(s64) = G_SEXT %1
     $w0 = COPY %2
@@ -205,7 +205,7 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: test_2anyext32_1signext64
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
@@ -213,7 +213,7 @@ body: |
     ; CHECK: $x1 = COPY [[SEXTLOAD]](s64)
     ; CHECK: $w2 = COPY [[ANYEXT1]](s32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ANYEXT %1
     %3:_(s64) = G_SEXT %1
     %4:_(s32) = G_ANYEXT %1
@@ -229,14 +229,14 @@ body: |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   $w0 = COPY [[LOAD]](s32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     G_BR %bb.1
   bb.1:
     %2:_(s32) = G_ANYEXT %1
@@ -250,14 +250,14 @@ body: |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+  ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   $w0 = COPY [[SEXTLOAD]](s32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     G_BR %bb.1
   bb.1:
     %2:_(s32) = G_SEXT %1
@@ -271,14 +271,14 @@ body: |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 1)
+  ; CHECK:   [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   $w0 = COPY [[ZEXTLOAD]](s32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     G_BR %bb.1
   bb.1:
     %2:_(s32) = G_ZEXT %1
@@ -292,7 +292,7 @@ body: |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   $w0 = COPY [[LOAD]](s32)
@@ -300,7 +300,7 @@ body: |
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %2:_(s32) = G_ANYEXT %1
     G_BR %bb.1
   bb.1:
@@ -316,7 +316,7 @@ body: |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+  ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SEXTLOAD]](s32)
@@ -325,7 +325,7 @@ body: |
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     G_BR %bb.1
   bb.1:
     %2:_(s64) = G_ANYEXT %1
@@ -341,7 +341,7 @@ body: |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+  ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
@@ -351,7 +351,7 @@ body: |
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     G_BR %bb.1
   bb.1:
     %2:_(s32) = G_ANYEXT %1
@@ -367,7 +367,7 @@ body: |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load 1)
+  ; CHECK:   [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
   ; CHECK:   G_BR %bb.1
@@ -380,7 +380,7 @@ body: |
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8))
     %4:_(s32) = G_ANYEXT %1
     G_BR %bb.1
   bb.1:
@@ -403,12 +403,12 @@ body:             |
     ; CHECK-LABEL: name: test_atomic
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load unordered 2)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load unordered (s16))
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s16)
     ; CHECK: $w0 = COPY [[ZEXT]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
-    %1:_(s16) = G_LOAD %0(p0) :: (load unordered 2)
+    %1:_(s16) = G_LOAD %0(p0) :: (load unordered (s16))
     %2:_(s32) = G_ZEXT %1(s16)
     $w0 = COPY %2(s32)
     RET_ReallyLR implicit $w0

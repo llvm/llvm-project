@@ -20,7 +20,7 @@ body:             |
     ; CHECK: liveins: $d0, $x0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load 8, align 4)
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load (<2 x s32>), align 4)
     ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[LDRDui]], %subreg.dsub
     ; CHECK: [[FMULv2i32_indexed:%[0-9]+]]:fpr64 = FMULv2i32_indexed [[COPY]], [[INSERT_SUBREG]], 0
@@ -28,7 +28,7 @@ body:             |
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s32>) = COPY $d0
     %1:gpr(p0) = COPY $x0
-    %2:fpr(<2 x s32>) = G_LOAD %1(p0) :: (load 8, align 4)
+    %2:fpr(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>), align 4)
     %9:fpr(<2 x s32>) = G_IMPLICIT_DEF
     %10:fpr(<4 x s32>) = G_CONCAT_VECTORS %2(<2 x s32>), %9(<2 x s32>)
     %8:gpr(s64) = G_CONSTANT i64 0

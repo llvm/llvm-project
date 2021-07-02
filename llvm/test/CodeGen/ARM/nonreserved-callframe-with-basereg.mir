@@ -37,12 +37,12 @@ body:             |
     liveins: $r0
 
     ; CHECK: t2STRi12 killed $r0, $r6, [[OFFSET:[0-9]+]]
-    t2STRi12 killed $r0, %stack.0, 0, 14, $noreg :: (store 4 into %stack.0)
+    t2STRi12 killed $r0, %stack.0, 0, 14, $noreg :: (store (s32) into %stack.0)
 
     ADJCALLSTACKDOWN 2276, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
 
     ; CHECK: renamable $r0 = t2LDRi12 $r6, [[OFFSET]]
-    renamable $r0 = t2LDRi12 %stack.0, 0, 14, $noreg, :: (load 4 from %stack.0)
+    renamable $r0 = t2LDRi12 %stack.0, 0, 14, $noreg, :: (load (s32) from %stack.0)
     renamable $r1 = IMPLICIT_DEF
     renamable $r2 = IMPLICIT_DEF
     renamable $r3 = IMPLICIT_DEF

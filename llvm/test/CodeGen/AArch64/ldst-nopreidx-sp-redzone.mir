@@ -152,8 +152,8 @@ body:             |
   bb.0.bb:
     successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
     liveins: $x27, $x28, $lr
-    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store 8 into %stack.9), (store 8 into %stack.8)
-    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.7), (store 8 into %stack.6)
+    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store (s64) into %stack.9), (store (s64) into %stack.8)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.7), (store (s64) into %stack.6)
     $fp = frame-setup ADDXri $sp, 16, 0
     $sp = frame-setup SUBXri $sp, 80, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
@@ -163,21 +163,21 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $w28, -32
     $x8 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
     $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
-    $x8 = LDRXui killed $x8, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
-    STURXi killed renamable $x8, $fp, -24 :: (volatile store 8 into %stack.0.StackGuardSlot)
-    STRXui $xzr, $sp, 1 :: (store 8 into %ir.tmp3)
-    STRXui $xzr, $sp, 0 :: (store 8 into %ir.tmp4)
-    renamable $x8 = LDURXi $fp, -24 :: (volatile load 8 from %stack.0.StackGuardSlot)
+    $x8 = LDRXui killed $x8, 0 :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
+    STURXi killed renamable $x8, $fp, -24 :: (volatile store (s64) into %stack.0.StackGuardSlot)
+    STRXui $xzr, $sp, 1 :: (store (s64) into %ir.tmp3)
+    STRXui $xzr, $sp, 0 :: (store (s64) into %ir.tmp4)
+    renamable $x8 = LDURXi $fp, -24 :: (volatile load (s64) from %stack.0.StackGuardSlot)
     $x9 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
     $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
-    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
     $xzr = SUBSXrs killed renamable $x9, killed renamable $x8, 0, implicit-def $nzcv, implicit-def $nzcv
     Bcc 1, %bb.2, implicit $nzcv
   
   bb.1.bb:
     $sp = frame-destroy ADDXri $sp, 480, 0
-    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.7), (load 8 from %stack.6)
-    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load 8 from %stack.9), (load 8 from %stack.8)
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.7), (load (s64) from %stack.6)
+    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load (s64) from %stack.9), (load (s64) from %stack.8)
     RET undef $lr
   
   bb.2.bb:
@@ -263,8 +263,8 @@ body:             |
   bb.0.bb:
     successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
     liveins: $x27, $x28, $lr
-    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store 8 into %stack.9), (store 8 into %stack.8)
-    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.7), (store 8 into %stack.6)
+    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store (s64) into %stack.9), (store (s64) into %stack.8)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.7), (store (s64) into %stack.6)
     $fp = frame-setup ADDXri $sp, 16, 0
     $sp = frame-setup SUBXri $sp, 480, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
@@ -274,21 +274,21 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $w28, -32
     $x8 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
     $x8 = LDRXui killed $x8, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
-    $x8 = LDRXui killed $x8, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
-    STURXi killed renamable $x8, $fp, -24 :: (volatile store 8 into %stack.0.StackGuardSlot)
-    STRXui $xzr, $sp, 1 :: (store 8 into %ir.tmp3)
-    STRXui $xzr, $sp, 0 :: (store 8 into %ir.tmp4)
-    renamable $x8 = LDURXi $fp, -24 :: (volatile load 8 from %stack.0.StackGuardSlot)
+    $x8 = LDRXui killed $x8, 0 :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
+    STURXi killed renamable $x8, $fp, -24 :: (volatile store (s64) into %stack.0.StackGuardSlot)
+    STRXui $xzr, $sp, 1 :: (store (s64) into %ir.tmp3)
+    STRXui $xzr, $sp, 0 :: (store (s64) into %ir.tmp4)
+    renamable $x8 = LDURXi $fp, -24 :: (volatile load (s64) from %stack.0.StackGuardSlot)
     $x9 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
     $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
-    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
     $xzr = SUBSXrs killed renamable $x9, killed renamable $x8, 0, implicit-def $nzcv, implicit-def $nzcv
     Bcc 1, %bb.2, implicit $nzcv
   
   bb.1.bb:
     $sp = frame-destroy ADDXri $sp, 480, 0
-    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.7), (load 8 from %stack.6)
-    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load 8 from %stack.9), (load 8 from %stack.8)
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.7), (load (s64) from %stack.6)
+    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load (s64) from %stack.9), (load (s64) from %stack.8)
     RET undef $lr
   
   bb.2.bb:
@@ -376,8 +376,8 @@ body:             |
   bb.0.bb:
     successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
     liveins: $x27, $x28, $lr
-    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store 8 into %stack.9), (store 8 into %stack.8)
-    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.7), (store 8 into %stack.6)
+    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store (s64) into %stack.9), (store (s64) into %stack.8)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.7), (store (s64) into %stack.6)
     $fp = frame-setup ADDXri $sp, 16, 0
     $sp = frame-setup SUBXri $sp, 480, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
@@ -386,19 +386,19 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $w27, -24
     frame-setup CFI_INSTRUCTION offset $w28, -32
     $x8 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
-    STRXui $xzr, $sp, 1 :: (store 8 into %ir.tmp3)
-    STRXui $xzr, $sp, 0 :: (store 8 into %ir.tmp4)
-    renamable $x8 = LDURXi $fp, -24 :: (volatile load 8 from %stack.0.StackGuardSlot)
+    STRXui $xzr, $sp, 1 :: (store (s64) into %ir.tmp3)
+    STRXui $xzr, $sp, 0 :: (store (s64) into %ir.tmp4)
+    renamable $x8 = LDURXi $fp, -24 :: (volatile load (s64) from %stack.0.StackGuardSlot)
     $x9 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
     $x9 = LDRXui killed $x9, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
-    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    $x9 = LDRXui killed $x9, 0 :: (dereferenceable invariant load (s64) from @__stack_chk_guard)
     $xzr = SUBSXrs killed renamable $x9, killed renamable $x8, 0, implicit-def $nzcv, implicit-def $nzcv
     Bcc 1, %bb.2, implicit $nzcv
   
   bb.1.bb:
     $sp = frame-destroy ADDXri $sp, 480, 0
-    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.7), (load 8 from %stack.6)
-    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load 8 from %stack.9), (load 8 from %stack.8)
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.7), (load (s64) from %stack.6)
+    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4 :: (load (s64) from %stack.9), (load (s64) from %stack.8)
     RET undef $lr
   
   bb.2.bb:

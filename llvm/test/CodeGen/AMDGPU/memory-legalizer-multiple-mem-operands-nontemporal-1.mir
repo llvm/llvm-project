@@ -110,27 +110,27 @@ body:             |
     successors: %bb.1.if(0x30000000), %bb.2.else(0x50000000)
     liveins: $sgpr0_sgpr1, $sgpr3
 
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 44, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 44, 0 :: (non-temporal dereferenceable invariant load (s32) from `i32 addrspace(4)* undef`)
     $sgpr8 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
-    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 36, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`)
     $sgpr9 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $sgpr10 = S_MOV_B32 4294967295, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $sgpr11 = S_MOV_B32 15204352, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 4, 0, 0, 0, implicit $exec :: (store 4 into %ir.scratchptr01)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 4, 0, 0, 0, implicit $exec :: (store (s32) into %ir.scratchptr01)
     S_WAITCNT 127
     S_CMP_LG_U32 killed $sgpr2, 0, implicit-def $scc
     S_WAITCNT 3855
     $vgpr0 = V_MOV_B32_e32 2, implicit $exec
     $vgpr1 = V_MOV_B32_e32 32772, implicit $exec
-    BUFFER_STORE_DWORD_OFFEN killed $vgpr0, killed $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.scratchptr12)
+    BUFFER_STORE_DWORD_OFFEN killed $vgpr0, killed $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into %ir.scratchptr12)
     S_CBRANCH_SCC0 %bb.1.if, implicit killed $scc
 
   bb.2.else:
     successors: %bb.3.done(0x80000000)
     liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 52, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 52, 0 :: (non-temporal dereferenceable invariant load (s32) from `i32 addrspace(4)* undef`)
     S_WAITCNT 3855
     $vgpr0 = V_MOV_B32_e32 32772, implicit $exec
     S_BRANCH %bb.3.done
@@ -139,7 +139,7 @@ body:             |
     successors: %bb.3.done(0x80000000)
     liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 48, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 48, 0 :: (non-temporal dereferenceable invariant load (s32) from `i32 addrspace(4)* undef`)
     S_WAITCNT 3855
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
 
@@ -149,11 +149,11 @@ body:             |
     S_WAITCNT 127
     $sgpr0 = S_LSHL_B32 killed $sgpr0, 2, implicit-def dead $scc
     $vgpr0 = V_ADD_CO_U32_e32 killed $sgpr0, killed $vgpr0, implicit-def dead $vcc, implicit $exec
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, 0, implicit $exec :: (non-temporal load 4 from %ir.else_ptr), (non-temporal load 4 from %ir.if_ptr)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr3, 0, 0, 0, 0, implicit $exec :: (non-temporal load (s32) from %ir.else_ptr), (non-temporal load (s32) from %ir.if_ptr)
     $vgpr1 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr4_sgpr5
     $vgpr2 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit $sgpr4_sgpr5, implicit $exec
     S_WAITCNT 3952
-    FLAT_STORE_DWORD killed $vgpr1_vgpr2, killed $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.out)
+    FLAT_STORE_DWORD killed $vgpr1_vgpr2, killed $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out)
     S_ENDPGM 0
 
 ...

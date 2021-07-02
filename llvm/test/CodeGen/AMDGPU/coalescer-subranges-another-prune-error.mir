@@ -68,7 +68,7 @@ body:             |
     %23:vreg_128 = COPY killed %17
     %24:sreg_64 = COPY killed %16
     %25:vgpr_32 = V_OR_B32_e32 %22, %11, implicit $exec
-    %26:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %25, undef %27:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
+    %26:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %25, undef %27:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, align 1, addrspace 4)
     %28:vgpr_32 = V_LSHRREV_B32_e32 30, killed %26.sub0, implicit $exec
     %29:vreg_128 = COPY killed %21
     %29.sub0:vreg_128 = COPY %1
@@ -257,7 +257,7 @@ body:             |
     %109.sub5:sgpr_256 = COPY %108
     %109.sub6:sgpr_256 = COPY %108
     %109.sub7:sgpr_256 = COPY killed %108
-    %110:vgpr_32 = IMAGE_SAMPLE_V1_V2 killed %107, killed %109, undef %111:sgpr_128, 8, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, addrspace 4)
+    %110:vgpr_32 = IMAGE_SAMPLE_V1_V2 killed %107, killed %109, undef %111:sgpr_128, 8, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, addrspace 4)
     %112:vgpr_32 = nofpexcept V_MUL_F32_e32 0, killed %110, implicit $mode, implicit $exec
     %113:vgpr_32 = nofpexcept V_MUL_F32_e32 0, killed %112, implicit $mode, implicit $exec
     %114:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %113, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec

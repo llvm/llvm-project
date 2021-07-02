@@ -15,7 +15,7 @@ body:             |
     ; CHECK: %base:gpr64sp = COPY $x0
     ; CHECK: %foo:gpr32 = COPY $w1
     ; CHECK: %dst:gpr32 = COPY $w2
-    ; CHECK: STRWroW %dst, %base, %foo, 1, 1 :: (store 4)
+    ; CHECK: STRWroW %dst, %base, %foo, 1, 1 :: (store (s32))
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -23,7 +23,7 @@ body:             |
     %offset:gpr(s64) = G_SHL %ext, %c
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(s64)
     %dst:gpr(s32) = COPY $w2
-    G_STORE %dst, %ptr :: (store 4)
+    G_STORE %dst, %ptr :: (store (s32))
 ...
 ---
 name:            strxrow
@@ -40,7 +40,7 @@ body:             |
     ; CHECK: %base:gpr64sp = COPY $x0
     ; CHECK: %foo:gpr32 = COPY $w1
     ; CHECK: %dst:gpr64 = COPY $x2
-    ; CHECK: STRXroW %dst, %base, %foo, 1, 1 :: (store 8)
+    ; CHECK: STRXroW %dst, %base, %foo, 1, 1 :: (store (s64))
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -48,7 +48,7 @@ body:             |
     %offset:gpr(s64) = G_SHL %ext, %c
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(s64)
     %dst:gpr(s64) = COPY $x2
-    G_STORE %dst, %ptr :: (store 8)
+    G_STORE %dst, %ptr :: (store (s64))
 ...
 ---
 name:            strxrow_p0
@@ -66,7 +66,7 @@ body:             |
     ; CHECK: %foo:gpr32 = COPY $w1
     ; CHECK: %dst:gpr64all = COPY $x2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %dst
-    ; CHECK: STRXroW [[COPY]], %base, %foo, 1, 1 :: (store 8)
+    ; CHECK: STRXroW [[COPY]], %base, %foo, 1, 1 :: (store (p0))
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -74,5 +74,5 @@ body:             |
     %offset:gpr(s64) = G_SHL %ext, %c
     %ptr:gpr(p0) = G_PTR_ADD %base, %offset(s64)
     %dst:gpr(p0) = COPY $x2
-    G_STORE %dst, %ptr :: (store 8)
+    G_STORE %dst, %ptr :: (store (p0))
 ...

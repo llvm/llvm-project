@@ -129,12 +129,12 @@ body:             |
   bb.2.bb7:
     successors: %bb.3(0x04000000), %bb.2(0x7c000000)
 
-    %14:gr32bit = LMux %26, 0, $noreg :: (load 4 from %ir.lsr.iv12)
+    %14:gr32bit = LMux %26, 0, $noreg :: (load (s32) from %ir.lsr.iv12)
     CR %14, undef %15:gr32bit, implicit-def $cc
     %16:grx32bit = COPY %28.subreg_l32
     %16:grx32bit = LOCHIMux %16, 0, 14, 12, implicit $cc
     %17:grx32bit = SELRMux %27, %28.subreg_l32, 14, 2, implicit killed $cc
-    %18:gr32bit = LMux undef %19:addr64bit, 0, $noreg :: (load 4 from `i32* undef`)
+    %18:gr32bit = LMux undef %19:addr64bit, 0, $noreg :: (load (s32) from `i32* undef`)
     %20:grx32bit = COPY %28.subreg_l32
     %20:grx32bit = OILMux %20, 3, implicit-def dead $cc
     CR undef %21:gr32bit, %18, implicit-def $cc
@@ -157,7 +157,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0
     CallBRASL @fun, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
-    STRL %4, @globvar :: (store 4 into @globvar)
+    STRL %4, @globvar :: (store (s32) into @globvar)
     CLFIMux undef %23:grx32bit, 1, implicit-def $cc
     %25:grx32bit = LHIMux 0
     %25:grx32bit = LOCHIMux %25, 1, 14, 2, implicit killed $cc

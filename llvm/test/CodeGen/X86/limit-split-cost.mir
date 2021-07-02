@@ -93,7 +93,7 @@ body:             |
   
     %0:gr32 = COPY $edi
     %5:gr64 = LEA64r $rip, 1, $noreg, @.str.2, $noreg
-    %6:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @m, $noreg :: (load 8 from got)
+    %6:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @m, $noreg :: (load (s64) from got)
     %4:gr64 = LEA64r $rip, 1, $noreg, @.str.1, $noreg
     %3:gr64 = LEA64r $rip, 1, $noreg, @.str, $noreg
   
@@ -140,7 +140,7 @@ body:             |
   bb.7.do.cond:
     successors: %bb.8(0x04000000), %bb.1(0x7c000000)
   
-    CMP32mi8 %6, 1, $noreg, 0, $noreg, 5, implicit-def $eflags :: (dereferenceable load 4 from @m, !tbaa !4)
+    CMP32mi8 %6, 1, $noreg, 0, $noreg, 5, implicit-def $eflags :: (dereferenceable load (s32) from @m, !tbaa !4)
     JCC_1 %bb.1, 5, implicit killed $eflags
     JMP_1 %bb.8
   

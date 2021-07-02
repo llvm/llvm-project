@@ -38,9 +38,9 @@ body:             |
 
     %1:tgpr = COPY $r1
     %0:tgpr = COPY $r0
-    %2:tgpr = tLDRpci %const.0, 14, $noreg :: (load 4 from constant-pool)
+    %2:tgpr = tLDRpci %const.0, 14, $noreg :: (load (s32) from constant-pool)
     %3:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
-    %4:tgpr = tLDRpci %const.1, 14, $noreg :: (load 4 from constant-pool)
+    %4:tgpr = tLDRpci %const.1, 14, $noreg :: (load (s32) from constant-pool)
     %5:tgpr, $cpsr = tADDrr %0, %2, 14, $noreg
     %6:tgpr, $cpsr = tADC %1, killed %4, 14, $noreg, implicit $cpsr
     tBcc %bb.2, 3, $cpsr
@@ -81,9 +81,9 @@ body:             |
 
     %1:tgpr = COPY $r1
     %0:tgpr = COPY $r0
-    %2:tgpr = tLDRpci %const.0, 14, $noreg :: (load 4 from constant-pool)
+    %2:tgpr = tLDRpci %const.0, 14, $noreg :: (load (s32) from constant-pool)
     %3:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
-    %4:tgpr = tLDRpci %const.1, 14, $noreg :: (load 4 from constant-pool)
+    %4:tgpr = tLDRpci %const.1, 14, $noreg :: (load (s32) from constant-pool)
     %5:tgpr, dead $cpsr = tADDrr %0, %2, 14, $noreg
     %6:tgpr, $cpsr = tADDrr %1, killed %4, 14, $noreg
     tBcc %bb.2, 3, $cpsr

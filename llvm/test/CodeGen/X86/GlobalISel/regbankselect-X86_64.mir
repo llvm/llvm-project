@@ -966,16 +966,16 @@ body:             |
 
     ; FAST-LABEL: name: test_load_i8
     ; FAST: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; FAST: [[LOAD:%[0-9]+]]:gpr(s8) = G_LOAD [[COPY]](p0) :: (load 1 from %ir.p1)
+    ; FAST: [[LOAD:%[0-9]+]]:gpr(s8) = G_LOAD [[COPY]](p0) :: (load (s8) from %ir.p1)
     ; FAST: $al = COPY [[LOAD]](s8)
     ; FAST: RET 0, implicit $al
     ; GREEDY-LABEL: name: test_load_i8
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s8) = G_LOAD [[COPY]](p0) :: (load 1 from %ir.p1)
+    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s8) = G_LOAD [[COPY]](p0) :: (load (s8) from %ir.p1)
     ; GREEDY: $al = COPY [[LOAD]](s8)
     ; GREEDY: RET 0, implicit $al
     %0(p0) = COPY $rdi
-    %1(s8) = G_LOAD %0(p0) :: (load 1 from %ir.p1)
+    %1(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.p1)
     $al = COPY %1(s8)
     RET 0, implicit $al
 
@@ -995,16 +995,16 @@ body:             |
 
     ; FAST-LABEL: name: test_load_i16
     ; FAST: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; FAST: [[LOAD:%[0-9]+]]:gpr(s16) = G_LOAD [[COPY]](p0) :: (load 2 from %ir.p1)
+    ; FAST: [[LOAD:%[0-9]+]]:gpr(s16) = G_LOAD [[COPY]](p0) :: (load (s16) from %ir.p1)
     ; FAST: $ax = COPY [[LOAD]](s16)
     ; FAST: RET 0, implicit $ax
     ; GREEDY-LABEL: name: test_load_i16
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s16) = G_LOAD [[COPY]](p0) :: (load 2 from %ir.p1)
+    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s16) = G_LOAD [[COPY]](p0) :: (load (s16) from %ir.p1)
     ; GREEDY: $ax = COPY [[LOAD]](s16)
     ; GREEDY: RET 0, implicit $ax
     %0(p0) = COPY $rdi
-    %1(s16) = G_LOAD %0(p0) :: (load 2 from %ir.p1)
+    %1(s16) = G_LOAD %0(p0) :: (load (s16) from %ir.p1)
     $ax = COPY %1(s16)
     RET 0, implicit $ax
 
@@ -1024,16 +1024,16 @@ body:             |
 
     ; FAST-LABEL: name: test_load_i32
     ; FAST: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; FAST: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.p1)
+    ; FAST: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p1)
     ; FAST: $eax = COPY [[LOAD]](s32)
     ; FAST: RET 0, implicit $eax
     ; GREEDY-LABEL: name: test_load_i32
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.p1)
+    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p1)
     ; GREEDY: $eax = COPY [[LOAD]](s32)
     ; GREEDY: RET 0, implicit $eax
     %0(p0) = COPY $rdi
-    %1(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %1(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p1)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -1054,16 +1054,16 @@ body:             |
 
     ; FAST-LABEL: name: test_load_i64
     ; FAST: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; FAST: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.p1)
+    ; FAST: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.p1)
     ; FAST: $rax = COPY [[LOAD]](s64)
     ; FAST: RET 0, implicit $rax
     ; GREEDY-LABEL: name: test_load_i64
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.p1)
+    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.p1)
     ; GREEDY: $rax = COPY [[LOAD]](s64)
     ; GREEDY: RET 0, implicit $rax
     %0(p0) = COPY $rdi
-    %1(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %1(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.p1)
     $rax = COPY %1(s64)
     RET 0, implicit $rax
 
@@ -1083,20 +1083,20 @@ body:             |
 
     ; FAST-LABEL: name: test_load_float
     ; FAST: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; FAST: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.p1)
+    ; FAST: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p1)
     ; FAST: [[COPY1:%[0-9]+]]:vecr(s32) = COPY [[LOAD]](s32)
     ; FAST: [[ANYEXT:%[0-9]+]]:vecr(s128) = G_ANYEXT [[COPY1]](s32)
     ; FAST: $xmm0 = COPY [[ANYEXT]](s128)
     ; FAST: RET 0, implicit $xmm0
     ; GREEDY-LABEL: name: test_load_float
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.p1)
+    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p1)
     ; GREEDY: [[COPY1:%[0-9]+]]:vecr(s32) = COPY [[LOAD]](s32)
     ; GREEDY: [[ANYEXT:%[0-9]+]]:vecr(s128) = G_ANYEXT [[COPY1]](s32)
     ; GREEDY: $xmm0 = COPY [[ANYEXT]](s128)
     ; GREEDY: RET 0, implicit $xmm0
     %0:_(p0) = COPY $rdi
-    %1:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
+    %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p1)
     %2:_(s128) = G_ANYEXT %1(s32)
     $xmm0 = COPY %2(s128)
     RET 0, implicit $xmm0
@@ -1117,20 +1117,20 @@ body:             |
 
     ; FAST-LABEL: name: test_load_double
     ; FAST: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; FAST: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.p1)
+    ; FAST: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.p1)
     ; FAST: [[COPY1:%[0-9]+]]:vecr(s64) = COPY [[LOAD]](s64)
     ; FAST: [[ANYEXT:%[0-9]+]]:vecr(s128) = G_ANYEXT [[COPY1]](s64)
     ; FAST: $xmm0 = COPY [[ANYEXT]](s128)
     ; FAST: RET 0, implicit $xmm0
     ; GREEDY-LABEL: name: test_load_double
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.p1)
+    ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.p1)
     ; GREEDY: [[COPY1:%[0-9]+]]:vecr(s64) = COPY [[LOAD]](s64)
     ; GREEDY: [[ANYEXT:%[0-9]+]]:vecr(s128) = G_ANYEXT [[COPY1]](s64)
     ; GREEDY: $xmm0 = COPY [[ANYEXT]](s128)
     ; GREEDY: RET 0, implicit $xmm0
     %0:_(p0) = COPY $rdi
-    %1:_(s64) = G_LOAD %0(p0) :: (load 8 from %ir.p1)
+    %1:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.p1)
     %2:_(s128) = G_ANYEXT %1(s64)
     $xmm0 = COPY %2(s128)
     RET 0, implicit $xmm0
@@ -1151,16 +1151,16 @@ body:             |
 
     ; FAST-LABEL: name: test_load_v4i32
     ; FAST: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; FAST: [[LOAD:%[0-9]+]]:vecr(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.p1, align 1)
+    ; FAST: [[LOAD:%[0-9]+]]:vecr(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<4 x s32>) from %ir.p1, align 1)
     ; FAST: $xmm0 = COPY [[LOAD]](<4 x s32>)
     ; FAST: RET 0, implicit $xmm0
     ; GREEDY-LABEL: name: test_load_v4i32
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: [[LOAD:%[0-9]+]]:vecr(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.p1, align 1)
+    ; GREEDY: [[LOAD:%[0-9]+]]:vecr(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<4 x s32>) from %ir.p1, align 1)
     ; GREEDY: $xmm0 = COPY [[LOAD]](<4 x s32>)
     ; GREEDY: RET 0, implicit $xmm0
     %0(p0) = COPY $rdi
-    %1(<4 x s32>) = G_LOAD %0(p0) :: (load 16 from %ir.p1, align 1)
+    %1(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>) from %ir.p1, align 1)
     $xmm0 = COPY %1(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -1181,18 +1181,18 @@ body:             |
     ; FAST-LABEL: name: test_store_i32
     ; FAST: [[COPY:%[0-9]+]]:gpr(s32) = COPY $edi
     ; FAST: [[COPY1:%[0-9]+]]:gpr(p0) = COPY $rsi
-    ; FAST: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store 4 into %ir.p1)
+    ; FAST: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32) into %ir.p1)
     ; FAST: $rax = COPY [[COPY1]](p0)
     ; FAST: RET 0, implicit $rax
     ; GREEDY-LABEL: name: test_store_i32
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(s32) = COPY $edi
     ; GREEDY: [[COPY1:%[0-9]+]]:gpr(p0) = COPY $rsi
-    ; GREEDY: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store 4 into %ir.p1)
+    ; GREEDY: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32) into %ir.p1)
     ; GREEDY: $rax = COPY [[COPY1]](p0)
     ; GREEDY: RET 0, implicit $rax
     %0(s32) = COPY $edi
     %1(p0) = COPY $rsi
-    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into %ir.p1)
     $rax = COPY %1(p0)
     RET 0, implicit $rax
 
@@ -1213,18 +1213,18 @@ body:             |
     ; FAST-LABEL: name: test_store_i64
     ; FAST: [[COPY:%[0-9]+]]:gpr(s64) = COPY $rdi
     ; FAST: [[COPY1:%[0-9]+]]:gpr(p0) = COPY $rsi
-    ; FAST: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store 8 into %ir.p1)
+    ; FAST: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64) into %ir.p1)
     ; FAST: $rax = COPY [[COPY1]](p0)
     ; FAST: RET 0, implicit $rax
     ; GREEDY-LABEL: name: test_store_i64
     ; GREEDY: [[COPY:%[0-9]+]]:gpr(s64) = COPY $rdi
     ; GREEDY: [[COPY1:%[0-9]+]]:gpr(p0) = COPY $rsi
-    ; GREEDY: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store 8 into %ir.p1)
+    ; GREEDY: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64) into %ir.p1)
     ; GREEDY: $rax = COPY [[COPY1]](p0)
     ; GREEDY: RET 0, implicit $rax
     %0(s64) = COPY $rdi
     %1(p0) = COPY $rsi
-    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+    G_STORE %0(s64), %1(p0) :: (store (s64) into %ir.p1)
     $rax = COPY %1(p0)
     RET 0, implicit $rax
 
@@ -1250,20 +1250,20 @@ body:             |
     ; FAST: [[TRUNC:%[0-9]+]]:vecr(s32) = G_TRUNC [[COPY]](s128)
     ; FAST: [[COPY1:%[0-9]+]]:gpr(p0) = COPY $rdi
     ; FAST: [[COPY2:%[0-9]+]]:gpr(s32) = COPY [[TRUNC]](s32)
-    ; FAST: G_STORE [[COPY2]](s32), [[COPY1]](p0) :: (store 4 into %ir.p1)
+    ; FAST: G_STORE [[COPY2]](s32), [[COPY1]](p0) :: (store (s32) into %ir.p1)
     ; FAST: $rax = COPY [[COPY1]](p0)
     ; FAST: RET 0, implicit $rax
     ; GREEDY-LABEL: name: test_store_float
     ; GREEDY: [[COPY:%[0-9]+]]:vecr(s128) = COPY $xmm0
     ; GREEDY: [[TRUNC:%[0-9]+]]:vecr(s32) = G_TRUNC [[COPY]](s128)
     ; GREEDY: [[COPY1:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: G_STORE [[TRUNC]](s32), [[COPY1]](p0) :: (store 4 into %ir.p1)
+    ; GREEDY: G_STORE [[TRUNC]](s32), [[COPY1]](p0) :: (store (s32) into %ir.p1)
     ; GREEDY: $rax = COPY [[COPY1]](p0)
     ; GREEDY: RET 0, implicit $rax
     %2:_(s128) = COPY $xmm0
     %0:_(s32) = G_TRUNC %2(s128)
     %1:_(p0) = COPY $rdi
-    G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into %ir.p1)
     $rax = COPY %1(p0)
     RET 0, implicit $rax
 
@@ -1289,20 +1289,20 @@ body:             |
     ; FAST: [[TRUNC:%[0-9]+]]:vecr(s64) = G_TRUNC [[COPY]](s128)
     ; FAST: [[COPY1:%[0-9]+]]:gpr(p0) = COPY $rdi
     ; FAST: [[COPY2:%[0-9]+]]:gpr(s64) = COPY [[TRUNC]](s64)
-    ; FAST: G_STORE [[COPY2]](s64), [[COPY1]](p0) :: (store 8 into %ir.p1)
+    ; FAST: G_STORE [[COPY2]](s64), [[COPY1]](p0) :: (store (s64) into %ir.p1)
     ; FAST: $rax = COPY [[COPY1]](p0)
     ; FAST: RET 0, implicit $rax
     ; GREEDY-LABEL: name: test_store_double
     ; GREEDY: [[COPY:%[0-9]+]]:vecr(s128) = COPY $xmm0
     ; GREEDY: [[TRUNC:%[0-9]+]]:vecr(s64) = G_TRUNC [[COPY]](s128)
     ; GREEDY: [[COPY1:%[0-9]+]]:gpr(p0) = COPY $rdi
-    ; GREEDY: G_STORE [[TRUNC]](s64), [[COPY1]](p0) :: (store 8 into %ir.p1)
+    ; GREEDY: G_STORE [[TRUNC]](s64), [[COPY1]](p0) :: (store (s64) into %ir.p1)
     ; GREEDY: $rax = COPY [[COPY1]](p0)
     ; GREEDY: RET 0, implicit $rax
     %2:_(s128) = COPY $xmm0
     %0:_(s64) = G_TRUNC %2(s128)
     %1:_(p0) = COPY $rdi
-    G_STORE %0(s64), %1(p0) :: (store 8 into %ir.p1)
+    G_STORE %0(s64), %1(p0) :: (store (s64) into %ir.p1)
     $rax = COPY %1(p0)
     RET 0, implicit $rax
 

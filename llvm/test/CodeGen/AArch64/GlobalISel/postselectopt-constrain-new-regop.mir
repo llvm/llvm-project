@@ -39,12 +39,12 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 60, 59
-  ; CHECK:   [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[UBFMXri]], 0, 0 :: (load 4)
+  ; CHECK:   [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[UBFMXri]], 0, 0 :: (load (s32))
   ; CHECK:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[DEF]]
   ; CHECK:   [[FMULSrr:%[0-9]+]]:fpr32 = FMULSrr [[COPY6]], [[LDRSroX]]
   ; CHECK:   [[COPY7:%[0-9]+]]:fpr32 = COPY [[DEF]]
   ; CHECK:   [[FADDSrr:%[0-9]+]]:fpr32 = FADDSrr [[FMULSrr]], [[COPY7]]
-  ; CHECK:   STRSui [[FADDSrr]], [[COPY2]], 0 :: (store 4)
+  ; CHECK:   STRSui [[FADDSrr]], [[COPY2]], 0 :: (store (s32))
   ; CHECK: bb.2:
   ; CHECK:   RET_ReallyLR
   bb.1:
@@ -70,12 +70,12 @@ body:             |
 
   bb.2:
     %12:gpr64 = UBFMXri %8, 60, 59
-    %15:fpr32 = LDRSroX %0, %12, 0, 0 :: (load 4)
+    %15:fpr32 = LDRSroX %0, %12, 0, 0 :: (load (s32))
     %31:fpr32 = COPY %3
     %16:fpr32 = FMULSrr %31, %15
     %32:fpr32 = COPY %3
     %17:fpr32 = FADDSrr %16, %32
-    STRSui %17, %2, 0 :: (store 4)
+    STRSui %17, %2, 0 :: (store (s32))
 
   bb.3:
     RET_ReallyLR

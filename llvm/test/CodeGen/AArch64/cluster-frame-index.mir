@@ -12,9 +12,9 @@ body:             |
     %0:gpr32 = COPY $w0
     %1:gpr32 = COPY $w1
     undef %3.sub_32:gpr64 = ORRWrs $wzr, %0, 0
-    STRXui %3, %stack.0, 0 :: (store 8)
+    STRXui %3, %stack.0, 0 :: (store (s64))
     undef %5.sub_32:gpr64 = ORRWrs $wzr, %1, 0
-    STRXui %5, %stack.0, 1 :: (store 8)
+    STRXui %5, %stack.0, 1 :: (store (s64))
     RET_ReallyLR
 
     ; CHECK: COPY
@@ -38,9 +38,9 @@ body:             |
     %0:gpr32 = COPY $w0
     %1:gpr32 = COPY $w1
     undef %3.sub_32:gpr64 = ORRWrs $wzr, %0, 0
-    STRXui %3, %fixed-stack.0, 0 :: (store 8)
+    STRXui %3, %fixed-stack.0, 0 :: (store (s64))
     undef %5.sub_32:gpr64 = ORRWrs $wzr, %1, 0
-    STRXui %5, %fixed-stack.0, 1 :: (store 8)
+    STRXui %5, %fixed-stack.0, 1 :: (store (s64))
     RET_ReallyLR
 
     ; CHECK: COPY

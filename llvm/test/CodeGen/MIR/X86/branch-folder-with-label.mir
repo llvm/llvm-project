@@ -232,7 +232,7 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 16
     CFI_INSTRUCTION offset $rbx, -16
     renamable $rbx = COPY $rdi
-    renamable $edi = MOV32rm $rdi, 1, $noreg, 0, $noreg :: (load 4 from %ir.out)
+    renamable $edi = MOV32rm $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.out)
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !9
     TEST32rr renamable $eax, renamable $eax, implicit-def $eflags
     JCC_1 %bb.2, 9, implicit killed $eflags
@@ -248,7 +248,7 @@ body:             |
     successors: %bb.3(0x80000000)
     liveins: $rbx
   
-    MOV32mi killed renamable $rbx, 1, $noreg, 0, $noreg, 1 :: (store 4 into %ir.out)
+    MOV32mi killed renamable $rbx, 1, $noreg, 0, $noreg, 1 :: (store (s32) into %ir.out)
     renamable $eax = MOV32r0 implicit-def dead $eflags
   
   bb.3.cleanup:
@@ -367,7 +367,7 @@ body:             |
     successors: %bb.8(0x30000000), %bb.7(0x50000000)
     liveins: $rbx, $r14
   
-    CMP32mi8 $rsp, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (dereferenceable load 4 from %ir.idx)
+    CMP32mi8 $rsp, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (dereferenceable load (s32) from %ir.idx)
     JCC_1 %bb.8, 8, implicit killed $eflags
     JMP_1 %bb.7
   
@@ -375,7 +375,7 @@ body:             |
     successors: %bb.8(0x30000000), %bb.3(0x50000000)
     liveins: $rbx, $r14
   
-    CMP32mi8 renamable $rbx, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load 4 from %ir.1)
+    CMP32mi8 renamable $rbx, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.1)
     JCC_1 %bb.3, 5, implicit killed $eflags
     JMP_1 %bb.8
   

@@ -61,7 +61,7 @@ body:             |
     successors: %bb.1(0x00000001), %bb.2(0x7fffffff)
     liveins: $r2d
   
-    renamable $r2l = LMux killed renamable $r2d, 0, $noreg :: (load 4 from %ir.ptr)
+    renamable $r2l = LMux killed renamable $r2d, 0, $noreg :: (load (s32) from %ir.ptr)
     DBG_VALUE $noreg, $r2l, !7, !DIExpression(), debug-location !9
     CHIMux renamable $r2l, 0, implicit-def $cc
     DBG_VALUE $noreg, $r2l, !7, !DIExpression(), debug-location !9

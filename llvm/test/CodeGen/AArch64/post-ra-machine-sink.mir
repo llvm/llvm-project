@@ -252,7 +252,7 @@ body: |
     liveins: $w0, $w1
     $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
     renamable $w19 = COPY $w0
-    $w0 = LDRWui $sp, 0 :: (load 4)
+    $w0 = LDRWui $sp, 0 :: (load (s32))
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
 
@@ -279,7 +279,7 @@ body: |
     liveins: $w0, $w1
     $w1 = SUBSWri $w1, 1, 0, implicit-def $nzcv
     renamable $w19 = COPY $w0
-    STRWui $w1, $x19, 0 :: (store 4)
+    STRWui $w1, $x19, 0 :: (store (s32))
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
 

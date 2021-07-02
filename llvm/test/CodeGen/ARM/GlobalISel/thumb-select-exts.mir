@@ -320,7 +320,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRHi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: t2STRHi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -330,7 +330,7 @@ body:             |
 
     %3(s16) = G_ZEXT %2(s1)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -356,7 +356,7 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRHi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: t2STRHi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -366,7 +366,7 @@ body:             |
 
     %3(s16) = G_SEXT %2(s1)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -390,7 +390,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: t2STRHi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: t2STRHi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -400,7 +400,7 @@ body:             |
 
     %3(s16) = G_ANYEXT %2(s1)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -425,7 +425,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: [[t2UXTB:%[0-9]+]]:rgpr = t2UXTB [[COPY2]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: t2STRHi12 [[t2UXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: t2STRHi12 [[t2UXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -435,7 +435,7 @@ body:             |
 
     %3(s16) = G_ZEXT %2(s8)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -460,7 +460,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: [[t2SXTB:%[0-9]+]]:rgpr = t2SXTB [[COPY2]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: t2STRHi12 [[t2SXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: t2STRHi12 [[t2SXTB]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -470,7 +470,7 @@ body:             |
 
     %3(s16) = G_SEXT %2(s8)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -494,7 +494,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: t2STRHi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: t2STRHi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -504,7 +504,7 @@ body:             |
 
     %3(s16) = G_ANYEXT %2(s8)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -529,7 +529,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRBi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 1)
+    ; CHECK: t2STRBi12 [[t2ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -539,7 +539,7 @@ body:             |
 
     %3(s8) = G_ZEXT %2(s1)
 
-    G_STORE %3(s8), %0(p0) :: (store 1)
+    G_STORE %3(s8), %0(p0) :: (store (s8))
 
     BX_RET 14, $noreg
 ...
@@ -565,7 +565,7 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
     ; CHECK: [[t2ANDri:%[0-9]+]]:rgpr = t2ANDri [[COPY2]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: [[t2RSBri:%[0-9]+]]:rgpr = t2RSBri [[t2ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRBi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 1)
+    ; CHECK: t2STRBi12 [[t2RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -575,7 +575,7 @@ body:             |
 
     %3(s8) = G_SEXT %2(s1)
 
-    G_STORE %3(s8), %0(p0) :: (store 1)
+    G_STORE %3(s8), %0(p0) :: (store (s8))
 
     BX_RET 14, $noreg
 ...
@@ -599,7 +599,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:rgpr = COPY [[COPY1]]
-    ; CHECK: t2STRBi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 1)
+    ; CHECK: t2STRBi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -609,7 +609,7 @@ body:             |
 
     %3(s8) = G_ANYEXT %2(s1)
 
-    G_STORE %3(s8), %0(p0) :: (store 1)
+    G_STORE %3(s8), %0(p0) :: (store (s8))
 
     BX_RET 14, $noreg
 ...

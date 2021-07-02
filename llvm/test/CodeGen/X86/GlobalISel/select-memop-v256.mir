@@ -43,17 +43,17 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
 # NO_AVX512F:           %0:gr64 = COPY $rdi
-# NO_AVX512F-NEXT:      %1:vr256 = VMOVUPSYrm %0, 1, $noreg, 0, $noreg :: (load 32 from %ir.p1, align 1)
+# NO_AVX512F-NEXT:      %1:vr256 = VMOVUPSYrm %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1, align 1)
 # NO_AVX512F-NEXT:      $ymm0 = COPY %1
 # NO_AVX512F-NEXT:      RET 0, implicit $ymm0
 #
 # AVX512F:              %0:gr64 = COPY $rdi
-# AVX512F-NEXT:         %1:vr256x = VMOVUPSZ256rm_NOVLX %0, 1, $noreg, 0, $noreg :: (load 32 from %ir.p1, align 1)
+# AVX512F-NEXT:         %1:vr256x = VMOVUPSZ256rm_NOVLX %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1, align 1)
 # AVX512F-NEXT:         $ymm0 = COPY %1
 # AVX512F-NEXT:         RET 0, implicit $ymm0
 #
 # AVX512VL:             %0:gr64 = COPY $rdi
-# AVX512VL-NEXT:        %1:vr256x = VMOVUPSZ256rm %0, 1, $noreg, 0, $noreg :: (load 32 from %ir.p1, align 1)
+# AVX512VL-NEXT:        %1:vr256x = VMOVUPSZ256rm %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1, align 1)
 # AVX512VL-NEXT:        $ymm0 = COPY %1
 # AVX512VL-NEXT:        RET 0, implicit $ymm0
 body:             |
@@ -61,7 +61,7 @@ body:             |
     liveins: $rdi
 
     %0(p0) = COPY $rdi
-    %1(<8 x s32>) = G_LOAD %0(p0) :: (load 32 from %ir.p1, align 1)
+    %1(<8 x s32>) = G_LOAD %0(p0) :: (load (<8 x s32>) from %ir.p1, align 1)
     $ymm0 = COPY %1(<8 x s32>)
     RET 0, implicit $ymm0
 
@@ -76,17 +76,17 @@ registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
 # NO_AVX512F:           %0:gr64 = COPY $rdi
-# NO_AVX512F-NEXT:      %1:vr256 = VMOVAPSYrm %0, 1, $noreg, 0, $noreg :: (load 32 from %ir.p1)
+# NO_AVX512F-NEXT:      %1:vr256 = VMOVAPSYrm %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1)
 # NO_AVX512F-NEXT:      $ymm0 = COPY %1
 # NO_AVX512F-NEXT:      RET 0, implicit $ymm0
 #
 # AVX512F:              %0:gr64 = COPY $rdi
-# AVX512F-NEXT:         %1:vr256x = VMOVAPSZ256rm_NOVLX %0, 1, $noreg, 0, $noreg :: (load 32 from %ir.p1)
+# AVX512F-NEXT:         %1:vr256x = VMOVAPSZ256rm_NOVLX %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1)
 # AVX512F-NEXT:         $ymm0 = COPY %1
 # AVX512F-NEXT:         RET 0, implicit $ymm0
 #
 # AVX512VL:             %0:gr64 = COPY $rdi
-# AVX512VL-NEXT:        %1:vr256x = VMOVAPSZ256rm %0, 1, $noreg, 0, $noreg :: (load 32 from %ir.p1)
+# AVX512VL-NEXT:        %1:vr256x = VMOVAPSZ256rm %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1)
 # AVX512VL-NEXT:        $ymm0 = COPY %1
 # AVX512VL-NEXT:        RET 0, implicit $ymm0
 body:             |
@@ -94,7 +94,7 @@ body:             |
     liveins: $rdi
 
     %0(p0) = COPY $rdi
-    %1(<8 x s32>) = G_LOAD %0(p0) :: (load 32 from %ir.p1)
+    %1(<8 x s32>) = G_LOAD %0(p0) :: (load (<8 x s32>) from %ir.p1)
     $ymm0 = COPY %1(<8 x s32>)
     RET 0, implicit $ymm0
 
@@ -117,17 +117,17 @@ registers:
   - { id: 1, class: gpr }
 # NO_AVX512F:           %0:vr256 = COPY $ymm0
 # NO_AVX512F-NEXT:      %1:gr64 = COPY $rdi
-# NO_AVX512F-NEXT:      VMOVUPSYmr %1, 1, $noreg, 0, $noreg, %0 :: (store 32 into %ir.p1, align 1)
+# NO_AVX512F-NEXT:      VMOVUPSYmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1, align 1)
 # NO_AVX512F-NEXT:      RET 0
 #
 # AVX512F:              %0:vr256x = COPY $ymm0
 # AVX512F-NEXT:         %1:gr64 = COPY $rdi
-# AVX512F-NEXT:         VMOVUPSZ256mr_NOVLX %1, 1, $noreg, 0, $noreg, %0 :: (store 32 into %ir.p1, align 1)
+# AVX512F-NEXT:         VMOVUPSZ256mr_NOVLX %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1, align 1)
 # AVX512F-NEXT:         RET 0
 #
 # AVX512VL:             %0:vr256x = COPY $ymm0
 # AVX512VL-NEXT:        %1:gr64 = COPY $rdi
-# AVX512VL-NEXT:        VMOVUPSZ256mr %1, 1, $noreg, 0, $noreg, %0 :: (store 32 into %ir.p1, align 1)
+# AVX512VL-NEXT:        VMOVUPSZ256mr %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1, align 1)
 # AVX512VL-NEXT:        RET 0
 body:             |
   bb.1 (%ir-block.0):
@@ -135,7 +135,7 @@ body:             |
 
     %0(<8 x s32>) = COPY $ymm0
     %1(p0) = COPY $rdi
-    G_STORE %0(<8 x s32>), %1(p0) :: (store 32 into %ir.p1, align 1)
+    G_STORE %0(<8 x s32>), %1(p0) :: (store (<8 x s32>) into %ir.p1, align 1)
     RET 0
 
 ...
@@ -157,17 +157,17 @@ registers:
   - { id: 1, class: gpr }
 # NO_AVX512F:           %0:vr256 = COPY $ymm0
 # NO_AVX512F-NEXT:      %1:gr64 = COPY $rdi
-# NO_AVX512F-NEXT:      VMOVAPSYmr %1, 1, $noreg, 0, $noreg, %0 :: (store 32 into %ir.p1)
+# NO_AVX512F-NEXT:      VMOVAPSYmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1)
 # NO_AVX512F-NEXT:      RET 0
 #
 # AVX512F:              %0:vr256x = COPY $ymm0
 # AVX512F-NEXT:         %1:gr64 = COPY $rdi
-# AVX512F-NEXT:         VMOVAPSZ256mr_NOVLX %1, 1, $noreg, 0, $noreg, %0 :: (store 32 into %ir.p1)
+# AVX512F-NEXT:         VMOVAPSZ256mr_NOVLX %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1)
 # AVX512F-NEXT:         RET 0
 #
 # AVX512VL:             %0:vr256x = COPY $ymm0
 # AVX512VL-NEXT:        %1:gr64 = COPY $rdi
-# AVX512VL-NEXT:        VMOVAPSZ256mr %1, 1, $noreg, 0, $noreg, %0 :: (store 32 into %ir.p1)
+# AVX512VL-NEXT:        VMOVAPSZ256mr %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1)
 # AVX512VL-NEXT:        RET 0
 body:             |
   bb.1 (%ir-block.0):
@@ -175,7 +175,7 @@ body:             |
 
     %0(<8 x s32>) = COPY $ymm0
     %1(p0) = COPY $rdi
-    G_STORE %0(<8 x s32>), %1(p0) :: (store 32 into %ir.p1)
+    G_STORE %0(<8 x s32>), %1(p0) :: (store (<8 x s32>) into %ir.p1)
     RET 0
 
 ...

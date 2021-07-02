@@ -14,12 +14,12 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[COPY]], [[C]](s64)
     ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[ASHR]](s64)
-    ; CHECK: G_STORE [[MV]](s128), [[COPY1]](p0) :: (store 16)
+    ; CHECK: G_STORE [[MV]](s128), [[COPY1]](p0) :: (store (s128))
     ; CHECK: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s128) = G_SEXT %0(s64)
-    G_STORE %2(s128), %1(p0) :: (store 16)
+    G_STORE %2(s128), %1(p0) :: (store (s128))
     RET_ReallyLR
 
 ...
@@ -36,12 +36,12 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[C]](s64)
-    ; CHECK: G_STORE [[MV]](s128), [[COPY1]](p0) :: (store 16)
+    ; CHECK: G_STORE [[MV]](s128), [[COPY1]](p0) :: (store (s128))
     ; CHECK: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s128) = G_ZEXT %0(s64)
-    G_STORE %2(s128), %1(p0) :: (store 16)
+    G_STORE %2(s128), %1(p0) :: (store (s128))
     RET_ReallyLR
 
 ...
@@ -60,12 +60,12 @@ body:             |
     ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[MV]](s64), [[C1]](s64)
-    ; CHECK: G_STORE [[MV1]](s128), [[COPY1]](p0) :: (store 16)
+    ; CHECK: G_STORE [[MV1]](s128), [[COPY1]](p0) :: (store (s128))
     ; CHECK: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1
     %2:_(s128) = G_ZEXT %0(s32)
-    G_STORE %2(s128), %1(p0) :: (store 16)
+    G_STORE %2(s128), %1(p0) :: (store (s128))
     RET_ReallyLR
 
 ...
@@ -81,17 +81,17 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store 8)
-    ; CHECK: G_STORE [[C]](s64), [[COPY1]](p0) :: (store 8)
-    ; CHECK: G_STORE [[C]](s64), [[COPY1]](p0) :: (store 8)
+    ; CHECK: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64))
+    ; CHECK: G_STORE [[C]](s64), [[COPY1]](p0) :: (store (s64))
+    ; CHECK: G_STORE [[C]](s64), [[COPY1]](p0) :: (store (s64))
     ; CHECK: RET_ReallyLR
     %0:_(s64) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s192) = G_ZEXT %0(s64)
     %3:_(s64), %4:_(s64), %5:_(s64) = G_UNMERGE_VALUES %2(s192)
-    G_STORE %3, %1(p0) :: (store 8)
-    G_STORE %4, %1(p0) :: (store 8)
-    G_STORE %5, %1(p0) :: (store 8)
+    G_STORE %3, %1(p0) :: (store (s64))
+    G_STORE %4, %1(p0) :: (store (s64))
+    G_STORE %5, %1(p0) :: (store (s64))
     RET_ReallyLR
 
 ...

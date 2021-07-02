@@ -6,7 +6,7 @@ body: |
   bb.0:
     liveins: $w1, $x0, $lr
 
-    STRWui killed $w1, $x0, 0 :: (store 4)
+    STRWui killed $w1, $x0, 0 :: (store (s32))
     CFI_INSTRUCTION 0
     CFI_INSTRUCTION 0
     CFI_INSTRUCTION 0
@@ -27,7 +27,7 @@ body: |
     CFI_INSTRUCTION 0
     CFI_INSTRUCTION 0
     CFI_INSTRUCTION 0
-    $w0 = LDRHHui killed $x0, 1 :: (load 2)
+    $w0 = LDRHHui killed $x0, 1 :: (load (s16))
     RET $lr, implicit $w0
 
 ...
@@ -42,7 +42,7 @@ body: |
   bb.0:
     liveins: $w1, $x0, $lr
 
-    STRWui $w1, $x0, 0 :: (store 4)
+    STRWui $w1, $x0, 0 :: (store (s32))
     CFI_INSTRUCTION 0
     CFI_INSTRUCTION 0
     CFI_INSTRUCTION 0
@@ -63,7 +63,7 @@ body: |
     CFI_INSTRUCTION 0
     CFI_INSTRUCTION 0
     CFI_INSTRUCTION 0
-    STRWui killed $w1, killed $x0, 1 :: (store 4)
+    STRWui killed $w1, killed $x0, 1 :: (store (s32))
     RET $lr
 
 ...
@@ -76,17 +76,17 @@ body: |
   bb.0:
     liveins: $w1, $x0, $lr
 
-    STRWui $w1, $x0, 0 :: (store 4)
+    STRWui $w1, $x0, 0 :: (store (s32))
     $w2 = COPY $w1
     $x3 = COPY $x0
-    STRWui killed $w1, killed $x0, 1 :: (store 4)
+    STRWui killed $w1, killed $x0, 1 :: (store (s32))
     RET $lr
 ...
 # When merging a lower store with an upper one, we must clear kill flags on
 # the lower store.
 # CHECK-LABEL: store-pair-clearkill0
-# CHECK-NOT: STPWi $w1, killed $w1, $x0, 0 :: (store 4)
-# CHECK: STPWi $w1, $w1, $x0, 0 :: (store 4)
+# CHECK-NOT: STPWi $w1, killed $w1, $x0, 0 :: (store (s32))
+# CHECK: STPWi $w1, $w1, $x0, 0 :: (store (s32))
 # CHECK: $w2 = COPY $w1
 # CHECK: RET $lr
 ---
@@ -98,15 +98,15 @@ body: |
 
     $w1 = MOVi32imm 13
     $w2 = MOVi32imm 7
-    STRWui $w1, $x0, 1 :: (store 4)
+    STRWui $w1, $x0, 1 :: (store (s32))
     $w2 = COPY killed $w1
-    STRWui killed $w2, $x0, 0 :: (store 4)
+    STRWui killed $w2, $x0, 0 :: (store (s32))
 
     $w1 = MOVi32imm 42
     $w2 = MOVi32imm 7
-    STRWui $w1, $x0, 0 :: (store 4)
+    STRWui $w1, $x0, 0 :: (store (s32))
     $w2 = COPY killed $w1
-    STRWui killed $w2, killed $x0, 1 :: (store 4)
+    STRWui killed $w2, killed $x0, 1 :: (store (s32))
 
     RET $lr
 ...
@@ -131,15 +131,15 @@ body: |
   bb.0:
     liveins: $w1
 
-    STRWui $w1, $sp, 0 :: (store 4)
+    STRWui $w1, $sp, 0 :: (store (s32))
     $wzr = COPY killed $w1 ; killing use of $w1
-    $w11 = LDRWui $sp, 0 :: (load 4)
+    $w11 = LDRWui $sp, 0 :: (load (s32))
     HINT 0, implicit $w11 ; some use of $w11
 ...
 # When replaceing the load of a store-load pair with a copy the kill flags
 # along the way need to be cleared.
 # CHECK-LABEL: name: store-load-clearkill
-# CHECK: STRWui $w1, $sp, 0 :: (store 4)
+# CHECK: STRWui $w1, $sp, 0 :: (store (s32))
 # CHECK-NOT: COPY killed $w1
 # CHECK: $wzr = COPY $w1
 # CHECK: $w11 = ORRWrs $wzr, $w1, 0
@@ -151,10 +151,10 @@ body: |
   bb.0:
     liveins: $x0, $x2, $lr
 
-    STRWui undef $w1, $x0, 0 :: (store 4)
-    $w0 = LDRBBui $x0, 1 :: (load 2)
-    STRHHui undef $w3, $x2, 0 :: (store 4)
-    $w1 = LDRBBui $x2, 0 :: (load 4)
+    STRWui undef $w1, $x0, 0 :: (store (s32))
+    $w0 = LDRBBui $x0, 1 :: (load (s16))
+    STRHHui undef $w3, $x2, 0 :: (store (s32))
+    $w1 = LDRBBui $x2, 0 :: (load (s32))
     RET $lr, implicit $w0
 ...
 # CHECK-LABEL: name: promote-load-from-store-undef
@@ -169,9 +169,9 @@ body: |
   bb.0:
     liveins: $x0, $lr
 
-    STRXui $x0, $sp, 0 :: (store 8)
-    STRXui killed $x0, $sp, 2 :: (store 8)
-    $x0 = LDRXui $sp, 0 :: (load 8)
+    STRXui $x0, $sp, 0 :: (store (s64))
+    STRXui killed $x0, $sp, 2 :: (store (s64))
+    $x0 = LDRXui $sp, 0 :: (load (s64))
     BL &bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def $sp
     RET $lr
 ...

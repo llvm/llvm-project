@@ -3220,18 +3220,34 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
   if (parseOptionalAtomicOrdering(FailureOrder))
     return true;
 
+  LLT MemoryType;
   if (Token.isNot(MIToken::IntegerLiteral) &&
-      Token.isNot(MIToken::kw_unknown_size))
-    return error("expected the size integer literal or 'unknown-size' after "
+      Token.isNot(MIToken::kw_unknown_size) &&
+      Token.isNot(MIToken::lparen))
+    return error("expected memory LLT, the size integer literal or 'unknown-size' after "
                  "memory operation");
-  uint64_t Size;
+
+  uint64_t Size = MemoryLocation::UnknownSize;
   if (Token.is(MIToken::IntegerLiteral)) {
     if (getUint64(Size))
       return true;
+
+    // Convert from bytes to bits for storage.
+    MemoryType = LLT::scalar(8 * Size);
+    lex();
   } else if (Token.is(MIToken::kw_unknown_size)) {
     Size = MemoryLocation::UnknownSize;
+    lex();
+  } else {
+    if (expectAndConsume(MIToken::lparen))
+      return true;
+    if (parseLowLevelType(Token.location(), MemoryType))
+      return true;
+    if (expectAndConsume(MIToken::rparen))
+      return true;
+
+    Size = MemoryType.getSizeInBytes();
   }
-  lex();
 
   MachinePointerInfo Ptr = MachinePointerInfo();
   if (Token.is(MIToken::Identifier)) {
@@ -3247,7 +3263,8 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     if (parseMachinePointerInfo(Ptr))
       return true;
   }
-  unsigned BaseAlignment = (Size != MemoryLocation::UnknownSize ? Size : 1);
+  unsigned BaseAlignment =
+      (Size != MemoryLocation::UnknownSize ? PowerOf2Ceil(Size) : 1);
   AAMDNodes AAInfo;
   MDNode *Range = nullptr;
   while (consumeIfPresent(MIToken::comma)) {
@@ -3294,8 +3311,8 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
   }
   if (expectAndConsume(MIToken::rparen))
     return true;
-  Dest = MF.getMachineMemOperand(Ptr, Flags, Size, Align(BaseAlignment), AAInfo,
-                                 Range, SSID, Order, FailureOrder);
+  Dest = MF.getMachineMemOperand(Ptr, Flags, MemoryType, Align(BaseAlignment),
+                                 AAInfo, Range, SSID, Order, FailureOrder);
   return false;
 }
 

@@ -28,7 +28,7 @@ define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store 4 into %ir.gep, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
   ; GCN:   $vgpr0 = COPY [[ADD]](s32)
   ; GCN:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
@@ -42,10 +42,7 @@ define fastcc i32 @i32_fastcc_i32_i32_stack_object(i32 %arg0, i32 %arg1) #1 {
 
 define hidden fastcc i32 @sibling_call_i32_fastcc_i32_i32(i32 %a, i32 %b, i32 %c) #1 {
   ; GCN-LABEL: name: sibling_call_i32_fastcc_i32_i32
-  ; GCN: frameInfo:
-  ; GCN:   hasCalls:        false
-  ; GCN:   hasTailCall:     true
-; GCN: bb.1.entry:
+  ; GCN: bb.1.entry:
   ; GCN:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $vgpr2, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
   ; GCN:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; GCN:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -106,7 +103,7 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_stack_object(i32 %a, i32 %b, 
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store 4 into %ir.gep, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32
   ; GCN:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN:   [[COPY13:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -157,7 +154,7 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_callee_stack_object(i32 %a, i
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store 4 into %ir.gep, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_stack_object
   ; GCN:   [[COPY12:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN:   [[COPY13:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -249,7 +246,7 @@ define amdgpu_kernel void @kernel_call_i32_fastcc_i32_i32_unused_result(i32 %a, 
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; GCN:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GCN:   [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load 8 from %ir.0, align 16, addrspace 4)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (<2 x s32>) from %ir.0, align 16, addrspace 4)
   ; GCN:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<2 x s32>), [[C]](s32)
   ; GCN:   [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<2 x s32>), [[C1]](s32)
   ; GCN:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
@@ -303,7 +300,7 @@ define hidden fastcc i32 @i32_fastcc_i32_byval_i32(i32 %arg0, i32 addrspace(5)* 
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; GCN:   [[COPY1:%[0-9]+]]:_(p5) = COPY [[FRAME_INDEX]](p5)
   ; GCN:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p5) :: (dereferenceable load 4 from %ir.arg1, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p5) :: (dereferenceable load (s32) from %ir.arg1, addrspace 5)
   ; GCN:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[LOAD]]
   ; GCN:   $vgpr0 = COPY [[ADD]](s32)
   ; GCN:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
@@ -346,7 +343,7 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, i3
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C]](s32)
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; GCN:   G_MEMCPY [[PTR_ADD]](p5), [[COPY9]](p5), [[C1]](s32), 0 :: (dereferenceable store 4 into stack, addrspace 5), (dereferenceable load 4 from %ir.b.byval, addrspace 5)
+  ; GCN:   G_MEMCPY [[PTR_ADD]](p5), [[COPY9]](p5), [[C1]](s32), 0 :: (dereferenceable store (s32) into stack, addrspace 5), (dereferenceable load (s32) from %ir.b.byval, addrspace 5)
   ; GCN:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY12]](p4)
@@ -415,9 +412,9 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32(i32 %a, [32 x i32] %lar
   ; GCN:   [[COPY37:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY38:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.2, align 16, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.2, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.1, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
   ; GCN:   [[COPY39:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; GCN:   [[INTTOPTR:%[0-9]+]]:_(p5) = G_INTTOPTR [[C]](s32)
@@ -433,7 +430,7 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32(i32 %a, [32 x i32] %lar
   ; GCN:   $vgpr0 = COPY [[COPY8]](s32)
   ; GCN:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; GCN:   G_MEMCPY [[FRAME_INDEX2]](p5), [[INTTOPTR]](p5), [[C1]](s32), 0 :: (dereferenceable store 4 into %fixed-stack.0, align 16, addrspace 5), (dereferenceable load 4 from `i32 addrspace(5)* inttoptr (i32 16 to i32 addrspace(5)*)`, align 16, addrspace 5)
+  ; GCN:   G_MEMCPY [[FRAME_INDEX2]](p5), [[INTTOPTR]](p5), [[C1]](s32), 0 :: (dereferenceable store (s32) into %fixed-stack.0, align 16, addrspace 5), (dereferenceable load (s32) from `i32 addrspace(5)* inttoptr (i32 16 to i32 addrspace(5)*)`, align 16, addrspace 5)
   ; GCN:   [[COPY48:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY48]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY40]](p4)
@@ -486,11 +483,11 @@ define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %l
   ; GCN:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.2, align 16, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.2, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.1, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.1, addrspace 5)
   ; GCN:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load 4 from %fixed-stack.0, align 8, addrspace 5)
+  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.0, align 8, addrspace 5)
   ; GCN:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
   ; GCN:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[LOAD1]]
@@ -550,11 +547,11 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x 
   ; GCN:   [[COPY37:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY38:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.5, align 16, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.5, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.4, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
   ; GCN:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load 4 from %fixed-stack.3, align 8, addrspace 5)
+  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.3, align 8, addrspace 5)
   ; GCN:   [[COPY39:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN:   [[COPY40:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -597,11 +594,11 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32(i32 %a, i32 %b, [32 x 
   ; GCN:   $vgpr29 = COPY [[COPY37]](s32)
   ; GCN:   $vgpr30 = COPY [[COPY38]](s32)
   ; GCN:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; GCN:   G_STORE [[LOAD]](s32), [[FRAME_INDEX3]](p5) :: (store 4 into %fixed-stack.2, align 16, addrspace 5)
+  ; GCN:   G_STORE [[LOAD]](s32), [[FRAME_INDEX3]](p5) :: (store (s32) into %fixed-stack.2, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; GCN:   G_STORE [[LOAD1]](s32), [[FRAME_INDEX4]](p5) :: (store 4 into %fixed-stack.1, addrspace 5)
+  ; GCN:   G_STORE [[LOAD1]](s32), [[FRAME_INDEX4]](p5) :: (store (s32) into %fixed-stack.1, addrspace 5)
   ; GCN:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; GCN:   G_STORE [[LOAD2]](s32), [[FRAME_INDEX5]](p5) :: (store 4 into %fixed-stack.0, align 8, addrspace 5)
+  ; GCN:   G_STORE [[LOAD2]](s32), [[FRAME_INDEX5]](p5) :: (store (s32) into %fixed-stack.0, align 8, addrspace 5)
   ; GCN:   [[COPY48:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY48]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY40]](p4)
@@ -662,17 +659,17 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i
   ; GCN:   [[COPY37:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY38:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.5, align 16, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.5, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.4, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
   ; GCN:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load 4 from %fixed-stack.3, align 8, addrspace 5)
+  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.3, align 8, addrspace 5)
   ; GCN:   [[COPY39:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX3]], [[C1]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store 4 into %ir.gep, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN:   [[COPY40:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN:   [[COPY41:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -714,11 +711,11 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_a32i32_stack_object(i32 %a, i
   ; GCN:   $vgpr29 = COPY [[COPY37]](s32)
   ; GCN:   $vgpr30 = COPY [[COPY38]](s32)
   ; GCN:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; GCN:   G_STORE [[LOAD]](s32), [[FRAME_INDEX4]](p5) :: (store 4 into %fixed-stack.2, align 16, addrspace 5)
+  ; GCN:   G_STORE [[LOAD]](s32), [[FRAME_INDEX4]](p5) :: (store (s32) into %fixed-stack.2, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; GCN:   G_STORE [[LOAD1]](s32), [[FRAME_INDEX5]](p5) :: (store 4 into %fixed-stack.1, addrspace 5)
+  ; GCN:   G_STORE [[LOAD1]](s32), [[FRAME_INDEX5]](p5) :: (store (s32) into %fixed-stack.1, addrspace 5)
   ; GCN:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; GCN:   G_STORE [[LOAD2]](s32), [[FRAME_INDEX6]](p5) :: (store 4 into %fixed-stack.0, align 8, addrspace 5)
+  ; GCN:   G_STORE [[LOAD2]](s32), [[FRAME_INDEX6]](p5) :: (store (s32) into %fixed-stack.0, align 8, addrspace 5)
   ; GCN:   [[COPY48:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY48]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY40]](p4)
@@ -801,13 +798,13 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
   ; GCN:   [[COPY19:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY19]], [[C1]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; GCN:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; GCN:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY19]], [[C2]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; GCN:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; GCN:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY19]], [[C3]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; GCN:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
@@ -946,17 +943,17 @@ define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i3
   ; GCN:   [[COPY37:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY38:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.5, align 16, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.5, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.4, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
   ; GCN:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load 4 from %fixed-stack.3, align 8, addrspace 5)
+  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.3, align 8, addrspace 5)
   ; GCN:   [[COPY39:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX3]], [[C1]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store 4 into %ir.gep, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN:   [[COPY40:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN:   [[COPY41:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -998,11 +995,11 @@ define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32(i32 %a, i3
   ; GCN:   $vgpr29 = COPY [[COPY37]](s32)
   ; GCN:   $vgpr30 = COPY [[COPY38]](s32)
   ; GCN:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; GCN:   G_STORE [[LOAD]](s32), [[FRAME_INDEX4]](p5) :: (store 4 into %fixed-stack.2, align 16, addrspace 5)
+  ; GCN:   G_STORE [[LOAD]](s32), [[FRAME_INDEX4]](p5) :: (store (s32) into %fixed-stack.2, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; GCN:   G_STORE [[LOAD1]](s32), [[FRAME_INDEX5]](p5) :: (store 4 into %fixed-stack.1, addrspace 5)
+  ; GCN:   G_STORE [[LOAD1]](s32), [[FRAME_INDEX5]](p5) :: (store (s32) into %fixed-stack.1, addrspace 5)
   ; GCN:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; GCN:   G_STORE [[LOAD2]](s32), [[FRAME_INDEX6]](p5) :: (store 4 into %fixed-stack.0, align 8, addrspace 5)
+  ; GCN:   G_STORE [[LOAD2]](s32), [[FRAME_INDEX6]](p5) :: (store (s32) into %fixed-stack.0, align 8, addrspace 5)
   ; GCN:   [[COPY48:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY48]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY40]](p4)
@@ -1066,26 +1063,26 @@ define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg
   ; GCN:   [[COPY37:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY38:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.9, align 16, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.9, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.8, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.8, addrspace 5)
   ; GCN:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
-  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load 4 from %fixed-stack.7, align 8, addrspace 5)
+  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.7, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
-  ; GCN:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load 4 from %fixed-stack.6, addrspace 5)
+  ; GCN:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.6, addrspace 5)
   ; GCN:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; GCN:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load 4 from %fixed-stack.5, align 16, addrspace 5)
+  ; GCN:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.5, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; GCN:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load 4 from %fixed-stack.4, addrspace 5)
+  ; GCN:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
   ; GCN:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; GCN:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load 4 from %fixed-stack.3, align 8, addrspace 5)
+  ; GCN:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.3, align 8, addrspace 5)
   ; GCN:   [[COPY39:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
   ; GCN:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX7]], [[C2]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store 4 into %ir.gep, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (volatile store (s32) into %ir.gep, addrspace 5)
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @i32_fastcc_i32_i32_a32i32
   ; GCN:   [[COPY40:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN:   [[COPY41:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -1127,11 +1124,11 @@ define fastcc i32 @sibling_call_stack_objecti32_fastcc_i32_i32_a32i32_larger_arg
   ; GCN:   $vgpr29 = COPY [[C1]](s32)
   ; GCN:   $vgpr30 = COPY [[C1]](s32)
   ; GCN:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; GCN:   G_STORE [[C1]](s32), [[FRAME_INDEX8]](p5) :: (store 4 into %fixed-stack.2, align 16, addrspace 5)
+  ; GCN:   G_STORE [[C1]](s32), [[FRAME_INDEX8]](p5) :: (store (s32) into %fixed-stack.2, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; GCN:   G_STORE [[C1]](s32), [[FRAME_INDEX9]](p5) :: (store 4 into %fixed-stack.1, addrspace 5)
+  ; GCN:   G_STORE [[C1]](s32), [[FRAME_INDEX9]](p5) :: (store (s32) into %fixed-stack.1, addrspace 5)
   ; GCN:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; GCN:   G_STORE [[C1]](s32), [[FRAME_INDEX10]](p5) :: (store 4 into %fixed-stack.0, align 8, addrspace 5)
+  ; GCN:   G_STORE [[C1]](s32), [[FRAME_INDEX10]](p5) :: (store (s32) into %fixed-stack.0, align 8, addrspace 5)
   ; GCN:   [[COPY48:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY48]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY40]](p4)
@@ -1197,88 +1194,88 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
   ; GCN:   [[COPY37:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY38:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.35
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.35, align 16, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.35, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.34
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.34, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.34, addrspace 5)
   ; GCN:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.33
-  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load 4 from %fixed-stack.33, align 8, addrspace 5)
+  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.33, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.32
-  ; GCN:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load 4 from %fixed-stack.32, addrspace 5)
+  ; GCN:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.32, addrspace 5)
   ; GCN:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.31
-  ; GCN:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load 4 from %fixed-stack.31, align 16, addrspace 5)
+  ; GCN:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.31, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.30
-  ; GCN:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load 4 from %fixed-stack.30, addrspace 5)
+  ; GCN:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.30, addrspace 5)
   ; GCN:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.29
-  ; GCN:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load 4 from %fixed-stack.29, align 8, addrspace 5)
+  ; GCN:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.29, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.28
-  ; GCN:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load 4 from %fixed-stack.28, addrspace 5)
+  ; GCN:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.28, addrspace 5)
   ; GCN:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.27
-  ; GCN:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load 4 from %fixed-stack.27, align 16, addrspace 5)
+  ; GCN:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.27, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.26
-  ; GCN:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load 4 from %fixed-stack.26, addrspace 5)
+  ; GCN:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load (s32) from %fixed-stack.26, addrspace 5)
   ; GCN:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.25
-  ; GCN:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load 4 from %fixed-stack.25, align 8, addrspace 5)
+  ; GCN:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load (s32) from %fixed-stack.25, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX11:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.24
-  ; GCN:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load 4 from %fixed-stack.24, addrspace 5)
+  ; GCN:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load (s32) from %fixed-stack.24, addrspace 5)
   ; GCN:   [[FRAME_INDEX12:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.23
-  ; GCN:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load 4 from %fixed-stack.23, align 16, addrspace 5)
+  ; GCN:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load (s32) from %fixed-stack.23, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX13:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.22
-  ; GCN:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load 4 from %fixed-stack.22, addrspace 5)
+  ; GCN:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load (s32) from %fixed-stack.22, addrspace 5)
   ; GCN:   [[FRAME_INDEX14:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.21
-  ; GCN:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load 4 from %fixed-stack.21, align 8, addrspace 5)
+  ; GCN:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load (s32) from %fixed-stack.21, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX15:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.20
-  ; GCN:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load 4 from %fixed-stack.20, addrspace 5)
+  ; GCN:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load (s32) from %fixed-stack.20, addrspace 5)
   ; GCN:   [[FRAME_INDEX16:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.19
-  ; GCN:   [[LOAD16:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load 4 from %fixed-stack.19, align 16, addrspace 5)
+  ; GCN:   [[LOAD16:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load (s32) from %fixed-stack.19, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX17:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.18
-  ; GCN:   [[LOAD17:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX17]](p5) :: (invariant load 4 from %fixed-stack.18, addrspace 5)
+  ; GCN:   [[LOAD17:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX17]](p5) :: (invariant load (s32) from %fixed-stack.18, addrspace 5)
   ; GCN:   [[FRAME_INDEX18:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.17
-  ; GCN:   [[LOAD18:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX18]](p5) :: (invariant load 4 from %fixed-stack.17, align 8, addrspace 5)
+  ; GCN:   [[LOAD18:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX18]](p5) :: (invariant load (s32) from %fixed-stack.17, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX19:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.16
-  ; GCN:   [[LOAD19:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX19]](p5) :: (invariant load 4 from %fixed-stack.16, addrspace 5)
+  ; GCN:   [[LOAD19:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX19]](p5) :: (invariant load (s32) from %fixed-stack.16, addrspace 5)
   ; GCN:   [[FRAME_INDEX20:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.15
-  ; GCN:   [[LOAD20:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX20]](p5) :: (invariant load 4 from %fixed-stack.15, align 16, addrspace 5)
+  ; GCN:   [[LOAD20:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX20]](p5) :: (invariant load (s32) from %fixed-stack.15, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX21:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.14
-  ; GCN:   [[LOAD21:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX21]](p5) :: (invariant load 4 from %fixed-stack.14, addrspace 5)
+  ; GCN:   [[LOAD21:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX21]](p5) :: (invariant load (s32) from %fixed-stack.14, addrspace 5)
   ; GCN:   [[FRAME_INDEX22:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.13
-  ; GCN:   [[LOAD22:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX22]](p5) :: (invariant load 4 from %fixed-stack.13, align 8, addrspace 5)
+  ; GCN:   [[LOAD22:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX22]](p5) :: (invariant load (s32) from %fixed-stack.13, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX23:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.12
-  ; GCN:   [[LOAD23:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX23]](p5) :: (invariant load 4 from %fixed-stack.12, addrspace 5)
+  ; GCN:   [[LOAD23:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX23]](p5) :: (invariant load (s32) from %fixed-stack.12, addrspace 5)
   ; GCN:   [[FRAME_INDEX24:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.11
-  ; GCN:   [[LOAD24:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX24]](p5) :: (invariant load 4 from %fixed-stack.11, align 16, addrspace 5)
+  ; GCN:   [[LOAD24:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX24]](p5) :: (invariant load (s32) from %fixed-stack.11, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX25:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.10
-  ; GCN:   [[LOAD25:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX25]](p5) :: (invariant load 4 from %fixed-stack.10, addrspace 5)
+  ; GCN:   [[LOAD25:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX25]](p5) :: (invariant load (s32) from %fixed-stack.10, addrspace 5)
   ; GCN:   [[FRAME_INDEX26:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
-  ; GCN:   [[LOAD26:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX26]](p5) :: (invariant load 4 from %fixed-stack.9, align 8, addrspace 5)
+  ; GCN:   [[LOAD26:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX26]](p5) :: (invariant load (s32) from %fixed-stack.9, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX27:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
-  ; GCN:   [[LOAD27:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX27]](p5) :: (invariant load 4 from %fixed-stack.8, addrspace 5)
+  ; GCN:   [[LOAD27:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX27]](p5) :: (invariant load (s32) from %fixed-stack.8, addrspace 5)
   ; GCN:   [[FRAME_INDEX28:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
-  ; GCN:   [[LOAD28:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX28]](p5) :: (invariant load 4 from %fixed-stack.7, align 16, addrspace 5)
+  ; GCN:   [[LOAD28:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX28]](p5) :: (invariant load (s32) from %fixed-stack.7, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX29:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
-  ; GCN:   [[LOAD29:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX29]](p5) :: (invariant load 4 from %fixed-stack.6, addrspace 5)
+  ; GCN:   [[LOAD29:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX29]](p5) :: (invariant load (s32) from %fixed-stack.6, addrspace 5)
   ; GCN:   [[FRAME_INDEX30:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; GCN:   [[LOAD30:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX30]](p5) :: (invariant load 4 from %fixed-stack.5, align 8, addrspace 5)
+  ; GCN:   [[LOAD30:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX30]](p5) :: (invariant load (s32) from %fixed-stack.5, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX31:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; GCN:   [[LOAD31:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX31]](p5) :: (invariant load 4 from %fixed-stack.4, addrspace 5)
+  ; GCN:   [[LOAD31:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX31]](p5) :: (invariant load (s32) from %fixed-stack.4, addrspace 5)
   ; GCN:   [[FRAME_INDEX32:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; GCN:   [[LOAD32:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX32]](p5) :: (invariant load 4 from %fixed-stack.3, align 16, addrspace 5)
+  ; GCN:   [[LOAD32:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX32]](p5) :: (invariant load (s32) from %fixed-stack.3, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX33:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
-  ; GCN:   [[LOAD33:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX33]](p5) :: (invariant load 4 from %fixed-stack.2, addrspace 5)
+  ; GCN:   [[LOAD33:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX33]](p5) :: (invariant load (s32) from %fixed-stack.2, addrspace 5)
   ; GCN:   [[COPY39:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; GCN:   [[FRAME_INDEX34:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca0
   ; GCN:   [[FRAME_INDEX35:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.1.alloca1
-  ; GCN:   G_STORE [[C]](s32), [[FRAME_INDEX34]](p5) :: (store 4 into %ir.alloca0, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[FRAME_INDEX34]](p5) :: (store (s32) into %ir.alloca0, addrspace 5)
   ; GCN:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX34]], [[C2]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (store 4 into %ir.alloca0 + 4, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.alloca0 + 4, addrspace 5)
   ; GCN:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; GCN:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX34]], [[C3]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store 4 into %ir.alloca0 + 8, addrspace 5)
-  ; GCN:   G_STORE [[C1]](s64), [[FRAME_INDEX35]](p5) :: (store 8 into %ir.alloca1, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store (s32) into %ir.alloca0 + 8, addrspace 5)
+  ; GCN:   G_STORE [[C1]](s64), [[FRAME_INDEX35]](p5) :: (store (s64) into %ir.alloca1, addrspace 5)
   ; GCN:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX35]], [[C3]](s32)
-  ; GCN:   G_STORE [[C1]](s64), [[PTR_ADD2]](p5) :: (store 8 into %ir.alloca1 + 8, addrspace 5)
+  ; GCN:   G_STORE [[C1]](s64), [[PTR_ADD2]](p5) :: (store (s64) into %ir.alloca1 + 8, addrspace 5)
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @void_fastcc_multi_byval
   ; GCN:   [[COPY40:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN:   [[COPY41:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -1291,10 +1288,10 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
   ; GCN:   $vgpr0 = COPY [[COPY8]](s32)
   ; GCN:   [[FRAME_INDEX36:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
   ; GCN:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; GCN:   G_MEMCPY [[FRAME_INDEX36]](p5), [[FRAME_INDEX34]](p5), [[C4]](s32), 0 :: (dereferenceable store 12 into %fixed-stack.1, align 16, addrspace 5), (dereferenceable load 12 from %ir.alloca0, align 16, addrspace 5)
+  ; GCN:   G_MEMCPY [[FRAME_INDEX36]](p5), [[FRAME_INDEX34]](p5), [[C4]](s32), 0 :: (dereferenceable store (s96) into %fixed-stack.1, align 16, addrspace 5), (dereferenceable load (s96) from %ir.alloca0, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX37:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
   ; GCN:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; GCN:   G_MEMCPY [[FRAME_INDEX37]](p5), [[FRAME_INDEX35]](p5), [[C5]](s32), 0 :: (dereferenceable store 16 into %fixed-stack.0, addrspace 5), (dereferenceable load 16 from %ir.alloca1, align 8, addrspace 5)
+  ; GCN:   G_MEMCPY [[FRAME_INDEX37]](p5), [[FRAME_INDEX35]](p5), [[C5]](s32), 0 :: (dereferenceable store (s128) into %fixed-stack.0, addrspace 5), (dereferenceable load (s128) from %ir.alloca1, align 8, addrspace 5)
   ; GCN:   [[COPY48:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY48]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY40]](p4)
@@ -1362,84 +1359,84 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
   ; GCN:   [[COPY37:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; GCN:   [[COPY38:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; GCN:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.36
-  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.36, align 16, addrspace 5)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.36, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.35
-  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load 4 from %fixed-stack.35, addrspace 5)
+  ; GCN:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.35, addrspace 5)
   ; GCN:   [[FRAME_INDEX2:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.34
-  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load 4 from %fixed-stack.34, align 8, addrspace 5)
+  ; GCN:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p5) :: (invariant load (s32) from %fixed-stack.34, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX3:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.33
-  ; GCN:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load 4 from %fixed-stack.33, addrspace 5)
+  ; GCN:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p5) :: (invariant load (s32) from %fixed-stack.33, addrspace 5)
   ; GCN:   [[FRAME_INDEX4:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.32
-  ; GCN:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load 4 from %fixed-stack.32, align 16, addrspace 5)
+  ; GCN:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p5) :: (invariant load (s32) from %fixed-stack.32, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX5:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.31
-  ; GCN:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load 4 from %fixed-stack.31, addrspace 5)
+  ; GCN:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p5) :: (invariant load (s32) from %fixed-stack.31, addrspace 5)
   ; GCN:   [[FRAME_INDEX6:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.30
-  ; GCN:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load 4 from %fixed-stack.30, align 8, addrspace 5)
+  ; GCN:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p5) :: (invariant load (s32) from %fixed-stack.30, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX7:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.29
-  ; GCN:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load 4 from %fixed-stack.29, addrspace 5)
+  ; GCN:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p5) :: (invariant load (s32) from %fixed-stack.29, addrspace 5)
   ; GCN:   [[FRAME_INDEX8:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.28
-  ; GCN:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load 4 from %fixed-stack.28, align 16, addrspace 5)
+  ; GCN:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p5) :: (invariant load (s32) from %fixed-stack.28, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX9:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.27
-  ; GCN:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load 4 from %fixed-stack.27, addrspace 5)
+  ; GCN:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p5) :: (invariant load (s32) from %fixed-stack.27, addrspace 5)
   ; GCN:   [[FRAME_INDEX10:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.26
-  ; GCN:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load 4 from %fixed-stack.26, align 8, addrspace 5)
+  ; GCN:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p5) :: (invariant load (s32) from %fixed-stack.26, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX11:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.25
-  ; GCN:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load 4 from %fixed-stack.25, addrspace 5)
+  ; GCN:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p5) :: (invariant load (s32) from %fixed-stack.25, addrspace 5)
   ; GCN:   [[FRAME_INDEX12:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.24
-  ; GCN:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load 4 from %fixed-stack.24, align 16, addrspace 5)
+  ; GCN:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p5) :: (invariant load (s32) from %fixed-stack.24, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX13:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.23
-  ; GCN:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load 4 from %fixed-stack.23, addrspace 5)
+  ; GCN:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p5) :: (invariant load (s32) from %fixed-stack.23, addrspace 5)
   ; GCN:   [[FRAME_INDEX14:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.22
-  ; GCN:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load 4 from %fixed-stack.22, align 8, addrspace 5)
+  ; GCN:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p5) :: (invariant load (s32) from %fixed-stack.22, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX15:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.21
-  ; GCN:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load 4 from %fixed-stack.21, addrspace 5)
+  ; GCN:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p5) :: (invariant load (s32) from %fixed-stack.21, addrspace 5)
   ; GCN:   [[FRAME_INDEX16:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.20
-  ; GCN:   [[LOAD16:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load 4 from %fixed-stack.20, align 16, addrspace 5)
+  ; GCN:   [[LOAD16:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX16]](p5) :: (invariant load (s32) from %fixed-stack.20, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX17:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.19
-  ; GCN:   [[LOAD17:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX17]](p5) :: (invariant load 4 from %fixed-stack.19, addrspace 5)
+  ; GCN:   [[LOAD17:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX17]](p5) :: (invariant load (s32) from %fixed-stack.19, addrspace 5)
   ; GCN:   [[FRAME_INDEX18:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.18
-  ; GCN:   [[LOAD18:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX18]](p5) :: (invariant load 4 from %fixed-stack.18, align 8, addrspace 5)
+  ; GCN:   [[LOAD18:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX18]](p5) :: (invariant load (s32) from %fixed-stack.18, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX19:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.17
-  ; GCN:   [[LOAD19:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX19]](p5) :: (invariant load 4 from %fixed-stack.17, addrspace 5)
+  ; GCN:   [[LOAD19:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX19]](p5) :: (invariant load (s32) from %fixed-stack.17, addrspace 5)
   ; GCN:   [[FRAME_INDEX20:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.16
-  ; GCN:   [[LOAD20:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX20]](p5) :: (invariant load 4 from %fixed-stack.16, align 16, addrspace 5)
+  ; GCN:   [[LOAD20:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX20]](p5) :: (invariant load (s32) from %fixed-stack.16, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX21:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.15
-  ; GCN:   [[LOAD21:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX21]](p5) :: (invariant load 4 from %fixed-stack.15, addrspace 5)
+  ; GCN:   [[LOAD21:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX21]](p5) :: (invariant load (s32) from %fixed-stack.15, addrspace 5)
   ; GCN:   [[FRAME_INDEX22:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.14
-  ; GCN:   [[LOAD22:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX22]](p5) :: (invariant load 4 from %fixed-stack.14, align 8, addrspace 5)
+  ; GCN:   [[LOAD22:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX22]](p5) :: (invariant load (s32) from %fixed-stack.14, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX23:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.13
-  ; GCN:   [[LOAD23:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX23]](p5) :: (invariant load 4 from %fixed-stack.13, addrspace 5)
+  ; GCN:   [[LOAD23:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX23]](p5) :: (invariant load (s32) from %fixed-stack.13, addrspace 5)
   ; GCN:   [[FRAME_INDEX24:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.12
-  ; GCN:   [[LOAD24:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX24]](p5) :: (invariant load 4 from %fixed-stack.12, align 16, addrspace 5)
+  ; GCN:   [[LOAD24:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX24]](p5) :: (invariant load (s32) from %fixed-stack.12, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX25:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.11
-  ; GCN:   [[LOAD25:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX25]](p5) :: (invariant load 4 from %fixed-stack.11, addrspace 5)
+  ; GCN:   [[LOAD25:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX25]](p5) :: (invariant load (s32) from %fixed-stack.11, addrspace 5)
   ; GCN:   [[FRAME_INDEX26:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.10
-  ; GCN:   [[LOAD26:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX26]](p5) :: (invariant load 4 from %fixed-stack.10, align 8, addrspace 5)
+  ; GCN:   [[LOAD26:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX26]](p5) :: (invariant load (s32) from %fixed-stack.10, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX27:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.9
-  ; GCN:   [[LOAD27:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX27]](p5) :: (invariant load 4 from %fixed-stack.9, addrspace 5)
+  ; GCN:   [[LOAD27:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX27]](p5) :: (invariant load (s32) from %fixed-stack.9, addrspace 5)
   ; GCN:   [[FRAME_INDEX28:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.8
-  ; GCN:   [[LOAD28:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX28]](p5) :: (invariant load 4 from %fixed-stack.8, align 16, addrspace 5)
+  ; GCN:   [[LOAD28:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX28]](p5) :: (invariant load (s32) from %fixed-stack.8, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX29:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.7
-  ; GCN:   [[LOAD29:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX29]](p5) :: (invariant load 4 from %fixed-stack.7, addrspace 5)
+  ; GCN:   [[LOAD29:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX29]](p5) :: (invariant load (s32) from %fixed-stack.7, addrspace 5)
   ; GCN:   [[FRAME_INDEX30:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.6
-  ; GCN:   [[LOAD30:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX30]](p5) :: (invariant load 4 from %fixed-stack.6, align 8, addrspace 5)
+  ; GCN:   [[LOAD30:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX30]](p5) :: (invariant load (s32) from %fixed-stack.6, align 8, addrspace 5)
   ; GCN:   [[FRAME_INDEX31:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.5
-  ; GCN:   [[LOAD31:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX31]](p5) :: (invariant load 4 from %fixed-stack.5, addrspace 5)
+  ; GCN:   [[LOAD31:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX31]](p5) :: (invariant load (s32) from %fixed-stack.5, addrspace 5)
   ; GCN:   [[FRAME_INDEX32:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.4
-  ; GCN:   [[LOAD32:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX32]](p5) :: (invariant load 4 from %fixed-stack.4, align 16, addrspace 5)
+  ; GCN:   [[LOAD32:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX32]](p5) :: (invariant load (s32) from %fixed-stack.4, align 16, addrspace 5)
   ; GCN:   [[FRAME_INDEX33:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; GCN:   [[LOAD33:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX33]](p5) :: (invariant load 4 from %fixed-stack.3, addrspace 5)
+  ; GCN:   [[LOAD33:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX33]](p5) :: (invariant load (s32) from %fixed-stack.3, addrspace 5)
   ; GCN:   [[COPY39:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN:   [[FRAME_INDEX34:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
-  ; GCN:   G_STORE [[C]](s32), [[FRAME_INDEX34]](p5) :: (store 4 into %ir.alloca, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[FRAME_INDEX34]](p5) :: (store (s32) into %ir.alloca, addrspace 5)
   ; GCN:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; GCN:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX34]], [[C2]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (store 4 into %ir.alloca + 4, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.alloca + 4, addrspace 5)
   ; GCN:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; GCN:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX34]], [[C3]](s32)
-  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store 4 into %ir.alloca + 8, addrspace 5)
+  ; GCN:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store (s32) into %ir.alloca + 8, addrspace 5)
   ; GCN:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @void_fastcc_byval_and_stack_passed
   ; GCN:   [[COPY40:%[0-9]+]]:_(p4) = COPY [[COPY7]]
   ; GCN:   [[COPY41:%[0-9]+]]:_(p4) = COPY [[COPY6]]
@@ -1451,7 +1448,7 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
   ; GCN:   [[COPY47:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
   ; GCN:   [[FRAME_INDEX35:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
   ; GCN:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; GCN:   G_MEMCPY [[FRAME_INDEX35]](p5), [[FRAME_INDEX34]](p5), [[C4]](s32), 0 :: (dereferenceable store 12 into %fixed-stack.2, align 16, addrspace 5), (dereferenceable load 12 from %ir.alloca, align 16, addrspace 5)
+  ; GCN:   G_MEMCPY [[FRAME_INDEX35]](p5), [[FRAME_INDEX34]](p5), [[C4]](s32), 0 :: (dereferenceable store (s96) into %fixed-stack.2, align 16, addrspace 5), (dereferenceable load (s96) from %ir.alloca, align 16, addrspace 5)
   ; GCN:   $vgpr0 = COPY [[C1]](s32)
   ; GCN:   $vgpr1 = COPY [[C1]](s32)
   ; GCN:   $vgpr2 = COPY [[C1]](s32)
@@ -1484,9 +1481,9 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
   ; GCN:   $vgpr29 = COPY [[C1]](s32)
   ; GCN:   $vgpr30 = COPY [[C1]](s32)
   ; GCN:   [[FRAME_INDEX36:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; GCN:   G_STORE [[C1]](s32), [[FRAME_INDEX36]](p5) :: (store 4 into %fixed-stack.1, addrspace 5)
+  ; GCN:   G_STORE [[C1]](s32), [[FRAME_INDEX36]](p5) :: (store (s32) into %fixed-stack.1, addrspace 5)
   ; GCN:   [[FRAME_INDEX37:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; GCN:   G_STORE [[COPY8]](s32), [[FRAME_INDEX37]](p5) :: (store 4 into %fixed-stack.0, align 16, addrspace 5)
+  ; GCN:   G_STORE [[COPY8]](s32), [[FRAME_INDEX37]](p5) :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
   ; GCN:   [[COPY48:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY48]](<4 x s32>)
   ; GCN:   $sgpr4_sgpr5 = COPY [[COPY40]](p4)

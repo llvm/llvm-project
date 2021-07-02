@@ -16,7 +16,7 @@ define dso_local void @write_int(i32 signext %in) {
 }
 ; CHECK: name:            write_int
 ; CHECK:      %[[SCRATCH:[0-9]+]]:gprc_and_gprc_nor0 = ADDItoc @i, $r2
-; CHECK-NEXT: STW %{{[0-9]+}}, 0, killed %[[SCRATCH]] :: (store 4 into @i)
+; CHECK-NEXT: STW %{{[0-9]+}}, 0, killed %[[SCRATCH]] :: (store (s32) into @i)
 
 ; TEST:         .write_int:
 ; TEST:           la 4, i[TD](2)
@@ -28,7 +28,7 @@ define dso_local i64 @read_ll() {
     ret i64 %0
 }
 ; CHECK: name:            read_ll
-; CHECK: LWZtoc @ll, $r2 :: (load 4 from got)
+; CHECK: LWZtoc @ll, $r2 :: (load (s32) from got)
 
 ; TEST:       .read_ll:
 ; TEST:         lwz 4, L..C0(2)
@@ -42,7 +42,7 @@ define dso_local float @read_float() {
 }
 ; CHECK: name:            read_float
 ; CHECK: %[[SCRATCH:[0-9]+]]:gprc_and_gprc_nor0 = ADDItoc @f, $r2
-; CHECK: %{{[0-9]+}}:f4rc = LFS 0, killed %[[SCRATCH]] :: (dereferenceable load 4 from @f)
+; CHECK: %{{[0-9]+}}:f4rc = LFS 0, killed %[[SCRATCH]] :: (dereferenceable load (s32) from @f)
 
 ; TEST:       .read_float:
 ; TEST:         la 3, f[TD](2)
@@ -54,7 +54,7 @@ define dso_local void @write_double(double %in) {
     ret void
 }
 ; CHECK: name:            write_double
-; CHECK: LWZtoc @d, $r2 :: (load 4 from got)
+; CHECK: LWZtoc @d, $r2 :: (load (s32) from got)
 
 ; TEST:       .write_double
 ; TEST:         lwz 3, L..C1(2)

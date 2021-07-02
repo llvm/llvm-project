@@ -22,16 +22,16 @@ body:             |
 
     ; CHECK-LABEL: name: not_necessarily_equiv_loads
     ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %load1:_(s32) = G_LOAD %ptr(p0) :: (load 4 from @g)
-    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (load 4 from @g)
+    ; CHECK: %load1:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
+    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
     ; CHECK: %or:_(s32) = G_OR %load2, %load1
-    ; CHECK: G_STORE %or(s32), %ptr(p0) :: (store 4 into @g)
+    ; CHECK: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
     ; CHECK: RET_ReallyLR
     %ptr:_(p0) = G_GLOBAL_VALUE @g
-    %load1:_(s32) = G_LOAD %ptr(p0) :: (load 4 from @g)
-    %load2:_(s32) = G_LOAD %ptr(p0) :: (load 4 from @g)
+    %load1:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
+    %load2:_(s32) = G_LOAD %ptr(p0) :: (load (s32) from @g)
     %or:_(s32) = G_OR %load2, %load1
-    G_STORE %or(s32), %ptr(p0) :: (store 4 into @g)
+    G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
     RET_ReallyLR
 
 ...
@@ -46,14 +46,14 @@ body:             |
 
     ; CHECK-LABEL: name: invariant_loads
     ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load 4 from @g)
-    ; CHECK: G_STORE %load2(s32), %ptr(p0) :: (store 4 into @g)
+    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
+    ; CHECK: G_STORE %load2(s32), %ptr(p0) :: (store (s32) into @g)
     ; CHECK: RET_ReallyLR
     %ptr:_(p0) = G_GLOBAL_VALUE @g
-    %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load 4 from @g)
-    %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load 4 from @g)
+    %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
+    %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
     %or:_(s32) = G_OR %load2, %load1
-    G_STORE %or(s32), %ptr(p0) :: (store 4 into @g)
+    G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
     RET_ReallyLR
 
 ...
@@ -68,15 +68,15 @@ body:             |
 
     ; CHECK-LABEL: name: both_have_to_be_invariant
     ; CHECK: %ptr:_(p0) = G_GLOBAL_VALUE @g
-    ; CHECK: %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load 4 from @g)
-    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load 4 from @g)
+    ; CHECK: %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
+    ; CHECK: %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load (s32) from @g)
     ; CHECK: %or:_(s32) = G_OR %load2, %load1
-    ; CHECK: G_STORE %or(s32), %ptr(p0) :: (store 4 into @g)
+    ; CHECK: G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
     ; CHECK: RET_ReallyLR
     %ptr:_(p0) = G_GLOBAL_VALUE @g
-    %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load 4 from @g)
-    %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load 4 from @g)
+    %load1:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable invariant load (s32) from @g)
+    %load2:_(s32) = G_LOAD %ptr(p0) :: (dereferenceable load (s32) from @g)
     %or:_(s32) = G_OR %load2, %load1
-    G_STORE %or(s32), %ptr(p0) :: (store 4 into @g)
+    G_STORE %or(s32), %ptr(p0) :: (store (s32) into @g)
     RET_ReallyLR
 ...

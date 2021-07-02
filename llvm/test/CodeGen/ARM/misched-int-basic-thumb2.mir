@@ -42,7 +42,7 @@
 # CHECK_SWIFT: Latency    : 2
 # CHECK_R52:   Latency    : 2
 #
-# CHECK:       SU(3):   %3:rgpr = t2LDRi12 %2:rgpr, 0, 14, $noreg :: (dereferenceable load 4 from @g1)
+# CHECK:       SU(3):   %3:rgpr = t2LDRi12 %2:rgpr, 0, 14, $noreg :: (dereferenceable load (s32) from @g1)
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 3
 # CHECK_R52:   Latency    : 4
@@ -57,7 +57,7 @@
 # CHECK_SWIFT: Latency    : 14
 # CHECK_R52:   Latency    : 8
 
-# CHECK:       SU(8):   t2STRi12 %7:rgpr, %2:rgpr, 0, 14, $noreg :: (store 4 into @g1)
+# CHECK:       SU(8):   t2STRi12 %7:rgpr, %2:rgpr, 0, 14, $noreg :: (store (s32) into @g1)
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 0
 # CHECK_R52:   Latency    : 4
@@ -152,12 +152,12 @@ body:             |
     %1 = COPY $r1
     %0 = COPY $r0
     %2 = t2MOVi32imm @g1
-    %3 = t2LDRi12 %2, 0, 14, $noreg :: (dereferenceable load 4 from @g1)
+    %3 = t2LDRi12 %2, 0, 14, $noreg :: (dereferenceable load (s32) from @g1)
     %4 = t2MOVi32imm @g2
-    %5 = t2LDRi12 %4, 0, 14, $noreg :: (dereferenceable load 4 from @g2)
+    %5 = t2LDRi12 %4, 0, 14, $noreg :: (dereferenceable load (s32) from @g2)
     %6 = t2ADDrr %3, %3, 14, $noreg, $noreg
     %7 = t2SDIV %6, %5, 14, $noreg
-    t2STRi12 %7, %2, 0, 14, $noreg :: (store 4 into @g1)
+    t2STRi12 %7, %2, 0, 14, $noreg :: (store (s32) into @g1)
     %8 = t2SMULBB %1, %1, 14, $noreg
     %9 = t2SMLABB %0, %0, %8, 14, $noreg
     %10 = t2UXTH %9, 0, 14, $noreg

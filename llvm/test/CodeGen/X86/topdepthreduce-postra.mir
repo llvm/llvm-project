@@ -8,9 +8,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: test
     ; CHECK: $eax = MOV32rr killed $edi
-    ; CHECK: MOV8mi killed renamable $rsi, 1, $noreg, 0, $noreg, 1 :: (store 1)
+    ; CHECK: MOV8mi killed renamable $rsi, 1, $noreg, 0, $noreg, 1 :: (store (s8))
     ; CHECK: renamable $eax = DEC32r killed renamable $eax, implicit-def $eflags
     $eax = MOV32rr $edi
     renamable $eax = DEC32r killed renamable $eax, implicit-def $eflags
-    MOV8mi killed renamable $rsi, 1, $noreg, 0, $noreg, 1 :: (store 1)
+    MOV8mi killed renamable $rsi, 1, $noreg, 0, $noreg, 1 :: (store (s8))
 ...

@@ -36,11 +36,11 @@ body:             |
 
     ; AVX512F-LABEL: name: test_load_v16i32_noalign
     ; AVX512F: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; AVX512F: [[VMOVUPSZrm:%[0-9]+]]:vr512 = VMOVUPSZrm [[COPY]], 1, $noreg, 0, $noreg :: (load 64 from %ir.p1, align 1)
+    ; AVX512F: [[VMOVUPSZrm:%[0-9]+]]:vr512 = VMOVUPSZrm [[COPY]], 1, $noreg, 0, $noreg :: (load (<16 x s32>) from %ir.p1, align 1)
     ; AVX512F: $zmm0 = COPY [[VMOVUPSZrm]]
     ; AVX512F: RET 0, implicit $zmm0
     %0(p0) = COPY $rdi
-    %1(<16 x s32>) = G_LOAD %0(p0) :: (load 64 from %ir.p1, align 1)
+    %1(<16 x s32>) = G_LOAD %0(p0) :: (load (<16 x s32>) from %ir.p1, align 1)
     $zmm0 = COPY %1(<16 x s32>)
     RET 0, implicit $zmm0
 
@@ -59,11 +59,11 @@ body:             |
 
     ; AVX512F-LABEL: name: test_load_v16i32_align
     ; AVX512F: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; AVX512F: [[VMOVUPSZrm:%[0-9]+]]:vr512 = VMOVUPSZrm [[COPY]], 1, $noreg, 0, $noreg :: (load 64 from %ir.p1, align 32)
+    ; AVX512F: [[VMOVUPSZrm:%[0-9]+]]:vr512 = VMOVUPSZrm [[COPY]], 1, $noreg, 0, $noreg :: (load (<16 x s32>) from %ir.p1, align 32)
     ; AVX512F: $zmm0 = COPY [[VMOVUPSZrm]]
     ; AVX512F: RET 0, implicit $zmm0
     %0(p0) = COPY $rdi
-    %1(<16 x s32>) = G_LOAD %0(p0) :: (load 64 from %ir.p1, align 32)
+    %1(<16 x s32>) = G_LOAD %0(p0) :: (load (<16 x s32>) from %ir.p1, align 32)
     $zmm0 = COPY %1(<16 x s32>)
     RET 0, implicit $zmm0
 
@@ -83,11 +83,11 @@ body:             |
     ; AVX512F-LABEL: name: test_store_v16i32_noalign
     ; AVX512F: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
     ; AVX512F: [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-    ; AVX512F: VMOVUPSZmr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY]] :: (store 64 into %ir.p1, align 1)
+    ; AVX512F: VMOVUPSZmr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY]] :: (store (<16 x s32>) into %ir.p1, align 1)
     ; AVX512F: RET 0
     %0(<16 x s32>) = COPY $zmm0
     %1(p0) = COPY $rdi
-    G_STORE %0(<16 x s32>), %1(p0) :: (store 64 into %ir.p1, align 1)
+    G_STORE %0(<16 x s32>), %1(p0) :: (store (<16 x s32>) into %ir.p1, align 1)
     RET 0
 
 ...
@@ -106,11 +106,11 @@ body:             |
     ; AVX512F-LABEL: name: test_store_v16i32_align
     ; AVX512F: [[COPY:%[0-9]+]]:vr512 = COPY $zmm0
     ; AVX512F: [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-    ; AVX512F: VMOVUPSZmr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY]] :: (store 64 into %ir.p1, align 32)
+    ; AVX512F: VMOVUPSZmr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY]] :: (store (<16 x s32>) into %ir.p1, align 32)
     ; AVX512F: RET 0
     %0(<16 x s32>) = COPY $zmm0
     %1(p0) = COPY $rdi
-    G_STORE %0(<16 x s32>), %1(p0) :: (store 64 into %ir.p1, align 32)
+    G_STORE %0(<16 x s32>), %1(p0) :: (store (<16 x s32>) into %ir.p1, align 32)
     RET 0
 
 ...

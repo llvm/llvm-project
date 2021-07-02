@@ -3,7 +3,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; Function Attrs: norecurse nounwind
 define void @foo(i32 %a, i32 %b, float* nocapture %foo_arr) #0 {
-; CHECK: (load 4 from %ir.arrayidx1.{{i[1-2]}})
+; CHECK: (load (s32) from %ir.arrayidx1.{{i[1-2]}})
 entry:
   %cmp = icmp sgt i32 %a, 0
   br i1 %cmp, label %if.then, label %if.end

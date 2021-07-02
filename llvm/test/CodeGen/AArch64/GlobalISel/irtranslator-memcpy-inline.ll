@@ -9,7 +9,7 @@ define void @copy(i8* %dst, i8* %src) {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 0 :: (store 1 into %ir.dst), (load 1 from %ir.src)
+  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 0 :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
   ; CHECK:   RET_ReallyLR
 entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 4, i1 false)
@@ -24,7 +24,7 @@ define void @inline_copy(i8* %dst, i8* %src) {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (store 1 into %ir.dst), (load 1 from %ir.src)
+  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
   ; CHECK:   RET_ReallyLR
 entry:
   call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 4, i1 false)
@@ -39,7 +39,7 @@ define void @copy_volatile(i8* %dst, i8* %src) {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 0 :: (volatile store 1 into %ir.dst), (volatile load 1 from %ir.src)
+  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 0 :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
   ; CHECK:   RET_ReallyLR
 entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 4, i1 true)
@@ -54,7 +54,7 @@ define void @inline_copy_volatile(i8* %dst, i8* %src) {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (volatile store 1 into %ir.dst), (volatile load 1 from %ir.src)
+  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
   ; CHECK:   RET_ReallyLR
 entry:
   call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 4, i1 true)
@@ -69,7 +69,7 @@ define void @tail_copy(i8* %dst, i8* %src) {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 1 :: (store 1 into %ir.dst), (load 1 from %ir.src)
+  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 1 :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
   ; CHECK:   RET_ReallyLR
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 4, i1 false)
@@ -84,7 +84,7 @@ define void @tail_inline_copy(i8* %dst, i8* %src) {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (store 1 into %ir.dst), (load 1 from %ir.src)
+  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (store (s8) into %ir.dst), (load (s8) from %ir.src)
   ; CHECK:   RET_ReallyLR
 entry:
   tail call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 4, i1 false)
@@ -99,7 +99,7 @@ define void @tail_copy_volatile(i8* %dst, i8* %src) {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 1 :: (volatile store 1 into %ir.dst), (volatile load 1 from %ir.src)
+  ; CHECK:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64), 1 :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
   ; CHECK:   RET_ReallyLR
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 4, i1 true)
@@ -114,7 +114,7 @@ define void @tail_inline_copy_volatile(i8* %dst, i8* %src) {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (volatile store 1 into %ir.dst), (volatile load 1 from %ir.src)
+  ; CHECK:   G_MEMCPY_INLINE [[COPY]](p0), [[COPY1]](p0), [[ZEXT]](s64) :: (volatile store (s8) into %ir.dst), (volatile load (s8) from %ir.src)
   ; CHECK:   RET_ReallyLR
 entry:
   tail call void @llvm.memcpy.inline.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 4, i1 true)

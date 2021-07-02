@@ -13,10 +13,10 @@ body: |
     ; CHECK-LABEL: name: sextload
     ; CHECK: liveins: $x0
     ; CHECK: %x0:_(p0) = COPY $x0
-    ; CHECK: %sextload:_(s32) = G_SEXTLOAD %x0(p0) :: (load 2)
+    ; CHECK: %sextload:_(s32) = G_SEXTLOAD %x0(p0) :: (load (s16))
     ; CHECK: $w0 = COPY %sextload(s32)
     %x0:_(p0) = COPY $x0
-    %sextload:_(s32) = G_SEXTLOAD %x0:_(p0) :: (load 2)
+    %sextload:_(s32) = G_SEXTLOAD %x0:_(p0) :: (load (s16))
     %sext_inreg:_(s32) = G_SEXT_INREG %sextload:_(s32), 24
     $w0 = COPY %sext_inreg(s32)
 ...

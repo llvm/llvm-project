@@ -24,7 +24,7 @@ body:             |
   ; CHECK:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load 4, addrspace 3)
+  ; CHECK:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
   ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_LO16 */, def %0, 2147549193 /* reguse tiedto:$1 */, %0(tied-def 3)
   ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 851977 /* reguse:VGPR_LO16 */, [[DS_READ_B32_gfx9_]]
   ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_LO16 */, def undef %0.sub0, 851978 /* regdef:VGPR_LO16 */, def undef %0.sub1
@@ -37,7 +37,7 @@ body:             |
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 
   bb.1:
-    %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load 4, addrspace 3)
+    %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load (s32), addrspace 3)
     INLINEASM &"", 1, 851978, def %0, 2147549193, %0(tied-def 3)
     INLINEASM &"", 1, 851977, %2
     INLINEASM &"", 1, 851978, def undef %0.sub0, 851978, def %0.sub1
@@ -62,7 +62,7 @@ body:             |
   ; CHECK:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load 4, addrspace 3)
+  ; CHECK:   [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load (s32), addrspace 3)
   ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_LO16 */, def %0, 2147549193 /* reguse tiedto:$1 */, %0(tied-def 3)
   ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 851977 /* reguse:VGPR_LO16 */, [[DS_READ_B32_gfx9_]]
   ; CHECK:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_LO16 */, def undef %0.sub1, 851978 /* regdef:VGPR_LO16 */, def undef %0.sub0
@@ -75,7 +75,7 @@ body:             |
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 
   bb.1:
-    %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load 4, addrspace 3)
+    %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load (s32), addrspace 3)
     INLINEASM &"", 1, 851978, def %0, 2147549193, %0(tied-def 3)
     INLINEASM &"", 1, 851977, %2
     INLINEASM &"", 1, 851978, def %0.sub1, 851978, def undef %0.sub0

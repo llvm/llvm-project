@@ -51,8 +51,8 @@ define void @dont_tail_call_explicit_sret_alloca_dummyusers(i64* %ptr) {
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.l
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.ptr)
-  ; CHECK:   G_STORE [[LOAD]](s64), [[FRAME_INDEX]](p0) :: (store 8 into %ir.l)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.ptr)
+  ; CHECK:   G_STORE [[LOAD]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %ir.l)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   $x8 = COPY [[FRAME_INDEX]](p0)
   ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
@@ -90,7 +90,7 @@ define i64 @dont_tail_call_sret_alloca_returned() {
   ; CHECK:   $x8 = COPY [[FRAME_INDEX]](p0)
   ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 8 from %ir.l)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.l)
   ; CHECK:   $x0 = COPY [[LOAD]](s64)
   ; CHECK:   RET_ReallyLR implicit $x0
   %l = alloca i64, align 8

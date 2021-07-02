@@ -197,12 +197,12 @@ body:             |
     $ebp = frame-setup MOV32rr $esp
     CFI_INSTRUCTION def_cfa_register $ebp
     frame-setup PUSH32r undef $eax, implicit-def $esp, implicit $esp
-    renamable $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load 4 from %fixed-stack.1)
+    renamable $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.1)
     DBG_VALUE 0, 0, !14, !DIExpression(), debug-location !15
-    renamable $ecx = MOV32rm $ebp, 1, $noreg, 8, $noreg, debug-location !16 :: (load 4 from %ir.b.addr)
+    renamable $ecx = MOV32rm $ebp, 1, $noreg, 8, $noreg, debug-location !16 :: (load (s32) from %ir.b.addr)
     DBG_VALUE 1, 0, !14, !DIExpression(), debug-location !15
     renamable $ecx = ADD32ri8 renamable $ecx, 4, implicit-def $eflags, debug-location !16
-    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed $eax :: (store 4 into %fixed-stack.1)
+    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed $eax :: (store (s32) into %fixed-stack.1)
     $eax = MOV32rr killed $ecx, debug-location !16
     $esp = frame-destroy ADD32ri8 $esp, 4, implicit-def dead $eflags, debug-location !16
     $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp, debug-location !16
@@ -237,24 +237,24 @@ body:             |
     $ebp = frame-setup MOV32rr $esp
     CFI_INSTRUCTION def_cfa_register $ebp
     $esp = frame-setup SUB32ri8 $esp, 24, implicit-def dead $eflags
-    renamable $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load 4 from %fixed-stack.1)
+    renamable $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.1)
     DBG_VALUE renamable $eax, 0, !20, !DIExpression(DW_OP_deref), debug-location !21
-    MOV32mi $ebp, 1, $noreg, -4, $noreg, 2, debug-location !23 :: (store 4 into %ir.z)
-    CMP32mi8 renamable $eax, 1, $noreg, 4, $noreg, 2, implicit-def $eflags, debug-location !24 :: (load 4 from %ir.var)
-    MOV32mr $ebp, 1, $noreg, -8, $noreg, killed $eax :: (store 4 into %stack.1)
+    MOV32mi $ebp, 1, $noreg, -4, $noreg, 2, debug-location !23 :: (store (s32) into %ir.z)
+    CMP32mi8 renamable $eax, 1, $noreg, 4, $noreg, 2, implicit-def $eflags, debug-location !24 :: (load (s32) from %ir.var)
+    MOV32mr $ebp, 1, $noreg, -8, $noreg, killed $eax :: (store (s32) into %stack.1)
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
     JCC_1 %bb.2, 14, implicit $eflags, debug-location !24
   
   bb.1.if.then:
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
-    renamable $eax = MOV32rm $ebp, 1, $noreg, -4, $noreg, debug-location !26 :: (load 4 from %ir.z)
+    renamable $eax = MOV32rm $ebp, 1, $noreg, -4, $noreg, debug-location !26 :: (load (s32) from %ir.z)
     renamable $eax = ADD32ri8 renamable $eax, 1, implicit-def $eflags, debug-location !26
-    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed renamable $eax, debug-location !26 :: (store 4 into %ir.z)
+    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed renamable $eax, debug-location !26 :: (store (s32) into %ir.z)
   
   bb.2.if.end:
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
-    $eax = MOV32rm $ebp, 1, $noreg, -8, $noreg :: (load 4 from %stack.1)
-    MOV32mr $esp, 1, $noreg, 0, $noreg, killed renamable $eax, debug-location !27 :: (store 4 into stack)
+    $eax = MOV32rm $ebp, 1, $noreg, -8, $noreg :: (load (s32) from %stack.1)
+    MOV32mr $esp, 1, $noreg, 0, $noreg, killed renamable $eax, debug-location !27 :: (store (s32) into stack)
     CALLpcrel32 @_ZN1A3fooEv, csr_32, implicit $esp, implicit $ssp, implicit-def $al, debug-location !27
     renamable $ecx = MOVSX32rr8 killed renamable $al, debug-location !27
     CMP32ri8 killed renamable $ecx, 97, implicit-def $eflags, debug-location !27
@@ -262,9 +262,9 @@ body:             |
   
   bb.3.if.then2:
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
-    renamable $eax = MOV32rm $ebp, 1, $noreg, -4, $noreg, debug-location !29 :: (load 4 from %ir.z)
+    renamable $eax = MOV32rm $ebp, 1, $noreg, -4, $noreg, debug-location !29 :: (load (s32) from %ir.z)
     renamable $eax = ADD32ri8 renamable $eax, 1, implicit-def $eflags, debug-location !29
-    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed renamable $eax, debug-location !29 :: (store 4 into %ir.z)
+    MOV32mr $ebp, 1, $noreg, -4, $noreg, killed renamable $eax, debug-location !29 :: (store (s32) into %ir.z)
   
   bb.4.if.end4:
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21

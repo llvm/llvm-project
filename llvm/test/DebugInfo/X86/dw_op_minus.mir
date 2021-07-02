@@ -98,20 +98,20 @@ body:             |
   bb.0.entry:
     $rsp = frame-setup SUB64ri8 $rsp, 24, implicit-def dead $eflags
     CFI_INSTRUCTION def_cfa_offset 32
-    renamable $rax = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @__safestack_unsafe_stack_ptr, $noreg :: (load 8 from got)
-    renamable $rcx = MOV64rm renamable $rax, 1, $noreg, 0, $fs :: (dereferenceable load 8 from @__safestack_unsafe_stack_ptr)
+    renamable $rax = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @__safestack_unsafe_stack_ptr, $noreg :: (load (s64) from got)
+    renamable $rcx = MOV64rm renamable $rax, 1, $noreg, 0, $fs :: (dereferenceable load (s64) from @__safestack_unsafe_stack_ptr)
     DBG_VALUE renamable $rcx, 0, !9, !DIExpression(DW_OP_constu, 400, DW_OP_minus), debug-location !15
     $rdx = MOV64rr $rcx
     renamable $rdx = ADD64ri32 renamable $rdx, -400, implicit-def dead $eflags
-    MOV64mr renamable $rax, 1, $noreg, 0, $fs, renamable $rdx :: (store 8 into @__safestack_unsafe_stack_ptr)
+    MOV64mr renamable $rax, 1, $noreg, 0, $fs, renamable $rdx :: (store (s64) into @__safestack_unsafe_stack_ptr)
     $rdi = MOV64rr killed $rdx, debug-location !17
-    MOV64mr $rsp, 1, $noreg, 16, $noreg, killed $rax :: (store 8 into %stack.0)
-    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed $rcx :: (store 8 into %stack.1)
+    MOV64mr $rsp, 1, $noreg, 16, $noreg, killed $rax :: (store (s64) into %stack.0)
+    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed $rcx :: (store (s64) into %stack.1)
     DBG_VALUE $rsp, 0, !9, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_constu, 400, DW_OP_minus), debug-location !15
     CALL64pcrel32 @Capture, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, debug-location !17
-    $rax = MOV64rm $rsp, 1, $noreg, 16, $noreg :: (load 8 from %stack.0)
-    $rcx = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.1)
-    MOV64mr killed renamable $rax, 1, $noreg, 0, $fs, killed renamable $rcx, debug-location !18 :: (store 8 into @__safestack_unsafe_stack_ptr)
+    $rax = MOV64rm $rsp, 1, $noreg, 16, $noreg :: (load (s64) from %stack.0)
+    $rcx = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load (s64) from %stack.1)
+    MOV64mr killed renamable $rax, 1, $noreg, 0, $fs, killed renamable $rcx, debug-location !18 :: (store (s64) into @__safestack_unsafe_stack_ptr)
     $rsp = frame-destroy ADD64ri8 $rsp, 24, implicit-def dead $eflags, debug-location !18
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !18
     RETQ debug-location !18

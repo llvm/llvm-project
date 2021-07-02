@@ -151,7 +151,7 @@ body:             |
     frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp, debug-location !28
     frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp, debug-location !28
     $rsp = frame-setup SUB64ri8 $rsp, 24, implicit-def dead $eflags
-    renamable $ecx = MOV32rm $rip, 1, $noreg, @bees, $noreg, debug-location !28 :: (volatile dereferenceable load 4 from @bees)
+    renamable $ecx = MOV32rm $rip, 1, $noreg, @bees, $noreg, debug-location !28 :: (volatile dereferenceable load (s32) from @bees)
     $eax = MOV32ri 3, implicit-def $rax
     CMP32ri8 killed renamable $ecx, 12, implicit-def $eflags, debug-location !28
     JCC_1 %bb.4, 4, implicit $eflags, debug-location !28
@@ -160,18 +160,18 @@ body:             |
     successors: %bb.2, %bb.3
     liveins: $rdi, $rsi
   
-    MOV64mr $rsp, 1, $noreg, 16, $noreg, killed renamable $rsi :: (store 8 into %stack.1)
-    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, 16, $noreg, killed renamable $rsi :: (store (s64) into %stack.1)
+    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $df, 12, implicit-def dead early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, debug-location !28
-    renamable $eax = MOV32rm $rip, 1, $noreg, @bees, $noreg, debug-location !28 :: (volatile dereferenceable load 4 from @bees)
+    renamable $eax = MOV32rm $rip, 1, $noreg, @bees, $noreg, debug-location !28 :: (volatile dereferenceable load (s32) from @bees)
     CMP32ri8 killed renamable $eax, 2, implicit-def $eflags, debug-location !28
     JCC_1 %bb.3, 5, implicit killed $eflags, debug-location !28
   
   bb.2.if.then2:
     successors: %bb.4
   
-    renamable $rax = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.0)
-    renamable $rax = SUB64rm killed renamable $rax, $rsp, 1, $noreg, 16, $noreg, implicit-def dead $eflags, debug-location !28 :: (load 8 from %stack.1)
+    renamable $rax = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load (s64) from %stack.0)
+    renamable $rax = SUB64rm killed renamable $rax, $rsp, 1, $noreg, 16, $noreg, implicit-def dead $eflags, debug-location !28 :: (load (s64) from %stack.1)
     JMP_1 %bb.4
   
   bb.3.if.end3:
@@ -180,10 +180,10 @@ body:             |
     $edi = MOV32ri 1, implicit-def $rdi, debug-location !28
     $esi = MOV32ri 2, implicit-def $rsi, debug-location !28
     CALL64pcrel32 @sum, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, debug-location !28
-    MOV64mr $rsp, 1, $noreg, 8, $noreg, $rax :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, 8, $noreg, $rax :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $df, 12, implicit-def dead early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, debug-location !28
-    ADD32mi8 $rip, 1, $noreg, @bees, $noreg, 1, implicit-def dead $eflags, debug-location !28 :: (volatile store 4 into @bees), (volatile dereferenceable load 4 from @bees)
-    renamable $rax = MOVSX64rm32 $rsp, 1, $noreg, 8, $noreg, debug-location !28 :: (load 4 from %stack.0, align 8)
+    ADD32mi8 $rip, 1, $noreg, @bees, $noreg, 1, implicit-def dead $eflags, debug-location !28 :: (volatile store (s32) into @bees), (volatile dereferenceable load (s32) from @bees)
+    renamable $rax = MOVSX64rm32 $rsp, 1, $noreg, 8, $noreg, debug-location !28 :: (load (s32) from %stack.0, align 8)
   
   bb.4.return:
     liveins: $rax

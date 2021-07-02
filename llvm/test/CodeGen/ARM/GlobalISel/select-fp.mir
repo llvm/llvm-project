@@ -68,7 +68,7 @@ body:             |
     %1(s32) = G_TRUNC %0(s64)
     ; CHECK: [[VREGTRUNC:%[0-9]+]]:gpr, [[UNINTERESTING:%[0-9]+]]:gpr = VMOVRRD [[VREG]]
 
-    G_STORE %1(s32), %2 :: (store 4)
+    G_STORE %1(s32), %2 :: (store (s32))
     ; CHECK: STRi12 [[VREGTRUNC]], [[PTR]], 0, 14 /* CC::al */, $noreg
 
     BX_RET 14, $noreg
@@ -720,7 +720,7 @@ body:             |
     %0(p0) = COPY $r0
     ; CHECK: %[[P:[0-9]+]]:gpr = COPY $r0
 
-    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    %1(s32) = G_LOAD %0(p0) :: (load (s32))
     ; CHECK: %[[V:[0-9]+]]:spr = VLDRS %[[P]], 0, 14 /* CC::al */, $noreg
 
     $s0 = COPY %1
@@ -746,7 +746,7 @@ body:             |
     %0(p0) = COPY $r0
     ; CHECK: %[[P:[0-9]+]]:gpr = COPY $r0
 
-    %1(s64) = G_LOAD %0(p0) :: (load 8)
+    %1(s64) = G_LOAD %0(p0) :: (load (s64))
     ; CHECK: %[[V:[0-9]+]]:dpr = VLDRD %[[P]], 0, 14 /* CC::al */, $noreg
 
     $d0 = COPY %1
@@ -777,10 +777,10 @@ body:             |
     %1(s32) = COPY $s0
     %2(s64) = COPY $d2
 
-    G_STORE %1(s32), %0(p0) :: (store 4)
+    G_STORE %1(s32), %0(p0) :: (store (s32))
     ; CHECK: VSTRS %[[F32]], %[[P]], 0, 14 /* CC::al */, $noreg
 
-    G_STORE %2(s64), %0(p0) :: (store 8)
+    G_STORE %2(s64), %0(p0) :: (store (s64))
     ; CHECK: VSTRD %[[F64]], %[[P]], 0, 14 /* CC::al */, $noreg
 
     BX_RET 14, $noreg

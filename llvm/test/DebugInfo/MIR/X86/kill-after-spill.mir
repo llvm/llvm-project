@@ -291,11 +291,11 @@ body:             |
 
     ; The instruction below is inserted additionally in order to test part of the code.
     $r12d = MOV32rr $r15d
-    MOV32mr $rbp, 1, $noreg, -48, $noreg, renamable $r15d :: (store 4 into %stack.0)
+    MOV32mr $rbp, 1, $noreg, -48, $noreg, renamable $r15d :: (store (s32) into %stack.0)
     ; The instruction below is altered ($r15d -> $r12d) in order to test part of the code.
     ; The original instruction "$edi = MOV32rr killed $r15d
     $edi = MOV32rr killed $r12d
-    MOV32mr $rbp, 1, $noreg, -44, $noreg, renamable $ebx :: (store 4 into %stack.1)
+    MOV32mr $rbp, 1, $noreg, -44, $noreg, renamable $ebx :: (store (s32) into %stack.1)
     $esi = MOV32rr killed $ebx
     CALL64pcrel32 @func2, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
     $r12 = MOV64rr $rax
@@ -325,7 +325,7 @@ body:             |
     $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags
     $rdi = MOV64rr $r12
     CALL64pcrel32 @func5, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit-def $rsp, implicit-def $ssp
-    renamable $rax = MOV64rm killed renamable $r13, 1, $noreg, 8, $noreg :: (load 8 from %ir.13)
+    renamable $rax = MOV64rm killed renamable $r13, 1, $noreg, 8, $noreg :: (load (s64) from %ir.13)
     TEST64rr renamable $rax, renamable $rax, implicit-def $eflags
     JCC_1 %bb.8, 4, implicit $eflags, debug-location !57
 
@@ -333,23 +333,23 @@ body:             |
     successors: %bb.6(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
-    CMP32mi8 renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load 4 from %ir.tot_perf2, align 8)
+    CMP32mi8 renamable $r15, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_perf2, align 8)
     JCC_1 %bb.7, 5, implicit $eflags, debug-location !57
 
   bb.6.lor.lhs.false:
     successors: %bb.8(0x30000000), %bb.7(0x50000000)
     liveins: $rax, $r12, $r15
 
-    CMP32mi8 killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load 4 from %ir.tot_bw)
+    CMP32mi8 killed renamable $r15, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.tot_bw)
     JCC_1 %bb.8, 4, implicit $eflags, debug-location !57
 
   bb.7.if.then14:
     successors: %bb.8(0x80000000)
     liveins: $rax, $r12
 
-    renamable $rdx = MOV64rm killed renamable $rax, 1, $noreg, 8, $noreg :: (load 8 from %ir.20)
+    renamable $rdx = MOV64rm killed renamable $rax, 1, $noreg, 8, $noreg :: (load (s64) from %ir.20)
     $rdi = MOV64rr killed $r12
-    $esi = MOV32rm $rbp, 1, $noreg, -44, $noreg :: (load 4 from %stack.1)
+    $esi = MOV32rm $rbp, 1, $noreg, -44, $noreg :: (load (s32) from %stack.1)
     CALL64pcrel32 @func6, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit $rdx, implicit-def $rsp, implicit-def $ssp, debug-location !57
 
   bb.8.cleanup:
@@ -362,12 +362,12 @@ body:             |
     successors: %bb.9(0x80000000)
     liveins: $r13
 
-    renamable $edi = MOV32rm renamable $r13, 1, $noreg, 0, $noreg :: (load 4 from %ir.variableLocal11, align 8)
-    renamable $esi = MOVZX32rm8 killed renamable $r13, 1, $noreg, 4, $noreg :: (load 1 from %ir.variableLocal2, align 4)
+    renamable $edi = MOV32rm renamable $r13, 1, $noreg, 0, $noreg :: (load (s32) from %ir.variableLocal11, align 8)
+    renamable $esi = MOVZX32rm8 killed renamable $r13, 1, $noreg, 4, $noreg :: (load (s8) from %ir.variableLocal2, align 4)
     renamable $ecx = MOV32ri @.str, implicit-def $rcx
     renamable $rcx = OR64ri32 killed renamable $rcx, -92238, implicit-def dead $eflags
     $edx = MOV32ri 5
-    $r8d = MOV32rm $rbp, 1, $noreg, -48, $noreg :: (load 4 from %stack.0)
+    $r8d = MOV32rm $rbp, 1, $noreg, -48, $noreg :: (load (s32) from %stack.0)
     CALL64pcrel32 @func3, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $edx, implicit $rcx, implicit $r8d, implicit-def $rsp, implicit-def $ssp
     renamable $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def dead $eflags, debug-location !57
 

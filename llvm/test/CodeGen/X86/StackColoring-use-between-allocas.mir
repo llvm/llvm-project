@@ -148,8 +148,8 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: _Z1gv
-    ; CHECK: [[MOVSDrm:%[0-9]+]]:vr128 = MOVSDrm $rip, 1, $noreg, @i, $noreg :: (dereferenceable load 8 from `<2 x float>* bitcast (%class.d* @i to <2 x float>*)`)
-    ; CHECK: [[MOVSDrm1:%[0-9]+]]:vr128 = MOVSDrm $rip, 1, $noreg, @i + 8, $noreg :: (dereferenceable load 8 from `<2 x float>* bitcast (float* getelementptr inbounds (%class.d, %class.d* @i, i64 0, i32 0, i64 2) to <2 x float>*)`)
+    ; CHECK: [[MOVSDrm:%[0-9]+]]:vr128 = MOVSDrm $rip, 1, $noreg, @i, $noreg :: (dereferenceable load (s64) from `<2 x float>* bitcast (%class.d* @i to <2 x float>*)`)
+    ; CHECK: [[MOVSDrm1:%[0-9]+]]:vr128 = MOVSDrm $rip, 1, $noreg, @i + 8, $noreg :: (dereferenceable load (s64) from `<2 x float>* bitcast (float* getelementptr inbounds (%class.d, %class.d* @i, i64 0, i32 0, i64 2) to <2 x float>*)`)
     ; CHECK: ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     ; CHECK: $xmm0 = COPY [[MOVSDrm]]
     ; CHECK: $xmm1 = COPY [[MOVSDrm1]]
@@ -157,8 +157,8 @@ body:             |
     ; CHECK: ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
     ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY $xmm1
-    ; CHECK: MOVLPDmr %stack.3.tmp, 1, $noreg, 0, $noreg, [[COPY]] :: (store 8 into %ir.3)
-    ; CHECK: MOVLPDmr %stack.3.tmp, 1, $noreg, 8, $noreg, [[COPY1]] :: (store 8 into %ir.5)
+    ; CHECK: MOVLPDmr %stack.3.tmp, 1, $noreg, 0, $noreg, [[COPY]] :: (store (s64) into %ir.3)
+    ; CHECK: MOVLPDmr %stack.3.tmp, 1, $noreg, 8, $noreg, [[COPY1]] :: (store (s64) into %ir.5)
     ; CHECK: ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     ; CHECK: [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.0.a, 1, $noreg, 0, $noreg
     ; CHECK: [[LEA64r1:%[0-9]+]]:gr64 = LEA64r %stack.3.tmp, 1, $noreg, 0, $noreg
@@ -176,8 +176,8 @@ body:             |
     ; CHECK: RET 0
     LIFETIME_START %stack.0.a
     LIFETIME_START %stack.1.ref.tmp
-    %0:vr128 = MOVSDrm $rip, 1, $noreg, @i, $noreg :: (dereferenceable load 8 from `<2 x float>* bitcast (%class.d* @i to <2 x float>*)`)
-    %1:vr128 = MOVSDrm $rip, 1, $noreg, @i + 8, $noreg :: (dereferenceable load 8 from `<2 x float>* bitcast (float* getelementptr inbounds (%class.d, %class.d* @i, i64 0, i32 0, i64 2) to <2 x float>*)`)
+    %0:vr128 = MOVSDrm $rip, 1, $noreg, @i, $noreg :: (dereferenceable load (s64) from `<2 x float>* bitcast (%class.d* @i to <2 x float>*)`)
+    %1:vr128 = MOVSDrm $rip, 1, $noreg, @i + 8, $noreg :: (dereferenceable load (s64) from `<2 x float>* bitcast (float* getelementptr inbounds (%class.d, %class.d* @i, i64 0, i32 0, i64 2) to <2 x float>*)`)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $xmm0 = COPY %0
     $xmm1 = COPY %1
@@ -185,8 +185,8 @@ body:             |
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %2:vr128 = COPY $xmm0
     %3:vr128 = COPY $xmm1
-    MOVLPDmr %stack.1.ref.tmp, 1, $noreg, 0, $noreg, %2 :: (store 8 into %ir.2)
-    MOVLPDmr %stack.1.ref.tmp, 1, $noreg, 8, $noreg, %3 :: (store 8 into %ir.4)
+    MOVLPDmr %stack.1.ref.tmp, 1, $noreg, 0, $noreg, %2 :: (store (s64) into %ir.2)
+    MOVLPDmr %stack.1.ref.tmp, 1, $noreg, 8, $noreg, %3 :: (store (s64) into %ir.4)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %4:gr64 = LEA64r %stack.0.a, 1, $noreg, 0, $noreg
     %5:gr64 = LEA64r %stack.1.ref.tmp, 1, $noreg, 0, $noreg

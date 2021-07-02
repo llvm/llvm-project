@@ -179,13 +179,13 @@ body:             |
     CFI_INSTRUCTION def_cfa_register $rbp
     $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
     $eax = XOR32rr undef $eax, undef $eax, implicit-def $eflags, implicit-def $rax
-    MOV64mr $rbp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %ir.offset.addr)
-    MOV64mr $rbp, 1, $noreg, -16, $noreg, killed renamable $rsi :: (store 8 into %ir.limit.addr)
+    MOV64mr $rbp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %ir.offset.addr)
+    MOV64mr $rbp, 1, $noreg, -16, $noreg, killed renamable $rsi :: (store (s64) into %ir.limit.addr)
     DBG_VALUE renamable $rdx, 0, !44, !DIExpression(DW_OP_deref), debug-location !45
     $rdi = MOV64rr $rdx, debug-location !46
     $rsi = MOV64rr killed $rax, debug-location !46
     $eax = MOV32ri 6, implicit-def $rax, debug-location !46
-    MOV64mr $rbp, 1, $noreg, -24, $noreg, killed $rdx :: (store 8 into %stack.2)
+    MOV64mr $rbp, 1, $noreg, -24, $noreg, killed $rdx :: (store (s64) into %stack.2)
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
     $rdx = MOV64rr killed $rax, debug-location !46
     renamable $rcx = MOV64ri @.str, debug-location !46
@@ -195,27 +195,27 @@ body:             |
   
   bb.1.lor.lhs.false:
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
-    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load 8 from %stack.2)
+    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load (s64) from %stack.2)
     $esi = MOV32ri 6, implicit-def $rsi, debug-location !48
     CALL64pcrel32 @_ZNSsixEm, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rax, debug-location !48
-    renamable $ecx = MOVSX32rm8 killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !48 :: (load 1 from %ir.call1)
+    renamable $ecx = MOVSX32rm8 killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !48 :: (load (s8) from %ir.call1)
     CMP32ri8 killed renamable $ecx, 45, implicit-def $eflags, debug-location !48
     JCC_1 %bb.3, 5, implicit $eflags, debug-location !48
   
   bb.2.if.then:
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
-    renamable $rax = MOV64rm $rbp, 1, $noreg, -8, $noreg, debug-location !50 :: (load 8 from %ir.offset.addr)
-    MOV64mi32 killed renamable $rax, 1, $noreg, 0, $noreg, 1, debug-location !50 :: (store 8 into %ir.1)
+    renamable $rax = MOV64rm $rbp, 1, $noreg, -8, $noreg, debug-location !50 :: (load (s64) from %ir.offset.addr)
+    MOV64mi32 killed renamable $rax, 1, $noreg, 0, $noreg, 1, debug-location !50 :: (store (s64) into %ir.1)
   
   bb.3.if.end:
     DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
     $esi = XOR32rr undef $esi, undef $esi, implicit-def $eflags, implicit-def $rsi
-    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load 8 from %stack.2)
+    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load (s64) from %stack.2)
     $edx = MOV32ri 6, implicit-def $rdx, debug-location !51
     CALL64pcrel32 @_ZNSs5eraseEmm, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit killed $rdx, implicit-def $rax, debug-location !51
-    renamable $rdx = MOV64rm $rbp, 1, $noreg, -16, $noreg, debug-location !52 :: (load 8 from %ir.limit.addr)
-    MOV64mi32 killed renamable $rdx, 1, $noreg, 0, $noreg, 2, debug-location !52 :: (store 8 into %ir.2)
-    MOV64mr $rbp, 1, $noreg, -32, $noreg, killed $rax :: (store 8 into %stack.3)
+    renamable $rdx = MOV64rm $rbp, 1, $noreg, -16, $noreg, debug-location !52 :: (load (s64) from %ir.limit.addr)
+    MOV64mi32 killed renamable $rdx, 1, $noreg, 0, $noreg, 2, debug-location !52 :: (store (s64) into %ir.2)
+    MOV64mr $rbp, 1, $noreg, -32, $noreg, killed $rax :: (store (s64) into %stack.3)
     $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags, debug-location !53
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !53
     CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !53

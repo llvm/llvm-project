@@ -57,7 +57,7 @@ body: |
 
     frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
     $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
-    $rbx = LOAD_STACK_GUARD :: (invariant load 8 from @__stack_chk_guard)
+    $rbx = LOAD_STACK_GUARD :: (invariant load (s64) from @__stack_chk_guard)
     MOV64mr $rsp, 1, _, 24, _, $rbx
     $rsi = LEA64r $rsp, 1, _, 19, _
     MOV64mr $rsp, 1, _, 8, _, $rsi

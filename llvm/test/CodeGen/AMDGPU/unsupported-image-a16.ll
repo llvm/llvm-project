@@ -5,7 +5,7 @@
 ; feature, and instead generates a slection error.
 
 ; SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.image.load.1d
-; GISEL-ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "ImageResource") (in function: load_1d)
+; GISEL-ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(<8 x s32>), 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource") (in function: load_1d)
 
 define amdgpu_ps <4 x float> @load_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:

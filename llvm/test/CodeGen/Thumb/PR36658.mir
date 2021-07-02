@@ -226,7 +226,7 @@ body:             |
 
     renamable $r0, dead $cpsr = tLSLri killed renamable $r2, 2, 14, $noreg
     renamable $r1 = tLEApcrelJT %jump-table.1, 14, $noreg
-    renamable $r0 = tLDRr killed renamable $r1, killed renamable $r0, 14, $noreg :: (load 4 from jump-table)
+    renamable $r0 = tLDRr killed renamable $r1, killed renamable $r0, 14, $noreg :: (load (s32) from jump-table)
     tBR_JTr killed renamable $r0, %jump-table.1
 
   bb.19.sw.bb93:
@@ -244,7 +244,7 @@ body:             |
 
     renamable $r1, dead $cpsr = tLSLri killed renamable $r2, 2, 14, $noreg
     renamable $r2 = tLEApcrelJT %jump-table.0, 14, $noreg
-    renamable $r2 = tLDRr killed renamable $r2, killed renamable $r1, 14, $noreg :: (load 4 from jump-table)
+    renamable $r2 = tLDRr killed renamable $r2, killed renamable $r1, 14, $noreg :: (load (s32) from jump-table)
     $r1 = tMOVSr $r0, implicit-def dead $cpsr
     tBR_JTr killed renamable $r2, %jump-table.0
 
@@ -284,7 +284,7 @@ body:             |
     liveins: $r4
 
     renamable $r0, dead $cpsr = tMOVi8 1, 14, $noreg
-    tSTRi killed renamable $r0, killed renamable $r4, 0, 14, $noreg :: (store 4 into %ir.ignore_ptr)
+    tSTRi killed renamable $r0, killed renamable $r4, 0, 14, $noreg :: (store (s32) into %ir.ignore_ptr)
     renamable $r1, dead $cpsr = tMOVi8 0, 14, $noreg
     tB %bb.28, 14, $noreg
 

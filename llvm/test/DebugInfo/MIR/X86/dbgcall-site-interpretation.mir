@@ -157,7 +157,7 @@ body:             |
     $r15d = MOV32rr $esi, implicit-def $r15
     $ebx = MOV32rr $edi, implicit-def $rbx
     $edi = MOV32rr $esi
-    MOV32mr $rsp, 1, $noreg, 8, $noreg, killed renamable $edx :: (store 4 into %ir.arg3.addr)
+    MOV32mr $rsp, 1, $noreg, 8, $noreg, killed renamable $edx :: (store (s32) into %ir.arg3.addr)
     renamable $rdx = LEA64r $rsp, 1, $noreg, 8, $noreg
     renamable $ecx = MOV32rr $r14d,
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $rdx, implicit $ecx, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, implicit-def $rax, debug-location !21
@@ -178,14 +178,14 @@ body:             |
     TEST32rr killed renamable $edx, renamable $edx, implicit-def $eflags, debug-location !21
     renamable $ecx = CMOV32rr renamable $ecx, killed renamable $eax, 4, implicit killed $eflags, implicit killed $rcx, implicit-def $rcx, debug-location !21
     DBG_VALUE $ecx, $noreg, !19, !DIExpression(), debug-location !21
-    MOV32mr $rsp, 1, $noreg, 12, $noreg, renamable $ecx, debug-location !21 :: (store 4 into %ir.local2)
+    MOV32mr $rsp, 1, $noreg, 12, $noreg, renamable $ecx, debug-location !21 :: (store (s32) into %ir.local2)
     CMP32rr renamable $ecx, renamable $r14d, implicit-def $eflags, implicit killed $r14, debug-location !21
     renamable $ebx = CMOV32rr renamable $ebx, renamable $edi, 12, implicit killed $eflags, implicit killed $rbx, implicit-def $rbx, debug-location !21
     renamable $ecx = nsw IMUL32rr renamable $ecx, renamable $ebx, implicit-def dead $eflags, implicit killed $rbx, implicit killed $rcx, implicit-def $rcx, debug-location !21
     DBG_VALUE $rsp, $noreg, !19, !DIExpression(DW_OP_plus_uconst, 12, DW_OP_deref), debug-location !21
     DBG_VALUE $ecx, $noreg, !20, !DIExpression(), debug-location !21
     $esi = MOV32ri 4, debug-location !21
-    renamable $ecx = MOV32rm $rsp, 1, $noreg, 8, $noreg, implicit-def $rcx, debug-location !21 :: (dereferenceable load 4 from %ir.arg3.addr)
+    renamable $ecx = MOV32rm $rsp, 1, $noreg, 8, $noreg, implicit-def $rcx, debug-location !21 :: (dereferenceable load (s32) from %ir.arg3.addr)
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $rdx, implicit $ecx, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, implicit-def $rax, debug-location !21
     DBG_VALUE $eax, $noreg, !14, !DIExpression(), debug-location !21
     renamable $eax = nsw ADD32ri8 killed renamable $eax, 4, implicit-def dead $eflags, debug-location !21

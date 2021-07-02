@@ -145,30 +145,30 @@ body:             |
 
     ; CHECK-LABEL: name: test_spill
     ; CHECK: liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
-    ; CHECK: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $r9 :: (store 8 into %stack.0)
-    ; CHECK: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $r8 :: (store 8 into %stack.1)
-    ; CHECK: MOV64mr %stack.2, 1, $noreg, 0, $noreg, $rcx :: (store 8 into %stack.2)
+    ; CHECK: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $r9 :: (store (s64) into %stack.0)
+    ; CHECK: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $r8 :: (store (s64) into %stack.1)
+    ; CHECK: MOV64mr %stack.2, 1, $noreg, 0, $noreg, $rcx :: (store (s64) into %stack.2)
     ; CHECK: [[R1:%[0-9]+]]:gr64 = COPY $rdx
     ; CHECK: [[R2:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK: [[R3:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK: [[R4:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 8 from %fixed-stack.0, align 16)
-    ; CHECK: [[R5:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 8 from %fixed-stack.1)
-    ; CHECK: [[R6:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load 8 from %fixed-stack.2, align 16)
+    ; CHECK: [[R4:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    ; CHECK: [[R5:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.1)
+    ; CHECK: [[R6:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.2, align 16)
     ; CHECK: ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    ; CHECK: [[R6]]:gr64, [[R5]]:gr64, [[R4]]:gr64, [[R1]]:gr64, [[R2]]:gr64, [[R3]]:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 9, [[R6]](tied-def 0), [[R5]](tied-def 1), [[R4]](tied-def 2), 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.2, 0, [[R1]](tied-def 3), [[R2]](tied-def 4), [[R3]](tied-def 5), 2, 0, 2, 9, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store 8 on %stack.0), (load store 8 on %stack.1), (load store 8 on %stack.2)
+    ; CHECK: [[R6]]:gr64, [[R5]]:gr64, [[R4]]:gr64, [[R1]]:gr64, [[R2]]:gr64, [[R3]]:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 9, [[R6]](tied-def 0), [[R5]](tied-def 1), [[R4]](tied-def 2), 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.2, 0, [[R1]](tied-def 3), [[R2]](tied-def 4), [[R3]](tied-def 5), 2, 0, 2, 9, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store (s64) on %stack.0), (load store (s64) on %stack.1), (load store (s64) on %stack.2)
     ; CHECK: ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    ; CHECK: [[RES:%[0-9]+]]:gr32 = MOV32rm [[R3]], 1, $noreg, 4, $noreg :: (load 4 from %ir.gep00, addrspace 1)
-    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R2]], 1, $noreg, 8, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep01, addrspace 1)
-    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R1]], 1, $noreg, 12, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep02, addrspace 1)
-    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.2, 1, $noreg, 0, $noreg :: (load 8 from %stack.2)
-    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[MOV64rm]], 1, $noreg, 16, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep03, addrspace 1)
-    ; CHECK: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
-    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[MOV64rm1]], 1, $noreg, 20, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep04, addrspace 1)
-    ; CHECK: [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
-    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[MOV64rm2]], 1, $noreg, 24, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep05, addrspace 1)
-    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R4]], 1, $noreg, 28, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep06, addrspace 1)
-    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R5]], 1, $noreg, 32, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep07, addrspace 1)
-    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R6]], 1, $noreg, 36, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep08, addrspace 1)
+    ; CHECK: [[RES:%[0-9]+]]:gr32 = MOV32rm [[R3]], 1, $noreg, 4, $noreg :: (load (s32) from %ir.gep00, addrspace 1)
+    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R2]], 1, $noreg, 8, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep01, addrspace 1)
+    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R1]], 1, $noreg, 12, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep02, addrspace 1)
+    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %stack.2)
+    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[MOV64rm]], 1, $noreg, 16, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep03, addrspace 1)
+    ; CHECK: [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
+    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[MOV64rm1]], 1, $noreg, 20, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep04, addrspace 1)
+    ; CHECK: [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[MOV64rm2]], 1, $noreg, 24, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep05, addrspace 1)
+    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R4]], 1, $noreg, 28, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep06, addrspace 1)
+    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R5]], 1, $noreg, 32, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep07, addrspace 1)
+    ; CHECK: [[RES]]:gr32 = ADD32rm [[RES]], [[R6]], 1, $noreg, 36, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep08, addrspace 1)
     ; CHECK: $eax = COPY [[RES]]
     ; CHECK: RET 0, $eax
     %9:gr64 = COPY $r9
@@ -177,21 +177,21 @@ body:             |
     %12:gr64 = COPY $rdx
     %13:gr64 = COPY $rsi
     %14:gr64 = COPY $rdi
-    %8:gr64 = MOV64rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load 8 from %fixed-stack.2, align 16)
-    %7:gr64 = MOV64rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 8 from %fixed-stack.1)
-    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 8 from %fixed-stack.0, align 16)
+    %8:gr64 = MOV64rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.2, align 16)
+    %7:gr64 = MOV64rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.1)
+    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %6:gr64, %7:gr64, %8:gr64, %9:gr64, %10:gr64, %11:gr64, %12:gr64, %13:gr64, %14:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 9, %6(tied-def 0), %7(tied-def 1), %8(tied-def 2), %9(tied-def 3), %10(tied-def 4), %11(tied-def 5), %12(tied-def 6), %13(tied-def 7), %14(tied-def 8), 2, 0, 2, 9, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %20:gr32 = MOV32rm %14, 1, $noreg, 4, $noreg :: (load 4 from %ir.gep00, addrspace 1)
-    %20:gr32 = ADD32rm %20, %13, 1, $noreg, 8, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep01, addrspace 1)
-    %20:gr32 = ADD32rm %20, %12, 1, $noreg, 12, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep02, addrspace 1)
-    %20:gr32 = ADD32rm %20, %11, 1, $noreg, 16, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep03, addrspace 1)
-    %20:gr32 = ADD32rm %20, %10, 1, $noreg, 20, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep04, addrspace 1)
-    %20:gr32 = ADD32rm %20, %9, 1, $noreg, 24, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep05, addrspace 1)
-    %20:gr32 = ADD32rm %20, %8, 1, $noreg, 28, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep06, addrspace 1)
-    %20:gr32 = ADD32rm %20, %7, 1, $noreg, 32, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep07, addrspace 1)
-    %20:gr32 = ADD32rm %20, %6, 1, $noreg, 36, $noreg, implicit-def dead $eflags :: (load 4 from %ir.gep08, addrspace 1)
+    %20:gr32 = MOV32rm %14, 1, $noreg, 4, $noreg :: (load (s32) from %ir.gep00, addrspace 1)
+    %20:gr32 = ADD32rm %20, %13, 1, $noreg, 8, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep01, addrspace 1)
+    %20:gr32 = ADD32rm %20, %12, 1, $noreg, 12, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep02, addrspace 1)
+    %20:gr32 = ADD32rm %20, %11, 1, $noreg, 16, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep03, addrspace 1)
+    %20:gr32 = ADD32rm %20, %10, 1, $noreg, 20, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep04, addrspace 1)
+    %20:gr32 = ADD32rm %20, %9, 1, $noreg, 24, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep05, addrspace 1)
+    %20:gr32 = ADD32rm %20, %8, 1, $noreg, 28, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep06, addrspace 1)
+    %20:gr32 = ADD32rm %20, %7, 1, $noreg, 32, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep07, addrspace 1)
+    %20:gr32 = ADD32rm %20, %6, 1, $noreg, 36, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep08, addrspace 1)
     $eax = COPY %20
     RET 0, killed $eax
 

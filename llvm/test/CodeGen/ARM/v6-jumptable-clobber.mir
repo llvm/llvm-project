@@ -232,7 +232,7 @@ body:             |
     liveins: $r0, $r1
   
     $r2 = tLDRpci %const.0, 14, $noreg
-    tSTRi killed $r2, killed $r1, 0, 14, $noreg :: (store 4 into %ir.addr)
+    tSTRi killed $r2, killed $r1, 0, 14, $noreg :: (store (s32) into %ir.addr)
     dead $r1 = SPACE 980, undef $r0
     $r0 = tUXTB killed $r0, 14, $noreg
     $r1, dead $cpsr = tSUBi3 killed $r0, 1, 14, $noreg
@@ -245,7 +245,7 @@ body:             |
   
     $r0, dead $cpsr = tLSLri killed $r1, 2, 14, $noreg
     $r1 = tLEApcrelJT %jump-table.0, 14, $noreg
-    $r0 = tLDRr killed $r1, killed $r0, 14, $noreg :: (load 4 from jump-table)
+    $r0 = tLDRr killed $r1, killed $r0, 14, $noreg :: (load (s32) from jump-table)
     tBR_JTr killed $r0, %jump-table.0
   
   bb.3.d2:
@@ -330,7 +330,7 @@ body:             |
     liveins: $r0, $r1
   
     $r2 = tLDRpci %const.0, 14, $noreg
-    tSTRi killed $r2, killed $r1, 0, 14, $noreg :: (store 4 into %ir.addr)
+    tSTRi killed $r2, killed $r1, 0, 14, $noreg :: (store (s32) into %ir.addr)
     $r0 = tUXTB killed $r0, 14, $noreg
     $r1, dead $cpsr = tSUBi3 killed $r0, 1, 14, $noreg
     tCMPi8 $r1, 25, 14, $noreg, implicit-def $cpsr
@@ -342,7 +342,7 @@ body:             |
   
     $r0, dead $cpsr = tLSLri killed $r1, 2, 14, $noreg
     $r1 = tLEApcrelJT %jump-table.0, 14, $noreg
-    $r0 = tLDRr killed $r1, killed $r0, 14, $noreg :: (load 4 from jump-table)
+    $r0 = tLDRr killed $r1, killed $r0, 14, $noreg :: (load (s32) from jump-table)
     tBR_JTr killed $r0, %jump-table.0
   
   bb.3.d2:

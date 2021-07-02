@@ -6,7 +6,7 @@
   source_filename = "convert-rr-to-ri-instrs.c"
   target datalayout = "e-m:e-i64:64-n32:64"
   target triple = "powerpc64le-unknown-linux-gnu"
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testADD4(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
   entry:
@@ -14,7 +14,7 @@
     %add1 = add nsw i32 %add, %b
     ret i32 %add1
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testADD8(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -22,21 +22,21 @@
     %add1 = add nsw i64 %add, %b
     ret i64 %add1
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i128 @testADDC(i128 %a, i128 %b) local_unnamed_addr #0 {
   entry:
     %add = add nsw i128 %b, %a
     ret i128 %add
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i128 @testADDC8(i128 %a, i128 %b) local_unnamed_addr #0 {
   entry:
     %add = add nsw i128 %b, %a
     ret i128 %add
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testADDC_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -46,21 +46,21 @@
     %retval.0 = xor i64 %add, %neg
     ret i64 %retval.0
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testADDI(i32 signext %a) local_unnamed_addr #0 {
   entry:
     %add = add nsw i32 %a, 44
     ret i32 %add
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testADDI8(i32 signext %a) local_unnamed_addr #0 {
   entry:
     %add = add nsw i32 %a, 44
     ret i32 %add
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testAND_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -70,7 +70,7 @@
     %conv = trunc i64 %cond to i32
     ret i32 %conv
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testAND8_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -79,7 +79,7 @@
     %cond = select i1 %tobool, i64 %b, i64 %a
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testCMPD(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -88,7 +88,7 @@
     %cond = add nsw i64 %add, %b
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testCMPDI(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -97,7 +97,7 @@
     %cond = add nsw i64 %add, %b
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testCMPDI_F(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -106,7 +106,7 @@
     %cond = add nsw i64 %add, %b
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testCMPLD(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -115,7 +115,7 @@
     %cond = add i64 %add, %b
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testCMPLDI(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -124,7 +124,7 @@
     %cond = add i64 %add, %b
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testCMPW(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
   entry:
@@ -133,7 +133,7 @@
     %cond = add nsw i32 %add, %b
     ret i32 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testCMPWI(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
   entry:
@@ -142,7 +142,7 @@
     %cond = add nsw i32 %add, %b
     ret i32 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testCMPLW(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
   entry:
@@ -151,7 +151,7 @@
     %cond = add i32 %add, %b
     ret i32 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testCMPLWI(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
   entry:
@@ -160,7 +160,7 @@
     %cond = add i32 %add, %b
     ret i32 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define zeroext i8 @testLBZUX(i8* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -178,7 +178,7 @@
     %conv6 = trunc i32 %add5 to i8
     ret i8 %conv6
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define zeroext i8 @testLBZX(i8* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -196,7 +196,7 @@
     %conv6 = trunc i32 %add5 to i8
     ret i8 %conv6
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define zeroext i16 @testLHZUX(i16* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -214,7 +214,7 @@
     %conv6 = trunc i32 %add5 to i16
     ret i16 %conv6
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define zeroext i16 @testLHZX(i16* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -232,7 +232,7 @@
     %conv6 = trunc i32 %add5 to i16
     ret i16 %conv6
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define signext i16 @testLHAUX(i16* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -250,7 +250,7 @@
     %conv6 = trunc i32 %add5 to i16
     ret i16 %conv6
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define signext i16 @testLHAX(i16* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -268,7 +268,7 @@
     %conv6 = trunc i32 %add5 to i16
     ret i16 %conv6
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define zeroext i32 @testLWZUX(i32* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -283,7 +283,7 @@
     %add4 = add i32 %1, %0
     ret i32 %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define zeroext i32 @testLWZX(i32* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -298,7 +298,7 @@
     %add4 = add i32 %1, %0
     ret i32 %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define i64 @testLWAX(i32* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -315,7 +315,7 @@
     %add5 = add nsw i64 %conv4, %conv
     ret i64 %add5
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define i64 @testLDUX(i64* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -330,7 +330,7 @@
     %add4 = add i64 %1, %0
     ret i64 %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define i64 @testLDX(i64* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -345,7 +345,7 @@
     %add4 = add i64 %1, %0
     ret i64 %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define double @testLFDUX(double* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
@@ -360,7 +360,7 @@
     %add4 = fadd double %0, %1
     ret double %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define double @testLFDX(double* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
@@ -375,7 +375,7 @@
     %add4 = fadd double %0, %1
     ret double %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define <4 x float> @testLFSUX(float* nocapture readonly %ptr, i32 signext %idx) local_unnamed_addr #2 {
   entry:
@@ -405,7 +405,7 @@
     %9 = bitcast <4 x i32> %vecinit14 to <4 x float>
     ret <4 x float> %9
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define float @testLFSX(float* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
@@ -420,7 +420,7 @@
     %add4 = fadd float %0, %1
     ret float %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define double @testLXSDX(double* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -435,7 +435,7 @@
     %add4 = fadd double %0, %1
     ret double %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define float @testLXSSPX(float* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -450,7 +450,7 @@
     %add4 = fadd float %0, %1
     ret float %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define <4 x i32> @testLXVX(<4 x i32>* nocapture readonly %ptr, i32 zeroext %idx) local_unnamed_addr #1 {
   entry:
@@ -465,35 +465,35 @@
     %add4 = add <4 x i32> %1, %0
     ret <4 x i32> %add4
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testOR(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
   entry:
     %or = or i32 %b, %a
     ret i32 %or
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testOR8(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
     %or = or i64 %b, %a
     ret i64 %or
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testORI(i32 signext %a) local_unnamed_addr #0 {
   entry:
     %or = or i32 %a, 88
     ret i32 %or
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testORI8(i64 %a) local_unnamed_addr #0 {
   entry:
     %or = or i64 %a, 99
     ret i64 %or
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLDCL(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -504,7 +504,7 @@
     %or = or i64 %shr, %shl
     ret i64 %or
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLDCL_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -517,7 +517,7 @@
     %cond = select i1 %tobool, i64 %and, i64 %a
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLDCR(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -528,7 +528,7 @@
     %or = or i64 %shr, %shl
     ret i64 %or
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLDCR_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -541,7 +541,7 @@
     %cond = select i1 %tobool, i64 %and, i64 %a
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLDICL(i64 %a) local_unnamed_addr #0 {
   entry:
@@ -549,7 +549,7 @@
     %and = and i64 %shr, 16777215
     ret i64 %and
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLDICL_MB0(i64 %a) local_unnamed_addr #0 {
   entry:
@@ -557,7 +557,7 @@
     %and = and i64 %shr, 16777215
     ret i64 %and
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLDICL_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -567,7 +567,7 @@
     %cond = select i1 %tobool, i64 %b, i64 %and
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLDICL_rec2(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -587,7 +587,7 @@
     %cond = select i1 %tobool, i64 %b, i64 %and
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testRLWINM(i32 zeroext %a) local_unnamed_addr #0 {
   entry:
@@ -595,7 +595,7 @@
     %and = and i32 %shl, 4080
     ret i32 %and
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testRLWINMFullReg(i32 zeroext %a) local_unnamed_addr #0 {
   entry:
@@ -603,7 +603,7 @@
     %and = and i32 %shl, 4080
     ret i32 %and
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testRLWINMFullRegOutOfRange(i32 zeroext %a) local_unnamed_addr #0 {
   entry:
@@ -611,7 +611,7 @@
     %and = and i32 %shl, 4080
     ret i32 %and
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLWINM8(i64 %a) local_unnamed_addr #0 {
   entry:
@@ -619,7 +619,7 @@
     %and = and i64 %shl, 4080
     ret i64 %and
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testRLWINM_rec(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
   entry:
@@ -628,7 +628,7 @@
     %cond = select i1 %tobool, i32 %b, i32 %a
     ret i32 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testRLWINM_rec2(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
   entry:
@@ -649,14 +649,14 @@
     %cond = select i1 %tobool, i64 %b, i64 %conv1
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testSLD(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
     %shl = shl i64 %a, %b
     ret i64 %shl
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testSLD_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -665,14 +665,14 @@
     %cond = select i1 %tobool, i64 %b, i64 %a
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testSRD(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
     %shr = lshr i64 %a, %b
     ret i64 %shr
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testSRD_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -681,14 +681,14 @@
     %cond = select i1 %tobool, i64 %b, i64 %a
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testSLW(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
   entry:
     %shl = shl i32 %a, %b
     ret i32 %shl
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testSLW_rec(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
   entry:
@@ -697,14 +697,14 @@
     %cond = select i1 %tobool, i32 %b, i32 %a
     ret i32 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testSRW(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
   entry:
     %shr = lshr i32 %a, %b
     ret i32 %shr
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testSRW_rec(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
   entry:
@@ -713,14 +713,14 @@
     %cond = select i1 %tobool, i32 %b, i32 %a
     ret i32 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testSRAW(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
   entry:
     %shr = ashr i32 %a, %b
     ret i32 %shr
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testSRAW_rec(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
   entry:
@@ -729,14 +729,14 @@
     %cond = select i1 %tobool, i32 %b, i32 %shr
     ret i32 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testSRAD(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
     %shr = ashr i64 %a, %b
     ret i64 %shr
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testSRAD_rec(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -745,7 +745,7 @@
     %cond = select i1 %tobool, i64 %b, i64 %shr
     ret i64 %cond
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTBUX(i8* nocapture %ptr, i8 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -759,7 +759,7 @@
     store i8 %a, i8* %arrayidx3, align 1, !tbaa !3
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTBX(i8* nocapture %ptr, i8 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -773,7 +773,7 @@
     store i8 %a, i8* %arrayidx3, align 1, !tbaa !3
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTHUX(i16* nocapture %ptr, i16 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -787,7 +787,7 @@
     store i16 %a, i16* %arrayidx3, align 2, !tbaa !6
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTHX(i16* nocapture %ptr, i16 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -801,7 +801,7 @@
     store i16 %a, i16* %arrayidx3, align 1, !tbaa !3
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTWUX(i32* nocapture %ptr, i32 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -815,7 +815,7 @@
     store i32 %a, i32* %arrayidx3, align 4, !tbaa !8
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTWX(i32* nocapture %ptr, i32 zeroext %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -829,7 +829,7 @@
     store i32 %a, i32* %arrayidx3, align 4, !tbaa !8
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTDUX(i64* nocapture %ptr, i64 %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -843,7 +843,7 @@
     store i64 %a, i64* %arrayidx3, align 8, !tbaa !10
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTDX(i64* nocapture %ptr, i64 %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -857,7 +857,7 @@
     store i64 %a, i64* %arrayidx3, align 8, !tbaa !10
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define void @testSTFSX(float* nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
@@ -871,7 +871,7 @@
     store float %a, float* %arrayidx3, align 4, !tbaa !14
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define void @testSTFSUX(float* nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
@@ -885,7 +885,7 @@
     store float %a, float* %arrayidx3, align 4, !tbaa !14
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define void @testSTFDX(double* nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
@@ -899,7 +899,7 @@
     store double %a, double* %arrayidx3, align 8, !tbaa !12
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind readonly
   define void @testSTFDUX(double* nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #2 {
   entry:
@@ -913,7 +913,7 @@
     store double %a, double* %arrayidx3, align 8, !tbaa !12
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTXSSPX(float* nocapture %ptr, float %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -922,7 +922,7 @@
     store float %a, float* %arrayidx, align 4, !tbaa !14
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTXSDX(double* nocapture %ptr, double %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -931,7 +931,7 @@
     store double %a, double* %arrayidx, align 8, !tbaa !12
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind
   define void @testSTXVX(<4 x i32>* nocapture %ptr, <4 x i32> %a, i32 zeroext %idx) local_unnamed_addr #3 {
   entry:
@@ -940,57 +940,57 @@
     store <4 x i32> %a, <4 x i32>* %arrayidx, align 16, !tbaa !3
     ret void
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i128 @testSUBFC(i128 %a, i128 %b) local_unnamed_addr #0 {
   entry:
     %sub = sub nsw i128 %a, %b
     ret i128 %sub
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i128 @testSUBFC8(i128 %a, i128 %b) local_unnamed_addr #0 {
   entry:
     %sub = sub nsw i128 %a, %b
     ret i128 %sub
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testXOR(i32 signext %a, i32 signext %b) local_unnamed_addr #0 {
   entry:
     %xor = xor i32 %b, %a
     ret i32 %xor
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testXOR8(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
     %xor = xor i64 %b, %a
     ret i64 %xor
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define signext i32 @testXORI(i32 signext %a) local_unnamed_addr #0 {
   entry:
     %xor = xor i32 %a, 17
     ret i32 %xor
   }
-  
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testXOR8I(i64 %a) local_unnamed_addr #0 {
   entry:
     %xor = xor i64 %a, 17
     ret i64 %xor
   }
-  
+
   attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #2 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,-vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #3 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr9" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+power9-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  
+
   !llvm.module.flags = !{!0, !1}
   !llvm.ident = !{!2}
-  
+
   !0 = !{i32 1, !"wchar_size", i32 4}
   !1 = !{i32 7, !"PIC Level", i32 2}
   !2 = !{!"clang version 6.0.0 (trunk 316067)"}
@@ -1018,7 +1018,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
@@ -1026,10 +1026,10 @@ registers:
   - { id: 4, class: gprc_and_gprc_nor0, preferred-register: '' }
   - { id: 5, class: gprc, preferred-register: '' }
   - { id: 6, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1046,13 +1046,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 33
@@ -1077,15 +1077,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1102,13 +1102,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = LI8 33
     %0 = COPY $x3
     %2 = ADD8 %0, %1
@@ -1130,7 +1130,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -1140,12 +1140,12 @@ registers:
   - { id: 6, class: gprc, preferred-register: '' }
   - { id: 7, class: g8rc, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
   - { reg: '$x6', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1162,13 +1162,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5, $x6
-  
+
     %3 = COPY $x6
     %2 = COPY $x5
     %1 = COPY $x4
@@ -1194,19 +1194,19 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
   - { reg: '$x6', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1223,13 +1223,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5, $x6
-  
+
     %3 = COPY $x6
     %2 = COPY $x5
     %1 = COPY $x4
@@ -1252,7 +1252,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: gprc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
@@ -1262,10 +1262,10 @@ registers:
   - { id: 6, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 7, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1282,13 +1282,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = LI 433
     %0 = COPY $x3
     %2 = COPY %0.sub_32
@@ -1313,14 +1313,14 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: gprc_and_gprc_nor0, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1337,13 +1337,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = COPY $x3
     %1 = LI 77
     %2 = ADDI killed %1, 44
@@ -1363,14 +1363,14 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1387,13 +1387,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = COPY $x3
     %1 = LI8 333
     %2 = ADDI8 killed %1, 44
@@ -1413,7 +1413,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: gprc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -1421,10 +1421,10 @@ registers:
   - { id: 4, class: crrc, preferred-register: '' }
   - { id: 5, class: gprc, preferred-register: '' }
   - { id: 6, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1441,13 +1441,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = LI 78
     %0 = COPY $x3
     %2 = COPY %0.sub_32
@@ -1470,16 +1470,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
   - { id: 3, class: crrc, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1496,13 +1496,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = LI8 321
     %0 = COPY $x3
     %2 = AND8_rec %1, %0, implicit-def $cr0
@@ -1523,17 +1523,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: crrc, preferred-register: '' }
   - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1550,13 +1550,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = LI8 65533
     %0 = COPY $x3
     %2 = CMPD %0, %1
@@ -1577,17 +1577,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: crrc, preferred-register: '' }
   - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1604,13 +1604,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 89
     %2 = CMPDI %0, 87
@@ -1630,17 +1630,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: crrc, preferred-register: '' }
   - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1657,13 +1657,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 87
     %2 = CMPDI %0, 87
@@ -1683,17 +1683,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: crrc, preferred-register: '' }
   - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1710,13 +1710,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = LI8 99
     %0 = COPY $x3
     %2 = CMPLD %0, %1
@@ -1737,17 +1737,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: crrc, preferred-register: '' }
   - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1764,13 +1764,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 65534
     %2 = CMPLDI %0, 65535
@@ -1790,7 +1790,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
@@ -1800,10 +1800,10 @@ registers:
   - { id: 6, class: gprc, preferred-register: '' }
   - { id: 7, class: gprc, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1820,13 +1820,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI -1
@@ -1849,7 +1849,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
@@ -1859,10 +1859,10 @@ registers:
   - { id: 6, class: gprc, preferred-register: '' }
   - { id: 7, class: gprc, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1879,13 +1879,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -1908,7 +1908,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
@@ -1920,10 +1920,10 @@ registers:
   - { id: 8, class: g8rc, preferred-register: '' }
   - { id: 9, class: g8rc, preferred-register: '' }
   - { id: 10, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -1940,13 +1940,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 32767
@@ -1972,7 +1972,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
@@ -1984,10 +1984,10 @@ registers:
   - { id: 8, class: g8rc, preferred-register: '' }
   - { id: 9, class: g8rc, preferred-register: '' }
   - { id: 10, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2004,13 +2004,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2035,7 +2035,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2054,10 +2054,10 @@ registers:
   - { id: 15, class: g8rc, preferred-register: '' }
   - { id: 16, class: g8rc, preferred-register: '' }
   - { id: 17, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2074,13 +2074,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2088,12 +2088,12 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = RLDICL killed %4, 0, 32
-    %7 = LBZX %0, killed %6 :: (load 1 from %ir.arrayidx, !tbaa !3)
+    %7 = LBZX %0, killed %6 :: (load (s8) from %ir.arrayidx, !tbaa !3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -15
-    %12,%17 = LBZUX %0, killed %11 :: (load 1 from %ir.arrayidx3, !tbaa !3)
+    %12,%17 = LBZUX %0, killed %11 :: (load (s8) from %ir.arrayidx3, !tbaa !3)
     ; CHECK: LBZU -15, %0
     ; CHECK-LATE: lbzu 5, -15(3)
     %13 = ADD4 killed %12, killed %7
@@ -2113,7 +2113,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2131,10 +2131,10 @@ registers:
   - { id: 14, class: g8rc, preferred-register: '' }
   - { id: 15, class: g8rc, preferred-register: '' }
   - { id: 16, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2151,13 +2151,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 45
     %2 = COPY %1.sub_32
@@ -2165,14 +2165,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = RLDICL killed %4, 0, 32
-    %7 = LBZX %0, killed %6 :: (load 1 from %ir.arrayidx, !tbaa !3)
+    %7 = LBZX %0, killed %6 :: (load (s8) from %ir.arrayidx, !tbaa !3)
     ; CHECK: LBZ 45, killed %6
     ; CHECK-LATE: lbz 5, 45(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = RLDICL killed %9, 0, 32
-    %12 = LBZX %0, killed %11 :: (load 1 from %ir.arrayidx3, !tbaa !3)
+    %12 = LBZX %0, killed %11 :: (load (s8) from %ir.arrayidx3, !tbaa !3)
     ; CHECK: LBZ 45, killed %11
     ; CHECK-LATE: lbz 3, 45(4)
     %13 = ADD4 killed %12, killed %7
@@ -2192,7 +2192,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2211,10 +2211,10 @@ registers:
   - { id: 15, class: g8rc, preferred-register: '' }
   - { id: 16, class: g8rc, preferred-register: '' }
   - { id: 17, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2231,13 +2231,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2245,12 +2245,12 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = RLDIC killed %4, 1, 31
-    %7 = LHZX %0, killed %6 :: (load 2 from %ir.arrayidx, !tbaa !6)
+    %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 31440
-    %12,%17 = LHZUX %0, killed %11 :: (load 2 from %ir.arrayidx3, !tbaa !6)
+    %12,%17 = LHZUX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
     ; CHECK: LHZU 31440, %0
     ; CHECK-LATE: lhzu 5, 31440(3)
     %13 = ADD4 killed %12, killed %7
@@ -2270,7 +2270,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2288,10 +2288,10 @@ registers:
   - { id: 14, class: g8rc, preferred-register: '' }
   - { id: 15, class: g8rc, preferred-register: '' }
   - { id: 16, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2308,13 +2308,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2322,12 +2322,12 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = RLDIC killed %4, 1, 31
-    %7 = LHZX %0, killed %6 :: (load 2 from %ir.arrayidx, !tbaa !6)
+    %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 882
-    %12 = LHZX %0, killed %11 :: (load 2 from %ir.arrayidx3, !tbaa !6)
+    %12 = LHZX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
     ; CHECK: LHZ 882, %0
     ; CHECK-LATE: lhz 3, 882(3)
     %13 = ADD4 killed %12, killed %7
@@ -2347,7 +2347,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2366,10 +2366,10 @@ registers:
   - { id: 15, class: g8rc, preferred-register: '' }
   - { id: 16, class: g8rc, preferred-register: '' }
   - { id: 17, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2386,13 +2386,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2400,12 +2400,12 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = RLDIC %4, 1, 31
-    %7 = LHZX %0, killed %6 :: (load 2 from %ir.arrayidx, !tbaa !6)
+    %7 = LHZX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 400
-    %12,%17 = LHAUX %0, killed %11 :: (load 2 from %ir.arrayidx3, !tbaa !6)
+    %12,%17 = LHAUX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
     ; CHECK: LHAU 400, %0
     ; CHECK-LATE: lhau 5, 400(3)
     %13 = ADD4 killed %12, killed %7
@@ -2425,7 +2425,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2443,10 +2443,10 @@ registers:
   - { id: 14, class: g8rc, preferred-register: '' }
   - { id: 15, class: g8rc, preferred-register: '' }
   - { id: 16, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2463,13 +2463,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2477,15 +2477,15 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 -999
-    %7 = LHAX %0, killed %6 :: (load 2 from %ir.arrayidx, !tbaa !6)
+    %7 = LHAX %0, killed %6 :: (load (s16) from %ir.arrayidx, !tbaa !6)
     ; CHECK: LHA -999, %0
     ; CHECK-LATE: lha 4, -999(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 999
-    %12 = LHAX %0, killed %11 :: (load 2 from %ir.arrayidx3, !tbaa !6)
-    ; CHECK: LHA 999, %0 
+    %12 = LHAX %0, killed %11 :: (load (s16) from %ir.arrayidx3, !tbaa !6)
+    ; CHECK: LHA 999, %0
     ; CHECK-LATE: lha 3, 999(3)
     %13 = ADD4 killed %12, killed %7
     %15 = IMPLICIT_DEF
@@ -2504,7 +2504,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2524,10 +2524,10 @@ registers:
   - { id: 16, class: g8rc, preferred-register: '' }
   - { id: 17, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 18, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2544,13 +2544,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2558,14 +2558,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 889
-    %7,%17 = LWZUX %0, killed %6 :: (load 4 from %ir.arrayidx, !tbaa !8)
+    %7,%17 = LWZUX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
     ; CHECK: LWZU 889, %0
     ; CHECK-LATE: lwzu {{[0-9]+}}, 889({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -2
-    %12,%18 = LWZUX %0, killed %11 :: (load 4 from %ir.arrayidx3, !tbaa !8)
+    %12,%18 = LWZUX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
     ; CHECK: LWZU -2, %0
     ; CHECK-LATE: lwzu {{[0-9]+}}, -2({{[0-9]+}})
     %13 = ADD4 killed %12, killed %7
@@ -2585,7 +2585,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2603,10 +2603,10 @@ registers:
   - { id: 14, class: g8rc, preferred-register: '' }
   - { id: 15, class: g8rc, preferred-register: '' }
   - { id: 16, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2623,13 +2623,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 1000
     %2 = COPY %1.sub_32
@@ -2637,14 +2637,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = RLDIC %4, 2, 30
-    %7 = LWZX %0, killed %6 :: (load 4 from %ir.arrayidx, !tbaa !8)
+    %7 = LWZX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
     ; CHECK: LWZ 1000, killed %6
     ; CHECK-LATE: lwz 5, 1000(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = RLDIC %9, 2, 30
-    %12 = LWZX %0, killed %11 :: (load 4 from %ir.arrayidx3, !tbaa !8)
+    %12 = LWZX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
     ; CHECK: LWZ 1000, killed %11
     ; CHECK-LATE: lwz 3, 1000(4)
     %13 = ADD4 killed %12, killed %7
@@ -2664,7 +2664,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2679,10 +2679,10 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: g8rc, preferred-register: '' }
   - { id: 13, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2699,13 +2699,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 444
     %2 = COPY %1.sub_32
@@ -2713,14 +2713,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = RLDIC %4, 2, 30
-    %7 = LWAX %0, killed %6 :: (load 4 from %ir.arrayidx, !tbaa !8)
+    %7 = LWAX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !8)
     ; CHECK: LWA 444, killed %6
     ; CHECK-LATE: lwa 5, 444(5)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = RLDIC %9, 2, 30
-    %12 = LWAX %0, killed %11 :: (load 4 from %ir.arrayidx3, !tbaa !8)
+    %12 = LWAX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !8)
     ; CHECK: LWA 444, killed %11
     ; CHECK-LATE: lwa 3, 444(4)
     %13 = ADD8 killed %12, killed %7
@@ -2737,7 +2737,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2754,10 +2754,10 @@ registers:
   - { id: 13, class: g8rc, preferred-register: '' }
   - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 15, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2774,13 +2774,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2788,14 +2788,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 100
-    %7,%14 = LDUX %0, killed %6 :: (load 8 from %ir.arrayidx, !tbaa !10)
+    %7,%14 = LDUX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !10)
     ; CHECK: LDU 100, %0
     ; CHECK-LATE: ldu {{[0-9]+}}, 100({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 200
-    %12,%15 = LDUX %0, killed %11 :: (load 8 from %ir.arrayidx3, !tbaa !10)
+    %12,%15 = LDUX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !10)
     ; CHECK: LDU 200, %0
     ; CHECK-LATE: ldu {{[0-9]+}}, 200({{[0-9]+}})
     %13 = ADD8 killed %12, killed %7
@@ -2812,7 +2812,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2827,10 +2827,10 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: g8rc, preferred-register: '' }
   - { id: 13, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2847,13 +2847,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2861,14 +2861,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 120
-    %7 = LDX %0, killed %6 :: (load 8 from %ir.arrayidx, !tbaa !10)
+    %7 = LDX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !10)
     ; CHECK: LD 120, %0
     ; CHECK-LATE: ld 4, 120(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 280
-    %12 = LDX %0, killed %11 :: (load 8 from %ir.arrayidx3, !tbaa !10)
+    %12 = LDX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !10)
     ; CHECK: LD 280, %0
     ; CHECK-LATE: ld 3, 280(3)
     %13 = ADD8 killed %12, killed %7
@@ -2885,7 +2885,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2902,10 +2902,10 @@ registers:
   - { id: 13, class: f8rc, preferred-register: '' }
   - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 15, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2922,13 +2922,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -2936,14 +2936,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 440
-    %7,%14 = LFDUX %0, killed %6 :: (load 8 from %ir.arrayidx, !tbaa !12)
+    %7,%14 = LFDUX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !12)
     ; CHECK: LFDU 440, %0
     ; CHECK-LATE: lfdu {{[0-9]+}}, 440({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 16
-    %12,%15 = LFDUX %0, killed %11 :: (load 8 from %ir.arrayidx3, !tbaa !12)
+    %12,%15 = LFDUX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !12)
     ; CHECK: LFDU 16, %0
     ; CHECK-LATE: lfdu {{[0-9]+}}, 16({{[0-9]+}})
     %13 = FADD killed %7, killed %12, implicit $rm
@@ -2960,7 +2960,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -2975,10 +2975,10 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: f8rc, preferred-register: '' }
   - { id: 13, class: f8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -2995,13 +2995,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 -20
     %2 = COPY %1.sub_32
@@ -3009,14 +3009,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = RLDIC %4, 3, 29
-    %7 = LFDX %0, killed %6 :: (load 8 from %ir.arrayidx, !tbaa !12)
+    %7 = LFDX %0, killed %6 :: (load (s64) from %ir.arrayidx, !tbaa !12)
     ; CHECK: LFD -20, killed %6
     ; CHECK-LATE: lfd {{[0-9]+}}, -20({{[0-9]+}})
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = RLDIC %9, 3, 29
-    %12 = LFDX %0, killed %11 :: (load 8 from %ir.arrayidx3, !tbaa !12)
+    %12 = LFDX %0, killed %11 :: (load (s64) from %ir.arrayidx3, !tbaa !12)
     ; CHECK: LFD -20, killed %11
     ; CHECK-LATE: lfd {{[0-9]+}}, -20({{[0-9]+}})
     %13 = FADD killed %7, killed %12, implicit $rm
@@ -3033,7 +3033,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -3059,10 +3059,10 @@ registers:
   - { id: 22, class: gprc, preferred-register: '' }
   - { id: 23, class: g8rc, preferred-register: '' }
   - { id: 24, class: vrrc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3079,64 +3079,64 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-  - { id: 0, name: '', type: default, offset: 0, size: 16, alignment: 16, 
+fixedStack:
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 16, alignment: 16,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -16, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
-  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4, 
+  - { id: 1, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -20, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
-  - { id: 2, name: '', type: default, offset: 0, size: 4, alignment: 4, 
+  - { id: 2, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -24, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
-  - { id: 3, name: '', type: default, offset: 0, size: 4, alignment: 4, 
+  - { id: 3, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -28, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
-  - { id: 4, name: '', type: default, offset: 0, size: 4, alignment: 4, 
+  - { id: 4, name: '', type: default, offset: 0, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       local-offset: -32, debug-info-variable: '', debug-info-expression: '',
       debug-info-location: '' }
-constants:       
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI8 72
-    %3, %4 = LFSUX %0, killed %2 :: (load 4 from %ir.arrayidx, !tbaa !14)
+    %3, %4 = LFSUX %0, killed %2 :: (load (s32) from %ir.arrayidx, !tbaa !14)
     ; CHECK: LFSU 72, %0
     ; CHECK-LATE: lfsu 0, 72(3)
     %5 = FCTIWUZ killed %3, implicit $rm
     %6 = ADDI8 %stack.4, 0
     STFIWX killed %5, $zero8, killed %6
-    %7 = LWZ 0, %stack.4 :: (load 4 from %stack.4)
-    %8 = LFS 4, %4 :: (load 4 from %ir.3, !tbaa !14)
+    %7 = LWZ 0, %stack.4 :: (load (s32) from %stack.4)
+    %8 = LFS 4, %4 :: (load (s32) from %ir.3, !tbaa !14)
     %10 = FCTIWUZ %8, implicit $rm
     %11 = ADDI8 %stack.1, 0
     STFIWX killed %10, $zero8, killed %11
-    %12 = LWZ 0, %stack.1 :: (load 4 from %stack.1)
-    %13 = LFS 8, %4 :: (load 4 from %ir.5, !tbaa !14)
+    %12 = LWZ 0, %stack.1 :: (load (s32) from %stack.1)
+    %13 = LFS 8, %4 :: (load (s32) from %ir.5, !tbaa !14)
     %15 = FCTIWUZ %13, implicit $rm
     %16 = ADDI8 %stack.2, 0
     STFIWX killed %15, $zero8, killed %16
-    %17 = LWZ 0, %stack.2 :: (load 4 from %stack.2)
-    %18 = LFS 12, %4 :: (load 4 from %ir.7, !tbaa !14)
+    %17 = LWZ 0, %stack.2 :: (load (s32) from %stack.2)
+    %18 = LFS 12, %4 :: (load (s32) from %ir.7, !tbaa !14)
     %20 = FCTIWUZ %18, implicit $rm
     %21 = ADDI8 %stack.3, 0
     STFIWX killed %20, $zero8, killed %21
-    %22 = LWZ 0, %stack.3 :: (load 4 from %stack.3)
-    STW killed %7, 0, %stack.0 :: (store 4 into %stack.0, align 16)
-    STW killed %22, 12, %stack.0 :: (store 4 into %stack.0 + 12)
-    STW killed %17, 8, %stack.0 :: (store 4 into %stack.0 + 8, align 8)
-    STW killed %12, 4, %stack.0 :: (store 4 into %stack.0 + 4)
+    %22 = LWZ 0, %stack.3 :: (load (s32) from %stack.3)
+    STW killed %7, 0, %stack.0 :: (store (s32) into %stack.0, align 16)
+    STW killed %22, 12, %stack.0 :: (store (s32) into %stack.0 + 12)
+    STW killed %17, 8, %stack.0 :: (store (s32) into %stack.0 + 8, align 8)
+    STW killed %12, 4, %stack.0 :: (store (s32) into %stack.0 + 4)
     %23 = ADDI8 %stack.0, 0
-    %24 = LVX $zero8, killed %23 :: (load 16 from %stack.0)
+    %24 = LVX $zero8, killed %23 :: (load (s128) from %stack.0)
     $v2 = COPY %24
     BLR8 implicit $lr8, implicit $rm, implicit $v2
 
@@ -3150,7 +3150,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -3165,10 +3165,10 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: f4rc, preferred-register: '' }
   - { id: 13, class: f4rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3185,13 +3185,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -3199,14 +3199,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 88
-    %7 = LFSX %0, killed %6 :: (load 4 from %ir.arrayidx, !tbaa !14)
+    %7 = LFSX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !14)
     ; CHECK: LFS 88, %0
     ; CHECK-LATE: lfs 0, 88(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -88
-    %12 = LFSX %0, killed %11 :: (load 4 from %ir.arrayidx3, !tbaa !14)
+    %12 = LFSX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !14)
     ; CHECK: LFS -88, %0
     ; CHECK-LATE: lfs 1, -88(3)
     %13 = FADDS killed %7, killed %12, implicit $rm
@@ -3223,7 +3223,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -3238,10 +3238,10 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: vsfrc, preferred-register: '' }
   - { id: 13, class: vsfrc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3258,13 +3258,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -3272,14 +3272,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 100
-    %7 = LXSDX %0, killed %6, implicit $rm :: (load 8 from %ir.arrayidx, !tbaa !12)
+    %7 = LXSDX %0, killed %6, implicit $rm :: (load (s64) from %ir.arrayidx, !tbaa !12)
     ; CHECK: DFLOADf64 100, %0
     ; CHECK-LATE: lfd 0, 100(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -120
-    %12 = LXSDX %0, killed %11, implicit $rm :: (load 8 from %ir.arrayidx3, !tbaa !12)
+    %12 = LXSDX %0, killed %11, implicit $rm :: (load (s64) from %ir.arrayidx3, !tbaa !12)
     ; CHECK: DFLOADf64 -120, %0
     ; CHECK-LATE: lfd 1, -120(3)
     %13 = XSADDDP killed %7, killed %12, implicit $rm
@@ -3296,7 +3296,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -3311,10 +3311,10 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: vssrc, preferred-register: '' }
   - { id: 13, class: vssrc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3331,13 +3331,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -3345,14 +3345,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 96
-    %7 = LXSSPX %0, killed %6 :: (load 4 from %ir.arrayidx, !tbaa !14)
+    %7 = LXSSPX %0, killed %6 :: (load (s32) from %ir.arrayidx, !tbaa !14)
     ; CHECK: DFLOADf32 96, %0
     ; CHECK-LATE: lfs 0, 96(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -92
-    %12 = LXSSPX %0, killed %11 :: (load 4 from %ir.arrayidx3, !tbaa !14)
+    %12 = LXSSPX %0, killed %11 :: (load (s32) from %ir.arrayidx3, !tbaa !14)
     ; CHECK: DFLOADf32 -92, %0
     ; CHECK-LATE: lfs 1, -92(3)
     %13 = XSADDSP killed %7, killed %12
@@ -3369,7 +3369,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -3384,10 +3384,10 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: vrrc, preferred-register: '' }
   - { id: 13, class: vrrc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3404,13 +3404,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -3418,14 +3418,14 @@ body:             |
     %5 = IMPLICIT_DEF
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 32
-    %7 = LXVX %0, killed %6 :: (load 16 from %ir.arrayidx, !tbaa !3)
+    %7 = LXVX %0, killed %6 :: (load (s128) from %ir.arrayidx, !tbaa !3)
     ; CHECK: LXV 32, %0
     ; CHECK-LATE: lxv 34, 32(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -16
-    %12 = LXVX %0, killed %11 :: (load 16 from %ir.arrayidx3, !tbaa !3)
+    %12 = LXVX %0, killed %11 :: (load (s128) from %ir.arrayidx3, !tbaa !3)
     ; CHECK: LXV -16, %0
     ; CHECK-LATE: lxv 35, -16(3)
     %13 = VADDUWM killed %12, killed %7
@@ -3442,15 +3442,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gprc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3467,13 +3467,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI 99
     %3 = COPY %1.sub_32
@@ -3493,14 +3493,14 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3517,13 +3517,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 777
     %2 = OR8 %1, %0
@@ -3542,12 +3542,12 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gprc, preferred-register: '' }
   - { id: 1, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3564,13 +3564,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = LI 777
     %1 = ORI %0, 88
     ; CHECK: LI 857
@@ -3588,12 +3588,12 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3610,13 +3610,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = LI8 8721
     %1 = ORI8 %0, 99
     ; CHECK: LI8 8819
@@ -3634,16 +3634,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: gprc, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3660,13 +3660,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -3687,7 +3687,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
@@ -3695,10 +3695,10 @@ registers:
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: crrc, preferred-register: '' }
   - { id: 6, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3715,13 +3715,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = RLDICL %1, 0, 58
@@ -3744,16 +3744,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: gprc, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3770,13 +3770,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -3797,7 +3797,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
@@ -3805,10 +3805,10 @@ registers:
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: crrc, preferred-register: '' }
   - { id: 6, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3825,13 +3825,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = RLDICL %1, 0, 58
@@ -3854,12 +3854,12 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3876,13 +3876,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = LI8 -1
     %1 = RLDICL %0, 53, 49
     ; CHECK: LI8 32767
@@ -3900,12 +3900,12 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3922,13 +3922,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = LI8 32
     %1 = RLDICL %0, 60, 0
     ; CHECK: LI8 2
@@ -3946,16 +3946,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 3, class: crrc, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -3972,13 +3972,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 -1
     %2 = RLDICL_rec %0, 53, 48, implicit-def $cr0
@@ -4000,16 +4000,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 3, class: crrc, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4026,13 +4026,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 200
     %2 = RLDICL_rec %0, 61, 3, implicit-def $cr0
@@ -4054,16 +4054,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 3, class: crrc, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4080,13 +4080,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 2
     %2 = RLDICL_rec %0, 32, 32, implicit-def $cr0
@@ -4108,15 +4108,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: gprc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
   - { id: 4, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4133,13 +4133,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = COPY $x3
     %1 = COPY %0.sub_32
     %3 = IMPLICIT_DEF
@@ -4160,15 +4160,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: gprc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
   - { id: 4, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4185,13 +4185,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = COPY $x3
     %1 = COPY %0.sub_32
     %3 = IMPLICIT_DEF
@@ -4212,15 +4212,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: gprc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
   - { id: 4, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4237,13 +4237,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = COPY $x3
     %1 = COPY %0.sub_32
     %3 = IMPLICIT_DEF
@@ -4264,12 +4264,12 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4286,13 +4286,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = LI8 234
     %1 = RLWINM8 %0, 4, 20, 27
     ; CHECK: LI8 3744
@@ -4310,7 +4310,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -4321,10 +4321,10 @@ registers:
   - { id: 7, class: g8rc, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
   - { id: 9, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4341,13 +4341,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -4375,7 +4375,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -4386,10 +4386,10 @@ registers:
   - { id: 7, class: g8rc, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
   - { id: 9, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4406,13 +4406,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -4439,7 +4439,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -4449,10 +4449,10 @@ registers:
   - { id: 6, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 7, class: crrc, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4469,13 +4469,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI8 -18
@@ -4499,15 +4499,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4524,13 +4524,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 13
@@ -4550,17 +4550,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
   - { id: 4, class: crrc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4577,13 +4577,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 17
@@ -4605,15 +4605,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4630,13 +4630,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 4
@@ -4656,17 +4656,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
   - { id: 4, class: crrc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4683,13 +4683,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 17
@@ -4711,7 +4711,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
@@ -4721,10 +4721,10 @@ registers:
   - { id: 6, class: g8rc, preferred-register: '' }
   - { id: 7, class: g8rc, preferred-register: '' }
   - { id: 8, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4741,13 +4741,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = COPY %1.sub_32
@@ -4768,7 +4768,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -4779,10 +4779,10 @@ registers:
   - { id: 7, class: g8rc, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
   - { id: 9, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4799,13 +4799,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 11
@@ -4831,7 +4831,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
@@ -4841,10 +4841,10 @@ registers:
   - { id: 6, class: g8rc, preferred-register: '' }
   - { id: 7, class: g8rc, preferred-register: '' }
   - { id: 8, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4861,13 +4861,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 8
@@ -4888,7 +4888,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -4899,10 +4899,10 @@ registers:
   - { id: 7, class: g8rc, preferred-register: '' }
   - { id: 8, class: g8rc, preferred-register: '' }
   - { id: 9, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4919,13 +4919,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 7
@@ -4951,17 +4951,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: gprc, preferred-register: '' }
   - { id: 4, class: gprc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -4978,13 +4978,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 15
@@ -5006,7 +5006,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
@@ -5015,10 +5015,10 @@ registers:
   - { id: 5, class: crrc, preferred-register: '' }
   - { id: 6, class: gprc, preferred-register: '' }
   - { id: 7, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5035,13 +5035,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 8
@@ -5065,15 +5065,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5090,13 +5090,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 44
@@ -5116,17 +5116,17 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 4, class: crrc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5143,13 +5143,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 61
@@ -5171,7 +5171,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5187,11 +5187,11 @@ registers:
   - { id: 12, class: g8rc, preferred-register: '' }
   - { id: 13, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5208,13 +5208,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = COPY $x3
@@ -5224,14 +5224,14 @@ body:             |
     %7 = IMPLICIT_DEF
     %6 = INSERT_SUBREG %7, killed %5, 1
     %8 = LI8 966
-    %13 = STBUX %3, %0, killed %8 :: (store 1 into %ir.arrayidx, !tbaa !3)
+    %13 = STBUX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STBU %3, 966, %0
     ; CHECK-LATE: {{[0-9]+}}, 966({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 777
-    %14 = STBUX %3, %0, killed %12 :: (store 1 into %ir.arrayidx3, !tbaa !3)
+    %14 = STBUX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
     ; CHECK: STBU %3, 777, %0
     ; CHECK-LATE: {{[0-9]+}}, 777({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
@@ -5246,7 +5246,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5260,11 +5260,11 @@ registers:
   - { id: 10, class: g8rc, preferred-register: '' }
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5281,13 +5281,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = LI8 975
@@ -5297,14 +5297,14 @@ body:             |
     %7 = IMPLICIT_DEF
     %6 = INSERT_SUBREG %7, killed %5, 1
     %8 = RLDICL killed %6, 0, 32
-    STBX %3, %0, killed %8 :: (store 1 into %ir.arrayidx, !tbaa !3)
+    STBX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STB %3, 975, killed %8
     ; CHECK-LATE: stb 4, 975(6)
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = RLDICL killed %10, 0, 32
-    STBX %3, %0, killed %12 :: (store 1 into %ir.arrayidx3, !tbaa !3)
+    STBX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
     ; CHECK: STB %3, 975, killed %12
     ; CHECK-LATE: stb 4, 975(5)
     BLR8 implicit $lr8, implicit $rm
@@ -5319,7 +5319,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5335,11 +5335,11 @@ registers:
   - { id: 12, class: g8rc, preferred-register: '' }
   - { id: 13, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5356,13 +5356,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = COPY $x3
@@ -5372,14 +5372,14 @@ body:             |
     %7 = IMPLICIT_DEF
     %6 = INSERT_SUBREG %7, killed %5, 1
     %8 = LI8 32000
-    %13 = STHUX %3, %0, killed %8 :: (store 2 into %ir.arrayidx, !tbaa !6)
+    %13 = STHUX %3, %0, killed %8 :: (store (s16) into %ir.arrayidx, !tbaa !6)
     ; CHECK: STHU %3, 32000, %0
     ; CHECK-LATE: sthu {{[0-9]+}}, 32000({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 -761
-    %14 = STHUX %3, %0, killed %12 :: (store 2 into %ir.arrayidx3, !tbaa !6)
+    %14 = STHUX %3, %0, killed %12 :: (store (s16) into %ir.arrayidx3, !tbaa !6)
     ; CHECK: STHU %3, -761, %0
     ; CHECK-LATE: sthu {{[0-9]+}}, -761({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
@@ -5394,7 +5394,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5408,11 +5408,11 @@ registers:
   - { id: 10, class: g8rc, preferred-register: '' }
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5429,13 +5429,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = COPY $x3
@@ -5445,14 +5445,14 @@ body:             |
     %7 = IMPLICIT_DEF
     %6 = INSERT_SUBREG %7, killed %5, 1
     %8 = LI8 900
-    STHX %3, %0, killed %8 :: (store 1 into %ir.arrayidx, !tbaa !3)
+    STHX %3, %0, killed %8 :: (store (s8) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STH %3, 900, %0
     ; CHECK-LATE: sth {{[0-9]+}}, 900({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 -900
-    STHX %3, %0, killed %12 :: (store 1 into %ir.arrayidx3, !tbaa !3)
+    STHX %3, %0, killed %12 :: (store (s8) into %ir.arrayidx3, !tbaa !3)
     ; CHECK: STH %3, -900, %0
     ; CHECK-LATE: sth {{[0-9]+}}, -900({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
@@ -5467,7 +5467,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5483,11 +5483,11 @@ registers:
   - { id: 12, class: g8rc, preferred-register: '' }
   - { id: 13, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5504,13 +5504,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = COPY $x3
@@ -5520,14 +5520,14 @@ body:             |
     %7 = IMPLICIT_DEF
     %6 = INSERT_SUBREG %7, killed %5, 1
     %8 = LI8 111
-    %13 = STWUX %3, %0, killed %8 :: (store 4 into %ir.arrayidx, !tbaa !8)
+    %13 = STWUX %3, %0, killed %8 :: (store (s32) into %ir.arrayidx, !tbaa !8)
     ; CHECK: STWU %3, 111, %0
     ; CHECK-LATE: stwu {{[0-9]+}}, 111({{[0-9]+}})
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 0
-    %14 = STWUX %3, %0, killed %12 :: (store 4 into %ir.arrayidx3, !tbaa !8)
+    %14 = STWUX %3, %0, killed %12 :: (store (s32) into %ir.arrayidx3, !tbaa !8)
     ; CHECK: STWU %3, 0, %0
     ; CHECK-LATE: stwu {{[0-9]+}}, 0({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
@@ -5542,7 +5542,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5556,11 +5556,11 @@ registers:
   - { id: 10, class: g8rc, preferred-register: '' }
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5577,13 +5577,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = COPY $x3
@@ -5593,14 +5593,14 @@ body:             |
     %7 = IMPLICIT_DEF
     %6 = INSERT_SUBREG %7, killed %5, 1
     %8 = LI8 2
-    STWX %3, %0, killed %8 :: (store 4 into %ir.arrayidx, !tbaa !8)
+    STWX %3, %0, killed %8 :: (store (s32) into %ir.arrayidx, !tbaa !8)
     ; CHECK: STW %3, 2, %0
     ; CHECK-LATE: stw 4, 2(3)
     %9 = ADDI %4, 2
     %11 = IMPLICIT_DEF
     %10 = INSERT_SUBREG %11, killed %9, 1
     %12 = LI8 99
-    STWX %3, %0, killed %12 :: (store 4 into %ir.arrayidx3, !tbaa !8)
+    STWX %3, %0, killed %12 :: (store (s32) into %ir.arrayidx3, !tbaa !8)
     ; CHECK: STW %3, 99, %0
     ; CHECK-LATE: stw 4, 99(3)
     BLR8 implicit $lr8, implicit $rm
@@ -5615,7 +5615,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5630,11 +5630,11 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 13, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5651,13 +5651,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = COPY $x3
@@ -5666,14 +5666,14 @@ body:             |
     %6 = IMPLICIT_DEF
     %5 = INSERT_SUBREG %6, killed %4, 1
     %7 = LI8 444
-    %12 = STDUX %1, %0, killed %7 :: (store 8 into %ir.arrayidx, !tbaa !10)
+    %12 = STDUX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !10)
     ; CHECK: STDU %1, 444, %0
     ; CHECK-LATE: stdu {{[0-9]+}}, 444({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -8
-    %13 = STDUX %1, %0, killed %11 :: (store 8 into %ir.arrayidx3, !tbaa !10)
+    %13 = STDUX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !10)
     ; CHECK: STDU %1, -8, %0
     ; CHECK-LATE: stdu {{[0-9]+}}, -8({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
@@ -5688,7 +5688,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5701,11 +5701,11 @@ registers:
   - { id: 9, class: g8rc, preferred-register: '' }
   - { id: 10, class: g8rc, preferred-register: '' }
   - { id: 11, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5722,13 +5722,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = LI8 1000
@@ -5737,14 +5737,14 @@ body:             |
     %6 = IMPLICIT_DEF
     %5 = INSERT_SUBREG %6, killed %4, 1
     %7 = LI8 900
-    STDX %1, %0, killed %7 :: (store 8 into %ir.arrayidx, !tbaa !10)
+    STDX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !10)
     ; CHECK: STD %1, 1000, killed %7
     ; CHECK-LATE: {{[0-9]+}}, 1000({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -900
-    STDX %1, %0, killed %11 :: (store 8 into %ir.arrayidx3, !tbaa !10)
+    STDX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !10)
     ; CHECK: STD %1, 1000, killed %11
     ; CHECK-LATE: {{[0-9]+}}, 1000({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
@@ -5759,7 +5759,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: f4rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5772,11 +5772,11 @@ registers:
   - { id: 9, class: g8rc, preferred-register: '' }
   - { id: 10, class: g8rc, preferred-register: '' }
   - { id: 11, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5793,13 +5793,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $f1, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $f1
     %0 = COPY $x3
@@ -5808,14 +5808,14 @@ body:             |
     %6 = IMPLICIT_DEF
     %5 = INSERT_SUBREG %6, killed %4, 1
     %7 = LI8 400
-    STFSX %1, %0, killed %7 :: (store 4 into %ir.arrayidx, !tbaa !14)
+    STFSX %1, %0, killed %7 :: (store (s32) into %ir.arrayidx, !tbaa !14)
     ; CHECK: STFS %1, 400, %0
     ; CHECK-LATE: stfs 1, 400(3)
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -401
-    STFSX %1, %0, killed %11 :: (store 4 into %ir.arrayidx3, !tbaa !14)
+    STFSX %1, %0, killed %11 :: (store (s32) into %ir.arrayidx3, !tbaa !14)
     ; CHECK: STFS %1, -401, %0
     ; CHECK-LATE: stfs 1, -401(3)
     BLR8 implicit $lr8, implicit $rm
@@ -5830,7 +5830,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: f4rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5845,11 +5845,11 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 13, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5866,13 +5866,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $f1, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $f1
     %0 = COPY $x3
@@ -5881,14 +5881,14 @@ body:             |
     %6 = IMPLICIT_DEF
     %5 = INSERT_SUBREG %6, killed %4, 1
     %7 = LI8 111
-    %12 = STFSUX %1, %0, killed %7 :: (store 4 into %ir.arrayidx, !tbaa !14)
+    %12 = STFSUX %1, %0, killed %7 :: (store (s32) into %ir.arrayidx, !tbaa !14)
     ; CHECK: STFSU %1, 111, %0
     ; CHECK-LATE: stfsu {{[0-9]+}}, 111({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 987
-    %13 = STFSUX %1, %0, killed %11 :: (store 4 into %ir.arrayidx3, !tbaa !14)
+    %13 = STFSUX %1, %0, killed %11 :: (store (s32) into %ir.arrayidx3, !tbaa !14)
     ; CHECK: STFSU %1, 987, %0
     ; CHECK-LATE: stfsu {{[0-9]+}}, 987({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
@@ -5903,7 +5903,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: f8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5916,11 +5916,11 @@ registers:
   - { id: 9, class: g8rc, preferred-register: '' }
   - { id: 10, class: g8rc, preferred-register: '' }
   - { id: 11, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -5937,13 +5937,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $f1, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $f1
     %0 = COPY $x3
@@ -5952,14 +5952,14 @@ body:             |
     %6 = IMPLICIT_DEF
     %5 = INSERT_SUBREG %6, killed %4, 1
     %7 = LI8 876
-    STFDX %1, %0, killed %7 :: (store 8 into %ir.arrayidx, !tbaa !12)
+    STFDX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !12)
     ; CHECK: STFD %1, 876, %0
     ; CHECK-LATE: stfd 1, 876(3)
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -873
-    STFDX %1, %0, killed %11 :: (store 8 into %ir.arrayidx3, !tbaa !12)
+    STFDX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !12)
     ; CHECK: STFD %1, -873, %0
     ; CHECK-LATE: stfd 1, -873(3)
     BLR8 implicit $lr8, implicit $rm
@@ -5974,7 +5974,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: f8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -5989,11 +5989,11 @@ registers:
   - { id: 11, class: g8rc, preferred-register: '' }
   - { id: 12, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 13, class: g8rc_and_g8rc_nox0, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6010,13 +6010,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $f1, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $f1
     %0 = COPY $x3
@@ -6025,14 +6025,14 @@ body:             |
     %6 = IMPLICIT_DEF
     %5 = INSERT_SUBREG %6, killed %4, 1
     %7 = LI8 -9038
-    %12 = STFDUX %1, %0, killed %7 :: (store 8 into %ir.arrayidx, !tbaa !12)
+    %12 = STFDUX %1, %0, killed %7 :: (store (s64) into %ir.arrayidx, !tbaa !12)
     ; CHECK: STFDU %1, -9038, %0
     ; CHECK-LATE: stfdu {{[0-9]+}}, -9038({{[0-9]+}})
     %8 = ADDI %3, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 6477
-    %13 = STFDUX %1, %0, killed %11 :: (store 8 into %ir.arrayidx3, !tbaa !12)
+    %13 = STFDUX %1, %0, killed %11 :: (store (s64) into %ir.arrayidx3, !tbaa !12)
     ; CHECK: STFDU %1, 6477, %0
     ; CHECK-LATE: stfdu {{[0-9]+}}, 6477({{[0-9]+}})
     BLR8 implicit $lr8, implicit $rm
@@ -6047,16 +6047,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: vssrc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6073,18 +6073,18 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $f1, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $f1
     %0 = COPY $x3
     %3 = LI8 444
-    STXSSPX %1, %0, killed %3 :: (store 4 into %ir.arrayidx, !tbaa !14)
+    STXSSPX %1, %0, killed %3 :: (store (s32) into %ir.arrayidx, !tbaa !14)
     ; CHECK: DFSTOREf32 %1, 444, %0
     ; CHECK-LATE: stfs 1, 444(3)
     BLR8 implicit $lr8, implicit $rm
@@ -6099,16 +6099,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: vsfrc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$f1', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6125,18 +6125,18 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $f1, $x5
-  
+
     %2 = COPY $x5
     %1 = COPY $f1
     %0 = COPY $x3
     %3 = LI8 4
-    STXSDX %1, %0, killed %3, implicit $rm :: (store 8 into %ir.arrayidx, !tbaa !12)
+    STXSDX %1, %0, killed %3, implicit $rm :: (store (s64) into %ir.arrayidx, !tbaa !12)
     ; CHECK: DFSTOREf64 %1, 4, %0
     ; CHECK-LATE: stfd 1, 4(3)
     BLR8 implicit $lr8, implicit $rm
@@ -6151,16 +6151,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: vrrc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$v2', virtual-reg: '%1' }
   - { reg: '$x7', virtual-reg: '%2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6177,18 +6177,18 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $v2, $x7
-  
+
     %2 = COPY $x7
     %1 = COPY $v2
     %0 = LI8 16
     %3 = RLDICR %2, 4, 59
-    STXVX %1, %0, killed %3 :: (store 16 into %ir.arrayidx, !tbaa !3)
+    STXVX %1, %0, killed %3 :: (store (s128) into %ir.arrayidx, !tbaa !3)
     ; CHECK: STXV %1, 16, killed %3
     ; CHECK-LATE: stxv 34, 16(4)
     BLR8 implicit $lr8, implicit $rm
@@ -6203,7 +6203,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gprc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
@@ -6213,12 +6213,12 @@ registers:
   - { id: 6, class: gprc, preferred-register: '' }
   - { id: 7, class: gprc, preferred-register: '' }
   - { id: 8, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
   - { reg: '$x6', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6235,13 +6235,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5, $x6
-  
+
     %3 = COPY $x6
     %2 = COPY $x5
     %1 = COPY $x4
@@ -6267,19 +6267,19 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
   - { id: 3, class: g8rc, preferred-register: '' }
   - { id: 4, class: g8rc, preferred-register: '' }
   - { id: 5, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
   - { reg: '$x5', virtual-reg: '%2' }
   - { reg: '$x6', virtual-reg: '%3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6296,13 +6296,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4, $x5, $x6
-  
+
     %3 = COPY $x6
     %2 = COPY $x5
     %1 = COPY $x4
@@ -6325,15 +6325,15 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: gprc, preferred-register: '' }
   - { id: 2, class: gprc, preferred-register: '' }
   - { id: 3, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6350,13 +6350,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = LI 10101
     %0 = COPY $x3
     %3 = COPY %0.sub_32
@@ -6376,14 +6376,14 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
   - { id: 2, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6400,13 +6400,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
-  
+
     %1 = COPY $x4
     %0 = LI8 5535
     %2 = XOR8 %1, %0
@@ -6425,12 +6425,12 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gprc, preferred-register: '' }
   - { id: 1, class: gprc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6447,13 +6447,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = LI 871
     %1 = XORI %0, 17
     ; CHECK: LI 886
@@ -6471,12 +6471,12 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
-liveins:         
+liveins:
   - { reg: '$x3', virtual-reg: '%0' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -6493,13 +6493,13 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x3
-  
+
     %0 = LI8 453
     %1 = XORI8 %0, 17
     ; CHECK: LI8 468

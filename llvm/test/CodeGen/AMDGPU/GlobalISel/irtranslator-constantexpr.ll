@@ -37,7 +37,7 @@ define amdgpu_kernel void @constantexpr_select_0() {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   store i32 select (i1 icmp eq (i8 addrspace(1)* @gint, i8 addrspace(1)* null), i32 1, i32 0), i32 addrspace(1)* undef, align 4
   ret void
@@ -54,7 +54,7 @@ define amdgpu_kernel void @constantexpr_select_1() {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[SELECT]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   store i32 select (i1 icmp eq (i8 addrspace(1)* @gint, i8 addrspace(1)* inttoptr (i64 1024 to i8 addrspace(1)*)), i32 1, i32 0), i32 addrspace(1)* undef, align 4
   ret void

@@ -31,9 +31,9 @@ body: |
     frame-setup PUSH32r undef $eax, implicit-def $esp, implicit $esp
     CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK: name: test
-  ; CHECK: $eax = MOV32rm $esp, 1, $noreg, 8, $noreg :: (load 4 from %fixed-stack.0, align 16)
-    $eax = MOV32rm $esp, 1, _, 8, _ :: (load 4 from %fixed-stack.0, align 16)
-    MOV32mr $esp, 1, _, 0, _, $eax :: (store 4 into %ir.b)
+  ; CHECK: $eax = MOV32rm $esp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.0, align 16)
+    $eax = MOV32rm $esp, 1, _, 8, _ :: (load (s32) from %fixed-stack.0, align 16)
+    MOV32mr $esp, 1, _, 0, _, $eax :: (store (s32) into %ir.b)
     $edx = POP32r implicit-def $esp, implicit $esp
     RETL $eax
 ...

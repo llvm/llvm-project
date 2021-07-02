@@ -26,12 +26,12 @@ body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @internal_global
     ; ELF-MOVT: [[G:%[0-9]+]]:rgpr = t2MOVi32imm @internal_global
-    ; ELF-NOMOVT: [[G:%[0-9]+]]:gpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load 4 from constant-pool)
+    ; ELF-NOMOVT: [[G:%[0-9]+]]:gpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
     ; DARWIN-MOVT: [[G:%[0-9]+]]:rgpr = t2MOVi32imm @internal_global
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_abs @internal_global
 
-    %1(s32) = G_LOAD %0(p0) :: (load 4 from @internal_global)
-    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load 4 from @internal_global)
+    %1(s32) = G_LOAD %0(p0) :: (load (s32) from @internal_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (s32) from @internal_global)
 
     $r0 = COPY %1(s32)
     ; CHECK: $r0 = COPY [[V]]
@@ -56,12 +56,12 @@ body:             |
   bb.0:
     %0(p0) = G_GLOBAL_VALUE @external_global
     ; ELF-MOVT: [[G:%[0-9]+]]:rgpr = t2MOVi32imm @external_global
-    ; ELF-NOMOVT: [[G:%[0-9]+]]:gpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load 4 from constant-pool)
+    ; ELF-NOMOVT: [[G:%[0-9]+]]:gpr = t2LDRpci %const.0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
     ; DARWIN-MOVT: [[G:%[0-9]+]]:rgpr = t2MOVi32imm @external_global
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_abs @external_global
 
-    %1(s32) = G_LOAD %0(p0) :: (load 4 from @external_global)
-    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load 4 from @external_global)
+    %1(s32) = G_LOAD %0(p0) :: (load (s32) from @external_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (s32) from @external_global)
 
     $r0 = COPY %1(s32)
     ; CHECK: $r0 = COPY [[V]]

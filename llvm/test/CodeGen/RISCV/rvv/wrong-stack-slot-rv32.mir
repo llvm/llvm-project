@@ -43,7 +43,7 @@ body:             |
     liveins: $x10, $v30m2
 
     $x25 = COPY $x10
-    SW renamable $x25, %stack.0, 0 :: (store 4 into %stack.0)
+    SW renamable $x25, %stack.0, 0 :: (store (s32) into %stack.0)
     PseudoVSPILL_M2 renamable $v30m2, %stack.1 :: (store unknown-size into %stack.1, align 8)
     PseudoRET
 

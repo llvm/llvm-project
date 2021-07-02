@@ -15,8 +15,8 @@ stack:
 body: |
   bb.0:
     liveins: $r0
-    S2_storeri_io $r29, 0, $r0 :: (store 4 into %stack.0)
-    $r1 = L2_loadri_io $r29, 4 :: (load 4 from %stack.1)
+    S2_storeri_io $r29, 0, $r0 :: (store (s32) into %stack.0)
+    $r1 = L2_loadri_io $r29, 4 :: (load (s32) from %stack.1)
 ...
 
 
@@ -35,7 +35,7 @@ stack:
 body: |
   bb.0:
     liveins: $r0
-    S2_storeri_io $r29, 0, $r0 :: (store 4 into %stack.0)
-    $r1 = L2_loadri_io $r29, 0 :: (load 4 from %stack.0)
+    S2_storeri_io $r29, 0, $r0 :: (store (s32) into %stack.0)
+    $r1 = L2_loadri_io $r29, 0 :: (load (s32) from %stack.0)
 ...
 

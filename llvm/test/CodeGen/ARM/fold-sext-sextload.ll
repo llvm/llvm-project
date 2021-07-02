@@ -2,7 +2,7 @@
 
 define <4 x i8> @i(<4 x i8>*, <4 x i8>) !dbg !8 {
   %3 = load <4 x i8>, <4 x i8>* %0, align 4, !dbg !14
-  ; CHECK: $[[reg:.*]] = VLD1LNd32 {{.*}} debug-location !14 :: (load 4 from %ir.0)
+  ; CHECK: $[[reg:.*]] = VLD1LNd32 {{.*}} debug-location !14 :: (load (s32) from %ir.0)
   ; CHECK: VMOVLsv8i16 {{.*}} $[[reg]], {{.*}} debug-location !14
   ; CHECK: VMOVLsv4i32 {{.*}} $[[reg]], {{.*}} debug-location !14
   %4 = sdiv <4 x i8> %1, %3, !dbg !15

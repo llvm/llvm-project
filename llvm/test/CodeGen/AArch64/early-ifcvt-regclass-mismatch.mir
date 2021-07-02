@@ -128,7 +128,7 @@ body:             |
   bb.2.if.then139.i:
     successors: %bb.5(0x80000000)
 
-    %7:gpr64 = LDRXui %8, 0 :: (load 8 from `double* undef`)
+    %7:gpr64 = LDRXui %8, 0 :: (load (s64) from `double* undef`)
     B %bb.5
 
   bb.3.if.else142.i:

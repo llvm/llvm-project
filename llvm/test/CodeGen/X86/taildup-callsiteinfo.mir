@@ -62,7 +62,7 @@ body:             |
     successors: %bb.3(0x80000000)
     liveins: $rcx
 
-    renamable $ecx = MOV32rm killed renamable $rcx, 1, $noreg, 0, $noreg :: (load 4 from %ir.size_ptr)
+    renamable $ecx = MOV32rm killed renamable $rcx, 1, $noreg, 0, $noreg :: (load (s32) from %ir.size_ptr)
 
   bb.3.cond.end:
     liveins: $ecx
