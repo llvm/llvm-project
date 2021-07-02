@@ -20,34 +20,33 @@
 namespace mlir {
 namespace sparse_tensor {
 
-/// Tensor expression kind.
-enum class Kind { kTensor, kInvariant, kMulF, kMulI, kAddF, kAddI };
-
 /// Dimension level type for a tensor (undef means index does not appear).
 enum class Dim { kSparse, kDense, kSingle, kUndef };
 
-/// Children expressions of a binary TensorExp.
+/// Tensor expression kind.
+enum class Kind {
+  // Leaf.
+  kTensor,
+  kInvariant,
+  kZero,
+  // Operation.
+  kMulF,
+  kMulI,
+  kAddF,
+  kAddI,
+  kSubF,
+  kSubI
+};
+
+/// Children subexpressions of tensor operations.
 struct Children {
   unsigned e0;
   unsigned e1;
 };
 
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
-/// For tensors, e0 denotes the tensor index. For invariants, the IR value is
-/// stored directly. For binary operations, e0 and e1 denote the index of the
-/// children tensor expressions.
 struct TensorExp {
-  TensorExp(Kind k, unsigned x, unsigned y, Value v) : kind(k), val(v) {
-    assert((kind == Kind::kTensor && x != -1u && y == -1u && !val) ||
-           (kind == Kind::kInvariant && x == -1u && y == -1u && val) ||
-           (kind >= Kind::kMulF && x != -1u && y != -1u && !val));
-    if (kind == Kind::kTensor) {
-      tensor = x;
-    } else if (kind >= Kind::kMulF) {
-      children.e0 = x;
-      children.e1 = y;
-    }
-  }
+  TensorExp(Kind k, unsigned x, unsigned y, Value v);
 
   /// Tensor expression kind.
   Kind kind;
@@ -56,7 +55,7 @@ struct TensorExp {
     /// Expressions representing tensors simply have a tensor number.
     unsigned tensor;
 
-    /// Binary operations hold the indices of their child expressions.
+    /// Tensor operations hold the indices of their children.
     Children children;
   };
 
@@ -69,10 +68,8 @@ struct TensorExp {
 /// loop indices (encoded in a bitvector) and the index of the corresponding
 /// tensor expression.
 struct LatPoint {
-  LatPoint(unsigned n, unsigned e, unsigned b) : bits(n, false), exp(e) {
-    bits.set(b);
-  }
-  LatPoint(const llvm::BitVector &b, unsigned e) : bits(b), exp(e) {}
+  LatPoint(unsigned n, unsigned e, unsigned b);
+  LatPoint(const llvm::BitVector &b, unsigned e);
 
   /// Conjunction of tensor loop indices as bitvector. This represents
   /// all indices involved in the tensor expression
@@ -103,7 +100,8 @@ public:
         dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
 
   /// Adds a tensor expression. Returns its index.
-  unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value());
+  unsigned addExp(Kind k, unsigned e0 = -1u, unsigned e1 = -1u,
+                  Value v = Value());
   unsigned addExp(Kind k, Value v) { return addExp(k, -1u, -1u, v); }
 
   /// Adds an iteration lattice point. Returns its index.
@@ -126,6 +124,12 @@ public:
   /// Returns the index of the new set.
   unsigned takeDisj(Kind kind, unsigned s0, unsigned s1);
 
+  /// Maps a zero operand over a lattice set, i.e. each lattice point on an
+  /// expression E is simply copied over, but with 0 OP E as new expression.
+  /// This is useful to deal with disjunctive, but non-commutative operators.
+  /// Returns the index of the new set.
+  unsigned mapZero(Kind kind, unsigned s0);
+
   /// Optimizes the iteration lattice points in the given set. This
   /// method should be called right before code generation to avoid
   /// generating redundant loops and conditions.
@@ -135,7 +139,7 @@ public:
   /// within the given set using just two basic rules:
   /// (1) multiple dense conditions are reduced to single dense, and
   /// (2) a *singleton* sparse/dense is reduced to sparse/random access.
-  llvm::BitVector simplifyCond(unsigned s, unsigned p0);
+  llvm::BitVector simplifyCond(unsigned s0, unsigned p0);
 
   /// Returns true if Li > Lj.
   bool latGT(unsigned i, unsigned j) const;
