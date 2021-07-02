@@ -2875,8 +2875,18 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
   while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
-    if (Prev->isEHPad() || !isGuaranteedToTransferExecutionToSuccessor(Prev))
+    // While we theoretically can erase EH, that would result in a block that
+    // used to start with an EH no longer starting with EH, which is invalid.
+    // To make it valid, we'd need to fixup predecessors to no longer refer to
+    // this block, but that changes CFG, which is not allowed in InstCombine.
+    if (Prev->isEHPad())
       return nullptr; // Can not drop any more instructions. We're done here.
+
+    if (!isGuaranteedToTransferExecutionToSuccessor(Prev))
+      return nullptr; // Can not drop any more instructions. We're done here.
+    // Otherwise, this instruction can be freely erased,
+    // even if it is not side-effect free.
+
     // Temporarily disable removal of volatile stores preceding unreachable,
     // pending a potential LangRef change permitting volatile stores to trap.
     // TODO: Either remove this code, or properly integrate the check into
