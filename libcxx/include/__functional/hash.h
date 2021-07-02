@@ -14,6 +14,7 @@
 #include <__tuple>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 #include <__utility/swap.h>
 #include <cstdint>
 #include <cstring>
