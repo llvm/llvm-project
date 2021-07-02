@@ -1483,7 +1483,7 @@ public:
       FusedInsts.insert(LoadOp0);
       LoadOp0->eraseFromParent();
     }
-    if (LoadOp1->hasNUses(0)) {
+    if (LoadOp1 != LoadOp0 && LoadOp1->hasNUses(0)) {
       FusedInsts.insert(LoadOp1);
       LoadOp1->eraseFromParent();
     }
