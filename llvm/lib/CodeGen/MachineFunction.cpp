@@ -969,8 +969,11 @@ void MachineFunction::setDebugInstrNumberingCount(unsigned Num) {
 }
 
 void MachineFunction::makeDebugValueSubstitution(DebugInstrOperandPair A,
-                                                 DebugInstrOperandPair B) {
-  auto Result = DebugValueSubstitutions.insert(std::make_pair(A, B));
+                                                 DebugInstrOperandPair B,
+                                                 unsigned Subreg) {
+  // Catch any accidental self-loops.
+  assert(A.first != B.first);
+  auto Result = DebugValueSubstitutions.insert({A, {B, Subreg}});
   (void)Result;
   assert(Result.second && "Substitution for an already substituted value?");
 }

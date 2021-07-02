@@ -8,7 +8,7 @@
 # lets not.
 #
 # CHECK:      debugValueSubstitutions:
-# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0 }
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
 #
 # CHECK:      LEA64_32r
 # CHECK-SAME: debug-instr-number 2
