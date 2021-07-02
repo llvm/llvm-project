@@ -53,6 +53,7 @@ set(PROFILE_SOURCES
   InstrProfiling.c
   InstrProfilingInternal.c
   InstrProfilingValue.c
+  InstrProfilingBiasVar.c
   InstrProfilingBuffer.c
   InstrProfilingFile.c
   InstrProfilingMerge.c
