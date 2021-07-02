@@ -1,5 +1,4 @@
 set(LIBFUZZER_SOURCES
-  FuzzerCrossOver.cpp
   FuzzerDataFlowTrace.cpp
   FuzzerDriver.cpp
   FuzzerExtFunctionsDlsym.cpp
@@ -29,7 +28,6 @@ set(LIBFUZZER_HEADERS
   FuzzerCorpus.h
   FuzzerDataFlowTrace.h
   FuzzerDefs.h
-  FuzzerDictionary.h
   FuzzerExtFunctions.def
   FuzzerExtFunctions.h
   FuzzerFlags.def
@@ -84,6 +82,32 @@ else()
   endif()
 endif()
 
+macro(partially_link_libcxx name dir arch)
+  if(${arch} MATCHES "i386")
+    set(EMULATION_ARGUMENT "-m" "elf_i386")
+  else()
+    set(EMULATION_ARGUMENT "")
+  endif()
+  set(cxx_${arch}_merge_dir "${CMAKE_CURRENT_BINARY_DIR}/cxx_${arch}_merge.dir")
+  file(MAKE_DIRECTORY ${cxx_${arch}_merge_dir})
+  add_custom_command(TARGET clang_rt.${name}-${arch} POST_BUILD
+    COMMAND ${CMAKE_LINKER} ${EMULATION_ARGUMENT} --whole-archive "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" --no-whole-archive ${dir}/lib/libc++.a -r -o ${name}.o
+    COMMAND ${CMAKE_OBJCOPY} --localize-hidden ${name}.o
+    COMMAND ${CMAKE_COMMAND} -E remove "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>"
+    COMMAND ${CMAKE_AR} qcs "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" ${name}.o
+    WORKING_DIRECTORY ${cxx_${arch}_merge_dir}
+  )
+endmacro()
+
+add_subdirectory(mutagen)
+foreach(X IN LISTS LIBFUZZER_MUTAGEN_SOURCES)
+    list(APPEND LIBFUZZER_SOURCES "mutagen/${X}")
+endforeach()
+foreach(X IN LISTS LIBFUZZER_MUTAGEN_HEADERS)
+    list(APPEND LIBFUZZER_HEADERS "mutagen/${X}")
+endforeach()
+include_directories(.)
+
 add_compiler_rt_component(fuzzer)
 
 add_compiler_rt_object_libraries(RTfuzzer
@@ -135,23 +159,6 @@ add_compiler_rt_runtime(clang_rt.fuzzer_interceptors
 if(OS_NAME MATCHES "Linux|Fuchsia" AND
    COMPILER_RT_LIBCXX_PATH AND
    COMPILER_RT_LIBCXXABI_PATH)
-  macro(partially_link_libcxx name dir arch)
-    if(${arch} MATCHES "i386")
-      set(EMULATION_ARGUMENT "-m" "elf_i386")
-    else()
-      set(EMULATION_ARGUMENT "")
-    endif()
-    set(cxx_${arch}_merge_dir "${CMAKE_CURRENT_BINARY_DIR}/cxx_${arch}_merge.dir")
-    file(MAKE_DIRECTORY ${cxx_${arch}_merge_dir})
-    add_custom_command(TARGET clang_rt.${name}-${arch} POST_BUILD
-      COMMAND ${CMAKE_LINKER} ${EMULATION_ARGUMENT} --whole-archive "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" --no-whole-archive ${dir}/lib/libc++.a -r -o ${name}.o
-      COMMAND ${CMAKE_OBJCOPY} --localize-hidden ${name}.o
-      COMMAND ${CMAKE_COMMAND} -E remove "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>"
-      COMMAND ${CMAKE_AR} qcs "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" ${name}.o
-      WORKING_DIRECTORY ${cxx_${arch}_merge_dir}
-    )
-  endmacro()
-
   foreach(arch ${FUZZER_SUPPORTED_ARCH})
     get_target_flags_for_arch(${arch} TARGET_CFLAGS)
     set(LIBCXX_${arch}_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/libcxx_fuzzer_${arch})
