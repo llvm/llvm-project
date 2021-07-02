@@ -77,10 +77,7 @@ enum ActionKind {
   GetSymbolsSources,
 
   /// Only execute frontend initialization
-  InitOnly,
-
-  /// Run a plugin action, \see ActionName.
-  PluginAction
+  InitOnly
 
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)
@@ -251,12 +248,6 @@ public:
 
   // Source file encoding
   Fortran::parser::Encoding encoding_{Fortran::parser::Encoding::UTF_8};
-
-  /// The list of plugins to load.
-  std::vector<std::string> plugins;
-
-  /// The name of the action to run when using a plugin action.
-  std::string ActionName;
 
 public:
   FrontendOptions()

@@ -5299,6 +5299,10 @@ def enable_noundef_analysis : Flag<["-"], "enable-noundef-analysis">, Group<f_Gr
 def discard_value_names : Flag<["-"], "discard-value-names">,
   HelpText<"Discard value names in LLVM IR">,
   MarshallingInfoFlag<CodeGenOpts<"DiscardValueNames">>;
+def load : Separate<["-"], "load">, MetaVarName<"<dsopath>">,
+  HelpText<"Load the named plugin (dynamic shared object)">;
+def plugin : Separate<["-"], "plugin">, MetaVarName<"<name>">,
+  HelpText<"Use the named plugin action instead of the default action (use \"help\" to list available options)">;
 def plugin_arg : JoinedAndSeparate<["-"], "plugin-arg-">,
     MetaVarName<"<name> <arg>">,
     HelpText<"Pass <arg> to plugin <name>">;
@@ -5865,12 +5869,6 @@ def init_only : Flag<["-"], "init-only">,
   HelpText<"Only execute frontend initialization">;
 
 } // let Group = Action_Group
-
-def load : Separate<["-"], "load">, MetaVarName<"<dsopath>">,
-  HelpText<"Load the named plugin (dynamic shared object)">;
-def plugin : Separate<["-"], "plugin">, MetaVarName<"<name>">,
-  HelpText<"Use the named plugin action instead of the default action (use \"help\" to list available options)">;
-
 } // let Flags = [CC1Option, FC1Option, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
