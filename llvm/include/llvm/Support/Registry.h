@@ -18,6 +18,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/CommandLine.h"
 #include <memory>
 
 namespace llvm {
@@ -120,7 +121,10 @@ namespace llvm {
     public:
       Add(StringRef Name, StringRef Desc)
           : Entry(Name, Desc, CtorFn), Node(Entry) {
+        llvm::outs() << "      -------------- (Registry) --------------\n";
+        llvm::outs() << "         \tAdd     :: " << Name << "\n";
         add_node(&Node);
+        llvm::outs() << "      ------------- (\\Registry) --------------\n";
       }
     };
   };
@@ -145,8 +149,14 @@ namespace llvm {
     else \
       Head = N; \
     Tail = N; \
+    llvm::outs() << "         REGISTRY_CLASS :: list >> \n"; \
+    for (const REGISTRY_CLASS::entry &plugin : REGISTRY_CLASS::entries()) { \
+      llvm::outs() << "          " << plugin.getName() << " \t-- " << plugin.getDesc() << "\n"; \
+    } \
   } \
   template<typename T> typename Registry<T>::iterator Registry<T>::begin() { \
+    llvm::outs() << "iterator (head)\n"; \
+    llvm::outs() << Head << "\n"; \
     return iterator(Head); \
   } \
   template REGISTRY_CLASS::node *Registry<REGISTRY_CLASS::type>::Head; \
