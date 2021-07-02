@@ -159,7 +159,7 @@ def ExpOp : ComplexUnaryOp<"exp", [SameOperandsAndResultType]> {
   let summary = "computes exponential of a complex number";
   let description = [{
     The `exp` op takes a single complex number and computes the exponential of
-    it, i.e. `exp(x)` or `e^(x)`, where `x` is the input tensor.
+    it, i.e. `exp(x)` or `e^(x)`, where `x` is the input value.
     `e` denotes Euler's number and is approximately equal to 2.718281.
 
     Example:
@@ -193,6 +193,27 @@ def ImOp : ComplexUnaryOp<"im",
 
   let results = (outs AnyFloat:$imaginary);
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// LogOp
+//===----------------------------------------------------------------------===//
+
+def LogOp : ComplexUnaryOp<"log", [SameOperandsAndResultType]> {
+  let summary = "computes natural logarithm of a complex number";
+  let description = [{
+    The `log` op takes a single complex number and computes the natural
+    logarithm of it, i.e. `log(x)` or `log_e(x)`, where `x` is the input value.
+    `e` denotes Euler's number and is approximately equal to 2.718281.
+
+    Example:
+
+    ```mlir
+    %a = complex.log %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
 }
 
 //===----------------------------------------------------------------------===//

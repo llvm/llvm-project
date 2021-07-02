@@ -870,12 +870,32 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
       if (MO.isDef())
         Tracker.invalidateRegister(MO.getReg().asMCReg(), *TRI);
 
-      if (MO.readsReg())
-        Tracker.invalidateRegister(MO.getReg().asMCReg(), *TRI);
+      if (MO.readsReg()) {
+        if (MO.isDebug()) {
+          //  Check if the register in the debug instruction is utilized
+          // in a copy instruction, so we can update the debug info if the
+          // register is changed.
+          for (MCRegUnitIterator RUI(MO.getReg().asMCReg(), TRI); RUI.isValid();
+               ++RUI) {
+            if (auto *Copy = Tracker.findCopyDefViaUnit(*RUI, *TRI)) {
+              CopyDbgUsers[Copy].insert(MI);
+            }
+          }
+        } else {
+          Tracker.invalidateRegister(MO.getReg().asMCReg(), *TRI);
+        }
+      }
     }
   }
 
   for (auto *Copy : MaybeDeadCopies) {
+
+    Register Src = Copy->getOperand(1).getReg();
+    Register Def = Copy->getOperand(0).getReg();
+    SmallVector<MachineInstr *> MaybeDeadDbgUsers(CopyDbgUsers[Copy].begin(),
+                                                  CopyDbgUsers[Copy].end());
+
+    MRI->updateDbgUsersToReg(Src.asMCReg(), Def.asMCReg(), MaybeDeadDbgUsers);
     Copy->eraseFromParent();
     ++NumDeletes;
   }

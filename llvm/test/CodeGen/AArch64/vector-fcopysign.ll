@@ -195,20 +195,8 @@ define <4 x half> @test_copysign_v4f16_v4f16(<4 x half> %a, <4 x half> %b) #0 {
 ; NOFP16-NEXT:    mov.h   v0[3], v1[0]
 ; NOFP16-NEXT:    ret
 
-; FP16-NEXT:    mov h2, v1[1]
-; FP16-NEXT:    mov h3, v0[1]
-; FP16-NEXT:    movi.8h v4, #128, lsl #8
-; FP16-NEXT:    mov h5, v1[2]
-; FP16-NEXT:    bit.16b v3, v2, v4
-; FP16-NEXT:    mov h2, v0[2]
-; FP16-NEXT:    bit.16b v2, v5, v4
-; FP16-NEXT:    mov h5, v0[3]
-; FP16-NEXT:    bit.16b v0, v1, v4
-; FP16-NEXT:    mov h1, v1[3]
-; FP16-NEXT:    mov.h v0[1], v3[0]
-; FP16-NEXT:    mov.h v0[2], v2[0]
-; FP16-NEXT:    bit.16b v5, v1, v4
-; FP16-NEXT:    mov.h v0[3], v5[0]
+; FP16-NEXT:    movi.4h v2, #128, lsl #8
+; FP16-NEXT:    bit.8b  v0, v1, v2
 ; FP16-NEXT:    ret
   %r = call <4 x half> @llvm.copysign.v4f16(<4 x half> %a, <4 x half> %b)
   ret <4 x half> %r
@@ -246,20 +234,8 @@ define <4 x half> @test_copysign_v4f16_v4f32(<4 x half> %a, <4 x float> %b) #0 {
 ; NOFP16-NEXT:    ret
 
 ; FP16-NEXT:    fcvtn v1.4h, v1.4s
-; FP16-NEXT:    mov h2, v0[1]
-; FP16-NEXT:    movi.8h v3, #128, lsl #8
-; FP16-NEXT:    mov h4, v0[2]
-; FP16-NEXT:    mov h5, v1[1]
-; FP16-NEXT:    bit.16b v2, v5, v3
-; FP16-NEXT:    mov h5, v1[2]
-; FP16-NEXT:    bit.16b v4, v5, v3
-; FP16-NEXT:    mov h5, v0[3]
-; FP16-NEXT:    bit.16b v0, v1, v3
-; FP16-NEXT:    mov h1, v1[3]
-; FP16-NEXT:    mov.h v0[1], v2[0]
-; FP16-NEXT:    mov.h v0[2], v4[0]
-; FP16-NEXT:    bit.16b v5, v1, v3
-; FP16-NEXT:    mov.h v0[3], v5[0]
+; FP16-NEXT:    movi.4h    v2, #128, lsl #8
+; FP16-NEXT:    bit.8b v0, v1, v2
 ; FP16-NEXT:    ret
   %tmp0 = fptrunc <4 x float> %b to <4 x half>
   %r = call <4 x half> @llvm.copysign.v4f16(<4 x half> %a, <4 x half> %tmp0)
@@ -295,23 +271,17 @@ define <4 x half> @test_copysign_v4f16_v4f64(<4 x half> %a, <4 x double> %b) #0 
 ; NOFP16-NEXT:    mov.h   v0[3], v1[0]
 ; NOFP16-NEXT:    ret
 
-; FP16-NEXT:    mov h3, v0[1]
-; FP16-NEXT:    movi.8h v4, #128, lsl #8
-; FP16-NEXT:    fcvt h5, d1
-; FP16-NEXT:    mov h6, v0[2]
-; FP16-NEXT:    mov h7, v0[3]
-; FP16-NEXT:    bit.16b v0, v5, v4
-; FP16-NEXT:    fcvt h5, d2
-; FP16-NEXT:    bit.16b v6, v5, v4
+; FP16-NEXT:    mov d3, v1[1]
+; FP16-NEXT:    fcvt    h1, d1
+; FP16-NEXT:    fcvt    h3, d3
+; FP16-NEXT:    mov.h   v1[1], v3[0]
+; FP16-NEXT:    fcvt    h3, d2
 ; FP16-NEXT:    mov d2, v2[1]
-; FP16-NEXT:    mov d1, v1[1]
-; FP16-NEXT:    fcvt h1, d1
-; FP16-NEXT:    fcvt h2, d2
-; FP16-NEXT:    bit.16b v3, v1, v4
-; FP16-NEXT:    mov.h v0[1], v3[0]
-; FP16-NEXT:    mov.h v0[2], v6[0]
-; FP16-NEXT:    bit.16b v7, v2, v4
-; FP16-NEXT:    mov.h v0[3], v7[0]
+; FP16-NEXT:    fcvt    h2, d2
+; FP16-NEXT:    mov.h   v1[2], v3[0]
+; FP16-NEXT:    mov.h   v1[3], v2[0]
+; FP16-NEXT:    movi.4h v2, #128, lsl #8
+; FP16-NEXT:    bit.8b  v0, v1, v2
 ; FP16-NEXT:    ret
   %tmp0 = fptrunc <4 x double> %b to <4 x half>
   %r = call <4 x half> @llvm.copysign.v4f16(<4 x half> %a, <4 x half> %tmp0)
@@ -380,36 +350,8 @@ define <8 x half> @test_copysign_v8f16_v8f16(<8 x half> %a, <8 x half> %b) #0 {
 ; NOFP16-NEXT:    mov.h   v0[7], v1[0]
 ; NOFP16-NEXT:    ret
 
-; FP16-NEXT:    mov h4, v1[1]
-; FP16-NEXT:    mov h3, v0[1]
 ; FP16-NEXT:    movi.8h v2, #128, lsl #8
-; FP16-NEXT:    mov h5, v1[2]
-; FP16-NEXT:    mov h6, v0[2]
-; FP16-NEXT:    mov h7, v1[3]
-; FP16-NEXT:    mov h16, v0[3]
-; FP16-NEXT:    mov h17, v1[4]
-; FP16-NEXT:    bit.16b v3, v4, v2
-; FP16-NEXT:    mov h4, v0[4]
-; FP16-NEXT:    bit.16b v6, v5, v2
-; FP16-NEXT:    mov h5, v1[5]
-; FP16-NEXT:    bit.16b v16, v7, v2
-; FP16-NEXT:    mov h7, v0[5]
-; FP16-NEXT:    bit.16b v4, v17, v2
-; FP16-NEXT:    mov h17, v1[6]
-; FP16-NEXT:    bit.16b v7, v5, v2
-; FP16-NEXT:    mov h5, v0[6]
-; FP16-NEXT:    bit.16b v5, v17, v2
-; FP16-NEXT:    mov h17, v0[7]
-; FP16-NEXT:    bit.16b v0, v1, v2
-; FP16-NEXT:    mov.h   v0[1], v3[0]
-; FP16-NEXT:    mov.h   v0[2], v6[0]
-; FP16-NEXT:    mov.h   v0[3], v16[0]
-; FP16-NEXT:    mov.h   v0[4], v4[0]
-; FP16-NEXT:    mov h1, v1[7]
-; FP16-NEXT:    mov.h   v0[5], v7[0]
-; FP16-NEXT:    mov.h   v0[6], v5[0]
-; FP16-NEXT:    bit.16b v17, v1, v2
-; FP16-NEXT:    mov.h   v0[7], v17[0]
+; FP16-NEXT:    bit.16b  v0, v1, v2
 ; FP16-NEXT:    ret
   %r = call <8 x half> @llvm.copysign.v8f16(<8 x half> %a, <8 x half> %b)
   ret <8 x half> %r
@@ -475,36 +417,10 @@ define <8 x half> @test_copysign_v8f16_v8f32(<8 x half> %a, <8 x float> %b) #0 {
 ; NOFP16-NEXT:    ret
 
 ; FP16-NEXT:    fcvtn   v2.4h, v2.4s
-; FP16-NEXT:    fcvtn   v4.4h, v1.4s
-; FP16-NEXT:    mov h3, v0[1]
-; FP16-NEXT:    movi.8h v1, #128, lsl #8
-; FP16-NEXT:    mov h5, v0[2]
-; FP16-NEXT:    mov h6, v0[3]
-; FP16-NEXT:    mov h7, v0[4]
-; FP16-NEXT:    mov h16, v0[5]
-; FP16-NEXT:    mov h17, v0[6]
-; FP16-NEXT:    mov h18, v4[1]
-; FP16-NEXT:    bit.16b v3, v18, v1
-; FP16-NEXT:    mov h18, v4[2]
-; FP16-NEXT:    bit.16b v5, v18, v1
-; FP16-NEXT:    mov h18, v0[7]
-; FP16-NEXT:    bit.16b v0, v4, v1
-; FP16-NEXT:    mov h4, v4[3]
-; FP16-NEXT:    bit.16b v6, v4, v1
-; FP16-NEXT:    mov h4, v2[1]
-; FP16-NEXT:    bit.16b v16, v4, v1
-; FP16-NEXT:    mov h4, v2[2]
-; FP16-NEXT:    bit.16b v17, v4, v1
-; FP16-NEXT:    mov.h   v0[1], v3[0]
-; FP16-NEXT:    mov.h   v0[2], v5[0]
-; FP16-NEXT:    mov.h   v0[3], v6[0]
-; FP16-NEXT:    bit.16b v7, v2, v1
-; FP16-NEXT:    mov h2, v2[3]
-; FP16-NEXT:    mov.h   v0[4], v7[0]
-; FP16-NEXT:    mov.h   v0[5], v16[0]
-; FP16-NEXT:    mov.h   v0[6], v17[0]
-; FP16-NEXT:    bit.16b v18, v2, v1
-; FP16-NEXT:    mov.h   v0[7], v18[0]
+; FP16-NEXT:    fcvtn   v1.4h, v1.4s
+; FP16-NEXT:    mov.d   v1[1], v2[0]
+; FP16-NEXT:    movi.8h v2, #128, lsl #8
+; FP16-NEXT:    bit.16b v0, v1, v2
 ; FP16-NEXT:    ret
   %tmp0 = fptrunc <8 x float> %b to <8 x half>
   %r = call <8 x half> @llvm.copysign.v8f16(<8 x half> %a, <8 x half> %tmp0)
