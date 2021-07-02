@@ -13,28 +13,28 @@ body: |
 
     ; SI-LABEL: name: test_load_private_s1_align1
     ; SI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s1), addrspace 5)
+    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI: $vgpr0 = COPY [[AND]](s32)
     ; CI-LABEL: name: test_load_private_s1_align1
     ; CI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s1), addrspace 5)
+    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; CI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CI: $vgpr0 = COPY [[AND]](s32)
     ; VI-LABEL: name: test_load_private_s1_align1
     ; VI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s1), addrspace 5)
+    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; VI: $vgpr0 = COPY [[AND]](s32)
     ; GFX9-LABEL: name: test_load_private_s1_align1
     ; GFX9: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s1), addrspace 5)
+    ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; GFX9: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
@@ -53,28 +53,28 @@ body: |
 
     ; SI-LABEL: name: test_load_private_s2_align1
     ; SI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s2), addrspace 5)
+    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI: $vgpr0 = COPY [[AND]](s32)
     ; CI-LABEL: name: test_load_private_s2_align1
     ; CI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s2), addrspace 5)
+    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; CI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; CI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CI: $vgpr0 = COPY [[AND]](s32)
     ; VI-LABEL: name: test_load_private_s2_align1
     ; VI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s2), addrspace 5)
+    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; VI: $vgpr0 = COPY [[AND]](s32)
     ; GFX9-LABEL: name: test_load_private_s2_align1
     ; GFX9: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s2), addrspace 5)
+    ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; GFX9: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]

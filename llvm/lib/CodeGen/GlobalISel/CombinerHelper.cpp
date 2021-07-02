@@ -489,7 +489,7 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
       // Check for legality.
       if (LI) {
         LegalityQuery::MemDesc MMDesc;
-        MMDesc.SizeInBits = MMO.getSizeInBits();
+        MMDesc.MemoryTy = MMO.getMemoryType();
         MMDesc.AlignInBits = MMO.getAlign().value() * 8;
         MMDesc.Ordering = MMO.getSuccessOrdering();
         LLT UseTy = MRI.getType(UseMI.getOperand(0).getReg());
@@ -3709,7 +3709,7 @@ bool CombinerHelper::matchLoadOrCombine(
   Register Ptr = LowestIdxLoad->getOperand(1).getReg();
   const MachineMemOperand &MMO = **LowestIdxLoad->memoperands_begin();
   LegalityQuery::MemDesc MMDesc;
-  MMDesc.SizeInBits = WideMemSizeInBits;
+  MMDesc.MemoryTy = Ty;
   MMDesc.AlignInBits = MMO.getAlign().value() * 8;
   MMDesc.Ordering = MMO.getSuccessOrdering();
   if (!isLegalOrBeforeLegalizer(

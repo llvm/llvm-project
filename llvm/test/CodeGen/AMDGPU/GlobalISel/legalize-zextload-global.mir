@@ -23,12 +23,14 @@ body: |
 
     ; GFX8-LABEL: name: test_zextload_global_i32_i1
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s1), addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX8: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 1
+    ; GFX8: $vgpr0 = COPY [[ASSERT_ZEXT]](s32)
     ; GFX6-LABEL: name: test_zextload_global_i32_i1
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s1), addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 1
+    ; GFX6: $vgpr0 = COPY [[ASSERT_ZEXT]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_ZEXTLOAD %0 :: (load (s1), addrspace 1)
     $vgpr0 = COPY %1
@@ -42,12 +44,14 @@ body: |
 
     ; GFX8-LABEL: name: test_zextload_global_i32_i7
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s7), addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX8: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 7
+    ; GFX8: $vgpr0 = COPY [[ASSERT_ZEXT]](s32)
     ; GFX6-LABEL: name: test_zextload_global_i32_i7
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s7), addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 7
+    ; GFX6: $vgpr0 = COPY [[ASSERT_ZEXT]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_ZEXTLOAD %0 :: (load (s7), addrspace 1)
     $vgpr0 = COPY %1
@@ -80,12 +84,14 @@ body: |
 
     ; GFX8-LABEL: name: test_zextload_global_i32_i30
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s30), addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX8: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 30
+    ; GFX8: $vgpr0 = COPY [[ASSERT_ZEXT]](s32)
     ; GFX6-LABEL: name: test_zextload_global_i32_i30
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s30), addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX6: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 30
+    ; GFX6: $vgpr0 = COPY [[ASSERT_ZEXT]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_ZEXTLOAD %0 :: (load (s30), addrspace 1)
     $vgpr0 = COPY %1
@@ -99,12 +105,14 @@ body: |
 
     ; GFX8-LABEL: name: test_zextload_global_i32_i31
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s31), addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; GFX8: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX8: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 31
+    ; GFX8: $vgpr0 = COPY [[ASSERT_ZEXT]](s32)
     ; GFX6-LABEL: name: test_zextload_global_i32_i31
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s31), addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; GFX6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GFX6: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 31
+    ; GFX6: $vgpr0 = COPY [[ASSERT_ZEXT]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_ZEXTLOAD %0 :: (load (s31), addrspace 1)
     $vgpr0 = COPY %1

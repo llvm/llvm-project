@@ -446,7 +446,8 @@ body:             |
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
     ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
-    ; MIPS32: G_STORE [[AND]](s32), [[COPY3]](p0) :: (store (s1) into %ir.pcarry_flag)
+    ; MIPS32: [[AND1:%[0-9]+]]:_(s32) = G_AND [[AND]], [[C1]]
+    ; MIPS32: G_STORE [[AND1]](s32), [[COPY3]](p0) :: (store (s8) into %ir.pcarry_flag)
     ; MIPS32: G_STORE [[MUL]](s32), [[COPY2]](p0) :: (store (s32) into %ir.pmul)
     ; MIPS32: RetRA
     %0:_(s32) = COPY $a0
