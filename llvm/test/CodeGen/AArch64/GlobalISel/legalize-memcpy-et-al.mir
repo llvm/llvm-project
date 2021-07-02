@@ -18,7 +18,7 @@ body:             |
     ; CHECK: $x0 = COPY [[COPY]](p0)
     ; CHECK: $x1 = COPY [[COPY1]](p0)
     ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -71,7 +71,7 @@ body:             |
     ; CHECK: $x0 = COPY [[COPY]](p0)
     ; CHECK: $x1 = COPY [[COPY1]](p0)
     ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memmove, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK: BL &memmove, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -100,7 +100,7 @@ body:             |
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; CHECK: $w1 = COPY [[COPY3]](s32)
     ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memset, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2
+    ; CHECK: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -129,7 +129,7 @@ body:             |
     ; CHECK: $x0 = COPY [[COPY]](p0)
     ; CHECK: $x1 = COPY [[COPY1]](p0)
     ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK: $x0 = COPY [[ZEXT]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
@@ -158,7 +158,7 @@ body:             |
     ; CHECK: $x0 = COPY [[COPY]](p0)
     ; CHECK: $x1 = COPY [[COPY1]](p0)
     ; CHECK: $x2 = COPY [[ZEXT]](s64)
-    ; CHECK: BL &memcpy, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
+    ; CHECK: BL &memcpy, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK: TCRETURNdi &memset, 0, csr_aarch64_aapcs, implicit $sp
     %0:_(p0) = COPY $x0
