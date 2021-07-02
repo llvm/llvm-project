@@ -315,6 +315,28 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
   }
 };
 
+struct LogOpConversion : public OpConversionPattern<complex::LogOp> {
+  using OpConversionPattern<complex::LogOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::LogOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    complex::LogOp::Adaptor transformed(operands);
+    auto type = transformed.complex().getType().cast<ComplexType>();
+    auto elementType = type.getElementType().cast<FloatType>();
+    mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+
+    Value abs = b.create<complex::AbsOp>(elementType, transformed.complex());
+    Value resultReal = b.create<math::LogOp>(elementType, abs);
+    Value real = b.create<complex::ReOp>(elementType, transformed.complex());
+    Value imag = b.create<complex::ImOp>(elementType, transformed.complex());
+    Value resultImag = b.create<math::Atan2Op>(elementType, imag, real);
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
+                                                   resultImag);
+    return success();
+  }
+};
+
 struct NegOpConversion : public OpConversionPattern<complex::NegOp> {
   using OpConversionPattern<complex::NegOp>::OpConversionPattern;
 
@@ -374,6 +396,7 @@ void mlir::populateComplexToStandardConversionPatterns(
       ComparisonOpConversion<complex::NotEqualOp, CmpFPredicate::UNE>,
       DivOpConversion,
       ExpOpConversion,
+      LogOpConversion,
       NegOpConversion,
       SignOpConversion>(patterns.getContext());
   // clang-format on
@@ -396,8 +419,8 @@ void ConvertComplexToStandardPass::runOnFunction() {
   target.addLegalDialect<StandardOpsDialect, math::MathDialect,
                          complex::ComplexDialect>();
   target.addIllegalOp<complex::AbsOp, complex::DivOp, complex::EqualOp,
-                      complex::ExpOp, complex::NotEqualOp, complex::NegOp,
-                      complex::SignOp>();
+                      complex::ExpOp, complex::LogOp, complex::NotEqualOp,
+                      complex::NegOp, complex::SignOp>();
   if (failed(applyPartialConversion(function, target, std::move(patterns))))
     signalPassFailure();
 }
