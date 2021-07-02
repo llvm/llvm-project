@@ -64,6 +64,10 @@ def icf_eq: Joined<["--"], "icf=">,
     HelpText<"Set level for identical code folding (default: none)">,
     MetaVarName<"[none,safe,all]">,
     Group<grp_lld>;
+def lto_O: Joined<["--"], "lto-O">,
+    HelpText<"Set optimization level for LTO (default: 2)">,
+    MetaVarName<"<opt-level>">,
+    Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
