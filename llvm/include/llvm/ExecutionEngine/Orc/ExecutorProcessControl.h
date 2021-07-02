@@ -24,6 +24,7 @@
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
 #include <future>
+#include <mutex>
 #include <vector>
 
 namespace llvm {
@@ -32,6 +33,19 @@ namespace orc {
 /// ExecutorProcessControl supports interaction with a JIT target process.
 class ExecutorProcessControl {
 public:
+  /// Sender to return the result of a WrapperFunction executed in the JIT.
+  using SendResultFunction =
+      unique_function<void(shared::WrapperFunctionResult)>;
+
+  /// An asynchronous wrapper-function.
+  using AsyncWrapperFunction = unique_function<void(
+      SendResultFunction SendResult, const char *ArgData, size_t ArgSize)>;
+
+  /// A map associating tag names with asynchronous wrapper function
+  /// implementations in the JIT.
+  using WrapperFunctionAssociationMap =
+      DenseMap<SymbolStringPtr, AsyncWrapperFunction>;
+
   /// APIs for manipulating memory in the target process.
   class MemoryAccess {
   public:
@@ -138,14 +152,91 @@ public:
   virtual Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
 
-  /// Run a wrapper function in the executor.
+  /// Run a wrapper function in the executor (async version).
+  ///
+  /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
   ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
   ///
-  virtual Expected<shared::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<char> ArgBuffer) = 0;
+  /// The given OnComplete function will be called to return the result.
+  virtual void runWrapperAsync(SendResultFunction OnComplete,
+                               JITTargetAddress WrapperFnAddr,
+                               ArrayRef<char> ArgBuffer) = 0;
+
+  /// Run a wrapper function in the executor. The wrapper function should be
+  /// callable as:
+  ///
+  /// \code{.cpp}
+  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  /// \endcode{.cpp}
+  shared::WrapperFunctionResult runWrapper(JITTargetAddress WrapperFnAddr,
+                                           ArrayRef<char> ArgBuffer) {
+    std::promise<shared::WrapperFunctionResult> RP;
+    auto RF = RP.get_future();
+    runWrapperAsync(
+        [&](shared::WrapperFunctionResult R) { RP.set_value(std::move(R)); },
+        WrapperFnAddr, ArgBuffer);
+    return RF.get();
+  }
+
+  /// Run a wrapper function using SPS to serialize the arguments and
+  /// deserialize the results.
+  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
+  void runSPSWrapperAsync(SendResultT &&SendResult,
+                          JITTargetAddress WrapperFnAddr,
+                          const ArgTs &...Args) {
+    shared::WrapperFunction<SPSSignature>::callAsync(
+        [this, WrapperFnAddr](SendResultFunction SendResult,
+                              const char *ArgData, size_t ArgSize) {
+          runWrapperAsync(std::move(SendResult), WrapperFnAddr,
+                          ArrayRef<char>(ArgData, ArgSize));
+        },
+        std::move(SendResult), Args...);
+  }
+
+  /// Run a wrapper function using SPS to serialize the arguments and
+  /// deserialize the results.
+  template <typename SPSSignature, typename RetT, typename... ArgTs>
+  Error runSPSWrapper(JITTargetAddress WrapperFnAddr, RetT &RetVal,
+                      const ArgTs &...Args) {
+    return shared::WrapperFunction<SPSSignature>::call(
+        [this, WrapperFnAddr](const char *ArgData, size_t ArgSize) {
+          return runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
+        },
+        RetVal, Args...);
+  }
+
+  /// Wrap a handler that takes concrete argument types (and a sender for a
+  /// concrete return type) to produce an AsyncWrapperFunction. Uses SPS to
+  /// unpack the arguments and pack the result.
+  ///
+  /// This function is usually used when building association maps.
+  template <typename SPSSignature, typename HandlerT>
+  static AsyncWrapperFunction wrapAsyncWithSPS(HandlerT &&H) {
+    return [H = std::forward<HandlerT>(H)](SendResultFunction SendResult,
+                                           const char *ArgData,
+                                           size_t ArgSize) mutable {
+      shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
+                                                         std::move(SendResult));
+    };
+  }
+
+  /// For each symbol name, associate the AsyncWrapperFunction implementation
+  /// value with the address of that symbol.
+  ///
+  /// Symbols will be looked up using LookupKind::Static,
+  /// JITDylibLookupFlags::MatchAllSymbols (hidden tags will be found), and
+  /// LookupFlags::WeaklyReferencedSymbol (missing tags will not cause an
+  /// error, the implementations will simply be dropped).
+  Error associateJITSideWrapperFunctions(JITDylib &JD,
+                                         WrapperFunctionAssociationMap WFs);
+
+  /// Run a registered jit-side wrapper function.
+  void runJITSideWrapperFunction(SendResultFunction SendResult,
+                                 JITTargetAddress TagAddr,
+                                 ArrayRef<char> ArgBuffer);
 
   /// Disconnect from the target process.
   ///
@@ -161,6 +252,9 @@ protected:
   unsigned PageSize = 0;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
+
+  std::mutex TagToFuncMapMutex;
+  DenseMap<JITTargetAddress, std::shared_ptr<AsyncWrapperFunction>> TagToFunc;
 };
 
 /// Call a wrapper function via ExecutorProcessControl::runWrapper.
@@ -168,8 +262,8 @@ class EPCCaller {
 public:
   EPCCaller(ExecutorProcessControl &EPC, JITTargetAddress WrapperFnAddr)
       : EPC(EPC), WrapperFnAddr(WrapperFnAddr) {}
-  Expected<shared::WrapperFunctionResult> operator()(const char *ArgData,
-                                                     size_t ArgSize) const {
+  shared::WrapperFunctionResult operator()(const char *ArgData,
+                                           size_t ArgSize) const {
     return EPC.runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
   }
 
@@ -202,8 +296,9 @@ public:
   Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  Expected<shared::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<char> ArgBuffer) override;
+  void runWrapperAsync(SendResultFunction OnComplete,
+                       JITTargetAddress WrapperFnAddr,
+                       ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
 
