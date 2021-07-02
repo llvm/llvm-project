@@ -4838,9 +4838,6 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
   }
 
   auto &&CreateInsertElement = [this](Value *Vec, Value *V, unsigned Pos) {
-    // No need to insert undefs elements - exit.
-    if (isa<UndefValue>(V))
-      return Vec;
     Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(Pos));
     auto *InsElt = dyn_cast<InsertElementInst>(Vec);
     if (!InsElt)
@@ -4865,11 +4862,20 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
       isa<StoreInst>(VL[0]) ? cast<StoreInst>(VL[0])->getValueOperand() : VL[0];
   FixedVectorType *VecTy = FixedVectorType::get(Val0->getType(), VL.size());
   Value *Vec = PoisonValue::get(VecTy);
+  SmallVector<int> NonConsts;
+  // Insert constant values at first.
   for (int I = 0, E = VL.size(); I < E; ++I) {
     if (PostponedIndices.contains(I))
       continue;
+    if (!isConstant(VL[I])) {
+      NonConsts.push_back(I);
+      continue;
+    }
     Vec = CreateInsertElement(Vec, VL[I], I);
   }
+  // Insert non-constant values.
+  for (int I : NonConsts)
+    Vec = CreateInsertElement(Vec, VL[I], I);
   // Append instructions, which are/may be part of the loop, in the end to make
   // it possible to hoist non-loop-based instructions.
   for (const std::pair<Value *, unsigned> &Pair : PostponedInsts)
@@ -5043,7 +5049,7 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
       UniqueValues.append(VL.begin(), std::next(VL.begin(), NumValues));
     }
     UniqueValues.append(VF - UniqueValues.size(),
-                        UndefValue::get(VL[0]->getType()));
+                        PoisonValue::get(VL[0]->getType()));
     VL = UniqueValues;
   }
 
