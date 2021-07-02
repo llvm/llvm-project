@@ -13,11 +13,13 @@
 #ifndef MLIR_DIALECT_TOSA_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_TOSA_TRANSFORMS_PASSES_H
 
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace tosa {
 
+std::unique_ptr<Pass> createTosaInferShapesPass();
 std::unique_ptr<Pass> createTosaMakeBroadcastablePass();
 std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
 
