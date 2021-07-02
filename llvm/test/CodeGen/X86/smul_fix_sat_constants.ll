@@ -15,10 +15,10 @@ define i64 @func() nounwind {
 ; X64-NEXT:    movl $2, %ecx
 ; X64-NEXT:    movl $3, %eax
 ; X64-NEXT:    imulq %rcx
-; X64-NEXT:    cmpq $1, %rdx
+; X64-NEXT:    cmpq $2, %rdx
 ; X64-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
 ; X64-NEXT:    movl $1, %ecx
-; X64-NEXT:    cmovgq %rax, %rcx
+; X64-NEXT:    cmovgeq %rax, %rcx
 ; X64-NEXT:    cmpq $-2, %rdx
 ; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
 ; X64-NEXT:    cmovgeq %rcx, %rax
@@ -51,9 +51,9 @@ define i64 @func3() nounwind {
 ; X64-NEXT:    movl $2, %edx
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    imulq %rdx
-; X64-NEXT:    cmpq $1, %rdx
+; X64-NEXT:    cmpq $2, %rdx
 ; X64-NEXT:    movabsq $4611686018427387903, %rsi # imm = 0x3FFFFFFFFFFFFFFF
-; X64-NEXT:    cmovgq %rcx, %rsi
+; X64-NEXT:    cmovgeq %rcx, %rsi
 ; X64-NEXT:    cmpq $-2, %rdx
 ; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
 ; X64-NEXT:    cmovgeq %rsi, %rax
