@@ -234,6 +234,10 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     error(filename + ": is not a native COFF file. Recompile without /GL");
     break;
   case file_magic::pecoff_executable:
+    if (config->mingw) {
+      symtab->addFile(make<DLLFile>(mbref));
+      break;
+    }
     if (filename.endswith_insensitive(".dll")) {
       error(filename + ": bad file type. Did you specify a DLL instead of an "
                        "import library?");
