@@ -179,10 +179,10 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
     ; CHECK: %idx:_(s64) = COPY $x0
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-    ; CHECK: G_STORE [[COPY]](<2 x s64>), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 32)
+    ; CHECK: G_STORE [[COPY]](<2 x s64>), [[FRAME_INDEX]](p0) :: (store (<2 x s64>) into %stack.0, align 32)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
-    ; CHECK: G_STORE [[COPY1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (s128) into %stack.0 + 16, basealign 32)
+    ; CHECK: G_STORE [[COPY1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into %stack.0 + 16, basealign 32)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND %idx, [[C1]]
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8

@@ -116,10 +116,10 @@ body: |
     ; CHECK-LABEL: name: load_global_v8i32_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p1) :: (load (s128) from %ir.global.not.uniform.v8i32, align 32, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v8i32, align 32, addrspace 1)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (s128) from %ir.global.not.uniform.v8i32 + 16, basealign 32, addrspace 1)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v8i32 + 16, basealign 32, addrspace 1)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(<8 x s32>) = G_LOAD %0 :: (load (<8 x s32>) from %ir.global.not.uniform.v8i32)
@@ -136,10 +136,10 @@ body: |
     ; CHECK-LABEL: name: load_global_v4i64_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p1) :: (load (s128) from %ir.global.not.uniform.v4i64, align 32, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v4i64, align 32, addrspace 1)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p1) :: (load (s128) from %ir.global.not.uniform.v4i64 + 16, basealign 32, addrspace 1)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v4i64 + 16, basealign 32, addrspace 1)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(<4 x s64>) = G_LOAD %0 :: (load (<4 x s64>) from %ir.global.not.uniform.v4i64)
@@ -155,16 +155,16 @@ body: |
     ; CHECK-LABEL: name: load_global_v16i32_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p1) :: (load (s128) from %ir.global.not.uniform.v16i32, align 64, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32, align 64, addrspace 1)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (s128) from %ir.global.not.uniform.v16i32 + 16, basealign 64, addrspace 1)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 16, basealign 64, addrspace 1)
     ; CHECK: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (s128) from %ir.global.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 1)
+    ; CHECK: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 1)
     ; CHECK: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (s128) from %ir.global.not.uniform.v16i32 + 48, basealign 64, addrspace 1)
+    ; CHECK: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 48, basealign 64, addrspace 1)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>), [[LOAD2]](<4 x s32>), [[LOAD3]](<4 x s32>)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(<16 x s32>) = G_LOAD %0 :: (load (<16 x s32>) from %ir.global.not.uniform.v16i32)
@@ -180,16 +180,16 @@ body: |
     ; CHECK-LABEL: name: load_global_v8i64_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p1) :: (load (s128) from %ir.global.not.uniform.v8i64, align 64, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64, align 64, addrspace 1)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p1) :: (load (s128) from %ir.global.not.uniform.v8i64 + 16, basealign 64, addrspace 1)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 16, basealign 64, addrspace 1)
     ; CHECK: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD1]](p1) :: (load (s128) from %ir.global.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 1)
+    ; CHECK: [[LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 1)
     ; CHECK: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD2]](p1) :: (load (s128) from %ir.global.not.uniform.v8i64 + 48, basealign 64, addrspace 1)
+    ; CHECK: [[LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 48, basealign 64, addrspace 1)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>), [[LOAD2]](<2 x s64>), [[LOAD3]](<2 x s64>)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(<8 x s64>) = G_LOAD %0 :: (load (<8 x s64>) from %ir.global.not.uniform.v8i64)
@@ -261,10 +261,10 @@ body: |
     ; CHECK-LABEL: name: load_constant_v8i32_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128) from %ir.constant.not.uniform.v8i32, align 32, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v8i32, align 32, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from %ir.constant.not.uniform.v8i32 + 16, basealign 32, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v8i32 + 16, basealign 32, addrspace 4)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<8 x s32>) = G_LOAD %0 :: (load (<8 x s32>) from %ir.constant.not.uniform.v8i32)
@@ -300,10 +300,10 @@ body: |
     ; CHECK-LABEL: name: load_constant_v16i16_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[COPY]](p4) :: (load (s128) from %ir.constant.not.uniform, align 32, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[COPY]](p4) :: (load (<8 x s16>) from %ir.constant.not.uniform, align 32, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from %ir.constant.not.uniform + 16, basealign 32, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (load (<8 x s16>) from %ir.constant.not.uniform + 16, basealign 32, addrspace 4)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s16>) = G_CONCAT_VECTORS [[LOAD]](<8 x s16>), [[LOAD1]](<8 x s16>)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<16 x s16>) = G_LOAD %0 :: (load (<16 x s16>) from %ir.constant.not.uniform)
@@ -319,10 +319,10 @@ body: |
     ; CHECK-LABEL: name: load_constant_v4i64_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (s128) from %ir.constant.not.uniform.v4i64, align 32, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v4i64, align 32, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from %ir.constant.not.uniform.v4i64 + 16, basealign 32, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v4i64 + 16, basealign 32, addrspace 4)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<4 x s64>) = G_LOAD %0 :: (load (<4 x s64>) from %ir.constant.not.uniform.v4i64)
@@ -338,16 +338,16 @@ body: |
     ; CHECK-LABEL: name: load_constant_v16i32_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128) from %ir.constant.not.uniform.v16i32, align 64, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32, align 64, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from %ir.constant.not.uniform.v16i32 + 16, basealign 64, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 16, basealign 64, addrspace 4)
     ; CHECK: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p4) :: (load (s128) from %ir.constant.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 4)
     ; CHECK: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p4) :: (load (s128) from %ir.constant.not.uniform.v16i32 + 48, basealign 64, addrspace 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 48, basealign 64, addrspace 4)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>), [[LOAD2]](<4 x s32>), [[LOAD3]](<4 x s32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<16 x s32>) = G_LOAD %0 :: (load (<16 x s32>) from %ir.constant.not.uniform.v16i32)
@@ -363,16 +363,16 @@ body: |
     ; CHECK-LABEL: name: load_constant_v8i64_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (s128) from %ir.constant.not.uniform.v8i64, align 64, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64, align 64, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from %ir.constant.not.uniform.v8i64 + 16, basealign 64, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 16, basealign 64, addrspace 4)
     ; CHECK: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD1]](p4) :: (load (s128) from %ir.constant.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD1]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 4)
     ; CHECK: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD2]](p4) :: (load (s128) from %ir.constant.not.uniform.v8i64 + 48, basealign 64, addrspace 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD2]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 48, basealign 64, addrspace 4)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>), [[LOAD2]](<2 x s64>), [[LOAD3]](<2 x s64>)
     %0:_(p4) = COPY $sgpr0_sgpr1
     %1:_(<8 x s64>) = G_LOAD %0 :: (load (<8 x s64>) from %ir.constant.not.uniform.v8i64)
@@ -616,10 +616,10 @@ body: |
     ; CHECK-LABEL: name: load_constant_v8i32_vgpr_crash
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(p4) = COPY $vgpr0_vgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128), align 32, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>), align 32, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from unknown-address + 16, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from unknown-address + 16, addrspace 4)
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
     %0:_(p4) = COPY $vgpr0_vgpr1
     %1:_(<8 x s32>) = G_LOAD %0 :: (load (<8 x s32>), addrspace 4)
@@ -641,10 +641,10 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[PHI:%[0-9]+]]:vgpr(p4) = G_PHI [[COPY]](p4), %bb.0, %3(p4), %bb.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PHI]](p4) :: (load (s128), align 32, addrspace 4)
+  ; CHECK:   [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PHI]](p4) :: (load (<4 x s32>), align 32, addrspace 4)
   ; CHECK:   [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[PHI]], [[C]](s64)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from unknown-address + 16, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from unknown-address + 16, addrspace 4)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr(p4) = COPY [[COPY1]](p4)
   ; CHECK:   G_BR %bb.1

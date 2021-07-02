@@ -1539,7 +1539,7 @@ body: |
 
     ; CI-LABEL: name: test_load_constant_s160_align4
     ; CI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; CI: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128), align 4, addrspace 4)
+    ; CI: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; CI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; CI: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (load (s32) from unknown-address + 16, addrspace 4)
@@ -1549,7 +1549,7 @@ body: |
     ; CI: S_NOP 0, implicit [[BITCAST]](s160)
     ; VI-LABEL: name: test_load_constant_s160_align4
     ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128), align 4, addrspace 4)
+    ; VI: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; VI: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; VI: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (load (s32) from unknown-address + 16, addrspace 4)
@@ -1559,7 +1559,7 @@ body: |
     ; VI: S_NOP 0, implicit [[BITCAST]](s160)
     ; GFX9-LABEL: name: test_load_constant_s160_align4
     ; GFX9: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; GFX9: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128), align 4, addrspace 4)
+    ; GFX9: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; GFX9: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; GFX9: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (load (s32) from unknown-address + 16, addrspace 4)
@@ -1580,10 +1580,10 @@ body: |
 
     ; CI-LABEL: name: test_load_constant_s224_align4
     ; CI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; CI: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128), align 4, addrspace 4)
+    ; CI: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; CI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CI: [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (s96) from unknown-address + 16, align 4, addrspace 4)
+    ; CI: [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<3 x s32>) from unknown-address + 16, align 4, addrspace 4)
     ; CI: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
     ; CI: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; CI: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
@@ -1599,10 +1599,10 @@ body: |
     ; CI: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
     ; VI-LABEL: name: test_load_constant_s224_align4
     ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128), align 4, addrspace 4)
+    ; VI: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; VI: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; VI: [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (s96) from unknown-address + 16, align 4, addrspace 4)
+    ; VI: [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<3 x s32>) from unknown-address + 16, align 4, addrspace 4)
     ; VI: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
     ; VI: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; VI: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
@@ -1618,10 +1618,10 @@ body: |
     ; VI: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](s256)
     ; GFX9-LABEL: name: test_load_constant_s224_align4
     ; GFX9: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; GFX9: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (s128), align 4, addrspace 4)
+    ; GFX9: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>), align 4, addrspace 4)
     ; GFX9: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX9: [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (s96) from unknown-address + 16, align 4, addrspace 4)
+    ; GFX9: [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<3 x s32>) from unknown-address + 16, align 4, addrspace 4)
     ; GFX9: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
     ; GFX9: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s32>)
     ; GFX9: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
@@ -5852,7 +5852,7 @@ body: |
 
     ; CI-LABEL: name: test_load_constant_v3s64_align8
     ; CI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; CI: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (s128), align 8, addrspace 4)
+    ; CI: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (<2 x s64>), align 8, addrspace 4)
     ; CI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; CI: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p4) :: (load (s64) from unknown-address + 16, addrspace 4)
@@ -5863,7 +5863,7 @@ body: |
     ; CI: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](<4 x s64>)
     ; VI-LABEL: name: test_load_constant_v3s64_align8
     ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (s128), align 8, addrspace 4)
+    ; VI: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (<2 x s64>), align 8, addrspace 4)
     ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; VI: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; VI: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p4) :: (load (s64) from unknown-address + 16, addrspace 4)
@@ -5874,7 +5874,7 @@ body: |
     ; VI: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INSERT]](<4 x s64>)
     ; GFX9-LABEL: name: test_load_constant_v3s64_align8
     ; GFX9: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; GFX9: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (s128), align 8, addrspace 4)
+    ; GFX9: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p4) :: (load (<2 x s64>), align 8, addrspace 4)
     ; GFX9: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; GFX9: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p4) :: (load (s64) from unknown-address + 16, addrspace 4)
