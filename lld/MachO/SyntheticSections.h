@@ -46,7 +46,7 @@ public:
     return sec->kind() == SyntheticKind;
   }
 
-  const StringRef segname;
+  StringRef segname;
   // This fake InputSection makes it easier for us to write code that applies
   // generically to both user inputs and synthetics.
   InputSection *isec;
