@@ -14076,7 +14076,9 @@ static SDValue FindBFIToCombineWith(SDNode *N) {
 
 static SDValue PerformBFICombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
   if (N1.getOpcode() == ISD::AND) {
     // (bfi A, (and B, Mask1), Mask2) -> (bfi A, B, Mask2) iff
     // the bits being cleared by the AND are not demanded by the BFI.
@@ -14097,33 +14099,54 @@ static SDValue PerformBFICombine(SDNode *N,
                              N->getOperand(2));
     return SDValue();
   }
+
   // Look for another BFI to combine with.
-  SDValue CombineBFI = FindBFIToCombineWith(N);
-  if (CombineBFI == SDValue())
-    return SDValue();
+  if (SDValue CombineBFI = FindBFIToCombineWith(N)) {
+    // We've found a BFI.
+    APInt ToMask1, FromMask1;
+    SDValue From1 = ParseBFI(N, ToMask1, FromMask1);
 
-  // We've found a BFI.
-  APInt ToMask1, FromMask1;
-  SDValue From1 = ParseBFI(N, ToMask1, FromMask1);
+    APInt ToMask2, FromMask2;
+    SDValue From2 = ParseBFI(CombineBFI.getNode(), ToMask2, FromMask2);
+    assert(From1 == From2);
+    (void)From2;
 
-  APInt ToMask2, FromMask2;
-  SDValue From2 = ParseBFI(CombineBFI.getNode(), ToMask2, FromMask2);
-  assert(From1 == From2);
-  (void)From2;
+    // Create a new BFI, combining the two together.
+    APInt NewFromMask = FromMask1 | FromMask2;
+    APInt NewToMask = ToMask1 | ToMask2;
 
-  // Create a new BFI, combining the two together.
-  APInt NewFromMask = FromMask1 | FromMask2;
-  APInt NewToMask = ToMask1 | ToMask2;
+    EVT VT = N->getValueType(0);
+    SDLoc dl(N);
 
-  EVT VT = N->getValueType(0);
-  SDLoc dl(N);
+    if (NewFromMask[0] == 0)
+      From1 = DCI.DAG.getNode(
+          ISD::SRL, dl, VT, From1,
+          DCI.DAG.getConstant(NewFromMask.countTrailingZeros(), dl, VT));
+    return DCI.DAG.getNode(ARMISD::BFI, dl, VT, CombineBFI.getOperand(0), From1,
+                          DCI.DAG.getConstant(~NewToMask, dl, VT));
+  }
 
-  if (NewFromMask[0] == 0)
-    From1 = DCI.DAG.getNode(
-        ISD::SRL, dl, VT, From1,
-        DCI.DAG.getConstant(NewFromMask.countTrailingZeros(), dl, VT));
-  return DCI.DAG.getNode(ARMISD::BFI, dl, VT, CombineBFI.getOperand(0), From1,
-                         DCI.DAG.getConstant(~NewToMask, dl, VT));
+  // Reassociate BFI(BFI (A, B, M1), C, M2) to BFI(BFI (A, C, M2), B, M1) so
+  // that lower bit insertions are performed first, providing that M1 and M2
+  // do no overlap. This can allow multiple BFI instructions to be combined
+  // together by the other folds above.
+  if (N->getOperand(0).getOpcode() == ARMISD::BFI) {
+    APInt ToMask1 = ~N->getConstantOperandAPInt(2);
+    APInt ToMask2 = ~N0.getConstantOperandAPInt(2);
+
+    if (!N0.hasOneUse() || (ToMask1 & ToMask2) != 0 ||
+        ToMask1.countLeadingZeros() < ToMask2.countLeadingZeros())
+      return SDValue();
+
+    EVT VT = N->getValueType(0);
+    SDLoc dl(N);
+    SDValue BFI1 = DCI.DAG.getNode(ARMISD::BFI, dl, VT, N0.getOperand(0),
+                                   N->getOperand(1), N->getOperand(2));
+    return DCI.DAG.getNode(ARMISD::BFI, dl, VT, BFI1, N0.getOperand(1),
+                           N0.getOperand(2));
+  }
+
+  return SDValue();
 }
 
 /// PerformVMOVRRDCombine - Target-specific dag combine xforms for
