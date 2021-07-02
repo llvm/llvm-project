@@ -1,6 +1,6 @@
 ; Tests that coro-split will convert coro.resume followed by a suspend to a
 ; musttail call.
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
 
 define void @fakeresume1(i8*)  {
 entry:

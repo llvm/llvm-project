@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
