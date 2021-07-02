@@ -3679,6 +3679,52 @@ TEST_P(ImportVariables, InitAndDefinitionAreInTheFromContext) {
   EXPECT_TRUE(ImportedD->getDefinition());
 }
 
+TEST_P(ImportVariables, ImportBindingDecl) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+      void declToImport() {
+        int a[2] = {1,2};
+        auto [x1,y1] = a;
+        auto& [x2,y2] = a;
+        
+        struct S {
+          mutable int x1 : 2;
+          volatile double y1;
+        };
+        S b;
+        const auto [x3, y3] = b;
+      };
+      )",
+      Lang_CXX17, "", Lang_CXX17);
+
+  TranslationUnitDecl *FromTU = From->getTranslationUnitDecl();
+  auto *FromF = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("declToImport")));
+  auto *ToF = Import(FromF, Lang_CXX17);
+  EXPECT_TRUE(ToF);
+
+  auto VerifyImport = [&](llvm::StringRef BindName) {
+    auto *FromB = FirstDeclMatcher<BindingDecl>().match(
+        FromF, bindingDecl(hasName(BindName)));
+    ASSERT_TRUE(FromB);
+    auto *ToB = Import(FromB, Lang_CXX17);
+    EXPECT_TRUE(ToB);
+    EXPECT_EQ(FromB->getBinding() != nullptr, ToB->getBinding() != nullptr);
+    EXPECT_EQ(FromB->getDecomposedDecl() != nullptr,
+              ToB->getDecomposedDecl() != nullptr);
+    EXPECT_EQ(FromB->getHoldingVar() != nullptr,
+              ToB->getHoldingVar() != nullptr);
+  };
+
+  VerifyImport("x1");
+  VerifyImport("y1");
+  VerifyImport("x2");
+  VerifyImport("y2");
+  VerifyImport("x3");
+  VerifyImport("y3");
+}
+
 struct ImportClasses : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ImportClasses, ImportDefinitionWhenProtoIsInNestedToContext) {
