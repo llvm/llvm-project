@@ -12,6 +12,7 @@
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/TestHelpers.h"
 
+#include <cmath>
 #include <memory>
 #include <stdint.h>
 #include <string>
@@ -256,51 +257,64 @@ public:
   // Return the ULP (units-in-the-last-place) difference between the
   // stored MPFR and a floating point number.
   //
-  // We define:
-  //   ULP(mpfr_value, value) = abs(mpfr_value - value) / eps(value)
+  // We define ULP difference as follows:
+  //   If exponents of this value and the |input| are same, then:
+  //     ULP(this_value, input) = abs(this_value - input) / eps(input)
+  //   else:
+  //     max = max(abs(this_value), abs(input))
+  //     min = min(abs(this_value), abs(input))
+  //     maxExponent = exponent(max)
+  //     ULP(this_value, input) = (max - 2^maxExponent) / eps(max) +
+  //                              (2^maxExponent - min) / eps(min)
   //
   // Remarks:
-  // 1. ULP < 0.5 will imply that the value is correctly rounded.
+  // 1. A ULP of 0.0 will imply that the value is correctly rounded.
   // 2. We expect that this value and the value to be compared (the [input]
   //    argument) are reasonable close, and we will provide an upper bound
   //    of ULP value for testing.  Morever, most of the fractional parts of
   //    ULP value do not matter much, so using double as the return type
   //    should be good enough.
+  // 3. For close enough values (values which don't diff in their exponent by
+  //    not more than 1), a ULP difference of N indicates a bit distance
+  //    of N between this number and [input].
+  // 4. A values of +0.0 and -0.0 are treated as equal.
   template <typename T>
   cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, double> ulp(T input) {
-    fputil::FPBits<T> bits(input);
-    MPFRNumber mpfrInput(input);
-    // When calculating error, we first round this number to the floating
-    // point type T and calculate the ulp error against this rounded number.
-    // The input is always either exact or rounded. So, we if compare
-    // with this number directly, we can end up with a large ULP error.
-    MPFRNumber thisRoundedToFloat(as<T>());
-
-    // abs(thisRoundedToFloat - input)
-    mpfr_sub(mpfrInput.value, thisRoundedToFloat.value, mpfrInput.value,
-             MPFR_RNDN);
-    mpfr_abs(mpfrInput.value, mpfrInput.value, MPFR_RNDN);
-
-    // get eps(input)
-    int epsExponent = bits.encoding.exponent - fputil::FPBits<T>::exponentBias -
-                      fputil::MantissaWidth<T>::value;
-    if (bits.encoding.exponent == 0) {
-      // correcting denormal exponent
-      ++epsExponent;
-    } else if ((bits.encoding.mantissa == 0) && (bits.encoding.exponent > 1) &&
-               mpfr_less_p(thisRoundedToFloat.value, mpfrInput.value)) {
-      // when the input is exactly 2^n, distance (epsilon) between the input
-      // and the next floating point number is different from the distance to
-      // the previous floating point number.  So in that case, if the correct
-      // value from MPFR is smaller than the input, we use the smaller epsilon
-      --epsExponent;
+    T thisAsT = as<T>();
+    int thisExponent = fputil::FPBits<T>(thisAsT).getExponent();
+    int inputExponent = fputil::FPBits<T>(input).getExponent();
+    if (thisAsT * input < 0 || thisExponent == inputExponent) {
+      MPFRNumber inputMPFR(input);
+      mpfr_sub(inputMPFR.value, value, inputMPFR.value, MPFR_RNDN);
+      mpfr_abs(inputMPFR.value, inputMPFR.value, MPFR_RNDN);
+      mpfr_mul_2si(inputMPFR.value, inputMPFR.value, -thisExponent, MPFR_RNDN);
+      return inputMPFR.as<double>();
     }
 
-    // Since eps(value) is of the form 2^e, instead of dividing such number,
-    // we multiply by its inverse 2^{-e}.
-    mpfr_mul_2si(mpfrInput.value, mpfrInput.value, -epsExponent, MPFR_RNDN);
+    // If the control reaches here, it means that this number and input are
+    // of the same sign but different exponent. In such a case, ULP error is
+    // calculated as sum of two parts.
+    thisAsT = std::abs(thisAsT);
+    input = std::abs(input);
+    T min = thisAsT > input ? input : thisAsT;
+    T max = thisAsT > input ? thisAsT : input;
+    int minExponent = fputil::FPBits<T>(min).getExponent();
+    int maxExponent = fputil::FPBits<T>(max).getExponent();
 
-    return mpfrInput.as<double>();
+    MPFRNumber minMPFR(min);
+    MPFRNumber maxMPFR(max);
+
+    MPFRNumber pivot(uint32_t(1));
+    mpfr_mul_2si(pivot.value, pivot.value, maxExponent, MPFR_RNDN);
+
+    mpfr_sub(minMPFR.value, pivot.value, minMPFR.value, MPFR_RNDN);
+    mpfr_mul_2si(minMPFR.value, minMPFR.value, -minExponent, MPFR_RNDN);
+
+    mpfr_sub(maxMPFR.value, maxMPFR.value, pivot.value, MPFR_RNDN);
+    mpfr_mul_2si(maxMPFR.value, maxMPFR.value, -maxExponent, MPFR_RNDN);
+
+    mpfr_add(minMPFR.value, minMPFR.value, maxMPFR.value, MPFR_RNDN);
+    return minMPFR.as<double>();
   }
 };
 
