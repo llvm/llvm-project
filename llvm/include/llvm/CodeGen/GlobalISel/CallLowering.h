@@ -236,7 +236,7 @@ public:
     /// direct SP manipulation, depending on the context. \p MPO
     /// should be initialized to an appropriate description of the
     /// address created.
-    virtual Register getStackAddress(uint64_t Size, int64_t Offset,
+    virtual Register getStackAddress(uint64_t MemSize, int64_t Offset,
                                      MachinePointerInfo &MPO,
                                      ISD::ArgFlagsTy Flags) = 0;
 
@@ -245,8 +245,8 @@ public:
     ///
     /// This is overridable primarily for targets to maintain compatibility with
     /// hacks around the existing DAG call lowering infrastructure.
-    virtual uint64_t getStackValueStoreSize(const DataLayout &DL,
-                                            const CCValAssign &VA) const;
+    virtual LLT getStackValueStoreType(const DataLayout &DL,
+                                       const CCValAssign &VA) const;
 
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
@@ -258,17 +258,17 @@ public:
     /// location. Load or store it there, with appropriate extension
     /// if necessary.
     virtual void assignValueToAddress(Register ValVReg, Register Addr,
-                                      uint64_t Size, MachinePointerInfo &MPO,
+                                      LLT MemTy, MachinePointerInfo &MPO,
                                       CCValAssign &VA) = 0;
 
     /// An overload which takes an ArgInfo if additional information about the
     /// arg is needed. \p ValRegIndex is the index in \p Arg.Regs for the value
     /// to store.
     virtual void assignValueToAddress(const ArgInfo &Arg, unsigned ValRegIndex,
-                                      Register Addr, uint64_t Size,
+                                      Register Addr, LLT MemTy,
                                       MachinePointerInfo &MPO,
                                       CCValAssign &VA) {
-      assignValueToAddress(Arg.Regs[ValRegIndex], Addr, Size, MPO, VA);
+      assignValueToAddress(Arg.Regs[ValRegIndex], Addr, MemTy, MPO, VA);
     }
 
     /// Handle custom values, which may be passed into one or more of \p VAs.

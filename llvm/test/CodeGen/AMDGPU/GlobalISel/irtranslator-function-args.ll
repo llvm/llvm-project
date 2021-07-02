@@ -1293,7 +1293,7 @@ define void @void_func_v65i16(<65 x i16> %arg0) #0 {
   ; CHECK:   [[COPY30:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr30
   ; CHECK:   [[COPY31:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr31
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.0, align 16, addrspace 5)
   ; CHECK:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<130 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>), [[COPY4]](<2 x s16>), [[COPY5]](<2 x s16>), [[COPY6]](<2 x s16>), [[COPY7]](<2 x s16>), [[COPY8]](<2 x s16>), [[COPY9]](<2 x s16>), [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[COPY12]](<2 x s16>), [[COPY13]](<2 x s16>), [[COPY14]](<2 x s16>), [[COPY15]](<2 x s16>), [[COPY16]](<2 x s16>), [[COPY17]](<2 x s16>), [[COPY18]](<2 x s16>), [[COPY19]](<2 x s16>), [[COPY20]](<2 x s16>), [[COPY21]](<2 x s16>), [[COPY22]](<2 x s16>), [[COPY23]](<2 x s16>), [[COPY24]](<2 x s16>), [[COPY25]](<2 x s16>), [[COPY26]](<2 x s16>), [[COPY27]](<2 x s16>), [[COPY28]](<2 x s16>), [[COPY29]](<2 x s16>), [[COPY30]](<2 x s16>), [[COPY31]](<2 x s16>), [[LOAD]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>)
   ; CHECK:   [[UV:%[0-9]+]]:_(<65 x s16>), [[UV1:%[0-9]+]]:_(<65 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<130 x s16>)
@@ -2079,7 +2079,7 @@ define void @void_func_v32i32_i1_i8_i16(<32 x i32> %arg0, i1 %arg1, i8 %arg2, i1
   ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.3
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s8) from %fixed-stack.3, align 16, addrspace 5)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s1) from %fixed-stack.3, align 16, addrspace 5)
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[LOAD]](s32)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.2
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s16) from %fixed-stack.2, align 4, addrspace 5)
@@ -2265,9 +2265,9 @@ define void @void_func_v32i32_v2i16_v2f16(<32 x i32> %arg0, <2 x i16> %arg1, <2 
   ; CHECK:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.1
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.1, align 16, addrspace 5)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.1, align 16, addrspace 5)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (s32) from %fixed-stack.0, addrspace 5)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[FRAME_INDEX1]](p5) :: (invariant load (<2 x s16>) from %fixed-stack.0, addrspace 5)
   ; CHECK:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[COPY33:%[0-9]+]]:_(p1) = COPY [[DEF]](p1)
