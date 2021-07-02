@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
   // Use TransformLayer to set IR transform.
   {
     LLVMOrcIRTransformLayerRef TL = LLVMOrcLLJITGetIRTransformLayer(J);
-    LLVMOrcLLJITIRTransformLayerSetTransform(TL, *transform, NULL);
+    LLVMOrcIRTransformLayerSetTransform(TL, *transform, NULL);
   }
 
   // Create our demo module.
