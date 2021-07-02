@@ -167,9 +167,14 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
 
     if (r.offset % sizeof(CompactUnwindEntry<Ptr>) == 0) {
-      if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
-        if (!cast<ConcatInputSection>(referentIsec)->shouldOmitFromOutput())
-          allEntriesAreOmitted = false;
+      InputSection *referentIsec;
+      if (auto *isec = r.referent.dyn_cast<InputSection *>())
+        referentIsec = isec;
+      else
+        referentIsec = cast<Defined>(r.referent.dyn_cast<Symbol *>())->isec;
+
+      if (!cast<ConcatInputSection>(referentIsec)->shouldOmitFromOutput())
+        allEntriesAreOmitted = false;
       continue;
     }
 
@@ -257,7 +262,6 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
       uint64_t referentVA = TombstoneValue<Ptr>;
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
-          assert(referentSym->isInGot());
           if (auto *defined = dyn_cast<Defined>(referentSym))
             checkTextSegment(defined->isec);
           // At this point in the link, we may not yet know the final address of
