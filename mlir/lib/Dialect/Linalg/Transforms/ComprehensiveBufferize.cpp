@@ -979,10 +979,10 @@ bool BufferizationAliasInfo::isSourceEquivalentToAMatchingExtractSliceOp(
 /// Apply `fun` to all the members of the equivalence class of `v`.
 void BufferizationAliasInfo::applyOnEquivalenceClass(
     Value v, function_ref<void(Value)> fun) const {
-  for (auto it = equivalentInfo.findLeader(v),
-            eit = equivalentInfo.member_end();
-       it != eit; ++it) {
-    fun(v);
+  auto leaderIt = equivalentInfo.findLeader(v);
+  for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
+       ++mit) {
+    fun(mit->v);
   }
 }
 
@@ -1485,9 +1485,8 @@ bufferize(OpBuilder &b, CallOpInterface callOp, BlockAndValueMapping &bvm,
               getEquivalentEnclosingFuncBBArg(returnVal, aliasInfo)) {
         Value oldRes = callOp->getResult(returnOperand.getOperandNumber());
         int64_t idx = bbArg.getArgNumber();
-        Value buffer = bvm.lookupOrNull(callOp->getOperand(idx));
-        if (!buffer)
-          return callOp->emitError() << "operand #" << idx << " not bufferized";
+        Value buffer = lookup(bvm, callOp->getOperand(idx));
+        assert(buffer && "expected bufferized value");
         // Add CallOp operand/result equivalence: this is interprocedural info.
         aliasInfo.insertNewBufferEquivalence(oldRes, buffer);
         map(bvm, oldRes, buffer);
@@ -1504,11 +1503,11 @@ bufferize(OpBuilder &b, CallOpInterface callOp, BlockAndValueMapping &bvm,
         continue;
       }
 
-      // TODO: Need to hoist above function boundary and add to
-      // `hoistedArgumentTypes`.
-      if (Operation *allocOp = getEquivalentAlloc(returnVal, aliasInfo))
-        return allocOp->emitError()
-               << " needs hoist across function boundary\n";
+      // TODO: Need to hoist above function boundary.
+      if (Operation *allocOp = getEquivalentAlloc(returnVal, aliasInfo)) {
+        hoistedArguments.push_back(allocOp->getResult(0));
+        continue;
+      }
 
       // Other cases legitimately need to return a tensor, this is currently not
       // supported. For instance, if hoisting across function boundary has
@@ -1518,13 +1517,14 @@ bufferize(OpBuilder &b, CallOpInterface callOp, BlockAndValueMapping &bvm,
 
       int64_t returnIdx = returnOperand.getOperandNumber();
       return returnOp->emitError()
-             << " bufferize result #" << returnIdx << "\n";
+             << "buffer result #" << returnIdx << " not produced by an alloc\n";
     }
   }
 
   // 2. Compute bufferized FunctionType.
   SmallVector<Type> argumentTypes{callOp->getOperandTypes()};
-  llvm::append_range(argumentTypes, ValueRange{hoistedArguments}.getTypes());
+  ValueRange hoistedArgs{hoistedArguments};
+  llvm::append_range(argumentTypes, hoistedArgs.getTypes());
   // Get the bufferized FunctionType for funcOp or construct it if not yet
   // available.
   FunctionType bufferizedFuncType = getOrCreateBufferizedFunctionType(
@@ -1543,8 +1543,8 @@ bufferize(OpBuilder &b, CallOpInterface callOp, BlockAndValueMapping &bvm,
 
     // Tensor operands are guaranteed to have been buferized.
     int64_t idx = opOperand.getOperandNumber();
-    Value buffer = bvm.lookupOrNull(tensorOperand);
-    assert(buffer && " missing buffer for operand");
+    Value buffer = lookup(bvm, tensorOperand);
+    assert(buffer && "expected bufferized value");
 
     // Caller / callee type mistmatch is handled with a CastOp.
     auto memRefType = bufferizedFuncType.getInput(idx);
@@ -1592,7 +1592,7 @@ static LogicalResult bufferize(OpBuilder &b, tensor::CastOp castOp,
           ? rankedMemRefType.getAffineMaps()
           : ArrayRef<AffineMap>{};
   Type memRefType = getContiguousOrUnrankedMemRefType(
-      castOp.getResult().getType(), {}, memorySpace);
+      castOp.getResult().getType(), affineMaps, memorySpace);
   Value res = b.create<memref::CastOp>(castOp.getLoc(), memRefType,
                                        lookup(bvm, castOp.source()));
   aliasInfo.insertNewBufferEquivalence(res, castOp.getResult());
@@ -2176,64 +2176,21 @@ static LogicalResult bufferizeFuncOpInternals(
   return failure(result.wasInterrupted());
 }
 
-namespace {
-struct LinalgComprehensiveFuncBufferize
-    : public LinalgComprehensiveFuncBufferizeBase<
-          LinalgComprehensiveFuncBufferize> {
-  void runOnFunction() override;
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<linalg::LinalgDialect, memref::MemRefDialect>();
-  }
-};
-} // end namespace
-
-void LinalgComprehensiveFuncBufferize::runOnFunction() {
-  auto funcOp = getFunction();
-
-  // Analysis phase.
-  DominanceInfo domInfo(funcOp);
-  BufferizationAliasInfo aliasInfo(funcOp);
-  // If the analysis fails, just return. This is expected to reset the IR and no
-  // single OpResult should be marked inPlace.
-  if (failed(inPlaceAnalysisFuncOpBody(funcOp, aliasInfo, domInfo))) {
-    signalPassFailure();
-    return;
-  }
-
-  if (testAnalysisOnly)
-    return;
-
-  // Bufferization phase.
-  BlockAndValueMapping bvm;
-  DenseMap<FuncOp, FunctionType> bufferizedFunctionTypes;
-  if (failed(bufferizeFuncOpInternals(funcOp, bvm, aliasInfo,
-                                      bufferizedFunctionTypes)))
-    signalPassFailure();
-
-  // Post-pass cleanup of inplaceable attributes.
-  funcOp.walk([&](Operation *op) { op->removeAttr(kInPlaceResultsAttrName); });
-}
-
-std::unique_ptr<Pass> mlir::createLinalgComprehensiveFuncBufferizePass() {
-  return std::make_unique<LinalgComprehensiveFuncBufferize>();
-}
-
 //===----------------------------------------------------------------------===//
 // Bufferization entry-point for modules.
 //===----------------------------------------------------------------------===//
 
-/// Return the op with Allocate MemoryEffect if `v` is equivalent to an such
+/// Return the op with Allocate MemoryEffect if `v` is equivalent to such an
 /// an op. Return null otherwise.
 static Operation *getEquivalentAlloc(Value value,
                                      const BufferizationAliasInfo &aliasInfo) {
-  Operation *res;
+  Operation *res = nullptr;
   aliasInfo.applyOnEquivalenceClass(value, [&](Value v) {
     if (!res)
       if (auto interface =
               dyn_cast_or_null<MemoryEffectOpInterface>(v.getDefiningOp()))
         if (auto effect =
-                interface.getEffectOnValue<MemoryEffects::Allocate>(value))
+                interface.getEffectOnValue<MemoryEffects::Allocate>(v))
           res = v.getDefiningOp();
   });
   return res;
@@ -2249,9 +2206,12 @@ getEquivalentEnclosingFuncBBArg(Value v,
   if (!funcOp)
     funcOp = op->getParentOfType<FuncOp>();
   assert(funcOp && "expected non-null FuncOp");
-  for (BlockArgument bbArg : funcOp.getArguments())
+  for (BlockArgument bbArg : funcOp.getArguments()) {
+    if (!bbArg.getType().isa<RankedTensorType>())
+      continue;
     if (aliasInfo.areEquivalentBufferizedValues(v, bbArg))
       return bbArg;
+  }
   return nullptr;
 }
 
@@ -2292,9 +2252,6 @@ static LogicalResult bufferizeFuncOpBoundary(
   //    externally).
   // -> Figure out a better layering.
   TypeRange resultTypes;
-  FunctionType bufferizedFuncType =
-      getOrCreateBufferizedFunctionType(funcOp, funcOp.getType().getInputs(),
-                                        resultTypes, bufferizedFunctionTypes);
 
   // Corner case: Bodiless FuncOp
   // ============================
@@ -2305,6 +2262,9 @@ static LogicalResult bufferizeFuncOpBoundary(
     if (llvm::any_of(funcOp.getType().getResults(), isaTensor))
       return funcOp->emitError() << "cannot bufferize bodiless function that "
                                  << "returns a tensor";
+    FunctionType bufferizedFuncType =
+        getOrCreateBufferizedFunctionType(funcOp, funcOp.getType().getInputs(),
+                                          TypeRange{}, bufferizedFunctionTypes);
     funcOp.setType(bufferizedFuncType);
     LLVM_DEBUG(DBGS() << "End bufferizeFuncOpBoundary no fun body: " << funcOp);
     return success();
@@ -2323,16 +2283,29 @@ static LogicalResult bufferizeFuncOpBoundary(
     Value returnVal = returnOperand.get();
     if (getEquivalentEnclosingFuncBBArg(returnVal, aliasInfo))
       continue;
-    // TODO: Need to hoist above function boundary. If this is not possible due
-    // to data-depedent sizes, we need a better type than memref.
-    if (Operation *allocOp = getEquivalentAlloc(returnVal, aliasInfo))
-      return allocOp->emitError() << " needs hoist across function boundary\n";
+
+    // TODO: Need to hoist above function boundary.
+    if (Operation *allocOp = getEquivalentAlloc(returnVal, aliasInfo)) {
+      returnValues.push_back(allocOp->getResult(0));
+      continue;
+    }
+
+    // Other cases legitimately need to return a tensor, this is currently not
+    // supported. For instance, if hoisting across function boundary has
+    // failed, it may be due to e.g. data-dependent sizes. In such a case, we
+    // would need a better type than memref.
     int64_t returnIdx = returnOperand.getOperandNumber();
-    return returnOp->emitError() << " bufferize result #" << returnIdx << "\n";
+    return returnOp->emitError()
+           << "buffer result #" << returnIdx << " not produced by an alloc\n";
   }
 
   // 2. Rewrite the terminator without the inPlace bufferizable values.
-  OpBuilder(returnOp).create<ReturnOp>(returnOp.getLoc(), returnValues);
+  ValueRange retValues{returnValues};
+  FunctionType bufferizedFuncType = getOrCreateBufferizedFunctionType(
+      funcOp, funcOp.getType().getInputs(), retValues.getTypes(),
+      bufferizedFunctionTypes);
+  OpBuilder b(returnOp);
+  b.create<ReturnOp>(returnOp.getLoc(), returnValues);
   returnOp->erase();
 
   // 3. Rewrite the bbArgs.
