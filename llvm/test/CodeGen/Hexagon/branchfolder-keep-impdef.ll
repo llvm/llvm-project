@@ -19,7 +19,7 @@ b2:                                               ; preds = %b1, %b0
   %t1 = phi i8* [ %t0, %b1 ], [ undef, %b0 ]
   %t2 = getelementptr inbounds i8, i8* %t1, i32 %p0
   tail call void @llvm.memmove.p0i8.p0i8.i32(i8* undef, i8* %t2, i32 undef, i1 false) #1
-  unreachable
+  ret void
 }
 
 declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #0
