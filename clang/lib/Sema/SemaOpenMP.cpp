@@ -9401,11 +9401,21 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
 
     // Build expression: UB = min(UB, prevUB) for #for in composite or combined
     // construct
+    ExprResult NewPrevUB = PrevUB;
     SourceLocation DistEUBLoc = AStmt->getBeginLoc();
-    ExprResult IsUBGreater =
-        SemaRef.BuildBinOp(CurScope, DistEUBLoc, BO_GT, UB.get(), PrevUB.get());
+    if (!SemaRef.Context.hasSameType(UB.get()->getType(),
+                                     PrevUB.get()->getType())) {
+      NewPrevUB = SemaRef.BuildCStyleCastExpr(
+          DistEUBLoc,
+          SemaRef.Context.getTrivialTypeSourceInfo(UB.get()->getType()),
+          DistEUBLoc, NewPrevUB.get());
+      if (!NewPrevUB.isUsable())
+        return 0;
+    }
+    ExprResult IsUBGreater = SemaRef.BuildBinOp(CurScope, DistEUBLoc, BO_GT,
+                                                UB.get(), NewPrevUB.get());
     ExprResult CondOp = SemaRef.ActOnConditionalOp(
-        DistEUBLoc, DistEUBLoc, IsUBGreater.get(), PrevUB.get(), UB.get());
+        DistEUBLoc, DistEUBLoc, IsUBGreater.get(), NewPrevUB.get(), UB.get());
     PrevEUB = SemaRef.BuildBinOp(CurScope, DistIncLoc, BO_Assign, UB.get(),
                                  CondOp.get());
     PrevEUB =
