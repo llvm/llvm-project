@@ -33,9 +33,9 @@ func @entry() {
   %9 = vector.insert %a, %8[0] : vector<2xf32> into vector<3x2xf32>
   %10 = vector.insert %b, %9[1] : vector<2xf32> into vector<3x2xf32>
   %C = vector.insert %c, %10[2] : vector<2xf32> into vector<3x2xf32>
-  %11 = vector.tuple %A, %B : vector<2x2xf32>, vector<2x2xf32>
-  %D = vector.insert_slices %11, [2, 2], [1, 1]
-    : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<2x4xf32>
+  %cst = constant dense<0.000000e+00> : vector<2x4xf32>
+  %11 = vector.insert_strided_slice %A, %cst {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<2x4xf32>
+  %D = vector.insert_strided_slice %B, %11 {offsets = [0, 2], strides = [1, 1]} : vector<2x2xf32> into vector<2x4xf32>
 
   vector.print %A : vector<2x2xf32>
   vector.print %B : vector<2x2xf32>
