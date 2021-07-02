@@ -10,13 +10,35 @@
 #include "ConcatOutputSection.h"
 #include "InputSection.h"
 #include "Symbols.h"
+#include "UnwindInfoSection.h"
+
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 
 #include <atomic>
 
 using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
+
+class ICF {
+public:
+  ICF(std::vector<ConcatInputSection *> &inputs);
+
+  void run();
+  void segregate(size_t begin, size_t end,
+                 std::function<bool(const ConcatInputSection *,
+                                    const ConcatInputSection *)>
+                     equals);
+  size_t findBoundary(size_t begin, size_t end);
+  void forEachClassRange(size_t begin, size_t end,
+                         std::function<void(size_t, size_t)> func);
+  void forEachClass(std::function<void(size_t, size_t)> func);
+
+  // ICF needs a copy of the inputs vector because its equivalence-class
+  // segregation algorithm destroys the proper sequence.
+  std::vector<ConcatInputSection *> icfInputs;
+};
 
 ICF::ICF(std::vector<ConcatInputSection *> &inputs) {
   icfInputs.assign(inputs.begin(), inputs.end());
@@ -275,4 +297,60 @@ void ICF::segregate(
 
     begin = mid;
   }
+}
+
+template <class Ptr>
+DenseSet<const InputSection *> findFunctionsWithUnwindInfo() {
+  DenseSet<const InputSection *> result;
+  for (ConcatInputSection *isec : in.unwindInfo->getInputs()) {
+    for (size_t i = 0; i < isec->relocs.size(); ++i) {
+      Reloc &r = isec->relocs[i];
+      assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
+      if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
+          offsetof(CompactUnwindEntry<Ptr>, functionAddress))
+        continue;
+      result.insert(r.referent.get<InputSection *>());
+    }
+  }
+  return result;
+}
+
+void macho::foldIdenticalSections() {
+  TimeTraceScope timeScope("Fold Identical Code Sections");
+  // The ICF equivalence-class segregation algorithm relies on pre-computed
+  // hashes of InputSection::data for the ConcatOutputSection::inputs and all
+  // sections referenced by their relocs. We could recursively traverse the
+  // relocs to find every referenced InputSection, but that precludes easy
+  // parallelization. Therefore, we hash every InputSection here where we have
+  // them all accessible as simple vectors.
+  std::vector<ConcatInputSection *> codeSections;
+
+  // ICF can't fold functions with unwind info
+  DenseSet<const InputSection *> functionsWithUnwindInfo =
+      target->wordSize == 8 ? findFunctionsWithUnwindInfo<uint64_t>()
+                            : findFunctionsWithUnwindInfo<uint32_t>();
+
+  // If an InputSection is ineligible for ICF, we give it a unique ID to force
+  // it into an unfoldable singleton equivalence class.  Begin the unique-ID
+  // space at inputSections.size(), so that it will never intersect with
+  // equivalence-class IDs which begin at 0. Since hashes & unique IDs never
+  // coexist with equivalence-class IDs, this is not necessary, but might help
+  // someone keep the numbers straight in case we ever need to debug the
+  // ICF::segregate()
+  uint64_t icfUniqueID = inputSections.size();
+  for (ConcatInputSection *isec : inputSections) {
+    bool isHashable = isCodeSection(isec) && !isec->shouldOmitFromOutput() &&
+                      !functionsWithUnwindInfo.contains(isec) &&
+                      isec->isHashableForICF();
+    if (isHashable) {
+      codeSections.push_back(isec);
+    } else {
+      isec->icfEqClass[0] = ++icfUniqueID;
+    }
+  }
+  parallelForEach(codeSections,
+                  [](ConcatInputSection *isec) { isec->hashForICF(); });
+  // Now that every input section is either hashed or marked as unique, run the
+  // segregation algorithm to detect foldable subsections.
+  ICF(codeSections).run();
 }

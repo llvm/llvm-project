@@ -557,6 +557,7 @@ public:
 
   WordLiteralSection();
   void addInput(WordLiteralInputSection *);
+  void finalizeContents();
   void writeTo(uint8_t *buf) const override;
 
   uint64_t getSize() const override {
@@ -584,6 +585,8 @@ public:
   }
 
 private:
+  std::vector<WordLiteralInputSection *> inputs;
+
   template <class T> struct Hasher {
     llvm::hash_code operator()(T v) const { return llvm::hash_value(v); }
   };
