@@ -113,20 +113,14 @@ public:
   lldb::LanguageType GetLanguage() const {
     // TODO: See if there is a way to determine the language for a symbol
     // somehow, for now just return our best guess
-    return GetMangled().GuessLanguage();
+    return m_mangled.GuessLanguage();
   }
 
   void SetID(uint32_t uid) { m_uid = uid; }
 
-  Mangled &GetMangled() {
-    SynthesizeNameIfNeeded();
-    return m_mangled;
-  }
+  Mangled &GetMangled() { return m_mangled; }
 
-  const Mangled &GetMangled() const {
-    SynthesizeNameIfNeeded();
-    return m_mangled;
-  }
+  const Mangled &GetMangled() const { return m_mangled; }
 
   ConstString GetReExportedSymbolName() const;
 
@@ -172,9 +166,9 @@ public:
   bool IsTrampoline() const;
 
   bool IsIndirect() const;
-
+  
   bool IsWeak() const { return m_is_weak; }
-
+  
   void SetIsWeak (bool b) { m_is_weak = b; }
 
   bool GetByteSizeIsValid() const { return m_size_is_valid; }
@@ -229,10 +223,6 @@ public:
 
   bool ContainsFileAddress(lldb::addr_t file_addr) const;
 
-  static llvm::StringRef GetSyntheticSymbolPrefix() {
-    return "___lldb_unnamed_symbol";
-  }
-
 protected:
   // This is the internal guts of ResolveReExportedSymbol, it assumes
   // reexport_name is not null, and that module_spec is valid.  We track the
@@ -242,8 +232,6 @@ protected:
       Target &target, ConstString &reexport_name,
       lldb_private::ModuleSpec &module_spec,
       lldb_private::ModuleList &seen_modules) const;
-
-  void SynthesizeNameIfNeeded() const;
 
   uint32_t m_uid =
       UINT32_MAX;           // User ID (usually the original symbol table index)
@@ -270,7 +258,7 @@ protected:
                                          // doing name lookups
       m_is_weak : 1,
       m_type : 6;            // Values from the lldb::SymbolType enum.
-  mutable Mangled m_mangled; // uniqued symbol name/mangled name pair
+  Mangled m_mangled;         // uniqued symbol name/mangled name pair
   AddressRange m_addr_range; // Contains the value, or the section offset
                              // address when the value is an address in a
                              // section, and the size (if any)

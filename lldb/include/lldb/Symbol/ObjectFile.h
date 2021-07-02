@@ -712,6 +712,8 @@ protected:
   ///     false otherwise.
   bool SetModulesArchitecture(const ArchSpec &new_arch);
 
+  ConstString GetNextSyntheticSymbolName();
+
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);
 
