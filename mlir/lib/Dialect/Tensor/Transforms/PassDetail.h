@@ -13,6 +13,10 @@
 
 namespace mlir {
 
+namespace memref {
+class MemRefDialect;
+} // end namespace memref
+
 namespace scf {
 class SCFDialect;
 } // end namespace scf

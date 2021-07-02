@@ -2965,7 +2965,7 @@ struct DimOpLowering : public ConvertOpToLLVMPattern<memref::DimOp> {
   LogicalResult
   matchAndRewrite(memref::DimOp dimOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    Type operandType = dimOp.memrefOrTensor().getType();
+    Type operandType = dimOp.source().getType();
     if (operandType.isa<UnrankedMemRefType>()) {
       rewriter.replaceOp(dimOp, {extractSizeOfUnrankedMemRef(
                                     operandType, dimOp, operands, rewriter)});
@@ -2977,7 +2977,7 @@ struct DimOpLowering : public ConvertOpToLLVMPattern<memref::DimOp> {
                                     operandType, dimOp, operands, rewriter)});
       return success();
     }
-    return failure();
+    llvm_unreachable("expected MemRefType or UnrankedMemRefType");
   }
 
 private:
@@ -2995,7 +2995,7 @@ private:
     // Extract pointer to the underlying ranked descriptor and bitcast it to a
     // memref<element_type> descriptor pointer to minimize the number of GEP
     // operations.
-    UnrankedMemRefDescriptor unrankedDesc(transformed.memrefOrTensor());
+    UnrankedMemRefDescriptor unrankedDesc(transformed.source());
     Value underlyingRankedDesc = unrankedDesc.memRefDescPtr(rewriter, loc);
     Value scalarMemRefDescPtr = rewriter.create<LLVM::BitcastOp>(
         loc,
@@ -3033,7 +3033,7 @@ private:
       int64_t i = index.getValue();
       if (memRefType.isDynamicDim(i)) {
         // extract dynamic size from the memref descriptor.
-        MemRefDescriptor descriptor(transformed.memrefOrTensor());
+        MemRefDescriptor descriptor(transformed.source());
         return descriptor.size(rewriter, loc, i);
       }
       // Use constant for static size.
@@ -3042,7 +3042,7 @@ private:
     }
     Value index = dimOp.index();
     int64_t rank = memRefType.getRank();
-    MemRefDescriptor memrefDescriptor(transformed.memrefOrTensor());
+    MemRefDescriptor memrefDescriptor(transformed.source());
     return memrefDescriptor.size(rewriter, loc, index, rank);
   }
 };

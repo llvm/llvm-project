@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 def Tensor_Dialect : Dialect {
   let name = "tensor";
   let cppNamespace = "::mlir::tensor";
+
   let description = [{
     The `tensor` dialect is intended to hold core tensor creation and
     manipulation ops, which are not strongly associated with any particular
@@ -43,6 +44,8 @@ def Tensor_Dialect : Dialect {
     dialect), and does not live in this dialect.
 
   }];
+
+  let hasConstantMaterializer = 1;
 }
 
 #endif // TENSOR_BASE

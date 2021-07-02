@@ -31,7 +31,7 @@ func @binary_ops_on_size(%lhs : !shape.size, %rhs : !shape.size) {
 // CHECK-SAME: (%[[SHAPE:.*]]: tensor<?xindex>) -> index
 func @rank(%shape : tensor<?xindex>) -> index {
   // CHECK: %[[C0:.*]] = constant 0 : index
-  // CHECK: %[[RESULT:.*]] = memref.dim %[[SHAPE]], %[[C0]]
+  // CHECK: %[[RESULT:.*]] = tensor.dim %[[SHAPE]], %[[C0]]
   // CHECK: return %[[RESULT]] : index
   %rank = shape.rank %shape : tensor<?xindex> -> index
   return %rank : index
@@ -60,12 +60,12 @@ func @rank(%shape : !shape.shape) {
 
 // -----
 
-// Express `get_extent` as `memref.dim` when it relies directly on the outcome of a
+// Express `get_extent` as `tensor.dim` when it relies directly on the outcome of a
 // `shape_of` operation.
 // CHECK-LABEL: @get_extent_shape_of
 // CHECK-SAME:  (%[[ARG:.*]]: tensor<2x3xf32>, %[[IDX:.*]]: index) -> index
 func @get_extent_shape_of(%arg : tensor<2x3xf32>, %idx : index) -> index {
-  // CHECK: %[[RESULT:.*]] = memref.dim %[[ARG]], %[[IDX]] : tensor<2x3xf32>
+  // CHECK: %[[RESULT:.*]] = tensor.dim %[[ARG]], %[[IDX]] : tensor<2x3xf32>
   // CHECK: return %[[RESULT]] : index
   %shape = shape.shape_of %arg : tensor<2x3xf32> -> tensor<?xindex>
   %result = shape.get_extent %shape, %idx : tensor<?xindex>, index -> index
@@ -178,7 +178,7 @@ func @shape_reduce(%shape : tensor<?xindex>) -> index {
 // CHECK-NEXT: %[[INIT:.*]] = constant 1 : index
 // CHECK-NEXT: %[[C0:.*]] = constant 0 : index
 // CHECK-NEXT: %[[C1:.*]] = constant 1 : index
-// CHECK-NEXT: %[[RANK:.*]] = memref.dim %[[SHAPE]], %[[C0]] : tensor<?xindex>
+// CHECK-NEXT: %[[RANK:.*]] = tensor.dim %[[SHAPE]], %[[C0]] : tensor<?xindex>
 // CHECK-NEXT: %[[RESULT:.*]] = scf.for %[[I:.*]] = %[[C0]] to %[[RANK]] step %[[C1]] iter_args(%[[ACC:.*]] = %[[INIT]]) -> (index)
 // CHECK-NEXT:   %[[EXTENT:.*]] = tensor.extract %[[SHAPE]][%[[I]]]
 // CHECK-NEXT:   %[[NEW_ACC:.*]] = muli %[[ACC]], %[[EXTENT]] : index
@@ -206,7 +206,7 @@ func @shape_of_unranked(%arg : tensor<*xf32>) {
   // CHECK: %[[RANK:.*]] = rank %[[ARG]] : tensor<*xf32>
   // CHECK: %[[SHAPE:.*]] = tensor.generate %[[RANK]] {
   // CHECK: ^bb0(%[[I:.*]]: index):
-  // CHECK:   %[[EXTENT:.*]] = memref.dim %[[ARG]], %[[I]] : tensor<*xf32>
+  // CHECK:   %[[EXTENT:.*]] = tensor.dim %[[ARG]], %[[I]] : tensor<*xf32>
   // CHECK:   yield %[[EXTENT]] : index
   // CHECK: } : tensor<?xindex>
   %shape = shape.shape_of %arg : tensor<*xf32> -> tensor<?xindex>
@@ -258,7 +258,7 @@ func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
   // CHECK-DAG: %[[C1:.*]] = constant 1 : index
   // CHECK-DAG: %[[C5:.*]] = constant 5 : index
   // CHECK-DAG: %[[C2:.*]] = constant 2 : index
-  // CHECK-DAG: %[[DYN_DIM:.*]] = memref.dim %[[ARG]], %[[C2]] : tensor<1x5x?xf32>
+  // CHECK-DAG: %[[DYN_DIM:.*]] = tensor.dim %[[ARG]], %[[C2]] : tensor<1x5x?xf32>
   // CHECK-DAG: %[[SHAPE_UNCASTED:.*]] = tensor.from_elements %[[C1]], %[[C5]], %[[DYN_DIM]] : tensor<3xindex>
   %shape = shape.shape_of %arg : tensor<1x5x?xf32> -> tensor<?xindex>
   return
@@ -270,8 +270,8 @@ func @shape_of_dyn(%arg : tensor<1x5x?xf32>) {
 // CHECK-SAME:   (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>) -> i1
 func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>) -> i1 {
   // CHECK: %[[C0:.*]] = constant 0 : index
-  // CHECK: %[[RANK_A:.*]] = memref.dim %[[A]], %[[C0]] : tensor<?xindex>
-  // CHECK: %[[RANK_B:.*]] = memref.dim %[[B]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[RANK_A:.*]] = tensor.dim %[[A]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[RANK_B:.*]] = tensor.dim %[[B]], %[[C0]] : tensor<?xindex>
   // CHECK: %[[RANK_EQ:.*]] = cmpi eq, %[[RANK_A]], %[[RANK_B]]
   // CHECK: %[[SHAPE_EQ:.*]] = scf.if %[[RANK_EQ]] -> (i1) {
   // CHECK:   %[[C1:.*]] = constant 1 : index
@@ -299,8 +299,8 @@ func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>) -> i1 {
 // CHECK-SAME:   (%[[A:.*]]: tensor<?xindex>, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<?xindex>) -> i1
 func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>, %c : tensor<?xindex>) -> i1 {
   // CHECK: %[[C0:.*]] = constant 0 : index
-  // CHECK: %[[RANK_A:.*]] = memref.dim %[[A]], %[[C0]] : tensor<?xindex>
-  // CHECK: %[[RANK_B:.*]] = memref.dim %[[B]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[RANK_A:.*]] = tensor.dim %[[A]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[RANK_B:.*]] = tensor.dim %[[B]], %[[C0]] : tensor<?xindex>
   // CHECK: %[[RANK_EQ:.*]] = cmpi eq, %[[RANK_A]], %[[RANK_B]]
   // CHECK: %[[SHAPE_EQ:.*]] = scf.if %[[RANK_EQ]] -> (i1) {
   // CHECK:   %[[C1:.*]] = constant 1 : index
@@ -317,7 +317,7 @@ func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>, %c : tensor<?xindex>)
   // CHECK:   %[[SHAPE_EQ_INNER:.*]] = constant false
   // CHECK:   scf.yield %[[SHAPE_EQ_INNER]] : i1
   // CHECK: }
-  // CHECK: %[[RANK_C:.*]] = memref.dim %[[C]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[RANK_C:.*]] = tensor.dim %[[C]], %[[C0]] : tensor<?xindex>
   // CHECK: %[[RANK_EQ:.*]] = cmpi eq, %[[RANK_A]], %[[RANK_C]]
   // CHECK: %[[SHAPE_EQ2:.*]] = scf.if %[[RANK_EQ]] -> (i1) {
   // CHECK:   %[[C1:.*]] = constant 1 : index
@@ -362,9 +362,9 @@ func @try_is_broadcastable (%a : tensor<2xindex>, %b : tensor<3xindex>, %c : ten
 // CHECK-SAME:          %[[ARG2:.*]]: tensor<2xindex>)
 // CHECK:           %[[C0:.*]] = constant 0 : index
 // CHECK:           %[[C1:.*]] = constant 1 : index
-// CHECK:           %[[RANK0:.*]] = memref.dim %[[ARG0]], %[[C0]] : tensor<2xindex>
-// CHECK:           %[[RANK1:.*]] = memref.dim %[[ARG1]], %[[C0]] : tensor<3xindex>
-// CHECK:           %[[RANK2:.*]] = memref.dim %[[ARG2]], %[[C0]] : tensor<2xindex>
+// CHECK:           %[[RANK0:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<2xindex>
+// CHECK:           %[[RANK1:.*]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<3xindex>
+// CHECK:           %[[RANK2:.*]] = tensor.dim %[[ARG2]], %[[C0]] : tensor<2xindex>
 // CHECK:           %[[CMP0:.*]] = cmpi ugt, %[[RANK1]], %[[RANK0]] : index
 // CHECK:           %[[LARGER_DIM:.*]] = select %[[CMP0]], %[[RANK1]], %[[RANK0]] : index
 // CHECK:           %[[CMP1:.*]] = cmpi ugt, %[[RANK2]], %[[LARGER_DIM]] : index
@@ -452,9 +452,9 @@ func @broadcast(%a : tensor<2xindex>, %b : tensor<3xindex>, %c : tensor<2xindex>
 // CHECK-SAME:          %[[ARG2:.*]]: tensor<2xindex>)
 // CHECK:           %[[C0:.*]] = constant 0 : index
 // CHECK:           %[[C1:.*]] = constant 1 : index
-// CHECK:           %[[RANK0:.*]] = memref.dim %[[ARG0]], %[[C0]] : tensor<2xindex>
-// CHECK:           %[[RANK1:.*]] = memref.dim %[[ARG1]], %[[C0]] : tensor<3xindex>
-// CHECK:           %[[RANK2:.*]] = memref.dim %[[ARG2]], %[[C0]] : tensor<2xindex>
+// CHECK:           %[[RANK0:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<2xindex>
+// CHECK:           %[[RANK1:.*]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<3xindex>
+// CHECK:           %[[RANK2:.*]] = tensor.dim %[[ARG2]], %[[C0]] : tensor<2xindex>
 // CHECK:           %[[CMP0:.*]] = cmpi ugt, %[[RANK1]], %[[RANK0]] : index
 // CHECK:           %[[LARGER_DIM:.*]] = select %[[CMP0]], %[[RANK1]], %[[RANK0]] : index
 // CHECK:           %[[CMP1:.*]] = cmpi ugt, %[[RANK2]], %[[LARGER_DIM]] : index
@@ -544,9 +544,9 @@ func @broadcast_3_shapes_different_extents(%a : tensor<2xindex>,
 // CHECK-SAME:          %[[ARG1:.*]]: tensor<3xindex>,
 // CHECK-SAME:          %[[ARG2:.*]]: tensor<2xindex>) {
 // CHECK:           %[[C0:.*]] = constant 0 : index
-// CHECK:           %[[RANK0:.*]] = memref.dim %[[ARG0]], %[[C0]] : tensor<2xindex>
-// CHECK:           %[[RANK1:.*]] = memref.dim %[[ARG1]], %[[C0]] : tensor<3xindex>
-// CHECK:           %[[RANK2:.*]] = memref.dim %[[ARG2]], %[[C0]] : tensor<2xindex>
+// CHECK:           %[[RANK0:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<2xindex>
+// CHECK:           %[[RANK1:.*]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<3xindex>
+// CHECK:           %[[RANK2:.*]] = tensor.dim %[[ARG2]], %[[C0]] : tensor<2xindex>
 // CHECK:           %[[CMP0:.*]] = cmpi ugt, %[[RANK1]], %[[RANK0]] : index
 // CHECK:           %[[LARGER_DIM:.*]] = select %[[CMP0]], %[[RANK1]], %[[RANK0]] : index
 // CHECK:           %[[CMP1:.*]] = cmpi ugt, %[[RANK2]], %[[LARGER_DIM]] : index
@@ -611,7 +611,7 @@ func @broadcast_to_known_rank(%a : tensor<1xindex>, %b : tensor<3xindex>)
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<?xindex>, %[[INDEX:.*]]: index
 func @split_at(%shape: tensor<?xindex>, %index: index) -> (tensor<?xindex>, tensor<?xindex>) {
   // CHECK-NEXT: %[[C0:.*]] = constant 0 : index
-  // CHECK-NEXT: %[[RANK:.*]] = memref.dim %[[SHAPE]], %[[C0]] : tensor<?xindex>
+  // CHECK-NEXT: %[[RANK:.*]] = tensor.dim %[[SHAPE]], %[[C0]] : tensor<?xindex>
   // CHECK-NEXT: %[[POSINDEX:.*]] = addi %[[INDEX]], %[[RANK]] : index
   // CHECK-NEXT: %[[ISNEG:.*]] = cmpi slt, %[[INDEX]], %[[C0]] : index
   // CHECK-NEXT: %[[SELECT:.*]] = select %[[ISNEG]], %[[POSINDEX]], %[[INDEX]] : index

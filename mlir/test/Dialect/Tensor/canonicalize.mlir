@@ -184,10 +184,10 @@ func @extract_oob_from_tensor.from_elements(%element : index) -> index {
 // CHECK-SAME: %[[IDX:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
 func @extract_from_tensor.generate(%idx: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
-  // CHECK-NEXT: %[[RES:.*]] = memref.dim %[[TENSOR]], %[[IDX]]
+  // CHECK-NEXT: %[[RES:.*]] = tensor.dim %[[TENSOR]], %[[IDX]]
   %0 = tensor.generate %size {
     ^bb0(%arg0: index):
-    %1 = memref.dim %tensor, %arg0 : tensor<*xf32>
+    %1 = tensor.dim %tensor, %arg0 : tensor<*xf32>
     tensor.yield %1 : index
   } : tensor<?xindex>
   %1 = tensor.extract %0[%idx] : tensor<?xindex>
@@ -201,13 +201,13 @@ func @extract_from_tensor.generate(%idx: index, %tensor: tensor<*xf32>) -> index
 // CHECK-SAME: %[[IDX0:.*]]: index, %[[IDX1:.*]]: index, %[[TENSOR:.*]]: tensor<*xf32>
 func @extract_from_tensor.generate_2d(%idx0: index, %idx1: index, %tensor: tensor<*xf32>) -> index {
   %size = rank %tensor : tensor<*xf32>
-  // CHECK-NEXT: %[[DIM0:.*]] = memref.dim %[[TENSOR]], %[[IDX0]]
-  // CHECK-NEXT: %[[DIM1:.*]] = memref.dim %[[TENSOR]], %[[IDX1]]
+  // CHECK-NEXT: %[[DIM0:.*]] = tensor.dim %[[TENSOR]], %[[IDX0]]
+  // CHECK-NEXT: %[[DIM1:.*]] = tensor.dim %[[TENSOR]], %[[IDX1]]
   // CHECK-NEXT: %[[RES:.*]] = addi %[[DIM0]], %[[DIM1]]
   %0 = tensor.generate %size, %size {
     ^bb0(%arg0: index, %arg1: index):
-    %1 = memref.dim %tensor, %arg0 : tensor<*xf32>
-    %2 = memref.dim %tensor, %arg1 : tensor<*xf32>
+    %1 = tensor.dim %tensor, %arg0 : tensor<*xf32>
+    %2 = tensor.dim %tensor, %arg1 : tensor<*xf32>
     %3 = addi %1, %2 : index
     tensor.yield %3 : index
   } : tensor<?x?xindex>
@@ -225,7 +225,7 @@ func @extract_from_tensor.generate_sideeffects(%idx: index, %tensor: tensor<*xf3
   // CHECK: %[[DTENSOR:.*]] = tensor.generate
   %0 = tensor.generate %size {
     ^bb0(%arg0: index):
-    %1 = memref.dim %tensor, %arg0 : tensor<*xf32>
+    %1 = tensor.dim %tensor, %arg0 : tensor<*xf32>
     memref.store %1, %mem[%arg0] : memref<?xindex>
     tensor.yield %1 : index
   } : tensor<?xindex>
@@ -443,7 +443,7 @@ func @insert_slice_propagate_dest_cast(%arg0 : tensor<2x?xi32>, %arg1 : tensor<i
   %c1 = constant 1 : index
   %c2 = constant 2 : index
   %c8 = constant 8 : index
-  %0 = memref.dim %arg0, %c1 : tensor<2x?xi32>
+  %0 = tensor.dim %arg0, %c1 : tensor<2x?xi32>
   %1 = tensor.extract %arg1[] : tensor<i32>
   %2 = tensor.generate %arg2, %c8 {
   ^bb0(%arg4: index, %arg5: index):
@@ -482,3 +482,38 @@ func @insert_slice_output_dest_canonicalize(%arg0 : tensor<2x3xi32>, %arg1 : ten
 //       CHECK:   %[[GENERATE:.+]] = tensor.generate
 //       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[ARG0]] into %[[GENERATE]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+// Test case: Folding of tensor.dim(tensor.generate %idx) -> %idx
+// CHECK-LABEL: func @dim_of_tensor.generate(
+//  CHECK-SAME:     %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
+//   CHECK-NOT:   tensor.dim
+//       CHECK:   return %[[IDX1]] : index
+func @dim_of_tensor.generate(%arg0: index, %arg1: index) -> index {
+  %c3 = constant 3 : index
+  %0 = tensor.generate %arg0, %arg1 {
+  ^bb0(%arg2: index, %arg3: index, %arg4: index, %arg5: index, %arg6: index):
+    tensor.yield %c3 : index
+  } : tensor<2x?x4x?x5xindex>
+  %1 = tensor.dim %0, %c3 : tensor<2x?x4x?x5xindex>
+  return %1 : index
+}
+
+// -----
+
+// Test case: Folding tensor.dim(tensor.cast %0, %idx) -> tensor.dim %0, %idx
+// CHECK-LABEL: func @fold_dim_of_tensor.cast
+//  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: tensor<4x?xf32>
+//   CHECK-DAG:   %[[C1:.+]] = constant 1 : index
+//   CHECK-DAG:   %[[C4:.+]] = constant 4 : index
+//       CHECK:   %[[T0:.+]] = tensor.dim %[[ARG0]], %[[C1]]
+//  CHECK-NEXT:   return %[[C4]], %[[T0]]
+func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0 = tensor.cast %arg0 : tensor<4x?xf32> to tensor<?x?xf32>
+  %1 = tensor.dim %0, %c0 : tensor<?x?xf32>
+  %2 = tensor.dim %0, %c1 : tensor<?x?xf32>
+  return %1, %2: index, index
+}

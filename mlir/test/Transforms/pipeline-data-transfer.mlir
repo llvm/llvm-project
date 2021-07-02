@@ -320,18 +320,14 @@ func @live_out_use(%arg0: memref<512 x 32 x f32>) -> f32 {
 // -----
 
 // CHECK-LABEL: func @dynamic_shape_dma_buffer
-func @dynamic_shape_dma_buffer(%arg0: memref<512 x 32 x f32>) {
-  %c32 = constant 32 : index
+func @dynamic_shape_dma_buffer(%arg0: memref<512 x 32 x f32>, %Av: memref<? x ? x f32, 2>) {
   %num_elt = constant 512 : index
   %zero = constant 0 : index
-
-  %Av = memref.alloc(%c32, %c32) : memref<? x ? x f32, 2>
   %tag = memref.alloc() : memref<1 x i32>
 
 // Double buffering for dynamic shaped buffer.
-// CHECK:       memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32, 2>
-// CHECK-NEXT:  %[[C0:.*]] = constant 0 : index
-// CHECK-NEXT:  memref.dim %{{.*}}, %[[C0]] : memref<?x?xf32, 2>
+// Note: Cannot capture C0 because there are multiple C0 constants in the IR.
+// CHECK:       memref.dim %{{.*}}, %{{.*}} : memref<?x?xf32, 2>
 // CHECK-NEXT:  %[[C1:.*]] = constant 1 : index
 // CHECK-NEXT:  memref.dim %{{.*}}, %[[C1]] : memref<?x?xf32, 2>
 // CHECK-NEXT:  memref.alloc(%{{.*}}, %{{.*}}) : memref<2x?x?xf32, 2>
@@ -342,7 +338,6 @@ func @dynamic_shape_dma_buffer(%arg0: memref<512 x 32 x f32>) {
       memref<? x ? x f32, 2>, memref<1 x i32>
     affine.dma_wait %tag[%zero], %num_elt : memref<1 x i32>
   }
-  memref.dealloc %Av : memref<? x ? x f32, 2>
   return
 // CHECK-NEXT:  affine.for %{{.*}} = 1 to 16 {
 // CHECK:         affine.dma_start %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}} mod 2, 0, 0], %{{.*}}[%{{.*}} mod 2, 0], %{{.*}}
