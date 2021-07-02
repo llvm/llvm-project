@@ -1482,8 +1482,8 @@ void UnwrappedLineParser::parseStructuralElement() {
     }
     case tok::equal:
       // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType
-      // TT_FatArrow. The always start an expression or a child block if
-      // followed by a curly.
+      // TT_FatArrow. They always start an expression or a child block if
+      // followed by a curly brace.
       if (FormatTok->is(TT_FatArrow)) {
         nextToken();
         if (FormatTok->is(tok::l_brace)) {
@@ -1790,14 +1790,20 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
   bool HasError = false;
 
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
-  // replace this by using parseAssigmentExpression() inside.
+  // replace this by using parseAssignmentExpression() inside.
   do {
     if (Style.isCSharp()) {
+      // Fat arrows (=>) have tok::TokenKind tok::equal but TokenType
+      // TT_FatArrow. They always start an expression or a child block if
+      // followed by a curly brace.
       if (FormatTok->is(TT_FatArrow)) {
         nextToken();
-        // Fat arrows can be followed by simple expressions or by child blocks
-        // in curly braces.
         if (FormatTok->is(tok::l_brace)) {
+          // C# may break after => if the next character is a newline.
+          if (Style.isCSharp() && Style.BraceWrapping.AfterFunction == true) {
+            // calling `addUnwrappedLine()` here causes odd parsing errors.
+            FormatTok->MustBreakBefore = true;
+          }
           parseChildBlock();
           continue;
         }
@@ -1926,6 +1932,12 @@ void UnwrappedLineParser::parseParens() {
         nextToken();
         parseBracedList();
       }
+      break;
+    case tok::equal:
+      if (Style.isCSharp() && FormatTok->is(TT_FatArrow))
+        parseStructuralElement();
+      else
+        nextToken();
       break;
     case tok::kw_class:
       if (Style.Language == FormatStyle::LK_JavaScript)
