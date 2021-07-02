@@ -526,7 +526,7 @@ void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
   delete unwrap(ObjLayer);
 }
 
-void LLVMOrcLLJITIRTransformLayerSetTransform(
+void LLVMOrcIRTransformLayerSetTransform(
     LLVMOrcIRTransformLayerRef IRTransformLayer,
     LLVMOrcIRTransformLayerTransformFunction TransformFunction, void *Ctx) {
   unwrap(IRTransformLayer)
