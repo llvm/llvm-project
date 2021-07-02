@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -allow-unregistered-dialect -linalg-comprehensive-module-bufferize -split-input-file -verify-diagnostics
 
 func private @foo() -> tensor<?xf32>
 
@@ -84,4 +84,26 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
 
   // expected-error @+1 {{buffer result #0 not produced by an alloc}}
   return %r0: tensor<4xf32>
+}
+
+// -----
+
+func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32>
+{
+  %r = scf.if %b -> (tensor<4xf32>) { 
+    // expected-error @+1 {{not nested under ForOp}}
+    scf.yield %A : tensor<4xf32>
+  } else {
+    scf.yield %B : tensor<4xf32>
+  }
+  return %r: tensor<4xf32>
+}
+
+// -----
+
+func @unknown_op(%A : tensor<4xf32>) -> tensor<4xf32>
+{
+  // expected-error @+1 {{unsupported op with tensors}}
+  %r = "marklar"(%A) : (tensor<4xf32>) -> (tensor<4xf32>)
+  return %r: tensor<4xf32>
 }
