@@ -1711,9 +1711,10 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       // Get ExecMode
       ExecModeVal = KernDescVal.Mode;
       DP("ExecModeVal %d\n", ExecModeVal);
-      // If KernDescVal.WG_Size is 0, it is equivalent to not
-      // specified. Hence, max_flat_workgroup_size is filtered out in
-      // getLaunchVals
+      if (KernDescVal.WG_Size == 0) {
+        KernDescVal.WG_Size = RTLDeviceInfoTy::Default_WG_Size;
+        DP("Setting KernDescVal.WG_Size to default %d\n", KernDescVal.WG_Size);
+      }
       WGSizeVal = KernDescVal.WG_Size;
       DP("WGSizeVal %d\n", WGSizeVal);
       check("Loading KernDesc computation property", err);
@@ -1930,7 +1931,7 @@ launchVals getLaunchVals(int ConstWGSize, int ExecutionMode, int EnvTeamLimit,
     }
   }
   // check flat_max_work_group_size attr here
-  if (ConstWGSize > 0 && threadsPerGroup > ConstWGSize) {
+  if (threadsPerGroup > ConstWGSize) {
     threadsPerGroup = ConstWGSize;
     DP("Reduced threadsPerGroup to flat-attr-group-size limit %d\n",
        threadsPerGroup);
