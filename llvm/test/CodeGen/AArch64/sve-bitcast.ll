@@ -450,5 +450,39 @@ define <vscale x 8 x bfloat> @bitcast_double_to_bfloat(<vscale x 2 x double> %v)
   ret <vscale x 8 x bfloat> %bc
 }
 
+define <vscale x 2 x i32> @bitcast_short_float_to_i32(<vscale x 2 x double> %v) #0 {
+; CHECK-LABEL: bitcast_short_float_to_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %trunc = fptrunc <vscale x 2 x double> %v to <vscale x 2 x float>
+  %bitcast = bitcast <vscale x 2 x float> %trunc to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %bitcast
+}
+
+define <vscale x 2 x double> @bitcast_short_i32_to_float(<vscale x 2 x i64> %v) #0 {
+; CHECK-LABEL: bitcast_short_i32_to_float:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %trunc = trunc <vscale x 2 x i64> %v to <vscale x 2 x i32>
+  %bitcast = bitcast <vscale x 2 x i32> %trunc to <vscale x 2 x float>
+  %extended = fpext <vscale x 2 x float> %bitcast to <vscale x 2 x double>
+  ret <vscale x 2 x double> %extended
+}
+
+define <vscale x 2 x float> @bitcast_short_half_to_float(<vscale x 4 x half> %v) #0 {
+; CHECK-LABEL: bitcast_short_half_to_float:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z0.h
+; CHECK-NEXT:    ret
+  %add = fadd <vscale x 4 x half> %v, %v
+  %bitcast = bitcast <vscale x 4 x half> %add to <vscale x 2 x float>
+  ret <vscale x 2 x float> %bitcast
+}
+
 ; +bf16 is required for the bfloat version.
 attributes #0 = { "target-features"="+sve,+bf16" }
