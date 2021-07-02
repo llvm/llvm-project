@@ -257,6 +257,8 @@ inline bool isWordLiteralSection(uint32_t flags) {
 
 bool isCodeSection(const InputSection *);
 
+bool isCfStringSection(const InputSection *);
+
 extern std::vector<ConcatInputSection *> inputSections;
 
 namespace section_names {
