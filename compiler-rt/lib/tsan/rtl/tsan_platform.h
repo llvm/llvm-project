@@ -560,6 +560,28 @@ struct Mapping47 {
 
 #define TSAN_RUNTIME_VMA 1
 
+#elif SANITIZER_GO && defined(__s390x__)
+/*
+Go on linux/s390x
+0000 0000 1000 - 1000 0000 0000: executable and heap - 16 TiB
+1000 0000 0000 - 4000 0000 0000: -
+4000 0000 0000 - 8000 0000 0000: shadow - 64TiB (4 * app)
+8000 0000 0000 - 9000 0000 0000: -
+9000 0000 0000 - 9800 0000 0000: metainfo - 8TiB (0.5 * app)
+9800 0000 0000 - a000 0000 0000: -
+a000 0000 0000 - b000 0000 0000: traces - 16TiB (max history * 128k threads)
+*/
+struct Mapping {
+  static const uptr kMetaShadowBeg = 0x900000000000ull;
+  static const uptr kMetaShadowEnd = 0x980000000000ull;
+  static const uptr kTraceMemBeg   = 0xa00000000000ull;
+  static const uptr kTraceMemEnd   = 0xb00000000000ull;
+  static const uptr kShadowBeg     = 0x400000000000ull;
+  static const uptr kShadowEnd     = 0x800000000000ull;
+  static const uptr kAppMemBeg     = 0x000000001000ull;
+  static const uptr kAppMemEnd     = 0x100000000000ull;
+};
+
 #else
 # error "Unknown platform"
 #endif
