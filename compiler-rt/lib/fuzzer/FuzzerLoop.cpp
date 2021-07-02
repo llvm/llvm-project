@@ -177,7 +177,7 @@ void Fuzzer::DumpCurrentUnit(const char *Prefix) {
   if (!CurrentUnitData)
     return; // Happens when running individual inputs.
   ScopedDisableMsanInterceptorChecks S;
-  MD.PrintMutationSequence();
+  PrintMutationSequence(MD);
   Printf("; base unit: %s\n", Sha1ToString(BaseSha1).c_str());
   size_t UnitSize = CurrentUnitSize;
   if (UnitSize <= kMaxUnitSizeToPrint) {
@@ -539,8 +539,9 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
                            TimeOfUnit, UniqFeatureSetTmp, DFT, II);
     WriteFeatureSetToFile(Options.FeaturesDir, Sha1ToString(NewII->Sha1),
                           NewII->UniqFeatureSet);
+    const auto &MS = MD.MutationSequence();
     WriteEdgeToMutationGraphFile(Options.MutationGraphFile, NewII, II,
-                                 MD.MutationSequence());
+                                 MS.GetString());
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&
@@ -652,7 +653,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
   PrintStats(Text, "");
   if (Options.Verbosity) {
     Printf(" L: %zd/%zd ", U.size(), Corpus.MaxInputSize());
-    MD.PrintMutationSequence(Options.Verbosity >= 2);
+    PrintMutationSequence(MD, Options.Verbosity >= 2);
     Printf("\n");
   }
 }
@@ -898,7 +899,7 @@ void Fuzzer::Loop(Vector<SizedFile> &CorporaFiles) {
   }
 
   PrintStats("DONE  ", "\n");
-  MD.PrintRecommendedDictionary();
+  PrintRecommendedDictionary(MD);
 }
 
 void Fuzzer::MinimizeCrashLoop(const Unit &U) {
