@@ -60,7 +60,9 @@ static const opt::OptTable::Info ObjcopyInfoTable[] = {
 
 class ObjcopyOptTable : public opt::OptTable {
 public:
-  ObjcopyOptTable() : OptTable(ObjcopyInfoTable) {}
+  ObjcopyOptTable() : OptTable(ObjcopyInfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 
 enum InstallNameToolID {
@@ -164,7 +166,7 @@ static const opt::OptTable::Info StripInfoTable[] = {
 
 class StripOptTable : public opt::OptTable {
 public:
-  StripOptTable() : OptTable(StripInfoTable) {}
+  StripOptTable() : OptTable(StripInfoTable) { setGroupedShortOptions(true); }
 };
 
 } // namespace

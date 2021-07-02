@@ -14,6 +14,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
@@ -67,7 +68,8 @@ public:
     LazyObjectKind,
     PDBKind,
     ImportKind,
-    BitcodeKind
+    BitcodeKind,
+    DLLKind
   };
   Kind kind() const { return fileKind; }
   virtual ~InputFile() {}
@@ -391,6 +393,28 @@ private:
   void parse() override;
 
   std::vector<Symbol *> symbols;
+};
+
+// .dll file.
+class DLLFile : public InputFile {
+public:
+  explicit DLLFile(MemoryBufferRef m) : InputFile(DLLKind, m) {}
+  static bool classof(const InputFile *f) { return f->kind() == DLLKind; }
+  void parse() override;
+  MachineTypes getMachineType() override;
+
+  struct Symbol {
+    StringRef dllName;
+    StringRef symbolName;
+    llvm::COFF::ImportNameType nameType;
+    llvm::COFF::ImportType importType;
+  };
+
+  void makeImport(Symbol *s);
+
+private:
+  std::unique_ptr<COFFObjectFile> coffObj;
+  llvm::StringSet<> seen;
 };
 
 inline bool isBitcode(MemoryBufferRef mb) {

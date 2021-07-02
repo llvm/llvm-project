@@ -34,7 +34,6 @@ static_library("profile") {
     "GCDAProfiling.c",
     "InstrProfiling.c",
     "InstrProfiling.h",
-    "InstrProfilingBiasVar.c",
     "InstrProfilingBuffer.c",
     "InstrProfilingFile.c",
     "InstrProfilingInternal.c",

@@ -50,8 +50,9 @@ def pooling_poly(
     strides=AttributeDef(S.SH, S.SW),
     dilations=AttributeDef(S.DH, S.DW)):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] += cast(
-      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max(D.kh, D.kw)(
+      cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                D.c]))
 
 
 @linalg_structured_op
@@ -221,13 +222,30 @@ with Context() as ctx, Location.unknown():
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
     # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[SHAPE:.+]]: f32, %[[OUT:.+]]: i32)
     # CHECK-NEXT:   %[[IN_CAST:.+]] = fptosi %[[IN:.+]] : f32 to i32
-    # CHECK-NEXT:   %[[SUM:.+]] = addi %[[OUT]], %[[IN_CAST]] : i32
-    # CHECK-NEXT:   linalg.yield %[[SUM]] : i32
+    # CHECK-NEXT:   %[[COND:.+]] = cmpi sgt, %[[OUT]], %[[IN_CAST:.+]] : i32
+    # CHECK-NEXT:   %[[MAX:.+]] = select %[[COND]], %[[OUT]], %[[IN_CAST:.+]] : i32
+    # CHECK-NEXT:   linalg.yield %[[MAX]] : i32
     # CHECK-NEXT: -> tensor<2x4xi32>
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), i32))
     def test_f32i32_pooling(input, shape, init_result):
+      return pooling_poly(
+          input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
+
+    # CHECK-LABEL: @test_f32f32_pooling
+    # CHECK: linalg.generic
+    # CHECK-SAME: indexing_maps = [#[[$CONV_MAP_I]], #[[$POOL_MAP_K]], #[[$CONV_MAP_O]]]
+    # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
+    # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[SHAPE:.+]]: f32, %[[OUT:.+]]: f32)
+    # CHECK-NEXT:   %[[COND:.+]] = cmpf ogt, %[[OUT]], %[[IN:.+]] : f32
+    # CHECK-NEXT:   %[[MAX:.+]] = select %[[COND]], %[[OUT]], %[[IN:.+]] : f32
+    # CHECK-NEXT:   linalg.yield %[[MAX]] : f32
+    # CHECK-NEXT: -> tensor<2x4xf32>
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
+        RankedTensorType.get((2, 4), f32))
+    def test_f32f32_pooling(input, shape, init_result):
       return pooling_poly(
           input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 

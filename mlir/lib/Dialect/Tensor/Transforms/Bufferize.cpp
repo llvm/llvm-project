@@ -36,6 +36,21 @@ public:
 } // namespace
 
 namespace {
+class BufferizeDimOp : public OpConversionPattern<tensor::DimOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tensor::DimOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    tensor::DimOp::Adaptor adaptor(operands);
+    rewriter.replaceOpWithNewOp<memref::DimOp>(op, adaptor.source(),
+                                               adaptor.index());
+    return success();
+  }
+};
+} // namespace
+
+namespace {
 class BufferizeExtractOp : public OpConversionPattern<tensor::ExtractOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -139,8 +154,9 @@ public:
 
 void mlir::populateTensorBufferizePatterns(
     BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
-  patterns.add<BufferizeCastOp, BufferizeExtractOp, BufferizeFromElementsOp,
-               BufferizeGenerateOp>(typeConverter, patterns.getContext());
+  patterns.add<BufferizeCastOp, BufferizeDimOp, BufferizeExtractOp,
+               BufferizeFromElementsOp, BufferizeGenerateOp>(
+      typeConverter, patterns.getContext());
 }
 
 namespace {

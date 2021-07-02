@@ -1829,9 +1829,13 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // recorded in the value substitution table. Apply any substitutions to
   // the instruction / operand number in this DBG_INSTR_REF.
   auto Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
+  // Collect any subregister extractions performed during optimization.
+  SmallVector<unsigned, 4> SeenSubregs;
   while (Sub != MF.DebugValueSubstitutions.end()) {
-    InstNo = Sub->second.Dest.first;
-    OpNo = Sub->second.Dest.second;
+    std::tie(InstNo, OpNo) = Sub->second.Dest;
+    unsigned Subreg = Sub->second.Subreg;
+    if (Subreg)
+      SeenSubregs.push_back(Subreg);
     Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
   }
 
@@ -1863,6 +1867,77 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
     // the resolver helper to find out.
     NewID = resolveDbgPHIs(*MI.getParent()->getParent(), MLiveOuts, MLiveIns,
                            MI, InstNo);
+  }
+
+  // Apply any subregister extractions, in reverse. We might have seen code
+  // like this:
+  //    CALL64 @foo, implicit-def $rax
+  //    %0:gr64 = COPY $rax
+  //    %1:gr32 = COPY %0.sub_32bit
+  //    %2:gr16 = COPY %1.sub_16bit
+  //    %3:gr8  = COPY %2.sub_8bit
+  // In which case each copy would have been recorded as a substitution with
+  // a subregister qualifier. Apply those qualifiers now.
+  if (NewID && !SeenSubregs.empty()) {
+    unsigned Offset = 0;
+    unsigned Size = 0;
+
+    // Look at each subregister that we passed through, and progressively
+    // narrow in, accumulating any offsets that occur. Substitutions should
+    // only ever be the same or narrower width than what they read from;
+    // iterate in reverse order so that we go from wide to small.
+    for (unsigned Subreg : reverse(SeenSubregs)) {
+      unsigned ThisSize = TRI->getSubRegIdxSize(Subreg);
+      unsigned ThisOffset = TRI->getSubRegIdxOffset(Subreg);
+      Offset += ThisOffset;
+      Size = (Size == 0) ? ThisSize : std::min(Size, ThisSize);
+    }
+
+    // If that worked, look for an appropriate subregister with the register
+    // where the define happens. Don't look at values that were defined during
+    // a stack write: we can't currently express register locations within
+    // spills.
+    LocIdx L = NewID->getLoc();
+    if (NewID && !MTracker->isSpill(L)) {
+      // Find the register class for the register where this def happened.
+      // FIXME: no index for this?
+      Register Reg = MTracker->LocIdxToLocID[L];
+      const TargetRegisterClass *TRC = nullptr;
+      for (auto *TRCI : TRI->regclasses())
+        if (TRCI->contains(Reg))
+          TRC = TRCI;
+      assert(TRC && "Couldn't find target register class?");
+
+      // If the register we have isn't the right size or in the right place,
+      // Try to find a subregister inside it.
+      unsigned MainRegSize = TRI->getRegSizeInBits(*TRC);
+      if (Size != MainRegSize || Offset) {
+        // Enumerate all subregisters, searching.
+        Register NewReg = 0;
+        for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {
+          unsigned Subreg = TRI->getSubRegIndex(Reg, *SRI);
+          unsigned SubregSize = TRI->getSubRegIdxSize(Subreg);
+          unsigned SubregOffset = TRI->getSubRegIdxOffset(Subreg);
+          if (SubregSize == Size && SubregOffset == Offset) {
+            NewReg = *SRI;
+            break;
+          }
+        }
+
+        // If we didn't find anything: there's no way to express our value.
+        if (!NewReg) {
+          NewID = None;
+        } else {
+          // Re-state the value as being defined within the subregister
+          // that we found.
+          LocIdx NewLoc = MTracker->lookupOrTrackRegister(NewReg);
+          NewID = ValueIDNum(NewID->getBlock(), NewID->getInst(), NewLoc);
+        }
+      }
+    } else {
+      // If we can't handle subregisters, unset the new value.
+      NewID = None;
+    }
   }
 
   // We, we have a value number or None. Tell the variable value tracker about

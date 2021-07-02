@@ -263,6 +263,7 @@ struct Configuration {
   bool warnLocallyDefinedImported = true;
   bool warnDebugInfoUnusable = true;
   bool warnLongSectionNames = true;
+  bool warnStdcallFixup = true;
   bool incremental = true;
   bool integrityCheck = false;
   bool killAt = false;
@@ -273,6 +274,7 @@ struct Configuration {
   bool thinLTOIndexOnly;
   bool autoImport = false;
   bool pseudoRelocs = false;
+  bool stdcallFixup = false;
 };
 
 extern Configuration *config;

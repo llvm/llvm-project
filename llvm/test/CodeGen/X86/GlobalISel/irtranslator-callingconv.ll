@@ -492,7 +492,7 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X86:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X86:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X86:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; X86:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s128) from %fixed-stack.0)
+  ; X86:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s32>) from %fixed-stack.0)
   ; X86:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<4 x s32>), [[LOAD]](<4 x s32>)
   ; X86:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<8 x s32>)
@@ -570,21 +570,21 @@ define void @test_abi_exts_call(i8* %addr) {
   ; X86:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; X86:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
   ; X86:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LOAD1]](s8)
-  ; X86:   G_STORE [[ANYEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack, align 1)
+  ; X86:   G_STORE [[ANYEXT]](s32), [[PTR_ADD]](p0) :: (store (s8) into stack)
   ; X86:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
   ; X86:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86:   [[COPY1:%[0-9]+]]:_(p0) = COPY $esp
   ; X86:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
   ; X86:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD1]](s8)
-  ; X86:   G_STORE [[SEXT]](s32), [[PTR_ADD1]](p0) :: (store (s32) into stack, align 1)
+  ; X86:   G_STORE [[SEXT]](s32), [[PTR_ADD1]](p0) :: (store (s8) into stack)
   ; X86:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
   ; X86:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86:   [[COPY2:%[0-9]+]]:_(p0) = COPY $esp
   ; X86:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY2]], [[C]](s32)
   ; X86:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s8)
-  ; X86:   G_STORE [[ZEXT]](s32), [[PTR_ADD2]](p0) :: (store (s32) into stack, align 1)
+  ; X86:   G_STORE [[ZEXT]](s32), [[PTR_ADD2]](p0) :: (store (s8) into stack)
   ; X86:   CALLpcrel32 @take_char, csr_32, implicit $esp, implicit $ssp
   ; X86:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86:   RET 0

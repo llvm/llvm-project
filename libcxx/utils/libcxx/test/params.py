@@ -53,20 +53,12 @@ def getStdFlag(cfg, std):
   return None
 
 DEFAULT_PARAMETERS = [
-  # Core parameters of the test suite
   Parameter(name='target_triple', type=str, default=getHostTriple,
             help="The target triple to compile the test suite for. This must be "
                  "compatible with the target that the tests will be run on.",
             actions=lambda triple: filter(None, [
-              AddFeature(triple),
+              AddFeature('target={}'.format(triple)),
               AddFlagIfSupported('--target={}'.format(triple)),
-              AddFeature('linux-gnu') if re.match(r'^.*-linux-gnu', triple) else None,
-              AddFeature('x86_64-linux') if re.match(r'^x86_64.*-linux', triple) else None,
-              AddFeature('x86_64-apple') if re.match(r'^x86_64.*-apple', triple) else None,
-              AddFeature('target-x86') if re.match(r'^i.86.*', triple) else None,
-              AddFeature('target-x86_64') if re.match(r'^x86_64.*', triple) else None,
-              AddFeature('target-aarch64') if re.match(r'^aarch64.*', triple) else None,
-              AddFeature('target-arm') if re.match(r'^arm.*', triple) else None,
             ])),
 
   Parameter(name='std', choices=_allStandards, type=str,
@@ -142,7 +134,6 @@ DEFAULT_PARAMETERS = [
               AddFeature('sanitizer-new-delete') if sanitizer in ['Address', 'Memory', 'MemoryWithOrigins', 'Thread'] else None,
             ])),
 
-  # Parameters to enable or disable parts of the test suite
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
             actions=lambda experimental: [] if not experimental else [
@@ -166,6 +157,12 @@ DEFAULT_PARAMETERS = [
             actions=lambda enabled: [] if enabled else [
               AddFeature('libcxx-no-debug-mode')
             ]),
+
+  Parameter(name='additional_features', type=list, default=[],
+            help="A comma-delimited list of additional features that will be enabled when running the tests. "
+                 "This should be used sparingly since specifying ad-hoc features manually is error-prone and "
+                 "brittle in the long run as changes are made to the test suite.",
+            actions=lambda features: [AddFeature(f) for f in features]),
 ]
 
 DEFAULT_PARAMETERS += [

@@ -292,9 +292,9 @@ define i32 @fabs(i32 %arg) {
 define i32 @fcopysign(i32 %arg) {
 ; CHECK-LABEL: 'fcopysign'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = call half @llvm.copysign.f16(half undef, half undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V4F16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V8F16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %V16F16 = call <16 x half> @llvm.copysign.v16f16(<16 x half> undef, <16 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F16 = call <16 x half> @llvm.copysign.v16f16(<16 x half> undef, <16 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = call float @llvm.copysign.f32(float undef, float undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = call <2 x float> @llvm.copysign.v2f32(<2 x float> undef, <2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = call <4 x float> @llvm.copysign.v4f32(<4 x float> undef, <4 x float> undef)

@@ -10,10 +10,7 @@
 // <optional>
 
 // Throwing bad_optional_access is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10 && !no-exceptions
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9 && !no-exceptions
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}} && !no-exceptions
 
 // constexpr T& optional<T>::value() &&;
 

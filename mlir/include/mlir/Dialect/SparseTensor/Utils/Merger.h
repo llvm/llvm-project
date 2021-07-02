@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 #define MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
 
@@ -148,11 +149,6 @@ public:
   /// Returns true if any set bit corresponds to queried dim.
   bool hasAnyDimOf(const llvm::BitVector &bits, Dim d) const;
 
-  /// Builds the iteration lattices in a bottom-up traversal given the remaining
-  /// tensor (sub)expression and the next loop index in the iteration graph.
-  /// Returns index of the root expression.
-  unsigned buildLattices(unsigned exp, unsigned idx);
-
   /// Setter
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
@@ -169,7 +165,19 @@ public:
   void dumpBits(const llvm::BitVector &bits) const;
 #endif
 
+  /// Builds the iteration lattices in a bottom-up traversal given the remaining
+  /// tensor (sub)expression and the next loop index in the iteration graph.
+  /// Returns index of the root expression.
+  unsigned buildLattices(unsigned exp, unsigned idx);
+
+  /// Builds a tensor expression from the given Linalg operation.
+  /// Returns index of the root expression on success.
+  Optional<unsigned> buildTensorExpFromLinalg(linalg::GenericOp op);
+
 private:
+  /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
+  Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value val);
+
   const unsigned outTensor;
   const unsigned syntheticTensor;
   const unsigned numTensors;

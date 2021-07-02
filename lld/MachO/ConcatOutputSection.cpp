@@ -27,7 +27,7 @@ using namespace lld::macho;
 void ConcatOutputSection::addInput(ConcatInputSection *input) {
   if (inputs.empty()) {
     align = input->align;
-    flags = input->flags;
+    flags = input->getFlags();
   } else {
     align = std::max(align, input->align);
     finalizeFlags(input);
@@ -288,7 +288,8 @@ void ConcatOutputSection::finalize() {
         // unfinalized inputs[finalIdx].
         fatal(Twine(__FUNCTION__) + ": FIXME: thunk range overrun");
       }
-      thunkInfo.isec = make<ConcatInputSection>(isec->segname, isec->name);
+      thunkInfo.isec =
+          make<ConcatInputSection>(isec->getSegName(), isec->getName());
       thunkInfo.isec->parent = this;
       StringRef thunkName = saver.save(funcSym->getName() + ".thunk." +
                                        std::to_string(thunkInfo.sequence++));
@@ -332,8 +333,7 @@ void ConcatOutputSection::writeTo(uint8_t *buf) const {
 }
 
 void ConcatOutputSection::finalizeFlags(InputSection *input) {
-  uint8_t inputType = input->flags & SECTION_TYPE;
-  switch (inputType) {
+  switch (sectionType(input->getFlags())) {
   default /*type-unspec'ed*/:
     // FIXME: Add additional logics here when supporting emitting obj files.
     break;
@@ -351,16 +351,7 @@ void ConcatOutputSection::finalizeFlags(InputSection *input) {
   case S_THREAD_LOCAL_VARIABLE_POINTERS:
   case S_NON_LAZY_SYMBOL_POINTERS:
   case S_SYMBOL_STUBS:
-    flags |= input->flags;
+    flags |= input->getFlags();
     break;
   }
-}
-
-void ConcatOutputSection::eraseOmittedInputSections() {
-  // Remove the duplicates from inputs
-  inputs.erase(std::remove_if(inputs.begin(), inputs.end(),
-                              [](const ConcatInputSection *isec) -> bool {
-                                return isec->shouldOmitFromOutput();
-                              }),
-               inputs.end());
 }

@@ -72,8 +72,8 @@ body:             |
     ; MIPS32: [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.3.s
     ; MIPS32: G_STORE [[COPY]](p0), [[FRAME_INDEX3]](p0) :: (store (p0) into %ir.fmt.addr)
     ; MIPS32: G_VASTART [[FRAME_INDEX4]](p0) :: (store (p0) into %ir.ap1, align 1)
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX4]](p0) :: (load (s32))
-    ; MIPS32: G_STORE [[LOAD]](p0), [[FRAME_INDEX5]](p0) :: (store (s32))
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX4]](p0) :: (load (p0))
+    ; MIPS32: G_STORE [[LOAD]](p0), [[FRAME_INDEX5]](p0) :: (store (p0))
     ; MIPS32: [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX5]](p0) :: (load (p0) from %ir.aq)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD1]], [[C]](s32)

@@ -16,7 +16,6 @@
 
 using iterator = std::move_iterator<int*>;
 
-
 static_assert(std::input_iterator<iterator>);
 static_assert(!std::forward_iterator<iterator>);
 static_assert(!std::indirectly_writable<iterator, int>);
@@ -25,3 +24,4 @@ static_assert(std::sentinel_for<iterator, iterator>);
 static_assert(std::sized_sentinel_for<iterator, iterator>);
 static_assert(!std::indirectly_movable<int*, iterator>);
 static_assert(!std::indirectly_movable_storable<int*, iterator>);
+static_assert(!std::indirectly_swappable<iterator, iterator>);

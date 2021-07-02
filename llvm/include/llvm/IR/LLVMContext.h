@@ -305,6 +305,9 @@ public:
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate&);
 
+  /// Whether typed pointers are supported. If false, all pointers are opaque.
+  bool supportsTypedPointers() const;
+
 private:
   // Module needs access to the add/removeModule methods.
   friend class Module;

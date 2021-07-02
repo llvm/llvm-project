@@ -67,13 +67,12 @@ public:
                         unsigned numReservedCols, unsigned numDims = 0,
                         unsigned numSymbols = 0, unsigned numLocals = 0,
                         ArrayRef<Optional<Value>> idArgs = {})
-      : numReservedCols(numReservedCols), numDims(numDims),
-        numSymbols(numSymbols) {
-    assert(numReservedCols >= numDims + numSymbols + 1);
-    assert(idArgs.empty() || idArgs.size() == numDims + numSymbols + numLocals);
-    equalities.reserve(numReservedCols * numReservedEqualities);
-    inequalities.reserve(numReservedCols * numReservedInequalities);
-    numIds = numDims + numSymbols + numLocals;
+      : numIds(numDims + numSymbols + numLocals), numDims(numDims),
+        numSymbols(numSymbols),
+        equalities(0, numIds + 1, numReservedEqualities, numReservedCols),
+        inequalities(0, numIds + 1, numReservedInequalities, numReservedCols) {
+    assert(numReservedCols >= numIds + 1);
+    assert(idArgs.empty() || idArgs.size() == numIds);
     ids.reserve(numReservedCols);
     if (idArgs.empty())
       ids.resize(numIds, None);
@@ -86,17 +85,11 @@ public:
   FlatAffineConstraints(unsigned numDims = 0, unsigned numSymbols = 0,
                         unsigned numLocals = 0,
                         ArrayRef<Optional<Value>> idArgs = {})
-      : numReservedCols(numDims + numSymbols + numLocals + 1), numDims(numDims),
-        numSymbols(numSymbols) {
-    assert(numReservedCols >= numDims + numSymbols + 1);
-    assert(idArgs.empty() || idArgs.size() == numDims + numSymbols + numLocals);
-    numIds = numDims + numSymbols + numLocals;
-    ids.reserve(numIds);
-    if (idArgs.empty())
-      ids.resize(numIds, None);
-    else
-      ids.append(idArgs.begin(), idArgs.end());
-  }
+      : FlatAffineConstraints(/*numReservedInequalities=*/0,
+                              /*numReservedEqualities=*/0,
+                              /*numReservedCols=*/numDims + numSymbols +
+                                  numLocals + 1,
+                              numDims, numSymbols, numLocals, idArgs) {}
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.
@@ -112,8 +105,6 @@ public:
 
   /// Creates an affine constraint system from an IntegerSet.
   explicit FlatAffineConstraints(IntegerSet set);
-
-  FlatAffineConstraints(const FlatAffineConstraints &other);
 
   FlatAffineConstraints(ArrayRef<const AffineValueMap *> avmRef,
                         IntegerSet set);
@@ -173,51 +164,38 @@ public:
   std::unique_ptr<FlatAffineConstraints> clone() const;
 
   /// Returns the value at the specified equality row and column.
-  inline int64_t atEq(unsigned i, unsigned j) const {
-    return equalities[i * numReservedCols + j];
-  }
-  inline int64_t &atEq(unsigned i, unsigned j) {
-    return equalities[i * numReservedCols + j];
-  }
+  inline int64_t atEq(unsigned i, unsigned j) const { return equalities(i, j); }
+  inline int64_t &atEq(unsigned i, unsigned j) { return equalities(i, j); }
 
   inline int64_t atIneq(unsigned i, unsigned j) const {
-    return inequalities[i * numReservedCols + j];
+    return inequalities(i, j);
   }
 
-  inline int64_t &atIneq(unsigned i, unsigned j) {
-    return inequalities[i * numReservedCols + j];
-  }
+  inline int64_t &atIneq(unsigned i, unsigned j) { return inequalities(i, j); }
 
   /// Returns the number of columns in the constraint system.
   inline unsigned getNumCols() const { return numIds + 1; }
 
-  inline unsigned getNumEqualities() const {
-    assert(equalities.size() % numReservedCols == 0 &&
-           "inconsistent equality buffer size");
-    return equalities.size() / numReservedCols;
-  }
+  inline unsigned getNumEqualities() const { return equalities.getNumRows(); }
 
   inline unsigned getNumInequalities() const {
-    assert(inequalities.size() % numReservedCols == 0 &&
-           "inconsistent inequality buffer size");
-    return inequalities.size() / numReservedCols;
+    return inequalities.getNumRows();
   }
 
   inline unsigned getNumReservedEqualities() const {
-    return equalities.capacity() / numReservedCols;
+    return equalities.getNumReservedRows();
   }
 
   inline unsigned getNumReservedInequalities() const {
-    return inequalities.capacity() / numReservedCols;
+    return inequalities.getNumReservedRows();
   }
 
   inline ArrayRef<int64_t> getEquality(unsigned idx) const {
-    return ArrayRef<int64_t>(&equalities[idx * numReservedCols], getNumCols());
+    return equalities.getRow(idx);
   }
 
   inline ArrayRef<int64_t> getInequality(unsigned idx) const {
-    return ArrayRef<int64_t>(&inequalities[idx * numReservedCols],
-                             getNumCols());
+    return inequalities.getRow(idx);
   }
 
   /// Adds constraints (lower and upper bounds) for the specified 'affine.for'
@@ -649,16 +627,6 @@ private:
   /// arrays as needed.
   void removeIdRange(unsigned idStart, unsigned idLimit);
 
-  /// Coefficients of affine equalities (in == 0 form).
-  SmallVector<int64_t, 64> equalities;
-
-  /// Coefficients of affine inequalities (in >= 0 form).
-  SmallVector<int64_t, 64> inequalities;
-
-  /// Number of columns reserved. Actual ones in used are returned by
-  /// getNumCols().
-  unsigned numReservedCols;
-
   /// Total number of identifiers.
   unsigned numIds;
 
@@ -668,6 +636,12 @@ private:
   /// Number of identifiers corresponding to symbols (unknown but constant for
   /// analysis).
   unsigned numSymbols;
+
+  /// Coefficients of affine equalities (in == 0 form).
+  Matrix equalities;
+
+  /// Coefficients of affine inequalities (in >= 0 form).
+  Matrix inequalities;
 
   /// Values corresponding to the (column) identifiers of this constraint
   /// system appearing in the order the identifiers correspond to columns.

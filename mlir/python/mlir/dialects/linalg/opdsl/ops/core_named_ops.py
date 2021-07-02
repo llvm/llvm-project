@@ -22,6 +22,26 @@ def matmul(
 
 
 @linalg_structured_op
+def mmt4d(lhs=TensorDef(TV.LhsType, S.M, S.K, S.M0, S.K0),
+          rhs=TensorDef(TV.RhsType, S.N, S.K, S.N0, S.K0),
+          accum=TensorDef(TV.AccumType, S.M, S.N, S.M0, S.N0,
+                                  output=True)):
+  """Performs a matrix-matrix-transpose multiplication of two 4D inputs.
+
+    Differences from linalg.matmul:
+    * The right hand side is transposed, whence the 't' in 'mmt'.
+    * The input and output tensors have a 4D shape instead of a 2D shape. They
+      are interpreted as 2D matrices with one level of 2D tile subdivision,
+      whence the 2+2=4 dimensions. The inner tile dimensions are identified with
+      '0' suffixes below, for instance the LHS matrix shape (M, K, M0, K0) reads
+      as: MxK tiles, each of shape M0xK0.
+  """
+  domain(D.m, D.m0, D.n, D.n0, D.k, D.k0)
+  implements(ContractionOpInterface)
+  accum[D.m, D.n, D.m0, D.n0] += cast(TV.AccumType, lhs[D.m, D.k, D.m0, D.k0]) * cast(TV.AccumType, rhs[D.n, D.k, D.n0, D.k0])
+
+
+@linalg_structured_op
 def batch_matmul(
     A=TensorDef(T1, Batch, S.M, S.K),
     B=TensorDef(T2, Batch, S.K, S.N),
@@ -126,6 +146,24 @@ def pooling_nhwc_sum_poly(
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.c] += cast(
       U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
+
+
+@linalg_structured_op
+def pooling_nhwc_max_poly(
+    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs max pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max(D.kh, D.kw)(
+      cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                D.c]))
 
 
 @linalg_structured_op

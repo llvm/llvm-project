@@ -1886,8 +1886,8 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
 //         EnvTeamLimit, EnvNumTeams, num_teams, thread_limit,
 //         loop_tripcount.
 struct launchVals {
-  int threadsPerGroup;
-  int num_groups;
+  int WorkgroupSize;
+  int GridSize;
 };
 
 launchVals getLaunchVals(int ConstWGSize, int ExecutionMode, int EnvTeamLimit,
@@ -2031,8 +2031,8 @@ launchVals getLaunchVals(int ConstWGSize, int ExecutionMode, int EnvTeamLimit,
      threadsPerGroup);
 
   launchVals res;
-  res.threadsPerGroup = threadsPerGroup;
-  res.num_groups = num_groups;
+  res.WorkgroupSize = threadsPerGroup;
+  res.GridSize = threadsPerGroup * num_groups;
   return res;
 }
 
@@ -2118,10 +2118,11 @@ int32_t __tgt_rtl_run_target_team_region_locked(
                     thread_limit,   // From run_region arg
                     loop_tripcount, // From run_region arg
                     DeviceInfo.NumTeams[KernelInfo->device_id]);
-  int num_groups = LV.num_groups;
-  int threadsPerGroup = LV.threadsPerGroup;
+  const int GridSize = LV.GridSize;
+  const int WorkgroupSize = LV.WorkgroupSize;
 
   if (print_kernel_trace >= LAUNCH) {
+    int num_groups = GridSize / WorkgroupSize;
     // enum modes are SPMD, GENERIC, NONE 0,1,2
     // if doing rtl timing, print to stderr, unless stdout requested.
     bool traceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
@@ -2130,7 +2131,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
             "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
             "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu n:%s\n",
             device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
-            arg_num, num_groups, threadsPerGroup, num_teams, thread_limit,
+            arg_num, num_groups, WorkgroupSize, num_teams, thread_limit,
             group_segment_size, sgpr_count, vgpr_count, sgpr_spill_count,
             vgpr_spill_count, loop_tripcount, KernelInfo->Name);
   }
@@ -2150,11 +2151,11 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
     // packet->header is written last
     packet->setup = UINT16_C(1) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-    packet->workgroup_size_x = threadsPerGroup;
+    packet->workgroup_size_x = WorkgroupSize;
     packet->workgroup_size_y = 1;
     packet->workgroup_size_z = 1;
     packet->reserved0 = 0;
-    packet->grid_size_x = num_groups * threadsPerGroup;
+    packet->grid_size_x = GridSize;
     packet->grid_size_y = 1;
     packet->grid_size_z = 1;
     packet->private_segment_size = KernelInfoEntry.private_segment_size;

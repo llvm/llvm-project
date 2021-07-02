@@ -132,6 +132,10 @@ template<class In, class Out>
 template<class In, class Out>
   concept indirectly_movable_storable = see below;         // since C++20
 
+// [alg.req.ind.swap], concept indirectly_swappable
+template<class I1, class I2 = I1>
+  concept indirectly_swappable = see below;                // since C++20
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator                                            // deprecated in C++17

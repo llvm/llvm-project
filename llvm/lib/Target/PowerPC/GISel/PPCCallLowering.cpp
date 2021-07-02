@@ -86,22 +86,19 @@ void PPCIncomingValueHandler::assignValueToReg(Register ValVReg,
 }
 
 void PPCIncomingValueHandler::assignValueToAddress(Register ValVReg,
-                                                   Register Addr, uint64_t Size,
+                                                   Register Addr, LLT MemTy,
                                                    MachinePointerInfo &MPO,
                                                    CCValAssign &VA) {
-  assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
-         "Unsupported size");
-
   // define a lambda expression to load value
   auto BuildLoad = [](MachineIRBuilder &MIRBuilder, MachinePointerInfo &MPO,
-                      uint64_t Size, const DstOp &Res, Register Addr) {
+                      LLT MemTy, const DstOp &Res, Register Addr) {
     MachineFunction &MF = MIRBuilder.getMF();
-    auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size,
+    auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,
                                         inferAlignFromPtrInfo(MF, MPO));
     return MIRBuilder.buildLoad(Res, Addr, *MMO);
   };
 
-  BuildLoad(MIRBuilder, MPO, Size, ValVReg, Addr);
+  BuildLoad(MIRBuilder, MPO, MemTy, ValVReg, Addr);
 }
 
 Register PPCIncomingValueHandler::getStackAddress(uint64_t Size, int64_t Offset,

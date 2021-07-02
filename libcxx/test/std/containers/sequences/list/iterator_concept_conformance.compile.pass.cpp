@@ -41,6 +41,7 @@ static_assert( std::indirectly_movable<iterator, reverse_iterator>);
 static_assert( std::indirectly_movable_storable<iterator, reverse_iterator>);
 static_assert(!std::indirectly_movable<iterator, const_reverse_iterator>);
 static_assert(!std::indirectly_movable_storable<iterator, const_reverse_iterator>);
+static_assert(std::indirectly_swappable<iterator, iterator>);
 
 static_assert(std::bidirectional_iterator<const_iterator>);
 static_assert(!std::random_access_iterator<const_iterator>);
@@ -61,3 +62,4 @@ static_assert( std::indirectly_movable<const_iterator, reverse_iterator>);
 static_assert( std::indirectly_movable_storable<const_iterator, reverse_iterator>);
 static_assert(!std::indirectly_movable<const_iterator, const_reverse_iterator>);
 static_assert(!std::indirectly_movable_storable<const_iterator, const_reverse_iterator>);
+static_assert(!std::indirectly_swappable<const_iterator, const_iterator>);

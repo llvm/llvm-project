@@ -144,32 +144,6 @@ LogicalResult mlir::getFlattenedAffineExprs(
 // FlatAffineConstraints.
 //===----------------------------------------------------------------------===//
 
-// Copy constructor.
-FlatAffineConstraints::FlatAffineConstraints(
-    const FlatAffineConstraints &other) {
-  numReservedCols = other.numReservedCols;
-  numDims = other.getNumDimIds();
-  numSymbols = other.getNumSymbolIds();
-  numIds = other.getNumIds();
-
-  auto otherIds = other.getIds();
-  ids.reserve(numReservedCols);
-  ids.append(otherIds.begin(), otherIds.end());
-
-  unsigned numReservedEqualities = other.getNumReservedEqualities();
-  unsigned numReservedInequalities = other.getNumReservedInequalities();
-
-  equalities.reserve(numReservedEqualities * numReservedCols);
-  inequalities.reserve(numReservedInequalities * numReservedCols);
-
-  for (unsigned r = 0, e = other.getNumInequalities(); r < e; r++) {
-    addInequality(other.getInequality(r));
-  }
-  for (unsigned r = 0, e = other.getNumEqualities(); r < e; r++) {
-    addEquality(other.getEquality(r));
-  }
-}
-
 // Clones this object.
 std::unique_ptr<FlatAffineConstraints> FlatAffineConstraints::clone() const {
   return std::make_unique<FlatAffineConstraints>(*this);
@@ -177,11 +151,10 @@ std::unique_ptr<FlatAffineConstraints> FlatAffineConstraints::clone() const {
 
 // Construct from an IntegerSet.
 FlatAffineConstraints::FlatAffineConstraints(IntegerSet set)
-    : numReservedCols(set.getNumInputs() + 1),
-      numIds(set.getNumDims() + set.getNumSymbols()), numDims(set.getNumDims()),
-      numSymbols(set.getNumSymbols()) {
-  equalities.reserve(set.getNumEqualities() * numReservedCols);
-  inequalities.reserve(set.getNumInequalities() * numReservedCols);
+    : numIds(set.getNumDims() + set.getNumSymbols()), numDims(set.getNumDims()),
+      numSymbols(set.getNumSymbols()),
+      equalities(0, numIds + 1, set.getNumEqualities(), numIds + 1),
+      inequalities(0, numIds + 1, set.getNumInequalities(), numIds + 1) {
   ids.resize(numIds, None);
 
   // Flatten expressions and add them to the constraint system.
@@ -217,22 +190,13 @@ void FlatAffineConstraints::reset(unsigned numReservedInequalities,
                                   ArrayRef<Value> idArgs) {
   assert(newNumReservedCols >= newNumDims + newNumSymbols + newNumLocals + 1 &&
          "minimum 1 column");
-  numReservedCols = newNumReservedCols;
-  numDims = newNumDims;
-  numSymbols = newNumSymbols;
-  numIds = numDims + numSymbols + newNumLocals;
-  assert(idArgs.empty() || idArgs.size() == numIds);
+  SmallVector<Optional<Value>, 8> newIds;
+  if (!idArgs.empty())
+    newIds.assign(idArgs.begin(), idArgs.end());
 
-  clearConstraints();
-  if (numReservedEqualities >= 1)
-    equalities.reserve(newNumReservedCols * numReservedEqualities);
-  if (numReservedInequalities >= 1)
-    inequalities.reserve(newNumReservedCols * numReservedInequalities);
-  if (idArgs.empty()) {
-    ids.resize(numIds, None);
-  } else {
-    ids.assign(idArgs.begin(), idArgs.end());
-  }
+  *this = FlatAffineConstraints(numReservedInequalities, numReservedEqualities,
+                                newNumReservedCols, newNumDims, newNumSymbols,
+                                newNumLocals, newIds);
 }
 
 void FlatAffineConstraints::reset(unsigned newNumDims, unsigned newNumSymbols,
@@ -247,10 +211,9 @@ void FlatAffineConstraints::append(const FlatAffineConstraints &other) {
   assert(other.getNumDimIds() == getNumDimIds());
   assert(other.getNumSymbolIds() == getNumSymbolIds());
 
-  inequalities.reserve(inequalities.size() +
-                       other.getNumInequalities() * numReservedCols);
-  equalities.reserve(equalities.size() +
-                     other.getNumEqualities() * numReservedCols);
+  inequalities.reserveRows(inequalities.getNumRows() +
+                           other.getNumInequalities());
+  equalities.reserveRows(equalities.getNumRows() + other.getNumEqualities());
 
   for (unsigned r = 0, e = other.getNumInequalities(); r < e; r++) {
     addInequality(other.getInequality(r));
@@ -282,17 +245,7 @@ void FlatAffineConstraints::addId(IdKind kind, unsigned pos, Value id) {
   else
     assert(pos <= getNumLocalIds());
 
-  unsigned oldNumReservedCols = numReservedCols;
-
-  // Check if a resize is necessary.
-  if (getNumCols() + 1 > numReservedCols) {
-    equalities.resize(getNumEqualities() * (getNumCols() + 1));
-    inequalities.resize(getNumInequalities() * (getNumCols() + 1));
-    numReservedCols++;
-  }
-
   int absolutePos;
-
   if (kind == IdKind::Dimension) {
     absolutePos = pos;
     numDims++;
@@ -304,35 +257,8 @@ void FlatAffineConstraints::addId(IdKind kind, unsigned pos, Value id) {
   }
   numIds++;
 
-  // Note that getNumCols() now will already return the new size, which will be
-  // at least one.
-  int numInequalities = static_cast<int>(getNumInequalities());
-  int numEqualities = static_cast<int>(getNumEqualities());
-  int numCols = static_cast<int>(getNumCols());
-  for (int r = numInequalities - 1; r >= 0; r--) {
-    for (int c = numCols - 2; c >= 0; c--) {
-      if (c < absolutePos)
-        atIneq(r, c) = inequalities[r * oldNumReservedCols + c];
-      else
-        atIneq(r, c + 1) = inequalities[r * oldNumReservedCols + c];
-    }
-    atIneq(r, absolutePos) = 0;
-  }
-
-  for (int r = numEqualities - 1; r >= 0; r--) {
-    for (int c = numCols - 2; c >= 0; c--) {
-      // All values in column absolutePositions < absolutePos have the same
-      // coordinates in the 2-d view of the coefficient buffer.
-      if (c < absolutePos)
-        atEq(r, c) = equalities[r * oldNumReservedCols + c];
-      else
-        // Those at absolutePosition >= absolutePos, get a shifted
-        // absolutePosition.
-        atEq(r, c + 1) = equalities[r * oldNumReservedCols + c];
-    }
-    // Initialize added dimension to zero.
-    atEq(r, absolutePos) = 0;
-  }
+  inequalities.insertColumn(absolutePos);
+  equalities.insertColumn(absolutePos);
 
   // If an 'id' is provided, insert it; otherwise use None.
   if (id)
@@ -840,9 +766,9 @@ void FlatAffineConstraints::normalizeConstraintsByGCD() {
 }
 
 bool FlatAffineConstraints::hasConsistentState() const {
-  if (inequalities.size() != getNumInequalities() * numReservedCols)
+  if (!inequalities.hasConsistentState())
     return false;
-  if (equalities.size() != getNumEqualities() * numReservedCols)
+  if (!equalities.hasConsistentState())
     return false;
   if (ids.size() != getNumIds())
     return false;
@@ -923,31 +849,6 @@ static void eliminateFromConstraint(FlatAffineConstraints *constraints,
   }
 }
 
-// Remove coefficients in column range [colStart, colLimit) in place.
-// This removes in data in the specified column range, and copies any
-// remaining valid data into place.
-static void shiftColumnsToLeft(FlatAffineConstraints *constraints,
-                               unsigned colStart, unsigned colLimit,
-                               bool isEq) {
-  assert(colLimit <= constraints->getNumIds());
-  if (colLimit <= colStart)
-    return;
-
-  unsigned numCols = constraints->getNumCols();
-  unsigned numRows = isEq ? constraints->getNumEqualities()
-                          : constraints->getNumInequalities();
-  unsigned numToEliminate = colLimit - colStart;
-  for (unsigned r = 0, e = numRows; r < e; ++r) {
-    for (unsigned c = colLimit; c < numCols; ++c) {
-      if (isEq) {
-        constraints->atEq(r, c - numToEliminate) = constraints->atEq(r, c);
-      } else {
-        constraints->atIneq(r, c - numToEliminate) = constraints->atIneq(r, c);
-      }
-    }
-  }
-}
-
 // Removes identifiers in column range [idStart, idLimit), and copies any
 // remaining valid data into place, and updates member variables.
 void FlatAffineConstraints::removeIdRange(unsigned idStart, unsigned idLimit) {
@@ -960,11 +861,9 @@ void FlatAffineConstraints::removeIdRange(unsigned idStart, unsigned idLimit) {
   assert(idStart < numIds && "invalid idStart position");
 
   // TODO: Make 'removeIdRange' a lambda called from here.
-  // Remove eliminated identifiers from equalities.
-  shiftColumnsToLeft(this, idStart, idLimit, /*isEq=*/true);
-
-  // Remove eliminated identifiers from inequalities.
-  shiftColumnsToLeft(this, idStart, idLimit, /*isEq=*/false);
+  // Remove eliminated identifiers from the constraints..
+  equalities.removeColumns(idStart, idLimit - idStart);
+  inequalities.removeColumns(idStart, idLimit - idStart);
 
   // Update members numDims, numSymbols and numIds.
   unsigned numDimsEliminated = 0;
@@ -987,8 +886,6 @@ void FlatAffineConstraints::removeIdRange(unsigned idStart, unsigned idLimit) {
   numIds = numIds - numColsEliminated;
 
   ids.erase(ids.begin() + idStart, ids.begin() + idLimit);
-
-  // No resize necessary. numReservedCols remains the same.
 }
 
 /// Returns the position of the identifier that has the minimum <number of lower
@@ -1737,7 +1634,7 @@ void FlatAffineConstraints::removeRedundantInequalities() {
     if (!redun[r])
       copyRow(r, pos++);
   }
-  inequalities.resize(numReservedCols * pos);
+  inequalities.resizeVertically(pos);
 }
 
 // A more complex check to eliminate redundant inequalities and equalities. Uses
@@ -1764,7 +1661,7 @@ void FlatAffineConstraints::removeRedundantConstraints() {
     if (!simplex.isMarkedRedundant(r))
       copyInequality(r, pos++);
   }
-  inequalities.resize(numReservedCols * pos);
+  inequalities.resizeVertically(pos);
 
   // Scan to get rid of all equalities marked redundant, in-place. In Simplex,
   // after the inequalities, a pair of constraints for each equality is added.
@@ -1782,7 +1679,7 @@ void FlatAffineConstraints::removeRedundantConstraints() {
           simplex.isMarkedRedundant(numIneqs + 2 * r + 1)))
       copyEquality(r, pos++);
   }
-  equalities.resize(numReservedCols * pos);
+  equalities.resizeVertically(pos);
 }
 
 std::pair<AffineMap, AffineMap> FlatAffineConstraints::getLowerAndUpperBound(
@@ -2185,60 +2082,45 @@ LogicalResult FlatAffineConstraints::addSliceBounds(ArrayRef<Value> values,
 
 void FlatAffineConstraints::addEquality(ArrayRef<int64_t> eq) {
   assert(eq.size() == getNumCols());
-  unsigned offset = equalities.size();
-  equalities.resize(equalities.size() + numReservedCols);
-  std::copy(eq.begin(), eq.end(), equalities.begin() + offset);
+  unsigned row = equalities.appendExtraRow();
+  for (unsigned i = 0, e = eq.size(); i < e; ++i)
+    equalities(row, i) = eq[i];
 }
 
 void FlatAffineConstraints::addInequality(ArrayRef<int64_t> inEq) {
   assert(inEq.size() == getNumCols());
-  unsigned offset = inequalities.size();
-  inequalities.resize(inequalities.size() + numReservedCols);
-  std::copy(inEq.begin(), inEq.end(), inequalities.begin() + offset);
+  unsigned row = inequalities.appendExtraRow();
+  for (unsigned i = 0, e = inEq.size(); i < e; ++i)
+    inequalities(row, i) = inEq[i];
 }
 
 void FlatAffineConstraints::addConstantLowerBound(unsigned pos, int64_t lb) {
   assert(pos < getNumCols());
-  unsigned offset = inequalities.size();
-  inequalities.resize(inequalities.size() + numReservedCols);
-  std::fill(inequalities.begin() + offset,
-            inequalities.begin() + offset + getNumCols(), 0);
-  inequalities[offset + pos] = 1;
-  inequalities[offset + getNumCols() - 1] = -lb;
+  unsigned row = inequalities.appendExtraRow();
+  inequalities(row, pos) = 1;
+  inequalities(row, getNumCols() - 1) = -lb;
 }
 
 void FlatAffineConstraints::addConstantUpperBound(unsigned pos, int64_t ub) {
   assert(pos < getNumCols());
-  unsigned offset = inequalities.size();
-  inequalities.resize(inequalities.size() + numReservedCols);
-  std::fill(inequalities.begin() + offset,
-            inequalities.begin() + offset + getNumCols(), 0);
-  inequalities[offset + pos] = -1;
-  inequalities[offset + getNumCols() - 1] = ub;
+  unsigned row = inequalities.appendExtraRow();
+  inequalities(row, pos) = -1;
+  inequalities(row, getNumCols() - 1) = ub;
 }
 
 void FlatAffineConstraints::addConstantLowerBound(ArrayRef<int64_t> expr,
                                                   int64_t lb) {
-  assert(expr.size() == getNumCols());
-  unsigned offset = inequalities.size();
-  inequalities.resize(inequalities.size() + numReservedCols);
-  std::fill(inequalities.begin() + offset,
-            inequalities.begin() + offset + getNumCols(), 0);
-  std::copy(expr.begin(), expr.end(), inequalities.begin() + offset);
-  inequalities[offset + getNumCols() - 1] += -lb;
+  addInequality(expr);
+  inequalities(inequalities.getNumRows() - 1, getNumCols() - 1) += -lb;
 }
 
 void FlatAffineConstraints::addConstantUpperBound(ArrayRef<int64_t> expr,
                                                   int64_t ub) {
   assert(expr.size() == getNumCols());
-  unsigned offset = inequalities.size();
-  inequalities.resize(inequalities.size() + numReservedCols);
-  std::fill(inequalities.begin() + offset,
-            inequalities.begin() + offset + getNumCols(), 0);
-  for (unsigned i = 0, e = getNumCols(); i < e; i++) {
-    inequalities[offset + i] = -expr[i];
-  }
-  inequalities[offset + getNumCols() - 1] += ub;
+  unsigned row = inequalities.appendExtraRow();
+  for (unsigned i = 0, e = expr.size(); i < e; ++i)
+    inequalities(row, i) = -expr[i];
+  inequalities(inequalities.getNumRows() - 1, getNumCols() - 1) += ub;
 }
 
 /// Adds a new local identifier as the floordiv of an affine function of other
@@ -2311,12 +2193,10 @@ void FlatAffineConstraints::setDimSymbolSeparation(unsigned newSymbolCount) {
 
 /// Sets the specified identifier to a constant value.
 void FlatAffineConstraints::setIdToConstant(unsigned pos, int64_t val) {
-  unsigned offset = equalities.size();
-  equalities.resize(equalities.size() + numReservedCols);
-  std::fill(equalities.begin() + offset,
-            equalities.begin() + offset + getNumCols(), 0);
-  equalities[offset + pos] = 1;
-  equalities[offset + getNumCols() - 1] = -val;
+  equalities.resizeVertically(equalities.getNumRows() + 1);
+  unsigned row = equalities.getNumRows() - 1;
+  equalities(row, pos) = 1;
+  equalities(row, getNumCols() - 1) = -val;
 }
 
 /// Sets the specified identifier to a constant value; asserts if the id is not
@@ -2330,29 +2210,11 @@ void FlatAffineConstraints::setIdToConstant(Value id, int64_t val) {
 }
 
 void FlatAffineConstraints::removeEquality(unsigned pos) {
-  unsigned numEqualities = getNumEqualities();
-  assert(pos < numEqualities);
-  unsigned outputIndex = pos * numReservedCols;
-  unsigned inputIndex = (pos + 1) * numReservedCols;
-  unsigned numElemsToCopy = (numEqualities - pos - 1) * numReservedCols;
-  std::copy(equalities.begin() + inputIndex,
-            equalities.begin() + inputIndex + numElemsToCopy,
-            equalities.begin() + outputIndex);
-  assert(equalities.size() >= numReservedCols);
-  equalities.resize(equalities.size() - numReservedCols);
+  equalities.removeRow(pos);
 }
 
 void FlatAffineConstraints::removeInequality(unsigned pos) {
-  unsigned numInequalities = getNumInequalities();
-  assert(pos < numInequalities && "invalid position");
-  unsigned outputIndex = pos * numReservedCols;
-  unsigned inputIndex = (pos + 1) * numReservedCols;
-  unsigned numElemsToCopy = (numInequalities - pos - 1) * numReservedCols;
-  std::copy(inequalities.begin() + inputIndex,
-            inequalities.begin() + inputIndex + numElemsToCopy,
-            inequalities.begin() + outputIndex);
-  assert(inequalities.size() >= numReservedCols);
-  inequalities.resize(inequalities.size() - numReservedCols);
+  inequalities.removeRow(pos);
 }
 
 /// Finds an equality that equates the specified identifier to a constant.
@@ -2716,7 +2578,7 @@ void FlatAffineConstraints::removeTrivialRedundancy() {
   // Detect and mark redundant constraints.
   SmallVector<bool, 256> redunIneq(getNumInequalities(), false);
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
-    int64_t *rowStart = inequalities.data() + numReservedCols * r;
+    int64_t *rowStart = &inequalities(r, 0);
     auto row = ArrayRef<int64_t>(rowStart, getNumCols());
     if (isTriviallyValid(r) || !rowSet.insert(row).second) {
       redunIneq[r] = true;
@@ -2745,21 +2607,13 @@ void FlatAffineConstraints::removeTrivialRedundancy() {
     }
   }
 
-  auto copyRow = [&](unsigned src, unsigned dest) {
-    if (src == dest)
-      return;
-    for (unsigned c = 0, e = getNumCols(); c < e; c++) {
-      atIneq(dest, c) = atIneq(src, c);
-    }
-  };
-
   // Scan to get rid of all rows marked redundant, in-place.
   unsigned pos = 0;
-  for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
+  for (unsigned r = 0, e = getNumInequalities(); r < e; r++)
     if (!redunIneq[r])
-      copyRow(r, pos++);
-  }
-  inequalities.resize(numReservedCols * pos);
+      inequalities.copyRow(r, pos++);
+
+  inequalities.resizeVertically(pos);
 
   // TODO: consider doing this for equalities as well, but probably not worth
   // the savings.
@@ -3053,8 +2907,8 @@ void FlatAffineConstraints::projectOut(Value id) {
 }
 
 void FlatAffineConstraints::clearConstraints() {
-  equalities.clear();
-  inequalities.clear();
+  equalities.resizeVertically(0);
+  inequalities.resizeVertically(0);
 }
 
 namespace {

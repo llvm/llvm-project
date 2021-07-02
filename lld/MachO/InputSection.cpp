@@ -25,10 +25,10 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::macho;
 
-std::vector<InputSection *> macho::inputSections;
+std::vector<ConcatInputSection *> macho::inputSections;
 
 uint64_t InputSection::getFileSize() const {
-  return isZeroFill(flags) ? 0 : getSize();
+  return isZeroFill(getFlags()) ? 0 : getSize();
 }
 
 uint64_t InputSection::getVA(uint64_t off) const {
@@ -48,16 +48,10 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
 
 // ICF needs to hash any section that might potentially be duplicated so
 // that it can match on content rather than identity.
-bool ConcatInputSection::isHashableForICF(bool isText) const {
-  if (shouldOmitFromOutput())
-    return false;
-  switch (sectionType(flags)) {
+bool ConcatInputSection::isHashableForICF() const {
+  switch (sectionType(getFlags())) {
   case S_REGULAR:
-    if (isText)
-      return !hasPersonality;
-    // One might hope that we could hash __TEXT,__const subsections to fold
-    // references to duplicated values, but alas, many tests fail.
-    return false;
+    return true;
   case S_CSTRING_LITERALS:
   case S_4BYTE_LITERALS:
   case S_8BYTE_LITERALS:
@@ -133,7 +127,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->relaxGotLoad(loc, r.type);
       referentVA = resolveSymbolVA(referentSym, r.type) + r.addend;
 
-      if (isThreadLocalVariables(flags)) {
+      if (isThreadLocalVariables(getFlags())) {
         // References from thread-local variable sections are treated as offsets
         // relative to the start of the thread-local data memory area, which
         // is initialized via copying all the TLV data sections (which are all
@@ -209,7 +203,7 @@ WordLiteralInputSection::WordLiteralInputSection(StringRef segname,
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
   auto *osec = cast<WordLiteralSection>(parent);
   const uint8_t *buf = data.data();
-  switch (sectionType(flags)) {
+  switch (sectionType(getFlags())) {
   case S_4BYTE_LITERALS:
     return osec->getLiteral4Offset(buf + off);
   case S_8BYTE_LITERALS:
@@ -222,22 +216,27 @@ uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
 }
 
 bool macho::isCodeSection(const InputSection *isec) {
-  uint32_t type = sectionType(isec->flags);
+  uint32_t type = sectionType(isec->getFlags());
   if (type != S_REGULAR && type != S_COALESCED)
     return false;
 
-  uint32_t attr = isec->flags & SECTION_ATTRIBUTES_USR;
+  uint32_t attr = isec->getFlags() & SECTION_ATTRIBUTES_USR;
   if (attr == S_ATTR_PURE_INSTRUCTIONS)
     return true;
 
-  if (isec->segname == segment_names::text)
-    return StringSwitch<bool>(isec->name)
+  if (isec->getSegName() == segment_names::text)
+    return StringSwitch<bool>(isec->getName())
         .Cases(section_names::textCoalNt, section_names::staticInit, true)
         .Default(false);
 
   return false;
 }
 
+bool macho::isCfStringSection(const InputSection *isec) {
+  return isec->getName() == section_names::cfString &&
+         isec->getSegName() == segment_names::data;
+}
+
 std::string lld::toString(const InputSection *isec) {
-  return (toString(isec->file) + ":(" + isec->name + ")").str();
+  return (toString(isec->getFile()) + ":(" + isec->getName() + ")").str();
 }

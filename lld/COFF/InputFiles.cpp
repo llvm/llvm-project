@@ -957,12 +957,6 @@ Optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
   return dwarf->getDILineInfo(offset, sectionIndex);
 }
 
-static StringRef ltrim1(StringRef s, const char *chars) {
-  if (!s.empty() && strchr(chars, s[0]))
-    return s.substr(1);
-  return s;
-}
-
 void ImportFile::parse() {
   const char *buf = mb.getBufferStart();
   const auto *hdr = reinterpret_cast<const coff_import_header *>(buf);
@@ -1137,4 +1131,94 @@ std::string lld::coff::replaceThinLTOSuffix(StringRef path) {
   if (path.consume_back(suffix))
     return (path + repl).str();
   return std::string(path);
+}
+
+static bool isRVACode(COFFObjectFile *coffObj, uint64_t rva, InputFile *file) {
+  for (size_t i = 1, e = coffObj->getNumberOfSections(); i <= e; i++) {
+    const coff_section *sec = CHECK(coffObj->getSection(i), file);
+    if (rva >= sec->VirtualAddress &&
+        rva <= sec->VirtualAddress + sec->VirtualSize) {
+      return (sec->Characteristics & COFF::IMAGE_SCN_CNT_CODE) != 0;
+    }
+  }
+  return false;
+}
+
+void DLLFile::parse() {
+  // Parse a memory buffer as a PE-COFF executable.
+  std::unique_ptr<Binary> bin = CHECK(createBinary(mb), this);
+
+  if (auto *obj = dyn_cast<COFFObjectFile>(bin.get())) {
+    bin.release();
+    coffObj.reset(obj);
+  } else {
+    error(toString(this) + " is not a COFF file");
+    return;
+  }
+
+  if (!coffObj->getPE32Header() && !coffObj->getPE32PlusHeader()) {
+    error(toString(this) + " is not a PE-COFF executable");
+    return;
+  }
+
+  for (const auto &exp : coffObj->export_directories()) {
+    StringRef dllName, symbolName;
+    uint32_t exportRVA;
+    checkError(exp.getDllName(dllName));
+    checkError(exp.getSymbolName(symbolName));
+    checkError(exp.getExportRVA(exportRVA));
+
+    if (symbolName.empty())
+      continue;
+
+    bool code = isRVACode(coffObj.get(), exportRVA, this);
+
+    Symbol *s = make<Symbol>();
+    s->dllName = dllName;
+    s->symbolName = symbolName;
+    s->importType = code ? ImportType::IMPORT_CODE : ImportType::IMPORT_DATA;
+    s->nameType = ImportNameType::IMPORT_NAME;
+
+    if (coffObj->getMachine() == I386) {
+      s->symbolName = symbolName = saver.save("_" + symbolName);
+      s->nameType = ImportNameType::IMPORT_NAME_NOPREFIX;
+    }
+
+    StringRef impName = saver.save("__imp_" + symbolName);
+    symtab->addLazyDLLSymbol(this, s, impName);
+    if (code)
+      symtab->addLazyDLLSymbol(this, s, symbolName);
+  }
+}
+
+MachineTypes DLLFile::getMachineType() {
+  if (coffObj)
+    return static_cast<MachineTypes>(coffObj->getMachine());
+  return IMAGE_FILE_MACHINE_UNKNOWN;
+}
+
+void DLLFile::makeImport(DLLFile::Symbol *s) {
+  if (!seen.insert(s->symbolName).second)
+    return;
+
+  size_t impSize = s->dllName.size() + s->symbolName.size() + 2; // +2 for NULs
+  size_t size = sizeof(coff_import_header) + impSize;
+  char *buf = bAlloc.Allocate<char>(size);
+  memset(buf, 0, size);
+  char *p = buf;
+  auto *imp = reinterpret_cast<coff_import_header *>(p);
+  p += sizeof(*imp);
+  imp->Sig2 = 0xFFFF;
+  imp->Machine = coffObj->getMachine();
+  imp->SizeOfData = impSize;
+  imp->OrdinalHint = 0; // Only linking by name
+  imp->TypeInfo = (s->nameType << 2) | s->importType;
+
+  // Write symbol name and DLL name.
+  memcpy(p, s->symbolName.data(), s->symbolName.size());
+  p += s->symbolName.size() + 1;
+  memcpy(p, s->dllName.data(), s->dllName.size());
+  MemoryBufferRef mbref = MemoryBufferRef(StringRef(buf, size), s->dllName);
+  ImportFile *impFile = make<ImportFile>(mbref);
+  symtab->addFile(impFile);
 }
