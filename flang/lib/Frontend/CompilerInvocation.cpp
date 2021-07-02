@@ -199,6 +199,23 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     }
   }
 
+  printf("--------- (ParseFrontendArgs) ----------\n");
+
+  if (llvm::opt::Arg *a = args.getLastArg(clang::driver::options::OPT_load)) {
+    llvm::outs() << "   " << a->getOption().getName() << "   >>> " << a->getValue() << "\n";
+    //opts.plugins = a->getValue();
+    opts.plugins.push_back(a->getValue());
+  }
+
+  if (const llvm::opt::Arg *a = args.getLastArg(clang::driver::options::OPT_plugin)) {
+    llvm::outs() << "   " << a->getOption().getName() << " >>> " << a->getValue() << "\n";
+    //opts.plugins.emplace_back(a->getValue());
+    opts.programAction_ = PluginAction;
+    opts.ActionName = a->getValue();
+  }
+
+  printf("-------- (\\ParseFrontendArgs) ----------\n");
+
   opts.outputFile_ = args.getLastArgValue(clang::driver::options::OPT_o);
   opts.showHelp_ = args.hasArg(clang::driver::options::OPT_help);
   opts.showVersion_ = args.hasArg(clang::driver::options::OPT_version);

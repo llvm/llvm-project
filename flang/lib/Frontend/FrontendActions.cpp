@@ -488,3 +488,7 @@ void InitOnlyAction::ExecuteAction() {
           "Use `-init-only` for testing purposes only");
   ci.diagnostics().Report(DiagID);
 }
+
+void PluginParseTreeAction::ExecuteAction() {
+  
+}
