@@ -1,5 +1,16 @@
 // RUN: mlir-opt %s -tensor-bufferize | FileCheck %s
 
+// CHECK-LABEL:   func @dim(
+// CHECK-SAME:              %[[TENSOR:.*]]: tensor<f32>,
+// CHECK-SAME:              %[[INDEX:.*]]: index) -> index {
+// CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]] : memref<f32>
+// CHECK:           %[[EXTENT:.*]] = memref.dim %[[MEMREF]], %[[INDEX]] : memref<f32>
+// CHECK:           return %[[EXTENT]] : index
+func @dim(%arg0: tensor<f32>, %arg1: index) -> index {
+  %0 = tensor.dim %arg0, %arg1 : tensor<f32>
+  return %0 : index
+}
+
 // CHECK-LABEL:   func @tensor.cast(
 // CHECK-SAME:                      %[[TENSOR:.*]]: tensor<?xindex>) -> tensor<2xindex> {
 // CHECK:           %[[MEMREF:.*]] = memref.buffer_cast %[[TENSOR]]
@@ -67,7 +78,8 @@ func @tensor.from_elements(%arg0: index, %arg1: index) -> tensor<2xindex> {
 // CHECK:           %[[C0:.*]] = constant 0 : index
 // CHECK:           %[[C1:.*]] = constant 1 : index
 // CHECK:           scf.parallel (%[[I:.*]]) = (%[[C0]]) to (%[[DYNAMIC_EXTENT]]) step (%[[C1]]) {
-// CHECK:             %[[ELEM:.*]] = tensor.dim %[[ARG]], %[[I]] : tensor<*xf32>
+// CHECK:             %[[CASTED:.*]] = memref.buffer_cast %[[ARG]] : memref<*xf32>
+// CHECK:             %[[ELEM:.*]] = memref.dim %[[CASTED]], %[[I]] : memref<*xf32>
 // CHECK:             store %[[ELEM]], %[[MEMREF]][%[[I]]] : memref<?xindex>
 // CHECK:             scf.yield
 // CHECK:           }
