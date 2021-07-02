@@ -27,6 +27,15 @@ add_mlir_public_c_api_library(MLIRCAPIGPU
   MLIRPass
 )
 
+add_mlir_public_c_api_library(MLIRCAPILLVM
+  LLVM.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRLLVMIR
+)
+
 add_mlir_public_c_api_library(MLIRCAPILinalg
   Linalg.cpp
   LinalgPasses.cpp
