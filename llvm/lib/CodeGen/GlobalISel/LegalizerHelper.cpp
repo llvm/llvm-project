@@ -2762,7 +2762,51 @@ LegalizerHelper::lowerLoad(MachineInstr &MI) {
   Register DstReg = MI.getOperand(0).getReg();
   Register PtrReg = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
-  auto &MMO = **MI.memoperands_begin();
+  MachineMemOperand &MMO = **MI.memoperands_begin();
+  LLT MemTy = MMO.getMemoryType();
+  MachineFunction &MF = MIRBuilder.getMF();
+  if (MemTy.isVector())
+    return UnableToLegalize;
+
+  unsigned MemSizeInBits = MemTy.getSizeInBits();
+  unsigned MemStoreSizeInBits = 8 * MemTy.getSizeInBytes();
+
+  if (MemSizeInBits != MemStoreSizeInBits) {
+    // Promote to a byte-sized load if not loading an integral number of
+    // bytes.  For example, promote EXTLOAD:i20 -> EXTLOAD:i24.
+    LLT WideMemTy = LLT::scalar(MemStoreSizeInBits);
+    MachineMemOperand *NewMMO =
+        MF.getMachineMemOperand(&MMO, MMO.getPointerInfo(), WideMemTy);
+
+    Register LoadReg = DstReg;
+    LLT LoadTy = DstTy;
+
+    // If this wasn't already an extending load, we need to widen the result
+    // register to avoid creating a load with a narrower result than the source.
+    if (MemStoreSizeInBits > DstTy.getSizeInBits()) {
+      LoadTy = WideMemTy;
+      LoadReg = MRI.createGenericVirtualRegister(WideMemTy);
+    }
+
+    if (MI.getOpcode() == TargetOpcode::G_SEXTLOAD) {
+      auto NewLoad = MIRBuilder.buildLoad(LoadTy, PtrReg, *NewMMO);
+      MIRBuilder.buildSExtInReg(LoadReg, NewLoad, MemSizeInBits);
+    } else if (MI.getOpcode() == TargetOpcode::G_ZEXTLOAD ||
+               WideMemTy == DstTy) {
+      auto NewLoad = MIRBuilder.buildLoad(LoadTy, PtrReg, *NewMMO);
+      // The extra bits are guaranteed to be zero, since we stored them that
+      // way.  A zext load from Wide thus automatically gives zext from MemVT.
+      MIRBuilder.buildAssertZExt(LoadReg, NewLoad, MemSizeInBits);
+    } else {
+      MIRBuilder.buildLoad(LoadReg, PtrReg, *NewMMO);
+    }
+
+    if (DstTy != LoadTy)
+      MIRBuilder.buildTrunc(DstReg, LoadReg);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   if (DstTy.getSizeInBits() != MMO.getSizeInBits())
     return UnableToLegalize;
@@ -2831,20 +2875,46 @@ LegalizerHelper::lowerStore(MachineInstr &MI) {
   Register SrcReg = MI.getOperand(0).getReg();
   Register PtrReg = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(SrcReg);
+  MachineFunction &MF = MIRBuilder.getMF();
   MachineMemOperand &MMO = **MI.memoperands_begin();
-  if (SrcTy.getSizeInBits() != MMO.getSizeInBits())
-    return UnableToLegalize;
+  LLT MemTy = MMO.getMemoryType();
+
   if (SrcTy.isVector())
     return UnableToLegalize;
-  if (isPowerOf2_32(SrcTy.getSizeInBits()))
+
+  unsigned StoreWidth = MemTy.getSizeInBits();
+  unsigned StoreSizeInBits = 8 * MemTy.getSizeInBytes();
+
+  if (StoreWidth != StoreSizeInBits) {
+    // Promote to a byte-sized store with upper bits zero if not
+    // storing an integral number of bytes.  For example, promote
+    // TRUNCSTORE:i1 X -> TRUNCSTORE:i8 (and X, 1)
+    LLT WideTy = LLT::scalar(StoreSizeInBits);
+
+    if (StoreSizeInBits > SrcTy.getSizeInBits()) {
+      // Avoid creating a store with a narrower source than result.
+      SrcReg = MIRBuilder.buildAnyExt(WideTy, SrcReg).getReg(0);
+      SrcTy = WideTy;
+    }
+
+    auto ZextInReg = MIRBuilder.buildZExtInReg(SrcTy, SrcReg, StoreWidth);
+
+    MachineMemOperand *NewMMO =
+        MF.getMachineMemOperand(&MMO, MMO.getPointerInfo(), WideTy);
+    MIRBuilder.buildStore(ZextInReg, PtrReg, *NewMMO);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  if (isPowerOf2_32(MemTy.getSizeInBits()))
     return UnableToLegalize; // Don't know what we're being asked to do.
 
   // Extend to the next pow-2.
-  const LLT ExtendTy = LLT::scalar(NextPowerOf2(SrcTy.getSizeInBits()));
+  const LLT ExtendTy = LLT::scalar(NextPowerOf2(MemTy.getSizeInBits()));
   auto ExtVal = MIRBuilder.buildAnyExt(ExtendTy, SrcReg);
 
   // Obtain the smaller value by shifting away the larger value.
-  uint64_t LargeSplitSize = PowerOf2Floor(SrcTy.getSizeInBits());
+  uint64_t LargeSplitSize = PowerOf2Floor(MemTy.getSizeInBits());
   uint64_t SmallSplitSize = SrcTy.getSizeInBits() - LargeSplitSize;
   auto ShiftAmt = MIRBuilder.buildConstant(ExtendTy, LargeSplitSize);
   auto SmallVal = MIRBuilder.buildLShr(ExtendTy, ExtVal, ShiftAmt);
@@ -2857,7 +2927,6 @@ LegalizerHelper::lowerStore(MachineInstr &MI) {
   auto SmallPtr =
     MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst);
 
-  MachineFunction &MF = MIRBuilder.getMF();
   MachineMemOperand *LargeMMO =
     MF.getMachineMemOperand(&MMO, 0, LargeSplitSize / 8);
   MachineMemOperand *SmallMMO =
