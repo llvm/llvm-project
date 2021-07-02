@@ -22,8 +22,9 @@
 // possible that they provide explicit guides to make it work.
 
 #include <tuple>
-#include <memory>
 #include <cassert>
+#include <functional>
+#include <memory>
 
 #include "test_macros.h"
 #include "archetypes.h"

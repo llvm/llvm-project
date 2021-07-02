@@ -88,6 +88,7 @@ template <class T, class Container>
 */
 
 #include <__config>
+#include <__memory/uses_allocator.h>
 #include <__utility/forward.h>
 #include <deque>
 

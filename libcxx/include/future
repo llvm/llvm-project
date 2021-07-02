@@ -364,6 +364,8 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__availability>
 #include <__config>
 #include <__debug>
+#include <__memory/allocator_arg_t.h>
+#include <__memory/uses_allocator.h>
 #include <__utility/__decay_copy.h>
 #include <__utility/forward.h>
 #include <chrono>

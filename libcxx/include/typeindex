@@ -45,6 +45,7 @@ struct hash<type_index>
 */
 
 #include <__config>
+#include <__functional/unary_function.h>
 #include <__functional_base>
 #include <compare>
 #include <typeinfo>
