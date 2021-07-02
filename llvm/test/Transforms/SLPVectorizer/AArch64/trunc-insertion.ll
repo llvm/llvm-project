@@ -8,21 +8,21 @@ define dso_local void @l() local_unnamed_addr {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ poison, [[BB:%.*]] ], [ [[TMP11:%.*]], [[BB25:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[BB:%.*]] ], [ [[TMP11:%.*]], [[BB25:%.*]] ]
 ; CHECK-NEXT:    br i1 undef, label [[BB3:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[I4:%.*]] = zext i1 undef to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i16> [[TMP0]], poison
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i16> [[TMP0]], undef
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <2 x i16> [[TMP1]], <i16 8, i16 8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    br label [[BB25]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    [[I12:%.*]] = zext i1 undef to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i16> [[TMP0]], poison
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i16> [[TMP0]], undef
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <2 x i16> [[TMP4]] to <2 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <2 x i64> poison, [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <2 x i64> undef, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i1> [[TMP6]] to <2 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <2 x i32> poison, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <2 x i32> undef, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i1> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    br label [[BB25]]
 ; CHECK:       bb25:
