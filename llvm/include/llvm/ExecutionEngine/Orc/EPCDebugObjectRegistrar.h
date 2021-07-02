@@ -43,7 +43,7 @@ public:
       : EPC(EPC), RegisterFn(RegisterFn) {}
 
   Error registerDebugObject(sys::MemoryBlock TargetMem) override {
-    return WrapperFunction<void(SPSTargetAddress, uint64_t)>::call(
+    return WrapperFunction<void(SPSExecutorAddress, uint64_t)>::call(
         EPCCaller(EPC, RegisterFn), pointerToJITTargetAddress(TargetMem.base()),
         static_cast<uint64_t>(TargetMem.allocatedSize()));
   }
