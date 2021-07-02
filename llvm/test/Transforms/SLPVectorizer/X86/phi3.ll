@@ -14,12 +14,12 @@ define void @Rf_GReset() {
 ; CHECK-LABEL: @Rf_GReset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* @d, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[TMP1]]
 ; CHECK-NEXT:    br i1 icmp eq (%struct.GPar.0.16.26* (...)* inttoptr (i64 115 to %struct.GPar.0.16.26* (...)*), %struct.GPar.0.16.26* (...)* @Rf_gpptr), label [[IF_THEN:%.*]], label [[IF_END7:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], poison
-; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], poison
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], undef
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP5]], [[TMP6]]
@@ -55,12 +55,12 @@ define void @Rf_GReset_unary_fneg() {
 ; CHECK-LABEL: @Rf_GReset_unary_fneg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* @d, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg <2 x double> [[TMP1]]
 ; CHECK-NEXT:    br i1 icmp eq (%struct.GPar.0.16.26* (...)* inttoptr (i64 115 to %struct.GPar.0.16.26* (...)*), %struct.GPar.0.16.26* (...)* @Rf_gpptr), label [[IF_THEN:%.*]], label [[IF_END7:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], poison
-; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], poison
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], undef
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP5]], [[TMP6]]

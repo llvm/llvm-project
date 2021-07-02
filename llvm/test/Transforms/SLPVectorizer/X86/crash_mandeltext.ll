@@ -97,10 +97,10 @@ define void @zot(%struct.hoge* %arg) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, double* undef, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[TMP]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], poison
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], undef
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_HOGE:%.*]], %struct.hoge* [[ARG:%.*]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], poison
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], poison
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], undef
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TMP7]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB12:%.*]]
