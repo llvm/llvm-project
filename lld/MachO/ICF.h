@@ -15,26 +15,7 @@
 namespace lld {
 namespace macho {
 
-class ConcatInputSection;
-
-class ICF {
-public:
-  ICF(std::vector<ConcatInputSection *> &inputs);
-
-  void run();
-  void segregate(size_t begin, size_t end,
-                 std::function<bool(const ConcatInputSection *,
-                                    const ConcatInputSection *)>
-                     equals);
-  size_t findBoundary(size_t begin, size_t end);
-  void forEachClassRange(size_t begin, size_t end,
-                         std::function<void(size_t, size_t)> func);
-  void forEachClass(std::function<void(size_t, size_t)> func);
-
-  // ICF needs a copy of the inputs vector because its equivalence-class
-  // segregation algorithm destroys the proper sequence.
-  std::vector<ConcatInputSection *> icfInputs;
-};
+void foldIdenticalSections();
 
 } // namespace macho
 } // namespace lld

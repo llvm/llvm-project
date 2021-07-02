@@ -355,12 +355,3 @@ void ConcatOutputSection::finalizeFlags(InputSection *input) {
     break;
   }
 }
-
-void ConcatOutputSection::eraseOmittedInputSections() {
-  // Remove the duplicates from inputs
-  inputs.erase(std::remove_if(inputs.begin(), inputs.end(),
-                              [](const ConcatInputSection *isec) -> bool {
-                                return isec->shouldOmitFromOutput();
-                              }),
-               inputs.end());
-}
