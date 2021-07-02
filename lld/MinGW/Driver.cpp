@@ -142,16 +142,10 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
     if (!bStatic) {
       if (Optional<std::string> s = findFile(dir, name + ".lib"))
         return *s;
-      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll")) {
-        error("lld doesn't support linking directly against " + *s +
-              ", use an import library");
-        return "";
-      }
-      if (Optional<std::string> s = findFile(dir, name + ".dll")) {
-        error("lld doesn't support linking directly against " + *s +
-              ", use an import library");
-        return "";
-      }
+      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll"))
+        return *s;
+      if (Optional<std::string> s = findFile(dir, name + ".dll"))
+        return *s;
     }
   }
   error("unable to find library -l" + name);
