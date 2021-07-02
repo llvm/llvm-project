@@ -339,6 +339,7 @@ class PrimFn:
   log = PrimFnType("log")
   mul = PrimFnType("mul")
   max = PrimFnType("max")
+  min = PrimFnType("min")
   sub = PrimFnType("sub")
 
 
@@ -364,6 +365,7 @@ class ReduceFn:
   add = PrimFn.add.reduce
   mul = PrimFn.mul.reduce
   max = PrimFn.max.reduce
+  min = PrimFn.min.reduce
 
 
 class PrimApply(TensorExpression):

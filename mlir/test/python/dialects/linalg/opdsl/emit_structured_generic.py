@@ -43,7 +43,7 @@ def conv_poly(
 
 
 @linalg_structured_op
-def pooling_poly(
+def pooling_max_poly(
     I=TensorDef(T1, S.N, S.H, S.W, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
@@ -51,6 +51,19 @@ def pooling_poly(
     dilations=AttributeDef(S.DH, S.DW)):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
   O[D.n, D.oh, D.ow, D.c] = ReduceFn.max(D.kh, D.kw)(
+      cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                D.c]))
+
+
+@linalg_structured_op
+def pooling_min_poly(
+    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min(D.kh, D.kw)(
       cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
                 D.c]))
 
@@ -216,7 +229,7 @@ with Context() as ctx, Location.unknown():
       return conv_poly(
           input, filter, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 
-    # CHECK-LABEL: @test_f32i32_pooling
+    # CHECK-LABEL: @test_f32i32_max_pooling
     # CHECK: linalg.generic
     # CHECK-SAME: indexing_maps = [#[[$CONV_MAP_I]], #[[$POOL_MAP_K]], #[[$CONV_MAP_O]]]
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
@@ -229,11 +242,11 @@ with Context() as ctx, Location.unknown():
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), i32))
-    def test_f32i32_pooling(input, shape, init_result):
-      return pooling_poly(
+    def test_f32i32_max_pooling(input, shape, init_result):
+      return pooling_max_poly(
           input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 
-    # CHECK-LABEL: @test_f32f32_pooling
+    # CHECK-LABEL: @test_f32f32_max_pooling
     # CHECK: linalg.generic
     # CHECK-SAME: indexing_maps = [#[[$CONV_MAP_I]], #[[$POOL_MAP_K]], #[[$CONV_MAP_O]]]
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction", "parallel"]
@@ -245,8 +258,26 @@ with Context() as ctx, Location.unknown():
     @builtin.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
         RankedTensorType.get((2, 4), f32))
-    def test_f32f32_pooling(input, shape, init_result):
-      return pooling_poly(
+    def test_f32f32_max_pooling(input, shape, init_result):
+      return pooling_max_poly(
+          input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
+
+    # CHECK-LABEL: @test_f32i32_min_pooling
+    # CHECK:   = cmpi slt,
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
+        RankedTensorType.get((2, 4), i32))
+    def test_f32i32_min_pooling(input, shape, init_result):
+      return pooling_min_poly(
+          input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
+
+    # CHECK-LABEL: @test_f32f32_min_pooling
+    # CHECK:   = cmpf olt,
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((2, 2), f32),
+        RankedTensorType.get((2, 4), f32))
+    def test_f32f32_min_pooling(input, shape, init_result):
+      return pooling_min_poly(
           input, shape, outs=[init_result], strides=[2, 4], dilations=[1, 2])
 
     # CHECK-LABEL: @test_i32_fill_rng
