@@ -22,9 +22,9 @@
   source_filename = "t.ll"
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64--linux"
-  
+
   @static_local_guard = external global i64, align 8
-  
+
   ; Function Attrs: optsize
   define void @f(i32 %arg) #0 {
   entry:
@@ -33,38 +33,38 @@
       i32 1, label %sw.bb
       i32 2, label %sw.bb2
     ]
-  
+
   sw.bb:                                            ; preds = %entry, %entry
     %tmp = load atomic i8, i8* bitcast (i64* @static_local_guard to i8*) acquire, align 8
     %guard.uninitialized.i = icmp eq i8 %tmp, 0
     br i1 %guard.uninitialized.i, label %init.check.i, label %return, !prof !0
-  
+
   init.check.i:                                     ; preds = %sw.bb
     tail call void @initialize_static_local(i64* nonnull @static_local_guard)
     ret void
-  
+
   sw.bb2:                                           ; preds = %entry
     tail call void @mergeable_conditional_tailcall()
     ret void
-  
+
   sw.epilog:                                        ; preds = %entry
     tail call void @mergeable_conditional_tailcall()
     ret void
-  
+
   return:                                           ; preds = %sw.bb
     ret void
   }
-  
+
   declare void @mergeable_conditional_tailcall()
-  
+
   declare void @initialize_static_local(i64*)
-  
+
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #1
-  
+
   attributes #0 = { optsize }
   attributes #1 = { nounwind }
-  
+
   !0 = !{!"branch_weights", i32 1, i32 1048575}
 
 ...
@@ -76,10 +76,10 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
-liveins:         
+registers:
+liveins:
   - { reg: '$edi', virtual-reg: '' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -96,43 +96,43 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
     liveins: $edi
-  
+
     CMP32ri8 killed $edi, 2, implicit-def $eflags
     JCC_1 %bb.2, 2, implicit $eflags
     JMP_1 %bb.1
-  
+
   bb.1.entry:
     successors: %bb.4(0x40000000), %bb.5(0x40000000)
     liveins: $eflags
-  
+
     JCC_1 %bb.4, 4, implicit killed $eflags
     JMP_1 %bb.5
-  
+
   bb.2.sw.bb:
     successors: %bb.3(0x00000800), %bb.6(0x7ffff800)
-  
-    $al = MOV8rm $rip, 1, $noreg, @static_local_guard, $noreg :: (volatile load acquire 1 from `i8* bitcast (i64* @static_local_guard to i8*)`, align 8)
+
+    $al = MOV8rm $rip, 1, $noreg, @static_local_guard, $noreg :: (volatile load acquire (s8) from `i8* bitcast (i64* @static_local_guard to i8*)`, align 8)
     TEST8rr killed $al, $al, implicit-def $eflags
     JCC_1 %bb.6, 5, implicit killed $eflags
     JMP_1 %bb.3
-  
+
   bb.3.init.check.i:
     dead $edi = MOV32ri @static_local_guard, implicit-def $rdi
     TCRETURNdi64 @initialize_static_local, 0, csr_64, implicit $rsp, implicit $rdi
-  
+
   bb.4.sw.bb2:
     TCRETURNdi64 @mergeable_conditional_tailcall, 0, csr_64, implicit $rsp
-  
+
   bb.5.sw.epilog:
     TCRETURNdi64 @mergeable_conditional_tailcall, 0, csr_64, implicit $rsp
-  
+
   bb.6.return:
     RET 0
 

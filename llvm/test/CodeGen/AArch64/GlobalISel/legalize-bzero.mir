@@ -22,7 +22,7 @@ body:             |
     ; CHECK: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %width:_(s64) = COPY $x1
-    G_BZERO %ptr(p0), %width(s64), 0 :: (store 4)
+    G_BZERO %ptr(p0), %width(s64), 0 :: (store (s32))
     RET_ReallyLR
 
 ...
@@ -41,5 +41,5 @@ body:             |
     ; CHECK: TCRETURNdi &bzero, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1
     %ptr:_(p0) = COPY $x0
     %width:_(s64) = COPY $x1
-    G_BZERO %ptr(p0), %width(s64), 1 :: (store 4)
+    G_BZERO %ptr(p0), %width(s64), 1 :: (store (s32))
     RET_ReallyLR

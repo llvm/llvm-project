@@ -50,7 +50,7 @@ body:             |
     nofpexcept WFCDB %0, %1, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -86,7 +86,7 @@ body:             |
     nofpexcept WFCDB %1, %0, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -124,7 +124,7 @@ body:             |
     nofpexcept WFCDB %1, %0, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -160,7 +160,7 @@ body:             |
     nofpexcept WFCSB %0, %1, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -196,7 +196,7 @@ body:             |
     nofpexcept WFCSB %1, %0, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -234,7 +234,7 @@ body:             |
     nofpexcept WFCSB %1, %0, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -270,7 +270,7 @@ body:             |
     nofpexcept WFKDB %0, %1, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -306,7 +306,7 @@ body:             |
     nofpexcept WFKDB %1, %0, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -344,7 +344,7 @@ body:             |
     nofpexcept WFKDB %1, %0, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -380,7 +380,7 @@ body:             |
     nofpexcept WFKSB %0, %1, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -416,7 +416,7 @@ body:             |
     nofpexcept WFKSB %1, %0, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -454,7 +454,7 @@ body:             |
     nofpexcept WFKSB %1, %0, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...
@@ -492,7 +492,7 @@ body:             |
     nofpexcept WFCSB %0, %1.subreg_h32:vr128bit, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
-    STG %4, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...

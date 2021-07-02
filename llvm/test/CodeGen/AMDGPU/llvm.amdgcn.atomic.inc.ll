@@ -20,7 +20,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 42
 ; GCN: ds_inc_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, [[K]]
 ; MIR-LABEL: @lds_atomic_inc_ret_i32
-; MIR: DS_INC_RTN_U32 {{.*}} :: (load store 4 on %{{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
+; MIR: DS_INC_RTN_U32 {{.*}} :: (load store (s32) on %{{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
 define amdgpu_kernel void @lds_atomic_inc_ret_i32(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr) #0 {
   %result = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false), !noalias !0
   store i32 %result, i32 addrspace(1)* %out

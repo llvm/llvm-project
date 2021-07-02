@@ -92,8 +92,8 @@ body:             |
     ; CHECK: [[PTR_ADD:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; CHECK: [[C1:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 344
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[PTR_ADD]](p0) :: (load 4)
-    ; CHECK: [[LOAD1:%[0-9]+]]:fpr(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+    ; CHECK: [[LOAD1:%[0-9]+]]:fpr(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32))
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:fpr(<2 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32)
     ; CHECK: $d0 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ; CHECK: RET_ReallyLR implicit $d0
@@ -102,8 +102,8 @@ body:             |
     %5:_(p0) = G_PTR_ADD %0, %4(s64)
     %6:_(s64) = G_CONSTANT i64 344
     %7:_(p0) = G_PTR_ADD %0, %6(s64)
-    %15:_(s32) = G_LOAD %5(p0) :: (load 4)
-    %20:_(s32) = G_LOAD %7(p0) :: (load 4)
+    %15:_(s32) = G_LOAD %5(p0) :: (load (s32))
+    %20:_(s32) = G_LOAD %7(p0) :: (load (s32))
     %21:_(<2 x s32>) = G_BUILD_VECTOR %15(s32), %20(s32)
     $d0 = COPY %21(<2 x s32>)
     RET_ReallyLR implicit $d0

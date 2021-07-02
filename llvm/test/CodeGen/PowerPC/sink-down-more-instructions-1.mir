@@ -337,7 +337,7 @@ body:             |
   ; CHECK: bb.5 (%ir-block.23):
   ; CHECK:   successors: %bb.7(0x2aaaaaab), %bb.6(0x55555555)
   ; CHECK:   [[RLDICR:%[0-9]+]]:g8rc = RLDICR [[PHI]], 2, 61
-  ; CHECK:   [[LWZX:%[0-9]+]]:gprc = LWZX [[COPY2]], [[RLDICR]] :: (load 4 from %ir.24, !tbaa !2)
+  ; CHECK:   [[LWZX:%[0-9]+]]:gprc = LWZX [[COPY2]], [[RLDICR]] :: (load (s32) from %ir.24, !tbaa !2)
   ; CHECK:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZX]], [[PHI2]]
   ; CHECK:   BCC 76, [[CMPLWI1]], %bb.7
   ; CHECK:   B %bb.6
@@ -359,7 +359,7 @@ body:             |
   ; CHECK:   successors: %bb.8(0x80000000)
   ; CHECK:   [[PHI3:%[0-9]+]]:gprc = PHI [[PHI1]], %bb.5, [[ISEL]], %bb.6
   ; CHECK:   [[ADD4_1:%[0-9]+]]:gprc = nsw ADD4 [[PHI3]], [[ADD4_]]
-  ; CHECK:   STWX killed [[ADD4_1]], [[COPY1]], [[RLDICR]] :: (store 4 into %ir.36, !tbaa !2)
+  ; CHECK:   STWX killed [[ADD4_1]], [[COPY1]], [[RLDICR]] :: (store (s32) into %ir.36, !tbaa !2)
   ; CHECK: bb.8 (%ir-block.37):
   ; CHECK:   [[LI8_2:%[0-9]+]]:g8rc = LI8 0
   ; CHECK:   $x3 = COPY [[LI8_2]]
@@ -394,11 +394,11 @@ body:             |
   ; CHECK:   successors: %bb.15(0x2aaaaaab), %bb.13(0x55555555)
   ; CHECK:   [[PHI8:%[0-9]+]]:gprc = PHI [[ADDI2]], %bb.11, [[ISEL1]], %bb.10
   ; CHECK:   [[ADDI8_4:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[PHI7]], 8
-  ; CHECK:   [[LWZU:%[0-9]+]]:gprc, [[LWZU1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LWZU 8, [[PHI6]] :: (load 4 from %ir.46, !tbaa !2)
+  ; CHECK:   [[LWZU:%[0-9]+]]:gprc, [[LWZU1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LWZU 8, [[PHI6]] :: (load (s32) from %ir.46, !tbaa !2)
   ; CHECK:   [[ADD4_2:%[0-9]+]]:gprc = nsw ADD4 [[LWZU]], [[PHI5]]
   ; CHECK:   [[ADD4_3:%[0-9]+]]:gprc = nsw ADD4 [[PHI8]], [[ADD4_2]]
-  ; CHECK:   STW killed [[ADD4_3]], 0, [[ADDI8_4]] :: (store 4 into %ir.44, !tbaa !2)
-  ; CHECK:   [[LWZ:%[0-9]+]]:gprc = LWZ 4, [[LWZU1]] :: (load 4 from %ir.uglygep1112.cast, !tbaa !2)
+  ; CHECK:   STW killed [[ADD4_3]], 0, [[ADDI8_4]] :: (store (s32) into %ir.44, !tbaa !2)
+  ; CHECK:   [[LWZ:%[0-9]+]]:gprc = LWZ 4, [[LWZU1]] :: (load (s32) from %ir.uglygep1112.cast, !tbaa !2)
   ; CHECK:   BCC 76, [[CMPLWI2]], %bb.15
   ; CHECK:   B %bb.13
   ; CHECK: bb.13 (%ir-block.60):
@@ -426,7 +426,7 @@ body:             |
   ; CHECK:   [[COPY15:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY [[ADDI8_4]]
   ; CHECK:   [[ADD4_4:%[0-9]+]]:gprc = nsw ADD4 [[LWZ]], [[ADD4_2]]
   ; CHECK:   [[ADD4_5:%[0-9]+]]:gprc = nsw ADD4 [[PHI9]], [[ADD4_4]]
-  ; CHECK:   STW killed [[ADD4_5]], 4, [[COPY15]] :: (store 4 into %ir.uglygep78.cast, !tbaa !2)
+  ; CHECK:   STW killed [[ADD4_5]], 4, [[COPY15]] :: (store (s32) into %ir.uglygep78.cast, !tbaa !2)
   ; CHECK:   [[ADDI8_5:%[0-9]+]]:g8rc = nuw nsw ADDI8 [[PHI4]], 2
   ; CHECK:   BDNZ8 %bb.9, implicit-def dead $ctr8, implicit $ctr8
   ; CHECK:   B %bb.3
@@ -488,7 +488,7 @@ body:             |
     successors: %bb.8(0x2aaaaaab), %bb.21(0x55555555)
 
     %76:g8rc = RLDICR %4, 2, 61
-    %77:gprc = LWZX %36, %76 :: (load 4 from %ir.24, !tbaa !2)
+    %77:gprc = LWZX %36, %76 :: (load (s32) from %ir.24, !tbaa !2)
     %7:gprc = nsw ADD4 killed %77, %6
     BCC 76, %95, %bb.8
     B %bb.21
@@ -510,7 +510,7 @@ body:             |
   bb.8 (%ir-block.33):
     %10:gprc = PHI %5, %bb.5, %91, %bb.21
     %87:gprc = nsw ADD4 %10, %7
-    STWX killed %87, %37, %76 :: (store 4 into %ir.36, !tbaa !2)
+    STWX killed %87, %37, %76 :: (store (s32) into %ir.36, !tbaa !2)
 
   bb.9 (%ir-block.37):
     %89:g8rc = LI8 0
@@ -526,7 +526,7 @@ body:             |
     %14:g8rc_and_g8rc_nox0 = PHI %2, %bb.2, %15, %bb.18
     %16:g8rc_and_g8rc_nox0 = ADDI8 %14, 8
     %15:g8rc_and_g8rc_nox0 = COPY %16
-    %54:gprc, %55:g8rc_and_g8rc_nox0 = LWZU 8, %13 :: (load 4 from %ir.46, !tbaa !2)
+    %54:gprc, %55:g8rc_and_g8rc_nox0 = LWZU 8, %13 :: (load (s32) from %ir.46, !tbaa !2)
     %17:g8rc_and_g8rc_nox0 = COPY %55
     %18:gprc_and_gprc_nor0 = COPY %11.sub_32
     %58:gprc = MULHWU %18, %57
@@ -556,9 +556,9 @@ body:             |
 
     %25:gprc = PHI %23, %bb.12, %93, %bb.19
     %67:gprc = nsw ADD4 %25, %21
-    STW killed %67, 0, %16 :: (store 4 into %ir.44, !tbaa !2)
+    STW killed %67, 0, %16 :: (store (s32) into %ir.44, !tbaa !2)
     %26:g8rc = ORI8 %11, 1
-    %68:gprc = LWZ 4, %17 :: (load 4 from %ir.uglygep1112.cast, !tbaa !2)
+    %68:gprc = LWZ 4, %17 :: (load (s32) from %ir.uglygep1112.cast, !tbaa !2)
     %27:gprc = nsw ADD4 killed %68, %21
     BCC 76, %69, %bb.16
     B %bb.20
@@ -587,7 +587,7 @@ body:             |
 
     %31:gprc = PHI %28, %bb.15, %29, %bb.16, %30, %bb.17
     %73:gprc = nsw ADD4 %31, %27
-    STW killed %73, 4, %15 :: (store 4 into %ir.uglygep78.cast, !tbaa !2)
+    STW killed %73, 4, %15 :: (store (s32) into %ir.uglygep78.cast, !tbaa !2)
     %32:g8rc = nuw nsw ADDI8 %11, 2
     %74:gprc_and_gprc_nor0 = COPY %32.sub_32
     %33:gprc_and_gprc_nor0 = ADDI killed %74, -2

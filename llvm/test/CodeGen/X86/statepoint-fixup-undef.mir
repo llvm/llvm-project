@@ -99,24 +99,24 @@ body:             |
   ; CHECK:   renamable $r14 = COPY $rdx
   ; CHECK:   renamable $r13 = COPY $rsi
   ; CHECK:   renamable $r12 = COPY $rdi
-  ; CHECK:   renamable $ebx = MOV32rm undef renamable $rax, 1, $noreg, 0, $noreg, implicit-def $rbx :: (load unordered 4 from `i32 addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   renamable $ebx = MOV32rm undef renamable $rax, 1, $noreg, 0, $noreg, implicit-def $rbx :: (load unordered (s32) from `i32 addrspace(1)* undef`, align 8, addrspace 1)
   ; CHECK: bb.1.bb7:
   ; CHECK:   liveins: $rbx, $r12, $r13, $r14, $r15
   ; CHECK:   renamable $ebp = LEA64_32r renamable $rbx, 1, $noreg, 6, $noreg
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   CALL64pcrel32 target-flags(x86-plt) @wombat, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $r13 :: (store 8 into %stack.0)
-  ; CHECK:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed renamable $r12 :: (store 8 into %stack.1)
-  ; CHECK:   MOV64mr %stack.2, 1, $noreg, 0, $noreg, renamable $r14 :: (store 8 into %stack.2)
-  ; CHECK:   MOV64mr %stack.3, 1, $noreg, 0, $noreg, killed renamable $r15 :: (store 8 into %stack.3)
+  ; CHECK:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $r13 :: (store (s64) into %stack.0)
+  ; CHECK:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed renamable $r12 :: (store (s64) into %stack.1)
+  ; CHECK:   MOV64mr %stack.2, 1, $noreg, 0, $noreg, renamable $r14 :: (store (s64) into %stack.2)
+  ; CHECK:   MOV64mr %stack.3, 1, $noreg, 0, $noreg, killed renamable $r15 :: (store (s64) into %stack.3)
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   $rdi = COPY killed renamable $r14
   ; CHECK:   $esi = COPY renamable $ebx
   ; CHECK:   $edx = COPY killed renamable $ebp
   ; CHECK:   $rcx = COPY killed renamable $rax
   ; CHECK:   $r8d = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   STATEPOINT 2, 5, 5, undef renamable $rax, $rdi, $esi, $edx, $rcx, killed $r8d, 2, 0, 2, 0, 2, 7, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.2, 0, 1, 8, %stack.3, 0, renamable $ebx, undef renamable $eax, 2, 6, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit killed $rbx :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1), (volatile load store 8 on %stack.2), (volatile load store 8 on %stack.3)
+  ; CHECK:   STATEPOINT 2, 5, 5, undef renamable $rax, $rdi, $esi, $edx, $rcx, killed $r8d, 2, 0, 2, 0, 2, 7, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.2, 0, 1, 8, %stack.3, 0, renamable $ebx, undef renamable $eax, 2, 6, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit killed $rbx :: (volatile load store (s64) on %stack.0), (volatile load store (s64) on %stack.1), (volatile load store (s64) on %stack.2), (volatile load store (s64) on %stack.3)
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   RET 0
   ; STACKMAP-LABEL: __LLVM_StackMaps:
@@ -207,7 +207,7 @@ body:             |
     renamable $r14 = COPY $rdx
     renamable $r13 = COPY $rsi
     renamable $r12 = COPY $rdi
-    renamable $ebx = MOV32rm undef renamable $rax, 1, $noreg, 0, $noreg, implicit-def $rbx :: (load unordered 4 from `i32 addrspace(1)* undef`, align 8, addrspace 1)
+    renamable $ebx = MOV32rm undef renamable $rax, 1, $noreg, 0, $noreg, implicit-def $rbx :: (load unordered (s32) from `i32 addrspace(1)* undef`, align 8, addrspace 1)
 
   bb.1.bb7:
     liveins: $rbx, $r12, $r13, $r14, $r15
@@ -216,17 +216,17 @@ body:             |
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     CALL64pcrel32 target-flags(x86-plt) @wombat, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $r13 :: (store 8 into %stack.0)
-    MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed renamable $r12 :: (store 8 into %stack.1)
-    MOV64mr %stack.2, 1, $noreg, 0, $noreg, renamable $r14 :: (store 8 into %stack.2)
-    MOV64mr %stack.3, 1, $noreg, 0, $noreg, killed renamable $r15 :: (store 8 into %stack.3)
+    MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $r13 :: (store (s64) into %stack.0)
+    MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed renamable $r12 :: (store (s64) into %stack.1)
+    MOV64mr %stack.2, 1, $noreg, 0, $noreg, renamable $r14 :: (store (s64) into %stack.2)
+    MOV64mr %stack.3, 1, $noreg, 0, $noreg, killed renamable $r15 :: (store (s64) into %stack.3)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $rdi = COPY killed renamable $r14
     $esi = COPY renamable $ebx
     $edx = COPY killed renamable $ebp
     $rcx = COPY killed renamable $rax
     $r8d = MOV32r0 implicit-def dead $eflags
-    STATEPOINT 2, 5, 5, undef renamable $rax, $rdi, $esi, $edx, $rcx, killed $r8d, 2, 0, 2, 0, 2, 7, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.2, 0, 1, 8, %stack.3, 0, renamable $ebx, undef renamable $eax, 2, 6, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit killed $rbx :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1), (volatile load store 8 on %stack.2), (volatile load store 8 on %stack.3)
+    STATEPOINT 2, 5, 5, undef renamable $rax, $rdi, $esi, $edx, $rcx, killed $r8d, 2, 0, 2, 0, 2, 7, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.2, 0, 1, 8, %stack.3, 0, renamable $ebx, undef renamable $eax, 2, 6, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit killed $rbx :: (volatile load store (s64) on %stack.0), (volatile load store (s64) on %stack.1), (volatile load store (s64) on %stack.2), (volatile load store (s64) on %stack.3)
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     RET 0
 

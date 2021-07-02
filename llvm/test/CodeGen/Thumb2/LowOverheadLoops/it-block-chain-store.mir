@@ -142,7 +142,7 @@ body:             |
   ; CHECK:   renamable $lr = t2ADDri killed renamable $r2, 3, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r2, killed renamable $lr, 19, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2STRi12 killed renamable $lr, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.iter.addr)
+  ; CHECK:   t2STRi12 killed renamable $lr, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.iter.addr)
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r12
   ; CHECK:   $r2 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.1.do.body:
@@ -150,9 +150,9 @@ body:             |
   ; CHECK:   liveins: $r0, $r1, $r2
   ; CHECK:   $lr = tMOVr $r2, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = nsw tSUBi8 killed $r2, 1, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg :: (load 16 from %ir.pSrc.addr.02, align 4)
+  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg :: (load (s128) from %ir.pSrc.addr.02, align 4)
   ; CHECK:   renamable $q0 = MVE_VMULf32 killed renamable $q0, killed renamable $q0, 0, $noreg, undef renamable $q0
-  ; CHECK:   renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 0, killed $noreg :: (store 16 into %ir.pDst.addr.01, align 4)
+  ; CHECK:   renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 0, killed $noreg :: (store (s128) into %ir.pDst.addr.01, align 4)
   ; CHECK:   dead $lr = MVE_LETP killed renamable $lr, %bb.1
   ; CHECK: bb.2.do.end:
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
@@ -173,7 +173,7 @@ body:             |
     renamable $lr = t2ADDri killed renamable $r2, 3, 14 /* CC::al */, $noreg, $noreg
     renamable $r2, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r2, killed renamable $lr, 19, 14 /* CC::al */, $noreg, $noreg
-    t2STRi12 renamable $lr, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.iter.addr)
+    t2STRi12 renamable $lr, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.iter.addr)
     $lr = t2DoLoopStart renamable $lr
     $r2 = tMOVr killed $lr, 14 /* CC::al */, $noreg
 
@@ -186,11 +186,11 @@ body:             |
     renamable $r2, dead $cpsr = nsw tSUBi8 killed $r2, 1, 14 /* CC::al */, $noreg
     renamable $r12 = nsw t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
     MVE_VPST 8, implicit $vpr
-    renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.pSrc.addr.02, align 4)
+    renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load (s128) from %ir.pSrc.addr.02, align 4)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $q0 = MVE_VMULf32 killed renamable $q0, renamable $q0, 0, $noreg, undef renamable $q0
     MVE_VPST 8, implicit $vpr
-    renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 1, killed renamable $vpr :: (store 16 into %ir.pDst.addr.01, align 4)
+    renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 1, killed renamable $vpr :: (store (s128) into %ir.pDst.addr.01, align 4)
     t2LoopEnd killed renamable $lr, %bb.1, implicit-def dead $cpsr
     tB %bb.2, 14 /* CC::al */, $noreg
 
@@ -243,7 +243,7 @@ body:             |
   ; CHECK:   renamable $lr = t2ADDri killed renamable $r2, 3, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r2, killed renamable $lr, 19, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2STRi12 killed renamable $lr, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.iter.addr)
+  ; CHECK:   t2STRi12 killed renamable $lr, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.iter.addr)
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r12
   ; CHECK:   $r2 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.1.do.body:
@@ -251,9 +251,9 @@ body:             |
   ; CHECK:   liveins: $r0, $r1, $r2
   ; CHECK:   $lr = tMOVr $r2, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = nsw tSUBi8 killed $r2, 1, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg :: (load 16 from %ir.pSrc.addr.02, align 4)
+  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg :: (load (s128) from %ir.pSrc.addr.02, align 4)
   ; CHECK:   renamable $q0 = MVE_VMULf32 killed renamable $q0, killed renamable $q0, 0, $noreg, undef renamable $q0
-  ; CHECK:   renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 0, killed $noreg :: (store 16 into %ir.pDst.addr.01, align 4)
+  ; CHECK:   renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 0, killed $noreg :: (store (s128) into %ir.pDst.addr.01, align 4)
   ; CHECK:   dead $lr = MVE_LETP killed renamable $lr, %bb.1
   ; CHECK: bb.2.do.end:
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
@@ -274,7 +274,7 @@ body:             |
     renamable $lr = t2ADDri killed renamable $r2, 3, 14 /* CC::al */, $noreg, $noreg
     renamable $r2, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r2, killed renamable $lr, 19, 14 /* CC::al */, $noreg, $noreg
-    t2STRi12 renamable $lr, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.iter.addr)
+    t2STRi12 renamable $lr, killed renamable $r3, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.iter.addr)
     $lr = t2DoLoopStart renamable $lr
     $r2 = tMOVr killed $lr, 14 /* CC::al */, $noreg
 
@@ -287,11 +287,11 @@ body:             |
     renamable $r2, dead $cpsr = nsw tSUBi8 killed $r2, 1, 14 /* CC::al */, $noreg
     renamable $r12 = nsw t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
     MVE_VPST 8, implicit $vpr
-    renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.pSrc.addr.02, align 4)
+    renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load (s128) from %ir.pSrc.addr.02, align 4)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $q0 = MVE_VMULf32 killed renamable $q0, renamable $q0, 0, $noreg, undef renamable $q0
     MVE_VPST 8, implicit $vpr
-    renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 1, killed renamable $vpr :: (store 16 into %ir.pDst.addr.01, align 4)
+    renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 1, killed renamable $vpr :: (store (s128) into %ir.pDst.addr.01, align 4)
     t2LoopEnd killed renamable $lr, %bb.1, implicit-def dead $cpsr
     tB %bb.2, 14 /* CC::al */, $noreg
 

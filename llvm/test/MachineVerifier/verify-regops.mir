@@ -10,7 +10,7 @@
 # CHECK-LABEL: fun
 
 # CHECK: *** Bad machine code: Expected a register operand. ***
-# CHECK: - instruction: %1:gr32 = XOR32rm -1, %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %fixed-stack.1, align 8)
+# CHECK: - instruction: %1:gr32 = XOR32rm -1, %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %fixed-stack.1, align 8)
 # CHECK: - operand 1:   -1
 
 # CHECK: *** Bad machine code: Expected a non-register operand. ***
@@ -25,9 +25,9 @@ fixedStack:
   - { id: 3, size: 4, alignment: 16, isImmutable: true }
 body:             |
   bb.0:
-    %0:gr32 = MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.3, align 16)
-    ; Was: %1:gr32 = XOR32rm %0, %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %fixed-stack.1, align 8)
-    %1:gr32 = XOR32rm -1, %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %fixed-stack.1, align 8)
+    %0:gr32 = MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.3, align 16)
+    ; Was: %1:gr32 = XOR32rm %0, %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %fixed-stack.1, align 8)
+    %1:gr32 = XOR32rm -1, %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %fixed-stack.1, align 8)
     ; Was: %2:gr32 = OR32ri %1, -256, implicit-def dead $eflags
     %2:gr32 = OR32ri %1, %0, implicit-def dead $eflags
     %3:gr32 = MOV32ri -1

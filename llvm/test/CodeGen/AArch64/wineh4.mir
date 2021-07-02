@@ -133,19 +133,19 @@ body:             |
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
     liveins: $x0, $x1, $d0, $d1, $d10, $d11, $d8, $d9, $x27, $x28, $x25, $x26, $x23, $x24, $x21, $x22, $x19, $x20
 
-    early-clobber $sp = frame-setup STPDpre killed $d10, killed $d11, $sp, -14 :: (store 8 into %stack.12), (store 8 into %stack.13)
+    early-clobber $sp = frame-setup STPDpre killed $d10, killed $d11, $sp, -14 :: (store (s64) into %stack.12), (store (s64) into %stack.13)
     frame-setup SEH_SaveFRegP_X 10, 11, -112
-    frame-setup STPDi killed $d8, killed $d9, $sp, 2 :: (store 8 into %stack.10), (store 8 into %stack.11)
+    frame-setup STPDi killed $d8, killed $d9, $sp, 2 :: (store (s64) into %stack.10), (store (s64) into %stack.11)
     frame-setup SEH_SaveFRegP 8, 9, 16
-    frame-setup STPXi killed $x27, killed $x28, $sp, 4 :: (store 8 into %stack.8), (store 8 into %stack.9)
+    frame-setup STPXi killed $x27, killed $x28, $sp, 4 :: (store (s64) into %stack.8), (store (s64) into %stack.9)
     frame-setup SEH_SaveRegP 27, 28, 32
-    frame-setup STPXi killed $x25, killed $x26, $sp, 6 :: (store 8 into %stack.6), (store 8 into %stack.7)
+    frame-setup STPXi killed $x25, killed $x26, $sp, 6 :: (store (s64) into %stack.6), (store (s64) into %stack.7)
     frame-setup SEH_SaveRegP 25, 26, 48
-    frame-setup STPXi killed $x23, killed $x24, $sp, 8 :: (store 8 into %stack.4), (store 8 into %stack.5)
+    frame-setup STPXi killed $x23, killed $x24, $sp, 8 :: (store (s64) into %stack.4), (store (s64) into %stack.5)
     frame-setup SEH_SaveRegP 23, 24, 64
-    frame-setup STPXi killed $x21, killed $x22, $sp, 10 :: (store 8 into %stack.2), (store 8 into %stack.3)
+    frame-setup STPXi killed $x21, killed $x22, $sp, 10 :: (store (s64) into %stack.2), (store (s64) into %stack.3)
     frame-setup SEH_SaveRegP 21, 22, 80
-    frame-setup STPXi killed $x19, killed $x20, $sp, 12 :: (store 8 into %stack.0), (store 8 into %stack.1)
+    frame-setup STPXi killed $x19, killed $x20, $sp, 12 :: (store (s64) into %stack.0), (store (s64) into %stack.1)
     frame-setup SEH_SaveRegP 19, 20, 96
     frame-setup SEH_PrologEnd
     frame-setup CFI_INSTRUCTION def_cfa_offset 112
@@ -185,19 +185,19 @@ body:             |
     $x28 = ADDXrr $x27, killed $x26
     $x0 = COPY $x28
     frame-destroy SEH_EpilogStart
-    $x19, $x20 = frame-destroy LDPXi $sp, 12 :: (load 8 from %stack.0), (load 8 from %stack.1)
+    $x19, $x20 = frame-destroy LDPXi $sp, 12 :: (load (s64) from %stack.0), (load (s64) from %stack.1)
     frame-destroy SEH_SaveRegP 19, 20, 96
-    $x21, $x22 = frame-destroy LDPXi $sp, 10 :: (load 8 from %stack.2), (load 8 from %stack.3)
+    $x21, $x22 = frame-destroy LDPXi $sp, 10 :: (load (s64) from %stack.2), (load (s64) from %stack.3)
     frame-destroy SEH_SaveRegP 21, 22, 80
-    $x23, $x24 = frame-destroy LDPXi $sp, 8 :: (load 8 from %stack.4), (load 8 from %stack.5)
+    $x23, $x24 = frame-destroy LDPXi $sp, 8 :: (load (s64) from %stack.4), (load (s64) from %stack.5)
     frame-destroy SEH_SaveRegP 23, 24, 64
-    $x25, $x26 = frame-destroy LDPXi $sp, 6 :: (load 8 from %stack.6), (load 8 from %stack.7)
+    $x25, $x26 = frame-destroy LDPXi $sp, 6 :: (load (s64) from %stack.6), (load (s64) from %stack.7)
     frame-destroy SEH_SaveRegP 25, 26, 48
-    $x27, $x28 = frame-destroy LDPXi $sp, 4 :: (load 8 from %stack.8), (load 8 from %stack.9)
+    $x27, $x28 = frame-destroy LDPXi $sp, 4 :: (load (s64) from %stack.8), (load (s64) from %stack.9)
     frame-destroy SEH_SaveRegP 27, 28, 32
-    $d8, $d9 = frame-destroy LDPDi $sp, 2 :: (load 8 from %stack.10), (load 8 from %stack.11)
+    $d8, $d9 = frame-destroy LDPDi $sp, 2 :: (load (s64) from %stack.10), (load (s64) from %stack.11)
     frame-destroy SEH_SaveFRegP 8, 9, 16
-    early-clobber $sp, $d10, $d11 = frame-destroy LDPDpost $sp, 14 :: (load 8 from %stack.12), (load 8 from %stack.13)
+    early-clobber $sp, $d10, $d11 = frame-destroy LDPDpost $sp, 14 :: (load (s64) from %stack.12), (load (s64) from %stack.13)
     frame-destroy SEH_SaveFRegP_X 10, 11, -112
     frame-destroy SEH_EpilogEnd
     RET_ReallyLR implicit $x0
@@ -208,19 +208,19 @@ body:             |
     $x0 = COPY $d11
     $x0 = ADDXrr $x0, $x0
     frame-destroy SEH_EpilogStart
-    $x19, $x20 = frame-destroy LDPXi $sp, 12 :: (load 8 from %stack.0), (load 8 from %stack.1)
+    $x19, $x20 = frame-destroy LDPXi $sp, 12 :: (load (s64) from %stack.0), (load (s64) from %stack.1)
     frame-destroy SEH_SaveRegP 19, 20, 96
-    $x21, $x22 = frame-destroy LDPXi $sp, 10 :: (load 8 from %stack.2), (load 8 from %stack.3)
+    $x21, $x22 = frame-destroy LDPXi $sp, 10 :: (load (s64) from %stack.2), (load (s64) from %stack.3)
     frame-destroy SEH_SaveRegP 21, 22, 80
-    $x23, $x24 = frame-destroy LDPXi $sp, 8 :: (load 8 from %stack.4), (load 8 from %stack.5)
+    $x23, $x24 = frame-destroy LDPXi $sp, 8 :: (load (s64) from %stack.4), (load (s64) from %stack.5)
     frame-destroy SEH_SaveRegP 23, 24, 64
-    $x25, $x26 = frame-destroy LDPXi $sp, 6 :: (load 8 from %stack.6), (load 8 from %stack.7)
+    $x25, $x26 = frame-destroy LDPXi $sp, 6 :: (load (s64) from %stack.6), (load (s64) from %stack.7)
     frame-destroy SEH_SaveRegP 25, 26, 48
-    $x27, $x28 = frame-destroy LDPXi $sp, 4 :: (load 8 from %stack.8), (load 8 from %stack.9)
+    $x27, $x28 = frame-destroy LDPXi $sp, 4 :: (load (s64) from %stack.8), (load (s64) from %stack.9)
     frame-destroy SEH_SaveRegP 27, 28, 32
-    $d8, $d9 = frame-destroy LDPDi $sp, 2 :: (load 8 from %stack.10), (load 8 from %stack.11)
+    $d8, $d9 = frame-destroy LDPDi $sp, 2 :: (load (s64) from %stack.10), (load (s64) from %stack.11)
     frame-destroy SEH_SaveFRegP 8, 9, 16
-    early-clobber $sp, $d10, $d11 = frame-destroy LDPDpost $sp, 14 :: (load 8 from %stack.12), (load 8 from %stack.13)
+    early-clobber $sp, $d10, $d11 = frame-destroy LDPDpost $sp, 14 :: (load (s64) from %stack.12), (load (s64) from %stack.13)
     frame-destroy SEH_SaveFRegP_X 10, 11, -112
     frame-destroy SEH_EpilogEnd
     RET_ReallyLR implicit $x0

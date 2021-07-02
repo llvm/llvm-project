@@ -149,7 +149,7 @@ body:             |
     $rbp = LEA64r $rsp, 1, $noreg, 48, $noreg
     frame-setup SEH_SetFrame 50, 48
     frame-setup SEH_EndPrologue
-    MOV64mi32 $rbp, 1, $noreg, -8, $noreg, -2 :: (store 8 into %fixed-stack.0)
+    MOV64mi32 $rbp, 1, $noreg, -8, $noreg, -2 :: (store (s64) into %fixed-stack.0)
     TEST8rr killed renamable $cl, renamable $cl, implicit-def $eflags
     JCC_1 %bb.1, 5, implicit $eflags
 
@@ -164,12 +164,12 @@ body:             |
     successors: %bb.6(0x00000001), %bb.8(0x7fffffff)
     liveins: $r8b
 
-    MOV32mi $rbp, 1, $noreg, -12, $noreg, 0 :: (store 4 into %stack.0)
+    MOV32mi $rbp, 1, $noreg, -12, $noreg, 0 :: (store (s32) into %stack.0)
     TEST8rr killed renamable $r8b, renamable $r8b, implicit-def $eflags
     JCC_1 %bb.6, 5, implicit $eflags
 
   bb.8.return (address-taken):
-    $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg :: (load 4 from %stack.0)
+    $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg :: (load (s32) from %stack.0)
     SEH_Epilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 48, implicit-def dead $eflags
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -213,7 +213,7 @@ body:             |
     frame-setup SEH_StackAlloc 32
     $rbp = LEA64r $rdx, 1, $noreg, 48, $noreg
     frame-setup SEH_EndPrologue
-    MOV32mi $rbp, 1, $noreg, -12, $noreg, 1 :: (store 4 into %stack.0)
+    MOV32mi $rbp, 1, $noreg, -12, $noreg, 1 :: (store (s32) into %stack.0)
     $rax = LEA64r $rip, 0, $noreg, %bb.8, $noreg
     SEH_Epilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags

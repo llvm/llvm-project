@@ -49,20 +49,20 @@ body: |
     %2:fpr64 = COPY $d0
     %1:gpr64 = COPY $x1
     %0:gpr64common = COPY $x0
-    STRXui %0, %stack.1, 0 :: (store 8)
-    STRXui %1, %stack.2, 0 :: (store 8)
-    STRDui %2, %stack.3, 0 :: (store 8)
-    STRDui %3, %stack.4, 0 :: (store 8)
+    STRXui %0, %stack.1, 0 :: (store (s64))
+    STRXui %1, %stack.2, 0 :: (store (s64))
+    STRDui %2, %stack.3, 0 :: (store (s64))
+    STRDui %3, %stack.4, 0 :: (store (s64))
 
     %4:fpr64 = FMOVDi 20
     %5:fpr64 = FADDDrr %2, killed %4
-    STRDui %5, %stack.5, 0 :: (store 8)
+    STRDui %5, %stack.5, 0 :: (store (s64))
 
     %6:gpr32 = FCVTZSUWDr %5
     STRDroW %3, %0, killed %6, 1, 1
 
-    %7:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load 8)
-    %8:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load 8)
+    %7:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
+    %8:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
 
     %9:gpr32common = FCVTZSUWDr killed %8
     %10:fpr64 = LDRDroW %7, %9, 1, 1
@@ -70,30 +70,30 @@ body: |
     %11:gpr32common = ADDWri %9, 1, 0
     STRDroW killed %10, %7, killed %11, 1, 1
 
-    %12:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load 8)
-    %13:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load 8)
+    %12:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+    %13:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
 
     %14:gpr32common = FCVTZSUWDr %12
     %15:gpr32common = ADDWri killed %14, 30, 0
     STRDroW %12, killed %13, killed %15, 1, 1
 
-    %16:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load 8)
-    STRDui killed %16, %stack.6, 0 :: (store 8)
+    %16:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+    STRDui killed %16, %stack.6, 0 :: (store (s64))
 
     %19:fpr64 = FMOVDi 112
     %46:gpr32 = MOVi32imm 408
-    %43:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load 8)
-    %44:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load 8)
+    %43:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
+    %44:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load (s64))
 
     %45:gpr32 = FCVTZSUWDr %43
     %47:gpr64common = SMADDLrrr killed %45, %46, killed %44
-    %48:fpr64 = LDRDui %stack.6, 0 :: (dereferenceable load 8)
+    %48:fpr64 = LDRDui %stack.6, 0 :: (dereferenceable load (s64))
 
     %49:gpr32 = FCVTZSUWDr killed %48
     STRDroW %43, killed %47, killed %49, 1, 1
 
-    %21:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load 8)
-    %22:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load 8)
+    %21:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load (s64))
+    %22:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
 
     %23:gpr32 = FCVTZSUWDr killed %22
     %24:gpr32 = MOVi32imm 408
@@ -103,15 +103,15 @@ body: |
     %29:fpr64 = FADDDrr killed %27, %19
     STURDi killed %29, %26, -8
 
-    %30:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load 8)
-    %31:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load 8)
+    %30:gpr64common = LDRXui %stack.1, 0 :: (dereferenceable load (s64))
+    %31:fpr64 = LDRDui %stack.5, 0 :: (dereferenceable load (s64))
 
     %32:gpr32common = FCVTZSUWDr killed %31
     %34:gpr64all = IMPLICIT_DEF
     %33:gpr64 = INSERT_SUBREG %34, %32, %subreg.sub_32
     %35:gpr64 = SBFMXri killed %33, 61, 31
     %36:fpr64 = LDRDroX killed %30, %35, 0, 0
-    %37:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load 8)
+    %37:gpr64 = LDRXui %stack.2, 0 :: (dereferenceable load (s64))
 
     %38:gpr32common = ADDWri %32, 20, 0
     %39:gpr64common = SMADDLrrr killed %38, %24, killed %37
@@ -119,7 +119,7 @@ body: |
 
     %40:gpr64 = MOVi64imm 4617315517961601024
 
-    %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load (s64))
     $w0 = COPY %42
     RET_ReallyLR implicit $w0
 

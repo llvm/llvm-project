@@ -76,7 +76,7 @@ body:             |
     liveins: $edi
 
     DBG_VALUE $edi, $noreg, !20, !DIExpression(), debug-location !23
-    MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !24 :: (store 4 into @global)
+    MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !24 :: (store (s32) into @global)
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !29
     TAILJMPd64 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit killed $al, debug-location !29
 ...

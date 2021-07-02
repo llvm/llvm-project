@@ -25,14 +25,14 @@ body: |
   bb.0:
     renamable $r0 = PS_fi %stack.0, 0
     ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
-    renamable $w0 = PS_vloadrw_ai %stack.2, 0 :: (load 128 from %stack.2)
-    V6_vS32b_ai killed renamable $r0, 0, renamable $v1 :: (store 64 into %stack.0, align 128)
+    renamable $w0 = PS_vloadrw_ai %stack.2, 0 :: (load (s1024) from %stack.2)
+    V6_vS32b_ai killed renamable $r0, 0, renamable $v1 :: (store (s512) into %stack.0, align 128)
     $r0 = A2_tfrsi 0
-    renamable $r1 = L2_loadri_io %stack.0, 4 :: (load 4 from %stack.0 + 4)
+    renamable $r1 = L2_loadri_io %stack.0, 4 :: (load (s32) from %stack.0 + 4)
     J2_call &__hexagon_divsi3, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $r0, implicit killed $r1, implicit-def $r29, implicit-def $r0
     ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
     renamable $v0 = V6_lvsplatw killed renamable $r0
-    PS_vstorerw_ai %stack.1, 0, killed renamable $w0 :: (store 128 into %stack.1)
+    PS_vstorerw_ai %stack.1, 0, killed renamable $w0 :: (store (s1024) into %stack.1)
 ...
 
 

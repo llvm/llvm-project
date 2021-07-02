@@ -23,5 +23,5 @@ body: |
     ; CHECK: CMPri killed $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
     ; CHECK: Bcc %bb.1, 1 /* CC::ne */, killed $cpsr
     ; CHECK: .3:
-    dead early-clobber renamable $r0_r1, dead early-clobber renamable $r2 = CMP_SWAP_64 killed renamable $r3, killed renamable $r4_r5, renamable $r4_r5 :: (volatile load store monotonic monotonic 8)
+    dead early-clobber renamable $r0_r1, dead early-clobber renamable $r2 = CMP_SWAP_64 killed renamable $r3, killed renamable $r4_r5, renamable $r4_r5 :: (volatile load store monotonic monotonic (s64))
 ...

@@ -192,16 +192,16 @@ body:             |
     frame-setup PUSH32r killed $esi, implicit-def $esp, implicit $esp
     CFI_INSTRUCTION def_cfa_offset 8
     CFI_INSTRUCTION offset $esi, -8
-    $esi = MOV32rm $esp, 1, _, 8, _ :: (load 4 from %fixed-stack.2)
+    $esi = MOV32rm $esp, 1, _, 8, _ :: (load (s32) from %fixed-stack.2)
     DBG_VALUE $esp, 0, !26, !10, debug-location !25
     DBG_VALUE $esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
     CALLpcrel32 @getString, csr_32, implicit $esp, implicit-def $esp, implicit-def $eax, debug-location !29
-    $ecx = MOV32rm $eax, 1, _, 0, _, debug-location !29 :: (dereferenceable load 4 from %ir.1)
-    $edx = MOV32rm $eax, 1, _, 4, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 4)
-    MOV32mr $esi, 1, _, 0, _, killed $ecx, debug-location !29 :: (store 4 into %ir.0)
-    MOV32mr $esi, 1, _, 4, _, killed $edx, debug-location !29 :: (store 4 into %ir.0 + 4)
-    $eax = MOV32rm killed $eax, 1, _, 8, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 8)
-    MOV32mr $esi, 1, _, 8, _, killed $eax, debug-location !29 :: (store 4 into %ir.0 + 8)
+    $ecx = MOV32rm $eax, 1, _, 0, _, debug-location !29 :: (dereferenceable load (s32) from %ir.1)
+    $edx = MOV32rm $eax, 1, _, 4, _, debug-location !29 :: (dereferenceable load (s32) from %ir.1 + 4)
+    MOV32mr $esi, 1, _, 0, _, killed $ecx, debug-location !29 :: (store (s32) into %ir.0)
+    MOV32mr $esi, 1, _, 4, _, killed $edx, debug-location !29 :: (store (s32) into %ir.0 + 4)
+    $eax = MOV32rm killed $eax, 1, _, 8, _, debug-location !29 :: (dereferenceable load (s32) from %ir.1 + 8)
+    MOV32mr $esi, 1, _, 8, _, killed $eax, debug-location !29 :: (store (s32) into %ir.0 + 8)
     $eax = COPY killed $esi, debug-location !30
     $esi = POP32r implicit-def $esp, implicit $esp, debug-location !30
     RET 0, $eax, debug-location !30
@@ -243,10 +243,10 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    $eax = MOV32rm $esp, 1, _, 4, _ :: (load 4 from %fixed-stack.1)
-    $eax = MOV32rm killed $eax, 1, _, 0, _, debug-location !34 :: (load 4 from %ir.0)
+    $eax = MOV32rm $esp, 1, _, 4, _ :: (load (s32) from %fixed-stack.1)
+    $eax = MOV32rm killed $eax, 1, _, 0, _, debug-location !34 :: (load (s32) from %ir.0)
     DBG_VALUE $eax, 0, !35, !DIExpression(DW_OP_constu, 4, DW_OP_minus), debug-location !34
-    $eax = ADD32rm killed $eax, $esp, 1, _, 8, _, implicit-def dead $eflags, debug-location !36 :: (load 4 from %fixed-stack.0)
+    $eax = ADD32rm killed $eax, $esp, 1, _, 8, _, implicit-def dead $eflags, debug-location !36 :: (load (s32) from %fixed-stack.0)
     RET 0, $eax, debug-location !36
 
 ...

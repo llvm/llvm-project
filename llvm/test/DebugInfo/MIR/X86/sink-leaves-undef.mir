@@ -83,7 +83,7 @@ body:             |
     DBG_VALUE %4, $noreg, !10, !DIExpression(), debug-location !16
     %3:gr32 = COPY $edi
     DBG_VALUE %3, $noreg, !9, !DIExpression(), debug-location !14
-    %0:gr32 = MOV32rm %4, 1, $noreg, 0, $noreg, debug-location !15 :: (load 4 from %ir.c, align 1)
+    %0:gr32 = MOV32rm %4, 1, $noreg, 0, $noreg, debug-location !15 :: (load (s32) from %ir.c, align 1)
     DBG_VALUE %0, $noreg, !12, !DIExpression(), debug-location !15
     %5:gr32 = MOV32r0 implicit-def dead $eflags
     %6:gr32 = SUB32ri8 %3, 42, implicit-def $eflags, debug-location !17

@@ -51,7 +51,7 @@ constants:       []
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
-    renamable $ax = MOV16rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 2 from %fixed-stack.0, align 8)
+    renamable $ax = MOV16rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s16) from %fixed-stack.0, align 8)
     DBG_VALUE %fixed-stack.0, 0, !32, !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value), debug-location !34
     RET 0, $ax
 ...

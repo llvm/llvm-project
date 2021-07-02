@@ -104,7 +104,7 @@ body:  |
     JCC_1 %bb.5, 4, implicit killed $eflags, debug-location !17
   bb.4:
   liveins: $rax, $rbp
-    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rbp :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rbp :: (store (s64) into %stack.0)
     JMP_1 %bb.6
   bb.5:
   liveins: $rax, $rbp

@@ -13,10 +13,10 @@ body:             |
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
   ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store 8 into %stack.0, align 4, addrspace 5)
+  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
+  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
   ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
@@ -48,14 +48,14 @@ body:             |
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
   ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store 8 into %stack.0, align 4, addrspace 5)
+  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
+  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
   ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, implicit $exec
   ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
-  ; GCN:   SI_SPILL_V32_SAVE $vgpr2, %stack.1, $sgpr32, 0, implicit $exec :: (store 4 into %stack.1, addrspace 5)
+  ; GCN:   SI_SPILL_V32_SAVE $vgpr2, %stack.1, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
   ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.2:
@@ -90,12 +90,12 @@ body:             |
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
   ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store 8 into %stack.0, align 4, addrspace 5)
+  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
+  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; GCN:   renamable $vgpr2 = V_ADD_U32_e32 1, undef $vgpr0, implicit $exec
-  ; GCN:   SI_SPILL_V32_SAVE $vgpr2, %stack.1, $sgpr32, 0, implicit $exec :: (store 4 into %stack.1, addrspace 5)
+  ; GCN:   SI_SPILL_V32_SAVE $vgpr2, %stack.1, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
   ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.2:
@@ -126,13 +126,13 @@ body:             |
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
   ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store 8 into %stack.0, align 4, addrspace 5)
+  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
+  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, undef renamable $vgpr0, 0, 0, implicit $exec
   ; GCN:   renamable $vgpr0 = V_ADD_U32_e64 1, 1, 0, implicit $exec
-  ; GCN:   SI_SPILL_V32_SAVE killed $vgpr0, %stack.1, $sgpr32, 0, implicit $exec :: (store 4 into %stack.1, addrspace 5)
+  ; GCN:   SI_SPILL_V32_SAVE killed $vgpr0, %stack.1, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
@@ -162,10 +162,10 @@ body:             |
   ; GCN: bb.0:
   ; GCN:   successors: %bb.1(0x80000000)
   ; GCN:   liveins: $vgpr0_vgpr1
-  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store 8 into %stack.0, align 4, addrspace 5)
+  ; GCN:   SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN: bb.1:
   ; GCN:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
+  ; GCN:   $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; GCN:   undef renamable $vgpr3 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit-def dead $vgpr2_vgpr3
   ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, undef renamable $vgpr1, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec

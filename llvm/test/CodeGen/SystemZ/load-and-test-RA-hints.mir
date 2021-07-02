@@ -140,8 +140,8 @@ body:             |
   bb.3.bb1:
     successors: %bb.7(0x30000000), %bb.4(0x50000000)
   
-    %5:grx32bit = LMux %21, 0, $noreg :: (load 4 from %ir.lsr.iv35, !tbaa !1)
-    %6:grx32bit = LMux undef %19:addr64bit, 0, $noreg :: (load 4 from `i32* undef`, !tbaa !1)
+    %5:grx32bit = LMux %21, 0, $noreg :: (load (s32) from %ir.lsr.iv35, !tbaa !1)
+    %6:grx32bit = LMux undef %19:addr64bit, 0, $noreg :: (load (s32) from `i32* undef`, !tbaa !1)
     CHIMux %6, 0, implicit-def $cc
     BRC 14, 6, %bb.4, implicit killed $cc
   
@@ -149,7 +149,7 @@ body:             |
     J %bb.5
   
   bb.4.bb8:
-    %20:grx32bit = LMux %22, 0, $noreg :: (load 4 from %ir.0, !tbaa !1)
+    %20:grx32bit = LMux %22, 0, $noreg :: (load (s32) from %ir.0, !tbaa !1)
     CHIMux %20, 0, implicit-def $cc
     %25:grx32bit = LOCRMux %25, %5, 14, 8, implicit $cc
     %24:grx32bit = LOCRMux %24, %23, 14, 8, implicit killed $cc

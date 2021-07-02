@@ -36,8 +36,8 @@ body:             |
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
-    %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
+    %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
 
     %5 = V_AND_B32_e32 65535, %3, implicit $exec
     %6 = V_LSHRREV_B32_e64 16, %4, implicit $exec
@@ -51,7 +51,7 @@ body:             |
 
     %13 = V_OR_B32_e64 %10, %12, implicit $exec
 
-    FLAT_STORE_DWORD %0, %13, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %13, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31
 
@@ -88,14 +88,14 @@ body:             |
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
-    %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
+    %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
 
     %9:vgpr_32 = V_LSHRREV_B16_e64 8, %3, implicit $exec
     %10:sreg_32_xm0 = S_MOV_B32 255
     %11:vgpr_32 = V_AND_B32_e64 %3, killed %10, implicit $exec
     %17:vgpr_32 = V_MOV_B32_sdwa 0, %4, 0, 5, 2, 4, implicit $exec, implicit %11(tied-def 0)
-    FLAT_STORE_DWORD %0, %17, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %17, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     S_ENDPGM 0
 
 ...
@@ -131,14 +131,14 @@ body:             |
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
-    %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
+    %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
 
     %9:vgpr_32 = V_LSHRREV_B16_e64 8, %3, implicit $exec
     %10:sreg_32_xm0 = S_MOV_B32 65535
     %11:vgpr_32 = V_AND_B32_e64 %3, killed %10, implicit $exec
     %17:vgpr_32 = V_MOV_B32_sdwa 0, %4, 0, 5, 2, 4, implicit $exec, implicit %11(tied-def 0)
-    FLAT_STORE_DWORD %0, %17, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %17, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     S_ENDPGM 0
 
 ...

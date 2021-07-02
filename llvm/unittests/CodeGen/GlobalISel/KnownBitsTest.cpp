@@ -263,7 +263,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsPtrToIntViceVersa) {
 TEST_F(AArch64GISelMITest, TestKnownBitsAND) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 52
    %mask1:_(s8) = G_CONSTANT i8 10
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -295,7 +295,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAND) {
 TEST_F(AArch64GISelMITest, TestKnownBitsOR) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 52
    %mask1:_(s8) = G_CONSTANT i8 10
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -327,7 +327,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsOR) {
 TEST_F(AArch64GISelMITest, TestKnownBitsXOR) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 52
    %mask1:_(s8) = G_CONSTANT i8 10
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -378,7 +378,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsXORConstant) {
 TEST_F(AArch64GISelMITest, TestKnownBitsASHR) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 38
    %mask1:_(s8) = G_CONSTANT i8 202
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -422,7 +422,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsASHR) {
 TEST_F(AArch64GISelMITest, TestKnownBitsLSHR) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 38
    %mask1:_(s8) = G_CONSTANT i8 202
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -466,7 +466,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsLSHR) {
 TEST_F(AArch64GISelMITest, TestKnownBitsSHL) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 51
    %mask1:_(s8) = G_CONSTANT i8 72
    %tmp:_(s8) = G_AND %unknown, %mask0
@@ -494,7 +494,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSHL) {
 TEST_F(AArch64GISelMITest, TestKnownBitsADD) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s16) = G_LOAD %ptr(p0) :: (load 2)
+   %unknown:_(s16) = G_LOAD %ptr(p0) :: (load (s16))
    %mask0:_(s16) = G_CONSTANT i16 4642
    %mask1:_(s16) = G_CONSTANT i16 9536
    %tmp0:_(s16) = G_AND %unknown, %mask0
@@ -527,7 +527,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsADD) {
 TEST_F(AArch64GISelMITest, TestKnownBitsSUB) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s16) = G_LOAD %ptr(p0) :: (load 2)
+   %unknown:_(s16) = G_LOAD %ptr(p0) :: (load (s16))
    %mask0:_(s16) = G_CONSTANT i16 4642
    %mask1:_(s16) = G_CONSTANT i16 9536
    %tmp0:_(s16) = G_AND %unknown, %mask0
@@ -557,7 +557,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSUB) {
 TEST_F(AArch64GISelMITest, TestKnownBitsMUL) {
   StringRef MIRString = R"(
    %ptr0:_(p0) = G_IMPLICIT_DEF
-   %load0:_(s16) = G_LOAD %ptr0(p0) :: (load 2)
+   %load0:_(s16) = G_LOAD %ptr0(p0) :: (load (s16))
    %mask0:_(s16) = G_CONSTANT i16 4
    %mask1:_(s16) = G_CONSTANT i16 18
    %tmp:_(s16) = G_AND %load0, %mask0
@@ -636,7 +636,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsFCMP) {
 TEST_F(AArch64GISelMITest, TestKnownBitsSelect) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 24
    %mask1:_(s8) = G_CONSTANT i8 224
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -747,7 +747,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsConstant) {
 
 TEST_F(AArch64GISelMITest, TestNumSignBitsSext) {
   StringRef MIRString = "  %3:_(p0) = G_IMPLICIT_DEF\n"
-                        "  %4:_(s8) = G_LOAD %3 :: (load 1)\n"
+                        "  %4:_(s8) = G_LOAD %3 :: (load (s8))\n"
                         "  %5:_(s32) = G_SEXT %4\n"
                         "  %6:_(s32) = COPY %5\n"
 
@@ -768,7 +768,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSext) {
 TEST_F(AArch64GISelMITest, TestNumSignBitsSextInReg) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %load4:_(s32) = G_LOAD %ptr :: (load 4)
+   %load4:_(s32) = G_LOAD %ptr :: (load (s32))
 
    %inreg7:_(s32) = G_SEXT_INREG %load4, 7
    %copy_inreg7:_(s32) = COPY %inreg7
@@ -782,7 +782,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSextInReg) {
    %inreg31:_(s32) = G_SEXT_INREG %load4, 31
    %copy_inreg31:_(s32) = COPY %inreg31
 
-   %load1:_(s8) = G_LOAD %ptr :: (load 1)
+   %load1:_(s8) = G_LOAD %ptr :: (load (s8))
    %sext_load1:_(s32) = G_SEXT %load1
 
    %inreg6_sext:_(s32) = G_SEXT_INREG %sext_load1, 6
@@ -832,7 +832,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSextInReg) {
 TEST_F(AArch64GISelMITest, TestNumSignBitsAssertSext) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %load4:_(s32) = G_LOAD %ptr :: (load 4)
+   %load4:_(s32) = G_LOAD %ptr :: (load (s32))
 
    %assert_sext1:_(s32) = G_ASSERT_SEXT %load4, 1
    %copy_assert_sext1:_(s32) = COPY %assert_sext1
@@ -849,7 +849,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsAssertSext) {
    %assert_sext31:_(s32) = G_ASSERT_SEXT %load4, 31
    %copy_assert_sext31:_(s32) = COPY %assert_sext31
 
-   %load1:_(s8) = G_LOAD %ptr :: (load 1)
+   %load1:_(s8) = G_LOAD %ptr :: (load (s8))
    %sext_load1:_(s32) = G_SEXT %load1
 
    %assert_sext6_sext:_(s32) = G_ASSERT_SEXT %sext_load1, 6
@@ -900,7 +900,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsAssertSext) {
 
 TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
   StringRef MIRString = "  %3:_(p0) = G_IMPLICIT_DEF\n"
-                        "  %4:_(s32) = G_LOAD %3 :: (load 4)\n"
+                        "  %4:_(s32) = G_LOAD %3 :: (load (s32))\n"
                         "  %5:_(s8) = G_TRUNC %4\n"
                         "  %6:_(s8) = COPY %5\n"
 
@@ -928,16 +928,16 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsTrunc) {
   StringRef MIRString =
     "  %3:_(<4 x s32>) = G_IMPLICIT_DEF\n"
     "  %4:_(s32) = G_IMPLICIT_DEF\n"
-    "  %5:_(s32) = G_AMDGPU_BUFFER_LOAD_UBYTE %3, %4, %4, %4, 0, 0, 0 :: (load 1)\n"
+    "  %5:_(s32) = G_AMDGPU_BUFFER_LOAD_UBYTE %3, %4, %4, %4, 0, 0, 0 :: (load (s8))\n"
     "  %6:_(s32) = COPY %5\n"
 
-    "  %7:_(s32) = G_AMDGPU_BUFFER_LOAD_SBYTE %3, %4, %4, %4, 0, 0, 0 :: (load 1)\n"
+    "  %7:_(s32) = G_AMDGPU_BUFFER_LOAD_SBYTE %3, %4, %4, %4, 0, 0, 0 :: (load (s8))\n"
     "  %8:_(s32) = COPY %7\n"
 
-    "  %9:_(s32) = G_AMDGPU_BUFFER_LOAD_USHORT %3, %4, %4, %4, 0, 0, 0 :: (load 2)\n"
+    "  %9:_(s32) = G_AMDGPU_BUFFER_LOAD_USHORT %3, %4, %4, %4, 0, 0, 0 :: (load (s16))\n"
     "  %10:_(s32) = COPY %9\n"
 
-    "  %11:_(s32) = G_AMDGPU_BUFFER_LOAD_SSHORT %3, %4, %4, %4, 0, 0, 0 :: (load 2)\n"
+    "  %11:_(s32) = G_AMDGPU_BUFFER_LOAD_SSHORT %3, %4, %4, %4, 0, 0, 0 :: (load (s16))\n"
     "  %12:_(s32) = COPY %11\n";
 
   setUp(MIRString);
@@ -1011,7 +1011,7 @@ TEST_F(AMDGPUGISelMITest, TestIsKnownToBeAPowerOfTwo) {
   %copy_trunc_five:_(s1) = COPY %trunc_five
 
   %ptr:_(p1) = G_IMPLICIT_DEF
-  %shift_amt:_(s32) = G_LOAD %ptr :: (load 4, addrspace 1)
+  %shift_amt:_(s32) = G_LOAD %ptr :: (load (s32), addrspace 1)
 
   %shl_1:_(s32) = G_SHL %one, %shift_amt
   %copy_shl_1:_(s32) = COPY %shl_1
@@ -1019,7 +1019,7 @@ TEST_F(AMDGPUGISelMITest, TestIsKnownToBeAPowerOfTwo) {
   %shl_2:_(s32) = G_SHL %two, %shift_amt
   %copy_shl_2:_(s32) = COPY %shl_2
 
-  %not_sign_mask:_(s32) = G_LOAD %ptr :: (load 4, addrspace 1)
+  %not_sign_mask:_(s32) = G_LOAD %ptr :: (load (s32), addrspace 1)
   %sign_mask:_(s32) = G_CONSTANT i32 -2147483648
 
   %lshr_not_sign_mask:_(s32) = G_LSHR %not_sign_mask, %shift_amt
@@ -1072,7 +1072,7 @@ TEST_F(AMDGPUGISelMITest, TestIsKnownToBeAPowerOfTwo) {
 
 TEST_F(AArch64GISelMITest, TestMetadata) {
   StringRef MIRString = "  %imp:_(p0) = G_IMPLICIT_DEF\n"
-                        "  %load:_(s8) = G_LOAD %imp(p0) :: (load 1)\n"
+                        "  %load:_(s8) = G_LOAD %imp(p0) :: (load (s8))\n"
                         "  %ext:_(s32) = G_ZEXT %load(s8)\n"
                         "  %cst:_(s32) = G_CONSTANT i32 1\n"
                         "  %and:_(s32) = G_AND %ext, %cst\n"
@@ -1390,7 +1390,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
 TEST_F(AArch64GISelMITest, TestKnownBitsUMAX) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 10
    %mask1:_(s8) = G_CONSTANT i8 1
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -1471,7 +1471,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMax) {
 TEST_F(AArch64GISelMITest, TestKnownBitsUMIN) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 10
    %mask1:_(s8) = G_CONSTANT i8 1
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -1505,7 +1505,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMIN) {
 TEST_F(AArch64GISelMITest, TestKnownBitsSMAX) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 128
    %mask1:_(s8) = G_CONSTANT i8 64
    %tmp0:_(s8) = G_AND %unknown, %mask0
@@ -1540,7 +1540,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSMAX) {
 TEST_F(AArch64GISelMITest, TestKnownBitsSMIN) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
-   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load 1)
+   %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
    %mask0:_(s8) = G_CONSTANT i8 128
    %mask1:_(s8) = G_CONSTANT i8 64
    %tmp0:_(s8) = G_AND %unknown, %mask0

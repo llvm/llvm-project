@@ -202,7 +202,7 @@ define void @bit_test_block_incomplete_phi() {
   ; CHECK:   successors:
   ; CHECK: bb.3.if.end:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[DEF1]](p0) :: (load 8 from `i8** undef`)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[DEF1]](p0) :: (load (p0) from `i8** undef`)
   ; CHECK: bb.4.return:
   ; CHECK:   [[PHI:%[0-9]+]]:_(s1) = G_PHI [[C]](s1), %bb.3, [[C1]](s1), %bb.5
   ; CHECK:   RET_ReallyLR

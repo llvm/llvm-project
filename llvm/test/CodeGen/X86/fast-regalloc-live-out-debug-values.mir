@@ -141,29 +141,29 @@ body:             |
   ; CHECK:   frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp, debug-location !13
   ; CHECK:   $rsp = frame-setup SUB64ri8 $rsp, 40, implicit-def dead $eflags
   ; CHECK:   CFI_INSTRUCTION offset $rbx, -24
-  ; CHECK:   renamable $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg, debug-location !13 :: (dereferenceable load 4 from %ir.a.addr)
+  ; CHECK:   renamable $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg, debug-location !13 :: (dereferenceable load (s32) from %ir.a.addr)
   ; CHECK:   renamable $rax = KILL killed renamable $eax, debug-location !13
   ; CHECK:   $rcx = MOV64rr $rsp, debug-location !14
-  ; CHECK:   MOV64mr $rbp, 1, $noreg, -40, $noreg, $rcx :: (store 8 into %stack.4)
+  ; CHECK:   MOV64mr $rbp, 1, $noreg, -40, $noreg, $rcx :: (store (s64) into %stack.4)
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
   ; CHECK:   $rsp = MOV64rr $rcx, debug-location !14
-  ; CHECK:   MOV64mr $rbp, 1, $noreg, -24, $noreg, killed renamable $rax, debug-location !14 :: (store 8 into %ir.__vla_expr0)
+  ; CHECK:   MOV64mr $rbp, 1, $noreg, -24, $noreg, killed renamable $rax, debug-location !14 :: (store (s64) into %ir.__vla_expr0)
   ; CHECK:   DBG_VALUE renamable $rcx, 0, !18, !DIExpression(), debug-location !22
-  ; CHECK:   MOV32mi $rbp, 1, $noreg, -28, $noreg, 0, debug-location !25 :: (store 4 into %ir.i)
+  ; CHECK:   MOV32mi $rbp, 1, $noreg, -28, $noreg, 0, debug-location !25 :: (store (s32) into %ir.i)
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
   ; CHECK: bb.1.for.cond:
   ; CHECK:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
-  ; CHECK:   renamable $eax = MOV32rm $rbp, 1, $noreg, -28, $noreg, debug-location !27 :: (load 4 from %ir.i)
-  ; CHECK:   CMP32rm killed renamable $eax, $rbp, 1, $noreg, -12, $noreg, implicit-def $eflags, debug-location !30 :: (load 4 from %ir.a.addr)
+  ; CHECK:   renamable $eax = MOV32rm $rbp, 1, $noreg, -28, $noreg, debug-location !27 :: (load (s32) from %ir.i)
+  ; CHECK:   CMP32rm killed renamable $eax, $rbp, 1, $noreg, -12, $noreg, implicit-def $eflags, debug-location !30 :: (load (s32) from %ir.a.addr)
   ; CHECK:   JCC_1 %bb.4, 13, implicit killed $eflags, debug-location !31
   ; CHECK: bb.2.for.body:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
-  ; CHECK:   $rax = MOV64rm $rbp, 1, $noreg, -40, $noreg :: (load 8 from %stack.4)
-  ; CHECK:   renamable $edx = MOV32rm $rbp, 1, $noreg, -12, $noreg, debug-location !32 :: (load 4 from %ir.a.addr)
-  ; CHECK:   renamable $rcx = MOVSX64rm32 $rbp, 1, $noreg, -28, $noreg, debug-location !36 :: (load 4 from %ir.i)
-  ; CHECK:   MOV32mr renamable $rax, 4, killed renamable $rcx, 0, $noreg, killed renamable $edx, debug-location !37 :: (store 4 into %ir.arrayidx)
+  ; CHECK:   $rax = MOV64rm $rbp, 1, $noreg, -40, $noreg :: (load (s64) from %stack.4)
+  ; CHECK:   renamable $edx = MOV32rm $rbp, 1, $noreg, -12, $noreg, debug-location !32 :: (load (s32) from %ir.a.addr)
+  ; CHECK:   renamable $rcx = MOVSX64rm32 $rbp, 1, $noreg, -28, $noreg, debug-location !36 :: (load (s32) from %ir.i)
+  ; CHECK:   MOV32mr renamable $rax, 4, killed renamable $rcx, 0, $noreg, killed renamable $edx, debug-location !37 :: (store (s32) into %ir.arrayidx)
   ; CHECK: bb.3.for.inc:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
@@ -171,12 +171,12 @@ body:             |
   ; CHECK: bb.4.for.end:
   ; CHECK:   DBG_VALUE $rbp, 0, !18, !DIExpression(DW_OP_constu, 40, DW_OP_minus, DW_OP_deref), debug-location !22
   ; CHECK:   $rax = IMPLICIT_DEF
-  ; CHECK:   $rax = MOV64rm $rbp, 1, $noreg, -40, $noreg :: (load 8 from %stack.4)
+  ; CHECK:   $rax = MOV64rm $rbp, 1, $noreg, -40, $noreg :: (load (s64) from %stack.4)
   ; CHECK:   dead $rbx = IMPLICIT_DEF
   ; CHECK:   dead $rcx = IMPLICIT_DEF
   ; CHECK:   dead $rdx = IMPLICIT_DEF
   ; CHECK:   renamable $rcx = IMPLICIT_DEF
-  ; CHECK:   renamable $eax = MOV32rm killed renamable $rax, 4, killed renamable $rcx, 0, $noreg, debug-location !44 :: (load 4 from %ir.arrayidx3)
+  ; CHECK:   renamable $eax = MOV32rm killed renamable $rax, 4, killed renamable $rcx, 0, $noreg, debug-location !44 :: (load (s32) from %ir.arrayidx3)
   ; CHECK:   $rsp = LEA64r $rbp, 1, $noreg, -8, $noreg, debug-location !45
   ; CHECK:   $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !45
   ; CHECK:   $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !45
@@ -186,25 +186,25 @@ body:             |
     liveins: $edi
 
     %0:gr32 = COPY $edi
-    %1:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg, debug-location !13 :: (dereferenceable load 4 from %ir.a.addr)
+    %1:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg, debug-location !13 :: (dereferenceable load (s32) from %ir.a.addr)
     %2:gr64_nosp = SUBREG_TO_REG 0, killed %1, %subreg.sub_32bit, debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !14
     %3:gr64 = COPY $rsp, debug-location !14
     $rsp = COPY %3, debug-location !14
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !14
-    MOV64mr %stack.1.__vla_expr0, 1, $noreg, 0, $noreg, %2, debug-location !14 :: (store 8 into %ir.__vla_expr0)
+    MOV64mr %stack.1.__vla_expr0, 1, $noreg, 0, $noreg, %2, debug-location !14 :: (store (s64) into %ir.__vla_expr0)
     DBG_VALUE %3, 0, !18, !DIExpression(), debug-location !22
-    MOV32mi %stack.2.i, 1, $noreg, 0, $noreg, 0, debug-location !25 :: (store 4 into %ir.i)
+    MOV32mi %stack.2.i, 1, $noreg, 0, $noreg, 0, debug-location !25 :: (store (s32) into %ir.i)
 
   bb.1.for.cond:
-    %4:gr32 = MOV32rm %stack.2.i, 1, $noreg, 0, $noreg, debug-location !27 :: (load 4 from %ir.i)
-    CMP32rm %4, %stack.0.a.addr, 1, $noreg, 0, $noreg, implicit-def $eflags, debug-location !30 :: (load 4 from %ir.a.addr)
+    %4:gr32 = MOV32rm %stack.2.i, 1, $noreg, 0, $noreg, debug-location !27 :: (load (s32) from %ir.i)
+    CMP32rm %4, %stack.0.a.addr, 1, $noreg, 0, $noreg, implicit-def $eflags, debug-location !30 :: (load (s32) from %ir.a.addr)
     JCC_1 %bb.4, 13, implicit $eflags, debug-location !31
 
   bb.2.for.body:
-    %5:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg, debug-location !32 :: (load 4 from %ir.a.addr)
-    %6:gr64_nosp = MOVSX64rm32 %stack.2.i, 1, $noreg, 0, $noreg, debug-location !36 :: (load 4 from %ir.i)
-    MOV32mr %3, 4, %6, 0, $noreg, killed %5, debug-location !37 :: (store 4 into %ir.arrayidx)
+    %5:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg, debug-location !32 :: (load (s32) from %ir.a.addr)
+    %6:gr64_nosp = MOVSX64rm32 %stack.2.i, 1, $noreg, 0, $noreg, debug-location !36 :: (load (s32) from %ir.i)
+    MOV32mr %3, 4, %6, 0, $noreg, killed %5, debug-location !37 :: (store (s32) into %ir.arrayidx)
 
   bb.3.for.inc:
     JMP_1 %bb.1, debug-location !39
@@ -215,7 +215,7 @@ body:             |
     $rcx = IMPLICIT_DEF
     $rdx = IMPLICIT_DEF
     %7:gr64_nosp = IMPLICIT_DEF
-    %8:gr32 = MOV32rm %3, 4, %7, 0, $noreg, debug-location !44 :: (load 4 from %ir.arrayidx3)
+    %8:gr32 = MOV32rm %3, 4, %7, 0, $noreg, debug-location !44 :: (load (s32) from %ir.arrayidx3)
     $eax = COPY %8, debug-location !45
     RETQ implicit $eax, debug-location !45
 

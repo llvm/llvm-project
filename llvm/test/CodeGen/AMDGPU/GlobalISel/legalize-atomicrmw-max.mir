@@ -11,10 +11,10 @@ body: |
     ; CHECK-LABEL: name: atomicrmw_max_global_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK: [[ATOMICRMW_MAX:%[0-9]+]]:_(s32) = G_ATOMICRMW_MAX [[COPY]](p1), [[COPY1]] :: (load store seq_cst 4, addrspace 1)
+    ; CHECK: [[ATOMICRMW_MAX:%[0-9]+]]:_(s32) = G_ATOMICRMW_MAX [[COPY]](p1), [[COPY1]] :: (load store seq_cst (s32), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
-    %2:_(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store seq_cst 4, addrspace 1)
+    %2:_(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store seq_cst (s32), addrspace 1)
 ...
 
 ---
@@ -26,10 +26,10 @@ body: |
     ; CHECK-LABEL: name: atomicrmw_max_local_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; CHECK: [[ATOMICRMW_MAX:%[0-9]+]]:_(s32) = G_ATOMICRMW_MAX [[COPY]](p3), [[COPY1]] :: (load store seq_cst 4, addrspace 3)
+    ; CHECK: [[ATOMICRMW_MAX:%[0-9]+]]:_(s32) = G_ATOMICRMW_MAX [[COPY]](p3), [[COPY1]] :: (load store seq_cst (s32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store seq_cst 4, addrspace 3)
+    %2:_(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store seq_cst (s32), addrspace 3)
 ...
 
 ---
@@ -41,10 +41,10 @@ body: |
     ; CHECK-LABEL: name: atomicrmw_max_global_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK: [[ATOMICRMW_MAX:%[0-9]+]]:_(s32) = G_ATOMICRMW_MAX [[COPY]](p1), [[COPY1]] :: (load store seq_cst 4, addrspace 1)
+    ; CHECK: [[ATOMICRMW_MAX:%[0-9]+]]:_(s32) = G_ATOMICRMW_MAX [[COPY]](p1), [[COPY1]] :: (load store seq_cst (s32), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
-    %2:_(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store seq_cst 4, addrspace 1)
+    %2:_(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store seq_cst (s32), addrspace 1)
 ...
 
 ---
@@ -56,8 +56,8 @@ body: |
     ; CHECK-LABEL: name: atomicrmw_max_local_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; CHECK: [[ATOMICRMW_MAX:%[0-9]+]]:_(s32) = G_ATOMICRMW_MAX [[COPY]](p3), [[COPY1]] :: (load store seq_cst 4, addrspace 3)
+    ; CHECK: [[ATOMICRMW_MAX:%[0-9]+]]:_(s32) = G_ATOMICRMW_MAX [[COPY]](p3), [[COPY1]] :: (load store seq_cst (s32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store seq_cst 4, addrspace 3)
+    %2:_(s32) = G_ATOMICRMW_MAX %0, %1 :: (load store seq_cst (s32), addrspace 3)
 ...

@@ -30,7 +30,7 @@ body:             |
   ; CHECK:   [[UDIV:%[0-9]+]]:_(s64) = G_UDIV [[FREEZE]], [[C]]
   ; CHECK:   [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[C1]](s64)
   ; CHECK:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[SHL]], [[UDIV]]
-  ; CHECK:   G_STORE [[ADD]](s64), [[COPY]](p0) :: (store 8)
+  ; CHECK:   G_STORE [[ADD]](s64), [[COPY]](p0) :: (store (s64))
   ; CHECK: bb.2:
   bb.1:
     liveins: $x0
@@ -58,7 +58,7 @@ body:             |
     %16:_(s64) = G_UDIV %15, %4
     %17:_(s64) = G_SHL %7, %12(s64)
     %18:_(s64) = G_ADD %17, %16
-    G_STORE %18(s64), %0(p0) :: (store 8)
+    G_STORE %18(s64), %0(p0) :: (store (s64))
 
   bb.3:
 

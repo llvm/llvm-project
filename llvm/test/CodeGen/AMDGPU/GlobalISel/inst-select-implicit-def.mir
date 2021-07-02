@@ -99,10 +99,10 @@ body: |
     ; GCN-LABEL: name: implicit_def_p1_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
-    ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     %0:vgpr(p1) = G_IMPLICIT_DEF
     %1:vgpr(s32) = G_CONSTANT i32 4
-    G_STORE %1, %0 :: (store 4, addrspace 1)
+    G_STORE %1, %0 :: (store (s32), addrspace 1)
 ...
 
 ---
@@ -117,10 +117,10 @@ body: |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
     ; GCN: $m0 = S_MOV_B32 -1
-    ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     %0:vgpr(p3) = G_IMPLICIT_DEF
     %1:vgpr(s32) = G_CONSTANT i32 4
-    G_STORE %1, %0 :: (store 4, addrspace 1)
+    G_STORE %1, %0 :: (store (s32), addrspace 1)
 ...
 
 ---
@@ -134,10 +134,10 @@ body: |
     ; GCN-LABEL: name: implicit_def_p4_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
-    ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     %0:vgpr(p4) = G_IMPLICIT_DEF
     %1:vgpr(s32) = G_CONSTANT i32 4
-    G_STORE %1, %0 :: (store 4, addrspace 1)
+    G_STORE %1, %0 :: (store (s32), addrspace 1)
 ...
 
 ---

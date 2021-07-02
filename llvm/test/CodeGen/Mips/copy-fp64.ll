@@ -16,9 +16,9 @@ define  double @foo(double %self) {
   ; CHECK:   renamable $t9 = LW killed renamable $at, target-flags(mips-got) @bar
   ; CHECK:   dead $ra = JALR killed $t9, csr_o32_fp64, target-flags(mips-jalr) <mcsymbol bar>, implicit-def dead $ra, implicit killed $d6_64, implicit-def $d0_64
   ; CHECK:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   SDC164 killed $d0_64, %stack.0, 0 :: (store 8 into %stack.0)
+  ; CHECK:   SDC164 killed $d0_64, %stack.0, 0 :: (store (s64) into %stack.0)
   ; CHECK: bb.1.bb1:
-  ; CHECK:   $d0_64 = LDC164 %stack.0, 0 :: (load 8 from %stack.0)
+  ; CHECK:   $d0_64 = LDC164 %stack.0, 0 :: (load (s64) from %stack.0)
   ; CHECK:   RetRA implicit killed $d0_64
 start:
   %0 = call double @bar(double %self)

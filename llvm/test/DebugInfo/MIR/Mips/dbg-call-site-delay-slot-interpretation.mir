@@ -99,9 +99,9 @@ body:             |
     DBG_VALUE $a1, $noreg, !18, !DIExpression(), debug-location !19
     $sp = ADDiu $sp, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SW killed $ra, $sp, 28 :: (store 4 into %stack.0)
-    SW killed $s1, $sp, 24 :: (store 4 into %stack.1)
-    SW killed $s0, $sp, 20 :: (store 4 into %stack.2)
+    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
+    SW killed $s1, $sp, 24 :: (store (s32) into %stack.1)
+    SW killed $s0, $sp, 20 :: (store (s32) into %stack.2)
     CFI_INSTRUCTION offset $ra_64, -4
     CFI_INSTRUCTION offset $s1_64, -8
     CFI_INSTRUCTION offset $s0_64, -12
@@ -114,7 +114,7 @@ body:             |
       $a1 = OR $s1, $zero, debug-location !19
     }
     renamable $at = nsw ADDu killed renamable $v0, killed renamable $s1, debug-location !19
-    SW killed renamable $at, killed renamable $s0, 0, debug-location !19 :: (store 4 into %ir.adr)
+    SW killed renamable $at, killed renamable $s0, 0, debug-location !19 :: (store (s32) into %ir.adr)
     $s0 = LW $sp, 20
     DBG_VALUE $a0, $noreg, !17, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !19
     $s1 = LW $sp, 24

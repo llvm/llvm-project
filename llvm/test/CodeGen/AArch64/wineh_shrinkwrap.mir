@@ -134,7 +134,7 @@ body:             |
     $x0 = ADDXri %stack.0.A, 0, 0
     BL @"?init@@YAXPEAH@Z", csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    renamable $w8 = LDRWui %stack.0.A, 100 :: (dereferenceable load 4 from %ir.arrayidx, !tbaa !2)
+    renamable $w8 = LDRWui %stack.0.A, 100 :: (dereferenceable load (s32) from %ir.arrayidx, !tbaa !2)
     renamable $w8 = ADDWrr killed renamable $w19, killed renamable $w8
     renamable $w0 = ADDWri killed renamable $w8, 1, 0
 

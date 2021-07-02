@@ -186,7 +186,7 @@ body:             |
     %21 = COPY %13
     %21 = S2_lsr_i_p_and %21, %29, 9
     %22 = S2_asl_i_p_and %22, %7, 42
-    S2_storerd_io undef %23, 0, %22 :: (store 8 into `i64* undef`)
+    S2_storerd_io undef %23, 0, %22 :: (store (s64) into `i64* undef`)
     %25 = C2_cmpeqp %21, %51
     J2_jumpt %25, %bb.3.for.end, implicit-def dead $pc
     J2_jump %bb.2.if.end82, implicit-def dead $pc

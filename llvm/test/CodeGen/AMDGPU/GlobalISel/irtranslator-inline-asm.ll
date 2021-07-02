@@ -292,9 +292,9 @@ define void @test_many_matching_constraints(i32 %a, i32 %b, i32 %c) nounwind {
   ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY %4
   ; CHECK:   [[COPY8:%[0-9]+]]:_(s32) = COPY %5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(s32) = COPY %6
-  ; CHECK:   G_STORE [[COPY7]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[COPY8]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   G_STORE [[COPY9]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[COPY7]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[COPY8]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[COPY9]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   [[COPY10:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY10]]
   %asm = call {i32, i32, i32} asm sideeffect "; ", "=v,=v,=v,0,2,1"(i32 %c, i32 %a, i32 %b)

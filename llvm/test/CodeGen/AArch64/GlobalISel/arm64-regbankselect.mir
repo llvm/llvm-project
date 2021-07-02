@@ -233,7 +233,7 @@ body: |
     successors: %bb.2.end, %bb.1.then
     liveins: $x0, $x1, $w2
 
-    %0 = LDRWui killed $x0, 0 :: (load 4 from %ir.src)
+    %0 = LDRWui killed $x0, 0 :: (load (s32) from %ir.src)
     %5(s32) = COPY %0
     %1(p0) = COPY $x1
     %2 = COPY $w2
@@ -245,7 +245,7 @@ body: |
 
   bb.2.end:
     %4(s32) = PHI %0, %bb.0.entry, %3, %bb.1.then
-    G_STORE killed %4, killed %1 :: (store 4 into %ir.dst)
+    G_STORE killed %4, killed %1 :: (store (s32) into %ir.dst)
     RET_ReallyLR
 ...
 
@@ -692,10 +692,10 @@ registers:
 # CHECK:         %0:gpr(s64) = COPY $x0
 # CHECK-NEXT:    %1:gpr(p0) = COPY $x1
 # FAST-NEXT:     %2:fpr(<2 x s32>) = G_BITCAST %0(s64)
-# FAST-NEXT:     %3:fpr(<2 x s32>) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+# FAST-NEXT:     %3:fpr(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>) from %ir.addr)
 # FAST-NEXT:     %4:fpr(<2 x s32>) = G_OR %2, %3
 # GREEDY-NEXT:   %2:gpr(<2 x s32>) = G_BITCAST %0(s64)
-# GREEDY-NEXT:   %3:gpr(<2 x s32>) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+# GREEDY-NEXT:   %3:gpr(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>) from %ir.addr)
 # GREEDY-NEXT:   %4:gpr(<2 x s32>) = G_OR %2, %3
 # CHECK-NEXT:    %5:gpr(s64) = G_BITCAST %4(<2 x s32>)
 # CHECK-NEXT:    $x0 = COPY %5(s64)
@@ -707,7 +707,7 @@ body:             |
     %0(s64) = COPY $x0
     %1(p0) = COPY $x1
     %2(<2 x s32>) = G_BITCAST %0(s64)
-    %3(<2 x s32>) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+    %3(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>) from %ir.addr)
     %4(<2 x s32>) = G_OR %2, %3
     %5(s64) = G_BITCAST %4(<2 x s32>)
     $x0 = COPY %5(s64)
@@ -737,7 +737,7 @@ registers:
 # No repairing should be necessary for both modes.
 # CHECK:         %0:gpr(s64) = COPY $x0
 # CHECK-NEXT:    %1:gpr(p0) = COPY $x1
-# CHECK-NEXT:    %2:fpr(s64) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+# CHECK-NEXT:    %2:fpr(s64) = G_LOAD %1(p0) :: (load (s64) from %ir.addr)
 # %0 has been mapped to GPR, we need to repair to match FPR.
 # CHECK-NEXT:    %4:fpr(s64) = COPY %0
 # CHECK-NEXT:    %3:fpr(s64) = G_FADD %4, %2
@@ -750,7 +750,7 @@ body:             |
 
     %0(s64) = COPY $x0
     %1(p0) = COPY $x1
-    %2(s64) = G_LOAD %1(p0) :: (load 8 from %ir.addr)
+    %2(s64) = G_LOAD %1(p0) :: (load (s64) from %ir.addr)
     %3(s64) = G_FADD %0, %2
     $x0 = COPY %3(s64)
     RET_ReallyLR implicit $x0
@@ -781,7 +781,7 @@ registers:
 # CHECK-NEXT:    %3:fpr(s64) = COPY %0
 # CHECK-NEXT:    %4:fpr(s64) = COPY %0
 # CHECK-NEXT:    %2:fpr(s64) = G_FADD %3, %4
-# CHECK-NEXT:    G_STORE %2(s64), %1(p0) :: (store 8 into %ir.addr)
+# CHECK-NEXT:    G_STORE %2(s64), %1(p0) :: (store (s64) into %ir.addr)
 # CHECK-NEXT:    RET_ReallyLR
 
 body:             |
@@ -791,7 +791,7 @@ body:             |
     %0(s64) = COPY $x0
     %1(p0) = COPY $x1
     %2(s64) = G_FADD %0, %0
-    G_STORE %2(s64), %1(p0) :: (store 8 into %ir.addr)
+    G_STORE %2(s64), %1(p0) :: (store (s64) into %ir.addr)
     RET_ReallyLR
 
 ...
@@ -931,11 +931,11 @@ body:             |
 # If we didn't look through the copy for %0, the default mapping
 # would have been on GPR and we would have to insert a copy to move
 # the value away from FPR (h0).
-# CHECK-NEXT: G_STORE %0(s16), %1(p0) :: (store 2 into %ir.p.addr)
+# CHECK-NEXT: G_STORE %0(s16), %1(p0) :: (store (s16) into %ir.p.addr)
 # If we didn't look through the copy for %2, the default mapping
 # would have been on GPR and we would have to insert a copy to move
 # the value to FPR (h0).
-# CHECK-NEXT: %2:fpr(s16) = G_LOAD %1(p0) :: (load 2 from %ir.p.addr)
+# CHECK-NEXT: %2:fpr(s16) = G_LOAD %1(p0) :: (load (s16) from %ir.p.addr)
 # CHECK-NEXT: $h0 = COPY %2(s16)
 name:            passFp16ViaAllocas
 alignment:       4
@@ -955,8 +955,8 @@ body:             |
 
     %0(s16) = COPY $h0
     %1(p0) = G_FRAME_INDEX %stack.0.p.addr
-    G_STORE %0(s16), %1(p0) :: (store 2 into %ir.p.addr)
-    %2(s16) = G_LOAD %1(p0) :: (load 2 from %ir.p.addr)
+    G_STORE %0(s16), %1(p0) :: (store (s16) into %ir.p.addr)
+    %2(s16) = G_LOAD %1(p0) :: (load (s16) from %ir.p.addr)
     $h0 = COPY %2(s16)
     RET_ReallyLR implicit $h0
 

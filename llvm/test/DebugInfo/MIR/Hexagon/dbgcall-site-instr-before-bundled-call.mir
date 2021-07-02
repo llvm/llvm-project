@@ -103,8 +103,8 @@ body:             |
     liveins: $d8, $d9, $d10, $d11, $d12, $d13, $d8, $d9, $d10, $d11, $d12, $d13
 
     BUNDLE implicit-def $r29, implicit-def $r30, implicit $r29, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, implicit killed $d8, debug-location !15 {
-      $r29 = S2_allocframe $r29, 64, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !15 :: (store 4 into stack)
-      S2_storerd_io internal $r29, -16, killed $d8, debug-location !15 :: (store 8 into %fixed-stack.5)
+      $r29 = S2_allocframe $r29, 64, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !15 :: (store (s32) into stack)
+      S2_storerd_io internal $r29, -16, killed $d8, debug-location !15 :: (store (s64) into %fixed-stack.5)
     }
     CFI_INSTRUCTION def_cfa $r30, 8
     CFI_INSTRUCTION offset $r31, -4
@@ -122,46 +122,46 @@ body:             |
     CFI_INSTRUCTION offset $r27, -52
     CFI_INSTRUCTION offset $r26, -56
     BUNDLE implicit $r29, implicit killed $d9, implicit killed $d10, debug-location !15 {
-      S2_storerd_io $r29, 48, killed $d9, debug-location !15 :: (store 8 into %fixed-stack.4)
-      S2_storerd_io $r29, 40, killed $d10, debug-location !15 :: (store 8 into %fixed-stack.3)
+      S2_storerd_io $r29, 48, killed $d9, debug-location !15 :: (store (s64) into %fixed-stack.4)
+      S2_storerd_io $r29, 40, killed $d10, debug-location !15 :: (store (s64) into %fixed-stack.3)
     }
     BUNDLE implicit $r29, implicit killed $d11, implicit killed $d12, debug-location !15 {
-      S2_storerd_io $r29, 32, killed $d11, debug-location !15 :: (store 8 into %fixed-stack.2)
-      S2_storerd_io $r29, 24, killed $d12, debug-location !15 :: (store 8 into %fixed-stack.1)
+      S2_storerd_io $r29, 32, killed $d11, debug-location !15 :: (store (s64) into %fixed-stack.2)
+      S2_storerd_io $r29, 24, killed $d12, debug-location !15 :: (store (s64) into %fixed-stack.1)
     }
     BUNDLE implicit-def $r0, implicit $r29, implicit killed $d13, implicit $gp, debug-location !15 {
-      S2_storerd_io $r29, 16, killed $d13, debug-location !15 :: (store 8 into %fixed-stack.0)
-      renamable $r0 = L2_loadrigp @ga, implicit $gp, debug-location !15 :: (dereferenceable load 4 from @ga)
+      S2_storerd_io $r29, 16, killed $d13, debug-location !15 :: (store (s64) into %fixed-stack.0)
+      renamable $r0 = L2_loadrigp @ga, implicit $gp, debug-location !15 :: (dereferenceable load (s32) from @ga)
     }
     BUNDLE implicit-def $r0, implicit $r29, implicit killed $r0, implicit $gp, debug-location !16 {
-      S2_storeri_io $r29, 12, killed renamable $r0, debug-location !16 :: (store 4 into %stack.0)
-      renamable $r0 = L2_loadrigp @gb, implicit $gp, debug-location !16 :: (dereferenceable load 4 from @gb)
+      S2_storeri_io $r29, 12, killed renamable $r0, debug-location !16 :: (store (s32) into %stack.0)
+      renamable $r0 = L2_loadrigp @gb, implicit $gp, debug-location !16 :: (dereferenceable load (s32) from @gb)
     }
     BUNDLE implicit-def $r0, implicit $r29, implicit killed $r0, implicit killed $gp, debug-location !17 {
-      S2_storeri_io $r29, 8, killed renamable $r0, debug-location !17 :: (store 4 into %stack.1)
-      renamable $r0 = L2_loadrigp @gc, implicit killed $gp, debug-location !17 :: (dereferenceable load 4 from @gc)
+      S2_storeri_io $r29, 8, killed renamable $r0, debug-location !17 :: (store (s32) into %stack.1)
+      renamable $r0 = L2_loadrigp @gc, implicit killed $gp, debug-location !17 :: (dereferenceable load (s32) from @gc)
     }
-    S2_storeri_io $r29, 4, killed renamable $r0, debug-location !18 :: (store 4 into %stack.2)
+    S2_storeri_io $r29, 4, killed renamable $r0, debug-location !18 :: (store (s32) into %stack.2)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0, 12, implicit-def dead early-clobber $r1, 12, implicit-def dead early-clobber $r2, 12, implicit-def dead early-clobber $r3, 12, implicit-def dead early-clobber $r4, 12, implicit-def dead early-clobber $r5, 12, implicit-def dead early-clobber $r6, 12, implicit-def dead early-clobber $r7, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $r16, 12, implicit-def dead early-clobber $r17, 12, implicit-def dead early-clobber $r18, 12, implicit-def dead early-clobber $r19, 12, implicit-def dead early-clobber $r20, 12, implicit-def dead early-clobber $r21, 12, implicit-def dead early-clobber $r22, 12, implicit-def dead early-clobber $r23, 12, implicit-def dead early-clobber $r24, 12, implicit-def dead early-clobber $r25, 12, implicit-def dead early-clobber $r26, 12, implicit-def dead early-clobber $r27, 12, implicit-def dead early-clobber $r28, !19, debug-location !18
     BUNDLE implicit-def $r0, implicit-def $r1, implicit $r29, debug-location !20 {
-      $r0 = L2_loadri_io $r29, 12, debug-location !20 :: (load 4 from %stack.0)
-      $r1 = L2_loadri_io $r29, 8, debug-location !20 :: (load 4 from %stack.1)
+      $r0 = L2_loadri_io $r29, 12, debug-location !20 :: (load (s32) from %stack.0)
+      $r1 = L2_loadri_io $r29, 8, debug-location !20 :: (load (s32) from %stack.1)
     }
     BUNDLE implicit-def dead $r2, implicit-def dead $pc, implicit-def dead $r31, implicit-def $r29, implicit $r29, implicit killed $r0, implicit killed $r1, debug-location !20 {
-      $r2 = L2_loadri_io $r29, 4, debug-location !20 :: (load 4 from %stack.2)
+      $r2 = L2_loadri_io $r29, 4, debug-location !20 :: (load (s32) from %stack.2)
       J2_call @callee, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $r0, implicit killed $r1, implicit internal killed $r2, implicit-def $r29, debug-location !20
     }
     BUNDLE implicit-def $d8, implicit-def $r16, implicit-def $r17, implicit-def $d9, implicit-def $r18, implicit-def $r19, implicit $r29, debug-location !21 {
-      $d8 = L2_loadrd_io $r29, 56, debug-location !21 :: (load 8 from %fixed-stack.5)
-      $d9 = L2_loadrd_io $r29, 48, debug-location !21 :: (load 8 from %fixed-stack.4)
+      $d8 = L2_loadrd_io $r29, 56, debug-location !21 :: (load (s64) from %fixed-stack.5)
+      $d9 = L2_loadrd_io $r29, 48, debug-location !21 :: (load (s64) from %fixed-stack.4)
     }
     BUNDLE implicit-def $d10, implicit-def $r20, implicit-def $r21, implicit-def $d11, implicit-def $r22, implicit-def $r23, implicit $r29, debug-location !21 {
-      $d10 = L2_loadrd_io $r29, 40, debug-location !21 :: (load 8 from %fixed-stack.3)
-      $d11 = L2_loadrd_io $r29, 32, debug-location !21 :: (load 8 from %fixed-stack.2)
+      $d10 = L2_loadrd_io $r29, 40, debug-location !21 :: (load (s64) from %fixed-stack.3)
+      $d11 = L2_loadrd_io $r29, 32, debug-location !21 :: (load (s64) from %fixed-stack.2)
     }
     BUNDLE implicit-def $d12, implicit-def $r24, implicit-def $r25, implicit-def $d13, implicit-def $r26, implicit-def $r27, implicit killed $r29, debug-location !21 {
-      $d12 = L2_loadrd_io $r29, 24, debug-location !21 :: (load 8 from %fixed-stack.1)
-      $d13 = L2_loadrd_io killed $r29, 16, debug-location !21 :: (load 8 from %fixed-stack.0)
+      $d12 = L2_loadrd_io $r29, 24, debug-location !21 :: (load (s64) from %fixed-stack.1)
+      $d13 = L2_loadrd_io killed $r29, 16, debug-location !21 :: (load (s64) from %fixed-stack.0)
     }
     $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def dead $pc, implicit $d8, implicit $d9, implicit $d10, implicit $d11, implicit $d12, implicit $d13, debug-location !21
 

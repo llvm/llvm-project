@@ -56,10 +56,10 @@ body:             |
   ;    +-------------------+ <-  SP -48
 
   ; CHECK-LABEL: test_q10_q11_x19{{[[:space:]]}}
-  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -3 :: (store 16 into %stack.[[Q11:[0-9]+]]), (store 16 into %stack.[[Q10:[0-9]+]])
+  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -3 :: (store (s128) into %stack.[[Q11:[0-9]+]]), (store (s128) into %stack.[[Q10:[0-9]+]])
   ; CHECK-DAG: - { id: [[Q11]], {{.*}}, offset: -48, size: 16, alignment: 16
   ; CHECK-DAG: - { id: [[Q10]], {{.*}}, offset: -32, size: 16, alignment: 16
-  ; CHECK-DAG: frame-setup STRXui killed $x19, $sp, 4 :: (store 8 into %stack.[[X19:[0-9]+]])
+  ; CHECK-DAG: frame-setup STRXui killed $x19, $sp, 4 :: (store (s64) into %stack.[[X19:[0-9]+]])
   ; CHECK-DAG: - { id: [[X19]], {{.*}}, offset: -16, size: 8, alignment: 16
 
 ...
@@ -81,8 +81,8 @@ body:             |
   ;    +-------------------+ <-  SP -48
 
   ; CHECK-LABEL: test_q10_q11_x19_x20{{[[:space:]]}}
-  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -3 :: (store 16 into %stack.[[Q11:[0-9]+]]), (store 16 into %stack.[[Q10:[0-9]+]])
-  ; CHECK-DAG: frame-setup STPXi killed $x20, killed $x19, $sp, 4 :: (store 8 into %stack.[[X20:[0-9]+]]), (store 8 into %stack.[[X19:[0-9]+]])
+  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -3 :: (store (s128) into %stack.[[Q11:[0-9]+]]), (store (s128) into %stack.[[Q10:[0-9]+]])
+  ; CHECK-DAG: frame-setup STPXi killed $x20, killed $x19, $sp, 4 :: (store (s64) into %stack.[[X20:[0-9]+]]), (store (s64) into %stack.[[X19:[0-9]+]])
   ; CHECK-DAG: - { id: [[Q11]], {{.*}}, offset: -48, size: 16, alignment: 16
   ; CHECK-DAG: - { id: [[Q10]], {{.*}}, offset: -32, size: 16, alignment: 16
   ; CHECK-DAG: - { id: [[X20]], {{.*}}, offset: -16, size: 8, alignment: 8
@@ -112,8 +112,8 @@ body:             |
   ;    +-------------------+ <-  SP -64
 
   ; CHECK-LABEL: test_q10_q11_x19_x20_x21
-  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -4 :: (store 16 into %stack.[[Q11:[0-9]+]]), (store 16 into %stack.[[Q10:[0-9]+]])
-  ; CHECK-DAG: frame-setup STRXui killed $x21, $sp, 4 :: (store 8 into %stack.[[X21:[0-9]+]])
+  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -4 :: (store (s128) into %stack.[[Q11:[0-9]+]]), (store (s128) into %stack.[[Q10:[0-9]+]])
+  ; CHECK-DAG: frame-setup STRXui killed $x21, $sp, 4 :: (store (s64) into %stack.[[X21:[0-9]+]])
   ; CHECK-DAG: frame-setup STPXi killed $x20, killed $x19, $sp, 6
   ; CHECK-DAG: - { id: [[Q11]], {{.*}}, offset: -64, size: 16, alignment: 16
   ; CHECK-DAG: - { id: [[Q10]], {{.*}}, offset: -48, size: 16, alignment: 16
@@ -168,7 +168,7 @@ body:             |
 
   ; CHECK-LABEL: test_q8_to_q23_x19_to_x30
   ; CHECK: $sp = frame-setup SUBXri $sp, 368, 0
-  ; CHECK-NEXT: frame-setup STPQi killed $q23, killed $q22, $sp, 1 :: (store 16 into %stack.{{[0-9]+}}), (store 16 into %stack.{{[0-9]+}})
+  ; CHECK-NEXT: frame-setup STPQi killed $q23, killed $q22, $sp, 1 :: (store (s128) into %stack.{{[0-9]+}}), (store (s128) into %stack.{{[0-9]+}})
   ; CHECK-NEXT: frame-setup STPQi killed $q21, killed $q20, $sp, 3
   ; CHECK-NEXT: frame-setup STPQi killed $q19, killed $q18, $sp, 5
   ; CHECK-NEXT: frame-setup STPQi killed $q17, killed $q16, $sp, 7
@@ -176,7 +176,7 @@ body:             |
   ; CHECK-NEXT: frame-setup STPQi killed $q13, killed $q12, $sp, 11
   ; CHECK-NEXT: frame-setup STPQi killed $q11, killed $q10, $sp, 13
   ; CHECK-NEXT: frame-setup STPQi killed $q9, killed $q8, $sp, 15
-  ; CHECK-NEXT: frame-setup STPXi killed $fp, killed $lr, $sp, 34 :: (store 8 into %stack.{{[0-9]+}}), (store 8 into %stack.{{[0-9]+}})
+  ; CHECK-NEXT: frame-setup STPXi killed $fp, killed $lr, $sp, 34 :: (store (s64) into %stack.{{[0-9]+}}), (store (s64) into %stack.{{[0-9]+}})
   ; CHECK-NEXT: frame-setup STPXi killed $x28, killed $x27, $sp, 36
   ; CHECK-NEXT: frame-setup STPXi killed $x26, killed $x25, $sp, 38
   ; CHECK-NEXT: frame-setup STPXi killed $x24, killed $x23, $sp, 40
@@ -234,7 +234,7 @@ body:             |
   ;    +-------------------+ <-  SP -400
 
   ; CHECK-LABEL: test_q8_to_q23_x19_to_x30_preinc
-  ; CHECK: $sp = frame-setup STPQpre killed $q23, killed $q22, $sp, -22 :: (store 16 into %stack.{{[0-9]+}}), (store 16 into %stack.{{[0-9]+}})
+  ; CHECK: $sp = frame-setup STPQpre killed $q23, killed $q22, $sp, -22 :: (store (s128) into %stack.{{[0-9]+}}), (store (s128) into %stack.{{[0-9]+}})
   ; CHECK-NEXT: frame-setup STPQi killed $q21, killed $q20, $sp, 2
   ; CHECK-NEXT: frame-setup STPQi killed $q19, killed $q18, $sp, 4
   ; CHECK-NEXT: frame-setup STPQi killed $q17, killed $q16, $sp, 6
@@ -242,7 +242,7 @@ body:             |
   ; CHECK-NEXT: frame-setup STPQi killed $q13, killed $q12, $sp, 10
   ; CHECK-NEXT: frame-setup STPQi killed $q11, killed $q10, $sp, 12
   ; CHECK-NEXT: frame-setup STPQi killed $q9, killed $q8, $sp, 14
-  ; CHECK-NEXT: frame-setup STPXi killed $fp, killed $lr, $sp, 32 :: (store 8 into %stack.{{[0-9]+}}), (store 8 into %stack.{{[0-9]+}})
+  ; CHECK-NEXT: frame-setup STPXi killed $fp, killed $lr, $sp, 32 :: (store (s64) into %stack.{{[0-9]+}}), (store (s64) into %stack.{{[0-9]+}})
   ; CHECK-NEXT: frame-setup STPXi killed $x28, killed $x27, $sp, 34
   ; CHECK-NEXT: frame-setup STPXi killed $x26, killed $x25, $sp, 36
   ; CHECK-NEXT: frame-setup STPXi killed $x24, killed $x23, $sp, 38

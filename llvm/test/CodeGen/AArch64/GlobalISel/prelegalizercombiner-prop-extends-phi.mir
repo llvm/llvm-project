@@ -122,15 +122,15 @@ body:             |
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   %ld1:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load 16)
+  ; CHECK:   %ld1:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
   ; CHECK:   G_BR %bb.3
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   %ld2:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load 16)
+  ; CHECK:   %ld2:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
   ; CHECK: bb.3:
   ; CHECK:   %phi:_(<4 x s32>) = G_PHI %ld1(<4 x s32>), %bb.1, %ld2(<4 x s32>), %bb.2
   ; CHECK:   %ext:_(<4 x s64>) = G_SEXT %phi(<4 x s32>)
-  ; CHECK:   G_STORE %ext(<4 x s64>), %ptr(p0) :: (store 16)
+  ; CHECK:   G_STORE %ext(<4 x s64>), %ptr(p0) :: (store (<4 x s64>))
   ; CHECK:   RET_ReallyLR
   bb.1.entry:
     liveins: $x0, $q0, $q1
@@ -143,16 +143,16 @@ body:             |
     G_BR %bb.3
 
   bb.2:
-    %ld1:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load 16)
+    %ld1:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
     G_BR %bb.4
 
   bb.3:
-    %ld2:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load 16)
+    %ld2:_(<4 x s32>) = G_LOAD %ptr(p0) :: (load (<4 x s32>))
 
   bb.4:
     %phi:_(<4 x s32>) = G_PHI %ld1(<4 x s32>), %bb.2, %ld2(<4 x s32>), %bb.3
     %ext:_(<4 x s64>) = G_SEXT %phi
-    G_STORE %ext(<4 x s64>), %ptr(p0) :: (store 16)
+    G_STORE %ext(<4 x s64>), %ptr(p0) :: (store (<4 x s64>))
     RET_ReallyLR
 
 ...

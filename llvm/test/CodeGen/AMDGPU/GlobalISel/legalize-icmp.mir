@@ -352,7 +352,7 @@ body: |
 
     ; GFX7-LABEL: name: test_icmp_v4s32
     ; GFX7: [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-    ; GFX7: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load 16)
+    ; GFX7: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load (<4 x s32>))
     ; GFX7: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX7: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
     ; GFX7: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
@@ -377,7 +377,7 @@ body: |
     ; GFX7: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s32>)
     ; GFX8-LABEL: name: test_icmp_v4s32
     ; GFX8: [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-    ; GFX8: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load 16)
+    ; GFX8: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load (<4 x s32>))
     ; GFX8: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX8: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
     ; GFX8: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
@@ -402,7 +402,7 @@ body: |
     ; GFX8: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s32>)
     ; GFX9-LABEL: name: test_icmp_v4s32
     ; GFX9: [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-    ; GFX9: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load 16)
+    ; GFX9: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load (<4 x s32>))
     ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
     ; GFX9: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
@@ -422,7 +422,7 @@ body: |
     ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[AND1]](s32), [[AND2]](s32), [[AND3]](s32)
     ; GFX9: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s32>)
     %0:_(p1) = G_IMPLICIT_DEF
-    %1:_(<4 x s32>) = G_LOAD %0 :: (volatile load 16)
+    %1:_(<4 x s32>) = G_LOAD %0 :: (volatile load (<4 x s32>))
     %2:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %3:_(<4 x s1>) = G_ICMP intpred(ne), %1, %2
     %4:_(<4 x s32>) = G_ZEXT %3

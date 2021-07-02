@@ -149,7 +149,7 @@ body:             |
     ; MIPS32FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; MIPS32FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
     ; MIPS32FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
-    ; MIPS32FP32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load 4 from %fixed-stack.0, align 8)
+    ; MIPS32FP32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
     ; MIPS32FP32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[LW]], 1
     ; MIPS32FP32: [[MOVN_I_D32_:%[0-9]+]]:afgr64 = MOVN_I_D32 [[COPY]], [[ANDi]], [[COPY1]]
     ; MIPS32FP32: $d0 = COPY [[MOVN_I_D32_]]
@@ -159,7 +159,7 @@ body:             |
     ; MIPS32FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; MIPS32FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
     ; MIPS32FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
-    ; MIPS32FP64: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load 4 from %fixed-stack.0, align 8)
+    ; MIPS32FP64: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
     ; MIPS32FP64: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[LW]], 1
     ; MIPS32FP64: [[MOVN_I_D64_:%[0-9]+]]:fgr64 = MOVN_I_D64 [[COPY]], [[ANDi]], [[COPY1]]
     ; MIPS32FP64: $d0 = COPY [[MOVN_I_D64_]]
@@ -167,7 +167,7 @@ body:             |
     %0:fprb(s64) = COPY $d6
     %1:fprb(s64) = COPY $d7
     %4:gprb(p0) = G_FRAME_INDEX %fixed-stack.0
-    %3:gprb(s32) = G_LOAD %4(p0) :: (load 4 from %fixed-stack.0, align 8)
+    %3:gprb(s32) = G_LOAD %4(p0) :: (load (s32) from %fixed-stack.0, align 8)
     %7:gprb(s32) = G_CONSTANT i32 1
     %8:gprb(s32) = COPY %3(s32)
     %6:gprb(s32) = G_AND %8, %7

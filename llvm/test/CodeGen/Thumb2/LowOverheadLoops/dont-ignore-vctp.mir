@@ -102,7 +102,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   renamable $r3, dead $cpsr = tLSLri killed renamable $r2, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2 = tLEApcrel %const.0, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg :: (load 16 from constant-pool)
+  ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg :: (load (s128) from constant-pool)
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3
   ; CHECK: bb.1.do.body (align 4):
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
@@ -135,7 +135,7 @@ body:             |
     renamable $r2, dead $cpsr = tMOVi8 1, 14, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r2, killed renamable $r12, 19, 14, $noreg, $noreg
     renamable $r2 = tLEApcrel %const.0, 14, $noreg
-    renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg :: (load 16 from constant-pool)
+    renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg :: (load (s128) from constant-pool)
     $lr = t2DoLoopStart renamable $lr
 
   bb.1.do.body (align 4):

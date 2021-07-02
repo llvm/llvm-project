@@ -26,11 +26,11 @@ body:             |
     ; CHECK-LABEL: name: load_acq_i8
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDARB:%[0-9]+]]:gpr32 = LDARB [[COPY]] :: (load acquire 1 from %ir.ptr, align 8)
+    ; CHECK: [[LDARB:%[0-9]+]]:gpr32 = LDARB [[COPY]] :: (load acquire (s8) from %ir.ptr, align 8)
     ; CHECK: $w0 = COPY [[LDARB]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
-    %2:gpr(s32) = G_LOAD %0(p0) :: (load acquire 1 from %ir.ptr, align 8)
+    %2:gpr(s32) = G_LOAD %0(p0) :: (load acquire (s8) from %ir.ptr, align 8)
     $w0 = COPY %2(s32)
     RET_ReallyLR implicit $w0
 

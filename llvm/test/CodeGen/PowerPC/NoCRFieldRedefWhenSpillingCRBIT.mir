@@ -95,18 +95,18 @@ body:             |
     renamable $cr5gt = COPY renamable $cr1gt, implicit $cr1
     ; CHECK: crnor 4*cr5+lt, lt, 4*cr1+gt
     ; CHECK: crmove 4*cr5+gt, 4*cr1+gt
-    SPILL_CRBIT killed renamable $cr5lt, 0, %stack.0 :: (store 4 into %stack.0)
+    SPILL_CRBIT killed renamable $cr5lt, 0, %stack.0 :: (store (s32) into %stack.0)
     renamable $cr1 = CMPW renamable $r4, renamable $r5, implicit killed $x5, implicit killed $x4
-    SPILL_CRBIT killed renamable $cr5gt, 0, %stack.1 :: (store 4 into %stack.1)
-    SPILL_CRBIT killed renamable $cr1gt, 0, %stack.2 :: (store 4 into %stack.2)
+    SPILL_CRBIT killed renamable $cr5gt, 0, %stack.1 :: (store (s32) into %stack.1)
+    SPILL_CRBIT killed renamable $cr1gt, 0, %stack.2 :: (store (s32) into %stack.2)
     INLINEASM &"# nothing", 25, 12, implicit-def dead early-clobber $cr0, 12, implicit-def dead early-clobber $cr1, 12, implicit-def dead early-clobber $cr2, 12, implicit-def dead early-clobber $cr3, 12, implicit-def dead early-clobber $cr4, 12, implicit-def dead early-clobber $cr5, 12, implicit-def dead early-clobber $cr6, 12, implicit-def dead early-clobber $cr7, !1
     BLR8 implicit $lr8, implicit $rm
   
   bb.1.if.end326:
     successors: %bb.2(0x00000001), %bb.3(0x7fffffff)
   
-    renamable $cr5lt = RESTORE_CRBIT 0, %stack.0 :: (load 4 from %stack.0)
-    renamable $cr5gt = RESTORE_CRBIT 0, %stack.1 :: (load 4 from %stack.1)
+    renamable $cr5lt = RESTORE_CRBIT 0, %stack.0 :: (load (s32) from %stack.0)
+    renamable $cr5gt = RESTORE_CRBIT 0, %stack.1 :: (load (s32) from %stack.1)
     renamable $cr5lt = CROR killed renamable $cr5lt, killed renamable $cr5gt
     BCn killed renamable $cr5lt, %bb.3
     B %bb.2

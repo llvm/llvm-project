@@ -28,11 +28,11 @@
 # CHECK: ![[TVAR:[0-9]+]] = !DILocalVariable(name: "t",
 
 # Ascertain that the spill has been recognized and manifested in a DBG_VALUE.
-# CHECK: MOV64mr $rsp,{{.*-8.*}}killed{{.*}}$rdi :: (store 8 into %stack.0)
+# CHECK: MOV64mr $rsp,{{.*-8.*}}killed{{.*}}$rdi :: (store (s64) into %stack.0)
 # CHECK-NEXT: DBG_VALUE $rsp,{{.*}}![[PVAR]],{{.*}}!DIExpression(DW_OP_constu, 8, DW_OP_minus)
 
 # Check for the restore.
-# CHECK: $rdi = MOV64rm $rsp,{{.*-8.*}}:: (load 8 from %stack.0)
+# CHECK: $rdi = MOV64rm $rsp,{{.*-8.*}}:: (load (s64) from %stack.0)
 # CHECK-NEXT: DBG_VALUE $rdi,{{.*}}![[PVAR]], !DIExpression()
 
 --- |
@@ -306,9 +306,9 @@ body:             |
     CFI_INSTRUCTION offset $r14, -32
     CFI_INSTRUCTION offset $r15, -24
     CFI_INSTRUCTION offset $rbp, -16
-    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !20, debug-location !18
-    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
+    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -325,7 +325,7 @@ body:             |
   bb.2.if.end:
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
-    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !23 :: (load 4 from %ir.add.ptr, !tbaa !24)
+    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !23 :: (load (s32) from %ir.add.ptr, !tbaa !24)
     RETQ $eax, debug-location !28
 
 ...
@@ -389,17 +389,17 @@ body:             |
     successors: %bb.2(0x80000000)
     liveins: $rdi, $rbp, $r15, $r14, $r13, $r12, $rbx
   
-    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
-    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
+    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
   
   bb.2.if.end:
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
     DBG_VALUE $rbx, $noreg, !113, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location !114
-    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rbx :: (store 8 into %stack.0)
-    renamable $rsi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rbx :: (store (s64) into %stack.0)
+    renamable $rsi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
 
-    renamable $eax = MOV32rm killed renamable $rsi, 1, $noreg, 4, $noreg, debug-location !123 :: (load 4 from %ir.add.ptr, !tbaa !24)
+    renamable $eax = MOV32rm killed renamable $rsi, 1, $noreg, 4, $noreg, debug-location !123 :: (load (s32) from %ir.add.ptr, !tbaa !24)
     $rdi = MOV64ri 0
     RETQ $eax, debug-location !128
 
@@ -487,9 +487,9 @@ body:             |
     CFI_INSTRUCTION offset $r14, -32
     CFI_INSTRUCTION offset $r15, -24
     CFI_INSTRUCTION offset $rbp, -16
-    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !220, debug-location !218
-    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
+    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -506,7 +506,7 @@ body:             |
   bb.2.if.end:
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
-    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !223 :: (load 4 from %ir.add.ptr, !tbaa !24)
+    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !223 :: (load (s32) from %ir.add.ptr, !tbaa !24)
     RETQ $eax, debug-location !228
 
 
@@ -582,7 +582,7 @@ body:             |
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
     $rax = COPY $rdi
-    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     $rdi = MOV64ri 0
     TEST64rr $rax, renamable $rax, implicit-def $eflags, debug-location !315
     JCC_1 %bb.3, 4, implicit $eflags, debug-location !317
@@ -626,8 +626,8 @@ body:             |
   bb.3.if.end:
     liveins: $rbx, $r12, $r13, $r14, $r15, $rbp
   
-    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
-    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !323 :: (load 4 from %ir.add.ptr, !tbaa !24)
+    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !323 :: (load (s32) from %ir.add.ptr, !tbaa !24)
     RETQ $eax, debug-location !328
 
 ...
@@ -711,9 +711,9 @@ body:             |
     CFI_INSTRUCTION offset $r14, -32
     CFI_INSTRUCTION offset $r15, -24
     CFI_INSTRUCTION offset $rbp, -16
-    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !20, debug-location !409
-    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load 8 from %stack.0)
+    renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -730,7 +730,7 @@ body:             |
   bb.2.if.end:
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
-    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !414 :: (load 4 from %ir.add.ptr, !tbaa !24)
+    renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !414 :: (load (s32) from %ir.add.ptr, !tbaa !24)
     RETQ $eax, debug-location !415
 
 ...

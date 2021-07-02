@@ -15,10 +15,10 @@ name: no-clobber-zr
 body: |
   bb.0:
     liveins: $x0,  $x1
-    STRXui $xzr, $x0, 0 :: (store 8 into %ir.p)
+    STRXui $xzr, $x0, 0 :: (store (s64) into %ir.p)
     dead $xzr = SUBSXri killed $x1, 0, 0, implicit-def $nzcv
     $w8 = CSINCWr $wzr, $wzr, 1, implicit killed $nzcv
-    STRXui $xzr, killed $x0, 1 :: (store 8 into %ir.p)
+    STRXui $xzr, killed $x0, 1 :: (store (s64) into %ir.p)
     $w0 = ORRWrs $wzr, killed $w8, 0
     RET $lr, implicit $w0
 ...

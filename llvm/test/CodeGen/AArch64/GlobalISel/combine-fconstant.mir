@@ -20,13 +20,13 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1028443341
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 524
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: G_STORE [[C]](s32), [[PTR_ADD]](p0) :: (store 4)
+    ; CHECK: G_STORE [[C]](s32), [[PTR_ADD]](p0) :: (store (s32))
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %3:_(s32) = G_FCONSTANT float 0x3FA99999A0000000
     %1:_(s64) = G_CONSTANT i64 524
     %2:_(p0) = G_PTR_ADD %0, %1(s64)
-    G_STORE %3(s32), %2(p0) :: (store 4)
+    G_STORE %3(s32), %2(p0) :: (store (s32))
     RET_ReallyLR
 ...
 ---
@@ -43,11 +43,11 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK: %ptr:_(p0) = COPY $x0
     ; CHECK: %c:_(s64) = G_CONSTANT i64 0
-    ; CHECK: G_STORE %c(s64), %ptr(p0) :: (store 8)
+    ; CHECK: G_STORE %c(s64), %ptr(p0) :: (store (s64))
     ; CHECK: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %c:_(s64) = G_FCONSTANT double 0.0
-    G_STORE %c(s64), %ptr(p0) :: (store 8)
+    G_STORE %c(s64), %ptr(p0) :: (store (s64))
     RET_ReallyLR
 ...
 ---

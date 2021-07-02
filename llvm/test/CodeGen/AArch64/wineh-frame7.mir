@@ -139,18 +139,18 @@ body:             |
 
     renamable $x8 = ADDXri %stack.1.i.addr, 0, 0
     renamable $w9 = MOVi32imm 2
-    STRWui killed renamable $w0, renamable $x8, 0 :: (store 4 into %ir.i.addr)
-    renamable $w0 = LDRWui renamable $x8, 0 :: (load 4 from %ir.i.addr)
+    STRWui killed renamable $w0, renamable $x8, 0 :: (store (s32) into %ir.i.addr)
+    renamable $w0 = LDRWui renamable $x8, 0 :: (load (s32) from %ir.i.addr)
     renamable $w0 = ADDWri killed renamable $w0, 2, 0
-    STRWui killed renamable $w0, %stack.3.a, 0 :: (store 4 into %ir.a)
+    STRWui killed renamable $w0, %stack.3.a, 0 :: (store (s32) into %ir.a)
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    STRXui killed $x8, %stack.5, 0 :: (store 8 into %stack.5)
-    STRWui killed $w9, %stack.6, 0 :: (store 4 into %stack.6)
+    STRXui killed $x8, %stack.5, 0 :: (store (s64) into %stack.5)
+    STRWui killed $w9, %stack.6, 0 :: (store (s32) into %stack.6)
     BL @"?func2@@YAHXZ", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    $x8 = LDRXui %stack.5, 0 :: (load 8 from %stack.5)
-    renamable $w9 = LDRWui killed renamable $x8, 0 :: (load 4 from %ir.i.addr)
-    $w10 = LDRWui %stack.6, 0 :: (load 4 from %stack.6)
+    $x8 = LDRXui %stack.5, 0 :: (load (s64) from %stack.5)
+    renamable $w9 = LDRWui killed renamable $x8, 0 :: (load (s32) from %ir.i.addr)
+    $w10 = LDRWui %stack.6, 0 :: (load (s32) from %stack.6)
     $wzr = SUBSWrr killed renamable $w9, killed renamable $w10, implicit-def $nzcv
     renamable $w9 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     TBNZW killed renamable $w9, 0, %bb.2
@@ -162,8 +162,8 @@ body:             |
     ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     BL @"?func2@@YAHXZ", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    $x8 = LDRXui %stack.5, 0 :: (load 8 from %stack.5)
-    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store 4 into %ir.retval)
+    $x8 = LDRXui %stack.5, 0 :: (load (s64) from %stack.5)
+    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store (s32) into %ir.retval)
     B %bb.4
 
   bb.3.if.else:
@@ -174,12 +174,12 @@ body:             |
     $x0 = COPY killed renamable $x8
     BL @"?func3@@YAHPEAH@Z", csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit killed $x0, implicit-def $w0
     ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    $x8 = LDRXui %stack.5, 0 :: (load 8 from %stack.5)
-    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store 4 into %ir.retval)
+    $x8 = LDRXui %stack.5, 0 :: (load (s64) from %stack.5)
+    STRWui killed renamable $w0, killed renamable $x8, 1 :: (store (s32) into %ir.retval)
 
   bb.4.return:
-    $x8 = LDRXui %stack.5, 0 :: (load 8 from %stack.5)
-    renamable $w0 = LDRWui killed renamable $x8, 1 :: (load 4 from %ir.retval)
+    $x8 = LDRXui %stack.5, 0 :: (load (s64) from %stack.5)
+    renamable $w0 = LDRWui killed renamable $x8, 1 :: (load (s32) from %ir.retval)
     RET_ReallyLR implicit killed $w0
 
 ...

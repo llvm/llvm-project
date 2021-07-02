@@ -66,7 +66,7 @@ body:             |
 
     $sp = ADDiu $sp, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW killed $ra, $sp, 20 :: (store 4 into %stack.0)
+    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
     CFI_INSTRUCTION offset $ra_64, -4
     JAL @k, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit-def $v0
     BLEZ $v0, %bb.4.if.end, implicit-def $at
@@ -84,7 +84,7 @@ body:             |
     JAL @f, csr_o32_fp64, implicit-def dead $ra, implicit killed $a0, implicit-def $sp
 
   bb.4.if.end:
-    $ra = LW $sp, 20 :: (load 4 from %stack.0)
+    $ra = LW $sp, 20 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 24
     PseudoReturn undef $ra
 

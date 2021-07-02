@@ -5,17 +5,17 @@
   source_filename = "block-placement.ll"
   target datalayout = "e-m:e-i64:64-n32:64"
   target triple = "powerpc64le-unknown-linux-gnu"
-  
+
   %"class.xercesc_2_7::HashXMLCh" = type { %"class.xercesc_2_7::HashBase" }
   %"class.xercesc_2_7::HashBase" = type { i32 (...)** }
-  
+
   define dso_local zeroext i1 @_ZN11xercesc_2_79HashXMLCh6equalsEPKvS2_(%"class.xercesc_2_7::HashXMLCh"* nocapture readnone %this, i8* readonly %key1, i8* readonly %key2) unnamed_addr #0 {
   entry:
     %cmp.i = icmp eq i8* %key1, null
     %cmp1.i = icmp eq i8* %key2, null
     %or.cond.i = or i1 %cmp.i, %cmp1.i
     br i1 %or.cond.i, label %if.then.i, label %while.cond.preheader.i
-  
+
   while.cond.preheader.i:                           ; preds = %entry
     %0 = bitcast i8* %key2 to i16*
     %1 = bitcast i8* %key1 to i16*
@@ -23,33 +23,33 @@
     %3 = load i16, i16* %0, align 2
     %cmp926.i = icmp eq i16 %2, %3
     br i1 %cmp926.i, label %while.body.i.preheader, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
-  
+
   while.body.i.preheader:                           ; preds = %while.cond.preheader.i
     %scevgep = getelementptr i8, i8* %key2, i64 2
     %scevgep4 = getelementptr i8, i8* %key1, i64 2
     br label %while.body.i
-  
+
   if.then.i:                                        ; preds = %entry
     br i1 %cmp.i, label %lor.lhs.false3.i, label %land.lhs.true.i
-  
+
   land.lhs.true.i:                                  ; preds = %if.then.i
     %4 = bitcast i8* %key1 to i16*
     %5 = load i16, i16* %4, align 2
     %tobool.i = icmp eq i16 %5, 0
     br i1 %tobool.i, label %lor.lhs.false3.i, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
-  
+
   lor.lhs.false3.i:                                 ; preds = %land.lhs.true.i, %if.then.i
     br i1 %cmp1.i, label %if.else.i, label %land.lhs.true5.i
-  
+
   land.lhs.true5.i:                                 ; preds = %lor.lhs.false3.i
     %6 = bitcast i8* %key2 to i16*
     %7 = load i16, i16* %6, align 2
     %tobool6.i = icmp eq i16 %7, 0
     br i1 %tobool6.i, label %if.else.i, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
-  
+
   if.else.i:                                        ; preds = %land.lhs.true5.i, %lor.lhs.false3.i
     br label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
-  
+
   while.body.i:                                     ; preds = %while.body.i.preheader, %if.end12.i
     %lsr.iv5 = phi i8* [ %scevgep4, %while.body.i.preheader ], [ %scevgep6, %if.end12.i ]
     %lsr.iv = phi i8* [ %scevgep, %while.body.i.preheader ], [ %scevgep2, %if.end12.i ]
@@ -62,7 +62,7 @@
     %14 = bitcast i8* %13 to i16*
     %tobool10.i = icmp eq i16 %8, 0
     br i1 %tobool10.i, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit, label %if.end12.i
-  
+
   if.end12.i:                                       ; preds = %while.body.i
     %15 = load i16, i16* %14, align 2
     %16 = load i16, i16* %12, align 2
@@ -70,13 +70,13 @@
     %scevgep2 = getelementptr i8, i8* %lsr.iv, i64 2
     %scevgep6 = getelementptr i8, i8* %lsr.iv5, i64 2
     br i1 %cmp9.i, label %while.body.i, label %_ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit
-  
+
   _ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit:    ; preds = %if.end12.i, %while.body.i, %if.else.i, %land.lhs.true5.i, %land.lhs.true.i, %while.cond.preheader.i
     %retval.0.i1 = phi i64 [ 1, %if.else.i ], [ 0, %land.lhs.true.i ], [ 0, %land.lhs.true5.i ], [ 0, %while.cond.preheader.i ], [ 0, %if.end12.i ], [ 1, %while.body.i ]
     %backToBool = trunc i64 %retval.0.i1 to i1
     ret i1 %backToBool
   }
-  
+
   attributes #0 = { "target-cpu"="pwr9" }
 
 ...
@@ -122,90 +122,90 @@ body:             |
   bb.0.entry:
     successors: %bb.5(0x40000000), %bb.1(0x40000000)
     liveins: $x4, $x5
-  
+
     renamable $cr1 = CMPDI renamable $x4, 0
     renamable $cr0 = CMPDI renamable $x5, 0
     renamable $cr5lt = CROR renamable $cr1eq, renamable $cr0eq
     BC killed renamable $cr5lt, %bb.5
-  
+
   bb.1.while.cond.preheader.i:
     successors: %bb.2(0x40000000), %bb.11(0x40000000)
     liveins: $x4, $x5
-  
-    renamable $r8 = LHZ 0, renamable $x4 :: (load 2 from %ir.1)
-    renamable $r6 = LHZ 0, renamable $x5 :: (load 2 from %ir.0)
+
+    renamable $r8 = LHZ 0, renamable $x4 :: (load (s16) from %ir.1)
+    renamable $r6 = LHZ 0, renamable $x5 :: (load (s16) from %ir.0)
     renamable $x3 = LI8 0
     renamable $cr0 = CMPLW renamable $r8, killed renamable $r6
     BCC 68, killed renamable $cr0, %bb.11
-  
+
   bb.2.while.body.i.preheader:
     successors: %bb.3(0x80000000)
     liveins: $r8, $x3, $x4, $x5
-  
+
     renamable $x6 = ADDI8 renamable $x5, 2
     renamable $x7 = ADDI8 renamable $x4, 2
-  
+
   bb.3.while.body.i:
     successors: %bb.4(0x04000000), %bb.10(0x7c000000)
     liveins: $r8, $x3, $x4, $x5, $x6, $x7
-  
+
     dead renamable $r8 = ANDI_rec killed renamable $r8, 65535, implicit-def $cr0
     BCC 68, killed renamable $cr0, %bb.10
-  
+
   bb.4:
     renamable $x3 = LI8 1
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3
-  
+
   bb.5.if.then.i:
     successors: %bb.7(0x30000000), %bb.6(0x50000000)
     liveins: $cr0, $cr1, $x4, $x5
-  
+
     BC killed renamable $cr1eq, %bb.7
-  
+
   bb.6.land.lhs.true.i:
     successors: %bb.7(0x30000000), %bb.11(0x50000000)
     liveins: $cr0, $x4, $x5
-  
-    renamable $r4 = LHZ 0, killed renamable $x4 :: (load 2 from %ir.4)
+
+    renamable $r4 = LHZ 0, killed renamable $x4 :: (load (s16) from %ir.4)
     renamable $x3 = LI8 0
     renamable $cr1 = CMPLWI killed renamable $r4, 0
     BCC 68, killed renamable $cr1, %bb.11
-  
+
   bb.7.lor.lhs.false3.i:
     successors: %bb.9(0x30000000), %bb.8(0x50000000)
     liveins: $cr0, $x5
-  
+
     BC killed renamable $cr0eq, %bb.9
-  
+
   bb.8.land.lhs.true5.i:
     successors: %bb.9(0x80000000)
     liveins: $x5
-  
-    renamable $r4 = LHZ 0, killed renamable $x5 :: (load 2 from %ir.6)
+
+    renamable $r4 = LHZ 0, killed renamable $x5 :: (load (s16) from %ir.6)
     renamable $x3 = LI8 0
     renamable $cr0 = CMPLWI killed renamable $r4, 0
     BCCLR 68, killed renamable $cr0, implicit $lr, implicit $rm, implicit killed $x3
-  
+
   bb.9.if.else.i:
     renamable $x3 = LI8 1
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3
-  
+
   bb.10.if.end12.i:
     successors: %bb.3(0x7c000000), %bb.11(0x04000000)
     liveins: $x3, $x4, $x5, $x6, $x7
-  
+
     renamable $x5 = ADDI8 killed renamable $x5, 2
     renamable $x4 = ADDI8 killed renamable $x4, 2
-    renamable $r8 = LHZ 0, renamable $x4 :: (load 2 from %ir.14)
-    renamable $r9 = LHZ 0, renamable $x5 :: (load 2 from %ir.12)
+    renamable $r8 = LHZ 0, renamable $x4 :: (load (s16) from %ir.14)
+    renamable $r9 = LHZ 0, renamable $x5 :: (load (s16) from %ir.12)
     renamable $x6 = ADDI8 killed renamable $x6, 2
     renamable $x7 = ADDI8 killed renamable $x7, 2
     renamable $cr0 = CMPLW renamable $r8, killed renamable $r9
     BCC 76, killed renamable $cr0, %bb.3
-  
+
   bb.11._ZN11xercesc_2_79XMLString6equalsEPKtS2_.exit:
     liveins: $x3
-  
+
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3
 
   ; CHECK:      bb.5.if.else.i:

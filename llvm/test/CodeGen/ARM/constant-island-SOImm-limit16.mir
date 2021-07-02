@@ -48,9 +48,9 @@ body:             |
     ; 2 consecutive entries: 1 is 4-byte aligned, 1 is not 4-byte aligned.
 
     renamable $r1 = LEApcrel %const.0, 14, $noreg
-    renamable $r1 = LDRH killed renamable $r1, $noreg, 0, 14, $noreg :: (load 2 from constant-pool)
+    renamable $r1 = LDRH killed renamable $r1, $noreg, 0, 14, $noreg :: (load (s16) from constant-pool)
     renamable $r1 = LEApcrel %const.1, 14, $noreg
-    renamable $r1 = LDRH killed renamable $r1, $noreg, 0, 14, $noreg :: (load 2 from constant-pool)
+    renamable $r1 = LDRH killed renamable $r1, $noreg, 0, 14, $noreg :: (load (s16) from constant-pool)
 
     renamable $r0 = SPACE SPACEBYTES, undef renamable $r0
 

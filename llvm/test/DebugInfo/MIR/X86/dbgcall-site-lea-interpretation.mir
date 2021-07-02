@@ -113,13 +113,13 @@ body:             |
     $r9d = MOV32rr $esi
     $r14 = MOV64rr $rsi
     $r15 = MOV64rr $rdi
-    MOV32mr $rsp, 1, $noreg, 12, $noreg, renamable $edi :: (store 4 into %ir.arg1.addr)
-    MOV32mr $rsp, 1, $noreg, 8, $noreg, renamable $edx :: (store 4 into %ir.arg3.addr)
+    MOV32mr $rsp, 1, $noreg, 12, $noreg, renamable $edi :: (store (s32) into %ir.arg1.addr)
+    MOV32mr $rsp, 1, $noreg, 8, $noreg, renamable $edx :: (store (s32) into %ir.arg3.addr)
     renamable $r9d = nsw ADD32rr killed renamable $r9d, renamable $edi, implicit-def dead $eflags, debug-location !14
     $esi = MOV32rr $r9d, debug-location !14
     renamable $esi = nsw SUB32rr killed renamable $esi, renamable $edx, implicit-def dead $eflags, debug-location !14
     renamable $edx = nsw IMUL32rr killed renamable $edx, killed renamable $edi, implicit-def dead $eflags, debug-location !14
-    MOV32mr $rsp, 1, $noreg, 4, $noreg, renamable $edx, debug-location !14 :: (store 4 into %ir.local1)
+    MOV32mr $rsp, 1, $noreg, 4, $noreg, renamable $edx, debug-location !14 :: (store (s32) into %ir.local1)
     renamable $rcx = LEA64r $r14, 1, $r15, 0, $noreg
     renamable $edi = LEA64_32r $r14, 2, $r15, 4, $noreg
     renamable $esi = LEA64_32r $r14, 1, $noreg, 0, $noreg
@@ -127,10 +127,10 @@ body:             |
     renamable $r8 = LEA64r $noreg, 2, $r15, 8, $noreg
     renamable $r9d = LEA64_32r  $noreg, 1, $r15, 10, $noreg, implicit-def $r9d
     CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit $rdx, implicit $rcx, implicit $r8, implicit $r9d, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !14
-    ADD32mr $rsp, 1, $noreg, 4, $noreg, killed renamable $eax, implicit-def dead $eflags, debug-location !14 :: (store 4 into %ir.local1), (dereferenceable load 4 from %ir.local1)
+    ADD32mr $rsp, 1, $noreg, 4, $noreg, killed renamable $eax, implicit-def dead $eflags, debug-location !14 :: (store (s32) into %ir.local1), (dereferenceable load (s32) from %ir.local1)
     $rdi = LEA64r $r14, 1, killed $r14, 0, $noreg
     CALL64pcrel32 @foo2, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax, debug-location !14
-    renamable $eax = MOV32rm $rsp, 1, $noreg, 4, $noreg, debug-location !14 :: (dereferenceable load 4 from %ir.local1)
+    renamable $eax = MOV32rm $rsp, 1, $noreg, 4, $noreg, debug-location !14 :: (dereferenceable load (s32) from %ir.local1)
     $rsp = frame-destroy ADD64ri8 $rsp, 16, implicit-def dead $eflags, debug-location !14
     CFI_INSTRUCTION def_cfa_offset 16, debug-location !14
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !14

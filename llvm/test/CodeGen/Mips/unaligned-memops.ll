@@ -12,10 +12,10 @@ define void @g2(i32* %a, i32* %b) {
   ; MIPS:   [[COPY:%[0-9]+]]:gpr32 = COPY $a1
   ; MIPS:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a0
   ; MIPS:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; MIPS:   [[LWL:%[0-9]+]]:gpr32 = LWL [[COPY1]], 0, [[DEF]] :: (load 4 from %ir.a, align 1)
-  ; MIPS:   [[LWR:%[0-9]+]]:gpr32 = LWR [[COPY1]], 3, [[LWL]] :: (load 4 from %ir.a, align 1)
-  ; MIPS:   SWL [[LWR]], [[COPY]], 0 :: (store 4 into %ir.b, align 1)
-  ; MIPS:   SWR [[LWR]], [[COPY]], 3 :: (store 4 into %ir.b, align 1)
+  ; MIPS:   [[LWL:%[0-9]+]]:gpr32 = LWL [[COPY1]], 0, [[DEF]] :: (load (s32) from %ir.a, align 1)
+  ; MIPS:   [[LWR:%[0-9]+]]:gpr32 = LWR [[COPY1]], 3, [[LWL]] :: (load (s32) from %ir.a, align 1)
+  ; MIPS:   SWL [[LWR]], [[COPY]], 0 :: (store (s32) into %ir.b, align 1)
+  ; MIPS:   SWR [[LWR]], [[COPY]], 3 :: (store (s32) into %ir.b, align 1)
   ; MIPS:   RetRA
   ; MICROMIPS-LABEL: name: g2
   ; MICROMIPS: bb.0.entry:
@@ -23,10 +23,10 @@ define void @g2(i32* %a, i32* %b) {
   ; MICROMIPS:   [[COPY:%[0-9]+]]:gpr32 = COPY $a1
   ; MICROMIPS:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a0
   ; MICROMIPS:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; MICROMIPS:   [[LWL_MM:%[0-9]+]]:gpr32 = LWL_MM [[COPY1]], 0, [[DEF]] :: (load 4 from %ir.a, align 1)
-  ; MICROMIPS:   [[LWR_MM:%[0-9]+]]:gpr32 = LWR_MM [[COPY1]], 3, [[LWL_MM]] :: (load 4 from %ir.a, align 1)
-  ; MICROMIPS:   SWL_MM [[LWR_MM]], [[COPY]], 0 :: (store 4 into %ir.b, align 1)
-  ; MICROMIPS:   SWR_MM [[LWR_MM]], [[COPY]], 3 :: (store 4 into %ir.b, align 1)
+  ; MICROMIPS:   [[LWL_MM:%[0-9]+]]:gpr32 = LWL_MM [[COPY1]], 0, [[DEF]] :: (load (s32) from %ir.a, align 1)
+  ; MICROMIPS:   [[LWR_MM:%[0-9]+]]:gpr32 = LWR_MM [[COPY1]], 3, [[LWL_MM]] :: (load (s32) from %ir.a, align 1)
+  ; MICROMIPS:   SWL_MM [[LWR_MM]], [[COPY]], 0 :: (store (s32) into %ir.b, align 1)
+  ; MICROMIPS:   SWR_MM [[LWR_MM]], [[COPY]], 3 :: (store (s32) into %ir.b, align 1)
   ; MICROMIPS:   RetRA
 entry:
   %0 = load i32, i32* %a, align 1

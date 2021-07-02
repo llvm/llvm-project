@@ -128,7 +128,7 @@ body:             |
     JMP_1 %bb.1
   
   bb.3.bb3:
-    %6:gr32 = MOV32rm %3, 1, $noreg, 0, $noreg, debug-location !17 :: (load 4 from %ir.tmp1)
+    %6:gr32 = MOV32rm %3, 1, $noreg, 0, $noreg, debug-location !17 :: (load (s32) from %ir.tmp1)
     JMP_1 %bb.2
   
   bb.4.exit:

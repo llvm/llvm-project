@@ -49,9 +49,9 @@ body:             |
 
     %1:gpr = COPY $r1
     %0:gpr = COPY $r0
-    %2:gprnopc = t2LDRi12 %0, 0, 14, $noreg :: (load 4 from %ir.a)
+    %2:gprnopc = t2LDRi12 %0, 0, 14, $noreg :: (load (s32) from %ir.a)
     %3:rgpr = nsw t2ADDri %2, 10, 14, $noreg, $noreg
-    %4:gprnopc = t2LDRi12 %1, 0, 14, $noreg :: (load 4 from %ir.b)
+    %4:gprnopc = t2LDRi12 %1, 0, 14, $noreg :: (load (s32) from %ir.b)
     %5:rgpr = nsw t2ADDri %4, 20, 14, $noreg, $noreg
     %6:rgpr = nsw t2MUL %5, %3, 14, $noreg
     $r0 = COPY %6

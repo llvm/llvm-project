@@ -76,9 +76,9 @@ body:             |
 
     $sp = frame-setup SUBXri $sp, 16, 0
     $x8 = ADDXri $sp, 0, 0
-    STRXui $xzr, $sp, 1 :: (store 8 into %ir.3 + 8)
-    STRXui $xzr, $sp, 0 :: (store 8 into %ir.3)
-    renamable $w0 = LDRWroW killed renamable $x8, killed renamable $w0, 1, 1 :: (load 4 from %ir.5, !tbaa !2)
+    STRXui $xzr, $sp, 1 :: (store (s64) into %ir.3 + 8)
+    STRXui $xzr, $sp, 0 :: (store (s64) into %ir.3)
+    renamable $w0 = LDRWroW killed renamable $x8, killed renamable $w0, 1, 1 :: (load (s32) from %ir.5, !tbaa !2)
     $sp = frame-destroy ADDXri $sp, 16, 0
     RET undef $lr, implicit $w0
 

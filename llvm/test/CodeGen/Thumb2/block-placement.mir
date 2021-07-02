@@ -347,7 +347,7 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $r12 = t2LDRi12 $sp, 32, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+  ; CHECK:   renamable $r12 = t2LDRi12 $sp, 32, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0, align 8)
   ; CHECK:   $r9 = tMOVr killed $r2, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r8 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
@@ -420,7 +420,7 @@ body:             |
   bb.1:
     liveins: $r0, $r1, $r2, $r3
 
-    renamable $r12 = t2LDRi12 $sp, 32, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+    renamable $r12 = t2LDRi12 $sp, 32, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0, align 8)
     $r9 = tMOVr killed $r2, 14 /* CC::al */, $noreg
     renamable $r8 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
     t2B %bb.2, 14 /* CC::al */, $noreg

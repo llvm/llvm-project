@@ -655,7 +655,7 @@ body:             |
     ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
     ; CHECK: %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 15
     ; CHECK: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
-    ; CHECK: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store 8)
+    ; CHECK: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store (p0))
     ; CHECK: RET_ReallyLR
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = COPY $w1
@@ -665,7 +665,7 @@ body:             |
     %cst:gpr(s64) = G_CONSTANT i64 3
     %shl:gpr(s64) = G_SHL %zext, %cst(s64)
     %gep:gpr(p0) = G_PTR_ADD %0, %shl(s64)
-    G_STORE %2(p0), %gep(p0) :: (store 8)
+    G_STORE %2(p0), %gep(p0) :: (store (p0))
     RET_ReallyLR
 ...
 ---
@@ -690,7 +690,7 @@ body:             |
     ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
     ; CHECK: %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 7
     ; CHECK: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
-    ; CHECK: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store 8)
+    ; CHECK: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store (p0))
     ; CHECK: RET_ReallyLR
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = COPY $w1
@@ -700,7 +700,7 @@ body:             |
     %cst:gpr(s64) = G_CONSTANT i64 3
     %shl:gpr(s64) = G_SHL %zext, %cst(s64)
     %gep:gpr(p0) = G_PTR_ADD %0, %shl(s64)
-    G_STORE %2(p0), %gep(p0) :: (store 8)
+    G_STORE %2(p0), %gep(p0) :: (store (p0))
     RET_ReallyLR
 ...
 ---
@@ -725,7 +725,7 @@ body:             |
     ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
     ; CHECK: %zext:gpr64 = SBFMXri [[SUBREG_TO_REG]], 0, 15
     ; CHECK: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
-    ; CHECK: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store 8)
+    ; CHECK: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store (p0))
     ; CHECK: RET_ReallyLR
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = COPY $w1
@@ -735,7 +735,7 @@ body:             |
     %cst:gpr(s64) = G_CONSTANT i64 3
     %shl:gpr(s64) = G_SHL %zext, %cst(s64)
     %gep:gpr(p0) = G_PTR_ADD %0, %shl(s64)
-    G_STORE %2(p0), %gep(p0) :: (store 8)
+    G_STORE %2(p0), %gep(p0) :: (store (p0))
     RET_ReallyLR
 ...
 ---
@@ -760,7 +760,7 @@ body:             |
     ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
     ; CHECK: %zext:gpr64 = SBFMXri [[SUBREG_TO_REG]], 0, 7
     ; CHECK: [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
-    ; CHECK: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store 8)
+    ; CHECK: STRXroX [[COPY3]], [[COPY]], %zext, 0, 1 :: (store (p0))
     ; CHECK: RET_ReallyLR
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = COPY $w1
@@ -770,6 +770,6 @@ body:             |
     %cst:gpr(s64) = G_CONSTANT i64 3
     %shl:gpr(s64) = G_SHL %zext, %cst(s64)
     %gep:gpr(p0) = G_PTR_ADD %0, %shl(s64)
-    G_STORE %2(p0), %gep(p0) :: (store 8)
+    G_STORE %2(p0), %gep(p0) :: (store (p0))
     RET_ReallyLR
 ...

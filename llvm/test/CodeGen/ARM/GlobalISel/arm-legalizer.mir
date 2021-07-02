@@ -27,8 +27,8 @@ body:             |
 
     %1(s64) = G_CONSTANT i64 17179869200 ; = 4 * 2 ^ 32 + 16
     %2(s32), %3(s32) = G_UNMERGE_VALUES %1(s64)
-    G_STORE %2(s32), %0(p0) :: (store 4)
-    G_STORE %3(s32), %0(p0) :: (store 4)
+    G_STORE %2(s32), %0(p0) :: (store (s32))
+    G_STORE %3(s32), %0(p0) :: (store (s32))
     ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_CONSTANT i32 4
     ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_CONSTANT i32 16
     ; CHECK-NOT: G_CONSTANT i64

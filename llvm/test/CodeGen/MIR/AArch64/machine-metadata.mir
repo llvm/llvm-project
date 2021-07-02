@@ -76,19 +76,19 @@ body:             |
     ; CHECK-LABEL: name: test_memcpy
     ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY $x1
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY $x0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 1 :: (load 16 from %ir.p1, align 4, !alias.scope !5, !noalias !8)
-    ; CHECK: STRQui killed [[LDRQui]], [[COPY1]], 0 :: (store 16 into %ir.p0, align 4, !alias.scope !10, !noalias !11)
-    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 1 :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 1 :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8)
+    ; CHECK: STRQui killed [[LDRQui]], [[COPY1]], 0 :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11)
+    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 1 :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[LDRWui]], killed [[LDRWui1]]
     ; CHECK: $w0 = COPY [[ADDWrr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %1:gpr64common = COPY $x1
     %0:gpr64common = COPY $x0
-    %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 4, !alias.scope !5, !noalias !8)
-    STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 4, !alias.scope !10, !noalias !11)
-    %3:gpr32 = LDRWui %1, 0 :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    %4:gpr32 = LDRWui %1, 1 :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8)
+    STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11)
+    %3:gpr32 = LDRWui %1, 0 :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    %4:gpr32 = LDRWui %1, 1 :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     %5:gpr32 = ADDWrr killed %3, killed %4
     $w0 = COPY %5
     RET_ReallyLR implicit $w0
@@ -111,19 +111,19 @@ body:             |
     ; CHECK-LABEL: name: test_memcpy_inline
     ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY $x1
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY $x0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 1 :: (load 16 from %ir.p1, align 4, !alias.scope !5, !noalias !8)
-    ; CHECK: STRQui killed [[LDRQui]], [[COPY1]], 0 :: (store 16 into %ir.p0, align 4, !alias.scope !10, !noalias !11)
-    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 1 :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 1 :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8)
+    ; CHECK: STRQui killed [[LDRQui]], [[COPY1]], 0 :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11)
+    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 1 :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[LDRWui]], killed [[LDRWui1]]
     ; CHECK: $w0 = COPY [[ADDWrr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %1:gpr64common = COPY $x1
     %0:gpr64common = COPY $x0
-    %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 4, !alias.scope !5, !noalias !8)
-    STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 4, !alias.scope !10, !noalias !11)
-    %3:gpr32 = LDRWui %1, 0 :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    %4:gpr32 = LDRWui %1, 1 :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 4, !alias.scope !5, !noalias !8)
+    STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 4, !alias.scope !10, !noalias !11)
+    %3:gpr32 = LDRWui %1, 0 :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    %4:gpr32 = LDRWui %1, 1 :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     %5:gpr32 = ADDWrr killed %3, killed %4
     $w0 = COPY %5
     RET_ReallyLR implicit $w0
@@ -146,19 +146,19 @@ body:             |
     ; CHECK-LABEL: name: test_mempcpy
     ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY $x1
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY $x0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 1 :: (load 16 from %ir.p1, align 1, !alias.scope !5, !noalias !8)
-    ; CHECK: STRQui killed [[LDRQui]], [[COPY1]], 0 :: (store 16 into %ir.p0, align 1, !alias.scope !10, !noalias !11)
-    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 1 :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 1 :: (load (s128) from %ir.p1, align 1, !alias.scope !5, !noalias !8)
+    ; CHECK: STRQui killed [[LDRQui]], [[COPY1]], 0 :: (store (s128) into %ir.p0, align 1, !alias.scope !10, !noalias !11)
+    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 1 :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr killed [[LDRWui]], killed [[LDRWui1]]
     ; CHECK: $w0 = COPY [[ADDWrr]]
     ; CHECK: RET_ReallyLR implicit $w0
     %1:gpr64common = COPY $x1
     %0:gpr64common = COPY $x0
-    %2:fpr128 = LDRQui %0, 1 :: (load 16 from %ir.p1, align 1, !alias.scope !5, !noalias !8)
-    STRQui killed %2, %0, 0 :: (store 16 into %ir.p0, align 1, !alias.scope !10, !noalias !11)
-    %3:gpr32 = LDRWui %1, 0 :: (load 4 from %ir.q, !alias.scope !3, !noalias !0)
-    %4:gpr32 = LDRWui %1, 1 :: (load 4 from %ir.q1, !alias.scope !3, !noalias !0)
+    %2:fpr128 = LDRQui %0, 1 :: (load (s128) from %ir.p1, align 1, !alias.scope !5, !noalias !8)
+    STRQui killed %2, %0, 0 :: (store (s128) into %ir.p0, align 1, !alias.scope !10, !noalias !11)
+    %3:gpr32 = LDRWui %1, 0 :: (load (s32) from %ir.q, !alias.scope !3, !noalias !0)
+    %4:gpr32 = LDRWui %1, 1 :: (load (s32) from %ir.q1, !alias.scope !3, !noalias !0)
     %5:gpr32 = ADDWrr killed %3, killed %4
     $w0 = COPY %5
     RET_ReallyLR implicit $w0

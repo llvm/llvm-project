@@ -39,7 +39,7 @@ body:             |
   bb.2:
     successors: %bb.1(0x80000000)
     %3:gpr64common = ADDXrr %6, %2
-    %4:gpr32 = LDRBBui killed %3, 1 :: (load 1 from %ir.scevgep)
+    %4:gpr32 = LDRBBui killed %3, 1 :: (load (s8) from %ir.scevgep)
     %5:gpr32all = COPY %4
     B %bb.1
 

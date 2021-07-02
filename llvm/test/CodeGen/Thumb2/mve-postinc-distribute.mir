@@ -88,11 +88,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRWU32
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -115,11 +115,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHU16
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRHU16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRHU16 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRHU16 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -142,11 +142,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU8
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBU8_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRBU8 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBU8 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -169,11 +169,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBS32
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS32_post1:%[0-9]+]]:mqpr = MVE_VLDRBS32_post [[COPY]], 32, 0, $noreg :: (load 4, align 8)
+    ; CHECK: [[MVE_VLDRBS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS32_post1:%[0-9]+]]:mqpr = MVE_VLDRBS32_post [[COPY]], 32, 0, $noreg :: (load (s32), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBS32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %1:mqpr = MVE_VLDRBS32 %0, 0, 0, $noreg :: (load 4, align 8)
+    %1:mqpr = MVE_VLDRBS32 %0, 0, 0, $noreg :: (load (s32), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -196,11 +196,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU32
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU32_post1:%[0-9]+]]:mqpr = MVE_VLDRBU32_post [[COPY]], 32, 0, $noreg :: (load 4, align 8)
+    ; CHECK: [[MVE_VLDRBU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU32_post1:%[0-9]+]]:mqpr = MVE_VLDRBU32_post [[COPY]], 32, 0, $noreg :: (load (s32), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %1:mqpr = MVE_VLDRBU32 %0, 0, 0, $noreg :: (load 4, align 8)
+    %1:mqpr = MVE_VLDRBU32 %0, 0, 0, $noreg :: (load (s32), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -223,11 +223,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHS32
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHS32_post1:%[0-9]+]]:mqpr = MVE_VLDRHS32_post [[COPY]], 32, 0, $noreg :: (load 8)
+    ; CHECK: [[MVE_VLDRHS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHS32_post1:%[0-9]+]]:mqpr = MVE_VLDRHS32_post [[COPY]], 32, 0, $noreg :: (load (s64))
     ; CHECK: $r0 = COPY [[MVE_VLDRHS32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %1:mqpr = MVE_VLDRHS32 %0, 0, 0, $noreg :: (load 8, align 8)
+    %1:mqpr = MVE_VLDRHS32 %0, 0, 0, $noreg :: (load (s64), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -250,11 +250,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHU32
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHU32_post1:%[0-9]+]]:mqpr = MVE_VLDRHU32_post [[COPY]], 32, 0, $noreg :: (load 8)
+    ; CHECK: [[MVE_VLDRHU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHU32_post1:%[0-9]+]]:mqpr = MVE_VLDRHU32_post [[COPY]], 32, 0, $noreg :: (load (s64))
     ; CHECK: $r0 = COPY [[MVE_VLDRHU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %1:mqpr = MVE_VLDRHU32 %0, 0, 0, $noreg :: (load 8, align 8)
+    %1:mqpr = MVE_VLDRHU32 %0, 0, 0, $noreg :: (load (s64), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -277,11 +277,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBS16
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBS16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS16_post1:%[0-9]+]]:mqpr = MVE_VLDRBS16_post [[COPY]], 32, 0, $noreg :: (load 8)
+    ; CHECK: [[MVE_VLDRBS16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS16_post1:%[0-9]+]]:mqpr = MVE_VLDRBS16_post [[COPY]], 32, 0, $noreg :: (load (s64))
     ; CHECK: $r0 = COPY [[MVE_VLDRBS16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %1:mqpr = MVE_VLDRBS16 %0, 0, 0, $noreg :: (load 8, align 8)
+    %1:mqpr = MVE_VLDRBS16 %0, 0, 0, $noreg :: (load (s64), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -304,11 +304,11 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU16
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU16_post1:%[0-9]+]]:mqpr = MVE_VLDRBU16_post [[COPY]], 32, 0, $noreg :: (load 8)
+    ; CHECK: [[MVE_VLDRBU16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU16_post1:%[0-9]+]]:mqpr = MVE_VLDRBU16_post [[COPY]], 32, 0, $noreg :: (load (s64))
     ; CHECK: $r0 = COPY [[MVE_VLDRBU16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %1:mqpr = MVE_VLDRBU16 %0, 0, 0, $noreg :: (load 8, align 8)
+    %1:mqpr = MVE_VLDRBU16 %0, 0, 0, $noreg :: (load (s64), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -332,12 +332,12 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRWU32_post:%[0-9]+]]:rgpr = MVE_VSTRWU32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRWU32_post:%[0-9]+]]:rgpr = MVE_VSTRWU32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:gprnopc = COPY $r0
-    MVE_VSTRWU32 %1, %0, 0, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRWU32 %1, %0, 0, 0, $noreg :: (store (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -361,12 +361,12 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRHU16_post:%[0-9]+]]:rgpr = MVE_VSTRHU16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRHU16_post:%[0-9]+]]:rgpr = MVE_VSTRHU16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRHU16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:gprnopc = COPY $r0
-    MVE_VSTRHU16 %1, %0, 0, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRHU16 %1, %0, 0, 0, $noreg :: (store (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -390,12 +390,12 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRBU8_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:gprnopc = COPY $r0
-    MVE_VSTRBU8 %1, %0, 0, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRBU8 %1, %0, 0, 0, $noreg :: (store (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -419,12 +419,12 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRH32_post:%[0-9]+]]:tgpr = MVE_VSTRH32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 8)
+    ; CHECK: [[MVE_VSTRH32_post:%[0-9]+]]:tgpr = MVE_VSTRH32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s64))
     ; CHECK: $r0 = COPY [[MVE_VSTRH32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    MVE_VSTRH32 %1, %0, 0, 0, $noreg :: (store 8, align 8)
+    MVE_VSTRH32 %1, %0, 0, 0, $noreg :: (store (s64), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -448,12 +448,12 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB32_post:%[0-9]+]]:tgpr = MVE_VSTRB32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 4, align 8)
+    ; CHECK: [[MVE_VSTRB32_post:%[0-9]+]]:tgpr = MVE_VSTRB32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s32), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRB32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    MVE_VSTRB32 %1, %0, 0, 0, $noreg :: (store 4, align 8)
+    MVE_VSTRB32 %1, %0, 0, 0, $noreg :: (store (s32), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -477,12 +477,12 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB16_post:%[0-9]+]]:tgpr = MVE_VSTRB16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 8)
+    ; CHECK: [[MVE_VSTRB16_post:%[0-9]+]]:tgpr = MVE_VSTRB16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s64))
     ; CHECK: $r0 = COPY [[MVE_VSTRB16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    MVE_VSTRB16 %1, %0, 0, 0, $noreg :: (store 8, align 8)
+    MVE_VSTRB16 %1, %0, 0, 0, $noreg :: (store (s64), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -506,14 +506,14 @@ body:             |
     ; CHECK-LABEL: name: ld0ld4
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -28, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -28, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -536,14 +536,14 @@ body:             |
     ; CHECK-LABEL: name: ld4ld0
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -567,16 +567,16 @@ body:             |
     ; CHECK-LABEL: name: ld0ld4ld0
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
-    %4:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
+    %4:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -600,16 +600,16 @@ body:             |
     ; CHECK-LABEL: name: ld4ld0ld4
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -28, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -28, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
-    %4:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
+    %4:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -632,14 +632,14 @@ body:             |
     ; CHECK-LABEL: name: addload
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -28, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -28, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -662,14 +662,14 @@ body:             |
     ; CHECK-LABEL: name: sub
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], -32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], 36, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], -32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], 36, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2SUBri %0, 32, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -693,15 +693,15 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
     ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[COPY]]
     ; CHECK: $r0 = COPY [[t2ADDri]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %0
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
@@ -727,14 +727,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
     ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 4, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 4, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[t2ADDri]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:rgpr = COPY $r0
     %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
-    %4:rgpr, %3:mqpr = MVE_VLDRWU32_post %0, 4, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
+    %4:rgpr, %3:mqpr = MVE_VLDRWU32_post %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -757,15 +757,15 @@ body:             |
     ; CHECK-LABEL: name: badScale
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load (s128), align 8)
     ; CHECK: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], 3, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[t2SUBri]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2SUBri %0, 3, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -788,15 +788,15 @@ body:             |
     ; CHECK-LABEL: name: badRange
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load (s128), align 8)
     ; CHECK: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], -300, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], -300, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], -300, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[t2SUBri]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2SUBri %0, -300, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, -300, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, -300, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -820,15 +820,15 @@ body:             |
     ; CHECK-LABEL: name: addUseOK
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], -32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], 36, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], -32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], 36, 0, $noreg :: (load (s128), align 8)
     ; CHECK: [[t2LSRri:%[0-9]+]]:rgpr = nuw t2LSRri [[MVE_VLDRWU32_post]], 2, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2LSRri]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2SUBri %0, 32, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     %4:rgpr = nuw t2LSRri %2, 2, 14, $noreg, $noreg
     $r0 = COPY %4
     tBX_RET 14, $noreg, implicit $r0
@@ -855,15 +855,15 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
     ; CHECK: [[t2SUBri:%[0-9]+]]:rgpr = nuw t2SUBri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: [[t2LSRri:%[0-9]+]]:rgpr = nuw t2LSRri [[t2SUBri]], 2, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 0, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_1:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[COPY]], 4, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[t2LSRri]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %2:rgpr = nuw t2SUBri %0, 32, 14, $noreg, $noreg
     %4:rgpr = nuw t2LSRri %2, 2, 14, $noreg, $noreg
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %4
     tBX_RET 14, $noreg, implicit $r0
 
@@ -887,16 +887,16 @@ body:             |
     ; CHECK-LABEL: name: addUseKilled
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], -32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], -32, 0, $noreg :: (load (s128), align 8)
     ; CHECK: [[t2LSRri:%[0-9]+]]:rgpr = nuw t2LSRri [[MVE_VLDRWU32_post]], 2, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], 36, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], 36, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[t2LSRri]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
-    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2SUBri %0, 32, 14, $noreg, $noreg
     %4:rgpr = nuw t2LSRri killed %2, 2, 14, $noreg, $noreg
-    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
+    %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %4
     tBX_RET 14, $noreg, implicit $r0
 
@@ -918,13 +918,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRWU32_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:rgpr = COPY $r0
-    %2:rgpr, %1:mqpr = MVE_VLDRWU32_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRWU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:rgpr, %1:mqpr = MVE_VLDRWU32_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -946,13 +946,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHU16_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRHU16_:%[0-9]+]]:mqpr = MVE_VLDRHU16 [[MVE_VLDRHU16_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRHU16_:%[0-9]+]]:mqpr = MVE_VLDRHU16 [[MVE_VLDRHU16_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRHU16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:rgpr = COPY $r0
-    %2:rgpr, %1:mqpr = MVE_VLDRHU16_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRHU16 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:rgpr, %1:mqpr = MVE_VLDRHU16_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRHU16 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -974,13 +974,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU8_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBU8_:%[0-9]+]]:mqpr = MVE_VLDRBU8 [[MVE_VLDRBU8_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBU8_:%[0-9]+]]:mqpr = MVE_VLDRBU8 [[MVE_VLDRBU8_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBU8_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:rgpr = COPY $r0
-    %2:rgpr, %1:mqpr = MVE_VLDRBU8_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBU8 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:rgpr, %1:mqpr = MVE_VLDRBU8_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBU8 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1002,13 +1002,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBS32_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS32_post1:%[0-9]+]]:mqpr = MVE_VLDRBS32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBS32_:%[0-9]+]]:mqpr = MVE_VLDRBS32 [[MVE_VLDRBS32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS32_post1:%[0-9]+]]:mqpr = MVE_VLDRBS32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBS32_:%[0-9]+]]:mqpr = MVE_VLDRBS32 [[MVE_VLDRBS32_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBS32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRBS32_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBS32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRBS32_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBS32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1030,13 +1030,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU32_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU32_post1:%[0-9]+]]:mqpr = MVE_VLDRBU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBU32_:%[0-9]+]]:mqpr = MVE_VLDRBU32 [[MVE_VLDRBU32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU32_post1:%[0-9]+]]:mqpr = MVE_VLDRBU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBU32_:%[0-9]+]]:mqpr = MVE_VLDRBU32 [[MVE_VLDRBU32_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRBU32_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRBU32_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBU32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1058,13 +1058,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHS32_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHS32_post1:%[0-9]+]]:mqpr = MVE_VLDRHS32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRHS32_:%[0-9]+]]:mqpr = MVE_VLDRHS32 [[MVE_VLDRHS32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHS32_post1:%[0-9]+]]:mqpr = MVE_VLDRHS32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRHS32_:%[0-9]+]]:mqpr = MVE_VLDRHS32 [[MVE_VLDRHS32_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRHS32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRHS32_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRHS32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRHS32_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRHS32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1086,13 +1086,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHU32_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHU32_post1:%[0-9]+]]:mqpr = MVE_VLDRHU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRHU32_:%[0-9]+]]:mqpr = MVE_VLDRHU32 [[MVE_VLDRHU32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHU32_post1:%[0-9]+]]:mqpr = MVE_VLDRHU32_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRHU32_:%[0-9]+]]:mqpr = MVE_VLDRHU32 [[MVE_VLDRHU32_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRHU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRHU32_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRHU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRHU32_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRHU32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1114,13 +1114,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBS16_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBS16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS16_post1:%[0-9]+]]:mqpr = MVE_VLDRBS16_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBS16_:%[0-9]+]]:mqpr = MVE_VLDRBS16 [[MVE_VLDRBS16_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBS16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS16_post1:%[0-9]+]]:mqpr = MVE_VLDRBS16_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBS16_:%[0-9]+]]:mqpr = MVE_VLDRBS16 [[MVE_VLDRBS16_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBS16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRBS16_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBS16 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRBS16_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBS16 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1142,13 +1142,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU16_post
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU16_post1:%[0-9]+]]:mqpr = MVE_VLDRBU16_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBU16_:%[0-9]+]]:mqpr = MVE_VLDRBU16 [[MVE_VLDRBU16_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU16_post1:%[0-9]+]]:mqpr = MVE_VLDRBU16_post [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBU16_:%[0-9]+]]:mqpr = MVE_VLDRBU16 [[MVE_VLDRBU16_post]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBU16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRBU16_post %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBU16 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRBU16_post %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBU16 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1171,14 +1171,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRWU32_post:%[0-9]+]]:rgpr = MVE_VSTRWU32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRWU32 [[COPY]], [[MVE_VSTRWU32_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRWU32_post:%[0-9]+]]:rgpr = MVE_VSTRWU32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRWU32 [[COPY]], [[MVE_VSTRWU32_post]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRWU32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:rgpr = COPY $r0
-    %2:rgpr = MVE_VSTRWU32_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRWU32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:rgpr = MVE_VSTRWU32_post %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRWU32 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1201,14 +1201,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRHU16_post:%[0-9]+]]:rgpr = MVE_VSTRHU16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRHU16 [[COPY]], [[MVE_VSTRHU16_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRHU16_post:%[0-9]+]]:rgpr = MVE_VSTRHU16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRHU16 [[COPY]], [[MVE_VSTRHU16_post]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRHU16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:rgpr = COPY $r0
-    %2:rgpr = MVE_VSTRHU16_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRHU16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:rgpr = MVE_VSTRHU16_post %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRHU16 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1231,14 +1231,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRBU8 [[COPY]], [[MVE_VSTRBU8_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRBU8 [[COPY]], [[MVE_VSTRBU8_post]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRBU8_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:rgpr = COPY $r0
-    %2:rgpr = MVE_VSTRBU8_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRBU8 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:rgpr = MVE_VSTRBU8_post %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRBU8 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1261,14 +1261,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRH32_post:%[0-9]+]]:tgpr = MVE_VSTRH32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRH32 [[COPY]], [[MVE_VSTRH32_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRH32_post:%[0-9]+]]:tgpr = MVE_VSTRH32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRH32 [[COPY]], [[MVE_VSTRH32_post]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRH32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRH32_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRH32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRH32_post %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRH32 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1291,14 +1291,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB32_post:%[0-9]+]]:tgpr = MVE_VSTRB32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB32 [[COPY]], [[MVE_VSTRB32_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB32_post:%[0-9]+]]:tgpr = MVE_VSTRB32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB32 [[COPY]], [[MVE_VSTRB32_post]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRB32_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRB32_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRB32_post %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB32 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1321,14 +1321,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB16_post:%[0-9]+]]:tgpr = MVE_VSTRB16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB16_post:%[0-9]+]]:tgpr = MVE_VSTRB16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_post]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRB16_post]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRB16_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRB16_post %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1350,13 +1350,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRWU32_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRWU32_pre:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRWU32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_pre:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRWU32_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRWU32_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:rgpr = COPY $r0
-    %2:rgpr, %1:mqpr = MVE_VLDRWU32_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRWU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:rgpr, %1:mqpr = MVE_VLDRWU32_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1378,13 +1378,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHU16_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHU16_pre:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_pre1:%[0-9]+]]:mqpr = MVE_VLDRHU16_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRHU16_:%[0-9]+]]:mqpr = MVE_VLDRHU16 [[MVE_VLDRHU16_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU16_pre:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_pre1:%[0-9]+]]:mqpr = MVE_VLDRHU16_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRHU16_:%[0-9]+]]:mqpr = MVE_VLDRHU16 [[MVE_VLDRHU16_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRHU16_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:rgpr = COPY $r0
-    %2:rgpr, %1:mqpr = MVE_VLDRHU16_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRHU16 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:rgpr, %1:mqpr = MVE_VLDRHU16_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRHU16 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1406,13 +1406,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU8_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU8_pre:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU8_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBU8_:%[0-9]+]]:mqpr = MVE_VLDRBU8 [[MVE_VLDRBU8_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU8_pre:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU8_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBU8_:%[0-9]+]]:mqpr = MVE_VLDRBU8 [[MVE_VLDRBU8_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBU8_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:rgpr = COPY $r0
-    %2:rgpr, %1:mqpr = MVE_VLDRBU8_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBU8 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:rgpr, %1:mqpr = MVE_VLDRBU8_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBU8 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1434,13 +1434,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBS32_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBS32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBS32_pre1:%[0-9]+]]:mqpr = MVE_VLDRBS32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBS32_:%[0-9]+]]:mqpr = MVE_VLDRBS32 [[MVE_VLDRBS32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBS32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBS32_pre1:%[0-9]+]]:mqpr = MVE_VLDRBS32_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBS32_:%[0-9]+]]:mqpr = MVE_VLDRBS32 [[MVE_VLDRBS32_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBS32_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRBS32_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBS32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRBS32_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBS32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1462,13 +1462,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU32_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBU32_:%[0-9]+]]:mqpr = MVE_VLDRBU32 [[MVE_VLDRBU32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU32_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBU32_:%[0-9]+]]:mqpr = MVE_VLDRBU32 [[MVE_VLDRBU32_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBU32_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRBU32_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRBU32_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBU32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1490,13 +1490,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHS32_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHS32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRHS32_pre1:%[0-9]+]]:mqpr = MVE_VLDRHS32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRHS32_:%[0-9]+]]:mqpr = MVE_VLDRHS32 [[MVE_VLDRHS32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHS32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRHS32_pre1:%[0-9]+]]:mqpr = MVE_VLDRHS32_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRHS32_:%[0-9]+]]:mqpr = MVE_VLDRHS32 [[MVE_VLDRHS32_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRHS32_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRHS32_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRHS32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRHS32_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRHS32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1518,13 +1518,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRHU32_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRHU32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRHU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRHU32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRHU32_:%[0-9]+]]:mqpr = MVE_VLDRHU32 [[MVE_VLDRHU32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRHU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRHU32_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRHU32_:%[0-9]+]]:mqpr = MVE_VLDRHU32 [[MVE_VLDRHU32_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRHU32_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRHU32_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRHU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRHU32_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRHU32 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1546,13 +1546,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBS16_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBS16_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBS16_pre1:%[0-9]+]]:mqpr = MVE_VLDRBS16_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBS16_:%[0-9]+]]:mqpr = MVE_VLDRBS16 [[MVE_VLDRBS16_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBS16_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBS16_pre1:%[0-9]+]]:mqpr = MVE_VLDRBS16_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBS16_:%[0-9]+]]:mqpr = MVE_VLDRBS16 [[MVE_VLDRBS16_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBS16_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRBS16_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBS16 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRBS16_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBS16 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1574,13 +1574,13 @@ body:             |
     ; CHECK-LABEL: name: MVE_VLDRBU16_pre
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VLDRBU16_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBU16_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU16_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
-    ; CHECK: [[MVE_VLDRBU16_:%[0-9]+]]:mqpr = MVE_VLDRBU16 [[MVE_VLDRBU16_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU16_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBU16_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU16_pre [[COPY]], 32, 0, $noreg :: (load (s128), align 8)
+    ; CHECK: [[MVE_VLDRBU16_:%[0-9]+]]:mqpr = MVE_VLDRBU16 [[MVE_VLDRBU16_pre]], -16, 0, $noreg :: (load (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VLDRBU16_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:tgpr = COPY $r0
-    %2:tgpr, %1:mqpr = MVE_VLDRBU16_pre %0, 32, 0, $noreg :: (load 16, align 8)
-    %1:mqpr = MVE_VLDRBU16 %0, 16, 0, $noreg :: (load 16, align 8)
+    %2:tgpr, %1:mqpr = MVE_VLDRBU16_pre %0, 32, 0, $noreg :: (load (s128), align 8)
+    %1:mqpr = MVE_VLDRBU16 %0, 16, 0, $noreg :: (load (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1603,14 +1603,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRWU32_pre:%[0-9]+]]:rgpr = MVE_VSTRWU32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRWU32 [[COPY]], [[MVE_VSTRWU32_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRWU32_pre:%[0-9]+]]:rgpr = MVE_VSTRWU32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRWU32 [[COPY]], [[MVE_VSTRWU32_pre]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRWU32_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:rgpr = COPY $r0
-    %2:rgpr = MVE_VSTRWU32_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRWU32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:rgpr = MVE_VSTRWU32_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRWU32 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1633,14 +1633,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRHU16_pre:%[0-9]+]]:rgpr = MVE_VSTRHU16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRHU16 [[COPY]], [[MVE_VSTRHU16_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRHU16_pre:%[0-9]+]]:rgpr = MVE_VSTRHU16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRHU16 [[COPY]], [[MVE_VSTRHU16_pre]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRHU16_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:rgpr = COPY $r0
-    %2:rgpr = MVE_VSTRHU16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRHU16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:rgpr = MVE_VSTRHU16_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRHU16 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1663,14 +1663,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRBU8_pre:%[0-9]+]]:rgpr = MVE_VSTRBU8_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRBU8 [[COPY]], [[MVE_VSTRBU8_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRBU8_pre:%[0-9]+]]:rgpr = MVE_VSTRBU8_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRBU8 [[COPY]], [[MVE_VSTRBU8_pre]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRBU8_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:rgpr = COPY $r0
-    %2:rgpr = MVE_VSTRBU8_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRBU8 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:rgpr = MVE_VSTRBU8_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRBU8 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1693,14 +1693,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRH32_pre:%[0-9]+]]:tgpr = MVE_VSTRH32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRH32 [[COPY]], [[MVE_VSTRH32_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRH32_pre:%[0-9]+]]:tgpr = MVE_VSTRH32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRH32 [[COPY]], [[MVE_VSTRH32_pre]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRH32_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRH32_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRH32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRH32_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRH32 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1723,14 +1723,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB32_pre:%[0-9]+]]:tgpr = MVE_VSTRB32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB32 [[COPY]], [[MVE_VSTRB32_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB32_pre:%[0-9]+]]:tgpr = MVE_VSTRB32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB32 [[COPY]], [[MVE_VSTRB32_pre]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRB32_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRB32_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRB32_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB32 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1753,14 +1753,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -16, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRB16_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1783,18 +1783,18 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -16, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -48, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], 2, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -16, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -48, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], 2, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRB16_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB16 %1, %0, -16, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB16 %1, %0, 34, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB16 %1, %0, -16, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB16 %1, %0, 34, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1818,16 +1818,16 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: [[MVE_VSTRB16_pre1:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 64, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre1]], -48, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: [[MVE_VSTRB16_pre1:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 64, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre1]], -48, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRB16_pre1]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    %3:tgpr = MVE_VSTRB16_pre %1, %0, 64, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    %3:tgpr = MVE_VSTRB16_pre %1, %0, 64, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %3
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1851,15 +1851,15 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB16 [[COPY]], [[COPY1]], 0, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[COPY1]], 0, 0, $noreg :: (store (s128), align 8)
     ; CHECK: [[t2ADDri:%[0-9]+]]:tgpr = nuw t2ADDri [[COPY1]], 32, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ADDri]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB16 %1, %0, 0, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB16 %1, %0, 0, 0, $noreg :: (store (s128), align 8)
     %3:tgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     $r0 = COPY %3
     tBX_RET 14, $noreg, implicit $r0
@@ -1883,14 +1883,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRBU8_pre:%[0-9]+]]:tgpr = MVE_VSTRBU8_pre [[COPY]], [[COPY1]], 33, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRWU32 [[COPY]], [[COPY1]], 0, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRBU8_pre:%[0-9]+]]:tgpr = MVE_VSTRBU8_pre [[COPY]], [[COPY1]], 33, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRWU32 [[COPY]], [[COPY1]], 0, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRBU8_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRBU8_pre %1, %0, 33, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRWU32 %1, %0, 0, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRBU8_pre %1, %0, 33, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRWU32 %1, %0, 0, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
@@ -1913,14 +1913,14 @@ body:             |
     ; CHECK: liveins: $r0, $q0
     ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
-    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 100, 0, $noreg :: (store 16, align 8)
-    ; CHECK: MVE_VSTRB16 [[COPY]], [[COPY1]], -100, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 100, 0, $noreg :: (store (s128), align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[COPY1]], -100, 0, $noreg :: (store (s128), align 8)
     ; CHECK: $r0 = COPY [[MVE_VSTRB16_pre]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %1:mqpr = COPY $q0
     %0:tgpr = COPY $r0
-    %2:tgpr = MVE_VSTRB16_pre %1, %0, 100, 0, $noreg :: (store 16, align 8)
-    MVE_VSTRB16 %1, %0, -100, 0, $noreg :: (store 16, align 8)
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 100, 0, $noreg :: (store (s128), align 8)
+    MVE_VSTRB16 %1, %0, -100, 0, $noreg :: (store (s128), align 8)
     $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 

@@ -5,7 +5,7 @@
   ; Line numbers should not be retained when loop invariant instructions are hoisted.
   ;
   ; CHECK-LABEL:  bb.0.entry:
-  ; CHECK:        MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @x, $noreg :: (load 8 from got)
+  ; CHECK:        MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @x, $noreg :: (load (s64) from got)
   ; CHECK-LABEL:  bb.1.while.body:
   ;
   target triple = "x86_64-unknown-linux-gnu"
@@ -87,9 +87,9 @@ body:             |
     DBG_VALUE %0, _, !17, !DIExpression(), debug-location !18
     %1 = ADD64ri8 %0, 4, implicit-def dead $eflags, debug-location !20
     DBG_VALUE %1, _, !17, !DIExpression(), debug-location !18
-    %3 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load 4 from %ir.p.addr.0)
-    %4 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !22 :: (load 8 from got)
-    MOV32mr killed %4, 1, _, 0, _, killed %3, debug-location !22 :: (store 4 into @x)
+    %3 = MOV32rm %0, 1, _, 0, _, debug-location !21 :: (load (s32) from %ir.p.addr.0)
+    %4 = MOV64rm $rip, 1, _, target-flags(x86-gotpcrel) @x, _, debug-location !22 :: (load (s64) from got)
+    MOV32mr killed %4, 1, _, 0, _, killed %3, debug-location !22 :: (store (s32) into @x)
     JMP_1 %bb.1.while.body, debug-location !23
 
 ...

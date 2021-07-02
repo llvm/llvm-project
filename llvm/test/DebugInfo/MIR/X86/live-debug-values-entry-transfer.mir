@@ -99,7 +99,7 @@ body:             |
     successors: %bb.2
     liveins: $ebx
 
-    MOV32mr $rip, 1, $noreg, @glob, $noreg, renamable $ebx :: (store 4 into @glob)
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, renamable $ebx :: (store (s32) into @glob)
 
   bb.2.loop:
     successors: %bb.1, %bb.3
