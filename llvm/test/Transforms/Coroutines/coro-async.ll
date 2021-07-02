@@ -410,7 +410,7 @@ is_not_equal:
      i32 64    ; Initial async context size without space for frame
 }>
 
-define swiftcc void @polymorphic_suspend_return(i8* %async.ctxt, %async.task* %task, %async.actor* %actor)  {
+define swiftcc void @polymorphic_suspend_return(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor)  {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %proj.1 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %tmp, i64 0, i32 0
@@ -445,7 +445,7 @@ entry:
   %resume_proj_fun = bitcast i8*(i8*)* @resume_context_projection to i8*
   %callee = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
   %res = call {i8*, i8*, i8*, i8*} (i32, i8*, i8*, ...)
-         @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32 0,
+         @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32 256, ;; swiftasync at 0 and swiftself at 1 in resume function
                                                  i8* %resume.func_ptr,
                                                  i8* %resume_proj_fun,
                                                  void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
@@ -464,8 +464,8 @@ entry:
   unreachable
 }
 
-; CHECK-LABEL: define swiftcc void @polymorphic_suspend_return(i8* %async.ctxt, %async.task* %task, %async.actor* %actor)
-; CHECK-LABEL: define internal swiftcc void @polymorphic_suspend_return.resume.0(i8* {{.*}}%0, i8* {{.*}}%1, i8* {{.*}}%2, i8* {{.*}}%3)
+; CHECK-LABEL: define swiftcc void @polymorphic_suspend_return(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor)
+; CHECK-LABEL: define internal swiftcc void @polymorphic_suspend_return.resume.0(i8* {{.*}}swiftasync{{.*}} %0, i8* {{.*}}swiftself{{.*}} %1, i8* {{.*}}%2, i8* {{.*}}%3)
 ; CHECK: bitcast i8* %3 to %async.task*
 ; CHECK: }
 
