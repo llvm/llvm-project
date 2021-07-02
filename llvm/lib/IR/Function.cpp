@@ -1566,7 +1566,8 @@ static bool matchIntrinsicType(
           dyn_cast<PointerType>(ThisArgVecTy->getElementType());
       if (!ThisArgEltTy)
         return true;
-      return ThisArgEltTy->getElementType() != ReferenceType->getElementType();
+      return !ThisArgEltTy->isOpaqueOrPointeeTypeMatches(
+          ReferenceType->getElementType());
     }
     case IITDescriptor::VecElementArgument: {
       if (D.getArgumentNumber() >= ArgTys.size())
