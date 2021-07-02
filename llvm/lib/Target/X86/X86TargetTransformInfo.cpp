@@ -2074,9 +2074,9 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   static const TypeConversionCostTblEntry SSE2ConversionTbl[] = {
-    // These are somewhat magic numbers justified by looking at the output of
-    // Intel's IACA, running some kernels and making sure when we take
-    // legalization into account the throughput will be overestimated.
+    // These are somewhat magic numbers justified by comparing the
+    // output of llvm-mca for our various supported scheduler models
+    // and basing it off the worst case scenario.
     { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  3 },
     { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  4 },
     { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  3 },
