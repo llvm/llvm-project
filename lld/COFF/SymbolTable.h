@@ -57,7 +57,9 @@ public:
   // symbols and warn about imported local symbols.
   void resolveRemainingUndefines();
 
-  void loadMinGWAutomaticImports();
+  // Load lazy objects that are needed for MinGW automatic import and for
+  // doing stdcall fixups.
+  void loadMinGWSymbols();
   bool handleMinGWAutomaticImport(Symbol *sym, StringRef name);
 
   // Returns a list of chunks of selected symbols.
@@ -134,6 +136,8 @@ private:
 extern SymbolTable *symtab;
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);
+
+StringRef ltrim1(StringRef s, const char *chars);
 
 } // namespace coff
 } // namespace lld

@@ -289,6 +289,11 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   else
     add("-WX:no");
 
+  if (args.hasFlag(OPT_enable_stdcall_fixup, OPT_disable_stdcall_fixup, false))
+    add("-stdcall-fixup");
+  else if (args.hasArg(OPT_disable_stdcall_fixup))
+    add("-stdcall-fixup:no");
+
   if (args.hasArg(OPT_shared))
     add("-dll");
   if (args.hasArg(OPT_verbose))

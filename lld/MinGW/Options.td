@@ -35,11 +35,15 @@ def disable_auto_import: F<"disable-auto-import">,
     HelpText<"Don't automatically import data symbols from other DLLs without dllimport">;
 def disable_runtime_pseudo_reloc: F<"disable-runtime-pseudo-reloc">,
     HelpText<"Don't do automatic imports that require runtime fixups">;
+def disable_stdcall_fixup: F<"disable-stdcall-fixup">,
+    HelpText<"Don't resolve stdcall/fastcall/vectorcall to undecorated symbols">;
 defm dynamicbase: B<"dynamicbase", "Enable ASLR", "Disable ASLR">;
 def enable_auto_import: F<"enable-auto-import">,
     HelpText<"Automatically import data symbols from other DLLs where needed">;
 def enable_runtime_pseudo_reloc: F<"enable-runtime-pseudo-reloc">,
     HelpText<"Allow automatic imports that require runtime fixups">;
+def enable_stdcall_fixup: F<"enable-stdcall-fixup">,
+    HelpText<"Resolve stdcall/fastcall/vectorcall to undecorated symbols without warnings">;
 defm entry: Eq<"entry", "Name of entry point symbol">, MetaVarName<"<entry>">;
 def exclude_all_symbols: F<"exclude-all-symbols">,
     HelpText<"Don't automatically export any symbols">;
