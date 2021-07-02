@@ -23174,10 +23174,6 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
   if (BasePtr.getBase().isUndef())
     return false;
 
-  // Do not handle stores to opaque types
-  if (St->getMemoryVT().isZeroSized())
-    return false;
-
   // BaseIndexOffset assumes that offsets are fixed-size, which
   // is not valid for scalable vectors where the offsets are
   // scaled by `vscale`, so bail out early.

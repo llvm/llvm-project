@@ -6465,10 +6465,6 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
 
   EVT LoadResultVT = TLI->getValueType(*DL, Load->getType());
   unsigned BitWidth = LoadResultVT.getSizeInBits();
-  // If the BitWidth is 0, do not try to optimize the type
-  if (BitWidth == 0)
-    return false;
-
   APInt DemandBits(BitWidth, 0);
   APInt WidestAndBits(BitWidth, 0);
 
