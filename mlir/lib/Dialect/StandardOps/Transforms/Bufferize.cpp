@@ -23,19 +23,6 @@
 using namespace mlir;
 
 namespace {
-class BufferizeDimOp : public OpConversionPattern<tensor::DimOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(tensor::DimOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    tensor::DimOp::Adaptor adaptor(operands);
-    rewriter.replaceOpWithNewOp<memref::DimOp>(op, adaptor.source(),
-                                               adaptor.index());
-    return success();
-  }
-};
-
 class BufferizeIndexCastOp : public OpConversionPattern<IndexCastOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -70,8 +57,8 @@ public:
 
 void mlir::populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
                                         RewritePatternSet &patterns) {
-  patterns.add<BufferizeDimOp, BufferizeSelectOp, BufferizeIndexCastOp>(
-      typeConverter, patterns.getContext());
+  patterns.add<BufferizeSelectOp, BufferizeIndexCastOp>(typeConverter,
+                                                        patterns.getContext());
 }
 
 namespace {
