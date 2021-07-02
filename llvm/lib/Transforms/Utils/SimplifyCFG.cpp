@@ -4673,12 +4673,16 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
 
     if (BBI->mayHaveSideEffects()) {
       if (auto *SI = dyn_cast<StoreInst>(BBI)) {
-        // Temporarily disable removal of volatile stores preceding unreachable,
-        // pending a potential LangRef change permitting volatile stores to
-        // trap.
-        // TODO: Either remove this code, or properly integrate the check into
-        // isGuaranteedToTransferExecutionToSuccessor().
         if (SI->isVolatile())
+          break;
+      } else if (auto *LI = dyn_cast<LoadInst>(BBI)) {
+        if (LI->isVolatile())
+          break;
+      } else if (auto *RMWI = dyn_cast<AtomicRMWInst>(BBI)) {
+        if (RMWI->isVolatile())
+          break;
+      } else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(BBI)) {
+        if (CXI->isVolatile())
           break;
       } else if (isa<CatchPadInst>(BBI)) {
         // A catchpad may invoke exception object constructors and such, which
@@ -4688,9 +4692,8 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
         if (classifyEHPersonality(BB->getParent()->getPersonalityFn()) !=
             EHPersonality::CoreCLR)
           break;
-      } else if (!isa<LoadInst>(BBI) && !isa<AtomicRMWInst>(BBI) &&
-                 !isa<AtomicCmpXchgInst>(BBI) && !isa<FenceInst>(BBI) &&
-                 !isa<VAArgInst>(BBI) && !isa<LandingPadInst>(BBI)) {
+      } else if (!isa<FenceInst>(BBI) && !isa<VAArgInst>(BBI) &&
+                 !isa<LandingPadInst>(BBI)) {
         break;
       }
       // Note that deleting LandingPad's here is in fact okay, although it
