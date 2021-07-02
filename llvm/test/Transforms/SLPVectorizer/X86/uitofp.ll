@@ -127,12 +127,9 @@ define void @uitofp_8i64_8f64() #0 {
 
 define void @uitofp_2i32_2f64() #0 {
 ; SSE-LABEL: @uitofp_2i32_2f64(
-; SSE-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 0), align 64
-; SSE-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[CVT0:%.*]] = uitofp i32 [[LD0]] to double
-; SSE-NEXT:    [[CVT1:%.*]] = uitofp i32 [[LD1]] to double
-; SSE-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; SSE-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* bitcast ([16 x i32]* @src32 to <2 x i32>*), align 64
+; SSE-NEXT:    [[TMP2:%.*]] = uitofp <2 x i32> [[TMP1]] to <2 x double>
+; SSE-NEXT:    store <2 x double> [[TMP2]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 64
 ; SSE-NEXT:    ret void
 ;
 ; AVX1-LABEL: @uitofp_2i32_2f64(
@@ -173,18 +170,12 @@ define void @uitofp_2i32_2f64() #0 {
 
 define void @uitofp_4i32_4f64() #0 {
 ; SSE-LABEL: @uitofp_4i32_4f64(
-; SSE-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 0), align 64
-; SSE-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 2), align 8
-; SSE-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[CVT0:%.*]] = uitofp i32 [[LD0]] to double
-; SSE-NEXT:    [[CVT1:%.*]] = uitofp i32 [[LD1]] to double
-; SSE-NEXT:    [[CVT2:%.*]] = uitofp i32 [[LD2]] to double
-; SSE-NEXT:    [[CVT3:%.*]] = uitofp i32 [[LD3]] to double
-; SSE-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; SSE-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; SSE-NEXT:    store double [[CVT2]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2), align 16
-; SSE-NEXT:    store double [[CVT3]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 3), align 8
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* bitcast ([16 x i32]* @src32 to <2 x i32>*), align 64
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 2) to <2 x i32>*), align 8
+; SSE-NEXT:    [[TMP3:%.*]] = uitofp <2 x i32> [[TMP1]] to <2 x double>
+; SSE-NEXT:    [[TMP4:%.*]] = uitofp <2 x i32> [[TMP2]] to <2 x double>
+; SSE-NEXT:    store <2 x double> [[TMP3]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 64
+; SSE-NEXT:    store <2 x double> [[TMP4]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2) to <2 x double>*), align 16
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @uitofp_4i32_4f64(
@@ -210,30 +201,18 @@ define void @uitofp_4i32_4f64() #0 {
 
 define void @uitofp_8i32_8f64() #0 {
 ; SSE-LABEL: @uitofp_8i32_8f64(
-; SSE-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 0), align 64
-; SSE-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 2), align 8
-; SSE-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[LD4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 4), align 16
-; SSE-NEXT:    [[LD5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 5), align 4
-; SSE-NEXT:    [[LD6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 6), align 8
-; SSE-NEXT:    [[LD7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 7), align 4
-; SSE-NEXT:    [[CVT0:%.*]] = uitofp i32 [[LD0]] to double
-; SSE-NEXT:    [[CVT1:%.*]] = uitofp i32 [[LD1]] to double
-; SSE-NEXT:    [[CVT2:%.*]] = uitofp i32 [[LD2]] to double
-; SSE-NEXT:    [[CVT3:%.*]] = uitofp i32 [[LD3]] to double
-; SSE-NEXT:    [[CVT4:%.*]] = uitofp i32 [[LD4]] to double
-; SSE-NEXT:    [[CVT5:%.*]] = uitofp i32 [[LD5]] to double
-; SSE-NEXT:    [[CVT6:%.*]] = uitofp i32 [[LD6]] to double
-; SSE-NEXT:    [[CVT7:%.*]] = uitofp i32 [[LD7]] to double
-; SSE-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; SSE-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; SSE-NEXT:    store double [[CVT2]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2), align 16
-; SSE-NEXT:    store double [[CVT3]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 3), align 8
-; SSE-NEXT:    store double [[CVT4]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4), align 32
-; SSE-NEXT:    store double [[CVT5]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 5), align 8
-; SSE-NEXT:    store double [[CVT6]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 6), align 16
-; SSE-NEXT:    store double [[CVT7]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 7), align 8
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* bitcast ([16 x i32]* @src32 to <2 x i32>*), align 64
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 2) to <2 x i32>*), align 8
+; SSE-NEXT:    [[TMP3:%.*]] = load <2 x i32>, <2 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 4) to <2 x i32>*), align 16
+; SSE-NEXT:    [[TMP4:%.*]] = load <2 x i32>, <2 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @src32, i32 0, i64 6) to <2 x i32>*), align 8
+; SSE-NEXT:    [[TMP5:%.*]] = uitofp <2 x i32> [[TMP1]] to <2 x double>
+; SSE-NEXT:    [[TMP6:%.*]] = uitofp <2 x i32> [[TMP2]] to <2 x double>
+; SSE-NEXT:    [[TMP7:%.*]] = uitofp <2 x i32> [[TMP3]] to <2 x double>
+; SSE-NEXT:    [[TMP8:%.*]] = uitofp <2 x i32> [[TMP4]] to <2 x double>
+; SSE-NEXT:    store <2 x double> [[TMP5]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 64
+; SSE-NEXT:    store <2 x double> [[TMP6]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2) to <2 x double>*), align 16
+; SSE-NEXT:    store <2 x double> [[TMP7]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4) to <2 x double>*), align 32
+; SSE-NEXT:    store <2 x double> [[TMP8]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 6) to <2 x double>*), align 16
 ; SSE-NEXT:    ret void
 ;
 ; AVX256-LABEL: @uitofp_8i32_8f64(

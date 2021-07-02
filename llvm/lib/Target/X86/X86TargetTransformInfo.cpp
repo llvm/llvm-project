@@ -1820,6 +1820,8 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 }, // vpternlogq
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   2 }, // vpternlogq+psrlq
 
+    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    1 },
+    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    1 },
     { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i8,   2 },
     { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i8,   2 },
     { ISD::UINT_TO_FP,  MVT::v8f32,  MVT::v8i8,   2 },
@@ -1835,15 +1837,11 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  5 },
     { ISD::UINT_TO_FP,  MVT::v4f64,  MVT::v4i64,  5 },
 
-    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    1 },
-    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    1 },
-
     { ISD::FP_TO_SINT,  MVT::v8i8,   MVT::v8f32,  3 },
     { ISD::FP_TO_UINT,  MVT::v8i8,   MVT::v8f32,  3 },
 
     { ISD::FP_TO_UINT,  MVT::i64,    MVT::f32,    1 },
     { ISD::FP_TO_UINT,  MVT::i64,    MVT::f64,    1 },
-
     { ISD::FP_TO_UINT,  MVT::v2i32,  MVT::v2f32,  1 },
     { ISD::FP_TO_UINT,  MVT::v4i32,  MVT::v4f32,  1 },
     { ISD::FP_TO_UINT,  MVT::v2i32,  MVT::v2f64,  1 },
@@ -2055,10 +2053,16 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v16i16, MVT::v16i32, 6 },
     { ISD::TRUNCATE,    MVT::v2i8,   MVT::v2i64,  1 }, // PSHUFB
 
+    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i32,    1 },
+    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i32,    1 },
+    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i64,    1 },
+    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i64,    1 },
     { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v4i32,  1 },
     { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v4i32,  1 },
     { ISD::SINT_TO_FP,  MVT::v4f64,  MVT::v4i32,  2 },
 
+    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i32,    1 },
+    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i32,    1 },
     { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    4 },
     { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    4 },
     { ISD::UINT_TO_FP,  MVT::v4f32,  MVT::v2i64, 12 },
@@ -2077,6 +2081,10 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     // These are somewhat magic numbers justified by comparing the
     // output of llvm-mca for our various supported scheduler models
     // and basing it off the worst case scenario.
+    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i32,    3 },
+    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i32,    3 },
+    { ISD::SINT_TO_FP,  MVT::f32,    MVT::i64,    3 },
+    { ISD::SINT_TO_FP,  MVT::f64,    MVT::i64,    3 },
     { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v16i8,  3 },
     { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  4 },
     { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v8i16,  3 },
@@ -2086,6 +2094,8 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::SINT_TO_FP,  MVT::v4f32,  MVT::v2i64,  8 },
     { ISD::SINT_TO_FP,  MVT::v2f64,  MVT::v2i64,  8 },
 
+    { ISD::UINT_TO_FP,  MVT::f32,    MVT::i32,    3 },
+    { ISD::UINT_TO_FP,  MVT::f64,    MVT::i32,    3 },
     { ISD::UINT_TO_FP,  MVT::f32,    MVT::i64,    8 },
     { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    9 },
     { ISD::UINT_TO_FP,  MVT::v2f64,  MVT::v16i8,  4 },

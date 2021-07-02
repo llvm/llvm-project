@@ -70,7 +70,7 @@ define i32 @sitofp_i16_double() {
 
 define i32 @sitofp_i32_double() {
 ; SSE2-LABEL: 'sitofp_i32_double'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i32_f64 = sitofp i32 undef to double
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cvt_i32_f64 = sitofp i32 undef to double
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v2i32_v2f64 = sitofp <2 x i32> undef to <2 x double>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v4i32_v4f64 = sitofp <4 x i32> undef to <4 x double>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v8i32_v8f64 = sitofp <8 x i32> undef to <8 x double>
@@ -112,12 +112,19 @@ define i32 @sitofp_i32_double() {
 }
 
 define i32 @sitofp_i64_double() {
-; SSE-LABEL: 'sitofp_i64_double'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i64_f64 = sitofp i64 undef to double
-; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i64_v2f64 = sitofp <2 x i64> undef to <2 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v4i64_v4f64 = sitofp <4 x i64> undef to <4 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %cvt_v8i64_v8f64 = sitofp <8 x i64> undef to <8 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE2-LABEL: 'sitofp_i64_double'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cvt_i64_f64 = sitofp i64 undef to double
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i64_v2f64 = sitofp <2 x i64> undef to <2 x double>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v4i64_v4f64 = sitofp <4 x i64> undef to <4 x double>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %cvt_v8i64_v8f64 = sitofp <8 x i64> undef to <8 x double>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE42-LABEL: 'sitofp_i64_double'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i64_f64 = sitofp i64 undef to double
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i64_v2f64 = sitofp <2 x i64> undef to <2 x double>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v4i64_v4f64 = sitofp <4 x i64> undef to <4 x double>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %cvt_v8i64_v8f64 = sitofp <8 x i64> undef to <8 x double>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'sitofp_i64_double'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i64_f64 = sitofp i64 undef to double
@@ -215,7 +222,7 @@ define i32 @sitofp_i16_float() {
 
 define i32 @sitofp_i32_float() {
 ; SSE2-LABEL: 'sitofp_i32_float'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i32_f32 = sitofp i32 undef to float
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cvt_i32_f32 = sitofp i32 undef to float
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cvt_v2i32_v2f32 = sitofp <2 x i32> undef to <2 x float>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cvt_v4i32_v4f32 = sitofp <4 x i32> undef to <4 x float>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %cvt_v8i32_v8f32 = sitofp <8 x i32> undef to <8 x float>
@@ -263,13 +270,21 @@ define i32 @sitofp_i32_float() {
 }
 
 define i32 @sitofp_i64_float() {
-; SSE-LABEL: 'sitofp_i64_float'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i64_f32 = sitofp i64 undef to float
-; SSE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i64_v2f32 = sitofp <2 x i64> undef to <2 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v4i64_v4f32 = sitofp <4 x i64> undef to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %cvt_v8i64_v8f32 = sitofp <8 x i64> undef to <8 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %cvt_v16i64_v16f32 = sitofp <16 x i64> undef to <16 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+; SSE2-LABEL: 'sitofp_i64_float'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cvt_i64_f32 = sitofp i64 undef to float
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i64_v2f32 = sitofp <2 x i64> undef to <2 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v4i64_v4f32 = sitofp <4 x i64> undef to <4 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %cvt_v8i64_v8f32 = sitofp <8 x i64> undef to <8 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %cvt_v16i64_v16f32 = sitofp <16 x i64> undef to <16 x float>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; SSE42-LABEL: 'sitofp_i64_float'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i64_f32 = sitofp i64 undef to float
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i64_v2f32 = sitofp <2 x i64> undef to <2 x float>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %cvt_v4i64_v4f32 = sitofp <4 x i64> undef to <4 x float>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %cvt_v8i64_v8f32 = sitofp <8 x i64> undef to <8 x float>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %cvt_v16i64_v16f32 = sitofp <16 x i64> undef to <16 x float>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'sitofp_i64_float'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i64_f32 = sitofp i64 undef to float
