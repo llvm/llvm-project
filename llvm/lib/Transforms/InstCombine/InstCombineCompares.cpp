@@ -2638,6 +2638,13 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   Type *Ty = Add->getType();
   CmpInst::Predicate Pred = Cmp.getPredicate();
 
+  // Fold an unsigned compare with offset to signed compare:
+  // (X + C2) >u C --> X <s -C2 (if C == C2 + SMAX)
+  // TODO: Find the ULT and signed predicate siblings.
+  if (Pred == CmpInst::ICMP_UGT &&
+      C == *C2 + APInt::getSignedMaxValue(Ty->getScalarSizeInBits()))
+    return new ICmpInst(ICmpInst::ICMP_SLT, X, ConstantInt::get(Ty, -(*C2)));
+
   // If the add does not wrap, we can always adjust the compare by subtracting
   // the constants. Equality comparisons are handled elsewhere. SGE/SLE/UGE/ULE
   // are canonicalized to SGT/SLT/UGT/ULT.
