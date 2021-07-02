@@ -337,6 +337,9 @@ public:
   /// \return - False on success.
   virtual bool parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
                                      SMLoc &EndLoc) = 0;
+
+  /// Parse a .gnu_attribute.
+  bool parseGNUAttribute(SMLoc L, int64_t &Tag, int64_t &IntegerValue);
 };
 
 /// Create an MCAsmParser instance for parsing assembly similar to gas syntax
