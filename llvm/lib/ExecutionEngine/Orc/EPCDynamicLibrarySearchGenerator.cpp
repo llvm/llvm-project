@@ -1,4 +1,4 @@
-//===---------------- TPCDynamicLibrarySearchGenerator.cpp ----------------===//
+//===---------------- EPCDynamicLibrarySearchGenerator.cpp ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/TPCDynamicLibrarySearchGenerator.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<TPCDynamicLibrarySearchGenerator>>
-TPCDynamicLibrarySearchGenerator::Load(TargetProcessControl &TPC,
+Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
+EPCDynamicLibrarySearchGenerator::Load(ExecutorProcessControl &EPC,
                                        const char *LibraryPath,
                                        SymbolPredicate Allow) {
-  auto Handle = TPC.loadDylib(LibraryPath);
+  auto Handle = EPC.loadDylib(LibraryPath);
   if (!Handle)
     return Handle.takeError();
 
-  return std::make_unique<TPCDynamicLibrarySearchGenerator>(TPC, *Handle,
+  return std::make_unique<EPCDynamicLibrarySearchGenerator>(EPC, *Handle,
                                                             std::move(Allow));
 }
 
-Error TPCDynamicLibrarySearchGenerator::tryToGenerate(
+Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     LookupState &LS, LookupKind K, JITDylib &JD,
     JITDylibLookupFlags JDLookupFlags, const SymbolLookupSet &Symbols) {
 
@@ -41,8 +41,8 @@ Error TPCDynamicLibrarySearchGenerator::tryToGenerate(
 
   SymbolMap NewSymbols;
 
-  TargetProcessControl::LookupRequest Request(H, LookupSymbols);
-  auto Result = TPC.lookupSymbols(Request);
+  ExecutorProcessControl::LookupRequest Request(H, LookupSymbols);
+  auto Result = EPC.lookupSymbols(Request);
   if (!Result)
     return Result.takeError();
 

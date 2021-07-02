@@ -1,4 +1,4 @@
-//===- TPCDebugObjectRegistrar.h - TPC-based debug registration -*- C++ -*-===//
+//===- EPCDebugObjectRegistrar.h - EPC-based debug registration -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TargetProcessControl based registration of debug objects.
+// ExecutorProcessControl based registration of debug objects.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_TPCDEBUGOBJECTREGISTRAR_H
-#define LLVM_EXECUTIONENGINE_ORC_TPCDEBUGOBJECTREGISTRAR_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_EPCDEBUGOBJECTREGISTRAR_H
+#define LLVM_EXECUTIONENGINE_ORC_EPCDEBUGOBJECTREGISTRAR_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
 
@@ -27,38 +27,38 @@ using namespace llvm::orc::shared;
 namespace llvm {
 namespace orc {
 
-/// Abstract interface for registering debug objects in the target process.
+/// Abstract interface for registering debug objects in the executor process.
 class DebugObjectRegistrar {
 public:
   virtual Error registerDebugObject(sys::MemoryBlock) = 0;
   virtual ~DebugObjectRegistrar() {}
 };
 
-/// Use TargetProcessControl to register debug objects locally or in a remote
-/// target process.
-class TPCDebugObjectRegistrar : public DebugObjectRegistrar {
+/// Use ExecutorProcessControl to register debug objects locally or in a remote
+/// executor process.
+class EPCDebugObjectRegistrar : public DebugObjectRegistrar {
 public:
-  TPCDebugObjectRegistrar(TargetProcessControl &TPC,
+  EPCDebugObjectRegistrar(ExecutorProcessControl &EPC,
                           JITTargetAddress RegisterFn)
-      : TPC(TPC), RegisterFn(RegisterFn) {}
+      : EPC(EPC), RegisterFn(RegisterFn) {}
 
   Error registerDebugObject(sys::MemoryBlock TargetMem) override {
     return WrapperFunction<void(SPSTargetAddress, uint64_t)>::call(
-        TPCCaller(TPC, RegisterFn), pointerToJITTargetAddress(TargetMem.base()),
+        EPCCaller(EPC, RegisterFn), pointerToJITTargetAddress(TargetMem.base()),
         static_cast<uint64_t>(TargetMem.allocatedSize()));
   }
 
 private:
-  TargetProcessControl &TPC;
+  ExecutorProcessControl &EPC;
   JITTargetAddress RegisterFn;
 };
 
-/// Create a TargetProcessControl-based DebugObjectRegistrar that emits debug
+/// Create a ExecutorProcessControl-based DebugObjectRegistrar that emits debug
 /// objects to the GDB JIT interface.
-Expected<std::unique_ptr<TPCDebugObjectRegistrar>>
-createJITLoaderGDBRegistrar(TargetProcessControl &TPC);
+Expected<std::unique_ptr<EPCDebugObjectRegistrar>>
+createJITLoaderGDBRegistrar(ExecutorProcessControl &EPC);
 
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_TDEBUGOBJECTREGISTRAR_H
+#endif // LLVM_EXECUTIONENGINE_ORC_EPCDEBUGOBJECTREGISTRAR_H

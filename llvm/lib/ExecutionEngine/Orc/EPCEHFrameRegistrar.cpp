@@ -1,4 +1,4 @@
-//===------ TPCEHFrameRegistrar.cpp - TPC-based eh-frame registration -----===//
+//===------ EPCEHFrameRegistrar.cpp - EPC-based eh-frame registration -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/TPCEHFrameRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 
 using namespace llvm::orc::shared;
@@ -14,19 +14,19 @@ using namespace llvm::orc::shared;
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<TPCEHFrameRegistrar>>
-TPCEHFrameRegistrar::Create(TargetProcessControl &TPC) {
+Expected<std::unique_ptr<EPCEHFrameRegistrar>>
+EPCEHFrameRegistrar::Create(ExecutorProcessControl &EPC) {
   // FIXME: Proper mangling here -- we really need to decouple linker mangling
   // from DataLayout.
 
   // Find the addresses of the registration/deregistration functions in the
-  // target process.
-  auto ProcessHandle = TPC.loadDylib(nullptr);
+  // executor process.
+  auto ProcessHandle = EPC.loadDylib(nullptr);
   if (!ProcessHandle)
     return ProcessHandle.takeError();
 
   std::string RegisterWrapperName, DeregisterWrapperName;
-  if (TPC.getTargetTriple().isOSBinFormatMachO()) {
+  if (EPC.getTargetTriple().isOSBinFormatMachO()) {
     RegisterWrapperName += '_';
     DeregisterWrapperName += '_';
   }
@@ -34,10 +34,10 @@ TPCEHFrameRegistrar::Create(TargetProcessControl &TPC) {
   DeregisterWrapperName += "llvm_orc_deregisterEHFrameSectionWrapper";
 
   SymbolLookupSet RegistrationSymbols;
-  RegistrationSymbols.add(TPC.intern(RegisterWrapperName));
-  RegistrationSymbols.add(TPC.intern(DeregisterWrapperName));
+  RegistrationSymbols.add(EPC.intern(RegisterWrapperName));
+  RegistrationSymbols.add(EPC.intern(DeregisterWrapperName));
 
-  auto Result = TPC.lookupSymbols({{*ProcessHandle, RegistrationSymbols}});
+  auto Result = EPC.lookupSymbols({{*ProcessHandle, RegistrationSymbols}});
   if (!Result)
     return Result.takeError();
 
@@ -48,22 +48,22 @@ TPCEHFrameRegistrar::Create(TargetProcessControl &TPC) {
   auto RegisterEHFrameWrapperFnAddr = (*Result)[0][0];
   auto DeregisterEHFrameWrapperFnAddr = (*Result)[0][1];
 
-  return std::make_unique<TPCEHFrameRegistrar>(
-      TPC, RegisterEHFrameWrapperFnAddr, DeregisterEHFrameWrapperFnAddr);
+  return std::make_unique<EPCEHFrameRegistrar>(
+      EPC, RegisterEHFrameWrapperFnAddr, DeregisterEHFrameWrapperFnAddr);
 }
 
-Error TPCEHFrameRegistrar::registerEHFrames(JITTargetAddress EHFrameSectionAddr,
+Error EPCEHFrameRegistrar::registerEHFrames(JITTargetAddress EHFrameSectionAddr,
                                             size_t EHFrameSectionSize) {
 
   return WrapperFunction<void(SPSTargetAddress, uint64_t)>::call(
-      TPCCaller(TPC, RegisterEHFrameWrapperFnAddr), EHFrameSectionAddr,
+      EPCCaller(EPC, RegisterEHFrameWrapperFnAddr), EHFrameSectionAddr,
       static_cast<uint64_t>(EHFrameSectionSize));
 }
 
-Error TPCEHFrameRegistrar::deregisterEHFrames(
+Error EPCEHFrameRegistrar::deregisterEHFrames(
     JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
   return WrapperFunction<void(SPSTargetAddress, uint64_t)>::call(
-      TPCCaller(TPC, DeregisterEHFrameWrapperFnAddr), EHFrameSectionAddr,
+      EPCCaller(EPC, DeregisterEHFrameWrapperFnAddr), EHFrameSectionAddr,
       static_cast<uint64_t>(EHFrameSectionSize));
 }
 

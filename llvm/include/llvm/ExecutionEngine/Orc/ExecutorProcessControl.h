@@ -1,4 +1,4 @@
-//===--- TargetProcessControl.h - Target process control APIs ---*- C++ -*-===//
+//===- ExecutorProcessControl.h - Executor process control APIs -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Utilities for interacting with target processes.
+// Utilities for interacting with the executor processes.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESSCONTROL_H
-#define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESSCONTROL_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
+#define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,8 +29,8 @@
 namespace llvm {
 namespace orc {
 
-/// TargetProcessControl supports interaction with a JIT target process.
-class TargetProcessControl {
+/// ExecutorProcessControl supports interaction with a JIT target process.
+class ExecutorProcessControl {
 public:
   /// APIs for manipulating memory in the target process.
   class MemoryAccess {
@@ -99,7 +99,7 @@ public:
     const SymbolLookupSet &Symbols;
   };
 
-  virtual ~TargetProcessControl();
+  virtual ~ExecutorProcessControl();
 
   /// Intern a symbol name in the SymbolStringPool.
   SymbolStringPtr intern(StringRef SymName) { return SSP->intern(SymName); }
@@ -153,7 +153,7 @@ public:
   virtual Error disconnect() = 0;
 
 protected:
-  TargetProcessControl(std::shared_ptr<SymbolStringPool> SSP)
+  ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP)
       : SSP(std::move(SSP)) {}
 
   std::shared_ptr<SymbolStringPool> SSP;
@@ -163,33 +163,34 @@ protected:
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
 };
 
-/// Call a wrapper function via TargetProcessControl::runWrapper.
-class TPCCaller {
+/// Call a wrapper function via ExecutorProcessControl::runWrapper.
+class EPCCaller {
 public:
-  TPCCaller(TargetProcessControl &TPC, JITTargetAddress WrapperFnAddr)
-      : TPC(TPC), WrapperFnAddr(WrapperFnAddr) {}
+  EPCCaller(ExecutorProcessControl &EPC, JITTargetAddress WrapperFnAddr)
+      : EPC(EPC), WrapperFnAddr(WrapperFnAddr) {}
   Expected<shared::WrapperFunctionResult> operator()(const char *ArgData,
                                                      size_t ArgSize) const {
-    return TPC.runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
+    return EPC.runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
   }
 
 private:
-  TargetProcessControl &TPC;
+  ExecutorProcessControl &EPC;
   JITTargetAddress WrapperFnAddr;
 };
 
-/// A TargetProcessControl implementation targeting the current process.
-class SelfTargetProcessControl : public TargetProcessControl,
-                                 private TargetProcessControl::MemoryAccess {
+/// A ExecutorProcessControl implementation targeting the current process.
+class SelfExecutorProcessControl
+    : public ExecutorProcessControl,
+      private ExecutorProcessControl::MemoryAccess {
 public:
-  SelfTargetProcessControl(
+  SelfExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP, Triple TargetTriple,
       unsigned PageSize, std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
-  /// Create a SelfTargetProcessControl with the given memory manager.
+  /// Create a SelfExecutorProcessControl with the given memory manager.
   /// If no memory manager is given a jitlink::InProcessMemoryManager will
   /// be used by default.
-  static Expected<std::unique_ptr<SelfTargetProcessControl>>
+  static Expected<std::unique_ptr<SelfExecutorProcessControl>>
   Create(std::shared_ptr<SymbolStringPool> SSP,
          std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr = nullptr);
 
@@ -230,4 +231,4 @@ private:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESSCONTROL_H
+#endif // LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
