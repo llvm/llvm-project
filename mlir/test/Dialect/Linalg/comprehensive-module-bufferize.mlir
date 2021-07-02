@@ -498,3 +498,60 @@ func @main() {
 
 //     CHECK:   func private @print_memref_f32(memref<*xf32>)
 func private @print_memref_f32(tensor<*xf32>)
+
+// -----
+
+func private @some_use(memref<?xf32>)
+
+#TILE_MAP = affine_map<(d0)[s0] -> (3, -d0 + s0)>
+
+//  CHECK-DAG: #[[$DYN_0D_MAP:.*]] = affine_map<()[s0] -> (s0)>
+//  CHECK-DAG: #[[$DYN_1D_MAP:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+//  CHECK-DAG: #[[$TILE_MAP:.*]] = affine_map<(d0)[s0] -> (3, -d0 + s0)>
+
+//      CHECK:  func @tiled_dot(
+// CHECK-SAME:    %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$DYN_1D_MAP]]>
+// CHECK-SAME:    %[[B:[a-zA-Z0-9]*]]: memref<?xf32, #[[$DYN_1D_MAP]]>
+// CHECK-SAME:    %[[c:[a-zA-Z0-9]*]]: memref<f32, #[[$DYN_0D_MAP]]>
+func @tiled_dot(%A: tensor<?xf32>, %B: tensor<?xf32>, %c: tensor<f32> {linalg.inplaceable = true},
+                %effecting: memref<?xf32>) -> tensor<f32> {
+  %c3 = constant 3 : index
+  %c0 = constant 0 : index
+
+  //     CHECK: %[[M:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, #[[$DYN_1D_MAP:.*]]>
+  %0 = tensor.dim %A, %c0 : tensor<?xf32>
+
+  //     CHECK: linalg.tiled_loop {{.*}} to (%[[M]]) {{.*}} %[[A]]{{.*}}%[[B]]{{.*}}outs{{.*}}%[[c]]
+  %1 = linalg.tiled_loop (%arg3) = (%c0) to (%0) step (%c3)
+       ins (%arg4 = %A: tensor<?xf32>, %use = %effecting : memref<?xf32>, %arg5 = %B: tensor<?xf32>)
+      outs (%arg6 = %c: tensor<f32>)
+      iterators["reduction"]
+  {
+    // CHECK-NOT:   alloc
+
+    %2 = tensor.dim %arg4, %c0 : tensor<?xf32>
+    %3 = affine.min #TILE_MAP(%arg3)[%2]
+
+    //     CHECK:   %[[SV_A:.*]] = memref.subview {{.*}}
+    %4 = tensor.extract_slice %arg4[%arg3] [%3] [1] : tensor<?xf32> to tensor<?xf32>
+    %5 = tensor.dim %arg5, %c0 : tensor<?xf32>
+    %6 = affine.min #TILE_MAP(%arg3)[%5]
+
+    //     CHECK:   %[[SV_B:.*]] = memref.subview {{.*}}
+    %7 = tensor.extract_slice %arg5[%arg3] [%6] [1] : tensor<?xf32> to tensor<?xf32>
+
+    //     CHECK:   linalg.dot ins(%[[SV_A]], %[[SV_B]] : memref<?xf32, #[[$DYN_1D_MAP:.*]]>, memref<?xf32, #[[$DYN_1D_MAP:.*]]>) outs(%{{.*}} : memref<f32, #[[$DYN_0D_MAP]]>)
+    %8 = linalg.dot ins(%4, %7 : tensor<?xf32>, tensor<?xf32>) outs(%arg6 : tensor<f32>) -> tensor<f32>
+
+    //     CHECK:   call @some_use(%{{.*}}) : (memref<?xf32>) -> ()
+    call @some_use(%use) : (memref<?xf32>) -> ()
+
+    linalg.yield %8 : tensor<f32>
+    //     CHECK:   linalg.yield
+    // CHECK-NOT:   tensor
+  }
+
+  //     CHECK: return
+  // CHECK-NOT: tensor
+  return %1 : tensor<f32>
+}
