@@ -10,6 +10,9 @@
 
 // is_literal_type
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <type_traits>
 #include <cstddef>       // for std::nullptr_t
 #include "test_macros.h"

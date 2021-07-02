@@ -10,6 +10,9 @@
 
 // result_of<Fn(ArgTypes...)>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <type_traits>
 #include <cassert>
 #include <functional>
