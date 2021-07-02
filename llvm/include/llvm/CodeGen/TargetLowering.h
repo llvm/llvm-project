@@ -1879,8 +1879,8 @@ public:
   /// corresponding pointee type. This may entail some non-trivial operations to
   /// truncate or reconstruct types that will be illegal in the backend. See
   /// ARMISelLowering for an example implementation.
-  virtual Value *emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
-                                AtomicOrdering Ord) const {
+  virtual Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
+                                Value *Addr, AtomicOrdering Ord) const {
     llvm_unreachable("Load linked unimplemented on this target");
   }
 
