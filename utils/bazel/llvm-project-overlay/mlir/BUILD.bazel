@@ -1575,6 +1575,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":LinalgOps",
         ":SideEffectInterfaces",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorOpsIncGen",
