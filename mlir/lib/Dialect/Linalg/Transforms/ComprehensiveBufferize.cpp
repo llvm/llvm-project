@@ -358,6 +358,7 @@ static bool hasKnownBufferizationAliasingBehavior(Operation *op) {
       // clang-format off
       isa<CallOpInterface,
           tensor::CastOp,
+          ConstantOp,
           scf::ForOp,
           InitTensorOp,
           LinalgOp,
@@ -467,6 +468,7 @@ static Optional<OpOperand *> getAliasingOpOperand(OpResult result) {
     return None;
   return TypeSwitch<Operation *, OpOperand *>(result.getDefiningOp())
       .Case([&](tensor::CastOp op) { return &op->getOpOperand(0); })
+      .Case([&](ConstantOp op) { return &op->getOpOperand(0); })
       .Case([&](LinalgOp op) {
         return op.getOutputTensorOperands()[result.getResultNumber()];
       })
@@ -499,6 +501,8 @@ static Optional<OpResult> getAliasingOpResult(OpOperand &opOperand) {
       // These terminators legitimately have no result.
       .Case<ReturnOp, linalg::YieldOp, scf::YieldOp>(
           [&](auto op) { return OpResult(); })
+      // ConstantOp is never inplaceable.
+      .Case([&](ConstantOp op) { return op->getResult(0); })
       // ExtractSliceOp is different: its result is not inplaceable on op.source
       // but when bufferized inplace, the result is an aliasing subregion of
       // op.source.
@@ -1600,6 +1604,26 @@ static LogicalResult bufferize(OpBuilder &b, tensor::CastOp castOp,
   return success();
 }
 
+static LogicalResult bufferize(OpBuilder &b, ConstantOp constantOp,
+                               BlockAndValueMapping &bvm,
+                               BufferizationAliasInfo &aliasInfo,
+                               GlobalCreator &globalCreator) {
+  if (!constantOp.getType().dyn_cast<RankedTensorType>())
+    return failure();
+
+  // Take a guard before anything else.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(constantOp);
+
+  auto globalMemref = globalCreator.getGlobalFor(constantOp);
+  Value memref = b.create<memref::GetGlobalOp>(
+      constantOp.getLoc(), globalMemref.type(), globalMemref.getName());
+  aliasInfo.insertNewBufferEquivalence(memref, constantOp.getResult());
+  map(bvm, constantOp, memref);
+
+  return success();
+}
+
 /// DimOp tensor operand is modified inplace. This allows leaving dead
 /// tensors behind that will get DCE'd.
 static LogicalResult bufferize(OpBuilder &b, tensor::DimOp dimOp,
@@ -2115,7 +2139,8 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
 
 static LogicalResult bufferizeFuncOpInternals(
     FuncOp funcOp, BlockAndValueMapping &bvm, BufferizationAliasInfo &aliasInfo,
-    DenseMap<FuncOp, FunctionType> &bufferizedFunctionTypes) {
+    DenseMap<FuncOp, FunctionType> &bufferizedFunctionTypes,
+    GlobalCreator &globalCreator) {
   LLVM_DEBUG(llvm::dbgs() << "\n\n");
   LDBG("Begin BufferizeFuncOpInternals:\n" << funcOp << '\n');
   OpBuilder b(funcOp->getContext());
@@ -2150,6 +2175,12 @@ static LogicalResult bufferizeFuncOpInternals(
       .Case([&](CallOpInterface op) {
         LDBG("Begin bufferize:\n" << op << '\n');
         return bufferize(b, op, bvm, aliasInfo, bufferizedFunctionTypes);
+      })
+      .Case([&](ConstantOp op) {
+        if (!isaTensor(op.getResult().getType()))
+          return success();
+        LDBG("Begin bufferize:\n" << op << '\n');
+        return bufferize(b, op, bvm, aliasInfo, globalCreator);
       })
       .Default([&](Operation *op) {
         auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
@@ -2429,6 +2460,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap)))
     return signalPassFailure();
 
+  GlobalCreator globalCreator(moduleOp);
   DominanceInfo domInfo(moduleOp);
   BufferizationAliasInfo aliasInfo(moduleOp);
   // Interestingly, all function args that are not visible outside of a module
@@ -2461,7 +2493,8 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     if (!testAnalysisOnly) {
       BlockAndValueMapping tensorToBufferMap;
       if (failed(bufferizeFuncOpInternals(funcOp, tensorToBufferMap, aliasInfo,
-                                          bufferizedFunctionTypes))) {
+                                          bufferizedFunctionTypes,
+                                          globalCreator))) {
         signalPassFailure();
         return;
       }
