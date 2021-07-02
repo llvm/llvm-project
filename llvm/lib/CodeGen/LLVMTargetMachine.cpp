@@ -64,8 +64,12 @@ void LLVMTargetMachine::initAsmInfo() {
   if (Options.BinutilsVersion.first > 0)
     TmpAsmInfo->setBinutilsVersion(Options.BinutilsVersion);
 
-  if (Options.DisableIntegratedAS)
+  if (Options.DisableIntegratedAS) {
     TmpAsmInfo->setUseIntegratedAssembler(false);
+    // If there is explict option disable integratedAS, we can't use it for
+    // inlineasm either.
+    TmpAsmInfo->setParseInlineAsmUsingAsmParser(false);
+  }
 
   TmpAsmInfo->setPreserveAsmComments(Options.MCOptions.PreserveAsmComments);
 
