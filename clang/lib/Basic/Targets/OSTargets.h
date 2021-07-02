@@ -948,8 +948,16 @@ class LLVM_LIBRARY_VISIBILITY EmscriptenTargetInfo
   }
 
 public:
-  explicit EmscriptenTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : WebAssemblyOSTargetInfo<Target>(Triple, Opts) {}
+  explicit EmscriptenTargetInfo(const llvm::Triple &Triple,
+                                const TargetOptions &Opts)
+      : WebAssemblyOSTargetInfo<Target>(Triple, Opts) {
+    // Keeping the alignment of long double to 8 bytes even though its size is
+    // 16 bytes allows emscripten to have an 8-byte-aligned max_align_t which
+    // in turn gives is a 8-byte aligned malloc.
+    // Emscripten's ABI is unstable and we may change this back to 128 to match
+    // the WebAssembly default in the future.
+    this->LongDoubleAlign = 64;
+  }
 };
 
 } // namespace targets
