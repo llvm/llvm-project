@@ -55,14 +55,14 @@ EPCEHFrameRegistrar::Create(ExecutorProcessControl &EPC) {
 Error EPCEHFrameRegistrar::registerEHFrames(JITTargetAddress EHFrameSectionAddr,
                                             size_t EHFrameSectionSize) {
 
-  return WrapperFunction<void(SPSTargetAddress, uint64_t)>::call(
+  return WrapperFunction<void(SPSExecutorAddress, uint64_t)>::call(
       EPCCaller(EPC, RegisterEHFrameWrapperFnAddr), EHFrameSectionAddr,
       static_cast<uint64_t>(EHFrameSectionSize));
 }
 
 Error EPCEHFrameRegistrar::deregisterEHFrames(
     JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
-  return WrapperFunction<void(SPSTargetAddress, uint64_t)>::call(
+  return WrapperFunction<void(SPSExecutorAddress, uint64_t)>::call(
       EPCCaller(EPC, DeregisterEHFrameWrapperFnAddr), EHFrameSectionAddr,
       static_cast<uint64_t>(EHFrameSectionSize));
 }
