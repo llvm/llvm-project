@@ -295,8 +295,8 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
     } else {
       auto *isec =
           make<ConcatInputSection>(segname, name, this, data, align, flags);
-      if (!(isDebugSection(isec->flags) &&
-            isec->segname == segment_names::dwarf)) {
+      if (!(isDebugSection(isec->getFlags()) &&
+            isec->getSegName() == segment_names::dwarf)) {
         subsections.push_back({{0, isec}});
       } else {
         // Instead of emitting DWARF sections, we emit STABS symbols to the
@@ -522,7 +522,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
       isPrivateExtern = true;
 
     return symtab->addDefined(
-        name, isec->file, isec, value, size, sym.n_desc & N_WEAK_DEF,
+        name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
         isPrivateExtern, sym.n_desc & N_ARM_THUMB_DEF,
         sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
   }
@@ -530,7 +530,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
   assert(!isWeakDefCanBeHidden &&
          "weak_def_can_be_hidden on already-hidden symbol?");
   return make<Defined>(
-      name, isec->file, isec, value, size, sym.n_desc & N_WEAK_DEF,
+      name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
       /*isExternal=*/false, /*isPrivateExtern=*/false,
       sym.n_desc & N_ARM_THUMB_DEF, sym.n_desc & REFERENCED_DYNAMICALLY,
       sym.n_desc & N_NO_DEAD_STRIP);
@@ -672,7 +672,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       auto *nextIsec = make<ConcatInputSection>(*concatIsec);
       nextIsec->numRefs = 0;
       nextIsec->wasCoalesced = false;
-      if (isZeroFill(isec->flags)) {
+      if (isZeroFill(isec->getFlags())) {
         // Zero-fill sections have NULL data.data() non-zero data.size()
         nextIsec->data = {nullptr, isec->data.size() - symbolOffset};
         isec->data = {nullptr, symbolOffset};
@@ -698,11 +698,11 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
                        StringRef sectName)
     : InputFile(OpaqueKind, mb) {
-  ConcatInputSection *isec =
-      make<ConcatInputSection>(segName.take_front(16), sectName.take_front(16));
-  isec->file = this;
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
-  isec->data = {buf, mb.getBufferSize()};
+  ArrayRef<uint8_t> data = {buf, mb.getBufferSize()};
+  ConcatInputSection *isec =
+      make<ConcatInputSection>(segName.take_front(16), sectName.take_front(16),
+                               /*file=*/this, data);
   isec->live = true;
   subsections.push_back({{0, isec}});
 }

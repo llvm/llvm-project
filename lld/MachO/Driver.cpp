@@ -546,20 +546,19 @@ static void replaceCommonSymbols() {
     if (common == nullptr)
       continue;
 
-    auto *isec =
-        make<ConcatInputSection>(segment_names::data, section_names::common);
-    isec->file = common->getFile();
-    isec->align = common->align;
     // Casting to size_t will truncate large values on 32-bit architectures,
     // but it's not really worth supporting the linking of 64-bit programs on
     // 32-bit archs.
-    isec->data = {nullptr, static_cast<size_t>(common->size)};
-    isec->flags = S_ZEROFILL;
+    ArrayRef<uint8_t> data = {nullptr, static_cast<size_t>(common->size)};
+    auto *isec = make<ConcatInputSection>(
+        segment_names::data, section_names::common, common->getFile(), data,
+        common->align, S_ZEROFILL);
     inputSections.push_back(isec);
 
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
     // and pass them on here.
-    replaceSymbol<Defined>(sym, sym->getName(), isec->file, isec, /*value=*/0,
+    replaceSymbol<Defined>(sym, sym->getName(), isec->getFile(), isec,
+                           /*value=*/0,
                            /*size=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern,
@@ -994,8 +993,8 @@ static void gatherInputSections() {
         if (auto *isec = dyn_cast<ConcatInputSection>(entry.isec)) {
           if (isec->isCoalescedWeak())
             continue;
-          if (isec->segname == segment_names::ld) {
-            assert(isec->name == section_names::compactUnwind);
+          if (isec->getSegName() == segment_names::ld) {
+            assert(isec->getName() == section_names::compactUnwind);
             in.unwindInfo->addInput(isec);
             continue;
           }

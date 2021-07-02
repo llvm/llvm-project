@@ -88,7 +88,7 @@ static bool equalsConstant(const ConcatInputSection *ia,
     return false;
   if (ia->data != ib->data)
     return false;
-  if (ia->flags != ib->flags)
+  if (ia->getFlags() != ib->getFlags())
     return false;
   if (ia->relocs.size() != ib->relocs.size())
     return false;
