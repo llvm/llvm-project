@@ -21,6 +21,7 @@
 #include "clang/AST/AttrVisitor.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/Type.h"
@@ -204,6 +205,7 @@ public:
   void Visit(const OMPClause *C);
   void Visit(const BlockDecl::Capture &C);
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
+  void Visit(const concepts::Requirement *R);
   void Visit(const APValue &Value, QualType Ty);
 
   void VisitTypedefType(const TypedefType *TT);
@@ -290,6 +292,7 @@ public:
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *ME);
+  void VisitRequiresExpr(const RequiresExpr *RE);
 
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE);
   void VisitObjCMessageExpr(const ObjCMessageExpr *OME);

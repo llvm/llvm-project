@@ -356,6 +356,46 @@ void TextNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
     OS << " selected";
 }
 
+void TextNodeDumper::Visit(const concepts::Requirement *R) {
+  if (!R) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>> Requirement";
+    return;
+  }
+
+  {
+    ColorScope Color(OS, ShowColors, StmtColor);
+    switch (R->getKind()) {
+    case concepts::Requirement::RK_Type:
+      OS << "TypeRequirement";
+      break;
+    case concepts::Requirement::RK_Simple:
+      OS << "SimpleRequirement";
+      break;
+    case concepts::Requirement::RK_Compound:
+      OS << "CompoundRequirement";
+      break;
+    case concepts::Requirement::RK_Nested:
+      OS << "NestedRequirement";
+      break;
+    }
+  }
+
+  dumpPointer(R);
+
+  if (auto *ER = dyn_cast<concepts::ExprRequirement>(R)) {
+    if (ER->hasNoexceptRequirement())
+      OS << " noexcept";
+  }
+
+  if (R->isDependent())
+    OS << " dependent";
+  else
+    OS << (R->isSatisfied() ? " satisfied" : " unsatisfied");
+  if (R->containsUnexpandedParameterPack())
+    OS << " contains_unexpanded_pack";
+}
+
 static double GetApproxValue(const llvm::APFloat &F) {
   llvm::APFloat V = F;
   bool ignored;
@@ -1364,6 +1404,12 @@ void TextNodeDumper::VisitConceptSpecializationExpr(
     const ConceptSpecializationExpr *Node) {
   OS << " ";
   dumpBareDeclRef(Node->getFoundDecl());
+}
+
+void TextNodeDumper::VisitRequiresExpr(
+    const RequiresExpr *Node) {
+  if (!Node->isValueDependent())
+    OS << (Node->isSatisfied() ? " satisfied" : " unsatisfied");
 }
 
 void TextNodeDumper::VisitRValueReferenceType(const ReferenceType *T) {

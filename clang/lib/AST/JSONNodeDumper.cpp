@@ -185,6 +185,35 @@ void JSONNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
   attributeOnlyIfTrue("selected", A.isSelected());
 }
 
+void JSONNodeDumper::Visit(const concepts::Requirement *R) {
+  if (!R)
+    return;
+
+  switch (R->getKind()) {
+  case concepts::Requirement::RK_Type:
+    JOS.attribute("kind", "TypeRequirement");
+    break;
+  case concepts::Requirement::RK_Simple:
+    JOS.attribute("kind", "SimpleRequirement");
+    break;
+  case concepts::Requirement::RK_Compound:
+    JOS.attribute("kind", "CompoundRequirement");
+    break;
+  case concepts::Requirement::RK_Nested:
+    JOS.attribute("kind", "NestedRequirement");
+    break;
+  }
+
+  if (auto *ER = dyn_cast<concepts::ExprRequirement>(R))
+    attributeOnlyIfTrue("noexcept", ER->hasNoexceptRequirement());
+
+  attributeOnlyIfTrue("isDependent", R->isDependent());
+  if (!R->isDependent())
+    JOS.attribute("satisfied", R->isSatisfied());
+  attributeOnlyIfTrue("containsUnexpandedPack",
+                      R->containsUnexpandedParameterPack());
+}
+
 void JSONNodeDumper::Visit(const APValue &Value, QualType Ty) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
@@ -713,9 +742,13 @@ void JSONNodeDumper::VisitMemberPointerType(const MemberPointerType *MPT) {
 void JSONNodeDumper::VisitNamedDecl(const NamedDecl *ND) {
   if (ND && ND->getDeclName()) {
     JOS.attribute("name", ND->getNameAsString());
-    std::string MangledName = ASTNameGen.getName(ND);
-    if (!MangledName.empty())
-      JOS.attribute("mangledName", MangledName);
+    // FIXME: There are likely other contexts in which it makes no sense to ask
+    // for a mangled name.
+    if (!isa<RequiresExprBodyDecl>(ND->getDeclContext())) {
+      std::string MangledName = ASTNameGen.getName(ND);
+      if (!MangledName.empty())
+        JOS.attribute("mangledName", MangledName);
+    }
   }
 }
 
@@ -1413,6 +1446,11 @@ void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(
             [&TAL, this] { Visit(TAL.getArgument(), TAL.getSourceRange()); });
     });
   }
+}
+
+void JSONNodeDumper::VisitRequiresExpr(const RequiresExpr *RE) {
+  if (!RE->isValueDependent())
+    JOS.attribute("satisfied", RE->isSatisfied());
 }
 
 void JSONNodeDumper::VisitIntegerLiteral(const IntegerLiteral *IL) {
