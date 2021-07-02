@@ -2874,24 +2874,23 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
   // Try to remove the previous instruction if it must lead to unreachable.
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
-  while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
-    if (Prev->isEHPad() || !isGuaranteedToTransferExecutionToSuccessor(Prev))
-      return nullptr; // Can not drop any more instructions. We're done here.
+  Instruction *Prev = I.getPrevNonDebugInstruction();
+  if (Prev && !Prev->isEHPad() &&
+      isGuaranteedToTransferExecutionToSuccessor(Prev)) {
     // Temporarily disable removal of volatile stores preceding unreachable,
     // pending a potential LangRef change permitting volatile stores to trap.
     // TODO: Either remove this code, or properly integrate the check into
     // isGuaranteedToTransferExecutionToSuccessor().
     if (auto *SI = dyn_cast<StoreInst>(Prev))
       if (SI->isVolatile())
-        return nullptr; // Can not drop this instruction. We're done here.
+        return nullptr;
 
     // A value may still have uses before we process it here (for example, in
     // another unreachable block), so convert those to poison.
     replaceInstUsesWith(*Prev, PoisonValue::get(Prev->getType()));
     eraseInstFromFunction(*Prev);
+    return &I;
   }
-  assert(I.getParent()->sizeWithoutDebug() == 1 && "The block is now empty.");
-  // FIXME: recurse into unconditional predecessors?
   return nullptr;
 }
 
