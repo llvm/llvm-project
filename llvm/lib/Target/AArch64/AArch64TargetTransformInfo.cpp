@@ -642,6 +642,46 @@ static Optional<Instruction *> instCombineRDFFR(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, RDFFR);
 }
 
+static Optional<Instruction *>
+instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
+  const auto Pattern = cast<ConstantInt>(II.getArgOperand(0))->getZExtValue();
+
+  if (Pattern == AArch64SVEPredPattern::all) {
+    LLVMContext &Ctx = II.getContext();
+    IRBuilder<> Builder(Ctx);
+    Builder.SetInsertPoint(&II);
+
+    Constant *StepVal = ConstantInt::get(II.getType(), NumElts);
+    auto *VScale = Builder.CreateVScale(StepVal);
+    VScale->takeName(&II);
+    return IC.replaceInstUsesWith(II, VScale);
+  }
+
+  unsigned MinNumElts = 0;
+  switch (Pattern) {
+  default:
+    return None;
+  case AArch64SVEPredPattern::vl1:
+  case AArch64SVEPredPattern::vl2:
+  case AArch64SVEPredPattern::vl3:
+  case AArch64SVEPredPattern::vl4:
+  case AArch64SVEPredPattern::vl5:
+  case AArch64SVEPredPattern::vl6:
+  case AArch64SVEPredPattern::vl7:
+  case AArch64SVEPredPattern::vl8:
+    MinNumElts = Pattern;
+    break;
+  case AArch64SVEPredPattern::vl16:
+    MinNumElts = 16;
+    break;
+  }
+
+  return NumElts >= MinNumElts
+             ? Optional<Instruction *>(IC.replaceInstUsesWith(
+                   II, ConstantInt::get(II.getType(), MinNumElts)))
+             : None;
+}
+
 Optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -661,6 +701,14 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_lasta:
   case Intrinsic::aarch64_sve_lastb:
     return instCombineSVELast(IC, II);
+  case Intrinsic::aarch64_sve_cntd:
+    return instCombineSVECntElts(IC, II, 2);
+  case Intrinsic::aarch64_sve_cntw:
+    return instCombineSVECntElts(IC, II, 4);
+  case Intrinsic::aarch64_sve_cnth:
+    return instCombineSVECntElts(IC, II, 8);
+  case Intrinsic::aarch64_sve_cntb:
+    return instCombineSVECntElts(IC, II, 16);
   }
 
   return None;
