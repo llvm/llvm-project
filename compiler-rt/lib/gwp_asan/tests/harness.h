@@ -106,4 +106,9 @@ protected:
   gwp_asan::GuardedPoolAllocator GPA;
 };
 
+// https://github.com/google/googletest/blob/master/docs/advanced.md#death-tests-and-threads
+using DefaultGuardedPoolAllocatorDeathTest = DefaultGuardedPoolAllocator;
+using CustomGuardedPoolAllocatorDeathTest = CustomGuardedPoolAllocator;
+using BacktraceGuardedPoolAllocatorDeathTest = BacktraceGuardedPoolAllocator;
+
 #endif // GWP_ASAN_TESTS_HARNESS_H_
