@@ -15922,6 +15922,23 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     CI->setConvergent();
     return CI;
   }
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray:
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_h:
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_l:
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_lh: {
+    llvm::Value *NodePtr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *RayExtent = EmitScalarExpr(E->getArg(1));
+    llvm::Value *RayOrigin = EmitScalarExpr(E->getArg(2));
+    llvm::Value *RayDir = EmitScalarExpr(E->getArg(3));
+    llvm::Value *RayInverseDir = EmitScalarExpr(E->getArg(4));
+    llvm::Value *TextureDescr = EmitScalarExpr(E->getArg(5));
+
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_image_bvh_intersect_ray,
+                                   {NodePtr->getType(), RayDir->getType()});
+    return Builder.CreateCall(F, {NodePtr, RayExtent, RayOrigin, RayDir,
+                                  RayInverseDir, TextureDescr});
+  }
+
   // amdgcn workitem
   case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
     return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_x, 0, 1024);
