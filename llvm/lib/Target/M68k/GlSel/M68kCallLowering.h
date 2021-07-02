@@ -43,6 +43,29 @@ public:
 
   bool enableBigEndian() const override;
 };
+struct M68kIncomingValueHandler : public CallLowering::IncomingValueHandler {
+  M68kIncomingValueHandler(MachineIRBuilder &MIRBuilder,
+                           MachineRegisterInfo &MRI)
+      : CallLowering::IncomingValueHandler(MIRBuilder, MRI) {}
+
+  uint64_t StackUsed;
+
+private:
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        CCValAssign &VA) override;
+
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override;
+
+  Register getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override;
+};
+
+struct FormalArgHandler : public M68kIncomingValueHandler {
+  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+      : M68kIncomingValueHandler(MIRBuilder, MRI) {}
+};
 
 } // end namespace llvm
 
