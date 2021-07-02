@@ -61,7 +61,7 @@ namespace {
 template <typename type_t> class empirical_type {
 public:
   // Ctor. Contents is invalid when constructed.
-  empirical_type() {}
+  empirical_type() = default;
 
   // Return true and copy contents to out if valid, else return false.
   bool get(type_t &out) const {

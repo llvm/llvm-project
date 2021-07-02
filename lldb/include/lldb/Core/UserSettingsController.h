@@ -32,12 +32,12 @@ namespace lldb_private {
 
 class Properties {
 public:
-  Properties() : m_collection_sp() {}
+  Properties() = default;
 
   Properties(const lldb::OptionValuePropertiesSP &collection_sp)
       : m_collection_sp(collection_sp) {}
 
-  virtual ~Properties() {}
+  virtual ~Properties() = default;
 
   virtual lldb::OptionValuePropertiesSP GetValueProperties() const {
     // This function is virtual in case subclasses want to lazily implement

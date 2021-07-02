@@ -21,7 +21,7 @@
 namespace lldb_private {
 class FileCache {
 private:
-  FileCache() {}
+  FileCache() = default;
 
   typedef std::map<lldb::user_id_t, lldb::FileUP> FDToFileMap;
 

@@ -24,7 +24,7 @@ class SymbolFileDWARF;
 
 class DWARFBaseDIE {
 public:
-  DWARFBaseDIE() {}
+  DWARFBaseDIE() = default;
 
   DWARFBaseDIE(DWARFUnit *cu, DWARFDebugInfoEntry *die)
       : m_cu(cu), m_die(die) {}

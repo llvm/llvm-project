@@ -106,9 +106,7 @@ protected:
     bool libSystemInitialized = false;                        // Version >= 2
     lldb::addr_t dyldImageLoadAddress = LLDB_INVALID_ADDRESS; // Version >= 2
 
-    DYLDAllImageInfos()
-
-    {}
+    DYLDAllImageInfos() = default;
 
     void Clear() {
       version = 0;

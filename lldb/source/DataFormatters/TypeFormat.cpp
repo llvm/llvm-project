@@ -29,13 +29,13 @@ using namespace lldb_private;
 
 TypeFormatImpl::TypeFormatImpl(const Flags &flags) : m_flags(flags) {}
 
-TypeFormatImpl::~TypeFormatImpl() {}
+TypeFormatImpl::~TypeFormatImpl() = default;
 
 TypeFormatImpl_Format::TypeFormatImpl_Format(lldb::Format f,
                                              const TypeFormatImpl::Flags &flags)
     : TypeFormatImpl(flags), m_format(f) {}
 
-TypeFormatImpl_Format::~TypeFormatImpl_Format() {}
+TypeFormatImpl_Format::~TypeFormatImpl_Format() = default;
 
 bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
                                          std::string &dest) const {
@@ -134,7 +134,7 @@ TypeFormatImpl_EnumType::TypeFormatImpl_EnumType(
     ConstString type_name, const TypeFormatImpl::Flags &flags)
     : TypeFormatImpl(flags), m_enum_type(type_name), m_types() {}
 
-TypeFormatImpl_EnumType::~TypeFormatImpl_EnumType() {}
+TypeFormatImpl_EnumType::~TypeFormatImpl_EnumType() = default;
 
 bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
                                            std::string &dest) const {

@@ -725,7 +725,7 @@ ClangExpressionParser::ClangExpressionParser(
       m_compiler->getCodeGenOpts(), *m_llvm_context));
 }
 
-ClangExpressionParser::~ClangExpressionParser() {}
+ClangExpressionParser::~ClangExpressionParser() = default;
 
 namespace {
 

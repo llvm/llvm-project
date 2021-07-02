@@ -92,7 +92,7 @@ TerminalState::TerminalState()
 }
 
 // Destructor
-TerminalState::~TerminalState() {}
+TerminalState::~TerminalState() = default;
 
 void TerminalState::Clear() {
   m_tty.Clear();
@@ -190,10 +190,10 @@ bool TerminalState::ProcessGroupIsValid() const {
 }
 
 // Constructor
-TerminalStateSwitcher::TerminalStateSwitcher() {}
+TerminalStateSwitcher::TerminalStateSwitcher() = default;
 
 // Destructor
-TerminalStateSwitcher::~TerminalStateSwitcher() {}
+TerminalStateSwitcher::~TerminalStateSwitcher() = default;
 
 // Returns the number of states that this switcher contains
 uint32_t TerminalStateSwitcher::GetNumberOfStates() const {

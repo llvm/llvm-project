@@ -32,7 +32,7 @@ AddressResolverFileLine::AddressResolverFileLine(
     SourceLocationSpec location_spec)
     : AddressResolver(), m_src_location_spec(location_spec) {}
 
-AddressResolverFileLine::~AddressResolverFileLine() {}
+AddressResolverFileLine::~AddressResolverFileLine() = default;
 
 Searcher::CallbackReturn
 AddressResolverFileLine::SearchCallback(SearchFilter &filter,

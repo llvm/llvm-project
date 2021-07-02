@@ -76,7 +76,7 @@ private:
 
     class VTableRegion {
     public:
-      VTableRegion() {}
+      VTableRegion() = default;
 
       VTableRegion(AppleObjCVTables *owner, lldb::addr_t header_addr);
 

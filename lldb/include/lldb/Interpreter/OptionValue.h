@@ -60,7 +60,7 @@ public:
     eDumpGroupExport = (eDumpOptionCommand | eDumpOptionName | eDumpOptionValue)
   };
 
-  OptionValue() {}
+  OptionValue() = default;
 
   virtual ~OptionValue() = default;
 

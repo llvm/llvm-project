@@ -467,7 +467,7 @@ RegisterContextDarwin_x86_64::RegisterContextDarwin_x86_64(
   }
 }
 
-RegisterContextDarwin_x86_64::~RegisterContextDarwin_x86_64() {}
+RegisterContextDarwin_x86_64::~RegisterContextDarwin_x86_64() = default;
 
 void RegisterContextDarwin_x86_64::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();

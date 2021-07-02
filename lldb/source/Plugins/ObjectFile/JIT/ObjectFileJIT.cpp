@@ -100,7 +100,7 @@ ObjectFileJIT::ObjectFileJIT(const lldb::ModuleSP &module_sp,
   }
 }
 
-ObjectFileJIT::~ObjectFileJIT() {}
+ObjectFileJIT::~ObjectFileJIT() = default;
 
 bool ObjectFileJIT::ParseHeader() {
   // JIT code is never in a file, nor is it required to have any header
