@@ -1710,7 +1710,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
   // For example, the ABI alignment may change based on software platform while
   // this function should only be affected by hardware implementation.
   Type *Ty = VT.getTypeForEVT(Context);
-  if (VT.isZeroSized() || Alignment >= DL.getABITypeAlign(Ty)) {
+  if (Alignment >= DL.getABITypeAlign(Ty)) {
     // Assume that an access that meets the ABI-specified alignment is fast.
     if (Fast != nullptr)
       *Fast = true;
