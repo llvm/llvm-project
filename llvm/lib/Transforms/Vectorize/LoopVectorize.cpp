@@ -331,7 +331,7 @@ static cl::opt<bool>
                            cl::desc("Prefer in-loop vector reductions, "
                                     "overriding the targets preference."));
 
-cl::opt<bool> ForceOrderedReductions(
+static cl::opt<bool> ForceOrderedReductions(
     "force-ordered-reductions", cl::init(false), cl::Hidden,
     cl::desc("Enable the vectorisation of loops with in-order (strict) "
              "FP reductions"));
@@ -1317,8 +1317,7 @@ public:
   /// the IsOrdered flag of RdxDesc is set and we do not allow reordering
   /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) {
-    return ForceOrderedReductions && !Hints->allowReordering() &&
-           RdxDesc.isOrdered();
+    return !Hints->allowReordering() && RdxDesc.isOrdered();
   }
 
   /// \returns The smallest bitwidth each instruction can be represented with.
@@ -10225,7 +10224,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (!LVL.canVectorizeFPMath(ForceOrderedReductions)) {
+  bool AllowOrderedReductions;
+  // If the flag is set, use that instead and override the TTI behaviour.
+  if (ForceOrderedReductions.getNumOccurrences() > 0)
+    AllowOrderedReductions = ForceOrderedReductions;
+  else
+    AllowOrderedReductions = TTI->enableOrderedReductions();
+  if (!LVL.canVectorizeFPMath(AllowOrderedReductions)) {
     ORE->emit([&]() {
       auto *ExactFPMathInst = Requirements.getExactFPInst();
       return OptimizationRemarkAnalysisFPCommute(DEBUG_TYPE, "CantReorderFPOps",
