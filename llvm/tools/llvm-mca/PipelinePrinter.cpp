@@ -18,8 +18,18 @@ namespace llvm {
 namespace mca {
 
 void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
-  for (const auto &V : Views)
-    V->printView(OutputKind, OS);
+  json::Object JO;
+  for (const auto &V : Views) {
+    if ((OutputKind == View::OK_JSON)) {
+      if (V->isSerializable()) {
+        JO.try_emplace(V->getNameAsString().str(), V->toJSON());
+      }
+    } else {
+      V->printView(OS);
+    }
+  }
+  if (OutputKind == View::OK_JSON)
+    OS << formatv("{0:2}", json::Value(std::move(JO))) << "\n";
 }
 } // namespace mca.
 } // namespace llvm
