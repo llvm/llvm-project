@@ -1928,6 +1928,7 @@ void PPCAIXAsmPrinter::emitFunctionBodyEnd() {
 
     OutStreamer->emitIntValue(0, PointerSize);
     OutStreamer->emitIntValue(0, PointerSize);
+    OutStreamer->SwitchSection(MF->getSection());
   }
 }
 
