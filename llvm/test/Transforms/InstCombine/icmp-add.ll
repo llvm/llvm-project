@@ -796,8 +796,7 @@ define i1 @ugt_wrong_offset(i8 %a) {
 
 define i1 @ult_offset(i8 %a) {
 ; CHECK-LABEL: @ult_offset(
-; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], -6
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[T]], 122
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[A:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[OV]]
 ;
   %t = add i8 %a, 250
@@ -809,7 +808,7 @@ define i1 @ult_offset_use(i32 %a) {
 ; CHECK-LABEL: @ult_offset_use(
 ; CHECK-NEXT:    [[T:%.*]] = add i32 [[A:%.*]], 42
 ; CHECK-NEXT:    call void @use(i32 [[T]])
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i32 [[T]], -2147483606
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i32 [[A]], -43
 ; CHECK-NEXT:    ret i1 [[OV]]
 ;
   %t = add i32 %a, 42
@@ -820,14 +819,15 @@ define i1 @ult_offset_use(i32 %a) {
 
 define <2 x i1> @ult_offset_splat(<2 x i5> %a) {
 ; CHECK-LABEL: @ult_offset_splat(
-; CHECK-NEXT:    [[T:%.*]] = add <2 x i5> [[A:%.*]], <i5 9, i5 9>
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult <2 x i5> [[T]], <i5 -7, i5 -7>
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt <2 x i5> [[A:%.*]], <i5 -10, i5 -10>
 ; CHECK-NEXT:    ret <2 x i1> [[OV]]
 ;
   %t = add <2 x i5> %a, <i5 9, i5 9>
   %ov = icmp ult <2 x i5> %t, <i5 25, i5 25>
   ret <2 x i1> %ov
 }
+
+; negative test - constants must differ by SMIN
 
 define i1 @ult_wrong_offset(i8 %a) {
 ; CHECK-LABEL: @ult_wrong_offset(
