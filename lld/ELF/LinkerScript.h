@@ -227,7 +227,7 @@ struct ByteCommand : BaseCommand {
 };
 
 struct InsertCommand {
-  StringRef name;
+  std::vector<StringRef> names;
   bool isAfter;
   StringRef where;
 };

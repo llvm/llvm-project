@@ -251,30 +251,34 @@ getChangedSymbolAssignment(const SymbolAssignmentMap &oldValues) {
 // Process INSERT [AFTER|BEFORE] commands. For each command, we move the
 // specified output section to the designated place.
 void LinkerScript::processInsertCommands() {
+  std::vector<OutputSection *> moves;
   for (const InsertCommand &cmd : insertCommands) {
-    // If cmd.os is empty, it may have been discarded by
-    // adjustSectionsBeforeSorting(). We do not handle such output sections.
-    auto from = llvm::find_if(sectionCommands, [&](BaseCommand *base) {
-      return isa<OutputSection>(base) &&
-             cast<OutputSection>(base)->name == cmd.name;
-    });
-    if (from == sectionCommands.end())
-      continue;
-    OutputSection *osec = cast<OutputSection>(*from);
-    sectionCommands.erase(from);
+    for (StringRef name : cmd.names) {
+      // If base is empty, it may have been discarded by
+      // adjustSectionsBeforeSorting(). We do not handle such output sections.
+      auto from = llvm::find_if(sectionCommands, [&](BaseCommand *base) {
+        return isa<OutputSection>(base) &&
+               cast<OutputSection>(base)->name == name;
+      });
+      if (from == sectionCommands.end())
+        continue;
+      moves.push_back(cast<OutputSection>(*from));
+      sectionCommands.erase(from);
+    }
 
     auto insertPos = llvm::find_if(sectionCommands, [&cmd](BaseCommand *base) {
       auto *to = dyn_cast<OutputSection>(base);
       return to != nullptr && to->name == cmd.where;
     });
     if (insertPos == sectionCommands.end()) {
-      error("unable to insert " + osec->name +
+      error("unable to insert " + cmd.names[0] +
             (cmd.isAfter ? " after " : " before ") + cmd.where);
     } else {
       if (cmd.isAfter)
         ++insertPos;
-      sectionCommands.insert(insertPos, osec);
+      sectionCommands.insert(insertPos, moves.begin(), moves.end());
     }
+    moves.clear();
   }
 }
 
