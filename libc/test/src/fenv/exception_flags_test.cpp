@@ -18,6 +18,7 @@ TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlag) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   __llvm_libc::fputil::disableExcept(FE_ALL_EXCEPT);
+  __llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT);
 
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
                    FE_UNDERFLOW};
@@ -39,8 +40,9 @@ TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlag) {
     ASSERT_EQ(__llvm_libc::fesetexceptflag(&eflags, FE_ALL_EXCEPT), 0);
     ASSERT_NE(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT) & e, 0);
 
-    // Cleanup
-    __llvm_libc::fputil::clearExcept(e);
+    // Cleanup. We clear all excepts as raising excepts like FE_OVERFLOW
+    // can also raise FE_INEXACT.
+    __llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT);
   }
 
   // Next, we will raise one exception and save the flags.
