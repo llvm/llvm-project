@@ -1148,14 +1148,15 @@ AliasResult BasicAAResult::aliasGEP(
     bool AllNonPositive = DecompGEP1.Offset.isNonPositive();
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
       APInt Scale = DecompGEP1.VarIndices[i].Scale;
+      APInt ScaleForGDC = DecompGEP1.VarIndices[i].Scale;
       if (!DecompGEP1.VarIndices[i].IsNSW)
-        Scale = APInt::getOneBitSet(Scale.getBitWidth(),
-                                    Scale.countTrailingZeros());
+        ScaleForGDC = APInt::getOneBitSet(Scale.getBitWidth(),
+                                          Scale.countTrailingZeros());
 
       if (i == 0)
-        GCD = Scale.abs();
+        GCD = ScaleForGDC.abs();
       else
-        GCD = APIntOps::GreatestCommonDivisor(GCD, Scale.abs());
+        GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGDC.abs());
 
       if (AllNonNegative || AllNonPositive) {
         // If the Value could change between cycles, then any reasoning about
