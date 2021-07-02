@@ -101,48 +101,43 @@ void markLive() {
   if (auto *stubBinder =
           dyn_cast_or_null<DylibSymbol>(symtab->find("dyld_stub_binder")))
     addSym(stubBinder);
-  for (InputSection *isec : inputSections) {
+  for (ConcatInputSection *isec : inputSections) {
     // Sections marked no_dead_strip
-    if (isec->flags & S_ATTR_NO_DEAD_STRIP) {
-      assert(isa<ConcatInputSection>(isec));
+    if (isec->getFlags() & S_ATTR_NO_DEAD_STRIP) {
       enqueue(isec, 0);
       continue;
     }
 
     // mod_init_funcs, mod_term_funcs sections
-    if (sectionType(isec->flags) == S_MOD_INIT_FUNC_POINTERS ||
-        sectionType(isec->flags) == S_MOD_TERM_FUNC_POINTERS) {
-      assert(isa<ConcatInputSection>(isec));
+    if (sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS ||
+        sectionType(isec->getFlags()) == S_MOD_TERM_FUNC_POINTERS) {
       enqueue(isec, 0);
       continue;
     }
+  }
 
-    // Dead strip runs before UnwindInfoSection handling so we need to keep
-    // __LD,__compact_unwind alive here.
-    // But that section contains absolute references to __TEXT,__text and
-    // keeps most code alive due to that. So we can't just enqueue() the
-    // section: We must skip the relocations for the functionAddress
-    // in each CompactUnwindEntry.
-    // See also scanEhFrameSection() in lld/ELF/MarkLive.cpp.
-    if (isec->segname == segment_names::ld &&
-        isec->name == section_names::compactUnwind) {
-      auto concatIsec = cast<ConcatInputSection>(isec);
-      concatIsec->live = true;
-      const int compactUnwindEntrySize =
-          target->wordSize == 8 ? sizeof(CompactUnwindEntry<uint64_t>)
-                                : sizeof(CompactUnwindEntry<uint32_t>);
-      for (const Reloc &r : isec->relocs) {
-        // This is the relocation for the address of the function itself.
-        // Ignore it, else these would keep everything alive.
-        if (r.offset % compactUnwindEntrySize == 0)
-          continue;
+  // Dead strip runs before UnwindInfoSection handling so we need to keep
+  // __LD,__compact_unwind alive here.
+  // But that section contains absolute references to __TEXT,__text and
+  // keeps most code alive due to that. So we can't just enqueue() the
+  // section: We must skip the relocations for the functionAddress
+  // in each CompactUnwindEntry.
+  // See also scanEhFrameSection() in lld/ELF/MarkLive.cpp.
+  for (ConcatInputSection *isec : in.unwindInfo->getInputs()) {
+    isec->live = true;
+    const int compactUnwindEntrySize =
+        target->wordSize == 8 ? sizeof(CompactUnwindEntry<uint64_t>)
+                              : sizeof(CompactUnwindEntry<uint32_t>);
+    for (const Reloc &r : isec->relocs) {
+      // This is the relocation for the address of the function itself.
+      // Ignore it, else these would keep everything alive.
+      if (r.offset % compactUnwindEntrySize == 0)
+        continue;
 
-        if (auto *s = r.referent.dyn_cast<Symbol *>())
-          addSym(s);
-        else
-          enqueue(r.referent.get<InputSection *>(), r.addend);
-      }
-      continue;
+      if (auto *s = r.referent.dyn_cast<Symbol *>())
+        addSym(s);
+      else
+        enqueue(r.referent.get<InputSection *>(), r.addend);
     }
   }
 
@@ -163,13 +158,10 @@ void markLive() {
 
     // S_ATTR_LIVE_SUPPORT sections are live if they point _to_ a live section.
     // Process them in a second pass.
-    for (InputSection *isec : inputSections) {
-      if (!isa<ConcatInputSection>(isec))
-        continue;
-      auto concatIsec = cast<ConcatInputSection>(isec);
+    for (ConcatInputSection *isec : inputSections) {
       // FIXME: Check if copying all S_ATTR_LIVE_SUPPORT sections into a
       // separate vector and only walking that here is faster.
-      if (!(concatIsec->flags & S_ATTR_LIVE_SUPPORT) || concatIsec->live)
+      if (!(isec->getFlags() & S_ATTR_LIVE_SUPPORT) || isec->live)
         continue;
 
       for (const Reloc &r : isec->relocs) {

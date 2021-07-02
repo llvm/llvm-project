@@ -517,6 +517,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:Pass",
         "//mlir:StandardOps",
+        "//mlir:TensorDialect",
         "//mlir:TosaDialect",
         "//mlir:Transforms",
     ],

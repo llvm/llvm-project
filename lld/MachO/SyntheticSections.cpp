@@ -746,7 +746,7 @@ void SymtabSection::emitStabs() {
       if (defined->isAbsolute())
         continue;
       InputSection *isec = defined->isec;
-      ObjFile *file = dyn_cast_or_null<ObjFile>(isec->file);
+      ObjFile *file = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!file || !file->compileUnit)
         continue;
       symbolsNeedingStabs.push_back(defined);
@@ -754,7 +754,7 @@ void SymtabSection::emitStabs() {
   }
 
   llvm::stable_sort(symbolsNeedingStabs, [&](Defined *a, Defined *b) {
-    return a->isec->file->id < b->isec->file->id;
+    return a->isec->getFile()->id < b->isec->getFile()->id;
   });
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
@@ -763,7 +763,7 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (Defined *defined : symbolsNeedingStabs) {
     InputSection *isec = defined->isec;
-    ObjFile *file = cast<ObjFile>(isec->file);
+    ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
       if (lastFile != nullptr)
@@ -775,7 +775,7 @@ void SymtabSection::emitStabs() {
     }
 
     StabsEntry symStab;
-    symStab.sect = defined->isec->parent->index;
+    symStab.sect = defined->isec->canonical()->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
     symStab.value = defined->getVA();
 
@@ -900,7 +900,7 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
         nList->n_value = defined->value;
       } else {
         nList->n_type = scope | N_SECT;
-        nList->n_sect = defined->isec->parent->index;
+        nList->n_sect = defined->isec->canonical()->parent->index;
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
@@ -1255,40 +1255,46 @@ WordLiteralSection::WordLiteralSection()
 
 void WordLiteralSection::addInput(WordLiteralInputSection *isec) {
   isec->parent = this;
-  // We do all processing of the InputSection here, so it will be effectively
-  // finalized.
-  isec->isFinal = true;
-  const uint8_t *buf = isec->data.data();
-  switch (sectionType(isec->flags)) {
-  case S_4BYTE_LITERALS: {
-    for (size_t off = 0, e = isec->data.size(); off < e; off += 4) {
-      if (!isec->isLive(off))
-        continue;
-      uint32_t value = *reinterpret_cast<const uint32_t *>(buf + off);
-      literal4Map.emplace(value, literal4Map.size());
+  inputs.push_back(isec);
+}
+
+void WordLiteralSection::finalizeContents() {
+  for (WordLiteralInputSection *isec : inputs) {
+    // We do all processing of the InputSection here, so it will be effectively
+    // finalized.
+    isec->isFinal = true;
+    const uint8_t *buf = isec->data.data();
+    switch (sectionType(isec->getFlags())) {
+    case S_4BYTE_LITERALS: {
+      for (size_t off = 0, e = isec->data.size(); off < e; off += 4) {
+        if (!isec->isLive(off))
+          continue;
+        uint32_t value = *reinterpret_cast<const uint32_t *>(buf + off);
+        literal4Map.emplace(value, literal4Map.size());
+      }
+      break;
     }
-    break;
-  }
-  case S_8BYTE_LITERALS: {
-    for (size_t off = 0, e = isec->data.size(); off < e; off += 8) {
-      if (!isec->isLive(off))
-        continue;
-      uint64_t value = *reinterpret_cast<const uint64_t *>(buf + off);
-      literal8Map.emplace(value, literal8Map.size());
+    case S_8BYTE_LITERALS: {
+      for (size_t off = 0, e = isec->data.size(); off < e; off += 8) {
+        if (!isec->isLive(off))
+          continue;
+        uint64_t value = *reinterpret_cast<const uint64_t *>(buf + off);
+        literal8Map.emplace(value, literal8Map.size());
+      }
+      break;
     }
-    break;
-  }
-  case S_16BYTE_LITERALS: {
-    for (size_t off = 0, e = isec->data.size(); off < e; off += 16) {
-      if (!isec->isLive(off))
-        continue;
-      UInt128 value = *reinterpret_cast<const UInt128 *>(buf + off);
-      literal16Map.emplace(value, literal16Map.size());
+    case S_16BYTE_LITERALS: {
+      for (size_t off = 0, e = isec->data.size(); off < e; off += 16) {
+        if (!isec->isLive(off))
+          continue;
+        UInt128 value = *reinterpret_cast<const UInt128 *>(buf + off);
+        literal16Map.emplace(value, literal16Map.size());
+      }
+      break;
     }
-    break;
-  }
-  default:
-    llvm_unreachable("invalid literal section type");
+    default:
+      llvm_unreachable("invalid literal section type");
+    }
   }
 }
 

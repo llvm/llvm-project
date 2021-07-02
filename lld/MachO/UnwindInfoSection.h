@@ -27,21 +27,21 @@ template <class Ptr> struct CompactUnwindEntry {
 
 class UnwindInfoSection : public SyntheticSection {
 public:
-  bool isNeeded() const override { return compactUnwindSection != nullptr; }
-  uint64_t getSize() const override { return unwindInfoSize; }
-  virtual void prepareRelocations(ConcatInputSection *) = 0;
-
-  void setCompactUnwindSection(ConcatOutputSection *cuSection) {
-    compactUnwindSection = cuSection;
+  bool isNeeded() const override {
+    return !compactUnwindSection->inputs.empty();
   }
+  uint64_t getSize() const override { return unwindInfoSize; }
+  virtual void addInput(ConcatInputSection *) = 0;
+  std::vector<ConcatInputSection *> getInputs() {
+    return compactUnwindSection->inputs;
+  }
+  void prepareRelocations();
 
 protected:
-  UnwindInfoSection()
-      : SyntheticSection(segment_names::text, section_names::unwindInfo) {
-    align = 4;
-  }
+  UnwindInfoSection();
+  virtual void prepareRelocations(ConcatInputSection *) = 0;
 
-  ConcatOutputSection *compactUnwindSection = nullptr;
+  ConcatOutputSection *compactUnwindSection;
   uint64_t unwindInfoSize = 0;
 };
 
