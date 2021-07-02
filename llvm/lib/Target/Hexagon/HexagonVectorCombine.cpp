@@ -440,12 +440,15 @@ auto AlignVectors::createAdjustedPointer(IRBuilder<> &Builder, Value *Ptr,
     -> Value * {
   // The adjustment is in bytes, but if it's a multiple of the type size,
   // we don't need to do pointer casts.
-  Type *ElemTy = cast<PointerType>(Ptr->getType())->getElementType();
-  int ElemSize = HVC.getSizeOf(ElemTy);
-  if (Adjust % ElemSize == 0) {
-    Value *Tmp0 =
-        Builder.CreateGEP(ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize));
-    return Builder.CreatePointerCast(Tmp0, ValTy->getPointerTo());
+  auto *PtrTy = cast<PointerType>(Ptr->getType());
+  if (!PtrTy->isOpaque()) {
+    Type *ElemTy = PtrTy->getElementType();
+    int ElemSize = HVC.getSizeOf(ElemTy);
+    if (Adjust % ElemSize == 0) {
+      Value *Tmp0 =
+          Builder.CreateGEP(ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize));
+      return Builder.CreatePointerCast(Tmp0, ValTy->getPointerTo());
+    }
   }
 
   PointerType *CharPtrTy = Type::getInt8PtrTy(HVC.F.getContext());
