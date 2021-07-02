@@ -1,6 +1,6 @@
 ; Tests that coro-split will optimize the lifetime.start maker of each local variable,
 ; sink them to the places after the suspend block.
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse,simplify-cfg' -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { i8* }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }

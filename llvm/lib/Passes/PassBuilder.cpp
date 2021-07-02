@@ -1003,9 +1003,6 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   if (AttributorRun & AttributorRunOption::CGSCC)
     MainCGPipeline.addPass(AttributorCGSCCPass());
 
-  if (PTO.Coroutines)
-    MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
-
   // Now deduce any function attributes based in the current code.
   MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
 
@@ -1026,6 +1023,9 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, Phase)));
+
+  if (PTO.Coroutines)
+    MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
 
   return MIWP;
 }
