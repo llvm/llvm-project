@@ -487,3 +487,29 @@ void test5() try {
 }
 
 } // namespace test_simpler_implicit_move
+
+namespace test_auto_variables {
+
+struct S {};
+
+template <class T> struct range {
+  S *begin() const;
+  S *end() const;
+};
+
+template <class T> S test_dependent_ranged_for() {
+  for (auto x : range<T>())
+    return x;
+  return S();
+}
+template S test_dependent_ranged_for<int>();
+
+template <class T> struct X {};
+
+template <class T> X<T> test_dependent_invalid_decl() {
+  auto x = X<T>().foo(); // expected-error {{no member named 'foo'}}
+  return x;
+}
+template X<int> test_dependent_invalid_decl<int>(); // expected-note {{requested here}}
+
+} // namespace test_auto_variables
