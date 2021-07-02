@@ -624,24 +624,36 @@ static void genReductionEnd(Merger &merger, CodeGen &codegen,
 /// Recursively generates tensor expression.
 static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
                     linalg::GenericOp op, unsigned exp) {
+  Location loc = op.getLoc();
   if (merger.exp(exp).kind == Kind::kTensor)
     return genTensorLoad(merger, codegen, rewriter, op, exp);
-  else if (merger.exp(exp).kind == Kind::kInvariant)
+  if (merger.exp(exp).kind == Kind::kInvariant)
     return genInvariantValue(merger, codegen, rewriter, exp);
+  if (merger.exp(exp).kind == Kind::kZero) {
+    Type tp = op.getOutputTensorTypes()[0].getElementType();
+    merger.exp(exp).val =
+        rewriter.create<ConstantOp>(loc, tp, rewriter.getZeroAttr(tp));
+    return genInvariantValue(merger, codegen, rewriter, exp);
+  }
   Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0);
   Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1);
   switch (merger.exp(exp).kind) {
   case Kind::kTensor:
   case Kind::kInvariant:
+  case Kind::kZero:
     llvm_unreachable("handled above");
   case Kind::kMulF:
-    return rewriter.create<MulFOp>(op.getLoc(), v0, v1);
+    return rewriter.create<MulFOp>(loc, v0, v1);
   case Kind::kMulI:
-    return rewriter.create<MulIOp>(op.getLoc(), v0, v1);
+    return rewriter.create<MulIOp>(loc, v0, v1);
   case Kind::kAddF:
-    return rewriter.create<AddFOp>(op.getLoc(), v0, v1);
+    return rewriter.create<AddFOp>(loc, v0, v1);
   case Kind::kAddI:
-    return rewriter.create<AddIOp>(op.getLoc(), v0, v1);
+    return rewriter.create<AddIOp>(loc, v0, v1);
+  case Kind::kSubF:
+    return rewriter.create<SubFOp>(loc, v0, v1);
+  case Kind::kSubI:
+    return rewriter.create<SubIOp>(loc, v0, v1);
   }
   llvm_unreachable("unexpected expression kind");
 }
@@ -671,7 +683,8 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
       merger.exp(exp).val =
           hoist ? genTensorLoad(merger, codegen, rewriter, op, exp) : Value();
     }
-  } else if (merger.exp(exp).kind != Kind::kInvariant) {
+  } else if (merger.exp(exp).kind != Kind::kInvariant &&
+             merger.exp(exp).kind != Kind::kZero) {
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.
