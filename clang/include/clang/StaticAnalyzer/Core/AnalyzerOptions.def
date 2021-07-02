@@ -320,6 +320,11 @@ ANALYZER_OPTION(bool, ShouldDisplayCheckerNameForText, "display-checker-name",
                 "Display the checker name for textual outputs",
                 true)
 
+ANALYZER_OPTION(bool, ShouldSupportSymbolicIntegerCasts,
+                "support-symbolic-integer-casts",
+                "Produce cast symbols for integral types.",
+                false)
+
 ANALYZER_OPTION(
     bool, ShouldConsiderSingleElementArraysAsFlexibleArrayMembers,
     "consider-single-element-arrays-as-flexible-array-members",

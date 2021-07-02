@@ -416,7 +416,10 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_IntegralCast: {
         // Delegate to SValBuilder to process.
         SVal V = state->getSVal(Ex, LCtx);
-        V = svalBuilder.evalIntegralCast(state, V, T, ExTy);
+        if (AMgr.options.ShouldSupportSymbolicIntegerCasts)
+          V = svalBuilder.evalCast(V, T, ExTy);
+        else
+          V = svalBuilder.evalIntegralCast(state, V, T, ExTy);
         state = state->BindExpr(CastE, LCtx, V);
         Bldr.generateNode(CastE, Pred, state);
         continue;
