@@ -1720,6 +1720,13 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (!MaybeImmVal)
     return false;
 
+  // Don't do this combine if there multiple uses of the first PTR_ADD,
+  // since we may be able to compute the second PTR_ADD as an immediate
+  // offset anyway. Folding the first offset into the second may cause us
+  // to go beyond the bounds of our legal addressing modes.
+  if (!MRI.hasOneNonDBGUse(Add2))
+    return false;
+
   MachineInstr *Add2Def = MRI.getUniqueVRegDef(Add2);
   if (!Add2Def || Add2Def->getOpcode() != TargetOpcode::G_PTR_ADD)
     return false;
@@ -3955,6 +3962,13 @@ bool CombinerHelper::applyBuildFn(
   return true;
 }
 
+bool CombinerHelper::applyBuildFnNoErase(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  Builder.setInstrAndDebugLoc(MI);
+  MatchInfo(Builder);
+  return true;
+}
+
 /// Match an FSHL or FSHR that can be combined to a ROTR or ROTL rotate.
 bool CombinerHelper::matchFunnelShiftToRotate(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
@@ -4127,6 +4141,129 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(
     B.buildInstr(TargetOpcode::G_UBFX, {Dst}, {ShiftSrc, LSBCst, WidthCst});
   };
   return true;
+}
+
+bool CombinerHelper::reassociationCanBreakAddressingModePattern(
+    MachineInstr &PtrAdd) {
+  assert(PtrAdd.getOpcode() == TargetOpcode::G_PTR_ADD);
+
+  Register Src1Reg = PtrAdd.getOperand(1).getReg();
+  MachineInstr *Src1Def = getOpcodeDef(TargetOpcode::G_PTR_ADD, Src1Reg, MRI);
+  if (!Src1Def)
+    return false;
+
+  Register Src2Reg = PtrAdd.getOperand(2).getReg();
+
+  if (MRI.hasOneNonDBGUse(Src1Reg))
+    return false;
+
+  auto C1 = getConstantVRegVal(Src1Def->getOperand(2).getReg(), MRI);
+  if (!C1)
+    return false;
+  auto C2 = getConstantVRegVal(Src2Reg, MRI);
+  if (!C2)
+    return false;
+
+  const APInt &C1APIntVal = *C1;
+  const APInt &C2APIntVal = *C2;
+  const int64_t CombinedValue = (C1APIntVal + C2APIntVal).getSExtValue();
+
+  for (auto &UseMI : MRI.use_nodbg_instructions(Src1Reg)) {
+    // This combine may end up running before ptrtoint/inttoptr combines
+    // manage to eliminate redundant conversions, so try to look through them.
+    MachineInstr *ConvUseMI = &UseMI;
+    unsigned ConvUseOpc = ConvUseMI->getOpcode();
+    while (ConvUseOpc == TargetOpcode::G_INTTOPTR ||
+           ConvUseOpc == TargetOpcode::G_PTRTOINT) {
+      Register DefReg = ConvUseMI->getOperand(0).getReg();
+      if (!MRI.hasOneNonDBGUse(DefReg))
+        break;
+      ConvUseMI = &*MRI.use_instr_nodbg_begin(DefReg);
+    }
+    auto LoadStore = ConvUseOpc == TargetOpcode::G_LOAD ||
+                     ConvUseOpc == TargetOpcode::G_STORE;
+    if (!LoadStore)
+      continue;
+    // Is x[offset2] already not a legal addressing mode? If so then
+    // reassociating the constants breaks nothing (we test offset2 because
+    // that's the one we hope to fold into the load or store).
+    TargetLoweringBase::AddrMode AM;
+    AM.HasBaseReg = true;
+    AM.BaseOffs = C2APIntVal.getSExtValue();
+    unsigned AS =
+        MRI.getType(ConvUseMI->getOperand(1).getReg()).getAddressSpace();
+    Type *AccessTy =
+        getTypeForLLT(MRI.getType(ConvUseMI->getOperand(0).getReg()),
+                      PtrAdd.getMF()->getFunction().getContext());
+    const auto &TLI = *PtrAdd.getMF()->getSubtarget().getTargetLowering();
+    if (!TLI.isLegalAddressingMode(PtrAdd.getMF()->getDataLayout(), AM,
+                                   AccessTy, AS))
+      continue;
+
+    // Would x[offset1+offset2] still be a legal addressing mode?
+    AM.BaseOffs = CombinedValue;
+    if (!TLI.isLegalAddressingMode(PtrAdd.getMF()->getDataLayout(), AM,
+                                   AccessTy, AS))
+      return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchReassocPtrAdd(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD);
+  // We're trying to match a few pointer computation patterns here for
+  // re-association opportunities.
+  // 1) Isolating a constant operand to be on the RHS, e.g.:
+  // G_PTR_ADD(BASE, G_ADD(X, C)) -> G_PTR_ADD(G_PTR_ADD(BASE, X), C)
+  //
+  // 2) Folding two constants in each sub-tree as long as such folding
+  // doesn't break a legal addressing mode.
+  // G_PTR_ADD(G_PTR_ADD(BASE, C1), C2) -> G_PTR_ADD(BASE, C1+C2)
+  Register Src1Reg = MI.getOperand(1).getReg();
+  Register Src2Reg = MI.getOperand(2).getReg();
+  MachineInstr *LHS = MRI.getVRegDef(Src1Reg);
+  MachineInstr *RHS = MRI.getVRegDef(Src2Reg);
+
+  if (LHS->getOpcode() != TargetOpcode::G_PTR_ADD) {
+    // Try to match example 1).
+    if (RHS->getOpcode() != TargetOpcode::G_ADD)
+      return false;
+    auto C2 = getConstantVRegVal(RHS->getOperand(2).getReg(), MRI);
+    if (!C2)
+      return false;
+
+    MatchInfo = [=,&MI](MachineIRBuilder &B) {
+      LLT PtrTy = MRI.getType(MI.getOperand(0).getReg());
+
+      auto NewBase =
+          Builder.buildPtrAdd(PtrTy, Src1Reg, RHS->getOperand(1).getReg());
+      Observer.changingInstr(MI);
+      MI.getOperand(1).setReg(NewBase.getReg(0));
+      MI.getOperand(2).setReg(RHS->getOperand(2).getReg());
+      Observer.changedInstr(MI);
+    };
+  } else {
+    // Try to match example 2.
+    Register LHSSrc1 = LHS->getOperand(1).getReg();
+    Register LHSSrc2 = LHS->getOperand(2).getReg();
+    auto C1 = getConstantVRegVal(LHSSrc2, MRI);
+    if (!C1)
+      return false;
+    auto C2 = getConstantVRegVal(Src2Reg, MRI);
+    if (!C2)
+      return false;
+
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      auto NewCst = B.buildConstant(MRI.getType(Src2Reg), *C1 + *C2);
+      Observer.changingInstr(MI);
+      MI.getOperand(1).setReg(LHSSrc1);
+      MI.getOperand(2).setReg(NewCst.getReg(0));
+      Observer.changedInstr(MI);
+    };
+  }
+  return !reassociationCanBreakAddressingModePattern(MI);
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
