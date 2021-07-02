@@ -47,6 +47,15 @@ void PrintMemoryProfile();
 
 unsigned NumberOfCpuCores();
 
+// Parses one dictionary entry.
+// If successful, write the enty to Unit and returns true,
+// otherwise returns false.
+bool ParseOneDictionaryEntry(const std::string &Str, Unit *U);
+
+// Parses the dictionary file, fills Units, returns true iff all lines
+// were parsed successfully.
+bool ParseDictionaryFile(const std::string &Text, Vector<Unit> *Units);
+
 // Platform specific functions.
 void SetSignalHandler(const FuzzingOptions& Options);
 
@@ -62,9 +71,6 @@ bool ExecuteCommand(const Command &Cmd, std::string *CmdOutput);
 // Fuchsia does not have popen/pclose.
 FILE *OpenProcessPipe(const char *Command, const char *Mode);
 int CloseProcessPipe(FILE *F);
-
-const void *SearchMemory(const void *haystack, size_t haystacklen,
-                         const void *needle, size_t needlelen);
 
 std::string CloneArgsWithoutX(const Vector<std::string> &Args,
                               const char *X1, const char *X2);
