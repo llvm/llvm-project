@@ -14,7 +14,7 @@
 #if SCUDO_LINUX
 namespace scudo {
 
-TEST(MemtagBasicTest, Unsupported) {
+TEST(MemtagBasicDeathTest, Unsupported) {
   if (archSupportsMemoryTagging())
     GTEST_SKIP();
 
@@ -63,6 +63,8 @@ protected:
   uptr Addr = 0;
 };
 
+using MemtagDeathTest = MemtagTest;
+
 TEST_F(MemtagTest, ArchMemoryTagGranuleSize) {
   EXPECT_GT(archMemoryTagGranuleSize(), 1u);
   EXPECT_TRUE(isPowerOfTwo(archMemoryTagGranuleSize()));
@@ -77,7 +79,7 @@ TEST_F(MemtagTest, ExtractTag) {
   EXPECT_EQ(0xffffull, Tags);
 }
 
-TEST_F(MemtagTest, AddFixedTag) {
+TEST_F(MemtagDeathTest, AddFixedTag) {
   for (uptr Tag = 0; Tag < 0x10; ++Tag)
     EXPECT_EQ(Tag, extractTag(addFixedTag(Addr, Tag)));
   if (SCUDO_DEBUG) {
@@ -94,7 +96,7 @@ TEST_F(MemtagTest, UntagPointer) {
   }
 }
 
-TEST_F(MemtagTest, ScopedDisableMemoryTagChecks) {
+TEST_F(MemtagDeathTest, ScopedDisableMemoryTagChecks) {
   u8 *P = reinterpret_cast<u8 *>(addFixedTag(Addr, 1));
   EXPECT_NE(P, Buffer);
 
@@ -120,7 +122,7 @@ TEST_F(MemtagTest, SelectRandomTagWithMask) {
   }
 }
 
-TEST_F(MemtagTest, SKIP_NO_DEBUG(LoadStoreTagUnaligned)) {
+TEST_F(MemtagDeathTest, SKIP_NO_DEBUG(LoadStoreTagUnaligned)) {
   for (uptr P = Addr; P < Addr + 4 * archMemoryTagGranuleSize(); ++P) {
     if (P % archMemoryTagGranuleSize() == 0)
       continue;
@@ -141,7 +143,7 @@ TEST_F(MemtagTest, LoadStoreTag) {
             loadTag(Base + archMemoryTagGranuleSize()));
 }
 
-TEST_F(MemtagTest, SKIP_NO_DEBUG(StoreTagsUnaligned)) {
+TEST_F(MemtagDeathTest, SKIP_NO_DEBUG(StoreTagsUnaligned)) {
   for (uptr P = Addr; P < Addr + 4 * archMemoryTagGranuleSize(); ++P) {
     uptr Tagged = addFixedTag(P, 5);
     if (Tagged % archMemoryTagGranuleSize() == 0)
