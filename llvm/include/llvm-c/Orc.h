@@ -34,9 +34,14 @@
 LLVM_C_EXTERN_C_BEGIN
 
 /**
- * Represents an address in the target process.
+ * Represents an address in the executor process.
  */
 typedef uint64_t LLVMOrcJITTargetAddress;
+
+/**
+ * Represents an address in the executor process.
+ */
+typedef uint64_t LLVMOrcExecutorAddress;
 
 /**
  * Represents generic linkage flags for a symbol definition.
@@ -65,7 +70,7 @@ typedef struct {
  * Represents an evaluated symbol address and flags.
  */
 typedef struct {
-  LLVMOrcJITTargetAddress Address;
+  LLVMOrcExecutorAddress Address;
   LLVMJITSymbolFlags Flags;
 } LLVMJITEvaluatedSymbol;
 

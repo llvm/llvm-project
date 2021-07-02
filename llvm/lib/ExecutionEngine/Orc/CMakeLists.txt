@@ -4,6 +4,10 @@ add_llvm_component_library(LLVMOrcJIT
   Core.cpp
   DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
+  EPCDynamicLibrarySearchGenerator.cpp
+  EPCDebugObjectRegistrar.cpp
+  EPCEHFrameRegistrar.cpp
+  EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   IndirectionUtils.cpp
   IRCompileLayer.cpp
@@ -21,12 +25,8 @@ add_llvm_component_library(LLVMOrcJIT
   RTDyldObjectLinkingLayer.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp
-  TargetProcessControl.cpp
+  ExecutorProcessControl.cpp
   ThreadSafeModule.cpp
-  TPCDebugObjectRegistrar.cpp
-  TPCDynamicLibrarySearchGenerator.cpp
-  TPCEHFrameRegistrar.cpp
-  TPCIndirectionUtils.cpp
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
 

@@ -1,4 +1,4 @@
-//===----- TPCDebugObjectRegistrar.cpp - TPC-based debug registration -----===//
+//===----- EPCDebugObjectRegistrar.cpp - EPC-based debug registration -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/TPCDebugObjectRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -15,21 +15,21 @@
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<TPCDebugObjectRegistrar>>
-createJITLoaderGDBRegistrar(TargetProcessControl &TPC) {
-  auto ProcessHandle = TPC.loadDylib(nullptr);
+Expected<std::unique_ptr<EPCDebugObjectRegistrar>>
+createJITLoaderGDBRegistrar(ExecutorProcessControl &EPC) {
+  auto ProcessHandle = EPC.loadDylib(nullptr);
   if (!ProcessHandle)
     return ProcessHandle.takeError();
 
   SymbolStringPtr RegisterFn =
-      TPC.getTargetTriple().isOSBinFormatMachO()
-          ? TPC.intern("_llvm_orc_registerJITLoaderGDBWrapper")
-          : TPC.intern("llvm_orc_registerJITLoaderGDBWrapper");
+      EPC.getTargetTriple().isOSBinFormatMachO()
+          ? EPC.intern("_llvm_orc_registerJITLoaderGDBWrapper")
+          : EPC.intern("llvm_orc_registerJITLoaderGDBWrapper");
 
   SymbolLookupSet RegistrationSymbols;
   RegistrationSymbols.add(RegisterFn);
 
-  auto Result = TPC.lookupSymbols({{*ProcessHandle, RegistrationSymbols}});
+  auto Result = EPC.lookupSymbols({{*ProcessHandle, RegistrationSymbols}});
   if (!Result)
     return Result.takeError();
 
@@ -37,7 +37,7 @@ createJITLoaderGDBRegistrar(TargetProcessControl &TPC) {
   assert((*Result)[0].size() == 1 &&
          "Unexpected number of addresses in result");
 
-  return std::make_unique<TPCDebugObjectRegistrar>(TPC, (*Result)[0][0]);
+  return std::make_unique<EPCDebugObjectRegistrar>(EPC, (*Result)[0][0]);
 }
 
 } // namespace orc
