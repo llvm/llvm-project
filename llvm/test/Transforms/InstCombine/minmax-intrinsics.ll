@@ -858,3 +858,49 @@ define <3 x i8> @umin_non_zero_idiom4(<3 x i8> %a) {
   %res = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %a, <3 x i8> <i8 1, i8 undef, i8 undef>)
   ret <3 x i8> %res
 }
+
+define i1 @umin_eq_zero(i8 %a, i8 %b) {
+; CHECK-LABEL: @umin_eq_zero(
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[UMIN]], 0
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %umin = call i8 @llvm.umin.i8(i8 %a, i8 %b)
+  %res = icmp eq i8 %umin, 0
+  ret i1 %res
+}
+
+define <3 x i1> @umin_eq_zero2(<3 x i8> %a, <3 x i8> %b) {
+; CHECK-LABEL: @umin_eq_zero2(
+; CHECK-NEXT:    [[UMIN:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[A:%.*]], <3 x i8> [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <3 x i8> [[UMIN]], zeroinitializer
+; CHECK-NEXT:    ret <3 x i1> [[RES]]
+;
+
+  %umin = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %a, <3 x i8> %b)
+  %res = icmp eq <3 x i8> %umin, zeroinitializer
+  ret <3 x i1> %res
+}
+
+define i1 @umin_ne_zero(i8 %a, i8 %b) {
+; CHECK-LABEL: @umin_ne_zero(
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8 [[UMIN]], 0
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %umin = call i8 @llvm.umin.i8(i8 %a, i8 %b)
+  %res = icmp ne i8 %umin, 0
+  ret i1 %res
+}
+
+define <3 x i1> @umin_ne_zero2(<3 x i8> %a, <3 x i8> %b) {
+; CHECK-LABEL: @umin_ne_zero2(
+; CHECK-NEXT:    [[UMIN:%.*]] = call <3 x i8> @llvm.umin.v3i8(<3 x i8> [[A:%.*]], <3 x i8> [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne <3 x i8> [[UMIN]], zeroinitializer
+; CHECK-NEXT:    ret <3 x i1> [[RES]]
+;
+
+  %umin = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %a, <3 x i8> %b)
+  %res = icmp ne <3 x i8> %umin, zeroinitializer
+  ret <3 x i1> %res
+}
