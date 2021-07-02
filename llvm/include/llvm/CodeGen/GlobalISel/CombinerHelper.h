@@ -150,11 +150,11 @@ public:
   void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
 
   bool matchSextTruncSextLoad(MachineInstr &MI);
-  bool applySextTruncSextLoad(MachineInstr &MI);
+  void applySextTruncSextLoad(MachineInstr &MI);
 
   /// Match sext_inreg(load p), imm -> sextload p
   bool matchSextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
-  bool applySextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
+  void applySextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
 
   /// Try to combine G_[SU]DIV and G_[SU]REM into a single G_[SU]DIVREM
   /// when their source operands are identical.
@@ -239,87 +239,87 @@ public:
   bool tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
 
   bool matchPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
-  bool applyPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
+  void applyPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
 
   /// Fold (shift (shift base, x), y) -> (shift base (x+y))
   bool matchShiftImmedChain(MachineInstr &MI, RegisterImmPair &MatchInfo);
-  bool applyShiftImmedChain(MachineInstr &MI, RegisterImmPair &MatchInfo);
+  void applyShiftImmedChain(MachineInstr &MI, RegisterImmPair &MatchInfo);
 
   /// If we have a shift-by-constant of a bitwise logic op that itself has a
   /// shift-by-constant operand with identical opcode, we may be able to convert
   /// that into 2 independent shifts followed by the logic op.
   bool matchShiftOfShiftedLogic(MachineInstr &MI,
                                 ShiftOfShiftedLogic &MatchInfo);
-  bool applyShiftOfShiftedLogic(MachineInstr &MI,
+  void applyShiftOfShiftedLogic(MachineInstr &MI,
                                 ShiftOfShiftedLogic &MatchInfo);
 
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
-  bool applyCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
+  void applyCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
 
   // Transform a G_SHL with an extended source into a narrower shift if
   // possible.
   bool matchCombineShlOfExtend(MachineInstr &MI, RegisterImmPair &MatchData);
-  bool applyCombineShlOfExtend(MachineInstr &MI,
+  void applyCombineShlOfExtend(MachineInstr &MI,
                                const RegisterImmPair &MatchData);
 
   /// Reduce a shift by a constant to an unmerge and a shift on a half sized
   /// type. This will not produce a shift smaller than \p TargetShiftSize.
   bool matchCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftSize,
                                  unsigned &ShiftVal);
-  bool applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
+  void applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
   bool tryCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftAmount);
 
   /// Transform <ty,...> G_UNMERGE(G_MERGE ty X, Y, Z) -> ty X, Y, Z.
   bool
   matchCombineUnmergeMergeToPlainValues(MachineInstr &MI,
                                         SmallVectorImpl<Register> &Operands);
-  bool
+  void
   applyCombineUnmergeMergeToPlainValues(MachineInstr &MI,
                                         SmallVectorImpl<Register> &Operands);
 
   /// Transform G_UNMERGE Constant -> Constant1, Constant2, ...
   bool matchCombineUnmergeConstant(MachineInstr &MI,
                                    SmallVectorImpl<APInt> &Csts);
-  bool applyCombineUnmergeConstant(MachineInstr &MI,
+  void applyCombineUnmergeConstant(MachineInstr &MI,
                                    SmallVectorImpl<APInt> &Csts);
 
   /// Transform X, Y<dead> = G_UNMERGE Z -> X = G_TRUNC Z.
   bool matchCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
-  bool applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
+  void applyCombineUnmergeWithDeadLanesToTrunc(MachineInstr &MI);
 
   /// Transform X, Y = G_UNMERGE(G_ZEXT(Z)) -> X = G_ZEXT(Z); Y = G_CONSTANT 0
   bool matchCombineUnmergeZExtToZExt(MachineInstr &MI);
-  bool applyCombineUnmergeZExtToZExt(MachineInstr &MI);
+  void applyCombineUnmergeZExtToZExt(MachineInstr &MI);
 
   /// Transform fp_instr(cst) to constant result of the fp operation.
   bool matchCombineConstantFoldFpUnary(MachineInstr &MI,
                                        Optional<APFloat> &Cst);
-  bool applyCombineConstantFoldFpUnary(MachineInstr &MI,
+  void applyCombineConstantFoldFpUnary(MachineInstr &MI,
                                        Optional<APFloat> &Cst);
 
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
-  bool applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);
+  void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);
 
   /// Transform PtrToInt(IntToPtr(x)) to x.
   bool matchCombineP2IToI2P(MachineInstr &MI, Register &Reg);
-  bool applyCombineP2IToI2P(MachineInstr &MI, Register &Reg);
+  void applyCombineP2IToI2P(MachineInstr &MI, Register &Reg);
 
   /// Transform G_ADD (G_PTRTOINT x), y -> G_PTRTOINT (G_PTR_ADD x, y)
   /// Transform G_ADD y, (G_PTRTOINT x) -> G_PTRTOINT (G_PTR_ADD x, y)
   bool matchCombineAddP2IToPtrAdd(MachineInstr &MI,
                                   std::pair<Register, bool> &PtrRegAndCommute);
-  bool applyCombineAddP2IToPtrAdd(MachineInstr &MI,
+  void applyCombineAddP2IToPtrAdd(MachineInstr &MI,
                                   std::pair<Register, bool> &PtrRegAndCommute);
 
   // Transform G_PTR_ADD (G_PTRTOINT C1), C2 -> C1 + C2
   bool matchCombineConstPtrAddToI2P(MachineInstr &MI, int64_t &NewCst);
-  bool applyCombineConstPtrAddToI2P(MachineInstr &MI, int64_t &NewCst);
+  void applyCombineConstPtrAddToI2P(MachineInstr &MI, int64_t &NewCst);
 
   /// Transform anyext(trunc(x)) to x.
   bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
-  bool applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
+  void applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
 
   /// Transform zext(trunc(x)) to x.
   bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
@@ -327,7 +327,7 @@ public:
   /// Transform [asz]ext([asz]ext(x)) to [asz]ext x.
   bool matchCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
-  bool applyCombineExtOfExt(MachineInstr &MI,
+  void applyCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
 
   /// Transform fneg(fneg(x)) to x.
@@ -335,23 +335,23 @@ public:
 
   /// Match fabs(fabs(x)) to fabs(x).
   bool matchCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
-  bool applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
+  void applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
 
   /// Transform trunc ([asz]ext x) to x or ([asz]ext x) or (trunc x).
   bool matchCombineTruncOfExt(MachineInstr &MI,
                               std::pair<Register, unsigned> &MatchInfo);
-  bool applyCombineTruncOfExt(MachineInstr &MI,
+  void applyCombineTruncOfExt(MachineInstr &MI,
                               std::pair<Register, unsigned> &MatchInfo);
 
   /// Transform trunc (shl x, K) to shl (trunc x),
   /// K => K < VT.getScalarSizeInBits().
   bool matchCombineTruncOfShl(MachineInstr &MI,
                               std::pair<Register, Register> &MatchInfo);
-  bool applyCombineTruncOfShl(MachineInstr &MI,
+  void applyCombineTruncOfShl(MachineInstr &MI,
                               std::pair<Register, Register> &MatchInfo);
 
   /// Transform G_MUL(x, -1) to G_SUB(0, x)
-  bool applyCombineMulByNegativeOne(MachineInstr &MI);
+  void applyCombineMulByNegativeOne(MachineInstr &MI);
 
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
@@ -418,7 +418,7 @@ public:
   /// Return true if MI is a G_ADD which can be simplified to a G_SUB.
   bool matchSimplifyAddToSub(MachineInstr &MI,
                              std::tuple<Register, Register> &MatchInfo);
-  bool applySimplifyAddToSub(MachineInstr &MI,
+  void applySimplifyAddToSub(MachineInstr &MI,
                              std::tuple<Register, Register> &MatchInfo);
 
   /// Match (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
@@ -427,13 +427,13 @@ public:
                                        InstructionStepsMatchInfo &MatchInfo);
 
   /// Replace \p MI with a series of instructions described in \p MatchInfo.
-  bool applyBuildInstructionSteps(MachineInstr &MI,
+  void applyBuildInstructionSteps(MachineInstr &MI,
                                   InstructionStepsMatchInfo &MatchInfo);
 
   /// Match ashr (shl x, C), C -> sext_inreg (C)
   bool matchAshrShlToSextInreg(MachineInstr &MI,
                                std::tuple<Register, int64_t> &MatchInfo);
-  bool applyAshShlToSextInreg(MachineInstr &MI,
+  void applyAshShlToSextInreg(MachineInstr &MI,
                               std::tuple<Register, int64_t> &MatchInfo);
 
   /// Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
@@ -462,27 +462,27 @@ public:
 
   /// Combine inverting a result of a compare into the opposite cond code.
   bool matchNotCmp(MachineInstr &MI, SmallVectorImpl<Register> &RegsToNegate);
-  bool applyNotCmp(MachineInstr &MI, SmallVectorImpl<Register> &RegsToNegate);
+  void applyNotCmp(MachineInstr &MI, SmallVectorImpl<Register> &RegsToNegate);
 
   /// Fold (xor (and x, y), y) -> (and (not x), y)
   ///{
   bool matchXorOfAndWithSameReg(MachineInstr &MI,
                                 std::pair<Register, Register> &MatchInfo);
-  bool applyXorOfAndWithSameReg(MachineInstr &MI,
+  void applyXorOfAndWithSameReg(MachineInstr &MI,
                                 std::pair<Register, Register> &MatchInfo);
   ///}
 
   /// Combine G_PTR_ADD with nullptr to G_INTTOPTR
   bool matchPtrAddZero(MachineInstr &MI);
-  bool applyPtrAddZero(MachineInstr &MI);
+  void applyPtrAddZero(MachineInstr &MI);
 
   /// Combine G_UREM x, (known power of 2) to an add and bitmasking.
-  bool applySimplifyURemByPow2(MachineInstr &MI);
+  void applySimplifyURemByPow2(MachineInstr &MI);
 
   bool matchCombineInsertVecElts(MachineInstr &MI,
                                  SmallVectorImpl<Register> &MatchInfo);
 
-  bool applyCombineInsertVecElts(MachineInstr &MI,
+  void applyCombineInsertVecElts(MachineInstr &MI,
                              SmallVectorImpl<Register> &MatchInfo);
 
   /// Match expression trees of the form
@@ -498,7 +498,7 @@ public:
                           std::function<void(MachineIRBuilder &)> &MatchInfo);
 
   bool matchExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
-  bool applyExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
+  void applyExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
 
   bool matchExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
   void applyExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
@@ -512,11 +512,11 @@ public:
 
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// By default, it erases the instruction \p MI from the function.
-  bool applyBuildFn(MachineInstr &MI,
+  void applyBuildFn(MachineInstr &MI,
                     std::function<void(MachineIRBuilder &)> &MatchInfo);
   /// Use a function which takes in a MachineIRBuilder to perform a combine.
   /// This variant does not erase \p MI after calling the build function.
-  bool applyBuildFnNoErase(MachineInstr &MI,
+  void applyBuildFnNoErase(MachineInstr &MI,
                            std::function<void(MachineIRBuilder &)> &MatchInfo);
 
   bool matchFunnelShiftToRotate(MachineInstr &MI);
