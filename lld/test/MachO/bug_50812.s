@@ -3,7 +3,7 @@
 ##        Replace this with "normal" .s test format once lld supports `-r`
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: %lld -lSystem -platform_version macos 11.3 11.0 -arch x86_64 %t.o
+# RUN: %lld -lSystem -platform_version macos 11.3 11.0 -arch x86_64 %t.o -o %t
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF
