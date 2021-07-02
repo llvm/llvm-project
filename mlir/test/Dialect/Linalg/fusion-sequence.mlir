@@ -150,8 +150,8 @@ module {
     %c1 = constant 1 : index
     %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
-    %1 = memref.dim %0, %c0 : tensor<?x?xf32>
-    %2 = memref.dim %0, %c1 : tensor<?x?xf32>
+    %1 = tensor.dim %0, %c0 : tensor<?x?xf32>
+    %2 = tensor.dim %0, %c1 : tensor<?x?xf32>
     %3 = linalg.init_tensor [%1, %2] : tensor<?x?xf32>
     %4 = linalg.generic
       {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
@@ -223,26 +223,26 @@ module {
 //  CHECK-SAME:   %[[ARG6:[a-zA-Z0-9_]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
 //   CHECK-DAG:   %[[C0:.+]] = constant 0 : index
 //   CHECK-DAG:   %[[C1:.+]] = constant 1 : index
-//       CHECK:   %[[M:.+]] = memref.dim %[[ARG0]], %c0 : tensor<?x?xf32>
+//       CHECK:   %[[M:.+]] = tensor.dim %[[ARG0]], %c0 : tensor<?x?xf32>
 //       CHECK:   %[[R0:.+]] = scf.for %[[IV0:[a-zA-Z0-9_]+]] =
 //  CHECK-SAME:     iter_args(%[[ARG8:.+]] = %[[ARG6]]) -> (tensor<?x?xf32>) {
-//       CHECK:     %[[M_1:.+]] = memref.dim %[[ARG8]], %[[C0]]
+//       CHECK:     %[[M_1:.+]] = tensor.dim %[[ARG8]], %[[C0]]
 //       CHECK:     %[[TILE_M_1:.+]] = affine.min #[[MAP0]](%[[M_1]], %[[IV0]])
-//       CHECK:     %[[N3:.+]] = memref.dim %[[ARG8]], %[[C1]]
+//       CHECK:     %[[N3:.+]] = tensor.dim %[[ARG8]], %[[C1]]
 //       CHECK:     %[[STARG6:.+]] = tensor.extract_slice %[[ARG8]][%[[IV0]], 0]
 //  CHECK-SAME:       [%[[TILE_M_1]], %[[N3]]]
-//       CHECK:     %[[M_2:.+]] = memref.dim %[[ARG4]], %[[C0]]
+//       CHECK:     %[[M_2:.+]] = tensor.dim %[[ARG4]], %[[C0]]
 //       CHECK:     %[[TILE_M_2:.+]] = affine.min #[[MAP1]](%[[IV0]])[%[[M_2]], %[[M]]]
-//       CHECK:     %[[N2:.+]] = memref.dim %[[ARG4]], %[[C1]]
+//       CHECK:     %[[N2:.+]] = tensor.dim %[[ARG4]], %[[C1]]
 //       CHECK:     %[[STARG4:.+]] = tensor.extract_slice %[[ARG4]][%[[IV0]], 0]
 //  CHECK-SAME:       [%[[TILE_M_2]], %[[N2]]]
 //       CHECK:     %[[TILE_M_3:.+]] = affine.min #[[MAP1]](%[[IV0]])[%[[M]], %[[M]]]
-//       CHECK:     %[[N0:.+]] = memref.dim %[[ARG0]], %[[C1]]
+//       CHECK:     %[[N0:.+]] = tensor.dim %[[ARG0]], %[[C1]]
 //       CHECK:     %[[STARG0:.+]] = tensor.extract_slice %[[ARG0]][%[[IV0]], 0]
 //  CHECK-SAME:       [%[[TILE_M_3]], %[[N0]]]
-//       CHECK:     %[[M_3:.+]] = memref.dim %[[ARG2]], %[[C0]]
+//       CHECK:     %[[M_3:.+]] = tensor.dim %[[ARG2]], %[[C0]]
 //       CHECK:     %[[TILE_M_4:.+]] = affine.min #[[MAP1]](%[[IV0]])[%[[M_3]], %[[M]]]
-//       CHECK:     %[[N1:.+]] = memref.dim %[[ARG2]], %[[C1]]
+//       CHECK:     %[[N1:.+]] = tensor.dim %[[ARG2]], %[[C1]]
 //       CHECK:     %[[STARG2:.+]] = tensor.extract_slice %[[ARG2]][%[[IV0]], 0]
 //  CHECK-SAME:       [%[[TILE_M_4]], %[[N1]]]
 //       CHECK:     %[[T0:.+]] = linalg.matmul

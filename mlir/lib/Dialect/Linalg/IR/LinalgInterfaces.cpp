@@ -196,7 +196,7 @@ SmallVector<Value, 4> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
   SmallVector<Value, 4> res;
   for (OpOperand *opOperand : getInputAndOutputOperands()) {
     for (int64_t i = 0, e = getRank(opOperand); i < e; ++i)
-      res.push_back(b.createOrFold<memref::DimOp>(loc, opOperand->get(), i));
+      res.push_back(createOrFoldDimOp(b, loc, opOperand->get(), i));
   }
   return res;
 }
@@ -305,8 +305,7 @@ LogicalResult LinalgOp::reifyReturnTypeShapesPerResultDim(
     SmallVector<Value> shapes;
     for (int64_t dim : llvm::seq<int64_t>(0, getRank(opOperand))) {
       if (checkDimExpr.visit(shapeExprs[pos]))
-        shapes.push_back(
-            b.createOrFold<memref::DimOp>(loc, opOperand->get(), dim));
+        shapes.push_back(createOrFoldDimOp(b, loc, opOperand->get(), dim));
       else
         shapes.push_back(allResultDimValues[pos]);
       pos++;

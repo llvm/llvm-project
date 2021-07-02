@@ -166,7 +166,7 @@ static Value generateInBoundsCheck(
   Location loc = xferOp.getLoc();
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
   if (!xferOp.isDimInBounds(0) && !isBroadcast) {
-    Value memrefDim = lb.create<memref::DimOp>(xferOp.source(), *dim);
+    Value memrefDim = createOrFoldDimOp(b, loc, xferOp.source(), *dim);
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value base = xferOp.indices()[dim.getValue()];

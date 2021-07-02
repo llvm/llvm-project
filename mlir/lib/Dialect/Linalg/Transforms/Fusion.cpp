@@ -187,8 +187,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
                               << loopRanges.back() << "\n");
     } else {
       auto shapeDim = getShapeDefiningLoopRange(producer, i);
-      Value dim = b.createOrFold<memref::DimOp>(loc, shapeDim.shape,
-                                                shapeDim.dimension);
+      Value dim = createOrFoldDimOp(b, loc, shapeDim.shape, shapeDim.dimension);
       tileSizes.push_back(zero);
       sizeBounds.push_back(dim);
       loopRanges.push_back(Range{zero, dim, one});
