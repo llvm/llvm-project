@@ -116,9 +116,10 @@ void __llvm_profile_initialize(void) {
     return;
   }
 
-  /* This symbol is defined by the compiler when runtime counter relocation is
-   * used and runtime provides a weak external reference so we can check it. */
-  if (!&__llvm_profile_counter_bias) {
+  /* This symbol is defined as weak and initialized to -1 by the runtimer, but
+   * compiler will generate a strong definition initialized to 0 when runtime
+   * counter relocation is used. */
+  if (__llvm_profile_counter_bias == -1) {
     lprofWrite("LLVM Profile: counter relocation at runtime is required\n");
     return;
   }
