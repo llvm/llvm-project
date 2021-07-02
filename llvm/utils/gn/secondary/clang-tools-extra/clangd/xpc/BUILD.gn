@@ -16,6 +16,7 @@ static_library("transport") {
   deps = [
     ":conversions",
     "//clang-tools-extra/clangd",
+    "//clang-tools-extra/clangd:features",
     "//clang-tools-extra/clangd/support",
     "//llvm/lib/Support",
   ]
