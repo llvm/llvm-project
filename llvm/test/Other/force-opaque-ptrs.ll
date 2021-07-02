@@ -48,3 +48,22 @@ define void @f3(i32 addrspace(1)* addrspace(2)* %p) {
 ;
   unreachable
 }
+
+define void @remangle_intrinsic() {
+; CHECK-LABEL: define {{[^@]+}}@remangle_intrinsic() {
+; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    call void @llvm.stackprotector(ptr null, ptr [[A]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.expandload.v2i64(ptr null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i8*
+  call i8* @llvm.stacksave()
+  call void @llvm.stackprotector(i8* null, i8** %a)
+  call <2 x i64> @llvm.masked.expandload.v2i64(i64* null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
+  ret void
+}
+
+declare i8* @llvm.stacksave()
+declare void @llvm.stackprotector(i8*, i8**)
+declare <2 x i64> @llvm.masked.expandload.v2i64(i64*, <2 x i1>, <2 x i64>)
