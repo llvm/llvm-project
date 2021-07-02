@@ -24,21 +24,22 @@ define i32 @foo() {
   ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
   ; CHECK:   [[GV2:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var3
   ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @var1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @var1)
   ; CHECK:   [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(ne), [[LOAD]](s32), [[C3]]
   ; CHECK:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.3
+  ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   [[GV3:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var2
   ; CHECK:   [[C4:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 2
-  ; CHECK:   G_STORE [[C4]](s32), [[GV3]](p0) :: (store 4 into @var2)
+  ; CHECK:   G_STORE [[C4]](s32), [[GV3]](p0) :: (store (s32) into @var2)
   ; CHECK:   [[C5:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
-  ; CHECK:   G_STORE [[C5]](s32), [[GV]](p0) :: (store 4 into @var1)
+  ; CHECK:   G_STORE [[C5]](s32), [[GV]](p0) :: (store (s32) into @var1)
   ; CHECK:   [[GV4:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK:   G_STORE [[C4]](s32), [[GV4]](p0) :: (store 4 into @var3)
-  ; CHECK:   G_STORE [[C5]](s32), [[GV]](p0) :: (store 4 into @var1)
+  ; CHECK:   G_STORE [[C4]](s32), [[GV4]](p0) :: (store (s32) into @var3)
+  ; CHECK:   G_STORE [[C5]](s32), [[GV]](p0) :: (store (s32) into @var1)
   ; CHECK: bb.3.if.end:
   ; CHECK:   [[C6:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
   ; CHECK:   $w0 = COPY [[C6]](s32)
@@ -74,16 +75,17 @@ define i32 @darwin_tls() {
   ; CHECK:   [[GV1:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var2
   ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[GV2:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV2]](p0) :: (dereferenceable load 4 from @var1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV2]](p0) :: (dereferenceable load (s32) from @var1)
   ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(ne), [[LOAD]](s32), [[C1]]
   ; CHECK:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.3
+  ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @tls_gv)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @tls_gv)
   ; CHECK:   [[GV3:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK:   G_STORE [[LOAD1]](s32), [[GV3]](p0) :: (store 4 into @var2)
+  ; CHECK:   G_STORE [[LOAD1]](s32), [[GV3]](p0) :: (store (s32) into @var2)
   ; CHECK: bb.3.if.end:
   ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
   ; CHECK:   $w0 = COPY [[C2]](s32)

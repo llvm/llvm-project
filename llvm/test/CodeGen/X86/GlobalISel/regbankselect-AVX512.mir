@@ -103,7 +103,7 @@ body:             |
     liveins: $rdi
 
     %0(p0) = COPY $rdi
-    %1(<16 x s32>) = G_LOAD %0(p0) :: (load 64 from %ir.p1, align 1)
+    %1(<16 x s32>) = G_LOAD %0(p0) :: (load (<16 x s32>) from %ir.p1, align 1)
     $zmm0 = COPY %1(<16 x s32>)
     RET 0, implicit $zmm0
 
@@ -126,7 +126,7 @@ body:             |
 
     %0(<16 x s32>) = COPY $zmm0
     %1(p0) = COPY $rdi
-    G_STORE %0(<16 x s32>), %1(p0) :: (store 64 into %ir.p1, align 1)
+    G_STORE %0(<16 x s32>), %1(p0) :: (store (<16 x s32>) into %ir.p1, align 1)
     RET 0
 
 ...

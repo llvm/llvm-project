@@ -569,9 +569,6 @@ public:
       reportAllocationSizeTooBig(NewSize, 0, MaxAllowedMallocSize);
     }
 
-    void *OldTaggedPtr = OldPtr;
-    OldPtr = getHeaderTaggedPointer(OldPtr);
-
     // The following cases are handled by the C wrappers.
     DCHECK_NE(OldPtr, nullptr);
     DCHECK_NE(NewSize, 0);
@@ -590,6 +587,9 @@ public:
       return NewPtr;
     }
 #endif // GWP_ASAN_HOOKS
+
+    void *OldTaggedPtr = OldPtr;
+    OldPtr = getHeaderTaggedPointer(OldPtr);
 
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(OldPtr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Reallocating, OldPtr);

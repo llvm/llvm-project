@@ -15,11 +15,11 @@ define arm_aapcscc i32 @test_call_to_varargs_with_ints(i32 *%a, i32 %b) {
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
-; CHECK: G_STORE [[BVREG]](s32), [[FI1]](p0){{.*}}store 4
+; CHECK: G_STORE [[BVREG]](s32), [[FI1]](p0){{.*}}store (s32)
 ; CHECK: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
 ; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
-; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0){{.*}}store 4
+; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0){{.*}}store (s32)
 ; ARM: BL @int_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @int_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s32) = COPY $r0
@@ -46,7 +46,7 @@ define arm_aapcs_vfpcc float @test_call_to_varargs_with_floats(float %a, double 
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
-; CHECK: G_STORE [[BVREG]](s64), [[FI1]](p0){{.*}}store 8
+; CHECK: G_STORE [[BVREG]](s64), [[FI1]](p0){{.*}}store (s64)
 ; ARM: BL @float_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @float_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s32) = COPY $r0
@@ -93,7 +93,7 @@ define arm_aapcs_vfpcc float @test_indirect_call_to_varargs(float (float, double
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
-; CHECK: G_STORE [[BVREG]](s64), [[FI1]](p0){{.*}}store 8
+; CHECK: G_STORE [[BVREG]](s64), [[FI1]](p0){{.*}}store (s64)
 ; ARM: BLX [[FPTRVREG]](p0), csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBLXr 14 /* CC::al */, $noreg, [[FPTRVREG]](p0), csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s32) = COPY $r0

@@ -71,8 +71,8 @@ body:             |
     liveins: $x2
 
     %0 = ADDIStocHA8 $x2, @b
-    %1 = LD target-flags(ppc-toc-lo) @b, killed %0 :: (load 8 from @b)
-    %2 = LWZ 0, %1 :: (load 4 from %ir.0)
+    %1 = LD target-flags(ppc-toc-lo) @b, killed %0 :: (load (s64) from @b)
+    %2 = LWZ 0, %1 :: (load (s32) from %ir.0)
     %3 = LI 0
     %4 = RLWIMI %3, killed %2, 0, 0, 31
     ; CHECK-LABEL: name: main
@@ -80,9 +80,9 @@ body:             |
     ; CHECK: %[[REG2:[0-9]+]]:gprc = COPY %[[REG1]]
     ; CHECK: %[[REG2]]:gprc = RLWIMI %[[REG2]], killed %2, 0, 0, 31
     %8 = RLWIMI %3, %4, 0, 0, 31
-    STW %4, 0, %1 :: (store 4 into %ir.0)
+    STW %4, 0, %1 :: (store (s32) into %ir.0)
     %10 = EXTSW_32_64 %8
-    STW %8, 0, %1 :: (store 4 into %ir.0)
+    STW %8, 0, %1 :: (store (s32) into %ir.0)
     $x3 = COPY %10
     BLR8 implicit $x3, implicit $lr8, implicit $rm
 

@@ -19,6 +19,14 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
+/// Materialize a single constant operation from a given attribute value with
+/// the desired resultant type.
+Operation *TensorDialect::materializeConstant(OpBuilder &builder,
+                                              Attribute value, Type type,
+                                              Location loc) {
+  return builder.create<mlir::ConstantOp>(loc, type, value);
+}
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
@@ -182,6 +190,123 @@ struct ChainedTensorCast : public OpRewritePattern<CastOp> {
 void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
   results.add<ChainedTensorCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// DimOp
+//===----------------------------------------------------------------------===//
+
+void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
+                  int64_t index) {
+  auto loc = result.location;
+  Value indexValue = builder.create<ConstantIndexOp>(loc, index);
+  build(builder, result, source, indexValue);
+}
+
+void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
+                  Value index) {
+  auto indexTy = builder.getIndexType();
+  build(builder, result, indexTy, source, index);
+}
+
+Optional<int64_t> DimOp::getConstantIndex() {
+  if (auto constantOp = index().getDefiningOp<ConstantOp>())
+    return constantOp.getValue().cast<IntegerAttr>().getInt();
+  return {};
+}
+
+static LogicalResult verify(DimOp op) {
+  // Assume unknown index to be in range.
+  Optional<int64_t> index = op.getConstantIndex();
+  if (!index.hasValue())
+    return success();
+
+  // Check that constant index is not knowingly out of range.
+  auto type = op.source().getType();
+  if (auto tensorType = type.dyn_cast<RankedTensorType>()) {
+    if (index.getValue() >= tensorType.getRank())
+      return op.emitOpError("index is out of range");
+  } else if (type.isa<UnrankedTensorType>()) {
+    // Assume index to be in range.
+  } else {
+    llvm_unreachable("expected operand with tensor type");
+  }
+  return success();
+}
+
+OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
+  // All forms of folding require a known index.
+  auto index = operands[1].dyn_cast_or_null<IntegerAttr>();
+  if (!index)
+    return {};
+
+  // Folding for unranked types (UnrankedTensorType) is not supported.
+  auto tensorType = source().getType().dyn_cast<RankedTensorType>();
+  if (!tensorType)
+    return {};
+
+  // Fold if the shape extent along the given index is known.
+  if (!tensorType.isDynamicDim(index.getInt())) {
+    Builder builder(getContext());
+    return builder.getIndexAttr(tensorType.getShape()[index.getInt()]);
+  }
+
+  Operation *definingOp = source().getDefiningOp();
+
+  // Fold dim to the operand of tensor.generate.
+  if (auto fromElements = dyn_cast_or_null<tensor::GenerateOp>(definingOp)) {
+    auto resultType =
+        fromElements.getResult().getType().cast<RankedTensorType>();
+    // The case where the type encodes the size of the dimension is handled
+    // above.
+    assert(resultType.getShape()[index.getInt()] ==
+           RankedTensorType::kDynamicSize);
+
+    // Find the operand of the fromElements that corresponds to this index.
+    auto dynExtents = fromElements.dynamicExtents().begin();
+    for (auto dim : resultType.getShape().take_front(index.getInt()))
+      if (dim == RankedTensorType::kDynamicSize)
+        dynExtents++;
+
+    return Value{*dynExtents};
+  }
+
+  // The size at the given index is now known to be a dynamic size.
+  unsigned unsignedIndex = index.getValue().getZExtValue();
+
+  if (auto sliceOp = dyn_cast_or_null<tensor::ExtractSliceOp>(definingOp)) {
+    assert(sliceOp.isDynamicSize(unsignedIndex) &&
+           "Expected dynamic slice size");
+    return sliceOp.getDynamicSize(unsignedIndex);
+  }
+
+  // dim(cast) -> dim
+  if (succeeded(foldTensorCast(*this)))
+    return getResult();
+
+  return {};
+}
+
+namespace {
+/// Fold dim of a cast into the dim of the source of the tensor cast.
+struct DimOfCastOp : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto castOp = dimOp.source().getDefiningOp<CastOp>();
+    if (!castOp)
+      return failure();
+    Value newSource = castOp.getOperand();
+    rewriter.replaceOpWithNewOp<DimOp>(dimOp, newSource, dimOp.index());
+    return success();
+  }
+};
+} // end anonymous namespace.
+
+void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                        MLIRContext *context) {
+  results.add<DimOfCastOp>(context);
 }
 
 //===----------------------------------------------------------------------===//

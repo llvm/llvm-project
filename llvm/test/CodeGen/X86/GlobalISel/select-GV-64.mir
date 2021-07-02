@@ -33,12 +33,12 @@ registers:
   - { id: 1, class: gpr, preferred-register: '' }
 # X64:                     %0:gr64 = IMPLICIT_DEF
 # X64-NEXT:                %1:gr64 = LEA64r $noreg, 1, $noreg, @g_int, $noreg
-# X64-NEXT:                MOV64mr %0, 1, $noreg, 0, $noreg, %1 :: (store 8 into `i32** undef`)
+# X64-NEXT:                MOV64mr %0, 1, $noreg, 0, $noreg, %1 :: (store (p0) into `i32** undef`)
 # X64-NEXT:                RET 0
 #
 # X64_DARWIN_PIC:          %0:gr64 = IMPLICIT_DEF
 # X64_DARWIN_PIC-NEXT:     %1:gr64 = LEA64r $rip, 1, $noreg, @g_int, $noreg
-# X64_DARWIN_PIC-NEXT:     MOV64mr %0, 1, $noreg, 0, $noreg, %1 :: (store 8 into `i32** undef`)
+# X64_DARWIN_PIC-NEXT:     MOV64mr %0, 1, $noreg, 0, $noreg, %1 :: (store (p0) into `i32** undef`)
 # X64_DARWIN_PIC-NEXT:     RET 0
 #
 body:             |
@@ -47,7 +47,7 @@ body:             |
 
     %0(p0) = IMPLICIT_DEF
     %1(p0) = G_GLOBAL_VALUE @g_int
-    G_STORE %1(p0), %0(p0) :: (store 8 into `i32** undef`)
+    G_STORE %1(p0), %0(p0) :: (store (p0) into `i32** undef`)
     RET 0
 
 ...
@@ -65,19 +65,19 @@ registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
 # X64:                     %1:gr64 = LEA64r $noreg, 1, $noreg, @g_int, $noreg
-# X64-NEXT:                %0:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load 4 from @g_int)
+# X64-NEXT:                %0:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from @g_int)
 # X64-NEXT:                $eax = COPY %0
 # X64-NEXT:                RET 0, implicit $eax
 #
 # X64_DARWIN_PIC:          %1:gr64 = LEA64r $rip, 1, $noreg, @g_int, $noreg
-# X64_DARWIN_PIC-NEXT:     %0:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load 4 from @g_int)
+# X64_DARWIN_PIC-NEXT:     %0:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg :: (load (s32) from @g_int)
 # X64_DARWIN_PIC-NEXT:     $eax = COPY %0
 # X64_DARWIN_PIC-NEXT:     RET 0, implicit $eax
 #
 body:             |
   bb.1.entry:
     %1(p0) = G_GLOBAL_VALUE @g_int
-    %0(s32) = G_LOAD %1(p0) :: (load 4 from @g_int)
+    %0(s32) = G_LOAD %1(p0) :: (load (s32) from @g_int)
     $eax = COPY %0(s32)
     RET 0, implicit $eax
 

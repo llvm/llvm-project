@@ -1148,7 +1148,6 @@ void DeclPrinter::VisitTemplateDecl(const TemplateDecl *D) {
     Out << "concept " << Concept->getName() << " = " ;
     Concept->getConstraintExpr()->printPretty(Out, nullptr, Policy, Indentation,
                                               "\n", &Context);
-    Out << ";";
   }
 }
 

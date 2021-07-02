@@ -618,6 +618,9 @@ public:
   /// \param Args - Arguments of the LOH.
   virtual void emitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {}
 
+  /// Emit a .gnu_attribute directive.
+  virtual void emitGNUAttribute(unsigned Tag, unsigned Value) {}
+
   /// Emit a common symbol.
   ///
   /// \param Symbol - The common symbol to emit.

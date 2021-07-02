@@ -5275,15 +5275,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_sections_EQ)) {
+    StringRef Val = A->getValue();
     if (Triple.isX86() && Triple.isOSBinFormatELF()) {
-      StringRef Val = A->getValue();
       if (Val != "all" && Val != "labels" && Val != "none" &&
           !Val.startswith("list="))
         D.Diag(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
       else
         A->render(Args, CmdArgs);
-    } else {
+    } else if (Triple.isNVPTX()) {
+      // Do not pass the option to the GPU compilation. We still want it enabled
+      // for the host-side compilation, so seeing it here is not an error.
+    } else if (Val != "none") {
+      // =none is allowed everywhere. It's useful for overriding the option
+      // and is the same as not specifying the option.
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     }

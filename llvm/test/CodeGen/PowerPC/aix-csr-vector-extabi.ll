@@ -37,15 +37,15 @@ entry:
 
 ; MIR32:         liveins: $v20, $v26, $v31
 
-; MIR32-DAG:     STXVD2X killed $v20, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.2)
-; MIR32-DAG:     STXVD2X killed $v26, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.1)
-; MIR32-DAG:     STXVD2X killed $v31, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.0)
+; MIR32-DAG:     STXVD2X killed $v20, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.2)
+; MIR32-DAG:     STXVD2X killed $v26, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.1)
+; MIR32-DAG:     STXVD2X killed $v31, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.0)
 
 ; MIR32:         INLINEASM
 
-; MIR32-DAG:     $v20 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.2)
-; MIR32-DAG:     $v26 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.1)
-; MIR32-DAG:     $v31 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.0)
+; MIR32-DAG:     $v20 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load (s128) from %fixed-stack.2)
+; MIR32-DAG:     $v26 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load (s128) from %fixed-stack.1)
+; MIR32-DAG:     $v31 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load (s128) from %fixed-stack.0)
 ; MIR32:         BLR implicit $lr, implicit $rm
 
 ; MIR64:         name:            vec_regs
@@ -64,15 +64,15 @@ entry:
 
 ; MIR64:         liveins: $v20, $v26, $v31
 
-; MIR64-DAG:     STXVD2X killed $v20, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.2)
-; MIR64-DAG:     STXVD2X killed $v26, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.1)
-; MIR64-DAG:     STXVD2X killed $v31, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.0)
+; MIR64-DAG:     STXVD2X killed $v20, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.2)
+; MIR64-DAG:     STXVD2X killed $v26, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.1)
+; MIR64-DAG:     STXVD2X killed $v31, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.0)
 
 ; MIR64:         INLINEASM
 
-; MIR64-DAG:     $v20 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.2)
-; MIR64-DAG:     $v26 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.1)
-; MIR64-DAG:     $v31 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.0)
+; MIR64-DAG:     $v20 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load (s128) from %fixed-stack.2)
+; MIR64-DAG:     $v26 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load (s128) from %fixed-stack.1)
+; MIR64-DAG:     $v31 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load (s128) from %fixed-stack.0)
 ; MIR64:         BLR8 implicit $lr8, implicit $rm
 
 
@@ -149,33 +149,33 @@ define dso_local void @fprs_gprs_vecregs() {
 
 ; MIR32:         liveins: $r14, $r25, $r31, $f14, $f21, $f31, $v20, $v26, $v31
 
-; MIR32-DAG:     STW killed $r14, 232, $r1 :: (store 4 into %fixed-stack.8, align 8)
-; MIR32-DAG:     STW killed $r25, 276, $r1 :: (store 4 into %fixed-stack.7)
-; MIR32-DAG:     STW killed $r31, 300, $r1 :: (store 4 into %fixed-stack.6)
-; MIR32-DAG:     STFD killed $f14, 304, $r1 :: (store 8 into %fixed-stack.5, align 16)
-; MIR32-DAG:     STFD killed $f21, 360, $r1 :: (store 8 into %fixed-stack.4)
-; MIR32-DAG:     STFD killed $f31, 440, $r1 :: (store 8 into %fixed-stack.3)
+; MIR32-DAG:     STW killed $r14, 232, $r1 :: (store (s32) into %fixed-stack.8, align 8)
+; MIR32-DAG:     STW killed $r25, 276, $r1 :: (store (s32) into %fixed-stack.7)
+; MIR32-DAG:     STW killed $r31, 300, $r1 :: (store (s32) into %fixed-stack.6)
+; MIR32-DAG:     STFD killed $f14, 304, $r1 :: (store (s64) into %fixed-stack.5, align 16)
+; MIR32-DAG:     STFD killed $f21, 360, $r1 :: (store (s64) into %fixed-stack.4)
+; MIR32-DAG:     STFD killed $f31, 440, $r1 :: (store (s64) into %fixed-stack.3)
 ; MIR32-DAG:     $r{{[0-9]+}} = LI 32
-; MIR32-DAG:     STXVD2X killed $v20, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.2)
+; MIR32-DAG:     STXVD2X killed $v20, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.2)
 ; MIR32-DAG:     $r{{[0-9]+}} = LI 128
-; MIR32-DAG:     STXVD2X killed $v26, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.1)
+; MIR32-DAG:     STXVD2X killed $v26, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.1)
 ; MIR32-DAG:     $r{{[0-9]+}} = LI 208
-; MIR32-DAG:     STXVD2X killed $v31, $r1, killed $r{{[0-9]+}} :: (store 16 into %fixed-stack.0)
+; MIR32-DAG:     STXVD2X killed $v31, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.0)
 ; MIR32-DAG:     $r1 = STWU $r1, -448, $r1
 
 ; MIR32:         INLINEASM
 
-; MIR32-DAG:     $r14 = LWZ 232, $r1 :: (load 4 from %fixed-stack.8, align 8)
-; MIR32-DAG:     $r25 = LWZ 276, $r1 :: (load 4 from %fixed-stack.7)
-; MIR32-DAG:     $r31 = LWZ 300, $r1 :: (load 4 from %fixed-stack.6)
-; MIR32-DAG:     $f14 = LFD 304, $r1 :: (load 8 from %fixed-stack.5, align 16)
-; MIR32-DAG:     $f21 = LFD 360, $r1 :: (load 8 from %fixed-stack.4)
-; MIR32-DAG:     $f31 = LFD 440, $r1 :: (load 8 from %fixed-stack.3)
-; MIR32-DAG:     $v20 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.2)
+; MIR32-DAG:     $r14 = LWZ 232, $r1 :: (load (s32) from %fixed-stack.8, align 8)
+; MIR32-DAG:     $r25 = LWZ 276, $r1 :: (load (s32) from %fixed-stack.7)
+; MIR32-DAG:     $r31 = LWZ 300, $r1 :: (load (s32) from %fixed-stack.6)
+; MIR32-DAG:     $f14 = LFD 304, $r1 :: (load (s64) from %fixed-stack.5, align 16)
+; MIR32-DAG:     $f21 = LFD 360, $r1 :: (load (s64) from %fixed-stack.4)
+; MIR32-DAG:     $f31 = LFD 440, $r1 :: (load (s64) from %fixed-stack.3)
+; MIR32-DAG:     $v20 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load (s128) from %fixed-stack.2)
 ; MIR32-DAG:     $r{{[0-9]+}} = LI 32
-; MIR32-DAG:     $v26 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.1)
+; MIR32-DAG:     $v26 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load (s128) from %fixed-stack.1)
 ; MIR32-DAG:     $r{{[0-9]+}} = LI 128
-; MIR32-DAG:     $v31 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load 16 from %fixed-stack.0)
+; MIR32-DAG:     $v31 = LXVD2X $r1, killed $r{{[0-9]+}} :: (load (s128) from %fixed-stack.0)
 ; MIR32-DAG:     $r{{[0-9]+}} = LI 208
 ; MIR32-DAG:     $r1 = ADDI $r1, 448
 ; MIR32-DAG:     BLR implicit $lr, implicit $rm
@@ -215,32 +215,32 @@ define dso_local void @fprs_gprs_vecregs() {
 ; MIR64:         liveins: $x14, $x25, $x31, $f14, $f21, $f31, $v20, $v26, $v31
 
 ; MIR64-DAG:     $x1 = STDU $x1, -544, $x1
-; MIR64-DAG:     STD killed $x14, 256, $x1 :: (store 8 into %fixed-stack.8, align 16)
-; MIR64-DAG:     STD killed $x25, 344, $x1 :: (store 8 into %fixed-stack.7)
-; MIR64-DAG:     STD killed $x31, 392, $x1 :: (store 8 into %fixed-stack.6)
-; MIR64-DAG:     STFD killed $f14, 400, $x1 :: (store 8 into %fixed-stack.5, align 16)
-; MIR64-DAG:     STFD killed $f21, 456, $x1 :: (store 8 into %fixed-stack.4)
-; MIR64-DAG:     STFD killed $f31, 536, $x1 :: (store 8 into %fixed-stack.3)
+; MIR64-DAG:     STD killed $x14, 256, $x1 :: (store (s64) into %fixed-stack.8, align 16)
+; MIR64-DAG:     STD killed $x25, 344, $x1 :: (store (s64) into %fixed-stack.7)
+; MIR64-DAG:     STD killed $x31, 392, $x1 :: (store (s64) into %fixed-stack.6)
+; MIR64-DAG:     STFD killed $f14, 400, $x1 :: (store (s64) into %fixed-stack.5, align 16)
+; MIR64-DAG:     STFD killed $f21, 456, $x1 :: (store (s64) into %fixed-stack.4)
+; MIR64-DAG:     STFD killed $f31, 536, $x1 :: (store (s64) into %fixed-stack.3)
 ; MIR64-DAG:     $x{{[0-9]+}} = LI8 64
-; MIR64-DAG:     STXVD2X killed $v20, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.2)
+; MIR64-DAG:     STXVD2X killed $v20, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.2)
 ; MIR64-DAG:     $x{{[0-9]+}} = LI8 160
-; MIR64-DAG:     STXVD2X killed $v26, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.1)
+; MIR64-DAG:     STXVD2X killed $v26, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.1)
 ; MIR64-DAG:     $x{{[0-9]+}} = LI8 240
-; MIR64-DAG:     STXVD2X killed $v31, $x1, killed $x{{[0-9]+}} :: (store 16 into %fixed-stack.0)
+; MIR64-DAG:     STXVD2X killed $v31, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.0)
 
 ; MIR64:         INLINEASM
 
-; MIR64-DAG:     $x14 = LD 256, $x1 :: (load 8 from %fixed-stack.8, align 16)
-; MIR64-DAG:     $x25 = LD 344, $x1 :: (load 8 from %fixed-stack.7)
-; MIR64-DAG:     $x31 = LD 392, $x1 :: (load 8 from %fixed-stack.6)
-; MIR64-DAG:     $f14 = LFD 400, $x1 :: (load 8 from %fixed-stack.5, align 16)
-; MIR64-DAG:     $f21 = LFD 456, $x1 :: (load 8 from %fixed-stack.4)
-; MIR64-DAG:     $f31 = LFD 536, $x1 :: (load 8 from %fixed-stack.3)
-; MIR64-DAG:     $v20 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.2)
+; MIR64-DAG:     $x14 = LD 256, $x1 :: (load (s64) from %fixed-stack.8, align 16)
+; MIR64-DAG:     $x25 = LD 344, $x1 :: (load (s64) from %fixed-stack.7)
+; MIR64-DAG:     $x31 = LD 392, $x1 :: (load (s64) from %fixed-stack.6)
+; MIR64-DAG:     $f14 = LFD 400, $x1 :: (load (s64) from %fixed-stack.5, align 16)
+; MIR64-DAG:     $f21 = LFD 456, $x1 :: (load (s64) from %fixed-stack.4)
+; MIR64-DAG:     $f31 = LFD 536, $x1 :: (load (s64) from %fixed-stack.3)
+; MIR64-DAG:     $v20 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load (s128) from %fixed-stack.2)
 ; MIR64-DAG:     $x{{[0-9]+}} = LI8 64
-; MIR64-DAG:     $v26 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.1)
+; MIR64-DAG:     $v26 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load (s128) from %fixed-stack.1)
 ; MIR64-DAG:     $x{{[0-9]+}} = LI8 160
-; MIR64-DAG:     $v31 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load 16 from %fixed-stack.0)
+; MIR64-DAG:     $v31 = LXVD2X $x1, killed $x{{[0-9]+}} :: (load (s128) from %fixed-stack.0)
 ; MIR64-DAG:     $x{{[0-9]+}} = LI8 240
 ; MIR64-DAG:     $x1 = ADDI8 $x1, 544
 ; MIR64-DAG:     BLR8 implicit $lr8, implicit $rm

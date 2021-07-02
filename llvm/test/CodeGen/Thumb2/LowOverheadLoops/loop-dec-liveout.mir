@@ -245,7 +245,7 @@ body:             |
   ; CHECK:   renamable $r4, dead $cpsr = tSUBi3 renamable $r3, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r7 = t2ANDri renamable $r3, 3, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   tCMPi8 killed renamable $r4, 3, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   tSTRspi killed renamable $r7, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
+  ; CHECK:   tSTRspi killed renamable $r7, $sp, 0, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
   ; CHECK:   tBcc %bb.4, 2 /* CC::hs */, killed $cpsr
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.6(0x80000000)
@@ -271,50 +271,50 @@ body:             |
   ; CHECK: bb.5.bb28:
   ; CHECK:   successors: %bb.5(0x7c000000), %bb.6(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r8
-  ; CHECK:   renamable $r5 = tLDRr renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep617)
+  ; CHECK:   renamable $r5 = tLDRr renamable $r1, $r3, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep617)
   ; CHECK:   renamable $r7, dead $cpsr = tADDrr renamable $r2, renamable $r3, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r6 = tLDRr renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep418)
+  ; CHECK:   renamable $r6 = tLDRr renamable $r2, $r3, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep418)
   ; CHECK:   renamable $r8 = nuw t2ADDri killed renamable $r8, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r5, dead $cpsr = tEOR killed renamable $r5, killed renamable $r6, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r6 = tLDRr renamable $r0, $r3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep219)
+  ; CHECK:   renamable $r6 = tLDRr renamable $r0, $r3, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep219)
   ; CHECK:   renamable $r5 = nsw tADDhirr killed renamable $r5, killed renamable $r6, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRr killed renamable $r5, renamable $r0, $r3, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep219)
+  ; CHECK:   tSTRr killed renamable $r5, renamable $r0, $r3, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep219)
   ; CHECK:   renamable $r5, dead $cpsr = tADDrr renamable $r1, renamable $r3, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r4 = tLDRi renamable $r7, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep11)
-  ; CHECK:   renamable $r6 = tLDRi renamable $r5, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep14)
+  ; CHECK:   renamable $r4 = tLDRi renamable $r7, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep11)
+  ; CHECK:   renamable $r6 = tLDRi renamable $r5, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep14)
   ; CHECK:   renamable $r9 = t2EORrr killed renamable $r4, killed renamable $r6, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r6, dead $cpsr = tADDrr renamable $r0, renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   $r11 = t2ADDri $r6, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 16, 14 /* CC::al */, $noreg
-  ; CHECK:   t2LDMIA killed $r11, 14 /* CC::al */, $noreg, def $r4, def $r10, def $r11 :: (load 4 from %ir.scevgep9), (load 4 from %ir.scevgep8), (load 4 from %ir.scevgep1)
+  ; CHECK:   t2LDMIA killed $r11, 14 /* CC::al */, $noreg, def $r4, def $r10, def $r11 :: (load (s32) from %ir.scevgep9), (load (s32) from %ir.scevgep8), (load (s32) from %ir.scevgep1)
   ; CHECK:   renamable $r4 = nsw tADDhirr killed renamable $r4, killed renamable $r9, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRi killed renamable $r4, renamable $r6, 1, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep9)
-  ; CHECK:   renamable $r9 = t2LDRi12 renamable $r5, 8, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep12)
-  ; CHECK:   renamable $r4 = tLDRi renamable $r7, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep10)
+  ; CHECK:   tSTRi killed renamable $r4, renamable $r6, 1, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep9)
+  ; CHECK:   renamable $r9 = t2LDRi12 renamable $r5, 8, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep12)
+  ; CHECK:   renamable $r4 = tLDRi renamable $r7, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep10)
   ; CHECK:   renamable $r4 = t2EORrr killed renamable $r4, killed renamable $r9, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r4 = nsw tADDhirr killed renamable $r4, killed renamable $r10, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRi killed renamable $r4, renamable $r6, 2, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep8)
-  ; CHECK:   renamable $r4 = tLDRi killed renamable $r5, 3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep5)
-  ; CHECK:   renamable $r5 = tLDRi killed renamable $r7, 3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep3)
+  ; CHECK:   tSTRi killed renamable $r4, renamable $r6, 2, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep8)
+  ; CHECK:   renamable $r4 = tLDRi killed renamable $r5, 3, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep5)
+  ; CHECK:   renamable $r5 = tLDRi killed renamable $r7, 3, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep3)
   ; CHECK:   renamable $r4, dead $cpsr = tEOR killed renamable $r4, killed renamable $r5, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r4 = nsw tADDhirr killed renamable $r4, killed renamable $r11, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRi killed renamable $r4, killed renamable $r6, 3, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep1)
+  ; CHECK:   tSTRi killed renamable $r4, killed renamable $r6, 3, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep1)
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.5
   ; CHECK: bb.6.bb13:
   ; CHECK:   successors: %bb.12(0x30000000), %bb.7(0x50000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r8
-  ; CHECK:   renamable $r5 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.0)
+  ; CHECK:   renamable $r5 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.0)
   ; CHECK:   tCBZ $r5, %bb.12
   ; CHECK: bb.7.bb16:
   ; CHECK:   successors: %bb.8(0x40000000), %bb.9(0x40000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r5, $r8
-  ; CHECK:   renamable $lr = t2LDRs renamable $r1, renamable $r8, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp17)
+  ; CHECK:   renamable $lr = t2LDRs renamable $r1, renamable $r8, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp17)
   ; CHECK:   tCMPi8 renamable $r5, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   renamable $r3 = t2LDRs renamable $r2, renamable $r8, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp19)
+  ; CHECK:   renamable $r3 = t2LDRs renamable $r2, renamable $r8, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp19)
   ; CHECK:   renamable $lr = t2EORrr killed renamable $lr, killed renamable $r3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   renamable $r3 = t2LDRs renamable $r0, renamable $r8, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp22)
+  ; CHECK:   renamable $r3 = t2LDRs renamable $r0, renamable $r8, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp22)
   ; CHECK:   renamable $r3 = nsw tADDhirr killed renamable $r3, killed renamable $lr, 14 /* CC::al */, $noreg
-  ; CHECK:   t2STRs killed renamable $r3, renamable $r0, renamable $r8, 2, 14 /* CC::al */, $noreg :: (store 4 into %ir.tmp22)
+  ; CHECK:   t2STRs killed renamable $r3, renamable $r0, renamable $r8, 2, 14 /* CC::al */, $noreg :: (store (s32) into %ir.tmp22)
   ; CHECK:   tBcc %bb.9, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.8:
   ; CHECK:   successors: %bb.12(0x80000000)
@@ -325,12 +325,12 @@ body:             |
   ; CHECK:   liveins: $r0, $r1, $r2, $r5, $r8
   ; CHECK:   renamable $r3 = nuw t2ADDri renamable $r8, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   tCMPi8 killed renamable $r5, 2, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   renamable $r7 = t2LDRs renamable $r1, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp58)
-  ; CHECK:   renamable $r6 = t2LDRs renamable $r2, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp60)
+  ; CHECK:   renamable $r7 = t2LDRs renamable $r1, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp58)
+  ; CHECK:   renamable $r6 = t2LDRs renamable $r2, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp60)
   ; CHECK:   renamable $r7 = t2EORrr killed renamable $r7, killed renamable $r6, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   renamable $r6 = t2LDRs renamable $r0, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp63)
+  ; CHECK:   renamable $r6 = t2LDRs renamable $r0, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp63)
   ; CHECK:   renamable $r7 = nsw tADDhirr killed renamable $r7, killed renamable $r6, 14 /* CC::al */, $noreg
-  ; CHECK:   t2STRs killed renamable $r7, renamable $r0, killed renamable $r3, 2, 14 /* CC::al */, $noreg :: (store 4 into %ir.tmp63)
+  ; CHECK:   t2STRs killed renamable $r7, renamable $r0, killed renamable $r3, 2, 14 /* CC::al */, $noreg :: (store (s32) into %ir.tmp63)
   ; CHECK:   tBcc %bb.11, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.10:
   ; CHECK:   successors: %bb.12(0x80000000)
@@ -341,12 +341,12 @@ body:             |
   ; CHECK:   liveins: $r0, $r1, $r2, $r8
   ; CHECK:   renamable $r3 = nuw t2ADDri killed renamable $r8, 2, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $lr = t2MOVi 3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   renamable $r1 = t2LDRs killed renamable $r1, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp69)
-  ; CHECK:   renamable $r2 = t2LDRs killed renamable $r2, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp71)
+  ; CHECK:   renamable $r1 = t2LDRs killed renamable $r1, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp69)
+  ; CHECK:   renamable $r2 = t2LDRs killed renamable $r2, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp71)
   ; CHECK:   renamable $r1, dead $cpsr = tEOR killed renamable $r1, killed renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r2 = t2LDRs renamable $r0, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load 4 from %ir.tmp74)
+  ; CHECK:   renamable $r2 = t2LDRs renamable $r0, renamable $r3, 2, 14 /* CC::al */, $noreg :: (load (s32) from %ir.tmp74)
   ; CHECK:   renamable $r1 = nsw tADDhirr killed renamable $r1, killed renamable $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   t2STRs killed renamable $r1, killed renamable $r0, killed renamable $r3, 2, 14 /* CC::al */, $noreg :: (store 4 into %ir.tmp74)
+  ; CHECK:   t2STRs killed renamable $r1, killed renamable $r0, killed renamable $r3, 2, 14 /* CC::al */, $noreg :: (store (s32) into %ir.tmp74)
   ; CHECK: bb.12.bb27:
   ; CHECK:   liveins: $lr
   ; CHECK:   $r0 = tMOVr killed $lr, 14 /* CC::al */, $noreg
@@ -378,7 +378,7 @@ body:             |
     renamable $r4, dead $cpsr = tSUBi3 renamable $r3, 1, 14, $noreg
     renamable $r7 = t2ANDri renamable $r3, 3, 14, $noreg, $noreg
     tCMPi8 killed renamable $r4, 3, 14, $noreg, implicit-def $cpsr
-    tSTRspi killed renamable $r7, $sp, 0, 14, $noreg :: (store 4 into %stack.0)
+    tSTRspi killed renamable $r7, $sp, 0, 14, $noreg :: (store (s32) into %stack.0)
     tBcc %bb.4, 2, killed $cpsr
 
   bb.2:
@@ -412,35 +412,35 @@ body:             |
     successors: %bb.5(0x7c000000), %bb.6(0x04000000)
     liveins: $r0, $r1, $r2, $r3, $r8, $lr
 
-    renamable $r5 = tLDRr renamable $r1, $r3, 14, $noreg :: (load 4 from %ir.scevgep617)
+    renamable $r5 = tLDRr renamable $r1, $r3, 14, $noreg :: (load (s32) from %ir.scevgep617)
     renamable $r7, dead $cpsr = tADDrr renamable $r2, renamable $r3, 14, $noreg
-    renamable $r6 = tLDRr renamable $r2, $r3, 14, $noreg :: (load 4 from %ir.scevgep418)
+    renamable $r6 = tLDRr renamable $r2, $r3, 14, $noreg :: (load (s32) from %ir.scevgep418)
     renamable $r8 = nuw t2ADDri killed renamable $r8, 4, 14, $noreg, $noreg
     renamable $r5, dead $cpsr = tEOR killed renamable $r5, killed renamable $r6, 14, $noreg
-    renamable $r6 = tLDRr renamable $r0, $r3, 14, $noreg :: (load 4 from %ir.scevgep219)
+    renamable $r6 = tLDRr renamable $r0, $r3, 14, $noreg :: (load (s32) from %ir.scevgep219)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r5 = nsw tADDhirr killed renamable $r5, killed renamable $r6, 14, $noreg
-    tSTRr killed renamable $r5, renamable $r0, $r3, 14, $noreg :: (store 4 into %ir.scevgep219)
+    tSTRr killed renamable $r5, renamable $r0, $r3, 14, $noreg :: (store (s32) into %ir.scevgep219)
     renamable $r5, dead $cpsr = tADDrr renamable $r1, renamable $r3, 14, $noreg
-    renamable $r4 = tLDRi renamable $r7, 1, 14, $noreg :: (load 4 from %ir.scevgep11)
-    renamable $r6 = tLDRi renamable $r5, 1, 14, $noreg :: (load 4 from %ir.scevgep14)
+    renamable $r4 = tLDRi renamable $r7, 1, 14, $noreg :: (load (s32) from %ir.scevgep11)
+    renamable $r6 = tLDRi renamable $r5, 1, 14, $noreg :: (load (s32) from %ir.scevgep14)
     renamable $r9 = t2EORrr killed renamable $r4, killed renamable $r6, 14, $noreg, $noreg
     renamable $r6, dead $cpsr = tADDrr renamable $r0, renamable $r3, 14, $noreg
     $r11 = t2ADDri $r6, 4, 14, $noreg, $noreg
     renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 16, 14, $noreg
-    t2LDMIA killed $r11, 14, $noreg, def $r4, def $r10, def $r11 :: (load 4 from %ir.scevgep9), (load 4 from %ir.scevgep8), (load 4 from %ir.scevgep1)
+    t2LDMIA killed $r11, 14, $noreg, def $r4, def $r10, def $r11 :: (load (s32) from %ir.scevgep9), (load (s32) from %ir.scevgep8), (load (s32) from %ir.scevgep1)
     renamable $r4 = nsw tADDhirr killed renamable $r4, killed renamable $r9, 14, $noreg
-    tSTRi killed renamable $r4, renamable $r6, 1, 14, $noreg :: (store 4 into %ir.scevgep9)
-    renamable $r9 = t2LDRi12 renamable $r5, 8, 14, $noreg :: (load 4 from %ir.scevgep12)
-    renamable $r4 = tLDRi renamable $r7, 2, 14, $noreg :: (load 4 from %ir.scevgep10)
+    tSTRi killed renamable $r4, renamable $r6, 1, 14, $noreg :: (store (s32) into %ir.scevgep9)
+    renamable $r9 = t2LDRi12 renamable $r5, 8, 14, $noreg :: (load (s32) from %ir.scevgep12)
+    renamable $r4 = tLDRi renamable $r7, 2, 14, $noreg :: (load (s32) from %ir.scevgep10)
     renamable $r4 = t2EORrr killed renamable $r4, killed renamable $r9, 14, $noreg, $noreg
     renamable $r4 = nsw tADDhirr killed renamable $r4, killed renamable $r10, 14, $noreg
-    tSTRi killed renamable $r4, renamable $r6, 2, 14, $noreg :: (store 4 into %ir.scevgep8)
-    renamable $r4 = tLDRi killed renamable $r5, 3, 14, $noreg :: (load 4 from %ir.scevgep5)
-    renamable $r5 = tLDRi killed renamable $r7, 3, 14, $noreg :: (load 4 from %ir.scevgep3)
+    tSTRi killed renamable $r4, renamable $r6, 2, 14, $noreg :: (store (s32) into %ir.scevgep8)
+    renamable $r4 = tLDRi killed renamable $r5, 3, 14, $noreg :: (load (s32) from %ir.scevgep5)
+    renamable $r5 = tLDRi killed renamable $r7, 3, 14, $noreg :: (load (s32) from %ir.scevgep3)
     renamable $r4, dead $cpsr = tEOR killed renamable $r4, killed renamable $r5, 14, $noreg
     renamable $r4 = nsw tADDhirr killed renamable $r4, killed renamable $r11, 14, $noreg
-    tSTRi killed renamable $r4, killed renamable $r6, 3, 14, $noreg :: (store 4 into %ir.scevgep1)
+    tSTRi killed renamable $r4, killed renamable $r6, 3, 14, $noreg :: (store (s32) into %ir.scevgep1)
     t2LoopEnd renamable $lr, %bb.5, implicit-def dead $cpsr
     tB %bb.6, 14, $noreg
 
@@ -448,20 +448,20 @@ body:             |
     successors: %bb.12(0x30000000), %bb.7(0x50000000)
     liveins: $lr, $r0, $r1, $r2, $r8
 
-    renamable $r5 = tLDRspi $sp, 0, 14, $noreg :: (load 4 from %stack.0)
+    renamable $r5 = tLDRspi $sp, 0, 14, $noreg :: (load (s32) from %stack.0)
     tCBZ $r5, %bb.12
 
   bb.7.bb16:
     successors: %bb.8(0x40000000), %bb.9(0x40000000)
     liveins: $lr, $r0, $r1, $r2, $r5, $r8
 
-    renamable $lr = t2LDRs renamable $r1, renamable $r8, 2, 14, $noreg :: (load 4 from %ir.tmp17)
+    renamable $lr = t2LDRs renamable $r1, renamable $r8, 2, 14, $noreg :: (load (s32) from %ir.tmp17)
     tCMPi8 renamable $r5, 1, 14, $noreg, implicit-def $cpsr
-    renamable $r3 = t2LDRs renamable $r2, renamable $r8, 2, 14, $noreg :: (load 4 from %ir.tmp19)
+    renamable $r3 = t2LDRs renamable $r2, renamable $r8, 2, 14, $noreg :: (load (s32) from %ir.tmp19)
     renamable $lr = t2EORrr killed renamable $lr, killed renamable $r3, 14, $noreg, $noreg
-    renamable $r3 = t2LDRs renamable $r0, renamable $r8, 2, 14, $noreg :: (load 4 from %ir.tmp22)
+    renamable $r3 = t2LDRs renamable $r0, renamable $r8, 2, 14, $noreg :: (load (s32) from %ir.tmp22)
     renamable $r3 = nsw tADDhirr killed renamable $r3, killed renamable $lr, 14, $noreg
-    t2STRs killed renamable $r3, renamable $r0, renamable $r8, 2, 14, $noreg :: (store 4 into %ir.tmp22)
+    t2STRs killed renamable $r3, renamable $r0, renamable $r8, 2, 14, $noreg :: (store (s32) into %ir.tmp22)
     tBcc %bb.9, 1, killed $cpsr
 
   bb.8:
@@ -476,12 +476,12 @@ body:             |
 
     renamable $r3 = nuw t2ADDri renamable $r8, 1, 14, $noreg, $noreg
     tCMPi8 killed renamable $r5, 2, 14, $noreg, implicit-def $cpsr
-    renamable $r7 = t2LDRs renamable $r1, renamable $r3, 2, 14, $noreg :: (load 4 from %ir.tmp58)
-    renamable $r6 = t2LDRs renamable $r2, renamable $r3, 2, 14, $noreg :: (load 4 from %ir.tmp60)
+    renamable $r7 = t2LDRs renamable $r1, renamable $r3, 2, 14, $noreg :: (load (s32) from %ir.tmp58)
+    renamable $r6 = t2LDRs renamable $r2, renamable $r3, 2, 14, $noreg :: (load (s32) from %ir.tmp60)
     renamable $r7 = t2EORrr killed renamable $r7, killed renamable $r6, 14, $noreg, $noreg
-    renamable $r6 = t2LDRs renamable $r0, renamable $r3, 2, 14, $noreg :: (load 4 from %ir.tmp63)
+    renamable $r6 = t2LDRs renamable $r0, renamable $r3, 2, 14, $noreg :: (load (s32) from %ir.tmp63)
     renamable $r7 = nsw tADDhirr killed renamable $r7, killed renamable $r6, 14, $noreg
-    t2STRs killed renamable $r7, renamable $r0, killed renamable $r3, 2, 14, $noreg :: (store 4 into %ir.tmp63)
+    t2STRs killed renamable $r7, renamable $r0, killed renamable $r3, 2, 14, $noreg :: (store (s32) into %ir.tmp63)
     tBcc %bb.11, 1, killed $cpsr
 
   bb.10:
@@ -496,12 +496,12 @@ body:             |
 
     renamable $r3 = nuw t2ADDri killed renamable $r8, 2, 14, $noreg, $noreg
     renamable $lr = t2MOVi 3, 14, $noreg, $noreg
-    renamable $r1 = t2LDRs killed renamable $r1, renamable $r3, 2, 14, $noreg :: (load 4 from %ir.tmp69)
-    renamable $r2 = t2LDRs killed renamable $r2, renamable $r3, 2, 14, $noreg :: (load 4 from %ir.tmp71)
+    renamable $r1 = t2LDRs killed renamable $r1, renamable $r3, 2, 14, $noreg :: (load (s32) from %ir.tmp69)
+    renamable $r2 = t2LDRs killed renamable $r2, renamable $r3, 2, 14, $noreg :: (load (s32) from %ir.tmp71)
     renamable $r1, dead $cpsr = tEOR killed renamable $r1, killed renamable $r2, 14, $noreg
-    renamable $r2 = t2LDRs renamable $r0, renamable $r3, 2, 14, $noreg :: (load 4 from %ir.tmp74)
+    renamable $r2 = t2LDRs renamable $r0, renamable $r3, 2, 14, $noreg :: (load (s32) from %ir.tmp74)
     renamable $r1 = nsw tADDhirr killed renamable $r1, killed renamable $r2, 14, $noreg
-    t2STRs killed renamable $r1, killed renamable $r0, killed renamable $r3, 2, 14, $noreg :: (store 4 into %ir.tmp74)
+    t2STRs killed renamable $r1, killed renamable $r0, killed renamable $r3, 2, 14, $noreg :: (store (s32) into %ir.tmp74)
 
   bb.12.bb27:
     liveins: $lr

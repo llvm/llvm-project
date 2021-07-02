@@ -12,11 +12,11 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
     ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
     ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load 4, addrspace 6)
+    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), addrspace 6)
     ; CI: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
     ; CI: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(p6) = COPY $sgpr0
-    %1:_(s64) = G_SEXTLOAD %0 :: (load 4, align 4, addrspace 6)
+    %1:_(s64) = G_SEXTLOAD %0 :: (load (s32), align 4, addrspace 6)
     $vgpr0_vgpr1 = COPY %1
 ...
 
@@ -30,11 +30,11 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
     ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
     ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load 4, align 2, addrspace 6)
+    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), align 2, addrspace 6)
     ; CI: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
     ; CI: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(p6) = COPY $sgpr0
-    %1:_(s64) = G_SEXTLOAD %0 :: (load 4, align 2, addrspace 6)
+    %1:_(s64) = G_SEXTLOAD %0 :: (load (s32), align 2, addrspace 6)
     $vgpr0_vgpr1 = COPY %1
 ...
 
@@ -48,11 +48,11 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
     ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
     ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load 4, align 1, addrspace 6)
+    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), align 1, addrspace 6)
     ; CI: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
     ; CI: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(p6) = COPY $sgpr0
-    %1:_(s64) = G_SEXTLOAD %0 :: (load 4, align 1, addrspace 6)
+    %1:_(s64) = G_SEXTLOAD %0 :: (load (s32), align 1, addrspace 6)
     $vgpr0_vgpr1 = COPY %1
 ...
 
@@ -66,10 +66,10 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
     ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
     ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p4) :: (load 1, addrspace 6)
+    ; CI: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p4) :: (load (s8), addrspace 6)
     ; CI: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p6) = COPY $sgpr0
-    %1:_(s32) = G_SEXTLOAD %0 :: (load 1, align 1, addrspace 6)
+    %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), align 1, addrspace 6)
     $vgpr0 = COPY %1
 ...
 
@@ -83,10 +83,10 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
     ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
     ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p4) :: (load 2, addrspace 6)
+    ; CI: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p4) :: (load (s16), addrspace 6)
     ; CI: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p6) = COPY $sgpr0
-    %1:_(s32) = G_SEXTLOAD %0 :: (load 2, align 2, addrspace 6)
+    %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), align 2, addrspace 6)
     $vgpr0 = COPY %1
 ...
 
@@ -100,9 +100,9 @@ body: |
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
     ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
     ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p4) :: (load 2, align 1, addrspace 6)
+    ; CI: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p4) :: (load (s16), align 1, addrspace 6)
     ; CI: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p6) = COPY $sgpr0
-    %1:_(s32) = G_SEXTLOAD %0 :: (load 2, align 1, addrspace 6)
+    %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), align 1, addrspace 6)
     $vgpr0 = COPY %1
 ...

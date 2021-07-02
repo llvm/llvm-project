@@ -18,13 +18,13 @@
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/TPCIndirectionUtils.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
@@ -126,9 +126,9 @@ void KaleidoscopeASTMaterializationUnit::materialize(
 
 class KaleidoscopeJIT {
 private:
-  std::unique_ptr<TargetProcessControl> TPC;
+  std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<ExecutionSession> ES;
-  std::unique_ptr<TPCIndirectionUtils> TPCIU;
+  std::unique_ptr<EPCIndirectionUtils> EPCIU;
 
   DataLayout DL;
   MangleAndInterner Mangle;
@@ -146,11 +146,11 @@ private:
   }
 
 public:
-  KaleidoscopeJIT(std::unique_ptr<TargetProcessControl> TPC,
+  KaleidoscopeJIT(std::unique_ptr<ExecutorProcessControl> EPC,
                   std::unique_ptr<ExecutionSession> ES,
-                  std::unique_ptr<TPCIndirectionUtils> TPCIU,
+                  std::unique_ptr<EPCIndirectionUtils> EPCIU,
                   JITTargetMachineBuilder JTMB, DataLayout DL)
-      : TPC(std::move(TPC)), ES(std::move(ES)), TPCIU(std::move(TPCIU)),
+      : EPC(std::move(EPC)), ES(std::move(ES)), EPCIU(std::move(EPCIU)),
         DL(std::move(DL)), Mangle(*this->ES, this->DL),
         ObjectLayer(*this->ES,
                     []() { return std::make_unique<SectionMemoryManager>(); }),
@@ -167,36 +167,36 @@ public:
   ~KaleidoscopeJIT() {
     if (auto Err = ES->endSession())
       ES->reportError(std::move(Err));
-    if (auto Err = TPCIU->cleanup())
+    if (auto Err = EPCIU->cleanup())
       ES->reportError(std::move(Err));
   }
 
   static Expected<std::unique_ptr<KaleidoscopeJIT>> Create() {
     auto SSP = std::make_shared<SymbolStringPool>();
-    auto TPC = SelfTargetProcessControl::Create(SSP);
-    if (!TPC)
-      return TPC.takeError();
+    auto EPC = SelfExecutorProcessControl::Create(SSP);
+    if (!EPC)
+      return EPC.takeError();
 
     auto ES = std::make_unique<ExecutionSession>(std::move(SSP));
 
-    auto TPCIU = TPCIndirectionUtils::Create(**TPC);
-    if (!TPCIU)
-      return TPCIU.takeError();
+    auto EPCIU = EPCIndirectionUtils::Create(**EPC);
+    if (!EPCIU)
+      return EPCIU.takeError();
 
-    (*TPCIU)->createLazyCallThroughManager(
+    (*EPCIU)->createLazyCallThroughManager(
         *ES, pointerToJITTargetAddress(&handleLazyCallThroughError));
 
-    if (auto Err = setUpInProcessLCTMReentryViaTPCIU(**TPCIU))
+    if (auto Err = setUpInProcessLCTMReentryViaEPCIU(**EPCIU))
       return std::move(Err);
 
-    JITTargetMachineBuilder JTMB((*TPC)->getTargetTriple());
+    JITTargetMachineBuilder JTMB((*EPC)->getTargetTriple());
 
     auto DL = JTMB.getDefaultDataLayoutForTarget();
     if (!DL)
       return DL.takeError();
 
-    return std::make_unique<KaleidoscopeJIT>(std::move(*TPC), std::move(ES),
-                                             std::move(*TPCIU), std::move(JTMB),
+    return std::make_unique<KaleidoscopeJIT>(std::move(*EPC), std::move(ES),
+                                             std::move(*EPCIU), std::move(JTMB),
                                              std::move(*DL));
   }
 

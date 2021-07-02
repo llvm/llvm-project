@@ -1199,11 +1199,11 @@ const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
   return nullptr;
 }
 
-typedef struct {
+struct symbol_info {
   void *addr = nullptr;
   uint32_t size = UINT32_MAX;
   uint32_t sh_type = SHT_NULL;
-} symbol_info;
+};
 
 int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
                                     symbol_info *res) {
@@ -1711,9 +1711,10 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       // Get ExecMode
       ExecModeVal = KernDescVal.Mode;
       DP("ExecModeVal %d\n", ExecModeVal);
-      // If KernDescVal.WG_Size is 0, it is equivalent to not
-      // specified. Hence, max_flat_workgroup_size is filtered out in
-      // getLaunchVals
+      if (KernDescVal.WG_Size == 0) {
+        KernDescVal.WG_Size = RTLDeviceInfoTy::Default_WG_Size;
+        DP("Setting KernDescVal.WG_Size to default %d\n", KernDescVal.WG_Size);
+      }
       WGSizeVal = KernDescVal.WG_Size;
       DP("WGSizeVal %d\n", WGSizeVal);
       check("Loading KernDesc computation property", err);
@@ -1884,14 +1885,21 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
 // Inputs: Max_Teams, Max_WG_Size, Warp_Size, ExecutionMode,
 //         EnvTeamLimit, EnvNumTeams, num_teams, thread_limit,
 //         loop_tripcount.
-void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
-                   int ExecutionMode, int EnvTeamLimit, int EnvNumTeams,
-                   int num_teams, int thread_limit, uint64_t loop_tripcount,
-                   int32_t device_id) {
+struct launchVals {
+  int WorkgroupSize;
+  int GridSize;
+};
+
+launchVals getLaunchVals(int ConstWGSize, int ExecutionMode, int EnvTeamLimit,
+                         int EnvNumTeams, int num_teams, int thread_limit,
+                         uint64_t loop_tripcount, int DeviceNumTeams) {
+
+  int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
+  int num_groups = 0;
 
   int Max_Teams = DeviceInfo.EnvMaxTeamsDefault > 0
                       ? DeviceInfo.EnvMaxTeamsDefault
-                      : DeviceInfo.NumTeams[device_id];
+                      : DeviceNumTeams;
   if (Max_Teams > DeviceInfo.HardTeamLimit)
     Max_Teams = DeviceInfo.HardTeamLimit;
 
@@ -1923,7 +1931,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
     }
   }
   // check flat_max_work_group_size attr here
-  if (ConstWGSize > 0 && threadsPerGroup > ConstWGSize) {
+  if (threadsPerGroup > ConstWGSize) {
     threadsPerGroup = ConstWGSize;
     DP("Reduced threadsPerGroup to flat-attr-group-size limit %d\n",
        threadsPerGroup);
@@ -2021,6 +2029,11 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
   }
   DP("Final %d num_groups and %d threadsPerGroup\n", num_groups,
      threadsPerGroup);
+
+  launchVals res;
+  res.WorkgroupSize = threadsPerGroup;
+  res.GridSize = threadsPerGroup * num_groups;
+  return res;
 }
 
 static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
@@ -2098,19 +2111,18 @@ int32_t __tgt_rtl_run_target_team_region_locked(
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
-  int num_groups = 0;
-
-  int threadsPerGroup = RTLDeviceInfoTy::Default_WG_Size;
-
-  getLaunchVals(threadsPerGroup, num_groups, KernelInfo->ConstWGSize,
-                KernelInfo->ExecutionMode, DeviceInfo.EnvTeamLimit,
-                DeviceInfo.EnvNumTeams,
-                num_teams,      // From run_region arg
-                thread_limit,   // From run_region arg
-                loop_tripcount, // From run_region arg
-                KernelInfo->device_id);
+  launchVals LV =
+      getLaunchVals(KernelInfo->ConstWGSize, KernelInfo->ExecutionMode,
+                    DeviceInfo.EnvTeamLimit, DeviceInfo.EnvNumTeams,
+                    num_teams,      // From run_region arg
+                    thread_limit,   // From run_region arg
+                    loop_tripcount, // From run_region arg
+                    DeviceInfo.NumTeams[KernelInfo->device_id]);
+  const int GridSize = LV.GridSize;
+  const int WorkgroupSize = LV.WorkgroupSize;
 
   if (print_kernel_trace >= LAUNCH) {
+    int num_groups = GridSize / WorkgroupSize;
     // enum modes are SPMD, GENERIC, NONE 0,1,2
     // if doing rtl timing, print to stderr, unless stdout requested.
     bool traceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
@@ -2119,7 +2131,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
             "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
             "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu n:%s\n",
             device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
-            arg_num, num_groups, threadsPerGroup, num_teams, thread_limit,
+            arg_num, num_groups, WorkgroupSize, num_teams, thread_limit,
             group_segment_size, sgpr_count, vgpr_count, sgpr_spill_count,
             vgpr_spill_count, loop_tripcount, KernelInfo->Name);
   }
@@ -2139,11 +2151,11 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
     // packet->header is written last
     packet->setup = UINT16_C(1) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-    packet->workgroup_size_x = threadsPerGroup;
+    packet->workgroup_size_x = WorkgroupSize;
     packet->workgroup_size_y = 1;
     packet->workgroup_size_z = 1;
     packet->reserved0 = 0;
-    packet->grid_size_x = num_groups * threadsPerGroup;
+    packet->grid_size_x = GridSize;
     packet->grid_size_y = 1;
     packet->grid_size_z = 1;
     packet->private_segment_size = KernelInfoEntry.private_segment_size;

@@ -32,7 +32,7 @@
   }
 ...
 
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, implicit $exec :: (store 8 into %ir.out.gep.1, align 4, addrspace 1)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
 ---
 name: test1
 liveins:
@@ -48,7 +48,7 @@ body: |
     $sgpr3 = S_MOV_B32 61440
 
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
+    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %1, %2, %3
@@ -56,14 +56,14 @@ body: |
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
 
-    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 0, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
-    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 0, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 
     S_ENDPGM 0
 ...
 
-# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 4, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
-# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 8, 0, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 8, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 ---
 name: test2
 liveins:
@@ -79,7 +79,7 @@ body: |
     $sgpr3 = S_MOV_B32 61440
 
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
+    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %1, %2, %3
@@ -87,14 +87,14 @@ body: |
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
 
-    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 4, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
-    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 0, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 
     S_ENDPGM 0
 ...
 
-# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
-# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 8, 4, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+# CHECK: BUFFER_STORE_DWORD_OFFSET %{{[0-9]+}}, %{{[0-9]+}}, 0, 8, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 ---
 name: test3
 liveins:
@@ -110,7 +110,7 @@ body: |
     $sgpr3 = S_MOV_B32 61440
 
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
+    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %1, %2, %3
@@ -118,13 +118,13 @@ body: |
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
 
-    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 0, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
-    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 4, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 0, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 
     S_ENDPGM 0
 ...
 
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 4, 0, 0, implicit $exec :: (store 8 into %ir.out.gep.1, align 4, addrspace 1)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 4, 4, 0, 0, implicit $exec :: (store (s64) into %ir.out.gep.1, align 4, addrspace 1)
 ---
 name: test4
 liveins:
@@ -140,7 +140,7 @@ body: |
     $sgpr3 = S_MOV_B32 61440
 
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
+    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %1, %2, %3
@@ -148,8 +148,8 @@ body: |
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
 
-    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 4, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
-    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 4, 0, 0, implicit $exec :: (store 4 into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %5, %4, 0, 4, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %6, %4, 0, 8, 4, 0, 0, implicit $exec :: (store (s32) into %ir.out.gep.1, addrspace 1)
 
     S_ENDPGM 0
 ...

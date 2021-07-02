@@ -7,7 +7,7 @@
 // CHECK:           %[[EXTENT:.*]] = memref.dim %[[MEMREF]], %[[INDEX]] : memref<f32>
 // CHECK:           return %[[EXTENT]] : index
 func @dim(%arg0: tensor<f32>, %arg1: index) -> index {
-  %0 = memref.dim %arg0, %arg1 : tensor<f32>
+  %0 = tensor.dim %arg0, %arg1 : tensor<f32>
   return %0 : index
 }
 

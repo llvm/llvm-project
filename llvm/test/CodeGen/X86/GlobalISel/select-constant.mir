@@ -177,11 +177,11 @@ body:             |
     ; CHECK-LABEL: name: main
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
     ; CHECK: [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 0
-    ; CHECK: MOV64mr [[COPY]], 1, $noreg, 0, $noreg, [[MOV64ri32_]] :: (store 8 into %ir.data)
+    ; CHECK: MOV64mr [[COPY]], 1, $noreg, 0, $noreg, [[MOV64ri32_]] :: (store (p0) into %ir.data)
     ; CHECK: RET 0
     %0(p0) = COPY $rdi
     %1(p0) = G_CONSTANT i64 0
-    G_STORE %1(p0), %0(p0) :: (store 8 into %ir.data)
+    G_STORE %1(p0), %0(p0) :: (store (p0) into %ir.data)
     RET 0
 
 ...

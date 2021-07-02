@@ -25,9 +25,9 @@ attributes #0 = { "target-cpu"="cortex-r52" "target-features"="-fp64"  }
 ; 32 bits of the double to before actually storing it to memory
 
 ; CHECK: Creating new node: {{.*}} = add FrameIndex:i32<2>, Constant:i32<4>
-; CHECK-NEXT: Creating new node: {{.*}} i32,ch = load<(load 4 from [[MEM:%.*]] + 4)>
+; CHECK-NEXT: Creating new node: {{.*}} i32,ch = load<(load (s32) from [[MEM:%.*]] + 4)>
 ; CHECK: INLINEASM
-; CHECK: (load 4 from [[MEM]] + 4)
-; CHECK-NOT: (store 4 into [[MEM]] + 4)
+; CHECK: (load (s32) from [[MEM]] + 4)
+; CHECK-NOT: (store (s32) into [[MEM]] + 4)
 
 

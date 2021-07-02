@@ -88,7 +88,7 @@ body:             |
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   $sp_64 = DADDiu $sp_64, -16
   ; CHECK:   CFI_INSTRUCTION def_cfa_offset 16
-  ; CHECK:   SD killed $ra_64, $sp_64, 8 :: (store 8 into %stack.0)
+  ; CHECK:   SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
   ; CHECK:   CFI_INSTRUCTION offset $ra_64, -8
   ; CHECK:   BUNDLE {
   ; CHECK:     $sp_64 = DADDiu $sp_64, -16
@@ -111,7 +111,7 @@ body:             |
   ; CHECK:     $a0_64 = DADDiu $zero_64, 0
   ; CHECK:   }
   ; CHECK: bb.3.return:
-  ; CHECK:   $ra_64 = LD $sp_64, 8 :: (load 8 from %stack.0)
+  ; CHECK:   $ra_64 = LD $sp_64, 8 :: (load (s64) from %stack.0)
   ; CHECK:   PseudoReturn64 undef $ra_64, implicit $v0_64 {
   ; CHECK:     $sp_64 = DADDiu $sp_64, 16
   ; CHECK:   }
@@ -121,7 +121,7 @@ body:             |
 
     $sp_64 = DADDiu $sp_64, -16
     CFI_INSTRUCTION def_cfa_offset 16
-    SD killed $ra_64, $sp_64, 8 :: (store 8 into %stack.0)
+    SD killed $ra_64, $sp_64, 8 :: (store (s64) into %stack.0)
     CFI_INSTRUCTION offset $ra_64, -8
     ; This BUNDLE instruction must not be split by the delay slot filler:
     BUNDLE {
@@ -146,7 +146,7 @@ body:             |
   bb.3.return:
     liveins: $v0_64
 
-    $ra_64 = LD $sp_64, 8 :: (load 8 from %stack.0)
+    $ra_64 = LD $sp_64, 8 :: (load (s64) from %stack.0)
     $sp_64 = DADDiu $sp_64, 16
     PseudoReturn64 undef $ra_64, implicit $v0_64
 

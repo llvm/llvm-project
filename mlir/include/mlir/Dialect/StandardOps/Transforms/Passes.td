@@ -14,7 +14,7 @@ include "mlir/Pass/PassBase.td"
 def StdBufferize : FunctionPass<"std-bufferize"> {
   let summary = "Bufferize the std dialect";
   let constructor = "mlir::createStdBufferizePass()";
-  let dependentDialects = ["scf::SCFDialect"];
+  let dependentDialects = ["memref::MemRefDialect", "scf::SCFDialect"];
 }
 
 def StdExpandOps : FunctionPass<"std-expand"> {

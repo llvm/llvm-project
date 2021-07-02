@@ -577,8 +577,8 @@ body:             |
   ; CHECK:   [[PHI1:%[0-9]+]]:_(s64) = G_PHI [[DEF]](s64), %bb.0
   ; CHECK:   [[PHI2:%[0-9]+]]:_(s64) = G_PHI [[COPY]](s64), %bb.0
   ; CHECK:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[PHI]](s64), [[PHI1]](s64)
-  ; CHECK:   G_STORE [[MV]](s128), [[COPY1]](p0) :: (store 16)
-  ; CHECK:   G_STORE [[PHI2]](s64), [[COPY1]](p0) :: (store 8)
+  ; CHECK:   G_STORE [[MV]](s128), [[COPY1]](p0) :: (store (s128))
+  ; CHECK:   G_STORE [[PHI2]](s64), [[COPY1]](p0) :: (store (s64))
   ; CHECK:   RET_ReallyLR
   ; Check that the G_MERGE here gets inserted after all the PHIs.
   bb.0:
@@ -593,8 +593,8 @@ body:             |
   bb.1:
     %3:_(s128) = G_PHI %2(s128), %bb.0
     %4:_(s64) = G_PHI %0(s64), %bb.0
-    G_STORE %3(s128), %1(p0) :: (store 16)
-    G_STORE %4(s64), %1(p0) :: (store 8)
+    G_STORE %3(s128), %1(p0) :: (store (s128))
+    G_STORE %4(s64), %1(p0) :: (store (s64))
     RET_ReallyLR
 
 ...

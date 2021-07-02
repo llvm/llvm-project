@@ -157,7 +157,8 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
     target.addIllegalOp<tensor::CastOp, tensor::ExtractOp,
                         tensor::FromElementsOp, tensor::GenerateOp>();
     target.addLegalDialect<memref::MemRefDialect>();
-    target.addLegalDialect<StandardOpsDialect>();
+    target.addDynamicallyLegalDialect<StandardOpsDialect>(
+        [&](Operation *op) { return typeConverter.isLegal(op); });
     target.addLegalDialect<scf::SCFDialect>();
 
     if (failed(

@@ -9,6 +9,8 @@
 #ifndef LLD_MACHO_WRITER_H
 #define LLD_MACHO_WRITER_H
 
+#include "Config.h"
+
 #include <cstdint>
 
 namespace lld {
@@ -26,6 +28,8 @@ public:
 };
 
 template <class LP> void writeResult();
+
+NamePair maybeRenameSection(NamePair key);
 
 void createSyntheticSections();
 

@@ -1398,21 +1398,21 @@ body: |
 
     ; CHECK-LABEL: name: extract_vector_elt_7_v64s32
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load 64, align 4, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load 64 from unknown-address + 64, align 4, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<16 x s32>) from unknown-address + 64, align 4, addrspace 4)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load 64 from unknown-address + 128, align 4, addrspace 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<16 x s32>) from unknown-address + 128, align 4, addrspace 4)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 192
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load 64 from unknown-address + 192, align 4, addrspace 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<16 x s32>) from unknown-address + 192, align 4, addrspace 4)
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](<16 x s32>), 224
     ; CHECK: S_ENDPGM 0, implicit [[EXTRACT]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_CONSTANT i32 7
-    %2:_(<64 x s32>) = G_LOAD %0 :: (load 256, align 4, addrspace 4)
+    %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1
     S_ENDPGM 0, implicit %3
 ...
@@ -1426,21 +1426,21 @@ body: |
 
     ; CHECK-LABEL: name: extract_vector_elt_33_v64s32
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load 64, align 4, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load 64 from unknown-address + 64, align 4, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<16 x s32>) from unknown-address + 64, align 4, addrspace 4)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load 64 from unknown-address + 128, align 4, addrspace 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<16 x s32>) from unknown-address + 128, align 4, addrspace 4)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 192
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load 64 from unknown-address + 192, align 4, addrspace 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<16 x s32>) from unknown-address + 192, align 4, addrspace 4)
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](<16 x s32>), 32
     ; CHECK: S_ENDPGM 0, implicit [[EXTRACT]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_CONSTANT i32 33
-    %2:_(<64 x s32>) = G_LOAD %0 :: (load 256, align 4, addrspace 4)
+    %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1
     S_ENDPGM 0, implicit %3
 ...
@@ -1460,7 +1460,7 @@ body: |
     ; CHECK: S_ENDPGM 0, implicit [[COPY1]](s32), implicit [[DEF]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_CONSTANT i32 64
-    %2:_(<64 x s32>) = G_LOAD %0 :: (load 256, align 4, addrspace 4)
+    %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1
     %4:_(s32) = G_CONSTANT i32 65
     %5:_(s32) = G_EXTRACT_VECTOR_ELT %2, %4
@@ -1476,221 +1476,221 @@ body: |
 
     ; CHECK-LABEL: name: extract_vector_elt_33_v64p3
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load 64, align 4, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x p3>), align 4, addrspace 4)
     ; CHECK: [[BITCAST:%[0-9]+]]:_(<16 x p3>) = G_BITCAST [[LOAD]](<16 x s32>)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load 64 from unknown-address + 64, align 4, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<16 x p3>) from unknown-address + 64, align 4, addrspace 4)
     ; CHECK: [[BITCAST1:%[0-9]+]]:_(<16 x p3>) = G_BITCAST [[LOAD1]](<16 x s32>)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load 64 from unknown-address + 128, align 4, addrspace 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<16 x p3>) from unknown-address + 128, align 4, addrspace 4)
     ; CHECK: [[BITCAST2:%[0-9]+]]:_(<16 x p3>) = G_BITCAST [[LOAD2]](<16 x s32>)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 192
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load 64 from unknown-address + 192, align 4, addrspace 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<16 x p3>) from unknown-address + 192, align 4, addrspace 4)
     ; CHECK: [[BITCAST3:%[0-9]+]]:_(<16 x p3>) = G_BITCAST [[LOAD3]](<16 x s32>)
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
     ; CHECK: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3), [[UV2:%[0-9]+]]:_(p3), [[UV3:%[0-9]+]]:_(p3), [[UV4:%[0-9]+]]:_(p3), [[UV5:%[0-9]+]]:_(p3), [[UV6:%[0-9]+]]:_(p3), [[UV7:%[0-9]+]]:_(p3), [[UV8:%[0-9]+]]:_(p3), [[UV9:%[0-9]+]]:_(p3), [[UV10:%[0-9]+]]:_(p3), [[UV11:%[0-9]+]]:_(p3), [[UV12:%[0-9]+]]:_(p3), [[UV13:%[0-9]+]]:_(p3), [[UV14:%[0-9]+]]:_(p3), [[UV15:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[BITCAST]](<16 x p3>)
     ; CHECK: [[UV16:%[0-9]+]]:_(p3), [[UV17:%[0-9]+]]:_(p3), [[UV18:%[0-9]+]]:_(p3), [[UV19:%[0-9]+]]:_(p3), [[UV20:%[0-9]+]]:_(p3), [[UV21:%[0-9]+]]:_(p3), [[UV22:%[0-9]+]]:_(p3), [[UV23:%[0-9]+]]:_(p3), [[UV24:%[0-9]+]]:_(p3), [[UV25:%[0-9]+]]:_(p3), [[UV26:%[0-9]+]]:_(p3), [[UV27:%[0-9]+]]:_(p3), [[UV28:%[0-9]+]]:_(p3), [[UV29:%[0-9]+]]:_(p3), [[UV30:%[0-9]+]]:_(p3), [[UV31:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[BITCAST1]](<16 x p3>)
     ; CHECK: [[UV32:%[0-9]+]]:_(p3), [[UV33:%[0-9]+]]:_(p3), [[UV34:%[0-9]+]]:_(p3), [[UV35:%[0-9]+]]:_(p3), [[UV36:%[0-9]+]]:_(p3), [[UV37:%[0-9]+]]:_(p3), [[UV38:%[0-9]+]]:_(p3), [[UV39:%[0-9]+]]:_(p3), [[UV40:%[0-9]+]]:_(p3), [[UV41:%[0-9]+]]:_(p3), [[UV42:%[0-9]+]]:_(p3), [[UV43:%[0-9]+]]:_(p3), [[UV44:%[0-9]+]]:_(p3), [[UV45:%[0-9]+]]:_(p3), [[UV46:%[0-9]+]]:_(p3), [[UV47:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[BITCAST2]](<16 x p3>)
     ; CHECK: [[UV48:%[0-9]+]]:_(p3), [[UV49:%[0-9]+]]:_(p3), [[UV50:%[0-9]+]]:_(p3), [[UV51:%[0-9]+]]:_(p3), [[UV52:%[0-9]+]]:_(p3), [[UV53:%[0-9]+]]:_(p3), [[UV54:%[0-9]+]]:_(p3), [[UV55:%[0-9]+]]:_(p3), [[UV56:%[0-9]+]]:_(p3), [[UV57:%[0-9]+]]:_(p3), [[UV58:%[0-9]+]]:_(p3), [[UV59:%[0-9]+]]:_(p3), [[UV60:%[0-9]+]]:_(p3), [[UV61:%[0-9]+]]:_(p3), [[UV62:%[0-9]+]]:_(p3), [[UV63:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[BITCAST3]](<16 x p3>)
-    ; CHECK: G_STORE [[UV]](p3), [[FRAME_INDEX]](p5) :: (store 4 into %stack.0, align 256, addrspace 5)
+    ; CHECK: G_STORE [[UV]](p3), [[FRAME_INDEX]](p5) :: (store (p3) into %stack.0, align 256, addrspace 5)
     ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
-    ; CHECK: G_STORE [[UV1]](p3), [[PTR_ADD3]](p5) :: (store 4 into %stack.0 + 4, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV1]](p3), [[PTR_ADD3]](p5) :: (store (p3) into %stack.0 + 4, basealign 256, addrspace 5)
     ; CHECK: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK: [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
-    ; CHECK: G_STORE [[UV2]](p3), [[PTR_ADD4]](p5) :: (store 4 into %stack.0 + 8, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV2]](p3), [[PTR_ADD4]](p5) :: (store (p3) into %stack.0 + 8, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
     ; CHECK: [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C5]](s32)
-    ; CHECK: G_STORE [[UV3]](p3), [[PTR_ADD5]](p5) :: (store 4 into %stack.0 + 12, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV3]](p3), [[PTR_ADD5]](p5) :: (store (p3) into %stack.0 + 12, basealign 256, addrspace 5)
     ; CHECK: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[PTR_ADD6:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C6]](s32)
-    ; CHECK: G_STORE [[UV4]](p3), [[PTR_ADD6]](p5) :: (store 4 into %stack.0 + 16, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV4]](p3), [[PTR_ADD6]](p5) :: (store (p3) into %stack.0 + 16, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; CHECK: [[PTR_ADD7:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C7]](s32)
-    ; CHECK: G_STORE [[UV5]](p3), [[PTR_ADD7]](p5) :: (store 4 into %stack.0 + 20, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV5]](p3), [[PTR_ADD7]](p5) :: (store (p3) into %stack.0 + 20, basealign 256, addrspace 5)
     ; CHECK: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK: [[PTR_ADD8:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C8]](s32)
-    ; CHECK: G_STORE [[UV6]](p3), [[PTR_ADD8]](p5) :: (store 4 into %stack.0 + 24, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV6]](p3), [[PTR_ADD8]](p5) :: (store (p3) into %stack.0 + 24, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
     ; CHECK: [[PTR_ADD9:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C9]](s32)
-    ; CHECK: G_STORE [[UV7]](p3), [[PTR_ADD9]](p5) :: (store 4 into %stack.0 + 28, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV7]](p3), [[PTR_ADD9]](p5) :: (store (p3) into %stack.0 + 28, basealign 256, addrspace 5)
     ; CHECK: [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; CHECK: [[PTR_ADD10:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s32)
-    ; CHECK: G_STORE [[UV8]](p3), [[PTR_ADD10]](p5) :: (store 4 into %stack.0 + 32, align 32, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV8]](p3), [[PTR_ADD10]](p5) :: (store (p3) into %stack.0 + 32, align 32, basealign 256, addrspace 5)
     ; CHECK: [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 36
     ; CHECK: [[PTR_ADD11:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s32)
-    ; CHECK: G_STORE [[UV9]](p3), [[PTR_ADD11]](p5) :: (store 4 into %stack.0 + 36, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV9]](p3), [[PTR_ADD11]](p5) :: (store (p3) into %stack.0 + 36, basealign 256, addrspace 5)
     ; CHECK: [[C12:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
     ; CHECK: [[PTR_ADD12:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s32)
-    ; CHECK: G_STORE [[UV10]](p3), [[PTR_ADD12]](p5) :: (store 4 into %stack.0 + 40, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV10]](p3), [[PTR_ADD12]](p5) :: (store (p3) into %stack.0 + 40, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 44
     ; CHECK: [[PTR_ADD13:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C13]](s32)
-    ; CHECK: G_STORE [[UV11]](p3), [[PTR_ADD13]](p5) :: (store 4 into %stack.0 + 44, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV11]](p3), [[PTR_ADD13]](p5) :: (store (p3) into %stack.0 + 44, basealign 256, addrspace 5)
     ; CHECK: [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 48
     ; CHECK: [[PTR_ADD14:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C14]](s32)
-    ; CHECK: G_STORE [[UV12]](p3), [[PTR_ADD14]](p5) :: (store 4 into %stack.0 + 48, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV12]](p3), [[PTR_ADD14]](p5) :: (store (p3) into %stack.0 + 48, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 52
     ; CHECK: [[PTR_ADD15:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C15]](s32)
-    ; CHECK: G_STORE [[UV13]](p3), [[PTR_ADD15]](p5) :: (store 4 into %stack.0 + 52, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV13]](p3), [[PTR_ADD15]](p5) :: (store (p3) into %stack.0 + 52, basealign 256, addrspace 5)
     ; CHECK: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 56
     ; CHECK: [[PTR_ADD16:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C16]](s32)
-    ; CHECK: G_STORE [[UV14]](p3), [[PTR_ADD16]](p5) :: (store 4 into %stack.0 + 56, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV14]](p3), [[PTR_ADD16]](p5) :: (store (p3) into %stack.0 + 56, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 60
     ; CHECK: [[PTR_ADD17:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C17]](s32)
-    ; CHECK: G_STORE [[UV15]](p3), [[PTR_ADD17]](p5) :: (store 4 into %stack.0 + 60, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV15]](p3), [[PTR_ADD17]](p5) :: (store (p3) into %stack.0 + 60, basealign 256, addrspace 5)
     ; CHECK: [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
     ; CHECK: [[PTR_ADD18:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C18]](s32)
-    ; CHECK: G_STORE [[UV16]](p3), [[PTR_ADD18]](p5) :: (store 4 into %stack.0 + 64, align 64, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV16]](p3), [[PTR_ADD18]](p5) :: (store (p3) into %stack.0 + 64, align 64, basealign 256, addrspace 5)
     ; CHECK: [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 68
     ; CHECK: [[PTR_ADD19:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C19]](s32)
-    ; CHECK: G_STORE [[UV17]](p3), [[PTR_ADD19]](p5) :: (store 4 into %stack.0 + 68, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV17]](p3), [[PTR_ADD19]](p5) :: (store (p3) into %stack.0 + 68, basealign 256, addrspace 5)
     ; CHECK: [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 72
     ; CHECK: [[PTR_ADD20:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C20]](s32)
-    ; CHECK: G_STORE [[UV18]](p3), [[PTR_ADD20]](p5) :: (store 4 into %stack.0 + 72, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV18]](p3), [[PTR_ADD20]](p5) :: (store (p3) into %stack.0 + 72, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 76
     ; CHECK: [[PTR_ADD21:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C21]](s32)
-    ; CHECK: G_STORE [[UV19]](p3), [[PTR_ADD21]](p5) :: (store 4 into %stack.0 + 76, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV19]](p3), [[PTR_ADD21]](p5) :: (store (p3) into %stack.0 + 76, basealign 256, addrspace 5)
     ; CHECK: [[C22:%[0-9]+]]:_(s32) = G_CONSTANT i32 80
     ; CHECK: [[PTR_ADD22:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C22]](s32)
-    ; CHECK: G_STORE [[UV20]](p3), [[PTR_ADD22]](p5) :: (store 4 into %stack.0 + 80, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV20]](p3), [[PTR_ADD22]](p5) :: (store (p3) into %stack.0 + 80, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C23:%[0-9]+]]:_(s32) = G_CONSTANT i32 84
     ; CHECK: [[PTR_ADD23:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C23]](s32)
-    ; CHECK: G_STORE [[UV21]](p3), [[PTR_ADD23]](p5) :: (store 4 into %stack.0 + 84, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV21]](p3), [[PTR_ADD23]](p5) :: (store (p3) into %stack.0 + 84, basealign 256, addrspace 5)
     ; CHECK: [[C24:%[0-9]+]]:_(s32) = G_CONSTANT i32 88
     ; CHECK: [[PTR_ADD24:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C24]](s32)
-    ; CHECK: G_STORE [[UV22]](p3), [[PTR_ADD24]](p5) :: (store 4 into %stack.0 + 88, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV22]](p3), [[PTR_ADD24]](p5) :: (store (p3) into %stack.0 + 88, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C25:%[0-9]+]]:_(s32) = G_CONSTANT i32 92
     ; CHECK: [[PTR_ADD25:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C25]](s32)
-    ; CHECK: G_STORE [[UV23]](p3), [[PTR_ADD25]](p5) :: (store 4 into %stack.0 + 92, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV23]](p3), [[PTR_ADD25]](p5) :: (store (p3) into %stack.0 + 92, basealign 256, addrspace 5)
     ; CHECK: [[C26:%[0-9]+]]:_(s32) = G_CONSTANT i32 96
     ; CHECK: [[PTR_ADD26:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C26]](s32)
-    ; CHECK: G_STORE [[UV24]](p3), [[PTR_ADD26]](p5) :: (store 4 into %stack.0 + 96, align 32, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV24]](p3), [[PTR_ADD26]](p5) :: (store (p3) into %stack.0 + 96, align 32, basealign 256, addrspace 5)
     ; CHECK: [[C27:%[0-9]+]]:_(s32) = G_CONSTANT i32 100
     ; CHECK: [[PTR_ADD27:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C27]](s32)
-    ; CHECK: G_STORE [[UV25]](p3), [[PTR_ADD27]](p5) :: (store 4 into %stack.0 + 100, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV25]](p3), [[PTR_ADD27]](p5) :: (store (p3) into %stack.0 + 100, basealign 256, addrspace 5)
     ; CHECK: [[C28:%[0-9]+]]:_(s32) = G_CONSTANT i32 104
     ; CHECK: [[PTR_ADD28:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C28]](s32)
-    ; CHECK: G_STORE [[UV26]](p3), [[PTR_ADD28]](p5) :: (store 4 into %stack.0 + 104, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV26]](p3), [[PTR_ADD28]](p5) :: (store (p3) into %stack.0 + 104, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C29:%[0-9]+]]:_(s32) = G_CONSTANT i32 108
     ; CHECK: [[PTR_ADD29:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C29]](s32)
-    ; CHECK: G_STORE [[UV27]](p3), [[PTR_ADD29]](p5) :: (store 4 into %stack.0 + 108, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV27]](p3), [[PTR_ADD29]](p5) :: (store (p3) into %stack.0 + 108, basealign 256, addrspace 5)
     ; CHECK: [[C30:%[0-9]+]]:_(s32) = G_CONSTANT i32 112
     ; CHECK: [[PTR_ADD30:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C30]](s32)
-    ; CHECK: G_STORE [[UV28]](p3), [[PTR_ADD30]](p5) :: (store 4 into %stack.0 + 112, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV28]](p3), [[PTR_ADD30]](p5) :: (store (p3) into %stack.0 + 112, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C31:%[0-9]+]]:_(s32) = G_CONSTANT i32 116
     ; CHECK: [[PTR_ADD31:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C31]](s32)
-    ; CHECK: G_STORE [[UV29]](p3), [[PTR_ADD31]](p5) :: (store 4 into %stack.0 + 116, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV29]](p3), [[PTR_ADD31]](p5) :: (store (p3) into %stack.0 + 116, basealign 256, addrspace 5)
     ; CHECK: [[C32:%[0-9]+]]:_(s32) = G_CONSTANT i32 120
     ; CHECK: [[PTR_ADD32:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C32]](s32)
-    ; CHECK: G_STORE [[UV30]](p3), [[PTR_ADD32]](p5) :: (store 4 into %stack.0 + 120, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV30]](p3), [[PTR_ADD32]](p5) :: (store (p3) into %stack.0 + 120, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C33:%[0-9]+]]:_(s32) = G_CONSTANT i32 124
     ; CHECK: [[PTR_ADD33:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C33]](s32)
-    ; CHECK: G_STORE [[UV31]](p3), [[PTR_ADD33]](p5) :: (store 4 into %stack.0 + 124, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV31]](p3), [[PTR_ADD33]](p5) :: (store (p3) into %stack.0 + 124, basealign 256, addrspace 5)
     ; CHECK: [[C34:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
     ; CHECK: [[PTR_ADD34:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C34]](s32)
-    ; CHECK: G_STORE [[UV32]](p3), [[PTR_ADD34]](p5) :: (store 4 into %stack.0 + 128, align 128, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV32]](p3), [[PTR_ADD34]](p5) :: (store (p3) into %stack.0 + 128, align 128, basealign 256, addrspace 5)
     ; CHECK: [[C35:%[0-9]+]]:_(s32) = G_CONSTANT i32 132
     ; CHECK: [[PTR_ADD35:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C35]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:_(p5) = COPY [[PTR_ADD35]](p5)
-    ; CHECK: G_STORE [[UV33]](p3), [[COPY1]](p5) :: (store 4 into %stack.0 + 132, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV33]](p3), [[COPY1]](p5) :: (store (p3) into %stack.0 + 132, basealign 256, addrspace 5)
     ; CHECK: [[C36:%[0-9]+]]:_(s32) = G_CONSTANT i32 136
     ; CHECK: [[PTR_ADD36:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C36]](s32)
-    ; CHECK: G_STORE [[UV34]](p3), [[PTR_ADD36]](p5) :: (store 4 into %stack.0 + 136, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV34]](p3), [[PTR_ADD36]](p5) :: (store (p3) into %stack.0 + 136, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C37:%[0-9]+]]:_(s32) = G_CONSTANT i32 140
     ; CHECK: [[PTR_ADD37:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C37]](s32)
-    ; CHECK: G_STORE [[UV35]](p3), [[PTR_ADD37]](p5) :: (store 4 into %stack.0 + 140, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV35]](p3), [[PTR_ADD37]](p5) :: (store (p3) into %stack.0 + 140, basealign 256, addrspace 5)
     ; CHECK: [[C38:%[0-9]+]]:_(s32) = G_CONSTANT i32 144
     ; CHECK: [[PTR_ADD38:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C38]](s32)
-    ; CHECK: G_STORE [[UV36]](p3), [[PTR_ADD38]](p5) :: (store 4 into %stack.0 + 144, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV36]](p3), [[PTR_ADD38]](p5) :: (store (p3) into %stack.0 + 144, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C39:%[0-9]+]]:_(s32) = G_CONSTANT i32 148
     ; CHECK: [[PTR_ADD39:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C39]](s32)
-    ; CHECK: G_STORE [[UV37]](p3), [[PTR_ADD39]](p5) :: (store 4 into %stack.0 + 148, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV37]](p3), [[PTR_ADD39]](p5) :: (store (p3) into %stack.0 + 148, basealign 256, addrspace 5)
     ; CHECK: [[C40:%[0-9]+]]:_(s32) = G_CONSTANT i32 152
     ; CHECK: [[PTR_ADD40:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C40]](s32)
-    ; CHECK: G_STORE [[UV38]](p3), [[PTR_ADD40]](p5) :: (store 4 into %stack.0 + 152, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV38]](p3), [[PTR_ADD40]](p5) :: (store (p3) into %stack.0 + 152, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C41:%[0-9]+]]:_(s32) = G_CONSTANT i32 156
     ; CHECK: [[PTR_ADD41:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C41]](s32)
-    ; CHECK: G_STORE [[UV39]](p3), [[PTR_ADD41]](p5) :: (store 4 into %stack.0 + 156, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV39]](p3), [[PTR_ADD41]](p5) :: (store (p3) into %stack.0 + 156, basealign 256, addrspace 5)
     ; CHECK: [[C42:%[0-9]+]]:_(s32) = G_CONSTANT i32 160
     ; CHECK: [[PTR_ADD42:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C42]](s32)
-    ; CHECK: G_STORE [[UV40]](p3), [[PTR_ADD42]](p5) :: (store 4 into %stack.0 + 160, align 32, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV40]](p3), [[PTR_ADD42]](p5) :: (store (p3) into %stack.0 + 160, align 32, basealign 256, addrspace 5)
     ; CHECK: [[C43:%[0-9]+]]:_(s32) = G_CONSTANT i32 164
     ; CHECK: [[PTR_ADD43:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C43]](s32)
-    ; CHECK: G_STORE [[UV41]](p3), [[PTR_ADD43]](p5) :: (store 4 into %stack.0 + 164, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV41]](p3), [[PTR_ADD43]](p5) :: (store (p3) into %stack.0 + 164, basealign 256, addrspace 5)
     ; CHECK: [[C44:%[0-9]+]]:_(s32) = G_CONSTANT i32 168
     ; CHECK: [[PTR_ADD44:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C44]](s32)
-    ; CHECK: G_STORE [[UV42]](p3), [[PTR_ADD44]](p5) :: (store 4 into %stack.0 + 168, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV42]](p3), [[PTR_ADD44]](p5) :: (store (p3) into %stack.0 + 168, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C45:%[0-9]+]]:_(s32) = G_CONSTANT i32 172
     ; CHECK: [[PTR_ADD45:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C45]](s32)
-    ; CHECK: G_STORE [[UV43]](p3), [[PTR_ADD45]](p5) :: (store 4 into %stack.0 + 172, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV43]](p3), [[PTR_ADD45]](p5) :: (store (p3) into %stack.0 + 172, basealign 256, addrspace 5)
     ; CHECK: [[C46:%[0-9]+]]:_(s32) = G_CONSTANT i32 176
     ; CHECK: [[PTR_ADD46:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C46]](s32)
-    ; CHECK: G_STORE [[UV44]](p3), [[PTR_ADD46]](p5) :: (store 4 into %stack.0 + 176, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV44]](p3), [[PTR_ADD46]](p5) :: (store (p3) into %stack.0 + 176, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C47:%[0-9]+]]:_(s32) = G_CONSTANT i32 180
     ; CHECK: [[PTR_ADD47:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C47]](s32)
-    ; CHECK: G_STORE [[UV45]](p3), [[PTR_ADD47]](p5) :: (store 4 into %stack.0 + 180, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV45]](p3), [[PTR_ADD47]](p5) :: (store (p3) into %stack.0 + 180, basealign 256, addrspace 5)
     ; CHECK: [[C48:%[0-9]+]]:_(s32) = G_CONSTANT i32 184
     ; CHECK: [[PTR_ADD48:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C48]](s32)
-    ; CHECK: G_STORE [[UV46]](p3), [[PTR_ADD48]](p5) :: (store 4 into %stack.0 + 184, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV46]](p3), [[PTR_ADD48]](p5) :: (store (p3) into %stack.0 + 184, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C49:%[0-9]+]]:_(s32) = G_CONSTANT i32 188
     ; CHECK: [[PTR_ADD49:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C49]](s32)
-    ; CHECK: G_STORE [[UV47]](p3), [[PTR_ADD49]](p5) :: (store 4 into %stack.0 + 188, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV47]](p3), [[PTR_ADD49]](p5) :: (store (p3) into %stack.0 + 188, basealign 256, addrspace 5)
     ; CHECK: [[C50:%[0-9]+]]:_(s32) = G_CONSTANT i32 192
     ; CHECK: [[PTR_ADD50:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C50]](s32)
-    ; CHECK: G_STORE [[UV48]](p3), [[PTR_ADD50]](p5) :: (store 4 into %stack.0 + 192, align 64, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV48]](p3), [[PTR_ADD50]](p5) :: (store (p3) into %stack.0 + 192, align 64, basealign 256, addrspace 5)
     ; CHECK: [[C51:%[0-9]+]]:_(s32) = G_CONSTANT i32 196
     ; CHECK: [[PTR_ADD51:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C51]](s32)
-    ; CHECK: G_STORE [[UV49]](p3), [[PTR_ADD51]](p5) :: (store 4 into %stack.0 + 196, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV49]](p3), [[PTR_ADD51]](p5) :: (store (p3) into %stack.0 + 196, basealign 256, addrspace 5)
     ; CHECK: [[C52:%[0-9]+]]:_(s32) = G_CONSTANT i32 200
     ; CHECK: [[PTR_ADD52:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C52]](s32)
-    ; CHECK: G_STORE [[UV50]](p3), [[PTR_ADD52]](p5) :: (store 4 into %stack.0 + 200, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV50]](p3), [[PTR_ADD52]](p5) :: (store (p3) into %stack.0 + 200, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C53:%[0-9]+]]:_(s32) = G_CONSTANT i32 204
     ; CHECK: [[PTR_ADD53:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C53]](s32)
-    ; CHECK: G_STORE [[UV51]](p3), [[PTR_ADD53]](p5) :: (store 4 into %stack.0 + 204, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV51]](p3), [[PTR_ADD53]](p5) :: (store (p3) into %stack.0 + 204, basealign 256, addrspace 5)
     ; CHECK: [[C54:%[0-9]+]]:_(s32) = G_CONSTANT i32 208
     ; CHECK: [[PTR_ADD54:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C54]](s32)
-    ; CHECK: G_STORE [[UV52]](p3), [[PTR_ADD54]](p5) :: (store 4 into %stack.0 + 208, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV52]](p3), [[PTR_ADD54]](p5) :: (store (p3) into %stack.0 + 208, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C55:%[0-9]+]]:_(s32) = G_CONSTANT i32 212
     ; CHECK: [[PTR_ADD55:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C55]](s32)
-    ; CHECK: G_STORE [[UV53]](p3), [[PTR_ADD55]](p5) :: (store 4 into %stack.0 + 212, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV53]](p3), [[PTR_ADD55]](p5) :: (store (p3) into %stack.0 + 212, basealign 256, addrspace 5)
     ; CHECK: [[C56:%[0-9]+]]:_(s32) = G_CONSTANT i32 216
     ; CHECK: [[PTR_ADD56:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C56]](s32)
-    ; CHECK: G_STORE [[UV54]](p3), [[PTR_ADD56]](p5) :: (store 4 into %stack.0 + 216, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV54]](p3), [[PTR_ADD56]](p5) :: (store (p3) into %stack.0 + 216, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C57:%[0-9]+]]:_(s32) = G_CONSTANT i32 220
     ; CHECK: [[PTR_ADD57:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C57]](s32)
-    ; CHECK: G_STORE [[UV55]](p3), [[PTR_ADD57]](p5) :: (store 4 into %stack.0 + 220, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV55]](p3), [[PTR_ADD57]](p5) :: (store (p3) into %stack.0 + 220, basealign 256, addrspace 5)
     ; CHECK: [[C58:%[0-9]+]]:_(s32) = G_CONSTANT i32 224
     ; CHECK: [[PTR_ADD58:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C58]](s32)
-    ; CHECK: G_STORE [[UV56]](p3), [[PTR_ADD58]](p5) :: (store 4 into %stack.0 + 224, align 32, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV56]](p3), [[PTR_ADD58]](p5) :: (store (p3) into %stack.0 + 224, align 32, basealign 256, addrspace 5)
     ; CHECK: [[C59:%[0-9]+]]:_(s32) = G_CONSTANT i32 228
     ; CHECK: [[PTR_ADD59:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C59]](s32)
-    ; CHECK: G_STORE [[UV57]](p3), [[PTR_ADD59]](p5) :: (store 4 into %stack.0 + 228, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV57]](p3), [[PTR_ADD59]](p5) :: (store (p3) into %stack.0 + 228, basealign 256, addrspace 5)
     ; CHECK: [[C60:%[0-9]+]]:_(s32) = G_CONSTANT i32 232
     ; CHECK: [[PTR_ADD60:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C60]](s32)
-    ; CHECK: G_STORE [[UV58]](p3), [[PTR_ADD60]](p5) :: (store 4 into %stack.0 + 232, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV58]](p3), [[PTR_ADD60]](p5) :: (store (p3) into %stack.0 + 232, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C61:%[0-9]+]]:_(s32) = G_CONSTANT i32 236
     ; CHECK: [[PTR_ADD61:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C61]](s32)
-    ; CHECK: G_STORE [[UV59]](p3), [[PTR_ADD61]](p5) :: (store 4 into %stack.0 + 236, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV59]](p3), [[PTR_ADD61]](p5) :: (store (p3) into %stack.0 + 236, basealign 256, addrspace 5)
     ; CHECK: [[C62:%[0-9]+]]:_(s32) = G_CONSTANT i32 240
     ; CHECK: [[PTR_ADD62:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C62]](s32)
-    ; CHECK: G_STORE [[UV60]](p3), [[PTR_ADD62]](p5) :: (store 4 into %stack.0 + 240, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV60]](p3), [[PTR_ADD62]](p5) :: (store (p3) into %stack.0 + 240, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C63:%[0-9]+]]:_(s32) = G_CONSTANT i32 244
     ; CHECK: [[PTR_ADD63:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C63]](s32)
-    ; CHECK: G_STORE [[UV61]](p3), [[PTR_ADD63]](p5) :: (store 4 into %stack.0 + 244, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV61]](p3), [[PTR_ADD63]](p5) :: (store (p3) into %stack.0 + 244, basealign 256, addrspace 5)
     ; CHECK: [[C64:%[0-9]+]]:_(s32) = G_CONSTANT i32 248
     ; CHECK: [[PTR_ADD64:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C64]](s32)
-    ; CHECK: G_STORE [[UV62]](p3), [[PTR_ADD64]](p5) :: (store 4 into %stack.0 + 248, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV62]](p3), [[PTR_ADD64]](p5) :: (store (p3) into %stack.0 + 248, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C65:%[0-9]+]]:_(s32) = G_CONSTANT i32 252
     ; CHECK: [[PTR_ADD65:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C65]](s32)
-    ; CHECK: G_STORE [[UV63]](p3), [[PTR_ADD65]](p5) :: (store 4 into %stack.0 + 252, basealign 256, addrspace 5)
-    ; CHECK: [[LOAD4:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD35]](p5) :: (load 4 from %stack.0 + 132, addrspace 5)
+    ; CHECK: G_STORE [[UV63]](p3), [[PTR_ADD65]](p5) :: (store (p3) into %stack.0 + 252, basealign 256, addrspace 5)
+    ; CHECK: [[LOAD4:%[0-9]+]]:_(p3) = G_LOAD [[PTR_ADD35]](p5) :: (load (p3) from %stack.0 + 132, addrspace 5)
     ; CHECK: S_ENDPGM 0, implicit [[LOAD4]](p3)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_CONSTANT i32 33
-    %2:_(<64 x p3>) = G_LOAD %0 :: (load 256, align 4, addrspace 4)
+    %2:_(<64 x p3>) = G_LOAD %0 :: (load (<64 x p3>), align 4, addrspace 4)
     %3:_(p3) = G_EXTRACT_VECTOR_ELT %2, %1
     S_ENDPGM 0, implicit %3
 ...
@@ -1705,220 +1705,220 @@ body: |
     ; CHECK-LABEL: name: extract_vector_elt_varidx_v64s32
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load 64, align 4, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p1) :: (load (<16 x s32>), align 4, addrspace 4)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load 64 from unknown-address + 64, align 4, addrspace 4)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<16 x s32>) from unknown-address + 64, align 4, addrspace 4)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
     ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CHECK: [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load 64 from unknown-address + 128, align 4, addrspace 4)
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<16 x s32>) from unknown-address + 128, align 4, addrspace 4)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 192
     ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load 64 from unknown-address + 192, align 4, addrspace 4)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<16 x s32>) from unknown-address + 192, align 4, addrspace 4)
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<16 x s32>)
     ; CHECK: [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<16 x s32>)
     ; CHECK: [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32), [[UV40:%[0-9]+]]:_(s32), [[UV41:%[0-9]+]]:_(s32), [[UV42:%[0-9]+]]:_(s32), [[UV43:%[0-9]+]]:_(s32), [[UV44:%[0-9]+]]:_(s32), [[UV45:%[0-9]+]]:_(s32), [[UV46:%[0-9]+]]:_(s32), [[UV47:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD2]](<16 x s32>)
     ; CHECK: [[UV48:%[0-9]+]]:_(s32), [[UV49:%[0-9]+]]:_(s32), [[UV50:%[0-9]+]]:_(s32), [[UV51:%[0-9]+]]:_(s32), [[UV52:%[0-9]+]]:_(s32), [[UV53:%[0-9]+]]:_(s32), [[UV54:%[0-9]+]]:_(s32), [[UV55:%[0-9]+]]:_(s32), [[UV56:%[0-9]+]]:_(s32), [[UV57:%[0-9]+]]:_(s32), [[UV58:%[0-9]+]]:_(s32), [[UV59:%[0-9]+]]:_(s32), [[UV60:%[0-9]+]]:_(s32), [[UV61:%[0-9]+]]:_(s32), [[UV62:%[0-9]+]]:_(s32), [[UV63:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD3]](<16 x s32>)
-    ; CHECK: G_STORE [[UV]](s32), [[FRAME_INDEX]](p5) :: (store 4 into %stack.0, align 256, addrspace 5)
+    ; CHECK: G_STORE [[UV]](s32), [[FRAME_INDEX]](p5) :: (store (s32) into %stack.0, align 256, addrspace 5)
     ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
-    ; CHECK: G_STORE [[UV1]](s32), [[PTR_ADD3]](p5) :: (store 4 into %stack.0 + 4, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV1]](s32), [[PTR_ADD3]](p5) :: (store (s32) into %stack.0 + 4, basealign 256, addrspace 5)
     ; CHECK: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK: [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
-    ; CHECK: G_STORE [[UV2]](s32), [[PTR_ADD4]](p5) :: (store 4 into %stack.0 + 8, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV2]](s32), [[PTR_ADD4]](p5) :: (store (s32) into %stack.0 + 8, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
     ; CHECK: [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C5]](s32)
-    ; CHECK: G_STORE [[UV3]](s32), [[PTR_ADD5]](p5) :: (store 4 into %stack.0 + 12, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV3]](s32), [[PTR_ADD5]](p5) :: (store (s32) into %stack.0 + 12, basealign 256, addrspace 5)
     ; CHECK: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[PTR_ADD6:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C6]](s32)
-    ; CHECK: G_STORE [[UV4]](s32), [[PTR_ADD6]](p5) :: (store 4 into %stack.0 + 16, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV4]](s32), [[PTR_ADD6]](p5) :: (store (s32) into %stack.0 + 16, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; CHECK: [[PTR_ADD7:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C7]](s32)
-    ; CHECK: G_STORE [[UV5]](s32), [[PTR_ADD7]](p5) :: (store 4 into %stack.0 + 20, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV5]](s32), [[PTR_ADD7]](p5) :: (store (s32) into %stack.0 + 20, basealign 256, addrspace 5)
     ; CHECK: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK: [[PTR_ADD8:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C8]](s32)
-    ; CHECK: G_STORE [[UV6]](s32), [[PTR_ADD8]](p5) :: (store 4 into %stack.0 + 24, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV6]](s32), [[PTR_ADD8]](p5) :: (store (s32) into %stack.0 + 24, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
     ; CHECK: [[PTR_ADD9:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C9]](s32)
-    ; CHECK: G_STORE [[UV7]](s32), [[PTR_ADD9]](p5) :: (store 4 into %stack.0 + 28, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV7]](s32), [[PTR_ADD9]](p5) :: (store (s32) into %stack.0 + 28, basealign 256, addrspace 5)
     ; CHECK: [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
     ; CHECK: [[PTR_ADD10:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s32)
-    ; CHECK: G_STORE [[UV8]](s32), [[PTR_ADD10]](p5) :: (store 4 into %stack.0 + 32, align 32, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV8]](s32), [[PTR_ADD10]](p5) :: (store (s32) into %stack.0 + 32, align 32, basealign 256, addrspace 5)
     ; CHECK: [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 36
     ; CHECK: [[PTR_ADD11:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s32)
-    ; CHECK: G_STORE [[UV9]](s32), [[PTR_ADD11]](p5) :: (store 4 into %stack.0 + 36, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV9]](s32), [[PTR_ADD11]](p5) :: (store (s32) into %stack.0 + 36, basealign 256, addrspace 5)
     ; CHECK: [[C12:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
     ; CHECK: [[PTR_ADD12:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s32)
-    ; CHECK: G_STORE [[UV10]](s32), [[PTR_ADD12]](p5) :: (store 4 into %stack.0 + 40, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV10]](s32), [[PTR_ADD12]](p5) :: (store (s32) into %stack.0 + 40, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 44
     ; CHECK: [[PTR_ADD13:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C13]](s32)
-    ; CHECK: G_STORE [[UV11]](s32), [[PTR_ADD13]](p5) :: (store 4 into %stack.0 + 44, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV11]](s32), [[PTR_ADD13]](p5) :: (store (s32) into %stack.0 + 44, basealign 256, addrspace 5)
     ; CHECK: [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 48
     ; CHECK: [[PTR_ADD14:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C14]](s32)
-    ; CHECK: G_STORE [[UV12]](s32), [[PTR_ADD14]](p5) :: (store 4 into %stack.0 + 48, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV12]](s32), [[PTR_ADD14]](p5) :: (store (s32) into %stack.0 + 48, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 52
     ; CHECK: [[PTR_ADD15:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C15]](s32)
-    ; CHECK: G_STORE [[UV13]](s32), [[PTR_ADD15]](p5) :: (store 4 into %stack.0 + 52, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV13]](s32), [[PTR_ADD15]](p5) :: (store (s32) into %stack.0 + 52, basealign 256, addrspace 5)
     ; CHECK: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 56
     ; CHECK: [[PTR_ADD16:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C16]](s32)
-    ; CHECK: G_STORE [[UV14]](s32), [[PTR_ADD16]](p5) :: (store 4 into %stack.0 + 56, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV14]](s32), [[PTR_ADD16]](p5) :: (store (s32) into %stack.0 + 56, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 60
     ; CHECK: [[PTR_ADD17:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C17]](s32)
-    ; CHECK: G_STORE [[UV15]](s32), [[PTR_ADD17]](p5) :: (store 4 into %stack.0 + 60, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV15]](s32), [[PTR_ADD17]](p5) :: (store (s32) into %stack.0 + 60, basealign 256, addrspace 5)
     ; CHECK: [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
     ; CHECK: [[PTR_ADD18:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C18]](s32)
-    ; CHECK: G_STORE [[UV16]](s32), [[PTR_ADD18]](p5) :: (store 4 into %stack.0 + 64, align 64, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV16]](s32), [[PTR_ADD18]](p5) :: (store (s32) into %stack.0 + 64, align 64, basealign 256, addrspace 5)
     ; CHECK: [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 68
     ; CHECK: [[PTR_ADD19:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C19]](s32)
-    ; CHECK: G_STORE [[UV17]](s32), [[PTR_ADD19]](p5) :: (store 4 into %stack.0 + 68, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV17]](s32), [[PTR_ADD19]](p5) :: (store (s32) into %stack.0 + 68, basealign 256, addrspace 5)
     ; CHECK: [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 72
     ; CHECK: [[PTR_ADD20:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C20]](s32)
-    ; CHECK: G_STORE [[UV18]](s32), [[PTR_ADD20]](p5) :: (store 4 into %stack.0 + 72, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV18]](s32), [[PTR_ADD20]](p5) :: (store (s32) into %stack.0 + 72, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 76
     ; CHECK: [[PTR_ADD21:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C21]](s32)
-    ; CHECK: G_STORE [[UV19]](s32), [[PTR_ADD21]](p5) :: (store 4 into %stack.0 + 76, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV19]](s32), [[PTR_ADD21]](p5) :: (store (s32) into %stack.0 + 76, basealign 256, addrspace 5)
     ; CHECK: [[C22:%[0-9]+]]:_(s32) = G_CONSTANT i32 80
     ; CHECK: [[PTR_ADD22:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C22]](s32)
-    ; CHECK: G_STORE [[UV20]](s32), [[PTR_ADD22]](p5) :: (store 4 into %stack.0 + 80, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV20]](s32), [[PTR_ADD22]](p5) :: (store (s32) into %stack.0 + 80, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C23:%[0-9]+]]:_(s32) = G_CONSTANT i32 84
     ; CHECK: [[PTR_ADD23:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C23]](s32)
-    ; CHECK: G_STORE [[UV21]](s32), [[PTR_ADD23]](p5) :: (store 4 into %stack.0 + 84, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV21]](s32), [[PTR_ADD23]](p5) :: (store (s32) into %stack.0 + 84, basealign 256, addrspace 5)
     ; CHECK: [[C24:%[0-9]+]]:_(s32) = G_CONSTANT i32 88
     ; CHECK: [[PTR_ADD24:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C24]](s32)
-    ; CHECK: G_STORE [[UV22]](s32), [[PTR_ADD24]](p5) :: (store 4 into %stack.0 + 88, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV22]](s32), [[PTR_ADD24]](p5) :: (store (s32) into %stack.0 + 88, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C25:%[0-9]+]]:_(s32) = G_CONSTANT i32 92
     ; CHECK: [[PTR_ADD25:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C25]](s32)
-    ; CHECK: G_STORE [[UV23]](s32), [[PTR_ADD25]](p5) :: (store 4 into %stack.0 + 92, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV23]](s32), [[PTR_ADD25]](p5) :: (store (s32) into %stack.0 + 92, basealign 256, addrspace 5)
     ; CHECK: [[C26:%[0-9]+]]:_(s32) = G_CONSTANT i32 96
     ; CHECK: [[PTR_ADD26:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C26]](s32)
-    ; CHECK: G_STORE [[UV24]](s32), [[PTR_ADD26]](p5) :: (store 4 into %stack.0 + 96, align 32, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV24]](s32), [[PTR_ADD26]](p5) :: (store (s32) into %stack.0 + 96, align 32, basealign 256, addrspace 5)
     ; CHECK: [[C27:%[0-9]+]]:_(s32) = G_CONSTANT i32 100
     ; CHECK: [[PTR_ADD27:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C27]](s32)
-    ; CHECK: G_STORE [[UV25]](s32), [[PTR_ADD27]](p5) :: (store 4 into %stack.0 + 100, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV25]](s32), [[PTR_ADD27]](p5) :: (store (s32) into %stack.0 + 100, basealign 256, addrspace 5)
     ; CHECK: [[C28:%[0-9]+]]:_(s32) = G_CONSTANT i32 104
     ; CHECK: [[PTR_ADD28:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C28]](s32)
-    ; CHECK: G_STORE [[UV26]](s32), [[PTR_ADD28]](p5) :: (store 4 into %stack.0 + 104, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV26]](s32), [[PTR_ADD28]](p5) :: (store (s32) into %stack.0 + 104, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C29:%[0-9]+]]:_(s32) = G_CONSTANT i32 108
     ; CHECK: [[PTR_ADD29:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C29]](s32)
-    ; CHECK: G_STORE [[UV27]](s32), [[PTR_ADD29]](p5) :: (store 4 into %stack.0 + 108, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV27]](s32), [[PTR_ADD29]](p5) :: (store (s32) into %stack.0 + 108, basealign 256, addrspace 5)
     ; CHECK: [[C30:%[0-9]+]]:_(s32) = G_CONSTANT i32 112
     ; CHECK: [[PTR_ADD30:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C30]](s32)
-    ; CHECK: G_STORE [[UV28]](s32), [[PTR_ADD30]](p5) :: (store 4 into %stack.0 + 112, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV28]](s32), [[PTR_ADD30]](p5) :: (store (s32) into %stack.0 + 112, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C31:%[0-9]+]]:_(s32) = G_CONSTANT i32 116
     ; CHECK: [[PTR_ADD31:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C31]](s32)
-    ; CHECK: G_STORE [[UV29]](s32), [[PTR_ADD31]](p5) :: (store 4 into %stack.0 + 116, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV29]](s32), [[PTR_ADD31]](p5) :: (store (s32) into %stack.0 + 116, basealign 256, addrspace 5)
     ; CHECK: [[C32:%[0-9]+]]:_(s32) = G_CONSTANT i32 120
     ; CHECK: [[PTR_ADD32:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C32]](s32)
-    ; CHECK: G_STORE [[UV30]](s32), [[PTR_ADD32]](p5) :: (store 4 into %stack.0 + 120, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV30]](s32), [[PTR_ADD32]](p5) :: (store (s32) into %stack.0 + 120, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C33:%[0-9]+]]:_(s32) = G_CONSTANT i32 124
     ; CHECK: [[PTR_ADD33:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C33]](s32)
-    ; CHECK: G_STORE [[UV31]](s32), [[PTR_ADD33]](p5) :: (store 4 into %stack.0 + 124, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV31]](s32), [[PTR_ADD33]](p5) :: (store (s32) into %stack.0 + 124, basealign 256, addrspace 5)
     ; CHECK: [[C34:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
     ; CHECK: [[PTR_ADD34:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C34]](s32)
-    ; CHECK: G_STORE [[UV32]](s32), [[PTR_ADD34]](p5) :: (store 4 into %stack.0 + 128, align 128, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV32]](s32), [[PTR_ADD34]](p5) :: (store (s32) into %stack.0 + 128, align 128, basealign 256, addrspace 5)
     ; CHECK: [[C35:%[0-9]+]]:_(s32) = G_CONSTANT i32 132
     ; CHECK: [[PTR_ADD35:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C35]](s32)
-    ; CHECK: G_STORE [[UV33]](s32), [[PTR_ADD35]](p5) :: (store 4 into %stack.0 + 132, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV33]](s32), [[PTR_ADD35]](p5) :: (store (s32) into %stack.0 + 132, basealign 256, addrspace 5)
     ; CHECK: [[C36:%[0-9]+]]:_(s32) = G_CONSTANT i32 136
     ; CHECK: [[PTR_ADD36:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C36]](s32)
-    ; CHECK: G_STORE [[UV34]](s32), [[PTR_ADD36]](p5) :: (store 4 into %stack.0 + 136, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV34]](s32), [[PTR_ADD36]](p5) :: (store (s32) into %stack.0 + 136, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C37:%[0-9]+]]:_(s32) = G_CONSTANT i32 140
     ; CHECK: [[PTR_ADD37:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C37]](s32)
-    ; CHECK: G_STORE [[UV35]](s32), [[PTR_ADD37]](p5) :: (store 4 into %stack.0 + 140, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV35]](s32), [[PTR_ADD37]](p5) :: (store (s32) into %stack.0 + 140, basealign 256, addrspace 5)
     ; CHECK: [[C38:%[0-9]+]]:_(s32) = G_CONSTANT i32 144
     ; CHECK: [[PTR_ADD38:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C38]](s32)
-    ; CHECK: G_STORE [[UV36]](s32), [[PTR_ADD38]](p5) :: (store 4 into %stack.0 + 144, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV36]](s32), [[PTR_ADD38]](p5) :: (store (s32) into %stack.0 + 144, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C39:%[0-9]+]]:_(s32) = G_CONSTANT i32 148
     ; CHECK: [[PTR_ADD39:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C39]](s32)
-    ; CHECK: G_STORE [[UV37]](s32), [[PTR_ADD39]](p5) :: (store 4 into %stack.0 + 148, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV37]](s32), [[PTR_ADD39]](p5) :: (store (s32) into %stack.0 + 148, basealign 256, addrspace 5)
     ; CHECK: [[C40:%[0-9]+]]:_(s32) = G_CONSTANT i32 152
     ; CHECK: [[PTR_ADD40:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C40]](s32)
-    ; CHECK: G_STORE [[UV38]](s32), [[PTR_ADD40]](p5) :: (store 4 into %stack.0 + 152, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV38]](s32), [[PTR_ADD40]](p5) :: (store (s32) into %stack.0 + 152, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C41:%[0-9]+]]:_(s32) = G_CONSTANT i32 156
     ; CHECK: [[PTR_ADD41:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C41]](s32)
-    ; CHECK: G_STORE [[UV39]](s32), [[PTR_ADD41]](p5) :: (store 4 into %stack.0 + 156, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV39]](s32), [[PTR_ADD41]](p5) :: (store (s32) into %stack.0 + 156, basealign 256, addrspace 5)
     ; CHECK: [[C42:%[0-9]+]]:_(s32) = G_CONSTANT i32 160
     ; CHECK: [[PTR_ADD42:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C42]](s32)
-    ; CHECK: G_STORE [[UV40]](s32), [[PTR_ADD42]](p5) :: (store 4 into %stack.0 + 160, align 32, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV40]](s32), [[PTR_ADD42]](p5) :: (store (s32) into %stack.0 + 160, align 32, basealign 256, addrspace 5)
     ; CHECK: [[C43:%[0-9]+]]:_(s32) = G_CONSTANT i32 164
     ; CHECK: [[PTR_ADD43:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C43]](s32)
-    ; CHECK: G_STORE [[UV41]](s32), [[PTR_ADD43]](p5) :: (store 4 into %stack.0 + 164, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV41]](s32), [[PTR_ADD43]](p5) :: (store (s32) into %stack.0 + 164, basealign 256, addrspace 5)
     ; CHECK: [[C44:%[0-9]+]]:_(s32) = G_CONSTANT i32 168
     ; CHECK: [[PTR_ADD44:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C44]](s32)
-    ; CHECK: G_STORE [[UV42]](s32), [[PTR_ADD44]](p5) :: (store 4 into %stack.0 + 168, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV42]](s32), [[PTR_ADD44]](p5) :: (store (s32) into %stack.0 + 168, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C45:%[0-9]+]]:_(s32) = G_CONSTANT i32 172
     ; CHECK: [[PTR_ADD45:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C45]](s32)
-    ; CHECK: G_STORE [[UV43]](s32), [[PTR_ADD45]](p5) :: (store 4 into %stack.0 + 172, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV43]](s32), [[PTR_ADD45]](p5) :: (store (s32) into %stack.0 + 172, basealign 256, addrspace 5)
     ; CHECK: [[C46:%[0-9]+]]:_(s32) = G_CONSTANT i32 176
     ; CHECK: [[PTR_ADD46:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C46]](s32)
-    ; CHECK: G_STORE [[UV44]](s32), [[PTR_ADD46]](p5) :: (store 4 into %stack.0 + 176, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV44]](s32), [[PTR_ADD46]](p5) :: (store (s32) into %stack.0 + 176, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C47:%[0-9]+]]:_(s32) = G_CONSTANT i32 180
     ; CHECK: [[PTR_ADD47:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C47]](s32)
-    ; CHECK: G_STORE [[UV45]](s32), [[PTR_ADD47]](p5) :: (store 4 into %stack.0 + 180, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV45]](s32), [[PTR_ADD47]](p5) :: (store (s32) into %stack.0 + 180, basealign 256, addrspace 5)
     ; CHECK: [[C48:%[0-9]+]]:_(s32) = G_CONSTANT i32 184
     ; CHECK: [[PTR_ADD48:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C48]](s32)
-    ; CHECK: G_STORE [[UV46]](s32), [[PTR_ADD48]](p5) :: (store 4 into %stack.0 + 184, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV46]](s32), [[PTR_ADD48]](p5) :: (store (s32) into %stack.0 + 184, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C49:%[0-9]+]]:_(s32) = G_CONSTANT i32 188
     ; CHECK: [[PTR_ADD49:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C49]](s32)
-    ; CHECK: G_STORE [[UV47]](s32), [[PTR_ADD49]](p5) :: (store 4 into %stack.0 + 188, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV47]](s32), [[PTR_ADD49]](p5) :: (store (s32) into %stack.0 + 188, basealign 256, addrspace 5)
     ; CHECK: [[C50:%[0-9]+]]:_(s32) = G_CONSTANT i32 192
     ; CHECK: [[PTR_ADD50:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C50]](s32)
-    ; CHECK: G_STORE [[UV48]](s32), [[PTR_ADD50]](p5) :: (store 4 into %stack.0 + 192, align 64, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV48]](s32), [[PTR_ADD50]](p5) :: (store (s32) into %stack.0 + 192, align 64, basealign 256, addrspace 5)
     ; CHECK: [[C51:%[0-9]+]]:_(s32) = G_CONSTANT i32 196
     ; CHECK: [[PTR_ADD51:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C51]](s32)
-    ; CHECK: G_STORE [[UV49]](s32), [[PTR_ADD51]](p5) :: (store 4 into %stack.0 + 196, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV49]](s32), [[PTR_ADD51]](p5) :: (store (s32) into %stack.0 + 196, basealign 256, addrspace 5)
     ; CHECK: [[C52:%[0-9]+]]:_(s32) = G_CONSTANT i32 200
     ; CHECK: [[PTR_ADD52:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C52]](s32)
-    ; CHECK: G_STORE [[UV50]](s32), [[PTR_ADD52]](p5) :: (store 4 into %stack.0 + 200, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV50]](s32), [[PTR_ADD52]](p5) :: (store (s32) into %stack.0 + 200, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C53:%[0-9]+]]:_(s32) = G_CONSTANT i32 204
     ; CHECK: [[PTR_ADD53:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C53]](s32)
-    ; CHECK: G_STORE [[UV51]](s32), [[PTR_ADD53]](p5) :: (store 4 into %stack.0 + 204, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV51]](s32), [[PTR_ADD53]](p5) :: (store (s32) into %stack.0 + 204, basealign 256, addrspace 5)
     ; CHECK: [[C54:%[0-9]+]]:_(s32) = G_CONSTANT i32 208
     ; CHECK: [[PTR_ADD54:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C54]](s32)
-    ; CHECK: G_STORE [[UV52]](s32), [[PTR_ADD54]](p5) :: (store 4 into %stack.0 + 208, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV52]](s32), [[PTR_ADD54]](p5) :: (store (s32) into %stack.0 + 208, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C55:%[0-9]+]]:_(s32) = G_CONSTANT i32 212
     ; CHECK: [[PTR_ADD55:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C55]](s32)
-    ; CHECK: G_STORE [[UV53]](s32), [[PTR_ADD55]](p5) :: (store 4 into %stack.0 + 212, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV53]](s32), [[PTR_ADD55]](p5) :: (store (s32) into %stack.0 + 212, basealign 256, addrspace 5)
     ; CHECK: [[C56:%[0-9]+]]:_(s32) = G_CONSTANT i32 216
     ; CHECK: [[PTR_ADD56:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C56]](s32)
-    ; CHECK: G_STORE [[UV54]](s32), [[PTR_ADD56]](p5) :: (store 4 into %stack.0 + 216, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV54]](s32), [[PTR_ADD56]](p5) :: (store (s32) into %stack.0 + 216, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C57:%[0-9]+]]:_(s32) = G_CONSTANT i32 220
     ; CHECK: [[PTR_ADD57:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C57]](s32)
-    ; CHECK: G_STORE [[UV55]](s32), [[PTR_ADD57]](p5) :: (store 4 into %stack.0 + 220, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV55]](s32), [[PTR_ADD57]](p5) :: (store (s32) into %stack.0 + 220, basealign 256, addrspace 5)
     ; CHECK: [[C58:%[0-9]+]]:_(s32) = G_CONSTANT i32 224
     ; CHECK: [[PTR_ADD58:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C58]](s32)
-    ; CHECK: G_STORE [[UV56]](s32), [[PTR_ADD58]](p5) :: (store 4 into %stack.0 + 224, align 32, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV56]](s32), [[PTR_ADD58]](p5) :: (store (s32) into %stack.0 + 224, align 32, basealign 256, addrspace 5)
     ; CHECK: [[C59:%[0-9]+]]:_(s32) = G_CONSTANT i32 228
     ; CHECK: [[PTR_ADD59:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C59]](s32)
-    ; CHECK: G_STORE [[UV57]](s32), [[PTR_ADD59]](p5) :: (store 4 into %stack.0 + 228, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV57]](s32), [[PTR_ADD59]](p5) :: (store (s32) into %stack.0 + 228, basealign 256, addrspace 5)
     ; CHECK: [[C60:%[0-9]+]]:_(s32) = G_CONSTANT i32 232
     ; CHECK: [[PTR_ADD60:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C60]](s32)
-    ; CHECK: G_STORE [[UV58]](s32), [[PTR_ADD60]](p5) :: (store 4 into %stack.0 + 232, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV58]](s32), [[PTR_ADD60]](p5) :: (store (s32) into %stack.0 + 232, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C61:%[0-9]+]]:_(s32) = G_CONSTANT i32 236
     ; CHECK: [[PTR_ADD61:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C61]](s32)
-    ; CHECK: G_STORE [[UV59]](s32), [[PTR_ADD61]](p5) :: (store 4 into %stack.0 + 236, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV59]](s32), [[PTR_ADD61]](p5) :: (store (s32) into %stack.0 + 236, basealign 256, addrspace 5)
     ; CHECK: [[C62:%[0-9]+]]:_(s32) = G_CONSTANT i32 240
     ; CHECK: [[PTR_ADD62:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C62]](s32)
-    ; CHECK: G_STORE [[UV60]](s32), [[PTR_ADD62]](p5) :: (store 4 into %stack.0 + 240, align 16, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV60]](s32), [[PTR_ADD62]](p5) :: (store (s32) into %stack.0 + 240, align 16, basealign 256, addrspace 5)
     ; CHECK: [[C63:%[0-9]+]]:_(s32) = G_CONSTANT i32 244
     ; CHECK: [[PTR_ADD63:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C63]](s32)
-    ; CHECK: G_STORE [[UV61]](s32), [[PTR_ADD63]](p5) :: (store 4 into %stack.0 + 244, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV61]](s32), [[PTR_ADD63]](p5) :: (store (s32) into %stack.0 + 244, basealign 256, addrspace 5)
     ; CHECK: [[C64:%[0-9]+]]:_(s32) = G_CONSTANT i32 248
     ; CHECK: [[PTR_ADD64:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C64]](s32)
-    ; CHECK: G_STORE [[UV62]](s32), [[PTR_ADD64]](p5) :: (store 4 into %stack.0 + 248, align 8, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV62]](s32), [[PTR_ADD64]](p5) :: (store (s32) into %stack.0 + 248, align 8, basealign 256, addrspace 5)
     ; CHECK: [[C65:%[0-9]+]]:_(s32) = G_CONSTANT i32 252
     ; CHECK: [[PTR_ADD65:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C65]](s32)
-    ; CHECK: G_STORE [[UV63]](s32), [[PTR_ADD65]](p5) :: (store 4 into %stack.0 + 252, basealign 256, addrspace 5)
+    ; CHECK: G_STORE [[UV63]](s32), [[PTR_ADD65]](p5) :: (store (s32) into %stack.0 + 252, basealign 256, addrspace 5)
     ; CHECK: [[C66:%[0-9]+]]:_(s32) = G_CONSTANT i32 63
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C66]]
     ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND]], [[C3]]
     ; CHECK: [[PTR_ADD66:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[MUL]](s32)
-    ; CHECK: [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD66]](p5) :: (load 4, addrspace 5)
+    ; CHECK: [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD66]](p5) :: (load (s32), addrspace 5)
     ; CHECK: S_ENDPGM 0, implicit [[LOAD4]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
-    %2:_(<64 x s32>) = G_LOAD %0 :: (load 256, align 4, addrspace 4)
+    %2:_(<64 x s32>) = G_LOAD %0 :: (load (<64 x s32>), align 4, addrspace 4)
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1
     S_ENDPGM 0, implicit %3
 ...

@@ -6,6 +6,7 @@ load(":template_rule.bzl", "template_rule")
 load(":tblgen.bzl", "gentbl")
 load(":config.bzl", "llvm_config_defines")
 load(":targets.bzl", "llvm_targets")
+load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":binary_alias.bzl", "binary_alias")
 
 package(
@@ -24,22 +25,20 @@ llvm_copts = [
     "$(STACK_FRAME_UNLIMITED)",
 ]
 
-template_rule(
+enum_targets_gen(
     name = "targets_def_gen",
     src = "include/llvm/Config/Targets.def.in",
     out = "include/llvm/Config/Targets.def",
-    substitutions = {
-        "@LLVM_ENUM_TARGETS@": "\n".join(["LLVM_TARGET({})".format(t) for t in llvm_targets]),
-    },
+    macro_name = "TARGET",
+    targets = llvm_targets,
 )
 
-template_rule(
+enum_targets_gen(
     name = "asm_printers_def_gen",
     src = "include/llvm/Config/AsmPrinters.def.in",
     out = "include/llvm/Config/AsmPrinters.def",
-    substitutions = {
-        "@LLVM_ENUM_ASM_PRINTERS@": "\n".join(["LLVM_ASM_PRINTER({})".format(t) for t in llvm_targets]),
-    },
+    macro_name = "ASM_PRINTER",
+    targets = llvm_targets,
 )
 
 # List of targets with ASM parsers, filtered to our list of overall targets.
@@ -57,13 +56,12 @@ llvm_target_asm_parsers = [t for t in [
     "X86",
 ] if t in llvm_targets]
 
-template_rule(
+enum_targets_gen(
     name = "asm_parsers_def_gen",
     src = "include/llvm/Config/AsmParsers.def.in",
     out = "include/llvm/Config/AsmParsers.def",
-    substitutions = {
-        "@LLVM_ENUM_ASM_PARSERS@": "\n".join(["LLVM_ASM_PARSER({})".format(t) for t in llvm_target_asm_parsers]),
-    },
+    macro_name = "ASM_PARSER",
+    targets = llvm_target_asm_parsers,
 )
 
 # List of targets with disassemblers, filtered to our list of overall targets.
@@ -81,13 +79,12 @@ llvm_target_disassemblers = [t for t in [
     "X86",
 ] if t in llvm_targets]
 
-template_rule(
+enum_targets_gen(
     name = "disassemblers_def_gen",
     src = "include/llvm/Config/Disassemblers.def.in",
     out = "include/llvm/Config/Disassemblers.def",
-    substitutions = {
-        "@LLVM_ENUM_DISASSEMBLERS@": "\n".join(["LLVM_DISASSEMBLER({})".format(t) for t in llvm_target_disassemblers]),
-    },
+    macro_name = "DISASSEMBLER",
+    targets = llvm_target_disassemblers,
 )
 
 # TODO: Need to replace this with something that actually extracts the git

@@ -100,9 +100,9 @@ body:             |
     ; CHECK-LABEL: name: unmerge_merge_combine
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load 8)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64))
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load 16)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128))
     ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD1]](s128)
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[UV]]
     ; CHECK: [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[C]], [[UV]]
@@ -114,8 +114,8 @@ body:             |
     ; CHECK: $q0 = COPY [[MV]](s128)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s128) = G_ZEXTLOAD %0:_(p0) :: (load 8)
-    %2:_(s128) = G_LOAD %0:_(p0) :: (load 16)
+    %1:_(s128) = G_ZEXTLOAD %0:_(p0) :: (load (s64))
+    %2:_(s128) = G_LOAD %0:_(p0) :: (load (s128))
     %3:_(s128) = G_MUL %1:_, %2:_
     $q0 = COPY %3
     RET_ReallyLR

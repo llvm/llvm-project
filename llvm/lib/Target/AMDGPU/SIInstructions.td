@@ -111,6 +111,18 @@ def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64> {
   let Size = 16; // Requires two 8-byte v_mov_b32_dpp to complete.
 }
 
+// 64-bit scalar move immediate instruction. This is used to avoid subregs
+// initialization and allow rematerialization.
+def S_MOV_B64_IMM_PSEUDO : SPseudoInstSI <(outs SReg_64:$sdst),
+                                          (ins i64imm:$src0)> {
+  let isReMaterializable = 1;
+  let isAsCheapAsAMove = 1;
+  let isMoveImm = 1;
+  let SchedRW = [WriteSALU, Write64Bit];
+  let Size = 16; // Needs maximum 2 s_mov_b32 instructions 8 byte long each.
+  let Uses = [];
+}
+
 // Pseudoinstruction for @llvm.amdgcn.wqm. It is turned into a copy after the
 // WQM pass processes it.
 def WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;

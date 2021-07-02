@@ -120,15 +120,15 @@ body:             |
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; CHECK: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
     ; CHECK: [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.3
-    ; CHECK: G_STORE [[COPY2]](s64), [[FRAME_INDEX]](p0) :: (store 8)
-    ; CHECK: G_STORE [[COPY1]](s64), [[FRAME_INDEX1]](p0) :: (store 8)
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 8)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load 8)
+    ; CHECK: G_STORE [[COPY2]](s64), [[FRAME_INDEX]](p0) :: (store (s64))
+    ; CHECK: G_STORE [[COPY1]](s64), [[FRAME_INDEX1]](p0) :: (store (s64))
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64))
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (dereferenceable load (s64))
     ; CHECK: [[UMULH:%[0-9]+]]:_(s64) = G_UMULH [[LOAD]], [[LOAD1]]
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[LOAD1]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UMULH]](s64), [[C]]
-    ; CHECK: G_STORE [[C]](s64), [[FRAME_INDEX2]](p0) :: (store 8, align 1)
+    ; CHECK: G_STORE [[C]](s64), [[FRAME_INDEX2]](p0) :: (store (s64), align 1)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C1]]
@@ -142,13 +142,13 @@ body:             |
     %3:_(p0) = G_FRAME_INDEX %stack.0
     %4:_(p0) = G_FRAME_INDEX %stack.1
     %6:_(p0) = G_FRAME_INDEX %stack.3
-    G_STORE %2(s64), %3(p0) :: (store 8)
-    G_STORE %1(s64), %4(p0) :: (store 8)
-    %7:_(s64) = G_LOAD %3(p0) :: (dereferenceable load 8)
-    %8:_(s64) = G_LOAD %4(p0) :: (dereferenceable load 8)
+    G_STORE %2(s64), %3(p0) :: (store (s64))
+    G_STORE %1(s64), %4(p0) :: (store (s64))
+    %7:_(s64) = G_LOAD %3(p0) :: (dereferenceable load (s64))
+    %8:_(s64) = G_LOAD %4(p0) :: (dereferenceable load (s64))
     %9:_(s64), %10:_(s1) = G_UMULO %7, %8
     %31:_(s64) = G_CONSTANT i64 0
-    G_STORE %31(s64), %6(p0) :: (store 8, align 1)
+    G_STORE %31(s64), %6(p0) :: (store (s64), align 1)
     %16:_(s64) = G_ZEXT %10(s1)
     $x0 = COPY %9(s64)
     $x1 = COPY %16(s64)

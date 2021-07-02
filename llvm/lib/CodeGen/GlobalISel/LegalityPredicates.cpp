@@ -55,7 +55,7 @@ LegalityPredicate LegalityPredicates::typePairAndMemDescInSet(
   SmallVector<TypePairAndMemDesc, 4> TypesAndMemDesc = TypesAndMemDescInit;
   return [=](const LegalityQuery &Query) {
     TypePairAndMemDesc Match = {Query.Types[TypeIdx0], Query.Types[TypeIdx1],
-                                Query.MMODescrs[MMOIdx].SizeInBits,
+                                Query.MMODescrs[MMOIdx].MemoryTy,
                                 Query.MMODescrs[MMOIdx].AlignInBits};
     return llvm::any_of(TypesAndMemDesc,
                         [=](const TypePairAndMemDesc &Entry) -> bool {
@@ -176,7 +176,7 @@ LegalityPredicate LegalityPredicates::sameSize(unsigned TypeIdx0,
 
 LegalityPredicate LegalityPredicates::memSizeInBytesNotPow2(unsigned MMOIdx) {
   return [=](const LegalityQuery &Query) {
-    return !isPowerOf2_32(Query.MMODescrs[MMOIdx].SizeInBits / 8);
+    return !isPowerOf2_32(Query.MMODescrs[MMOIdx].MemoryTy.getSizeInBytes());
   };
 }
 

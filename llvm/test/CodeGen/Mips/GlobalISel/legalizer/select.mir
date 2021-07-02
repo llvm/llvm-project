@@ -190,9 +190,9 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
     ; MIPS32: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
     ; MIPS32: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    ; MIPS32: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1)
+    ; MIPS32: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %fixed-stack.1)
     ; MIPS32: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
@@ -208,9 +208,9 @@ body:             |
     %5:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %4(s32), %5(s32)
     %8:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    %6:_(s32) = G_LOAD %8(p0) :: (load 4 from %fixed-stack.1, align 8)
+    %6:_(s32) = G_LOAD %8(p0) :: (load (s32) from %fixed-stack.1, align 8)
     %9:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    %7:_(s32) = G_LOAD %9(p0) :: (load 4 from %fixed-stack.0)
+    %7:_(s32) = G_LOAD %9(p0) :: (load (s32) from %fixed-stack.0)
     %2:_(s64) = G_MERGE_VALUES %6(s32), %7(s32)
     %10:_(s64) = G_SELECT %0(s1), %1, %2
     %11:_(s32), %12:_(s32) = G_UNMERGE_VALUES %10(s64)
@@ -262,7 +262,7 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s64) = COPY $d7
     ; MIPS32: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
@@ -272,7 +272,7 @@ body:             |
     %0:_(s64) = COPY $d6
     %1:_(s64) = COPY $d7
     %4:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    %3:_(s32) = G_LOAD %4(p0) :: (load 4 from %fixed-stack.0, align 8)
+    %3:_(s32) = G_LOAD %4(p0) :: (load (s32) from %fixed-stack.0, align 8)
     %2:_(s1) = G_TRUNC %3(s32)
     %5:_(s64) = G_SELECT %2(s1), %0, %1
     $d0 = COPY %5(s64)

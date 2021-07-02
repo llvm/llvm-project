@@ -35,9 +35,9 @@ body:             |
     %5 : rgpr = t2MOVi32imm -858993459
     %6 : rgpr, %7 : rgpr  = t2UMULL killed %3, %5, 14, $noreg
     %8 : rgpr, %9 : rgpr  = t2UMULL killed %4, %5, 14, $noreg
-    t2STRi12 %1, %0, 0, 14, $noreg :: (store 4)
+    t2STRi12 %1, %0, 0, 14, $noreg :: (store (s32))
     %10 : rgpr = t2LSLri %2, 1, 14, $noreg, $noreg
-    t2STRi12 killed %10, %0, 4, 14, $noreg :: (store 4)
+    t2STRi12 killed %10, %0, 4, 14, $noreg :: (store (s32))
 
     ; Make sure we move the paired stores next to each other, and
     ; insert them in an appropriate location.
@@ -48,9 +48,9 @@ body:             |
 
     %11 : rgpr = t2MOVi 55, 14, $noreg, $noreg
     %12 : gprnopc = t2ADDrs %11, killed %7, 19, 14, $noreg, $noreg
-    t2STRi12 killed %12, %0, 16, 14, $noreg :: (store 4)
+    t2STRi12 killed %12, %0, 16, 14, $noreg :: (store (s32))
     %13 : gprnopc = t2ADDrs %11, killed %9, 19, 14, $noreg, $noreg
-    t2STRi12 killed %13, %0, 20, 14, $noreg :: (store 4)
+    t2STRi12 killed %13, %0, 20, 14, $noreg :: (store (s32))
 
     ; Make sure we move the paired stores next to each other.
     ; CHECK: t2STRi12 killed %12,
@@ -73,11 +73,11 @@ body:             |
     %2 : rgpr = COPY $r2
     %1 : rgpr = COPY $r1
     %0 : gpr = COPY $r0
-    t2STRi12 %1, %0, 0, 14, $noreg :: (store 4)
+    t2STRi12 %1, %0, 0, 14, $noreg :: (store (s32))
     %10 : rgpr = t2LSLri %2, 1, 14, $noreg, $noreg
-    t2STRi12 killed %10, %0, 4, 14, $noreg :: (store 4)
+    t2STRi12 killed %10, %0, 4, 14, $noreg :: (store (s32))
     %3 : rgpr = t2MUL %2, %2, 14, $noreg
-    t2STRi12 %3, %0, 8, 14, $noreg :: (store 4)
+    t2STRi12 %3, %0, 8, 14, $noreg :: (store (s32))
 
     ; Make sure we move the paired stores next to each other, and
     ; insert them in an appropriate location.
@@ -100,9 +100,9 @@ body:             |
     %10 : rgpr = t2LSLri %2, 1, 14, $noreg, $noreg
     %11 : rgpr = t2MOVi 55, 14, $noreg, $noreg
     %12 : gprnopc = t2ADDrs %11, killed %7, 19, 14, $noreg, $noreg
-    t2STRi12 killed %12, %0, 16, 14, $noreg :: (store 4)
+    t2STRi12 killed %12, %0, 16, 14, $noreg :: (store (s32))
     %13 : gprnopc = t2ADDrs %11, killed %9, 19, 14, $noreg, $noreg
-    t2STRi12 killed %13, %0, 20, 14, $noreg :: (store 4)
+    t2STRi12 killed %13, %0, 20, 14, $noreg :: (store (s32))
 
     ; Make sure we move the paired stores next to each other.
     ; CHECK: t2STRi12 {{.*}}, 16

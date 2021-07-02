@@ -121,6 +121,95 @@ void mlir::function_like_impl::setAllResultAttrDicts(
                         llvm::to_vector<8>(wrappedAttrs));
 }
 
+void mlir::function_like_impl::insertFunctionArguments(
+    Operation *op, ArrayRef<unsigned> argIndices, TypeRange argTypes,
+    ArrayRef<DictionaryAttr> argAttrs, ArrayRef<Optional<Location>> argLocs,
+    unsigned originalNumArgs, Type newType) {
+  assert(argIndices.size() == argTypes.size());
+  assert(argIndices.size() == argAttrs.size() || argAttrs.empty());
+  assert(argIndices.size() == argLocs.size() || argLocs.empty());
+  if (argIndices.empty())
+    return;
+
+  // There are 3 things that need to be updated:
+  // - Function type.
+  // - Arg attrs.
+  // - Block arguments of entry block.
+  Block &entry = op->getRegion(0).front();
+
+  // Update the argument attributes of the function.
+  auto oldArgAttrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName());
+  if (oldArgAttrs || !argAttrs.empty()) {
+    SmallVector<DictionaryAttr, 4> newArgAttrs;
+    newArgAttrs.reserve(originalNumArgs + argIndices.size());
+    unsigned oldIdx = 0;
+    auto migrate = [&](unsigned untilIdx) {
+      if (!oldArgAttrs) {
+        newArgAttrs.resize(newArgAttrs.size() + untilIdx - oldIdx);
+      } else {
+        auto oldArgAttrRange = oldArgAttrs.getAsRange<DictionaryAttr>();
+        newArgAttrs.append(oldArgAttrRange.begin() + oldIdx,
+                           oldArgAttrRange.begin() + untilIdx);
+      }
+      oldIdx = untilIdx;
+    };
+    for (unsigned i = 0, e = argIndices.size(); i < e; ++i) {
+      migrate(argIndices[i]);
+      newArgAttrs.push_back(argAttrs.empty() ? DictionaryAttr{} : argAttrs[i]);
+    }
+    migrate(originalNumArgs);
+    setAllArgAttrDicts(op, newArgAttrs);
+  }
+
+  // Update the function type and any entry block arguments.
+  op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+  for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
+    entry.insertArgument(argIndices[i], argTypes[i],
+                         argLocs.empty() ? Optional<Location>{} : argLocs[i]);
+}
+
+void mlir::function_like_impl::insertFunctionResults(
+    Operation *op, ArrayRef<unsigned> resultIndices, TypeRange resultTypes,
+    ArrayRef<DictionaryAttr> resultAttrs, unsigned originalNumResults,
+    Type newType) {
+  assert(resultIndices.size() == resultTypes.size());
+  assert(resultIndices.size() == resultAttrs.size() || resultAttrs.empty());
+  if (resultIndices.empty())
+    return;
+
+  // There are 2 things that need to be updated:
+  // - Function type.
+  // - Result attrs.
+
+  // Update the result attributes of the function.
+  auto oldResultAttrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName());
+  if (oldResultAttrs || !resultAttrs.empty()) {
+    SmallVector<DictionaryAttr, 4> newResultAttrs;
+    newResultAttrs.reserve(originalNumResults + resultIndices.size());
+    unsigned oldIdx = 0;
+    auto migrate = [&](unsigned untilIdx) {
+      if (!oldResultAttrs) {
+        newResultAttrs.resize(newResultAttrs.size() + untilIdx - oldIdx);
+      } else {
+        auto oldResultAttrsRange = oldResultAttrs.getAsRange<DictionaryAttr>();
+        newResultAttrs.append(oldResultAttrsRange.begin() + oldIdx,
+                              oldResultAttrsRange.begin() + untilIdx);
+      }
+      oldIdx = untilIdx;
+    };
+    for (unsigned i = 0, e = resultIndices.size(); i < e; ++i) {
+      migrate(resultIndices[i]);
+      newResultAttrs.push_back(resultAttrs.empty() ? DictionaryAttr{}
+                                                   : resultAttrs[i]);
+    }
+    migrate(originalNumResults);
+    setAllResultAttrDicts(op, newResultAttrs);
+  }
+
+  // Update the function type.
+  op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+}
+
 void mlir::function_like_impl::eraseFunctionArguments(
     Operation *op, ArrayRef<unsigned> argIndices, unsigned originalNumArgs,
     Type newType) {

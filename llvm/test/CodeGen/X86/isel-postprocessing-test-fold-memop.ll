@@ -9,6 +9,6 @@ entry:
 
   ; Folding the load+and+icmp instructions into a TEST64mr instruction
   ; should preserve memory operands.
-  ; CHECK: TEST64mr {{.*}} :: (load 8 from {{%.*}})
+  ; CHECK: TEST64mr {{.*}} :: (load (s64) from {{%.*}})
 }
 

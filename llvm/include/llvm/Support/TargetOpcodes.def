@@ -739,6 +739,9 @@ HANDLE_TARGET_OPCODE(G_WRITE_REGISTER)
 /// llvm.memcpy intrinsic
 HANDLE_TARGET_OPCODE(G_MEMCPY)
 
+/// llvm.memcpy.inline intrinsic
+HANDLE_TARGET_OPCODE(G_MEMCPY_INLINE)
+
 /// llvm.memmove intrinsic
 HANDLE_TARGET_OPCODE(G_MEMMOVE)
 

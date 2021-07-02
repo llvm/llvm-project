@@ -77,9 +77,9 @@ define amdgpu_kernel void @v_round_f64(double addrspace(1)* %out, double addrspa
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[0:1], s[6:7]
 ; SI-NEXT:    buffer_load_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
+; SI-NEXT:    s_mov_b32 s0, -1
 ; SI-NEXT:    s_movk_i32 s7, 0xfc01
 ; SI-NEXT:    s_mov_b32 s1, 0xfffff
-; SI-NEXT:    s_mov_b32 s0, -1
 ; SI-NEXT:    s_brev_b32 s6, -2
 ; SI-NEXT:    v_mov_b32_e32 v8, 0x3ff00000
 ; SI-NEXT:    s_waitcnt vmcnt(0)

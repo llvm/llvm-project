@@ -28,13 +28,13 @@ body:             |
     ; LITTLE-LABEL: name: s8_loads_to_s32_little_endian_pat
     ; LITTLE: liveins: $x0, $x1
     ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 1)
+    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
     ; BIG-LABEL: name: s8_loads_to_s32_little_endian_pat
     ; BIG: liveins: $x0, $x1
     ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 1)
+    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
     ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
@@ -51,11 +51,11 @@ body:             |
     %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s32)
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
 
-    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
+    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
 
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
 
     %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
@@ -94,14 +94,14 @@ body:             |
     ; LITTLE-LABEL: name: s8_loads_to_s32_big_endian_pat
     ; LITTLE: liveins: $x0, $x1
     ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 1)
+    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
     ; LITTLE: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
     ; BIG-LABEL: name: s8_loads_to_s32_big_endian_pat
     ; BIG: liveins: $x0, $x1
     ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 1)
+    ; BIG: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
     %cst_1:_(s32) = G_CONSTANT i32 1
@@ -117,14 +117,14 @@ body:             |
     %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s32)
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
 
-    %elt0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
+    %elt0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
 
     %byte0:_(s32) = nuw G_SHL %elt0, %cst_24(s32)
     %byte1:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     %byte2:_(s32) = nuw G_SHL %elt2, %cst_8(s32)
-    %byte3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    %byte3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
 
     %or1:_(s32) = G_OR %byte0, %byte1
     %or2:_(s32) = G_OR %byte2, %byte3
@@ -152,13 +152,13 @@ body:             |
     ; LITTLE-LABEL: name: different_or_pattern
     ; LITTLE: liveins: $x0, $x1
     ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 1)
+    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
     ; BIG-LABEL: name: different_or_pattern
     ; BIG: liveins: $x0, $x1
     ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 1)
+    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 1)
     ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
@@ -175,11 +175,11 @@ body:             |
     %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s32)
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
 
-    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
+    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
 
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
 
     %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
@@ -219,13 +219,13 @@ body:             |
     ; LITTLE-LABEL: name: s16_loads_to_s32_little_endian_pat
     ; LITTLE: liveins: $x0, $x1
     ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 2)
+    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
     ; BIG-LABEL: name: s16_loads_to_s32_little_endian_pat
     ; BIG: liveins: $x0, $x1
     ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 2)
+    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
     ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
@@ -235,8 +235,8 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -260,14 +260,14 @@ body:             |
     ; LITTLE-LABEL: name: s16_loads_to_s32_big_endian_pat
     ; LITTLE: liveins: $x0, $x1
     ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 2)
+    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
     ; LITTLE: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
     ; BIG-LABEL: name: s16_loads_to_s32_big_endian_pat
     ; BIG: liveins: $x0, $x1
     ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 2)
+    ; BIG: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
     %cst_1:_(s64) = G_CONSTANT i64 1
@@ -276,9 +276,9 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %elt0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    %elt0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt0, %cst_16(s32)
-    %low_half:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
 
     %full_load:_(s32) = G_OR %low_half, %high_half
     $w1 = COPY %full_load(s32)
@@ -301,13 +301,13 @@ body:             |
     ; LITTLE-LABEL: name: s16_loads_to_s64_little_endian_pat
     ; LITTLE: liveins: $x0, $x1
     ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s64) = G_LOAD %ptr(p0) :: (load 8, align 2)
+    ; LITTLE: %full_load:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
     ; LITTLE: $x1 = COPY %full_load(s64)
     ; LITTLE: RET_ReallyLR implicit $x1
     ; BIG-LABEL: name: s16_loads_to_s64_little_endian_pat
     ; BIG: liveins: $x0, $x1
     ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load 8, align 2)
+    ; BIG: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
     ; BIG: %full_load:_(s64) = G_BSWAP [[LOAD]]
     ; BIG: $x1 = COPY %full_load(s64)
     ; BIG: RET_ReallyLR implicit $x1
@@ -324,11 +324,11 @@ body:             |
     %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
 
-    %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
 
-    %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
-    %elt2:_(s64) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 2)
-    %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 2)
+    %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    %elt2:_(s64) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s16))
+    %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
 
     %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_16(s64)
     %byte4_byte5:_(s64) = nuw G_SHL %elt2, %cst_32(s64)
@@ -358,14 +358,14 @@ body:             |
     ; LITTLE-LABEL: name: s16_loads_to_s64_big_endian_pat
     ; LITTLE: liveins: $x0, $x1
     ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load 8, align 2)
+    ; LITTLE: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
     ; LITTLE: %full_load:_(s64) = G_BSWAP [[LOAD]]
     ; LITTLE: $x1 = COPY %full_load(s64)
     ; LITTLE: RET_ReallyLR implicit $x1
     ; BIG-LABEL: name: s16_loads_to_s64_big_endian_pat
     ; BIG: liveins: $x0, $x1
     ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: %full_load:_(s64) = G_LOAD %ptr(p0) :: (load 8, align 2)
+    ; BIG: %full_load:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 2)
     ; BIG: $x1 = COPY %full_load(s64)
     ; BIG: RET_ReallyLR implicit $x1
     %cst_1:_(s64) = G_CONSTANT i64 1
@@ -381,14 +381,14 @@ body:             |
     %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s64)
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
 
-    %elt0:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
-    %elt2:_(s64) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 2)
+    %elt0:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    %elt2:_(s64) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s16))
 
     %byte0_byte1:_(s64) = nuw G_SHL %elt0, %cst_48(s64)
     %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_32(s64)
     %byte4_byte5:_(s64) = nuw G_SHL %elt2, %cst_16(s64)
-    %byte6_byte7:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 2)
+    %byte6_byte7:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
 
     %or1:_(s64) = G_OR %byte0_byte1, %byte2_byte3
     %or2:_(s64) = G_OR %byte4_byte5, %byte6_byte7
@@ -417,7 +417,7 @@ body:             |
     ; LITTLE: %cst_1:_(s32) = G_CONSTANT i32 1
     ; LITTLE: %ptr:_(p0) = COPY $x0
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load 4, align 1)
+    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
     ; BIG-LABEL: name: nonzero_start_idx_positive_little_endian_pat
@@ -425,7 +425,7 @@ body:             |
     ; BIG: %cst_1:_(s32) = G_CONSTANT i32 1
     ; BIG: %ptr:_(p0) = COPY $x0
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load 4, align 1)
+    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
     ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
@@ -444,11 +444,11 @@ body:             |
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
     %ptr_elt_4:_(p0) = G_PTR_ADD %ptr, %cst_4(s32)
 
-    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
-    %elt4:_(s32) = G_ZEXTLOAD %ptr_elt_4(p0) :: (load 1)
+    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
+    %elt4:_(s32) = G_ZEXTLOAD %ptr_elt_4(p0) :: (load (s8))
 
-    %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
+    %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
     %byte1:_(s32) = nuw G_SHL %elt2, %cst_8(s32)
     %byte2:_(s32) = nuw G_SHL %elt3, %cst_16(s32)
     %byte3:_(s32) = nuw G_SHL %elt4, %cst_24(s32)
@@ -479,7 +479,7 @@ body:             |
     ; LITTLE: %cst_1:_(s32) = G_CONSTANT i32 1
     ; LITTLE: %ptr:_(p0) = COPY $x0
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load 4, align 1)
+    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
     ; LITTLE: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
@@ -488,7 +488,7 @@ body:             |
     ; BIG: %cst_1:_(s32) = G_CONSTANT i32 1
     ; BIG: %ptr:_(p0) = COPY $x0
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
-    ; BIG: %full_load:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load 4, align 1)
+    ; BIG: %full_load:_(s32) = G_LOAD %ptr_elt_1(p0) :: (load (s32), align 1)
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
     %cst_1:_(s32) = G_CONSTANT i32 1
@@ -506,11 +506,11 @@ body:             |
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
     %ptr_elt_4:_(p0) = G_PTR_ADD %ptr, %cst_4(s32)
 
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
 
-    %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_4(p0) :: (load 1)
+    %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_4(p0) :: (load (s8))
     %byte1:_(s32) = nuw G_SHL %elt3, %cst_8(s32)
     %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
     %byte3:_(s32) = nuw G_SHL %elt1, %cst_24(s32)
@@ -541,7 +541,7 @@ body:             |
     ; LITTLE: %cst_neg_3:_(s32) = G_CONSTANT i32 -3
     ; LITTLE: %ptr:_(p0) = COPY $x0
     ; LITTLE: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s32)
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load 4, align 1)
+    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
     ; BIG-LABEL: name: nonzero_start_idx_negative_little_endian_pat
@@ -549,7 +549,7 @@ body:             |
     ; BIG: %cst_neg_3:_(s32) = G_CONSTANT i32 -3
     ; BIG: %ptr:_(p0) = COPY $x0
     ; BIG: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s32)
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load 4, align 1)
+    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
     ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
@@ -566,11 +566,11 @@ body:             |
     %ptr_elt_neg_2:_(p0) = G_PTR_ADD %ptr, %cst_neg_2(s32)
     %ptr_elt_neg_1:_(p0) = G_PTR_ADD %ptr, %cst_neg_1(s32)
 
-    %elt_neg_2:_(s32) = G_ZEXTLOAD %ptr_elt_neg_2(p0) :: (load 1)
-    %elt_neg_1:_(s32) = G_ZEXTLOAD %ptr_elt_neg_1(p0) :: (load 1)
-    %elt_0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
+    %elt_neg_2:_(s32) = G_ZEXTLOAD %ptr_elt_neg_2(p0) :: (load (s8))
+    %elt_neg_1:_(s32) = G_ZEXTLOAD %ptr_elt_neg_1(p0) :: (load (s8))
+    %elt_0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
 
-    %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_neg_3(p0) :: (load 1)
+    %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_neg_3(p0) :: (load (s8))
     %byte1:_(s32) = nuw G_SHL %elt_neg_2, %cst_8(s32)
     %byte2:_(s32) = nuw G_SHL %elt_neg_1, %cst_16(s32)
     %byte3:_(s32) = nuw G_SHL %elt_0, %cst_24(s32)
@@ -601,7 +601,7 @@ body:             |
     ; LITTLE: %cst_neg_3:_(s32) = G_CONSTANT i32 -3
     ; LITTLE: %ptr:_(p0) = COPY $x0
     ; LITTLE: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s32)
-    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load 4, align 1)
+    ; LITTLE: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
     ; LITTLE: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
@@ -610,7 +610,7 @@ body:             |
     ; BIG: %cst_neg_3:_(s32) = G_CONSTANT i32 -3
     ; BIG: %ptr:_(p0) = COPY $x0
     ; BIG: %ptr_elt_neg_3:_(p0) = G_PTR_ADD %ptr, %cst_neg_3(s32)
-    ; BIG: %full_load:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load 4, align 1)
+    ; BIG: %full_load:_(s32) = G_LOAD %ptr_elt_neg_3(p0) :: (load (s32), align 1)
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
     %cst_neg_1:_(s32) = G_CONSTANT i32 -1
@@ -626,12 +626,12 @@ body:             |
     %ptr_elt_neg_2:_(p0) = G_PTR_ADD %ptr, %cst_neg_2(s32)
     %ptr_elt_neg_1:_(p0) = G_PTR_ADD %ptr, %cst_neg_1(s32)
 
-    %elt_neg_3:_(s32) = G_ZEXTLOAD %ptr_elt_neg_3(p0) :: (load 1)
-    %elt_neg_2:_(s32) = G_ZEXTLOAD %ptr_elt_neg_2(p0) :: (load 1)
-    %elt_neg_1:_(s32) = G_ZEXTLOAD %ptr_elt_neg_1(p0) :: (load 1)
-    %elt_0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
+    %elt_neg_3:_(s32) = G_ZEXTLOAD %ptr_elt_neg_3(p0) :: (load (s8))
+    %elt_neg_2:_(s32) = G_ZEXTLOAD %ptr_elt_neg_2(p0) :: (load (s8))
+    %elt_neg_1:_(s32) = G_ZEXTLOAD %ptr_elt_neg_1(p0) :: (load (s8))
+    %elt_0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
 
-    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
+    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
     %byte1:_(s32) = nuw G_SHL %elt_neg_1, %cst_8(s32)
     %byte2:_(s32) = nuw G_SHL %elt_neg_2, %cst_16(s32)
     %byte3:_(s32) = nuw G_SHL %elt_neg_3, %cst_24(s32)
@@ -659,8 +659,8 @@ body:             |
     ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load 2)
+    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load (s16))
     ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
     ; LITTLE: $w1 = COPY %full_load(s32)
@@ -671,8 +671,8 @@ body:             |
     ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load 2)
+    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load (s16))
     ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
     ; BIG: $w1 = COPY %full_load(s32)
@@ -683,8 +683,8 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (volatile load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -707,8 +707,8 @@ body:             |
     ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; LITTLE: %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
+    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE: %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
     ; LITTLE: %high_half:_(s32) = nuw G_SHL %wrong_size_load, %cst_16(s32)
     ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
     ; LITTLE: $w1 = COPY %full_load(s32)
@@ -719,8 +719,8 @@ body:             |
     ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; BIG: %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
+    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG: %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
     ; BIG: %high_half:_(s32) = nuw G_SHL %wrong_size_load, %cst_16(s32)
     ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
     ; BIG: $w1 = COPY %full_load(s32)
@@ -731,8 +731,8 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    %wrong_size_load:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
     %high_half:_(s32) = nuw G_SHL %wrong_size_load, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -758,8 +758,8 @@ body:             |
     ; LITTLE: %cst_24:_(s32) = G_CONSTANT i32 24
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_24(s32)
     ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
     ; LITTLE: $w1 = COPY %full_load(s32)
@@ -770,8 +770,8 @@ body:             |
     ; BIG: %cst_24:_(s32) = G_CONSTANT i32 24
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_24(s32)
     ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
     ; BIG: $w1 = COPY %full_load(s32)
@@ -782,8 +782,8 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_24(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -809,8 +809,8 @@ body:             |
     ; LITTLE: %cst_8:_(s32) = G_CONSTANT i32 8
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
     ; LITTLE: $w1 = COPY %full_load(s32)
@@ -821,8 +821,8 @@ body:             |
     ; BIG: %cst_8:_(s32) = G_CONSTANT i32 8
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
     ; BIG: $w1 = COPY %full_load(s32)
@@ -833,8 +833,8 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -863,9 +863,9 @@ body:             |
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
     ; LITTLE: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
-    ; LITTLE: %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; LITTLE: %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
-    ; LITTLE: %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 2)
+    ; LITTLE: %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE: %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; LITTLE: %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
     ; LITTLE: %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_16(s64)
     ; LITTLE: %byte6_byte7:_(s64) = nuw G_SHL %elt3, %cst_48(s64)
     ; LITTLE: %or1:_(s64) = G_OR %byte0_byte1, %byte2_byte3
@@ -881,9 +881,9 @@ body:             |
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
     ; BIG: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
-    ; BIG: %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; BIG: %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
-    ; BIG: %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 2)
+    ; BIG: %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG: %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    ; BIG: %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
     ; BIG: %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_16(s64)
     ; BIG: %byte6_byte7:_(s64) = nuw G_SHL %elt3, %cst_48(s64)
     ; BIG: %or1:_(s64) = G_OR %byte0_byte1, %byte2_byte3
@@ -900,10 +900,10 @@ body:             |
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s64)
 
-    %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    %byte0_byte1:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
 
-    %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
-    %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 2)
+    %elt1:_(s64) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
+    %elt3:_(s64) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s16))
 
     %byte2_byte3:_(s64) = nuw G_SHL %elt1, %cst_16(s64)
     %byte6_byte7:_(s64) = nuw G_SHL %elt3, %cst_48(s64)
@@ -930,8 +930,8 @@ body:             |
     ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2, addrspace 1)
+    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16), addrspace 1)
     ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
     ; LITTLE: $w1 = COPY %full_load(s32)
@@ -942,8 +942,8 @@ body:             |
     ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2, addrspace 1)
+    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16), addrspace 1)
     ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
     ; BIG: $w1 = COPY %full_load(s32)
@@ -954,8 +954,8 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2, addrspace 0)
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2, addrspace 1)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16), addrspace 0)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16), addrspace 1)
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -986,10 +986,10 @@ body:             |
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
     ; LITTLE: %uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s32)
     ; LITTLE: %also_uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s32)
-    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load 1)
-    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load 1)
+    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load (s8))
+    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load (s8))
     ; LITTLE: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     ; LITTLE: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
     ; LITTLE: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
@@ -1009,10 +1009,10 @@ body:             |
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
     ; BIG: %uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s32)
     ; BIG: %also_uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s32)
-    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load 1)
-    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load 1)
+    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load (s8))
+    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load (s8))
     ; BIG: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     ; BIG: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
     ; BIG: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
@@ -1033,11 +1033,11 @@ body:             |
     %uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s32)
     %also_uses_idx_2:_(p0) = G_PTR_ADD %ptr, %reused_idx(s32)
 
-    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
+    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
 
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load 1)
-    %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load 1)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    %elt2:_(s32) = G_ZEXTLOAD %uses_idx_2(p0) :: (load (s8))
+    %elt3:_(s32) = G_ZEXTLOAD %also_uses_idx_2(p0) :: (load (s8))
 
     %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
@@ -1073,10 +1073,10 @@ body:             |
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
     ; LITTLE: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s32)
     ; LITTLE: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
-    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
     ; LITTLE: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     ; LITTLE: %duplicate_shl_1:_(s32) = nuw G_SHL %elt2, %duplicate_shl_cst(s32)
     ; LITTLE: %duplicate_shl_2:_(s32) = nuw G_SHL %elt3, %duplicate_shl_cst(s32)
@@ -1096,10 +1096,10 @@ body:             |
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
     ; BIG: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s32)
     ; BIG: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
-    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
     ; BIG: %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     ; BIG: %duplicate_shl_1:_(s32) = nuw G_SHL %elt2, %duplicate_shl_cst(s32)
     ; BIG: %duplicate_shl_2:_(s32) = nuw G_SHL %elt3, %duplicate_shl_cst(s32)
@@ -1120,11 +1120,11 @@ body:             |
     %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s32)
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
 
-    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
+    %byte0:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
 
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
 
     %byte1:_(s32) = nuw G_SHL %elt1, %cst_8(s32)
     %duplicate_shl_1:_(s32) = nuw G_SHL %elt2, %duplicate_shl_cst(s32)
@@ -1163,10 +1163,10 @@ body:             |
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
     ; LITTLE: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s32)
     ; LITTLE: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
-    ; LITTLE: %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
-    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    ; LITTLE: %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; LITTLE: %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; LITTLE: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    ; LITTLE: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
     ; LITTLE: %byte1:_(s32) = nuw G_SHL %lowest_idx_load, %cst_8(s32)
     ; LITTLE: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
     ; LITTLE: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
@@ -1187,10 +1187,10 @@ body:             |
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s32)
     ; BIG: %ptr_elt_2:_(p0) = G_PTR_ADD %ptr, %cst_2(s32)
     ; BIG: %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
-    ; BIG: %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
-    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    ; BIG: %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    ; BIG: %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    ; BIG: %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    ; BIG: %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
     ; BIG: %byte1:_(s32) = nuw G_SHL %lowest_idx_load, %cst_8(s32)
     ; BIG: %byte2:_(s32) = nuw G_SHL %elt2, %cst_16(s32)
     ; BIG: %byte3:_(s32) = nuw G_SHL %elt3, %cst_24(s32)
@@ -1213,10 +1213,10 @@ body:             |
     %ptr_elt_3:_(p0) = G_PTR_ADD %ptr, %cst_3(s32)
 
     ; This load is index 0
-    %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 1)
-    %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 1)
-    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load 1)
-    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load 1)
+    %lowest_idx_load:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
+    %byte0:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s8))
+    %elt2:_(s32) = G_ZEXTLOAD %ptr_elt_2(p0) :: (load (s8))
+    %elt3:_(s32) = G_ZEXTLOAD %ptr_elt_3(p0) :: (load (s8))
 
     ; ... But it ends up being shifted, so we shouldn't combine.
     %byte1:_(s32) = nuw G_SHL %lowest_idx_load, %cst_8(s32)
@@ -1247,8 +1247,8 @@ body:             |
     ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
     ; LITTLE: %extra_use:_(s32) = G_AND %full_load, %low_half
@@ -1260,8 +1260,8 @@ body:             |
     ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
     ; BIG: %extra_use:_(s32) = G_AND %full_load, %low_half
@@ -1273,8 +1273,8 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -1299,8 +1299,8 @@ body:             |
     ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
     ; LITTLE: %extra_use:_(s32) = G_AND %full_load, %high_half
@@ -1312,8 +1312,8 @@ body:             |
     ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
     ; BIG: %extra_use:_(s32) = G_AND %full_load, %high_half
@@ -1325,8 +1325,8 @@ body:             |
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -1349,11 +1349,11 @@ body:             |
     ; LITTLE: %cst_16:_(s32) = G_CONSTANT i32 16
     ; LITTLE: %ptr:_(p0) = COPY $x1
     ; LITTLE: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    ; LITTLE: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
     ; LITTLE: %other_ptr:_(p0) = COPY $x1
     ; LITTLE: %some_val:_(s32) = G_CONSTANT i32 12
-    ; LITTLE: G_STORE %some_val(s32), %other_ptr(p0) :: (store 2)
-    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; LITTLE: G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
+    ; LITTLE: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; LITTLE: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; LITTLE: %full_load:_(s32) = G_OR %low_half, %high_half
     ; LITTLE: $w1 = COPY %full_load(s32)
@@ -1364,11 +1364,11 @@ body:             |
     ; BIG: %cst_16:_(s32) = G_CONSTANT i32 16
     ; BIG: %ptr:_(p0) = COPY $x1
     ; BIG: %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    ; BIG: %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
     ; BIG: %other_ptr:_(p0) = COPY $x1
     ; BIG: %some_val:_(s32) = G_CONSTANT i32 12
-    ; BIG: G_STORE %some_val(s32), %other_ptr(p0) :: (store 2)
-    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    ; BIG: G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
+    ; BIG: %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     ; BIG: %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
     ; BIG: %full_load:_(s32) = G_OR %low_half, %high_half
     ; BIG: $w1 = COPY %full_load(s32)
@@ -1378,14 +1378,14 @@ body:             |
 
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
 
     ; Memory could be modified here, so don't combine!
     %other_ptr:_(p0) = COPY $x1
     %some_val:_(s32) = G_CONSTANT i32 12
-    G_STORE  %some_val, %other_ptr :: (store 2)
+    G_STORE  %some_val, %other_ptr :: (store (s16))
 
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -1408,16 +1408,16 @@ body:             |
   ; LITTLE:   %cst_16:_(s32) = G_CONSTANT i32 16
   ; LITTLE:   %ptr:_(p0) = COPY $x1
   ; LITTLE:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-  ; LITTLE:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+  ; LITTLE:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
   ; LITTLE: bb.1:
   ; LITTLE:   successors: %bb.2(0x80000000)
   ; LITTLE:   liveins: $x0, $x1
   ; LITTLE:   %other_ptr:_(p0) = COPY $x1
   ; LITTLE:   %some_val:_(s32) = G_CONSTANT i32 12
-  ; LITTLE:   G_STORE %some_val(s32), %other_ptr(p0) :: (store 2)
+  ; LITTLE:   G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
   ; LITTLE: bb.2:
   ; LITTLE:   liveins: $x0, $x1
-  ; LITTLE:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+  ; LITTLE:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
   ; LITTLE:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
   ; LITTLE:   %full_load:_(s32) = G_OR %low_half, %high_half
   ; LITTLE:   $w1 = COPY %full_load(s32)
@@ -1430,16 +1430,16 @@ body:             |
   ; BIG:   %cst_16:_(s32) = G_CONSTANT i32 16
   ; BIG:   %ptr:_(p0) = COPY $x1
   ; BIG:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-  ; BIG:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+  ; BIG:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
   ; BIG: bb.1:
   ; BIG:   successors: %bb.2(0x80000000)
   ; BIG:   liveins: $x0, $x1
   ; BIG:   %other_ptr:_(p0) = COPY $x1
   ; BIG:   %some_val:_(s32) = G_CONSTANT i32 12
-  ; BIG:   G_STORE %some_val(s32), %other_ptr(p0) :: (store 2)
+  ; BIG:   G_STORE %some_val(s32), %other_ptr(p0) :: (store (s16))
   ; BIG: bb.2:
   ; BIG:   liveins: $x0, $x1
-  ; BIG:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+  ; BIG:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
   ; BIG:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
   ; BIG:   %full_load:_(s32) = G_OR %low_half, %high_half
   ; BIG:   $w1 = COPY %full_load(s32)
@@ -1455,7 +1455,7 @@ body:             |
 
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
 
   bb.1:
    liveins: $x0, $x1
@@ -1463,11 +1463,11 @@ body:             |
     ; Memory could be modified here, so don't combine!
     %other_ptr:_(p0) = COPY $x1
     %some_val:_(s32) = G_CONSTANT i32 12
-    G_STORE  %some_val, %other_ptr :: (store 2)
+    G_STORE  %some_val, %other_ptr :: (store (s16))
 
   bb.2:
     liveins: $x0, $x1
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -1489,10 +1489,10 @@ body:             |
   ; LITTLE:   %cst_16:_(s32) = G_CONSTANT i32 16
   ; LITTLE:   %ptr:_(p0) = COPY $x1
   ; LITTLE:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-  ; LITTLE:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+  ; LITTLE:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
   ; LITTLE: bb.1:
   ; LITTLE:   liveins: $x0, $x1
-  ; LITTLE:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+  ; LITTLE:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
   ; LITTLE:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
   ; LITTLE:   %full_load:_(s32) = G_OR %low_half, %high_half
   ; LITTLE:   $w1 = COPY %full_load(s32)
@@ -1505,10 +1505,10 @@ body:             |
   ; BIG:   %cst_16:_(s32) = G_CONSTANT i32 16
   ; BIG:   %ptr:_(p0) = COPY $x1
   ; BIG:   %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-  ; BIG:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+  ; BIG:   %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
   ; BIG: bb.1:
   ; BIG:   liveins: $x0, $x1
-  ; BIG:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+  ; BIG:   %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
   ; BIG:   %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
   ; BIG:   %full_load:_(s32) = G_OR %low_half, %high_half
   ; BIG:   $w1 = COPY %full_load(s32)
@@ -1523,11 +1523,11 @@ body:             |
 
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
 
   bb.1:
     liveins: $x0, $x1
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half
@@ -1546,24 +1546,24 @@ body:             |
     ; LITTLE-LABEL: name: load_first
     ; LITTLE: liveins: $x0, $x1
     ; LITTLE: %ptr:_(p0) = COPY $x1
-    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 2)
+    ; LITTLE: %full_load:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
     ; LITTLE: $w1 = COPY %full_load(s32)
     ; LITTLE: RET_ReallyLR implicit $w1
     ; BIG-LABEL: name: load_first
     ; BIG: liveins: $x0, $x1
     ; BIG: %ptr:_(p0) = COPY $x1
-    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load 4, align 2)
+    ; BIG: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD %ptr(p0) :: (load (s32), align 2)
     ; BIG: %full_load:_(s32) = G_BSWAP [[LOAD]]
     ; BIG: $w1 = COPY %full_load(s32)
     ; BIG: RET_ReallyLR implicit $w1
-    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load 2)
+    %low_half:_(s32) = G_ZEXTLOAD %ptr(p0) :: (load (s16))
     %cst_1:_(s64) = G_CONSTANT i64 1
     %cst_16:_(s32) = G_CONSTANT i32 16
 
     %ptr:_(p0) = COPY $x1
     %ptr_elt_1:_(p0) = G_PTR_ADD %ptr, %cst_1(s64)
 
-    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load 2)
+    %elt1:_(s32) = G_ZEXTLOAD %ptr_elt_1(p0) :: (load (s16))
     %high_half:_(s32) = nuw G_SHL %elt1, %cst_16(s32)
 
     %full_load:_(s32) = G_OR %low_half, %high_half

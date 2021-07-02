@@ -414,7 +414,7 @@ body:             |
     renamable $d27 = VSETLNi32 undef renamable $d27, killed renamable $r1, 0, 14, $noreg, implicit killed $q13, implicit-def $q13
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.19, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.19, 14, $noreg
-    renamable $s4 = VLDRS %const.0, 0, 14, $noreg, implicit killed $q1, implicit-def $q1 :: (load 4 from constant-pool)
+    renamable $s4 = VLDRS %const.0, 0, 14, $noreg, implicit killed $q1, implicit-def $q1 :: (load (s32) from constant-pool)
     renamable $d3 = VSETLNi32 undef renamable $d3, killed renamable $r1, 0, 14, $noreg, implicit killed $q1, implicit-def $q1
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.61, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.61, 14, $noreg
@@ -474,7 +474,7 @@ body:             |
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.29, 14, $noreg
     renamable $d10 = VSETLNi32 undef renamable $d10, killed renamable $r1, 0, 14, $noreg, implicit-def $q5
     renamable $r1 = t2ADDri renamable $r0, 16, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q3, 14, $noreg :: (store 16 into %ir.1, align 8)
+    VST1q64 killed $r1, 0, killed $q3, 14, $noreg :: (store (s128) into %ir.1, align 8)
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.39, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.39, 14, $noreg
     renamable $d9 = VSETLNi32 undef renamable $d9, killed renamable $r1, 0, 14, $noreg, implicit killed $q4, implicit-def $q4
@@ -482,7 +482,7 @@ body:             |
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.69, 14, $noreg
     renamable $d24 = VSETLNi32 undef renamable $d24, killed renamable $r1, 0, 14, $noreg, implicit killed $q12, implicit-def $q12
     renamable $r1 = t2ADDri renamable $r0, 32, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q2, 14, $noreg :: (store 16 into %ir.2, align 8)
+    VST1q64 killed $r1, 0, killed $q2, 14, $noreg :: (store (s128) into %ir.2, align 8)
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.31, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.31, 14, $noreg
     renamable $d11 = VSETLNi32 undef renamable $d11, killed renamable $r1, 0, 14, $noreg, implicit killed $q5, implicit-def $q5
@@ -502,7 +502,7 @@ body:             |
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.67, 14, $noreg
     renamable $d5 = VSETLNi32 undef renamable $d5, killed renamable $r1, 0, 14, $noreg, implicit-def $q2
     renamable $r1 = t2ADDri renamable $r0, 48, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q5, 14, $noreg :: (store 16 into %ir.3, align 8)
+    VST1q64 killed $r1, 0, killed $q5, 14, $noreg :: (store (s128) into %ir.3, align 8)
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.51, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.51, 14, $noreg
     renamable $d31 = VSETLNi32 undef renamable $d31, killed renamable $r1, 0, 14, $noreg, implicit killed $q15, implicit-def $q15
@@ -510,7 +510,7 @@ body:             |
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.43, 14, $noreg
     renamable $d7 = VSETLNi32 undef renamable $d7, killed renamable $r1, 0, 14, $noreg, implicit-def $q3
     renamable $r1 = t2ADDri renamable $r0, 80, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q4, 14, $noreg :: (store 16 into %ir.5, align 8)
+    VST1q64 killed $r1, 0, killed $q4, 14, $noreg :: (store (s128) into %ir.5, align 8)
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.47, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.47, 14, $noreg
     renamable $d1 = VSETLNi32 undef renamable $d1, killed renamable $r1, 0, 14, $noreg, implicit killed $q0, implicit-def $q0
@@ -530,7 +530,7 @@ body:             |
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.41, 14, $noreg
     renamable $d6 = VSETLNi32 undef renamable $d6, killed renamable $r1, 0, 14, $noreg, implicit killed $q3, implicit-def $q3
     renamable $r1 = t2ADDri renamable $r0, 112, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q0, 14, $noreg :: (store 16 into %ir.7, align 8)
+    VST1q64 killed $r1, 0, killed $q0, 14, $noreg :: (store (s128) into %ir.7, align 8)
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.59, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.59, 14, $noreg
     renamable $d29 = VSETLNi32 undef renamable $d29, killed renamable $r1, 0, 14, $noreg, implicit killed $q14, implicit-def $q14
@@ -538,7 +538,7 @@ body:             |
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.65, 14, $noreg
     renamable $d4 = VSETLNi32 undef renamable $d4, killed renamable $r1, 0, 14, $noreg, implicit killed $q2, implicit-def $q2
     renamable $r1 = t2ADDri renamable $r0, 128, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q15, 14, $noreg :: (store 16 into %ir.8, align 8)
+    VST1q64 killed $r1, 0, killed $q15, 14, $noreg :: (store (s128) into %ir.8, align 8)
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.55, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.55, 14, $noreg
     renamable $d23 = VSETLNi32 undef renamable $d23, killed renamable $r1, 0, 14, $noreg, implicit killed $q11, implicit-def $q11
@@ -558,7 +558,7 @@ body:             |
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.104, 14, $noreg
     renamable $d31 = VSETLNi32 undef renamable $d31, killed renamable $r1, 0, 14, $noreg, implicit-def $q15
     renamable $r1 = t2ADDri renamable $r0, 144, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q11, 14, $noreg :: (store 16 into %ir.9, align 8)
+    VST1q64 killed $r1, 0, killed $q11, 14, $noreg :: (store (s128) into %ir.9, align 8)
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.126, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.126, 14, $noreg
     renamable $d23 = VSETLNi32 undef renamable $d23, killed renamable $r1, 0, 14, $noreg, implicit-def $q11
@@ -566,7 +566,7 @@ body:             |
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.98, 14, $noreg
     renamable $d0 = VSETLNi32 undef renamable $d0, killed renamable $r1, 0, 14, $noreg, implicit-def $q0
     renamable $r1 = t2ADDri renamable $r0, 200, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q14, 14, $noreg :: (store 16 into %ir.11, align 8)
+    VST1q64 killed $r1, 0, killed $q14, 14, $noreg :: (store (s128) into %ir.11, align 8)
     $lr = t2MOVi16 target-flags(arm-lo16) @.str.124, 14, $noreg
     $lr = t2MOVTi16 $lr, target-flags(arm-hi16) @.str.124, 14, $noreg
     $r2 = t2MOVi16 target-flags(arm-lo16) @.str.127, 14, $noreg
@@ -599,9 +599,9 @@ body:             |
     $r3 = t2MOVTi16 $r3, target-flags(arm-hi16) @.str.121, 14, $noreg
     renamable $q14 = VDUP32q killed renamable $r3, 14, $noreg
     renamable $r3 = t2ADDri renamable $r0, 216, 14, $noreg, $noreg
-    VST1q64 killed $r3, 0, killed $q10, 14, $noreg :: (store 16 into %ir.12, align 8)
+    VST1q64 killed $r3, 0, killed $q10, 14, $noreg :: (store (s128) into %ir.12, align 8)
     $r3 = tMOVr $r0, 14, $noreg
-    renamable $r3 = VST1q32wb_register killed $r3, 0, killed $r4, killed $q1, 14, $noreg :: (store 16 into %ir.0, align 8)
+    renamable $r3 = VST1q32wb_register killed $r3, 0, killed $r4, killed $q1, 14, $noreg :: (store (s128) into %ir.0, align 8)
     $r4 = t2MOVi16 target-flags(arm-lo16) @.str.120, 14, $noreg
     $r4 = t2MOVTi16 $r4, target-flags(arm-hi16) @.str.120, 14, $noreg
     renamable $q10 = VMOVv4i32 0, 14, $noreg
@@ -636,29 +636,29 @@ body:             |
     $r4 = t2MOVTi16 $r4, target-flags(arm-hi16) @.str.88, 14, $noreg
     renamable $d8 = VSETLNi32 undef renamable $d8, killed renamable $r4, 0, 14, $noreg, implicit-def $q4
     renamable $r4, dead $cpsr = tMOVi8 0, 14, $noreg
-    tSTRi renamable $r4, killed renamable $r3, 0, 14, $noreg :: (store 4 into %ir.4 + 36)
+    tSTRi renamable $r4, killed renamable $r3, 0, 14, $noreg :: (store (s32) into %ir.4 + 36)
     $r3 = tMOVr $r0, 14, $noreg
     t2STRDi8 $r4, $r4, $r0, 192, 14, $noreg
-    early-clobber renamable $r3 = t2STR_PRE renamable $r4, killed renamable $r3, 96, 14, $noreg :: (store 4 into %ir.4 + 32)
-    VST1q64 killed $r3, 0, killed $q3, 14, $noreg :: (store 16 into %ir.6, align 8)
+    early-clobber renamable $r3 = t2STR_PRE renamable $r4, killed renamable $r3, 96, 14, $noreg :: (store (s32) into %ir.4 + 32)
+    VST1q64 killed $r3, 0, killed $q3, 14, $noreg :: (store (s128) into %ir.6, align 8)
     renamable $r3 = t2ADDri renamable $r0, 64, 14, $noreg, $noreg
     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.81, 14, $noreg
     $r5 = t2MOVTi16 $r5, target-flags(arm-hi16) @.str.81, 14, $noreg
-    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store 16 into %ir.4, align 4)
+    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store (s128) into %ir.4, align 4)
     renamable $r3 = t2ADDri renamable $r0, 176, 14, $noreg, $noreg
-    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store 16 into %ir.10 + 16, align 4)
+    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store (s128) into %ir.10 + 16, align 4)
     renamable $r3 = t2ADDri renamable $r0, 160, 14, $noreg, $noreg
     renamable $q1 = VDUP32q killed renamable $r5, 14, $noreg
     renamable $r5 = t2ADDri renamable $r0, 248, 14, $noreg, $noreg
-    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store 16 into %ir.10, align 4)
+    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store (s128) into %ir.10, align 4)
     renamable $r3 = t2ADDri renamable $r0, 232, 14, $noreg, $noreg
-    VST1q64 killed $r3, 0, killed $q2, 14, $noreg :: (store 16 into %ir.13, align 8)
+    VST1q64 killed $r3, 0, killed $q2, 14, $noreg :: (store (s128) into %ir.13, align 8)
     $r3 = t2MOVi16 target-flags(arm-lo16) @.str.82, 14, $noreg
     $r3 = t2MOVTi16 $r3, target-flags(arm-hi16) @.str.82, 14, $noreg
-    VST1q64 killed $r5, 0, killed $q12, 14, $noreg :: (store 16 into %ir.14, align 8)
+    VST1q64 killed $r5, 0, killed $q12, 14, $noreg :: (store (s128) into %ir.14, align 8)
     renamable $d3 = VSETLNi32 killed renamable $d3, killed renamable $r3, 1, 14, $noreg, implicit $q1, implicit-def $q1
     renamable $r3 = t2ADDri renamable $r0, 264, 14, $noreg, $noreg
-    VST1q64 killed $r3, 0, killed $q13, 14, $noreg :: (store 16 into %ir.15, align 8)
+    VST1q64 killed $r3, 0, killed $q13, 14, $noreg :: (store (s128) into %ir.15, align 8)
     $r3 = t2MOVi16 target-flags(arm-lo16) @.str.91, 14, $noreg
     $r3 = t2MOVTi16 $r3, target-flags(arm-hi16) @.str.91, 14, $noreg
     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.90, 14, $noreg
@@ -676,9 +676,9 @@ body:             |
     renamable $r4 = t2ADDri renamable $r0, 296, 14, $noreg, $noreg
     renamable $d5 = VSETLNi32 undef renamable $d5, killed renamable $r5, 0, 14, $noreg, implicit-def $q2
     renamable $r5 = t2ADDri renamable $r0, 280, 14, $noreg, $noreg
-    VST1q32 $r4, 0, $q10, 14, $noreg :: (store 16 into %ir.16 + 16, align 4)
-    VST1q32 killed $r5, 0, $q10, 14, $noreg :: (store 16 into %ir.16, align 4)
-    VST1q64 killed $r4, 0, killed $q1, 14, $noreg :: (store 16 into %ir.17, align 8)
+    VST1q32 $r4, 0, $q10, 14, $noreg :: (store (s128) into %ir.16 + 16, align 4)
+    VST1q32 killed $r5, 0, $q10, 14, $noreg :: (store (s128) into %ir.16, align 4)
+    VST1q64 killed $r4, 0, killed $q1, 14, $noreg :: (store (s128) into %ir.17, align 8)
     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.83, 14, $noreg
     $r5 = t2MOVTi16 $r5, target-flags(arm-hi16) @.str.83, 14, $noreg
     renamable $d9 = VSETLNi32 killed renamable $d9, renamable $r3, 1, 14, $noreg, implicit $q4, implicit-def $q4
@@ -689,7 +689,7 @@ body:             |
     renamable $d8 = VSETLNi32 killed renamable $d8, killed renamable $r5, 1, 14, $noreg, implicit $q4, implicit-def $q4
     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.106, 14, $noreg
     $r5 = t2MOVTi16 $r5, target-flags(arm-hi16) @.str.106, 14, $noreg
-    VST1q64 killed $r4, 0, killed $q13, 14, $noreg :: (store 16 into %ir.18, align 8)
+    VST1q64 killed $r4, 0, killed $q13, 14, $noreg :: (store (s128) into %ir.18, align 8)
     $r4 = t2MOVi16 target-flags(arm-lo16) @.str.119, 14, $noreg
     $r4 = t2MOVTi16 $r4, target-flags(arm-hi16) @.str.119, 14, $noreg
     renamable $q1 = VDUP32q killed renamable $r5, 14, $noreg
@@ -699,7 +699,7 @@ body:             |
     $r4 = t2MOVTi16 $r4, target-flags(arm-hi16) @.str.116, 14, $noreg
     renamable $d27 = VSETLNi32 undef renamable $d27, killed renamable $r4, 0, 14, $noreg, implicit-def $q13
     renamable $r4 = t2ADDri renamable $r0, 344, 14, $noreg, $noreg
-    VST1q64 killed $r4, 0, killed $q4, 14, $noreg :: (store 16 into %ir.19, align 8)
+    VST1q64 killed $r4, 0, killed $q4, 14, $noreg :: (store (s128) into %ir.19, align 8)
     $r4 = t2MOVi16 target-flags(arm-lo16) @.str.107, 14, $noreg
     $r4 = t2MOVTi16 $r4, target-flags(arm-hi16) @.str.107, 14, $noreg
     renamable $d3 = VSETLNi32 killed renamable $d3, killed renamable $r4, 1, 14, $noreg, implicit $q1, implicit-def $q1
@@ -720,7 +720,7 @@ body:             |
     renamable $r3 = t2ADDri renamable $r0, 360, 14, $noreg, $noreg
     renamable $d26 = VDUP32d killed renamable $r7, 14, $noreg, implicit killed $q13, implicit-def $q13
     renamable $r7 = t2ADDri renamable $r0, 504, 14, $noreg, $noreg
-    VST1q64 killed $r3, 0, killed $q2, 14, $noreg :: (store 16 into %ir.20, align 8)
+    VST1q64 killed $r3, 0, killed $q2, 14, $noreg :: (store (s128) into %ir.20, align 8)
     $r3 = t2MOVi16 target-flags(arm-lo16) @.str.97, 14, $noreg
     $r3 = t2MOVTi16 $r3, target-flags(arm-hi16) @.str.97, 14, $noreg
     renamable $q2 = VDUP32q killed renamable $r3, 14, $noreg
@@ -728,24 +728,24 @@ body:             |
     $r3 = t2MOVTi16 $r3, target-flags(arm-hi16) @.str.96, 14, $noreg
     renamable $d4 = VSETLNi32 killed renamable $d4, killed renamable $r3, 0, 14, $noreg, implicit $q2, implicit-def $q2
     renamable $r3 = t2ADDri renamable $r0, 388, 14, $noreg, $noreg
-    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store 16 into %ir.21 + 12, align 4)
+    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store (s128) into %ir.21 + 12, align 4)
     renamable $r3 = t2ADDri renamable $r0, 376, 14, $noreg, $noreg
-    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store 16 into %ir.21, align 4)
+    VST1q32 killed $r3, 0, $q10, 14, $noreg :: (store (s128) into %ir.21, align 4)
     renamable $r3 = t2ADDri renamable $r0, 584, 14, $noreg, $noreg
-    VST1q64 killed $r4, 0, killed $q2, 14, $noreg :: (store 16 into %ir.22, align 8)
+    VST1q64 killed $r4, 0, killed $q2, 14, $noreg :: (store (s128) into %ir.22, align 8)
     $r4 = t2MOVi16 target-flags(arm-lo16) @.str.100, 14, $noreg
     $r4 = t2MOVTi16 $r4, target-flags(arm-hi16) @.str.100, 14, $noreg
     renamable $d1 = VDUP32d killed renamable $r4, 14, $noreg, implicit killed $q0, implicit-def $q0
     renamable $r4 = t2ADDri renamable $r0, 408, 14, $noreg, $noreg
-    VST1q64 killed $r4, 0, killed $q0, 14, $noreg :: (store 16 into %ir.23, align 8)
+    VST1q64 killed $r4, 0, killed $q0, 14, $noreg :: (store (s128) into %ir.23, align 8)
     renamable $r4 = t2ADDri renamable $r0, 440, 14, $noreg, $noreg
-    VST1q32 killed $r5, 0, $q10, 14, $noreg :: (store 16 into %ir.24 + 12, align 4)
+    VST1q32 killed $r5, 0, $q10, 14, $noreg :: (store (s128) into %ir.24 + 12, align 4)
     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.103, 14, $noreg
     $r5 = t2MOVTi16 $r5, target-flags(arm-hi16) @.str.103, 14, $noreg
     renamable $d30 = VDUP32d killed renamable $r5, 14, $noreg, implicit killed $q15, implicit-def $q15
     renamable $r5 = t2ADDri renamable $r0, 424, 14, $noreg, $noreg
-    VST1q32 killed $r5, 0, $q10, 14, $noreg :: (store 16 into %ir.24, align 4)
-    VST1q64 killed $r4, 0, killed $q15, 14, $noreg :: (store 16 into %ir.25, align 8)
+    VST1q32 killed $r5, 0, $q10, 14, $noreg :: (store (s128) into %ir.24, align 4)
+    VST1q64 killed $r4, 0, killed $q15, 14, $noreg :: (store (s128) into %ir.25, align 8)
     $r4 = t2MOVi16 target-flags(arm-lo16) @.str.111, 14, $noreg
     $r4 = t2MOVTi16 $r4, target-flags(arm-hi16) @.str.111, 14, $noreg
     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.110, 14, $noreg
@@ -761,22 +761,22 @@ body:             |
     renamable $d0 = VSETLNi32 killed renamable $d0, killed renamable $r4, 0, 14, $noreg, implicit $q0, implicit-def $q0
     renamable $r4 = t2ADDri renamable $r0, 568, 14, $noreg, $noreg
     renamable $d31 = VDUP32d killed renamable $r12, 14, $noreg, implicit killed $q15, implicit-def $q15
-    VST1q64 killed $r1, 0, killed $q1, 14, $noreg :: (store 16 into %ir.26, align 8)
+    VST1q64 killed $r1, 0, killed $q1, 14, $noreg :: (store (s128) into %ir.26, align 8)
     renamable $r1 = t2ADDri renamable $r0, 472, 14, $noreg, $noreg
-    VST1q64 killed $r1, 0, killed $q0, 14, $noreg :: (store 16 into %ir.27, align 8)
+    VST1q64 killed $r1, 0, killed $q0, 14, $noreg :: (store (s128) into %ir.27, align 8)
     renamable $r1 = t2ADDri renamable $r0, 552, 14, $noreg, $noreg
-    VST1q64 killed $r5, 0, killed $q15, 14, $noreg :: (store 16 into %ir.28, align 8)
+    VST1q64 killed $r5, 0, killed $q15, 14, $noreg :: (store (s128) into %ir.28, align 8)
     renamable $r5 = t2ADDri renamable $r0, 536, 14, $noreg, $noreg
-    VST1q64 killed $r7, 0, killed $q9, 14, $noreg :: (store 16 into %ir.29, align 8)
+    VST1q64 killed $r7, 0, killed $q9, 14, $noreg :: (store (s128) into %ir.29, align 8)
     renamable $r7 = t2ADDri renamable $r0, 660, 14, $noreg, $noreg
-    VST1q64 killed $r6, 0, killed $q13, 14, $noreg :: (store 16 into %ir.30, align 8)
-    VST1q64 killed $r5, 0, killed $q12, 14, $noreg :: (store 16 into %ir.31, align 8)
-    VST1q64 killed $r1, 0, killed $q14, 14, $noreg :: (store 16 into %ir.32, align 8)
+    VST1q64 killed $r6, 0, killed $q13, 14, $noreg :: (store (s128) into %ir.30, align 8)
+    VST1q64 killed $r5, 0, killed $q12, 14, $noreg :: (store (s128) into %ir.31, align 8)
+    VST1q64 killed $r1, 0, killed $q14, 14, $noreg :: (store (s128) into %ir.32, align 8)
     renamable $r1 = t2ADDri renamable $r0, 608, 14, $noreg, $noreg
-    VST1q64 killed $r4, 0, killed $q8, 14, $noreg :: (store 16 into %ir.33, align 8)
-    VST1q64 killed $r3, 0, killed $q11, 14, $noreg :: (store 16 into %ir.34, align 8)
+    VST1q64 killed $r4, 0, killed $q8, 14, $noreg :: (store (s128) into %ir.33, align 8)
+    VST1q64 killed $r3, 0, killed $q11, 14, $noreg :: (store (s128) into %ir.34, align 8)
     t2STRDi8 killed $r2, $r2, $r0, 600, 14, $noreg
-    VST1q32 killed $r1, 0, $q10, 14, $noreg :: (store 16 into %ir.35, align 4)
+    VST1q32 killed $r1, 0, $q10, 14, $noreg :: (store (s128) into %ir.35, align 4)
     $r12 = t2MOVi16 target-flags(arm-lo16) @.str.139, 14, $noreg
     $r12 = t2MOVTi16 $r12, target-flags(arm-hi16) @.str.139, 14, $noreg
     $r2 = t2MOVi16 target-flags(arm-lo16) @.str.151, 14, $noreg
@@ -848,7 +848,7 @@ body:             |
     $r5 = t2MOVTi16 $r5, target-flags(arm-hi16) @.str.133, 14, $noreg
     renamable $q2 = VDUP32q killed renamable $r5, 14, $noreg
     renamable $r5 = t2ADDri renamable $r0, 756, 14, $noreg, $noreg
-    VST1q32 killed $r1, 0, killed $q10, 14, $noreg :: (store 16 into %ir.35 + 12, align 4)
+    VST1q32 killed $r1, 0, killed $q10, 14, $noreg :: (store (s128) into %ir.35 + 12, align 4)
     $r1 = t2MOVi16 target-flags(arm-lo16) @.str.132, 14, $noreg
     $r1 = t2MOVTi16 $r1, target-flags(arm-hi16) @.str.132, 14, $noreg
     renamable $d19 = VDUP32d killed renamable $r4, 14, $noreg, implicit killed $q9, implicit-def $q9
@@ -865,19 +865,19 @@ body:             |
     t2STRDi8 killed $r4, killed $r6, $r0, 636, 14, $noreg
     renamable $r4 = t2ADDri renamable $r0, 644, 14, $noreg, $noreg
     renamable $r6 = t2ADDri renamable $r0, 692, 14, $noreg, $noreg
-    VST1q64 killed $r4, 0, killed $q1, 14, $noreg :: (store 16 into %ir.36, align 8)
+    VST1q64 killed $r4, 0, killed $q1, 14, $noreg :: (store (s128) into %ir.36, align 8)
     renamable $r4 = t2ADDri renamable $r0, 724, 14, $noreg, $noreg
-    VST1q64 killed $r7, 0, killed $q2, 14, $noreg :: (store 16 into %ir.37, align 8)
+    VST1q64 killed $r7, 0, killed $q2, 14, $noreg :: (store (s128) into %ir.37, align 8)
     renamable $r7 = t2ADDri renamable $r0, 708, 14, $noreg, $noreg
     renamable $r0 = t2ADDri killed renamable $r0, 676, 14, $noreg, $noreg
-    VST1q64 killed $r0, 0, killed $q12, 14, $noreg :: (store 16 into %ir.38, align 8)
-    VST1q64 killed $r6, 0, killed $q14, 14, $noreg :: (store 16 into %ir.39, align 8)
-    VST1q64 killed $r7, 0, killed $q11, 14, $noreg :: (store 16 into %ir.40, align 8)
-    VST1q64 killed $r4, 0, killed $q15, 14, $noreg :: (store 16 into %ir.41, align 8)
-    VST1q64 killed $r2, 0, killed $q0, 14, $noreg :: (store 16 into %ir.42, align 8)
-    VST1q64 killed $r5, 0, killed $q9, 14, $noreg :: (store 16 into %ir.43, align 8)
-    VST1q64 killed $r1, 0, killed $q13, 14, $noreg :: (store 16 into %ir.44, align 8)
-    VST1q64 killed $lr, 0, killed $q8, 14, $noreg :: (store 16 into %ir.45, align 8)
+    VST1q64 killed $r0, 0, killed $q12, 14, $noreg :: (store (s128) into %ir.38, align 8)
+    VST1q64 killed $r6, 0, killed $q14, 14, $noreg :: (store (s128) into %ir.39, align 8)
+    VST1q64 killed $r7, 0, killed $q11, 14, $noreg :: (store (s128) into %ir.40, align 8)
+    VST1q64 killed $r4, 0, killed $q15, 14, $noreg :: (store (s128) into %ir.41, align 8)
+    VST1q64 killed $r2, 0, killed $q0, 14, $noreg :: (store (s128) into %ir.42, align 8)
+    VST1q64 killed $r5, 0, killed $q9, 14, $noreg :: (store (s128) into %ir.43, align 8)
+    VST1q64 killed $r1, 0, killed $q13, 14, $noreg :: (store (s128) into %ir.44, align 8)
+    VST1q64 killed $lr, 0, killed $q8, 14, $noreg :: (store (s128) into %ir.45, align 8)
     $sp = VLDMDIA_UPD $sp, 14, $noreg, def $d8, def $d9, def $d10, def $d11
     $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $r5, def $r6, def $r7, def $r11, def $pc
 

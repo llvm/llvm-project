@@ -88,15 +88,15 @@ body:             |
     liveins: $x0, $lr
 
     DBG_VALUE $x0, 0, !23, !DIExpression(DW_OP_plus_uconst, 12), debug-location !24
-    early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
     frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !25
     frame-setup CFI_INSTRUCTION offset $w29, -16, debug-location !25
-    renamable $x8 = LDRXui killed renamable $x0, 0, debug-location !25 :: (load 8 from %ir.ptr2)
-    renamable $w0 = LDRWui killed renamable $x8, 0, debug-location !31 :: (load 4 from %ir.0)
+    renamable $x8 = LDRXui killed renamable $x0, 0, debug-location !25 :: (load (s64) from %ir.ptr2)
+    renamable $w0 = LDRWui killed renamable $x8, 0, debug-location !31 :: (load (s32) from %ir.0)
     BL @baz, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0, debug-location !34
-    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !35 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !35 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
     TCRETURNdi @baz, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0, debug-location !35
 
 ...

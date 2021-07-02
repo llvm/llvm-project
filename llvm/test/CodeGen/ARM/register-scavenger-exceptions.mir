@@ -52,14 +52,14 @@ body:             |
     ; CHECK: $r3 = MOVi 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r4 = MOVi 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r10 = SUBri killed $r11, 4096, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: STRi12 killed $lr, killed $r10, -916, 14 /* CC::al */, $noreg :: (store 4 into %stack.2)
+    ; CHECK: STRi12 killed $lr, killed $r10, -916, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
     ; CHECK: BL @_Z3barv, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3, implicit killed $r4, implicit-def $sp
     $r0 = MOVi 0, 14, $noreg, $noreg
     $r1 = MOVi 0, 14, $noreg, $noreg
     $r2 = MOVi 0, 14, $noreg, $noreg
     $r3 = MOVi 0, 14, $noreg, $noreg
     $r4 = MOVi 0, 14, $noreg, $noreg
-    STRi12 killed $lr, %stack.2, 0, 14, $noreg :: (store 4 into %stack.2)
+    STRi12 killed $lr, %stack.2, 0, 14, $noreg :: (store (s32) into %stack.2)
     BL @_Z3barv, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3, implicit killed $r4, implicit-def $sp
 
 ...

@@ -85,7 +85,7 @@ body:             |
     CFI_INSTRUCTION offset $rbp, -16
     $rbp = frame-setup MOV64rr $rsp
     CFI_INSTRUCTION def_cfa_register $rbp
-    renamable $eax = MOV32rm $rip, 1, $noreg, @a, $noreg, debug-location !16 :: (dereferenceable load 4 from @a)
+    renamable $eax = MOV32rm $rip, 1, $noreg, @a, $noreg, debug-location !16 :: (dereferenceable load (s32) from @a)
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !16
     CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !16
     RETQ $eax, debug-location !16
@@ -111,10 +111,10 @@ body:             |
     frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp, debug-location !19
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION offset $rbx, -24
-    renamable $ebx = MOV32rm $rip, 1, $noreg, @c, $noreg, debug-location !19 :: (dereferenceable load 4 from @c)
-    MOV32mr $rip, 1, $noreg, @d, $noreg, renamable $ebx, debug-location !19 :: (store 4 into @d)
+    renamable $ebx = MOV32rm $rip, 1, $noreg, @c, $noreg, debug-location !19 :: (dereferenceable load (s32) from @c)
+    MOV32mr $rip, 1, $noreg, @d, $noreg, renamable $ebx, debug-location !19 :: (store (s32) into @d)
     CALL64pcrel32 @e, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !20
-    MOV32mr $rip, 1, $noreg, @b, $noreg, killed renamable $eax, debug-location !20 :: (store 4 into @b)
+    MOV32mr $rip, 1, $noreg, @b, $noreg, killed renamable $eax, debug-location !20 :: (store (s32) into @b)
     renamable $rdi = MOVSX64rr32 killed renamable $ebx, debug-location !21
     $esi = MOV32rr $edi, debug-location !21
     CALL64pcrel32 @call, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit killed $esi, implicit-def $rsp, implicit-def $ssp, debug-location !21

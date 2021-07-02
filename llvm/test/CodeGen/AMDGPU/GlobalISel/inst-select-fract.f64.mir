@@ -14,10 +14,10 @@ body: |
     ; CHECK-LABEL: name: fract_f64_neg
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load 16, align 4, addrspace 4)
+    ; CHECK: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
     ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
     ; CHECK: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
-    ; CHECK: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load 8, addrspace 1)
+    ; CHECK: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (s64), addrspace 1)
     ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
     ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
@@ -26,16 +26,16 @@ body: |
     ; CHECK: %12:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY3]], 1, [[COPY4]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: %15:vreg_64 = nofpexcept V_FRACT_F64_e64 0, %12, 0, 0, implicit $mode, implicit $exec
     ; CHECK: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], %15, [[COPY1]], 0, 0, implicit $exec :: (store 8, addrspace 1)
+    ; CHECK: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], %15, [[COPY1]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK: S_ENDPGM 0
     %2:sgpr(p4) = COPY $sgpr0_sgpr1
     %7:sgpr(s64) = G_CONSTANT i64 36
     %8:sgpr(p4) = G_PTR_ADD %2, %7(s64)
-    %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load 16, align 4, addrspace 4)
+    %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
     %10:sgpr(s64) = G_EXTRACT %9(<2 x s64>), 0
     %13:sgpr(s64) = G_EXTRACT %9(<2 x s64>), 64
     %15:sgpr(p1) = G_INTTOPTR %13(s64)
-    %18:sgpr(s64) = G_LOAD %15(p1) :: (load 8, addrspace 1)
+    %18:sgpr(s64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
     %19:sgpr(s64) = G_FCONSTANT double -0.000000e+00
     %24:sgpr(s64) = G_FNEG %18
     %25:vgpr(s64) = COPY %19(s64)
@@ -46,7 +46,7 @@ body: |
     %22:vgpr(s64) = G_FADD %20, %23
     %12:sgpr(p1) = G_INTTOPTR %10(s64)
     %27:vgpr(p1) = COPY %12(p1)
-    G_STORE %22(s64), %27(p1) :: (store 8, addrspace 1)
+    G_STORE %22(s64), %27(p1) :: (store (s64), addrspace 1)
     S_ENDPGM 0
 ...
 
@@ -63,10 +63,11 @@ body: |
     ; CHECK-LABEL: name: fract_f64_neg_abs
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load 16, align 4, addrspace 4)
+    ; CHECK: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 =
+    ; S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
     ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
     ; CHECK: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
-    ; CHECK: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load 8, addrspace 1)
+    ; CHECK: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (s64), addrspace 1)
     ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
     ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
@@ -75,16 +76,16 @@ body: |
     ; CHECK: %13:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY3]], 3, [[COPY4]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: %16:vreg_64 = nofpexcept V_FRACT_F64_e64 0, %13, 0, 0, implicit $mode, implicit $exec
     ; CHECK: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], %16, [[COPY1]], 0, 0, implicit $exec :: (store 8, addrspace 1)
+    ; CHECK: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], %16, [[COPY1]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK: S_ENDPGM 0
     %2:sgpr(p4) = COPY $sgpr0_sgpr1
     %7:sgpr(s64) = G_CONSTANT i64 36
     %8:sgpr(p4) = G_PTR_ADD %2, %7(s64)
-    %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load 16, align 4, addrspace 4)
+    %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
     %10:sgpr(s64) = G_EXTRACT %9(<2 x s64>), 0
     %13:sgpr(s64) = G_EXTRACT %9(<2 x s64>), 64
     %15:sgpr(p1) = G_INTTOPTR %13(s64)
-    %18:sgpr(s64) = G_LOAD %15(p1) :: (load 8, addrspace 1)
+    %18:sgpr(s64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
     %19:sgpr(s64) = G_FABS %18
     %20:sgpr(s64) = G_FCONSTANT double -0.000000e+00
     %25:sgpr(s64) = G_FNEG %19
@@ -96,6 +97,6 @@ body: |
     %23:vgpr(s64) = G_FADD %21, %24
     %12:sgpr(p1) = G_INTTOPTR %10(s64)
     %28:vgpr(p1) = COPY %12(p1)
-    G_STORE %23(s64), %28(p1) :: (store 8, addrspace 1)
+    G_STORE %23(s64), %28(p1) :: (store (s64), addrspace 1)
     S_ENDPGM 0
 ...

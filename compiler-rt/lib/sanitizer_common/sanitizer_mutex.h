@@ -66,8 +66,8 @@ class SpinMutex : public StaticSpinMutex {
   }
 
  private:
-  SpinMutex(const SpinMutex&);
-  void operator=(const SpinMutex&);
+  SpinMutex(const SpinMutex &) = delete;
+  void operator=(const SpinMutex &) = delete;
 };
 
 class BlockingMutex {
@@ -171,8 +171,8 @@ class RWMutex {
     }
   }
 
-  RWMutex(const RWMutex&);
-  void operator = (const RWMutex&);
+  RWMutex(const RWMutex &) = delete;
+  void operator=(const RWMutex &) = delete;
 };
 
 template<typename MutexType>
@@ -190,8 +190,8 @@ class GenericScopedLock {
  private:
   MutexType *mu_;
 
-  GenericScopedLock(const GenericScopedLock&);
-  void operator=(const GenericScopedLock&);
+  GenericScopedLock(const GenericScopedLock &) = delete;
+  void operator=(const GenericScopedLock &) = delete;
 };
 
 template<typename MutexType>
@@ -209,8 +209,8 @@ class GenericScopedReadLock {
  private:
   MutexType *mu_;
 
-  GenericScopedReadLock(const GenericScopedReadLock&);
-  void operator=(const GenericScopedReadLock&);
+  GenericScopedReadLock(const GenericScopedReadLock &) = delete;
+  void operator=(const GenericScopedReadLock &) = delete;
 };
 
 typedef GenericScopedLock<StaticSpinMutex> SpinMutexLock;

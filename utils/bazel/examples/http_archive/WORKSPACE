@@ -1,0 +1,48 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+"""An example WORKSPACE for configuring LLVM using http_archive."""
+
+workspace(name = "http_archive_example")
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# Replace with the LLVM commit you want to use.
+LLVM_COMMIT = "09ac97ce350316b95b8cddb796d52f71b6f68296"
+
+# The easiest way to calculate this for a new commit is to set it to empty and
+# then run a bazel build and it will report the digest necessary to cache the
+# archive and make the build reproducible.
+LLVM_SHA256 = "2fb1aa06d12f8db349a27426cb0ced062987c5c2a75143c69f4284929e2750ff"
+
+# FIXME: It shouldn't be necessary to use http_archive twice here. Caching
+# should mean that this isn't too expensive though.
+
+http_archive(
+    name = "llvm-project-raw",
+    build_file_content = "#empty",
+    sha256 = LLVM_SHA256,
+    strip_prefix = "llvm-project-" + LLVM_COMMIT,
+    urls = ["https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT)],
+)
+
+http_archive(
+    name = "llvm-bazel",
+    sha256 = LLVM_SHA256,
+    strip_prefix = "llvm-project-{}/utils/bazel".format(LLVM_COMMIT),
+    urls = ["https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT)],
+)
+
+load("@llvm-bazel//:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
+
+llvm_configure(
+    name = "llvm-project",
+    src_path = ".",
+    src_workspace = "@llvm-project-raw//:WORKSPACE",
+)
+
+# Disables optional dependencies for Support like zlib and terminfo. You may
+# instead want to configure them using the macros in the corresponding bzl
+# files.
+llvm_disable_optional_support_deps()

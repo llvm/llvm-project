@@ -63,10 +63,10 @@ body:             |
     ; CHECK-LABEL: name: store_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: STRXui [[COPY1]], [[COPY]], 0 :: (store 8 into %ir.addr)
+    ; CHECK: STRXui [[COPY1]], [[COPY]], 0 :: (store (s64) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s64) = COPY $x1
-    G_STORE  %1, %0 :: (store 8 into %ir.addr)
+    G_STORE  %1, %0 :: (store (s64) into %ir.addr)
 
 ...
 
@@ -86,10 +86,10 @@ body:             |
     ; CHECK-LABEL: name: store_s32_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: STRWui [[COPY1]], [[COPY]], 0 :: (store 4 into %ir.addr)
+    ; CHECK: STRWui [[COPY1]], [[COPY]], 0 :: (store (s32) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s32) = COPY $w1
-    G_STORE  %1, %0 :: (store 4 into %ir.addr)
+    G_STORE  %1, %0 :: (store (s32) into %ir.addr)
 
 ...
 
@@ -109,11 +109,11 @@ body:             |
     ; CHECK-LABEL: name: store_s16_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: STRHHui [[COPY1]], [[COPY]], 0 :: (store 2 into %ir.addr)
+    ; CHECK: STRHHui [[COPY1]], [[COPY]], 0 :: (store (s16) into %ir.addr)
     %0(p0) = COPY $x0
     %2:gpr(s32) = COPY $w1
     %1(s16) = G_TRUNC %2
-    G_STORE  %1, %0 :: (store 2 into %ir.addr)
+    G_STORE  %1, %0 :: (store (s16) into %ir.addr)
 
 ...
 
@@ -133,11 +133,11 @@ body:             |
     ; CHECK-LABEL: name: store_s8_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: STRBBui [[COPY1]], [[COPY]], 0 :: (store 1 into %ir.addr)
+    ; CHECK: STRBBui [[COPY1]], [[COPY]], 0 :: (store (s8) into %ir.addr)
     %0(p0) = COPY $x0
     %2:gpr(s32) = COPY $w1
     %1(s8) = G_TRUNC %2
-    G_STORE  %1, %0 :: (store 1 into %ir.addr)
+    G_STORE  %1, %0 :: (store (s8) into %ir.addr)
 
 ...
 
@@ -156,10 +156,10 @@ body:             |
 
     ; CHECK-LABEL: name: store_zero_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRXui $xzr, [[COPY]], 0 :: (store 8 into %ir.addr)
+    ; CHECK: STRXui $xzr, [[COPY]], 0 :: (store (s64) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s64) = G_CONSTANT i64 0
-    G_STORE  %1, %0 :: (store 8 into %ir.addr)
+    G_STORE  %1, %0 :: (store (s64) into %ir.addr)
 
 ...
 
@@ -178,10 +178,10 @@ body:             |
 
     ; CHECK-LABEL: name: store_zero_s32_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRWui $wzr, [[COPY]], 0 :: (store 4 into %ir.addr)
+    ; CHECK: STRWui $wzr, [[COPY]], 0 :: (store (s32) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s32) = G_CONSTANT i32 0
-    G_STORE  %1, %0 :: (store 4 into %ir.addr)
+    G_STORE  %1, %0 :: (store (s32) into %ir.addr)
 
 ...
 
@@ -194,10 +194,10 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: store_zero_s16
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRHHui $wzr, [[COPY]], 0 :: (store 2)
+    ; CHECK: STRHHui $wzr, [[COPY]], 0 :: (store (s16))
     %0:gpr(p0) = COPY $x0
     %1:gpr(s16) = G_CONSTANT i16 0
-    G_STORE %1(s16), %0(p0) :: (store 2)
+    G_STORE %1(s16), %0(p0) :: (store (s16))
 
 ...
 
@@ -210,10 +210,10 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: store_zero_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRBBui $wzr, [[COPY]], 0 :: (store 1)
+    ; CHECK: STRBBui $wzr, [[COPY]], 0 :: (store (s8))
     %0:gpr(p0) = COPY $x0
     %1:gpr(s8) = G_CONSTANT i8 0
-    G_STORE %1(s8), %0(p0) :: (store 1)
+    G_STORE %1(s8), %0(p0) :: (store (s8))
 ...
 
 ---
@@ -225,11 +225,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: store_zero_look_through_cst
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRXui $xzr, [[COPY]], 0 :: (store 8 into %ir.addr)
+    ; CHECK: STRXui $xzr, [[COPY]], 0 :: (store (s64) into %ir.addr)
     %0:gpr(p0) = COPY $x0
     %1:gpr(s32) = G_CONSTANT i32 0
     %2:gpr(s64) = G_ZEXT %1
-    G_STORE  %2, %0 :: (store 8 into %ir.addr)
+    G_STORE %2, %0 :: (store (s64) into %ir.addr)
 ...
 
 ---
@@ -251,10 +251,10 @@ body:             |
     ; CHECK-LABEL: name: store_fi_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
-    ; CHECK: STRXui [[COPY1]], %stack.0.ptr0, 0 :: (store 8)
+    ; CHECK: STRXui [[COPY1]], %stack.0.ptr0, 0 :: (store (p0))
     %0(p0) = COPY $x0
     %1(p0) = G_FRAME_INDEX %stack.0.ptr0
-    G_STORE  %0, %1 :: (store 8)
+    G_STORE  %0, %1 :: (store (p0))
 ...
 
 ---
@@ -275,12 +275,12 @@ body:             |
     ; CHECK-LABEL: name: store_gep_128_s64_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: STRXui [[COPY1]], [[COPY]], 16 :: (store 8 into %ir.addr)
+    ; CHECK: STRXui [[COPY1]], [[COPY]], 16 :: (store (s64) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s64) = COPY $x1
     %2(s64) = G_CONSTANT i64 128
     %3(p0) = G_PTR_ADD %0, %2
-    G_STORE %1, %3 :: (store 8 into %ir.addr)
+    G_STORE %1, %3 :: (store (s64) into %ir.addr)
 ...
 
 ---
@@ -301,12 +301,12 @@ body:             |
     ; CHECK-LABEL: name: store_gep_512_s32_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: STRWui [[COPY1]], [[COPY]], 128 :: (store 4 into %ir.addr)
+    ; CHECK: STRWui [[COPY1]], [[COPY]], 128 :: (store (s32) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s32) = COPY $w1
     %2(s64) = G_CONSTANT i64 512
     %3(p0) = G_PTR_ADD %0, %2
-    G_STORE %1, %3 :: (store 4 into %ir.addr)
+    G_STORE %1, %3 :: (store (s32) into %ir.addr)
 ...
 
 ---
@@ -327,13 +327,13 @@ body:             |
     ; CHECK-LABEL: name: store_gep_64_s16_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: STRHHui [[COPY1]], [[COPY]], 32 :: (store 2 into %ir.addr)
+    ; CHECK: STRHHui [[COPY1]], [[COPY]], 32 :: (store (s16) into %ir.addr)
     %0(p0) = COPY $x0
     %4:gpr(s32) = COPY $w1
     %1(s16) = G_TRUNC %4
     %2(s64) = G_CONSTANT i64 64
     %3(p0) = G_PTR_ADD %0, %2
-    G_STORE %1, %3 :: (store 2 into %ir.addr)
+    G_STORE %1, %3 :: (store (s16) into %ir.addr)
 ...
 
 ---
@@ -354,13 +354,13 @@ body:             |
     ; CHECK-LABEL: name: store_gep_1_s8_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: STRBBui [[COPY1]], [[COPY]], 1 :: (store 1 into %ir.addr)
+    ; CHECK: STRBBui [[COPY1]], [[COPY]], 1 :: (store (s8) into %ir.addr)
     %0(p0) = COPY $x0
     %4:gpr(s32) = COPY $w1
     %1(s8) = G_TRUNC %4
     %2(s64) = G_CONSTANT i64 1
     %3(p0) = G_PTR_ADD %0, %2
-    G_STORE %1, %3 :: (store 1 into %ir.addr)
+    G_STORE %1, %3 :: (store (s8) into %ir.addr)
 ...
 
 ---
@@ -379,10 +379,10 @@ body:             |
     ; CHECK-LABEL: name: store_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: STRDui [[COPY1]], [[COPY]], 0 :: (store 8 into %ir.addr)
+    ; CHECK: STRDui [[COPY1]], [[COPY]], 0 :: (store (s64) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s64) = COPY $d1
-    G_STORE  %1, %0 :: (store 8 into %ir.addr)
+    G_STORE %1, %0 :: (store (s64) into %ir.addr)
 
 ...
 
@@ -402,10 +402,10 @@ body:             |
     ; CHECK-LABEL: name: store_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: STRSui [[COPY1]], [[COPY]], 0 :: (store 4 into %ir.addr)
+    ; CHECK: STRSui [[COPY1]], [[COPY]], 0 :: (store (s32) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s32) = COPY $s1
-    G_STORE  %1, %0 :: (store 4 into %ir.addr)
+    G_STORE %1, %0 :: (store (s32) into %ir.addr)
 
 ...
 
@@ -427,12 +427,12 @@ body:             |
     ; CHECK-LABEL: name: store_gep_8_s64_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: STRDui [[COPY1]], [[COPY]], 1 :: (store 8 into %ir.addr)
+    ; CHECK: STRDui [[COPY1]], [[COPY]], 1 :: (store (s64) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s64) = COPY $d1
     %2(s64) = G_CONSTANT i64 8
     %3(p0) = G_PTR_ADD %0, %2
-    G_STORE %1, %3 :: (store 8 into %ir.addr)
+    G_STORE %1, %3 :: (store (s64) into %ir.addr)
 ...
 
 ---
@@ -453,12 +453,12 @@ body:             |
     ; CHECK-LABEL: name: store_gep_8_s32_fpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK: STRSui [[COPY1]], [[COPY]], 2 :: (store 4 into %ir.addr)
+    ; CHECK: STRSui [[COPY1]], [[COPY]], 2 :: (store (s32) into %ir.addr)
     %0(p0) = COPY $x0
     %1(s32) = COPY $s1
     %2(s64) = G_CONSTANT i64 8
     %3(p0) = G_PTR_ADD %0, %2
-    G_STORE %1, %3 :: (store 4 into %ir.addr)
+    G_STORE %1, %3 :: (store (s32) into %ir.addr)
 ...
 ---
 name:            store_v2s32
@@ -476,10 +476,10 @@ body:             |
     ; CHECK-LABEL: name: store_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK: STRDui [[COPY1]], [[COPY]], 0 :: (store 8 into %ir.addr)
+    ; CHECK: STRDui [[COPY1]], [[COPY]], 0 :: (store (<2 x s32>) into %ir.addr)
     %0(p0) = COPY $x0
     %1(<2 x s32>) = COPY $d1
-    G_STORE  %1, %0 :: (store 8 into %ir.addr)
+    G_STORE  %1, %0 :: (store (<2 x s32>) into %ir.addr)
 
 ...
 ---
@@ -497,10 +497,10 @@ body:             |
     ; CHECK-LABEL: name: store_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
-    ; CHECK: STRQui [[COPY1]], [[COPY]], 0 :: (store 16 into %ir.addr, align 8)
+    ; CHECK: STRQui [[COPY1]], [[COPY]], 0 :: (store (<2 x s64>) into %ir.addr, align 8)
     %0(p0) = COPY $x0
     %1(<2 x s64>) = COPY $q1
-    G_STORE %1, %0 :: (store 16 into %ir.addr, align 8)
+    G_STORE %1, %0 :: (store (<2 x s64>) into %ir.addr, align 8)
 
 ...
 ---
@@ -521,11 +521,11 @@ body:             |
     ; CHECK: liveins: $d0, $x0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRDui [[COPY]], [[COPY1]], 0 :: (store 8 into %ir.ptr)
+    ; CHECK: STRDui [[COPY]], [[COPY1]], 0 :: (store (<4 x s16>) into %ir.ptr)
     ; CHECK: RET_ReallyLR
     %0:fpr(<4 x s16>) = COPY $d0
     %1:gpr(p0) = COPY $x0
-    G_STORE %0(<4 x s16>), %1(p0) :: (store 8 into %ir.ptr)
+    G_STORE %0(<4 x s16>), %1(p0) :: (store (<4 x s16>) into %ir.ptr)
     RET_ReallyLR
 
 ...
@@ -547,11 +547,11 @@ body:             |
     ; CHECK: liveins: $q0, $x0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store 16 into %ir.ptr)
+    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store (<4 x s32>) into %ir.ptr)
     ; CHECK: RET_ReallyLR
     %0:fpr(<4 x s32>) = COPY $q0
     %1:gpr(p0) = COPY $x0
-    G_STORE %0(<4 x s32>), %1(p0) :: (store 16 into %ir.ptr)
+    G_STORE %0(<4 x s32>), %1(p0) :: (store (<4 x s32>) into %ir.ptr)
     RET_ReallyLR
 
 ...
@@ -573,11 +573,11 @@ body:             |
     ; CHECK: liveins: $q0, $x0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store 16 into %ir.ptr)
+    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store (<8 x s16>) into %ir.ptr)
     ; CHECK: RET_ReallyLR
     %0:fpr(<8 x s16>) = COPY $q0
     %1:gpr(p0) = COPY $x0
-    G_STORE %0(<8 x s16>), %1(p0) :: (store 16 into %ir.ptr)
+    G_STORE %0(<8 x s16>), %1(p0) :: (store (<8 x s16>) into %ir.ptr)
     RET_ReallyLR
 
 ...
@@ -599,11 +599,11 @@ body:             |
     ; CHECK: liveins: $q0, $x0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store 16 into %ir.ptr)
+    ; CHECK: STRQui [[COPY]], [[COPY1]], 0 :: (store (<16 x s8>) into %ir.ptr)
     ; CHECK: RET_ReallyLR
     %0:fpr(<16 x s8>) = COPY $q0
     %1:gpr(p0) = COPY $x0
-    G_STORE %0(<16 x s8>), %1(p0) :: (store 16 into %ir.ptr)
+    G_STORE %0(<16 x s8>), %1(p0) :: (store (<16 x s8>) into %ir.ptr)
     RET_ReallyLR
 
 ...
@@ -620,11 +620,11 @@ body:             |
     ; CHECK: %copy:gpr64all = COPY $x0
     ; CHECK: %adrp:gpr64common = ADRP target-flags(aarch64-page) @x
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %copy
-    ; CHECK: STRXui [[COPY]], %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x :: (store 8 into @x)
+    ; CHECK: STRXui [[COPY]], %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x :: (store (p0) into @x)
     %copy:gpr(p0) = COPY $x0
     %adrp:gpr64(p0) = ADRP target-flags(aarch64-page) @x
     %add_low:gpr(p0) = G_ADD_LOW %adrp(p0), target-flags(aarch64-pageoff, aarch64-nc) @x
-    G_STORE %copy(p0), %add_low(p0) :: (store 8 into @x)
+    G_STORE %copy(p0), %add_low(p0) :: (store (p0) into @x)
 
 ...
 ---
@@ -640,11 +640,11 @@ body:             |
     ; CHECK: %copy:gpr64all = COPY $x0
     ; CHECK: %adrp:gpr64common = ADRP target-flags(aarch64-page) @x + 8
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %copy
-    ; CHECK: STRXui [[COPY]], %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x + 8 :: (store 8 into @x)
+    ; CHECK: STRXui [[COPY]], %adrp, target-flags(aarch64-pageoff, aarch64-nc) @x + 8 :: (store (p0) into @x)
     %copy:gpr(p0) = COPY $x0
     %adrp:gpr64(p0) = ADRP target-flags(aarch64-page) @x + 8
     %add_low:gpr(p0) = G_ADD_LOW %adrp(p0), target-flags(aarch64-pageoff, aarch64-nc) @x + 8
-    G_STORE %copy(p0), %add_low(p0) :: (store 8 into @x)
+    G_STORE %copy(p0), %add_low(p0) :: (store (p0) into @x)
 
 ...
 ---
@@ -660,11 +660,11 @@ body:             |
     ; CHECK: %copy:gpr64all = COPY $x0
     ; CHECK: %add_low:gpr64common = MOVaddr target-flags(aarch64-page) @x + 3, target-flags(aarch64-pageoff, aarch64-nc) @x + 3
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY %copy
-    ; CHECK: STRXui [[COPY]], %add_low, 0 :: (store 8 into @x)
+    ; CHECK: STRXui [[COPY]], %add_low, 0 :: (store (p0) into @x)
     %copy:gpr(p0) = COPY $x0
     %adrp:gpr64(p0) = ADRP target-flags(aarch64-page) @x + 3
     %add_low:gpr(p0) = G_ADD_LOW %adrp(p0), target-flags(aarch64-pageoff, aarch64-nc) @x + 3
-    G_STORE %copy(p0), %add_low(p0) :: (store 8 into @x)
+    G_STORE %copy(p0), %add_low(p0) :: (store (p0) into @x)
 ...
 
 ---
@@ -679,36 +679,36 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK: %val32:gpr32 = COPY $w1
     ; CHECK: %val64:gpr64 = COPY $x2
-    ; CHECK: STRBBui %val32, [[COPY]], 0 :: (store 1)
-    ; CHECK: STRBBui %val32, [[COPY]], 43 :: (store 1)
-    ; CHECK: STRHHui %val32, [[COPY]], 0 :: (store 2)
-    ; CHECK: STURHHi %val32, [[COPY]], 43 :: (store 2)
+    ; CHECK: STRBBui %val32, [[COPY]], 0 :: (store (s8))
+    ; CHECK: STRBBui %val32, [[COPY]], 43 :: (store (s8))
+    ; CHECK: STRHHui %val32, [[COPY]], 0 :: (store (s16))
+    ; CHECK: STURHHi %val32, [[COPY]], 43 :: (store (s16))
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY %val64.sub_32
-    ; CHECK: STRHHui [[COPY1]], [[COPY]], 0 :: (store 2)
+    ; CHECK: STRHHui [[COPY1]], [[COPY]], 0 :: (store (s16))
     ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY %val64.sub_32
-    ; CHECK: STURHHi [[COPY2]], [[COPY]], 43 :: (store 2)
+    ; CHECK: STURHHi [[COPY2]], [[COPY]], 43 :: (store (s16))
     ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY %val64.sub_32
-    ; CHECK: STRWui [[COPY3]], [[COPY]], 0 :: (store 4)
+    ; CHECK: STRWui [[COPY3]], [[COPY]], 0 :: (store (s32))
     ; CHECK: [[COPY4:%[0-9]+]]:gpr32 = COPY %val64.sub_32
-    ; CHECK: STURWi [[COPY4]], [[COPY]], 43 :: (store 4)
+    ; CHECK: STURWi [[COPY4]], [[COPY]], 43 :: (store (s32))
     %0:gpr(p0) = COPY $x0
     %val32:gpr(s32) = COPY $w1
     %val64:gpr(s64) = COPY $x2
-    G_STORE %val32, %0 :: (store 1)
+    G_STORE %val32, %0 :: (store (s8))
     ; unscaled offset:
     %cst:gpr(s64) = G_CONSTANT i64 43
     %newptr:gpr(p0) = G_PTR_ADD %0, %cst
-    G_STORE %val32, %newptr :: (store 1)
+    G_STORE %val32, %newptr :: (store (s8))
 
-    G_STORE %val32, %0 :: (store 2)
+    G_STORE %val32, %0 :: (store (s16))
     ; unscaled offset:
-    G_STORE %val32, %newptr :: (store 2)
+    G_STORE %val32, %newptr :: (store (s16))
 
-    G_STORE %val64, %0 :: (store 2)
+    G_STORE %val64, %0 :: (store (s16))
     ; unscaled offset:
-    G_STORE %val64, %newptr :: (store 2)
+    G_STORE %val64, %newptr :: (store (s16))
 
-    G_STORE %val64, %0 :: (store 4)
+    G_STORE %val64, %0 :: (store (s32))
     ; unscaled offset:
-    G_STORE %val64, %newptr :: (store 4)
+    G_STORE %val64, %newptr :: (store (s32))
 ...

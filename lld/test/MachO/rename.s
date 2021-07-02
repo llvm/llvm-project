@@ -30,6 +30,7 @@
 # RUN: %lld \
 # RUN:     -rename_section __FROM_SECT __from_sect __TO_SECT __to_sect \
 # RUN:     -rename_segment __FROM_SEG __TO_SEG \
+# RUN:     -rename_section __TEXT __cstring __RODATA __cstring \
 # RUN:   -o %t %t.o
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s
 
@@ -37,14 +38,14 @@
 # CHECK-NEXT: sectname __text
 # CHECK-NEXT: segname __TEXT
 # CHECK:      {{^}}Section{{$}}
-# CHECK-NOT:  sectname __from_sect
 # CHECK-NEXT: sectname __to_sect
-# CHECK-NOT:  segname __FROM_SECT
 # CHECK-NEXT: segname __TO_SECT
 # CHECK:      {{^}}Section{{$}}
 # CHECK-NEXT: sectname __from_seg
-# CHECK-NOT:  segname __FROM_SEG
 # CHECK-NEXT: segname __TO_SEG
+# CHECK:      {{^}}Section{{$}}
+# CHECK-NEXT: sectname __cstring
+# CHECK-NEXT: segname __RODATA
 
 .section __FROM_SECT,__from_sect
 .global _from_sect
@@ -54,6 +55,10 @@ _from_sect:
 .section __FROM_SEG,__from_seg
 .global _from_seg
 _from_seg:
+  .space 8
+
+## This is a synthetic section; make sure it gets renamed too.
+.cstring
   .space 8
 
 .text

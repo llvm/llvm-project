@@ -121,7 +121,7 @@ define void @test_stack_ext_needed() {
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
-  ; CHECK:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store 1 into stack)
+  ; CHECK:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
   ; CHECK:   BL @stack_ext_needed, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7
   ; CHECK:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; CHECK:   RET_ReallyLR
@@ -141,7 +141,7 @@ define void @callee_s128(i128 %a, i128 %b, i128 *%ptr) {
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
   ; CHECK:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY2]](s64), [[COPY3]](s64)
   ; CHECK:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x4
-  ; CHECK:   G_STORE [[MV1]](s128), [[COPY4]](p0) :: (store 16 into %ir.ptr)
+  ; CHECK:   G_STORE [[MV1]](s128), [[COPY4]](p0) :: (store (s128) into %ir.ptr)
   ; CHECK:   RET_ReallyLR
   store i128 %b, i128 *%ptr
   ret void
@@ -153,7 +153,7 @@ define void @caller_s128(i128 *%ptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.ptr)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128) from %ir.ptr)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
   ; CHECK:   $x0 = COPY [[UV]](s64)
@@ -202,16 +202,16 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; CHECK:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C12]](s64)
-  ; CHECK:   G_STORE [[C8]](s8), [[PTR_ADD]](p0) :: (store 1 into stack)
+  ; CHECK:   G_STORE [[C8]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
   ; CHECK:   [[C13:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s64)
-  ; CHECK:   G_STORE [[C9]](s16), [[PTR_ADD1]](p0) :: (store 2 into stack + 8, align 1)
+  ; CHECK:   G_STORE [[C9]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 8, align 1)
   ; CHECK:   [[C14:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C14]](s64)
-  ; CHECK:   G_STORE [[C10]](s8), [[PTR_ADD2]](p0) :: (store 1 into stack + 16)
+  ; CHECK:   G_STORE [[C10]](s8), [[PTR_ADD2]](p0) :: (store (s8) into stack + 16)
   ; CHECK:   [[C15:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s64)
-  ; CHECK:   G_STORE [[C11]](s8), [[PTR_ADD3]](p0) :: (store 1 into stack + 24)
+  ; CHECK:   G_STORE [[C11]](s8), [[PTR_ADD3]](p0) :: (store (s8) into stack + 24)
   ; CHECK:   BL @i8i16callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK:   ADJCALLSTACKUP 32, 0, implicit-def $sp, implicit $sp
@@ -230,7 +230,7 @@ define void @arg_v2i64(<2 x i64> %arg) {
   ; CHECK:   liveins: $q0
   ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
   ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[COPY]](<2 x s64>), [[DEF]](p0) :: (store 16 into `<2 x i64>* undef`)
+  ; CHECK:   G_STORE [[COPY]](<2 x s64>), [[DEF]](p0) :: (store (<2 x s64>) into `<2 x i64>* undef`)
   ; CHECK:   RET_ReallyLR
   store <2 x i64> %arg, <2 x i64>* undef
   ret void
@@ -246,7 +246,7 @@ define void @arg_v8i64(<8 x i64> %arg) {
   ; CHECK:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>), [[COPY2]](<2 x s64>), [[COPY3]](<2 x s64>)
   ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[CONCAT_VECTORS]](<8 x s64>), [[DEF]](p0) :: (store 64 into `<8 x i64>* undef`)
+  ; CHECK:   G_STORE [[CONCAT_VECTORS]](<8 x s64>), [[DEF]](p0) :: (store (<8 x s64>) into `<8 x i64>* undef`)
   ; CHECK:   RET_ReallyLR
   store <8 x i64> %arg, <8 x i64>* undef
   ret void
@@ -259,7 +259,7 @@ define void @arg_v4f32(<4 x float> %arg) {
   ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
   ; CHECK:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
   ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[BITCAST]](<4 x s32>), [[DEF]](p0) :: (store 16 into `<4 x float>* undef`)
+  ; CHECK:   G_STORE [[BITCAST]](<4 x s32>), [[DEF]](p0) :: (store (<4 x s32>) into `<4 x float>* undef`)
   ; CHECK:   RET_ReallyLR
   store <4 x float> %arg, <4 x float>* undef
   ret void
@@ -279,7 +279,7 @@ define void @ret_arg_v16f32(<16 x float> %arg) {
   ; CHECK:   [[BITCAST3:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY3]](<2 x s64>)
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s32>) = G_CONCAT_VECTORS [[BITCAST]](<4 x s32>), [[BITCAST1]](<4 x s32>), [[BITCAST2]](<4 x s32>), [[BITCAST3]](<4 x s32>)
   ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK:   G_STORE [[CONCAT_VECTORS]](<16 x s32>), [[DEF]](p0) :: (store 64 into `<16 x float>* undef`)
+  ; CHECK:   G_STORE [[CONCAT_VECTORS]](<16 x s32>), [[DEF]](p0) :: (store (<16 x s32>) into `<16 x float>* undef`)
   ; CHECK:   RET_ReallyLR
   store <16 x float> %arg, <16 x float>* undef
   ret void
