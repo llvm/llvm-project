@@ -807,8 +807,8 @@ define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %in
 ; GFX9-O3-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
 ; GFX9-O3-NEXT:    buffer_load_dwordx4 v[1:4], v0, s[4:7], 0 offen
 ; GFX9-O3-NEXT:    buffer_load_dwordx2 v[5:6], v0, s[4:7], 0 offen offset:16
-; GFX9-O3-NEXT:    s_brev_b32 s9, -2
 ; GFX9-O3-NEXT:    s_mov_b32 s8, -1
+; GFX9-O3-NEXT:    s_brev_b32 s9, -2
 ; GFX9-O3-NEXT:    s_not_b64 exec, exec
 ; GFX9-O3-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v1, s8
