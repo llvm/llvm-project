@@ -1,0 +1,44 @@
+set(TARGET_LIBC_ENTRYPOINTS
+    # ctype.h entrypoints
+    libc.src.ctype.isalnum
+    libc.src.ctype.isalpha
+    libc.src.ctype.isascii
+    libc.src.ctype.isblank
+    libc.src.ctype.iscntrl
+    libc.src.ctype.isdigit
+    libc.src.ctype.isgraph
+    libc.src.ctype.islower
+    libc.src.ctype.isprint
+    libc.src.ctype.ispunct
+    libc.src.ctype.isspace
+    libc.src.ctype.isupper
+    libc.src.ctype.isxdigit
+    libc.src.ctype.toascii
+    libc.src.ctype.tolower
+    libc.src.ctype.toupper
+    # string.h entrypoints
+    libc.src.string.bzero
+    libc.src.string.memchr
+    libc.src.string.memcmp
+    libc.src.string.memcpy
+    libc.src.string.memmove
+    libc.src.string.memset
+    libc.src.string.memrchr
+    libc.src.string.strcat
+    libc.src.string.strchr
+    libc.src.string.strcpy
+    libc.src.string.strcmp
+    libc.src.string.strcspn
+    libc.src.string.strlen
+    libc.src.string.strncpy
+    libc.src.string.strnlen
+    libc.src.string.strpbrk
+    libc.src.string.strrchr
+    libc.src.string.strspn
+    libc.src.string.strstr
+    libc.src.string.strtok
+    libc.src.string.strtok_r
+)
+set(TARGET_LLVMLIBC_ENTRYPOINTS
+  ${TARGET_LIBC_ENTRYPOINTS}
+)
