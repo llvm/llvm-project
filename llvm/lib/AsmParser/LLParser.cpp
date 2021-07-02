@@ -970,7 +970,7 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
   } else {
     // The bitcast dest type is not present, it is implied by the dest type.
     ValID ID;
-    if (parseValID(ID))
+    if (parseValID(ID, /*PFS=*/nullptr))
       return true;
     if (ID.Kind != ValID::t_Constant)
       return error(AliaseeLoc, "invalid aliasee");
@@ -3321,7 +3321,7 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
 /// sanity.  PFS is used to convert function-local operands of metadata (since
 /// metadata operands are not just parsed here but also converted to values).
 /// PFS can be null when we are not parsing metadata values inside a function.
-bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS) {
+bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   ID.Loc = Lex.getLoc();
   switch (Lex.getKind()) {
   default:
@@ -3493,10 +3493,10 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS) {
     ValID Fn, Label;
 
     if (parseToken(lltok::lparen, "expected '(' in block address expression") ||
-        parseValID(Fn) ||
+        parseValID(Fn, PFS) ||
         parseToken(lltok::comma,
                    "expected comma in block address expression") ||
-        parseValID(Label) ||
+        parseValID(Label, PFS) ||
         parseToken(lltok::rparen, "expected ')' in block address expression"))
       return true;
 
@@ -3531,9 +3531,27 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS) {
                                               std::map<ValID, GlobalValue *>()))
               .first->second.insert(std::make_pair(std::move(Label), nullptr))
               .first->second;
-      if (!FwdRef)
-        FwdRef = new GlobalVariable(*M, Type::getInt8Ty(Context), false,
-                                    GlobalValue::InternalLinkage, nullptr, "");
+      if (!FwdRef) {
+        unsigned FwdDeclAS;
+        if (ExpectedTy) {
+          // If we know the type that the blockaddress is being assigned to,
+          // we can use the address space of that type.
+          if (!ExpectedTy->isPointerTy())
+            return error(ID.Loc,
+                         "type of blockaddress must be a pointer and not '" +
+                             getTypeString(ExpectedTy) + "'");
+          FwdDeclAS = ExpectedTy->getPointerAddressSpace();
+        } else if (PFS) {
+          // Otherwise, we default the address space of the current function.
+          FwdDeclAS = PFS->getFunction().getAddressSpace();
+        } else {
+          llvm_unreachable("Unknown address space for blockaddress");
+        }
+        FwdRef = new GlobalVariable(
+            *M, Type::getInt8Ty(Context), false, GlobalValue::InternalLinkage,
+            nullptr, "", nullptr, GlobalValue::NotThreadLocal, FwdDeclAS);
+      }
+
       ID.ConstantVal = FwdRef;
       ID.Kind = ValID::t_Constant;
       return false;
@@ -3570,7 +3588,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS) {
 
     ValID Fn;
 
-    if (parseValID(Fn))
+    if (parseValID(Fn, PFS))
       return true;
 
     if (Fn.Kind != ValID::t_GlobalID && Fn.Kind != ValID::t_GlobalName)
@@ -3960,7 +3978,7 @@ bool LLParser::parseGlobalValue(Type *Ty, Constant *&C) {
   C = nullptr;
   ValID ID;
   Value *V = nullptr;
-  bool Parsed = parseValID(ID) ||
+  bool Parsed = parseValID(ID, /*PFS=*/nullptr, Ty) ||
                 convertValIDToValue(Ty, ID, V, nullptr, /*IsCall=*/false);
   if (V && !(C = dyn_cast<Constant>(V)))
     return error(ID.Loc, "global values must be constants");
@@ -5679,7 +5697,9 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
     return false;
   case ValID::t_Constant:
     if (ID.ConstantVal->getType() != Ty)
-      return error(ID.Loc, "constant expression type mismatch");
+      return error(ID.Loc, "constant expression type mismatch: got type '" +
+                               getTypeString(ID.ConstantVal->getType()) +
+                               "' but expected '" + getTypeString(Ty) + "'");
     V = ID.ConstantVal;
     return false;
   case ValID::t_ConstantStruct:
@@ -5739,7 +5759,7 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
 bool LLParser::parseValue(Type *Ty, Value *&V, PerFunctionState *PFS) {
   V = nullptr;
   ValID ID;
-  return parseValID(ID, PFS) ||
+  return parseValID(ID, PFS, Ty) ||
          convertValIDToValue(Ty, ID, V, PFS, /*IsCall=*/false);
 }
 
@@ -6033,7 +6053,12 @@ bool LLParser::PerFunctionState::resolveForwardRefBlockAddresses() {
     if (!BB)
       return P.error(BBID.Loc, "referenced value is not a basic block");
 
-    GV->replaceAllUsesWith(BlockAddress::get(&F, BB));
+    Value *ResolvedVal = BlockAddress::get(&F, BB);
+    ResolvedVal = P.checkValidVariableType(BBID.Loc, BBID.StrVal, GV->getType(),
+                                           ResolvedVal, false);
+    if (!ResolvedVal)
+      return true;
+    GV->replaceAllUsesWith(ResolvedVal);
     GV->eraseFromParent();
   }
 
@@ -6568,7 +6593,7 @@ bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
   if (parseOptionalCallingConv(CC) || parseOptionalReturnAttrs(RetAttrs) ||
       parseOptionalProgramAddrSpace(InvokeAddrSpace) ||
       parseType(RetType, RetTypeLoc, true /*void allowed*/) ||
-      parseValID(CalleeID) || parseParameterList(ArgList, PFS) ||
+      parseValID(CalleeID, &PFS) || parseParameterList(ArgList, PFS) ||
       parseFnAttributeValuePairs(FnAttrs, FwdRefAttrGrps, false,
                                  NoBuiltinLoc) ||
       parseOptionalOperandBundles(BundleList, PFS) ||
@@ -6876,7 +6901,7 @@ bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
   BasicBlock *DefaultDest;
   if (parseOptionalCallingConv(CC) || parseOptionalReturnAttrs(RetAttrs) ||
       parseType(RetType, RetTypeLoc, true /*void allowed*/) ||
-      parseValID(CalleeID) || parseParameterList(ArgList, PFS) ||
+      parseValID(CalleeID, &PFS) || parseParameterList(ArgList, PFS) ||
       parseFnAttributeValuePairs(FnAttrs, FwdRefAttrGrps, false,
                                  NoBuiltinLoc) ||
       parseOptionalOperandBundles(BundleList, PFS) ||
@@ -7303,7 +7328,7 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
   if (parseOptionalCallingConv(CC) || parseOptionalReturnAttrs(RetAttrs) ||
       parseOptionalProgramAddrSpace(CallAddrSpace) ||
       parseType(RetType, RetTypeLoc, true /*void allowed*/) ||
-      parseValID(CalleeID) ||
+      parseValID(CalleeID, &PFS) ||
       parseParameterList(ArgList, PFS, TCK == CallInst::TCK_MustTail,
                          PFS.getFunction().isVarArg()) ||
       parseFnAttributeValuePairs(FnAttrs, FwdRefAttrGrps, false, BuiltinLoc) ||
@@ -7979,9 +8004,9 @@ bool LLParser::parseUseListOrderBB() {
 
   ValID Fn, Label;
   SmallVector<unsigned, 16> Indexes;
-  if (parseValID(Fn) ||
+  if (parseValID(Fn, /*PFS=*/nullptr) ||
       parseToken(lltok::comma, "expected comma in uselistorder_bb directive") ||
-      parseValID(Label) ||
+      parseValID(Label, /*PFS=*/nullptr) ||
       parseToken(lltok::comma, "expected comma in uselistorder_bb directive") ||
       parseUseListOrderIndexes(Indexes))
     return true;
