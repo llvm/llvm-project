@@ -2,9 +2,11 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify %s -DORDER=1
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++98 %s -DORDER=1
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++11 %s -DORDER=1
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++17 %s -DORDER=1
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify %s -DORDER=2
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++98 %s -DORDER=2
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++11 %s -DORDER=2
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-using-decls -verify -std=c++17 %s -DORDER=2
 
 #if ORDER == 1
 #include "a.h"
@@ -38,6 +40,19 @@ template<typename T> int UseAll() {
 template int UseAll<YA>();
 template int UseAll<YB>();
 template int UseAll<Y>();
+
+#if __cplusplus >= 201702L
+void use_g(Q q) {
+  q.f(q); // expected-error {{ambiguous}}
+#if ORDER == 1
+  // expected-note@a.h:* {{candidate function}}
+  // expected-note@a.h:* {{candidate function}}
+#else
+  // expected-note@b.h:* {{candidate function}}
+  // expected-note@b.h:* {{candidate function}}
+#endif
+}
+#endif
 
 // Which of these two sets of diagnostics is chosen is not important. It's OK
 // if this varies with ORDER, but it must be consistent across runs.
