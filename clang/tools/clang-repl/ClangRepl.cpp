@@ -28,9 +28,6 @@ static llvm::cl::list<std::string>
               llvm::cl::CommaSeparated);
 static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
-static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
-                                             llvm::cl::ZeroOrMore,
-                                             llvm::cl::desc("[code to run]"));
 
 static void LLVMErrorHandler(void *UserData, const std::string &Message,
                              bool GenCrashDiag) {
@@ -81,20 +78,13 @@ int main(int argc, const char **argv) {
                                     static_cast<void *>(&CI->getDiagnostics()));
 
   auto Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
-  for (const std::string &input : OptInputs) {
-    if (auto Err = Interp->ParseAndExecute(input))
+  llvm::LineEditor LE("clang-repl");
+  // FIXME: Add LE.setListCompleter
+  while (llvm::Optional<std::string> Line = LE.readLine()) {
+    if (*Line == "quit")
+      break;
+    if (auto Err = Interp->ParseAndExecute(*Line))
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-  }
-
-  if (OptInputs.empty()) {
-    llvm::LineEditor LE("clang-repl");
-    // FIXME: Add LE.setListCompleter
-    while (llvm::Optional<std::string> Line = LE.readLine()) {
-      if (*Line == "quit")
-        break;
-      if (auto Err = Interp->ParseAndExecute(*Line))
-        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-    }
   }
 
   // Our error handler depends on the Diagnostics object, which we're
