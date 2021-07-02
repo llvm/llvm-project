@@ -98,7 +98,7 @@ AppleGetItemInfoHandler::AppleGetItemInfoHandler(Process *process)
       m_get_item_info_return_buffer_addr(LLDB_INVALID_ADDRESS),
       m_get_item_info_retbuffer_mutex() {}
 
-AppleGetItemInfoHandler::~AppleGetItemInfoHandler() {}
+AppleGetItemInfoHandler::~AppleGetItemInfoHandler() = default;
 
 void AppleGetItemInfoHandler::Detach() {
 

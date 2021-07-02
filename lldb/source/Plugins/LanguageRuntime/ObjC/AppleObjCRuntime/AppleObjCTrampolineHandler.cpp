@@ -285,7 +285,7 @@ AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::VTableRegion(
   SetUpRegion();
 }
 
-AppleObjCTrampolineHandler::~AppleObjCTrampolineHandler() {}
+AppleObjCTrampolineHandler::~AppleObjCTrampolineHandler() = default;
 
 void AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::SetUpRegion() {
   // The header looks like:

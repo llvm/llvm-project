@@ -45,7 +45,7 @@ PlatformRemoteDarwinDevice::PlatformRemoteDarwinDevice()
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-PlatformRemoteDarwinDevice::~PlatformRemoteDarwinDevice() {}
+PlatformRemoteDarwinDevice::~PlatformRemoteDarwinDevice() = default;
 
 void PlatformRemoteDarwinDevice::GetStatus(Stream &strm) {
   Platform::GetStatus(strm);

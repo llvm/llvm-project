@@ -39,7 +39,7 @@ RegisterContextCorePOSIX_powerpc::RegisterContextCorePOSIX_powerpc(
   m_vec.SetByteOrder(vregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_powerpc::~RegisterContextCorePOSIX_powerpc() {}
+RegisterContextCorePOSIX_powerpc::~RegisterContextCorePOSIX_powerpc() = default;
 
 bool RegisterContextCorePOSIX_powerpc::ReadGPR() { return true; }
 

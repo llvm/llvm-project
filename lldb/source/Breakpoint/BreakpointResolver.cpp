@@ -65,7 +65,7 @@ BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        lldb::addr_t offset)
     : m_breakpoint(bkpt), m_offset(offset), SubclassID(resolverTy) {}
 
-BreakpointResolver::~BreakpointResolver() {}
+BreakpointResolver::~BreakpointResolver() = default;
 
 BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     const StructuredData::Dictionary &resolver_dict, Status &error) {

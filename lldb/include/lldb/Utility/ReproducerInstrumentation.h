@@ -469,7 +469,7 @@ template <> struct DeserializationHelper<> {
 
 /// The replayer interface.
 struct Replayer {
-  virtual ~Replayer() {}
+  virtual ~Replayer() = default;
   virtual void operator()(Deserializer &deserializer) const = 0;
 };
 
@@ -714,7 +714,7 @@ protected:
   friend llvm::optional_detail::OptionalStorage<InstrumentationData, true>;
   friend llvm::Optional<InstrumentationData>;
 
-  InstrumentationData() {}
+  InstrumentationData() = default;
   InstrumentationData(Serializer &serializer, Registry &registry)
       : m_serializer(&serializer), m_deserializer(nullptr),
         m_registry(&registry) {}

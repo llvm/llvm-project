@@ -33,7 +33,7 @@ StringList::StringList(const char **strv, int strc) : m_strings() {
   }
 }
 
-StringList::~StringList() {}
+StringList::~StringList() = default;
 
 void StringList::AppendString(const char *str) {
   if (str)

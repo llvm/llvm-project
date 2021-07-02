@@ -28,7 +28,7 @@ struct ELFNote {
 
   std::string n_name;
 
-  ELFNote() {}
+  ELFNote() = default;
 
   /// Parse an ELFNote entry from the given DataExtractor starting at position
   /// \p offset.

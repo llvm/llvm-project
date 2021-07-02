@@ -93,7 +93,7 @@ public:
 
   class Entity {
   public:
-    Entity() {}
+    Entity() = default;
 
     virtual ~Entity() = default;
 

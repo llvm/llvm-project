@@ -214,9 +214,7 @@ protected:
     uint32_t entry_count = 0;
     lldb::addr_t image_infos_addr = LLDB_INVALID_ADDRESS;
 
-    OSKextLoadedKextSummaryHeader()
-
-    {}
+    OSKextLoadedKextSummaryHeader() = default;
 
     uint32_t GetSize() {
       switch (version) {

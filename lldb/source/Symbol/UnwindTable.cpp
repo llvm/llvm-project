@@ -83,7 +83,7 @@ void UnwindTable::Initialize() {
   }
 }
 
-UnwindTable::~UnwindTable() {}
+UnwindTable::~UnwindTable() = default;
 
 llvm::Optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
                                                           SymbolContext &sc) {

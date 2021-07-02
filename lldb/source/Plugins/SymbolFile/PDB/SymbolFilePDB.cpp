@@ -130,7 +130,7 @@ SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
 SymbolFilePDB::SymbolFilePDB(lldb::ObjectFileSP objfile_sp)
     : SymbolFile(std::move(objfile_sp)), m_session_up(), m_global_scope_up() {}
 
-SymbolFilePDB::~SymbolFilePDB() {}
+SymbolFilePDB::~SymbolFilePDB() = default;
 
 uint32_t SymbolFilePDB::CalculateAbilities() {
   uint32_t abilities = 0;

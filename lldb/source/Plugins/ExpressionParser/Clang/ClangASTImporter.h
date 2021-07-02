@@ -216,7 +216,7 @@ public:
   void ForgetSource(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx);
 
   struct DeclOrigin {
-    DeclOrigin() {}
+    DeclOrigin() = default;
 
     DeclOrigin(clang::ASTContext *_ctx, clang::Decl *_decl)
         : ctx(_ctx), decl(_decl) {

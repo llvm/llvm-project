@@ -25,7 +25,7 @@ public:
   // Constructors and Destructors
   StopInfo(Thread &thread, uint64_t value);
 
-  virtual ~StopInfo() {}
+  virtual ~StopInfo() = default;
 
   bool IsValid() const;
 

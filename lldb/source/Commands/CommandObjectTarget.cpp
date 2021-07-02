@@ -158,9 +158,9 @@ static constexpr OptionEnumValueElement g_dependents_enumaration[] = {
 
 class OptionGroupDependents : public OptionGroup {
 public:
-  OptionGroupDependents() {}
+  OptionGroupDependents() = default;
 
-  ~OptionGroupDependents() override {}
+  ~OptionGroupDependents() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
     return llvm::makeArrayRef(g_target_dependents_options);

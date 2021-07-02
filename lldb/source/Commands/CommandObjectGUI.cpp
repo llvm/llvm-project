@@ -22,7 +22,7 @@ CommandObjectGUI::CommandObjectGUI(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "gui",
                           "Switch into the curses based GUI mode.", "gui") {}
 
-CommandObjectGUI::~CommandObjectGUI() {}
+CommandObjectGUI::~CommandObjectGUI() = default;
 
 bool CommandObjectGUI::DoExecute(Args &args, CommandReturnObject &result) {
 #if LLDB_ENABLE_CURSES

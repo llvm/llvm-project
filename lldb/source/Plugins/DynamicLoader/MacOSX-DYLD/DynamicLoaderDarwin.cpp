@@ -60,7 +60,7 @@ DynamicLoaderDarwin::DynamicLoaderDarwin(Process *process)
       m_dyld_image_infos_stop_id(UINT32_MAX), m_dyld(), m_mutex() {}
 
 // Destructor
-DynamicLoaderDarwin::~DynamicLoaderDarwin() {}
+DynamicLoaderDarwin::~DynamicLoaderDarwin() = default;
 
 /// Called after attaching a process.
 ///

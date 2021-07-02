@@ -26,7 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-TypeSummaryOptions::TypeSummaryOptions() {}
+TypeSummaryOptions::TypeSummaryOptions() = default;
 
 lldb::LanguageType TypeSummaryOptions::GetLanguage() const { return m_lang; }
 

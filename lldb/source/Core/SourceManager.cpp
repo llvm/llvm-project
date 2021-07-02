@@ -61,7 +61,7 @@ SourceManager::SourceManager(const DebuggerSP &debugger_sp)
       m_debugger_wp(debugger_sp) {}
 
 // Destructor
-SourceManager::~SourceManager() {}
+SourceManager::~SourceManager() = default;
 
 SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   if (!file_spec)

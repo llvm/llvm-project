@@ -22,7 +22,7 @@ NativeRegisterContext::NativeRegisterContext(NativeThreadProtocol &thread)
     : m_thread(thread) {}
 
 // Destructor
-NativeRegisterContext::~NativeRegisterContext() {}
+NativeRegisterContext::~NativeRegisterContext() = default;
 
 // FIXME revisit invalidation, process stop ids, etc.  Right now we don't
 // support caching in NativeRegisterContext.  We can do this later by utilizing

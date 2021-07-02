@@ -40,7 +40,7 @@ AppleThreadPlanStepThroughObjCTrampoline::
 
 // Destructor
 AppleThreadPlanStepThroughObjCTrampoline::
-    ~AppleThreadPlanStepThroughObjCTrampoline() {}
+    ~AppleThreadPlanStepThroughObjCTrampoline() = default;
 
 void AppleThreadPlanStepThroughObjCTrampoline::DidPush() {
   // Setting up the memory space for the called function text might require

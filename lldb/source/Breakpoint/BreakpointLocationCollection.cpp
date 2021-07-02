@@ -21,7 +21,7 @@ BreakpointLocationCollection::BreakpointLocationCollection()
     : m_break_loc_collection(), m_collection_mutex() {}
 
 // Destructor
-BreakpointLocationCollection::~BreakpointLocationCollection() {}
+BreakpointLocationCollection::~BreakpointLocationCollection() = default;
 
 void BreakpointLocationCollection::Add(const BreakpointLocationSP &bp_loc) {
   std::lock_guard<std::mutex> guard(m_collection_mutex);

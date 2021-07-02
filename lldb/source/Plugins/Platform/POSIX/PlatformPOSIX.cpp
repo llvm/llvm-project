@@ -46,7 +46,7 @@ PlatformPOSIX::PlatformPOSIX(bool is_host)
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-PlatformPOSIX::~PlatformPOSIX() {}
+PlatformPOSIX::~PlatformPOSIX() = default;
 
 lldb_private::OptionGroupOptions *PlatformPOSIX::GetConnectionOptions(
     lldb_private::CommandInterpreter &interpreter) {

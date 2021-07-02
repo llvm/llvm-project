@@ -43,7 +43,7 @@ ASTResultSynthesizer::ASTResultSynthesizer(ASTConsumer *passthrough,
   m_passthrough_sema = dyn_cast<SemaConsumer>(passthrough);
 }
 
-ASTResultSynthesizer::~ASTResultSynthesizer() {}
+ASTResultSynthesizer::~ASTResultSynthesizer() = default;
 
 void ASTResultSynthesizer::Initialize(ASTContext &Context) {
   m_ast_context = &Context;

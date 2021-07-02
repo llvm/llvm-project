@@ -33,7 +33,7 @@ GDBRemoteCommunicationServer::GDBRemoteCommunicationServer(
              bool &quit) { return this->Handle_QErrorStringEnable(packet); });
 }
 
-GDBRemoteCommunicationServer::~GDBRemoteCommunicationServer() {}
+GDBRemoteCommunicationServer::~GDBRemoteCommunicationServer() = default;
 
 void GDBRemoteCommunicationServer::RegisterPacketHandler(
     StringExtractorGDBRemote::ServerPacketType packet_type,

@@ -23,7 +23,7 @@ CommandObjectRegexCommand::CommandObjectRegexCommand(
       m_entries(), m_is_removable(is_removable) {}
 
 // Destructor
-CommandObjectRegexCommand::~CommandObjectRegexCommand() {}
+CommandObjectRegexCommand::~CommandObjectRegexCommand() = default;
 
 bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
                                           CommandReturnObject &result) {

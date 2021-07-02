@@ -271,7 +271,7 @@ using CallSiteParameterArray = llvm::SmallVector<CallSiteParameter, 0>;
 class CallEdge {
 public:
   enum class AddrType : uint8_t { Call, AfterCall };
-  virtual ~CallEdge() {}
+  virtual ~CallEdge() = default;
 
   /// Get the callee's definition.
   ///

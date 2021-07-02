@@ -38,7 +38,7 @@ SystemInitializerCommon::SystemInitializerCommon(
     HostInfo::SharedLibraryDirectoryHelper *helper)
     : m_shlib_dir_helper(helper) {}
 
-SystemInitializerCommon::~SystemInitializerCommon() {}
+SystemInitializerCommon::~SystemInitializerCommon() = default;
 
 /// Initialize the FileSystem based on the current reproducer mode.
 static llvm::Error InitializeFileSystem() {

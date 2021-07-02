@@ -18,7 +18,7 @@ namespace lldb_private {
 
 class InstrumentationRuntimeStopInfo : public StopInfo {
 public:
-  ~InstrumentationRuntimeStopInfo() override {}
+  ~InstrumentationRuntimeStopInfo() override = default;
 
   lldb::StopReason GetStopReason() const override {
     return lldb::eStopReasonInstrumentation;

@@ -197,7 +197,7 @@ public:
     m_collection_sp->Initialize(g_platformdarwinkernel_properties);
   }
 
-  virtual ~PlatformDarwinKernelProperties() {}
+  virtual ~PlatformDarwinKernelProperties() = default;
 
   FileSpecList GetKextDirectories() const {
     const uint32_t idx = ePropertyKextDirectories;
@@ -250,7 +250,7 @@ PlatformDarwinKernel::PlatformDarwinKernel(
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-PlatformDarwinKernel::~PlatformDarwinKernel() {}
+PlatformDarwinKernel::~PlatformDarwinKernel() = default;
 
 void PlatformDarwinKernel::GetStatus(Stream &strm) {
   Platform::GetStatus(strm);

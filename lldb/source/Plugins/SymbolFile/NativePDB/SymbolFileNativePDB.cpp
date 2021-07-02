@@ -256,7 +256,7 @@ SymbolFile *SymbolFileNativePDB::CreateInstance(ObjectFileSP objfile_sp) {
 SymbolFileNativePDB::SymbolFileNativePDB(ObjectFileSP objfile_sp)
     : SymbolFile(std::move(objfile_sp)) {}
 
-SymbolFileNativePDB::~SymbolFileNativePDB() {}
+SymbolFileNativePDB::~SymbolFileNativePDB() = default;
 
 uint32_t SymbolFileNativePDB::CalculateAbilities() {
   uint32_t abilities = 0;

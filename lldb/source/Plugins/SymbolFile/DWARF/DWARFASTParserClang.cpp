@@ -60,7 +60,7 @@ using namespace lldb_private;
 DWARFASTParserClang::DWARFASTParserClang(TypeSystemClang &ast)
     : m_ast(ast), m_die_to_decl_ctx(), m_decl_ctx_to_die() {}
 
-DWARFASTParserClang::~DWARFASTParserClang() {}
+DWARFASTParserClang::~DWARFASTParserClang() = default;
 
 static AccessType DW_ACCESS_to_AccessType(uint32_t dwarf_accessibility) {
   switch (dwarf_accessibility) {

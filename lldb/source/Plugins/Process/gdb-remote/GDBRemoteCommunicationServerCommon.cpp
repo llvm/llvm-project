@@ -168,7 +168,8 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
 }
 
 // Destructor
-GDBRemoteCommunicationServerCommon::~GDBRemoteCommunicationServerCommon() {}
+GDBRemoteCommunicationServerCommon::~GDBRemoteCommunicationServerCommon() =
+    default;
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qHostInfo(

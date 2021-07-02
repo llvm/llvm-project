@@ -32,7 +32,7 @@ using namespace lldb_private;
 char ObjCLanguageRuntime::ID = 0;
 
 // Destructor
-ObjCLanguageRuntime::~ObjCLanguageRuntime() {}
+ObjCLanguageRuntime::~ObjCLanguageRuntime() = default;
 
 ObjCLanguageRuntime::ObjCLanguageRuntime(Process *process)
     : LanguageRuntime(process), m_impl_cache(),
@@ -305,7 +305,7 @@ ObjCLanguageRuntime::EncodingToType::RealizeType(const char *name,
   return CompilerType();
 }
 
-ObjCLanguageRuntime::EncodingToType::~EncodingToType() {}
+ObjCLanguageRuntime::EncodingToType::~EncodingToType() = default;
 
 ObjCLanguageRuntime::EncodingToTypeSP ObjCLanguageRuntime::GetEncodingToType() {
   return nullptr;
@@ -363,7 +363,8 @@ void ObjCLanguageRuntime::ObjCExceptionPrecondition::AddClassName(
   m_class_names.insert(class_name);
 }
 
-ObjCLanguageRuntime::ObjCExceptionPrecondition::ObjCExceptionPrecondition() {}
+ObjCLanguageRuntime::ObjCExceptionPrecondition::ObjCExceptionPrecondition() =
+    default;
 
 bool ObjCLanguageRuntime::ObjCExceptionPrecondition::EvaluatePrecondition(
     StoppointCallbackContext &context) {

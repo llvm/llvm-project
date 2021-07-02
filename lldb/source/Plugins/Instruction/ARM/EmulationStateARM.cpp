@@ -24,7 +24,7 @@ EmulationStateARM::EmulationStateARM() : m_vfp_regs(), m_memory() {
   ClearPseudoRegisters();
 }
 
-EmulationStateARM::~EmulationStateARM() {}
+EmulationStateARM::~EmulationStateARM() = default;
 
 bool EmulationStateARM::LoadPseudoRegistersFromFrame(StackFrame &frame) {
   RegisterContext *reg_ctx = frame.GetRegisterContext().get();
