@@ -1199,11 +1199,11 @@ const Elf64_Sym *elf_lookup(Elf *elf, char *base, Elf64_Shdr *section_hash,
   return nullptr;
 }
 
-typedef struct {
+struct symbol_info {
   void *addr = nullptr;
   uint32_t size = UINT32_MAX;
   uint32_t sh_type = SHT_NULL;
-} symbol_info;
+};
 
 int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
                                     symbol_info *res) {
