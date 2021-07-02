@@ -1353,6 +1353,14 @@ def G_MEMCPY : GenericInstruction {
   let mayStore = true;
 }
 
+def G_MEMCPY_INLINE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$dst_addr, ptype1:$src_addr, type2:$size);
+  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = true;
+}
+
 def G_MEMMOVE : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins ptype0:$dst_addr, ptype1:$src_addr, type2:$size, untyped_imm_0:$tailcall);
