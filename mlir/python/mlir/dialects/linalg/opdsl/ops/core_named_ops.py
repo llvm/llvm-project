@@ -67,6 +67,21 @@ def vecmat(
 
 
 @linalg_structured_op
+def batch_matvec(
+    A=TensorDef(T1, Batch, S.M, S.K),
+    B=TensorDef(T2, Batch, S.K),
+    C=TensorDef(U,  Batch, S.M, output=True)):
+  """Performs a batched matrix-vector multiplication.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.b, D.m, D.k)
+  implements(ContractionOpInterface)
+  C[D.b, D.m] += cast(U, A[D.b, D.m, D.k]) * cast(U, B[D.b, D.k])
+
+
+@linalg_structured_op
 def dot(
     A=TensorDef(T1, S.M), B=TensorDef(T2, S.M), C=TensorDef(U, output=True)):
   """Performs a dot product of two vectors to a scalar result.
