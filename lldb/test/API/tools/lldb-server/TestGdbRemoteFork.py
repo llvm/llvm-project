@@ -164,6 +164,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         ], True)
         ret = self.expect_gdbremote_sequence()
 
+    @add_test_categories(["fork"])
     def test_detach_current(self):
         self.build()
         self.prep_debug_monitor_and_inferior()
