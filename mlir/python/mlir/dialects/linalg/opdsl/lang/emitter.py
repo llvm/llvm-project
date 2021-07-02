@@ -307,6 +307,18 @@ class _BodyBuilder:
       return std.MulIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'mul' operand: {lhs}")
 
+  def _eval_max(self, lhs: Value, rhs: Value) -> Value:
+    i1 = IntegerType.get_signless(1)
+    if _is_floating_point_type(lhs.type):
+      ogt_attr = IntegerAttr.get(IntegerType.get_signless(64), 2)
+      cond = std.CmpFOp(i1, ogt_attr, lhs, rhs).result
+      return std.SelectOp(lhs.type, cond, lhs, rhs).result
+    if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
+      sgt_attr = IntegerAttr.get(IntegerType.get_signless(64), 4)
+      cond = std.CmpIOp(i1, sgt_attr, lhs, rhs).result
+      return std.SelectOp(lhs.type, cond, lhs, rhs).result
+    raise NotImplementedError("Unsupported 'max' operand: {lhs}")
+
 
 def _infer_structured_outs(op_config: LinalgStructuredOpConfig,
                            in_arg_defs: Sequence[OperandDefConfig],
