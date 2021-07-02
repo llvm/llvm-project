@@ -273,3 +273,32 @@ define void @may_overflow_pointer_diff([16 x i8]* %ptr, i64 %idx) {
 
   ret void
 }
+
+; %gep.1 and %gep.idx may alias, e.g. if %idx.1 = 8 and %idx.2 == 2. %gep.idx is then
+;  (((18446744073709551614 * 8) % 2^64 + 6 * 2) % 2^64 + 10) % 2^64 == 6.
+define void @may_overflow_mul_scale_neg([200 x [ 6 x i8]]* %ptr, i64 %idx.1,i64 %idx.2) {
+; CHECK-LABEL: Function: may_overflow_mul_scale_neg: 4 pointers, 2 call sites
+; CHECK-NEXT:  MustAlias:   [200 x [6 x i8]]* %ptr, i8* %bc
+; CHECK-NEXT:  PartialAlias (off 6):    [200 x [6 x i8]]* %ptr, i8* %gep.1
+; CHECK-NEXT:  NoAlias: i8* %bc, i8* %gep.1
+; CHECK-NEXT:  MayAlias:    [200 x [6 x i8]]* %ptr, i8* %gep.idx
+; CHECK-NEXT:  NoAlias: i8* %bc, i8* %gep.idx
+; CHECK-NEXT:  NoAlias: i8* %gep.1, i8* %gep.idx
+;
+  %idx.1.pos = icmp sge i64 %idx.1, 0
+  call void @llvm.assume(i1 %idx.1.pos)
+  %idx.2.pos = icmp sge i64 %idx.2, 0
+  call void @llvm.assume(i1 %idx.2.pos)
+
+  %bc = bitcast [ 200 x [ 6 x i8 ] ]* %ptr to i8*
+  %gep.1 = getelementptr i8, i8* %bc, i64 6
+  store i8 1, i8* %gep.1, align 1
+
+  %mul.0 = mul i64 %idx.1, -2
+  %add = add i64 %mul.0, 10
+  %gep.idx = getelementptr [ 200 x [ 6 x i8 ] ], [ 200 x [ 6 x i8 ] ]* %ptr, i64 0, i64 %idx.2, i64 %add
+  store i8 0, i8* %gep.idx, align 1
+  ret void
+}
+
+declare void @llvm.assume(i1)
