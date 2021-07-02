@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Must be before Transport.h include.
 #include "Features.h"
 
 #include "ClangdLSPServer.h"
