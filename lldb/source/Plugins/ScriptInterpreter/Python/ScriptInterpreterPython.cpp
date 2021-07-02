@@ -1358,7 +1358,7 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
 
   Status error = ExecuteMultipleLines(
       function_def_string.c_str(),
-      ScriptInterpreter::ExecuteScriptOptions().SetEnableIO(false));
+      ExecuteScriptOptions().SetEnableIO(false));
   return error;
 }
 
@@ -2767,7 +2767,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
                           directory.c_str(), directory.c_str());
     bool syspath_retval =
         ExecuteMultipleLines(command_stream.GetData(),
-                             ScriptInterpreter::ExecuteScriptOptions()
+                             ExecuteScriptOptions()
                                  .SetEnableIO(false)
                                  .SetSetLLDBGlobals(false))
             .Success();
@@ -2855,7 +2855,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       (ExecuteOneLineWithReturn(
            command_stream.GetData(),
            ScriptInterpreterPythonImpl::eScriptReturnTypeBool, &does_contain,
-           ScriptInterpreter::ExecuteScriptOptions()
+           ExecuteScriptOptions()
                .SetEnableIO(false)
                .SetSetLLDBGlobals(false)) &&
        does_contain);
@@ -2877,7 +2877,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
     command_stream.Printf("import %s", module_name.c_str());
 
   error = ExecuteMultipleLines(command_stream.GetData(),
-                               ScriptInterpreter::ExecuteScriptOptions()
+                               ExecuteScriptOptions()
                                    .SetEnableIO(false)
                                    .SetSetLLDBGlobals(false));
   if (error.Fail())
@@ -3055,7 +3055,7 @@ bool ScriptInterpreterPythonImpl::GetDocumentationForItem(const char *item,
   if (ExecuteOneLineWithReturn(
           command, ScriptInterpreter::eScriptReturnTypeCharStrOrNone,
           &result_ptr,
-          ScriptInterpreter::ExecuteScriptOptions().SetEnableIO(false))) {
+          ExecuteScriptOptions().SetEnableIO(false))) {
     if (result_ptr)
       dest.assign(result_ptr);
     return true;

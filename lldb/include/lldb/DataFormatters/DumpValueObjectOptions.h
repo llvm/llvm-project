@@ -39,7 +39,7 @@ public:
     size_t m_base_element = 0;
     size_t m_stride = 0;
 
-    PointerAsArraySettings() {}
+    PointerAsArraySettings() = default;
 
     PointerAsArraySettings(size_t elem_count, size_t base_elem = 0,
                            size_t stride = 1)

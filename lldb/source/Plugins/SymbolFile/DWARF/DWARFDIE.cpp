@@ -54,7 +54,7 @@ public:
   explicit ElaboratingDIEIterator(DWARFDIE d) : m_worklist(1, d) {}
 
   /// End marker
-  ElaboratingDIEIterator() {}
+  ElaboratingDIEIterator() = default;
 
   const DWARFDIE &operator*() const { return m_worklist.back(); }
   ElaboratingDIEIterator &operator++() {

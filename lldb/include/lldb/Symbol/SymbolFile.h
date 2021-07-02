@@ -69,7 +69,7 @@ public:
       : m_objfile_sp(std::move(objfile_sp)), m_abilities(0),
         m_calculated_abilities(false) {}
 
-  ~SymbolFile() override {}
+  ~SymbolFile() override = default;
 
   /// Get a mask of what this symbol file supports for the object file
   /// that it was constructed with.

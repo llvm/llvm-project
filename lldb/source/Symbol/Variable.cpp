@@ -49,7 +49,7 @@ Variable::Variable(lldb::user_id_t uid, const char *name, const char *mangled,
       m_artificial(artificial), m_loc_is_const_data(location_is_constant_data),
       m_static_member(static_member) {}
 
-Variable::~Variable() {}
+Variable::~Variable() = default;
 
 lldb::LanguageType Variable::GetLanguage() const {
   lldb::LanguageType lang = m_mangled.GuessLanguage();

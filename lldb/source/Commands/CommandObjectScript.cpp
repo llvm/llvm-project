@@ -84,7 +84,7 @@ CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter)
           "results.  Start the interactive interpreter if no code is supplied.",
           "script [--language <scripting-language> --] [<script-code>]") {}
 
-CommandObjectScript::~CommandObjectScript() {}
+CommandObjectScript::~CommandObjectScript() = default;
 
 bool CommandObjectScript::DoExecute(llvm::StringRef command,
                                     CommandReturnObject &result) {

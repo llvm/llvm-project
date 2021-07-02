@@ -17,7 +17,7 @@ using namespace lldb_private;
 
 #pragma mark-- XMLDocument
 
-XMLDocument::XMLDocument() {}
+XMLDocument::XMLDocument() = default;
 
 XMLDocument::~XMLDocument() { Clear(); }
 
@@ -91,11 +91,11 @@ bool XMLDocument::XMLEnabled() {
 
 #pragma mark-- XMLNode
 
-XMLNode::XMLNode() {}
+XMLNode::XMLNode() = default;
 
 XMLNode::XMLNode(XMLNodeImpl node) : m_node(node) {}
 
-XMLNode::~XMLNode() {}
+XMLNode::~XMLNode() = default;
 
 void XMLNode::Clear() { m_node = nullptr; }
 
@@ -398,7 +398,7 @@ ApplePropertyList::ApplePropertyList(const char *path)
   ParseFile(path);
 }
 
-ApplePropertyList::~ApplePropertyList() {}
+ApplePropertyList::~ApplePropertyList() = default;
 
 llvm::StringRef ApplePropertyList::GetErrors() const {
   return m_xml_doc.GetErrors();

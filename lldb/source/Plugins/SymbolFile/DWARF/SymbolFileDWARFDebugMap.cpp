@@ -248,7 +248,7 @@ SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap(ObjectFileSP objfile_sp)
       m_func_indexes(), m_glob_indexes(),
       m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
 
-SymbolFileDWARFDebugMap::~SymbolFileDWARFDebugMap() {}
+SymbolFileDWARFDebugMap::~SymbolFileDWARFDebugMap() = default;
 
 void SymbolFileDWARFDebugMap::InitializeObject() {}
 

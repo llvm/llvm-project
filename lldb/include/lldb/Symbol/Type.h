@@ -51,7 +51,7 @@ public:
 
   SymbolFileType(SymbolFile &symbol_file, const lldb::TypeSP &type_sp);
 
-  ~SymbolFileType() {}
+  ~SymbolFileType() = default;
 
   Type *operator->() { return GetType(); }
 
@@ -239,7 +239,7 @@ class TypeImpl {
 public:
   TypeImpl() = default;
 
-  ~TypeImpl() {}
+  ~TypeImpl() = default;
 
   TypeImpl(const lldb::TypeSP &type_sp);
 

@@ -254,7 +254,7 @@ public:
 
 class OptionGroupOptions : public Options {
 public:
-  OptionGroupOptions() {}
+  OptionGroupOptions() = default;
 
   ~OptionGroupOptions() override = default;
 

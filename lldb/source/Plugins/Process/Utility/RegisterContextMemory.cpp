@@ -39,7 +39,7 @@ RegisterContextMemory::RegisterContextMemory(Thread &thread,
 }
 
 // Destructor
-RegisterContextMemory::~RegisterContextMemory() {}
+RegisterContextMemory::~RegisterContextMemory() = default;
 
 void RegisterContextMemory::InvalidateAllRegisters() {
   if (m_reg_data_addr != LLDB_INVALID_ADDRESS)

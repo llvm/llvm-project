@@ -18,7 +18,7 @@ RegisterContextKDP_x86_64::RegisterContextKDP_x86_64(
     : RegisterContextDarwin_x86_64(thread, concrete_frame_idx),
       m_kdp_thread(thread) {}
 
-RegisterContextKDP_x86_64::~RegisterContextKDP_x86_64() {}
+RegisterContextKDP_x86_64::~RegisterContextKDP_x86_64() = default;
 
 int RegisterContextKDP_x86_64::DoReadGPR(lldb::tid_t tid, int flavor,
                                          GPR &gpr) {

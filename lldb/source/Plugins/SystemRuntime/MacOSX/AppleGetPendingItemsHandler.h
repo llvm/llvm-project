@@ -55,9 +55,7 @@ public:
                                        from libBacktraceRecording */
     uint64_t count = 0; /* the number of pending items included in the buffer */
 
-    GetPendingItemsReturnInfo()
-
-    {}
+    GetPendingItemsReturnInfo() = default;
   };
 
   /// Get the list of pending items for a given queue via a call to

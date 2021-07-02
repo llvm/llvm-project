@@ -24,7 +24,7 @@ CFCData &CFCData::operator=(const CFCData &rhs)
 }
 
 // Destructor
-CFCData::~CFCData() {}
+CFCData::~CFCData() = default;
 
 CFIndex CFCData::GetLength() const {
   CFDataRef data = get();

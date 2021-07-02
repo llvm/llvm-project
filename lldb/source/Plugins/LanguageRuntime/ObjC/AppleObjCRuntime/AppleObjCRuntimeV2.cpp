@@ -1383,7 +1383,7 @@ private:
   lldb::addr_t m_invalid_key = 0;
 };
 
-AppleObjCRuntimeV2::HashTableSignature::HashTableSignature() {}
+AppleObjCRuntimeV2::HashTableSignature::HashTableSignature() = default;
 
 void AppleObjCRuntimeV2::HashTableSignature::UpdateSignature(
     const RemoteNXMapTable &hash_table) {

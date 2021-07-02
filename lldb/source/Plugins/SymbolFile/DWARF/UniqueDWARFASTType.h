@@ -30,7 +30,7 @@ public:
       : m_type_sp(rhs.m_type_sp), m_die(rhs.m_die),
         m_declaration(rhs.m_declaration), m_byte_size(rhs.m_byte_size) {}
 
-  ~UniqueDWARFASTType() {}
+  ~UniqueDWARFASTType() = default;
 
   UniqueDWARFASTType &operator=(const UniqueDWARFASTType &rhs) {
     if (this != &rhs) {
@@ -52,7 +52,7 @@ class UniqueDWARFASTTypeList {
 public:
   UniqueDWARFASTTypeList() : m_collection() {}
 
-  ~UniqueDWARFASTTypeList() {}
+  ~UniqueDWARFASTTypeList() = default;
 
   uint32_t GetSize() { return (uint32_t)m_collection.size(); }
 
@@ -72,7 +72,7 @@ class UniqueDWARFASTTypeMap {
 public:
   UniqueDWARFASTTypeMap() : m_collection() {}
 
-  ~UniqueDWARFASTTypeMap() {}
+  ~UniqueDWARFASTTypeMap() = default;
 
   void Insert(lldb_private::ConstString name,
               const UniqueDWARFASTType &entry) {

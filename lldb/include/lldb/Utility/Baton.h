@@ -34,8 +34,8 @@ namespace lldb_private {
 /// needed resources in their destructors.
 class Baton {
 public:
-  Baton() {}
-  virtual ~Baton() {}
+  Baton() = default;
+  virtual ~Baton() = default;
 
   virtual void *data() = 0;
 

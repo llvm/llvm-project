@@ -102,7 +102,7 @@ AppleGetPendingItemsHandler::AppleGetPendingItemsHandler(Process *process)
       m_get_pending_items_return_buffer_addr(LLDB_INVALID_ADDRESS),
       m_get_pending_items_retbuffer_mutex() {}
 
-AppleGetPendingItemsHandler::~AppleGetPendingItemsHandler() {}
+AppleGetPendingItemsHandler::~AppleGetPendingItemsHandler() = default;
 
 void AppleGetPendingItemsHandler::Detach() {
   if (m_process && m_process->IsAlive() &&

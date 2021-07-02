@@ -184,7 +184,7 @@ private:
   }
 
 public:
-  DeclContextOverride() {}
+  DeclContextOverride() = default;
 
   void OverrideAllDeclsFromContainingFunction(clang::Decl *decl) {
     for (DeclContext *decl_context = decl->getLexicalDeclContext();
