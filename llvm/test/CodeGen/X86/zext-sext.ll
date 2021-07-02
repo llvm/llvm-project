@@ -23,10 +23,10 @@ define void @func([40 x i16]* %a, i32* %b, i16** %c, i64* %d) nounwind {
 ; CHECK-NEXT:    cmpl $-8608074, %eax # imm = 0xFF7CA6B6
 ; CHECK-NEXT:    movslq %eax, %rdi
 ; CHECK-NEXT:    setl %dl
-; CHECK-NEXT:    cmpl $2138875573, %eax # imm = 0x7F7CA6B5
+; CHECK-NEXT:    cmpl $2138875574, %eax # imm = 0x7F7CA6B6
 ; CHECK-NEXT:    movq %rdi, %r8
 ; CHECK-NEXT:    leal -1(%rdx,%rdx), %edx
-; CHECK-NEXT:    cmovlel %edx, %esi
+; CHECK-NEXT:    cmovll %edx, %esi
 ; CHECK-NEXT:    subq %rax, %r8
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $1, %esi
