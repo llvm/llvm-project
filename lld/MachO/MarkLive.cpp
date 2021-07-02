@@ -103,14 +103,14 @@ void markLive() {
     addSym(stubBinder);
   for (ConcatInputSection *isec : inputSections) {
     // Sections marked no_dead_strip
-    if (isec->flags & S_ATTR_NO_DEAD_STRIP) {
+    if (isec->getFlags() & S_ATTR_NO_DEAD_STRIP) {
       enqueue(isec, 0);
       continue;
     }
 
     // mod_init_funcs, mod_term_funcs sections
-    if (sectionType(isec->flags) == S_MOD_INIT_FUNC_POINTERS ||
-        sectionType(isec->flags) == S_MOD_TERM_FUNC_POINTERS) {
+    if (sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS ||
+        sectionType(isec->getFlags()) == S_MOD_TERM_FUNC_POINTERS) {
       enqueue(isec, 0);
       continue;
     }
@@ -161,7 +161,7 @@ void markLive() {
     for (ConcatInputSection *isec : inputSections) {
       // FIXME: Check if copying all S_ATTR_LIVE_SUPPORT sections into a
       // separate vector and only walking that here is faster.
-      if (!(isec->flags & S_ATTR_LIVE_SUPPORT) || isec->live)
+      if (!(isec->getFlags() & S_ATTR_LIVE_SUPPORT) || isec->live)
         continue;
 
       for (const Reloc &r : isec->relocs) {
