@@ -149,6 +149,24 @@ def pooling_nhwc_sum_poly(
 
 
 @linalg_structured_op
+def pooling_nhwc_max_poly(
+    I=TensorDef(T1, S.N, S.H, S.W, S.C),
+    K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
+    strides=AttributeDef(S.SH, S.SW),
+    dilations=AttributeDef(S.DH, S.DW)):
+  """Performs max pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max(D.kh, D.kw)(
+      cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+                D.c]))
+
+
+@linalg_structured_op
 def fill_rng_2d(
     min=ScalarDef(F64),
     max=ScalarDef(F64),

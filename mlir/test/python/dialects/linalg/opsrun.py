@@ -85,6 +85,7 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
 pooling_boiler = """
 func @main() -> i32 attributes {llvm.emit_c_interface} {
   %v0 = constant 0 : i32
+  %v42 = constant 42.0 : f64
   %v1 = constant 1.0 : f64
 
   %input = memref.alloc() : memref<1x4x16x1xf64>
@@ -94,16 +95,19 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
   linalg.fill(%v1, %shape) : f64, memref<2x2xf64>
   linalg.fill(%v0, %output) : i32, memref<1x2x4x1xi32>
 
+  %c0 = constant 0 : index
+  memref.store %v42, %input[%c0, %c0, %c0, %c0] : memref<1x4x16x1xf64>
+
   call @pooling_on_buffers(%input, %shape, %output) :
     (memref<1x4x16x1xf64>, memref<2x2xf64>, memref<1x2x4x1xi32>) -> ()
 
-  %c0 = constant 0 : index
   %0 = memref.load %output[%c0, %c0, %c0, %c0] : memref<1x2x4x1xi32>
 
   // TODO: FFI-based solution to allow testing and printing with python code.
   return %0 : i32
 }
 """
+
 
 def transform(module, boilerplate):
   import mlir.conversions
@@ -308,12 +312,8 @@ def test_pooling_builtin():
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_sum_poly(
-            input,
-            shape,
-            outs=[output],
-            strides=[2, 4],
-            dilations=[1, 2])
+        linalg.pooling_nhwc_max_poly(
+            input, shape, outs=[output], strides=[2, 4], dilations=[1, 2])
 
     execution_engine = ExecutionEngine(transform(module, pooling_boiler))
 
@@ -325,7 +325,7 @@ def test_pooling_builtin():
     execution_engine.invoke("main", res)
 
     log("RESULT: ", res[0])
-    # CHECK: RESULT: 4
+    # CHECK: RESULT: 42
 
 
 test_pooling_builtin()
@@ -342,7 +342,7 @@ def test_pooling_generic():
           MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
           MemRefType.get((1, 2, 4, 1), i32))
       def pooling_on_buffers(input, shape, output):
-        linalg.pooling_nhwc_sum_poly(
+        linalg.pooling_nhwc_max_poly(
             input,
             shape,
             outs=[output],
@@ -360,7 +360,7 @@ def test_pooling_generic():
     execution_engine.invoke("main", res)
 
     log("RESULT: ", res[0])
-    # CHECK: RESULT: 4
+    # CHECK: RESULT: 42
 
 
 test_pooling_generic()

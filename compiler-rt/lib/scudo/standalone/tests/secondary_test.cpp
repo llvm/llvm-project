@@ -21,7 +21,8 @@
 #include <vector>
 
 template <typename Config> static scudo::Options getOptionsForConfig() {
-  if (!Config::MaySupportMemoryTagging || !scudo::archSupportsMemoryTagging())
+  if (!Config::MaySupportMemoryTagging || !scudo::archSupportsMemoryTagging() ||
+      !scudo::systemSupportsMemoryTagging())
     return {};
   scudo::AtomicOptions AO;
   AO.set(scudo::OptionBit::UseMemoryTagging);

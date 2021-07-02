@@ -221,6 +221,7 @@ def rsp_quoting : Joined<["--"], "rsp-quoting=">,
   HelpText<"Quoting style for response files, 'windows' (default) or 'posix'">;
 def start_lib : F<"start-lib">,
   HelpText<"Start group of objects treated as if they were in a library">;
+defm stdcall_fixup : B_priv<"stdcall-fixup">;
 def thinlto_emit_imports_files :
     F<"thinlto-emit-imports-files">,
     HelpText<"Emit .imports files with -thinlto-index-only">;

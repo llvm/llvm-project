@@ -274,6 +274,21 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  Value applyfn__max(Value lhs, Value rhs) {
+    OpBuilder builder = getBuilder();
+    if (isFloatingPoint(lhs)) {
+      Value condition =
+          builder.create<CmpFOp>(lhs.getLoc(), CmpFPredicate::OGT, lhs, rhs);
+      return builder.create<SelectOp>(lhs.getLoc(), condition, lhs, rhs);
+    }
+    if (isInteger(lhs)) {
+      Value condition =
+          builder.create<CmpIOp>(lhs.getLoc(), CmpIPredicate::sgt, lhs, rhs);
+      return builder.create<SelectOp>(lhs.getLoc(), condition, lhs, rhs);
+    }
+    llvm_unreachable("unsupported non numeric type");
+  }
+
   void yieldOutputs(ValueRange values) {
     assert(!values.empty() && "linalg ops must yield outputs");
     if (values.empty())

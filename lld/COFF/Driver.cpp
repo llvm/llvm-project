@@ -234,6 +234,10 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     error(filename + ": is not a native COFF file. Recompile without /GL");
     break;
   case file_magic::pecoff_executable:
+    if (config->mingw) {
+      symtab->addFile(make<DLLFile>(mbref));
+      break;
+    }
     if (filename.endswith_insensitive(".dll")) {
       error(filename + ": bad file type. Did you specify a DLL instead of an "
                        "import library?");
@@ -1769,6 +1773,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       OPT_runtime_pseudo_reloc, OPT_runtime_pseudo_reloc_no, config->mingw);
   config->callGraphProfileSort = args.hasFlag(
       OPT_call_graph_profile_sort, OPT_call_graph_profile_sort_no, true);
+  config->stdcallFixup =
+      args.hasFlag(OPT_stdcall_fixup, OPT_stdcall_fixup_no, config->mingw);
+  config->warnStdcallFixup = !args.hasArg(OPT_stdcall_fixup);
 
   // Don't warn about long section names, such as .debug_info, for mingw or
   // when -debug:dwarf is requested.
@@ -2102,10 +2109,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!wrapped.empty())
     while (run());
 
-  if (config->autoImport) {
+  if (config->autoImport || config->stdcallFixup) {
     // MinGW specific.
     // Load any further object files that might be needed for doing automatic
-    // imports.
+    // imports, and do stdcall fixups.
     //
     // For cases with no automatically imported symbols, this iterates once
     // over the symbol table and doesn't do anything.
@@ -2117,7 +2124,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // normal object file as well (although that won't be used for the
     // actual autoimport later on). If this pass adds new undefined references,
     // we won't iterate further to resolve them.
-    symtab->loadMinGWAutomaticImports();
+    //
+    // If stdcall fixups only are needed for loading import entries from
+    // a DLL without import library, this also just needs running once.
+    // If it ends up pulling in more object files from static libraries,
+    // (and maybe doing more stdcall fixups along the way), this would need
+    // to loop these two calls.
+    symtab->loadMinGWSymbols();
     run();
   }
 
