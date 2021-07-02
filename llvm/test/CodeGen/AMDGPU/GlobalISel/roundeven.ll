@@ -568,8 +568,8 @@ define double @v_roundeven_f64_fneg(double %x) {
 ; GFX6-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX6-NEXT:    v_or_b32_e32 v4, 0x43300000, v4
 ; GFX6-NEXT:    v_add_f64 v[5:6], -v[0:1], v[3:4]
-; GFX6-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX6-NEXT:    s_mov_b32 s4, -1
+; GFX6-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX6-NEXT:    s_mov_b32 s5, 0x432fffff
 ; GFX6-NEXT:    v_add_f64 v[3:4], v[5:6], -v[3:4]
 ; GFX6-NEXT:    v_cmp_gt_f64_e64 vcc, |v[1:2]|, s[4:5]

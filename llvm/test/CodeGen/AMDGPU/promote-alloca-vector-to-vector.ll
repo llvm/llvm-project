@@ -103,8 +103,7 @@ entry:
 ; OPT-LABEL: define amdgpu_kernel void @half4_alloca_load4
 
 ; GCN-NOT: buffer_
-; GCN-DAG: s_mov_b32 s[[SH:[0-9]+]], 0
-; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0xffff
+; GCN:     s_mov_b64 s[{{[0-9:]+}}], 0xffff
 
 ; OPT: %gep = getelementptr inbounds <4 x half>, <4 x half> addrspace(5)* %alloca, i32 0, i32 %sel2
 ; OPT: %0 = load <4 x half>, <4 x half> addrspace(5)* %alloca
@@ -163,8 +162,7 @@ entry:
 ; OPT-LABEL: define amdgpu_kernel void @short4_alloca_load4
 
 ; GCN-NOT: buffer_
-; GCN-DAG: s_mov_b32 s[[SH:[0-9]+]], 0
-; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0xffff
+; GCN:     s_mov_b64 s[{{[0-9:]+}}], 0xffff
 
 ; OPT: %gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(5)* %alloca, i32 0, i32 %sel2
 ; OPT: %0 = load <4 x i16>, <4 x i16> addrspace(5)* %alloca

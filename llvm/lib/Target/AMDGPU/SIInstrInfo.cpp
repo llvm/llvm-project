@@ -1765,6 +1765,30 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandMovDPP64(MI);
     break;
   }
+  case AMDGPU::S_MOV_B64_IMM_PSEUDO: {
+    const MachineOperand &SrcOp = MI.getOperand(1);
+    assert(!SrcOp.isFPImm());
+    APInt Imm(64, SrcOp.getImm());
+    if (Imm.isIntN(32) || isInlineConstant(Imm)) {
+      MI.setDesc(get(AMDGPU::S_MOV_B64));
+      break;
+    }
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
+    Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
+
+    APInt Lo(32, Imm.getLoBits(32).getZExtValue());
+    APInt Hi(32, Imm.getHiBits(32).getZExtValue());
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstLo)
+      .addImm(Lo.getSExtValue())
+      .addReg(Dst, RegState::Implicit | RegState::Define);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstHi)
+      .addImm(Hi.getSExtValue())
+      .addReg(Dst, RegState::Implicit | RegState::Define);
+    MI.eraseFromParent();
+    break;
+  }
   case AMDGPU::V_SET_INACTIVE_B32: {
     unsigned NotOpc = ST.isWave32() ? AMDGPU::S_NOT_B32 : AMDGPU::S_NOT_B64;
     unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;

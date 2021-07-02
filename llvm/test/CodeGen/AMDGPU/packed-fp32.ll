@@ -92,9 +92,8 @@ define amdgpu_kernel void @fadd_v2_v_lit_splat(<2 x float> addrspace(1)* %a) {
 ; GCN-LABEL: {{^}}fadd_v2_v_lit_hi0:
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
-; GFX90A-DAG: s_mov_b32 s[[HI:[0-9]+]], 0
-; GFX90A-DAG: s_mov_b32 s[[LO:[0-9]+]], 1.0
-; GFX90A:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{\[}}[[LO]]:[[HI]]]{{$}}
+; GFX90A-DAG: s_mov_b64 [[K:s\[[0-9:]+\]]], 0x3f800000
+; GFX90A:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[K]]
 define amdgpu_kernel void @fadd_v2_v_lit_hi0(<2 x float> addrspace(1)* %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %a, i32 %id

@@ -2473,8 +2473,7 @@ define i64 @v_srem_i64_pow2_shl_denom(i64 %x, i64 %y) {
 ; CHECK-LABEL: v_srem_i64_pow2_shl_denom:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_movk_i32 s4, 0x1000
-; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0x1000
 ; CHECK-NEXT:    v_lshl_b64 v[4:5], s[4:5], v2
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    v_or_b32_e32 v3, v1, v5
@@ -2663,8 +2662,7 @@ define <2 x i64> @v_srem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; GISEL-LABEL: v_srem_v2i64_pow2_shl_denom:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_movk_i32 s6, 0x1000
-; GISEL-NEXT:    s_mov_b32 s7, 0
+; GISEL-NEXT:    s_mov_b64 s[6:7], 0x1000
 ; GISEL-NEXT:    v_lshl_b64 v[4:5], s[6:7], v4
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v9, 31, v1
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v7, 31, v5
@@ -2952,8 +2950,7 @@ define <2 x i64> @v_srem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-LABEL: v_srem_v2i64_pow2_shl_denom:
 ; CGP:       ; %bb.0:
 ; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CGP-NEXT:    s_movk_i32 s4, 0x1000
-; CGP-NEXT:    s_mov_b32 s5, 0
+; CGP-NEXT:    s_mov_b64 s[4:5], 0x1000
 ; CGP-NEXT:    v_lshl_b64 v[10:11], s[4:5], v4
 ; CGP-NEXT:    v_mov_b32_e32 v7, v1
 ; CGP-NEXT:    v_mov_b32_e32 v5, v0
