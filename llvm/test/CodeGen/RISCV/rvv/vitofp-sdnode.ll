@@ -1145,7 +1145,7 @@ define <vscale x 4 x half> @vsitofp_nxv4i32_nxv4f16(<vscale x 4 x i32> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v10, v8
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 4 x i32> %va to <vscale x 4 x half>
   ret <vscale x 4 x half> %evec
@@ -1156,7 +1156,7 @@ define <vscale x 4 x half> @vuitofp_nxv4i32_nxv4f16(<vscale x 4 x i32> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.xu.w v10, v8
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 4 x i32> %va to <vscale x 4 x half>
   ret <vscale x 4 x half> %evec
@@ -1209,7 +1209,7 @@ define <vscale x 8 x half> @vsitofp_nxv8i32_nxv8f16(<vscale x 8 x i32> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v12, v8
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 8 x i32> %va to <vscale x 8 x half>
   ret <vscale x 8 x half> %evec
@@ -1220,7 +1220,7 @@ define <vscale x 8 x half> @vuitofp_nxv8i32_nxv8f16(<vscale x 8 x i32> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfncvt.f.xu.w v12, v8
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 8 x i32> %va to <vscale x 8 x half>
   ret <vscale x 8 x half> %evec
@@ -1273,7 +1273,7 @@ define <vscale x 16 x half> @vsitofp_nxv16i32_nxv16f16(<vscale x 16 x i32> %va) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v16, v8
-; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 16 x i32> %va to <vscale x 16 x half>
   ret <vscale x 16 x half> %evec
@@ -1284,7 +1284,7 @@ define <vscale x 16 x half> @vuitofp_nxv16i32_nxv16f16(<vscale x 16 x i32> %va) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfncvt.f.xu.w v16, v8
-; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 16 x i32> %va to <vscale x 16 x half>
   ret <vscale x 16 x half> %evec
@@ -1405,7 +1405,7 @@ define <vscale x 2 x float> @vsitofp_nxv2i64_nxv2f32(<vscale x 2 x i64> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v10, v8
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 2 x i64> %va to <vscale x 2 x float>
   ret <vscale x 2 x float> %evec
@@ -1416,7 +1416,7 @@ define <vscale x 2 x float> @vuitofp_nxv2i64_nxv2f32(<vscale x 2 x i64> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.xu.w v10, v8
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 2 x i64> %va to <vscale x 2 x float>
   ret <vscale x 2 x float> %evec
@@ -1471,7 +1471,7 @@ define <vscale x 4 x float> @vsitofp_nxv4i64_nxv4f32(<vscale x 4 x i64> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v12, v8
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 4 x i64> %va to <vscale x 4 x float>
   ret <vscale x 4 x float> %evec
@@ -1482,7 +1482,7 @@ define <vscale x 4 x float> @vuitofp_nxv4i64_nxv4f32(<vscale x 4 x i64> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfncvt.f.xu.w v12, v8
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 4 x i64> %va to <vscale x 4 x float>
   ret <vscale x 4 x float> %evec
@@ -1537,7 +1537,7 @@ define <vscale x 8 x float> @vsitofp_nxv8i64_nxv8f32(<vscale x 8 x i64> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v16, v8
-; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %evec = sitofp <vscale x 8 x i64> %va to <vscale x 8 x float>
   ret <vscale x 8 x float> %evec
@@ -1548,7 +1548,7 @@ define <vscale x 8 x float> @vuitofp_nxv8i64_nxv8f32(<vscale x 8 x i64> %va) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfncvt.f.xu.w v16, v8
-; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %evec = uitofp <vscale x 8 x i64> %va to <vscale x 8 x float>
   ret <vscale x 8 x float> %evec

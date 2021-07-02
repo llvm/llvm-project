@@ -955,7 +955,7 @@ define void @mulhu_v8i16(<8 x i16>* %x) {
 ; CHECK-NEXT:    vmv.v.i v11, 0
 ; CHECK-NEXT:    lui a1, 1048568
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, mu
-; CHECK-NEXT:    vmv1r.v v12, v11
+; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    vmv.s.x v12, a1
 ; CHECK-NEXT:    vsetivli zero, 7, e16, m1, tu, mu
 ; CHECK-NEXT:    vslideup.vi v11, v9, 6
