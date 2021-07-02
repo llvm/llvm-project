@@ -363,7 +363,7 @@ private:
             Left->Previous && Left->Previous->is(tok::l_paren)) {
           // Detect the case where macros are used to generate lambdas or
           // function bodies, e.g.:
-          //   auto my_lambda = MARCO((Type *type, int i) { .. body .. });
+          //   auto my_lambda = MACRO((Type *type, int i) { .. body .. });
           for (FormatToken *Tok = Left; Tok != CurrentToken; Tok = Tok->Next) {
             if (Tok->is(TT_BinaryOperator) &&
                 Tok->isOneOf(tok::star, tok::amp, tok::ampamp))
