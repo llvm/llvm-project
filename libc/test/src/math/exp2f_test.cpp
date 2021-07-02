@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/exp2f.h"
-#include "utils/FPUtil/BitPatterns.h"
-#include "utils/FPUtil/ClassificationFunctions.h"
-#include "utils/FPUtil/FloatOperations.h"
-#include "utils/FPUtil/FloatProperties.h"
+#include "utils/FPUtil/FPBits.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 #include <math.h>
@@ -18,65 +16,40 @@
 #include <errno.h>
 #include <stdint.h>
 
-using __llvm_libc::fputil::isNegativeQuietNaN;
-using __llvm_libc::fputil::isQuietNaN;
-using __llvm_libc::fputil::valueAsBits;
-using __llvm_libc::fputil::valueFromBits;
-
-using BitPatterns = __llvm_libc::fputil::BitPatterns<float>;
-
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-TEST(LlvmLibcexp2fTest, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcExp2fTest, SpecialNumbers) {
   errno = 0;
 
-  EXPECT_TRUE(
-      isQuietNaN(__llvm_libc::exp2f(valueFromBits(BitPatterns::aQuietNaN))));
+  EXPECT_FP_EQ(aNaN, __llvm_libc::exp2f(aNaN));
   EXPECT_EQ(errno, 0);
 
-  EXPECT_TRUE(isNegativeQuietNaN(
-      __llvm_libc::exp2f(valueFromBits(BitPatterns::aNegativeQuietNaN))));
+  EXPECT_FP_EQ(inf, __llvm_libc::exp2f(inf));
   EXPECT_EQ(errno, 0);
 
-  EXPECT_TRUE(isQuietNaN(
-      __llvm_libc::exp2f(valueFromBits(BitPatterns::aSignallingNaN))));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::exp2f(negInf));
   EXPECT_EQ(errno, 0);
 
-  EXPECT_TRUE(isNegativeQuietNaN(
-      __llvm_libc::exp2f(valueFromBits(BitPatterns::aNegativeSignallingNaN))));
+  EXPECT_FP_EQ(1.0f, __llvm_libc::exp2f(0.0f));
   EXPECT_EQ(errno, 0);
 
-  EXPECT_EQ(BitPatterns::inf,
-            valueAsBits(__llvm_libc::exp2f(valueFromBits(BitPatterns::inf))));
-  EXPECT_EQ(errno, 0);
-
-  EXPECT_EQ(BitPatterns::zero, valueAsBits(__llvm_libc::exp2f(
-                                   valueFromBits(BitPatterns::negInf))));
-  EXPECT_EQ(errno, 0);
-
-  EXPECT_EQ(BitPatterns::one,
-            valueAsBits(__llvm_libc::exp2f(valueFromBits(BitPatterns::zero))));
-  EXPECT_EQ(errno, 0);
-
-  EXPECT_EQ(BitPatterns::one, valueAsBits(__llvm_libc::exp2f(
-                                  valueFromBits(BitPatterns::negZero))));
+  EXPECT_FP_EQ(1.0f, __llvm_libc::exp2f(-0.0f));
   EXPECT_EQ(errno, 0);
 }
 
 TEST(LlvmLibcExpfTest, Overflow) {
   errno = 0;
-  EXPECT_EQ(BitPatterns::inf,
-            valueAsBits(__llvm_libc::exp2f(valueFromBits(0x7f7fffffU))));
+  EXPECT_FP_EQ(inf, __llvm_libc::exp2f(float(FPBits(0x7f7fffffU))));
   EXPECT_EQ(errno, ERANGE);
 
   errno = 0;
-  EXPECT_EQ(BitPatterns::inf,
-            valueAsBits(__llvm_libc::exp2f(valueFromBits(0x43000000U))));
+  EXPECT_FP_EQ(inf, __llvm_libc::exp2f(float(FPBits(0x43000000U))));
   EXPECT_EQ(errno, ERANGE);
 
   errno = 0;
-  EXPECT_EQ(BitPatterns::inf,
-            valueAsBits(__llvm_libc::exp2f(valueFromBits(0x43000001U))));
+  EXPECT_FP_EQ(inf, __llvm_libc::exp2f(float(FPBits(0x43000001U))));
   EXPECT_EQ(errno, ERANGE);
 }
 
@@ -86,44 +59,43 @@ TEST(LlvmLibcExpfTest, Borderline) {
   float x;
 
   errno = 0;
-  x = valueFromBits(0x42fa0001U);
+  x = float(FPBits(0x42fa0001U));
   EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, __llvm_libc::exp2f(x), 1.0);
   EXPECT_EQ(errno, 0);
 
-  x = valueFromBits(0x42ffffffU);
+  x = float(FPBits(0x42ffffffU));
   EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, __llvm_libc::exp2f(x), 1.0);
   EXPECT_EQ(errno, 0);
 
-  x = valueFromBits(0xc2fa0001U);
+  x = float(FPBits(0xc2fa0001U));
   EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, __llvm_libc::exp2f(x), 1.0);
   EXPECT_EQ(errno, 0);
 
-  x = valueFromBits(0xc2fc0000U);
+  x = float(FPBits(0xc2fc0000U));
   EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, __llvm_libc::exp2f(x), 1.0);
   EXPECT_EQ(errno, 0);
 
-  x = valueFromBits(0xc2fc0001U);
+  x = float(FPBits(0xc2fc0001U));
   EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, __llvm_libc::exp2f(x), 1.0);
   EXPECT_EQ(errno, 0);
 
-  x = valueFromBits(0xc3150000U);
+  x = float(FPBits(0xc3150000U));
   EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, __llvm_libc::exp2f(x), 1.0);
   EXPECT_EQ(errno, 0);
 }
 
 TEST(LlvmLibcExpfTest, Underflow) {
   errno = 0;
-  EXPECT_EQ(BitPatterns::zero,
-            valueAsBits(__llvm_libc::exp2f(valueFromBits(0xff7fffffU))));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::exp2f(float(FPBits(0xff7fffffU))));
   EXPECT_EQ(errno, ERANGE);
 
   errno = 0;
-  float x = valueFromBits(0xc3158000U);
+  float x = float(FPBits(0xc3158000U));
   EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, __llvm_libc::exp2f(x), 1.0);
   EXPECT_EQ(errno, ERANGE);
 
   errno = 0;
-  x = valueFromBits(0xc3165432U);
+  x = float(FPBits(0xc3165432U));
   EXPECT_MPFR_MATCH(mpfr::Operation::Exp2, x, __llvm_libc::exp2f(x), 1.0);
   EXPECT_EQ(errno, ERANGE);
 }
@@ -132,7 +104,7 @@ TEST(LlvmLibcexp2fTest, InFloatRange) {
   constexpr uint32_t count = 1000000;
   constexpr uint32_t step = UINT32_MAX / count;
   for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
-    float x = valueFromBits(v);
+    float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
     errno = 0;
