@@ -1,7 +1,13 @@
 # RUN: llc -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
 # RUN: llvm-dwarfdump %t | FileCheck %s
 
+# RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
+# RUN: llvm-dwarfdump %t | FileCheck %s
+
 # RUN: llc -start-before=livedebugvalues -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
+# RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
+
+# RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=livedebugvalues -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
 # RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
 
 ## Based on:

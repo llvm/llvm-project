@@ -1,5 +1,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
+; RUN: llc -force-instr-ref-livedebugvalues=1 < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
+; RUN: llc -force-instr-ref-livedebugvalues=1 < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ; Values in registers should be clobbered by calls, which use a regmask instead
 ; of individual register def operands.
