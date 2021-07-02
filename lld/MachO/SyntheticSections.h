@@ -113,19 +113,13 @@ public:
 class NonLazyPointerSectionBase : public SyntheticSection {
 public:
   NonLazyPointerSectionBase(const char *segname, const char *name);
-
   const llvm::SetVector<const Symbol *> &getEntries() const { return entries; }
-
   bool isNeeded() const override { return !entries.empty(); }
-
   uint64_t getSize() const override {
     return entries.size() * target->wordSize;
   }
-
   void writeTo(uint8_t *buf) const override;
-
   void addEntry(Symbol *sym);
-
   uint64_t getVA(uint32_t gotIndex) const {
     return addr + gotIndex * target->wordSize;
   }
