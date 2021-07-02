@@ -25,7 +25,7 @@ while read -r line; do
 
   if [ -z "$function_name" ]; then
     # If the offset is binary-relative, just resolve that.
-    symbolized="$(echo $function_offset | addr2line -e $binary_name)"
+    symbolized="$(echo $function_offset | addr2line -ie $binary_name)"
   else
     # Otherwise, the offset is function-relative. Get the address of the
     # function, and add it to the offset, then symbolize.
@@ -41,7 +41,7 @@ while read -r line; do
 
     # Add the function address and offset to get the offset into the binary.
     binary_offset="$(printf "0x%X" "$((function_addr+function_offset))")"
-    symbolized="$(echo $binary_offset | addr2line -e $binary_name)"
+    symbolized="$(echo $binary_offset | addr2line -ie $binary_name)"
   fi
 
   # Check that it symbolized properly. If it didn't, output the old line.
@@ -52,4 +52,4 @@ while read -r line; do
   else
     echo "${frame_number}${symbolized}"
   fi
-done
+done 2> >(grep -v "addr2line: DWARF error: could not find variable specification")
