@@ -122,14 +122,14 @@ define i32 @sitofp_i64_double() {
 ; AVX-LABEL: 'sitofp_i64_double'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i64_f64 = sitofp i64 undef to double
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i64_v2f64 = sitofp <2 x i64> undef to <2 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %cvt_v4i64_v4f64 = sitofp <4 x i64> undef to <4 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %cvt_v8i64_v8f64 = sitofp <8 x i64> undef to <8 x double>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %cvt_v4i64_v4f64 = sitofp <4 x i64> undef to <4 x double>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %cvt_v8i64_v8f64 = sitofp <8 x i64> undef to <8 x double>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'sitofp_i64_double'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_i64_f64 = sitofp i64 undef to double
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v2i64_v2f64 = sitofp <2 x i64> undef to <2 x double>
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %cvt_v4i64_v4f64 = sitofp <4 x i64> undef to <4 x double>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %cvt_v4i64_v4f64 = sitofp <4 x i64> undef to <4 x double>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %cvt_v8i64_v8f64 = sitofp <8 x i64> undef to <8 x double>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
