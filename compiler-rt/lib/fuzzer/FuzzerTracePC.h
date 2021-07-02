@@ -12,7 +12,7 @@
 #define LLVM_FUZZER_TRACE_PC
 
 #include "FuzzerDefs.h"
-#include "FuzzerUtil.h"
+#include "FuzzerDictionary.h"
 #include "FuzzerValueBitMap.h"
 
 #include <set>
@@ -40,7 +40,7 @@ struct TableOfRecentCompares {
     Table[Idx].B = Arg2;
   }
 
-  const Pair &Get(size_t I) { return Table[I % kSize]; }
+  Pair Get(size_t I) { return Table[I % kSize]; }
 
   Pair Table[kSize];
 };
