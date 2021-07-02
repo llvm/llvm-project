@@ -14,6 +14,8 @@ local_repository(
     path = SUBMODULE_PATH + "/utils/bazel",
 )
 
+load("@llvm-bazel//:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
+
 llvm_configure(
     name = "llvm-project",
     src_path = SUBMODULE_PATH,
