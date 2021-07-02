@@ -10,7 +10,7 @@ Linalg is designed to solve the High-level Hierarchical Optimization (HHO box)
 in MLIR and to interoperate nicely within a *Mixture Of Expert Compilers*
 environment (i.e. the *CGSel* box).
 
-The [Rationale Document](../Rationale/RationaleLinalgDialect.md) goes into
+The [Rationale Document](../../Rationale/RationaleLinalgDialect.md) goes into
 significantly more design and architectural decision details.
 
 ## Set of Key Transformations<a name="key_transformations"></a>
@@ -37,9 +37,9 @@ Linalg IR and that have influenced its design:
 ## High-Level Description of Linalg Ops<a name="linalg_ops"></a>
 
 Linalg takes at least some inspiration from all previously
-[listed prior art](../Rationale/RationaleLinalgDialect.md/#prior-art). The design enables the definition of
-***CustomOps*** with generic properties that enable
-[key transformations](#key_transformations), including lowering to scalar
+[listed prior art](../../Rationale/RationaleLinalgDialect.md/#prior-art). The
+design enables the definition of ***CustomOps*** with generic properties that
+enable [key transformations](#key_transformations), including lowering to scalar
 load/store and other operations or to external library calls and intrinsics.
 
 These ops can have ***either tensor or buffer*** as both input and output
@@ -70,7 +70,7 @@ abstraction on tensors and buffers. This `linalg.generic` operation can express
 custom operations that optionally have *indexing semantics* (by accessing the
 iteration indices using the `linalg.index` operation). The properties of
 `linalg.generic` are the result of applying the guiding principles described in
-the [Rationale Document](../Rationale/RationaleLinalgDialect.md). They are
+the [Rationale Document](../../Rationale/RationaleLinalgDialect.md). They are
 listed next, with a brief example and discussion for each.
 
 #### Property 1: Input and Output Operands Define The Iteration Space<a name="prop1"></a>
@@ -492,7 +492,7 @@ As it stands, the six properties above define the semantics of a
 `linalg.generic` op. It is an open question whether all of these semantics are
 strictly necessary in practice and whether some should or could be derived
 automatically while still maintaining the
-[core guiding principles](../Rationale/RationaleLinalgDialect.md/#core-guiding-principlesa-nameguiding_principlesa).
+[core guiding principles](../../Rationale/RationaleLinalgDialect.md/#core-guiding-principlesa-nameguiding_principlesa).
 
 For the time being, we have settled on the combination of these properties
 because of empirical evidence building and working on multiple high-level
@@ -662,13 +662,16 @@ void batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
 }
 ```
 
-### YAML Based Named Structured Ops
+### YAML Based Named Structured Ops<a name="yaml-gen"></a>
 
 Linalg provides a declarative generation tool (`mlir-linalg-ods-yaml-gen`) to
 automatically produce named ops from a YAML-based op description format intended
-to capture the structure of the named ops and be generated from a higher level
-"mathy" DSL syntax. This facility is currently in flight and is intended to
-subsume the above when ready. See the C++ class to YAML mapping traits in
+to capture the structure of the named ops. The YAML-based op descriptions are
+generated from a higher level [DSL](OpDSL.md) and are not meant to be edited
+directly.
+
+This facility is currently in flight and is intended to subsume the above when
+ready. See the C++ class to YAML mapping traits in
 `mlir-mlinalg-ods-yaml-gen.cpp` as the source of truth for the schema.
 
 Most of the above documentation roughly applies to this path and will be ported
