@@ -13,14 +13,11 @@
 
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
-#include "flang/Frontend/FrontendAction.h"
-#include "flang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DynamicLibrary.h"
 
 namespace Fortran::frontend {
 
@@ -82,22 +79,6 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case InitOnly:
     return std::make_unique<InitOnlyAction>();
     break;
-  case PluginAction: {
-    llvm::outs() << "---------- (case: PluginAction) --------\n";
-    llvm::outs() << "   Plugin Action: " << ci.frontendOpts().ActionName << "\n";
-    for (const FrontendPluginRegistry::entry &plugin : FrontendPluginRegistry::entries()) {
-      llvm::outs() << "     " << plugin.getName() << "\t-- " << plugin.getDesc() << "\n";
-      if (plugin.getName() == ci.frontendOpts().ActionName) {
-        llvm::outs() << "We have found the plugin name!! :-)\n";
-        std::unique_ptr<PluginParseTreeAction> P(plugin.instantiate());
-        return std::move(P);
-      }
-    }
-
-    unsigned diagID = ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error, "unable to find plugin '%0'");
-    ci.diagnostics().Report(diagID) << ci.frontendOpts().ActionName;
-    return nullptr;
-  }
   default:
     break;
     // TODO:
@@ -111,26 +92,6 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   return 0;
 }
 
-/// <<< TEMP Plugin Example
-
-class HelloWorldFlangPlugin : public PluginParseTreeAction
-{
-  protected:
-    void ExecuteAction() override {
-      llvm::outs() << "Hello World from your new plugin (Hello World)\n";
-    }
-};
-
-class HelloTwoFlangPlugin : public PluginParseTreeAction
-{
-  protected:
-    void ExecuteAction() override {
-      llvm::outs() << "Hello World from your new plugin (Hello Two)\n";
-    }
-};
-
-/// <<<<< TEMP Plugin Example
-
 std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &ci) {
   // Create the underlying action.
   std::unique_ptr<FrontendAction> act = CreateFrontendBaseAction(ci);
@@ -139,7 +100,6 @@ std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &ci) {
 
   return act;
 }
-
 bool ExecuteCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->frontendOpts().showHelp_) {
@@ -156,33 +116,6 @@ bool ExecuteCompilerInvocation(CompilerInstance *flang) {
     llvm::cl::PrintVersionMessage();
     return true;
   }
-
-  llvm::outs() << "------ (ExecuteCompilerInvocation) -----\n";
-
-  // Load any requested plugins.
-  for (const std::string &Path : flang->frontendOpts().plugins) {
-    llvm::outs() << "   Load :: Path >> " << Path << "\n";
-    std::string Error;
-    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(Path.c_str(), &Error)) {
-      unsigned diagID = flang->diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error, "unable to load plugin '%0': '%1'");
-      flang->diagnostics().Report(diagID) << Path << Error;
-    }
-  }
-
-  llvm::outs() << "    Plugin Registry List >>\n";
-  for (const FrontendPluginRegistry::entry &plugin : FrontendPluginRegistry::entries()) {
-    llvm::outs() << plugin.getName() << " -- " << plugin.getDesc() << "\n";
-  }
-  llvm::outs() << "    << Plugin Registry List\n";
-
-  static FrontendPluginRegistry::Add<HelloWorldFlangPlugin> X("-hello-wor", "simple Plugin example");
-  static FrontendPluginRegistry::Add<HelloTwoFlangPlugin> Y("hellotwo", "another print plugin example");
-
-  llvm::outs() << "----- (\\ExecuteCompilerInvocation) -----\n";
-
-  // If there were errors in processing arguments, don't do anything else.
-  if (flang->diagnostics().hasErrorOccurred())
-    return false;
 
   // Create and execute the frontend action.
   std::unique_ptr<FrontendAction> act(CreateFrontendAction(*flang));

@@ -6,5 +6,3 @@ add_executable(external-hello-world
 target_link_libraries(external-hello-world
   FortranRuntime
 )
-#add_subdirectory(HelloEarth)
-add_subdirectory(HelloWorld)
