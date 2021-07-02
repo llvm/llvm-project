@@ -257,8 +257,12 @@ void DebugUnparseAction::ExecuteAction() {
   auto &invoc = this->instance().invocation();
   auto &parseTree{instance().parsing().parseTree()};
 
+  CompilerInstance &ci = this->instance();
+  auto os{ci.CreateDefaultOutputFile(
+      /*Binary=*/false, /*InFile=*/GetCurrentFileOrBufferName())};
+
   // TODO: Options should come from CompilerInvocation
-  Unparse(llvm::outs(), *parseTree,
+  Unparse(*os, *parseTree,
       /*encoding=*/Fortran::parser::Encoding::UTF_8,
       /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
       /*preStatement=*/nullptr,
