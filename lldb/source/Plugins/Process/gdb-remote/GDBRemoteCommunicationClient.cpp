@@ -2639,25 +2639,21 @@ bool GDBRemoteCommunicationClient::KillSpawnedProcess(lldb::pid_t pid) {
   return false;
 }
 
-bool GDBRemoteCommunicationClient::SetCurrentThread(uint64_t tid) {
-  if (m_curr_tid == tid)
-    return true;
-
-  char packet[32];
-  int packet_len;
+llvm::Optional<uint64_t>
+GDBRemoteCommunicationClient::SendSetCurrentThreadPacket(uint64_t tid,
+                                                         char op) {
+  lldb_private::StreamString packet;
+  packet.PutChar('H');
+  packet.PutChar(op);
   if (tid == UINT64_MAX)
-    packet_len = ::snprintf(packet, sizeof(packet), "Hg-1");
+    packet.PutCString("-1");
   else
-    packet_len = ::snprintf(packet, sizeof(packet), "Hg%" PRIx64, tid);
-  assert(packet_len + 1 < (int)sizeof(packet));
-  UNUSED_IF_ASSERT_DISABLED(packet_len);
+    packet.PutHex64(tid);
   StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(packet, response, false) ==
+  if (SendPacketAndWaitForResponse(packet.GetString(), response, false) ==
       PacketResult::Success) {
-    if (response.IsOKResponse()) {
-      m_curr_tid = tid;
-      return true;
-    }
+    if (response.IsOKResponse())
+      return tid;
 
     /*
      * Connected bare-iron target (like YAMON gdb-stub) may not have support for
@@ -2665,49 +2661,31 @@ bool GDBRemoteCommunicationClient::SetCurrentThread(uint64_t tid) {
      * The reply from '?' packet could be as simple as 'S05'. There is no packet
      * which can
      * give us pid and/or tid. Assume pid=tid=1 in such cases.
-    */
-    if (response.IsUnsupportedResponse() && IsConnected()) {
-      m_curr_tid = 1;
-      return true;
-    }
+     */
+    if (response.IsUnsupportedResponse() && IsConnected())
+      return 1;
   }
-  return false;
+  return llvm::None;
+}
+
+bool GDBRemoteCommunicationClient::SetCurrentThread(uint64_t tid) {
+  if (m_curr_tid == tid)
+    return true;
+
+  llvm::Optional<uint64_t> ret = SendSetCurrentThreadPacket(tid, 'g');
+  if (ret.hasValue())
+    m_curr_tid = ret.getValue();
+  return ret.hasValue();
 }
 
 bool GDBRemoteCommunicationClient::SetCurrentThreadForRun(uint64_t tid) {
   if (m_curr_tid_run == tid)
     return true;
 
-  char packet[32];
-  int packet_len;
-  if (tid == UINT64_MAX)
-    packet_len = ::snprintf(packet, sizeof(packet), "Hc-1");
-  else
-    packet_len = ::snprintf(packet, sizeof(packet), "Hc%" PRIx64, tid);
-
-  assert(packet_len + 1 < (int)sizeof(packet));
-  UNUSED_IF_ASSERT_DISABLED(packet_len);
-  StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(packet, response, false) ==
-      PacketResult::Success) {
-    if (response.IsOKResponse()) {
-      m_curr_tid_run = tid;
-      return true;
-    }
-
-    /*
-     * Connected bare-iron target (like YAMON gdb-stub) may not have support for
-     * Hc packet.
-     * The reply from '?' packet could be as simple as 'S05'. There is no packet
-     * which can
-     * give us pid and/or tid. Assume pid=tid=1 in such cases.
-    */
-    if (response.IsUnsupportedResponse() && IsConnected()) {
-      m_curr_tid_run = 1;
-      return true;
-    }
-  }
-  return false;
+  llvm::Optional<uint64_t> ret = SendSetCurrentThreadPacket(tid, 'c');
+  if (ret.hasValue())
+    m_curr_tid_run = ret.getValue();
+  return ret.hasValue();
 }
 
 bool GDBRemoteCommunicationClient::GetStopReply(
