@@ -25,7 +25,7 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::macho;
 
-std::vector<InputSection *> macho::inputSections;
+std::vector<ConcatInputSection *> macho::inputSections;
 
 uint64_t InputSection::getFileSize() const {
   return isZeroFill(flags) ? 0 : getSize();
@@ -48,16 +48,10 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
 
 // ICF needs to hash any section that might potentially be duplicated so
 // that it can match on content rather than identity.
-bool ConcatInputSection::isHashableForICF(bool isText) const {
-  if (shouldOmitFromOutput())
-    return false;
+bool ConcatInputSection::isHashableForICF() const {
   switch (sectionType(flags)) {
   case S_REGULAR:
-    if (isText)
-      return !hasPersonality;
-    // One might hope that we could hash __TEXT,__const subsections to fold
-    // references to duplicated values, but alas, many tests fail.
-    return false;
+    return true;
   case S_CSTRING_LITERALS:
   case S_4BYTE_LITERALS:
   case S_8BYTE_LITERALS:

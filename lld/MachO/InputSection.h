@@ -95,7 +95,7 @@ public:
   void markLive(uint64_t off) override { live = true; }
   bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
-  bool isHashableForICF(bool isText) const;
+  bool isHashableForICF() const;
   void hashForICF();
   void writeTo(uint8_t *buf);
 
@@ -108,8 +108,6 @@ public:
     return isec->kind() == ConcatKind;
   }
 
-  // ICF can't fold functions with LSDA+personality
-  bool hasPersonality = false;
   // Points to the surviving section after this one is folded by ICF
   InputSection *replacement = nullptr;
   // Equivalence-class ID for ICF
@@ -124,6 +122,9 @@ public:
   bool live = !config->deadStrip;
   // How many symbols refer to this InputSection.
   uint32_t numRefs = 0;
+  // This variable has two usages. Initially, it represents the input order.
+  // After assignAddresses is called, it represents the offset from the
+  // beginning of the output section this section was assigned to.
   uint64_t outSecOff = 0;
 };
 
@@ -256,7 +257,7 @@ inline bool isWordLiteralSection(uint32_t flags) {
 
 bool isCodeSection(const InputSection *);
 
-extern std::vector<InputSection *> inputSections;
+extern std::vector<ConcatInputSection *> inputSections;
 
 namespace section_names {
 

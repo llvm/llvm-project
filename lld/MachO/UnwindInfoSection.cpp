@@ -103,9 +103,11 @@ struct SecondLevelPage {
   EncodingMap localEncodingIndexes;
 };
 
-template <class Ptr> class UnwindInfoSectionImpl : public UnwindInfoSection {
+template <class Ptr>
+class UnwindInfoSectionImpl final : public UnwindInfoSection {
 public:
   void prepareRelocations(ConcatInputSection *) override;
+  void addInput(ConcatInputSection *) override;
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
 
@@ -126,6 +128,25 @@ private:
   uint64_t level2PagesOffset = 0;
 };
 
+UnwindInfoSection::UnwindInfoSection()
+    : SyntheticSection(segment_names::text, section_names::unwindInfo) {
+  align = 4;
+  compactUnwindSection =
+      make<ConcatOutputSection>(section_names::compactUnwind);
+}
+
+void UnwindInfoSection::prepareRelocations() {
+  for (ConcatInputSection *isec : compactUnwindSection->inputs)
+    prepareRelocations(isec);
+}
+
+template <class Ptr>
+void UnwindInfoSectionImpl<Ptr>::addInput(ConcatInputSection *isec) {
+  assert(isec->segname == segment_names::ld &&
+         isec->name == section_names::compactUnwind);
+  compactUnwindSection->addInput(isec);
+}
+
 // Compact unwind relocations have different semantics, so we handle them in a
 // separate code path from regular relocations. First, we do not wish to add
 // rebase opcodes for __LD,__compact_unwind, because that section doesn't
@@ -133,8 +154,6 @@ private:
 // reside in the GOT and must be treated specially.
 template <class Ptr>
 void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
-  assert(isec->segname == segment_names::ld &&
-         isec->name == section_names::compactUnwind);
   assert(!isec->shouldOmitFromOutput() &&
          "__compact_unwind section should not be omitted");
 
@@ -149,13 +168,6 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
         offsetof(CompactUnwindEntry<Ptr>, personality))
       continue;
-
-    Reloc &rFunc = isec->relocs[++i];
-    assert(r.offset ==
-           rFunc.offset + offsetof(CompactUnwindEntry<Ptr>, personality));
-    auto *referentIsec =
-        cast<ConcatInputSection>(rFunc.referent.get<InputSection *>());
-    referentIsec->hasPersonality = true;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {

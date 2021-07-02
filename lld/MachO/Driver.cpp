@@ -8,6 +8,7 @@
 
 #include "Driver.h"
 #include "Config.h"
+#include "ICF.h"
 #include "InputFiles.h"
 #include "LTO.h"
 #include "MarkLive.h"
@@ -18,6 +19,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "UnwindInfoSection.h"
 #include "Writer.h"
 
 #include "lld/Common/Args.h"
@@ -983,6 +985,48 @@ void createFiles(const InputArgList &args) {
   }
 }
 
+static void gatherInputSections() {
+  TimeTraceScope timeScope("Gathering input sections");
+  int inputOrder = 0;
+  for (const InputFile *file : inputFiles) {
+    for (const SubsectionMap &map : file->subsections) {
+      for (const SubsectionEntry &entry : map) {
+        if (auto *isec = dyn_cast<ConcatInputSection>(entry.isec)) {
+          if (isec->isCoalescedWeak())
+            continue;
+          if (isec->segname == segment_names::ld) {
+            assert(isec->name == section_names::compactUnwind);
+            in.unwindInfo->addInput(isec);
+            continue;
+          }
+          isec->outSecOff = inputOrder++;
+          inputSections.push_back(isec);
+        } else if (auto *isec = dyn_cast<CStringInputSection>(entry.isec)) {
+          if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
+            in.cStringSection->inputOrder = inputOrder++;
+          in.cStringSection->addInput(isec);
+        } else if (auto *isec = dyn_cast<WordLiteralInputSection>(entry.isec)) {
+          if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
+            in.wordLiteralSection->inputOrder = inputOrder++;
+          in.wordLiteralSection->addInput(isec);
+        } else {
+          llvm_unreachable("unexpected input section kind");
+        }
+      }
+    }
+  }
+  assert(inputOrder <= UnspecifiedInputOrder);
+}
+
+static void foldIdenticalLiterals() {
+  // We always create a cStringSection, regardless of whether dedupLiterals is
+  // true. If it isn't, we simply create a non-deduplicating CStringSection.
+  // Either way, we must unconditionally finalize it here.
+  in.cStringSection->finalizeContents();
+  if (in.wordLiteralSection)
+    in.wordLiteralSection->finalizeContents();
+}
+
 bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -1344,24 +1388,16 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
     }
 
-    {
-      TimeTraceScope timeScope("Gathering input sections");
-      // Gather all InputSections into one vector.
-      for (const InputFile *file : inputFiles) {
-        for (const SubsectionMap &map : file->subsections) {
-          for (const SubsectionEntry &entry : map) {
-            if (auto concatIsec = dyn_cast<ConcatInputSection>(entry.isec))
-              if (concatIsec->isCoalescedWeak())
-                continue;
-            inputSections.push_back(entry.isec);
-          }
-        }
-      }
-      assert(inputSections.size() < UnspecifiedInputOrder);
-    }
+    gatherInputSections();
 
     if (config->deadStrip)
       markLive();
+
+    // ICF assumes that all literals have been folded already, so we must run
+    // foldIdenticalLiterals before foldIdenticalSections.
+    foldIdenticalLiterals();
+    if (config->icfLevel != ICFLevel::none)
+      foldIdenticalSections();
 
     // Write to an output file.
     if (target->wordSize == 8)
