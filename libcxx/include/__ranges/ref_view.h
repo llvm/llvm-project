@@ -13,6 +13,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>

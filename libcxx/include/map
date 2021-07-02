@@ -491,6 +491,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 
 #include <__config>
 #include <__debug>
+#include <__functional/is_transparent.h>
 #include <__node_handle>
 #include <__tree>
 #include <__utility/forward.h>

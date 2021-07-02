@@ -13,6 +13,7 @@
 // result_of<Fn(ArgTypes...)>
 
 #include <type_traits>
+#include <functional>
 #include <memory>
 #include <utility>
 #include "test_macros.h"
