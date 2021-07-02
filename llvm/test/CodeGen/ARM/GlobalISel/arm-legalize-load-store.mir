@@ -2,6 +2,7 @@
 # RUN: llc -mtriple thumbv7-- -run-pass=legalizer %s -o - | FileCheck %s
 --- |
   define void @test_legal_loads_stores() { ret void }
+  define void @test_load_store_s1() { ret void }
   define void @test_load_from_stack() { ret void }
 
   define void @test_load_store_64_vfp() #0 { ret void }
@@ -34,16 +35,14 @@ body:             |
     liveins: $r0
 
     ; These are all legal, so we should find them unchanged in the output
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s32), %0(p0)
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s16), %0(p0)
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s8), %0(p0)
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s1), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s32), %0(p0) :: (store (s32))
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s16), %0(p0) :: (store (s16))
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s8), %0(p0) :: (store (s8))
     ; CHECK-DAG: G_STORE {{%[0-9]+}}(p0), %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s16) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s8) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s1) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(p0) = G_LOAD %0(p0)
+    ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_LOAD %0(p0) :: (load (s32))
+    ; CHECK-DAG: {{%[0-9]+}}:_(s16) = G_LOAD %0(p0) :: (load (s16))
+    ; CHECK-DAG: {{%[0-9]+}}:_(s8) = G_LOAD %0(p0) :: (load (s8))
+    ; CHECK-DAG: {{%[0-9]+}}:_(p0) = G_LOAD %0(p0) :: (load (p0))
     %0(p0) = COPY $r0
     %2(s32) = G_LOAD %0(p0) :: (load (s32))
     G_STORE %2(s32), %0(p0) :: (store (s32))
@@ -51,10 +50,32 @@ body:             |
     G_STORE %3(s16), %0(p0) :: (store (s16))
     %4(s8) = G_LOAD %0(p0) :: (load (s8))
     G_STORE %4(s8), %0(p0) :: (store (s8))
-    %5(s1) = G_LOAD %0(p0) :: (load (s1))
-    G_STORE %5(s1), %0(p0) :: (store (s1))
     %6(p0) = G_LOAD %0(p0) :: (load (p0))
     G_STORE %6(p0), %0(p0) :: (store (p0))
+    BX_RET 14, $noreg
+...
+
+---
+name:            test_load_store_s1
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK: [[LD:%[0-9]+]]:_(s8) = G_LOAD %0(p0) :: (load (s8))
+    ; CHECK: [[ONE:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LD]]
+    ; CHECK: [[COPYONE:%[0-9]+]]:_(s32) = COPY [[ONE]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[EXT]], [[COPYONE]]
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[AND]]
+    ; CHECK: G_STORE [[TRUNC]](s8), {{%[0-9]+}}(p0) :: (store (s8))
+    %0:_(p0) = COPY $r0
+    %5:_(s1) = G_LOAD %0(p0) :: (load (s1))
+    G_STORE %5(s1), %0(p0) :: (store (s1))
     BX_RET 14, $noreg
 ...
 ---
