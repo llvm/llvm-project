@@ -35,7 +35,7 @@ public:
 
   class ProcessRunLocker {
   public:
-    ProcessRunLocker() {}
+    ProcessRunLocker() = default;
 
     ~ProcessRunLocker() { Unlock(); }
 

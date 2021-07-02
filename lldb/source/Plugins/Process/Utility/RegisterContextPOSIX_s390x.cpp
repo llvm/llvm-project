@@ -98,7 +98,7 @@ RegisterContextPOSIX_s390x::RegisterContextPOSIX_s390x(
   }
 }
 
-RegisterContextPOSIX_s390x::~RegisterContextPOSIX_s390x() {}
+RegisterContextPOSIX_s390x::~RegisterContextPOSIX_s390x() = default;
 
 void RegisterContextPOSIX_s390x::Invalidate() {}
 

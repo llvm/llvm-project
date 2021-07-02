@@ -67,7 +67,7 @@ DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
 }
 
 // Destructor
-DWARFExpression::~DWARFExpression() {}
+DWARFExpression::~DWARFExpression() = default;
 
 bool DWARFExpression::IsValid() const { return m_data.GetByteSize() > 0; }
 

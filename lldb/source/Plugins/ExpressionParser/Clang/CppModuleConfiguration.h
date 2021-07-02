@@ -59,7 +59,7 @@ public:
   /// Creates a configuration by analyzing the given list of used source files.
   explicit CppModuleConfiguration(const FileSpecList &support_files);
   /// Creates an empty and invalid configuration.
-  CppModuleConfiguration() {}
+  CppModuleConfiguration() = default;
 
   /// Returns true iff this is a valid configuration that can be used to
   /// load and compile modules.

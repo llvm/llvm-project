@@ -263,7 +263,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
 }
 
-ObjectFilePECOFF::~ObjectFilePECOFF() {}
+ObjectFilePECOFF::~ObjectFilePECOFF() = default;
 
 bool ObjectFilePECOFF::ParseHeader() {
   ModuleSP module_sp(GetModule());

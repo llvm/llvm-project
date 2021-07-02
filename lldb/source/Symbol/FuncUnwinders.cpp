@@ -55,7 +55,7 @@ FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
 
 /// destructor
 
-FuncUnwinders::~FuncUnwinders() {}
+FuncUnwinders::~FuncUnwinders() = default;
 
 UnwindPlanSP FuncUnwinders::GetUnwindPlanAtCallSite(Target &target,
                                                     Thread &thread) {

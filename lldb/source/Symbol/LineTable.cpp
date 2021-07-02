@@ -34,7 +34,7 @@ LineTable::LineTable(CompileUnit *comp_unit,
 }
 
 // Destructor
-LineTable::~LineTable() {}
+LineTable::~LineTable() = default;
 
 void LineTable::InsertLineEntry(lldb::addr_t file_addr, uint32_t line,
                                 uint16_t column, uint16_t file_idx,
@@ -58,7 +58,7 @@ void LineTable::InsertLineEntry(lldb::addr_t file_addr, uint32_t line,
   //  Dump (&s, Address::DumpStyleFileAddress);
 }
 
-LineSequence::LineSequence() {}
+LineSequence::LineSequence() = default;
 
 void LineTable::LineSequenceImpl::Clear() { m_entries.clear(); }
 

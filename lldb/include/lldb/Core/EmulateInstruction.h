@@ -237,7 +237,7 @@ public:
       uint32_t isa;
     } info;
 
-    Context() {}
+    Context() = default;
 
     void SetRegisterPlusOffset(RegisterInfo base_reg, int64_t signed_offset) {
       info_type = eInfoTypeRegisterPlusOffset;

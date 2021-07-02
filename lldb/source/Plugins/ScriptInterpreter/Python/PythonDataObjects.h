@@ -229,7 +229,7 @@ struct PythonFormat<
 
 class PythonObject {
 public:
-  PythonObject() {}
+  PythonObject() = default;
 
   PythonObject(PyRefType type, PyObject *py_obj) {
     m_py_obj = py_obj;
@@ -421,7 +421,7 @@ public:
       Py_DECREF(py_obj);
   }
 
-  TypedPythonObject() {}
+  TypedPythonObject() = default;
 };
 
 class PythonBytes : public TypedPythonObject<PythonBytes> {

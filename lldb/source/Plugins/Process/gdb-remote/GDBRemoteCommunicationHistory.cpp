@@ -24,7 +24,7 @@ GDBRemoteCommunicationHistory::GDBRemoteCommunicationHistory(uint32_t size)
     m_packets.resize(size);
 }
 
-GDBRemoteCommunicationHistory::~GDBRemoteCommunicationHistory() {}
+GDBRemoteCommunicationHistory::~GDBRemoteCommunicationHistory() = default;
 
 void GDBRemoteCommunicationHistory::AddPacket(char packet_char,
                                               GDBRemotePacket::Type type,

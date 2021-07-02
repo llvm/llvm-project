@@ -60,7 +60,7 @@ llvm::json::Value toJSON(const TraceStartRequest &packet);
 /// jLLDBTraceStop gdb-remote packet
 /// \{
 struct TraceStopRequest {
-  TraceStopRequest() {}
+  TraceStopRequest() = default;
 
   TraceStopRequest(llvm::StringRef type, const std::vector<lldb::tid_t> &tids);
 

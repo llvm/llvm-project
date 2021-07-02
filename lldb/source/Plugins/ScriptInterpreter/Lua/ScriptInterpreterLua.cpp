@@ -134,7 +134,7 @@ ScriptInterpreterLua::ScriptInterpreterLua(Debugger &debugger)
     : ScriptInterpreter(debugger, eScriptLanguageLua),
       m_lua(std::make_unique<Lua>()) {}
 
-ScriptInterpreterLua::~ScriptInterpreterLua() {}
+ScriptInterpreterLua::~ScriptInterpreterLua() = default;
 
 bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
                                           CommandReturnObject *result,

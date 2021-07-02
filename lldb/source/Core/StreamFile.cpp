@@ -43,7 +43,7 @@ StreamFile::StreamFile(const char *path, File::OpenOptions options,
   }
 }
 
-StreamFile::~StreamFile() {}
+StreamFile::~StreamFile() = default;
 
 void StreamFile::Flush() { m_file_sp->Flush(); }
 

@@ -157,7 +157,7 @@ public:
 
   /// The following values are valid if the variable is used by JIT code
   struct JITVars {
-    JITVars() {}
+    JITVars() = default;
 
     lldb::offset_t m_alignment =
         0;             ///< The required alignment of the variable, in bytes
