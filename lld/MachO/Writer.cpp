@@ -582,7 +582,7 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
     // need of rebase opcodes.
-    if (!(isThreadLocalVariables(isec->flags) && isa<Defined>(sym)))
+    if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
       addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
   }
 }
@@ -802,7 +802,8 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
 
     SymbolPriorityEntry &entry = it->second;
     size_t &priority = sectionPriorities[sym.isec];
-    priority = std::max(priority, getSymbolPriority(entry, sym.isec->file));
+    priority =
+        std::max(priority, getSymbolPriority(entry, sym.isec->getFile()));
   };
 
   // TODO: Make sure this handles weak symbols correctly.
@@ -889,7 +890,7 @@ template <class LP> void Writer::createOutputSections() {
   for (ConcatInputSection *isec : inputSections) {
     if (isec->shouldOmitFromOutput())
       continue;
-    NamePair names = maybeRenameSection({isec->segname, isec->name});
+    NamePair names = maybeRenameSection({isec->getSegName(), isec->getName()});
     ConcatOutputSection *&osec = concatOutputSections[names];
     if (!osec)
       osec = make<ConcatOutputSection>(names.second);
@@ -913,7 +914,8 @@ template <class LP> void Writer::createOutputSections() {
       if (it == concatOutputSections.end()) {
         getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
       } else {
-        fatal("section from " + toString(it->second->firstSection()->file) +
+        fatal("section from " +
+              toString(it->second->firstSection()->getFile()) +
               " conflicts with synthetic section " + ssec->segname + "," +
               ssec->name);
       }

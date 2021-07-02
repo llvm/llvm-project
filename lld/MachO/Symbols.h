@@ -129,7 +129,7 @@ public:
     return isWeakDef() && isExternal() && !privateExtern;
   }
   bool isTlv() const override {
-    return !isAbsolute() && isThreadLocalVariables(isec->flags);
+    return !isAbsolute() && isThreadLocalVariables(isec->getFlags());
   }
 
   bool isExternal() const { return external; }

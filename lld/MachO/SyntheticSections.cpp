@@ -746,7 +746,7 @@ void SymtabSection::emitStabs() {
       if (defined->isAbsolute())
         continue;
       InputSection *isec = defined->isec;
-      ObjFile *file = dyn_cast_or_null<ObjFile>(isec->file);
+      ObjFile *file = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!file || !file->compileUnit)
         continue;
       symbolsNeedingStabs.push_back(defined);
@@ -754,7 +754,7 @@ void SymtabSection::emitStabs() {
   }
 
   llvm::stable_sort(symbolsNeedingStabs, [&](Defined *a, Defined *b) {
-    return a->isec->file->id < b->isec->file->id;
+    return a->isec->getFile()->id < b->isec->getFile()->id;
   });
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
@@ -763,7 +763,7 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (Defined *defined : symbolsNeedingStabs) {
     InputSection *isec = defined->isec;
-    ObjFile *file = cast<ObjFile>(isec->file);
+    ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
       if (lastFile != nullptr)
@@ -1264,7 +1264,7 @@ void WordLiteralSection::finalizeContents() {
     // finalized.
     isec->isFinal = true;
     const uint8_t *buf = isec->data.data();
-    switch (sectionType(isec->flags)) {
+    switch (sectionType(isec->getFlags())) {
     case S_4BYTE_LITERALS: {
       for (size_t off = 0, e = isec->data.size(); off < e; off += 4) {
         if (!isec->isLive(off))

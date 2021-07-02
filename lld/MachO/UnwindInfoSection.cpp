@@ -142,8 +142,8 @@ void UnwindInfoSection::prepareRelocations() {
 
 template <class Ptr>
 void UnwindInfoSectionImpl<Ptr>::addInput(ConcatInputSection *isec) {
-  assert(isec->segname == segment_names::ld &&
-         isec->name == section_names::compactUnwind);
+  assert(isec->getSegName() == segment_names::ld &&
+         isec->getName() == section_names::compactUnwind);
   compactUnwindSection->addInput(isec);
 }
 
@@ -220,7 +220,7 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
 // the exact addresses that it references. So it is safe for compact unwind to
 // reference addresses in __TEXT, but not addresses in any other segment.
 static ConcatInputSection *checkTextSegment(InputSection *isec) {
-  if (isec->segname != segment_names::text)
+  if (isec->getSegName() != segment_names::text)
     error("compact unwind references address in " + toString(isec) +
           " which is not in segment __TEXT");
   // __text should always be a ConcatInputSection.
