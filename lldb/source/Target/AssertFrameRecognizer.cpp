@@ -22,6 +22,10 @@ namespace lldb_private {
 struct SymbolLocation {
   FileSpec module_spec;
   std::vector<ConstString> symbols;
+
+  // The symbols are regular expressions. In such case all symbols are matched
+  // with their trailing @VER symbol version stripped.
+  bool symbols_are_regex = false;
 };
 
 /// Fetches the abort frame location depending on the current platform.
@@ -45,6 +49,8 @@ bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
     location.symbols.push_back(ConstString("raise"));
     location.symbols.push_back(ConstString("__GI_raise"));
     location.symbols.push_back(ConstString("gsignal"));
+    location.symbols.push_back(ConstString("pthread_kill"));
+    location.symbols_are_regex = true;
     break;
   default:
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
@@ -93,9 +99,33 @@ void RegisterAssertFrameRecognizer(Process *process) {
   if (!GetAbortLocation(os, location))
     return;
 
+  if (!location.symbols_are_regex) {
+    target.GetFrameRecognizerManager().AddRecognizer(
+        std::make_shared<AssertFrameRecognizer>(),
+        location.module_spec.GetFilename(), location.symbols,
+        /*first_instruction_only*/ false);
+    return;
+  }
+  std::string module_re = "^";
+  for (char c : location.module_spec.GetFilename().GetStringRef()) {
+    if (c == '.')
+      module_re += '\\';
+    module_re += c;
+  }
+  module_re += '$';
+  std::string symbol_re = "^(";
+  for (auto it = location.symbols.cbegin(); it != location.symbols.cend();
+       ++it) {
+    if (it != location.symbols.cbegin())
+      symbol_re += '|';
+    symbol_re += it->GetStringRef();
+  }
+  // Strip the trailing @VER symbol version.
+  symbol_re += ")(@.*)?$";
   target.GetFrameRecognizerManager().AddRecognizer(
-      StackFrameRecognizerSP(new AssertFrameRecognizer()),
-      location.module_spec.GetFilename(), location.symbols,
+      std::make_shared<AssertFrameRecognizer>(),
+      std::make_shared<RegularExpression>(std::move(module_re)),
+      std::make_shared<RegularExpression>(std::move(symbol_re)),
       /*first_instruction_only*/ false);
 }
 
@@ -112,7 +142,7 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   if (!GetAssertLocation(os, location))
     return RecognizedStackFrameSP();
 
-  const uint32_t frames_to_fetch = 5;
+  const uint32_t frames_to_fetch = 6;
   const uint32_t last_frame_index = frames_to_fetch - 1;
   StackFrameSP prev_frame_sp = nullptr;
 
