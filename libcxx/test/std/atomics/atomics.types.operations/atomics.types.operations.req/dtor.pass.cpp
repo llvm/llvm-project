@@ -11,7 +11,7 @@
 
 // <atomic>
 
-// constexpr atomic<T>::atomic(T value)
+// constexpr atomic<T>::~atomic()
 
 #include <atomic>
 #include <type_traits>
@@ -20,38 +20,18 @@
 #include "test_macros.h"
 #include "atomic_helpers.h"
 
-struct UserType {
-  int i;
-
-  UserType() noexcept {}
-  constexpr explicit UserType(int d) noexcept : i(d) {}
-
-  friend bool operator==(const UserType& x, const UserType& y) { return x.i == y.i; }
-};
-
 template <class Tp>
-struct TestFunc {
+struct CheckTriviallyDestructible {
   void operator()() const {
     typedef std::atomic<Tp> Atomic;
-    constexpr Tp t(42);
-    {
-      constexpr Atomic a(t);
-      assert(a == t);
-    }
-    {
-      constexpr Atomic a{t};
-      assert(a == t);
-    }
-    {
-      constexpr Atomic a = ATOMIC_VAR_INIT(t);
-      assert(a == t);
-    }
+    static_assert(std::is_trivially_destructible<Atomic>::value, "");
   }
 };
 
 int main(int, char**) {
-  TestFunc<UserType>()();
-  TestEachIntegralType<TestFunc>()();
+  TestEachIntegralType<CheckTriviallyDestructible>()();
+  TestEachFloatingPointType<CheckTriviallyDestructible>()();
+  TestEachPointerType<CheckTriviallyDestructible>()();
 
   return 0;
 }

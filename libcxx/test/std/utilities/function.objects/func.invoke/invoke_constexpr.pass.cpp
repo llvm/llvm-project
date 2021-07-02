@@ -10,6 +10,9 @@
 
 // <functional>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // template<class F, class... Args>
 // constexpr  // constexpr in C++20
 // invoke_result_t<F, Args...> invoke(F&& f, Args&&... args)

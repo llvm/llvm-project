@@ -11,8 +11,6 @@
 
 // <atomic>
 
-// constexpr atomic<T>::atomic(T value)
-
 #include <atomic>
 #include <type_traits>
 #include <cassert>
@@ -20,38 +18,18 @@
 #include "test_macros.h"
 #include "atomic_helpers.h"
 
-struct UserType {
-  int i;
-
-  UserType() noexcept {}
-  constexpr explicit UserType(int d) noexcept : i(d) {}
-
-  friend bool operator==(const UserType& x, const UserType& y) { return x.i == y.i; }
-};
-
 template <class Tp>
-struct TestFunc {
+struct CheckStandardLayout {
   void operator()() const {
     typedef std::atomic<Tp> Atomic;
-    constexpr Tp t(42);
-    {
-      constexpr Atomic a(t);
-      assert(a == t);
-    }
-    {
-      constexpr Atomic a{t};
-      assert(a == t);
-    }
-    {
-      constexpr Atomic a = ATOMIC_VAR_INIT(t);
-      assert(a == t);
-    }
+    static_assert(std::is_standard_layout<Atomic>::value, "");
   }
 };
 
 int main(int, char**) {
-  TestFunc<UserType>()();
-  TestEachIntegralType<TestFunc>()();
+  TestEachIntegralType<CheckStandardLayout>()();
+  TestEachFloatingPointType<CheckStandardLayout>()();
+  TestEachPointerType<CheckStandardLayout>()();
 
   return 0;
 }
