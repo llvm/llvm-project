@@ -232,6 +232,11 @@ bool macho::isCodeSection(const InputSection *isec) {
   return false;
 }
 
+bool macho::isCfStringSection(const InputSection *isec) {
+  return isec->name == section_names::cfString &&
+         isec->segname == segment_names::data;
+}
+
 std::string lld::toString(const InputSection *isec) {
   return (toString(isec->file) + ":(" + isec->name + ")").str();
 }

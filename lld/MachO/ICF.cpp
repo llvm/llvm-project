@@ -324,6 +324,7 @@ void macho::foldIdenticalSections() {
   // parallelization. Therefore, we hash every InputSection here where we have
   // them all accessible as simple vectors.
   std::vector<ConcatInputSection *> codeSections;
+  std::vector<ConcatInputSection *> cfStringSections;
 
   // ICF can't fold functions with unwind info
   DenseSet<const InputSection *> functionsWithUnwindInfo =
@@ -339,18 +340,30 @@ void macho::foldIdenticalSections() {
   // ICF::segregate()
   uint64_t icfUniqueID = inputSections.size();
   for (ConcatInputSection *isec : inputSections) {
-    bool isHashable = isCodeSection(isec) && !isec->shouldOmitFromOutput() &&
+    bool isHashable = (isCodeSection(isec) || isCfStringSection(isec)) &&
+                      !isec->shouldOmitFromOutput() &&
                       !functionsWithUnwindInfo.contains(isec) &&
                       isec->isHashableForICF();
     if (isHashable) {
-      codeSections.push_back(isec);
+      if (isCodeSection(isec))
+        codeSections.push_back(isec);
+      else {
+        assert(isCfStringSection(isec));
+        cfStringSections.push_back(isec);
+      }
     } else {
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
-  parallelForEach(codeSections,
+  std::vector<ConcatInputSection *> hashable(codeSections);
+  hashable.insert(hashable.end(), cfStringSections.begin(),
+                  cfStringSections.end());
+  parallelForEach(hashable,
                   [](ConcatInputSection *isec) { isec->hashForICF(); });
   // Now that every input section is either hashed or marked as unique, run the
   // segregation algorithm to detect foldable subsections.
+  // We dedup cfStringSections first since code sections may refer to them, but
+  // not vice-versa.
+  ICF(cfStringSections).run();
   ICF(codeSections).run();
 }

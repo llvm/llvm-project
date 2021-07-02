@@ -281,6 +281,17 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
                                              flags);
       }
       subsections.push_back({{0, isec}});
+    } else if (config->icfLevel != ICFLevel::none &&
+               (name == section_names::cfString &&
+                segname == segment_names::data)) {
+      uint64_t literalSize = target->wordSize == 8 ? 32 : 16;
+      subsections.push_back({});
+      SubsectionMap &subsecMap = subsections.back();
+      for (uint64_t off = 0; off < data.size(); off += literalSize)
+        subsecMap.push_back(
+            {off, make<ConcatInputSection>(segname, name, this,
+                                           data.slice(off, literalSize), align,
+                                           flags)});
     } else {
       auto *isec =
           make<ConcatInputSection>(segname, name, this, data, align, flags);
@@ -593,22 +604,43 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     }
   }
 
-  // Calculate symbol sizes and create subsections by splitting the sections
-  // along symbol boundaries.
   for (size_t i = 0; i < subsections.size(); ++i) {
     SubsectionMap &subsecMap = subsections[i];
     if (subsecMap.empty())
       continue;
 
     std::vector<uint32_t> &symbolIndices = symbolsBySection[i];
-    llvm::stable_sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
-      return nList[lhs].n_value < nList[rhs].n_value;
-    });
     uint64_t sectionAddr = sectionHeaders[i].addr;
     uint32_t sectionAlign = 1u << sectionHeaders[i].align;
 
+    InputSection *isec = subsecMap.back().isec;
+    // __cfstring has already been split into subsections during
+    // parseSections(), so we simply need to match Symbols to the corresponding
+    // subsection here.
+    if (config->icfLevel != ICFLevel::none && isCfStringSection(isec)) {
+      for (size_t j = 0; j < symbolIndices.size(); ++j) {
+        uint32_t symIndex = symbolIndices[j];
+        const NList &sym = nList[symIndex];
+        StringRef name = strtab + sym.n_strx;
+        uint64_t symbolOffset = sym.n_value - sectionAddr;
+        InputSection *isec = findContainingSubsection(subsecMap, &symbolOffset);
+        if (symbolOffset != 0) {
+          error(toString(this) + ": __cfstring contains symbol " + name +
+                " at misaligned offset");
+          continue;
+        }
+        symbols[symIndex] = createDefined(sym, name, isec, 0, isec->getSize());
+      }
+      continue;
+    }
+
+    // Calculate symbol sizes and create subsections by splitting the sections
+    // along symbol boundaries.
     // We populate subsecMap by repeatedly splitting the last (highest address)
     // subsection.
+    llvm::stable_sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
+      return nList[lhs].n_value < nList[rhs].n_value;
+    });
     SubsectionEntry subsecEntry = subsecMap.back();
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
       uint32_t symIndex = symbolIndices[j];
