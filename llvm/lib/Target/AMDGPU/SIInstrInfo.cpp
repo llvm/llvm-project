@@ -1729,10 +1729,10 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addImm(0); // clamp
       } else {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
-          .addImm(Lo.getZExtValue())
+          .addImm(Lo.getSExtValue())
           .addReg(Dst, RegState::Implicit | RegState::Define);
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstHi)
-          .addImm(Hi.getZExtValue())
+          .addImm(Hi.getSExtValue())
           .addReg(Dst, RegState::Implicit | RegState::Define);
       }
     } else {
