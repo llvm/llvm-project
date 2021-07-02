@@ -21,6 +21,8 @@ int main() {
   const size_t kLog2Size = 32;
 #elif defined(__powerpc64__)
   const size_t kLog2Size = 39;
+#elif defined(__s390x__)
+  const size_t kLog2Size = 43;
 #endif
   const uintptr_t kLocation = 0x40ULL << kLog2Size;
   void *p = mmap(
