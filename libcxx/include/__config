@@ -1359,6 +1359,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS
 #define _LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS
 #define _LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR
+#define _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
 #endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
 #if !defined(__cpp_deduction_guides) || __cpp_deduction_guides < 201611
