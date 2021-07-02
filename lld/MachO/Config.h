@@ -126,6 +126,7 @@ struct Configuration {
   llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
+  uint32_t ltoo = 2;
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
