@@ -292,6 +292,148 @@ static void buildPadOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA Operator Return Type Inference.
+//===----------------------------------------------------------------------===//
+
+static void getI64Values(ArrayAttr arrayAttr, SmallVector<int64_t> &values) {
+  for (auto it : arrayAttr) {
+    values.push_back(it.cast<IntegerAttr>().getValue().getSExtValue());
+  }
+}
+
+LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  ShapedType type = operands.front().getType().cast<ShapedType>();
+
+  auto newShape = attributes.get("new_shape").cast<ArrayAttr>();
+  llvm::SmallVector<int64_t> newShapeValue;
+  getI64Values(newShape, newShapeValue);
+
+  // We cannot infer from the total number of elements so we must take the
+  // shape attribute as exact.
+  if (!type.hasRank() || !type.hasStaticShape()) {
+    inferredReturnShapes.push_back(ShapedTypeComponents(newShapeValue));
+    return success();
+  }
+
+  // Determine the number of elements covered by the slice of all static
+  // dimensions. This allows us to infer the length of the remaining dynamic
+  // dimension.
+  int64_t numElements = type.getNumElements();
+  int64_t staticMul = 1;
+  for (auto val : newShapeValue) {
+    if (val != -1) {
+      staticMul *= val;
+    }
+  }
+
+  // Determine the length of the dynamic dimension.
+  for (auto &val : newShapeValue) {
+    if (val == -1)
+      val = numElements / staticMul;
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(newShapeValue));
+  return success();
+}
+
+static LogicalResult resolveBroadcastShape(ValueRange operands,
+                                           SmallVector<int64_t> &outShape) {
+  int64_t outRank = 0;
+  for (auto operand : operands) {
+    auto type = operand.getType().cast<ShapedType>();
+    if (!type.hasRank())
+      return failure();
+    outRank = std::max<int64_t>(outRank, type.getRank());
+  }
+
+  outShape.resize(outRank, 1);
+
+  for (auto operand : operands) {
+    auto type = operand.getType().cast<ShapedType>();
+    auto shape = type.getShape();
+    auto rankDiff = outShape.size() - shape.size();
+
+    for (size_t i = 0; i < shape.size(); i++) {
+      auto dim1 = outShape[i + rankDiff];
+      auto dim2 = shape[i];
+      auto resolvedDim = dim1;
+
+      if (dim1 == 1) {
+        resolvedDim = dim2;
+      } else if (dim2 == 1) {
+        resolvedDim = dim1;
+      } else if (dim1 != dim2) {
+        return failure();
+      }
+      outShape[i + rankDiff] = resolvedDim;
+    }
+  }
+
+  return success();
+}
+
+static LogicalResult NAryInferReturnTypes(
+    ValueRange operands,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<int64_t> outShape;
+  if (resolveBroadcastShape(operands, outShape).failed()) {
+    inferredReturnShapes.push_back(ShapedTypeComponents());
+  } else {
+    inferredReturnShapes.push_back(ShapedTypeComponents(outShape));
+  }
+  return success();
+}
+
+#define NARY_SHAPE_INFER(OP)                                                   \
+  LogicalResult OP::inferReturnTypeComponents(                                 \
+      MLIRContext *context, ::llvm::Optional<Location> location,               \
+      ValueRange operands, DictionaryAttr attributes, RegionRange regions,     \
+      SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {           \
+    return NAryInferReturnTypes(operands, inferredReturnShapes);               \
+  }
+
+NARY_SHAPE_INFER(tosa::AbsOp)
+NARY_SHAPE_INFER(tosa::AddOp)
+NARY_SHAPE_INFER(tosa::ArithmeticRightShiftOp)
+NARY_SHAPE_INFER(tosa::BitwiseAndOp)
+NARY_SHAPE_INFER(tosa::BitwiseOrOp)
+NARY_SHAPE_INFER(tosa::BitwiseXorOp)
+NARY_SHAPE_INFER(tosa::BitwiseNotOp)
+NARY_SHAPE_INFER(tosa::CeilOp)
+NARY_SHAPE_INFER(tosa::ClampOp)
+NARY_SHAPE_INFER(tosa::ClzOp)
+NARY_SHAPE_INFER(tosa::DivOp)
+NARY_SHAPE_INFER(tosa::EqualOp)
+NARY_SHAPE_INFER(tosa::ExpOp)
+NARY_SHAPE_INFER(tosa::FloorOp)
+NARY_SHAPE_INFER(tosa::GreaterEqualOp)
+NARY_SHAPE_INFER(tosa::GreaterOp)
+NARY_SHAPE_INFER(tosa::LogOp)
+NARY_SHAPE_INFER(tosa::LogicalAndOp)
+NARY_SHAPE_INFER(tosa::LogicalLeftShiftOp)
+NARY_SHAPE_INFER(tosa::LogicalNotOp)
+NARY_SHAPE_INFER(tosa::LogicalOrOp)
+NARY_SHAPE_INFER(tosa::LogicalRightShiftOp)
+NARY_SHAPE_INFER(tosa::LogicalXorOp)
+NARY_SHAPE_INFER(tosa::MaximumOp)
+NARY_SHAPE_INFER(tosa::MinimumOp)
+NARY_SHAPE_INFER(tosa::MulOp)
+NARY_SHAPE_INFER(tosa::NegateOp)
+NARY_SHAPE_INFER(tosa::PowOp)
+NARY_SHAPE_INFER(tosa::ReciprocalOp)
+NARY_SHAPE_INFER(tosa::ReluNOp)
+NARY_SHAPE_INFER(tosa::ReverseOp)
+NARY_SHAPE_INFER(tosa::RsqrtOp)
+NARY_SHAPE_INFER(tosa::SelectOp)
+NARY_SHAPE_INFER(tosa::SubOp)
+NARY_SHAPE_INFER(tosa::TanhOp)
+NARY_SHAPE_INFER(tosa::SigmoidOp)
+#undef PRED_SHAPE_INFER
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Definitions.
 //===----------------------------------------------------------------------===//
 
