@@ -23,7 +23,7 @@
 
 #include "make_test_thread.h"
 #include "test_macros.h"
-#include "../atomics.types.operations.req/atomic_helpers.h"
+#include "atomic_helpers.h"
 
 template <class T>
 struct TestFn {

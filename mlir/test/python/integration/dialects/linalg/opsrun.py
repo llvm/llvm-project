@@ -86,6 +86,8 @@ pooling_boiler = """
 func @main() -> i32 attributes {llvm.emit_c_interface} {
   %v0 = constant 0 : i32
   %v42 = constant 42.0 : f64
+  %v77 = constant 77.0 : f64
+  %v-13 = constant -13.0 : f64
   %v1 = constant 1.0 : f64
 
   %input = memref.alloc() : memref<1x4x16x1xf64>
@@ -96,7 +98,11 @@ func @main() -> i32 attributes {llvm.emit_c_interface} {
   linalg.fill(%v0, %output) : i32, memref<1x2x4x1xi32>
 
   %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
   memref.store %v42, %input[%c0, %c0, %c0, %c0] : memref<1x4x16x1xf64>
+  memref.store %v77, %input[%c0, %c0, %c1, %c0] : memref<1x4x16x1xf64>
+  memref.store %v-13, %input[%c0, %c0, %c2, %c0] : memref<1x4x16x1xf64>
 
   call @pooling_on_buffers(%input, %shape, %output) :
     (memref<1x4x16x1xf64>, memref<2x2xf64>, memref<1x2x4x1xi32>) -> ()
@@ -301,7 +307,7 @@ def test_conv_generic():
 test_conv_generic()
 
 
-def test_pooling_builtin():
+def test_max_pooling_builtin():
   with Context() as ctx, Location.unknown():
     module = Module.create()
     f64 = F64Type.get()
@@ -325,13 +331,14 @@ def test_pooling_builtin():
     execution_engine.invoke("main", res)
 
     log("RESULT: ", res[0])
+    # 77 is not selected due to the dilation 2 in the second dimension.
     # CHECK: RESULT: 42
 
 
-test_pooling_builtin()
+test_max_pooling_builtin()
 
 
-def test_pooling_generic():
+def test_max_pooling_generic():
   with Context() as ctx, Location.unknown():
     module = Module.create()
     f64 = F64Type.get()
@@ -360,7 +367,73 @@ def test_pooling_generic():
     execution_engine.invoke("main", res)
 
     log("RESULT: ", res[0])
+    # 77 is not selected due to the dilation 2 in the second dimension.
     # CHECK: RESULT: 42
 
 
-test_pooling_generic()
+test_max_pooling_generic()
+
+
+def test_min_pooling_builtin():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f64 = F64Type.get()
+    i32 = IntegerType.get_signless(32)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
+          MemRefType.get((1, 2, 4, 1), i32))
+      def pooling_on_buffers(input, shape, output):
+        linalg.pooling_nhwc_min_poly(
+            input, shape, outs=[output], strides=[2, 4], dilations=[1, 2])
+
+    execution_engine = ExecutionEngine(transform(module, pooling_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result i32.
+    # Arguments must be passed as pointers.
+    c_int_p = ctypes.c_int * 1
+    res = c_int_p(-1)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # CHECK: RESULT: -13
+
+
+test_min_pooling_builtin()
+
+
+def test_min_pooling_generic():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f64 = F64Type.get()
+    i32 = IntegerType.get_signless(32)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(
+          MemRefType.get((1, 4, 16, 1), f64), MemRefType.get((2, 2), f64),
+          MemRefType.get((1, 2, 4, 1), i32))
+      def pooling_on_buffers(input, shape, output):
+        linalg.pooling_nhwc_min_poly(
+            input,
+            shape,
+            outs=[output],
+            strides=[2, 4],
+            dilations=[1, 2],
+            emit_generic=True)
+
+    execution_engine = ExecutionEngine(transform(module, pooling_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result i32.
+    # Arguments must be passed as pointers.
+    c_int_p = ctypes.c_int * 1
+    res = c_int_p(-1)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # CHECK: RESULT: -13
+
+
+test_min_pooling_generic()

@@ -831,7 +831,7 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
     return false;
 
   // If we're not allowed to hack on memcpy, we fail.
-  if (!HasMemcpy || DisableLIRP::Memcpy)
+  if ((!HasMemcpy && !isa<MemCpyInlineInst>(MCI)) || DisableLIRP::Memcpy)
     return false;
 
   Value *Dest = MCI->getDest();
@@ -1190,6 +1190,13 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     MaybeAlign LoadAlign, Instruction *TheStore, Instruction *TheLoad,
     const SCEVAddRecExpr *StoreEv, const SCEVAddRecExpr *LoadEv,
     const SCEV *BECount) {
+
+  // FIXME: until llvm.memcpy.inline supports dynamic sizes, we need to
+  // conservatively bail here, since otherwise we may have to transform
+  // llvm.memcpy.inline into llvm.memcpy which is illegal.
+  if (isa<MemCpyInlineInst>(TheStore))
+    return false;
+
   // The trip count of the loop and the base pointer of the addrec SCEV is
   // guaranteed to be loop invariant, which means that it should dominate the
   // header.  This allows us to insert code for it in the preheader.

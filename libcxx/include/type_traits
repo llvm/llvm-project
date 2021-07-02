@@ -99,7 +99,7 @@ namespace std
     template <class T> struct is_trivial;
     template <class T> struct is_trivially_copyable;
     template <class T> struct is_standard_layout;
-    template <class T> struct is_literal_type;
+    template <class T> struct is_literal_type; // Deprecated in C++17; removed in C++20
     template <class T> struct is_empty;
     template <class T> struct is_polymorphic;
     template <class T> struct is_abstract;
@@ -165,8 +165,8 @@ namespace std
     template <class T> struct decay;
     template <class... T> struct common_type;
     template <class T> struct underlying_type;
-    template <class> class result_of; // undefined
-    template <class Fn, class... ArgTypes> class result_of<Fn(ArgTypes...)>;
+    template <class> class result_of; // undefined; deprecated in C++17; removed in C++20
+    template <class Fn, class... ArgTypes> class result_of<Fn(ArgTypes...)>; // deprecated in C++17; removed in C++20
     template <class Fn, class... ArgTypes> struct invoke_result;  // C++17
 
     // const-volatile modifications:
@@ -233,7 +233,7 @@ namespace std
     template <class T>
       using underlying_type_t = typename underlying_type<T>::type;  // C++14
     template <class T>
-      using result_of_t       = typename result_of<T>::type;  // C++14
+      using result_of_t       = typename result_of<T>::type;  // C++14; deprecated in C++17; removed in C++20
     template <class Fn, class... ArgTypes>
       using invoke_result_t   = typename invoke_result<Fn, ArgTypes...>::type;  // C++17
 
@@ -302,7 +302,7 @@ namespace std
       template <class T> inline constexpr bool is_pod_v
         = is_pod<T>::value;                                              // C++17
       template <class T> inline constexpr bool is_literal_type_v
-        = is_literal_type<T>::value;                                     // C++17
+        = is_literal_type<T>::value;                                     // C++17; deprecated in C++17; removed in C++20
       template <class T> inline constexpr bool is_empty_v
         = is_empty<T>::value;                                            // C++17
       template <class T> inline constexpr bool is_polymorphic_v
@@ -3677,15 +3677,17 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_pod_v
 
 // is_literal_type;
 
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_literal_type
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 is_literal_type
     : public integral_constant<bool, __is_literal_type(_Tp)>
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
-_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_literal_type_v
+_LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_literal_type_v
     = is_literal_type<_Tp>::value;
-#endif
+#endif // _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
 
 // is_standard_layout;
 
@@ -4003,7 +4005,8 @@ struct __invoke_of
 
 // result_of
 
-template <class _Callable> class result_of;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
+template <class _Callable> class _LIBCPP_DEPRECATED_IN_CXX17 result_of;
 
 #ifndef _LIBCPP_CXX03_LANG
 
@@ -4091,8 +4094,9 @@ class _LIBCPP_TEMPLATE_VIS result_of<_Fn(_Args...)>
 #endif // C++03
 
 #if _LIBCPP_STD_VER > 11
-template <class _Tp> using result_of_t = typename result_of<_Tp>::type;
-#endif
+template <class _Tp> using result_of_t _LIBCPP_DEPRECATED_IN_CXX17 = typename result_of<_Tp>::type;
+#endif // _LIBCPP_STD_VER > 11
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
 
 #if _LIBCPP_STD_VER > 14
 
