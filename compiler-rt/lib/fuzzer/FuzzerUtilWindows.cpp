@@ -182,6 +182,27 @@ bool ExecuteCommand(const Command &Cmd, std::string *CmdOutput) {
   return _pclose(Pipe) == 0;
 }
 
+const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
+                         size_t PattLen) {
+  // TODO: make this implementation more efficient.
+  const char *Cdata = (const char *)Data;
+  const char *Cpatt = (const char *)Patt;
+
+  if (!Data || !Patt || DataLen == 0 || PattLen == 0 || DataLen < PattLen)
+    return NULL;
+
+  if (PattLen == 1)
+    return memchr(Data, *Cpatt, DataLen);
+
+  const char *End = Cdata + DataLen - PattLen + 1;
+
+  for (const char *It = Cdata; It < End; ++It)
+    if (It[0] == Cpatt[0] && memcmp(It, Cpatt, PattLen) == 0)
+      return It;
+
+  return NULL;
+}
+
 std::string DisassembleCmd(const std::string &FileName) {
   Vector<std::string> command_vector;
   command_vector.push_back("dumpbin /summary > nul");
