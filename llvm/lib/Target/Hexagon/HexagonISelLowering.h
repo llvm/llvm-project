@@ -323,7 +323,7 @@ public:
                              EVT NewVT) const override;
 
   // Handling of atomic RMW instructions.
-  Value *emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
+  Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
                               AtomicOrdering Ord) const override;

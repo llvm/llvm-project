@@ -19895,16 +19895,16 @@ bool ARMTargetLowering::shouldExpandShift(SelectionDAG &DAG, SDNode *N) const {
   return !Subtarget->hasMinSize() || Subtarget->isTargetWindows();
 }
 
-Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
+Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
+                                         Value *Addr,
                                          AtomicOrdering Ord) const {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Type *ValTy = cast<PointerType>(Addr->getType())->getElementType();
   bool IsAcquire = isAcquireOrStronger(Ord);
 
   // Since i64 isn't legal and intrinsics don't get type-lowered, the ldrexd
   // intrinsic must return {i32, i32} and we have to recombine them into a
   // single i64 here.
-  if (ValTy->getPrimitiveSizeInBits() == 64) {
+  if (ValueTy->getPrimitiveSizeInBits() == 64) {
     Intrinsic::ID Int =
         IsAcquire ? Intrinsic::arm_ldaexd : Intrinsic::arm_ldrexd;
     Function *Ldrex = Intrinsic::getDeclaration(M, Int);
@@ -19916,19 +19916,17 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
     Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
     if (!Subtarget->isLittle())
       std::swap (Lo, Hi);
-    Lo = Builder.CreateZExt(Lo, ValTy, "lo64");
-    Hi = Builder.CreateZExt(Hi, ValTy, "hi64");
+    Lo = Builder.CreateZExt(Lo, ValueTy, "lo64");
+    Hi = Builder.CreateZExt(Hi, ValueTy, "hi64");
     return Builder.CreateOr(
-        Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 32)), "val64");
+        Lo, Builder.CreateShl(Hi, ConstantInt::get(ValueTy, 32)), "val64");
   }
 
   Type *Tys[] = { Addr->getType() };
   Intrinsic::ID Int = IsAcquire ? Intrinsic::arm_ldaex : Intrinsic::arm_ldrex;
   Function *Ldrex = Intrinsic::getDeclaration(M, Int, Tys);
 
-  return Builder.CreateTruncOrBitCast(
-      Builder.CreateCall(Ldrex, Addr),
-      cast<PointerType>(Addr->getType())->getElementType());
+  return Builder.CreateTruncOrBitCast(Builder.CreateCall(Ldrex, Addr), ValueTy);
 }
 
 void ARMTargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
