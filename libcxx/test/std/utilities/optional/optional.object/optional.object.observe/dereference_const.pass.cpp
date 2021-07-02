@@ -37,6 +37,7 @@ int main(int, char**)
     {
         const optional<X> opt; ((void)opt);
         ASSERT_SAME_TYPE(decltype(*opt), X const&);
+        LIBCPP_STATIC_ASSERT(noexcept(*opt));
         // ASSERT_NOT_NOEXCEPT(*opt);
         // FIXME: This assertion fails with GCC because it can see that
         // (A) operator*() is constexpr, and
