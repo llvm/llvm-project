@@ -72,11 +72,15 @@ void InitializeShadowMemory() {
   InitializeShadowMemoryPlatform();
 }
 
-static void ProtectRange(uptr beg, uptr end) {
+static bool TryProtectRange(uptr beg, uptr end) {
   CHECK_LE(beg, end);
   if (beg == end)
-    return;
-  if (beg != (uptr)MmapFixedNoAccess(beg, end - beg)) {
+    return true;
+  return beg == (uptr)MmapFixedNoAccess(beg, end - beg);
+}
+
+static void ProtectRange(uptr beg, uptr end) {
+  if (!TryProtectRange(beg, end)) {
     Printf("FATAL: ThreadSanitizer can not protect [%zx,%zx]\n", beg, end);
     Printf("FATAL: Make sure you are not using unlimited stack\n");
     Die();
@@ -117,6 +121,16 @@ void CheckAndProtect() {
   ProtectRange(TraceMemBeg(), TraceMemEnd());
   ProtectRange(TraceMemEnd(), HeapMemBeg());
   ProtectRange(HeapEnd(), HiAppMemBeg());
+#endif
+
+#if defined(__s390x__)
+  // Protect the rest of the address space.
+  const uptr user_addr_max_l4 = 0x0020000000000000ull;
+  const uptr user_addr_max_l5 = 0xfffffffffffff000ull;
+  // All the maintained s390x kernels support at least 4-level page tables.
+  ProtectRange(HiAppMemEnd(), user_addr_max_l4);
+  // Older s390x kernels may not support 5-level page tables.
+  TryProtectRange(user_addr_max_l4, user_addr_max_l5);
 #endif
 }
 #endif
