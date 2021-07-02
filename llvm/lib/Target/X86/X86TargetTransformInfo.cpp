@@ -1955,6 +1955,8 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::SINT_TO_FP,  MVT::v4f64, MVT::v4i32, 2 },
     { ISD::SINT_TO_FP,  MVT::v8f32, MVT::v8i32, 2 },
     { ISD::SINT_TO_FP,  MVT::v8f64, MVT::v8i32, 4 },
+    { ISD::SINT_TO_FP,  MVT::v4f32, MVT::v2i64, 5 },
+    { ISD::SINT_TO_FP,  MVT::v4f32, MVT::v4i64, 8 },
 
     { ISD::UINT_TO_FP,  MVT::v4f32, MVT::v4i1,  7 },
     { ISD::UINT_TO_FP,  MVT::v4f64, MVT::v4i1,  7 },
@@ -1966,6 +1968,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::UINT_TO_FP,  MVT::v4f64, MVT::v4i16, 2 },
     { ISD::UINT_TO_FP,  MVT::v8f32, MVT::v8i16, 5 },
     { ISD::UINT_TO_FP,  MVT::v2f64, MVT::v2i32, 4 },
+    { ISD::UINT_TO_FP,  MVT::v2f32, MVT::v2i64, 10 },
     { ISD::UINT_TO_FP,  MVT::v4f32, MVT::v4i32, 5 },
     { ISD::UINT_TO_FP,  MVT::v4f64, MVT::v4i32, 6 },
     { ISD::UINT_TO_FP,  MVT::v4f32, MVT::v4i64, 18 },
@@ -2242,17 +2245,58 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   }
 
   // Fall back to legalized types.
-  // TODO: Add AVX support.
   std::pair<InstructionCost, MVT> LTSrc = TLI->getTypeLegalizationCost(DL, Src);
   std::pair<InstructionCost, MVT> LTDest =
       TLI->getTypeLegalizationCost(DL, Dst);
 
-  if (ST->hasSSE41() && !ST->hasAVX())
+  if (ST->useAVX512Regs()) {
+    if (ST->hasBWI())
+      if (const auto *Entry = ConvertCostTableLookup(
+              AVX512BWConversionTbl, ISD, LTDest.second, LTSrc.second))
+        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+
+    if (ST->hasDQI())
+      if (const auto *Entry = ConvertCostTableLookup(
+              AVX512DQConversionTbl, ISD, LTDest.second, LTSrc.second))
+        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = ConvertCostTableLookup(
+              AVX512FConversionTbl, ISD, LTDest.second, LTSrc.second))
+        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+  }
+
+  if (ST->hasBWI())
+    if (const auto *Entry = ConvertCostTableLookup(AVX512BWVLConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+
+  if (ST->hasDQI())
+    if (const auto *Entry = ConvertCostTableLookup(AVX512DQVLConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+
+  if (ST->hasAVX512())
+    if (const auto *Entry = ConvertCostTableLookup(AVX512VLConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+
+  if (ST->hasAVX2())
+    if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+
+  if (ST->hasAVX())
+    if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
+                                                   LTDest.second, LTSrc.second))
+      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+
+  if (ST->hasSSE41())
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
       return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
 
-  if (ST->hasSSE2() && !ST->hasAVX())
+  if (ST->hasSSE2())
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
       return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
