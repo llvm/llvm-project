@@ -507,7 +507,8 @@ namespace llvm {
                             PerFunctionState &PFS);
 
     // Constant Parsing.
-    bool parseValID(ValID &ID, PerFunctionState *PFS = nullptr);
+    bool parseValID(ValID &ID, PerFunctionState *PFS,
+                    Type *ExpectedTy = nullptr);
     bool parseGlobalValue(Type *Ty, Constant *&C);
     bool parseGlobalTypeAndValue(Constant *&V);
     bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
