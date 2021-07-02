@@ -14,27 +14,6 @@
 #include "omptarget.h"
 
 namespace RemoteOffloading {
-void parseEnvironment(RPCConfig &Config) {
-  // TODO: Error handle for incorrect inputs
-  if (const char *Env = std::getenv("LIBOMPTARGET_RPC_ADDRESS")) {
-    Config.ServerAddresses.clear();
-    std::string AddressString = Env;
-    const std::string Delimiter = ",";
-
-    size_t Pos = 0;
-    std::string Token;
-    while ((Pos = AddressString.find(Delimiter)) != std::string::npos) {
-      Token = AddressString.substr(0, Pos);
-      Config.ServerAddresses.push_back(Token);
-      AddressString.erase(0, Pos + Delimiter.length());
-    }
-    Config.ServerAddresses.push_back(AddressString);
-  }
-  if (const char *Env = std::getenv("LIBOMPTARGET_RPC_ALLOCATOR_MAX"))
-    Config.MaxSize = std::stoi(Env);
-  if (const char *Env = std::getenv("LIBOMPTARGET_RPC_BLOCK_SIZE"))
-    Config.BlockSize = std::stoi(Env);
-}
 
 void loadTargetBinaryDescription(const __tgt_bin_desc *Desc,
                                  TargetBinaryDescription &Request) {
@@ -101,10 +80,12 @@ void unloadTargetBinaryDescription(
 
   // Copy Global Offload Entries
   __tgt_offload_entry *CurEntry = Desc->HostEntriesBegin;
-  for (int i = 0; i < Request->entries_size(); i++) {
-    copyOffloadEntry(Request->entries()[i], CurEntry);
-    CopiedOffloadEntries[(void *)Request->entry_ptrs()[i]] = CurEntry;
+  size_t I = 0;
+  for (auto &Entry : Request->entries()) {
+    copyOffloadEntry(Entry, CurEntry);
+    CopiedOffloadEntries[(void *)Request->entry_ptrs()[I]] = CurEntry;
     CurEntry++;
+    I++;
   }
   Desc->HostEntriesEnd = CurEntry;
 
@@ -113,7 +94,7 @@ void unloadTargetBinaryDescription(
   auto ImageItr = Request->image_ptrs().begin();
   for (auto Image : Request->images()) {
     // Copy Device Offload Entries
-    auto *CurEntry = Desc->HostEntriesBegin;
+    CurEntry = Desc->HostEntriesBegin;
     bool Found = false;
 
     if (!Desc->HostEntriesBegin) {
@@ -121,21 +102,19 @@ void unloadTargetBinaryDescription(
       CurImage->EntriesEnd = nullptr;
     }
 
-    for (int i = 0; i < Image.entries_size(); i++) {
+    for (size_t I = 0; I < Image.entries_size(); I++) {
       auto TgtEntry =
-          CopiedOffloadEntries.find((void *)Request->entry_ptrs()[i]);
+          CopiedOffloadEntries.find((void *)Request->entry_ptrs()[I]);
       if (TgtEntry != CopiedOffloadEntries.end()) {
         if (!Found)
           CurImage->EntriesBegin = CurEntry;
 
+        CurImage->EntriesEnd = CurEntry + 1;
         Found = true;
-        if (Found) {
-          CurImage->EntriesEnd = CurEntry + 1;
-        }
       } else {
         Found = false;
-        copyOffloadEntry(Image.entries()[i], CurEntry);
-        CopiedOffloadEntries[(void *)(Request->entry_ptrs()[i])] = CurEntry;
+        copyOffloadEntry(Image.entries()[I], CurEntry);
+        CopiedOffloadEntries[(void *)(Request->entry_ptrs()[I])] = CurEntry;
       }
       CurEntry++;
     }
@@ -199,10 +178,10 @@ void unloadTargetTable(
   Table->EntriesBegin = new __tgt_offload_entry[TableResponse.entries_size()];
 
   auto *CurEntry = Table->EntriesBegin;
-  for (int i = 0; i < TableResponse.entries_size(); i++) {
-    copyOffloadEntry(TableResponse.entries()[i], CurEntry);
+  for (size_t I = 0; I < TableResponse.entries_size(); I++) {
+    copyOffloadEntry(TableResponse.entries()[I], CurEntry);
     HostToRemoteTargetTableMap[CurEntry->addr] =
-        (void *)TableResponse.entry_ptrs()[i];
+        (void *)TableResponse.entry_ptrs()[I];
     CurEntry++;
   }
   Table->EntriesEnd = CurEntry;
@@ -292,10 +271,10 @@ void dump(__tgt_target_table *Table) {
 
 void dump(TargetOffloadEntry Entry) {
   fprintf(stderr, "Entry: ");
-  fprintf(stderr, "    %s\n", Entry.name().c_str());
-  fprintf(stderr, "    %d\n", Entry.reserved());
-  fprintf(stderr, "    %d\n", Entry.flags());
-  fprintf(stderr, "    %ld\n", Entry.data().size());
+  fprintf(stderr, "  Name: %s\n", Entry.name().c_str());
+  fprintf(stderr, "  Reserved: %d\n", Entry.reserved());
+  fprintf(stderr, "  Flags: %d\n", Entry.flags());
+  fprintf(stderr, "  Size:  %ld\n", Entry.data().size());
   dump(static_cast<const void *>(Entry.data().data()),
        static_cast<const void *>((Entry.data().c_str() + Entry.data().size())));
 }
