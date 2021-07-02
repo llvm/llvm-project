@@ -7837,11 +7837,13 @@ SDValue TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG,
   assert(EltSize * 8 == EltVT.getFixedSizeInBits() &&
          "Converting bits to bytes lost precision");
 
-  assert(SubVecVT.isFixedLengthVector() &&
-         SubVecVT.getVectorElementType() == EltVT &&
-         "Sub-vector must be a fixed vector with matching element type");
-  Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
-                                  SubVecVT.getVectorNumElements());
+  // Scalable vectors don't need clamping as these are checked at compile time
+  if (SubVecVT.isFixedLengthVector()) {
+    assert(SubVecVT.getVectorElementType() == EltVT &&
+           "Sub-vector must be a fixed vector with matching element type");
+    Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
+                                    SubVecVT.getVectorNumElements());
+  }
 
   EVT IdxVT = Index.getValueType();
 
