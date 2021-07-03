@@ -225,12 +225,13 @@ class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
    string ret = !foldl("", id_frags, a, b, !strconcat(a, ".", b.ptx_elt_type));
 }
 
-class WMMA_NAME<string ALayout, string BLayout, int Satfinite, string Rnd,
+class WMMA_NAME<string ALayout, string BLayout, int Satfinite, string Rnd, string b1op,
                 WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
   string llvm = "llvm.nvvm.wmma."
                 # A.geom
                 # ".mma"
+                # b1op
                 # "." # ALayout
                 # "." # BLayout
                 # !if(!ne(Rnd, ""), !strconcat(".", Rnd), "")
@@ -241,11 +242,12 @@ class WMMA_NAME<string ALayout, string BLayout, int Satfinite, string Rnd,
                   !subst("llvm.", "int_", llvm));
 }
 
-class MMA_NAME<string ALayout, string BLayout, int Satfinite,
+class MMA_NAME<string ALayout, string BLayout, int Satfinite, string b1op,
                WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
-  string llvm = "llvm.nvvm.mma."
-                # A.geom
+  string llvm = "llvm.nvvm.mma"
+                # b1op
+                # "." # A.geom
                 # "." # ALayout
                 # "." # BLayout
                 # !if(Satfinite, ".satfinite", "")
@@ -427,6 +429,13 @@ class NVVM_WMMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_
              !eq(t, "b1")),
          !ne(layout, "row:col")) : false,
     true: true
+  );
+}
+
+class NVVM_MMA_B1OPS<list<WMMA_REGS> frags> {
+  list<string> ret = !cond(
+    !eq(frags[0].ptx_elt_type, "b1") : [".xor.popc", ".and.popc"],
+    true: [""]
   );
 }
 
@@ -4460,25 +4469,27 @@ foreach layout = ["row", "col"] in {
 }
 
 // WMMA.MMA
-class NVVM_WMMA_MMA<string ALayout, string BLayout, int Satfinite, string rnd,
+class NVVM_WMMA_MMA<string ALayout, string BLayout, int Satfinite, string rnd, string b1op,
                     WMMA_REGS A, WMMA_REGS B,
                     WMMA_REGS C, WMMA_REGS D>
   : Intrinsic<D.regs,
               !listconcat(A.regs, B.regs, C.regs),
               [IntrNoMem],
-              WMMA_NAME<ALayout, BLayout, Satfinite, rnd, A, B, C, D>.llvm>;
+              WMMA_NAME<ALayout, BLayout, Satfinite, rnd, b1op, A, B, C, D>.llvm>;
 
 foreach layout_a = ["row", "col"] in {
   foreach layout_b = ["row", "col"] in {
     foreach satf = [0, 1] in {
       foreach rnd = ["", "rn", "rz", "rm", "rp"] in {
         foreach op = NVVM_MMA_OPS.all_wmma_ops in {
-          if NVVM_WMMA_SUPPORTED<op, layout_a, layout_b, satf, rnd>.ret then {
-            def WMMA_NAME<layout_a, layout_b, satf, rnd,
-                              op[0], op[1], op[2], op[3]>.record
-              : NVVM_WMMA_MMA<layout_a, layout_b, satf, rnd,
-                              op[0], op[1], op[2], op[3]>;
-          }
+          foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
+            if NVVM_WMMA_SUPPORTED<op, layout_a, layout_b, satf, rnd>.ret then {
+              def WMMA_NAME<layout_a, layout_b, satf, rnd, b1op,
+                                op[0], op[1], op[2], op[3]>.record
+                : NVVM_WMMA_MMA<layout_a, layout_b, satf, rnd, b1op,
+                                op[0], op[1], op[2], op[3]>;
+            }
+          } // b1op
         } // op
       } // rnd
     } // satf
@@ -4486,21 +4497,23 @@ foreach layout_a = ["row", "col"] in {
 } // layout_a
 
 // MMA
-class NVVM_MMA<string ALayout, string BLayout, int Satfinite,
+class NVVM_MMA<string ALayout, string BLayout, int Satfinite, string b1op,
                WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D>
   : Intrinsic<D.regs,
               !listconcat(A.regs, B.regs, C.regs),
               [IntrNoMem],
-              MMA_NAME<ALayout, BLayout, Satfinite, A, B, C, D>.llvm>;
+              MMA_NAME<ALayout, BLayout, Satfinite, b1op, A, B, C, D>.llvm>;
 
 foreach layout_a = ["row", "col"] in {
   foreach layout_b = ["row", "col"] in {
     foreach satf = [0, 1] in {
       foreach op = NVVM_MMA_OPS.all_mma_ops in {
-        if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret then {
-          def MMA_NAME<layout_a, layout_b, satf, op[0], op[1], op[2], op[3]>.record
-            : NVVM_MMA<layout_a, layout_b, satf, op[0], op[1], op[2], op[3]>;
-        }
+        foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
+          if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret then {
+            def MMA_NAME<layout_a, layout_b, satf, b1op, op[0], op[1], op[2], op[3]>.record
+              : NVVM_MMA<layout_a, layout_b, satf, b1op, op[0], op[1], op[2], op[3]>;
+          }
+        } // b1op
       } // op
     } // satf
   } // layout_b

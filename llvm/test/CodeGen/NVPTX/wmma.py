@@ -55,14 +55,14 @@
 # RUN: llc < %t-ptx65-sm_75.ll -march=nvptx64 -mcpu=sm_75 -mattr=+ptx65 \
 # RUN:           | FileCheck %t-ptx65-sm_75.ll
 
-# Check all variants of instructions supported by PTX70 on SM80+
-# RUN: %python %s --ptx=70 --gpu-arch=80 > %t-ptx70-sm_80.ll
-# RUN: FileCheck %t-ptx70-sm_80.ll < %t-ptx70-sm_80.ll \
-# RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT,MMA,ALTFLOAT,DOUBLE,PTX65MMA,PTX70MMA
-# RUN: FileCheck %t-ptx70-sm_80.ll < %t-ptx70-sm_80.ll \
+# Check all variants of instructions supported by PTX71 on SM80+
+# RUN: %python %s --ptx=71 --gpu-arch=80 > %t-ptx71-sm_80.ll
+# RUN: FileCheck %t-ptx71-sm_80.ll < %t-ptx71-sm_80.ll \
+# RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT,MMA,ALTFLOAT,DOUBLE,PTX65MMA,PTX71MMA
+# RUN: FileCheck %t-ptx71-sm_80.ll < %t-ptx71-sm_80.ll \
 # RUN:           --check-prefixes=INTRINSICS
-# RUN: llc < %t-ptx70-sm_80.ll -march=nvptx64 -mcpu=sm_80 -mattr=+ptx70 \
-# RUN:           | FileCheck %t-ptx70-sm_80.ll
+# RUN: llc < %t-ptx71-sm_80.ll -march=nvptx64 -mcpu=sm_80 -mattr=+ptx71 \
+# RUN:           | FileCheck %t-ptx71-sm_80.ll
 
 from __future__ import print_function
 
@@ -649,9 +649,16 @@ define ${ret_ty} @test_${function}(
   print(Template(mma_template).substitute(test_params))
   return (test_params["intrinsic"], test_params["instruction"])
 
+def get_b1_ops(ptx_type):
+  if ptx_type != "b1":
+    return [""]
+  if ptx_version >= 71:
+    return [".xor.popc", ".and.popc"]
+  return [".xor.popc"]
+
 def gen_wmma_mma_tests():
-  wmma_intrinsic_template = "llvm.nvvm.wmma.${geom}.mma.${alayout}.${blayout}${rnd}.${intrinsic_signature}${satf}"
-  wmma_instruction_template = "wmma.mma${mma_variant}.sync${aligned}.${alayout}.${blayout}.${geom}${rnd}.${ptx_signature}${satf}"
+  wmma_intrinsic_template = "llvm.nvvm.wmma.${geom}.mma${b1op}.${alayout}.${blayout}${rnd}.${intrinsic_signature}${satf}"
+  wmma_instruction_template = "wmma.mma${b1op}.sync${aligned}.${alayout}.${blayout}.${geom}${rnd}.${ptx_signature}${satf}"
 
   generated_items=[]
 
@@ -665,29 +672,30 @@ def gen_wmma_mma_tests():
     if not is_wmma_variant_supported(op, alayout, blayout, rnd, satf):
       continue
 
-    params = {
-        "aligned" : ".aligned" if ptx_version >= 63 else "",
-        "alayout" : alayout,
-        "blayout" : blayout,
-        "intrinsic_signature" : wmma_signature(op),
-        "ptx_signature" : wmma_ptx_signature(op),
-        "satf"  : satf,
-        "rnd"   : rnd,
-        "geom"  : op.a.geom,
-        "mma_variant" : ".xor.popc" if op.a.mma_type.ptx_type == "b1" else "",
-    }
+    for b1op in get_b1_ops(op.a.mma_type.ptx_type):
+      params = {
+          "aligned" : ".aligned" if ptx_version >= 63 else "",
+          "alayout" : alayout,
+          "blayout" : blayout,
+          "intrinsic_signature" : wmma_signature(op),
+          "ptx_signature" : wmma_ptx_signature(op),
+          "satf"  : satf,
+          "rnd"   : rnd,
+          "geom"  : op.a.geom,
+          "b1op"  : b1op
+      }
 
-    intrinsic_template = wmma_intrinsic_template
-    instruction_template = wmma_instruction_template
+      intrinsic_template = wmma_intrinsic_template
+      instruction_template = wmma_instruction_template
 
-    generated_items.append(common_mma_test_gen(params, op,
-      intrinsic_template, instruction_template))
+      generated_items.append(common_mma_test_gen(params, op,
+                                                 intrinsic_template, instruction_template))
 
   return generated_items
 
 def gen_mma_tests():
-  mma_intrinsic_template = "llvm.nvvm.mma.${geom}.${alayout}.${blayout}${satf}.${intrinsic_signature}"
-  mma_instruction_template = "mma.sync${aligned}.${geom}.${alayout}.${blayout}${satf}.${ptx_signature}${mma_variant}"
+  mma_intrinsic_template = "llvm.nvvm.mma${b1op}.${geom}.${alayout}.${blayout}${satf}.${intrinsic_signature}"
+  mma_instruction_template = "mma.sync${aligned}.${geom}.${alayout}.${blayout}${satf}.${ptx_signature}${b1op}"
 
   generated_items=[]
 
@@ -700,22 +708,23 @@ def gen_mma_tests():
     if not is_mma_variant_supported(op, alayout, blayout, satf):
       continue
 
-    params = {
-        "aligned" : ".aligned" if ptx_version >= 63 else "",
-        "alayout" : alayout,
-        "blayout" : blayout,
-        "intrinsic_signature" : mma_signature(op),
-        "ptx_signature" : mma_ptx_signature(op),
-        "satf"  : satf,
-        "geom"  : op.a.geom,
-        "mma_variant" : ".xor.popc" if op.a.mma_type.ptx_type == "b1" else "",
-    }
+    for b1op in get_b1_ops(op.a.mma_type.ptx_type):
+      params = {
+          "aligned" : ".aligned" if ptx_version >= 63 else "",
+          "alayout" : alayout,
+          "blayout" : blayout,
+          "intrinsic_signature" : mma_signature(op),
+          "ptx_signature" : mma_ptx_signature(op),
+          "satf"  : satf,
+          "geom"  : op.a.geom,
+          "b1op"  : b1op
+      }
 
-    intrinsic_template = mma_intrinsic_template
-    instruction_template = mma_instruction_template
+      intrinsic_template = mma_intrinsic_template
+      instruction_template = mma_instruction_template
 
-    generated_items.append(common_mma_test_gen(params, op,
-      intrinsic_template, instruction_template))
+      generated_items.append(common_mma_test_gen(params, op,
+        intrinsic_template, instruction_template))
 
   return generated_items
 
@@ -810,32 +819,35 @@ def gen_check_unsupported_ops(items):
 ; PTX65MMA-DAG: mma.m8n8k32.row.col{{.*}}.s4.u4
 ; PTX65MMA-DAG: mma.m8n8k32.row.col{{.*}}.u4.s4
 
-; PTX70MMA-DAG: mma.m8n8k4.row.col.f64
-; PTX70MMA-DAG: mma.m16n8k4.row.col.tf32
-; PTX70MMA-DAG: mma.m16n8k8.row.col.tf32
-; PTX70MMA-DAG: mma.m16n8k16.row.col.bf16
-; PTX70MMA-DAG: mma.m16n8k8.row.col.bf16
-; PTX70MMA-DAG: mma.m16n8k16.row.col.f16.f16
-; PTX70MMA-DAG: mma.m16n8k16.row.col.f32.f32
-; PTX70MMA-DAG: mma.m16n8k16.row.col{{.*}}.u8.u8
-; PTX70MMA-DAG: mma.m16n8k16.row.col{{.*}}.s8.s8
-; PTX70MMA-DAG: mma.m16n8k16.row.col{{.*}}.s8.u8
-; PTX70MMA-DAG: mma.m16n8k16.row.col{{.*}}.u8.s8
-; PTX70MMA-DAG: mma.m16n8k32.row.col{{.*}}.u8.u8
-; PTX70MMA-DAG: mma.m16n8k32.row.col{{.*}}.s8.s8
-; PTX70MMA-DAG: mma.m16n8k32.row.col{{.*}}.s8.u8
-; PTX70MMA-DAG: mma.m16n8k32.row.col{{.*}}.u8.s8
-; PTX70MMA-DAG: mma.m16n8k32.row.col{{.*}}.u4.u4
-; PTX70MMA-DAG: mma.m16n8k32.row.col{{.*}}.s4.s4
-; PTX70MMA-DAG: mma.m16n8k32.row.col{{.*}}.s4.u4
-; PTX70MMA-DAG: mma.m16n8k32.row.col{{.*}}.u4.s4
-; PTX70MMA-DAG: mma.m16n8k64.row.col{{.*}}.u4.u4
-; PTX70MMA-DAG: mma.m16n8k64.row.col{{.*}}.s4.s4
-; PTX70MMA-DAG: mma.m16n8k64.row.col{{.*}}.s4.u4
-; PTX70MMA-DAG: mma.m16n8k64.row.col{{.*}}.u4.s4
-; PTX70MMA-DAG: mma.m8n8k128.row.col.b1
-; PTX70MMA-DAG: mma.m16n8k128.row.col.b1
-; PTX70MMA-DAG: mma.m16n8k256.row.col.b1
+; PTX71MMA-DAG: mma.m8n8k4.row.col.f64
+; PTX71MMA-DAG: mma.m16n8k4.row.col.tf32
+; PTX71MMA-DAG: mma.m16n8k8.row.col.tf32
+; PTX71MMA-DAG: mma.m16n8k16.row.col.bf16
+; PTX71MMA-DAG: mma.m16n8k8.row.col.bf16
+; PTX71MMA-DAG: mma.m16n8k16.row.col.f16.f16
+; PTX71MMA-DAG: mma.m16n8k16.row.col.f32.f32
+; PTX71MMA-DAG: mma.m16n8k16.row.col{{.*}}.u8.u8
+; PTX71MMA-DAG: mma.m16n8k16.row.col{{.*}}.s8.s8
+; PTX71MMA-DAG: mma.m16n8k16.row.col{{.*}}.s8.u8
+; PTX71MMA-DAG: mma.m16n8k16.row.col{{.*}}.u8.s8
+; PTX71MMA-DAG: mma.m16n8k32.row.col{{.*}}.u8.u8
+; PTX71MMA-DAG: mma.m16n8k32.row.col{{.*}}.s8.s8
+; PTX71MMA-DAG: mma.m16n8k32.row.col{{.*}}.s8.u8
+; PTX71MMA-DAG: mma.m16n8k32.row.col{{.*}}.u8.s8
+; PTX71MMA-DAG: mma.m16n8k32.row.col{{.*}}.u4.u4
+; PTX71MMA-DAG: mma.m16n8k32.row.col{{.*}}.s4.s4
+; PTX71MMA-DAG: mma.m16n8k32.row.col{{.*}}.s4.u4
+; PTX71MMA-DAG: mma.m16n8k32.row.col{{.*}}.u4.s4
+; PTX71MMA-DAG: mma.m16n8k64.row.col{{.*}}.u4.u4
+; PTX71MMA-DAG: mma.m16n8k64.row.col{{.*}}.s4.s4
+; PTX71MMA-DAG: mma.m16n8k64.row.col{{.*}}.s4.u4
+; PTX71MMA-DAG: mma.m16n8k64.row.col{{.*}}.u4.s4
+; PTX71MMA-DAG: mma.and.popc.m8n8k128.row.col.b1
+; PTX71MMA-DAG: mma.xor.popc.m8n8k128.row.col.b1
+; PTX71MMA-DAG: mma.and.popc.m16n8k128.row.col.b1
+; PTX71MMA-DAG: mma.xor.popc.m16n8k128.row.col.b1
+; PTX71MMA-DAG: mma.and.popc.m16n8k256.row.col.b1
+; PTX71MMA-DAG: mma.xor.popc.m16n8k256.row.col.b1
 ;
 
 """)

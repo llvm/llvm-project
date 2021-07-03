@@ -16630,9 +16630,18 @@ static NVPTXMmaInfo getNVPTXMmaInfo(unsigned BuiltinID) {
       0, \
       0
 // b1 MMA does not support .satfinite.
-#define MMA_VARIANTS_B1(geom, type) \
+#define MMA_VARIANTS_B1_XOR(geom, type) \
       0, \
-      Intrinsic::nvvm_wmma_##geom##_mma_row_col_##type,             \
+      Intrinsic::nvvm_wmma_##geom##_mma_xor_popc_row_col_##type,             \
+      0, \
+      0, \
+      0, \
+      0, \
+      0, \
+      0
+#define MMA_VARIANTS_B1_AND(geom, type) \
+      0, \
+      Intrinsic::nvvm_wmma_##geom##_mma_and_popc_row_col_##type,             \
       0, \
       0, \
       0, \
@@ -16689,7 +16698,9 @@ static NVPTXMmaInfo getNVPTXMmaInfo(unsigned BuiltinID) {
   case NVPTX::BI__imma_m8n8k32_mma_u4:
     return {1, 1, 2, 2, {{MMA_VARIANTS_I4(m8n8k32, u4)}}};
   case NVPTX::BI__bmma_m8n8k128_mma_xor_popc_b1:
-    return {1, 1, 2, 2, {{MMA_VARIANTS_B1(m8n8k128, b1)}}};
+    return {1, 1, 2, 2, {{MMA_VARIANTS_B1_XOR(m8n8k128, b1)}}};
+  case NVPTX::BI__bmma_m8n8k128_mma_and_popc_b1:
+    return {1, 1, 2, 2, {{MMA_VARIANTS_B1_AND(m8n8k128, b1)}}};
 
   // Double MMA
   case NVPTX::BI__dmma_m8n8k4_mma_f64:
@@ -16710,7 +16721,8 @@ static NVPTXMmaInfo getNVPTXMmaInfo(unsigned BuiltinID) {
 #undef MMA_VARIANTS
 #undef MMA_SATF_VARIANTS
 #undef MMA_VARIANTS_I4
-#undef MMA_VARIANTS_B1
+#undef MMA_VARIANTS_B1_AND
+#undef MMA_VARIANTS_B1_XOR
 }
 
 } // namespace
@@ -17119,6 +17131,7 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
   case NVPTX::BI__imma_m8n8k32_mma_s4:
   case NVPTX::BI__imma_m8n8k32_mma_u4:
   case NVPTX::BI__bmma_m8n8k128_mma_xor_popc_b1:
+  case NVPTX::BI__bmma_m8n8k128_mma_and_popc_b1:
   case NVPTX::BI__dmma_m8n8k4_mma_f64:
   case NVPTX::BI__mma_bf16_m16n16k16_mma_f32:
   case NVPTX::BI__mma_bf16_m8n32k16_mma_f32:
@@ -17136,7 +17149,8 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
     if (Layout < 0 || Layout > 3)
       return nullptr;
     llvm::APSInt SatfArg;
-    if (BuiltinID == NVPTX::BI__bmma_m8n8k128_mma_xor_popc_b1)
+    if (BuiltinID == NVPTX::BI__bmma_m8n8k128_mma_xor_popc_b1 ||
+        BuiltinID == NVPTX::BI__bmma_m8n8k128_mma_and_popc_b1)
       SatfArg = 0;  // .b1 does not have satf argument.
     else if (Optional<llvm::APSInt> OptSatfArg =
                  E->getArg(5)->getIntegerConstantExpr(getContext()))
