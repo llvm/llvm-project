@@ -2870,6 +2870,7 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   return nullptr;
 }
 
+// WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
 Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
   // Try to remove the previous instruction if it must lead to unreachable.
   // This includes instructions like stores and "llvm.assume" that may not get
