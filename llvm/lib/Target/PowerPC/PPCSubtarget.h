@@ -411,6 +411,16 @@ public:
     return PredictableSelectIsExpensive;
   }
 
+  // Select allocation orders of GPRC and G8RC. It should be strictly consistent
+  // with corresponding AltOrders in PPCRegisterInfo.td.
+  unsigned getGPRAllocationOrderIdx() const {
+    if (is64BitELFABI())
+      return 1;
+    if (isAIXABI())
+      return 2;
+    return 0;
+  }
+
   // GlobalISEL
   const CallLowering *getCallLowering() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
