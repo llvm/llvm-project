@@ -1397,7 +1397,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
       SmallVector<SDValue, 2> ScalarParts;
       for (unsigned i = 0; i != Parts; ++i)
         ScalarParts.push_back(getConstant(
-            NewVal.lshr(i * ViaEltSizeInBits).trunc(ViaEltSizeInBits), DL,
+            NewVal.extractBits(ViaEltSizeInBits, i * ViaEltSizeInBits), DL,
             ViaEltVT, isT, isO));
 
       return getNode(ISD::SPLAT_VECTOR_PARTS, DL, VT, ScalarParts);
@@ -1412,11 +1412,10 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
     assert(ViaVecVT.getSizeInBits() == VT.getSizeInBits());
 
     SmallVector<SDValue, 2> EltParts;
-    for (unsigned i = 0; i < ViaVecNumElts / VT.getVectorNumElements(); ++i) {
+    for (unsigned i = 0; i < ViaVecNumElts / VT.getVectorNumElements(); ++i)
       EltParts.push_back(getConstant(
-          NewVal.lshr(i * ViaEltSizeInBits).zextOrTrunc(ViaEltSizeInBits), DL,
+          NewVal.extractBits(ViaEltSizeInBits, i * ViaEltSizeInBits), DL,
           ViaEltVT, isT, isO));
-    }
 
     // EltParts is currently in little endian order. If we actually want
     // big-endian order then reverse it now.
@@ -2858,8 +2857,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     unsigned NumSubVectorElts = SubVectorVT.getVectorNumElements();
     unsigned NumSubVectors = Op.getNumOperands();
     for (unsigned i = 0; i != NumSubVectors; ++i) {
-      APInt DemandedSub = DemandedElts.lshr(i * NumSubVectorElts);
-      DemandedSub = DemandedSub.trunc(NumSubVectorElts);
+      APInt DemandedSub =
+          DemandedElts.extractBits(NumSubVectorElts, i * NumSubVectorElts);
       if (!!DemandedSub) {
         SDValue Sub = Op.getOperand(i);
         Known2 = computeKnownBits(Sub, DemandedSub, Depth + 1);
@@ -2979,8 +2978,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         if (DemandedElts[i]) {
           unsigned Shifts = IsLE ? i : NumElts - 1 - i;
           unsigned Offset = (Shifts % SubScale) * BitWidth;
-          Known.One &= Known2.One.lshr(Offset).trunc(BitWidth);
-          Known.Zero &= Known2.Zero.lshr(Offset).trunc(BitWidth);
+          Known = KnownBits::commonBits(Known,
+                                        Known2.extractBits(BitWidth, Offset));
           // If we don't know any bits, early out.
           if (Known.isUnknown())
             break;
@@ -4109,8 +4108,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     unsigned NumSubVectorElts = SubVectorVT.getVectorNumElements();
     unsigned NumSubVectors = Op.getNumOperands();
     for (unsigned i = 0; (i < NumSubVectors) && (Tmp > 1); ++i) {
-      APInt DemandedSub = DemandedElts.lshr(i * NumSubVectorElts);
-      DemandedSub = DemandedSub.trunc(NumSubVectorElts);
+      APInt DemandedSub =
+          DemandedElts.extractBits(NumSubVectorElts, i * NumSubVectorElts);
       if (!DemandedSub)
         continue;
       Tmp2 = ComputeNumSignBits(Op.getOperand(i), DemandedSub, Depth + 1);
@@ -10263,10 +10262,10 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
   // FIXME: This does not work for vectors with elements less than 8 bits.
   while (VecWidth > 8) {
     unsigned HalfSize = VecWidth / 2;
-    APInt HighValue = SplatValue.lshr(HalfSize).trunc(HalfSize);
-    APInt LowValue = SplatValue.trunc(HalfSize);
-    APInt HighUndef = SplatUndef.lshr(HalfSize).trunc(HalfSize);
-    APInt LowUndef = SplatUndef.trunc(HalfSize);
+    APInt HighValue = SplatValue.extractBits(HalfSize, HalfSize);
+    APInt LowValue = SplatValue.extractBits(HalfSize, 0);
+    APInt HighUndef = SplatUndef.extractBits(HalfSize, HalfSize);
+    APInt LowUndef = SplatUndef.extractBits(HalfSize, 0);
 
     // If the two halves do not match (ignoring undef bits), stop here.
     if ((HighValue & ~LowUndef) != (LowValue & ~HighUndef) ||
