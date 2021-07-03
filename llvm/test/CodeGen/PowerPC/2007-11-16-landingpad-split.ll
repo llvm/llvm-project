@@ -74,9 +74,11 @@ define void @Bork(i64 %range.0.0, i64 %range.0.1, i64 %size) personality i32 (..
 ; CHECK-NEXT:  .LBB0_6: # %unwind.loopexit
 ; CHECK-NEXT:  .Ltmp5:
 ; CHECK-NEXT:  .LBB0_7: # %unwind
-; CHECK-NEXT:    ld 3, 0(1)
+; CHECK-NEXT:    ld 4, 0(1)
 ; CHECK-NEXT:    mr 1, 27
-; CHECK-NEXT:    std 3, 0(1)
+; CHECK-NEXT:    std 4, 0(1)
+; CHECK-NEXT:    bl _Unwind_Resume
+; CHECK-NEXT:    nop
 entry:
 	%effectiveRange = alloca %struct.Range, align 8		; <%struct.Range*> [#uses=2]
 	%tmp4 = call i8* @llvm.stacksave()		; <i8*> [#uses=1]
@@ -91,7 +93,7 @@ bb30.preheader:		; preds = %entry
 
 unwind:		; preds = %cond_true, %entry
         %exn = landingpad {i8*, i32}
-                 catch i8* null
+                 cleanup
 	call void @llvm.stackrestore(i8* %tmp4)
         resume { i8*, i32 } %exn
 

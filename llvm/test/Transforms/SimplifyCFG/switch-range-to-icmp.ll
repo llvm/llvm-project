@@ -116,8 +116,6 @@ b:
 define void @PR42737(i32* %a, i1 %c) {
 ; CHECK-LABEL: @PR42737(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    unreachable
 ;
 entry:
