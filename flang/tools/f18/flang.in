@@ -24,6 +24,7 @@ INTRINSICS_MOD_DIR=""
 COMPILE_ONLY="False"
 PREPROCESS_ONLY="False"
 TEMP_OUTPUT="flang_temp_out_"
+PRINT_VERSION="False"
 
 # === parse_args ==============================================================
 #
@@ -88,6 +89,10 @@ parse_args()
 
         if [[ $1 == "-E" ]]; then
           PREPROCESS_ONLY="True"
+        fi
+
+        if [[ $1 == "-v" || $1 == "--version" ]]; then
+          PRINT_VERSION="True"
         fi
 
         shift
@@ -204,7 +209,6 @@ categorise_opts()
       [[ $opt == "-pedantic" ]] ||
       [[ $opt =~ ^-std=.* ]] ||
       [[ $opt =~ ^-U.* ]] ||
-      [[ $opt == "--version" ]] ||
       [[ $opt == "-Werror" ]]; then
       flang_opts+=($opt)
     elif [[ $opt =~ -I.* ]] || [[ $opt =~ -J.* ]]; then
@@ -265,6 +269,11 @@ preprocess() {
 # =============================================================================
 main() {
   parse_args "$@"
+
+  if [[ $PRINT_VERSION == "True" ]]; then
+    echo "flang version @FLANG_VERSION@"
+    exit 0
+  fi
 
   fortran_source_files=()
   other_source_files=()
