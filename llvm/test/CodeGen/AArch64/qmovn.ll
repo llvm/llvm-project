@@ -4,11 +4,7 @@
 define <4 x i16> @vqmovni32_smaxmin(<4 x i32> %s0) {
 ; CHECK-LABEL: vqmovni32_smaxmin:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mvni v1.4s, #127, msl #8
-; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    sqxtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %c1 = icmp slt <4 x i32> %s0, <i32 32767, i32 32767, i32 32767, i32 32767>
@@ -22,11 +18,7 @@ entry:
 define <4 x i16> @vqmovni32_sminmax(<4 x i32> %s0) {
 ; CHECK-LABEL: vqmovni32_sminmax:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mvni v1.4s, #127, msl #8
-; CHECK-NEXT:    smax v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    sqxtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %c1 = icmp sgt <4 x i32> %s0, <i32 -32768, i32 -32768, i32 -32768, i32 -32768>
@@ -40,9 +32,7 @@ entry:
 define <4 x i16> @vqmovni32_umaxmin(<4 x i32> %s0) {
 ; CHECK-LABEL: vqmovni32_umaxmin:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    uqxtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %c1 = icmp ult <4 x i32> %s0, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -54,11 +44,7 @@ entry:
 define <8 x i8> @vqmovni16_smaxmin(<8 x i16> %s0) {
 ; CHECK-LABEL: vqmovni16_smaxmin:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.8h, #127
-; CHECK-NEXT:    smin v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    mvni v1.8h, #127
-; CHECK-NEXT:    smax v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    sqxtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
 entry:
   %c1 = icmp slt <8 x i16> %s0, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
@@ -72,11 +58,7 @@ entry:
 define <8 x i8> @vqmovni16_sminmax(<8 x i16> %s0) {
 ; CHECK-LABEL: vqmovni16_sminmax:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mvni v1.8h, #127
-; CHECK-NEXT:    smax v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    movi v1.8h, #127
-; CHECK-NEXT:    smin v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    sqxtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
 entry:
   %c1 = icmp sgt <8 x i16> %s0, <i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>
@@ -90,9 +72,7 @@ entry:
 define <8 x i8> @vqmovni16_umaxmin(<8 x i16> %s0) {
 ; CHECK-LABEL: vqmovni16_umaxmin:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-NEXT:    umin v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    uqxtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
 entry:
   %c1 = icmp ult <8 x i16> %s0, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
