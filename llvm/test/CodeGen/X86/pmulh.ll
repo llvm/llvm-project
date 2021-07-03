@@ -2186,3 +2186,37 @@ define <8 x i64> @sext_mulhsw_v8i16_ashr_i64(<8 x i16> %a, <8 x i16> %b) {
   %d = ashr <8 x i64> %c, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
   ret <8 x i64> %d
 }
+
+define <8 x i16> @sse2_pmulh_w_const(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: sse2_pmulh_w_const:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65534,65533,65532,65531,65530,65529,0]
+; SSE-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sse2_pmulh_w_const:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = [65535,65534,65533,65532,65531,65530,65529,0]
+; AVX-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %res = call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> <i16 -1, i16 -2, i16 -3, i16 -4, i16 -5, i16 -6, i16 -7, i16 0>, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16>, <8 x i16>)
+
+define <8 x i16> @sse2_pmulhu_w_const(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: sse2_pmulhu_w_const:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65534,65533,65532,65531,65530,65529,0]
+; SSE-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sse2_pmulhu_w_const:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = [65535,65534,65533,65532,65531,65530,65529,0]
+; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %res = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> <i16 -1, i16 -2, i16 -3, i16 -4, i16 -5, i16 -6, i16 -7, i16 0>, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16>, <8 x i16>)
