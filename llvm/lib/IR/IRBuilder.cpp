@@ -493,6 +493,7 @@ Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
 }
 
 /// Create a call to a Masked Load intrinsic.
+/// \p Ty        - vector type to load
 /// \p Ptr       - base pointer for the load
 /// \p Alignment - alignment of the source location
 /// \p Mask      - vector of booleans which indicates what vector lanes should
@@ -500,16 +501,16 @@ Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
 /// \p PassThru  - pass-through value that is used to fill the masked-off lanes
 ///                of the result
 /// \p Name      - name of the result variable
-CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, Align Alignment,
+CallInst *IRBuilderBase::CreateMaskedLoad(Type *Ty, Value *Ptr, Align Alignment,
                                           Value *Mask, Value *PassThru,
                                           const Twine &Name) {
   auto *PtrTy = cast<PointerType>(Ptr->getType());
-  Type *DataTy = PtrTy->getElementType();
-  assert(DataTy->isVectorTy() && "Ptr should point to a vector");
+  assert(Ty->isVectorTy() && "Type should be vector");
+  assert(PtrTy->isOpaqueOrPointeeTypeMatches(Ty) && "Wrong element type");
   assert(Mask && "Mask should not be all-ones (null)");
   if (!PassThru)
-    PassThru = UndefValue::get(DataTy);
-  Type *OverloadedTypes[] = { DataTy, PtrTy };
+    PassThru = UndefValue::get(Ty);
+  Type *OverloadedTypes[] = { Ty, PtrTy };
   Value *Ops[] = {Ptr, getInt32(Alignment.value()), Mask, PassThru};
   return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops,
                                OverloadedTypes, Name);
@@ -546,6 +547,7 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
 }
 
 /// Create a call to a Masked Gather intrinsic.
+/// \p Ty       - vector type to gather
 /// \p Ptrs     - vector of pointers for loading
 /// \p Align    - alignment for one element
 /// \p Mask     - vector of booleans which indicates what vector lanes should
@@ -553,22 +555,27 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
 /// \p PassThru - pass-through value that is used to fill the masked-off lanes
 ///               of the result
 /// \p Name     - name of the result variable
-CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
-                                            Value *Mask, Value *PassThru,
+CallInst *IRBuilderBase::CreateMaskedGather(Type *Ty, Value *Ptrs,
+                                            Align Alignment, Value *Mask,
+                                            Value *PassThru,
                                             const Twine &Name) {
+  auto *VecTy = cast<VectorType>(Ty);
+  ElementCount NumElts = VecTy->getElementCount();
   auto *PtrsTy = cast<VectorType>(Ptrs->getType());
-  auto *PtrTy = cast<PointerType>(PtrsTy->getElementType());
-  ElementCount NumElts = PtrsTy->getElementCount();
-  auto *DataTy = VectorType::get(PtrTy->getElementType(), NumElts);
+  assert(cast<PointerType>(PtrsTy->getElementType())
+             ->isOpaqueOrPointeeTypeMatches(
+                 cast<VectorType>(Ty)->getElementType()) &&
+         "Element type mismatch");
+  assert(NumElts == PtrsTy->getElementCount() && "Element count mismatch");
 
   if (!Mask)
     Mask = Constant::getAllOnesValue(
         VectorType::get(Type::getInt1Ty(Context), NumElts));
 
   if (!PassThru)
-    PassThru = UndefValue::get(DataTy);
+    PassThru = UndefValue::get(Ty);
 
-  Type *OverloadedTypes[] = {DataTy, PtrsTy};
+  Type *OverloadedTypes[] = {Ty, PtrsTy};
   Value *Ops[] = {Ptrs, getInt32(Alignment.value()), Mask, PassThru};
 
   // We specify only one type when we create this intrinsic. Types of other

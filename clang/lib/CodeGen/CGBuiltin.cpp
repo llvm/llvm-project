@@ -11746,14 +11746,14 @@ static Value *EmitX86MaskedStore(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
 static Value *EmitX86MaskedLoad(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
                                 Align Alignment) {
   // Cast the pointer to right type.
-  Value *Ptr = CGF.Builder.CreateBitCast(Ops[0],
-                               llvm::PointerType::getUnqual(Ops[1]->getType()));
+  llvm::Type *Ty = Ops[1]->getType();
+  Value *Ptr =
+      CGF.Builder.CreateBitCast(Ops[0], llvm::PointerType::getUnqual(Ty));
 
   Value *MaskVec = getMaskVecValue(
-      CGF, Ops[2],
-      cast<llvm::FixedVectorType>(Ops[1]->getType())->getNumElements());
+      CGF, Ops[2], cast<llvm::FixedVectorType>(Ty)->getNumElements());
 
-  return CGF.Builder.CreateMaskedLoad(Ptr, Alignment, MaskVec, Ops[1]);
+  return CGF.Builder.CreateMaskedLoad(Ty, Ptr, Alignment, MaskVec, Ops[1]);
 }
 
 static Value *EmitX86ExpandLoad(CodeGenFunction &CGF,
