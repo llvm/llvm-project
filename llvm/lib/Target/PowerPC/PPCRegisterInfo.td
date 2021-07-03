@@ -303,9 +303,14 @@ def GPRC : RegisterClass<"PPC", [i32,f32], 32, (add (sequence "R%u", 2, 12),
                                                     R31, R0, R1, FP, BP)> {
   // On non-Darwin PPC64 systems, R2 can be allocated, but must be restored, so
   // put it at the end of the list.
-  let AltOrders = [(add (sub GPRC, R2), R2)];
+  // On AIX, CSRs are allocated starting from R31 according to:
+  // https://www.ibm.com/docs/en/ssw_aix_72/assembler/assembler_pdf.pdf.
+  // This also helps setting the correct `NumOfGPRsSaved' in traceback table.
+  let AltOrders = [(add (sub GPRC, R2), R2),
+                   (add (sequence "R%u", 2, 12),
+                        (sequence "R%u", 31, 13), R0, R1, FP, BP)];
   let AltOrderSelect = [{
-    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+    return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
 }
 
@@ -314,9 +319,11 @@ def G8RC : RegisterClass<"PPC", [i64], 64, (add (sequence "X%u", 2, 12),
                                                 X31, X13, X0, X1, FP8, BP8)> {
   // On non-Darwin PPC64 systems, R2 can be allocated, but must be restored, so
   // put it at the end of the list.
-  let AltOrders = [(add (sub G8RC, X2), X2)];
+  let AltOrders = [(add (sub G8RC, X2), X2),
+                   (add (sequence "X%u", 2, 12),
+                        (sequence "X%u", 31, 13), X0, X1, FP8, BP8)];
   let AltOrderSelect = [{
-    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+    return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
 }
 
@@ -326,18 +333,22 @@ def G8RC : RegisterClass<"PPC", [i64], 64, (add (sequence "X%u", 2, 12),
 def GPRC_NOR0 : RegisterClass<"PPC", [i32,f32], 32, (add (sub GPRC, R0), ZERO)> {
   // On non-Darwin PPC64 systems, R2 can be allocated, but must be restored, so
   // put it at the end of the list.
-  let AltOrders = [(add (sub GPRC_NOR0, R2), R2)];
+  let AltOrders = [(add (sub GPRC_NOR0, R2), R2),
+                   (add (sequence "R%u", 2, 12),
+                        (sequence "R%u", 31, 13), R1, FP, BP, ZERO)];
   let AltOrderSelect = [{
-    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+    return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
 }
 
 def G8RC_NOX0 : RegisterClass<"PPC", [i64], 64, (add (sub G8RC, X0), ZERO8)> {
   // On non-Darwin PPC64 systems, R2 can be allocated, but must be restored, so
   // put it at the end of the list.
-  let AltOrders = [(add (sub G8RC_NOX0, X2), X2)];
+  let AltOrders = [(add (sub G8RC_NOX0, X2), X2),
+                   (add (sequence "X%u", 2, 12),
+                        (sequence "X%u", 31, 13), X1, FP8, BP8, ZERO8)];
   let AltOrderSelect = [{
-    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+    return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
 }
 
