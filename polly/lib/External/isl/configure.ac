@@ -1,10 +1,10 @@
-AC_INIT([isl], [0.23], [isl-development@googlegroups.com])
+AC_INIT([isl], [0.24], [isl-development@googlegroups.com])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 AC_SUBST(versioninfo)
-versioninfo=23:0:0
+versioninfo=24:0:1
 
 if test "x$prefix" != "xNONE"; then
 	prefix_wd=`cd $prefix && pwd`
@@ -83,8 +83,8 @@ AM_CONDITIONAL(IMATH_FOR_MP, test x$with_int = ximath -o x$with_int = ximath-32)
 AM_CONDITIONAL(GMP_FOR_MP, test x$with_int = xgmp)
 
 AM_CONDITIONAL(HAVE_CXX11, test "x$HAVE_CXX11" = "x1")
-AM_CONDITIONAL(SMALL_INT_OPT, test "x$with_int" == "ximath-32")
-AS_IF([test "x$with_int" == "ximath-32"], [
+AM_CONDITIONAL(SMALL_INT_OPT, test "x$with_int" = "ximath-32")
+AS_IF([test "x$with_int" = "ximath-32"], [
 	AC_DEFINE([USE_SMALL_INT_OPT], [], [Use small integer optimization])
 ])
 
