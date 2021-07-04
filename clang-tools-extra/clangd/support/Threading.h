@@ -12,6 +12,7 @@
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Twine.h"
+#include <atomic>
 #include <cassert>
 #include <condition_variable>
 #include <future>
