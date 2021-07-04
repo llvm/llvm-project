@@ -475,7 +475,7 @@ auto AlignVectors::createAlignedLoad(IRBuilder<> &Builder, Type *ValTy,
     return PassThru;
   if (Mask == ConstantInt::getTrue(Mask->getType()))
     return Builder.CreateAlignedLoad(ValTy, Ptr, Align(Alignment));
-  return Builder.CreateMaskedLoad(Ptr, Align(Alignment), Mask, PassThru);
+  return Builder.CreateMaskedLoad(ValTy, Ptr, Align(Alignment), Mask, PassThru);
 }
 
 auto AlignVectors::createAlignedStore(IRBuilder<> &Builder, Value *Val,
