@@ -367,8 +367,9 @@ void BPFAbstractMemberAccess::replaceWithGEP(std::vector<CallInst *> &CallList,
       IdxList.push_back(Zero);
     IdxList.push_back(Call->getArgOperand(GEPIndex));
 
-    auto *GEP = GetElementPtrInst::CreateInBounds(Call->getArgOperand(0),
-                                                  IdxList, "", Call);
+    auto *GEP = GetElementPtrInst::CreateInBounds(
+        Call->getArgOperand(0)->getType()->getPointerElementType(),
+        Call->getArgOperand(0), IdxList, "", Call);
     Call->replaceAllUsesWith(GEP);
     Call->eraseFromParent();
   }
