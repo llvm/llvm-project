@@ -2778,7 +2778,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
                           : ShuffledMask;
         }
         NewLoad =
-            Builder.CreateMaskedLoad(AddrParts[Part], Group->getAlign(),
+            Builder.CreateMaskedLoad(VecTy, AddrParts[Part], Group->getAlign(),
                                      GroupMask, PoisonVec, "wide.masked.vec");
       }
       else
@@ -2990,15 +2990,15 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
     if (CreateGatherScatter) {
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
       Value *VectorGep = State.get(Addr, Part);
-      NewLI = Builder.CreateMaskedGather(VectorGep, Alignment, MaskPart,
+      NewLI = Builder.CreateMaskedGather(DataTy, VectorGep, Alignment, MaskPart,
                                          nullptr, "wide.masked.gather");
       addMetadata(NewLI, LI);
     } else {
       auto *VecPtr = CreateVecPtr(Part, State.get(Addr, VPIteration(0, 0)));
       if (isMaskRequired)
         NewLI = Builder.CreateMaskedLoad(
-            VecPtr, Alignment, BlockInMaskParts[Part], PoisonValue::get(DataTy),
-            "wide.masked.load");
+            DataTy, VecPtr, Alignment, BlockInMaskParts[Part],
+            PoisonValue::get(DataTy), "wide.masked.load");
       else
         NewLI =
             Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment, "wide.load");

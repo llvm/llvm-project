@@ -5403,7 +5403,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         for (Value *V : E->Scalars)
           CommonAlignment =
               commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
-        NewLI = Builder.CreateMaskedGather(VecPtr, CommonAlignment);
+        NewLI = Builder.CreateMaskedGather(VecTy, VecPtr, CommonAlignment);
       }
       Value *V = propagateMetadata(NewLI, E->Scalars);
 
