@@ -22,7 +22,7 @@
 
 #if !(defined(TLI_DEFINE_VECFUNC))
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF) {SCAL, VEC, VF},
-#endif 
+#endif
 
 #if defined(TLI_DEFINE_ACCELERATE_VECFUNCS)
 // Accelerate framework's Vector Functions
