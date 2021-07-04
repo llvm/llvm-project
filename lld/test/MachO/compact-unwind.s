@@ -43,10 +43,14 @@
 # CHECK:        Personality functions: (count = 2)
 # CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#MY_PERSONALITY-BASE]]
 # CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#GXX_PERSONALITY-BASE]]
+# CHECK:      Top level indices: (count = 2)
+# CHECK-DAG:    [0]: function offset={{.*}}, 2nd level page offset=0x[[#%x,PAGEOFF:]],
+# CHECK-DAG:    [1]: function offset={{.*}}, 2nd level page offset=0x00000000,
 # CHECK:        LSDA descriptors:
 # CHECK-DAG:     function offset=0x[[#%.8x,FOO-BASE]],  LSDA offset=0x[[#%.8x,EXCEPTION0-BASE]]
 # CHECK-DAG:     function offset=0x[[#%.8x,MAIN-BASE]], LSDA offset=0x[[#%.8x,EXCEPTION1-BASE]]
 # CHECK:        Second level indices:
+# CHECK-NEXT:   Second level index[0]: offset in section=0x[[#%.8x,PAGEOFF]]
 # CHECK-DAG:     function offset=0x[[#%.8x,MAIN-BASE]], encoding
 # CHECK-DAG:     function offset=0x[[#%.8x,FOO-BASE]], encoding
 # CHECK-DAG:     function offset=0x[[#%.8x,BAZ-BASE]], encoding

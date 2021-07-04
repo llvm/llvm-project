@@ -571,8 +571,10 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
     l2PagesOffset += SECOND_LEVEL_PAGE_BYTES;
   }
   // Level-1 sentinel
-  const CompactUnwindEntry<Ptr> &cuEnd = cuVector.back();
-  iep->functionOffset = cuEnd.functionAddress + cuEnd.functionLength;
+  const CompactUnwindEntry<Ptr> &cuEnd = *cuPtrVector.back();
+  assert(cuEnd.functionAddress != TombstoneValue<Ptr>);
+  iep->functionOffset =
+      cuEnd.functionAddress - in.header->addr + cuEnd.functionLength;
   iep->secondLevelPagesSectionOffset = 0;
   iep->lsdaIndexArraySectionOffset =
       lsdaOffset +
