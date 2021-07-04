@@ -483,7 +483,7 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
 
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits
-#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 4-bit
+#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 4-bits
 #define TSFLAG_FALSE_LANE_TYPE(X)       ((X) << 7) // 2-bits
 #define TSFLAG_INSTR_FLAGS(X)           ((X) << 9) // 2-bits
 // }
