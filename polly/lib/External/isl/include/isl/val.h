@@ -170,6 +170,7 @@ void isl_multi_val_dump(__isl_keep isl_multi_val *mv);
 __isl_give char *isl_multi_val_to_str(__isl_keep isl_multi_val *mv);
 
 ISL_DECLARE_EXPORTED_LIST_FN(val)
+ISL_DECLARE_EXPORTED_LIST_FN_READ(val)
 
 #if defined(__cplusplus)
 }

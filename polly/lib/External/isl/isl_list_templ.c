@@ -606,6 +606,14 @@ error:
 	return NULL;
 }
 
+/* This function performs the same operation as isl_*_list_from_*,
+ * but is considered as a function on the element when exported.
+ */
+__isl_give LIST(EL) *FN(EL,to_list)(__isl_take EL *el)
+{
+	return FN(FN(LIST(EL),from),EL_BASE)(el);
+}
+
 /* Append the elements of "list2" to "list1", where "list1" is known
  * to have only a single reference and enough room to hold
  * the extra elements.

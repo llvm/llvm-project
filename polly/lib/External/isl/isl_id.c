@@ -15,6 +15,7 @@
 #define EL_BASE id
 
 #include <isl_list_templ.c>
+#include <isl_list_read_templ.c>
 
 /* A special, static isl_id to use as domains (and ranges)
  * of sets and parameters domains.

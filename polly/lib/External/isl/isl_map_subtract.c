@@ -643,7 +643,7 @@ error:
 }
 
 /* A diff collector that aborts as soon as its add function is called,
- * setting empty to 0.
+ * setting empty to isl_false.
  */
 struct isl_is_empty_diff_collector {
 	struct isl_diff_collector dc;

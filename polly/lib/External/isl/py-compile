@@ -1,9 +1,9 @@
 #!/bin/sh
 # py-compile - Compile a Python program
 
-scriptversion=2018-03-07.03; # UTC
+scriptversion=2020-02-19.23; # UTC
 
-# Copyright (C) 2000-2018 Free Software Foundation, Inc.
+# Copyright (C) 2000-2020 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -115,8 +115,27 @@ else
     filetrans="filepath = os.path.normpath('$destdir' + os.sep + path)"
 fi
 
+python_major=$($PYTHON -V 2>&1 | sed -e 's/.* //;s/\..*$//;1q')
+if test -z "$python_major"; then
+  echo "$me: could not determine $PYTHON major version, guessing 3" >&2
+  python_major=3
+fi
+
+# The old way to import libraries was deprecated.
+if test "$python_major" -le 2; then
+  import_lib=imp
+  import_test="hasattr(imp, 'get_tag')"
+  import_call=imp.cache_from_source
+  import_arg2=', False' # needed in one call and not the other
+else
+  import_lib=importlib
+  import_test="hasattr(sys.implementation, 'cache_tag')"
+  import_call=importlib.util.cache_from_source
+  import_arg2=
+fi
+
 $PYTHON -c "
-import sys, os, py_compile, imp
+import sys, os, py_compile, $import_lib
 
 files = '''$files'''
 
@@ -129,15 +148,15 @@ for file in files.split():
 	    continue
     sys.stdout.write(file)
     sys.stdout.flush()
-    if hasattr(imp, 'get_tag'):
-        py_compile.compile(filepath, imp.cache_from_source(filepath), path)
+    if $import_test:
+        py_compile.compile(filepath, $import_call(filepath), path)
     else:
         py_compile.compile(filepath, filepath + 'c', path)
 sys.stdout.write('\n')" || exit $?
 
 # this will fail for python < 1.5, but that doesn't matter ...
 $PYTHON -O -c "
-import sys, os, py_compile, imp
+import sys, os, py_compile, $import_lib
 
 # pypy does not use .pyo optimization
 if hasattr(sys, 'pypy_translation_info'):
@@ -153,8 +172,8 @@ for file in files.split():
 	    continue
     sys.stdout.write(file)
     sys.stdout.flush()
-    if hasattr(imp, 'get_tag'):
-        py_compile.compile(filepath, imp.cache_from_source(filepath, False), path)
+    if $import_test:
+        py_compile.compile(filepath, $import_call(filepath$import_arg2), path)
     else:
         py_compile.compile(filepath, filepath + 'o', path)
 sys.stdout.write('\n')" 2>/dev/null || :

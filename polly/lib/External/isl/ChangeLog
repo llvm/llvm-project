@@ -1,3 +1,10 @@
+version: 0.24
+date: Sun 25 Apr 2021 03:56:37 PM CEST
+changes:
+	- improved (C++) bindings (inherit methods, renamed exports)
+	- initial templated C++ bindings
+	- detect bounds on constant polynomials as tight
+---
 version: 0.23
 date: Sun 01 Nov 2020 02:41:20 PM CET
 changes:
