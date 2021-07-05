@@ -13,19 +13,24 @@ def I32OrF32 : Type<CPred<"$_self.isInteger(32) || $_self.isF32()">,
 
 def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
   let arguments = (ins I32OrF32:$x);
+  let results = (outs Variadic<I32OrF32>:$y);
 }
 
 // CHECK: static ::mlir::LogicalResult [[$INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK:  if (!((type.isInteger(32) || type.isF32()))) {
-// CHECK:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be 32-bit integer or floating-point type, but got " << type;
+// CHECK-NEXT:  if (!((type.isInteger(32) || type.isF32()))) {
+// CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be 32-bit integer or floating-point type, but got " << type;
+
+// Check there is no verifier with same predicate generated.
+// CHECK-NOT:  if (!((type.isInteger(32) || type.isF32()))) {
+// CHECK-NOT:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be 32-bit integer or floating-point type, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult [[$TENSOR_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK:  if (!(((type.isa<::mlir::TensorType>())) && ((true)))) {
-// CHECK:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be tensor of any type values, but got " << type;
+// CHECK-NEXT:  if (!(((type.isa<::mlir::TensorType>())) && ((true)))) {
+// CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be tensor of any type values, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult [[$TENSOR_INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK:  if (!(((type.isa<::mlir::TensorType>())) && (((type.cast<::mlir::ShapedType>().getElementType().isF32())) || ((type.cast<::mlir::ShapedType>().getElementType().isSignlessInteger(32)))))) {
-// CHECK:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be tensor of 32-bit float or 32-bit signless integer values, but got " << type;
+// CHECK-NEXT:  if (!(((type.isa<::mlir::TensorType>())) && (((type.cast<::mlir::ShapedType>().getElementType().isF32())) || ((type.cast<::mlir::ShapedType>().getElementType().isSignlessInteger(32)))))) {
+// CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueGroupStartIndex << " must be tensor of 32-bit float or 32-bit signless integer values, but got " << type;
 
 // CHECK-LABEL: OpA::verify
 // CHECK: auto valueGroup0 = getODSOperands(0);

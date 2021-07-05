@@ -14,6 +14,7 @@
 #define MLIR_TABLEGEN_PREDICATE_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/Hashing.h"
 
 #include <string>
 #include <vector>
@@ -59,6 +60,8 @@ public:
   ArrayRef<llvm::SMLoc> getLoc() const;
 
 protected:
+  friend llvm::DenseMapInfo<Pred>;
+
   // The TableGen definition of this predicate.
   const llvm::Record *def;
 };
@@ -115,5 +118,19 @@ public:
 
 } // end namespace tblgen
 } // end namespace mlir
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::tblgen::Pred> {
+  static mlir::tblgen::Pred getEmptyKey() { return mlir::tblgen::Pred(); }
+  static mlir::tblgen::Pred getTombstoneKey() { return mlir::tblgen::Pred(); }
+  static unsigned getHashValue(mlir::tblgen::Pred pred) {
+    return llvm::hash_value(pred.def);
+  }
+  static bool isEqual(mlir::tblgen::Pred lhs, mlir::tblgen::Pred rhs) {
+    return lhs == rhs;
+  }
+};
+} // end namespace llvm
 
 #endif // MLIR_TABLEGEN_PREDICATE_H_
