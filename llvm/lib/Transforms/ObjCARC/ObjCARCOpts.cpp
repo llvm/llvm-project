@@ -532,12 +532,15 @@ class ObjCARCOpt {
   bool VisitBottomUp(BasicBlock *BB,
                      DenseMap<const BasicBlock *, BBState> &BBStates,
                      BlotMapVector<Value *, RRInfo> &Retains);
-  bool VisitInstructionTopDown(Instruction *Inst,
-                               DenseMap<Value *, RRInfo> &Releases,
-                               BBState &MyStates);
-  bool VisitTopDown(BasicBlock *BB,
-                    DenseMap<const BasicBlock *, BBState> &BBStates,
-                    DenseMap<Value *, RRInfo> &Releases);
+  bool VisitInstructionTopDown(
+      Instruction *Inst, DenseMap<Value *, RRInfo> &Releases, BBState &MyStates,
+      const DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
+          &ReleaseInsertPtToRCIdentityRoots);
+  bool VisitTopDown(
+      BasicBlock *BB, DenseMap<const BasicBlock *, BBState> &BBStates,
+      DenseMap<Value *, RRInfo> &Releases,
+      const DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
+          &ReleaseInsertPtToRCIdentityRoots);
   bool Visit(Function &F, DenseMap<const BasicBlock *, BBState> &BBStates,
              BlotMapVector<Value *, RRInfo> &Retains,
              DenseMap<Value *, RRInfo> &Releases);
@@ -1495,13 +1498,61 @@ bool ObjCARCOpt::VisitBottomUp(BasicBlock *BB,
   return NestingDetected;
 }
 
-bool
-ObjCARCOpt::VisitInstructionTopDown(Instruction *Inst,
-                                    DenseMap<Value *, RRInfo> &Releases,
-                                    BBState &MyStates) {
+// Fill ReleaseInsertPtToRCIdentityRoots, which is a map from insertion points
+// to the set of RC identity roots that would be released by the release calls
+// moved to the insertion points.
+static void collectReleaseInsertPts(
+    const BlotMapVector<Value *, RRInfo> &Retains,
+    DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
+        &ReleaseInsertPtToRCIdentityRoots) {
+  for (auto &P : Retains) {
+    // Retains is a map from an objc_retain call to a RRInfo of the RC identity
+    // root of the call. Get the RC identity root of the objc_retain call.
+    Instruction *Retain = cast<Instruction>(P.first);
+    Value *Root = GetRCIdentityRoot(Retain->getOperand(0));
+    // Collect all the insertion points of the objc_release calls that release
+    // the RC identity root of the objc_retain call.
+    for (const Instruction *InsertPt : P.second.ReverseInsertPts)
+      ReleaseInsertPtToRCIdentityRoots[InsertPt].insert(Root);
+  }
+}
+
+// Get the RC identity roots from an insertion point of an objc_release call.
+// Return nullptr if the passed instruction isn't an insertion point.
+static const SmallPtrSet<const Value *, 2> *
+getRCIdentityRootsFromReleaseInsertPt(
+    const Instruction *InsertPt,
+    const DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
+        &ReleaseInsertPtToRCIdentityRoots) {
+  auto I = ReleaseInsertPtToRCIdentityRoots.find(InsertPt);
+  if (I == ReleaseInsertPtToRCIdentityRoots.end())
+    return nullptr;
+  return &I->second;
+}
+
+bool ObjCARCOpt::VisitInstructionTopDown(
+    Instruction *Inst, DenseMap<Value *, RRInfo> &Releases, BBState &MyStates,
+    const DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
+        &ReleaseInsertPtToRCIdentityRoots) {
   bool NestingDetected = false;
   ARCInstKind Class = GetARCInstKind(Inst);
   const Value *Arg = nullptr;
+
+  // Make sure a call to objc_retain isn't moved past insertion points of calls
+  // to objc_release.
+  if (const SmallPtrSet<const Value *, 2> *Roots =
+          getRCIdentityRootsFromReleaseInsertPt(
+              Inst, ReleaseInsertPtToRCIdentityRoots))
+    for (auto *Root : *Roots) {
+      TopDownPtrState &S = MyStates.getPtrTopDownState(Root);
+      // Disable code motion if the current position is S_Retain to prevent
+      // moving the objc_retain call past objc_release calls. If it's
+      // S_CanRelease or larger, it's not necessary to disable code motion as
+      // the insertion points that prevent the objc_retain call from moving down
+      // should have been set already.
+      if (S.GetSeq() == S_Retain)
+        S.SetCFGHazardAfflicted(true);
+    }
 
   LLVM_DEBUG(dbgs() << "        Class: " << Class << "\n");
 
@@ -1565,10 +1616,11 @@ ObjCARCOpt::VisitInstructionTopDown(Instruction *Inst,
   return NestingDetected;
 }
 
-bool
-ObjCARCOpt::VisitTopDown(BasicBlock *BB,
-                         DenseMap<const BasicBlock *, BBState> &BBStates,
-                         DenseMap<Value *, RRInfo> &Releases) {
+bool ObjCARCOpt::VisitTopDown(
+    BasicBlock *BB, DenseMap<const BasicBlock *, BBState> &BBStates,
+    DenseMap<Value *, RRInfo> &Releases,
+    const DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
+        &ReleaseInsertPtToRCIdentityRoots) {
   LLVM_DEBUG(dbgs() << "\n== ObjCARCOpt::VisitTopDown ==\n");
   bool NestingDetected = false;
   BBState &MyStates = BBStates[BB];
@@ -1608,7 +1660,8 @@ ObjCARCOpt::VisitTopDown(BasicBlock *BB,
   for (Instruction &Inst : *BB) {
     LLVM_DEBUG(dbgs() << "    Visiting " << Inst << "\n");
 
-    NestingDetected |= VisitInstructionTopDown(&Inst, Releases, MyStates);
+    NestingDetected |= VisitInstructionTopDown(
+        &Inst, Releases, MyStates, ReleaseInsertPtToRCIdentityRoots);
 
     // Bail out if the number of pointers being tracked becomes too large so
     // that this pass can complete in a reasonable amount of time.
@@ -1728,10 +1781,15 @@ bool ObjCARCOpt::Visit(Function &F,
       return false;
   }
 
+  DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
+      ReleaseInsertPtToRCIdentityRoots;
+  collectReleaseInsertPts(Retains, ReleaseInsertPtToRCIdentityRoots);
+
   // Use reverse-postorder for top-down.
   bool TopDownNestingDetected = false;
   for (BasicBlock *BB : llvm::reverse(PostOrder)) {
-    TopDownNestingDetected |= VisitTopDown(BB, BBStates, Releases);
+    TopDownNestingDetected |=
+        VisitTopDown(BB, BBStates, Releases, ReleaseInsertPtToRCIdentityRoots);
     if (DisableRetainReleasePairing)
       return false;
   }
