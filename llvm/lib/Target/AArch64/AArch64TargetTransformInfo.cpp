@@ -839,6 +839,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 1 },
     { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 3 },
     { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 5 },
+    { ISD::TRUNCATE, MVT::nxv16i1, MVT::nxv16i8, 1 },
     { ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i32, 1 },
     { ISD::TRUNCATE, MVT::nxv2i32, MVT::nxv2i64, 1 },
     { ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i32, 1 },
@@ -1897,6 +1898,55 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                            CostKind);
 }
 
+InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
+  static const CostTblEntry ShuffleTbl[] = {
+      { TTI::SK_Splice, MVT::nxv16i8,  1 },
+      { TTI::SK_Splice, MVT::nxv8i16,  1 },
+      { TTI::SK_Splice, MVT::nxv4i32,  1 },
+      { TTI::SK_Splice, MVT::nxv2i64,  1 },
+      { TTI::SK_Splice, MVT::nxv2f16,  1 },
+      { TTI::SK_Splice, MVT::nxv4f16,  1 },
+      { TTI::SK_Splice, MVT::nxv8f16,  1 },
+      { TTI::SK_Splice, MVT::nxv2bf16, 1 },
+      { TTI::SK_Splice, MVT::nxv4bf16, 1 },
+      { TTI::SK_Splice, MVT::nxv8bf16, 1 },
+      { TTI::SK_Splice, MVT::nxv2f32,  1 },
+      { TTI::SK_Splice, MVT::nxv4f32,  1 },
+      { TTI::SK_Splice, MVT::nxv2f64,  1 },
+  };
+
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+  Type *LegalVTy = EVT(LT.second).getTypeForEVT(Tp->getContext());
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  EVT PromotedVT = LT.second.getScalarType() == MVT::i1
+                       ? TLI->getPromotedVTForPredicate(EVT(LT.second))
+                       : LT.second;
+  Type *PromotedVTy = EVT(PromotedVT).getTypeForEVT(Tp->getContext());
+  InstructionCost LegalizationCost = 0;
+  if (Index < 0) {
+    LegalizationCost =
+        getCmpSelInstrCost(Instruction::ICmp, PromotedVTy, PromotedVTy,
+                           CmpInst::BAD_ICMP_PREDICATE, CostKind) +
+        getCmpSelInstrCost(Instruction::Select, PromotedVTy, LegalVTy,
+                           CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  }
+
+  // Predicated splice are promoted when lowering. See AArch64ISelLowering.cpp
+  // Cost performed on a promoted type.
+  if (LT.second.getScalarType() == MVT::i1) {
+    LegalizationCost +=
+        getCastInstrCost(Instruction::ZExt, PromotedVTy, LegalVTy,
+                         TTI::CastContextHint::None, CostKind) +
+        getCastInstrCost(Instruction::Trunc, LegalVTy, PromotedVTy,
+                         TTI::CastContextHint::None, CostKind);
+  }
+  const auto *Entry =
+      CostTableLookup(ShuffleTbl, TTI::SK_Splice, PromotedVT.getSimpleVT());
+  assert(Entry && "Illegal Type for Splice");
+  LegalizationCost += Entry->Cost;
+  return LegalizationCost * LT.first;
+}
+
 InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
                                                ArrayRef<int> Mask, int Index,
@@ -1993,6 +2043,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
   }
-
+  if (Kind == TTI::SK_Splice && isa<ScalableVectorType>(Tp))
+    return getSpliceCost(Tp, Index);
   return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }

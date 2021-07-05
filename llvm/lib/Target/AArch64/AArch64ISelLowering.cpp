@@ -18508,6 +18508,10 @@ bool AArch64TargetLowering::isAllActivePredicate(SDValue N) const {
   return ::isAllActivePredicate(N);
 }
 
+EVT AArch64TargetLowering::getPromotedVTForPredicate(EVT VT) const {
+  return ::getPromotedVTForPredicate(VT);
+}
+
 bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op, const APInt &OriginalDemandedBits,
     const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
