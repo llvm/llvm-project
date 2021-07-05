@@ -1,3 +1,5 @@
+# REQUIRES: x86
+
 ## This tests that we can handle relocations that are not sorted by address.
 ## llvm-mc isn't able to emit such a file, hence the use of yaml2obj. ld64
 ## may emit files with unsorted relocations in `-r` mode, so we need to support
