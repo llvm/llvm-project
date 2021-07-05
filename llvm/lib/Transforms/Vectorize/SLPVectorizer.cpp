@@ -2675,6 +2675,15 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return;
   }
 
+  // Don't handle scalable vectors
+  if (S.getOpcode() == Instruction::ExtractElement &&
+      isa<ScalableVectorType>(
+          cast<ExtractElementInst>(S.OpValue)->getVectorOperandType())) {
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
+    newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx);
+    return;
+  }
+
   // Don't handle vectors.
   if (S.OpValue->getType()->isVectorTy() &&
       !isa<InsertElementInst>(S.OpValue)) {
@@ -3739,7 +3748,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
                                  0);
     }
     if (E->getOpcode() == Instruction::ExtractElement && allSameType(VL) &&
-        allSameBlock(VL)) {
+        allSameBlock(VL) &&
+        !isa<ScalableVectorType>(
+            cast<ExtractElementInst>(E->getMainOp())->getVectorOperandType())) {
       // Check that gather of extractelements can be represented as just a
       // shuffle of a single/two vectors the scalars are extracted from.
       SmallVector<int> Mask;
