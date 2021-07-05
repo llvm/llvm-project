@@ -332,7 +332,7 @@ static bool genBuffers(Merger &merger, CodeGen &codegen,
       // Find lower and upper bound in current dimension.
       Value up;
       if (shape[d] == MemRefType::kDynamicSize) {
-        up = createOrFoldDimOp(rewriter, loc, t->get(), d);
+        up = rewriter.create<tensor::DimOp>(loc, t->get(), d);
         args.push_back(up);
       } else {
         up = rewriter.create<ConstantIndexOp>(loc, shape[d]);

@@ -13,7 +13,9 @@
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
@@ -26,6 +28,17 @@
 #include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
+
+/// Helper function that creates a memref::DimOp or tensor::DimOp depending on
+/// the type of `source`.
+Value mlir::vector::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
+                                      int64_t dim) {
+  if (source.getType().isa<UnrankedMemRefType, MemRefType>())
+    return b.createOrFold<memref::DimOp>(loc, source, dim);
+  if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
+    return b.createOrFold<tensor::DimOp>(loc, source, dim);
+  llvm_unreachable("Expected MemRefType or TensorType");
+}
 
 /// Return the number of elements of basis, `0` if empty.
 int64_t mlir::computeMaxLinearIndex(ArrayRef<int64_t> basis) {

@@ -33,29 +33,6 @@ struct MemRefInlinerInterface : public DialectInlinerInterface {
 };
 } // end anonymous namespace
 
-SmallVector<Value, 4> mlir::getDynOperands(Location loc, Value val,
-                                           OpBuilder &b) {
-  SmallVector<Value, 4> dynOperands;
-  auto shapedType = val.getType().cast<ShapedType>();
-  for (auto dim : llvm::enumerate(shapedType.getShape())) {
-    if (dim.value() == ShapedType::kDynamicSize)
-      dynOperands.push_back(createOrFoldDimOp(b, loc, val, dim.index()));
-  }
-  return dynOperands;
-}
-
-// Helper function that creates a memref::DimOp or tensor::DimOp depending on
-// the type of `source`.
-// TODO: Move helper function out of MemRef dialect.
-Value mlir::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
-                              int64_t dim) {
-  if (source.getType().isa<UnrankedMemRefType, MemRefType>())
-    return b.createOrFold<memref::DimOp>(loc, source, dim);
-  if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
-    return b.createOrFold<tensor::DimOp>(loc, source, dim);
-  llvm_unreachable("Expected MemRefType or TensorType");
-}
-
 void mlir::memref::MemRefDialect::initialize() {
   addOperations<DmaStartOp, DmaWaitOp,
 #define GET_OP_LIST
