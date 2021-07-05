@@ -1,7 +1,7 @@
-// RUN: mlir-opt -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
-"emitc.include" (){include = "test.h", is_standard_include} : () -> ()
-emitc.include "test.h" is_standard_include
+emitc.include <"test.h">
+emitc.include "test.h"
 
 // CHECK-LABEL: func @f(%{{.*}}: i32, %{{.*}}: !emitc.opaque<"int32_t">) {
 func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
