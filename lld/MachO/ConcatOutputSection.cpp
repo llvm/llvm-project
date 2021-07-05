@@ -241,6 +241,8 @@ void ConcatOutputSection::finalize() {
     }
     // Process relocs by ascending address, i.e., ascending offset within isec
     std::vector<Reloc> &relocs = isec->relocs;
+    // FIXME: This property does not hold for object files produced by ld64's
+    // `-r` mode.
     assert(is_sorted(relocs,
                      [](Reloc &a, Reloc &b) { return a.offset > b.offset; }));
     for (Reloc &r : reverse(relocs)) {
