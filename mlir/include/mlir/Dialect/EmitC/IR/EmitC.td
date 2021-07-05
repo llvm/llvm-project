@@ -126,12 +126,15 @@ def EmitC_IncludeOp
 
     ```mlir
     // Custom form defining the inclusion of `<myheader>`.
-    emitc.include "myheader.h" is_standard_include
+    emitc.include <"myheader.h">
 
     // Generic form of the same operation.
     "emitc.include" (){include = "myheader.h", is_standard_include} : () -> ()
 
-    // Generic form defining the inclusion of `"myheader"`.
+    // Custom form defining the inclusion of `"myheader"`.
+    emitc.include "myheader.h"
+
+    // Generic form of the same operation.
     "emitc.include" (){include = "myheader.h"} : () -> ()
     ```
   }];
@@ -139,9 +142,8 @@ def EmitC_IncludeOp
     Arg<StrAttr, "source file to include">:$include,
     UnitAttr:$is_standard_include
   );
-  let assemblyFormat = [{
-    $include attr-dict (`is_standard_include` $is_standard_include^)?
-  }];
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
   let verifier = ?;
 }
 
