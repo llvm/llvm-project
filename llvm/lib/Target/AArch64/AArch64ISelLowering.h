@@ -832,6 +832,7 @@ public:
   }
 
   bool isAllActivePredicate(SDValue N) const;
+  EVT getPromotedVTForPredicate(EVT VT) const;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can

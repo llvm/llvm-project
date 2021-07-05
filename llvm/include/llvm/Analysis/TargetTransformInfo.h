@@ -858,8 +858,11 @@ public:
     SK_ExtractSubvector, ///< ExtractSubvector Index indicates start offset.
     SK_PermuteTwoSrc,    ///< Merge elements from two source vectors into one
                          ///< with any shuffle mask.
-    SK_PermuteSingleSrc  ///< Shuffle elements of single source vector with any
+    SK_PermuteSingleSrc, ///< Shuffle elements of single source vector with any
                          ///< shuffle mask.
+    SK_Splice            ///< Concatenates elements from the first input vector
+                         ///< with elements of the second input vector. Returning
+                         ///< a vector of the same type as the input vectors.
   };
 
   /// Kind of the reduction data.
