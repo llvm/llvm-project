@@ -200,3 +200,18 @@ bb:
   store i8 %tmp6, i8 addrspace(1)* null, align 1
   ret void
 }
+
+define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
+; GCN-LABEL: v_test_udiv64_mulhi_fold
+; GFX1030: s_mov_b32 [[VAL1:s[0-9]+]], 0xa9000000
+; GFX1030: s_brev_b32 [[VAL2:s[0-9]+]], 6
+; GFX1030: s_movk_i32 [[VAL3:s[0-9]+]], 0x500
+; GFX1030: s_mul_hi_u32 s7, [[VAL1]], [[VAL2]]
+; GFX1030: s_mov_b32 [[VAL4:s[0-9]+]], 0xa7c5
+; GFX1030: s_mul_hi_u32 s8, [[VAL1]], [[VAL3]]
+; GFX1030: s_mul_hi_u32 s5, [[VAL4]], [[VAL2]]
+; GFX1030: s_mul_hi_u32 s6, [[VAL4]], [[VAL3]]
+; GFX1030: v_add_co_u32 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+  %d = udiv i64 %arg, 100000
+  ret i64 %d
+}
