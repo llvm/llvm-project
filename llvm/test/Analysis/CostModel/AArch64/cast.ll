@@ -701,10 +701,10 @@ define i32 @load_extends() #0 {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi8 = load i8, i8* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi16 = load i16, i16* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi32 = load i32, i32* undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %loadv2i8 = load <2 x i8>, <2 x i8>* undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %loadv4i8 = load <4 x i8>, <4 x i8>* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %loadv2i8 = load <2 x i8>, <2 x i8>* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i8 = load <4 x i8>, <4 x i8>* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv8i8 = load <8 x i8>, <8 x i8>* undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv2i16 = load <2 x i16>, <2 x i16>* undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %loadv2i16 = load <2 x i16>, <2 x i16>* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i16 = load <4 x i16>, <4 x i16>* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv2i32 = load <2 x i32>, <2 x i32>* undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadv4i32 = load <4 x i32>, <4 x i32>* undef

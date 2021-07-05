@@ -1560,6 +1560,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
   setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
   setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+  setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::VSELECT, VT, Custom);
   setOperationAction(ISD::XOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
@@ -9228,6 +9229,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   EVT VT = Op.getValueType();
 
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
+
+  if (useSVEForFixedLengthVectorVT(VT))
+    return LowerFixedLengthVECTOR_SHUFFLEToSVE(Op, DAG);
 
   // Convert shuffles that are directly supported on NEON to target-specific
   // DAG nodes, instead of keeping them as shuffles and matching them again
@@ -18426,6 +18430,42 @@ AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
 
     return DAG.getNode(ISD::TRUNCATE, DL, VT, Val);
   }
+}
+
+SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
+    SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
+
+  auto *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
+  auto ShuffleMask = SVN->getMask();
+
+  SDLoc DL(Op);
+  SDValue Op1 = Op.getOperand(0);
+  SDValue Op2 = Op.getOperand(1);
+
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  Op1 = convertToScalableVector(DAG, ContainerVT, Op1);
+  Op2 = convertToScalableVector(DAG, ContainerVT, Op2);
+
+  bool ReverseEXT = false;
+  unsigned Imm;
+  if (isEXTMask(ShuffleMask, VT, ReverseEXT, Imm) &&
+      Imm == VT.getVectorNumElements() - 1) {
+    if (ReverseEXT)
+      std::swap(Op1, Op2);
+
+    EVT ScalarTy = VT.getVectorElementType();
+    if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16))
+      ScalarTy = MVT::i32;
+    SDValue Scalar = DAG.getNode(
+        ISD::EXTRACT_VECTOR_ELT, DL, ScalarTy, Op1,
+        DAG.getConstant(VT.getVectorNumElements() - 1, DL, MVT::i64));
+    Op = DAG.getNode(AArch64ISD::INSR, DL, ContainerVT, Op2, Scalar);
+    return convertFromScalableVector(DAG, VT, Op);
+  }
+
+  return SDValue();
 }
 
 SDValue AArch64TargetLowering::getSVESafeBitCast(EVT VT, SDValue Op,

@@ -5079,6 +5079,18 @@ static llvm::Optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     if (!C2.getBoolValue())
       break;
     return C1.srem(C2);
+  case ISD::MULHS: {
+    unsigned FullWidth = C1.getBitWidth() * 2;
+    APInt C1Ext = C1.sext(FullWidth);
+    APInt C2Ext = C2.sext(FullWidth);
+    return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
+  }
+  case ISD::MULHU: {
+    unsigned FullWidth = C1.getBitWidth() * 2;
+    APInt C1Ext = C1.zext(FullWidth);
+    APInt C2Ext = C2.zext(FullWidth);
+    return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
+  }
   }
   return llvm::None;
 }
