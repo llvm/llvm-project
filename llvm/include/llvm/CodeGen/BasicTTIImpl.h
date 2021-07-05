@@ -825,6 +825,7 @@ public:
     case TTI::SK_Transpose:
     case TTI::SK_InsertSubvector:
     case TTI::SK_ExtractSubvector:
+    case TTI::SK_Splice:
       break;
     }
     return Kind;
@@ -838,6 +839,7 @@ public:
     case TTI::SK_Broadcast:
       return getBroadcastShuffleOverhead(cast<FixedVectorType>(Tp));
     case TTI::SK_Select:
+    case TTI::SK_Splice:
     case TTI::SK_Reverse:
     case TTI::SK_Transpose:
     case TTI::SK_PermuteSingleSrc:
@@ -1370,6 +1372,12 @@ public:
       return thisT()->getShuffleCost(TTI::SK_Reverse,
                                      cast<VectorType>(Args[0]->getType()), None,
                                      0, cast<VectorType>(RetTy));
+    }
+    case Intrinsic::experimental_vector_splice: {
+      unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
+      return thisT()->getShuffleCost(TTI::SK_Splice,
+                                     cast<VectorType>(Args[0]->getType()), None,
+                                     Index, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
