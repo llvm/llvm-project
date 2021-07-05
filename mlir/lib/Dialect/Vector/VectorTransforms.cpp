@@ -2330,7 +2330,7 @@ static Value createInBoundsCond(OpBuilder &b,
     Value sum =
         makeComposedAffineApply(b, loc, d0 + vs, xferOp.indices()[indicesIdx]);
     Value cond = createFoldedSLE(
-        b, sum, createOrFoldDimOp(b, loc, xferOp.source(), indicesIdx));
+        b, sum, vector::createOrFoldDimOp(b, loc, xferOp.source(), indicesIdx));
     if (!cond)
       return;
     // Conjunction over all dims for which we are in-bounds.
@@ -2415,8 +2415,8 @@ static Value createSubViewIntersection(OpBuilder &b,
   auto isaWrite = isa<vector::TransferWriteOp>(xferOp);
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    Value dimMemRef =
-        createOrFoldDimOp(b, xferOp.getLoc(), xferOp.source(), indicesIdx);
+    Value dimMemRef = vector::createOrFoldDimOp(b, xferOp.getLoc(),
+                                                xferOp.source(), indicesIdx);
     Value dimAlloc = lb.create<memref::DimOp>(alloc, resultIdx);
     Value index = xferOp.indices()[indicesIdx];
     AffineExpr i, j, k;
@@ -3954,7 +3954,8 @@ public:
     unsigned vecWidth = vtp.getNumElements();
     unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
     Value off = xferOp.indices()[lastIndex];
-    Value dim = createOrFoldDimOp(rewriter, loc, xferOp.source(), lastIndex);
+    Value dim =
+        vector::createOrFoldDimOp(rewriter, loc, xferOp.source(), lastIndex);
     Value mask = buildVectorComparison(
         rewriter, xferOp, enableIndexOptimizations, vecWidth, dim, &off);
 

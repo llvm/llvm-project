@@ -44,19 +44,19 @@ void OptReductionPass::runOnOperation() {
 
   PassManager passManager(module.getContext());
   if (failed(parsePassPipeline(optPass, passManager))) {
-    LLVM_DEBUG(llvm::dbgs() << "\nFailed to parse pass pipeline");
-    return;
+    module.emitError() << "\nfailed to parse pass pipeline";
+    return signalPassFailure();
   }
 
   std::pair<Tester::Interestingness, int> original = test.isInteresting(module);
   if (original.first != Tester::Interestingness::True) {
-    LLVM_DEBUG(llvm::dbgs() << "\nThe original input is not interested");
-    return;
+    module.emitError() << "\nthe original input is not interested";
+    return signalPassFailure();
   }
 
   if (failed(passManager.run(moduleVariant))) {
-    LLVM_DEBUG(llvm::dbgs() << "\nFailed to run pass pipeline");
-    return;
+    module.emitError() << "\nfailed to run pass pipeline";
+    return signalPassFailure();
   }
 
   std::pair<Tester::Interestingness, int> reduced =

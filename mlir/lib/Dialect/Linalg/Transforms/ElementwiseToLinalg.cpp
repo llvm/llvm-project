@@ -66,7 +66,7 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
     Value firstOperand = operands.front();
     auto rankedTensorType = t.cast<RankedTensorType>();
     auto staticShape = llvm::to_vector<4>(rankedTensorType.getShape());
-    auto dynamicShape = getDynOperands(loc, firstOperand, b);
+    auto dynamicShape = linalg::getDynOperands(loc, firstOperand, b);
 
     res.push_back(b.create<linalg::InitTensorOp>(
         loc, dynamicShape, staticShape, rankedTensorType.getElementType()));
