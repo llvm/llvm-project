@@ -32,6 +32,14 @@ public:
     TypeHintPolicy.SuppressScope = true; // keep type names short
     TypeHintPolicy.AnonymousTagLocations =
         false; // do not print lambda locations
+    // Print canonical types. Otherwise, SuppressScope would result in
+    // things like "metafunction<args>::type" being shorted to just "type",
+    // which is useless. This is particularly important for structured
+    // bindings that use the tuple_element protocol, where the non-canonical
+    // types would be "tuple_element<I, A>::type".
+    // Note, for "auto", we would often prefer sugared types, but the AST
+    // doesn't currently retain them in DeducedType anyways.
+    TypeHintPolicy.PrintCanonicalTypes = true;
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
@@ -76,9 +84,8 @@ public:
     if (auto *AT = D->getReturnType()->getContainedAutoType()) {
       QualType Deduced = AT->getDeducedType();
       if (!Deduced.isNull()) {
-        addInlayHint(D->getFunctionTypeLoc().getRParenLoc(),
-                     InlayHintKind::TypeHint,
-                     "-> " + D->getReturnType().getAsString(TypeHintPolicy));
+        addTypeHint(D->getFunctionTypeLoc().getRParenLoc(), D->getReturnType(),
+                    "-> ");
       }
     }
 
@@ -86,10 +93,14 @@ public:
   }
 
   bool VisitVarDecl(VarDecl *D) {
-    // Do not show hints for the aggregate in a structured binding.
-    // In the future, we may show hints for the individual bindings.
-    if (isa<DecompositionDecl>(D))
+    // Do not show hints for the aggregate in a structured binding,
+    // but show hints for the individual bindings.
+    if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
+      for (auto *Binding : DD->bindings()) {
+        addTypeHint(Binding->getLocation(), Binding->getType(), ": ");
+      }
       return true;
+    }
 
     if (D->getType()->getContainedAutoType()) {
       if (!D->getType()->isDependentType()) {
@@ -98,8 +109,7 @@ public:
         // (e.g. for `const auto& x = 42`, print `const int&`).
         // Alternatively, we could place the hint on the `auto`
         // (and then just print the type deduced for the `auto`).
-        addInlayHint(D->getLocation(), InlayHintKind::TypeHint,
-                     ": " + D->getType().getAsString(TypeHintPolicy));
+        addTypeHint(D->getLocation(), D->getType(), ": ");
       }
     }
     return true;
@@ -309,6 +319,15 @@ private:
             sourceLocToPosition(AST.getSourceManager(), FileRange->getBegin()),
             sourceLocToPosition(AST.getSourceManager(), FileRange->getEnd())},
         Kind, Label.str()});
+  }
+
+  void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
+    // Do not print useless "NULL TYPE" hint.
+    if (!T.getTypePtrOrNull())
+      return;
+
+    addInlayHint(R, InlayHintKind::TypeHint,
+                 std::string(Prefix) + T.getAsString(TypeHintPolicy));
   }
 
   std::vector<InlayHint> &Results;
