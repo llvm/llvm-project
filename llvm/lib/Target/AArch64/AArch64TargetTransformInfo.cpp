@@ -1423,8 +1423,9 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
                                                 const Instruction *I) {
+  EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs
-  if (TLI->getValueType(DL, Ty,  true) == MVT::Other)
+  if (VT == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
 
@@ -1451,23 +1452,14 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     return LT.first * 2 * AmortizationCost;
   }
 
+  // Check truncating stores and extending loads.
   if (useNeonVector(Ty) &&
-      cast<VectorType>(Ty)->getElementType()->isIntegerTy(8)) {
-    unsigned ProfitableNumElements;
-    if (Opcode == Instruction::Store)
-      // We use a custom trunc store lowering so v.4b should be profitable.
-      ProfitableNumElements = 4;
-    else
-      // We scalarize the loads because there is not v.4b register and we
-      // have to promote the elements to v.2.
-      ProfitableNumElements = 8;
-
-    if (cast<FixedVectorType>(Ty)->getNumElements() < ProfitableNumElements) {
-      unsigned NumVecElts = cast<FixedVectorType>(Ty)->getNumElements();
-      unsigned NumVectorizableInstsToAmortize = NumVecElts * 2;
-      // We generate 2 instructions per vector element.
-      return NumVectorizableInstsToAmortize * NumVecElts * 2;
-    }
+      Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
+    // v4i8 types are lowered to scalar a load/store and sshll/xtn.
+    if (VT == MVT::v4i8)
+      return 2;
+    // Otherwise we need to scalarize.
+    return cast<FixedVectorType>(Ty)->getNumElements() * 2;
   }
 
   return LT.first;
