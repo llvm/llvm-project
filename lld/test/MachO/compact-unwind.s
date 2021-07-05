@@ -4,21 +4,21 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 %t/main.s -o %t/x86_64-main.o
 # RUN: %lld -arch x86_64 -pie -lSystem -lc++ %t/x86_64-my-personality.o %t/x86_64-main.o -o %t/x86_64-personality-first
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000
-# RUN: %lld -arch x86_64 -pie -lSystem -lc++ %t/x86_64-main.o %t/x86_64-my-personality.o -o %t/x86_64-personality-second
+# RUN: %lld -dead_strip -arch x86_64 -pie -lSystem -lc++ %t/x86_64-main.o %t/x86_64-my-personality.o -o %t/x86_64-personality-second
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/x86_64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin19.0.0 %t/my-personality.s -o %t/arm64-my-personality.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin19.0.0 %t/main.s -o %t/arm64-main.o
 # RUN: %lld -arch arm64 -pie -lSystem -lc++ %t/arm64-my-personality.o %t/arm64-main.o -o %t/arm64-personality-first
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x100000000
-# RUN: %lld -arch arm64 -pie -lSystem -lc++ %t/arm64-main.o %t/arm64-my-personality.o -o %t/arm64-personality-second
+# RUN: %lld -dead_strip -arch arm64 -pie -lSystem -lc++ %t/arm64-main.o %t/arm64-my-personality.o -o %t/arm64-personality-second
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x100000000
 
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/my-personality.s -o %t/arm64-32-my-personality.o
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/main.s -o %t/arm64-32-main.o
 # RUN: %lld-watchos -pie -lSystem -lc++ %t/arm64-32-my-personality.o %t/arm64-32-main.o -o %t/arm64-32-personality-first
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-32-personality-first | FileCheck %s --check-prefixes=FIRST,CHECK -D#%x,BASE=0x4000
-# RUN: %lld-watchos -pie -lSystem -lc++ %t/arm64-32-main.o %t/arm64-32-my-personality.o -o %t/arm64-32-personality-second
+# RUN: %lld-watchos -dead_strip -pie -lSystem -lc++ %t/arm64-32-main.o %t/arm64-32-my-personality.o -o %t/arm64-32-personality-second
 # RUN: llvm-objdump --macho --unwind-info --syms --indirect-symbols --rebase %t/arm64-32-personality-second | FileCheck %s --check-prefixes=SECOND,CHECK -D#%x,BASE=0x4000
 
 # FIRST:      Indirect symbols for (__DATA_CONST,__got)
@@ -43,10 +43,14 @@
 # CHECK:        Personality functions: (count = 2)
 # CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#MY_PERSONALITY-BASE]]
 # CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#GXX_PERSONALITY-BASE]]
+# CHECK:      Top level indices: (count = 2)
+# CHECK-DAG:    [0]: function offset={{.*}}, 2nd level page offset=0x[[#%x,PAGEOFF:]],
+# CHECK-DAG:    [1]: function offset={{.*}}, 2nd level page offset=0x00000000,
 # CHECK:        LSDA descriptors:
 # CHECK-DAG:     function offset=0x[[#%.8x,FOO-BASE]],  LSDA offset=0x[[#%.8x,EXCEPTION0-BASE]]
 # CHECK-DAG:     function offset=0x[[#%.8x,MAIN-BASE]], LSDA offset=0x[[#%.8x,EXCEPTION1-BASE]]
 # CHECK:        Second level indices:
+# CHECK-NEXT:   Second level index[0]: offset in section=0x[[#%.8x,PAGEOFF]]
 # CHECK-DAG:     function offset=0x[[#%.8x,MAIN-BASE]], encoding
 # CHECK-DAG:     function offset=0x[[#%.8x,FOO-BASE]], encoding
 # CHECK-DAG:     function offset=0x[[#%.8x,BAZ-BASE]], encoding
@@ -107,13 +111,16 @@ _main:
 ## -fno-exceptions, while the previous and next TU might be Objective-C++
 ## which has unwind info for Objective-C).
 .p2align 2
+.no_dead_strip _quux
 _quux:
   ret
 
 .globl _abs
+.no_dead_strip _abs
 _abs = 4
 
 .p2align 2
+.no_dead_strip _baz
 _baz:
   .cfi_startproc
 ## This will generate a symbol relocation. Check that we reuse the personality
@@ -124,7 +131,18 @@ _baz:
   ret
   .cfi_endproc
 
+.globl _stripped
+_stripped:
+  .cfi_startproc
+  .cfi_personality 155, ___gxx_personality_v0
+  .cfi_lsda 16, _exception1
+  .cfi_def_cfa_offset 16
+  ret
+  .cfi_endproc
+
 
 .section __TEXT,__gcc_except_tab
 _exception1:
   .space 1
+
+.subsections_via_symbols

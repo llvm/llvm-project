@@ -5934,7 +5934,7 @@ static __isl_give isl_pw_multi_aff *split_domain_pma(
 			pma = isl_pw_multi_aff_free(pma);
 		} else if (subs) {
 			pma = isl_pw_multi_aff_substitute(pma,
-					isl_dim_in, n_in - 1, min_expr_pa);
+					n_in - 1, min_expr_pa);
 		} else {
 			isl_bool split;
 			split = need_split_set(opt->p[i].set, cst);

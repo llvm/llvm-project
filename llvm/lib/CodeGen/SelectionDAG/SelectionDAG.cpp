@@ -1397,7 +1397,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
       SmallVector<SDValue, 2> ScalarParts;
       for (unsigned i = 0; i != Parts; ++i)
         ScalarParts.push_back(getConstant(
-            NewVal.lshr(i * ViaEltSizeInBits).trunc(ViaEltSizeInBits), DL,
+            NewVal.extractBits(ViaEltSizeInBits, i * ViaEltSizeInBits), DL,
             ViaEltVT, isT, isO));
 
       return getNode(ISD::SPLAT_VECTOR_PARTS, DL, VT, ScalarParts);
@@ -1412,11 +1412,10 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
     assert(ViaVecVT.getSizeInBits() == VT.getSizeInBits());
 
     SmallVector<SDValue, 2> EltParts;
-    for (unsigned i = 0; i < ViaVecNumElts / VT.getVectorNumElements(); ++i) {
+    for (unsigned i = 0; i < ViaVecNumElts / VT.getVectorNumElements(); ++i)
       EltParts.push_back(getConstant(
-          NewVal.lshr(i * ViaEltSizeInBits).zextOrTrunc(ViaEltSizeInBits), DL,
+          NewVal.extractBits(ViaEltSizeInBits, i * ViaEltSizeInBits), DL,
           ViaEltVT, isT, isO));
-    }
 
     // EltParts is currently in little endian order. If we actually want
     // big-endian order then reverse it now.
@@ -1770,7 +1769,7 @@ static void commuteShuffle(SDValue &N1, SDValue &N2, MutableArrayRef<int> M) {
 SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
                                        SDValue N2, ArrayRef<int> Mask) {
   assert(VT.getVectorNumElements() == Mask.size() &&
-           "Must have the same number of vector elements as mask elements!");
+         "Must have the same number of vector elements as mask elements!");
   assert(VT == N1.getValueType() && VT == N2.getValueType() &&
          "Invalid VECTOR_SHUFFLE");
 
@@ -2858,8 +2857,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     unsigned NumSubVectorElts = SubVectorVT.getVectorNumElements();
     unsigned NumSubVectors = Op.getNumOperands();
     for (unsigned i = 0; i != NumSubVectors; ++i) {
-      APInt DemandedSub = DemandedElts.lshr(i * NumSubVectorElts);
-      DemandedSub = DemandedSub.trunc(NumSubVectorElts);
+      APInt DemandedSub =
+          DemandedElts.extractBits(NumSubVectorElts, i * NumSubVectorElts);
       if (!!DemandedSub) {
         SDValue Sub = Op.getOperand(i);
         Known2 = computeKnownBits(Sub, DemandedSub, Depth + 1);
@@ -2955,8 +2954,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         Known2 = computeKnownBits(N0, SubDemandedElts.shl(i),
                          Depth + 1);
         unsigned Shifts = IsLE ? i : SubScale - 1 - i;
-        Known.One.insertBits(Known2.One, SubBitWidth * Shifts);
-        Known.Zero.insertBits(Known2.Zero, SubBitWidth * Shifts);
+        Known.insertBits(Known2, SubBitWidth * Shifts);
       }
     }
 
@@ -2980,8 +2978,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         if (DemandedElts[i]) {
           unsigned Shifts = IsLE ? i : NumElts - 1 - i;
           unsigned Offset = (Shifts % SubScale) * BitWidth;
-          Known.One &= Known2.One.lshr(Offset).trunc(BitWidth);
-          Known.Zero &= Known2.Zero.lshr(Offset).trunc(BitWidth);
+          Known = KnownBits::commonBits(Known,
+                                        Known2.extractBits(BitWidth, Offset));
           // If we don't know any bits, early out.
           if (Known.isUnknown())
             break;
@@ -4110,8 +4108,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     unsigned NumSubVectorElts = SubVectorVT.getVectorNumElements();
     unsigned NumSubVectors = Op.getNumOperands();
     for (unsigned i = 0; (i < NumSubVectors) && (Tmp > 1); ++i) {
-      APInt DemandedSub = DemandedElts.lshr(i * NumSubVectorElts);
-      DemandedSub = DemandedSub.trunc(NumSubVectorElts);
+      APInt DemandedSub =
+          DemandedElts.extractBits(NumSubVectorElts, i * NumSubVectorElts);
       if (!DemandedSub)
         continue;
       Tmp2 = ComputeNumSignBits(Op.getOperand(i), DemandedSub, Depth + 1);
@@ -5695,6 +5693,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       const APInt &Val = N1C->getAPIntValue();
       return SignExtendInReg(Val, VT);
     }
+
     if (ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
       SmallVector<SDValue, 8> Ops;
       llvm::EVT OpVT = N1.getOperand(0).getValueType();
@@ -5832,7 +5831,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getConstant(Val.extractBits(ElementSize, Shift), DL, VT);
     }
     break;
-  case ISD::EXTRACT_SUBVECTOR:
+  case ISD::EXTRACT_SUBVECTOR: {
     EVT N1VT = N1.getValueType();
     assert(VT.isVector() && N1VT.isVector() &&
            "Extract subvector VTs must be vectors!");
@@ -5874,6 +5873,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         VT == N1.getOperand(1).getValueType())
       return N1.getOperand(1);
     break;
+  }
   }
 
   // Perform trivial constant folding.
@@ -7644,7 +7644,7 @@ SDValue SelectionDAG::getIndexedMaskedStore(SDValue OrigStore, const SDLoc &dl,
                         AM, ST->isTruncatingStore(), ST->isCompressingStore());
 }
 
-SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
+SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT MemVT, const SDLoc &dl,
                                       ArrayRef<SDValue> Ops,
                                       MachineMemOperand *MMO,
                                       ISD::MemIndexType IndexType,
@@ -7653,9 +7653,9 @@ SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
 
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MGATHER, VTs, Ops);
-  ID.AddInteger(VT.getRawBits());
+  ID.AddInteger(MemVT.getRawBits());
   ID.AddInteger(getSyntheticNodeSubclassData<MaskedGatherSDNode>(
-      dl.getIROrder(), VTs, VT, MMO, IndexType, ExtTy));
+      dl.getIROrder(), VTs, MemVT, MMO, IndexType, ExtTy));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -7663,9 +7663,9 @@ SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
     return SDValue(E, 0);
   }
 
-  IndexType = TLI->getCanonicalIndexType(IndexType, VT, Ops[4]);
+  IndexType = TLI->getCanonicalIndexType(IndexType, MemVT, Ops[4]);
   auto *N = newSDNode<MaskedGatherSDNode>(dl.getIROrder(), dl.getDebugLoc(),
-                                          VTs, VT, MMO, IndexType, ExtTy);
+                                          VTs, MemVT, MMO, IndexType, ExtTy);
   createOperands(N, Ops);
 
   assert(N->getPassThru().getValueType() == N->getValueType(0) &&
@@ -7691,7 +7691,7 @@ SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
   return V;
 }
 
-SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
+SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT MemVT, const SDLoc &dl,
                                        ArrayRef<SDValue> Ops,
                                        MachineMemOperand *MMO,
                                        ISD::MemIndexType IndexType,
@@ -7700,9 +7700,9 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
 
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MSCATTER, VTs, Ops);
-  ID.AddInteger(VT.getRawBits());
+  ID.AddInteger(MemVT.getRawBits());
   ID.AddInteger(getSyntheticNodeSubclassData<MaskedScatterSDNode>(
-      dl.getIROrder(), VTs, VT, MMO, IndexType, IsTrunc));
+      dl.getIROrder(), VTs, MemVT, MMO, IndexType, IsTrunc));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
@@ -7710,9 +7710,9 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
     return SDValue(E, 0);
   }
 
-  IndexType = TLI->getCanonicalIndexType(IndexType, VT, Ops[4]);
+  IndexType = TLI->getCanonicalIndexType(IndexType, MemVT, Ops[4]);
   auto *N = newSDNode<MaskedScatterSDNode>(dl.getIROrder(), dl.getDebugLoc(),
-                                           VTs, VT, MMO, IndexType, IsTrunc);
+                                           VTs, MemVT, MMO, IndexType, IsTrunc);
   createOperands(N, Ops);
 
   assert(N->getMask().getValueType().getVectorElementCount() ==
@@ -10264,10 +10264,10 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
   // FIXME: This does not work for vectors with elements less than 8 bits.
   while (VecWidth > 8) {
     unsigned HalfSize = VecWidth / 2;
-    APInt HighValue = SplatValue.lshr(HalfSize).trunc(HalfSize);
-    APInt LowValue = SplatValue.trunc(HalfSize);
-    APInt HighUndef = SplatUndef.lshr(HalfSize).trunc(HalfSize);
-    APInt LowUndef = SplatUndef.trunc(HalfSize);
+    APInt HighValue = SplatValue.extractBits(HalfSize, HalfSize);
+    APInt LowValue = SplatValue.extractBits(HalfSize, 0);
+    APInt HighUndef = SplatUndef.extractBits(HalfSize, HalfSize);
+    APInt LowUndef = SplatUndef.extractBits(HalfSize, 0);
 
     // If the two halves do not match (ignoring undef bits), stop here.
     if ((HighValue & ~LowUndef) != (LowValue & ~HighUndef) ||

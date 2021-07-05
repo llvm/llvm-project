@@ -14,6 +14,8 @@ isl_size isl_union_set_dim(__isl_keep isl_union_set *uset,
 __isl_constructor
 __isl_give isl_union_set *isl_union_set_from_basic_set(
 	__isl_take isl_basic_set *bset);
+__isl_export
+__isl_give isl_union_set *isl_set_to_union_set(__isl_take isl_set *set);
 __isl_constructor
 __isl_give isl_union_set *isl_union_set_from_set(__isl_take isl_set *set);
 __isl_overload
@@ -142,6 +144,8 @@ __isl_give isl_set *isl_union_set_extract_set(__isl_keep isl_union_set *uset,
 	__isl_take isl_space *space);
 __isl_export
 isl_bool isl_union_set_isa_set(__isl_keep isl_union_set *uset);
+__isl_export
+__isl_give isl_set *isl_union_set_as_set(__isl_take isl_union_set *uset);
 __isl_give isl_set *isl_set_from_union_set(__isl_take isl_union_set *uset);
 __isl_export
 isl_stat isl_union_set_foreach_point(__isl_keep isl_union_set *uset,
@@ -182,6 +186,7 @@ __isl_give isl_printer *isl_printer_print_union_set(__isl_take isl_printer *p,
 void isl_union_set_dump(__isl_keep isl_union_set *uset);
 
 ISL_DECLARE_EXPORTED_LIST_FN(union_set)
+ISL_DECLARE_EXPORTED_LIST_FN_READ(union_set)
 
 __isl_give isl_union_set *isl_union_set_list_union(
 	__isl_take isl_union_set_list *list);

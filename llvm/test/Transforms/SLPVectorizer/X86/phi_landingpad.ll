@@ -12,12 +12,12 @@ define void @test_phi_in_landingpad() personality i8*
 ; CHECK-NEXT:    invoke void @foo()
 ; CHECK-NEXT:    to label [[DONE:%.*]] unwind label [[LPAD]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ poison, [[ENTRY:%.*]] ], [ poison, [[INNER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ undef, [[ENTRY:%.*]] ], [ undef, [[INNER]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    catch i8* null
 ; CHECK-NEXT:    br label [[DONE]]
 ; CHECK:       done:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ poison, [[INNER]] ], [ [[TMP0]], [[LPAD]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ undef, [[INNER]] ], [ [[TMP0]], [[LPAD]] ]
 ; CHECK-NEXT:    ret void
 ;
   bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

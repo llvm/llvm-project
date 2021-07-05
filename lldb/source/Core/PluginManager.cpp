@@ -38,7 +38,7 @@ typedef bool (*PluginInitCallback)();
 typedef void (*PluginTermCallback)();
 
 struct PluginInfo {
-  PluginInfo() {}
+  PluginInfo() = default;
 
   llvm::sys::DynamicLibrary library;
   PluginInitCallback plugin_init_callback = nullptr;

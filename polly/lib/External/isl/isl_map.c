@@ -112,9 +112,30 @@ isl_size isl_map_dim(__isl_keep isl_map *map, enum isl_dim_type type)
 	return isl_space_dim(isl_map_peek_space(map), type);
 }
 
+/* Return the dimensionality of the domain (tuple) of the map.
+ */
+isl_size isl_map_domain_tuple_dim(__isl_keep isl_map *map)
+{
+	return isl_map_dim(map, isl_dim_in);
+}
+
+/* Return the dimensionality of the range (tuple) of the map.
+ */
+isl_size isl_map_range_tuple_dim(__isl_keep isl_map *map)
+{
+	return isl_map_dim(map, isl_dim_out);
+}
+
 isl_size isl_set_dim(__isl_keep isl_set *set, enum isl_dim_type type)
 {
 	return isl_map_dim(set_to_map(set), type);
+}
+
+/* Return the dimensionality of the (tuple of the) set.
+ */
+isl_size isl_set_tuple_dim(__isl_keep isl_set *set)
+{
+	return isl_set_dim(set, isl_dim_set);
 }
 
 /* Return the position of the variables of the given type
@@ -742,6 +763,22 @@ __isl_give isl_map *isl_map_set_tuple_id(__isl_take isl_map *map,
 	return isl_map_reset_space(map, isl_map_get_space(map));
 }
 
+/* Replace the identifier of the domain tuple of "map" by "id".
+ */
+__isl_give isl_map *isl_map_set_domain_tuple_id(__isl_take isl_map *map,
+	__isl_take isl_id *id)
+{
+	return isl_map_set_tuple_id(map, isl_dim_in, id);
+}
+
+/* Replace the identifier of the range tuple of "map" by "id".
+ */
+__isl_give isl_map *isl_map_set_range_tuple_id(__isl_take isl_map *map,
+	__isl_take isl_id *id)
+{
+	return isl_map_set_tuple_id(map, isl_dim_out, id);
+}
+
 __isl_give isl_set *isl_set_set_tuple_id(__isl_take isl_set *set,
 	__isl_take isl_id *id)
 {
@@ -770,10 +807,38 @@ isl_bool isl_map_has_tuple_id(__isl_keep isl_map *map, enum isl_dim_type type)
 	return map ? isl_space_has_tuple_id(map->dim, type) : isl_bool_error;
 }
 
+/* Does the domain tuple of "map" have an identifier?
+ */
+isl_bool isl_map_has_domain_tuple_id(__isl_keep isl_map *map)
+{
+	return isl_map_has_tuple_id(map, isl_dim_in);
+}
+
+/* Does the range tuple of "map" have an identifier?
+ */
+isl_bool isl_map_has_range_tuple_id(__isl_keep isl_map *map)
+{
+	return isl_map_has_tuple_id(map, isl_dim_out);
+}
+
 __isl_give isl_id *isl_map_get_tuple_id(__isl_keep isl_map *map,
 	enum isl_dim_type type)
 {
 	return map ? isl_space_get_tuple_id(map->dim, type) : NULL;
+}
+
+/* Return the identifier of the domain tuple of "map", assuming it has one.
+ */
+__isl_give isl_id *isl_map_get_domain_tuple_id(__isl_keep isl_map *map)
+{
+	return isl_map_get_tuple_id(map, isl_dim_in);
+}
+
+/* Return the identifier of the range tuple of "map", assuming it has one.
+ */
+__isl_give isl_id *isl_map_get_range_tuple_id(__isl_keep isl_map *map)
+{
+	return isl_map_get_tuple_id(map, isl_dim_out);
 }
 
 isl_bool isl_set_has_tuple_id(__isl_keep isl_set *set)
@@ -2103,19 +2168,22 @@ error:
  * Since the basic map has conflicting constraints,
  * it must have at least one constraint, except perhaps
  * if it was already explicitly marked as being empty.
- * Do nothing in the latter case.
+ * Do nothing in the latter case, i.e., if it has been marked empty and
+ * has no constraints.
  */
 __isl_give isl_basic_map *isl_basic_map_set_to_empty(
 	__isl_take isl_basic_map *bmap)
 {
 	int i = 0;
 	isl_bool empty;
+	isl_size n;
 	isl_size total;
 
+	n = isl_basic_map_n_constraint(bmap);
 	empty = isl_basic_map_plain_is_empty(bmap);
-	if (empty < 0)
+	if (n < 0 || empty < 0)
 		return isl_basic_map_free(bmap);
-	if (empty)
+	if (n == 0 && empty)
 		return bmap;
 	total = isl_basic_map_dim(bmap, isl_dim_all);
 	if (total < 0)
@@ -3423,6 +3491,14 @@ __isl_give isl_set *isl_set_from_basic_set(__isl_take isl_basic_set *bset)
 	return isl_map_from_basic_map(bset);
 }
 
+/* This function performs the same operation as isl_set_from_basic_set,
+ * but is considered as a function on an isl_basic_set when exported.
+ */
+__isl_give isl_set *isl_basic_set_to_set(__isl_take isl_basic_set *bset)
+{
+	return isl_set_from_basic_set(bset);
+}
+
 __isl_give isl_map *isl_map_from_basic_map(__isl_take isl_basic_map *bmap)
 {
 	struct isl_map *map;
@@ -3711,6 +3787,41 @@ __isl_give isl_basic_set *isl_basic_set_intersect_params(
 	return isl_basic_set_intersect(bset1, bset2);
 }
 
+/* Does "map" consist of a single disjunct, without any local variables?
+ */
+static isl_bool is_convex_no_locals(__isl_keep isl_map *map)
+{
+	isl_size n_div;
+
+	if (!map)
+		return isl_bool_error;
+	if (map->n != 1)
+		return isl_bool_false;
+	n_div = isl_basic_map_dim(map->p[0], isl_dim_div);
+	if (n_div < 0)
+		return isl_bool_error;
+	if (n_div != 0)
+		return isl_bool_false;
+	return isl_bool_true;
+}
+
+/* Check that "map" consists of a single disjunct, without any local variables.
+ */
+static isl_stat check_convex_no_locals(__isl_keep isl_map *map)
+{
+	isl_bool ok;
+
+	ok = is_convex_no_locals(map);
+	if (ok < 0)
+		return isl_stat_error;
+	if (ok)
+		return isl_stat_ok;
+
+	isl_die(isl_map_get_ctx(map), isl_error_internal,
+		"unexpectedly not convex or involving local variables",
+		return isl_stat_error);
+}
+
 /* Special case of isl_map_intersect, where both map1 and map2
  * are convex, without any divs and such that either map1 or map2
  * contains a single constraint.  This constraint is then simply
@@ -3719,10 +3830,9 @@ __isl_give isl_basic_set *isl_basic_set_intersect_params(
 static __isl_give isl_map *map_intersect_add_constraint(
 	__isl_take isl_map *map1, __isl_take isl_map *map2)
 {
-	isl_assert(map1->ctx, map1->n == 1, goto error);
-	isl_assert(map2->ctx, map1->n == 1, goto error);
-	isl_assert(map1->ctx, map1->p[0]->n_div == 0, goto error);
-	isl_assert(map2->ctx, map1->p[0]->n_div == 0, goto error);
+	if (check_convex_no_locals(map1) < 0 ||
+	    check_convex_no_locals(map2) < 0)
+		goto error;
 
 	if (map2->p[0]->n_eq + map2->p[0]->n_ineq != 1)
 		return isl_map_intersect(map2, map1);
@@ -3788,8 +3898,8 @@ static __isl_give isl_map *map_intersect_internal(__isl_take isl_map *map1,
 		return map2;
 	}
 
-	if (map1->n == 1 && map2->n == 1 &&
-	    map1->p[0]->n_div == 0 && map2->p[0]->n_div == 0 &&
+	if (is_convex_no_locals(map1) == isl_bool_true &&
+	    is_convex_no_locals(map2) == isl_bool_true &&
 	    isl_space_is_equal(map1->dim, map2->dim) &&
 	    (map1->p[0]->n_eq + map1->p[0]->n_ineq == 1 ||
 	     map2->p[0]->n_eq + map2->p[0]->n_ineq == 1))
@@ -6277,6 +6387,14 @@ __isl_give isl_map *isl_map_universe(__isl_take isl_space *space)
 	return map;
 }
 
+/* This function performs the same operation as isl_map_universe,
+ * but is considered as a function on an isl_space when exported.
+ */
+__isl_give isl_map *isl_space_universe_map(__isl_take isl_space *space)
+{
+	return isl_map_universe(space);
+}
+
 __isl_give isl_set *isl_set_universe(__isl_take isl_space *space)
 {
 	struct isl_set *set;
@@ -6285,6 +6403,14 @@ __isl_give isl_set *isl_set_universe(__isl_take isl_space *space)
 	set = isl_set_alloc_space(isl_space_copy(space), 1, ISL_MAP_DISJOINT);
 	set = isl_set_add_basic_set(set, isl_basic_set_universe(space));
 	return set;
+}
+
+/* This function performs the same operation as isl_set_universe,
+ * but is considered as a function on an isl_space when exported.
+ */
+__isl_give isl_set *isl_space_universe_set(__isl_take isl_space *space)
+{
+	return isl_set_universe(space);
 }
 
 __isl_give isl_map *isl_map_dup(__isl_keep isl_map *map)
@@ -13399,129 +13525,19 @@ __isl_give isl_aff *isl_basic_set_get_div(__isl_keep isl_basic_set *bset,
 	return isl_basic_map_get_div(bset, pos);
 }
 
-/* Plug in "subs" for dimension "type", "pos" of "bset".
- *
- * Let i be the dimension to replace and let "subs" be of the form
- *
- *	f/d
- *
- * Any integer division with a non-zero coefficient for i,
- *
- *	floor((a i + g)/m)
- *
- * is replaced by
- *
- *	floor((a f + d g)/(m d))
- *
- * Constraints of the form
- *
- *	a i + g
- *
- * are replaced by
- *
- *	a f + d g
- *
- * We currently require that "subs" is an integral expression.
- * Handling rational expressions may require us to add stride constraints
- * as we do in isl_basic_set_preimage_multi_aff.
- */
-__isl_give isl_basic_set *isl_basic_set_substitute(
-	__isl_take isl_basic_set *bset,
-	enum isl_dim_type type, unsigned pos, __isl_keep isl_aff *subs)
-{
-	int i;
-	isl_int v;
-	isl_ctx *ctx;
-	isl_size n_div;
-
-	if (bset && isl_basic_set_plain_is_empty(bset))
-		return bset;
-
-	bset = isl_basic_set_cow(bset);
-	if (!bset || !subs)
-		goto error;
-
-	ctx = isl_basic_set_get_ctx(bset);
-	if (!isl_space_is_equal(bset->dim, subs->ls->dim))
-		isl_die(ctx, isl_error_invalid,
-			"spaces don't match", goto error);
-	n_div = isl_local_space_dim(subs->ls, isl_dim_div);
-	if (n_div < 0)
-		goto error;
-	if (n_div != 0)
-		isl_die(ctx, isl_error_unsupported,
-			"cannot handle divs yet", goto error);
-	if (!isl_int_is_one(subs->v->el[0]))
-		isl_die(ctx, isl_error_invalid,
-			"can only substitute integer expressions", goto error);
-
-	pos += isl_basic_set_offset(bset, type);
-
-	isl_int_init(v);
-
-	for (i = 0; i < bset->n_eq; ++i) {
-		if (isl_int_is_zero(bset->eq[i][pos]))
-			continue;
-		isl_int_set(v, bset->eq[i][pos]);
-		isl_int_set_si(bset->eq[i][pos], 0);
-		isl_seq_combine(bset->eq[i], subs->v->el[0], bset->eq[i],
-				v, subs->v->el + 1, subs->v->size - 1);
-	}
-
-	for (i = 0; i < bset->n_ineq; ++i) {
-		if (isl_int_is_zero(bset->ineq[i][pos]))
-			continue;
-		isl_int_set(v, bset->ineq[i][pos]);
-		isl_int_set_si(bset->ineq[i][pos], 0);
-		isl_seq_combine(bset->ineq[i], subs->v->el[0], bset->ineq[i],
-				v, subs->v->el + 1, subs->v->size - 1);
-	}
-
-	for (i = 0; i < bset->n_div; ++i) {
-		if (isl_int_is_zero(bset->div[i][1 + pos]))
-			continue;
-		isl_int_set(v, bset->div[i][1 + pos]);
-		isl_int_set_si(bset->div[i][1 + pos], 0);
-		isl_seq_combine(bset->div[i] + 1,
-				subs->v->el[0], bset->div[i] + 1,
-				v, subs->v->el + 1, subs->v->size - 1);
-		isl_int_mul(bset->div[i][0], bset->div[i][0], subs->v->el[0]);
-	}
-
-	isl_int_clear(v);
-
-	bset = isl_basic_set_simplify(bset);
-	return isl_basic_set_finalize(bset);
-error:
-	isl_basic_set_free(bset);
-	return NULL;
-}
-
-/* Plug in "subs" for dimension "type", "pos" of "set".
+/* Plug in "subs" for set dimension "pos" of "set".
  */
 __isl_give isl_set *isl_set_substitute(__isl_take isl_set *set,
-	enum isl_dim_type type, unsigned pos, __isl_keep isl_aff *subs)
+	unsigned pos, __isl_keep isl_aff *subs)
 {
-	int i;
+	isl_multi_aff *ma;
 
 	if (set && isl_set_plain_is_empty(set))
 		return set;
 
-	set = isl_set_cow(set);
-	if (!set || !subs)
-		goto error;
-
-	for (i = set->n - 1; i >= 0; --i) {
-		set->p[i] = isl_basic_set_substitute(set->p[i], type, pos, subs);
-		set = set_from_map(remove_if_empty(set_to_map(set), i));
-		if (!set)
-			return NULL;
-	}
-
-	return set;
-error:
-	isl_set_free(set);
-	return NULL;
+	ma = isl_multi_aff_identity_on_domain_space(isl_set_get_space(set));
+	ma = isl_multi_aff_set_aff(ma, pos, isl_aff_copy(subs));
+	return isl_set_preimage_multi_aff(set, ma);
 }
 
 /* Check if the range of "ma" is compatible with the domain or range

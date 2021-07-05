@@ -239,7 +239,7 @@ define i32 @fptosi_float_i32(i32 %arg) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = fptosi <2 x float> undef to <2 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = fptosi <4 x float> undef to <4 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = fptosi <8 x float> undef to <8 x i32>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I32 = fptosi <16 x float> undef to <16 x i32>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = fptosi <16 x float> undef to <16 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'fptosi_float_i32'

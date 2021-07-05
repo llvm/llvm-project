@@ -123,6 +123,10 @@ file formats.
  Display the specified section(s) as a list of strings. ``section`` may be a
  section index or section name.
 
+.. option:: --string-table
+ 
+ Display contents of the string table.
+
 .. option:: --symbols, --syms, -s
 
  Display the symbol table.

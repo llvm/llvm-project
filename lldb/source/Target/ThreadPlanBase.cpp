@@ -43,7 +43,7 @@ ThreadPlanBase::ThreadPlanBase(Thread &thread)
   SetIsMasterPlan(true);
 }
 
-ThreadPlanBase::~ThreadPlanBase() {}
+ThreadPlanBase::~ThreadPlanBase() = default;
 
 void ThreadPlanBase::GetDescription(Stream *s, lldb::DescriptionLevel level) {
   s->Printf("Base thread plan.");

@@ -15,6 +15,7 @@
 
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/InlineModelFeatureMaps.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include <cassert>
 #include <climits>
@@ -264,6 +265,15 @@ Optional<InlineResult> getAttributeBasedInliningDecision(
 /// - None, if the inlining cannot happen (is illegal)
 /// - an integer, representing the cost.
 Optional<int> getInliningCostEstimate(
+    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
+    function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
+    ProfileSummaryInfo *PSI = nullptr,
+    OptimizationRemarkEmitter *ORE = nullptr);
+
+/// Get the expanded cost features. The features are returned unconditionally,
+/// even if inlining is impossible.
+Optional<InlineCostFeatures> getInliningCostFeatures(
     CallBase &Call, TargetTransformInfo &CalleeTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,

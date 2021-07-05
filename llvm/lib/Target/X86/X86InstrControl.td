@@ -206,7 +206,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 }
 
 // Loop instructions
-let SchedRW = [WriteJump] in {
+let isBranch = 1, isTerminator = 1, SchedRW = [WriteJump] in {
 def LOOP   : Ii8PCRel<0xE2, RawFrm, (outs), (ins brtarget8:$dst), "loop\t$dst", []>;
 def LOOPE  : Ii8PCRel<0xE1, RawFrm, (outs), (ins brtarget8:$dst), "loope\t$dst", []>;
 def LOOPNE : Ii8PCRel<0xE0, RawFrm, (outs), (ins brtarget8:$dst), "loopne\t$dst", []>;

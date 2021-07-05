@@ -66,6 +66,7 @@ set(MLIR_TEST_DEPENDS
   FileCheck count not
   mlir-capi-execution-engine-test
   mlir-capi-ir-test
+  mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-sparse-tensor-test
   mlir-cpu-runner

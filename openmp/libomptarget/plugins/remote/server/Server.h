@@ -40,8 +40,6 @@ private:
 
   std::unordered_map<const void *, __tgt_device_image *>
       HostToRemoteDeviceImage;
-  std::unordered_map<const void *, __tgt_offload_entry *>
-      HostToRemoteOffloadEntry;
   std::unordered_map<const void *, std::unique_ptr<__tgt_bin_desc>>
       Descriptions;
   __tgt_target_table *Table = nullptr;
@@ -80,35 +78,29 @@ public:
 
   Status LoadBinary(ServerContext *Context, const Binary *Binary,
                     TargetTable *Reply) override;
-  Status Synchronize(ServerContext *Context, const SynchronizeDevice *Info,
-                     I32 *Reply) override;
   Status IsDataExchangeable(ServerContext *Context, const DevicePair *Request,
                             I32 *Reply) override;
 
   Status DataAlloc(ServerContext *Context, const AllocData *Request,
                    Pointer *Reply) override;
 
-  Status DataSubmitAsync(ServerContext *Context,
-                         ServerReader<SubmitDataAsync> *Reader,
-                         I32 *Reply) override;
-  Status DataRetrieveAsync(ServerContext *Context,
-                           const RetrieveDataAsync *Request,
-                           ServerWriter<Data> *Writer) override;
+  Status DataSubmit(ServerContext *Context, ServerReader<SubmitData> *Reader,
+                    I32 *Reply) override;
+  Status DataRetrieve(ServerContext *Context, const RetrieveData *Request,
+                      ServerWriter<Data> *Writer) override;
 
-  Status DataExchangeAsync(ServerContext *Context,
-                           const ExchangeDataAsync *Request,
-                           I32 *Reply) override;
+  Status DataExchange(ServerContext *Context, const ExchangeData *Request,
+                      I32 *Reply) override;
 
   Status DataDelete(ServerContext *Context, const DeleteData *Request,
                     I32 *Reply) override;
 
-  Status RunTargetRegionAsync(ServerContext *Context,
-                              const TargetRegionAsync *Request,
-                              I32 *Reply) override;
+  Status RunTargetRegion(ServerContext *Context, const TargetRegion *Request,
+                         I32 *Reply) override;
 
-  Status RunTargetTeamRegionAsync(ServerContext *Context,
-                                  const TargetTeamRegionAsync *Request,
-                                  I32 *Reply) override;
+  Status RunTargetTeamRegion(ServerContext *Context,
+                             const TargetTeamRegion *Request,
+                             I32 *Reply) override;
 };
 
 #endif

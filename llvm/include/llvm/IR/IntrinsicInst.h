@@ -915,7 +915,8 @@ class MemCpyInst : public MemTransferInst {
 public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memcpy;
+    return I->getIntrinsicID() == Intrinsic::memcpy ||
+           I->getIntrinsicID() == Intrinsic::memcpy_inline;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -935,10 +936,10 @@ public:
 };
 
 /// This class wraps the llvm.memcpy.inline intrinsic.
-class MemCpyInlineInst : public MemTransferInst {
+class MemCpyInlineInst : public MemCpyInst {
 public:
   ConstantInt *getLength() const {
-    return cast<ConstantInt>(MemTransferInst::getLength());
+    return cast<ConstantInt>(MemCpyInst::getLength());
   }
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {

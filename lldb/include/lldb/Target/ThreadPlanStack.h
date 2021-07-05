@@ -33,7 +33,7 @@ class ThreadPlanStack {
 
 public:
   ThreadPlanStack(const Thread &thread, bool make_empty = false);
-  ~ThreadPlanStack() {}
+  ~ThreadPlanStack() = default;
 
   using PlanStack = std::vector<lldb::ThreadPlanSP>;
 
@@ -115,7 +115,7 @@ private:
 class ThreadPlanStackMap {
 public:
   ThreadPlanStackMap(Process &process) : m_process(process) {}
-  ~ThreadPlanStackMap() {}
+  ~ThreadPlanStackMap() = default;
 
   // Prune the map using the current_threads list.
   void Update(ThreadList &current_threads, bool delete_missing,

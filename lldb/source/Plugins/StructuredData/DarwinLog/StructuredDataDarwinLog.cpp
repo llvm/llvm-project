@@ -126,7 +126,7 @@ public:
     m_collection_sp->Initialize(g_darwinlog_properties);
   }
 
-  ~StructuredDataDarwinLogProperties() override {}
+  ~StructuredDataDarwinLogProperties() override = default;
 
   bool GetEnableOnStartup() const {
     const uint32_t idx = ePropertyEnableOnStartup;
@@ -181,7 +181,7 @@ using FilterRuleSP = std::shared_ptr<FilterRule>;
 
 class FilterRule {
 public:
-  virtual ~FilterRule() {}
+  virtual ~FilterRule() = default;
 
   using OperationCreationFunc =
       std::function<FilterRuleSP(bool accept, size_t attribute_index,

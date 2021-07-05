@@ -496,7 +496,7 @@ IRExecutionUnit::~IRExecutionUnit() {
 IRExecutionUnit::MemoryManager::MemoryManager(IRExecutionUnit &parent)
     : m_default_mm_up(new llvm::SectionMemoryManager()), m_parent(parent) {}
 
-IRExecutionUnit::MemoryManager::~MemoryManager() {}
+IRExecutionUnit::MemoryManager::~MemoryManager() = default;
 
 lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
     const llvm::StringRef &name, IRExecutionUnit::AllocationKind alloc_kind) {

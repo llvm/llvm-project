@@ -1236,6 +1236,7 @@ void DwarfDebug::beginModule(Module *M) {
       if (!GVMapEntry.size() || (Expr && Expr->isConstant()))
         GVMapEntry.push_back({nullptr, Expr});
     }
+
     DenseSet<DIGlobalVariable *> Processed;
     for (auto *GVE : CUNode->getGlobalVariables()) {
       DIGlobalVariable *GV = GVE->getVariable();
@@ -1553,6 +1554,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     RegVar->initializeMMI(VI.Expr, VI.Slot);
     LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
                       << "\n");
+
     if (DbgVariable *DbgVar = MFVars.lookup(Var))
       DbgVar->addMMIEntry(*RegVar);
     else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {

@@ -107,7 +107,7 @@ AppleGetThreadItemInfoHandler::AppleGetThreadItemInfoHandler(Process *process)
       m_get_thread_item_info_return_buffer_addr(LLDB_INVALID_ADDRESS),
       m_get_thread_item_info_retbuffer_mutex() {}
 
-AppleGetThreadItemInfoHandler::~AppleGetThreadItemInfoHandler() {}
+AppleGetThreadItemInfoHandler::~AppleGetThreadItemInfoHandler() = default;
 
 void AppleGetThreadItemInfoHandler::Detach() {
 

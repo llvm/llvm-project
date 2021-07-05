@@ -122,7 +122,7 @@ public:
     m_stack_pointer = stack_frame_top;
   }
 
-  ~InterpreterStackFrame() {}
+  ~InterpreterStackFrame() = default;
 
   void Jump(const BasicBlock *bb) {
     m_prev_bb = m_bb;

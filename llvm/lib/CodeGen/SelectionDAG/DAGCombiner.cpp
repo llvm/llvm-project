@@ -3549,7 +3549,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
-  // canonicalize (sub X, (vscale * C)) to (add X,  (vscale * -C))
+  // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C))
   if (N1.getOpcode() == ISD::VSCALE) {
     const APInt &IntVal = N1.getConstantOperandAPInt(0);
     return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
@@ -9736,14 +9736,14 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   if (refineUniformBase(BasePtr, Index, DAG)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(
-        DAG.getVTList(MVT::Other), StoreVal.getValueType(), DL, Ops,
+        DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL, Ops,
         MSC->getMemOperand(), MSC->getIndexType(), MSC->isTruncatingStore());
   }
 
   if (refineIndexType(MSC, Index, MSC->isIndexScaled(), DAG)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(
-        DAG.getVTList(MVT::Other), StoreVal.getValueType(), DL, Ops,
+        DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL, Ops,
         MSC->getMemOperand(), MSC->getIndexType(), MSC->isTruncatingStore());
   }
 
@@ -9792,7 +9792,7 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   if (refineUniformBase(BasePtr, Index, DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
-                               PassThru.getValueType(), DL, Ops,
+                               MGT->getMemoryVT(), DL, Ops,
                                MGT->getMemOperand(), MGT->getIndexType(),
                                MGT->getExtensionType());
   }
@@ -9800,7 +9800,7 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   if (refineIndexType(MGT, Index, MGT->isIndexScaled(), DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
-                               PassThru.getValueType(), DL, Ops,
+                               MGT->getMemoryVT(), DL, Ops,
                                MGT->getMemOperand(), MGT->getIndexType(),
                                MGT->getExtensionType());
   }
@@ -12031,6 +12031,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
     AddToWorklist(ExtLoad.getNode());
     return SDValue(N, 0);   // Return N so it doesn't get rechecked!
   }
+
   // fold (sext_inreg (zextload x)) -> (sextload x) iff load has one use
   if (ISD::isZEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
       N0.hasOneUse() &&

@@ -13,7 +13,7 @@
 
 using namespace lldb_private;
 
-ExpressionVariable::~ExpressionVariable() {}
+ExpressionVariable::~ExpressionVariable() = default;
 
 uint8_t *ExpressionVariable::GetValueBytes() {
   llvm::Optional<uint64_t> byte_size = m_frozen_sp->GetByteSize();
@@ -28,7 +28,7 @@ uint8_t *ExpressionVariable::GetValueBytes() {
   return nullptr;
 }
 
-PersistentExpressionState::~PersistentExpressionState() {}
+PersistentExpressionState::~PersistentExpressionState() = default;
 
 lldb::addr_t PersistentExpressionState::LookupSymbol(ConstString name) {
   SymbolMap::iterator si = m_symbol_map.find(name.GetCString());

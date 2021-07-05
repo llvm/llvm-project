@@ -13,7 +13,7 @@
 #include <string.h>
 
 #include <isl/options.h>
-#include <isl/cpp.h>
+#include <isl/typed_cpp.h>
 
 static void die_impl(const char *file, int line, const char *message)
 {
@@ -284,6 +284,27 @@ static void test_ast_build(isl::ctx ctx)
 	assert(count_ast_fail == 2);
 }
 
+/* Basic test of the templated interface.
+ *
+ * Intersecting the domain of an access relation
+ * with statement instances should be allowed,
+ * while intersecting the range with statement instances
+ * should result in a compile-time error.
+ */
+static void test_typed(isl::ctx ctx)
+{
+	struct ST {};
+	struct AR {};
+	isl::typed::map<ST, AR> access(ctx, "{ S[i, j] -> A[i] }");
+	isl::typed::set<ST> instances(ctx, "{ S[i, j] : 0 <= i, j < 10 }");
+
+#ifndef COMPILE_ERROR
+	access.intersect_domain(instances);
+#else
+	access.intersect_range(instances);
+#endif
+}
+
 /* Test the (unchecked) isl C++ interface
  *
  * This includes:
@@ -297,6 +318,7 @@ static void test_ast_build(isl::ctx ctx)
  *  - Schedule trees
  *  - AST generation
  *  - AST expression generation
+ *  - Templated interface
  */
 int main()
 {
@@ -315,6 +337,7 @@ int main()
 	test_schedule_tree(ctx);
 	test_ast_build(ctx);
 	test_ast_build_expr(ctx);
+	test_typed(ctx);
 
 	isl_ctx_free(ctx);
 

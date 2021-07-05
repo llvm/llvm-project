@@ -2302,6 +2302,7 @@ cc_library(
         ":StandardOps",
         ":StandardOpsTransformsPassIncGen",
         ":Support",
+        ":TensorDialect",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -6181,6 +6182,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":Dialect",
         ":IR",
         ":InferTypeOpInterface",
@@ -6215,7 +6217,6 @@ cc_library(
         ":IR",
         ":LinalgOps",
         ":MathDialect",
-        ":MemRefDialect",
         ":Pass",
         ":StandardOps",
         ":TensorDialect",

@@ -176,7 +176,7 @@ void StoringDiagnosticConsumer::EndSourceFile() {
 ClangModulesDeclVendor::ClangModulesDeclVendor()
     : ClangDeclVendor(eClangModuleDeclVendor) {}
 
-ClangModulesDeclVendor::~ClangModulesDeclVendor() {}
+ClangModulesDeclVendor::~ClangModulesDeclVendor() = default;
 
 ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
     llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine,

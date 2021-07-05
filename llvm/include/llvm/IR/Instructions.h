@@ -987,15 +987,15 @@ public:
                                           NameStr, InsertAtEnd);
   }
 
-  /// Create an "inbounds" getelementptr. See the documentation for the
-  /// "inbounds" flag in LangRef.html for details.
-  static GetElementPtrInst *CreateInBounds(Value *Ptr,
-                                           ArrayRef<Value *> IdxList,
-                                           const Twine &NameStr = "",
-                                           Instruction *InsertBefore = nullptr){
+  LLVM_ATTRIBUTE_DEPRECATED(static GetElementPtrInst *CreateInBounds(
+        Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr = "",
+        Instruction *InsertBefore = nullptr),
+      "Use the version with explicit element type instead") {
     return CreateInBounds(nullptr, Ptr, IdxList, NameStr, InsertBefore);
   }
 
+  /// Create an "inbounds" getelementptr. See the documentation for the
+  /// "inbounds" flag in LangRef.html for details.
   static GetElementPtrInst *
   CreateInBounds(Type *PointeeType, Value *Ptr, ArrayRef<Value *> IdxList,
                  const Twine &NameStr = "",
@@ -1006,10 +1006,10 @@ public:
     return GEP;
   }
 
-  static GetElementPtrInst *CreateInBounds(Value *Ptr,
-                                           ArrayRef<Value *> IdxList,
-                                           const Twine &NameStr,
-                                           BasicBlock *InsertAtEnd) {
+  LLVM_ATTRIBUTE_DEPRECATED(static GetElementPtrInst *CreateInBounds(
+        Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr,
+        BasicBlock *InsertAtEnd),
+      "Use the version with explicit element type instead") {
     return CreateInBounds(nullptr, Ptr, IdxList, NameStr, InsertAtEnd);
   }
 

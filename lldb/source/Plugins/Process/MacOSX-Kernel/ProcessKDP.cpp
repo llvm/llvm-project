@@ -73,7 +73,7 @@ public:
     m_collection_sp->Initialize(g_processkdp_properties);
   }
 
-  virtual ~PluginProperties() {}
+  virtual ~PluginProperties() = default;
 
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyKDPPacketTimeout;
@@ -902,7 +902,7 @@ public:
     m_option_group.Finalize();
   }
 
-  ~CommandObjectProcessKDPPacketSend() {}
+  ~CommandObjectProcessKDPPacketSend() = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
@@ -1003,7 +1003,7 @@ public:
         CommandObjectSP(new CommandObjectProcessKDPPacketSend(interpreter)));
   }
 
-  ~CommandObjectProcessKDPPacket() {}
+  ~CommandObjectProcessKDPPacket() = default;
 };
 
 class CommandObjectMultiwordProcessKDP : public CommandObjectMultiword {
@@ -1017,7 +1017,7 @@ public:
                                  interpreter)));
   }
 
-  ~CommandObjectMultiwordProcessKDP() {}
+  ~CommandObjectMultiwordProcessKDP() = default;
 };
 
 CommandObject *ProcessKDP::GetPluginCommandObject() {

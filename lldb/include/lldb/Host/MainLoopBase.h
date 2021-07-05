@@ -33,8 +33,8 @@ private:
   class ReadHandle;
 
 public:
-  MainLoopBase() {}
-  virtual ~MainLoopBase() {}
+  MainLoopBase() = default;
+  virtual ~MainLoopBase() = default;
 
   typedef std::unique_ptr<ReadHandle> ReadHandleUP;
 

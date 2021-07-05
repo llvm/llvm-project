@@ -13,7 +13,7 @@ typedef struct isl_basic_map isl_basic_map;
 ISL_DECLARE_LIST_TYPE(basic_map)
 struct __isl_subclass(isl_union_map) isl_map;
 typedef struct isl_map isl_map;
-ISL_DECLARE_LIST_TYPE(map)
+ISL_DECLARE_EXPORTED_LIST_TYPE(map)
 
 #ifndef isl_basic_set
 struct __isl_subclass(isl_set) isl_basic_set;

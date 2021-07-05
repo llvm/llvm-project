@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMMCParser
   MCTargetAsmParser.cpp
   MasmParser.cpp
   WasmAsmParser.cpp
+  XCOFFAsmParser.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MC/MCParser

@@ -157,6 +157,28 @@ static void unpackRanges(ArrayRef<Range> ranges, SmallVectorImpl<Value> &lbs,
 namespace mlir {
 namespace linalg {
 
+/// Helper function that creates a memref::DimOp or tensor::DimOp depending on
+/// the type of `source`.
+Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim) {
+  if (source.getType().isa<UnrankedMemRefType, MemRefType>())
+    return b.createOrFold<memref::DimOp>(loc, source, dim);
+  if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
+    return b.createOrFold<tensor::DimOp>(loc, source, dim);
+  llvm_unreachable("Expected MemRefType or TensorType");
+}
+
+/// Given an operation, retrieves the value of each dynamic dimension through
+/// constructing the necessary DimOp operators.
+SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b) {
+  SmallVector<Value, 4> dynOperands;
+  auto shapedType = val.getType().cast<ShapedType>();
+  for (auto dim : llvm::enumerate(shapedType.getShape())) {
+    if (dim.value() == ShapedType::kDynamicSize)
+      dynOperands.push_back(createOrFoldDimOp(b, loc, val, dim.index()));
+  }
+  return dynOperands;
+}
+
 /// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
 /// is a constant then return a new value set to the smallest such constant.
 /// Otherwise returngetSmallestBoundingIndex nullptr.

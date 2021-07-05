@@ -28,7 +28,7 @@ HostProcessPosix::HostProcessPosix()
 HostProcessPosix::HostProcessPosix(lldb::process_t process)
     : HostNativeProcessBase(process) {}
 
-HostProcessPosix::~HostProcessPosix() {}
+HostProcessPosix::~HostProcessPosix() = default;
 
 Status HostProcessPosix::Signal(int signo) const {
   if (m_process == kInvalidPosixProcess) {

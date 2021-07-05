@@ -1768,6 +1768,17 @@ private:
       setOperations(S);
       return true;
     }
+    /// When ReuseShuffleIndices is empty it just returns position of \p V
+    /// within vector of Scalars. Otherwise, try to remap on its reuse index.
+    int findLaneForValue(Value *V) const {
+      unsigned FoundLane = std::distance(Scalars.begin(), find(Scalars, V));
+      assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
+      if (!ReuseShuffleIndices.empty()) {
+        FoundLane = std::distance(ReuseShuffleIndices.begin(),
+                                  find(ReuseShuffleIndices, FoundLane));
+      }
+      return FoundLane;
+    }
 
 #ifndef NDEBUG
     /// Debug printer.
@@ -2589,17 +2600,6 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   buildTree(Roots, ExternallyUsedValues, UserIgnoreLst);
 }
 
-static int findLaneForValue(ArrayRef<Value *> Scalars,
-                            ArrayRef<int> ReuseShuffleIndices, Value *V) {
-  unsigned FoundLane = std::distance(Scalars.begin(), find(Scalars, V));
-  assert(FoundLane < Scalars.size() && "Couldn't find extract lane");
-  if (!ReuseShuffleIndices.empty()) {
-    FoundLane = std::distance(ReuseShuffleIndices.begin(),
-                              find(ReuseShuffleIndices, FoundLane));
-  }
-  return FoundLane;
-}
-
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         ExtraValueToDebugLocsMap &ExternallyUsedValues,
                         ArrayRef<Value *> UserIgnoreLst) {
@@ -2620,8 +2620,7 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
     // For each lane:
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
       Value *Scalar = Entry->Scalars[Lane];
-      int FoundLane =
-          findLaneForValue(Entry->Scalars, Entry->ReuseShuffleIndices, Scalar);
+      int FoundLane = Entry->findLaneForValue(Scalar);
 
       // Check if the scalar is externally used as an extra arg.
       auto ExtI = ExternallyUsedValues.find(Scalar);
@@ -4681,7 +4680,7 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
       continue;
     unsigned Idx = UsedValuesEntry.lookup(V);
     const TreeEntry *VTE = Entries[Idx];
-    int FoundLane = findLaneForValue(VTE->Scalars, VTE->ReuseShuffleIndices, V);
+    int FoundLane = VTE->findLaneForValue(V);
     Mask[I] = Idx * VF + FoundLane;
     // Extra check required by isSingleSourceMaskImpl function (called by
     // ShuffleVectorInst::isSingleSourceMask).
@@ -4838,9 +4837,6 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
   }
 
   auto &&CreateInsertElement = [this](Value *Vec, Value *V, unsigned Pos) {
-    // No need to insert undefs elements - exit.
-    if (isa<UndefValue>(V))
-      return Vec;
     Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(Pos));
     auto *InsElt = dyn_cast<InsertElementInst>(Vec);
     if (!InsElt)
@@ -4850,13 +4846,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
     // Add to our 'need-to-extract' list.
     if (TreeEntry *Entry = getTreeEntry(V)) {
       // Find which lane we need to extract.
-      unsigned FoundLane =
-          std::distance(Entry->Scalars.begin(), find(Entry->Scalars, V));
-      assert(FoundLane < Entry->Scalars.size() && "Couldn't find extract lane");
-      if (!Entry->ReuseShuffleIndices.empty()) {
-        FoundLane = std::distance(Entry->ReuseShuffleIndices.begin(),
-                                  find(Entry->ReuseShuffleIndices, FoundLane));
-      }
+      unsigned FoundLane = Entry->findLaneForValue(V);
       ExternalUses.emplace_back(V, InsElt, FoundLane);
     }
     return Vec;
@@ -4865,11 +4855,20 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
       isa<StoreInst>(VL[0]) ? cast<StoreInst>(VL[0])->getValueOperand() : VL[0];
   FixedVectorType *VecTy = FixedVectorType::get(Val0->getType(), VL.size());
   Value *Vec = PoisonValue::get(VecTy);
+  SmallVector<int> NonConsts;
+  // Insert constant values at first.
   for (int I = 0, E = VL.size(); I < E; ++I) {
     if (PostponedIndices.contains(I))
       continue;
+    if (!isConstant(VL[I])) {
+      NonConsts.push_back(I);
+      continue;
+    }
     Vec = CreateInsertElement(Vec, VL[I], I);
   }
+  // Insert non-constant values.
+  for (int I : NonConsts)
+    Vec = CreateInsertElement(Vec, VL[I], I);
   // Append instructions, which are/may be part of the loop, in the end to make
   // it possible to hoist non-loop-based instructions.
   for (const std::pair<Value *, unsigned> &Pair : PostponedInsts)
@@ -5043,7 +5042,7 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
       UniqueValues.append(VL.begin(), std::next(VL.begin(), NumValues));
     }
     UniqueValues.append(VF - UniqueValues.size(),
-                        UndefValue::get(VL[0]->getType()));
+                        PoisonValue::get(VL[0]->getType()));
     VL = UniqueValues;
   }
 
@@ -5404,7 +5403,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         for (Value *V : E->Scalars)
           CommonAlignment =
               commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
-        NewLI = Builder.CreateMaskedGather(VecPtr, CommonAlignment);
+        NewLI = Builder.CreateMaskedGather(VecTy, VecPtr, CommonAlignment);
       }
       Value *V = propagateMetadata(NewLI, E->Scalars);
 

@@ -8,9 +8,6 @@
 define void @widget() {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i16, i16* @global, align 1
-; CHECK-NEXT:    [[I13:%.*]] = icmp ne i16 [[I]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[I13]])
 ; CHECK-NEXT:    unreachable
 ;
 bb:

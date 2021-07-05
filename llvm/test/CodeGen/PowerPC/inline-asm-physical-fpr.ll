@@ -13,7 +13,7 @@ entry:
 
 ; CHECK-LABEL: test_double
 ; CHECK:         #APP
-; CHECK-NEXT:    fadd. 31,1,2
+; CHECK-NEXT:    fadd. 31, 1, 2
 
 define dso_local signext i32 @test_int(double %a, double %b) {
 entry:
@@ -23,4 +23,4 @@ entry:
 
 ; CHECK-LABEL: test_int
 ; CHECK:         #APP
-; CHECK-NEXT:    fadd. 0,1,2
+; CHECK-NEXT:    fadd. 0, 1, 2

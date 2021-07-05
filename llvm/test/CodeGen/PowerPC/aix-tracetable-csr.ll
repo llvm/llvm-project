@@ -14,10 +14,10 @@ declare hidden fastcc i32 @spam(%1*, %2*, %3*) unnamed_addr #0
 
 ; Function Attrs: nounwind
 define void @baz(%3* %0) local_unnamed_addr #2 {
-; AIX-64: std 30
-; AIX-64: .byte 0x02 # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 2
-; AIX-32: stw 30
-; AIX-32: .byte 0x02 # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 2
+; AIX-64: std 31
+; AIX-64: .byte 0x01 # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 1
+; AIX-32: stw 31
+; AIX-32: .byte 0x01 # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 1
   %2 = call signext i32 @wibble(%1* nonnull undef) #2
   %3 = call fastcc zeroext i32 @spam(%1* nonnull undef, %2* nonnull undef, %3* nonnull %0)
   unreachable

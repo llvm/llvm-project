@@ -903,7 +903,6 @@ bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
   return true;
 }
 
-
 bool llvm::maskIsAllOneOrUndef(Value *Mask) {
   assert(isa<VectorType>(Mask->getType()) &&
          isa<IntegerType>(Mask->getType()->getScalarType()) &&

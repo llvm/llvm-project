@@ -366,6 +366,7 @@ void ObjFile::parseRelocations(ArrayRef<Section> sectionHeaders,
   ArrayRef<relocation_info> relInfos(
       reinterpret_cast<const relocation_info *>(buf + sec.reloff), sec.nreloc);
 
+  auto subsecIt = subsecMap.rbegin();
   for (size_t i = 0; i < relInfos.size(); i++) {
     // Paired relocations serve as Mach-O's method for attaching a
     // supplemental datum to a primary relocation record. ELF does not
@@ -440,7 +441,24 @@ void ObjFile::parseRelocations(ArrayRef<Section> sectionHeaders,
       r.addend = referentOffset;
     }
 
-    InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
+    // Find the subsection that this relocation belongs to.
+    // Though not required by the Mach-O format, clang and gcc seem to emit
+    // relocations in order, so let's take advantage of it. However, ld64 emits
+    // unsorted relocations (in `-r` mode), so we have a fallback for that
+    // uncommon case.
+    InputSection *subsec;
+    while (subsecIt != subsecMap.rend() && subsecIt->offset > r.offset)
+      ++subsecIt;
+    if (subsecIt == subsecMap.rend() ||
+        subsecIt->offset + subsecIt->isec->getSize() <= r.offset) {
+      subsec = findContainingSubsection(subsecMap, &r.offset);
+      // Now that we know the relocs are unsorted, avoid trying the 'fast path'
+      // for the other relocations.
+      subsecIt = subsecMap.rend();
+    } else {
+      subsec = subsecIt->isec;
+      r.offset -= subsecIt->offset;
+    }
     subsec->relocs.push_back(r);
 
     if (isSubtrahend) {
@@ -592,6 +610,12 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   symbols.resize(nList.size());
   for (uint32_t i = 0; i < nList.size(); ++i) {
     const NList &sym = nList[i];
+
+    // Ignore debug symbols for now.
+    // FIXME: may need special handling.
+    if (sym.n_type & N_STAB)
+      continue;
+
     StringRef name = strtab + sym.n_strx;
     if ((sym.n_type & N_TYPE) == N_SECT) {
       SubsectionMap &subsecMap = subsections[sym.n_sect - 1];

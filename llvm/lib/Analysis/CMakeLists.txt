@@ -5,7 +5,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
   # This url points to the most recent most which is known to be compatible with
   # LLVM. When better models are published, this url should be updated to aid
   # discoverability.
-  set(LLVM_INLINER_MODEL_CURRENT_URL "https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v0.1/inlining-Oz-acabaf6-v0.1.tar.gz")
+  set(LLVM_INLINER_MODEL_CURRENT_URL "https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v1.0/inlining-Oz-99f0063-v1.0.tar.gz")
 
   if (DEFINED LLVM_HAVE_TF_AOT)
     # If the path is empty, autogenerate the model

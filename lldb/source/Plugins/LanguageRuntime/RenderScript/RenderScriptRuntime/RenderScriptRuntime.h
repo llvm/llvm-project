@@ -46,7 +46,7 @@ typedef std::shared_ptr<RSScriptGroupDescriptor> RSScriptGroupDescriptorSP;
 struct RSCoordinate {
   uint32_t x = 0, y = 0, z = 0;
 
-  RSCoordinate(){};
+  RSCoordinate() = default;
 
   bool operator==(const lldb_renderscript::RSCoordinate &rhs) {
     return x == rhs.x && y == rhs.y && z == rhs.z;

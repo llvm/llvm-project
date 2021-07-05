@@ -65,7 +65,7 @@ ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
   }
 }
 
-ClangUtilityFunction::~ClangUtilityFunction() {}
+ClangUtilityFunction::~ClangUtilityFunction() = default;
 
 /// Install the utility function into a process
 ///

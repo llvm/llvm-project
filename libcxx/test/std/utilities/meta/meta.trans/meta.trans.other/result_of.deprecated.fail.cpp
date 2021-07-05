@@ -7,18 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
 
-// <any>
+// type_traits
 
-// [Note any is a not a literal type --end note]
+// result_of
 
-#include <any>
 #include <type_traits>
 
 #include "test_macros.h"
 
 int main(int, char**) {
-    static_assert(!std::is_literal_type<std::any>::value, "");
-
-  return 0;
+  [[maybe_unused]] std::result_of<int (*())()> a; // expected-warning {{'result_of<int (*())()>' is deprecated}}
 }

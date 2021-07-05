@@ -75,7 +75,7 @@ CC="$SAVE_CC"
 AC_LANG_PUSH(C++)
 
 SAVE_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CLANG_CXXFLAGS $CPPFLAGS"
+CPPFLAGS="$CLANG_CXXFLAGS -I$srcdir $CPPFLAGS"
 AC_CHECK_HEADER([clang/Basic/SourceLocation.h], [],
 	[AC_ERROR([clang header file not found])])
 AC_EGREP_HEADER([getDefaultTargetTriple], [llvm/Support/Host.h], [],
@@ -194,6 +194,8 @@ AC_TRY_COMPILE([
 	#include <clang/Basic/TargetOptions.h>
 	#include <clang/Lex/PreprocessorOptions.h>
 	#include <clang/Frontend/CompilerInstance.h>
+
+	#include "set_lang_defaults_arg4.h"
 ], [
 	using namespace clang;
 	CompilerInstance *Clang;
@@ -201,7 +203,8 @@ AC_TRY_COMPILE([
 	llvm::Triple T(TO.Triple);
 	PreprocessorOptions PO;
 	CompilerInvocation::setLangDefaults(Clang->getLangOpts(), IK_C,
-			T, PO, LangStandard::lang_unspecified);
+			T, setLangDefaultsArg4(PO),
+			LangStandard::lang_unspecified);
 ], [AC_DEFINE([SETLANGDEFAULTS_TAKES_5_ARGUMENTS], [],
 	[Define if CompilerInvocation::setLangDefaults takes 5 arguments])])
 AC_TRY_COMPILE([

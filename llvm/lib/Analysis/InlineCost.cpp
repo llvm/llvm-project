@@ -439,6 +439,25 @@ public:
   void dump();
 };
 
+// Considering forming a binary search, we should find the number of nodes
+// which is same as the number of comparisons when lowered. For a given
+// number of clusters, n, we can define a recursive function, f(n), to find
+// the number of nodes in the tree. The recursion is :
+// f(n) = 1 + f(n/2) + f (n - n/2), when n > 3,
+// and f(n) = n, when n <= 3.
+// This will lead a binary tree where the leaf should be either f(2) or f(3)
+// when n > 3.  So, the number of comparisons from leaves should be n, while
+// the number of non-leaf should be :
+//   2^(log2(n) - 1) - 1
+//   = 2^log2(n) * 2^-1 - 1
+//   = n / 2 - 1.
+// Considering comparisons from leaf and non-leaf nodes, we can estimate the
+// number of comparisons in a simple closed form :
+//   n + n / 2 - 1 = n * 3 / 2 - 1
+int64_t getExpectedNumberOfCompare(int NumCaseCluster) {
+  return 3 * static_cast<int64_t>(NumCaseCluster) / 2 - 1;
+}
+
 /// FIXME: if it is necessary to derive from InlineCostCallAnalyzer, note
 /// the FIXME in onLoweredCall, when instantiating an InlineCostCallAnalyzer
 class InlineCostCallAnalyzer final : public CallAnalyzer {
@@ -582,28 +601,15 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       addCost(JTCost, (int64_t)CostUpperBound);
       return;
     }
-    // Considering forming a binary search, we should find the number of nodes
-    // which is same as the number of comparisons when lowered. For a given
-    // number of clusters, n, we can define a recursive function, f(n), to find
-    // the number of nodes in the tree. The recursion is :
-    // f(n) = 1 + f(n/2) + f (n - n/2), when n > 3,
-    // and f(n) = n, when n <= 3.
-    // This will lead a binary tree where the leaf should be either f(2) or f(3)
-    // when n > 3.  So, the number of comparisons from leaves should be n, while
-    // the number of non-leaf should be :
-    //   2^(log2(n) - 1) - 1
-    //   = 2^log2(n) * 2^-1 - 1
-    //   = n / 2 - 1.
-    // Considering comparisons from leaf and non-leaf nodes, we can estimate the
-    // number of comparisons in a simple closed form :
-    //   n + n / 2 - 1 = n * 3 / 2 - 1
+
     if (NumCaseCluster <= 3) {
       // Suppose a comparison includes one compare and one conditional branch.
       addCost(NumCaseCluster * 2 * InlineConstants::InstrCost);
       return;
     }
 
-    int64_t ExpectedNumberOfCompare = 3 * (int64_t)NumCaseCluster / 2 - 1;
+    int64_t ExpectedNumberOfCompare =
+        getExpectedNumberOfCompare(NumCaseCluster);
     int64_t SwitchCost =
         ExpectedNumberOfCompare * 2 * InlineConstants::InstrCost;
 
@@ -936,6 +942,209 @@ public:
   int getCost() { return Cost; }
   bool wasDecidedByCostBenefit() { return DecidedByCostBenefit; }
 };
+
+class InlineCostFeaturesAnalyzer final : public CallAnalyzer {
+private:
+  InlineCostFeatures Cost = {};
+
+  // FIXME: These constants are taken from the heuristic-based cost visitor.
+  // These should be removed entirely in a later revision to avoid reliance on
+  // heuristics in the ML inliner.
+  static constexpr int JTCostMultiplier = 4;
+  static constexpr int CaseClusterCostMultiplier = 2;
+  static constexpr int SwitchCostMultiplier = 2;
+
+  // FIXME: These are taken from the heuristic-based cost visitor: we should
+  // eventually abstract these to the CallAnalyzer to avoid duplication.
+  unsigned SROACostSavingOpportunities = 0;
+  int VectorBonus = 0;
+  int SingleBBBonus = 0;
+  int Threshold = 5;
+
+  DenseMap<AllocaInst *, unsigned> SROACosts;
+
+  void increment(InlineCostFeatureIndex Feature, int64_t Delta = 1) {
+    Cost[static_cast<size_t>(Feature)] += Delta;
+  }
+
+  void set(InlineCostFeatureIndex Feature, int64_t Value) {
+    Cost[static_cast<size_t>(Feature)] = Value;
+  }
+
+  void onDisableSROA(AllocaInst *Arg) override {
+    auto CostIt = SROACosts.find(Arg);
+    if (CostIt == SROACosts.end())
+      return;
+
+    increment(InlineCostFeatureIndex::SROALosses, CostIt->second);
+    SROACostSavingOpportunities -= CostIt->second;
+    SROACosts.erase(CostIt);
+  }
+
+  void onDisableLoadElimination() override {
+    set(InlineCostFeatureIndex::LoadElimination, 1);
+  }
+
+  void onCallPenalty() override {
+    increment(InlineCostFeatureIndex::CallPenalty,
+              InlineConstants::CallPenalty);
+  }
+
+  void onCallArgumentSetup(const CallBase &Call) override {
+    increment(InlineCostFeatureIndex::CallArgumentSetup,
+              Call.arg_size() * InlineConstants::InstrCost);
+  }
+
+  void onLoadRelativeIntrinsic() override {
+    increment(InlineCostFeatureIndex::LoadRelativeIntrinsic,
+              3 * InlineConstants::InstrCost);
+  }
+
+  void onLoweredCall(Function *F, CallBase &Call,
+                     bool IsIndirectCall) override {
+    increment(InlineCostFeatureIndex::LoweredCallArgSetup,
+              Call.arg_size() * InlineConstants::InstrCost);
+
+    if (IsIndirectCall) {
+      InlineParams IndirectCallParams = {/* DefaultThreshold*/ 0,
+                                         /*HintThreshold*/ {},
+                                         /*ColdThreshold*/ {},
+                                         /*OptSizeThreshold*/ {},
+                                         /*OptMinSizeThreshold*/ {},
+                                         /*HotCallSiteThreshold*/ {},
+                                         /*LocallyHotCallSiteThreshold*/ {},
+                                         /*ColdCallSiteThreshold*/ {},
+                                         /*ComputeFullInlineCost*/ true,
+                                         /*EnableDeferral*/ true};
+      IndirectCallParams.DefaultThreshold =
+          InlineConstants::IndirectCallThreshold;
+
+      InlineCostCallAnalyzer CA(*F, Call, IndirectCallParams, TTI,
+                                GetAssumptionCache, GetBFI, PSI, ORE, false,
+                                true);
+      if (CA.analyze().isSuccess()) {
+        increment(InlineCostFeatureIndex::NestedInlineCostEstimate,
+                  CA.getCost());
+        increment(InlineCostFeatureIndex::NestedInlines, 1);
+      }
+    } else {
+      onCallPenalty();
+    }
+  }
+
+  void onFinalizeSwitch(unsigned JumpTableSize,
+                        unsigned NumCaseCluster) override {
+
+    if (JumpTableSize) {
+      int64_t JTCost =
+          static_cast<int64_t>(JumpTableSize) * InlineConstants::InstrCost +
+          JTCostMultiplier * InlineConstants::InstrCost;
+      increment(InlineCostFeatureIndex::JumpTablePenalty, JTCost);
+      return;
+    }
+
+    if (NumCaseCluster <= 3) {
+      increment(InlineCostFeatureIndex::CaseClusterPenalty,
+                NumCaseCluster * CaseClusterCostMultiplier *
+                    InlineConstants::InstrCost);
+      return;
+    }
+
+    int64_t ExpectedNumberOfCompare =
+        getExpectedNumberOfCompare(NumCaseCluster);
+
+    int64_t SwitchCost = ExpectedNumberOfCompare * SwitchCostMultiplier *
+                         InlineConstants::InstrCost;
+    increment(InlineCostFeatureIndex::SwitchPenalty, SwitchCost);
+  }
+
+  void onMissedSimplification() override {
+    increment(InlineCostFeatureIndex::UnsimplifiedCommonInstructions,
+              InlineConstants::InstrCost);
+  }
+
+  void onInitializeSROAArg(AllocaInst *Arg) override { SROACosts[Arg] = 0; }
+  void onAggregateSROAUse(AllocaInst *Arg) override {
+    SROACosts.find(Arg)->second += InlineConstants::InstrCost;
+    SROACostSavingOpportunities += InlineConstants::InstrCost;
+  }
+
+  void onBlockAnalyzed(const BasicBlock *BB) override {
+    if (BB->getTerminator()->getNumSuccessors() > 1)
+      set(InlineCostFeatureIndex::IsMultipleBlocks, 1);
+    Threshold -= SingleBBBonus;
+  }
+
+  InlineResult finalizeAnalysis() override {
+    auto *Caller = CandidateCall.getFunction();
+    if (Caller->hasMinSize()) {
+      DominatorTree DT(F);
+      LoopInfo LI(DT);
+      for (Loop *L : LI) {
+        // Ignore loops that will not be executed
+        if (DeadBlocks.count(L->getHeader()))
+          continue;
+        increment(InlineCostFeatureIndex::NumLoops,
+                  InlineConstants::CallPenalty);
+      }
+    }
+    set(InlineCostFeatureIndex::DeadBlocks, DeadBlocks.size());
+    set(InlineCostFeatureIndex::SimplifiedInstructions,
+        NumInstructionsSimplified);
+    set(InlineCostFeatureIndex::ConstantArgs, NumConstantArgs);
+    set(InlineCostFeatureIndex::ConstantOffsetPtrArgs,
+        NumConstantOffsetPtrArgs);
+    set(InlineCostFeatureIndex::SROASavings, SROACostSavingOpportunities);
+
+    if (NumVectorInstructions <= NumInstructions / 10)
+      increment(InlineCostFeatureIndex::Threshold, -1 * VectorBonus);
+    else if (NumVectorInstructions <= NumInstructions / 2)
+      increment(InlineCostFeatureIndex::Threshold, -1 * (VectorBonus / 2));
+
+    set(InlineCostFeatureIndex::Threshold, Threshold);
+
+    return InlineResult::success();
+  }
+
+  bool shouldStop() override { return false; }
+
+  void onLoadEliminationOpportunity() override {
+    increment(InlineCostFeatureIndex::LoadElimination, 1);
+  }
+
+  InlineResult onAnalysisStart() override {
+    increment(InlineCostFeatureIndex::CallSiteCost,
+              -1 * getCallsiteCost(this->CandidateCall, DL));
+
+    set(InlineCostFeatureIndex::ColdCcPenalty,
+        (F.getCallingConv() == CallingConv::Cold));
+
+    // FIXME: we shouldn't repeat this logic in both the Features and Cost
+    // analyzer - instead, we should abstract it to a common method in the
+    // CallAnalyzer
+    int SingleBBBonusPercent = 50;
+    int VectorBonusPercent = TTI.getInlinerVectorBonusPercent();
+    Threshold += TTI.adjustInliningThreshold(&CandidateCall);
+    Threshold *= TTI.getInliningThresholdMultiplier();
+    SingleBBBonus = Threshold * SingleBBBonusPercent / 100;
+    VectorBonus = Threshold * VectorBonusPercent / 100;
+    Threshold += (SingleBBBonus + VectorBonus);
+
+    return InlineResult::success();
+  }
+
+public:
+  InlineCostFeaturesAnalyzer(
+      const TargetTransformInfo &TTI,
+      function_ref<AssumptionCache &(Function &)> &GetAssumptionCache,
+      function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
+      ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE, Function &Callee,
+      CallBase &Call)
+      : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, PSI) {}
+
+  const InlineCostFeatures &features() const { return Cost; }
+};
+
 } // namespace
 
 /// Test whether the given value is an Alloca-derived function argument.
@@ -2500,6 +2709,19 @@ Optional<int> llvm::getInliningCostEstimate(
   if (!R.isSuccess())
     return None;
   return CA.getCost();
+}
+
+Optional<InlineCostFeatures> llvm::getInliningCostFeatures(
+    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
+    function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
+    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
+  InlineCostFeaturesAnalyzer CFA(CalleeTTI, GetAssumptionCache, GetBFI, PSI,
+                                 ORE, *Call.getCalledFunction(), Call);
+  auto R = CFA.analyze();
+  if (!R.isSuccess())
+    return None;
+  return CFA.features();
 }
 
 Optional<InlineResult> llvm::getAttributeBasedInliningDecision(

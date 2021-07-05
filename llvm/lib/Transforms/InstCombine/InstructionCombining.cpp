@@ -2870,27 +2870,39 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   return nullptr;
 }
 
+// WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
 Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
   // Try to remove the previous instruction if it must lead to unreachable.
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
-  Instruction *Prev = I.getPrevNonDebugInstruction();
-  if (Prev && !Prev->isEHPad() &&
-      isGuaranteedToTransferExecutionToSuccessor(Prev)) {
+  while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
+    // While we theoretically can erase EH, that would result in a block that
+    // used to start with an EH no longer starting with EH, which is invalid.
+    // To make it valid, we'd need to fixup predecessors to no longer refer to
+    // this block, but that changes CFG, which is not allowed in InstCombine.
+    if (Prev->isEHPad())
+      return nullptr; // Can not drop any more instructions. We're done here.
+
+    if (!isGuaranteedToTransferExecutionToSuccessor(Prev))
+      return nullptr; // Can not drop any more instructions. We're done here.
+    // Otherwise, this instruction can be freely erased,
+    // even if it is not side-effect free.
+
     // Temporarily disable removal of volatile stores preceding unreachable,
     // pending a potential LangRef change permitting volatile stores to trap.
     // TODO: Either remove this code, or properly integrate the check into
     // isGuaranteedToTransferExecutionToSuccessor().
     if (auto *SI = dyn_cast<StoreInst>(Prev))
       if (SI->isVolatile())
-        return nullptr;
+        return nullptr; // Can not drop this instruction. We're done here.
 
     // A value may still have uses before we process it here (for example, in
     // another unreachable block), so convert those to poison.
     replaceInstUsesWith(*Prev, PoisonValue::get(Prev->getType()));
     eraseInstFromFunction(*Prev);
-    return &I;
   }
+  assert(I.getParent()->sizeWithoutDebug() == 1 && "The block is now empty.");
+  // FIXME: recurse into unconditional predecessors?
   return nullptr;
 }
 
