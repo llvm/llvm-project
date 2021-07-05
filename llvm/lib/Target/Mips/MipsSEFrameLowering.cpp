@@ -545,7 +545,12 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
              "Function's alignment size requirement is not supported.");
       int64_t MaxAlign = -(int64_t)MFI.getMaxAlign().value();
 
-      BuildMI(MBB, MBBI, dl, TII.get(ADDiu), VR).addReg(ZERO).addImm(MaxAlign);
+      if (ABI.IsP32())
+        BuildMI(MBB, MBBI, dl, TII.get(Mips::Li_NM), VR).addImm(MaxAlign);
+      else
+        BuildMI(MBB, MBBI, dl, TII.get(ADDiu), VR)
+            .addReg(ZERO)
+            .addImm(MaxAlign);
       BuildMI(MBB, MBBI, dl, TII.get(AND), SP).addReg(SP).addReg(VR);
 
       if (hasBP(MF)) {
