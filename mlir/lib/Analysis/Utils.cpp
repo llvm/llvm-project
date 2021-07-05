@@ -374,6 +374,7 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
         cstWithShapeBounds.getConstantBoundOnDimSize(d, &lb, &lbDivisor);
     if (diff.hasValue()) {
       diffConstant = diff.getValue();
+      assert(diffConstant >= 0 && "Dim size bound can't be negative");
       assert(lbDivisor > 0);
     } else {
       // If no constant bound is found, then it can always be bound by the
