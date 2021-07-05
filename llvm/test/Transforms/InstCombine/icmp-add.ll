@@ -839,3 +839,95 @@ define i1 @ult_wrong_offset(i8 %a) {
   %ov = icmp ult i8 %t, 123
   ret i1 %ov
 }
+
+define i1 @sgt_offset(i8 %a) {
+; CHECK-LABEL: @sgt_offset(
+; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], -6
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[T]], -7
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, -6
+  %ov = icmp sgt i8 %t, -7
+  ret i1 %ov
+}
+
+define i1 @sgt_offset_use(i32 %a) {
+; CHECK-LABEL: @sgt_offset_use(
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[A:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[T]])
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i32 [[T]], 41
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i32 %a, 42
+  call void @use(i32 %t)
+  %ov = icmp sgt i32 %t, 41
+  ret i1 %ov
+}
+
+define <2 x i1> @sgt_offset_splat(<2 x i5> %a) {
+; CHECK-LABEL: @sgt_offset_splat(
+; CHECK-NEXT:    [[T:%.*]] = add <2 x i5> [[A:%.*]], <i5 9, i5 9>
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt <2 x i5> [[T]], <i5 8, i5 8>
+; CHECK-NEXT:    ret <2 x i1> [[OV]]
+;
+  %t = add <2 x i5> %a, <i5 9, i5 9>
+  %ov = icmp sgt <2 x i5> %t, <i5 8, i5 8>
+  ret <2 x i1> %ov
+}
+
+define i1 @sgt_wrong_offset(i8 %a) {
+; CHECK-LABEL: @sgt_wrong_offset(
+; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], -7
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[T]], -7
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, -7
+  %ov = icmp sgt i8 %t, -7
+  ret i1 %ov
+}
+
+define i1 @slt_offset(i8 %a) {
+; CHECK-LABEL: @slt_offset(
+; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], -6
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i8 [[T]], -6
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, -6
+  %ov = icmp slt i8 %t, -6
+  ret i1 %ov
+}
+
+define i1 @slt_offset_use(i32 %a) {
+; CHECK-LABEL: @slt_offset_use(
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[A:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[T]])
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i32 [[T]], 42
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i32 %a, 42
+  call void @use(i32 %t)
+  %ov = icmp slt i32 %t, 42
+  ret i1 %ov
+}
+
+define <2 x i1> @slt_offset_splat(<2 x i5> %a) {
+; CHECK-LABEL: @slt_offset_splat(
+; CHECK-NEXT:    [[T:%.*]] = add <2 x i5> [[A:%.*]], <i5 9, i5 9>
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt <2 x i5> [[T]], <i5 9, i5 9>
+; CHECK-NEXT:    ret <2 x i1> [[OV]]
+;
+  %t = add <2 x i5> %a, <i5 9, i5 9>
+  %ov = icmp slt <2 x i5> %t, <i5 9, i5 9>
+  ret <2 x i1> %ov
+}
+
+define i1 @slt_wrong_offset(i8 %a) {
+; CHECK-LABEL: @slt_wrong_offset(
+; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], -6
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i8 [[T]], -7
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, -6
+  %ov = icmp slt i8 %t, -7
+  ret i1 %ov
+}
