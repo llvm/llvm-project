@@ -21,9 +21,9 @@ RUN: llvm-strings --bytes 2 %t | FileCheck --check-prefix CHECK-2 %s --implicit-
 
 ## Show different syntaxes work.
 RUN: llvm-strings --bytes=2 %t | FileCheck --check-prefix CHECK-2 %s --implicit-check-not={{.}}
-RUN: llvm-strings -n=2 %t | FileCheck --check-prefix CHECK-2 %s --implicit-check-not={{.}}
+RUN: llvm-strings -n 2 %t | FileCheck --check-prefix CHECK-2 %s --implicit-check-not={{.}}
 
-CHECK-0: invalid minimum string length 0
+CHECK-0: llvm-strings: error: expected a positive integer, but got '0'
 
 CHECK-1:      a
 CHECK-1-NEXT: ab
@@ -43,4 +43,4 @@ CHECK-5:      abcde
 
 ## Show that a non-numeric argument is rejected.
 RUN: not llvm-strings -n foo %t 2>&1 | FileCheck %s --check-prefix=ERR
-ERR: llvm-strings{{.*}}: for the --bytes option: 'foo' value invalid for integer argument!
+ERR: llvm-strings: error: expected a positive integer, but got 'foo'
