@@ -85,6 +85,7 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("mips");
 
   if (ABI == "p32") {
+    Builder.defineMacro("__nanomips__");
     Builder.defineMacro("__mips", "32");
     Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_NANOMIPS");
   } else if (ABI == "o32") {
