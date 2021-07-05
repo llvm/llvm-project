@@ -234,8 +234,8 @@ module std [system] {
       module count_if                 { header "__algorithm/count_if.h" }
       module equal                    { header "__algorithm/equal.h" }
       module equal_range              { header "__algorithm/equal_range.h" }
-      module fill_n                   { header "__algorithm/fill_n.h" }
       module fill                     { header "__algorithm/fill.h" }
+      module fill_n                   { header "__algorithm/fill_n.h" }
       module find                     { header "__algorithm/find.h" }
       module find_end                 { header "__algorithm/find_end.h" }
       module find_first_of            { header "__algorithm/find_first_of.h" }
@@ -243,8 +243,8 @@ module std [system] {
       module find_if_not              { header "__algorithm/find_if_not.h" }
       module for_each                 { header "__algorithm/for_each.h" }
       module for_each_n               { header "__algorithm/for_each_n.h" }
-      module generate_n               { header "__algorithm/generate_n.h" }
       module generate                 { header "__algorithm/generate.h" }
+      module generate_n               { header "__algorithm/generate_n.h" }
       module half_positive            { header "__algorithm/half_positive.h" }
       module includes                 { header "__algorithm/includes.h" }
       module inplace_merge            { header "__algorithm/inplace_merge.h" }
@@ -286,10 +286,10 @@ module std [system] {
       module replace_copy             { header "__algorithm/replace_copy.h" }
       module replace_copy_if          { header "__algorithm/replace_copy_if.h" }
       module replace_if               { header "__algorithm/replace_if.h" }
-      module reverse_copy             { header "__algorithm/reverse_copy.h" }
       module reverse                  { header "__algorithm/reverse.h" }
-      module rotate_copy              { header "__algorithm/rotate_copy.h" }
+      module reverse_copy             { header "__algorithm/reverse_copy.h" }
       module rotate                   { header "__algorithm/rotate.h" }
+      module rotate_copy              { header "__algorithm/rotate_copy.h" }
       module sample                   { header "__algorithm/sample.h" }
       module search                   { header "__algorithm/search.h" }
       module search_n                 { header "__algorithm/search_n.h" }
@@ -306,8 +306,8 @@ module std [system] {
       module stable_partition         { header "__algorithm/stable_partition.h" }
       module stable_sort              { header "__algorithm/stable_sort.h" }
       module transform                { header "__algorithm/transform.h" }
-      module unique_copy              { header "__algorithm/unique_copy.h" }
       module unique                   { header "__algorithm/unique.h" }
+      module unique_copy              { header "__algorithm/unique_copy.h" }
       module unwrap_iter              { header "__algorithm/unwrap_iter.h" }
       module upper_bound              { header "__algorithm/upper_bound.h" }
     }
