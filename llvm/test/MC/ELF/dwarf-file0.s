@@ -1,3 +1,4 @@
+# UNSUPPORTED: -zos
 # REQUIRES: default_triple
 # RUN: llvm-mc -dwarf-version 4 %s -filetype=obj -o - | llvm-dwarfdump -debug-line - | FileCheck %s
 # RUN: llvm-mc -dwarf-version 4 %s --fatal-warnings -o - | FileCheck %s --check-prefix=ASM
