@@ -354,6 +354,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   else()
     set(CPACK_DEBIAN_PACKAGE_RELEASE "local")
   endif()
+  set (CPACK_DEBIAN_PACKAGE_DEPENDS "rocm-core")
 
   # RPM package specific variables
   set(CPACK_RPM_PACKAGE_REQUIRES "ncurses")
@@ -365,6 +366,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   else()
     set(CPACK_RPM_PACKAGE_RELEASE "local")
   endif()
+  set (CPACK_RPM_PACKAGE_REQUIRES "rocm-core")
 
   # Get rpm distro
   if(CPACK_RPM_PACKAGE_RELEASE)
@@ -377,6 +379,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   # Set the names now using CPACK utility
   set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
   set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
+  # Remove dependency on rocm-core if -DROCM_DEP_ROCMCORE=ON not given to cmake
+  if(NOT ROCM_DEP_ROCMCORE)
+      string(REGEX REPLACE ",? ?rocm-core" "" CPACK_RPM_PACKAGE_REQUIRES ${CPACK_RPM_PACKAGE_REQUIRES})
+      string(REGEX REPLACE ",? ?rocm-core" "" CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_DEBIAN_PACKAGE_DEPENDS})
+  endif()
 
   include(CPack)
 endif()
