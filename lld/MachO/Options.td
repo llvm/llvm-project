@@ -780,9 +780,8 @@ def client_name : Separate<["-"], "client_name">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def umbrella : Separate<["-"], "umbrella">,
-    MetaVarName<"<<name>>">,
-    HelpText<"Re-export this dylib through the umbrella framework <name>a">,
-    Flags<[HelpHidden]>,
+    MetaVarName<"<name>">,
+    HelpText<"Re-export this dylib through the umbrella framework <name>">,
     Group<grp_rare>;
 def headerpad : Separate<["-"], "headerpad">,
     MetaVarName<"<size>">,

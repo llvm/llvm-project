@@ -128,6 +128,31 @@ public:
   ExportSection *exportSection;
 };
 
+class LCSubFramework final : public LoadCommand {
+public:
+  LCSubFramework(StringRef umbrella) : umbrella(umbrella) {}
+
+  uint32_t getSize() const override {
+    return alignTo(sizeof(sub_framework_command) + umbrella.size() + 1,
+                   target->wordSize);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<sub_framework_command *>(buf);
+    buf += sizeof(sub_framework_command);
+
+    c->cmd = LC_SUB_FRAMEWORK;
+    c->cmdsize = getSize();
+    c->umbrella = sizeof(sub_framework_command);
+
+    memcpy(buf, umbrella.data(), umbrella.size());
+    buf[umbrella.size()] = '\0';
+  }
+
+private:
+  const StringRef umbrella;
+};
+
 class LCFunctionStarts final : public LoadCommand {
 public:
   explicit LCFunctionStarts(FunctionStartsSection *functionStartsSection)
@@ -665,6 +690,8 @@ template <class LP> void Writer::createLoadCommands() {
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
+  if (!config->umbrella.empty())
+    in.header->addLoadCommand(make<LCSubFramework>(config->umbrella));
   if (functionStartsSection)
     in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));
   if (dataInCodeSection)
