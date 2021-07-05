@@ -22,7 +22,7 @@ template <class T>
 void test_temp(__global int *par) {
   T *var1 = addrspace_cast<T *>(par); //expected-error{{addrspace_cast from '__global int *__private' to '__private int *' converts between mismatching address spaces}}
   __private T *var2 = addrspace_cast<__private T *>(par); //expected-error{{addrspace_cast from '__global int *__private' to '__private int *' converts between mismatching address spaces}}
-  T var3 = addrspace_cast<T>(par); //expected-error{{addrspace_cast from '__global int *__private' to '__private int' is not allowed}}
+  T var3 = addrspace_cast<T>(par); //expected-error{{addrspace_cast from '__global int *__private' to 'int' is not allowed}}
 }
 
 void bar() {

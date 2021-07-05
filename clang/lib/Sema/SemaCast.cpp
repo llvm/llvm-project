@@ -61,6 +61,15 @@ namespace {
         ValueKind(Expr::getValueKindForType(destType)),
         Kind(CK_Dependent), IsARCUnbridgedCast(false) {
 
+      // C++ [expr.type]/8.2.2:
+      //   If a pr-value initially has the type cv-T, where T is a
+      //   cv-unqualified non-class, non-array type, the type of the
+      //   expression is adjusted to T prior to any further analysis.
+      if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
+          !DestType->isArrayType()) {
+        DestType = DestType.getUnqualifiedType();
+      }
+
       if (const BuiltinType *placeholder =
             src.get()->getType()->getAsPlaceholderType()) {
         PlaceholderKind = placeholder->getKind();
