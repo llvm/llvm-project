@@ -113,6 +113,10 @@ if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
 endif()
 
+if (LIBCXX_BUILD_32_BITS)
+  serialize_lit_param(enable_32bit True)
+endif()
+
 if (NOT DEFINED LIBCXX_TEST_DEPS)
   message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")
 endif()
