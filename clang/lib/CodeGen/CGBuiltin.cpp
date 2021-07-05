@@ -14830,40 +14830,34 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_aesenc256kl_u8:
   case X86::BI__builtin_ia32_aesdec256kl_u8: {
     Intrinsic::ID IID;
-    StringRef StrNoErr, StrErr, StrEnd;
+    StringRef BlockName;
     switch (BuiltinID) {
-    default: llvm_unreachable("Unexpected builtin");
+    default:
+      llvm_unreachable("Unexpected builtin");
     case X86::BI__builtin_ia32_aesenc128kl_u8:
       IID = Intrinsic::x86_aesenc128kl;
-      StrNoErr = "aesenc128kl_no_error";
-      StrErr = "aesenc128kl_error";
-      StrEnd = "aesenc128kl_end";
+      BlockName = "aesenc128kl";
       break;
     case X86::BI__builtin_ia32_aesdec128kl_u8:
       IID = Intrinsic::x86_aesdec128kl;
-      StrNoErr = "aesdec128kl_no_error";
-      StrErr = "aesdec128kl_error";
-      StrEnd = "aesdec128kl_end";
+      BlockName = "aesdec128kl";
       break;
     case X86::BI__builtin_ia32_aesenc256kl_u8:
       IID = Intrinsic::x86_aesenc256kl;
-      StrNoErr = "aesenc256kl_no_error";
-      StrErr = "aesenc256kl_error";
-      StrEnd = "aesenc256kl_end";
+      BlockName = "aesenc256kl";
       break;
     case X86::BI__builtin_ia32_aesdec256kl_u8:
       IID = Intrinsic::x86_aesdec256kl;
-      StrNoErr = "aesdec256kl_no_error";
-      StrErr = "aesdec256kl_error";
-      StrEnd = "aesdec256kl_end";
+      BlockName = "aesdec256kl";
       break;
     }
 
     Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), {Ops[1], Ops[2]});
 
-    BasicBlock *NoError = createBasicBlock(StrNoErr, this->CurFn);
-    BasicBlock *Error = createBasicBlock(StrErr, this->CurFn);
-    BasicBlock *End = createBasicBlock(StrEnd, this->CurFn);
+    BasicBlock *NoError =
+        createBasicBlock(BlockName + "_no_error", this->CurFn);
+    BasicBlock *Error = createBasicBlock(BlockName + "_error", this->CurFn);
+    BasicBlock *End = createBasicBlock(BlockName + "_end", this->CurFn);
 
     Value *Ret = Builder.CreateExtractValue(Call, 0);
     Value *Succ = Builder.CreateTrunc(Ret, Builder.getInt1Ty());
@@ -14887,31 +14881,23 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_aesencwide256kl_u8:
   case X86::BI__builtin_ia32_aesdecwide256kl_u8: {
     Intrinsic::ID IID;
-    StringRef StrNoErr, StrErr, StrEnd;
+    StringRef BlockName;
     switch (BuiltinID) {
     case X86::BI__builtin_ia32_aesencwide128kl_u8:
       IID = Intrinsic::x86_aesencwide128kl;
-      StrNoErr = "aesencwide128kl_no_error";
-      StrErr = "aesencwide128kl_error";
-      StrEnd = "aesencwide128kl_end";
+      BlockName = "aesencwide128kl";
       break;
     case X86::BI__builtin_ia32_aesdecwide128kl_u8:
       IID = Intrinsic::x86_aesdecwide128kl;
-      StrNoErr = "aesdecwide128kl_no_error";
-      StrErr = "aesdecwide128kl_error";
-      StrEnd = "aesdecwide128kl_end";
+      BlockName = "aesdecwide128kl";
       break;
     case X86::BI__builtin_ia32_aesencwide256kl_u8:
       IID = Intrinsic::x86_aesencwide256kl;
-      StrNoErr = "aesencwide256kl_no_error";
-      StrErr = "aesencwide256kl_error";
-      StrEnd = "aesencwide256kl_end";
+      BlockName = "aesencwide256kl";
       break;
     case X86::BI__builtin_ia32_aesdecwide256kl_u8:
       IID = Intrinsic::x86_aesdecwide256kl;
-      StrNoErr = "aesdecwide256kl_no_error";
-      StrErr = "aesdecwide256kl_error";
-      StrEnd = "aesdecwide256kl_end";
+      BlockName = "aesdecwide256kl";
       break;
     }
 
@@ -14925,9 +14911,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
     Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), InOps);
 
-    BasicBlock *NoError = createBasicBlock(StrNoErr, this->CurFn);
-    BasicBlock *Error = createBasicBlock(StrErr, this->CurFn);
-    BasicBlock *End = createBasicBlock(StrEnd, this->CurFn);
+    BasicBlock *NoError =
+        createBasicBlock(BlockName + "_no_error", this->CurFn);
+    BasicBlock *Error = createBasicBlock(BlockName + "_error", this->CurFn);
+    BasicBlock *End = createBasicBlock(BlockName + "_end", this->CurFn);
 
     Value *Ret = Builder.CreateExtractValue(Call, 0);
     Value *Succ = Builder.CreateTrunc(Ret, Builder.getInt1Ty());
