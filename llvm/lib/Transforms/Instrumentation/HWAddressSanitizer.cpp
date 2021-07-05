@@ -1348,7 +1348,9 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     for (auto &BB : F) {
       for (auto &Inst : BB) {
         if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-          for (Value *V : DVI->location_ops()) {
+          SmallDenseSet<Value *> LocationOps(DVI->location_ops().begin(),
+                                             DVI->location_ops().end());
+          for (Value *V : LocationOps) {
             if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
               if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
                 DVI->replaceVariableLocationOp(V, NewAI);
