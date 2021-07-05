@@ -175,3 +175,39 @@ define void @test_arg_lowering_struct(%struct.A %a) #0 {
   ; CHECK:   RTS
   ret void
 }
+
+define i8 @test_ret1(i8 %a) {
+  ; CHECK-LABEL: name: test_ret1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[G_F_I1:%[0-9]+]]:_(p0) = G_FRAME_INDEX
+  ; CHECK:   [[G_LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[G_F_I1]](p0)
+  ; CHECK:   [[G_TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[G_LOAD1]](s32)
+  ; CHECK:   $bd0 = COPY [[G_TRUNC1]](s8)
+  ; CHECK:   RTS implicit $bd0
+  ret i8 %a
+}
+
+define i32 @test_ret2(i32 %a) {
+  ; CHECK-LABEL: name: test_ret2
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[G_F_I1:%[0-9]+]]:_(p0) = G_FRAME_INDEX
+  ; CHECK:   [[G_LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[G_F_I1]](p0)
+  ; CHECK:   $d0 = COPY [[G_LOAD1]](s32)
+  ; CHECK:   RTS implicit $d0
+  ret i32 %a
+}
+
+define i64 @test_ret3(i64 %a) {
+  ; CHECK-LABEL: name: test_ret3
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   [[G_F_I1:%[0-9]+]]:_(p0) = G_FRAME_INDEX
+  ; CHECK:   [[G_LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[G_F_I1]](p0)
+  ; CHECK:   [[G_F_I2:%[0-9]+]]:_(p0) = G_FRAME_INDEX
+  ; CHECK:   [[G_LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[G_F_I2]](p0)
+  ; CHECK:   [[G_MERGE_VAL:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[G_LOAD1]](s32), [[G_LOAD2]](s32)
+  ; CHECK:   [[G_UNMERGE_VAL1:%[0-9]+]]:_(s32), [[G_UNMERGE_VAL2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[G_MERGE_VAL]](s64)
+  ; CHECK:   $d0 = COPY [[G_UNMERGE_VAL1]](s32)
+  ; CHECK:   $d1 = COPY [[G_UNMERGE_VAL2]](s32)
+  ; CHECK:   RTS implicit $d0, implicit $d1
+  ret i64 %a
+}
