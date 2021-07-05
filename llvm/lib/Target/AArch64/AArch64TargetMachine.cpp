@@ -158,7 +158,7 @@ static cl::opt<bool> EnableFalkorHWPFFix("aarch64-enable-falkor-hwpf-fix",
 
 static cl::opt<bool>
     EnableBranchTargets("aarch64-enable-branch-targets", cl::Hidden,
-                        cl::desc("Enable the AAcrh64 branch target pass"),
+                        cl::desc("Enable the AArch64 branch target pass"),
                         cl::init(true));
 
 static cl::opt<unsigned> SVEVectorBitsMaxOpt(
