@@ -424,6 +424,9 @@ public:
   // This function returns string table entry.
   Expected<StringRef> getStringTableEntry(uint32_t Offset) const;
 
+  // This function returns the string table.
+  StringRef getStringTable() const;
+
   const XCOFF::SymbolAuxType *getSymbolAuxType(uintptr_t AuxEntryAddress) const;
 
   static uintptr_t getAdvancedSymbolEntryAddress(uintptr_t CurrentAddress,
