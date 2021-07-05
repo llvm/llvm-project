@@ -52,6 +52,25 @@ static void printAsPrintable(raw_ostream &W, const uint8_t *Start, size_t Len) {
     W << (isPrint(Start[i]) ? static_cast<char>(Start[i]) : '.');
 }
 
+void ObjDumper::printAsStringList(StringRef StringContent) {
+  const uint8_t *StrContent = StringContent.bytes_begin();
+  const uint8_t *CurrentWord = StrContent;
+  const uint8_t *StrEnd = StringContent.bytes_end();
+
+  while (CurrentWord <= StrEnd) {
+    size_t WordSize = strnlen(reinterpret_cast<const char *>(CurrentWord),
+                              StrEnd - CurrentWord);
+    if (!WordSize) {
+      CurrentWord++;
+      continue;
+    }
+    W.startLine() << format("[%6tx] ", CurrentWord - StrContent);
+    printAsPrintable(W.startLine(), CurrentWord, WordSize);
+    W.startLine() << '\n';
+    CurrentWord += WordSize + 1;
+  }
+}
+
 static std::vector<object::SectionRef>
 getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
                             ArrayRef<std::string> Sections) {
@@ -109,23 +128,7 @@ void ObjDumper::printSectionsAsString(const object::ObjectFile &Obj,
 
     StringRef SectionContent =
         unwrapOrError(Obj.getFileName(), Section.getContents());
-
-    const uint8_t *SecContent = SectionContent.bytes_begin();
-    const uint8_t *CurrentWord = SecContent;
-    const uint8_t *SecEnd = SectionContent.bytes_end();
-
-    while (CurrentWord <= SecEnd) {
-      size_t WordSize = strnlen(reinterpret_cast<const char *>(CurrentWord),
-                                SecEnd - CurrentWord);
-      if (!WordSize) {
-        CurrentWord++;
-        continue;
-      }
-      W.startLine() << format("[%6tx] ", CurrentWord - SecContent);
-      printAsPrintable(W.startLine(), CurrentWord, WordSize);
-      W.startLine() << '\n';
-      CurrentWord += WordSize + 1;
-    }
+    printAsStringList(SectionContent);
   }
 }
 
