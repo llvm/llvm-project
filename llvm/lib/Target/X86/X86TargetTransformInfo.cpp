@@ -3263,6 +3263,36 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   Type *ScalarType = Val->getScalarType();
   int RegisterFileMoveCost = 0;
 
+  // Non-immediate extraction/insertion can be handled as a sequence of
+  // aliased loads+stores via the stack.
+  if (Index == -1U && (Opcode == Instruction::ExtractElement ||
+                       Opcode == Instruction::InsertElement)) {
+    // TODO: On some SSE41+ targets, we expand to cmp+splat+select patterns:
+    // inselt N0, N1, N2 --> select (SplatN2 == {0,1,2...}) ? SplatN1 : N0. 
+
+    // TODO: Move this to BasicTTIImpl.h? We'd need better gep + index handling.
+    assert(isa<FixedVectorType>(Val) && "Fixed vector type expected");
+    Align VecAlign = DL.getPrefTypeAlign(Val);
+    Align SclAlign = DL.getPrefTypeAlign(ScalarType);
+
+    // Extract - store vector to stack, load scalar.
+    if (Opcode == Instruction::ExtractElement) {
+      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0,
+                             TTI::TargetCostKind::TCK_RecipThroughput) +
+             getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
+                             TTI::TargetCostKind::TCK_RecipThroughput);
+    }
+    // Insert - store vector to stack, store scalar, load vector.
+    if (Opcode == Instruction::InsertElement) {
+      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0,
+                             TTI::TargetCostKind::TCK_RecipThroughput) +
+             getMemoryOpCost(Instruction::Store, ScalarType, SclAlign, 0,
+                             TTI::TargetCostKind::TCK_RecipThroughput) +
+             getMemoryOpCost(Instruction::Load, Val, VecAlign, 0,
+                             TTI::TargetCostKind::TCK_RecipThroughput);
+    }
+  }
+
   if (Index != -1U && (Opcode == Instruction::ExtractElement ||
                        Opcode == Instruction::InsertElement)) {
     // Legalize the type.
