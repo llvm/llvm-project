@@ -2306,10 +2306,10 @@ static void getUsefulBitsForUse(SDNode *UserNode, APInt &UsefulBits,
 
   case AArch64::ORRWrs:
   case AArch64::ORRXrs:
-    if (UserNode->getOperand(1) != Orig)
-      return;
-    return getUsefulBitsFromOrWithShiftedReg(SDValue(UserNode, 0), UsefulBits,
-                                             Depth);
+    if (UserNode->getOperand(0) != Orig && UserNode->getOperand(1) == Orig)
+      getUsefulBitsFromOrWithShiftedReg(SDValue(UserNode, 0), UsefulBits,
+                                        Depth);
+    return;
   case AArch64::BFMWri:
   case AArch64::BFMXri:
     return getUsefulBitsFromBFM(SDValue(UserNode, 0), Orig, UsefulBits, Depth);
