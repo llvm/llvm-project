@@ -911,6 +911,8 @@ bool LoopReroll::DAGRootTracker::validateRootSet(DAGRootSet &DRS) {
   // Check that the first root is evenly spaced.
   unsigned N = DRS.Roots.size() + 1;
   const SCEV *StepSCEV = SE->getMinusSCEV(SE->getSCEV(DRS.Roots[0]), ADR);
+  if (isa<SCEVCouldNotCompute>(StepSCEV))
+    return false;
   const SCEV *ScaleSCEV = SE->getConstant(StepSCEV->getType(), N);
   if (ADR->getStepRecurrence(*SE) != SE->getMulExpr(StepSCEV, ScaleSCEV))
     return false;

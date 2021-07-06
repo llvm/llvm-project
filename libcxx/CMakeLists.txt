@@ -10,8 +10,6 @@ endif()
 #===============================================================================
 cmake_minimum_required(VERSION 3.13.4)
 
-set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
-
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"

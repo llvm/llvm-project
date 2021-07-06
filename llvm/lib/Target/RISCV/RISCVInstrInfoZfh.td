@@ -334,11 +334,17 @@ def : Pat<(riscv_fmv_x_anyexth FPR16:$src), (FMV_X_H FPR16:$src)>;
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZfh, IsRV32] in {
-// float->[u]int. Round-to-zero must be used.
+// half->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (fp_to_sint FPR16:$rs1)), (FCVT_W_H $rs1, 0b001)>;
 def : Pat<(i32 (fp_to_uint FPR16:$rs1)), (FCVT_WU_H $rs1, 0b001)>;
 
-// [u]int->float. Match GCC and default to using dynamic rounding mode.
+// half->int32 with current rounding mode.
+def : Pat<(i32 (lrint FPR16:$rs1)), (FCVT_W_H $rs1, 0b111)>;
+
+// half->int32 rounded to nearest with ties rounded away from zero.
+def : Pat<(i32 (lround FPR16:$rs1)), (FCVT_W_H $rs1, 0b100)>;
+
+// [u]int->half. Match GCC and default to using dynamic rounding mode.
 def : Pat<(sint_to_fp (i32 GPR:$rs1)), (FCVT_H_W $rs1, 0b111)>;
 def : Pat<(uint_to_fp (i32 GPR:$rs1)), (FCVT_H_WU $rs1, 0b111)>;
 } // Predicates = [HasStdExtZfh, IsRV32]
@@ -351,9 +357,17 @@ let Predicates = [HasStdExtZfh, IsRV64] in {
 def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR16:$rs1)), i32),
           (FCVT_WU_H $rs1, 0b001)>;
 
-// FP->[u]int64
+// half->[u]int64. Round-to-zero must be used.
 def : Pat<(i64 (fp_to_sint FPR16:$rs1)), (FCVT_L_H $rs1, 0b001)>;
 def : Pat<(i64 (fp_to_uint FPR16:$rs1)), (FCVT_LU_H $rs1, 0b001)>;
+
+// half->int64 with current rounding mode.
+def : Pat<(i64 (lrint FPR16:$rs1)), (FCVT_L_H $rs1, 0b111)>;
+def : Pat<(i64 (llrint FPR16:$rs1)), (FCVT_L_H $rs1, 0b111)>;
+
+// half->int64 rounded to nearest with ties rounded away from zero.
+def : Pat<(i64 (lround FPR16:$rs1)), (FCVT_L_H $rs1, 0b100)>;
+def : Pat<(i64 (llround FPR16:$rs1)), (FCVT_L_H $rs1, 0b100)>;
 
 // [u]int->fp. Match GCC and default to using dynamic rounding mode.
 def : Pat<(sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_H_W $rs1, 0b111)>;

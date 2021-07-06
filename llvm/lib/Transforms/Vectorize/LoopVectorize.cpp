@@ -6119,6 +6119,12 @@ bool LoopVectorizationCostModel::isCandidateForEpilogueVectorization(
       }))
     return false;
 
+  // Epilogue vectorization code has not been auditted to ensure it handles
+  // non-latch exits properly.  It may be fine, but it needs auditted and
+  // tested.
+  if (L.getExitingBlock() != L.getLoopLatch())
+    return false;
+
   return true;
 }
 

@@ -44,11 +44,11 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
       AliasChecks(Checks.begin(), Checks.end()),
       Preds(LAI.getPSE().getUnionPredicate()), LAI(LAI), LI(LI), DT(DT),
       SE(SE) {
-  assert(L->getUniqueExitBlock() && "No single exit block");
 }
 
 void LoopVersioning::versionLoop(
     const SmallVectorImpl<Instruction *> &DefsUsedOutside) {
+  assert(VersionedLoop->getUniqueExitBlock() && "No single exit block");
   assert(VersionedLoop->isLoopSimplifyForm() &&
          "Loop is not in loop-simplify form");
 

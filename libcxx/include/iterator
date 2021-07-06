@@ -561,27 +561,34 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__config>
 #include <__debug>
 #include <__functional_base>
+#include <__iterator/access.h>
 #include <__iterator/advance.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
+#include <__iterator/data.h>
 #include <__iterator/default_sentinel.h>
+#include <__iterator/distance.h>
+#include <__iterator/empty.h>
+#include <__iterator/erase_if_container.h>
 #include <__iterator/front_insert_iterator.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/insert_iterator.h>
-#include <__iterator/istream_iterator.h>
 #include <__iterator/istreambuf_iterator.h>
+#include <__iterator/istream_iterator.h>
+#include <__iterator/iterator.h>
+#include <__iterator/iterator_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/iterator.h>
 #include <__iterator/move_iterator.h>
 #include <__iterator/next.h>
-#include <__iterator/ostream_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
+#include <__iterator/ostream_iterator.h>
 #include <__iterator/prev.h>
 #include <__iterator/projected.h>
 #include <__iterator/readable_traits.h>
+#include <__iterator/reverse_access.h>
 #include <__iterator/reverse_iterator.h>
+#include <__iterator/size.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
@@ -596,305 +603,5 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-typename iterator_traits<_InputIter>::difference_type
-__distance(_InputIter __first, _InputIter __last, input_iterator_tag)
-{
-    typename iterator_traits<_InputIter>::difference_type __r(0);
-    for (; __first != __last; ++__first)
-        ++__r;
-    return __r;
-}
-
-template <class _RandIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-typename iterator_traits<_RandIter>::difference_type
-__distance(_RandIter __first, _RandIter __last, random_access_iterator_tag)
-{
-    return __last - __first;
-}
-
-template <class _InputIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-typename iterator_traits<_InputIter>::difference_type
-distance(_InputIter __first, _InputIter __last)
-{
-    return _VSTD::__distance(__first, __last, typename iterator_traits<_InputIter>::iterator_category());
-}
-
-template <class _Tp, size_t _Np>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-_Tp*
-begin(_Tp (&__array)[_Np])
-{
-    return __array;
-}
-
-template <class _Tp, size_t _Np>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-_Tp*
-end(_Tp (&__array)[_Np])
-{
-    return __array + _Np;
-}
-
-#if !defined(_LIBCPP_CXX03_LANG)
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto
-begin(_Cp& __c) -> decltype(__c.begin())
-{
-    return __c.begin();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto
-begin(const _Cp& __c) -> decltype(__c.begin())
-{
-    return __c.begin();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto
-end(_Cp& __c) -> decltype(__c.end())
-{
-    return __c.end();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto
-end(const _Cp& __c) -> decltype(__c.end())
-{
-    return __c.end();
-}
-
-#if _LIBCPP_STD_VER > 11
-
-template <class _Tp, size_t _Np>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-reverse_iterator<_Tp*> rbegin(_Tp (&__array)[_Np])
-{
-    return reverse_iterator<_Tp*>(__array + _Np);
-}
-
-template <class _Tp, size_t _Np>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-reverse_iterator<_Tp*> rend(_Tp (&__array)[_Np])
-{
-    return reverse_iterator<_Tp*>(__array);
-}
-
-template <class _Ep>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-reverse_iterator<const _Ep*> rbegin(initializer_list<_Ep> __il)
-{
-    return reverse_iterator<const _Ep*>(__il.end());
-}
-
-template <class _Ep>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-reverse_iterator<const _Ep*> rend(initializer_list<_Ep> __il)
-{
-    return reverse_iterator<const _Ep*>(__il.begin());
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-auto cbegin(const _Cp& __c) -> decltype(_VSTD::begin(__c))
-{
-    return _VSTD::begin(__c);
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-auto cend(const _Cp& __c) -> decltype(_VSTD::end(__c))
-{
-    return _VSTD::end(__c);
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto rbegin(_Cp& __c) -> decltype(__c.rbegin())
-{
-    return __c.rbegin();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto rbegin(const _Cp& __c) -> decltype(__c.rbegin())
-{
-    return __c.rbegin();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto rend(_Cp& __c) -> decltype(__c.rend())
-{
-    return __c.rend();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto rend(const _Cp& __c) -> decltype(__c.rend())
-{
-    return __c.rend();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto crbegin(const _Cp& __c) -> decltype(_VSTD::rbegin(__c))
-{
-    return _VSTD::rbegin(__c);
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-auto crend(const _Cp& __c) -> decltype(_VSTD::rend(__c))
-{
-    return _VSTD::rend(__c);
-}
-
-#endif
-
-
-#else  // defined(_LIBCPP_CXX03_LANG)
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
-typename _Cp::iterator
-begin(_Cp& __c)
-{
-    return __c.begin();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
-typename _Cp::const_iterator
-begin(const _Cp& __c)
-{
-    return __c.begin();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
-typename _Cp::iterator
-end(_Cp& __c)
-{
-    return __c.end();
-}
-
-template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
-typename _Cp::const_iterator
-end(const _Cp& __c)
-{
-    return __c.end();
-}
-
-#endif // !defined(_LIBCPP_CXX03_LANG)
-
-#if _LIBCPP_STD_VER > 14
-
-// #if _LIBCPP_STD_VER > 11
-// template <>
-// struct _LIBCPP_TEMPLATE_VIS plus<void>
-// {
-//     template <class _T1, class _T2>
-//     _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-//     auto operator()(_T1&& __t, _T2&& __u) const
-//     _NOEXCEPT_(noexcept(_VSTD::forward<_T1>(__t) + _VSTD::forward<_T2>(__u)))
-//     -> decltype        (_VSTD::forward<_T1>(__t) + _VSTD::forward<_T2>(__u))
-//         { return        _VSTD::forward<_T1>(__t) + _VSTD::forward<_T2>(__u); }
-//     typedef void is_transparent;
-// };
-// #endif
-
-template <class _Cont>
-_LIBCPP_INLINE_VISIBILITY
-constexpr auto size(const _Cont& __c)
-_NOEXCEPT_(noexcept(__c.size()))
--> decltype        (__c.size())
-{ return            __c.size(); }
-
-template <class _Tp, size_t _Sz>
-_LIBCPP_INLINE_VISIBILITY
-constexpr size_t size(const _Tp (&)[_Sz]) noexcept { return _Sz; }
-
-#if _LIBCPP_STD_VER > 17
-template <class _Cont>
-_LIBCPP_INLINE_VISIBILITY
-constexpr auto ssize(const _Cont& __c)
-_NOEXCEPT_(noexcept(static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(__c.size())))
-->                              common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>
-{ return            static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(__c.size()); }
-
-template <class _Tp, ptrdiff_t _Sz>
-_LIBCPP_INLINE_VISIBILITY
-constexpr ptrdiff_t ssize(const _Tp (&)[_Sz]) noexcept { return _Sz; }
-#endif
-
-template <class _Cont>
-_LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
-constexpr auto empty(const _Cont& __c)
-_NOEXCEPT_(noexcept(__c.empty()))
--> decltype        (__c.empty())
-{ return            __c.empty(); }
-
-template <class _Tp, size_t _Sz>
-_LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
-constexpr bool empty(const _Tp (&)[_Sz]) noexcept { return false; }
-
-template <class _Ep>
-_LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
-constexpr bool empty(initializer_list<_Ep> __il) noexcept { return __il.size() == 0; }
-
-template <class _Cont> constexpr
-_LIBCPP_INLINE_VISIBILITY
-auto data(_Cont& __c)
-_NOEXCEPT_(noexcept(__c.data()))
--> decltype        (__c.data())
-{ return            __c.data(); }
-
-template <class _Cont> constexpr
-_LIBCPP_INLINE_VISIBILITY
-auto data(const _Cont& __c)
-_NOEXCEPT_(noexcept(__c.data()))
--> decltype        (__c.data())
-{ return            __c.data(); }
-
-template <class _Tp, size_t _Sz>
-_LIBCPP_INLINE_VISIBILITY
-constexpr _Tp* data(_Tp (&__array)[_Sz]) noexcept { return __array; }
-
-template <class _Ep>
-_LIBCPP_INLINE_VISIBILITY
-constexpr const _Ep* data(initializer_list<_Ep> __il) noexcept { return __il.begin(); }
-#endif
-
-template <class _Container, class _Predicate>
-typename _Container::size_type
-__libcpp_erase_if_container(_Container& __c, _Predicate& __pred) {
-  typename _Container::size_type __old_size = __c.size();
-
-  const typename _Container::iterator __last = __c.end();
-  for (typename _Container::iterator __iter = __c.begin(); __iter != __last;) {
-    if (__pred(*__iter))
-      __iter = __c.erase(__iter);
-    else
-      ++__iter;
-  }
-
-  return __old_size - __c.size();
-}
-
-_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_ITERATOR

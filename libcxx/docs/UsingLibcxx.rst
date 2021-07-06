@@ -1,3 +1,5 @@
+.. _using-libcxx:
+
 ============
 Using libc++
 ============
@@ -5,138 +7,118 @@ Using libc++
 .. contents::
   :local:
 
-Getting Started
-===============
+Usually, libc++ is packaged and shipped by a vendor through some delivery vehicle
+(operating system distribution, SDK, toolchain, etc) and users don't need to do
+anything special in order to use the library.
 
-If you already have libc++ installed you can use it with clang.
+This page contains information about configuration knobs that can be used by
+users when they know libc++ is used by their toolchain, and how to use libc++
+when it is not the default library used by their toolchain.
 
-.. code-block:: bash
 
-    $ clang++ -stdlib=libc++ test.cpp
-    $ clang++ -std=c++11 -stdlib=libc++ test.cpp
+Using a different version of the C++ Standard
+=============================================
 
-On macOS and FreeBSD libc++ is the default standard library
-and the ``-stdlib=libc++`` is not required.
-
-.. _alternate libcxx:
-
-If you want to select an alternate installation of libc++ you
-can use the following options.
-
-.. code-block:: bash
-
-  $ clang++ -std=c++11 -stdlib=libc++ -nostdinc++ \
-            -I<libcxx-install-prefix>/include/c++/v1 \
-            -L<libcxx-install-prefix>/lib \
-            -Wl,-rpath,<libcxx-install-prefix>/lib \
-            test.cpp
-
-The option ``-Wl,-rpath,<libcxx-install-prefix>/lib`` adds a runtime library
-search path. Meaning that the systems dynamic linker will look for libc++ in
-``<libcxx-install-prefix>/lib`` whenever the program is run. Alternatively the
-environment variable ``LD_LIBRARY_PATH`` (``DYLD_LIBRARY_PATH`` on macOS) can
-be used to change the dynamic linkers search paths after a program is compiled.
-
-An example of using ``LD_LIBRARY_PATH``:
+Libc++ implements the various versions of the C++ Standard. Changing the version of
+the standard can be done by passing ``-std=c++XY`` to the compiler. Libc++ will
+automatically detect what Standard is being used and will provide functionality that
+matches that Standard in the library.
 
 .. code-block:: bash
 
-  $ clang++ -stdlib=libc++ -nostdinc++ \
-            -I<libcxx-install-prefix>/include/c++/v1
-            -L<libcxx-install-prefix>/lib \
-            test.cpp -o
-  $ ./a.out # Searches for libc++ in the systems library paths.
-  $ export LD_LIBRARY_PATH=<libcxx-install-prefix>/lib
-  $ ./a.out # Searches for libc++ along LD_LIBRARY_PATH
+  $ clang++ -std=c++17 test.cpp
 
-Using ``<filesystem>``
-======================
+.. warning::
+  Using ``-std=c++XY`` with a version of the Standard that has not been ratified yet
+  is considered unstable. Libc++ reserves the right to make breaking changes to the
+  library until the standard has been ratified.
 
-Prior to LLVM 9.0, libc++ provides the implementation of the filesystem library
-in a separate static library. Users of ``<filesystem>`` and ``<experimental/filesystem>``
-are required to link ``-lc++fs``. Prior to libc++ 7.0, users of
-``<experimental/filesystem>`` were required to link libc++experimental.
-
-Starting with LLVM 9.0, support for ``<filesystem>`` is provided in the main
-library and nothing special is required to use ``<filesystem>``.
 
 Using libc++experimental and ``<experimental/...>``
-=====================================================
+===================================================
 
 Libc++ provides implementations of experimental technical specifications
 in a separate library, ``libc++experimental.a``. Users of ``<experimental/...>``
-headers may be required to link ``-lc++experimental``.
+headers may be required to link ``-lc++experimental``. Note that not all
+vendors ship ``libc++experimental.a``, and as a result, you may not be
+able to use those experimental features.
 
 .. code-block:: bash
 
-  $ clang++ -std=c++14 -stdlib=libc++ test.cpp -lc++experimental
-
-Libc++experimental.a may not always be available, even when libc++ is already
-installed. For information on building libc++experimental from source see
-:ref:`Building Libc++ <build instructions>` and
-:ref:`libc++experimental CMake Options <libc++experimental options>`.
-
-Also see the `Experimental Library Implementation Status <http://libcxx.llvm.org/ts1z_status.html>`__
-page.
+  $ clang++ test.cpp -lc++experimental
 
 .. warning::
   Experimental libraries are Experimental.
     * The contents of the ``<experimental/...>`` headers and ``libc++experimental.a``
       library will not remain compatible between versions.
     * No guarantees of API or ABI stability are provided.
-    * When we implement the standardized version of an experimental feature,
+    * When the standardized version of an experimental feature is implemented,
       the experimental feature is removed two releases after the non-experimental
       version has shipped. The full policy is explained :ref:`here <experimental features>`.
 
-Using libc++ on Linux
-=====================
 
-On Linux libc++ can typically be used with only '-stdlib=libc++'. However
-some libc++ installations require the user manually link libc++abi themselves.
-If you are running into linker errors when using libc++ try adding '-lc++abi'
-to the link line.  For example:
+Using libc++ when it is not the system default
+==============================================
 
-.. code-block:: bash
-
-  $ clang++ -stdlib=libc++ test.cpp -lc++ -lc++abi -lm -lc -lgcc_s -lgcc
-
-Alternately, you could just add libc++abi to your libraries list, which in
-most situations will give the same result:
+On systems where libc++ is provided but is not the default, Clang provides a flag
+called ``-stdlib=`` that can be used to decide which standard library is used.
+Using ``-stdlib=libc++`` will select libc++:
 
 .. code-block:: bash
 
-  $ clang++ -stdlib=libc++ test.cpp -lc++abi
+  $ clang++ -stdlib=libc++ test.cpp
+
+On systems where libc++ is the library in use by default such as macOS and FreeBSD,
+this flag is not required.
 
 
-Using libc++ with GCC
----------------------
+.. _alternate libcxx:
 
-GCC does not provide a way to switch from libstdc++ to libc++. You must manually
-configure the compile and link commands.
+Using a custom built libc++
+===========================
 
-In particular, you must tell GCC to remove the libstdc++ include directories
-using ``-nostdinc++`` and to not link libstdc++.so using ``-nodefaultlibs``.
-
-Note that ``-nodefaultlibs`` removes all the standard system libraries and
-not just libstdc++ so they must be manually linked. For example:
+Most compilers provide a way to disable the default behavior for finding the
+standard library and to override it with custom paths. With Clang, this can
+be done with:
 
 .. code-block:: bash
 
-  $ g++ -nostdinc++ -I<libcxx-install-prefix>/include/c++/v1 \
-         test.cpp -nodefaultlibs -lc++ -lc++abi -lm -lc -lgcc_s -lgcc
+  $ clang++ -nostdinc++ -nostdlib++           \
+            -isystem <install>/include/c++/v1 \
+            -L <install>/lib                  \
+            -Wl,-rpath,<install>/lib          \
+            -lc++                             \
+            test.cpp
+
+The option ``-Wl,-rpath,<install>/lib`` adds a runtime library search path,
+which causes the system's dynamic linker to look for libc++ in ``<install>/lib``
+whenever the program is loaded.
+
+GCC does not support the ``-nostdlib++`` flag, so one must use ``-nodefaultlibs``
+instead. Since that removes all the standard system libraries and not just libc++,
+the system libraries must be re-added manually. For example:
+
+.. code-block:: bash
+
+  $ g++ -nostdinc++ -nodefaultlibs           \
+        -isystem <install>/include/c++/v1    \
+        -L <install>/lib                     \
+        -Wl,-rpath,<install>/lib             \
+        -lc++ -lc++abi -lm -lc -lgcc_s -lgcc \
+        test.cpp
 
 
 GDB Pretty printers for libc++
-------------------------------
+==============================
 
-GDB does not support pretty-printing of libc++ symbols by default. Unfortunately
-libc++ does not provide pretty-printers itself. However there are 3rd
-party implementations available and although they are not officially
-supported by libc++ they may be useful to users.
+GDB does not support pretty-printing of libc++ symbols by default. However, libc++ does
+provide pretty-printers itself. Those can be used as:
 
-Known 3rd Party Implementations Include:
+.. code-block:: bash
 
-* `Koutheir's libc++ pretty-printers <https://github.com/koutheir/libcxx-pretty-printers>`_.
+  $ gdb -ex "source <libcxx>/utils/gdb/libcxx/printers.py" \
+        -ex "python register_libcxx_printer_loader()" \
+        <args>
 
 
 Libc++ Configuration Macros
@@ -267,8 +249,9 @@ C++20 Specific Configuration Macros:
   This macro is used to re-enable `raw_storage_iterator`.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS**:
-  This macro is used to re-enable `is_literal_type`, `is_literal_type_v`, 
+  This macro is used to re-enable `is_literal_type`, `is_literal_type_v`,
   `result_of` and `result_of_t`.
+
 
 Libc++ Extensions
 =================
