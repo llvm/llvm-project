@@ -40,6 +40,10 @@ if (TARGET_TRIPLE)
   serialize_lit_param(target_triple "\"${TARGET_TRIPLE}\"")
 endif()
 
+if (LIBUNWIND_BUILD_32_BITS)
+  serialize_lit_param(enable_32bit True)
+endif()
+
 configure_lit_site_cfg(
   "${LIBUNWIND_TEST_CONFIG}"
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
