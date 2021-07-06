@@ -395,12 +395,14 @@ void PrintAddressDescription(
   tag_t *candidate = nullptr, *left = tag_ptr, *right = tag_ptr;
   uptr candidate_distance = 0;
   for (; candidate_distance < 1000; candidate_distance++) {
-    if (TagsEqual(addr_tag, left)) {
+    if (MemIsShadow(reinterpret_cast<uptr>(left)) &&
+        TagsEqual(addr_tag, left)) {
       candidate = left;
       break;
     }
     --left;
-    if (TagsEqual(addr_tag, right)) {
+    if (MemIsShadow(reinterpret_cast<uptr>(right)) &&
+        TagsEqual(addr_tag, right)) {
       candidate = right;
       break;
     }
