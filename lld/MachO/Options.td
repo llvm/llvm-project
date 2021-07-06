@@ -877,7 +877,6 @@ def final_output : Separate<["-"], "final_output">,
     Group<grp_rare>;
 def arch_multiple : Flag<["-"], "arch_multiple">,
     HelpText<"Augment error and warning messages with the architecture name">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def dot : Separate<["-"], "dot">,
     MetaVarName<"<path>">,

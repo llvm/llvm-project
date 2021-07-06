@@ -55,6 +55,10 @@ BUILTIN(__builtin_ppc_fetch_and_or, "UiUiD*Ui", "")
 BUILTIN(__builtin_ppc_fetch_and_orlp, "ULiULiD*ULi", "")
 BUILTIN(__builtin_ppc_fetch_and_swap, "UiUiD*Ui", "")
 BUILTIN(__builtin_ppc_fetch_and_swaplp, "ULiULiD*ULi", "")
+BUILTIN(__builtin_ppc_ldarx, "LiLiD*", "")
+BUILTIN(__builtin_ppc_lwarx, "iiD*", "")
+BUILTIN(__builtin_ppc_stdcx, "iLiD*Li", "")
+BUILTIN(__builtin_ppc_stwcx, "iiD*i", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
