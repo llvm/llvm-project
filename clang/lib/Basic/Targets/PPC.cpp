@@ -108,6 +108,10 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__fetch_and_orlp", "__builtin_ppc_fetch_and_orlp");
   Builder.defineMacro("__fetch_and_swap", "__builtin_ppc_fetch_and_swap");
   Builder.defineMacro("__fetch_and_swaplp", "__builtin_ppc_fetch_and_swaplp");
+  Builder.defineMacro("__ldarx", "__builtin_ppc_ldarx");
+  Builder.defineMacro("__lwarx", "__builtin_ppc_lwarx");
+  Builder.defineMacro("__stdcx", "__builtin_ppc_stdcx");
+  Builder.defineMacro("__stwcx", "__builtin_ppc_stwcx");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
