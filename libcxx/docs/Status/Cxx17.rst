@@ -1,10 +1,10 @@
-.. _cxx1z-status:
+.. _cxx17-status:
 
 ================================
 libc++ C++17 Status
 ================================
 
-.. include:: Helpers/Styles.rst
+.. include:: ../Helpers/Styles.rst
 
 .. contents::
    :local:
@@ -28,13 +28,13 @@ The groups that have contributed papers:
 
 .. note:: "Nothing to do" means that no library changes were needed to implement this change.
 
-.. _paper-status-cxx1z:
+.. _paper-status-cxx17:
 
 Paper Status
 ====================================
 
 .. csv-table::
-   :file: Cxx1zStatusPaperStatus.csv
+   :file: Cxx17Papers.csv
    :header-rows: 1
    :widths: auto
 
@@ -44,13 +44,13 @@ Paper Status
    .. [#note-P0607] P0607: The parts of P0607 that are not done are the ``<regex>`` bits.
 
 
-.. _issues-status-cxx1z:
+.. _issues-status-cxx17:
 
 Library Working Group Issues Status
 ====================================
 
 .. csv-table::
-   :file: Cxx1zStatusIssuesStatus.csv
+   :file: Cxx17Issues.csv
    :header-rows: 1
    :widths: auto
 

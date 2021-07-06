@@ -4,7 +4,7 @@
 libc++ Ranges Status
 ================================
 
-.. include:: Helpers/Styles.rst
+.. include:: ../Helpers/Styles.rst
 
 .. contents::
    :local:
@@ -27,7 +27,7 @@ Sub-Projects in the One Ranges Proposal
 =======================================
 
 .. csv-table::
-   :file: OneRangesProposalStatus.csv
+   :file: RangesPaper.csv
    :header-rows: 1
    :widths: auto
 
@@ -46,6 +46,6 @@ Paper and Issue Status
 (Note: stolen from MSVC `here <https://github.com/microsoft/STL/issues/39>`_.)
 
 .. csv-table::
-   :file: RangesIssuePaperStatus.csv
+   :file: RangesIssues.csv
    :header-rows: 1
    :widths: auto
