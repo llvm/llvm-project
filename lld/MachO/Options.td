@@ -873,8 +873,7 @@ def w : Flag<["-"], "w">,
     Group<grp_rare>;
 def final_output : Separate<["-"], "final_output">,
     MetaVarName<"<name>">,
-    HelpText<"Specify the dylib install name if -install_name is not used--used by compiler driver for multiple -arch arguments">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specify dylib install name if -install_name is not used; used by compiler driver for multiple -arch arguments">,
     Group<grp_rare>;
 def arch_multiple : Flag<["-"], "arch_multiple">,
     HelpText<"Augment error and warning messages with the architecture name">,
