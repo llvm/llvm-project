@@ -370,7 +370,7 @@ define <32 x i8> @packsswb_icmp_zero_trunc_256(<16 x i16> %a0) {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpacksswb %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,0,2,3]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,3]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %1 = icmp eq <16 x i16> %a0, zeroinitializer
   %2 = sext <16 x i1> %1 to <16 x i16>

@@ -3461,6 +3461,15 @@ SDValue AMDGPUTargetLowering::performMulhsCombine(SDNode *N,
   if (!Subtarget->hasMulI24() || VT.isVector())
     return SDValue();
 
+  // Don't generate 24-bit multiplies on values that are in SGPRs, since
+  // we only have a 32-bit scalar multiply (avoid values being moved to VGPRs
+  // unnecessarily). isDivergent() is used as an approximation of whether the
+  // value is in an SGPR.
+  // This doesn't apply if no s_mul_hi is available (since we'll end up with a
+  // valu op anyway)
+  if (Subtarget->hasSMulHi() && !N->isDivergent())
+    return SDValue();
+
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
 
@@ -3483,6 +3492,15 @@ SDValue AMDGPUTargetLowering::performMulhuCombine(SDNode *N,
   EVT VT = N->getValueType(0);
 
   if (!Subtarget->hasMulU24() || VT.isVector() || VT.getSizeInBits() > 32)
+    return SDValue();
+
+  // Don't generate 24-bit multiplies on values that are in SGPRs, since
+  // we only have a 32-bit scalar multiply (avoid values being moved to VGPRs
+  // unnecessarily). isDivergent() is used as an approximation of whether the
+  // value is in an SGPR.
+  // This doesn't apply if no s_mul_hi is available (since we'll end up with a
+  // valu op anyway)
+  if (Subtarget->hasSMulHi() && !N->isDivergent())
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;

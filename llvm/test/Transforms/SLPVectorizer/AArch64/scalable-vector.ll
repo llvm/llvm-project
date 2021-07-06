@@ -44,5 +44,99 @@ end:
   ret <vscale x 4 x i32> %retval
 }
 
+define void @scalable_phi1() {
+; CHECK-LABEL: @scalable_phi1(
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractelement <vscale x 8 x i16> undef, i32 undef
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractelement <vscale x 8 x i16> undef, i32 undef
+; CHECK-NEXT:    br label [[FOR_BODY_I:%.*]]
+; CHECK:       for.body.i:
+; CHECK-NEXT:    [[RECUR1:%.*]] = phi i16 [ [[EXTRACT1]], [[MIDDLE_BLOCK:%.*]] ], [ undef, [[FOR_BODY_I]] ]
+; CHECK-NEXT:    [[RECUR2:%.*]] = phi i16 [ [[EXTRACT2]], [[MIDDLE_BLOCK]] ], [ undef, [[FOR_BODY_I]] ]
+; CHECK-NEXT:    br label [[FOR_BODY_I]]
+;
+middle.block:
+  %extract1 = extractelement <vscale x 8 x i16> undef, i32 undef
+  %extract2 = extractelement <vscale x 8 x i16> undef, i32 undef
+  br label %for.body.i
+
+for.body.i:                                       ; preds = %for.body.i, %middle.block
+  %recur1 = phi i16 [ %extract1, %middle.block ], [ undef, %for.body.i ]
+  %recur2 = phi i16 [ %extract2, %middle.block ], [ undef, %for.body.i ]
+  br label %for.body.i
+}
+
+define void @scalable_phi2() {
+; CHECK-LABEL: @scalable_phi2(
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractelement <vscale x 8 x i16> undef, i32 undef
+; CHECK-NEXT:    [[EXTRACT2:%.*]] = extractelement <vscale x 8 x i16> undef, i32 undef
+; CHECK-NEXT:    br label [[FOR_BODY_I:%.*]]
+; CHECK:       for.body.i:
+; CHECK-NEXT:    [[RECUR1:%.*]] = phi i16 [ undef, [[FOR_BODY_I]] ], [ [[EXTRACT1]], [[MIDDLE_BLOCK:%.*]] ]
+; CHECK-NEXT:    [[RECUR2:%.*]] = phi i16 [ undef, [[FOR_BODY_I]] ], [ [[EXTRACT2]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY_I]]
+;
+middle.block:
+  %extract1 = extractelement <vscale x 8 x i16> undef, i32 undef
+  %extract2 = extractelement <vscale x 8 x i16> undef, i32 undef
+  br label %for.body.i
+
+for.body.i:                                       ; preds = %for.body.i, %middle.block
+  %recur1 = phi i16 [ undef, %for.body.i ], [ %extract1, %middle.block ]
+  %recur2 = phi i16 [ undef, %for.body.i ], [ %extract2, %middle.block ]
+  br label %for.body.i
+}
+
+define <vscale x 4 x i32> @build_vec_v4i32_reuse_0(<vscale x 2 x i32> %v0) {
+; CHECK-LABEL: @build_vec_v4i32_reuse_0(
+; CHECK-NEXT:    [[V0_0:%.*]] = extractelement <vscale x 2 x i32> [[V0:%.*]], i32 0
+; CHECK-NEXT:    [[V0_1:%.*]] = extractelement <vscale x 2 x i32> [[V0]], i32 1
+; CHECK-NEXT:    [[TMP0_0:%.*]] = add i32 [[V0_0]], [[V0_0]]
+; CHECK-NEXT:    [[TMP1_0:%.*]] = sub i32 [[V0_0]], [[V0_1]]
+; CHECK-NEXT:    [[TMP2_0:%.*]] = add i32 [[TMP0_0]], [[TMP1_0]]
+; CHECK-NEXT:    [[TMP3_0:%.*]] = insertelement <vscale x 4 x i32> undef, i32 [[TMP2_0]], i32 0
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP3_0]]
+;
+  %v0.0 = extractelement <vscale x 2 x i32> %v0, i32 0
+  %v0.1 = extractelement <vscale x 2 x i32> %v0, i32 1
+  %tmp0.0 = add i32 %v0.0, %v0.0
+  %tmp1.0 = sub i32 %v0.0, %v0.1
+  %tmp2.0 = add i32 %tmp0.0, %tmp1.0
+  %tmp3.0 = insertelement <vscale x 4 x i32> undef, i32 %tmp2.0, i32 0
+  ret <vscale x 4 x i32> %tmp3.0
+}
+
+define <vscale x 4 x i8> @shuffle(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @shuffle(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i8> [[X]], i32 3
+; CHECK-NEXT:    [[Y1:%.*]] = extractelement <4 x i8> [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[Y]], i32 2
+; CHECK-NEXT:    [[X0X0:%.*]] = mul i8 [[X0]], [[X0]]
+; CHECK-NEXT:    [[X3X3:%.*]] = mul i8 [[X3]], [[X3]]
+; CHECK-NEXT:    [[Y1Y1:%.*]] = mul i8 [[Y1]], [[Y1]]
+; CHECK-NEXT:    [[Y2Y2:%.*]] = mul i8 [[Y2]], [[Y2]]
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[X0X0]], i32 0
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <vscale x 4 x i8> [[INS1]], i8 [[X3X3]], i32 1
+; CHECK-NEXT:    [[INS3:%.*]] = insertelement <vscale x 4 x i8> [[INS2]], i8 [[Y1Y1]], i32 2
+; CHECK-NEXT:    [[INS4:%.*]] = insertelement <vscale x 4 x i8> [[INS3]], i8 [[Y2Y2]], i32 3
+; CHECK-NEXT:    ret <vscale x 4 x i8> [[INS4]]
+;
+  %x0 = extractelement <4 x i8> %x, i32 0
+  %x3 = extractelement <4 x i8> %x, i32 3
+  %y1 = extractelement <4 x i8> %y, i32 1
+  %y2 = extractelement <4 x i8> %y, i32 2
+  %x0x0 = mul i8 %x0, %x0
+  %x3x3 = mul i8 %x3, %x3
+  %y1y1 = mul i8 %y1, %y1
+  %y2y2 = mul i8 %y2, %y2
+  %ins1 = insertelement <vscale x 4 x i8> poison, i8 %x0x0, i32 0
+  %ins2 = insertelement <vscale x 4 x i8> %ins1, i8 %x3x3, i32 1
+  %ins3 = insertelement <vscale x 4 x i8> %ins2, i8 %y1y1, i32 2
+  %ins4 = insertelement <vscale x 4 x i8> %ins3, i8 %y2y2, i32 3
+  ret  <vscale x 4 x i8> %ins4
+}
+
 declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0nxv16i8(<vscale x 16 x i8>*, i32 immarg, <vscale x 16 x i1>, <vscale x 16 x i8>)
 declare void @llvm.masked.store.nxv16i8.p0nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>*, i32 immarg, <vscale x 16 x i1>)

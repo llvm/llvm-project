@@ -95,6 +95,7 @@ struct Configuration {
   Symbol *entry = nullptr;
   bool hasReexports = false;
   bool allLoad = false;
+  bool archMultiple = false;
   bool forceLoadObjC = false;
   bool forceLoadSwift = false;
   bool staticLink = false;
@@ -121,11 +122,20 @@ struct Configuration {
   uint32_t dylibCurrentVersion = 0;
   uint32_t timeTraceGranularity = 500;
   std::string progName;
+
+  // For `clang -arch arm64 -arch x86_64`, clang will:
+  // 1. invoke the linker twice, to write one temporary output per arch
+  // 2. invoke `lipo` to merge the two outputs into a single file
+  // `outputFile` is the name of the temporary file the linker writes to.
+  // `finalOutput `is the name of the file lipo writes to after the link.
+  llvm::StringRef outputFile;
+  llvm::StringRef finalOutput;
+
   llvm::StringRef installName;
   llvm::StringRef mapFile;
-  llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
+  llvm::StringRef umbrella;
   uint32_t ltoo = 2;
   bool deadStripDylibs = false;
   bool demangle = false;

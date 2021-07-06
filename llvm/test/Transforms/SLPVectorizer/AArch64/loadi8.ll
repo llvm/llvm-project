@@ -13,52 +13,32 @@ define void @f_noalias(i8* noalias nocapture %dst, i8* noalias nocapture readonl
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[SCALE]], align 16
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds [[STRUCT_WEIGHT_T]], %struct.weight_t* [[W]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[OFFSET]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP2]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP0]], [[CONV]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], [[TMP1]]
-; CHECK-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp ult i32 [[ADD]], 256
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[ADD]], 0
-; CHECK-NEXT:    [[SHR_I:%.*]] = sext i1 [[TMP3]] to i32
-; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[TOBOOL_NOT_I]], i32 [[ADD]], i32 [[SHR_I]]
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i32 [[COND_I]] to i8
-; CHECK-NEXT:    store i8 [[CONV_I]], i8* [[DST:%.*]], align 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[ARRAYIDX_1]], align 1
-; CHECK-NEXT:    [[CONV_1:%.*]] = zext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[MUL_1:%.*]] = mul nsw i32 [[TMP0]], [[CONV_1]]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[MUL_1]], [[TMP1]]
-; CHECK-NEXT:    [[TOBOOL_NOT_I_1:%.*]] = icmp ult i32 [[ADD_1]], 256
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[ADD_1]], 0
-; CHECK-NEXT:    [[SHR_I_1:%.*]] = sext i1 [[TMP5]] to i32
-; CHECK-NEXT:    [[COND_I_1:%.*]] = select i1 [[TOBOOL_NOT_I_1]], i32 [[ADD_1]], i32 [[SHR_I_1]]
-; CHECK-NEXT:    [[CONV_I_1:%.*]] = trunc i32 [[COND_I_1]] to i8
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 1
-; CHECK-NEXT:    store i8 [[CONV_I_1]], i8* [[ARRAYIDX2_1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i8, i8* [[DST:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 2
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, i8* [[ARRAYIDX_2]], align 1
-; CHECK-NEXT:    [[CONV_2:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[TMP0]], [[CONV_2]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[MUL_2]], [[TMP1]]
-; CHECK-NEXT:    [[TOBOOL_NOT_I_2:%.*]] = icmp ult i32 [[ADD_2]], 256
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[ADD_2]], 0
-; CHECK-NEXT:    [[SHR_I_2:%.*]] = sext i1 [[TMP7]] to i32
-; CHECK-NEXT:    [[COND_I_2:%.*]] = select i1 [[TOBOOL_NOT_I_2]], i32 [[ADD_2]], i32 [[SHR_I_2]]
-; CHECK-NEXT:    [[CONV_I_2:%.*]] = trunc i32 [[COND_I_2]] to i8
 ; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 2
-; CHECK-NEXT:    store i8 [[CONV_I_2]], i8* [[ARRAYIDX2_2]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, i8* [[ARRAYIDX_3]], align 1
-; CHECK-NEXT:    [[CONV_3:%.*]] = zext i8 [[TMP8]] to i32
-; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i32 [[TMP0]], [[CONV_3]]
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[MUL_3]], [[TMP1]]
-; CHECK-NEXT:    [[TOBOOL_NOT_I_3:%.*]] = icmp ult i32 [[ADD_3]], 256
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[ADD_3]], 0
-; CHECK-NEXT:    [[SHR_I_3:%.*]] = sext i1 [[TMP9]] to i32
-; CHECK-NEXT:    [[COND_I_3:%.*]] = select i1 [[TOBOOL_NOT_I_3]], i32 [[ADD_3]], i32 [[SHR_I_3]]
-; CHECK-NEXT:    [[CONV_I_3:%.*]] = trunc i32 [[COND_I_3]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SRC]] to <4 x i8>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, <4 x i8>* [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <4 x i32> [[TMP8]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = add nsw <4 x i32> [[TMP9]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult <4 x i32> [[TMP14]], <i32 256, i32 256, i32 256, i32 256>
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp sgt <4 x i32> [[TMP14]], zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = sext <4 x i1> [[TMP16]] to <4 x i32>
+; CHECK-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> [[TMP14]], <4 x i32> [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc <4 x i32> [[TMP18]] to <4 x i8>
 ; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 3
-; CHECK-NEXT:    store i8 [[CONV_I_3]], i8* [[ARRAYIDX2_3]], align 1
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i8* [[DST]] to <4 x i8>*
+; CHECK-NEXT:    store <4 x i8> [[TMP19]], <4 x i8>* [[TMP20]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

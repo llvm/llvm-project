@@ -1106,6 +1106,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->mapFile = args.getLastArgValue(OPT_map);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
+  if (const Arg *arg = args.getLastArg(OPT_final_output))
+    config->finalOutput = arg->getValue();
+  else
+    config->finalOutput = config->outputFile;
   config->astPaths = args.getAllArgValues(OPT_add_ast_path);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
@@ -1121,6 +1125,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     addFile(arg->getValue(), /*forceLoadArchive=*/false, /*isExplicit=*/false,
             /*isBundleLoader=*/true);
   }
+  if (const Arg *arg = args.getLastArg(OPT_umbrella)) {
+    if (config->outputType != MH_DYLIB)
+      warn("-umbrella used, but not creating dylib");
+    config->umbrella = arg->getValue();
+  }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPassManager =
       args.hasFlag(OPT_no_lto_legacy_pass_manager, OPT_lto_legacy_pass_manager,
@@ -1130,6 +1139,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     error("--lto-O: invalid optimization level: " + Twine(config->ltoo));
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
+  config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
   config->forceLoadSwift = args.hasArg(OPT_force_load_swift_libs);
   config->deadStripDylibs = args.hasArg(OPT_dead_strip_dylibs);
@@ -1164,7 +1174,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     else
       config->installName = arg->getValue();
   } else if (config->outputType == MH_DYLIB) {
-    config->installName = config->outputFile;
+    config->installName = config->finalOutput;
   }
 
   if (args.hasArg(OPT_mark_dead_strippable_dylib)) {

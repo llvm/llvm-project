@@ -166,6 +166,8 @@ public:
                                                 bool IsPairwiseForm,
                                                 TTI::TargetCostKind CostKind);
 
+  InstructionCost getSpliceCost(VectorType *Tp, int Index);
+
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,

@@ -822,6 +822,7 @@ public:
   }
 
   bool isAllActivePredicate(SDValue N) const;
+  EVT getPromotedVTForPredicate(EVT VT) const;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
@@ -1006,6 +1007,8 @@ private:
   SDValue LowerFixedLengthFPRoundToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthIntToFPToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthVECTOR_SHUFFLEToSVE(SDValue Op,
+                                              SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;

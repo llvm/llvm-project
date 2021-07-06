@@ -839,6 +839,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 1 },
     { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 3 },
     { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 5 },
+    { ISD::TRUNCATE, MVT::nxv16i1, MVT::nxv16i8, 1 },
     { ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i32, 1 },
     { ISD::TRUNCATE, MVT::nxv2i32, MVT::nxv2i64, 1 },
     { ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i32, 1 },
@@ -1423,8 +1424,9 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
                                                 const Instruction *I) {
+  EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs
-  if (TLI->getValueType(DL, Ty,  true) == MVT::Other)
+  if (VT == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
 
@@ -1451,23 +1453,14 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     return LT.first * 2 * AmortizationCost;
   }
 
+  // Check truncating stores and extending loads.
   if (useNeonVector(Ty) &&
-      cast<VectorType>(Ty)->getElementType()->isIntegerTy(8)) {
-    unsigned ProfitableNumElements;
-    if (Opcode == Instruction::Store)
-      // We use a custom trunc store lowering so v.4b should be profitable.
-      ProfitableNumElements = 4;
-    else
-      // We scalarize the loads because there is not v.4b register and we
-      // have to promote the elements to v.2.
-      ProfitableNumElements = 8;
-
-    if (cast<FixedVectorType>(Ty)->getNumElements() < ProfitableNumElements) {
-      unsigned NumVecElts = cast<FixedVectorType>(Ty)->getNumElements();
-      unsigned NumVectorizableInstsToAmortize = NumVecElts * 2;
-      // We generate 2 instructions per vector element.
-      return NumVectorizableInstsToAmortize * NumVecElts * 2;
-    }
+      Ty->getScalarSizeInBits() != LT.second.getScalarSizeInBits()) {
+    // v4i8 types are lowered to scalar a load/store and sshll/xtn.
+    if (VT == MVT::v4i8)
+      return 2;
+    // Otherwise we need to scalarize.
+    return cast<FixedVectorType>(Ty)->getNumElements() * 2;
   }
 
   return LT.first;
@@ -1905,6 +1898,55 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                            CostKind);
 }
 
+InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
+  static const CostTblEntry ShuffleTbl[] = {
+      { TTI::SK_Splice, MVT::nxv16i8,  1 },
+      { TTI::SK_Splice, MVT::nxv8i16,  1 },
+      { TTI::SK_Splice, MVT::nxv4i32,  1 },
+      { TTI::SK_Splice, MVT::nxv2i64,  1 },
+      { TTI::SK_Splice, MVT::nxv2f16,  1 },
+      { TTI::SK_Splice, MVT::nxv4f16,  1 },
+      { TTI::SK_Splice, MVT::nxv8f16,  1 },
+      { TTI::SK_Splice, MVT::nxv2bf16, 1 },
+      { TTI::SK_Splice, MVT::nxv4bf16, 1 },
+      { TTI::SK_Splice, MVT::nxv8bf16, 1 },
+      { TTI::SK_Splice, MVT::nxv2f32,  1 },
+      { TTI::SK_Splice, MVT::nxv4f32,  1 },
+      { TTI::SK_Splice, MVT::nxv2f64,  1 },
+  };
+
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+  Type *LegalVTy = EVT(LT.second).getTypeForEVT(Tp->getContext());
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  EVT PromotedVT = LT.second.getScalarType() == MVT::i1
+                       ? TLI->getPromotedVTForPredicate(EVT(LT.second))
+                       : LT.second;
+  Type *PromotedVTy = EVT(PromotedVT).getTypeForEVT(Tp->getContext());
+  InstructionCost LegalizationCost = 0;
+  if (Index < 0) {
+    LegalizationCost =
+        getCmpSelInstrCost(Instruction::ICmp, PromotedVTy, PromotedVTy,
+                           CmpInst::BAD_ICMP_PREDICATE, CostKind) +
+        getCmpSelInstrCost(Instruction::Select, PromotedVTy, LegalVTy,
+                           CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  }
+
+  // Predicated splice are promoted when lowering. See AArch64ISelLowering.cpp
+  // Cost performed on a promoted type.
+  if (LT.second.getScalarType() == MVT::i1) {
+    LegalizationCost +=
+        getCastInstrCost(Instruction::ZExt, PromotedVTy, LegalVTy,
+                         TTI::CastContextHint::None, CostKind) +
+        getCastInstrCost(Instruction::Trunc, LegalVTy, PromotedVTy,
+                         TTI::CastContextHint::None, CostKind);
+  }
+  const auto *Entry =
+      CostTableLookup(ShuffleTbl, TTI::SK_Splice, PromotedVT.getSimpleVT());
+  assert(Entry && "Illegal Type for Splice");
+  LegalizationCost += Entry->Cost;
+  return LegalizationCost * LT.first;
+}
+
 InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
                                                ArrayRef<int> Mask, int Index,
@@ -2001,6 +2043,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
   }
-
+  if (Kind == TTI::SK_Splice && isa<ScalableVectorType>(Tp))
+    return getSpliceCost(Tp, Index);
   return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }

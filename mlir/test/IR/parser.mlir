@@ -1239,6 +1239,12 @@ func @"\"_string_symbol_reference\""() {
   return
 }
 
+// CHECK-LABEL: func private @parse_opaque_attr_escape
+func private @parse_opaque_attr_escape() {
+    // CHECK: value = #foo<"\22escaped\\\0A\22">
+    "foo.constant"() {value = #foo<"\"escaped\\\n\"">} : () -> ()
+}
+
 // CHECK-LABEL: func private @string_attr_name
 // CHECK-SAME: {"0 . 0", nested = {"0 . 0"}}
 func private @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
