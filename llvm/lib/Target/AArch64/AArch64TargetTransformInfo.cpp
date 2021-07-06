@@ -1736,7 +1736,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
     return true;
 
   Type *Ty = RdxDesc.getRecurrenceType();
-  if (Ty->isBFloatTy() || !isLegalElementTypeForSVE(Ty))
+  if (Ty->isBFloatTy() || !isElementTypeLegalForScalableVector(Ty))
     return false;
 
   switch (RdxDesc.getRecurrenceKind()) {
