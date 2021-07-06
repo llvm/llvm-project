@@ -234,7 +234,8 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI)
           continue;
-        if (isa<VPWidenPHIRecipe>(UI) && !isa<VPReductionPHIRecipe>(UI))
+        auto *PhiR = dyn_cast<VPWidenPHIRecipe>(UI);
+        if (PhiR && !PhiR->getRecurrenceDescriptor())
           return true;
       }
       return false;
