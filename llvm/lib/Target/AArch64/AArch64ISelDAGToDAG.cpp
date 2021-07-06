@@ -128,6 +128,24 @@ public:
   bool SelectAddrModeUnscaled128(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeUnscaled(N, 16, Base, OffImm);
   }
+  template <unsigned Size, unsigned Max>
+  bool SelectAddrModeIndexedUImm(SDValue N, SDValue &Base, SDValue &OffImm) {
+    // Test if there is an appropriate addressing mode and check if the
+    // immediate fits.
+    bool Found = SelectAddrModeIndexed(N, Size, Base, OffImm);
+    if (Found) {
+      if (auto *CI = dyn_cast<ConstantSDNode>(OffImm)) {
+        int64_t C = CI->getSExtValue();
+        if (C <= Max)
+          return true;
+      }
+    }
+
+    // Otherwise, base only, materialize address in register.
+    Base = N;
+    OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
+    return true;
+  }
 
   template<int Width>
   bool SelectAddrModeWRO(SDValue N, SDValue &Base, SDValue &Offset,

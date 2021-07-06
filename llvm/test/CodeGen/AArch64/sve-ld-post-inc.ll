@@ -23,10 +23,10 @@ define <vscale x 4 x i32> @test_post_ld1_insert(i32* %a, i32** %ptr, i64 %inc) {
 define <vscale x 2 x double> @test_post_ld1_dup(double* %a, double** %ptr, i64 %inc) {
 ; CHECK-LABEL: test_post_ld1_dup:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    add x8, x0, x2, lsl #3
 ; CHECK-NEXT:    str x8, [x1]
-; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    ret
   %load = load double, double* %a
   %dup = call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double %load)
