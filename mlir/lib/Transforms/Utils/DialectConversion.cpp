@@ -1484,7 +1484,9 @@ void ConversionPatternRewriter::cancelRootUpdate(Operation *op) {
   auto stateHasOp = [op](const auto &it) { return it.getOperation() == op; };
   auto &rootUpdates = impl->rootUpdates;
   auto it = llvm::find_if(llvm::reverse(rootUpdates), stateHasOp);
-  rootUpdates.erase(rootUpdates.begin() + (rootUpdates.rend() - it));
+  assert(it != rootUpdates.rend() && "no root update started on op");
+  int updateIdx = std::prev(rootUpdates.rend()) - it;
+  rootUpdates.erase(rootUpdates.begin() + updateIdx);
 }
 
 /// PatternRewriter hook for notifying match failure reasons.
@@ -2049,7 +2051,7 @@ void OperationLegalizer::computeLegalizationGraphBenefit(
       orderedPatternList = anyOpLegalizerPatterns;
 
     // If the pattern is not found, then it was removed and cannot be matched.
-    auto it = llvm::find(orderedPatternList, &pattern);
+    auto *it = llvm::find(orderedPatternList, &pattern);
     if (it == orderedPatternList.end())
       return PatternBenefit::impossibleToMatch();
 

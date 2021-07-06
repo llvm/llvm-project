@@ -80,6 +80,21 @@ public:
   // Set the stack frame size of a function in the metadata.
   void setFunctionScratchSize(const MachineFunction &MF, unsigned Val);
 
+  // Set the amount of LDS used in bytes in the metadata. This is an optional
+  // advisory record for logging etc; wave dispatch actually uses the rsrc1
+  // register for the shader stage to determine the amount of LDS to allocate.
+  void setFunctionLdsSize(const MachineFunction &MF, unsigned Val);
+
+  // Set the number of used vgprs in the metadata. This is an optional advisory
+  // record for logging etc; wave dispatch actually uses the rsrc1 register for
+  // the shader stage to determine the number of vgprs to allocate.
+  void setFunctionNumUsedVgprs(const MachineFunction &MF, unsigned Val);
+
+  // Set the number of used sgprs in the metadata. This is an optional advisory
+  // record for logging etc; wave dispatch actually uses the rsrc1 register for
+  // the shader stage to determine the number of sgprs to allocate.
+  void setFunctionNumUsedSgprs(const MachineFunction &MF, unsigned Val);
+
   // Set the hardware register bit in PAL metadata to enable wave32 on the
   // shader of the given calling convention.
   void setWave32(unsigned CC);
