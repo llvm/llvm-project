@@ -143,7 +143,6 @@ C++ Dialect Support
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++2b - In Progress <cxx2b-status>`
-* `Post C++14 Technical Specifications - In Progress <http://libcxx.llvm.org/ts1z_status.html>`__
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 Notes and Known Issues
