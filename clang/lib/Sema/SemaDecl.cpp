@@ -13310,6 +13310,16 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     CheckCompleteDecompositionDeclaration(DD);
 }
 
+/// Determines if a variable's alignment is dependent.
+static bool hasDependentAlignment(VarDecl *VD) {
+  if (VD->getType()->isDependentType())
+    return true;
+  for (auto *I : VD->specific_attrs<AlignedAttr>())
+    if (I->isAlignmentDependent())
+      return true;
+  return false;
+}
+
 /// Check if VD needs to be dllexport/dllimport due to being in a
 /// dllexport/import function.
 void Sema::CheckStaticLocalForDllExport(VarDecl *VD) {
@@ -13398,7 +13408,7 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   if (unsigned MaxAlign = Context.getTargetInfo().getMaxTLSAlign()) {
     // Protect the check so that it's not performed on dependent types and
     // dependent alignments (we can't determine the alignment in that case).
-    if (VD->getTLSKind() && !VD->hasDependentAlignment() &&
+    if (VD->getTLSKind() && !hasDependentAlignment(VD) &&
         !VD->isInvalidDecl()) {
       CharUnits MaxAlignChars = Context.toCharUnitsFromBits(MaxAlign);
       if (Context.getDeclAlign(VD) > MaxAlignChars) {
