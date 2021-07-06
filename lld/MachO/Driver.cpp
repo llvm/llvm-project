@@ -1121,6 +1121,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     addFile(arg->getValue(), /*forceLoadArchive=*/false, /*isExplicit=*/false,
             /*isBundleLoader=*/true);
   }
+  if (const Arg *arg = args.getLastArg(OPT_umbrella)) {
+    if (config->outputType != MH_DYLIB)
+      warn("-umbrella used, but not creating dylib");
+    config->umbrella = arg->getValue();
+  }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPassManager =
       args.hasFlag(OPT_no_lto_legacy_pass_manager, OPT_lto_legacy_pass_manager,
