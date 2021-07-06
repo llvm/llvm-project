@@ -895,6 +895,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ANY_EXTEND);
   setTargetDAGCombine(ISD::ZERO_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND);
+  setTargetDAGCombine(ISD::VECTOR_SPLICE);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
   setTargetDAGCombine(ISD::TRUNCATE);
   setTargetDAGCombine(ISD::CONCAT_VECTORS);
@@ -1159,6 +1160,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MULHS, VT, Custom);
       setOperationAction(ISD::MULHU, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::SDIV, VT, Custom);
@@ -1282,6 +1284,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
+      setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
     }
@@ -1559,6 +1562,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::SMAX, VT, Custom);
   setOperationAction(ISD::SMIN, VT, Custom);
   setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+  setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
   setOperationAction(ISD::STORE, VT, Custom);
@@ -4911,6 +4915,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                /*OverrideNEON=*/true);
   case ISD::CTTZ:
     return LowerCTTZ(Op, DAG);
+  case ISD::VECTOR_SPLICE:
+    return LowerVECTOR_SPLICE(Op, DAG);
   }
 }
 
@@ -7415,6 +7421,14 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
 
   // Otherwise, return the output of the first CSEL.
   return CS1;
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+
+  if (Op.getConstantOperandAPInt(2) == -1)
+    return Op;
+  return SDValue();
 }
 
 SDValue AArch64TargetLowering::LowerSELECT_CC(SDValue Op,
@@ -16487,6 +16501,28 @@ performInsertVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return performPostLD1Combine(N, DCI, true);
 }
 
+SDValue performSVESpliceCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT Ty = N->getValueType(0);
+  if (Ty.isInteger())
+    return SDValue();
+
+  EVT IntTy = Ty.changeVectorElementTypeToInteger();
+  EVT ExtIntTy = getPackedSVEVectorVT(IntTy.getVectorElementCount());
+  if (ExtIntTy.getVectorElementType().getScalarSizeInBits() <
+      IntTy.getVectorElementType().getScalarSizeInBits())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue LHS = DAG.getAnyExtOrTrunc(DAG.getBitcast(IntTy, N->getOperand(0)),
+                                     DL, ExtIntTy);
+  SDValue RHS = DAG.getAnyExtOrTrunc(DAG.getBitcast(IntTy, N->getOperand(1)),
+                                     DL, ExtIntTy);
+  SDValue Idx = N->getOperand(2);
+  SDValue Splice = DAG.getNode(ISD::VECTOR_SPLICE, DL, ExtIntTy, LHS, RHS, Idx);
+  SDValue Trunc = DAG.getAnyExtOrTrunc(Splice, DL, IntTy);
+  return DAG.getBitcast(Ty, Trunc);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -16539,6 +16575,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
+  case ISD::VECTOR_SPLICE:
+    return performSVESpliceCombine(N, DAG);
   case AArch64ISD::BRCOND:
     return performBRCONDCombine(N, DCI, DAG);
   case AArch64ISD::TBNZ:

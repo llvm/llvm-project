@@ -1226,6 +1226,20 @@ let Predicates = [HasSVE] in {
   def : Pat<(nxv8bf16 (concat_vectors nxv4bf16:$v1, nxv4bf16:$v2)),
             (UZP1_ZZZ_H $v1, $v2)>;
 
+  // Splice with lane equal to -1
+  def : Pat<(nxv16i8 (vector_splice (nxv16i8 ZPR:$Z1), (nxv16i8 ZPR:$Z2), (i64 -1))),
+            (INSR_ZV_B ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
+            (LASTB_VPZ_B (PTRUE_B 31), ZPR:$Z1), bsub))>;
+  def : Pat<(nxv8i16 (vector_splice (nxv8i16 ZPR:$Z1), (nxv8i16 ZPR:$Z2), (i64 -1))),
+            (INSR_ZV_H ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
+            (LASTB_VPZ_H (PTRUE_H 31), ZPR:$Z1), hsub))>;
+  def : Pat<(nxv4i32 (vector_splice (nxv4i32 ZPR:$Z1), (nxv4i32 ZPR:$Z2), (i64 -1))),
+            (INSR_ZV_S ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
+            (LASTB_VPZ_S (PTRUE_S 31), ZPR:$Z1), ssub))>;
+  def : Pat<(nxv2i64 (vector_splice (nxv2i64 ZPR:$Z1), (nxv2i64 ZPR:$Z2), (i64 -1))),
+            (INSR_ZV_D ZPR:$Z2, (INSERT_SUBREG (IMPLICIT_DEF),
+            (LASTB_VPZ_D (PTRUE_D 31), ZPR:$Z1), dsub))>;
+
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;
   defm CMPGE_PPzZZ : sve_int_cmp_0<0b100, "cmpge", SETGE, SETLE>;
