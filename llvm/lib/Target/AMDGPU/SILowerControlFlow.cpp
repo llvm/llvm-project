@@ -838,14 +838,10 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
       switch (MI.getOpcode()) {
       case AMDGPU::SI_IF:
-        SplitMBB = process(MI);
-        break;
-
       case AMDGPU::SI_ELSE:
       case AMDGPU::SI_IF_BREAK:
       case AMDGPU::SI_LOOP:
       case AMDGPU::SI_END_CF:
-        // Only build worklist if SI_IF instructions must be processed first.
         SplitMBB = process(MI);
         break;
 
