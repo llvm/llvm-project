@@ -503,11 +503,11 @@ public:
                 unsigned UF, ElementCount VF, bool IsPtrLoopInvariant,
                 SmallBitVector &IsIndexLoopInvariant, VPTransformState &State);
 
-  /// Vectorize a single PHINode in a block. This method handles the induction
-  /// variable canonicalization. It supports both VF = 1 for unrolled loops and
-  /// arbitrary length vectors.
-  void widenPHIInstruction(Instruction *PN, RecurrenceDescriptor *RdxDesc,
-                           VPWidenPHIRecipe *PhiR, VPTransformState &State);
+  /// Vectorize a single first-order recurrence or pointer induction PHINode in
+  /// a block. This method handles the induction variable canonicalization. It
+  /// supports both VF = 1 for unrolled loops and arbitrary length vectors.
+  void widenPHIInstruction(Instruction *PN, VPWidenPHIRecipe *PhiR,
+                           VPTransformState &State);
 
   /// A helper function to scalarize a single Instruction in the innermost loop.
   /// Generates a sequence of scalar instances for each lane between \p MinLane
@@ -596,7 +596,7 @@ protected:
 
   /// Fix a reduction cross-iteration phi. This is the second phase of
   /// vectorizing this phi node.
-  void fixReduction(VPWidenPHIRecipe *Phi, VPTransformState &State);
+  void fixReduction(VPReductionPHIRecipe *Phi, VPTransformState &State);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   void clearReductionWrapFlags(const RecurrenceDescriptor &RdxDesc,
@@ -4135,8 +4135,8 @@ void InnerLoopVectorizer::fixCrossIterationPHIs(VPTransformState &State) {
     if (!PhiR)
       continue;
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    if (PhiR->getRecurrenceDescriptor()) {
-      fixReduction(PhiR, State);
+    if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(PhiR)) {
+      fixReduction(ReductionPhi, State);
     } else if (Legal->isFirstOrderRecurrence(OrigPhi))
       fixFirstOrderRecurrence(PhiR, State);
   }
@@ -4320,19 +4320,18 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(VPWidenPHIRecipe *PhiR,
       LCSSAPhi.addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
 }
 
-void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
+void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
                                        VPTransformState &State) {
   PHINode *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
   // Get it's reduction variable descriptor.
   assert(Legal->isReductionVariable(OrigPhi) &&
          "Unable to find the reduction variable");
-  const RecurrenceDescriptor &RdxDesc = *PhiR->getRecurrenceDescriptor();
+  const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
   RecurKind RK = RdxDesc.getRecurrenceKind();
   TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
   Instruction *LoopExitInst = RdxDesc.getLoopExitInstr();
   setDebugLocFromInst(ReductionStartValue);
-  bool IsInLoopReductionPhi = Cost->isInLoopReduction(OrigPhi);
 
   VPValue *LoopExitInstDef = State.Plan->getVPValue(LoopExitInst);
   // This is the vector-clone of the value that leaves the loop.
@@ -4347,14 +4346,11 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   // any loop invariant values.
   BasicBlock *VectorLoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
 
-  bool IsOrdered = IsInLoopReductionPhi && Cost->useOrderedReductions(RdxDesc);
-
-  for (unsigned Part = 0; Part < UF; ++Part) {
-    if (IsOrdered && Part > 0)
-      break;
+  unsigned LastPartForNewPhi = PhiR->isOrdered() ? 1 : UF;
+  for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
     Value *VecRdxPhi = State.get(PhiR->getVPSingleValue(), Part);
     Value *Val = State.get(PhiR->getBackedgeValue(), Part);
-    if (IsOrdered)
+    if (PhiR->isOrdered())
       Val = State.get(PhiR->getBackedgeValue(), UF - 1);
 
     cast<PHINode>(VecRdxPhi)->addIncoming(Val, VectorLoopLatch);
@@ -4373,7 +4369,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   // a Select choosing between the vectorized LoopExitInst and vectorized Phi,
   // instead of the former. For an inloop reduction the reduction will already
   // be predicated, and does not need to be handled here.
-  if (Cost->foldTailByMasking() && !IsInLoopReductionPhi) {
+  if (Cost->foldTailByMasking() && !PhiR->isInLoop()) {
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *VecLoopExitInst = State.get(LoopExitInstDef, Part);
       Value *Sel = nullptr;
@@ -4408,7 +4404,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   // then extend the loop exit value to enable InstCombine to evaluate the
   // entire expression in the smaller type.
   if (VF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
-    assert(!IsInLoopReductionPhi && "Unexpected truncated inloop reduction!");
+    assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
     Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
     Builder.SetInsertPoint(
         LI->getLoopFor(LoopVectorBody)->getLoopLatch()->getTerminator());
@@ -4446,7 +4442,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   // terminate on this line. This is the easiest way to ensure we don't
   // accidentally cause an extra step back into the loop while debugging.
   setDebugLocFromInst(LoopMiddleBlock->getTerminator());
-  if (IsOrdered)
+  if (PhiR->isOrdered())
     ReducedPartRdx = State.get(LoopExitInstDef, UF - 1);
   else {
     // Floating-point operations should have some FMF to enable the reduction.
@@ -4465,7 +4461,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
 
   // Create the reduction after the loop. Note that inloop reductions create the
   // target reduction in the loop using a Reduction recipe.
-  if (VF.isVector() && !IsInLoopReductionPhi) {
+  if (VF.isVector() && !PhiR->isInLoop()) {
     ReducedPartRdx =
         createTargetReduction(Builder, TTI, RdxDesc, ReducedPartRdx);
     // If the reduction can be performed in a smaller type, we need to extend
@@ -4729,7 +4725,6 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
 }
 
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
-                                              RecurrenceDescriptor *RdxDesc,
                                               VPWidenPHIRecipe *PhiR,
                                               VPTransformState &State) {
   PHINode *P = cast<PHINode>(PN);
@@ -4755,68 +4750,21 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
-  if (RdxDesc || Legal->isFirstOrderRecurrence(P)) {
-    bool ScalarPHI =
-        (State.VF.isScalar()) || Cost->isInLoopReduction(cast<PHINode>(PN));
-    Type *VecTy =
-        ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), State.VF);
+  if (Legal->isFirstOrderRecurrence(P)) {
+    Type *VecTy = State.VF.isScalar()
+                      ? PN->getType()
+                      : VectorType::get(PN->getType(), State.VF);
 
-    bool IsOrdered = Cost->isInLoopReduction(cast<PHINode>(PN)) &&
-                     Cost->useOrderedReductions(*RdxDesc);
-    unsigned LastPartForNewPhi = IsOrdered ? 1 : State.UF;
-    for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *EntryPart = PHINode::Create(
           VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
       State.set(PhiR, EntryPart, Part);
     }
-    if (Legal->isFirstOrderRecurrence(P))
       return;
-    VPValue *StartVPV = PhiR->getStartValue();
-    Value *StartV = StartVPV->getLiveInIRValue();
-
-    Value *Iden = nullptr;
-
-    assert(Legal->isReductionVariable(P) && StartV &&
-           "RdxDesc should only be set for reduction variables; in that case "
-           "a StartV is also required");
-    RecurKind RK = RdxDesc->getRecurrenceKind();
-    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
-      // MinMax reduction have the start value as their identify.
-      if (ScalarPHI) {
-        Iden = StartV;
-      } else {
-        IRBuilderBase::InsertPointGuard IPBuilder(Builder);
-        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-        StartV = Iden =
-            Builder.CreateVectorSplat(State.VF, StartV, "minmax.ident");
-      }
-    } else {
-      Constant *IdenC = RecurrenceDescriptor::getRecurrenceIdentity(
-          RK, VecTy->getScalarType(), RdxDesc->getFastMathFlags());
-      Iden = IdenC;
-
-      if (!ScalarPHI) {
-        Iden = ConstantVector::getSplat(State.VF, IdenC);
-        IRBuilderBase::InsertPointGuard IPBuilder(Builder);
-        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-        Constant *Zero = Builder.getInt32(0);
-        StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
-      }
-    }
-
-    for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-      Value *EntryPart = State.get(PhiR, Part);
-      // Make sure to add the reduction start value only to the
-      // first unroll part.
-      Value *StartVal = (Part == 0) ? StartV : Iden;
-      cast<PHINode>(EntryPart)->addIncoming(StartVal, LoopVectorPreHeader);
-    }
-
-    return;
   }
 
   assert(!Legal->isReductionVariable(P) &&
-         "reductions should be handled above");
+         "reductions should be handled elsewhere");
 
   setDebugLocFromInst(P);
 
@@ -8978,7 +8926,9 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
         RecurrenceDescriptor &RdxDesc = Legal->getReductionVars()[Phi];
         assert(RdxDesc.getRecurrenceStartValue() ==
                Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
-        PhiRecipe = new VPWidenPHIRecipe(Phi, RdxDesc, *StartV);
+        PhiRecipe = new VPReductionPHIRecipe(Phi, RdxDesc, *StartV,
+                                             CM.isInLoopReduction(Phi),
+                                             CM.useOrderedReductions(RdxDesc));
       } else {
         PhiRecipe = new VPWidenPHIRecipe(Phi, *StartV);
       }
@@ -9493,8 +9443,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  State.ILV->widenPHIInstruction(cast<PHINode>(getUnderlyingValue()), RdxDesc,
-                                 this, State);
+  State.ILV->widenPHIInstruction(cast<PHINode>(getUnderlyingValue()), this,
+                                 State);
 }
 
 void VPBlendRecipe::execute(VPTransformState &State) {
