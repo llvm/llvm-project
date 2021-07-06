@@ -3403,7 +3403,7 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(const VarDecl *VD) {
 
   // Variables with higher required alignment than their type's ABI
   // alignment cannot use NRVO.
-  if (!VD->hasDependentAlignment() &&
+  if (!VDType->isDependentType() && VD->hasAttr<AlignedAttr>() &&
       Context.getDeclAlign(VD) > Context.getTypeAlignInChars(VDType))
     Info.S = NamedReturnInfo::MoveEligible;
 

@@ -1494,9 +1494,6 @@ public:
     NonParmVarDeclBits.EscapingByref = true;
   }
 
-  /// Determines if this variable's alignment is dependent.
-  bool hasDependentAlignment() const;
-
   /// Retrieve the variable declaration from which this variable could
   /// be instantiated, if it is an instantiation (rather than a non-template).
   VarDecl *getTemplateInstantiationPattern() const;
