@@ -672,26 +672,17 @@ ErrorNonSelfAMDGPU::ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack,
 
 void ErrorNonSelfAMDGPU::PrintThreadsAndAddresses() {
   InternalScopedString str;
-  str.append("Threads and Addresses:\n");
-  u32 threads_per_row = 8, total_threads = 64;
-  // print 8 threads per row.
-  u32 row_st_tid = 0;
-  for (; (row_st_tid + threads_per_row - 1) < nactive_threads;
-       row_st_tid += threads_per_row) {
-    for (u32 i = 0; i < threads_per_row; i++) {
-      str.append("%02d : %p ", workitem_ids[row_st_tid + i],
-                 device_address[row_st_tid + i]);
-    }
-    str.append("\n");
-  }
-  if (row_st_tid != total_threads) {  // print remaining threads
-    for (; row_st_tid < nactive_threads; row_st_tid++) {
-      str.append("%02d : %p ", workitem_ids[row_st_tid],
-                 device_address[row_st_tid]);
+  str.append("Thread ids and accessed addresses:\n");
+  for (u32 idx = 0, per_row_count = 0; idx < nactive_threads; idx++) {
+    // print 8 threads per row.
+    if (per_row_count == 8) {
       str.append("\n");
+      per_row_count = 0;
     }
+    str.append("%02d : %p ", workitem_ids[idx], device_address[idx]);
+    per_row_count++;
   }
-
+  str.append("\n");
   Printf("%s", str.data());
 }
 
