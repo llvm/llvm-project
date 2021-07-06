@@ -5253,6 +5253,7 @@ multiclass CondUnaryRSYPseudoAndMemFold<string mnemonic,
 // The Sequence form uses a straight-line sequence of instructions and
 // the Loop form uses a loop of length-256 instructions followed by
 // another instruction to handle the excess.
+// The LoopVarLen form is for a loop with a non-constant length parameter.
 multiclass MemorySS<string mnemonic, bits<8> opcode,
                     SDPatternOperator sequence, SDPatternOperator loop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;
@@ -5265,6 +5266,10 @@ multiclass MemorySS<string mnemonic, bits<8> opcode,
                                    imm64:$length, GR64:$count256),
                       [(loop bdaddr12only:$dest, bdaddr12only:$src,
                              imm64:$length, GR64:$count256)]>;
+    def LoopVarLen : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                         GR64:$length, GR64:$count256),
+                            [(loop bdaddr12only:$dest, bdaddr12only:$src,
+                                   GR64:$length, GR64:$count256)]>;
   }
 }
 
