@@ -884,26 +884,28 @@ private:
   }
 
   RangeSet infer(SymbolRef Sym) {
-    if (Optional<RangeSet> ConstraintBasedRange = intersect(
-            RangeFactory, getConstraint(State, Sym),
-            // If Sym is a difference of symbols A - B, then maybe we have range
-            // set stored for B - A.
-            //
-            // If we have range set stored for both A - B and B - A then
-            // calculate the effective range set by intersecting the range set
-            // for A - B and the negated range set of B - A.
-            getRangeForNegatedSub(Sym), getRangeForEqualities(Sym))) {
-      return *ConstraintBasedRange;
-    }
-
-    // If Sym is a comparison expression (except <=>),
-    // find any other comparisons with the same operands.
-    // See function description.
-    if (Optional<RangeSet> CmpRangeSet = getRangeForComparisonSymbol(Sym)) {
-      return *CmpRangeSet;
-    }
-
-    return Visit(Sym);
+    return intersect(
+        RangeFactory,
+        // Of course, we should take the constraint directly associated with
+        // this symbol into consideration.
+        getConstraint(State, Sym),
+        // If Sym is a difference of symbols A - B, then maybe we have range
+        // set stored for B - A.
+        //
+        // If we have range set stored for both A - B and B - A then
+        // calculate the effective range set by intersecting the range set
+        // for A - B and the negated range set of B - A.
+        getRangeForNegatedSub(Sym),
+        // If Sym is (dis)equality, we might have some information on that
+        // in our equality classes data structure.
+        getRangeForEqualities(Sym),
+        // If Sym is a comparison expression (except <=>),
+        // find any other comparisons with the same operands.
+        // See function description.
+        getRangeForComparisonSymbol(Sym),
+        // Apart from the Sym itself, we can infer quite a lot if we look
+        // into subexpressions of Sym.
+        Visit(Sym));
   }
 
   RangeSet infer(EquivalenceClass Class) {
