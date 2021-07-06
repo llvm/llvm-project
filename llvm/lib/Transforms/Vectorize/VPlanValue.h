@@ -90,18 +90,22 @@ public:
   /// type identification.
   enum {
     VPValueSC,
-    VPVBlendSC,
     VPVInstructionSC,
     VPVMemoryInstructionSC,
-    VPVPredInstPHI,
     VPVReductionSC,
     VPVReplicateSC,
     VPVWidenSC,
     VPVWidenCallSC,
     VPVWidenGEPSC,
-    VPVWidenIntOrFpIndcutionSC,
-    VPVWidenPHISC,
     VPVWidenSelectSC,
+
+    // Phi-like VPValues. Need to be kept together.
+    VPVBlendSC,
+    VPVWidenPHISC,
+    VPVWidenCanonicalIVSC,
+    VPVWidenIntOrFpInductionSC,
+    VPVPredInstPHI,
+    VPVReductionPHISC,
   };
 
   VPValue(Value *UV = nullptr, VPDef *Def = nullptr)
@@ -314,21 +318,26 @@ public:
   /// SubclassID field of the VPRecipeBase objects. They are used for concrete
   /// type identification.
   using VPRecipeTy = enum {
-    VPBlendSC,
     VPBranchOnMaskSC,
     VPInstructionSC,
     VPInterleaveSC,
-    VPPredInstPHISC,
     VPReductionSC,
     VPReplicateSC,
     VPWidenCallSC,
-    VPWidenCanonicalIVSC,
     VPWidenGEPSC,
-    VPWidenIntOrFpInductionSC,
     VPWidenMemoryInstructionSC,
-    VPWidenPHISC,
     VPWidenSC,
-    VPWidenSelectSC
+    VPWidenSelectSC,
+
+    // Phi-like recipes. Need to be kept together.
+    VPBlendSC,
+    VPWidenPHISC,
+    VPWidenCanonicalIVSC,
+    VPWidenIntOrFpInductionSC,
+    VPPredInstPHISC,
+    VPReductionPHISC,
+    VPFirstPHISC = VPBlendSC,
+    VPLastPHISC = VPReductionPHISC,
   };
 
   VPDef(const unsigned char SC) : SubclassID(SC) {}
