@@ -4857,12 +4857,12 @@ static Constant *propagateNaN(Constant *In) {
 /// difference to the result.
 static Constant *simplifyFPOp(ArrayRef<Value *> Ops, FastMathFlags FMF,
                               const SimplifyQuery &Q) {
-  for (Value *V : Ops) {
-    // Poison is independent of anything else. It always propagates from an
-    // operand to a math result.
-    if (match(V, m_Poison()))
-      return PoisonValue::get(V->getType());
+  // Poison is independent of anything else. It always propagates from an
+  // operand to a math result.
+  if (any_of(Ops, [](Value *V) { return match(V, m_Poison()); }))
+    return PoisonValue::get(Ops[0]->getType());
 
+  for (Value *V : Ops) {
     bool IsNan = match(V, m_NaN());
     bool IsInf = match(V, m_Inf());
     bool IsUndef = Q.isUndefValue(V);

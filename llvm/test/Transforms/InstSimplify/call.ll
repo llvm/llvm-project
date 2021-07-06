@@ -1011,7 +1011,7 @@ define double @fma_poison_op2(double %x, double %y) {
 
 define double @fma_undef_op0_poison_op1(double %x) {
 ; CHECK-LABEL: @fma_undef_op0_poison_op1(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fma.f64(double undef, double poison, double %x)
   ret double %r
@@ -1019,7 +1019,7 @@ define double @fma_undef_op0_poison_op1(double %x) {
 
 define double @fma_undef_op0_poison_op2(double %x) {
 ; CHECK-LABEL: @fma_undef_op0_poison_op2(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fma.f64(double undef, double %x, double poison)
   ret double %r
@@ -1075,7 +1075,7 @@ define double @fmuladd_poison_op2(double %x, double %y) {
 
 define double @fmuladd_nan_op0_poison_op1(double %x) {
 ; CHECK-LABEL: @fmuladd_nan_op0_poison_op1(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fmuladd.f64(double 0x7ff8000000000000, double poison, double %x)
   ret double %r
@@ -1083,7 +1083,7 @@ define double @fmuladd_nan_op0_poison_op1(double %x) {
 
 define double @fmuladd_nan_op1_poison_op2(double %x) {
 ; CHECK-LABEL: @fmuladd_nan_op1_poison_op2(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fmuladd.f64(double %x, double 0x7ff8000000000000, double poison)
   ret double %r
