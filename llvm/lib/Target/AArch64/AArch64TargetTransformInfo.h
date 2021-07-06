@@ -208,7 +208,7 @@ public:
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
 
-  bool isLegalElementTypeForSVE(Type *Ty) const {
+  bool isElementTypeLegalForScalableVector(Type *Ty) const {
     if (Ty->isPointerTy())
       return true;
 
@@ -218,7 +218,7 @@ public:
     if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
-    if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
+    if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
         Ty->isIntegerTy(32) || Ty->isIntegerTy(64))
       return true;
 
@@ -233,7 +233,8 @@ public:
     if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors())
       return false; // Fall back to scalarization of masked operations.
 
-    return isLegalElementTypeForSVE(DataType->getScalarType());
+    return !DataType->getScalarType()->isIntegerTy(1) &&
+           isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -254,7 +255,8 @@ public:
                          DataTypeFVTy->getNumElements() < 2))
       return false;
 
-    return isLegalElementTypeForSVE(DataType->getScalarType());
+    return !DataType->getScalarType()->isIntegerTy(1) &&
+           isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const {

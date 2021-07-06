@@ -1003,6 +1003,10 @@ bool TargetTransformInfo::isLegalToVectorizeReduction(
   return TTIImpl->isLegalToVectorizeReduction(RdxDesc, VF);
 }
 
+bool TargetTransformInfo::isElementTypeLegalForScalableVector(Type *Ty) const {
+  return TTIImpl->isElementTypeLegalForScalableVector(Ty);
+}
+
 unsigned TargetTransformInfo::getLoadVectorFactor(unsigned VF,
                                                   unsigned LoadSize,
                                                   unsigned ChainSizeInBytes,
