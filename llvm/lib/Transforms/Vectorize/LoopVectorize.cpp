@@ -1305,6 +1305,9 @@ public:
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
 
+  /// Collect all element types in the loop for which widening is needed.
+  void collectElementTypesForWidening();
+
   /// Split reductions into those that happen in the loop, and those that happen
   /// outside. In loop reductions are collected into InLoopReductionChains.
   void collectInLoopReductions();
@@ -1889,6 +1892,9 @@ public:
 
   /// Values to ignore in the cost model when VF > 1.
   SmallPtrSet<const Value *, 16> VecValuesToIgnore;
+
+  /// All element types found in the loop.
+  SmallPtrSet<Type *, 16> ElementTypesInLoop;
 
   /// Profitable vector factors.
   SmallVector<VectorizationFactor, 8> ProfitableVFs;
@@ -6246,7 +6252,17 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
   unsigned MinWidth = -1U;
   unsigned MaxWidth = 8;
   const DataLayout &DL = TheFunction->getParent()->getDataLayout();
+  for (Type *T : ElementTypesInLoop) {
+    MinWidth = std::min<unsigned>(
+        MinWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedSize());
+    MaxWidth = std::max<unsigned>(
+        MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedSize());
+  }
+  return {MinWidth, MaxWidth};
+}
 
+void LoopVectorizationCostModel::collectElementTypesForWidening() {
+  ElementTypesInLoop.clear();
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the loop.
@@ -6292,14 +6308,9 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
           !isAccessInterleaved(&I) && !isLegalGatherOrScatter(&I))
         continue;
 
-      MinWidth = std::min(MinWidth,
-                          (unsigned)DL.getTypeSizeInBits(T->getScalarType()));
-      MaxWidth = std::max(MaxWidth,
-                          (unsigned)DL.getTypeSizeInBits(T->getScalarType()));
+      ElementTypesInLoop.insert(T);
     }
   }
-
-  return {MinWidth, MaxWidth};
 }
 
 unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
@@ -9840,6 +9851,8 @@ static bool processLoopInVPlanNativePath(
   // Get user vectorization factor.
   ElementCount UserVF = Hints.getWidth();
 
+  CM.collectElementTypesForWidening();
+
   // Plan how to best vectorize, return the best VF and its cost.
   const VectorizationFactor VF = LVP.planInVPlanNativePath(UserVF);
 
@@ -10061,6 +10074,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE,
                                 F, &Hints, IAI);
   CM.collectValuesToIgnore();
+  CM.collectElementTypesForWidening();
 
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, TLI, TTI, &LVL, CM, IAI, PSE, Hints,
