@@ -424,8 +424,7 @@ def allow_stack_execute : Flag<["-"], "allow_stack_execute">,
     Flags<[HelpHidden]>,
     Group<grp_main>;
 def export_dynamic : Flag<["-"], "export_dynamic">,
-    HelpText<"Preserve all global symbols during LTO">,
-    Flags<[HelpHidden]>,
+    HelpText<"Preserve all global symbols during LTO and when dead-stripping executables">,
     Group<grp_main>;
 
 def grp_bundle : OptionGroup<"bundle">, HelpText<"CREATING A BUNDLE">;

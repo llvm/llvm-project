@@ -79,9 +79,11 @@ void markLive() {
       // * -alias(-list)
       // * -init
 
-      // In dylibs and bundles, all external functions are GC roots.
-      // FIXME: -export_dynamic should enable this for executables too.
-      if (config->outputType != MH_EXECUTE && !defined->privateExtern) {
+      // In dylibs and bundles and in executables with -export_dynamic,
+      // all external functions are GC roots.
+      bool externsAreRoots =
+          config->outputType != MH_EXECUTE || config->exportDynamic;
+      if (externsAreRoots && !defined->privateExtern) {
         addSym(defined);
         continue;
       }
