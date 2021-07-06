@@ -11251,10 +11251,8 @@ within a map that has been added by the same *vendor-name*.
      ".api_shader_hash"            sequence of    Input shader hash, typically passed in from the client. The value
                                    2 integers     is implementation defined, and can not be relied on between
                                                   different builds of the compiler.
-     ".scratch_memory_size"        sequence of    Size in bytes of scratch memory used by the shader.
-                                   2 integers
-     ".lds_size"                   sequence of    Size in bytes of LDS memory.
-                                   2 integers
+     ".scratch_memory_size"        integer        Size in bytes of scratch memory used by the shader.
+     ".lds_size"                   integer        Size in bytes of LDS memory.
      ".vgpr_count"                 integer        Number of VGPRs used by the shader.
      ".sgpr_count"                 integer        Number of SGPRs used by the shader.
      ".stack_frame_size_in_bytes"  integer        Amount of stack size used by the shader.
