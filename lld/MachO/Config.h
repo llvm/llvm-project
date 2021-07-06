@@ -96,6 +96,7 @@ struct Configuration {
   bool hasReexports = false;
   bool allLoad = false;
   bool archMultiple = false;
+  bool exportDynamic = false;
   bool forceLoadObjC = false;
   bool forceLoadSwift = false;
   bool staticLink = false;
