@@ -685,11 +685,10 @@ isl::map ZoneAlgorithm::getDefToTarget(ScopStmt *DefStmt,
                    TargetStmt->getSurroundingLoop())) {
     isl::set DefDomain = getDomainFor(DefStmt);
     isl::set TargetDomain = getDomainFor(TargetStmt);
-    assert(DefDomain.dim(isl::dim::set) <= TargetDomain.dim(isl::dim::set));
+    assert(DefDomain.tuple_dim() <= TargetDomain.tuple_dim());
 
     Result = isl::map::from_domain_and_range(DefDomain, TargetDomain);
-    for (unsigned i = 0, DefDims = DefDomain.dim(isl::dim::set); i < DefDims;
-         i += 1)
+    for (unsigned i = 0, DefDims = DefDomain.tuple_dim(); i < DefDims; i += 1)
       Result = Result.equate(isl::dim::in, i, isl::dim::out, i);
   }
 
