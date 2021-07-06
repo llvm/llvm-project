@@ -1044,6 +1044,7 @@ static_assert((CodeSignatureSection::fixedHeadersSize % 8) == 0, "");
 CodeSignatureSection::CodeSignatureSection()
     : LinkEditSection(segment_names::linkEdit, section_names::codeSignature) {
   align = 16; // required by libstuff
+  // FIXME: Consider using finalOutput instead of outputFile.
   fileName = config->outputFile;
   size_t slashIndex = fileName.rfind("/");
   if (slashIndex != std::string::npos)

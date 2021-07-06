@@ -867,6 +867,7 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
       path.consume_front("@executable_path/")) {
     // ld64 allows overriding this with the undocumented flag -executable_path.
     // lld doesn't currently implement that flag.
+    // FIXME: Consider using finalOutput instead of outputFile.
     path::append(newPath, path::parent_path(config->outputFile), path);
     path = newPath;
   } else if (path.consume_front("@loader_path/")) {
