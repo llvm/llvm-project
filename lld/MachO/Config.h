@@ -95,6 +95,7 @@ struct Configuration {
   Symbol *entry = nullptr;
   bool hasReexports = false;
   bool allLoad = false;
+  bool archMultiple = false;
   bool forceLoadObjC = false;
   bool forceLoadSwift = false;
   bool staticLink = false;
