@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -fblocks -Wno-return-stack-address -triple x86_64-unknown-unknown-gnu -emit-llvm -O1 -fexperimental-new-pass-manager -o - %s | FileCheck %s
 
-struct alignas(4) X {
-  X();
-  X(const X &);
-  X(X &&);
+struct X {
+    X();
+    X(const X&);
+    X(X&&);
 };
 
 #define L(A, B, C) void l##A() {    \
@@ -210,75 +210,3 @@ void b_attr() {
     };
   }()();
 }
-
-namespace test_alignas {
-
-template <int A> X t1() {
-  X a [[gnu::aligned(A)]];
-  return a;
-}
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t1ILi1EEE1Xv
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  ret void
-template X t1<1>();
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t1ILi4EEE1Xv
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  ret void
-template X t1<4>();
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t1ILi8EEE1Xv
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  call {{.*}} @_ZN1XC1EOS_
-// CHECK-NEXT:  call void @llvm.lifetime.end
-template X t1<8>();
-
-template <int A> X t2() {
-  X a [[gnu::aligned(1)]] [[gnu::aligned(A)]] [[gnu::aligned(2)]];
-  return a;
-}
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t2ILi1EEE1Xv
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  ret void
-template X t2<1>();
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t2ILi4EEE1Xv
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  ret void
-template X t2<4>();
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t2ILi8EEE1Xv
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  call {{.*}} @_ZN1XC1EOS_
-// CHECK-NEXT:  call void @llvm.lifetime.end
-template X t2<8>();
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t3Ev
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  ret void
-X t3() {
-  X a [[gnu::aligned(1)]];
-  return a;
-}
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t4Ev
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  call {{.*}} @_ZN1XC1EOS_
-// CHECK-NEXT:  call void @llvm.lifetime.end
-X t4() {
-  X a [[gnu::aligned(8)]];
-  return a;
-}
-
-// CHECK-LABEL: define{{.*}} void @_ZN12test_alignas2t5Ev
-// CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  call {{.*}} @_ZN1XC1EOS_
-// CHECK-NEXT:  call void @llvm.lifetime.end
-X t5() {
-  X a [[gnu::aligned(1)]] [[gnu::aligned(8)]];
-  return a;
-}
-
-} // namespace test_alignas
