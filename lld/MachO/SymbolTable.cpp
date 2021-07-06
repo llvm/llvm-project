@@ -198,7 +198,10 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
 
 void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
   auto message = [source, &sym]() {
-    std::string message = "undefined symbol: " + toString(sym);
+    std::string message = "undefined symbol";
+    if (config->archMultiple)
+      message += (" for arch " + getArchitectureName(config->arch())).str();
+    message += ": " + toString(sym);
     if (!source.empty())
       message += "\n>>> referenced by " + source.str();
     else
