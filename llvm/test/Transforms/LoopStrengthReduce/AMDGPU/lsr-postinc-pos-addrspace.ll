@@ -12,19 +12,16 @@ define amdgpu_kernel void @local_cmp_user(i32 %arg0) nounwind {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG0:%.*]], 1
 ; CHECK-NEXT:    br label [[BB11:%.*]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i32 [ [[LSR_IV_NEXT3:%.*]], [[BB:%.*]] ], [ -2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[BB:%.*]] ], [ -2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[BB]] ], [ [[TMP0]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add i32 [[LSR_IV2]], 2
+; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add i32 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[BB13:%.*]], label [[BB]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[T:%.*]] = load i8 addrspace(3)*, i8 addrspace(3)* addrspace(3)* undef, align 4
-; CHECK-NEXT:    [[T1:%.*]] = ptrtoint i8 addrspace(3)* [[T]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[T1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[TMP1]] to i8 addrspace(3)*
-; CHECK-NEXT:    [[TMP:%.*]] = inttoptr i32 [[LSR_IV_NEXT3]] to i8 addrspace(3)*
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 addrspace(3)* [[TMP2]], [[TMP]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8 addrspace(3)* [[T]], i32 [[LSR_IV_NEXT2]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 addrspace(3)* [[SCEVGEP]], null
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB11]], label [[BB13]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    unreachable
@@ -55,19 +52,16 @@ define amdgpu_kernel void @global_cmp_user(i64 %arg0) nounwind {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[ARG0:%.*]], 1
 ; CHECK-NEXT:    br label [[BB11:%.*]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i64 [ [[LSR_IV_NEXT3:%.*]], [[BB:%.*]] ], [ -2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], [[BB:%.*]] ], [ -2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[BB]] ], [ [[TMP0]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
-; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add i64 [[LSR_IV2]], 2
+; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[BB13:%.*]], label [[BB]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[T:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
-; CHECK-NEXT:    [[T1:%.*]] = ptrtoint i8 addrspace(1)* [[T]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[T1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to i8 addrspace(1)*
-; CHECK-NEXT:    [[TMP:%.*]] = inttoptr i64 [[LSR_IV_NEXT3]] to i8 addrspace(1)*
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 addrspace(1)* [[TMP2]], [[TMP]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8 addrspace(1)* [[T]], i64 [[LSR_IV_NEXT2]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 addrspace(1)* [[SCEVGEP]], null
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB11]], label [[BB13]]
 ; CHECK:       bb13:
 ; CHECK-NEXT:    unreachable

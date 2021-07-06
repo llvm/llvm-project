@@ -263,6 +263,8 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
   const SCEV *AddrExp = SE.getTruncateOrZeroExtend(SE.getSCEV(Addr), PtrTy);
   const SCEV *BaseExp = SE.getTruncateOrZeroExtend(SE.getSCEV(Base), PtrTy);
   const SCEV *Diff = SE.getMinusSCEV(AddrExp, BaseExp);
+  if (isa<SCEVCouldNotCompute>(Diff))
+    return UnknownRange;
 
   ConstantRange Offset = SE.getSignedRange(Diff);
   if (isUnsafe(Offset))
