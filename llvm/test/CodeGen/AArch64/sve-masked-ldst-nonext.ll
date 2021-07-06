@@ -92,6 +92,15 @@ define <vscale x 8 x bfloat> @masked_load_nxv8bf16(<vscale x 8 x bfloat> *%a, <v
   ret <vscale x 8 x bfloat> %load
 }
 
+define <vscale x 4 x i32> @masked_load_passthru(<vscale x 4 x i32> *%a, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) nounwind {
+; CHECK-LABEL: masked_load_passthru:
+; CHECK-NEXT: ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT: mov z0.s, p0/m, z1.s
+; CHECK-NEXT: ret
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(<vscale x 4 x i32> *%a, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru)
+  ret <vscale x 4 x i32> %load
+}
+
 ;
 ; Masked Stores
 ;
