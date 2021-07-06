@@ -273,7 +273,6 @@ struct Binding {
   OutputSegment *segment = nullptr;
   uint64_t offset = 0;
   int64_t addend = 0;
-  int16_t ordinal = 0;
 };
 } // namespace
 
@@ -283,9 +282,8 @@ struct Binding {
 // The bind opcode "interpreter" remembers the values of each binding field, so
 // we only need to encode the differences between bindings. Hence the use of
 // lastBinding.
-static void encodeBinding(const Symbol *sym, const OutputSection *osec,
-                          uint64_t outSecOff, int64_t addend,
-                          bool isWeakBinding, Binding &lastBinding,
+static void encodeBinding(const OutputSection *osec, uint64_t outSecOff,
+                          int64_t addend, Binding &lastBinding,
                           raw_svector_ostream &os) {
   OutputSegment *seg = osec->parent;
   uint64_t offset = osec->getSegmentOffset() + outSecOff;
@@ -307,13 +305,7 @@ static void encodeBinding(const Symbol *sym, const OutputSection *osec,
     lastBinding.addend = addend;
   }
 
-  uint8_t flags = BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
-  if (!isWeakBinding && sym->isWeakRef())
-    flags |= BIND_SYMBOL_FLAGS_WEAK_IMPORT;
-
-  os << flags << sym->getName() << '\0'
-     << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER)
-     << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
+  os << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
   // DO_BIND causes dyld to both perform the binding and increment the offset
   lastBinding.offset += target->wordSize;
 }
@@ -345,6 +337,37 @@ static void encodeWeakOverride(const Defined *defined,
      << defined->getName() << '\0';
 }
 
+// Organize the bindings so we can encoded them with fewer opcodes.
+//
+// First, all bindings for a given symbol should be grouped together.
+// BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM is the largest opcode (since it
+// has an associated symbol string), so we only want to emit it once per symbol.
+//
+// Within each group, we sort the bindings by address. Since bindings are
+// delta-encoded, sorting them allows for a more compact result. Note that
+// sorting by address alone ensures that bindings for the same segment / section
+// are located together, minimizing the number of times we have to emit
+// BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB.
+//
+// Finally, we sort the symbols by the address of their first binding, again
+// to facilitate the delta-encoding process.
+template <class Sym>
+std::vector<std::pair<const Sym *, std::vector<BindingEntry>>>
+sortBindings(const BindingsMap<const Sym *> &bindingsMap) {
+  std::vector<std::pair<const Sym *, std::vector<BindingEntry>>> bindingsVec(
+      bindingsMap.begin(), bindingsMap.end());
+  for (auto &p : bindingsVec) {
+    std::vector<BindingEntry> &bindings = p.second;
+    llvm::sort(bindings, [](const BindingEntry &a, const BindingEntry &b) {
+      return a.target.getVA() < b.target.getVA();
+    });
+  }
+  llvm::sort(bindingsVec, [](const auto &a, const auto &b) {
+    return a.second[0].target.getVA() < b.second[0].target.getVA();
+  });
+  return bindingsVec;
+}
+
 // Emit bind opcodes, which are a stream of byte-sized opcodes that dyld
 // interprets to update a record with the following fields:
 //  * segment index (of the segment to write the symbol addresses to, typically
@@ -361,24 +384,30 @@ static void encodeWeakOverride(const Defined *defined,
 void BindingSection::finalizeContents() {
   raw_svector_ostream os{contents};
   Binding lastBinding;
+  int16_t lastOrdinal = 0;
 
-  // Since bindings are delta-encoded, sorting them allows for a more compact
-  // result. Note that sorting by address alone ensures that bindings for the
-  // same segment / section are located together.
-  llvm::sort(bindings, [](const BindingEntry &a, const BindingEntry &b) {
-    return a.target.getVA() < b.target.getVA();
-  });
-  for (const BindingEntry &b : bindings) {
-    int16_t ordinal = ordinalForDylibSymbol(*b.dysym);
-    if (ordinal != lastBinding.ordinal) {
+  for (auto &p : sortBindings(bindingsMap)) {
+    const DylibSymbol *sym = p.first;
+    std::vector<BindingEntry> &bindings = p.second;
+    llvm::sort(bindings, [](const BindingEntry &a, const BindingEntry &b) {
+      return a.target.getVA() < b.target.getVA();
+    });
+    uint8_t flags = BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
+    if (sym->isWeakRef())
+      flags |= BIND_SYMBOL_FLAGS_WEAK_IMPORT;
+    os << flags << sym->getName() << '\0'
+       << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER);
+    int16_t ordinal = ordinalForDylibSymbol(*sym);
+    if (ordinal != lastOrdinal) {
       encodeDylibOrdinal(ordinal, os);
-      lastBinding.ordinal = ordinal;
+      lastOrdinal = ordinal;
     }
-    encodeBinding(b.dysym, b.target.isec->parent,
-                  b.target.isec->getOffset(b.target.offset), b.addend,
-                  /*isWeakBinding=*/false, lastBinding, os);
+    for (const BindingEntry &b : bindings)
+      encodeBinding(b.target.isec->parent,
+                    b.target.isec->getOffset(b.target.offset), b.addend,
+                    lastBinding, os);
   }
-  if (!bindings.empty())
+  if (!bindingsMap.empty())
     os << static_cast<uint8_t>(BIND_OPCODE_DONE);
 }
 
@@ -396,17 +425,18 @@ void WeakBindingSection::finalizeContents() {
   for (const Defined *defined : definitions)
     encodeWeakOverride(defined, os);
 
-  // Since bindings are delta-encoded, sorting them allows for a more compact
-  // result.
-  llvm::sort(bindings,
-             [](const WeakBindingEntry &a, const WeakBindingEntry &b) {
-               return a.target.getVA() < b.target.getVA();
-             });
-  for (const WeakBindingEntry &b : bindings)
-    encodeBinding(b.symbol, b.target.isec->parent,
-                  b.target.isec->getOffset(b.target.offset), b.addend,
-                  /*isWeakBinding=*/true, lastBinding, os);
-  if (!bindings.empty() || !definitions.empty())
+  for (auto &p : sortBindings(bindingsMap)) {
+    const Symbol *sym = p.first;
+    std::vector<BindingEntry> &bindings = p.second;
+    os << static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
+       << sym->getName() << '\0'
+       << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER);
+    for (const BindingEntry &b : bindings)
+      encodeBinding(b.target.isec->parent,
+                    b.target.isec->getOffset(b.target.offset), b.addend,
+                    lastBinding, os);
+  }
+  if (!bindingsMap.empty() || !definitions.empty())
     os << static_cast<uint8_t>(BIND_OPCODE_DONE);
 }
 

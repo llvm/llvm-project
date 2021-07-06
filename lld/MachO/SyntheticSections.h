@@ -16,6 +16,7 @@
 #include "OutputSegment.h"
 #include "Target.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -169,12 +170,14 @@ private:
 };
 
 struct BindingEntry {
-  const DylibSymbol *dysym;
   int64_t addend;
   Location target;
-  BindingEntry(const DylibSymbol *dysym, int64_t addend, Location target)
-      : dysym(dysym), addend(addend), target(std::move(target)) {}
+  BindingEntry(int64_t addend, Location target)
+      : addend(addend), target(std::move(target)) {}
 };
+
+template <class Sym>
+using BindingsMap = llvm::DenseMap<Sym, std::vector<BindingEntry>>;
 
 // Stores bind opcodes for telling dyld which symbols to load non-lazily.
 class BindingSection final : public LinkEditSection {
@@ -182,25 +185,17 @@ public:
   BindingSection();
   void finalizeContents() override;
   uint64_t getRawSize() const override { return contents.size(); }
-  bool isNeeded() const override { return !bindings.empty(); }
+  bool isNeeded() const override { return !bindingsMap.empty(); }
   void writeTo(uint8_t *buf) const override;
 
   void addEntry(const DylibSymbol *dysym, const InputSection *isec,
                 uint64_t offset, int64_t addend = 0) {
-    bindings.emplace_back(dysym, addend, Location(isec, offset));
+    bindingsMap[dysym].emplace_back(addend, Location(isec, offset));
   }
 
 private:
-  std::vector<BindingEntry> bindings;
+  BindingsMap<const DylibSymbol *> bindingsMap;
   SmallVector<char, 128> contents;
-};
-
-struct WeakBindingEntry {
-  const Symbol *symbol;
-  int64_t addend;
-  Location target;
-  WeakBindingEntry(const Symbol *symbol, int64_t addend, Location target)
-      : symbol(symbol), addend(addend), target(std::move(target)) {}
 };
 
 // Stores bind opcodes for telling dyld which weak symbols need coalescing.
@@ -219,17 +214,17 @@ public:
   void finalizeContents() override;
   uint64_t getRawSize() const override { return contents.size(); }
   bool isNeeded() const override {
-    return !bindings.empty() || !definitions.empty();
+    return !bindingsMap.empty() || !definitions.empty();
   }
 
   void writeTo(uint8_t *buf) const override;
 
   void addEntry(const Symbol *symbol, const InputSection *isec, uint64_t offset,
                 int64_t addend = 0) {
-    bindings.emplace_back(symbol, addend, Location(isec, offset));
+    bindingsMap[symbol].emplace_back(addend, Location(isec, offset));
   }
 
-  bool hasEntry() const { return !bindings.empty(); }
+  bool hasEntry() const { return !bindingsMap.empty(); }
 
   void addNonWeakDefinition(const Defined *defined) {
     definitions.emplace_back(defined);
@@ -238,7 +233,7 @@ public:
   bool hasNonWeakDefinition() const { return !definitions.empty(); }
 
 private:
-  std::vector<WeakBindingEntry> bindings;
+  BindingsMap<const Symbol *> bindingsMap;
   std::vector<const Defined *> definitions;
   SmallVector<char, 128> contents;
 };
