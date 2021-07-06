@@ -1,32 +1,9 @@
 /// Test instrumentation can handle various linkages.
 // RUN: %clang_profgen -fcoverage-mapping %s -o %t
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
-// RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s
 
 // RUN: %clang_profgen -fcoverage-mapping -ffunction-sections -Wl,--gc-sections %s -o %t
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
-// RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s
-
-// CHECK:      {{.*}}external{{.*}}:
-// CHECK-NEXT:    Hash:
-// CHECK-NEXT:    Counters: 1
-// CHECK-NEXT:    Function count: 1
-// CHECK:      {{.*}}weak{{.*}}:
-// CHECK-NEXT:    Hash:
-// CHECK-NEXT:    Counters: 1
-// CHECK-NEXT:    Function count: 1
-// CHECK:      main:
-// CHECK-NEXT:    Hash:
-// CHECK-NEXT:    Counters: 1
-// CHECK-NEXT:    Function count: 1
-// CHECK:      {{.*}}internal{{.*}}:
-// CHECK-NEXT:    Hash:
-// CHECK-NEXT:    Counters: 1
-// CHECK-NEXT:    Function count: 1
-// CHECK:      {{.*}}linkonce_odr{{.*}}:
-// CHECK-NEXT:    Hash:
-// CHECK-NEXT:    Counters: 1
-// CHECK-NEXT:    Function count: 1
 
 #include <stdio.h>
 
