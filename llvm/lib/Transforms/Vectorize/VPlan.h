@@ -1073,7 +1073,7 @@ public:
     addOperand(&Start);
   }
 
-  ~VPWidenPHIRecipe() override = default;
+  virtual ~VPWidenPHIRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *B) {
@@ -1086,12 +1086,12 @@ public:
   }
 
   /// Generate the phi/select nodes.
-  void execute(VPTransformState &State) override;
+  virtual void execute(VPTransformState &State) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
+  virtual void print(raw_ostream &O, const Twine &Indent,
+                     VPSlotTracker &SlotTracker) const override;
 #endif
 
   /// Returns the start value of the phi, if it is a reduction or first-order
