@@ -1,10 +1,10 @@
-.. _cxx1y-status:
+.. _cxx14-status:
 
 ================================
 libc++ C++14 Status
 ================================
 
-.. include:: Helpers/Styles.rst
+.. include:: ../Helpers/Styles.rst
 
 .. contents::
    :local:
@@ -28,24 +28,24 @@ The groups that have contributed papers:
 -  SG1 - Study group #1 (Concurrency working group)
 
 
-.. _paper-status-cxx1y:
+.. _paper-status-cxx14:
 
 Paper Status
 ====================================
 
 .. csv-table::
-   :file: Cxx1yStatusPaperStatus.csv
+   :file: Cxx14Papers.csv
    :header-rows: 1
    :widths: auto
 
 
-.. _issues-status-cxx1y:
+.. _issues-status-cxx14:
 
 Library Working Group Issues Status
 ====================================
 
 .. csv-table::
-   :file: Cxx1yStatusIssuesStatus.csv
+   :file: Cxx14Issues.csv
    :header-rows: 1
    :widths: auto
 

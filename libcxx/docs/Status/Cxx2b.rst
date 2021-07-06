@@ -4,7 +4,7 @@
 libc++ C++2b Status
 ================================
 
-.. include:: Helpers/Styles.rst
+.. include:: ../Helpers/Styles.rst
 
 .. contents::
    :local:
@@ -33,7 +33,7 @@ Paper Status
 ====================================
 
 .. csv-table::
-   :file: Cxx2bStatusPaperStatus.csv
+   :file: Cxx2bPapers.csv
    :header-rows: 1
    :widths: auto
 
@@ -43,7 +43,7 @@ Library Working Group Issues Status
 ====================================
 
 .. csv-table::
-   :file: Cxx2bStatusIssuesStatus.csv
+   :file: Cxx2bIssues.csv
    :header-rows: 1
    :widths: auto
 

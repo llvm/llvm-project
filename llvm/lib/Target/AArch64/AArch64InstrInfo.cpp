@@ -2300,6 +2300,22 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1SB_D_IMM:
   case AArch64::ST1B_D_IMM:
+  case AArch64::LD1RB_IMM:
+  case AArch64::LD1RB_H_IMM:
+  case AArch64::LD1RB_S_IMM:
+  case AArch64::LD1RB_D_IMM:
+  case AArch64::LD1RSB_H_IMM:
+  case AArch64::LD1RSB_S_IMM:
+  case AArch64::LD1RSB_D_IMM:
+  case AArch64::LD1RH_IMM:
+  case AArch64::LD1RH_S_IMM:
+  case AArch64::LD1RH_D_IMM:
+  case AArch64::LD1RSH_S_IMM:
+  case AArch64::LD1RSH_D_IMM:
+  case AArch64::LD1RW_IMM:
+  case AArch64::LD1RW_D_IMM:
+  case AArch64::LD1RSW_IMM:
+  case AArch64::LD1RD_IMM:
     return 3;
   case AArch64::ADDG:
   case AArch64::STGOffset:
@@ -2911,6 +2927,42 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     Scale = TypeSize::Fixed(16);
     Width = 16;
     MinOffset = -64;
+    MaxOffset = 63;
+    break;
+  case AArch64::LD1RB_IMM:
+  case AArch64::LD1RB_H_IMM:
+  case AArch64::LD1RB_S_IMM:
+  case AArch64::LD1RB_D_IMM:
+  case AArch64::LD1RSB_H_IMM:
+  case AArch64::LD1RSB_S_IMM:
+  case AArch64::LD1RSB_D_IMM:
+    Scale = TypeSize::Fixed(1);
+    Width = 1;
+    MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::LD1RH_IMM:
+  case AArch64::LD1RH_S_IMM:
+  case AArch64::LD1RH_D_IMM:
+  case AArch64::LD1RSH_S_IMM:
+  case AArch64::LD1RSH_D_IMM:
+    Scale = TypeSize::Fixed(2);
+    Width = 2;
+    MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::LD1RW_IMM:
+  case AArch64::LD1RW_D_IMM:
+  case AArch64::LD1RSW_IMM:
+    Scale = TypeSize::Fixed(4);
+    Width = 4;
+    MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::LD1RD_IMM:
+    Scale = TypeSize::Fixed(8);
+    Width = 8;
+    MinOffset = 0;
     MaxOffset = 63;
     break;
   }

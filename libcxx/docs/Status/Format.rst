@@ -1,10 +1,10 @@
-.. ranges-status:
+.. format-status:
 
 ================================
 libc++ Format Status
 ================================
 
-.. include:: Helpers/Styles.rst
+.. include:: ../Helpers/Styles.rst
 
 .. contents::
    :local:
@@ -28,7 +28,7 @@ Sub-Projects in the Format library
 ==================================
 
 .. csv-table::
-   :file: FormatProposalStatus.csv
+   :file: FormatPaper.csv
    :header-rows: 1
    :widths: auto
 
@@ -48,6 +48,6 @@ Paper and Issue Status
 ======================
 
 .. csv-table::
-   :file: FormatIssuePaperStatus.csv
+   :file: FormatIssues.csv
    :header-rows: 1
    :widths: auto
