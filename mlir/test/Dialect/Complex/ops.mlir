@@ -32,6 +32,9 @@ func @ops(%f: f32) {
   // CHECK: complex.log %[[C]] : complex<f32>
   %log = complex.log %complex : complex<f32>
 
+  // CHECK: complex.log1p %[[C]] : complex<f32>
+  %log1p = complex.log1p %complex : complex<f32>
+
   // CHECK: complex.mul %[[C]], %[[C]] : complex<f32>
   %prod = complex.mul %complex, %complex : complex<f32>
 
