@@ -799,11 +799,30 @@ struct FoldInitTensorWithTensorReshapeOp
     return success();
   }
 };
+
+struct FoldInitTensorWithDimOp : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    Optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
+    auto initTensorOp = dimOp.source().getDefiningOp<linalg::InitTensorOp>();
+    if (!initTensorOp || !maybeConstantIndex)
+      return failure();
+    if (initTensorOp.isDynamicSize(*maybeConstantIndex)) {
+      rewriter.replaceOp(dimOp,
+                         initTensorOp.getDynamicSize(*maybeConstantIndex));
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<ConstantIndexOp>(dimOp, *maybeConstantIndex);
+    return success();
+  }
+};
 } // namespace
 
 void InitTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<FoldInitTensorWithExtractSliceOp,
+  results.add<FoldInitTensorWithDimOp, FoldInitTensorWithExtractSliceOp,
               FoldInitTensorWithTensorReshapeOp<TensorExpandShapeOp>,
               FoldInitTensorWithTensorReshapeOp<TensorCollapseShapeOp>,
               ReplaceStaticShapeDims>(context);

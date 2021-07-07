@@ -228,7 +228,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   SmallPtrSet<BasicBlock *, 4> LiveBlocks;
   // Edges that are reachable on the 1st iteration.
   DenseSet<BasicBlockEdge> LiveEdges;
-  LiveBlocks.insert(L->getHeader());
+  LiveBlocks.insert(Header);
 
   SmallPtrSet<BasicBlock *, 4> Visited;
   auto MarkLiveEdge = [&](BasicBlock *From, BasicBlock *To) {
@@ -286,7 +286,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   //     iteration, mark this successor live.
   // 3b. If we cannot prove it, conservatively assume that all successors are
   //     live.
-  auto &DL = L->getHeader()->getModule()->getDataLayout();
+  auto &DL = Header->getModule()->getDataLayout();
   const SimplifyQuery SQ(DL);
   for (auto *BB : RPOT) {
     Visited.insert(BB);
