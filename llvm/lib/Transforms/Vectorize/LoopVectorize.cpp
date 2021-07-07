@@ -3952,9 +3952,8 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths(VPTransformState &State) {
       Type *OriginalTy = I->getType();
       Type *ScalarTruncatedTy =
           IntegerType::get(OriginalTy->getContext(), KV.second);
-      auto *TruncatedTy = FixedVectorType::get(
-          ScalarTruncatedTy,
-          cast<FixedVectorType>(OriginalTy)->getNumElements());
+      auto *TruncatedTy = VectorType::get(
+          ScalarTruncatedTy, cast<VectorType>(OriginalTy)->getElementCount());
       if (TruncatedTy == OriginalTy)
         continue;
 
