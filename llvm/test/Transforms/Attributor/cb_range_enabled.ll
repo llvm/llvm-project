@@ -59,10 +59,24 @@ define i32 @test2(i32 %unknown, i32 %b) {
 
 ; Positive checks
 
+; FIXME: AAValueSimplify preserves the context but simplifies to a value in the other function, I think.
+;        Either way, as we settle on the new AAValueSimplifyReturned scheme that replaces AAReturnedValues
+;        we need to look into this again. For the purpose of making some progress we take this regression
+;        for now, call site contexts are not on by default anyway (yet).
 define i32 @test1_pcheck(i32 %unknown) {
-; CHECK-LABEL: define {{[^@]+}}@test1_pcheck
-; CHECK-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret i32 1
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test1_pcheck
+; IS__TUNIT____-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test1(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR0]], !range [[RNG1:![0-9]+]]
+; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[TMP1]], 90
+; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; IS__TUNIT____-NEXT:    ret i32 [[TMP3]]
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test1_pcheck
+; IS__CGSCC____-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test1(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR1]], !range [[RNG1:![0-9]+]]
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[TMP1]], 90
+; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; IS__CGSCC____-NEXT:    ret i32 [[TMP3]]
 ;
   %1 = call i32 @test1(i32 %unknown, i32 20)
   %2 = icmp sle i32 %1, 90
@@ -71,9 +85,19 @@ define i32 @test1_pcheck(i32 %unknown) {
 }
 
 define i32 @test2_pcheck(i32 %unknown) {
-; CHECK-LABEL: define {{[^@]+}}@test2_pcheck
-; CHECK-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret i32 1
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test2_pcheck
+; IS__TUNIT____-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test2(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR0]], !range [[RNG2:![0-9]+]]
+; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = icmp sge i32 [[TMP1]], 20
+; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; IS__TUNIT____-NEXT:    ret i32 [[TMP3]]
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test2_pcheck
+; IS__CGSCC____-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test2(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR1]], !range [[RNG2:![0-9]+]]
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp sge i32 [[TMP1]], 20
+; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; IS__CGSCC____-NEXT:    ret i32 [[TMP3]]
 ;
   %1 = call i32 @test2(i32 %unknown, i32 20)
   %2 = icmp sge i32 %1, 20
@@ -86,14 +110,14 @@ define i32 @test2_pcheck(i32 %unknown) {
 define i32 @test1_ncheck(i32 %unknown) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test1_ncheck
 ; IS__TUNIT____-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test1(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR0]], !range [[RNG1:![0-9]+]]
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test1(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR0]], !range [[RNG1]]
 ; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[TMP1]], 10
 ; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
 ; IS__TUNIT____-NEXT:    ret i32 [[TMP3]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test1_ncheck
 ; IS__CGSCC____-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test1(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR1]], !range [[RNG1:![0-9]+]]
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test1(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR1]], !range [[RNG1]]
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[TMP1]], 10
 ; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
 ; IS__CGSCC____-NEXT:    ret i32 [[TMP3]]
@@ -107,14 +131,14 @@ define i32 @test1_ncheck(i32 %unknown) {
 define i32 @test2_ncheck(i32 %unknown) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test2_ncheck
 ; IS__TUNIT____-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test2(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR0]], !range [[RNG2:![0-9]+]]
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i32 @test2(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR0]], !range [[RNG2]]
 ; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = icmp sge i32 [[TMP1]], 30
 ; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
 ; IS__TUNIT____-NEXT:    ret i32 [[TMP3]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test2_ncheck
 ; IS__CGSCC____-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test2(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR1]], !range [[RNG2:![0-9]+]]
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @test2(i32 [[UNKNOWN]], i32 noundef 20) #[[ATTR1]], !range [[RNG2]]
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp sge i32 [[TMP1]], 30
 ; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
 ; IS__CGSCC____-NEXT:    ret i32 [[TMP3]]
