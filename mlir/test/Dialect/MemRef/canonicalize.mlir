@@ -387,11 +387,32 @@ func @alloc_const_fold_with_symbols2() -> memref<?xi32, #map0> {
 }
 
 // -----
+
 // CHECK-LABEL: func @allocator
 // CHECK:   %[[alloc:.+]] = memref.alloc
 // CHECK:   memref.store %[[alloc:.+]], %arg0
 func @allocator(%arg0 : memref<memref<?xi32>>, %arg1 : index)  {
   %0 = memref.alloc(%arg1) : memref<?xi32>
   memref.store %0, %arg0[] : memref<memref<?xi32>>
-  return 
+  return
+}
+
+// -----
+
+#map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+
+// CHECK-LABEL: func @rank_reducing_subview_dim
+//  CHECK-SAME:   %[[IDX_0:[0-9a-zA-Z]*]]: index
+//  CHECK-SAME:   %[[IDX_1:[0-9a-zA-Z]*]]: index
+func @rank_reducing_subview_dim(%arg0 : memref<?x?x?xf32>, %arg1 : index,
+    %arg2 : index) -> index
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?xf32, #map0>
+  %1 = memref.dim %0, %c1 : memref<?x?xf32, #map0>
+
+  // CHECK-NEXT: return %[[IDX_1]] : index
+  return %1 : index
 }

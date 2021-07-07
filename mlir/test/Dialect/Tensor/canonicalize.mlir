@@ -517,3 +517,42 @@ func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
   %2 = tensor.dim %0, %c1 : tensor<?x?xf32>
   return %1, %2: index, index
 }
+
+// -----
+
+// CHECK-LABEL: func @rank_reducing_extract_slice_dim
+//  CHECK-SAME:   %[[IDX_0:[0-9a-zA-Z]*]]: index
+//  CHECK-SAME:   %[[IDX_1:[0-9a-zA-Z]*]]: index
+func @rank_reducing_extract_slice_dim(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
+    %arg2 : index) -> index
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = tensor.extract_slice %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : tensor<?x?x?xf32> to tensor<?x?xf32>
+  %1 = tensor.dim %0, %c1 : tensor<?x?xf32>
+
+  // CHECK-NEXT: return %[[IDX_1]] : index
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @rank_reducing_insert_slice_dim
+//  CHECK-SAME:   %[[OUT:[0-9a-zA-Z]*]]: tensor<?x?x?xf32>
+func @rank_reducing_insert_slice_dim(%out : tensor<?x?x?xf32>, %in : tensor<?x?xf32>, %arg1 : index,
+    %arg2 : index) -> index
+{
+  // CHECK-NEXT: %[[C1:.*]] = constant 1 : index
+
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %0 = tensor.insert_slice %in into %out[%c0, %arg1, %c1] [1, 1, 1] [%c1, %c1, %c1] : tensor<?x?xf32> into tensor<?x?x?xf32>
+
+  // CHECK-NEXT: %[[D1:.*]] = tensor.dim %[[OUT]], %[[C1]] : tensor<?x?x?xf32>
+  %1 = tensor.dim %0, %c1 : tensor<?x?x?xf32>
+
+  // CHECK-NEXT: return %[[D1]] : index
+  return %1 : index
+}
