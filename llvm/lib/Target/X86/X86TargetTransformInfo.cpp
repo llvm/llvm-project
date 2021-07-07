@@ -2315,6 +2315,16 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                       TTI::CastContextHint::None, CostKind);
   }
 
+  // Fallback for fptosi/fptoui i8/i16 cases we need to truncate from fptosi
+  // i32.
+  if ((ISD == ISD::FP_TO_SINT || ISD == ISD::FP_TO_UINT) &&
+      1 < Dst->getScalarSizeInBits() && Dst->getScalarSizeInBits() < 32) {
+    Type *TruncDst = Dst->getWithNewBitWidth(32);
+    return getCastInstrCost(Instruction::FPToSI, TruncDst, Src, CCH, CostKind) +
+           getCastInstrCost(Instruction::Trunc, Dst, TruncDst,
+                            TTI::CastContextHint::None, CostKind);
+  }
+
   return AdjustCost(
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
