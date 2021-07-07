@@ -1,6 +1,6 @@
 # Test cases where we spill from one frame index to another, both of which
 # are out of range of MVC, and both of which need emergency spill slots.
-# RUN: python %s | llc -mtriple=s390x-linux-gnu | FileCheck %s
+# RUN: %python %s | llc -mtriple=s390x-linux-gnu | FileCheck %s
 
 # CHECK: f1:
 # CHECK: %fallthru
