@@ -334,6 +334,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     target.addDynamicallyLegalOp<ConstantOp>(isLegalOperation);
 
     RewritePatternSet patterns(&context);
+    patterns.add<GeneralizePadTensorOpPattern>(patterns.getContext());
     populateLinalgBufferizePatterns(typeConverter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
