@@ -10,6 +10,7 @@ add_mlir_conversion_library(MLIRTosaToLinalg
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRDialectUtils
   MLIRIR
   MLIRLinalg
   MLIRLinalgUtils
