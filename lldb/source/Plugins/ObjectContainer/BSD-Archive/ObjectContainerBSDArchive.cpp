@@ -140,7 +140,7 @@ ObjectContainerBSDArchive::Archive::Archive(const lldb_private::ArchSpec &arch,
     : m_arch(arch), m_modification_time(time), m_file_offset(file_offset),
       m_objects(), m_data(data) {}
 
-ObjectContainerBSDArchive::Archive::~Archive() {}
+ObjectContainerBSDArchive::Archive::~Archive() = default;
 
 size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
   DataExtractor &data = m_data;
@@ -373,7 +373,7 @@ void ObjectContainerBSDArchive::SetArchive(Archive::shared_ptr &archive_sp) {
   m_archive_sp = archive_sp;
 }
 
-ObjectContainerBSDArchive::~ObjectContainerBSDArchive() {}
+ObjectContainerBSDArchive::~ObjectContainerBSDArchive() = default;
 
 bool ObjectContainerBSDArchive::ParseHeader() {
   if (m_archive_sp.get() == nullptr) {

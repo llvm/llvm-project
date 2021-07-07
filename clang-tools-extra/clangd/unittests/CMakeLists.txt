@@ -4,15 +4,6 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 
-get_filename_component(CLANGD_SOURCE_DIR
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../clangd REALPATH)
-get_filename_component(CLANGD_BINARY_DIR
-  ${CMAKE_CURRENT_BINARY_DIR}/../../clangd REALPATH)
-include_directories(
-  ${CLANGD_SOURCE_DIR}
-  ${CLANGD_BINARY_DIR}
-  )
-
 if(CLANG_BUILT_STANDALONE)
   # LLVMTestingSupport library is needed for clangd tests.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support

@@ -122,24 +122,24 @@ body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $w3
 
-    STRWui killed renamable $w3, %stack.0.c.addr, 0 :: (store 4 into %ir.c.addr)
-    STRWui killed renamable $w2, %stack.1.b.addr, 0 :: (store 4 into %ir.b.addr)
-    STRWui killed renamable $w1, %stack.2.idx.addr, 0 :: (store 4 into %ir.idx.addr)
-    STRWui killed renamable $w0, %stack.3.n.addr, 0 :: (store 4 into %ir.n.addr)
-    renamable $x8 = LDRSWui %stack.3.n.addr, 0 :: (dereferenceable load 4 from %ir.n.addr)
+    STRWui killed renamable $w3, %stack.0.c.addr, 0 :: (store (s32) into %ir.c.addr)
+    STRWui killed renamable $w2, %stack.1.b.addr, 0 :: (store (s32) into %ir.b.addr)
+    STRWui killed renamable $w1, %stack.2.idx.addr, 0 :: (store (s32) into %ir.idx.addr)
+    STRWui killed renamable $w0, %stack.3.n.addr, 0 :: (store (s32) into %ir.n.addr)
+    renamable $x8 = LDRSWui %stack.3.n.addr, 0 :: (dereferenceable load (s32) from %ir.n.addr)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     renamable $x8 = nuw ADDXri killed renamable $x8, 15, 0
     renamable $x8 = UBFMXri killed renamable $x8, 4, 63
     $x15 = COPY renamable $x8
-    STRXui killed $x8, %stack.6, 0 :: (store 8 into %stack.6)
+    STRXui killed $x8, %stack.6, 0 :: (store (s64) into %stack.6)
     BL &__chkstk, csr_aarch64_stackprobe_windows, implicit-def dead $lr, implicit $sp, implicit killed $x15
     renamable $x8 = COPY $sp
-    $x15 = LDRXui %stack.6, 0 :: (load 8 from %stack.6)
+    $x15 = LDRXui %stack.6, 0 :: (load (s64) from %stack.6)
     renamable $x8 = SUBSXrs killed renamable $x8, killed renamable $x15, 4, implicit-def dead $nzcv
     $sp = COPY renamable $x8
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    STRXui killed renamable $x8, %stack.4.a, 0 :: (store 8 into %ir.a)
-    renamable $x0 = LDRXui %stack.4.a, 0 :: (dereferenceable load 8 from %ir.a)
+    STRXui killed renamable $x8, %stack.4.a, 0 :: (store (s64) into %ir.a)
+    renamable $x0 = LDRXui %stack.4.a, 0 :: (dereferenceable load (s64) from %ir.a)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     BL @"?init@@YAXPEAH@Z", csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp

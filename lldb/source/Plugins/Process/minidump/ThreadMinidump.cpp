@@ -38,7 +38,7 @@ ThreadMinidump::ThreadMinidump(Process &process, const minidump::Thread &td,
     : Thread(process, td.ThreadId), m_thread_reg_ctx_sp(),
       m_gpregset_data(gpregset_data) {}
 
-ThreadMinidump::~ThreadMinidump() {}
+ThreadMinidump::~ThreadMinidump() = default;
 
 void ThreadMinidump::RefreshStateAfterStop() {}
 

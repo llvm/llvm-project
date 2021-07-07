@@ -100,6 +100,17 @@ END_REGISTER_VP_SDNODE(SDOPC)
 #define HANDLE_VP_TO_CONSTRAINEDFP(HASROUND, HASEXCEPT, INTRINID)
 #endif
 
+// Map this VP intrinsic to its canonical functional intrinsic.
+#ifndef HANDLE_VP_TO_INTRIN
+#define HANDLE_VP_TO_INTRIN(ID)
+#endif
+
+// This VP Intrinsic is a memory operation
+// The pointer arg is at POINTERPOS and the data arg is at DATAPOS.
+#ifndef HANDLE_VP_IS_MEMOP
+#define HANDLE_VP_IS_MEMOP(VPID, POINTERPOS, DATAPOS)
+#endif
+
 /// } Property Macros
 
 ///// Integer Arithmetic {
@@ -191,6 +202,36 @@ HELPER_REGISTER_BINARY_FP_VP(frem, VP_FREM, FRem)
 
 ///// } Floating-Point Arithmetic
 
+///// Memory Operations {
+// llvm.vp.store(ptr,val,mask,vlen)
+BEGIN_REGISTER_VP(vp_store, 2, 3, VP_STORE, 0)
+HANDLE_VP_TO_OPC(Store)
+HANDLE_VP_TO_INTRIN(masked_store)
+HANDLE_VP_IS_MEMOP(vp_store, 1, 0)
+END_REGISTER_VP(vp_store, VP_STORE)
+
+// llvm.vp.scatter(ptr,val,mask,vlen)
+BEGIN_REGISTER_VP(vp_scatter, 2, 3, VP_SCATTER, 0)
+HANDLE_VP_TO_INTRIN(masked_scatter)
+HANDLE_VP_IS_MEMOP(vp_scatter, 1, 0)
+END_REGISTER_VP(vp_scatter, VP_SCATTER)
+
+// llvm.vp.load(ptr,mask,vlen)
+BEGIN_REGISTER_VP(vp_load, 1, 2, VP_LOAD, -1)
+HANDLE_VP_TO_OPC(Load)
+HANDLE_VP_TO_INTRIN(masked_load)
+HANDLE_VP_IS_MEMOP(vp_load, 0, None)
+END_REGISTER_VP(vp_load, VP_LOAD)
+
+// llvm.vp.gather(ptr,mask,vlen)
+BEGIN_REGISTER_VP(vp_gather, 1, 2, VP_GATHER, -1)
+HANDLE_VP_TO_INTRIN(masked_gather)
+HANDLE_VP_IS_MEMOP(vp_gather, 0, None)
+END_REGISTER_VP(vp_gather, VP_GATHER)
+
+///// } Memory Operations
+
+
 #undef BEGIN_REGISTER_VP
 #undef BEGIN_REGISTER_VP_INTRINSIC
 #undef BEGIN_REGISTER_VP_SDNODE
@@ -199,3 +240,5 @@ HELPER_REGISTER_BINARY_FP_VP(frem, VP_FREM, FRem)
 #undef END_REGISTER_VP_SDNODE
 #undef HANDLE_VP_TO_OPC
 #undef HANDLE_VP_TO_CONSTRAINEDFP
+#undef HANDLE_VP_TO_INTRIN
+#undef HANDLE_VP_IS_MEMOP

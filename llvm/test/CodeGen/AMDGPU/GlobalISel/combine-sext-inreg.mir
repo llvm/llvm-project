@@ -11,11 +11,11 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_7_sextload_from_1
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SEXTLOAD]], 7
     ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_SEXTLOAD %0 :: (load 1, addrspace 1)
+    %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 7
     $vgpr0 = COPY %2
 
@@ -31,10 +31,10 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_8_sextload_from_1
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_SEXTLOAD %0 :: (load 1, addrspace 1)
+    %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 8
     $vgpr0 = COPY %2
 
@@ -50,10 +50,10 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_9_sextload_from_1
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_SEXTLOAD %0 :: (load 1, addrspace 1)
+    %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 9
     $vgpr0 = COPY %2
 
@@ -69,11 +69,11 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_7_sext_from_s8
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SEXTLOAD]], 7
     ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s8) = G_LOAD %0 :: (load 1, addrspace 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT %1
     %3:_(s32) = G_SEXT_INREG %2, 7
     $vgpr0 = COPY %3
@@ -90,10 +90,10 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_8_sext_from_s8
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s8) = G_LOAD %0 :: (load 1, addrspace 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT %1
     %3:_(s32) = G_SEXT_INREG %2, 8
     $vgpr0 = COPY %3
@@ -110,10 +110,10 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_8_sext_from_s9
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s8) = G_LOAD %0 :: (load 1, addrspace 1)
+    %1:_(s8) = G_LOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT %1
     %3:_(s32) = G_SEXT_INREG %2, 9
     $vgpr0 = COPY %3
@@ -130,12 +130,12 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_v2s32_7_sext_from_v2s8
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[LOAD:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[COPY]](p1) :: (load 2, addrspace 1)
+    ; GCN: [[LOAD:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
     ; GCN: [[SEXT:%[0-9]+]]:_(<2 x s32>) = G_SEXT [[LOAD]](<2 x s8>)
     ; GCN: [[SEXT_INREG:%[0-9]+]]:_(<2 x s32>) = G_SEXT_INREG [[SEXT]], 7
     ; GCN: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](<2 x s32>)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s8>) = G_LOAD %0 :: (load 2, addrspace 1)
+    %1:_(<2 x s8>) = G_LOAD %0 :: (load (<2 x s8>), addrspace 1)
     %2:_(<2 x s32>) = G_SEXT %1
     %3:_(<2 x s32>) = G_SEXT_INREG %2, 7
     $vgpr0_vgpr1 = COPY %3
@@ -152,11 +152,11 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_v2s32_8_sext_from_v2s8
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[LOAD:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[COPY]](p1) :: (load 2, addrspace 1)
+    ; GCN: [[LOAD:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
     ; GCN: [[SEXT:%[0-9]+]]:_(<2 x s32>) = G_SEXT [[LOAD]](<2 x s8>)
     ; GCN: $vgpr0_vgpr1 = COPY [[SEXT]](<2 x s32>)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s8>) = G_LOAD %0 :: (load 2, addrspace 1)
+    %1:_(<2 x s8>) = G_LOAD %0 :: (load (<2 x s8>), addrspace 1)
     %2:_(<2 x s32>) = G_SEXT %1
     %3:_(<2 x s32>) = G_SEXT_INREG %2, 8
     $vgpr0_vgpr1 = COPY %3
@@ -173,11 +173,11 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_v2s32_9_sext_from_v2s8
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[LOAD:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[COPY]](p1) :: (load 2, addrspace 1)
+    ; GCN: [[LOAD:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[COPY]](p1) :: (load (<2 x s8>), addrspace 1)
     ; GCN: [[SEXT:%[0-9]+]]:_(<2 x s32>) = G_SEXT [[LOAD]](<2 x s8>)
     ; GCN: $vgpr0_vgpr1 = COPY [[SEXT]](<2 x s32>)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s8>) = G_LOAD %0 :: (load 2, addrspace 1)
+    %1:_(<2 x s8>) = G_LOAD %0 :: (load (<2 x s8>), addrspace 1)
     %2:_(<2 x s32>) = G_SEXT %1
     %3:_(<2 x s32>) = G_SEXT_INREG %2, 9
     $vgpr0_vgpr1 = COPY %3
@@ -194,11 +194,11 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_7_zextload_from_1
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ZEXTLOAD]], 7
     ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load 1, addrspace 1)
+    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 7
     $vgpr0 = COPY %2
 
@@ -214,11 +214,11 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_8_zextload_from_1
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ZEXTLOAD]], 8
     ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load 1, addrspace 1)
+    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 8
     $vgpr0 = COPY %2
 
@@ -234,10 +234,10 @@ body:             |
     ; GCN-LABEL: name: sext_inreg_s32_9_zextload_from_1
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GCN: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GCN: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load 1, addrspace 1)
+    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8), addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 9
     $vgpr0 = COPY %2
 
@@ -257,8 +257,8 @@ body:             |
     ; GCN: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; GCN: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr5
     ; GCN: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
-    ; GCN: [[SEXTLOAD1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GCN: [[SEXTLOAD1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p1) :: (load (s8), addrspace 1)
     ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SEXTLOAD]], [[SEXTLOAD1]]
     ; GCN: $vgpr0 = COPY [[SELECT]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
@@ -266,8 +266,8 @@ body:             |
     %2:_(s32) = COPY $vgpr4
     %3:_(s32) = COPY $vgpr5
     %4:_(s1) = G_ICMP intpred(eq), %2, %3
-    %5:_(s32) = G_SEXTLOAD %0 :: (load 1, addrspace 1)
-    %6:_(s32) = G_SEXTLOAD %1 :: (load 1, addrspace 1)
+    %5:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
+    %6:_(s32) = G_SEXTLOAD %1 :: (load (s8), addrspace 1)
     %7:_(s32) = G_SELECT %4, %5, %6
     %8:_(s32) = G_SEXT_INREG %7, 8
     $vgpr0 = COPY %8
@@ -288,8 +288,8 @@ body:             |
     ; GCN: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; GCN: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr5
     ; GCN: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
-    ; GCN: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 4, addrspace 1)
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p1) :: (load 1, addrspace 1)
+    ; GCN: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY1]](p1) :: (load (s8), addrspace 1)
     ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[LOAD]], [[SEXTLOAD]]
     ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SELECT]], 8
     ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
@@ -298,8 +298,8 @@ body:             |
     %2:_(s32) = COPY $vgpr4
     %3:_(s32) = COPY $vgpr5
     %4:_(s1) = G_ICMP intpred(eq), %2, %3
-    %5:_(s32) = G_LOAD %0 :: (load 4, addrspace 1)
-    %6:_(s32) = G_SEXTLOAD %1 :: (load 1, addrspace 1)
+    %5:_(s32) = G_LOAD %0 :: (load (s32), addrspace 1)
+    %6:_(s32) = G_SEXTLOAD %1 :: (load (s8), addrspace 1)
     %7:_(s32) = G_SELECT %4, %5, %6
     %8:_(s32) = G_SEXT_INREG %7, 8
     $vgpr0 = COPY %8
@@ -320,8 +320,8 @@ body:             |
     ; GCN: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr4
     ; GCN: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr5
     ; GCN: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
-    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load 1, addrspace 1)
-    ; GCN: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (load 4, addrspace 1)
+    ; GCN: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GCN: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p1) :: (load (s32), addrspace 1)
     ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SEXTLOAD]], [[LOAD]]
     ; GCN: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[SELECT]], 8
     ; GCN: $vgpr0 = COPY [[SEXT_INREG]](s32)
@@ -330,8 +330,8 @@ body:             |
     %2:_(s32) = COPY $vgpr4
     %3:_(s32) = COPY $vgpr5
     %4:_(s1) = G_ICMP intpred(eq), %2, %3
-    %5:_(s32) = G_SEXTLOAD %0 :: (load 1, addrspace 1)
-    %6:_(s32) = G_LOAD %1 :: (load 4, addrspace 1)
+    %5:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 1)
+    %6:_(s32) = G_LOAD %1 :: (load (s32), addrspace 1)
     %7:_(s32) = G_SELECT %4, %5, %6
     %8:_(s32) = G_SEXT_INREG %7, 8
     $vgpr0 = COPY %8

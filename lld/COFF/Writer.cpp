@@ -1583,6 +1583,7 @@ static void maybeAddAddressTakenFunction(SymbolRVASet &addressTakenSyms,
     break;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
+  case Symbol::LazyDLLSymbolKind:
   case Symbol::UndefinedKind:
     // Undefined symbols resolve to zero, so they don't have an RVA. Lazy
     // symbols shouldn't have relocations.

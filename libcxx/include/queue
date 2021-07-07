@@ -179,6 +179,7 @@ template <class T, class Container, class Compare>
 */
 
 #include <__config>
+#include <__memory/uses_allocator.h>
 #include <__utility/forward.h>
 #include <algorithm>
 #include <compare>

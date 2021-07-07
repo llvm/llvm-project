@@ -13,9 +13,9 @@
 #
 # CHECK-LABEL: name: ldr-modified-baseReg-no-ldp1
 # CHECK-NOT: LDP
-# CHECK: $x9 = LDRXui $x10, 1 :: (load 8)
-# CHECK: $x10 = LDURXi $x8, 1 :: (load 8)
-# CHECK: $x10 = LDRXui $x10, 0 :: (load 8)
+# CHECK: $x9 = LDRXui $x10, 1 :: (load (s64))
+# CHECK: $x10 = LDURXi $x8, 1 :: (load (s64))
+# CHECK: $x10 = LDRXui $x10, 0 :: (load (s64))
 # CHECK: RET
 ---
 name: ldr-modified-baseReg-no-ldp1
@@ -24,17 +24,17 @@ body:             |
   bb.0:
     liveins: $x8, $x10
 
-    $x9 = LDRXui $x10, 1 :: (load 8)
-    $x10 = LDURXi $x8, 1 :: (load 8)
-    $x10 = LDRXui $x10, 0 :: (load 8)
+    $x9 = LDRXui $x10, 1 :: (load (s64))
+    $x10 = LDURXi $x8, 1 :: (load (s64))
+    $x10 = LDRXui $x10, 0 :: (load (s64))
     RET undef $lr, implicit undef $w0
 ...
 
 # CHECK-LABEL: name: str-modified-baseReg-no-stp1
 # CHECK-NOT: STP
-# CHECK: STRXui $x9, $x10, 1 :: (store 8)
-# CHECK: $x10 = LDRXui $x8, 0 :: (load 8)
-# CHECK: STRXui $x10, $x10, 0 :: (store 8)
+# CHECK: STRXui $x9, $x10, 1 :: (store (s64))
+# CHECK: $x10 = LDRXui $x8, 0 :: (load (s64))
+# CHECK: STRXui $x10, $x10, 0 :: (store (s64))
 # CHECK: RET
 ---
 name: str-modified-baseReg-no-stp1
@@ -43,17 +43,17 @@ body:             |
   bb.0:
     liveins: $x9, $x8, $x10
 
-    STRXui $x9, $x10, 1 :: (store 8)
-    $x10 = LDRXui $x8, 0 :: (load 8)
-    STRXui $x10, $x10, 0 :: (store 8)
+    STRXui $x9, $x10, 1 :: (store (s64))
+    $x10 = LDRXui $x8, 0 :: (load (s64))
+    STRXui $x10, $x10, 0 :: (store (s64))
     RET undef $lr, implicit undef $w0
 ...
 
 # CHECK-LABEL: name: ldr-modified-baseReg-no-ldp2
 # CHECK-NOT: LDP
-# CHECK: $x9 = LDRXui $x10, 1 :: (load 8)
+# CHECK: $x9 = LDRXui $x10, 1 :: (load (s64))
 # CHECK: $x10 = MOVi64imm 13
-# CHECK: $x11 = LDRXui $x10, 0 :: (load 8)
+# CHECK: $x11 = LDRXui $x10, 0 :: (load (s64))
 # CHECK: RET
 ---
 name: ldr-modified-baseReg-no-ldp2
@@ -62,17 +62,17 @@ body:             |
   bb.0:
     liveins: $x8, $x10
 
-    $x9 = LDRXui $x10, 1 :: (load 8)
+    $x9 = LDRXui $x10, 1 :: (load (s64))
     $x10 = MOVi64imm 13
-    $x11 = LDRXui $x10, 0 :: (load 8)
+    $x11 = LDRXui $x10, 0 :: (load (s64))
     RET undef $lr, implicit undef $w0
 ...
 
 # CHECK-LABEL: name: ldr-modified-baseReg-no-ldp3
 # CHECK-NOT: LDP
-# CHECK: $x9 = LDRXui $x10, 1 :: (load 8)
+# CHECK: $x9 = LDRXui $x10, 1 :: (load (s64))
 # CHECK: $x10 = ADDXri $x8, $x11, 0
-# CHECK: $x12 = LDRXui $x10, 0 :: (load 8)
+# CHECK: $x12 = LDRXui $x10, 0 :: (load (s64))
 # CHECK: RET
 ---
 name: ldr-modified-baseReg-no-ldp3
@@ -81,15 +81,15 @@ body:             |
   bb.0:
     liveins: $x8, $x10, $x11
 
-    $x9 = LDRXui $x10, 1 :: (load 8)
+    $x9 = LDRXui $x10, 1 :: (load (s64))
     $x10 = ADDXri $x8, $x11, 0
-    $x12 = LDRXui $x10, 0 :: (load 8)
+    $x12 = LDRXui $x10, 0 :: (load (s64))
     RET undef $lr, implicit undef $w0
 ...
 
 # CHECK-LABEL: name: ldr-modified-baseAddr-convert-to-ldp
-# CHECK: $x12, $x9 = LDPXi $x10, 0 :: (load 8)
-# CHECK: STRXui $x11, $x10, 1 :: (store 8)
+# CHECK: $x12, $x9 = LDPXi $x10, 0 :: (load (s64))
+# CHECK: STRXui $x11, $x10, 1 :: (store (s64))
 # CHECK: RET
 ---
 name: ldr-modified-baseAddr-convert-to-ldp
@@ -98,8 +98,8 @@ body:             |
   bb.0:
     liveins: $x8, $x10, $x11
 
-    $x9 = LDRXui $x10, 1 :: (load 8)
-    STRXui $x11, $x10, 1 :: (store 8)
-    $x12 = LDRXui $x10, 0 :: (load 8)
+    $x9 = LDRXui $x10, 1 :: (load (s64))
+    STRXui $x11, $x10, 1 :: (store (s64))
+    $x12 = LDRXui $x10, 0 :: (load (s64))
     RET undef $lr, implicit undef $w0
 ...

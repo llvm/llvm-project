@@ -137,8 +137,8 @@ body:             |
   ; CHECK:   [[MVE_VCTP16_:%[0-9]+]]:vccr = MVE_VCTP16 [[PHI4]], 0, $noreg
   ; CHECK:   [[t2SUBri1:%[0-9]+]]:rgpr = t2SUBri [[PHI4]], 8, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[COPY7:%[0-9]+]]:gpr = COPY [[t2SUBri1]]
-  ; CHECK:   [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI]], 16, 1, [[MVE_VCTP16_]] :: (load 16 from %ir.lsr.iv35, align 2)
-  ; CHECK:   [[MVE_VLDRHU16_post2:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post3:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI1]], 16, 1, [[MVE_VCTP16_]] :: (load 16 from %ir.lsr.iv12, align 2)
+  ; CHECK:   [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI]], 16, 1, [[MVE_VCTP16_]] :: (load (s128) from %ir.lsr.iv35, align 2)
+  ; CHECK:   [[MVE_VLDRHU16_post2:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post3:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI1]], 16, 1, [[MVE_VCTP16_]] :: (load (s128) from %ir.lsr.iv12, align 2)
   ; CHECK:   [[MVE_VMLADAVas16_:%[0-9]+]]:tgpreven = MVE_VMLADAVas16 [[PHI2]], killed [[MVE_VLDRHU16_post3]], killed [[MVE_VLDRHU16_post1]], 1, [[MVE_VCTP16_]]
   ; CHECK:   [[COPY8:%[0-9]+]]:gpr = COPY [[MVE_VMLADAVas16_]]
   ; CHECK:   [[COPY9:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post2]]
@@ -192,8 +192,8 @@ body:             |
     %26:vccr = MVE_VCTP16 %6, 0, $noreg
     %27:rgpr = t2SUBri %6, 8, 14 /* CC::al */, $noreg, $noreg
     %7:gpr = COPY %27
-    %28:rgpr, %29:mqpr = MVE_VLDRHU16_post %2, 16, 1, %26 :: (load 16 from %ir.lsr.iv35, align 2)
-    %30:rgpr, %31:mqpr = MVE_VLDRHU16_post %3, 16, 1, %26 :: (load 16 from %ir.lsr.iv12, align 2)
+    %28:rgpr, %29:mqpr = MVE_VLDRHU16_post %2, 16, 1, %26 :: (load (s128) from %ir.lsr.iv35, align 2)
+    %30:rgpr, %31:mqpr = MVE_VLDRHU16_post %3, 16, 1, %26 :: (load (s128) from %ir.lsr.iv12, align 2)
     %32:tgpreven = MVE_VMLADAVas16 %4, killed %31, killed %29, 1, %26
     %8:gpr = COPY %32
     %9:gpr = COPY %30

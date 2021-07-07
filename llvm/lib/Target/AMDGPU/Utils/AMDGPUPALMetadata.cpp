@@ -243,6 +243,27 @@ void AMDGPUPALMetadata::setFunctionScratchSize(const MachineFunction &MF,
   Node[".stack_frame_size_in_bytes"] = MsgPackDoc.getNode(Val);
 }
 
+// Set the amount of LDS used in bytes in the metadata.
+void AMDGPUPALMetadata::setFunctionLdsSize(const MachineFunction &MF,
+                                           unsigned Val) {
+  auto Node = getShaderFunction(MF.getFunction().getName());
+  Node[".lds_size"] = MsgPackDoc.getNode(Val);
+}
+
+// Set the number of used vgprs in the metadata.
+void AMDGPUPALMetadata::setFunctionNumUsedVgprs(const MachineFunction &MF,
+                                                unsigned Val) {
+  auto Node = getShaderFunction(MF.getFunction().getName());
+  Node[".vgpr_count"] = MsgPackDoc.getNode(Val);
+}
+
+// Set the number of used vgprs in the metadata.
+void AMDGPUPALMetadata::setFunctionNumUsedSgprs(const MachineFunction &MF,
+                                                unsigned Val) {
+  auto Node = getShaderFunction(MF.getFunction().getName());
+  Node[".sgpr_count"] = MsgPackDoc.getNode(Val);
+}
+
 // Set the hardware register bit in PAL metadata to enable wave32 on the
 // shader of the given calling convention.
 void AMDGPUPALMetadata::setWave32(unsigned CC) {

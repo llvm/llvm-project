@@ -1097,11 +1097,11 @@ define float @v_test_sitofp_i64_byte_to_f32(i64 %arg0) {
 ; SI-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; SI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; SI-NEXT:    s_mov_b32 s4, 0
 ; SI-NEXT:    v_and_b32_e32 v3, s6, v3
+; SI-NEXT:    s_movk_i32 s5, 0x80
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 23, v0
-; SI-NEXT:    s_mov_b32 s4, 0
-; SI-NEXT:    s_movk_i32 s5, 0x80
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[2:3]
 ; SI-NEXT:    v_and_b32_e32 v1, 1, v0
@@ -1129,11 +1129,11 @@ define float @v_test_sitofp_i64_byte_to_f32(i64 %arg0) {
 ; VI-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; VI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; VI-NEXT:    s_mov_b32 s4, 0
 ; VI-NEXT:    v_and_b32_e32 v3, s6, v3
+; VI-NEXT:    s_movk_i32 s5, 0x80
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 23, v0
-; VI-NEXT:    s_mov_b32 s4, 0
-; VI-NEXT:    s_movk_i32 s5, 0x80
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[2:3]
 ; VI-NEXT:    v_and_b32_e32 v1, 1, v0
@@ -1165,10 +1165,10 @@ define float @v_test_uitofp_i64_byte_to_f32(i64 %arg0) {
 ; SI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; SI-NEXT:    v_and_b32_e32 v3, s4, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 23, v0
 ; SI-NEXT:    s_mov_b32 s4, 0
 ; SI-NEXT:    s_movk_i32 s5, 0x80
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 23, v0
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[2:3]
 ; SI-NEXT:    v_and_b32_e32 v1, 1, v0
@@ -1195,10 +1195,10 @@ define float @v_test_uitofp_i64_byte_to_f32(i64 %arg0) {
 ; VI-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; VI-NEXT:    v_and_b32_e32 v3, s4, v3
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 23, v0
 ; VI-NEXT:    s_mov_b32 s4, 0
 ; VI-NEXT:    s_movk_i32 s5, 0x80
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 23, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[2:3]
 ; VI-NEXT:    v_and_b32_e32 v1, 1, v0

@@ -127,3 +127,11 @@ define i64 @test10(i64 %a, i64 %b) {
 ; CHECK-NEXT: -->  0
   ret i64 %t2
 }
+
+define i64 @test11(i64 %a) {
+; CHECK-LABEL: @test11
+  %t0 = udiv i64 0, %a
+; CHECK: %t0
+; CHECK-NEXT: -->  0
+  ret i64 %t0
+}

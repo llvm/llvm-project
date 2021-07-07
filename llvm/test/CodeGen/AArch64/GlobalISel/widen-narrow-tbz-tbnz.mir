@@ -76,7 +76,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %glob:gpr64common = MOVaddr target-flags(aarch64-page) @glob, target-flags(aarch64-pageoff, aarch64-nc) @glob
-  ; CHECK:   %load:gpr32 = LDRBBui %glob, 0 :: (dereferenceable load 1 from @glob, align 4)
+  ; CHECK:   %load:gpr32 = LDRBBui %glob, 0 :: (dereferenceable load (s8) from @glob, align 4)
   ; CHECK:   TBNZW %load, 0, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
@@ -84,7 +84,7 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     %glob:gpr(p0) = G_GLOBAL_VALUE @glob
-    %load:gpr(s8) = G_LOAD %glob(p0) :: (dereferenceable load 1 from @glob, align 4)
+    %load:gpr(s8) = G_LOAD %glob(p0) :: (dereferenceable load (s8) from @glob, align 4)
     %trunc:gpr(s1) = G_TRUNC %load(s8)
 
     ; Look through G_TRUNC to get the load. The load is into a s8, which will

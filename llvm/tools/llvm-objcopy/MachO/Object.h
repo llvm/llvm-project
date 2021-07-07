@@ -313,6 +313,7 @@ struct Object {
   ExportInfo Exports;
   IndirectSymbolTable IndirectSymTable;
   LinkData DataInCode;
+  LinkData LinkerOptimizationHint;
   LinkData FunctionStarts;
   LinkData CodeSignature;
 
@@ -328,6 +329,8 @@ struct Object {
   Optional<size_t> DySymTabCommandIndex;
   /// The index LC_DATA_IN_CODE load comamnd if present.
   Optional<size_t> DataInCodeCommandIndex;
+  /// The index of LC_LINKER_OPTIMIZATIN_HINT load comamnd if present.
+  Optional<size_t> LinkerOptimizationHintCommandIndex;
   /// The index LC_FUNCTION_STARTS load comamnd if present.
   Optional<size_t> FunctionStartsCommandIndex;
 

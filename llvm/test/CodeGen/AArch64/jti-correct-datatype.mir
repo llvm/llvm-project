@@ -46,7 +46,7 @@ body:             |
     liveins: $x1, $x2, $x3, $x4
   
     renamable $x8 = ADRP target-flags(aarch64-page) @reps
-    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load 4 from @reps, !tbaa !2)
+    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load (s32) from @reps, !tbaa !2)
     dead $wzr = SUBSWri killed renamable $w9, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.6, implicit $nzcv
   
@@ -55,7 +55,7 @@ body:             |
     liveins: $x1, $x2, $x3, $x4
   
     renamable $x8 = ADRP target-flags(aarch64-page) @reps
-    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load 4 from @reps, !tbaa !2)
+    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load (s32) from @reps, !tbaa !2)
     dead $wzr = SUBSWri killed renamable $w9, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.6, implicit $nzcv
   
@@ -64,7 +64,7 @@ body:             |
     liveins: $x1, $x2, $x3, $x4
   
     renamable $x8 = ADRP target-flags(aarch64-page) @reps
-    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load 4 from @reps, !tbaa !2)
+    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load (s32) from @reps, !tbaa !2)
     dead $wzr = SUBSWri killed renamable $w9, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.6, implicit $nzcv
   
@@ -73,7 +73,7 @@ body:             |
     liveins: $x1, $x2, $x3, $x4
   
     renamable $x8 = ADRP target-flags(aarch64-page) @reps
-    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load 4 from @reps, !tbaa !2)
+    renamable $w9 = LDRWui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @reps :: (volatile dereferenceable load (s32) from @reps, !tbaa !2)
     dead $wzr = SUBSWri killed renamable $w9, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.6, implicit $nzcv
   

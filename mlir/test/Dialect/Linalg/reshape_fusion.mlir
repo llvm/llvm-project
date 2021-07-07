@@ -478,7 +478,7 @@ func @unit_dim_reshape_expansion_full
   %c1 = constant 1 : index
   %0 = linalg.tensor_collapse_shape %arg0 [[0, 1, 2], [3, 4], [5]]
     : tensor<1x?x1x2x1x4xf32> into tensor<?x2x4xf32>
-  %1 = memref.dim %arg0, %c1 : tensor<1x?x1x2x1x4xf32>
+  %1 = tensor.dim %arg0, %c1 : tensor<1x?x1x2x1x4xf32>
   %2 = linalg.init_tensor [%1, 2, 4] : tensor<?x2x4xf32>
   %3 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,

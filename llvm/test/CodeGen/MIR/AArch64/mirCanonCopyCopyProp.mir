@@ -38,9 +38,9 @@ body: |
   bb.0:
     liveins: $x0, $x1, $d0, $d1
 
-    %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load (s64))
 
-    ;CHECK: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    ;CHECK: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load (s64))
     ;CHECK-NEXT: $w0 = COPY %bb0_
     ;CHECK-NEXT: RET_ReallyLR implicit $w0
 

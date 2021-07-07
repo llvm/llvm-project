@@ -145,7 +145,7 @@ body:             |
   ; CHECK:   [[DEF1:%[0-9]+]]:vr128 = IMPLICIT_DEF
   ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF1]], [[COPY5]]
   ; CHECK:   [[COPY16:%[0-9]+]]:fr32x = COPY [[VMOVSSZrrk]]
-  ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, killed [[COPY16]] :: (store 4 into %ir.fptr)
+  ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, killed [[COPY16]] :: (store (s32) into %ir.fptr)
   ; CHECK:   RET 0
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -196,7 +196,7 @@ body:             |
     %21 = IMPLICIT_DEF
     %20 = VMOVSSZrrk %19, killed %18, killed %21, %5
     %22 = COPY %20
-    VMOVSSZmr %4, 1, $noreg, 0, $noreg, killed %22 :: (store 4 into %ir.fptr)
+    VMOVSSZmr %4, 1, $noreg, 0, $noreg, killed %22 :: (store (s32) into %ir.fptr)
     RET 0
 
 ...

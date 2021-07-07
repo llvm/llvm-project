@@ -12,6 +12,7 @@
 
 #pragma GCC system_header
 
+#include <__string>
 #include <string>
 #include <cstring>
 

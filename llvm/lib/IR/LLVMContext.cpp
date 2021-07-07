@@ -347,3 +347,7 @@ const DiagnosticHandler *LLVMContext::getDiagHandlerPtr() const {
 std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
   return std::move(pImpl->DiagHandler);
 }
+
+bool LLVMContext::supportsTypedPointers() const {
+  return !pImpl->ForceOpaquePointers;
+}

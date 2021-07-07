@@ -13,6 +13,7 @@
 #include "Symbols.h"
 #include "Target.h"
 
+#include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
@@ -40,6 +41,8 @@ static lto::Config createConfig() {
   };
   c.TimeTraceEnabled = config->timeTraceEnabled;
   c.TimeTraceGranularity = config->timeTraceGranularity;
+  c.OptLevel = config->ltoo;
+  c.CGOptLevel = args::getCGOptLevel(config->ltoo);
   if (config->saveTemps)
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
                               /*UseInputModulePath=*/true));
@@ -73,6 +76,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 
     // FIXME: What about other output types? And we can probably be less
     // restrictive with -flat_namespace, but it's an infrequent use case.
+    // FIXME: Honor config->exportDynamic.
     r.VisibleToRegularObj = config->outputType != MH_EXECUTE ||
                             config->namespaceKind == NamespaceKind::flat ||
                             sym->isUsedInRegularObj;

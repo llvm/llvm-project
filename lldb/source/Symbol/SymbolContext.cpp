@@ -51,7 +51,7 @@ SymbolContext::SymbolContext(SymbolContextScope *sc_scope)
   sc_scope->CalculateSymbolContext(this);
 }
 
-SymbolContext::~SymbolContext() {}
+SymbolContext::~SymbolContext() = default;
 
 void SymbolContext::Clear(bool clear_target) {
   if (clear_target)
@@ -926,7 +926,7 @@ SymbolContextSpecifier::SymbolContextSpecifier(const TargetSP &target_sp)
       m_start_line(0), m_end_line(0), m_function_spec(), m_class_name(),
       m_address_range_up(), m_type(eNothingSpecified) {}
 
-SymbolContextSpecifier::~SymbolContextSpecifier() {}
+SymbolContextSpecifier::~SymbolContextSpecifier() = default;
 
 bool SymbolContextSpecifier::AddLineSpecification(uint32_t line_no,
                                                   SpecificationType type) {
@@ -1186,7 +1186,7 @@ void SymbolContextSpecifier::GetDescription(
 
 SymbolContextList::SymbolContextList() : m_symbol_contexts() {}
 
-SymbolContextList::~SymbolContextList() {}
+SymbolContextList::~SymbolContextList() = default;
 
 void SymbolContextList::Append(const SymbolContext &sc) {
   m_symbol_contexts.push_back(sc);

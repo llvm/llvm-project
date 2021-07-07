@@ -9,14 +9,14 @@ define { float, float } @add_complex_float({ float, float }* %a, { float, float 
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
   ; MIPS32:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; MIPS32:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir..realp)
+  ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir..realp)
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p0) :: (load 4 from %ir..imagp)
+  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir..imagp)
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
-  ; MIPS32:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[COPY3]](p0) :: (load 4 from %ir..realp1)
-  ; MIPS32:   [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
-  ; MIPS32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p0) :: (load 4 from %ir..imagp3)
+  ; MIPS32:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from %ir..realp1)
+  ; MIPS32:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; MIPS32:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir..imagp3)
   ; MIPS32:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[LOAD]], [[LOAD2]]
   ; MIPS32:   [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[LOAD1]], [[LOAD3]]
   ; MIPS32:   $f0 = COPY [[FADD]](s32)
@@ -46,14 +46,14 @@ define { double, double } @add_complex_double({ double, double }* %a, { double, 
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
   ; MIPS32:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; MIPS32:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; MIPS32:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY2]](p0) :: (load 8 from %ir..realp)
+  ; MIPS32:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY2]](p0) :: (load (s64) from %ir..realp)
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load 8 from %ir..imagp)
+  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64) from %ir..imagp)
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
-  ; MIPS32:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[COPY3]](p0) :: (load 8 from %ir..realp1)
-  ; MIPS32:   [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
-  ; MIPS32:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p0) :: (load 8 from %ir..imagp3)
+  ; MIPS32:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir..realp1)
+  ; MIPS32:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; MIPS32:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %ir..imagp3)
   ; MIPS32:   [[FADD:%[0-9]+]]:_(s64) = G_FADD [[LOAD]], [[LOAD2]]
   ; MIPS32:   [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[LOAD1]], [[LOAD3]]
   ; MIPS32:   $d0 = COPY [[FADD]](s64)
@@ -88,9 +88,9 @@ define void @call_ret_complex_float({ float, float }* %z) {
   ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32:   G_STORE [[COPY1]](s32), [[COPY3]](p0) :: (store 4 into %ir..realp)
-  ; MIPS32:   G_STORE [[COPY2]](s32), [[GEP]](p0) :: (store 4 into %ir..imagp)
+  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32:   G_STORE [[COPY1]](s32), [[COPY3]](p0) :: (store (s32) into %ir..realp)
+  ; MIPS32:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %ir..imagp)
   ; MIPS32:   RetRA
 entry:
   %call = call { float, float } @ret_complex_float()
@@ -116,9 +116,9 @@ define void @call_ret_complex_double({ double, double }* %z) {
   ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32:   G_STORE [[COPY1]](s64), [[COPY3]](p0) :: (store 8 into %ir..realp)
-  ; MIPS32:   G_STORE [[COPY2]](s64), [[GEP]](p0) :: (store 8 into %ir..imagp)
+  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32:   G_STORE [[COPY1]](s64), [[COPY3]](p0) :: (store (s64) into %ir..realp)
+  ; MIPS32:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir..imagp)
   ; MIPS32:   RetRA
 entry:
   %call = call { double, double } @ret_complex_double()

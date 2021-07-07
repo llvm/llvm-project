@@ -168,7 +168,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SMULH, G_UMULH}).legalFor({s32, s64});
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
-      .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
+      .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+      .lower();
 
   getActionDefinitionsBuilder(
       {G_SADDE, G_SSUBE, G_UADDE, G_USUBE, G_SADDO, G_SSUBO, G_UADDO, G_USUBO})
@@ -252,15 +253,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
       .lowerIf(atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered))
-      .legalForTypesWithMemDesc({{s32, p0, 8, 8},
-                                 {s32, p0, 16, 8},
-                                 {s32, p0, 32, 8},
-                                 {s64, p0, 8, 2},
-                                 {s64, p0, 16, 2},
-                                 {s64, p0, 32, 4},
-                                 {s64, p0, 64, 8},
-                                 {p0, p0, 64, 8},
-                                 {v2s32, p0, 64, 8}})
+      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                 {s32, p0, s16, 8},
+                                 {s32, p0, s32, 8},
+                                 {s64, p0, s8, 2},
+                                 {s64, p0, s16, 2},
+                                 {s64, p0, s32, 4},
+                                 {s64, p0, s64, 8},
+                                 {p0, p0, s64, 8},
+                                 {v2s32, p0, s64, 8}})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
       // TODO: We could support sum-of-pow2's but the lowering code doesn't know
@@ -278,34 +279,34 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   };
 
   getActionDefinitionsBuilder(G_LOAD)
-      .legalForTypesWithMemDesc({{s8, p0, 8, 8},
-                                 {s16, p0, 16, 8},
-                                 {s32, p0, 32, 8},
-                                 {s64, p0, 64, 8},
-                                 {p0, p0, 64, 8},
-                                 {s128, p0, 128, 8},
-                                 {v8s8, p0, 64, 8},
-                                 {v16s8, p0, 128, 8},
-                                 {v4s16, p0, 64, 8},
-                                 {v8s16, p0, 128, 8},
-                                 {v2s32, p0, 64, 8},
-                                 {v4s32, p0, 128, 8},
-                                 {v2s64, p0, 128, 8}})
+      .legalForTypesWithMemDesc({{s8, p0, s8, 8},
+                                 {s16, p0, s16, 8},
+                                 {s32, p0, s32, 8},
+                                 {s64, p0, s64, 8},
+                                 {p0, p0, s64, 8},
+                                 {s128, p0, s128, 8},
+                                 {v8s8, p0, s64, 8},
+                                 {v16s8, p0, s128, 8},
+                                 {v4s16, p0, s64, 8},
+                                 {v8s16, p0, s128, 8},
+                                 {v2s32, p0, s64, 8},
+                                 {v4s32, p0, s128, 8},
+                                 {v2s64, p0, s128, 8}})
       // These extends are also legal
-      .legalForTypesWithMemDesc({{s32, p0, 8, 8}, {s32, p0, 16, 8}})
+      .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 8}})
       .clampScalar(0, s8, s64)
       .lowerIfMemSizeNotPow2()
       .widenScalarToNextPow2(0)
       .narrowScalarIf([=](const LegalityQuery &Query) {
         // Clamp extending load results to 32-bits.
         return Query.Types[0].isScalar() &&
-               Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits &&
-               Query.Types[0].getSizeInBits() > 32;
+          Query.Types[0] != Query.MMODescrs[0].MemoryTy &&
+          Query.Types[0].getSizeInBits() > 32;
         },
         changeTo(0, s32))
       // Lower any any-extending loads left into G_ANYEXT and G_LOAD
       .lowerIf([=](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
+        return Query.Types[0] != Query.MMODescrs[0].MemoryTy;
       })
       .clampMaxNumElements(0, s8, 16)
       .clampMaxNumElements(0, s16, 8)
@@ -314,31 +315,31 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customIf(IsPtrVecPred);
 
   getActionDefinitionsBuilder(G_STORE)
-      .legalForTypesWithMemDesc({{s8, p0, 8, 8},
-                                 {s16, p0, 8, 8}, // truncstorei8 from s16
-                                 {s32, p0, 8, 8}, // truncstorei8 from s32
-                                 {s64, p0, 8, 8}, // truncstorei8 from s64
-                                 {s16, p0, 16, 8},
-                                 {s32, p0, 16, 8}, // truncstorei16 from s32
-                                 {s64, p0, 16, 8}, // truncstorei16 from s64
-                                 {s32, p0, 8, 8},
-                                 {s32, p0, 16, 8},
-                                 {s32, p0, 32, 8},
-                                 {s64, p0, 64, 8},
-                                 {s64, p0, 32, 8}, // truncstorei32 from s64
-                                 {p0, p0, 64, 8},
-                                 {s128, p0, 128, 8},
-                                 {v16s8, p0, 128, 8},
-                                 {v8s8, p0, 64, 8},
-                                 {v4s16, p0, 64, 8},
-                                 {v8s16, p0, 128, 8},
-                                 {v2s32, p0, 64, 8},
-                                 {v4s32, p0, 128, 8},
-                                 {v2s64, p0, 128, 8}})
+      .legalForTypesWithMemDesc({{s8, p0, s8, 8},
+                                 {s16, p0, s8, 8}, // truncstorei8 from s16
+                                 {s32, p0, s8, 8}, // truncstorei8 from s32
+                                 {s64, p0, s8, 8}, // truncstorei8 from s64
+                                 {s16, p0, s16, 8},
+                                 {s32, p0, s16, 8}, // truncstorei16 from s32
+                                 {s64, p0, s16, 8}, // truncstorei16 from s64
+                                 {s32, p0, s8, 8},
+                                 {s32, p0, s16, 8},
+                                 {s32, p0, s32, 8},
+                                 {s64, p0, s64, 8},
+                                 {s64, p0, s32, 8}, // truncstorei32 from s64
+                                 {p0, p0, s64, 8},
+                                 {s128, p0, s128, 8},
+                                 {v16s8, p0, s128, 8},
+                                 {v8s8, p0, s64, 8},
+                                 {v4s16, p0, s64, 8},
+                                 {v8s16, p0, s128, 8},
+                                 {v2s32, p0, s64, 8},
+                                 {v4s32, p0, s128, 8},
+                                 {v2s64, p0, s128, 8}})
       .clampScalar(0, s8, s64)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
-               Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
+               Query.Types[0] != Query.MMODescrs[0].MemoryTy;
       })
       // Maximum: sN * k = 128
       .clampMaxNumElements(0, s8, 16)

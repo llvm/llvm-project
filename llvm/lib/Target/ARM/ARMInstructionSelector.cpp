@@ -1096,24 +1096,6 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     if (NewOpc == G_LOAD || NewOpc == G_STORE)
       return false;
 
-    if (ValSize == 1 && NewOpc == Opcodes.STORE8) {
-      // Before storing a 1-bit value, make sure to clear out any unneeded bits.
-      Register OriginalValue = I.getOperand(0).getReg();
-
-      Register ValueToStore = MRI.createVirtualRegister(&ARM::GPRRegClass);
-      I.getOperand(0).setReg(ValueToStore);
-
-      auto InsertBefore = I.getIterator();
-      auto AndI = BuildMI(MBB, InsertBefore, I.getDebugLoc(), TII.get(Opcodes.AND))
-        .addDef(ValueToStore)
-        .addUse(OriginalValue)
-        .addImm(1)
-        .add(predOps(ARMCC::AL))
-        .add(condCodeOp());
-      if (!constrainSelectedInstRegOperands(*AndI, TII, TRI, RBI))
-        return false;
-    }
-
     I.setDesc(TII.get(NewOpc));
 
     if (NewOpc == ARM::LDRH || NewOpc == ARM::STRH)

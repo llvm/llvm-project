@@ -12,11 +12,7 @@
 // before macOS 10.14. The test fails on macOS 10.9 to 10.12, passes on macOS
 // 10.13 (no investigation done), and passes afterwards. Just mark all the OSes
 // before 10.14 as unsupported.
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.13
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.12
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.11
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.10
-// UNSUPPORTED: use_system_cxx_lib && x86_64-apple-macosx10.9
+// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
 
 // Check that the pointer __cxa_allocate_exception returns is aligned to the
 // default alignment for the target architecture.

@@ -182,7 +182,7 @@ Value getPaddedInput(OpBuilder &b, Location loc, Value input,
       conds.push_back(leftOutOfBound);
     else
       conds.push_back(b.create<OrOp>(loc, conds.back(), leftOutOfBound));
-    Value rightBound = b.create<memref::DimOp>(loc, input, idx);
+    Value rightBound = createOrFoldDimOp(b, loc, input, idx);
     Value rightOutOfBound =
         b.create<CmpIOp>(loc, CmpIPredicate::sge, dim, rightBound);
     conds.push_back(b.create<OrOp>(loc, conds.back(), rightOutOfBound));
@@ -558,6 +558,7 @@ static void lowerLinalgToLoopsImpl(FuncOp funcOp) {
   RewritePatternSet patterns(context);
   patterns.add<LinalgRewritePattern<LoopType>>(context);
   memref::DimOp::getCanonicalizationPatterns(patterns, context);
+  tensor::DimOp::getCanonicalizationPatterns(patterns, context);
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   patterns.add<FoldAffineOp>(context);
   // Just apply the patterns greedily.

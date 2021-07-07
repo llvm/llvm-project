@@ -2,7 +2,7 @@
 # generates correct instructions for them.
 
 # Check all variants of instructions supported by PTX60 on SM70
-# RUN: python %s --ptx=60 --gpu-arch=70 > %t-ptx60-sm_70.ll
+# RUN: %python %s --ptx=60 --gpu-arch=70 > %t-ptx60-sm_70.ll
 # RUN: FileCheck %t-ptx60-sm_70.ll < %t-ptx60-sm_70.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16
 # RUN: FileCheck %t-ptx60-sm_70.ll < %t-ptx60-sm_70.ll \
@@ -11,7 +11,7 @@
 # RUN:           | FileCheck %t-ptx60-sm_70.ll
 
 # Check all variants of instructions supported by PTX61 on SM70
-# RUN: python %s --ptx=61 --gpu-arch=70 > %t-ptx61-sm_70.ll
+# RUN: %python %s --ptx=61 --gpu-arch=70 > %t-ptx61-sm_70.ll
 # RUN: FileCheck %t-ptx61-sm_70.ll < %t-ptx61-sm_70.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM
 # RUN: FileCheck %t-ptx61-sm_70.ll < %t-ptx61-sm_70.ll \
@@ -20,7 +20,7 @@
 # RUN:           | FileCheck %t-ptx61-sm_70.ll
 
 # Check all variants of instructions supported by PTX63 on SM72
-# RUN: python %s --ptx=63 --gpu-arch=72 > %t-ptx63-sm_72.ll
+# RUN: %python %s --ptx=63 --gpu-arch=72 > %t-ptx63-sm_72.ll
 # RUN: FileCheck %t-ptx63-sm_72.ll < %t-ptx63-sm_72.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT
 # RUN: FileCheck %t-ptx63-sm_72.ll < %t-ptx63-sm_72.ll \
@@ -29,7 +29,7 @@
 # RUN:           | FileCheck %t-ptx63-sm_72.ll
 
 # Check all variants of instructions supported by PTX63 on SM75
-# RUN: python %s --ptx=63 --gpu-arch=75 > %t-ptx63-sm_75.ll
+# RUN: %python %s --ptx=63 --gpu-arch=75 > %t-ptx63-sm_75.ll
 # RUN: FileCheck %t-ptx63-sm_75.ll < %t-ptx63-sm_75.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT
 # RUN: FileCheck %t-ptx63-sm_75.ll < %t-ptx63-sm_75.ll \
@@ -38,7 +38,7 @@
 # RUN:           | FileCheck %t-ptx63-sm_75.ll
 
 # Check all variants of instructions supported by PTX64 on SM70+
-# RUN: python %s --ptx=64 --gpu-arch=70 > %t-ptx64-sm_70.ll
+# RUN: %python %s --ptx=64 --gpu-arch=70 > %t-ptx64-sm_70.ll
 # RUN: FileCheck %t-ptx64-sm_70.ll < %t-ptx64-sm_70.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,MMA
 # RUN: FileCheck %t-ptx64-sm_70.ll < %t-ptx64-sm_70.ll \
@@ -47,7 +47,7 @@
 # RUN:           | FileCheck %t-ptx64-sm_70.ll
 
 # Check all variants of instructions supported by PTX65 on SM75+
-# RUN: python %s --ptx=65 --gpu-arch=75 > %t-ptx65-sm_75.ll
+# RUN: %python %s --ptx=65 --gpu-arch=75 > %t-ptx65-sm_75.ll
 # RUN: FileCheck %t-ptx65-sm_75.ll < %t-ptx65-sm_75.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT,MMA,PTX65MMA
 # RUN: FileCheck %t-ptx65-sm_75.ll < %t-ptx65-sm_75.ll \
@@ -56,7 +56,7 @@
 # RUN:           | FileCheck %t-ptx65-sm_75.ll
 
 # Check all variants of instructions supported by PTX70 on SM80+
-# RUN: python %s --ptx=70 --gpu-arch=80 > %t-ptx70-sm_80.ll
+# RUN: %python %s --ptx=70 --gpu-arch=80 > %t-ptx70-sm_80.ll
 # RUN: FileCheck %t-ptx70-sm_80.ll < %t-ptx70-sm_80.ll \
 # RUN:           --check-prefixes=INTRINSICS,M16N16,EXTGEOM,INT,SUBINT,MMA,ALTFLOAT,DOUBLE,PTX65MMA,PTX70MMA
 # RUN: FileCheck %t-ptx70-sm_80.ll < %t-ptx70-sm_80.ll \

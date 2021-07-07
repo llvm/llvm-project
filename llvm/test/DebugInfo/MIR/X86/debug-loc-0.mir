@@ -94,7 +94,7 @@ stack:
 constants:       []
 body:             |
   bb.0.entry:
-    MOV64mi32 %stack.0.s1.addr, 1, $noreg, 0, $noreg, 0 :: (store 8 into %ir.0)
+    MOV64mi32 %stack.0.s1.addr, 1, $noreg, 0, $noreg, 0 :: (store (s64) into %ir.0)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !10
     dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi, debug-location !10
     CALL64pcrel32 @"$S16resilient_struct4SizeVMa", csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax, implicit-def dead $rdx, debug-location !10

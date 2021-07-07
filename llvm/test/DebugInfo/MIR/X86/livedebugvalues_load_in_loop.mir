@@ -10,7 +10,7 @@
   ; In a register:
 
   ; CHECK-LABEL: bb.0.entry:
-  ; CHECK:       DBG_VALUE $rdi, $noreg, !16, !DIExpression()
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
   ; CHECK-LABEL: bb.1.bb1:
   ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
   ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
@@ -79,8 +79,8 @@ body:  |
   bb.0.entry:
   liveins: $rdi
     successors: %bb.1, %bb.2
-    DBG_VALUE $rdi, $noreg, !16, !DIExpression(), debug-location !17
     $rbp = MOV64rr $rdi, debug-location !17
+    DBG_VALUE $rbp, $noreg, !16, !DIExpression(), debug-location !17
     dead $rcx = MOV64ri 0, debug-location !17
     CALL64pcrel32 @bees, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, debug-location !17
     CMP64ri8 renamable $rax, 1, implicit-def $eflags, debug-location !17
@@ -103,7 +103,7 @@ body:  |
     JCC_1 %bb.5, 4, implicit killed $eflags, debug-location !17
   bb.4:
   liveins: $rax, $rbp
-    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rbp :: (store 8 into %stack.0)
+    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rbp :: (store (s64) into %stack.0)
     JMP_1 %bb.6
   bb.5:
   liveins: $rax, $rbp

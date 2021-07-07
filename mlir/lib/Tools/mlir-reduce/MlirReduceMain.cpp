@@ -39,22 +39,35 @@ static LogicalResult loadModule(MLIRContext &context, OwningModuleRef &module,
 
 LogicalResult mlir::mlirReduceMain(int argc, char **argv,
                                    MLIRContext &context) {
+  // Override the default '-h' and use the default PrintHelpMessage() which
+  // won't print options in categories.
+  static llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
+                                  llvm::cl::Hidden);
+
+  static llvm::cl::OptionCategory MLIRReduceCategory("mlir-reduce options");
+
   static llvm::cl::opt<std::string> inputFilename(
-      llvm::cl::Positional, llvm::cl::Required, llvm::cl::desc("<input file>"));
+      llvm::cl::Positional, llvm::cl::desc("<input file>"),
+      llvm::cl::cat(MLIRReduceCategory));
 
   static llvm::cl::opt<std::string> outputFilename(
       "o", llvm::cl::desc("Output filename for the reduced test case"),
-      llvm::cl::init("-"));
+      llvm::cl::init("-"), llvm::cl::cat(MLIRReduceCategory));
+
+  llvm::cl::HideUnrelatedOptions(MLIRReduceCategory);
 
   llvm::InitLLVM y(argc, argv);
 
   registerReducerPasses();
-  registerMLIRContextCLOptions();
-  registerPassManagerCLOptions();
 
   PassPipelineCLParser parser("", "Reduction Passes to Run");
   llvm::cl::ParseCommandLineOptions(argc, argv,
                                     "MLIR test case reduction tool.\n");
+
+  if (Help) {
+    llvm::cl::PrintHelpMessage();
+    return success();
+  }
 
   std::string errorMessage;
 

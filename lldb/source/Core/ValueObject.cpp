@@ -106,7 +106,7 @@ ValueObject::ValueObject(ExecutionContextScope *exe_scope,
 }
 
 // Destructor
-ValueObject::~ValueObject() {}
+ValueObject::~ValueObject() = default;
 
 bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
@@ -2839,7 +2839,7 @@ ValueObject::EvaluationPoint::EvaluationPoint(
     const ValueObject::EvaluationPoint &rhs)
     : m_mod_id(), m_exe_ctx_ref(rhs.m_exe_ctx_ref), m_needs_update(true) {}
 
-ValueObject::EvaluationPoint::~EvaluationPoint() {}
+ValueObject::EvaluationPoint::~EvaluationPoint() = default;
 
 // This function checks the EvaluationPoint against the current process state.
 // If the current state matches the evaluation point, or the evaluation point

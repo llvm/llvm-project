@@ -93,7 +93,7 @@ SocketAddress::SocketAddress(const struct addrinfo *addr_info) {
 }
 
 // Destructor
-SocketAddress::~SocketAddress() {}
+SocketAddress::~SocketAddress() = default;
 
 void SocketAddress::Clear() {
   memset(&m_socket_addr, 0, sizeof(m_socket_addr));

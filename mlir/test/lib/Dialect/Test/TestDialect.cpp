@@ -11,7 +11,6 @@
 #include "TestInterfaces.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -801,7 +800,7 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::reifyReturnTypeShapes(
     OpBuilder &builder, ValueRange operands,
     llvm::SmallVectorImpl<Value> &shapes) {
   shapes = SmallVector<Value, 1>{
-      builder.createOrFold<memref::DimOp>(getLoc(), operands.front(), 0)};
+      builder.createOrFold<tensor::DimOp>(getLoc(), operands.front(), 0)};
   return success();
 }
 
@@ -815,7 +814,7 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
         llvm::seq<int64_t>(
             0, operand.getType().cast<RankedTensorType>().getRank()),
         [&](int64_t dim) -> Value {
-          return builder.createOrFold<memref::DimOp>(loc, operand, dim);
+          return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
     shapes.push_back(builder.create<tensor::FromElementsOp>(
         getLoc(), builder.getIndexType(), currShape));
@@ -834,7 +833,7 @@ OpWithResultShapePerDimInterfaceOp ::reifyReturnTypeShapesPerResultDim(
         llvm::seq<int64_t>(
             0, operand.getType().cast<RankedTensorType>().getRank()),
         [&](int64_t dim) -> Value {
-          return builder.createOrFold<memref::DimOp>(loc, operand, dim);
+          return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
     shapes.emplace_back(std::move(currShape));
   }
@@ -851,7 +850,7 @@ LogicalResult OpWithResultShapeAndPerDimInterfaceOp::reifyReturnTypeShapes(
         llvm::seq<int64_t>(
             0, operand.getType().cast<RankedTensorType>().getRank()),
         [&](int64_t dim) -> Value {
-          return builder.createOrFold<memref::DimOp>(loc, operand, dim);
+          return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
     shapes.push_back(builder.create<tensor::FromElementsOp>(
         getLoc(), builder.getIndexType(), currShape));
@@ -870,7 +869,7 @@ OpWithResultShapeAndPerDimInterfaceOp ::reifyReturnTypeShapesPerResultDim(
         llvm::seq<int64_t>(
             0, operand.getType().cast<RankedTensorType>().getRank()),
         [&](int64_t dim) -> Value {
-          return builder.createOrFold<memref::DimOp>(loc, operand, dim);
+          return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
     shapes.emplace_back(std::move(currShape));
   }

@@ -62,7 +62,7 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
   ConfigureRegisterContext();
 }
 
-RegisterContextCorePOSIX_arm64::~RegisterContextCorePOSIX_arm64() {}
+RegisterContextCorePOSIX_arm64::~RegisterContextCorePOSIX_arm64() = default;
 
 bool RegisterContextCorePOSIX_arm64::ReadGPR() { return true; }
 

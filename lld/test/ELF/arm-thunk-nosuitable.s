@@ -20,9 +20,9 @@ _start:
         bx lr
 
 // CHECK: <_start>:
-// CHECK-NEXT:   2200b4:        00 f0 00 80     beq.w   #0
+// CHECK-NEXT:   2200b4:        00 f0 00 80     beq.w   0x2200b8 <__Thumbv7ABSLongThunk_target>
 // CHECK: <__Thumbv7ABSLongThunk_target>:
-// CHECK-NEXT:   2200b8:        00 f0 01 90     b.w     #12582914
+// CHECK-NEXT:   2200b8:        00 f0 01 90     b.w     0xe200be <target>
 // CHECK:        2200bc:        70 47           bx      lr
 
         .section .text.2, "ax", %progbits

@@ -72,13 +72,13 @@ body:             |
     $sp = frame-setup SUBXri $sp, 16, 0
     renamable $x8 = ADRP target-flags(aarch64-page) @v
     $x9 = ADDXri $sp, 12, 0
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
     $sp = frame-destroy ADDXri $sp, 16, 0
     frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
     RET undef $lr
@@ -105,13 +105,13 @@ body:             |
     $sp = frame-setup SUBXri $sp, 16, 0
     renamable $x8 = ADRP target-flags(aarch64-page) @v
     $x9 = ADDXri $sp, 12, 0
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
     $sp = frame-destroy ADDXri $sp, 16, 0
     frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
     RET undef $lr
@@ -138,13 +138,13 @@ body:             |
     $sp = frame-setup SUBXri $sp, 16, 0
     renamable $x8 = ADRP target-flags(aarch64-page) @v
     $x9 = ADDXri $sp, 12, 0
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
     $sp = frame-destroy ADDXri $sp, 12, 0
     frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
     RET undef $lr
@@ -161,13 +161,13 @@ body:             |
     $sp = frame-setup SUBXri $sp, 16, 0
     renamable $x8 = ADRP target-flags(aarch64-page) @v
     $x9 = ADDXri $sp, 12, 0
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
-    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store 8 into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui renamable $x9, renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @v :: (volatile store (s64) into @v)
     $sp = frame-destroy ADDXri $sp, 12, 0
     frame-destroy AUTIASP implicit-def $lr, implicit killed $lr, implicit $sp
     RET undef $lr

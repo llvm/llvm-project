@@ -223,9 +223,7 @@ class ProcessModID {
   friend bool operator==(const ProcessModID &lhs, const ProcessModID &rhs);
 
 public:
-  ProcessModID()
-
-  {}
+  ProcessModID() = default;
 
   ProcessModID(const ProcessModID &rhs)
       : m_stop_id(rhs.m_stop_id), m_memory_id(rhs.m_memory_id) {}

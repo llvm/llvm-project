@@ -1,6 +1,6 @@
 ; Tests that CoroSplit can succesfully determine allocas should live on the frame
 ; if their aliases are used across suspension points through PHINode.
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
 
 define i8* @f(i1 %n) "coroutine.presplit"="1" {
 entry:
@@ -45,7 +45,7 @@ suspend:
 ; CHECK-NEXT:    %0 = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 2
 ; CHECK-NEXT:    %1 = bitcast i64* %0 to i8*
 ; CHECK-NEXT:    %2 = bitcast i8* %1 to i32*
-; CHECK-NEXT:    %alias_phi.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 3
+; CHECK:         %alias_phi.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 3
 ; CHECK-NEXT:    store i32* %2, i32** %alias_phi.spill.addr
 
 declare i8* @llvm.coro.free(token, i8*)

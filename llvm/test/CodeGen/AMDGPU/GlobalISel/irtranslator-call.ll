@@ -379,7 +379,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (volatile load 1 from `i1 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (volatile load (s1) from `i1 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i1_signext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -436,7 +436,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (volatile load 1 from `i1 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (volatile load (s1) from `i1 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i1_zeroext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -549,7 +549,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile load 1 from `i8 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile load (s8) from `i8 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i8_signext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -607,7 +607,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile load 1 from `i8 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile load (s8) from `i8 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i8_zeroext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -719,7 +719,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (volatile load 2 from `i16 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (volatile load (s16) from `i16 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i16_signext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -776,7 +776,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (volatile load 2 from `i16 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[DEF]](p1) :: (volatile load (s16) from `i16 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i16_zeroext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -981,7 +981,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load 16 from `<2 x i64> addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load (<2 x s64>) from `<2 x i64> addrspace(1)* null`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i64
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1100,7 +1100,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load 6 from `i48 addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load (s48) from `i48 addrspace(1)* undef`, align 8, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i48
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1160,7 +1160,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48_signext(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load 6 from `i48 addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load (s48) from `i48 addrspace(1)* undef`, align 8, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i48_signext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1220,7 +1220,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48_zeroext(i32) #0 {
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load 6 from `i48 addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s48) = G_LOAD [[DEF]](p1) :: (volatile load (s48) from `i48 addrspace(1)* undef`, align 8, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_i48_zeroext
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1279,7 +1279,7 @@ define amdgpu_kernel void @test_call_external_void_func_p0_imm(i8* %arg) #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load 8 from %ir.arg.kernarg.offset.cast, align 16, addrspace 4)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p0) from %ir.arg.kernarg.offset.cast, align 16, addrspace 4)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_p0
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1335,7 +1335,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2p0() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x p0>) = G_LOAD [[C]](p1) :: (load 16 from `<2 x i8*> addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x p0>) = G_LOAD [[C]](p1) :: (load (<2 x p0>) from `<2 x i8*> addrspace(1)* null`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2p0
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1397,7 +1397,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934593
   ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[DEF]](s64)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load 16 from `<2 x i64> addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load (<2 x s64>) from `<2 x i64> addrspace(1)* null`, addrspace 1)
   ; CHECK:   [[SHUF:%[0-9]+]]:_(<3 x s64>) = G_SHUFFLE_VECTOR [[LOAD]](<2 x s64>), [[BUILD_VECTOR]], shufflemask(0, 1, 2)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3i64
@@ -1464,7 +1464,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934593
   ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 17179869187
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C2]](s64)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load 16 from `<2 x i64> addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: (load (<2 x s64>) from `<2 x i64> addrspace(1)* null`, addrspace 1)
   ; CHECK:   [[SHUF:%[0-9]+]]:_(<4 x s64>) = G_SHUFFLE_VECTOR [[LOAD]](<2 x s64>), [[BUILD_VECTOR]], shufflemask(0, 1, 2, 3)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i64
@@ -1991,7 +1991,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: (load 4 from `<2 x i16> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: (load (<2 x s16>) from `<2 x i16> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2046,7 +2046,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load 6 from `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load (<3 x s16>) from `<3 x i16> addrspace(1)* undef`, align 8, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2105,7 +2105,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load 6 from `<3 x half> addrspace(1)* undef`, align 8, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[DEF]](p1) :: (load (<3 x s16>) from `<3 x half> addrspace(1)* undef`, align 8, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3f16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2164,7 +2164,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[DEF]](p1) :: (load 8 from `<4 x i16> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[DEF]](p1) :: (load (<4 x s16>) from `<4 x i16> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2280,7 +2280,7 @@ define amdgpu_kernel void @test_call_external_void_func_v5i16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<5 x s16>) = G_LOAD [[DEF]](p1) :: (load 10 from `<5 x i16> addrspace(1)* undef`, align 16, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<5 x s16>) = G_LOAD [[DEF]](p1) :: (load (<5 x s16>) from `<5 x i16> addrspace(1)* undef`, align 16, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v5i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2340,7 +2340,7 @@ define amdgpu_kernel void @test_call_external_void_func_v7i16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<7 x s16>) = G_LOAD [[DEF]](p1) :: (load 14 from `<7 x i16> addrspace(1)* undef`, align 16, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<7 x s16>) = G_LOAD [[DEF]](p1) :: (load (<7 x s16>) from `<7 x i16> addrspace(1)* undef`, align 16, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v7i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2401,7 +2401,7 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<63 x s16>) = G_LOAD [[DEF]](p1) :: (load 126 from `<63 x i16> addrspace(1)* undef`, align 128, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<63 x s16>) = G_LOAD [[DEF]](p1) :: (load (<63 x s16>) from `<63 x i16> addrspace(1)* undef`, align 128, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v63i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2459,7 +2459,7 @@ define amdgpu_kernel void @test_call_external_void_func_v63i16() #0 {
   ; CHECK:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
-  ; CHECK:   G_STORE [[UV31]](<2 x s16>), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](<2 x s16>), [[PTR_ADD1]](p5) :: (store (<2 x s16>) into stack, align 16, addrspace 5)
   ; CHECK:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -2493,7 +2493,7 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<65 x s16>) = G_LOAD [[DEF]](p1) :: (load 130 from `<65 x i16> addrspace(1)* undef`, align 256, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<65 x s16>) = G_LOAD [[DEF]](p1) :: (load (<65 x s16>) from `<65 x i16> addrspace(1)* undef`, align 256, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v65i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2551,10 +2551,10 @@ define amdgpu_kernel void @test_call_external_void_func_v65i16() #0 {
   ; CHECK:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
-  ; CHECK:   G_STORE [[UV31]](<2 x s16>), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](<2 x s16>), [[PTR_ADD1]](p5) :: (store (<2 x s16>) into stack, align 16, addrspace 5)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
-  ; CHECK:   G_STORE [[UV32]](<2 x s16>), [[PTR_ADD2]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[UV32]](<2 x s16>), [[PTR_ADD2]](p5) :: (store (<2 x s16>) into stack + 4, addrspace 5)
   ; CHECK:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -2588,7 +2588,7 @@ define amdgpu_kernel void @test_call_external_void_func_v66i16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<66 x s16>) = G_LOAD [[DEF]](p1) :: (load 132 from `<66 x i16> addrspace(1)* undef`, align 256, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<66 x s16>) = G_LOAD [[DEF]](p1) :: (load (<66 x s16>) from `<66 x i16> addrspace(1)* undef`, align 256, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v66i16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2644,10 +2644,10 @@ define amdgpu_kernel void @test_call_external_void_func_v66i16() #0 {
   ; CHECK:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
-  ; CHECK:   G_STORE [[UV31]](<2 x s16>), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](<2 x s16>), [[PTR_ADD1]](p5) :: (store (<2 x s16>) into stack, align 16, addrspace 5)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
-  ; CHECK:   G_STORE [[UV32]](<2 x s16>), [[PTR_ADD2]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[UV32]](<2 x s16>), [[PTR_ADD2]](p5) :: (store (<2 x s16>) into stack + 4, addrspace 5)
   ; CHECK:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -2681,7 +2681,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2f16() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: (load 4 from `<2 x half> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[DEF]](p1) :: (load (<2 x s16>) from `<2 x half> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2f16
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2736,7 +2736,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[DEF]](p1) :: (load 8 from `<2 x i32> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[DEF]](p1) :: (load (<2 x s32>) from `<2 x i32> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2972,7 +2972,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (load 16 from `<4 x i32> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (load (<4 x s32>) from `<4 x i32> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3155,8 +3155,8 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<8 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[LOAD]](p1) :: (load 32 from %ir.ptr, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<8 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<8 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v8i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3289,8 +3289,8 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<16 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[LOAD]](p1) :: (load 64 from %ir.ptr, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<16 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v16i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3362,8 +3362,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3419,7 +3419,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -3456,9 +3456,9 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr0, addrspace 1)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p1) :: (load 4 from `i32 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr0, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p1) :: (load (s32) from `i32 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32_i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3514,10 +3514,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C3]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
-  ; CHECK:   G_STORE [[LOAD2]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD2]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -3555,10 +3555,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p1) = COPY [[DEF1]](p1)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr0, addrspace 1)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[DEF1]](p1) :: (load 1 from `i8 addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY10]](p1) :: (load 2 from `i16 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr0, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[DEF1]](p1) :: (load (s8) from `i8 addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY10]](p1) :: (load (s16) from `i16 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32_i8_i8_i16
   ; CHECK:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3614,18 +3614,18 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK:   [[COPY21:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C3]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[LOAD2]](s8)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C4]](s32)
-  ; CHECK:   G_STORE [[ANYEXT]](s16), [[PTR_ADD2]](p5) :: (store 2 into stack + 4, align 4, addrspace 5)
+  ; CHECK:   G_STORE [[ANYEXT]](s16), [[PTR_ADD2]](p5) :: (store (s16) into stack + 4, align 4, addrspace 5)
   ; CHECK:   [[COPY22:%[0-9]+]]:_(s16) = COPY [[ANYEXT]](s16)
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C5]](s32)
-  ; CHECK:   G_STORE [[COPY22]](s16), [[PTR_ADD3]](p5) :: (store 2 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[COPY22]](s16), [[PTR_ADD3]](p5) :: (store (s16) into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C6]](s32)
-  ; CHECK:   G_STORE [[LOAD3]](s16), [[PTR_ADD4]](p5) :: (store 2 into stack + 12, align 4, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD3]](s16), [[PTR_ADD4]](p5) :: (store (s16) into stack + 12, align 4, addrspace 5)
   ; CHECK:   [[COPY23:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY23]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
@@ -3665,10 +3665,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p1) = COPY [[DEF1]](p1)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr0, addrspace 1)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(p3) = G_LOAD [[DEF1]](p1) :: (load 4 from `i8 addrspace(3)* addrspace(1)* undef`, addrspace 1)
-  ; CHECK:   [[LOAD3:%[0-9]+]]:_(p5) = G_LOAD [[COPY10]](p1) :: (load 4 from `i8 addrspace(5)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<32 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr0, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(p3) = G_LOAD [[DEF1]](p1) :: (load (p3) from `i8 addrspace(3)* addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[LOAD3:%[0-9]+]]:_(p5) = G_LOAD [[COPY10]](p1) :: (load (p5) from `i8 addrspace(5)* addrspace(1)* undef`, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v32i32_p3_p5
   ; CHECK:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3724,13 +3724,13 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK:   [[COPY21:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C3]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C4]](s32)
-  ; CHECK:   G_STORE [[LOAD2]](p3), [[PTR_ADD2]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD2]](p3), [[PTR_ADD2]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C5]](s32)
-  ; CHECK:   G_STORE [[LOAD3]](p5), [[PTR_ADD3]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD3]](p5), [[PTR_ADD3]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[COPY22:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY22]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)
@@ -3767,11 +3767,11 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `{ i8, i32 } addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load 1 from %ir.ptr0, align 4, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `{ i8, i32 } addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 4 from %ir.ptr0 + 4, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load (s32) from %ir.ptr0 + 4, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_struct_i8_i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3821,11 +3821,11 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK:   liveins: $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `{ i8, i32 } addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load 1 from %ir.ptr0, align 4, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `{ i8, i32 } addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 4 from %ir.ptr0 + 4, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load (s32) from %ir.ptr0 + 4, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_gfx_void_func_struct_i8_i32
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[LOAD1]](s8)
@@ -3850,11 +3850,11 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() #
   ; CHECK:   liveins: $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `{ i8, i32 } addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load 1 from %ir.ptr0, align 4, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `{ i8, i32 } addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
-  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load 4 from %ir.ptr0 + 4, addrspace 1)
+  ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load (s32) from %ir.ptr0 + 4, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_gfx_void_func_struct_i8_i32_inreg
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[LOAD1]](s8)
@@ -3892,8 +3892,8 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.val
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
-  ; CHECK:   G_STORE [[C]](s8), [[FRAME_INDEX]](p5) :: (store 1 into %ir.gep01, addrspace 5)
-  ; CHECK:   G_STORE [[C1]](s32), [[PTR_ADD]](p5) :: (store 4 into %ir.gep1, addrspace 5)
+  ; CHECK:   G_STORE [[C]](s8), [[FRAME_INDEX]](p5) :: (store (s8) into %ir.gep01, addrspace 5)
+  ; CHECK:   G_STORE [[C1]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.gep1, addrspace 5)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_byval_struct_i8_i32
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -3918,7 +3918,7 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C6]](s32)
   ; CHECK:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK:   G_MEMCPY [[PTR_ADD2]](p5), [[FRAME_INDEX]](p5), [[C7]](s32), 0 :: (dereferenceable store 8 into stack, align 4, addrspace 5), (dereferenceable load 8 from %ir.val, align 4, addrspace 5)
+  ; CHECK:   G_MEMCPY [[PTR_ADD2]](p5), [[FRAME_INDEX]](p5), [[C7]](s32), 0 :: (dereferenceable store (s64) into stack, align 4, addrspace 5), (dereferenceable load (s64) from %ir.val, align 4, addrspace 5)
   ; CHECK:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -3973,11 +3973,11 @@ define void @call_byval_3ai32_byval_i8_align32([3 x i32] addrspace(5)* %incoming
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY19]], [[C1]](s32)
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; CHECK:   G_MEMCPY [[PTR_ADD]](p5), [[COPY8]](p5), [[C2]](s32), 0 :: (dereferenceable store 12 into stack, align 4, addrspace 5), (dereferenceable load 12 from %ir.incoming0, align 4, addrspace 5)
+  ; CHECK:   G_MEMCPY [[PTR_ADD]](p5), [[COPY8]](p5), [[C2]](s32), 0 :: (dereferenceable store (s96) into stack, align 4, addrspace 5), (dereferenceable load (s96) from %ir.incoming0, align 4, addrspace 5)
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY19]], [[C3]](s32)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK:   G_MEMCPY [[PTR_ADD1]](p5), [[COPY9]](p5), [[C4]](s32), 0 :: (dereferenceable store 1 into stack + 32, align 32, addrspace 5), (dereferenceable load 1 from %ir.incoming1, align 32, addrspace 5)
+  ; CHECK:   G_MEMCPY [[PTR_ADD1]](p5), [[COPY9]](p5), [[C4]](s32), 0 :: (dereferenceable store (s8) into stack + 32, align 32, addrspace 5), (dereferenceable load (s8) from %ir.incoming1, align 32, addrspace 5)
   ; CHECK:   $vgpr0 = COPY [[C]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY20]](<4 x s32>)
@@ -4029,7 +4029,7 @@ define void @call_byval_a4i64_align4_higher_source_align([4 x i64] addrspace(5)*
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY18]], [[C]](s32)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-  ; CHECK:   G_MEMCPY [[PTR_ADD]](p5), [[COPY8]](p5), [[C1]](s32), 0 :: (dereferenceable store 32 into stack, align 4, addrspace 5), (dereferenceable load 32 from %ir.incoming_high_align, align 256, addrspace 5)
+  ; CHECK:   G_MEMCPY [[PTR_ADD]](p5), [[COPY8]](p5), [[C1]](s32), 0 :: (dereferenceable store (s256) into stack, align 4, addrspace 5), (dereferenceable load (s256) from %ir.incoming_high_align, align 256, addrspace 5)
   ; CHECK:   [[COPY19:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY19]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -4063,8 +4063,8 @@ define amdgpu_kernel void @test_call_external_void_func_v2i8() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<2 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[LOAD]](p1) :: (load 2 from %ir.ptr, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<2 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<2 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v2i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4126,8 +4126,8 @@ define amdgpu_kernel void @test_call_external_void_func_v3i8() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<3 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[LOAD]](p1) :: (load 3 from %ir.ptr, align 4, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<3 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<3 x s8>) from %ir.ptr, align 4, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v3i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4192,8 +4192,8 @@ define amdgpu_kernel void @test_call_external_void_func_v4i8() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<4 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[LOAD]](p1) :: (load 4 from %ir.ptr, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<4 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<4 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v4i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4261,8 +4261,8 @@ define amdgpu_kernel void @test_call_external_void_func_v8i8() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<8 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<8 x s8>) = G_LOAD [[LOAD]](p1) :: (load 8 from %ir.ptr, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<8 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<8 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<8 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v8i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4342,8 +4342,8 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load 8 from `<16 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[LOAD]](p1) :: (load 16 from %ir.ptr, addrspace 1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (load (p1) from `<16 x i8> addrspace(1)* addrspace(4)* undef`, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @external_void_func_v16i8
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4447,10 +4447,10 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load 128 from %ir.val.kernarg.offset.cast, align 16, addrspace 4)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (<32 x s32>) from %ir.val.kernarg.offset.cast, align 16, addrspace 4)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[INT]], [[C]](s64)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load 8 from %ir.tmp.kernarg.offset.cast, align 16, addrspace 4)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s64) from %ir.tmp.kernarg.offset.cast, align 16, addrspace 4)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[GV:%[0-9]+]]:sreg_64(p0) = G_GLOBAL_VALUE @stack_passed_f64_arg
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -4506,14 +4506,14 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
   ; CHECK:   [[COPY20:%[0-9]+]]:_(p5) = COPY $sp_reg
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C4]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[UV32:%[0-9]+]]:_(s32), [[UV33:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](s64)
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C5]](s32)
-  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD3]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY20]], [[C6]](s32)
-  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD4]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[COPY21:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY21]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY10]](p4)
@@ -4628,20 +4628,20 @@ define void @stack_12xv3i32() #0 {
   ; CHECK:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; CHECK:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C16]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
-  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK:   [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR11]](<3 x s32>)
   ; CHECK:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
-  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
-  ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store 4 into stack + 12, addrspace 5)
+  ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 12, addrspace 5)
   ; CHECK:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
-  ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store 4 into stack + 16, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; CHECK:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
@@ -4769,20 +4769,20 @@ define void @stack_12xv3f32() #0 {
   ; CHECK:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; CHECK:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C16]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
-  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK:   [[UV33:%[0-9]+]]:_(s32), [[UV34:%[0-9]+]]:_(s32), [[UV35:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR11]](<3 x s32>)
   ; CHECK:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
-  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
-  ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store 4 into stack + 12, addrspace 5)
+  ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 12, addrspace 5)
   ; CHECK:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
-  ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store 4 into stack + 16, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; CHECK:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
@@ -4902,32 +4902,32 @@ define void @stack_8xv5i32() #0 {
   ; CHECK:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; CHECK:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C16]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
-  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
-  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
-  ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store 4 into stack + 12, addrspace 5)
+  ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 12, addrspace 5)
   ; CHECK:   [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<5 x s32>)
   ; CHECK:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
-  ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store 4 into stack + 16, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; CHECK:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C21]](s32)
-  ; CHECK:   G_STORE [[UV36]](s32), [[PTR_ADD5]](p5) :: (store 4 into stack + 20, addrspace 5)
+  ; CHECK:   G_STORE [[UV36]](s32), [[PTR_ADD5]](p5) :: (store (s32) into stack + 20, addrspace 5)
   ; CHECK:   [[C22:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
   ; CHECK:   [[PTR_ADD6:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C22]](s32)
-  ; CHECK:   G_STORE [[UV37]](s32), [[PTR_ADD6]](p5) :: (store 4 into stack + 24, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[UV37]](s32), [[PTR_ADD6]](p5) :: (store (s32) into stack + 24, align 8, addrspace 5)
   ; CHECK:   [[C23:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
   ; CHECK:   [[PTR_ADD7:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C23]](s32)
-  ; CHECK:   G_STORE [[UV38]](s32), [[PTR_ADD7]](p5) :: (store 4 into stack + 28, addrspace 5)
+  ; CHECK:   G_STORE [[UV38]](s32), [[PTR_ADD7]](p5) :: (store (s32) into stack + 28, addrspace 5)
   ; CHECK:   [[C24:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   ; CHECK:   [[PTR_ADD8:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C24]](s32)
-  ; CHECK:   G_STORE [[UV39]](s32), [[PTR_ADD8]](p5) :: (store 4 into stack + 32, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV39]](s32), [[PTR_ADD8]](p5) :: (store (s32) into stack + 32, align 16, addrspace 5)
   ; CHECK:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)
@@ -5043,32 +5043,32 @@ define void @stack_8xv5f32() #0 {
   ; CHECK:   [[COPY17:%[0-9]+]]:_(p5) = COPY $sgpr32
   ; CHECK:   [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C16]](s32)
-  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store 4 into stack, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C17]](s32)
-  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store 4 into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[UV32]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack + 4, addrspace 5)
   ; CHECK:   [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C18]](s32)
-  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store 4 into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[UV33]](s32), [[PTR_ADD2]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C19]](s32)
-  ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store 4 into stack + 12, addrspace 5)
+  ; CHECK:   G_STORE [[UV34]](s32), [[PTR_ADD3]](p5) :: (store (s32) into stack + 12, addrspace 5)
   ; CHECK:   [[UV35:%[0-9]+]]:_(s32), [[UV36:%[0-9]+]]:_(s32), [[UV37:%[0-9]+]]:_(s32), [[UV38:%[0-9]+]]:_(s32), [[UV39:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR7]](<5 x s32>)
   ; CHECK:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C20]](s32)
-  ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store 4 into stack + 16, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV35]](s32), [[PTR_ADD4]](p5) :: (store (s32) into stack + 16, align 16, addrspace 5)
   ; CHECK:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C21]](s32)
-  ; CHECK:   G_STORE [[UV36]](s32), [[PTR_ADD5]](p5) :: (store 4 into stack + 20, addrspace 5)
+  ; CHECK:   G_STORE [[UV36]](s32), [[PTR_ADD5]](p5) :: (store (s32) into stack + 20, addrspace 5)
   ; CHECK:   [[C22:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
   ; CHECK:   [[PTR_ADD6:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C22]](s32)
-  ; CHECK:   G_STORE [[UV37]](s32), [[PTR_ADD6]](p5) :: (store 4 into stack + 24, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[UV37]](s32), [[PTR_ADD6]](p5) :: (store (s32) into stack + 24, align 8, addrspace 5)
   ; CHECK:   [[C23:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
   ; CHECK:   [[PTR_ADD7:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C23]](s32)
-  ; CHECK:   G_STORE [[UV38]](s32), [[PTR_ADD7]](p5) :: (store 4 into stack + 28, addrspace 5)
+  ; CHECK:   G_STORE [[UV38]](s32), [[PTR_ADD7]](p5) :: (store (s32) into stack + 28, addrspace 5)
   ; CHECK:   [[C24:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   ; CHECK:   [[PTR_ADD8:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY17]], [[C24]](s32)
-  ; CHECK:   G_STORE [[UV39]](s32), [[PTR_ADD8]](p5) :: (store 4 into stack + 32, align 16, addrspace 5)
+  ; CHECK:   G_STORE [[UV39]](s32), [[PTR_ADD8]](p5) :: (store (s32) into stack + 32, align 16, addrspace 5)
   ; CHECK:   [[COPY18:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY9]](p4)

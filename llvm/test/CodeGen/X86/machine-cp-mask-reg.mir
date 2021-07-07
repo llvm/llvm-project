@@ -42,7 +42,7 @@ body:             |
     ; CHECK: renamable $k0 = VPTESTNMBZrr killed renamable $zmm0, renamable $zmm0
     ; CHECK: renamable $rax = COPY renamable $k0
     ; CHECK: renamable $rsi = ADD64rr killed renamable $rsi, killed renamable $rax, implicit-def dead $eflags
-    ; CHECK: MOV64mr killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $rsi :: (store 8 into %ir.y)
+    ; CHECK: MOV64mr killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $rsi :: (store (s64) into %ir.y)
     ; CHECK: renamable $eax = COPY killed renamable $k0
     ; CHECK: renamable $al = AND8ri renamable $al, 1, implicit-def dead $eflags, implicit killed $eax, implicit-def $eax
     ; CHECK: $al = KILL renamable $al, implicit killed $eax
@@ -50,7 +50,7 @@ body:             |
     renamable $k0 = VPTESTNMBZrr killed renamable $zmm0, renamable $zmm0
     renamable $rax = COPY renamable $k0
     renamable $rsi = ADD64rr killed renamable $rsi, killed renamable $rax, implicit-def dead $eflags
-    MOV64mr killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $rsi :: (store 8 into %ir.y)
+    MOV64mr killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $rsi :: (store (s64) into %ir.y)
     renamable $eax = COPY killed renamable $k0
     renamable $al = AND8ri renamable $al, 1, implicit-def dead $eflags, implicit killed $eax, implicit-def $eax
     $al = KILL renamable $al, implicit killed $eax

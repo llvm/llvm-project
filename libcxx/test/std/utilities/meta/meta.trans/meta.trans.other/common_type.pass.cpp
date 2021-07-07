@@ -261,39 +261,6 @@ void test_bullet_four() {
   }
 }
 
-
-// The example code specified in Note B for common_type
-namespace note_b_example {
-
-typedef bool (&PF1)();
-typedef short (*PF2)(long);
-
-struct S {
-  operator PF2() const;
-  double operator()(char, int&);
-  void fn(long) const;
-  char data;
-};
-
-typedef void (S::*PMF)(long) const;
-typedef char S::*PMD;
-
-using std::is_same;
-using std::result_of;
-using std::unique_ptr;
-
-static_assert((is_same<result_of<S(int)>::type, short>::value), "Error!");
-static_assert((is_same<result_of<S&(unsigned char, int&)>::type, double>::value), "Error!");
-static_assert((is_same<result_of<PF1()>::type, bool>::value), "Error!");
-static_assert((is_same<result_of<PMF(unique_ptr<S>, int)>::type, void>::value), "Error!");
-#if TEST_STD_VER >= 11
-static_assert((is_same<result_of<PMD(S)>::type, char&&>::value), "Error!");
-#endif
-static_assert((is_same<result_of<PMD(const S*)>::type, const char&>::value), "Error!");
-
-} // namespace note_b_example
-
-
 int main(int, char**)
 {
     static_assert((std::is_same<std::common_type<int>::type, int>::value), "");

@@ -14,13 +14,13 @@ body:             |
     liveins: $w0, $w1, $x1
     ; CHECK-LABEL: name: 1-ldrwpre-ldrwui-merge
     ; CHECK: liveins: $w0, $w1, $x1
-    ; CHECK: early-clobber $x1, renamable $w0, renamable $w1 = LDPWpre renamable $x1, 5 :: (load 4)
-    ; CHECK: STPWi renamable $w0, renamable $w1, renamable $x1, 0 :: (store 4)
+    ; CHECK: early-clobber $x1, renamable $w0, renamable $w1 = LDPWpre renamable $x1, 5 :: (load (s32))
+    ; CHECK: STPWi renamable $w0, renamable $w1, renamable $x1, 0 :: (store (s32))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $w0 = LDRWpre killed renamable $x1, 20 :: (load 4)
-    renamable $w1 = LDRWui renamable $x1, 1 :: (load 4)
-    STRWui killed renamable $w0, renamable $x1, 0 :: (store 4)
-    STRWui killed renamable $w1, renamable $x1, 1 :: (store 4)
+    early-clobber renamable $x1, renamable $w0 = LDRWpre killed renamable $x1, 20 :: (load (s32))
+    renamable $w1 = LDRWui renamable $x1, 1 :: (load (s32))
+    STRWui killed renamable $w0, renamable $x1, 0 :: (store (s32))
+    STRWui killed renamable $w1, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...
 
@@ -39,13 +39,13 @@ body:             |
     liveins: $x2, $x3, $x1
     ; CHECK-LABEL: name: 2-ldrxpre-ldrxui-merge
     ; CHECK: liveins: $x1, $x2, $x3
-    ; CHECK: early-clobber $x1, renamable $x2, renamable $x3 = LDPXpre renamable $x1, 3 :: (load 8)
-    ; CHECK: STPXi renamable $x2, renamable $x3, renamable $x1, 0 :: (store 8)
+    ; CHECK: early-clobber $x1, renamable $x2, renamable $x3 = LDPXpre renamable $x1, 3 :: (load (s64))
+    ; CHECK: STPXi renamable $x2, renamable $x3, renamable $x1, 0 :: (store (s64))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $x2 = LDRXpre killed renamable $x1, 24 :: (load 8)
-    renamable $x3 = LDRXui renamable $x1, 1 :: (load 8)
-    STRXui killed renamable $x2, renamable $x1, 0 :: (store 8)
-    STRXui killed renamable $x3, renamable $x1, 1 :: (store 8)
+    early-clobber renamable $x1, renamable $x2 = LDRXpre killed renamable $x1, 24 :: (load (s64))
+    renamable $x3 = LDRXui renamable $x1, 1 :: (load (s64))
+    STRXui killed renamable $x2, renamable $x1, 0 :: (store (s64))
+    STRXui killed renamable $x3, renamable $x1, 1 :: (store (s64))
     RET undef $lr
 ...
 
@@ -64,14 +64,14 @@ body:             |
     liveins: $s0, $s1, $x1
     ; CHECK-LABEL: name: 3-ldrspre-ldrsui-merge
     ; CHECK: liveins: $s0, $s1, $x1
-    ; CHECK: early-clobber $x1, renamable $s0, renamable $s1 = LDPSpre renamable $x1, 3 :: (load 4)
-    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store 4)
-    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store 4)
+    ; CHECK: early-clobber $x1, renamable $s0, renamable $s1 = LDPSpre renamable $x1, 3 :: (load (s32))
+    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store (s32))
+    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store (s32))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 12 :: (load 4)
-    renamable $s1 = LDRSui renamable $x1, 1 :: (load 4)
-    STRSui killed renamable $s0, renamable $x1, 0 :: (store 4)
-    STRSui killed renamable $s1, renamable $x1, 1 :: (store 4)
+    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 12 :: (load (s32))
+    renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
+    STRSui killed renamable $s0, renamable $x1, 0 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...
 
@@ -90,14 +90,14 @@ body:             |
     liveins: $d0, $d1, $x1
     ; CHECK-LABEL: name: 4-ldrqdre-ldrdui-merge
     ; CHECK: liveins: $d0, $d1, $x1
-    ; CHECK: early-clobber $x1, renamable $d0, renamable $d1 = LDPDpre renamable $x1, 16 :: (load 8)
-    ; CHECK: STRDui renamable $d0, renamable $x1, 0 :: (store 8)
-    ; CHECK: STRDui renamable $d1, renamable $x1, 1 :: ("aarch64-suppress-pair" store 8)
+    ; CHECK: early-clobber $x1, renamable $d0, renamable $d1 = LDPDpre renamable $x1, 16 :: (load (s64))
+    ; CHECK: STRDui renamable $d0, renamable $x1, 0 :: (store (s64))
+    ; CHECK: STRDui renamable $d1, renamable $x1, 1 :: ("aarch64-suppress-pair" store (s64))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $d0 = LDRDpre killed renamable $x1, 128 :: (load 8)
-    renamable $d1 = LDRDui renamable $x1, 1 :: (load 8)
-    STRDui killed renamable $d0, renamable $x1, 0 :: (store 8)
-    STRDui killed renamable $d1, renamable $x1, 1 :: (store 8)
+    early-clobber renamable $x1, renamable $d0 = LDRDpre killed renamable $x1, 128 :: (load (s64))
+    renamable $d1 = LDRDui renamable $x1, 1 :: (load (s64))
+    STRDui killed renamable $d0, renamable $x1, 0 :: (store (s64))
+    STRDui killed renamable $d1, renamable $x1, 1 :: (store (s64))
     RET undef $lr
 ...
 
@@ -120,13 +120,13 @@ body:             |
     liveins: $q0, $q1, $x1
     ; CHECK-LABEL: name: 5-ldrqpre-ldrqui-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: early-clobber $x1, renamable $q0, renamable $q1 = LDPQpre renamable $x1, 3 :: (load 16)
-    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber $x1, renamable $q0, renamable $q1 = LDPQpre renamable $x1, 3 :: (load (s128))
+    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 48 :: (load 16)
-    renamable $q1 = LDRQui renamable $x1, 1 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRQui killed renamable $q1, renamable $x1, 1 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 48 :: (load (s128))
+    renamable $q1 = LDRQui renamable $x1, 1 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
     RET undef $lr
 ...
 
@@ -149,14 +149,14 @@ body:             |
     liveins: $q0, $q1, $x1
     ; CHECK-LABEL: name: 6-ldrqui-ldrqpre-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: renamable $q1 = LDRQui renamable $x1, 1 :: (load 16)
-    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 48, implicit $w1 :: (load 16)
-    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store 16)
+    ; CHECK: renamable $q1 = LDRQui renamable $x1, 1 :: (load (s128))
+    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 48, implicit $w1 :: (load (s128))
+    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    renamable $q1 = LDRQui renamable $x1, 1 :: (load 16)
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 48 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRQui killed renamable $q1, renamable $x1, 1 :: (store 16)
+    renamable $q1 = LDRQui renamable $x1, 1 :: (load (s128))
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 48 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
     RET undef $lr
 ...
 
@@ -179,13 +179,13 @@ body:             |
     liveins: $q0, $q1, $x1
     ; CHECK-LABEL: name: 7-ldrqpre-ldrqui-max-offset-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: early-clobber $x1, renamable $q0, renamable $q1 = LDPQpre renamable $x1, 15 :: (load 16)
-    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber $x1, renamable $q0, renamable $q1 = LDPQpre renamable $x1, 15 :: (load (s128))
+    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 240 :: (load 16)
-    renamable $q1 = LDRQui renamable $x1, 1 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRQui killed renamable $q1, renamable $x1, 1 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 240 :: (load (s128))
+    renamable $q1 = LDRQui renamable $x1, 1 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
     RET undef $lr
 ...
 
@@ -208,13 +208,13 @@ body:             |
     liveins: $q0, $q1, $x1
     ; CHECK-LABEL: name: 8-ldrqpre-ldrqui-min-offset-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: early-clobber $x1, renamable $q0, renamable $q1 = LDPQpre renamable $x1, -16 :: (load 16)
-    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber $x1, renamable $q0, renamable $q1 = LDPQpre renamable $x1, -16 :: (load (s128))
+    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, -256 :: (load 16)
-    renamable $q1 = LDRQui renamable $x1, 1 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRQui killed renamable $q1, renamable $x1, 1 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, -256 :: (load (s128))
+    renamable $q1 = LDRQui renamable $x1, 1 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
     RET undef $lr
 ...
 
@@ -238,16 +238,16 @@ body:             |
     liveins: $s0, $s1, $x0, $x1
     ; CHECK-LABEL: name: 9-ldrspre-ldrsui-mod-base-reg-no-merge
     ; CHECK: liveins: $s0, $s1, $x0, $x1
-    ; CHECK: dead early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load 4)
-    ; CHECK: renamable $x1 = LDRXui renamable $x0, 1 :: (load 8)
-    ; CHECK: renamable $s1 = LDRSui renamable $x1, 1 :: (load 4)
-    ; CHECK: STPSi renamable $s0, renamable $s1, renamable $x1, 0 :: (store 4)
+    ; CHECK: dead early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load (s32))
+    ; CHECK: renamable $x1 = LDRXui renamable $x0, 1 :: (load (s64))
+    ; CHECK: renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
+    ; CHECK: STPSi renamable $s0, renamable $s1, renamable $x1, 0 :: (store (s32))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 12 :: (load 4)
-    renamable $x1 = LDRXui renamable $x0, 1 :: (load 8)
-    renamable $s1 = LDRSui renamable $x1, 1 :: (load 4)
-    STRSui killed renamable $s0, renamable $x1, 0 :: (store 4)
-    STRSui killed renamable $s1, renamable $x1, 1 :: (store 4)
+    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 12 :: (load (s32))
+    renamable $x1 = LDRXui renamable $x0, 1 :: (load (s64))
+    renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
+    STRSui killed renamable $s0, renamable $x1, 0 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...
 
@@ -271,19 +271,19 @@ body:             |
     liveins: $s0, $s1, $x0, $x1
     ; CHECK-LABEL: name: 10-ldrspre-ldrsui-used-base-reg-no-merge
     ; CHECK: liveins: $s0, $s1, $x0, $x1
-    ; CHECK: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load 4)
-    ; CHECK: renamable $x0 = LDRXui renamable $x1, 1 :: (load 8)
-    ; CHECK: STRXui renamable $x0, renamable $x0, 1 :: (store 8)
-    ; CHECK: renamable $s1 = LDRSui renamable $x1, 1 :: (load 4)
-    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store 4)
-    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store 4)
+    ; CHECK: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load (s32))
+    ; CHECK: renamable $x0 = LDRXui renamable $x1, 1 :: (load (s64))
+    ; CHECK: STRXui renamable $x0, renamable $x0, 1 :: (store (s64))
+    ; CHECK: renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
+    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store (s32))
+    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store (s32))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 12 :: (load 4)
-    renamable $x0 = LDRXui renamable $x1, 1 :: (load 8)
-    STRXui killed renamable $x0, renamable $x0, 1 :: (store 8)
-    renamable $s1 = LDRSui renamable $x1, 1 :: (load 4)
-    STRSui killed renamable $s0, renamable $x1, 0 :: (store 4)
-    STRSui killed renamable $s1, renamable $x1, 1 :: (store 4)
+    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 12 :: (load (s32))
+    renamable $x0 = LDRXui renamable $x1, 1 :: (load (s64))
+    STRXui killed renamable $x0, renamable $x0, 1 :: (store (s64))
+    renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
+    STRSui killed renamable $s0, renamable $x1, 0 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...
 
@@ -306,22 +306,22 @@ body:             |
     liveins: $q0, $q1, $x1
     ; CHECK-LABEL: name: 11-ldrqpre-ldrqpre-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 48, implicit $w1 :: (load 16)
-    ; CHECK: early-clobber renamable $x1, dead renamable $q1 = LDRQpre renamable $x1, 1, implicit $w1 :: (load 16)
-    ; CHECK: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 16, implicit $w1 :: (load 16)
-    ; CHECK: early-clobber renamable $x1, dead renamable $q1 = LDRQpre renamable $x1, 12, implicit $w1 :: (load 16)
-    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 16, implicit $w1 :: (load 16)
-    ; CHECK: early-clobber renamable $x1, renamable $q1 = LDRQpre renamable $x1, 16, implicit $w1 :: (load 16)
-    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 48, implicit $w1 :: (load (s128))
+    ; CHECK: early-clobber renamable $x1, dead renamable $q1 = LDRQpre renamable $x1, 1, implicit $w1 :: (load (s128))
+    ; CHECK: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 16, implicit $w1 :: (load (s128))
+    ; CHECK: early-clobber renamable $x1, dead renamable $q1 = LDRQpre renamable $x1, 12, implicit $w1 :: (load (s128))
+    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 16, implicit $w1 :: (load (s128))
+    ; CHECK: early-clobber renamable $x1, renamable $q1 = LDRQpre renamable $x1, 16, implicit $w1 :: (load (s128))
+    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 48 :: (load 16)
-    early-clobber renamable $x1, renamable $q1 = LDRQpre killed renamable $x1, 1  :: (load 16)
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 16 :: (load 16)
-    early-clobber renamable $x1, renamable $q1 = LDRQpre killed renamable $x1, 12  :: (load 16)
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 16 :: (load 16)
-    early-clobber renamable $x1, renamable $q1 = LDRQpre killed renamable $x1, 16  :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRQui killed renamable $q1, renamable $x1, 1 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 48 :: (load (s128))
+    early-clobber renamable $x1, renamable $q1 = LDRQpre killed renamable $x1, 1  :: (load (s128))
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 16 :: (load (s128))
+    early-clobber renamable $x1, renamable $q1 = LDRQpre killed renamable $x1, 12  :: (load (s128))
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 16 :: (load (s128))
+    early-clobber renamable $x1, renamable $q1 = LDRQpre killed renamable $x1, 16  :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
     RET undef $lr
 ...
 
@@ -344,15 +344,15 @@ body:             |
 
     ; CHECK-LABEL: name: 12-ldrspre-ldrsui-no-merge
     ; CHECK: liveins: $s0, $s1, $x1
-    ; CHECK: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load 4)
-    ; CHECK: renamable $s1 = LDRSui renamable $x1, 2 :: (load 4)
-    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store 4)
-    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store 4)
+    ; CHECK: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 12, implicit $w1 :: (load (s32))
+    ; CHECK: renamable $s1 = LDRSui renamable $x1, 2 :: (load (s32))
+    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store (s32))
+    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store (s32))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 12 :: (load 4)
-    renamable $s1 = LDRSui renamable $x1, 2 :: (load 4)
-    STRSui killed renamable $s0, renamable $x1, 0 :: (store 4)
-    STRSui killed renamable $s1, renamable $x1, 1 :: (store 4)
+    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 12 :: (load (s32))
+    renamable $s1 = LDRSui renamable $x1, 2 :: (load (s32))
+    STRSui killed renamable $s0, renamable $x1, 0 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...
 
@@ -375,15 +375,15 @@ body:             |
     liveins: $q0, $d1, $x1
     ; CHECK-LABEL: name: 13-ldrqpre-ldrdui-no-merge
     ; CHECK: liveins: $d1, $q0, $x1
-    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load 16)
-    ; CHECK: renamable $d1 = LDRDui renamable $x1, 1 :: (load 8)
-    ; CHECK: STRQui renamable $q0, renamable $x1, 0 :: (store 16)
-    ; CHECK: STRDui renamable $d1, renamable $x1, 1 :: (store 8)
+    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK: renamable $d1 = LDRDui renamable $x1, 1 :: (load (s64))
+    ; CHECK: STRQui renamable $q0, renamable $x1, 0 :: (store (s128))
+    ; CHECK: STRDui renamable $d1, renamable $x1, 1 :: (store (s64))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load 16)
-    renamable $d1 = LDRDui renamable $x1, 1 :: (load 8)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRDui killed renamable $d1, renamable $x1, 1 :: (store 8)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))
+    renamable $d1 = LDRDui renamable $x1, 1 :: (load (s64))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRDui killed renamable $d1, renamable $x1, 1 :: (store (s64))
     RET undef $lr
 ...
 
@@ -406,11 +406,11 @@ body:             |
     liveins: $q0, $q1, $x1
     ; CHECK-LABEL: name: 14-ldrqpre-strqui-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load 16)
-    ; CHECK: STRQui renamable $q0, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK: STRQui renamable $q0, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
     RET undef $lr
 ...
 
@@ -433,13 +433,13 @@ body:             |
     liveins: $q0, $x1
     ; CHECK-LABEL: name: 15-ldrqpre-ldrqui-same-dst-reg-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load 16)
-    ; CHECK: renamable $q0 = LDRQui renamable $x1, 1 :: (load 16)
-    ; CHECK: STRQui renamable $q0, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber renamable $x1, dead renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK: renamable $q0 = LDRQui renamable $x1, 1 :: (load (s128))
+    ; CHECK: STRQui renamable $q0, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load 16)
-    renamable $q0 = LDRQui renamable $x1, 1 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))
+    renamable $q0 = LDRQui renamable $x1, 1 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
     RET undef $lr
 ...
 
@@ -463,14 +463,14 @@ body:             |
     liveins: $q0, $q1, $x1, $x2
     ; CHECK-LABEL: name: 16-ldrqpre-ldrqui-diff-base-reg-no-merge
     ; CHECK: liveins: $q0, $q1, $x1, $x2
-    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load 16)
-    ; CHECK: renamable $q1 = LDRQui renamable $x2, 1 :: (load 16)
-    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK: renamable $q1 = LDRQui renamable $x2, 1 :: (load (s128))
+    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load 16)
-    renamable $q1 = LDRQui renamable $x2, 1 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRQui killed renamable $q1, renamable $x1, 1 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))
+    renamable $q1 = LDRQui renamable $x2, 1 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
     RET undef $lr
 ...
 
@@ -493,13 +493,13 @@ body:             |
     liveins: $q0, $q1, $x1
     ; CHECK-LABEL: name: 17-ldrqpre-ldurqi-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: early-clobber $x1, renamable $q0, renamable $q1 = LDPQpre renamable $x1, 2 :: (load 16)
-    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber $x1, renamable $q0, renamable $q1 = LDPQpre renamable $x1, 2 :: (load (s128))
+    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load 16)
-    renamable $q1 = LDURQi renamable $x1, 16 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRQui killed renamable $q1, renamable $x1, 1 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))
+    renamable $q1 = LDURQi renamable $x1, 16 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
     RET undef $lr
 ...
 
@@ -522,14 +522,14 @@ body:             |
     liveins: $q0, $q1, $x1
     ; CHECK-LABEL: name: 18-ldrqpre-ldurqi-no-merge
     ; CHECK: liveins: $q0, $q1, $x1
-    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load 16)
-    ; CHECK: renamable $q1 = LDURQi renamable $x1, 1 :: (load 16)
-    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store 16)
+    ; CHECK: early-clobber renamable $x1, renamable $q0 = LDRQpre renamable $x1, 32, implicit $w1 :: (load (s128))
+    ; CHECK: renamable $q1 = LDURQi renamable $x1, 1 :: (load (s128))
+    ; CHECK: STPQi renamable $q0, renamable $q1, renamable $x1, 0 :: (store (s128))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load 16)
-    renamable $q1 = LDURQi renamable $x1, 1 :: (load 16)
-    STRQui killed renamable $q0, renamable $x1, 0 :: (store 16)
-    STRQui killed renamable $q1, renamable $x1, 1 :: (store 16)
+    early-clobber renamable $x1, renamable $q0 = LDRQpre killed renamable $x1, 32 :: (load (s128))
+    renamable $q1 = LDURQi renamable $x1, 1 :: (load (s128))
+    STRQui killed renamable $q0, renamable $x1, 0 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x1, 1 :: (store (s128))
     RET undef $lr
 ...
 
@@ -548,14 +548,14 @@ body:             |
     liveins: $s0, $s1, $x1
     ; CHECK-LABEL: name: 19-ldrspre-ldrsui-max-merge
     ; CHECK: liveins: $s0, $s1, $x1
-    ; CHECK: early-clobber $x1, renamable $s0, renamable $s1 = LDPSpre renamable $x1, 63 :: (load 4)
-    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store 4)
-    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store 4)
+    ; CHECK: early-clobber $x1, renamable $s0, renamable $s1 = LDPSpre renamable $x1, 63 :: (load (s32))
+    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store (s32))
+    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store (s32))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 252 :: (load 4)
-    renamable $s1 = LDRSui renamable $x1, 1 :: (load 4)
-    STRSui killed renamable $s0, renamable $x1, 0 :: (store 4)
-    STRSui killed renamable $s1, renamable $x1, 1 :: (store 4)
+    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 252 :: (load (s32))
+    renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
+    STRSui killed renamable $s0, renamable $x1, 0 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...
 
@@ -574,14 +574,14 @@ body:             |
     liveins: $s0, $s1, $x1
     ; CHECK-LABEL: name: 20-ldrspre-ldrsui-unaligned-no-merge
     ; CHECK: liveins: $s0, $s1, $x1
-    ; CHECK: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 251, implicit $w1 :: (load 4)
-    ; CHECK: renamable $s1 = LDRSui renamable $x1, 1 :: (load 4)
-    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store 4)
-    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store 4)
+    ; CHECK: early-clobber renamable $x1, renamable $s0 = LDRSpre renamable $x1, 251, implicit $w1 :: (load (s32))
+    ; CHECK: renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
+    ; CHECK: STRSui renamable $s0, renamable $x1, 0 :: (store (s32))
+    ; CHECK: STRSui renamable $s1, renamable $x1, 1 :: ("aarch64-suppress-pair" store (s32))
     ; CHECK: RET undef $lr
-    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 251 :: (load 4)
-    renamable $s1 = LDRSui renamable $x1, 1 :: (load 4)
-    STRSui killed renamable $s0, renamable $x1, 0 :: (store 4)
-    STRSui killed renamable $s1, renamable $x1, 1 :: (store 4)
+    early-clobber renamable $x1, renamable $s0 = LDRSpre killed renamable $x1, 251 :: (load (s32))
+    renamable $s1 = LDRSui renamable $x1, 1 :: (load (s32))
+    STRSui killed renamable $s0, renamable $x1, 0 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...

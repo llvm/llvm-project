@@ -72,8 +72,8 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
     Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
     // The pass-through vector for an x86 masked load is a zero vector.
-    CallInst *NewMaskedLoad =
-        IC.Builder.CreateMaskedLoad(PtrCast, Align(1), BoolMask, ZeroVec);
+    CallInst *NewMaskedLoad = IC.Builder.CreateMaskedLoad(
+        II.getType(), PtrCast, Align(1), BoolMask, ZeroVec);
     return IC.replaceInstUsesWith(II, NewMaskedLoad);
   }
 

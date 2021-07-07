@@ -16,7 +16,7 @@ body:             |
     %23:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 killed %21, implicit $mode, implicit $exec
     %108:vgpr_32 = V_LSHRREV_B32_e32 4, killed %23, implicit $exec
     undef %109.sub1:vreg_128 = COPY %108
-    %28:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %29:sgpr_128, 3044, 0 :: (dereferenceable invariant load 4)
+    %28:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %29:sgpr_128, 3044, 0 :: (dereferenceable invariant load (s32))
     S_CMP_EQ_U32 killed %28, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.2, implicit killed $scc
 
@@ -47,7 +47,7 @@ body:             |
     S_BRANCH %bb.6
 
   bb.6:
-    %36:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %37:sgpr_128, 2708, 0 :: (dereferenceable invariant load 4)
+    %36:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %37:sgpr_128, 2708, 0 :: (dereferenceable invariant load (s32))
     %39:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32_e64 0, killed %110.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %40:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %111.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %41:vgpr_32 = nofpexcept V_MUL_F32_e64 0, 0, 0, killed %40, 1, 0, implicit $mode, implicit $exec
@@ -83,7 +83,7 @@ body:             |
     S_BRANCH %bb.8
 
   bb.8:
-    dead %66:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %67:sgpr_128, 2704, 0 :: (dereferenceable invariant load 4)
+    dead %66:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %67:sgpr_128, 2704, 0 :: (dereferenceable invariant load (s32))
     %138:vreg_128 = COPY killed %111
 
   bb.9:

@@ -15,8 +15,8 @@ func @test_fusion_limit(
     -> tensor<?x?xf32> {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %d0 = memref.dim %arg0, %c0 : tensor<?x?xf32>
-  %d1 = memref.dim %arg0, %c1 : tensor<?x?xf32>
+  %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %init = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
   %0 = linalg.generic #binary2Dpointwise
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)

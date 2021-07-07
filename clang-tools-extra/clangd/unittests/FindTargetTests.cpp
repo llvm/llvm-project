@@ -464,7 +464,7 @@ TEST_F(TargetDeclTest, Concept) {
   )cpp";
   EXPECT_DECLS(
       "ConceptSpecializationExpr",
-      {"template <typename T> concept Fooable = requires (T t) { t.foo(); };"});
+      {"template <typename T> concept Fooable = requires (T t) { t.foo(); }"});
 
   // trailing requires clause
   Code = R"cpp(
@@ -475,7 +475,7 @@ TEST_F(TargetDeclTest, Concept) {
       void foo() requires [[Fooable]]<T>;
   )cpp";
   EXPECT_DECLS("ConceptSpecializationExpr",
-               {"template <typename T> concept Fooable = true;"});
+               {"template <typename T> concept Fooable = true"});
 
   // constrained-parameter
   Code = R"cpp(
@@ -486,7 +486,7 @@ TEST_F(TargetDeclTest, Concept) {
     void bar(T t);
   )cpp";
   EXPECT_DECLS("ConceptSpecializationExpr",
-               {"template <typename T> concept Fooable = true;"});
+               {"template <typename T> concept Fooable = true"});
 
   // partial-concept-id
   Code = R"cpp(
@@ -497,7 +497,7 @@ TEST_F(TargetDeclTest, Concept) {
     void bar(T t);
   )cpp";
   EXPECT_DECLS("ConceptSpecializationExpr",
-               {"template <typename T, typename U> concept Fooable = true;"});
+               {"template <typename T, typename U> concept Fooable = true"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {

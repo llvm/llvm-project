@@ -405,7 +405,7 @@ RegisterContextDarwin_i386::RegisterContextDarwin_i386(
   }
 }
 
-RegisterContextDarwin_i386::~RegisterContextDarwin_i386() {}
+RegisterContextDarwin_i386::~RegisterContextDarwin_i386() = default;
 
 void RegisterContextDarwin_i386::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();

@@ -218,10 +218,10 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
     ; CHECK-LABEL: name: mimg_nsa
     ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    ; CHECK: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
-    ; CHECK: $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
-    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load 16)
-    $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load 16)
+    ; CHECK: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; CHECK: $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
 ...
 
 ---
@@ -232,10 +232,10 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
     ; CHECK-LABEL: name: mimg_nsa_mixed
     ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    ; CHECK: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
-    ; CHECK: $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 $vgpr5_vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
-    ; CHECK: $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
-    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load 16)
-    $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 $vgpr5_vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
-    $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load 16)
+    ; CHECK: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; CHECK: $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 $vgpr5_vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
+    ; CHECK: $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 $vgpr5_vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
+    $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
 ...

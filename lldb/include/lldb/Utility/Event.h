@@ -101,7 +101,7 @@ class EventDataReceipt : public EventData {
 public:
   EventDataReceipt() : EventData(), m_predicate(false) {}
 
-  ~EventDataReceipt() override {}
+  ~EventDataReceipt() override = default;
 
   static ConstString GetFlavorString() {
     static ConstString g_flavor("Process::ProcessEventData");

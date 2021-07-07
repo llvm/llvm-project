@@ -53,7 +53,7 @@ RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
     : lldb_private::RegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
-RegisterContextPOSIX_arm64::~RegisterContextPOSIX_arm64() {}
+RegisterContextPOSIX_arm64::~RegisterContextPOSIX_arm64() = default;
 
 void RegisterContextPOSIX_arm64::Invalidate() {}
 

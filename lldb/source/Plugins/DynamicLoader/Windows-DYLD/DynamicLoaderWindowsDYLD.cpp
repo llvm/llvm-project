@@ -28,7 +28,7 @@ LLDB_PLUGIN_DEFINE(DynamicLoaderWindowsDYLD)
 DynamicLoaderWindowsDYLD::DynamicLoaderWindowsDYLD(Process *process)
     : DynamicLoader(process) {}
 
-DynamicLoaderWindowsDYLD::~DynamicLoaderWindowsDYLD() {}
+DynamicLoaderWindowsDYLD::~DynamicLoaderWindowsDYLD() = default;
 
 void DynamicLoaderWindowsDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

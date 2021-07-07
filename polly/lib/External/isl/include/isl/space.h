@@ -34,6 +34,7 @@ isl_bool isl_space_is_params(__isl_keep isl_space *space);
 isl_bool isl_space_is_set(__isl_keep isl_space *space);
 isl_bool isl_space_is_map(__isl_keep isl_space *space);
 
+__isl_overload
 __isl_give isl_space *isl_space_add_param_id(__isl_take isl_space *space,
 	__isl_take isl_id *id);
 
@@ -43,12 +44,28 @@ isl_bool isl_space_has_tuple_name(__isl_keep isl_space *space,
 	enum isl_dim_type type);
 __isl_keep const char *isl_space_get_tuple_name(__isl_keep isl_space *space,
 				 enum isl_dim_type type);
+__isl_overload
+__isl_give isl_space *isl_space_set_domain_tuple_id(
+	__isl_take isl_space *space, __isl_take isl_id *id);
+__isl_overload
+__isl_give isl_space *isl_space_set_range_tuple_id(
+	__isl_take isl_space *space, __isl_take isl_id *id);
 __isl_give isl_space *isl_space_set_tuple_id(__isl_take isl_space *space,
 	enum isl_dim_type type, __isl_take isl_id *id);
 __isl_give isl_space *isl_space_reset_tuple_id(__isl_take isl_space *space,
 	enum isl_dim_type type);
+__isl_export
+isl_bool isl_space_has_domain_tuple_id(__isl_keep isl_space *space);
+__isl_export
+isl_bool isl_space_has_range_tuple_id(__isl_keep isl_space *space);
 isl_bool isl_space_has_tuple_id(__isl_keep isl_space *space,
 	enum isl_dim_type type);
+__isl_export
+__isl_give isl_id *isl_space_get_domain_tuple_id(
+	__isl_keep isl_space *space);
+__isl_export
+__isl_give isl_id *isl_space_get_range_tuple_id(
+	__isl_keep isl_space *space);
 __isl_give isl_id *isl_space_get_tuple_id(__isl_keep isl_space *space,
 	enum isl_dim_type type);
 __isl_give isl_space *isl_space_reset_user(__isl_take isl_space *space);

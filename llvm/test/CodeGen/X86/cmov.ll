@@ -159,8 +159,8 @@ define i32 @test5(i32* nocapture %P) nounwind readonly {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $41, (%rdi)
-; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    cmpl $42, (%rdi)
+; CHECK-NEXT:    setge %al
 ; CHECK-NEXT:    orl $-2, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -202,9 +202,8 @@ define i64 @test8(i64 %0, i64 %1, i64 %2) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    movabsq $-2147483649, %rcx # imm = 0xFFFFFFFF7FFFFFFF
-; CHECK-NEXT:    cmpq %rcx, %rdi
-; CHECK-NEXT:    cmovleq %rdx, %rax
+; CHECK-NEXT:    cmpq $-2147483648, %rdi # imm = 0x80000000
+; CHECK-NEXT:    cmovlq %rdx, %rax
 ; CHECK-NEXT:    retq
   %4 = icmp sgt i64 %0, -2147483649
   %5 = select i1 %4, i64 %1, i64 %2

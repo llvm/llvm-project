@@ -191,50 +191,55 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
 }
 
 // Used by targetDataBegin
-// Return the target pointer begin (where the data will be moved).
+// Return a struct containing target pointer begin (where the data will be
+// moved).
 // Allocate memory if this is the first occurrence of this mapping.
 // Increment the reference counter.
-// If NULL is returned, then either data allocation failed or the user tried
-// to do an illegal mapping.
-void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
-                                 int64_t Size, map_var_info_t HstPtrName,
-                                 bool &IsNew, bool &IsHostPtr, bool IsImplicit,
-                                 bool UpdateRefCount, bool HasCloseModifier,
-                                 bool HasPresentModifier) {
-  void *rc = NULL;
-  IsHostPtr = false;
-  IsNew = false;
+// If the target pointer is NULL, then either data allocation failed or the user
+// tried to do an illegal mapping.
+// The returned struct also returns an iterator to the map table entry
+// corresponding to the host pointer (if exists), and two flags indicating
+// whether the entry is just created, and if the target pointer included is
+// actually a host pointer (when unified memory enabled).
+TargetPointerResultTy
+DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
+                           map_var_info_t HstPtrName, bool IsImplicit,
+                           bool UpdateRefCount, bool HasCloseModifier,
+                           bool HasPresentModifier) {
+  void *TargetPointer = NULL;
+  bool IsNew = false;
+  bool IsHostPtr = false;
   DataMapMtx.lock();
-  LookupResult lr = lookupMapping(HstPtrBegin, Size);
+  LookupResult LR = lookupMapping(HstPtrBegin, Size);
+  auto Entry = LR.Entry;
 
   // Check if the pointer is contained.
   // If a variable is mapped to the device manually by the user - which would
   // lead to the IsContained flag to be true - then we must ensure that the
   // device address is returned even under unified memory conditions.
-  if (lr.Flags.IsContained ||
-      ((lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) && IsImplicit)) {
-    auto &HT = *lr.Entry;
-    IsNew = false;
+  if (LR.Flags.IsContained ||
+      ((LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter) && IsImplicit)) {
+    auto &HT = *LR.Entry;
     if (UpdateRefCount)
       HT.incRefCount();
-    uintptr_t tp = HT.TgtPtrBegin + ((uintptr_t)HstPtrBegin - HT.HstPtrBegin);
+    uintptr_t Ptr = HT.TgtPtrBegin + ((uintptr_t)HstPtrBegin - HT.HstPtrBegin);
     INFO(OMP_INFOTYPE_MAPPING_EXISTS, DeviceID,
          "Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
          ", "
          "Size=%" PRId64 ", RefCount=%s (%s), Name=%s\n",
-         (IsImplicit ? " (implicit)" : ""), DPxPTR(HstPtrBegin), DPxPTR(tp),
+         (IsImplicit ? " (implicit)" : ""), DPxPTR(HstPtrBegin), DPxPTR(Ptr),
          Size, HT.refCountToStr().c_str(),
          UpdateRefCount ? "incremented" : "update suppressed",
          (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
-    rc = (void *)tp;
-  } else if ((lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) && !IsImplicit) {
+    TargetPointer = (void *)Ptr;
+  } else if ((LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter) && !IsImplicit) {
     // Explicit extension of mapped data - not allowed.
     MESSAGE("explicit extension not allowed: host address specified is " DPxMOD
             " (%" PRId64
             " bytes), but device allocation maps to host at " DPxMOD
             " (%" PRId64 " bytes)",
-            DPxPTR(HstPtrBegin), Size, DPxPTR(lr.Entry->HstPtrBegin),
-            lr.Entry->HstPtrEnd - lr.Entry->HstPtrBegin);
+            DPxPTR(HstPtrBegin), Size, DPxPTR(Entry->HstPtrBegin),
+            Entry->HstPtrEnd - Entry->HstPtrBegin);
     if (HasPresentModifier)
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
@@ -252,7 +257,7 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
          "memory\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size);
       IsHostPtr = true;
-      rc = HstPtrBegin;
+      TargetPointer = HstPtrBegin;
     }
   } else if (HasPresentModifier) {
     DP("Mapping required by 'present' map type modifier does not exist for "
@@ -264,24 +269,22 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
   } else if (Size) {
     // If it is not contained and Size > 0, we should create a new entry for it.
     IsNew = true;
-    uintptr_t tp = (uintptr_t)allocData(Size, HstPtrBegin);
-    const HostDataToTargetTy &newEntry =
-        *HostDataToTargetMap
-             .emplace((uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-                      (uintptr_t)HstPtrBegin + Size, tp, HstPtrName)
-             .first;
+    uintptr_t Ptr = (uintptr_t)allocData(Size, HstPtrBegin);
+    Entry = HostDataToTargetMap
+                .emplace((uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                         (uintptr_t)HstPtrBegin + Size, Ptr, HstPtrName)
+                .first;
     INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
          "Creating new map entry with "
          "HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", Size=%ld, "
          "RefCount=%s, Name=%s\n",
-         DPxPTR(HstPtrBegin), DPxPTR(tp), Size,
-         newEntry.refCountToStr().c_str(),
+         DPxPTR(HstPtrBegin), DPxPTR(Ptr), Size, Entry->refCountToStr().c_str(),
          (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
-    rc = (void *)tp;
+    TargetPointer = (void *)Ptr;
   }
 
   DataMapMtx.unlock();
-  return rc;
+  return {{IsNew, IsHostPtr}, Entry, TargetPointer};
 }
 
 // Used by targetDataBegin, targetDataEnd, targetDataUpdate and target.

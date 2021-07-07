@@ -32,9 +32,9 @@ body:             |
 
     ; CHECK:      $r12 = MFCR implicit killed $cr2, implicit killed $cr4
     ; CHECK-NEXT: STW killed $r12, 4, $r1
-    ; CHECK-NEXT: STW killed $r29, -12, $r1 :: (store 4 into %fixed-stack.0)
+    ; CHECK-NEXT: STW killed $r29, -12, $r1 :: (store (s32) into %fixed-stack.0)
 
-    ; CHECK:      $r29 = LWZ -12, $r1 :: (load 4 from %fixed-stack.0)
+    ; CHECK:      $r29 = LWZ -12, $r1 :: (load (s32) from %fixed-stack.0)
     ; CHECK-NEXT: $r12 = LWZ 4, $r1
     ; CHECK-NEXT: $cr2 = MTOCRF $r12
     ; CHECK-NEXT: $cr4 = MTOCRF killed $r12
@@ -69,8 +69,8 @@ body:             |
 
     ; CHECK:      $r12 = MFCR implicit killed $cr3
     ; CHECK-NEXT: STW killed $r12, 4, $r1
-    ; CHECK-NEXT: STW killed $r14, -72, $r1 :: (store 4 into %fixed-stack.0, align 8)
+    ; CHECK-NEXT: STW killed $r14, -72, $r1 :: (store (s32) into %fixed-stack.0, align 8)
 
-    ; CHECK:      $r14 = LWZ -72, $r1 :: (load 4 from %fixed-stack.0, align 8)
+    ; CHECK:      $r14 = LWZ -72, $r1 :: (load (s32) from %fixed-stack.0, align 8)
     ; CHECK-NEXT: $r12 = LWZ 4, $r1
     ; CHECK-NEXT: $cr3 = MTOCRF killed $r12

@@ -16,19 +16,18 @@ service RemoteOffload {
   rpc InitRequires(I64) returns (I32) {}
 
   rpc LoadBinary(Binary) returns (TargetTable) {}
-  rpc Synchronize(SynchronizeDevice) returns (I32) {}
 
   rpc DataAlloc(AllocData) returns (Pointer) {}
   rpc DataDelete(DeleteData) returns (I32) {}
 
-  rpc DataSubmitAsync(stream SubmitDataAsync) returns (I32) {}
-  rpc DataRetrieveAsync(RetrieveDataAsync) returns (stream Data) {}
+  rpc DataSubmit(stream SubmitData) returns (I32) {}
+  rpc DataRetrieve(RetrieveData) returns (stream Data) {}
 
   rpc IsDataExchangeable(DevicePair) returns (I32) {}
-  rpc DataExchangeAsync(ExchangeDataAsync) returns (I32) {}
+  rpc DataExchange(ExchangeData) returns (I32) {}
 
-  rpc RunTargetRegionAsync(TargetRegionAsync) returns (I32) {}
-  rpc RunTargetTeamRegionAsync(TargetTeamRegionAsync) returns (I32) {}
+  rpc RunTargetRegion(TargetRegion) returns (I32) {}
+  rpc RunTargetTeamRegion(TargetTeamRegion) returns (I32) {}
 }
 
 message Null {}
@@ -92,32 +91,25 @@ message TargetBinaryDescription {
   uint64 bin_ptr = 5;
 }
 
-message SynchronizeDevice {
-  uint64 queue_ptr = 1;
-  int32 device_id = 2;
-}
-
 message AllocData {
   uint64 size = 1;
   uint64 hst_ptr = 2;
   int32 device_id = 3;
 }
 
-message SubmitDataAsync {
+message SubmitData {
   bytes data = 1;
   uint64 hst_ptr = 2;
   uint64 tgt_ptr = 3;
-  uint64 queue_ptr = 4;
   uint64 start = 5;
   uint64 size = 6;
   int32 device_id = 7;
 }
 
-message RetrieveDataAsync {
+message RetrieveData {
   uint64 hst_ptr = 1;
   uint64 tgt_ptr = 2;
   uint64 size = 3;
-  uint64 queue_ptr = 4;
   int32 device_id = 5;
 }
 
@@ -128,12 +120,11 @@ message Data {
   int32 ret = 4;
 }
 
-message ExchangeDataAsync {
+message ExchangeData {
   uint64 src_dev_id = 1;
   uint64 src_ptr = 2;
   uint64 dst_dev_id = 3;
   uint64 dst_ptr = 4;
-  uint64 queue_ptr = 5;
   uint64 size = 6;
 }
 
@@ -142,23 +133,21 @@ message DeleteData {
   int32 device_id = 2;
 }
 
-message TargetRegionAsync {
+message TargetRegion {
   repeated uint64 tgt_args = 1;
   repeated int64 tgt_offsets = 2;
   uint64 tgt_entry_ptr = 3;
-  uint64 queue_ptr = 4;
-  int32 device_id = 5;
-  int32 arg_num = 6;
+  int32 device_id = 4;
+  int32 arg_num = 5;
 }
 
-message TargetTeamRegionAsync {
+message TargetTeamRegion {
   repeated uint64 tgt_args = 1;
   repeated int64 tgt_offsets = 2;
   uint64 tgt_entry_ptr = 3;
   uint64 loop_tripcount = 4;
-  uint64 queue_ptr = 5;
-  int32 device_id = 6;
-  int32 arg_num = 7;
-  int32 team_num = 8;
-  int32 thread_limit = 9;
+  int32 device_id = 5;
+  int32 arg_num = 6;
+  int32 team_num = 7;
+  int32 thread_limit = 8;
 }

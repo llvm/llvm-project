@@ -106,7 +106,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
   }
 }
 
-ValueObjectMemory::~ValueObjectMemory() {}
+ValueObjectMemory::~ValueObjectMemory() = default;
 
 CompilerType ValueObjectMemory::GetCompilerTypeImpl() {
   if (m_type_sp)

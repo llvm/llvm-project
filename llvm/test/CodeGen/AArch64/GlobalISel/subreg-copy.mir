@@ -12,7 +12,7 @@ body: |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load 16)
+  ; CHECK:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (s128))
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[LDRQui]].ssub
   ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
   ; CHECK:   TBNZW [[COPY2]], 0, %bb.1
@@ -23,7 +23,7 @@ body: |
     %1:gpr(p0) = COPY $x0
     %3:gpr(s64) = G_CONSTANT i64 1
     %5:gpr(s64) = G_CONSTANT i64 0
-    %0:fpr(s128) = G_LOAD %1:gpr(p0) :: (load 16)
+    %0:fpr(s128) = G_LOAD %1:gpr(p0) :: (load (s128))
     %2:fpr(s64) = G_TRUNC %0:fpr(s128)
     %8:gpr(s64) = COPY %2:fpr(s64)
     %4:gpr(s64) = G_AND %8:gpr, %3:gpr
@@ -46,7 +46,7 @@ body: |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load 16)
+  ; CHECK:   [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (s128))
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr64all = COPY [[LDRQui]].dsub
   ; CHECK:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
   ; CHECK:   TBNZX [[COPY2]], 33, %bb.1
@@ -57,7 +57,7 @@ body: |
     %1:gpr(p0) = COPY $x0
     %3:gpr(s64) = G_CONSTANT i64 8589934592
     %5:gpr(s64) = G_CONSTANT i64 0
-    %0:fpr(s128) = G_LOAD %1:gpr(p0) :: (load 16)
+    %0:fpr(s128) = G_LOAD %1:gpr(p0) :: (load (s128))
     %2:fpr(s64) = G_TRUNC %0:fpr(s128)
     %8:gpr(s64) = COPY %2:fpr(s64)
     %4:gpr(s64) = G_AND %8:gpr, %3:gpr

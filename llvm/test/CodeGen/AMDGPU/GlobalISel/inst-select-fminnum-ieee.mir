@@ -24,9 +24,9 @@ body: |
     ; GFX7: %7:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %8:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %9:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ; GFX7: %10:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %11:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %12:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
@@ -49,9 +49,9 @@ body: |
     ; minnum_ieee vv
     %6:vgpr(s32) = G_FMINNUM_IEEE %1, %2
 
-    G_STORE %4, %3 :: (store 4, addrspace 1)
-    G_STORE %5, %3 :: (store 4, addrspace 1)
-    G_STORE %6, %3 :: (store 4, addrspace 1)
+    G_STORE %4, %3 :: (store (s32), addrspace 1)
+    G_STORE %5, %3 :: (store (s32), addrspace 1)
+    G_STORE %6, %3 :: (store (s32), addrspace 1)
 
     ; 64-bit
 
@@ -92,9 +92,9 @@ body: |
     ; GFX7: %7:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %8:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %9:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ; GFX7: %10:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %11:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %12:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
@@ -117,9 +117,9 @@ body: |
     ; minnum_ieee vv
     %6:vgpr(s32) = G_FMINNUM_IEEE %1, %2
 
-    G_STORE %4, %3 :: (store 4, addrspace 1)
-    G_STORE %5, %3 :: (store 4, addrspace 1)
-    G_STORE %6, %3 :: (store 4, addrspace 1)
+    G_STORE %4, %3 :: (store (s32), addrspace 1)
+    G_STORE %5, %3 :: (store (s32), addrspace 1)
+    G_STORE %6, %3 :: (store (s32), addrspace 1)
 
     ; 64-bit
 

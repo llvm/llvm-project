@@ -95,7 +95,7 @@ static void registerJITLoaderGDBImpl(JITTargetAddress Addr, uint64_t Size) {
 extern "C" orc::shared::detail::CWrapperFunctionResult
 llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  return WrapperFunction<void(SPSTargetAddress, uint64_t)>::handle(
+  return WrapperFunction<void(SPSExecutorAddress, uint64_t)>::handle(
              Data, Size, registerJITLoaderGDBImpl)
       .release();
 }

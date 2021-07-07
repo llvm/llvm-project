@@ -342,7 +342,7 @@ body:             |
   ; CHECK: bb.1..backedge:
   ; CHECK:   successors: %bb.9(0x09249249), %bb.2(0x76db6db7)
   ; CHECK:   [[PHI:%[0-9]+]]:gpr64sp = PHI [[COPY7]], %bb.0, %7, %bb.9
-  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[PHI]], 0 :: (load 1 from %ir.lsr.iv)
+  ; CHECK:   [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[PHI]], 0 :: (load (s8) from %ir.lsr.iv)
   ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, killed [[LDRBBui]], %subreg.sub_32
   ; CHECK:   [[COPY8:%[0-9]+]]:gpr32sp = COPY [[SUBREG_TO_REG]].sub_32
   ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri killed [[COPY8]], 50, 0, implicit-def $nzcv
@@ -421,7 +421,7 @@ body:             |
     successors: %bb.8(0x09249249), %bb.9(0x76db6db7)
 
     %6:gpr64sp = PHI %5, %bb.0, %7, %bb.8
-    %17:gpr32 = LDRBBui %6, 0 :: (load 1 from %ir.lsr.iv)
+    %17:gpr32 = LDRBBui %6, 0 :: (load (s8) from %ir.lsr.iv)
     %16:gpr64 = SUBREG_TO_REG 0, killed %17, %subreg.sub_32
     %18:gpr32sp = COPY %16.sub_32
     %19:gpr32 = SUBSWri killed %18, 50, 0, implicit-def $nzcv
@@ -557,7 +557,7 @@ body:             |
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load 4 from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK:   $w0 = COPY [[COPY]]
   ; CHECK:   BL @use, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
@@ -590,7 +590,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %8:gpr64common = ADRP target-flags(aarch64-page) @A
-    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load 4 from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $w0 = COPY %6
     BL @use, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
@@ -678,7 +678,7 @@ body:             |
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load 4 from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK:   $w0 = COPY [[LDRWui]]
   ; CHECK:   BL @use, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
@@ -711,7 +711,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %8:gpr64common = ADRP target-flags(aarch64-page) @A
-    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load 4 from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     $w0 = COPY %9
     BL @use, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
@@ -806,7 +806,7 @@ body:             |
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load 4 from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr32all = COPY [[LDRWui]]
   ; CHECK:   B %bb.3
   ; CHECK: bb.2.for.cond.cleanup:
@@ -844,7 +844,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %11:gpr64common = ADRP target-flags(aarch64-page) @A
-    %12:gpr32 = LDRWui killed %11, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load 4 from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %12:gpr32 = LDRWui killed %11, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
     %0:gpr32all = COPY %12
     B %bb.3
 
@@ -932,7 +932,7 @@ body:             |
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load 4 from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
   ; CHECK:   B %bb.3
   ; CHECK: bb.2.for.cond.cleanup:
   ; CHECK:   [[PHI:%[0-9]+]]:gpr32all = PHI [[COPY]], %bb.0, %4, %bb.3
@@ -961,7 +961,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %8:gpr64common = ADRP target-flags(aarch64-page) @A
-    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load 4 from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
     B %bb.3
 
   bb.2.for.cond.cleanup:
@@ -1053,13 +1053,13 @@ body:             |
   ; CHECK:   B %bb.1
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY2]], 0 :: (load 4 from %ir.read, !tbaa !0)
+  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY2]], 0 :: (load (s32) from %ir.read, !tbaa !0)
   ; CHECK:   [[ADDWri:%[0-9]+]]:gpr32sp = ADDWri [[LDRWui]], 42, 0
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr32all = COPY [[ADDWri]]
   ; CHECK:   B %bb.3
   ; CHECK: bb.2.for.cond.cleanup:
   ; CHECK:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY]], %bb.0, %6, %bb.3
-  ; CHECK:   STRWui [[PHI]], [[COPY1]], 0 :: (store 4 into %ir.write, !tbaa !0)
+  ; CHECK:   STRWui [[PHI]], [[COPY1]], 0 :: (store (s32) into %ir.write, !tbaa !0)
   ; CHECK:   RET_ReallyLR
   ; CHECK: bb.3.for.body:
   ; CHECK:   successors: %bb.2(0x04000000), %bb.3(0x7c000000)
@@ -1081,7 +1081,7 @@ body:             |
     %11:gpr32common = COPY $w2
     %10:gpr64common = COPY $x1
     %9:gpr64common = COPY $x0
-    %12:gpr32common = LDRWui %9, 0 :: (load 4 from %ir.read, !tbaa !6)
+    %12:gpr32common = LDRWui %9, 0 :: (load (s32) from %ir.read, !tbaa !6)
     %13:gpr32 = SUBSWri %11, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
@@ -1095,7 +1095,7 @@ body:             |
 
   bb.2.for.cond.cleanup:
     %2:gpr32 = PHI %11, %bb.0, %6, %bb.3
-    STRWui %2, %10, 0 :: (store 4 into %ir.write, !tbaa !6)
+    STRWui %2, %10, 0 :: (store (s32) into %ir.write, !tbaa !6)
     RET_ReallyLR
 
   bb.3.for.body:
@@ -1189,15 +1189,15 @@ body:             |
   ; CHECK:   B %bb.1
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY3]], 0 :: (load 4 from %ir.read, !tbaa !0)
+  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY3]], 0 :: (load (s32) from %ir.read, !tbaa !0)
   ; CHECK:   [[ADDWri:%[0-9]+]]:gpr32sp = ADDWri [[LDRWui]], 42, 0
   ; CHECK:   [[COPY4:%[0-9]+]]:gpr32all = COPY [[ADDWri]]
   ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 43
-  ; CHECK:   STRWui killed [[MOVi32imm]], [[COPY1]], 0 :: (store 4 into %ir.store, !tbaa !0)
+  ; CHECK:   STRWui killed [[MOVi32imm]], [[COPY1]], 0 :: (store (s32) into %ir.store, !tbaa !0)
   ; CHECK:   B %bb.3
   ; CHECK: bb.2.for.cond.cleanup:
   ; CHECK:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY]], %bb.0, %6, %bb.3
-  ; CHECK:   STRWui [[PHI]], [[COPY2]], 0 :: (store 4 into %ir.write, !tbaa !0)
+  ; CHECK:   STRWui [[PHI]], [[COPY2]], 0 :: (store (s32) into %ir.write, !tbaa !0)
   ; CHECK:   RET_ReallyLR
   ; CHECK: bb.3.for.body:
   ; CHECK:   successors: %bb.2(0x04000000), %bb.3(0x7c000000)
@@ -1220,7 +1220,7 @@ body:             |
     %11:gpr64common = COPY $x2
     %10:gpr64common = COPY $x1
     %9:gpr64common = COPY $x0
-    %13:gpr32common = LDRWui %9, 0 :: (load 4 from %ir.read, !tbaa !6)
+    %13:gpr32common = LDRWui %9, 0 :: (load (s32) from %ir.read, !tbaa !6)
     %15:gpr32 = SUBSWri %12, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
@@ -1231,12 +1231,12 @@ body:             |
     %16:gpr32sp = ADDWri %13, 42, 0
     %1:gpr32all = COPY %16
     %14:gpr32 = MOVi32imm 43
-    STRWui killed %14, %11, 0 :: (store 4 into %ir.store, !tbaa !6)
+    STRWui killed %14, %11, 0 :: (store (s32) into %ir.store, !tbaa !6)
     B %bb.3
 
   bb.2.for.cond.cleanup:
     %2:gpr32 = PHI %12, %bb.0, %6, %bb.3
-    STRWui %2, %10, 0 :: (store 4 into %ir.write, !tbaa !6)
+    STRWui %2, %10, 0 :: (store (s32) into %ir.write, !tbaa !6)
     RET_ReallyLR
 
   bb.3.for.body:
@@ -1330,15 +1330,15 @@ body:             |
   ; CHECK:   B %bb.1
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY3]], 0 :: (load 4 from %ir.read, !tbaa !0)
+  ; CHECK:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY3]], 0 :: (load (s32) from %ir.read, !tbaa !0)
   ; CHECK:   [[ADDWri:%[0-9]+]]:gpr32sp = ADDWri [[LDRWui]], 42, 0
   ; CHECK:   [[COPY4:%[0-9]+]]:gpr32all = COPY [[ADDWri]]
   ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 43
-  ; CHECK:   STRWui killed [[MOVi32imm]], [[COPY3]], 0 :: (store 4 into %ir.read, !tbaa !0)
+  ; CHECK:   STRWui killed [[MOVi32imm]], [[COPY3]], 0 :: (store (s32) into %ir.read, !tbaa !0)
   ; CHECK:   B %bb.3
   ; CHECK: bb.2.for.cond.cleanup:
   ; CHECK:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY]], %bb.0, %6, %bb.3
-  ; CHECK:   STRWui [[PHI]], [[COPY2]], 0 :: (store 4 into %ir.write, !tbaa !0)
+  ; CHECK:   STRWui [[PHI]], [[COPY2]], 0 :: (store (s32) into %ir.write, !tbaa !0)
   ; CHECK:   RET_ReallyLR
   ; CHECK: bb.3.for.body:
   ; CHECK:   successors: %bb.2(0x04000000), %bb.3(0x7c000000)
@@ -1361,7 +1361,7 @@ body:             |
     %11:gpr64common = COPY $x2
     %10:gpr64common = COPY $x1
     %9:gpr64common = COPY $x0
-    %13:gpr32common = LDRWui %9, 0 :: (load 4 from %ir.read, !tbaa !6)
+    %13:gpr32common = LDRWui %9, 0 :: (load (s32) from %ir.read, !tbaa !6)
     %15:gpr32 = SUBSWri %12, 1, 0, implicit-def $nzcv
     Bcc 11, %bb.2, implicit $nzcv
     B %bb.1
@@ -1372,12 +1372,12 @@ body:             |
     %16:gpr32sp = ADDWri %13, 42, 0
     %1:gpr32all = COPY %16
     %14:gpr32 = MOVi32imm 43
-    STRWui killed %14, %9, 0 :: (store 4 into %ir.read, !tbaa !6)
+    STRWui killed %14, %9, 0 :: (store (s32) into %ir.read, !tbaa !6)
     B %bb.3
 
   bb.2.for.cond.cleanup:
     %2:gpr32 = PHI %12, %bb.0, %6, %bb.3
-    STRWui %2, %10, 0 :: (store 4 into %ir.write, !tbaa !6)
+    STRWui %2, %10, 0 :: (store (s32) into %ir.write, !tbaa !6)
     RET_ReallyLR
 
   bb.3.for.body:

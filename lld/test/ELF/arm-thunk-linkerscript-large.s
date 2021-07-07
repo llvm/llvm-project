@@ -55,8 +55,8 @@ _start:
 // CHECK1: Disassembly of section .text:
 // CHECK1-EMPTY:
 // CHECK1-NEXT: <_start>:
-// CHECK1-NEXT:   100000:       ff f0 fe ff     bl      #1048572
-// CHECK1-NEXT:   100004:       00 f0 00 f8     bl      #0
+// CHECK1-NEXT:   100000:       ff f0 fe ff     bl      0x200000 <tfuncl00>
+// CHECK1-NEXT:   100004:       00 f0 00 f8     bl      0x100008 <__Thumbv7ABSLongThunk_tfunch31>
 // CHECK1: <__Thumbv7ABSLongThunk_tfunch31>:
 // CHECK1-NEXT:   100008:       40 f2 01 0c     movw    r12, #1
 // CHECK1-NEXT:   10000c:       c0 f2 10 4c     movt    r12, #1040
@@ -70,8 +70,8 @@ _start:
 // CHECK2-EMPTY:
 // CHECK2-NEXT: <tfuncl00>:
 // CHECK2-NEXT:   200000:	70 47 	bx	lr
-// CHECK2-NEXT:   200002:	ff f0 ff df 	bl	#9437182
-// CHECK2-NEXT:   200006:	ff f6 ff ff 	bl	#-1048578
+// CHECK2-NEXT:   200002:	ff f0 ff df 	bl	0xb00004 <__Thumbv7ABSLongThunk_tfuncl24>
+// CHECK2-NEXT:   200006:	ff f6 ff ff 	bl	0x100008 <__Thumbv7ABSLongThunk_tfunch31>
  FUNCTIONL 01
  FUNCTIONL 02
  FUNCTIONL 03
@@ -82,7 +82,7 @@ _start:
  FUNCTIONL 08
  FUNCTIONL 09
 // CHECK3: <__Thumbv7ABSLongThunk_tfuncl24>:
-// CHECK3-NEXT:   b00004:      ff f2 fc 97     b.w     #15728632 <tfuncl24>
+// CHECK3-NEXT:   b00004:      ff f2 fc 97     b.w     0x1a00000 <tfuncl24>
  FUNCTIONL 10
  FUNCTIONL 11
  FUNCTIONL 12
@@ -110,9 +110,9 @@ _start:
  bl tfuncl24
  // Shouldn't need a thunk
  bl tfunch00
-// CHECK4:  2100002:    00 f0 05 f8     bl      #10
-// CHECK4-NEXT:  2100006:       ff f4 fb f7     bl      #-7340042
-// CHECK4-NEXT:  210000a:       ff f0 f9 ff     bl      #1048562
+// CHECK4:       2100002:       00 f0 05 f8     bl      0x2100010 <__Thumbv7ABSLongThunk_tfuncl00>
+// CHECK4-NEXT:  2100006:       ff f4 fb f7     bl      0x1a00000 <tfuncl24>
+// CHECK4-NEXT:  210000a:       ff f0 f9 ff     bl      0x2200000 <tfunch00>
 // CHECK4: <__Thumbv7ABSLongThunk_tfuncl00>:
 // CHECK4-NEXT:  2100010:       40 f2 01 0c     movw    r12, #1
 // CHECK4-NEXT:  2100014:       c0 f2 20 0c     movt    r12, #32
@@ -127,9 +127,9 @@ _start:
 // CHECK5-EMPTY:
 // CHECK5-NEXT: <tfunch00>:
 // CHECK5-NEXT:  2200000:       70 47   bx      lr
-// CHECK5-NEXT:  2200002:       00 f7 05 f8     bl      #-1048566
-// CHECK5-NEXT:  2200006:       ff f7 fb df     bl      #-8388618
-// CHECK5-NEXT:  220000a:       ff f6 f9 ff     bl      #-1048590
+// CHECK5-NEXT:  2200002:       00 f7 05 f8     bl      0x2100010 <__Thumbv7ABSLongThunk_tfuncl00>
+// CHECK5-NEXT:  2200006:       ff f7 fb df     bl      0x1a00000 <tfuncl24>
+// CHECK5-NEXT:  220000a:       ff f6 f9 ff     bl      0x2100000 <tfuncl31>
  FUNCTIONH 01
  FUNCTIONH 02
  FUNCTIONH 03
@@ -166,8 +166,8 @@ _start:
  bl tfunch00
 // CHECK6: <tfunch31>:
 // CHECK6-NEXT:  4100000:       70 47   bx      lr
-// CHECK6-NEXT:  4100002:       00 f0 03 f8     bl      #6
-// CHECK6-NEXT:  4100006:       00 f0 06 f8     bl      #12
+// CHECK6-NEXT:  4100002:       00 f0 03 f8     bl      0x410000c <__Thumbv7ABSLongThunk_tfuncl00>
+// CHECK6-NEXT:  4100006:       00 f0 06 f8     bl      0x4100016 <__Thumbv7ABSLongThunk_tfunch00>
 // CHECK6: <__Thumbv7ABSLongThunk_tfuncl00>:
 // CHECK6-NEXT:  410000c:       40 f2 01 0c     movw    r12, #1
 // CHECK6-NEXT:  4100010:       c0 f2 20 0c     movt    r12, #32

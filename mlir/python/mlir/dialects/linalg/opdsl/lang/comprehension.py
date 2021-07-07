@@ -32,13 +32,13 @@ class TensorExpression:
     """Visits all tensor expression reachable by the expression."""
     callback(self)
 
-  def _get_all_dim_defs(self) -> Set[DimDef]:
-    """Recursively gets all DimDef affine expressions that are referenced."""
+  def collect_dim_uses(self, uses: Set["DimDef"]):
+    """Collects all DimDefs reachable through this expression."""
     results = set()
 
     def visit_dim_def(dim_def):
       if isinstance(dim_def, DimDef):
-        results.add(dim_def)
+        uses.add(dim_def)
 
     def visit_affine_exprs(expr):
       if isinstance(expr, TensorUse):
@@ -49,7 +49,6 @@ class TensorExpression:
           ind.visit_affine_exprs(visit_dim_def)
 
     self.visit_tensor_exprs(visit_affine_exprs)
-    return results
 
   def collect_tensor_uses(self, uses: Set["TensorUse"]):
     """Collects all TensorUses reachable through this expression."""
@@ -126,8 +125,10 @@ class TensorUse(TensorExpression):
     reduced into. Any indices referenced on the rhs and not in self are
     considered reduction dims and will be ordered as encountered on the rhs.
     """
-    rhs_dims = rhs._get_all_dim_defs()
-    lhs_dims = self._get_all_dim_defs()
+    rhs_dims = set()
+    lhs_dims = set()
+    rhs.collect_dim_uses(rhs_dims)
+    self.collect_dim_uses(lhs_dims)
     return rhs_dims - lhs_dims
 
   def __repr__(self):
@@ -202,7 +203,7 @@ class TensorDef:
                        f"number of index_dims {len(index_dims)}")
     if index_dims and any(not isinstance(dim, DimDef) for dim in index_dims):
       raise ValueError(f"TensorDef requires index dims of type DimDef but "
-                       f"got {type(index_dims)}")
+                       f"got {index_dims}")
     kind = OperandKind.OutputTensor if output else OperandKind.InputTensor
     self.operand_def = OperandDef(
         kind, type_var, size_exprs=shape, index_dims=index_dims)
@@ -273,7 +274,7 @@ class AttributeDef:
   def __init__(self, *sizes: SymbolDef):
     if any(not isinstance(size, SymbolDef) for size in sizes):
       raise ValueError(f"AttributeDef requires sizes of type SymbolDef but got "
-                       f"{type(sizes)}")
+                       f"{sizes}")
     self.operand_def = OperandDef(OperandKind.Attribute, I64, size_exprs=sizes)
 
 
@@ -338,6 +339,7 @@ class PrimFn:
   log = PrimFnType("log")
   mul = PrimFnType("mul")
   max = PrimFnType("max")
+  min = PrimFnType("min")
   sub = PrimFnType("sub")
 
 
@@ -363,6 +365,7 @@ class ReduceFn:
   add = PrimFn.add.reduce
   mul = PrimFn.mul.reduce
   max = PrimFn.max.reduce
+  min = PrimFn.min.reduce
 
 
 class PrimApply(TensorExpression):
@@ -516,6 +519,7 @@ class LinalgOpDef:
     self.metadata = OpMetadataDef(
         name=name, cpp_class_name=cpp_class_name, doc=doc)
     self.registered_operands = dict()  # type: Dict[str, OperandDef]
+    self.domain = list()  # type: List[DimDef]
     self.comprehensions = list()  # type: List[Comprehension]
     self._affine_state = AffineBuildState()
 

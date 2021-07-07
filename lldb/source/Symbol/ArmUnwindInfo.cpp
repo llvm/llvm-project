@@ -68,7 +68,7 @@ ArmUnwindInfo::ArmUnwindInfo(ObjectFile &objfile, SectionSP &arm_exidx,
   llvm::sort(m_exidx_entries.begin(), m_exidx_entries.end());
 }
 
-ArmUnwindInfo::~ArmUnwindInfo() {}
+ArmUnwindInfo::~ArmUnwindInfo() = default;
 
 // Read a byte from the unwind instruction stream with the given offset. Custom
 // function is required because have to red in order of significance within

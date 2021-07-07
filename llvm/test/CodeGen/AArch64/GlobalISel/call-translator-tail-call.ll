@@ -66,7 +66,7 @@ define void @test_outgoing_stack_args([8 x <2 x double>], <4 x half> %arg) {
   ; DARWIN:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
   ; DARWIN:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
   ; DARWIN:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; DARWIN:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 16)
+  ; DARWIN:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s16>) from %fixed-stack.0, align 16)
   ; DARWIN:   $d0 = COPY [[LOAD]](<4 x s16>)
   ; DARWIN:   TCRETURNdi @outgoing_stack_args_fn, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $d0
   ; WINDOWS-LABEL: name: test_outgoing_stack_args
@@ -81,7 +81,7 @@ define void @test_outgoing_stack_args([8 x <2 x double>], <4 x half> %arg) {
   ; WINDOWS:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
   ; WINDOWS:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
   ; WINDOWS:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; WINDOWS:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 16)
+  ; WINDOWS:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s16>) from %fixed-stack.0, align 16)
   ; WINDOWS:   $d0 = COPY [[LOAD]](<4 x s16>)
   ; WINDOWS:   TCRETURNdi @outgoing_stack_args_fn, 0, csr_aarch64_aapcs, implicit $sp, implicit $d0
   tail call void @outgoing_stack_args_fn(<4 x half> %arg)
@@ -109,10 +109,10 @@ define i32 @test_too_big_stack() {
   ; DARWIN:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; DARWIN:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; DARWIN:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-  ; DARWIN:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store 1 into stack)
+  ; DARWIN:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
   ; DARWIN:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
   ; DARWIN:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-  ; DARWIN:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store 2 into stack + 2, align 1)
+  ; DARWIN:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 2, align 1)
   ; DARWIN:   BL @too_big_stack, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
   ; DARWIN:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
   ; DARWIN:   ADJCALLSTACKUP 4, 0, implicit-def $sp, implicit $sp
@@ -135,10 +135,10 @@ define i32 @test_too_big_stack() {
   ; WINDOWS:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; WINDOWS:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; WINDOWS:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
-  ; WINDOWS:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store 1 into stack)
+  ; WINDOWS:   G_STORE [[C]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
   ; WINDOWS:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; WINDOWS:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s64)
-  ; WINDOWS:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store 2 into stack + 8, align 1)
+  ; WINDOWS:   G_STORE [[C1]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 8, align 1)
   ; WINDOWS:   BL @too_big_stack, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
   ; WINDOWS:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w0
   ; WINDOWS:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -206,7 +206,7 @@ define void @test_varargs_2() {
   ; DARWIN:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; DARWIN:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; DARWIN:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s64)
-  ; DARWIN:   G_STORE [[C3]](s64), [[PTR_ADD]](p0) :: (store 8 into stack, align 1)
+  ; DARWIN:   G_STORE [[C3]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 1)
   ; DARWIN:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN:   RET_ReallyLR
@@ -242,7 +242,7 @@ define void @test_varargs_3([8 x <2 x double>], <4 x half> %arg) {
   ; DARWIN:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
   ; DARWIN:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
   ; DARWIN:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; DARWIN:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 16)
+  ; DARWIN:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s16>) from %fixed-stack.0, align 16)
   ; DARWIN:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; DARWIN:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
   ; DARWIN:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
@@ -254,7 +254,7 @@ define void @test_varargs_3([8 x <2 x double>], <4 x half> %arg) {
   ; DARWIN:   [[COPY8:%[0-9]+]]:_(p0) = COPY $sp
   ; DARWIN:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; DARWIN:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY8]], [[C4]](s64)
-  ; DARWIN:   G_STORE [[C3]](s64), [[PTR_ADD]](p0) :: (store 8 into stack, align 1)
+  ; DARWIN:   G_STORE [[C3]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 1)
   ; DARWIN:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN:   RET_ReallyLR
@@ -270,7 +270,7 @@ define void @test_varargs_3([8 x <2 x double>], <4 x half> %arg) {
   ; WINDOWS:   [[COPY6:%[0-9]+]]:_(<2 x s64>) = COPY $q6
   ; WINDOWS:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY $q7
   ; WINDOWS:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; WINDOWS:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 8 from %fixed-stack.0, align 16)
+  ; WINDOWS:   [[LOAD:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (<4 x s16>) from %fixed-stack.0, align 16)
   ; WINDOWS:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; WINDOWS:   [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.000000e+00
   ; WINDOWS:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 12

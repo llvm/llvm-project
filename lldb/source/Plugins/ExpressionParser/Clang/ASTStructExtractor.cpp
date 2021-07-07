@@ -38,7 +38,7 @@ ASTStructExtractor::ASTStructExtractor(ASTConsumer *passthrough,
   m_passthrough_sema = dyn_cast<SemaConsumer>(passthrough);
 }
 
-ASTStructExtractor::~ASTStructExtractor() {}
+ASTStructExtractor::~ASTStructExtractor() = default;
 
 void ASTStructExtractor::Initialize(ASTContext &Context) {
   m_ast_context = &Context;

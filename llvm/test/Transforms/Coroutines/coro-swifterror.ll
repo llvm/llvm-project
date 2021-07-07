@@ -4,7 +4,7 @@ target datalayout = "E-p:32:32"
 
 define i8* @f(i8* %buffer, i32 %n, i8** swifterror %errorslot) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32*
 ; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_VAL_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    tail call void @print(i32 [[N]])
@@ -44,7 +44,7 @@ cleanup:
 
 define i8* @g(i8* %buffer, i32 %n) {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca swifterror i8*, align 4
 ; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32*
 ; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_VAL_SPILL_ADDR]], align 4

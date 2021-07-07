@@ -3577,7 +3577,10 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     } else {
       PrintOffset(OS, FieldOffset, IndentLevel);
     }
-    OS << Field.getType().getAsString() << ' ' << Field << '\n';
+    const QualType &FieldType = C.getLangOpts().DumpRecordLayoutsCanonical
+                                    ? Field.getType().getCanonicalType()
+                                    : Field.getType();
+    OS << FieldType.getAsString() << ' ' << Field << '\n';
   }
 
   // Dump virtual bases.

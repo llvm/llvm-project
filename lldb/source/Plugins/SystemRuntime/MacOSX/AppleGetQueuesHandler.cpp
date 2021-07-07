@@ -99,7 +99,7 @@ AppleGetQueuesHandler::AppleGetQueuesHandler(Process *process)
       m_get_queues_return_buffer_addr(LLDB_INVALID_ADDRESS),
       m_get_queues_retbuffer_mutex() {}
 
-AppleGetQueuesHandler::~AppleGetQueuesHandler() {}
+AppleGetQueuesHandler::~AppleGetQueuesHandler() = default;
 
 void AppleGetQueuesHandler::Detach() {
 

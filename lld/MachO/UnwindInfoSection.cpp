@@ -103,9 +103,11 @@ struct SecondLevelPage {
   EncodingMap localEncodingIndexes;
 };
 
-template <class Ptr> class UnwindInfoSectionImpl : public UnwindInfoSection {
+template <class Ptr>
+class UnwindInfoSectionImpl final : public UnwindInfoSection {
 public:
   void prepareRelocations(ConcatInputSection *) override;
+  void addInput(ConcatInputSection *) override;
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
 
@@ -126,6 +128,25 @@ private:
   uint64_t level2PagesOffset = 0;
 };
 
+UnwindInfoSection::UnwindInfoSection()
+    : SyntheticSection(segment_names::text, section_names::unwindInfo) {
+  align = 4;
+  compactUnwindSection =
+      make<ConcatOutputSection>(section_names::compactUnwind);
+}
+
+void UnwindInfoSection::prepareRelocations() {
+  for (ConcatInputSection *isec : compactUnwindSection->inputs)
+    prepareRelocations(isec);
+}
+
+template <class Ptr>
+void UnwindInfoSectionImpl<Ptr>::addInput(ConcatInputSection *isec) {
+  assert(isec->getSegName() == segment_names::ld &&
+         isec->getName() == section_names::compactUnwind);
+  compactUnwindSection->addInput(isec);
+}
+
 // Compact unwind relocations have different semantics, so we handle them in a
 // separate code path from regular relocations. First, we do not wish to add
 // rebase opcodes for __LD,__compact_unwind, because that section doesn't
@@ -133,8 +154,6 @@ private:
 // reside in the GOT and must be treated specially.
 template <class Ptr>
 void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
-  assert(isec->segname == segment_names::ld &&
-         isec->name == section_names::compactUnwind);
   assert(!isec->shouldOmitFromOutput() &&
          "__compact_unwind section should not be omitted");
 
@@ -149,13 +168,6 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
         offsetof(CompactUnwindEntry<Ptr>, personality))
       continue;
-
-    Reloc &rFunc = isec->relocs[++i];
-    assert(r.offset ==
-           rFunc.offset + offsetof(CompactUnwindEntry<Ptr>, personality));
-    auto *referentIsec =
-        cast<ConcatInputSection>(rFunc.referent.get<InputSection *>());
-    referentIsec->hasPersonality = true;
 
     if (auto *s = r.referent.dyn_cast<Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {
@@ -208,12 +220,15 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
 // the exact addresses that it references. So it is safe for compact unwind to
 // reference addresses in __TEXT, but not addresses in any other segment.
 static ConcatInputSection *checkTextSegment(InputSection *isec) {
-  if (isec->segname != segment_names::text)
+  if (isec->getSegName() != segment_names::text)
     error("compact unwind references address in " + toString(isec) +
           " which is not in segment __TEXT");
   // __text should always be a ConcatInputSection.
   return cast<ConcatInputSection>(isec);
 }
+
+template <class Ptr>
+constexpr Ptr TombstoneValue = std::numeric_limits<Ptr>::max();
 
 // We need to apply the relocations to the pre-link compact unwind section
 // before converting it to post-link form. There should only be absolute
@@ -231,7 +246,7 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
     memcpy(buf, isec->data.data(), isec->data.size());
 
     for (const Reloc &r : isec->relocs) {
-      uint64_t referentVA = UINT64_MAX; // Tombstone value
+      uint64_t referentVA = TombstoneValue<Ptr>;
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
           assert(referentSym->isInGot());
@@ -291,7 +306,7 @@ static void addEntriesForFunctionsWithoutUnwindInfo(
     std::vector<CompactUnwindEntry<Ptr>> &cuVector) {
   DenseSet<Ptr> hasUnwindInfo;
   for (CompactUnwindEntry<Ptr> &cuEntry : cuVector)
-    if (cuEntry.functionAddress != UINT64_MAX)
+    if (cuEntry.functionAddress != TombstoneValue<Ptr>)
       hasUnwindInfo.insert(cuEntry.functionAddress);
 
   // Add explicit "has no unwind info" entries for all global and local symbols
@@ -372,13 +387,13 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
     return a->functionAddress < b->functionAddress;
   });
 
-  // Dead-stripped functions get a functionAddress of UINT64_MAX in
+  // Dead-stripped functions get a functionAddress of TombstoneValue in
   // relocateCompactUnwind(). Filter them out here.
   // FIXME: This doesn't yet collect associated data like LSDAs kept
   // alive only by a now-removed CompactUnwindEntry or other comdat-like
   // data (`kindNoneGroupSubordinate*` in ld64).
   CompactUnwindEntry<Ptr> tombstone;
-  tombstone.functionAddress = static_cast<Ptr>(UINT64_MAX);
+  tombstone.functionAddress = TombstoneValue<Ptr>;
   cuPtrVector.erase(
       std::lower_bound(cuPtrVector.begin(), cuPtrVector.end(), &tombstone,
                        [](const CompactUnwindEntry<Ptr> *a,
@@ -556,8 +571,10 @@ void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
     l2PagesOffset += SECOND_LEVEL_PAGE_BYTES;
   }
   // Level-1 sentinel
-  const CompactUnwindEntry<Ptr> &cuEnd = cuVector.back();
-  iep->functionOffset = cuEnd.functionAddress + cuEnd.functionLength;
+  const CompactUnwindEntry<Ptr> &cuEnd = *cuPtrVector.back();
+  assert(cuEnd.functionAddress != TombstoneValue<Ptr>);
+  iep->functionOffset =
+      cuEnd.functionAddress - in.header->addr + cuEnd.functionLength;
   iep->secondLevelPagesSectionOffset = 0;
   iep->lsdaIndexArraySectionOffset =
       lsdaOffset +

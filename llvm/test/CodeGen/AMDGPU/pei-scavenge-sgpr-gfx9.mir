@@ -26,7 +26,7 @@ body:             |
     ; MUBUF: liveins: $vgpr1, $vgpr2
     ; MUBUF: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
     ; MUBUF: $sgpr6 = S_ADD_I32 $sgpr32, 524544, implicit-def $scc
-    ; MUBUF: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.3, addrspace 5)
+    ; MUBUF: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
     ; MUBUF: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; MUBUF: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
     ; MUBUF: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
@@ -41,14 +41,14 @@ body:             |
     ; MUBUF: $sgpr33 = V_READLANE_B32 $vgpr2, 0
     ; MUBUF: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
     ; MUBUF: $sgpr6 = S_ADD_I32 $sgpr32, 524544, implicit-def $scc
-    ; MUBUF: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (load 4 from %stack.3, addrspace 5)
+    ; MUBUF: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
     ; MUBUF: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; MUBUF: S_ENDPGM 0, implicit $vcc
     ; FLATSCR-LABEL: name: scavenge_sgpr_pei_no_sgprs
     ; FLATSCR: liveins: $vgpr1, $vgpr2
     ; FLATSCR: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
     ; FLATSCR: $sgpr6 = S_ADD_I32 $sgpr32, 8196, implicit-def $scc
-    ; FLATSCR: SCRATCH_STORE_DWORD_SADDR killed $vgpr2, killed $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.3, addrspace 5)
+    ; FLATSCR: SCRATCH_STORE_DWORD_SADDR killed $vgpr2, killed $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
     ; FLATSCR: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; FLATSCR: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
     ; FLATSCR: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
@@ -63,7 +63,7 @@ body:             |
     ; FLATSCR: $sgpr33 = V_READLANE_B32 $vgpr2, 0
     ; FLATSCR: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
     ; FLATSCR: $sgpr6 = S_ADD_I32 $sgpr32, 8196, implicit-def $scc
-    ; FLATSCR: $vgpr2 = SCRATCH_LOAD_DWORD_SADDR killed $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %stack.3, addrspace 5)
+    ; FLATSCR: $vgpr2 = SCRATCH_LOAD_DWORD_SADDR killed $sgpr6, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.3, addrspace 5)
     ; FLATSCR: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; FLATSCR: S_ENDPGM 0, implicit $vcc
     S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr28, implicit-def $sgpr29, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc

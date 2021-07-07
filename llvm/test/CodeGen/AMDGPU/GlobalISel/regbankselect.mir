@@ -62,9 +62,9 @@ body: |
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: load_constant
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (load 4 from %ir.ptr0, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s32) from %ir.ptr0, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr0)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.ptr0)
 ...
 
 ---
@@ -76,9 +76,9 @@ body: |
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: load_constant_volatile
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (volatile load 4 from %ir.ptr0, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (volatile load (s32) from %ir.ptr0, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (volatile load 4 from %ir.ptr0)
+    %1:_(s32) = G_LOAD %0 :: (volatile load (s32) from %ir.ptr0)
 ...
 
 ---
@@ -90,9 +90,9 @@ body: |
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: load_global_uniform_invariant
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load 4 from %ir.ptr1, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (invariant load 4 from %ir.ptr1)
+    %1:_(s32) = G_LOAD %0 :: (invariant load (s32) from %ir.ptr1)
 ...
 
 ---
@@ -105,9 +105,9 @@ body: |
     ; CHECK-LABEL: name: load_global_uniform_noclobber
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load 4 from %ir.ptr1, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr1)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.ptr1)
 ...
 
 ---
@@ -120,9 +120,9 @@ body: |
     ; CHECK-LABEL: name: load_global_uniform_variant
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load 4 from %ir.ptr1, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.ptr1)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.ptr1)
 ...
 
 ---
@@ -135,9 +135,9 @@ body: |
     ; CHECK-LABEL: name: load_global_uniform_volatile_invariant
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (volatile invariant load 4 from %ir.ptr1, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (volatile invariant load (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (volatile invariant load 4 from %ir.ptr1)
+    %1:_(s32) = G_LOAD %0 :: (volatile invariant load (s32) from %ir.ptr1)
 ...
 
 ---
@@ -150,9 +150,9 @@ body: |
     ; CHECK-LABEL: name: load_global_uniform_atomic_invariant
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load acquire 4 from %ir.ptr1, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load acquire (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (invariant load acquire 4 from %ir.ptr1)
+    %1:_(s32) = G_LOAD %0 :: (invariant load acquire (s32) from %ir.ptr1)
 ...
 
 ---
@@ -165,9 +165,9 @@ body: |
     ; CHECK-LABEL: name: load_global_non_uniform
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load 4 from %ir.tmp1, addrspace 1)
+    ; CHECK: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s32) from %ir.tmp1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load 4 from %ir.tmp1)
+    %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.tmp1)
 ...
 
 ---
@@ -195,8 +195,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: load_constant_v4i16_from_8_align8
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (load 8 from %ir.ptr0, addrspace 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (load (<4 x s16>) from %ir.ptr0, addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<4 x s16>) = G_LOAD %0 :: (load 8 from %ir.ptr0, align 8, addrspace 4)
+    %1:_(<4 x s16>) = G_LOAD %0 :: (load (<4 x s16>) from %ir.ptr0, align 8, addrspace 4)
 
 ...

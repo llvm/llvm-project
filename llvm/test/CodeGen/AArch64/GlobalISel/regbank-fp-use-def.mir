@@ -24,13 +24,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
     ; CHECK: [[C:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
     ; CHECK: [[FCMP:%[0-9]+]]:gpr(s32) = G_FCMP floatpred(uno), [[C]](s32), [[LOAD]]
     ; CHECK: $w0 = COPY [[FCMP]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_FCONSTANT float 2.0
-    %2:_(s32) = G_LOAD %0 :: (load 4)
+    %2:_(s32) = G_LOAD %0 :: (load (s32))
     %3:_(s32) = G_FCMP floatpred(uno), %1, %2
     $w0 = COPY %3(s32)
     RET_ReallyLR implicit $w0
@@ -70,11 +70,11 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
     ; CHECK: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[COPY1]](s32)
-    ; CHECK: G_STORE [[SITOFP]](s32), [[COPY]](p0) :: (store 4)
+    ; CHECK: G_STORE [[SITOFP]](s32), [[COPY]](p0) :: (store (s32))
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_SITOFP %1
-    G_STORE %2, %0 :: (store 4)
+    G_STORE %2, %0 :: (store (s32))
 
 ...
 ---
@@ -120,7 +120,7 @@ body:             |
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %load:fpr(s32) = G_LOAD %ptr(p0) :: (load 4)
+  ; CHECK:   %load:fpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   %phi:fpr(s32) = G_PHI %fpr_copy(s32), %bb.0, %load(s32), %bb.1
@@ -137,7 +137,7 @@ body:             |
     G_BR %bb.2
   bb.1:
     successors: %bb.2
-    %load:_(s32) = G_LOAD %ptr(p0) :: (load 4)
+    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
     G_BR %bb.2
   bb.2:
     %phi:_(s32) = G_PHI %fpr_copy(s32), %bb.0, %load(s32), %bb.1
@@ -162,7 +162,7 @@ body:             |
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %load:gpr(s32) = G_LOAD %ptr(p0) :: (load 4)
+  ; CHECK:   %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   %phi:gpr(s32) = G_PHI %gpr_copy(s32), %bb.0, %load(s32), %bb.1
@@ -179,7 +179,7 @@ body:             |
     G_BR %bb.2
   bb.1:
     successors: %bb.2
-    %load:_(s32) = G_LOAD %ptr(p0) :: (load 4)
+    %load:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
     G_BR %bb.2
   bb.2:
     %phi:_(s32) = G_PHI %gpr_copy(s32), %bb.0, %load(s32), %bb.1
@@ -375,12 +375,12 @@ body: |
     ; CHECK-LABEL: name: load_used_by_sitofp
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
     ; CHECK: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[LOAD]](s32)
     ; CHECK: $s0 = COPY [[SITOFP]](s32)
     ; CHECK: RET_ReallyLR implicit $s0
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_LOAD %0 :: (load 4)
+    %1:_(s32) = G_LOAD %0 :: (load (s32))
     %2:_(s32) = G_SITOFP %1:_(s32)
     $s0 = COPY %2(s32)
     RET_ReallyLR implicit $s0
@@ -395,12 +395,12 @@ body: |
     ; CHECK-LABEL: name: load_used_by_uitofp
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
     ; CHECK: [[UITOFP:%[0-9]+]]:fpr(s32) = G_UITOFP [[LOAD]](s32)
     ; CHECK: $s0 = COPY [[UITOFP]](s32)
     ; CHECK: RET_ReallyLR implicit $s0
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_LOAD %0 :: (load 4)
+    %1:_(s32) = G_LOAD %0 :: (load (s32))
     %2:_(s32) = G_UITOFP %1:_(s32)
     $s0 = COPY %2(s32)
     RET_ReallyLR implicit $s0

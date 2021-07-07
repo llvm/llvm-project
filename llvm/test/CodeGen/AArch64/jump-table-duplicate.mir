@@ -121,8 +121,8 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $w0, $w1, $x19, $x20, $lr
   
-    early-clobber $sp = frame-setup STPXpre killed $x20, killed $x19, $sp, -4 :: (store 8 into %stack.3), (store 8 into %stack.2)
-    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STPXpre killed $x20, killed $x19, $sp, -4 :: (store (s64) into %stack.3), (store (s64) into %stack.2)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
     frame-setup CFI_INSTRUCTION def_cfa_offset 32
     frame-setup CFI_INSTRUCTION offset $w30, -8
     frame-setup CFI_INSTRUCTION offset $w29, -16
@@ -181,8 +181,8 @@ body:             |
   bb.9.lbl1:
     liveins: $w0
   
-    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.1), (load 8 from %stack.0)
-    early-clobber $sp, $x20, $x19 = frame-destroy LDPXpost $sp, 4 :: (load 8 from %stack.3), (load 8 from %stack.2)
+    $fp, $lr = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    early-clobber $sp, $x20, $x19 = frame-destroy LDPXpost $sp, 4 :: (load (s64) from %stack.3), (load (s64) from %stack.2)
     RET_ReallyLR implicit $w0
 
 ...

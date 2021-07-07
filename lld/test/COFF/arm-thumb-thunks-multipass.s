@@ -51,8 +51,8 @@ far_func\i:
 .endr
     bx lr
 
-// FUNC01: 403000:       41 f0 fc 87     bne.w   #8184 <.text+0x3ffc>
-// FUNC01: 403004:       41 f0 ff 87     bne.w   #8190 <.text+0x4006>
+// FUNC01: 403000:       41 f0 fc 87     bne.w   0x404ffc <.text+0x3ffc>
+// FUNC01: 403004:       41 f0 ff 87     bne.w   0x405006 <.text+0x4006>
 
 // Check that we only have two thunks here, even if we created the first
 // thunk twice (once in the first pass, then thrown away and recreated

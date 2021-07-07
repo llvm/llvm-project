@@ -844,8 +844,7 @@ define amdgpu_kernel void @store_misaligned64_constant_offsets() {
 define amdgpu_kernel void @store_misaligned64_constant_large_offsets() {
 ; CI-LABEL: store_misaligned64_constant_large_offsets:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_movk_i32 s0, 0x7b
-; CI-NEXT:    s_mov_b32 s1, 0
+; CI-NEXT:    s_mov_b64 s[0:1], 0x7b
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v2, 0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
@@ -856,8 +855,7 @@ define amdgpu_kernel void @store_misaligned64_constant_large_offsets() {
 ;
 ; GFX9-LABEL: store_misaligned64_constant_large_offsets:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_movk_i32 s0, 0x7b
-; GFX9-NEXT:    s_mov_b32 s1, 0
+; GFX9-NEXT:    s_mov_b64 s[0:1], 0x7b
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1

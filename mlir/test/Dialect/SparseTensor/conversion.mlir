@@ -36,7 +36,7 @@
 //       CHECK: return %[[D]] : index
 func @sparse_dim(%arg0: tensor<?xf64, #SparseVector>) -> index {
   %c = constant 0 : index
-  %0 = memref.dim %arg0, %c : tensor<?xf64, #SparseVector>
+  %0 = tensor.dim %arg0, %c : tensor<?xf64, #SparseVector>
   return %0 : index
 }
 

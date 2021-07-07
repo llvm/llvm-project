@@ -1494,17 +1494,12 @@ define <8 x i16> @neon.ushl8h_no_constant_shift(<8 x i8>* %A) nounwind {
 }
 
 define <4 x i32> @neon.ushl8h_constant_shift_extend_not_2x(<4 x i8>* %A) nounwind {
-;CHECK-LABEL: @neon.ushl8h_constant_shift_extend_not_2x
-;CHECK-NOT: ushll.8h v0,
-;CHECK: ldrb    w8, [x0]
-;CHECK: fmov    s0, w8
-;CHECK: ldrb    w8, [x0, #1]
-;CHECK: mov.s   v0[1], w8
-;CHECK: ldrb    w8, [x0, #2]
-;CHECK: mov.s   v0[2], w8
-;CHECK: ldrb    w8, [x0, #3]
-;CHECK: mov.s   v0[3], w8
-;CHECK: shl.4s v0, v0, #1
+; CHECK-LABEL: neon.ushl8h_constant_shift_extend_not_2x:
+; CHECK: // %bb.0:
+; CHECK-NEXT: ldr s0, [x0]
+; CHECK-NEXT: ushll.8h v0, v0, #0
+; CHECK-NEXT: ushll.4s v0, v0, #1
+; CHECK-NEXT: ret
   %tmp1 = load <4 x i8>, <4 x i8>* %A
   %tmp2 = zext <4 x i8> %tmp1 to <4 x i32>
   %tmp3 = call <4 x i32> @llvm.aarch64.neon.ushl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
@@ -1637,16 +1632,12 @@ define <8 x i16> @neon.sshll8h_constant_shift(<8 x i8>* %A) nounwind {
 }
 
 define <4 x i32> @neon.sshl4s_wrong_ext_constant_shift(<4 x i8>* %A) nounwind {
-;CHECK-LABEL: neon.sshl4s_wrong_ext_constant_shift
-;CHECK:       ldrsb   w8, [x0]
-;CHECK-NEXT:  fmov    s0, w8
-;CHECK-NEXT:  ldrsb   w8, [x0, #1]
-;CHECK-NEXT:  mov.s   v0[1], w8
-;CHECK-NEXT:  ldrsb   w8, [x0, #2]
-;CHECK-NEXT:  mov.s   v0[2], w8
-;CHECK-NEXT:  ldrsb   w8, [x0, #3]
-;CHECK-NEXT:  mov.s   v0[3], w8
-;CHECK-NEXT:  shl.4s  v0, v0, #1
+; CHECK-LABEL: neon.sshl4s_wrong_ext_constant_shift:
+; CHECK: // %bb.0:
+; CHECK-NEXT: ldr s0, [x0]
+; CHECK-NEXT: sshll.8h v0, v0, #0
+; CHECK-NEXT: sshll.4s v0, v0, #1
+; CHECK-NEXT: ret
         %tmp1 = load <4 x i8>, <4 x i8>* %A
         %tmp2 = sext <4 x i8> %tmp1 to <4 x i32>
         %tmp3 = call <4 x i32> @llvm.aarch64.neon.sshl.v4i32(<4 x i32> %tmp2, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)

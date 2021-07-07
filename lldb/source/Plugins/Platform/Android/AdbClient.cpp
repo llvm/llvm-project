@@ -118,11 +118,11 @@ Status AdbClient::CreateByDeviceID(const std::string &device_id,
   return error;
 }
 
-AdbClient::AdbClient() {}
+AdbClient::AdbClient() = default;
 
 AdbClient::AdbClient(const std::string &device_id) : m_device_id(device_id) {}
 
-AdbClient::~AdbClient() {}
+AdbClient::~AdbClient() = default;
 
 void AdbClient::SetDeviceID(const std::string &device_id) {
   m_device_id = device_id;
@@ -583,7 +583,7 @@ AdbClient::SyncService::executeCommand(const std::function<Status()> &cmd) {
   return error;
 }
 
-AdbClient::SyncService::~SyncService() {}
+AdbClient::SyncService::~SyncService() = default;
 
 Status AdbClient::SyncService::SendSyncRequest(const char *request_id,
                                                const uint32_t data_len,

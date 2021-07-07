@@ -98,9 +98,12 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRTransformLayer, LLVMOrcIRTransformLayerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectTransformLayer,
                                    LLVMOrcObjectTransformLayerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DumpObjects, LLVMOrcDumpObjectsRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IndirectStubsManager,
+                                   LLVMOrcIndirectStubsManagerRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LazyCallThroughManager,
+                                   LLVMOrcLazyCallThroughManagerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJITBuilder, LLVMOrcLLJITBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJIT, LLVMOrcLLJITRef)
-
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 
 namespace llvm {
@@ -341,6 +344,26 @@ LLVMOrcAbsoluteSymbols(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs) {
   return wrap(absoluteSymbols(std::move(SM)).release());
 }
 
+LLVMOrcMaterializationUnitRef LLVMOrcLazyReexports(
+    LLVMOrcLazyCallThroughManagerRef LCTM, LLVMOrcIndirectStubsManagerRef ISM,
+    LLVMOrcJITDylibRef SourceJD, LLVMOrcCSymbolAliasMapPairs CallableAliases,
+    size_t NumPairs) {
+
+  SymbolAliasMap SAM;
+  for (size_t I = 0; I != NumPairs; ++I) {
+    auto pair = CallableAliases[I];
+    JITSymbolFlags Flags = toJITSymbolFlags(pair.Entry.Flags);
+    SymbolStringPtr Name =
+        OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(pair.Entry.Name));
+    SAM[OrcV2CAPIHelper::moveToSymbolStringPtr(unwrap(pair.Name))] =
+        SymbolAliasMapEntry(Name, Flags);
+  }
+
+  return wrap(lazyReexports(*unwrap(LCTM), *unwrap(ISM), *unwrap(SourceJD),
+                            std::move(SAM))
+                  .release());
+}
+
 LLVMOrcJITDylibRef
 LLVMOrcExecutionSessionCreateBareJITDylib(LLVMOrcExecutionSessionRef ES,
                                           const char *Name) {
@@ -526,7 +549,7 @@ void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
   delete unwrap(ObjLayer);
 }
 
-void LLVMOrcLLJITIRTransformLayerSetTransform(
+void LLVMOrcIRTransformLayerSetTransform(
     LLVMOrcIRTransformLayerRef IRTransformLayer,
     LLVMOrcIRTransformLayerTransformFunction TransformFunction, void *Ctx) {
   unwrap(IRTransformLayer)
@@ -724,4 +747,32 @@ void LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(
 
 LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J) {
   return wrap(&unwrap(J)->getIRTransformLayer());
+}
+
+LLVMOrcIndirectStubsManagerRef
+LLVMOrcCreateLocalIndirectStubsManager(const char *TargetTriple) {
+  auto builder = createLocalIndirectStubsManagerBuilder(Triple(TargetTriple));
+  return wrap(builder().release());
+}
+
+void LLVMOrcDisposeIndirectStubsManager(LLVMOrcIndirectStubsManagerRef ISM) {
+  std::unique_ptr<IndirectStubsManager> TmpISM(unwrap(ISM));
+}
+
+LLVMErrorRef LLVMOrcCreateLocalLazyCallThroughManager(
+    const char *TargetTriple, LLVMOrcExecutionSessionRef ES,
+    LLVMOrcJITTargetAddress ErrorHandlerAddr,
+    LLVMOrcLazyCallThroughManagerRef *Result) {
+  auto LCTM = createLocalLazyCallThroughManager(Triple(TargetTriple),
+                                                *unwrap(ES), ErrorHandlerAddr);
+
+  if (!LCTM)
+    return wrap(LCTM.takeError());
+  *Result = wrap(LCTM->release());
+  return LLVMErrorSuccess;
+}
+
+void LLVMOrcDisposeLazyCallThroughManager(
+    LLVMOrcLazyCallThroughManagerRef LCM) {
+  std::unique_ptr<LazyCallThroughManager> TmpLCM(unwrap(LCM));
 }

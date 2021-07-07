@@ -16,7 +16,7 @@ define i32 @insert-extract-at-zero-idx(i32 %arg, float %fl) {
   ;CHECK: cost of 1 {{.*}} extract
   %E = extractelement <8 x float> undef, i32 1
 
-  ;CHECK: cost of 1 {{.*}} extract
+  ;CHECK: cost of 3 {{.*}} extract
   %F = extractelement <8 x float> undef, i32 %arg
 
   ;CHECK: cost of 0 {{.*}} insert

@@ -107,12 +107,12 @@ body:             |
   ; CHECK: bb.1.while.body:
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2
-  ; CHECK:   renamable $r3, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep7)
+  ; CHECK:   renamable $r3, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep7)
   ; CHECK:   tCMPhir renamable $lr, renamable $r2, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   t2IT 2, 8, implicit-def $itstate
   ; CHECK:   renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2 /* CC::hs */, killed $cpsr, implicit renamable $r3, implicit killed $itstate
-  ; CHECK:   early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep4)
+  ; CHECK:   early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep4)
   ; CHECK:   t2CMPri renamable $lr, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   tBcc %bb.1, 4 /* CC::mi */, killed $cpsr
   ; CHECK:   tB %bb.2, 14 /* CC::al */, $noreg
@@ -137,12 +137,12 @@ body:             |
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
     liveins: $lr, $r0, $r1, $r2
 
-    renamable $r3, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14, $noreg :: (load 4 from %ir.scevgep7)
+    renamable $r3, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14, $noreg :: (load (s32) from %ir.scevgep7)
     tCMPhir renamable $lr, renamable $r2, 14, $noreg, implicit-def $cpsr
     renamable $lr = t2LoopDec killed renamable $lr, 1
     t2IT 2, 8, implicit-def $itstate
     renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2, killed $cpsr, implicit renamable $r3, implicit killed $itstate
-    early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep4)
+    early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store (s32) into %ir.scevgep4)
     t2CMPri renamable $lr, 0, 14, $noreg, implicit-def $cpsr
     tBcc %bb.1, 4, killed $cpsr
     tB %bb.2, 14, $noreg

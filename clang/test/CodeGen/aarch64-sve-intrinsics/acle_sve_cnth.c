@@ -7,8 +7,9 @@
 uint64_t test_svcnth()
 {
   // CHECK-LABEL: test_svcnth
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 31)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.vscale.i64()
+  // CHECK-NEXT: %[[RET:.*]] = shl i64 %[[INTRINSIC]], 3
+  // CHECK: ret i64 %[[RET]]
   return svcnth();
 }
 
@@ -23,64 +24,56 @@ uint64_t test_svcnth_pat()
 uint64_t test_svcnth_pat_1()
 {
   // CHECK-LABEL: test_svcnth_pat_1
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 1)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: ret i64 1
   return svcnth_pat(SV_VL1);
 }
 
 uint64_t test_svcnth_pat_2()
 {
   // CHECK-LABEL: test_svcnth_pat_2
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 2)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: ret i64 2
   return svcnth_pat(SV_VL2);
 }
 
 uint64_t test_svcnth_pat_3()
 {
   // CHECK-LABEL: test_svcnth_pat_3
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 3)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: ret i64 3
   return svcnth_pat(SV_VL3);
 }
 
 uint64_t test_svcnth_pat_4()
 {
   // CHECK-LABEL: test_svcnth_pat_4
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 4)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: ret i64 4
   return svcnth_pat(SV_VL4);
 }
 
 uint64_t test_svcnth_pat_5()
 {
   // CHECK-LABEL: test_svcnth_pat_5
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 5)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: ret i64 5
   return svcnth_pat(SV_VL5);
 }
 
 uint64_t test_svcnth_pat_6()
 {
   // CHECK-LABEL: test_svcnth_pat_6
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 6)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: ret i64 6
   return svcnth_pat(SV_VL6);
 }
 
 uint64_t test_svcnth_pat_7()
 {
   // CHECK-LABEL: test_svcnth_pat_7
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 7)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: ret i64 7
   return svcnth_pat(SV_VL7);
 }
 
 uint64_t test_svcnth_pat_8()
 {
   // CHECK-LABEL: test_svcnth_pat_8
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 8)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: ret i64 8
   return svcnth_pat(SV_VL8);
 }
 
@@ -143,7 +136,8 @@ uint64_t test_svcnth_pat_15()
 uint64_t test_svcnth_pat_16()
 {
   // CHECK-LABEL: test_svcnth_pat_16
-  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.aarch64.sve.cnth(i32 31)
-  // CHECK: ret i64 %[[INTRINSIC]]
+  // CHECK: %[[INTRINSIC:.*]] = call i64 @llvm.vscale.i64()
+  // CHECK-NEXT: %[[RET:.*]] = shl i64 %[[INTRINSIC]], 3
+  // CHECK: ret i64 %[[RET]]
   return svcnth_pat(SV_ALL);
 }

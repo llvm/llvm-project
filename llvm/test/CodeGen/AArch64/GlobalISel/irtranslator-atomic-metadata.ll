@@ -7,7 +7,7 @@ define i32 @atomicrmw_volatile(i32* %ptr) {
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (volatile load store monotonic 4 on %ir.ptr)
+  ; CHECK:   [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (volatile load store monotonic (s32) on %ir.ptr)
   ; CHECK:   $w0 = COPY [[ATOMICRMW_ADD]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
   %oldval = atomicrmw volatile add i32* %ptr, i32 1 monotonic
@@ -20,7 +20,7 @@ define i32 @atomicrmw_falkor(i32* %ptr) {
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: ("aarch64-strided-access" load store monotonic 4 on %ir.ptr)
+  ; CHECK:   [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: ("aarch64-strided-access" load store monotonic (s32) on %ir.ptr)
   ; CHECK:   $w0 = COPY [[ATOMICRMW_ADD]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
   %oldval = atomicrmw add i32* %ptr, i32 1 monotonic, !falkor.strided.access !0
@@ -33,7 +33,7 @@ define i32 @atomicrmw_volatile_falkor(i32* %ptr) {
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (volatile "aarch64-strided-access" load store monotonic 4 on %ir.ptr)
+  ; CHECK:   [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (volatile "aarch64-strided-access" load store monotonic (s32) on %ir.ptr)
   ; CHECK:   $w0 = COPY [[ATOMICRMW_ADD]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
   %oldval = atomicrmw volatile add i32* %ptr, i32 1 monotonic, !falkor.strided.access !0
@@ -47,7 +47,7 @@ define i32 @cmpxchg_volatile(i32* %addr) {
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p0), [[C]], [[C1]] :: (volatile load store monotonic monotonic 4 on %ir.addr)
+  ; CHECK:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p0), [[C]], [[C1]] :: (volatile load store monotonic monotonic (s32) on %ir.addr)
   ; CHECK:   $w0 = COPY [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
   %val_success = cmpxchg volatile i32* %addr, i32 0, i32 1 monotonic monotonic
@@ -62,7 +62,7 @@ define i32 @cmpxchg_falkor(i32* %addr) {
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p0), [[C]], [[C1]] :: ("aarch64-strided-access" load store monotonic monotonic 4 on %ir.addr)
+  ; CHECK:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p0), [[C]], [[C1]] :: ("aarch64-strided-access" load store monotonic monotonic (s32) on %ir.addr)
   ; CHECK:   $w0 = COPY [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
   %val_success = cmpxchg i32* %addr, i32 0, i32 1 monotonic monotonic, !falkor.strided.access !0
@@ -77,7 +77,7 @@ define i32 @cmpxchg_volatile_falkor(i32* %addr) {
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p0), [[C]], [[C1]] :: (volatile "aarch64-strided-access" load store monotonic monotonic 4 on %ir.addr)
+  ; CHECK:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p0), [[C]], [[C1]] :: (volatile "aarch64-strided-access" load store monotonic monotonic (s32) on %ir.addr)
   ; CHECK:   $w0 = COPY [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
   %val_success = cmpxchg volatile i32* %addr, i32 0, i32 1 monotonic monotonic, !falkor.strided.access !0

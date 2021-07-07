@@ -2,7 +2,7 @@
 
 func @dim(%arg : tensor<1x?xf32>) {
   %c2 = constant 2 : index
-  memref.dim %arg, %c2 : tensor<1x?xf32> // expected-error {{'memref.dim' op index is out of range}}
+  tensor.dim %arg, %c2 : tensor<1x?xf32> // expected-error {{'tensor.dim' op index is out of range}}
   return
 }
 

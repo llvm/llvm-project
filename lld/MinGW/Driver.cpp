@@ -142,16 +142,10 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
     if (!bStatic) {
       if (Optional<std::string> s = findFile(dir, name + ".lib"))
         return *s;
-      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll")) {
-        error("lld doesn't support linking directly against " + *s +
-              ", use an import library");
-        return "";
-      }
-      if (Optional<std::string> s = findFile(dir, name + ".dll")) {
-        error("lld doesn't support linking directly against " + *s +
-              ", use an import library");
-        return "";
-      }
+      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll"))
+        return *s;
+      if (Optional<std::string> s = findFile(dir, name + ".dll"))
+        return *s;
     }
   }
   error("unable to find library -l" + name);
@@ -294,6 +288,11 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-WX");
   else
     add("-WX:no");
+
+  if (args.hasFlag(OPT_enable_stdcall_fixup, OPT_disable_stdcall_fixup, false))
+    add("-stdcall-fixup");
+  else if (args.hasArg(OPT_disable_stdcall_fixup))
+    add("-stdcall-fixup:no");
 
   if (args.hasArg(OPT_shared))
     add("-dll");

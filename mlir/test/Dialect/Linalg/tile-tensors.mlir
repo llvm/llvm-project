@@ -38,9 +38,9 @@ func @matmul_tensors(
 // TLOOP-DAG: %[[C3:.*]] = constant 3 : index
 // TLOOP-DAG: %[[C4:.*]] = constant 4 : index
 
-// TLOOP: %[[ARG_0_X:.*]] = memref.dim %[[ARG_0]], %[[C0]] : [[TY]]
-// TLOOP: %[[ARG_0_Y:.*]] = memref.dim %[[ARG_0]], %[[C1]] : [[TY]]
-// TLOOP: %[[ARG_1_Y:.*]] = memref.dim %[[ARG_1]], %[[C1]] : [[TY]]
+// TLOOP: %[[ARG_0_X:.*]] = tensor.dim %[[ARG_0]], %[[C0]] : [[TY]]
+// TLOOP: %[[ARG_0_Y:.*]] = tensor.dim %[[ARG_0]], %[[C1]] : [[TY]]
+// TLOOP: %[[ARG_1_Y:.*]] = tensor.dim %[[ARG_1]], %[[C1]] : [[TY]]
 
 // TLOOP: %{{.*}} = linalg.tiled_loop (%[[I:.*]], %[[J:.*]], %[[K:.*]]) =
 // TLOOP-SAME: (%[[C0]], %[[C0]], %[[C0]])
@@ -68,9 +68,9 @@ func @generic_op_tensors(
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  %0 = memref.dim %arg0, %c0 : tensor<?x?x?xf32>
-  %1 = memref.dim %arg0, %c1 : tensor<?x?x?xf32>
-  %2 = memref.dim %arg0, %c2 : tensor<?x?x?xf32>
+  %0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
+  %1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
+  %2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
   %3 = linalg.init_tensor [%0, %1, %2] : tensor<?x?x?xf32>
   %4 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
@@ -119,9 +119,9 @@ func @generic_op_tensors(
 // TLOOP-DAG: %[[C4:.*]] = constant 4 : index
 
 // TLOOP:     %[[INIT:.*]] = linalg.init_tensor
-// TLOOP:     %[[ARG_0_X:.*]] = memref.dim %[[ARG_0]], %[[C0]] : [[TY]]
-// TLOOP:     %[[ARG_0_Y:.*]] = memref.dim %[[ARG_0]], %[[C1]] : [[TY]]
-// TLOOP:     %[[ARG_0_Z:.*]] = memref.dim %[[ARG_0]], %[[C2]] : [[TY]]
+// TLOOP:     %[[ARG_0_X:.*]] = tensor.dim %[[ARG_0]], %[[C0]] : [[TY]]
+// TLOOP:     %[[ARG_0_Y:.*]] = tensor.dim %[[ARG_0]], %[[C1]] : [[TY]]
+// TLOOP:     %[[ARG_0_Z:.*]] = tensor.dim %[[ARG_0]], %[[C2]] : [[TY]]
 
 // TLOOP:     %{{.*}} = linalg.tiled_loop (%{{.*}}, %{{.*}}, %{{.*}}) =
 // TLOOP-SAME: (%[[C0]], %[[C0]], %[[C0]])

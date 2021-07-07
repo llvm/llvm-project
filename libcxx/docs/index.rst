@@ -32,19 +32,19 @@ Getting Started with libc++
 ---------------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    ReleaseNotes
    UsingLibcxx
    BuildingLibcxx
    TestingLibcxx
    Contributing
-   Cxx1yStatus
-   Cxx1zStatus
-   Cxx2aStatus
-   Cxx2bStatus
-   RangesStatus
-   FormatStatus
+   Status/Cxx14
+   Status/Cxx17
+   Status/Cxx20
+   Status/Cxx2b
+   Status/Ranges
+   Status/Format
 
 
 .. toctree::
@@ -139,11 +139,10 @@ C++ Dialect Support
 ---------------------
 
 * C++11 - Complete
-* :ref:`C++14 - Complete <cxx1y-status>`
-* :ref:`C++17 - In Progress <cxx1z-status>`
-* :ref:`C++20 - In Progress <cxx2a-status>`
+* :ref:`C++14 - Complete <cxx14-status>`
+* :ref:`C++17 - In Progress <cxx17-status>`
+* :ref:`C++20 - In Progress <cxx20-status>`
 * :ref:`C++2b - In Progress <cxx2b-status>`
-* `Post C++14 Technical Specifications - In Progress <http://libcxx.llvm.org/ts1z_status.html>`__
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 Notes and Known Issues
@@ -177,12 +176,6 @@ Design Documents
    DesignDocs/ThreadingSupportAPI
    DesignDocs/UniquePtrTrivialAbi
    DesignDocs/VisibilityMacros
-
-* `<atomic> design <http://libcxx.llvm.org/atomic_design.html>`_
-* `<type_traits> design <http://libcxx.llvm.org/type_traits_design.html>`_
-* `Notes by Marshall Clow`__
-
-.. __: https://cplusplusmusings.wordpress.com/2012/07/05/clang-and-standard-libraries-on-mac-os-x/
 
 Build Bots and Test Coverage
 ----------------------------

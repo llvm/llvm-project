@@ -26,11 +26,11 @@ define void @addstx(float* %res, <4 x float>* %a,  <4 x float>* %b, <4 x float>*
 ; The sizes below are conservative.  AArch64TargetLowering
 ; conservatively assumes the entire vector is stored.
   tail call void @llvm.aarch64.neon.st2.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, float* %res)
-; CHECK: ST2Twov4s {{.*}} :: (store 32 {{.*}})
+; CHECK: ST2Twov4s {{.*}} :: (store (s256) {{.*}})
   tail call void @llvm.aarch64.neon.st3.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, float* %res)
-; CHECK: ST3Threev4s {{.*}} :: (store 48 {{.*}})
+; CHECK: ST3Threev4s {{.*}} :: (store (s384) {{.*}})
   tail call void @llvm.aarch64.neon.st4.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, <4 x float> %dr, float* %res)
-; CHECK: ST4Fourv4s {{.*}} :: (store 64 {{.*}})
+; CHECK: ST4Fourv4s {{.*}} :: (store (s512) {{.*}})
 
   ret void
 }
@@ -49,11 +49,11 @@ define void @addst1x(float* %res, <4 x float>* %a,  <4 x float>* %b, <4 x float>
 ; The sizes below are conservative.  AArch64TargetLowering
 ; conservatively assumes the entire vector is stored.
   tail call void @llvm.aarch64.neon.st1x2.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, float* %res)
-; CHECK: ST1Twov4s {{.*}} :: (store 32 {{.*}})
+; CHECK: ST1Twov4s {{.*}} :: (store (s256) {{.*}})
   tail call void @llvm.aarch64.neon.st1x3.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, float* %res)
-; CHECK: ST1Threev4s {{.*}} :: (store 48 {{.*}})
+; CHECK: ST1Threev4s {{.*}} :: (store (s384) {{.*}})
   tail call void @llvm.aarch64.neon.st1x4.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, <4 x float> %dr, float* %res)
-; CHECK: ST1Fourv4s {{.*}} :: (store 64 {{.*}})
+; CHECK: ST1Fourv4s {{.*}} :: (store (s512) {{.*}})
 
   ret void
 }
@@ -72,11 +72,11 @@ define void @addstxlane(float* %res, <4 x float>* %a,  <4 x float>* %b, <4 x flo
 ; The sizes below are conservative.  AArch64TargetLowering
 ; conservatively assumes the entire vector is stored.
   tail call void @llvm.aarch64.neon.st2lane.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, i64 1, float* %res)
-; CHECK: ST2i32 {{.*}} :: (store 32 {{.*}})
+; CHECK: ST2i32 {{.*}} :: (store (s256) {{.*}})
   tail call void @llvm.aarch64.neon.st3lane.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, i64 1, float* %res)
-; CHECK: ST3i32 {{.*}} :: (store 48 {{.*}})
+; CHECK: ST3i32 {{.*}} :: (store (s384) {{.*}})
   tail call void @llvm.aarch64.neon.st4lane.v4f32.p0f32(<4 x float> %ar, <4 x float> %br, <4 x float> %cr, <4 x float> %dr, i64 1, float* %res)
-; CHECK: ST4i32 {{.*}} :: (store 64 {{.*}})
+; CHECK: ST4i32 {{.*}} :: (store (s512) {{.*}})
 
   ret void
 }

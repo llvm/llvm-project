@@ -5,14 +5,14 @@
 ;
 ; CHECK: ********** MI Scheduling **********
 ; CHECK: misched_bug:%bb.0 entry
-; CHECK: SU(2):   %2:gpr32 = LDRWui %0:gpr64common, 1 :: (load 4 from %ir.ptr1_plus1)
+; CHECK: SU(2):   %2:gpr32 = LDRWui %0:gpr64common, 1 :: (load (s32) from %ir.ptr1_plus1)
 ; CHECK:   Successors:
 ; CHECK-NEXT:    SU(5): Data Latency=4 Reg=%2
 ; CHECK-NEXT:    SU(4): Ord  Latency=0
-; CHECK: SU(3):   STRWui $wzr, %0:gpr64common, 0 :: (store 4 into %ir.ptr1)
+; CHECK: SU(3):   STRWui $wzr, %0:gpr64common, 0 :: (store (s32) into %ir.ptr1)
 ; CHECK:   Successors:
 ; CHECK: SU(4): Ord  Latency=0
-; CHECK: SU(4):   STRWui $wzr, %1:gpr64common, 0 :: (store 4 into %ir.ptr2)
+; CHECK: SU(4):   STRWui $wzr, %1:gpr64common, 0 :: (store (s32) into %ir.ptr2)
 ; CHECK: SU(5):   $w0 = COPY %2
 ; CHECK: ** ScheduleDAGMI::schedule picking next node
 define i32 @misched_bug(i32* %ptr1, i32* %ptr2) {

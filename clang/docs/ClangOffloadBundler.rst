@@ -121,7 +121,7 @@ Where:
       ============= ==============================================================
 
 **target-triple**
-  The target triple of the code object.
+    The target triple of the code object.
 
 **target-id**
   The canonical target ID of the code object. Present only if the target

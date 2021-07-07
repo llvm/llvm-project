@@ -14,15 +14,11 @@
 #error "This file is for OpenMP compilation only."
 #endif
 
-#ifdef __NVPTX__
 #pragma omp begin declare variant match(                                       \
     device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
 
 #ifdef __cplusplus
-#include <cstdint>
 extern "C" {
-#else
-#include <stdint.h>
 #endif
 
 #define __CUDA__
@@ -42,9 +38,6 @@ extern "C" {
 #endif
 
 #pragma omp end declare variant
-
-//<<<<<<< HEAD
-#endif // __NVPTX__
 
 #ifdef __AMDGCN__
 
@@ -74,7 +67,7 @@ extern "C" {
 
 #ifdef __cplusplus
 } // extern "C"
-//=======
+#endif
 // Ensure we make `_ZdlPv`, aka. `operator delete(void*)` available without the
 // need to `include <new>` in C++ mode.
 #ifdef __cplusplus
@@ -115,8 +108,6 @@ inline void operator delete[](void *ptr, __SIZE_TYPE__ size) OPENMP_NOEXCEPT {
 #endif
 
 #pragma pop_macro("OPENMP_NOEXCEPT")
-#endif
-
 #endif
 
 #pragma omp end declare variant

@@ -6,13 +6,21 @@
 ; RUN: opt < %s  -cost-model -analyze -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512vl,+avx512bw,+avx512dq,-prefer-256-bit | FileCheck %s --check-prefixes=SKX512
 
 define void @zext256() "min-legal-vector-width"="256" {
-; VEC256-LABEL: 'zext256'
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A = zext <8 x i16> undef to <8 x i64>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B = zext <8 x i32> undef to <8 x i64>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %C = zext <16 x i8> undef to <16 x i32>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D = zext <16 x i16> undef to <16 x i32>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = zext <32 x i8> undef to <32 x i16>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; AVX-LABEL: 'zext256'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A = zext <8 x i16> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %B = zext <8 x i32> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %C = zext <16 x i8> undef to <16 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D = zext <16 x i16> undef to <16 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %E = zext <32 x i8> undef to <32 x i16>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512VL256-LABEL: 'zext256'
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A = zext <8 x i16> undef to <8 x i64>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B = zext <8 x i32> undef to <8 x i64>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C = zext <16 x i8> undef to <16 x i32>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D = zext <16 x i16> undef to <16 x i32>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = zext <32 x i8> undef to <32 x i16>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512VL512-LABEL: 'zext256'
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A = zext <8 x i16> undef to <8 x i64>
@@ -21,6 +29,14 @@ define void @zext256() "min-legal-vector-width"="256" {
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D = zext <16 x i16> undef to <16 x i32>
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = zext <32 x i8> undef to <32 x i16>
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; SKX256-LABEL: 'zext256'
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A = zext <8 x i16> undef to <8 x i64>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B = zext <8 x i32> undef to <8 x i64>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %C = zext <16 x i8> undef to <16 x i32>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D = zext <16 x i16> undef to <16 x i32>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = zext <32 x i8> undef to <32 x i16>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SKX512-LABEL: 'zext256'
 ; SKX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A = zext <8 x i16> undef to <8 x i64>
@@ -40,11 +56,11 @@ define void @zext256() "min-legal-vector-width"="256" {
 
 define void @zext512() "min-legal-vector-width"="512" {
 ; AVX-LABEL: 'zext512'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A = zext <8 x i16> undef to <8 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B = zext <8 x i32> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A = zext <8 x i16> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %B = zext <8 x i32> undef to <8 x i64>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %C = zext <16 x i8> undef to <16 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D = zext <16 x i16> undef to <16 x i32>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = zext <32 x i8> undef to <32 x i16>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %E = zext <32 x i8> undef to <32 x i16>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512VL256-LABEL: 'zext512'
@@ -88,14 +104,23 @@ define void @zext512() "min-legal-vector-width"="512" {
 }
 
 define void @sext256() "min-legal-vector-width"="256" {
-; VEC256-LABEL: 'sext256'
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A = sext <8 x i8> undef to <8 x i64>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B = sext <8 x i16> undef to <8 x i64>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C = sext <8 x i32> undef to <8 x i64>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D = sext <16 x i8> undef to <16 x i32>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = sext <16 x i16> undef to <16 x i32>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F = sext <32 x i8> undef to <32 x i16>
-; VEC256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; AVX-LABEL: 'sext256'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A = sext <8 x i8> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %B = sext <8 x i16> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %C = sext <8 x i32> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D = sext <16 x i8> undef to <16 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = sext <16 x i16> undef to <16 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %F = sext <32 x i8> undef to <32 x i16>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512VL256-LABEL: 'sext256'
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A = sext <8 x i8> undef to <8 x i64>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %B = sext <8 x i16> undef to <8 x i64>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C = sext <8 x i32> undef to <8 x i64>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D = sext <16 x i8> undef to <16 x i32>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = sext <16 x i16> undef to <16 x i32>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F = sext <32 x i8> undef to <32 x i16>
+; AVX512VL256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512VL512-LABEL: 'sext256'
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A = sext <8 x i8> undef to <8 x i64>
@@ -105,6 +130,15 @@ define void @sext256() "min-legal-vector-width"="256" {
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %E = sext <16 x i16> undef to <16 x i32>
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F = sext <32 x i8> undef to <32 x i16>
 ; AVX512VL512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; SKX256-LABEL: 'sext256'
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %A = sext <8 x i8> undef to <8 x i64>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %B = sext <8 x i16> undef to <8 x i64>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C = sext <8 x i32> undef to <8 x i64>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %D = sext <16 x i8> undef to <16 x i32>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = sext <16 x i16> undef to <16 x i32>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F = sext <32 x i8> undef to <32 x i16>
+; SKX256-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SKX512-LABEL: 'sext256'
 ; SKX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A = sext <8 x i8> undef to <8 x i64>
@@ -126,12 +160,12 @@ define void @sext256() "min-legal-vector-width"="256" {
 
 define void @sext512() "min-legal-vector-width"="512" {
 ; AVX-LABEL: 'sext512'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A = sext <8 x i8> undef to <8 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %B = sext <8 x i16> undef to <8 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %C = sext <8 x i32> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A = sext <8 x i8> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %B = sext <8 x i16> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %C = sext <8 x i32> undef to <8 x i64>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D = sext <16 x i8> undef to <16 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %E = sext <16 x i16> undef to <16 x i32>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F = sext <32 x i8> undef to <32 x i16>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %F = sext <32 x i8> undef to <32 x i16>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512VL256-LABEL: 'sext512'
@@ -220,11 +254,11 @@ define i32 @zext256_vXi1() "min-legal-vector-width"="256" {
 ; AVX-LABEL: 'zext256_vXi1'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = zext <2 x i1> undef to <2 x i64>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = zext <4 x i1> undef to <4 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = zext <8 x i1> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i64 = zext <8 x i1> undef to <8 x i64>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = zext <2 x i1> undef to <2 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = zext <4 x i1> undef to <4 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = zext <8 x i1> undef to <8 x i32>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V16i32 = zext <16 x i1> undef to <16 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = zext <16 x i1> undef to <16 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = zext <2 x i1> undef to <2 x i16>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = zext <4 x i1> undef to <4 x i16>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = zext <8 x i1> undef to <8 x i16>
@@ -352,12 +386,12 @@ define i32 @sext256_vXi1() "min-legal-vector-width"="256" {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i1 undef to i64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i64 = sext <2 x i1> undef to <2 x i64>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = sext <4 x i1> undef to <4 x i64>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = sext <8 x i1> undef to <8 x i64>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i64 = sext <8 x i1> undef to <8 x i64>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = sext i1 undef to i32
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i32 = sext <2 x i1> undef to <2 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i32 = sext <4 x i1> undef to <4 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = sext <8 x i1> undef to <8 x i32>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V16i32 = sext <16 x i1> undef to <16 x i32>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = sext <16 x i1> undef to <16 x i32>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = sext i1 undef to i16
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i16 = sext <2 x i1> undef to <2 x i16>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i16 = sext <4 x i1> undef to <4 x i16>

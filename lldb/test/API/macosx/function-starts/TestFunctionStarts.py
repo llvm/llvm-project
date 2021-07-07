@@ -81,7 +81,6 @@ class FunctionStartsTestCase(TestBase):
         self.assertTrue(thread.num_frames > 1, "Couldn't backtrace.")
         name = thread.frame[1].GetFunctionName()
         self.assertTrue(name.startswith("___lldb_unnamed_symbol"))
-        self.assertTrue(name.endswith("$$StripMe"))
 
 
 

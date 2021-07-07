@@ -512,7 +512,7 @@ def MemRef_DeallocOp : MemRef_Op<"dealloc", [MemRefsNormalizable]> {
 // DimOp
 //===----------------------------------------------------------------------===//
 
-def DimOp : MemRef_Op<"dim", [NoSideEffect, MemRefsNormalizable]> {
+def MemRef_DimOp : MemRef_Op<"dim", [NoSideEffect, MemRefsNormalizable]> {
   let summary = "dimension index operation";
   let description = [{
     The `dim` operation takes a memref and a dimension operand of type `index`.
@@ -538,18 +538,17 @@ def DimOp : MemRef_Op<"dim", [NoSideEffect, MemRefsNormalizable]> {
     ```
   }];
 
-  let arguments = (ins AnyTypeOf<[AnyTensor, AnyRankedOrUnrankedMemRef],
-                                 "any memref or tensor type">:$memrefOrTensor,
+  let arguments = (ins AnyRankedOrUnrankedMemRef:$source,
                        Index:$index);
   let results = (outs Index:$result);
 
   let assemblyFormat = [{
-    attr-dict $memrefOrTensor `,` $index `:` type($memrefOrTensor)
+    attr-dict $source `,` $index `:` type($source)
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$memrefOrTensor, "int64_t":$index)>,
-    OpBuilder<(ins "Value":$memrefOrTensor, "Value":$index)>
+    OpBuilder<(ins "Value":$source, "int64_t":$index)>,
+    OpBuilder<(ins "Value":$source, "Value":$index)>
   ];
 
   let extraClassDeclaration = [{
@@ -1288,6 +1287,7 @@ def TensorLoadOp : MemRef_Op<"tensor_load",
 
   let assemblyFormat = "$memref attr-dict `:` type($memref)";
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

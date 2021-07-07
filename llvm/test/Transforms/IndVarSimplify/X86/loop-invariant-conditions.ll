@@ -193,7 +193,7 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test7(i64 %start, i64* %inc_ptr) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
@@ -405,7 +405,7 @@ for.end:                                          ; preds = %if.end, %entry
 define void @test8(i64 %start, i64* %inc_ptr) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], !range !1
+; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    [[OK:%.*]] = icmp sge i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[OK]], label [[LOOP_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       loop.preheader:
@@ -525,7 +525,7 @@ exit:
 define void @test11(i64* %inc_ptr) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG0]]
 ; CHECK-NEXT:    [[NE_COND:%.*]] = icmp ne i64 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[NE_COND]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
@@ -576,7 +576,7 @@ exit:
 define void @test12(i64* %inc_ptr) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[INC:%.*]] = load i64, i64* [[INC_PTR:%.*]], align 8, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]

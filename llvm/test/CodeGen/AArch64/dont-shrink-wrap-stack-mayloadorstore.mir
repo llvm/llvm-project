@@ -138,7 +138,7 @@ body:             |
   bb.1.if.end:
     liveins: $w0
 
-    STRWui killed renamable $w0, %stack.0.rstack, 0 :: (volatile store 4 into %ir.arrayidx1)
+    STRWui killed renamable $w0, %stack.0.rstack, 0 :: (volatile store (s32) into %ir.arrayidx1)
     renamable $w9 = MOVi32imm 1
     renamable $x8 = ADDXri %stack.0.rstack, 0, 0
 
@@ -147,7 +147,7 @@ body:             |
     liveins: $w9, $x8
 
     renamable $w10 = SUBWri renamable $w9, 1, 0, implicit-def $x10
-    renamable $w11 = LDRWroW renamable $x8, renamable $w10, 0, 1 :: (volatile load 4 from %ir.arrayidx2)
+    renamable $w11 = LDRWroW renamable $x8, renamable $w10, 0, 1 :: (volatile load (s32) from %ir.arrayidx2)
     CBNZW renamable $w11, %bb.4
 
   bb.3:
@@ -159,7 +159,7 @@ body:             |
   bb.4.if.then4:
     liveins: $w9, $w11, $x8, $x10
 
-    STRWroX killed renamable $w11, renamable $x8, killed renamable $x10, 0, 1 :: (volatile store 4 into %ir.1)
+    STRWroX killed renamable $w11, renamable $x8, killed renamable $x10, 0, 1 :: (volatile store (s32) into %ir.1)
 
   bb.5.if.end7:
     successors: %bb.6(0x04000000), %bb.2(0x7c000000)
@@ -204,19 +204,19 @@ body:             |
 
     renamable $w9 = MOVi32imm 67305985
     renamable $w8 = ORRWrs $wzr, renamable $w1, 0, implicit-def $x8
-    STRWui killed renamable $w9, %stack.0.tmp, 0 :: (volatile store 4 into %ir.tmp41)
+    STRWui killed renamable $w9, %stack.0.tmp, 0 :: (volatile store (s32) into %ir.tmp41)
     renamable $x9 = ADDXri %stack.0.tmp, 0, 0
-    renamable $w10 = LDRBBroX renamable $x9, renamable $x8, 0, 0 :: (volatile load 1 from %ir.tmp6)
+    renamable $w10 = LDRBBroX renamable $x9, renamable $x8, 0, 0 :: (volatile load (s8) from %ir.tmp6)
     dead $wzr = SUBSWri killed renamable $w1, 2, 0, implicit-def $nzcv
-    STRWui killed renamable $w10, renamable $x0, 0 :: (store 4 into %ir.tmp92)
+    STRWui killed renamable $w10, renamable $x0, 0 :: (store (s32) into %ir.tmp92)
     Bcc 8, %bb.4, implicit killed $nzcv
     B %bb.3
 
   bb.3.bb11:
     liveins: $x0, $x8, $x9
 
-    renamable $w8 = LDRBBroX killed renamable $x9, killed renamable $x8, 0, 0 :: (volatile load 1 from %ir.sunkaddr)
-    STRWui killed renamable $w8, killed renamable $x0, 1 :: (store 4 into %ir.tmp14)
+    renamable $w8 = LDRBBroX killed renamable $x9, killed renamable $x8, 0, 0 :: (volatile load (s8) from %ir.sunkaddr)
+    STRWui killed renamable $w8, killed renamable $x0, 1 :: (store (s32) into %ir.tmp14)
 
   bb.4.bb15:
     renamable $w0 = COPY $wzr

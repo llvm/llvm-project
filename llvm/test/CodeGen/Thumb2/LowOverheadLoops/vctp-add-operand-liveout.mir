@@ -136,8 +136,8 @@ body:             |
   ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
   ; CHECK:   $q0 = MVE_VORR killed $q1, killed $q1, 0, $noreg, undef $q0
   ; CHECK:   MVE_VPST 4, implicit $vpr
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, renamable $vpr :: (load 8 from %ir.lsr.iv17, align 2)
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 1, killed renamable $vpr :: (load 8 from %ir.lsr.iv1820, align 2)
+  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, renamable $vpr :: (load (s64) from %ir.lsr.iv17, align 2)
+  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 1, killed renamable $vpr :: (load (s64) from %ir.lsr.iv1820, align 2)
   ; CHECK:   $lr = tMOVr $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
   ; CHECK:   renamable $r3, dead $cpsr = nsw tSUBi8 killed $r3, 1, 14 /* CC::al */, $noreg
@@ -184,8 +184,8 @@ body:             |
     renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
     $q0 = MVE_VORR killed $q1, $q1, 0, $noreg, undef $q0
     MVE_VPST 4, implicit $vpr
-    renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, renamable $vpr :: (load 8 from %ir.lsr.iv17, align 2)
-    renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 1, killed renamable $vpr :: (load 8 from %ir.lsr.iv1820, align 2)
+    renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, renamable $vpr :: (load (s64) from %ir.lsr.iv17, align 2)
+    renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 1, killed renamable $vpr :: (load (s64) from %ir.lsr.iv1820, align 2)
     $lr = tMOVr $r3, 14, $noreg
     renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
     renamable $r3, dead $cpsr = nsw tSUBi8 killed $r3, 1, 14, $noreg

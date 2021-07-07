@@ -33,7 +33,7 @@ class CommandInterpreter;
 
 class CommandInterpreterRunResult {
 public:
-  CommandInterpreterRunResult() {}
+  CommandInterpreterRunResult() = default;
 
   uint32_t GetNumErrors() const { return m_num_errors; }
 
@@ -100,9 +100,7 @@ public:
         m_echo_comment_commands(echo_comments), m_print_results(print_results),
         m_print_errors(print_errors), m_add_to_history(add_to_history) {}
 
-  CommandInterpreterRunOptions()
-
-  {}
+  CommandInterpreterRunOptions() = default;
 
   void SetSilent(bool silent) {
     LazyBool value = silent ? eLazyBoolNo : eLazyBoolYes;

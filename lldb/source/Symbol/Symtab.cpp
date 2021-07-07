@@ -40,7 +40,7 @@ Symtab::Symtab(ObjectFile *objfile)
       lldb::eFunctionNameTypeSelector, UniqueCStringMap<uint32_t>()));
 }
 
-Symtab::~Symtab() {}
+Symtab::~Symtab() = default;
 
 void Symtab::Reserve(size_t count) {
   // Clients should grab the mutex from this symbol table and lock it manually

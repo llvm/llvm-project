@@ -6476,12 +6476,6 @@ def warn_pessimizing_move_on_initialization : Warning<
   InGroup<PessimizingMove>, DefaultIgnore;
 def note_remove_move : Note<"remove std::move call here">;
 
-def warn_return_std_move : Warning<
-  "local variable %0 will be copied despite being %select{returned|thrown}1 by name">,
-  InGroup<ReturnStdMove>, DefaultIgnore;
-def note_add_std_move : Note<
-  "call 'std::move' explicitly to avoid copying">;
-
 def warn_string_plus_int : Warning<
   "adding %0 to a string does not append to the string">,
   InGroup<StringPlusInt>;
@@ -8521,6 +8515,9 @@ def err_typecheck_expect_scalar_operand : Error<
   "operand of type %0 where arithmetic or pointer type is required">;
 def err_typecheck_cond_incompatible_operands : Error<
   "incompatible operand types%diff{ ($ and $)|}0,1">;
+def err_typecheck_expect_flt_or_vector : Error<
+  "invalid operand of type %0 where floating, complex or "
+  "a vector of such types is required">;
 def err_cast_selector_expr : Error<
   "cannot type cast @selector expression">;
 def ext_typecheck_cond_incompatible_pointers : ExtWarn<

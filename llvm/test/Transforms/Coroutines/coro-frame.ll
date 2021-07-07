@@ -1,5 +1,5 @@
 ; Check that we can handle spills of the result of the invoke instruction
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
 
 define i8* @f(i64 %this) "coroutine.presplit"="1" personality i32 0 {
 entry:

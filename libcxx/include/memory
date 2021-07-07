@@ -672,6 +672,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
+#include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/construct_at.h>
@@ -682,6 +683,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/temporary_buffer.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
+#include <__memory/uses_allocator.h>
 #include <compare>
 #include <cstddef>
 #include <cstdint>

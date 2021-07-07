@@ -640,6 +640,122 @@ class MyClass
     };
 })",
                MicrosoftStyle);
+
+  verifyFormat("void bar()\n"
+               "{\n"
+               "    Function(Val, (Action)(() =>\n"
+               "                           {\n"
+               "                               lock (mylock)\n"
+               "                               {\n"
+               "                                   if (true)\n"
+               "                                   {\n"
+               "                                       A.Remove(item);\n"
+               "                                   }\n"
+               "                               }\n"
+               "                           }));\n"
+               "}",
+               MicrosoftStyle);
+
+  verifyFormat("void baz()\n"
+               "{\n"
+               "    Function(Val, (Action)(() =>\n"
+               "                           {\n"
+               "                               using (var a = new Lock())\n"
+               "                               {\n"
+               "                                   if (true)\n"
+               "                                   {\n"
+               "                                       A.Remove(item);\n"
+               "                                   }\n"
+               "                               }\n"
+               "                           }));\n"
+               "}",
+               MicrosoftStyle);
+
+  verifyFormat("void baz()\n"
+               "{\n"
+               "    Function(Val, (Action)(() =>\n"
+               "                           {\n"
+               "                               if (true)\n"
+               "                               {\n"
+               "                                   A.Remove(item);\n"
+               "                               }\n"
+               "                           }));\n"
+               "}",
+               MicrosoftStyle);
+
+  verifyFormat("void baz()\n"
+               "{\n"
+               "    Function(Val, (Action)(() =>\n"
+               "                           {\n"
+               "                               do\n"
+               "                               {\n"
+               "                                   A.Remove(item);\n"
+               "                               } while (true)\n"
+               "                           }));\n"
+               "}",
+               MicrosoftStyle);
+
+  verifyFormat("void baz()\n"
+               "{\n"
+               "    Function(Val, (Action)(() =>\n"
+               "                           { A.Remove(item); }));\n"
+               "}",
+               MicrosoftStyle);
+
+  verifyFormat("void bar()\n"
+               "{\n"
+               "    Function(Val, (() =>\n"
+               "                   {\n"
+               "                       lock (mylock)\n"
+               "                       {\n"
+               "                           if (true)\n"
+               "                           {\n"
+               "                               A.Remove(item);\n"
+               "                           }\n"
+               "                       }\n"
+               "                   }));\n"
+               "}",
+               MicrosoftStyle);
+  verifyFormat("void bar()\n"
+               "{\n"
+               "    Function((() =>\n"
+               "              {\n"
+               "                  lock (mylock)\n"
+               "                  {\n"
+               "                      if (true)\n"
+               "                      {\n"
+               "                          A.Remove(item);\n"
+               "                      }\n"
+               "                  }\n"
+               "              }));\n"
+               "}",
+               MicrosoftStyle);
+
+  MicrosoftStyle.IndentWidth = 2;
+  verifyFormat("void bar()\n"
+               "{\n"
+               "  Function((() =>\n"
+               "            {\n"
+               "              lock (mylock)\n"
+               "              {\n"
+               "                if (true)\n"
+               "                {\n"
+               "                  A.Remove(item);\n"
+               "                }\n"
+               "              }\n"
+               "            }));\n"
+               "}",
+               MicrosoftStyle);
+  verifyFormat("void bar() {\n"
+               "  Function((() => {\n"
+               "    lock (mylock) {\n"
+               "      if (true) {\n"
+               "        A.Remove(item);\n"
+               "      }\n"
+               "    }\n"
+               "  }));\n"
+               "}",
+               GoogleStyle);
 }
 
 TEST_F(FormatTestCSharp, CSharpObjectInitializers) {

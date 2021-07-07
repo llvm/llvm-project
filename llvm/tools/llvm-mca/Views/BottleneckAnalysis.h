@@ -333,7 +333,7 @@ public:
 
   void printView(raw_ostream &OS) const override;
   StringRef getNameAsString() const override { return "BottleneckAnalysis"; }
-  json::Value toJSON() const override { return "not implemented"; }
+  bool isSerializable() const override { return false; }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS, MCInstPrinter &MCIP) const { DG.dump(OS, MCIP); }

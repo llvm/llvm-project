@@ -1,3 +1,7 @@
+# This is a no-op for building files in this dir, but is inherited by subdirs.
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 add_subdirectory(support)
 
 # Configure the Features.inc file.
@@ -64,6 +68,7 @@ add_clang_library(clangDaemon
   DumpAST.cpp
   ExpectedTypes.cpp
   FeatureModule.cpp
+  Features.cpp
   FindSymbols.cpp
   FindTarget.cpp
   FileDistance.cpp
