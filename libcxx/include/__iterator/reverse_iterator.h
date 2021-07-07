@@ -11,8 +11,8 @@
 #define _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
 
 #include <__config>
-#include <__iterator/iterator_traits.h>
 #include <__iterator/iterator.h>
+#include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <type_traits>
 

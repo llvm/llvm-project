@@ -11,8 +11,8 @@
 #define _LIBCPP___ITERATOR_ISTREAMBUF_ITERATOR_H
 
 #include <__config>
-#include <__iterator/iterator_traits.h>
 #include <__iterator/iterator.h>
+#include <__iterator/iterator_traits.h>
 #include <iosfwd> // for forward declaration of basic_streambuf
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
