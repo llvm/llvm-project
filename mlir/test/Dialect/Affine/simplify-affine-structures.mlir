@@ -368,7 +368,7 @@ func @test_always_false_if_elimination() {
 }
 
 
-// Testing: Affine.If is not trivially true or false, nothing happens.
+// Testing: affine.if is not trivially true or false, nothing happens.
 // CHECK-LABEL: func @test_dimensional_if_elimination() {
 func @test_dimensional_if_elimination() {
   affine.for %arg0 = 1 to 10 {
@@ -385,16 +385,97 @@ func @test_dimensional_if_elimination() {
   return
 }
 
-// Testing: Affine.If don't get removed if it is returning results.
+// Testing: affine.if gets removed.
 // CHECK-LABEL: func @test_num_results_if_elimination
-func @test_num_results_if_elimination() -> f32 {
-  %zero = constant 0.0 : f32
-  // CHECK: affine.if
-  %0 = affine.if affine_set<() : ()> () -> f32 {
-    affine.yield %zero : f32
-    // CHECK: else {
+func @test_num_results_if_elimination() -> index {
+  // CHECK: %[[zero:.*]] = constant 0 : index
+  %zero = constant 0 : index
+  %0 = affine.if affine_set<() : ()> () -> index {
+    affine.yield %zero : index
   } else {
-    affine.yield %zero : f32
+    affine.yield %zero : index
   }
-  return %0 : f32
+  // CHECK-NEXT: return %[[zero]] : index
+  return %0 : index
+}
+
+
+// Three more test functions involving affine.if operations which are
+// returning results:
+
+// Testing: affine.if gets removed. `Else` block get promoted.
+// CHECK-LABEL: func @test_trivially_false_returning_two_results
+// CHECK-SAME: (%[[arg0:.*]]: index)
+func @test_trivially_false_returning_two_results(%arg0: index) -> (index, index) {
+  // CHECK: %[[c7:.*]] = constant 7 : index
+  // CHECK: %[[c13:.*]] = constant 13 : index
+  %c7 = constant 7 : index
+  %c13 = constant 13 : index
+  // CHECK: %[[c2:.*]] = constant 2 : index
+  // CHECK: %[[c3:.*]] = constant 3 : index
+  %res:2 = affine.if affine_set<(d0, d1) : (5 >= 0, -2 >= 0)> (%c7, %c13) -> (index, index) {
+    %c0 = constant 0 : index
+    %c1 = constant 1 : index
+    affine.yield %c0, %c1 : index, index
+  } else {
+    %c2 = constant 2 : index
+    %c3 = constant 3 : index
+    affine.yield %c7, %arg0 : index, index
+  }
+  // CHECK-NEXT: return %[[c7]], %[[arg0]] : index, index
+  return %res#0, %res#1 : index, index
+}
+
+// Testing: affine.if gets removed. `Then` block get promoted.
+// CHECK-LABEL: func @test_trivially_true_returning_five_results
+func @test_trivially_true_returning_five_results() -> (index, index, index, index, index) {
+  // CHECK: %[[c12:.*]] = constant 12 : index
+  // CHECK: %[[c13:.*]] = constant 13 : index
+  %c12 = constant 12 : index
+  %c13 = constant 13 : index
+  // CHECK: %[[c0:.*]] = constant 0 : index
+  // CHECK: %[[c1:.*]] = constant 1 : index
+  // CHECK: %[[c2:.*]] = constant 2 : index
+  // CHECK: %[[c3:.*]] = constant 3 : index
+  // CHECK: %[[c4:.*]] = constant 4 : index
+  %res:5 = affine.if affine_set<(d0, d1) : (1 >= 0, 3 >= 0)>(%c12, %c13) -> (index, index, index, index, index) {
+    %c0 = constant 0 : index
+    %c1 = constant 1 : index
+    %c2 = constant 2 : index
+    %c3 = constant 3 : index
+    %c4 = constant 4 : index
+    affine.yield %c0, %c1, %c2, %c3, %c4 : index, index, index, index, index
+  } else {
+    %c5 = constant 5 : index
+    %c6 = constant 6 : index
+    %c7 = constant 7 : index
+    %c8 = constant 8 : index
+    %c9 = constant 9 : index
+    affine.yield %c5, %c6, %c7, %c8, %c9 : index, index, index, index, index
+  }
+  // CHECK-NEXT: return %[[c0]], %[[c1]], %[[c2]], %[[c3]], %[[c4]] : index, index, index, index, index
+  return %res#0, %res#1, %res#2, %res#3, %res#4 : index, index, index, index, index
+}
+
+// Testing: affine.if doesn't get removed.
+// CHECK-LABEL: func @test_not_trivially_true_or_false_returning_three_results
+func @test_not_trivially_true_or_false_returning_three_results() -> (index, index, index) {
+  // CHECK: %[[c8:.*]] = constant 8 : index
+  // CHECK: %[[c13:.*]] = constant 13 : index
+  %c8 = constant 8 : index
+  %c13 = constant 13 : index
+  // CHECK: affine.if
+  %res:3 = affine.if affine_set<(d0, d1) : (d0 - 1 == 0)>(%c8, %c13) -> (index, index, index) {
+    %c0 = constant 0 : index
+    %c1 = constant 1 : index
+    %c2 = constant 2 : index
+    affine.yield %c0, %c1, %c2 : index, index, index
+  // CHECK: } else {
+  } else {
+    %c3 = constant 3 : index
+    %c4 = constant 4 : index
+    %c5 = constant 5 : index
+    affine.yield %c3, %c4, %c5 : index, index, index
+  }
+  return %res#0, %res#1, %res#2 : index, index, index
 }
