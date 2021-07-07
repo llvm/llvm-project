@@ -388,8 +388,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # breakpoints get hit
         launchCommands = [
             'target create "%s"' % (program),
-            'br s -f main.c -l %d' % first_line,
-            'br s -f main.c -l %d' % second_line,
+            'breakpoint s -f main.c -l %d' % first_line,
+            'breakpoint s -f main.c -l %d' % second_line,
             'process launch --stop-at-entry'
         ]
 
