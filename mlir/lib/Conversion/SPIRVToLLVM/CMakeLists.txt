@@ -11,7 +11,7 @@ add_mlir_conversion_library(MLIRSPIRVToLLVM
   intrinsics_gen
 
   LINK_LIBS PUBLIC
-  MLIRGPU
+  MLIRGPUOps
   MLIRSPIRV
   MLIRSPIRVUtils
   MLIRLLVMIR

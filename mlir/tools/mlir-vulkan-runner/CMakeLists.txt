@@ -57,7 +57,7 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
     ${conversion_libs}
     MLIRAnalysis
     MLIRExecutionEngine
-    MLIRGPU
+    MLIRGPUOps
     MLIRIR
     MLIRJitRunner
     MLIRLLVMIR

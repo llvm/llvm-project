@@ -1,6 +1,6 @@
 # Test 64-bit COMPARE LOGICAL AND BRANCH in cases where the sheer number of
 # instructions causes some branches to be out of range.
-# RUN: python %s | llc -mtriple=s390x-linux-gnu | FileCheck %s
+# RUN: %python %s | llc -mtriple=s390x-linux-gnu | FileCheck %s
 
 # Construct:
 #

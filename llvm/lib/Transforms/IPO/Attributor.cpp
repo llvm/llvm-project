@@ -165,6 +165,16 @@ ChangeStatus llvm::operator&(ChangeStatus L, ChangeStatus R) {
 }
 ///}
 
+bool AA::isValidInScope(const Value &V, const Function *Scope) {
+  if (isa<Constant>(V))
+    return true;
+  if (auto *I = dyn_cast<Instruction>(&V))
+    return I->getFunction() == Scope;
+  if (auto *A = dyn_cast<Argument>(&V))
+    return A->getParent() == Scope;
+  return false;
+}
+
 Value *AA::getWithType(Value &V, Type &Ty) {
   if (V.getType() == &Ty)
     return &V;
@@ -182,6 +192,30 @@ Value *AA::getWithType(Value &V, Type &Ty) {
     if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy())
       return ConstantExpr::getFPTrunc(C, &Ty, /* OnlyIfReduced */ true);
   }
+  return nullptr;
+}
+
+Optional<Value *>
+AA::combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
+                                         const Optional<Value *> &B, Type *Ty) {
+  if (A == B)
+    return A;
+  if (!B.hasValue())
+    return A;
+  if (*B == nullptr)
+    return nullptr;
+  if (!A.hasValue())
+    return Ty ? getWithType(**B, *Ty) : nullptr;
+  if (*A == nullptr)
+    return nullptr;
+  if (!Ty)
+    Ty = (*A)->getType();
+  if (isa_and_nonnull<UndefValue>(*A))
+    return getWithType(**B, *Ty);
+  if (isa<UndefValue>(*B))
+    return A;
+  if (*A && *B && *A == getWithType(**B, *Ty))
+    return A;
   return nullptr;
 }
 
@@ -1321,19 +1355,26 @@ void Attributor::identifyDeadInternalFunctions() {
 ChangeStatus Attributor::cleanupIR() {
   TimeTraceScope TimeScope("Attributor::cleanupIR");
   // Delete stuff at the end to avoid invalid references and a nice order.
-  LLVM_DEBUG(dbgs() << "\n[Attributor] Delete at least "
+  LLVM_DEBUG(dbgs() << "\n[Attributor] Delete/replace at least "
                     << ToBeDeletedFunctions.size() << " functions and "
                     << ToBeDeletedBlocks.size() << " blocks and "
                     << ToBeDeletedInsts.size() << " instructions and "
+                    << ToBeChangedValues.size() << " values and "
                     << ToBeChangedUses.size() << " uses\n");
 
   SmallVector<WeakTrackingVH, 32> DeadInsts;
   SmallVector<Instruction *, 32> TerminatorsToFold;
 
-  for (auto &It : ToBeChangedUses) {
-    Use *U = It.first;
-    Value *NewV = It.second;
+  auto ReplaceUse = [&](Use *U, Value *NewV) {
     Value *OldV = U->get();
+
+    // If we plan to replace NewV we need to update it at this point.
+    do {
+      const auto &Entry = ToBeChangedValues.lookup(NewV);
+      if (!Entry.first)
+        break;
+      NewV = Entry.first;
+    } while (true);
 
     // Do not replace uses in returns if the value is a must-tail call we will
     // not delete.
@@ -1341,12 +1382,12 @@ ChangeStatus Attributor::cleanupIR() {
       if (auto *CI = dyn_cast<CallInst>(OldV->stripPointerCasts()))
         if (CI->isMustTailCall() &&
             (!ToBeDeletedInsts.count(CI) || !isRunOn(*CI->getCaller())))
-          continue;
+          return;
 
     // Do not perform call graph altering changes outside the SCC.
     if (auto *CB = dyn_cast<CallBase>(U->getUser()))
       if (CB->isCallee(U) && !isRunOn(*CB->getCaller()))
-        continue;
+        return;
 
     LLVM_DEBUG(dbgs() << "Use " << *NewV << " in " << *U->getUser()
                       << " instead of " << *OldV << "\n");
@@ -1376,7 +1417,27 @@ ChangeStatus Attributor::cleanupIR() {
         TerminatorsToFold.push_back(UserI);
       }
     }
+  };
+
+  for (auto &It : ToBeChangedUses) {
+    Use *U = It.first;
+    Value *NewV = It.second;
+    ReplaceUse(U, NewV);
   }
+
+  SmallVector<Use *, 4> Uses;
+  for (auto &It : ToBeChangedValues) {
+    Value *OldV = It.first;
+    auto &Entry = It.second;
+    Value *NewV = Entry.first;
+    Uses.clear();
+    for (auto &U : OldV->uses())
+      if (Entry.second || !U.getUser()->isDroppable())
+        Uses.push_back(&U);
+    for (Use *U : Uses)
+      ReplaceUse(U, NewV);
+  }
+
   for (auto &V : InvokeWithDeadSuccessor)
     if (InvokeInst *II = dyn_cast_or_null<InvokeInst>(V)) {
       assert(isRunOn(*II->getFunction()) &&

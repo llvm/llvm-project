@@ -12,7 +12,7 @@ add_mlir_library(MLIRLinalgTestPasses
 
   LINK_LIBS PUBLIC
   MLIRAffine
-  MLIRGPU
+  MLIRGPUTransforms
   MLIRLinalg
   MLIRLinalgTransforms
   MLIRLLVMToLLVMIRTranslation
