@@ -45,16 +45,14 @@ struct TestVectorToVectorConversion
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     if (unroll) {
-      patterns.add<UnrollVectorPattern>(
-          ctx,
+      populateVectorUnrollPatterns(
+          patterns,
           UnrollVectorOptions().setNativeShapeFn(getShape).setFilterConstraint(
               filter));
     }
     populateVectorToVectorCanonicalizationPatterns(patterns);
-    populateVectorToVectorTransformationPatterns(patterns);
     populateBubbleVectorBitCastOpPatterns(patterns);
     populateCastAwayVectorLeadingOneDimPatterns(patterns);
-    populateSplitVectorTransferPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 
@@ -65,27 +63,35 @@ private:
       return SmallVector<int64_t, 4>(2, 2);
     if (isa<vector::ContractionOp>(op))
       return SmallVector<int64_t, 4>(3, 2);
+    // For transfer ops, just propagate the shape coming from
+    // InsertStridedSlices/ExtractStridedSlices.
+    if (auto readOp = dyn_cast<vector::TransferReadOp>(op)) {
+      VectorType dstVec;
+      for (Operation *users : readOp->getUsers()) {
+        auto extract = dyn_cast<ExtractStridedSliceOp>(users);
+        if (!extract)
+          return llvm::None;
+        auto vecType = extract.getResult().getType().cast<VectorType>();
+        if (dstVec && dstVec != vecType)
+          return llvm::None;
+        dstVec = vecType;
+      }
+      return SmallVector<int64_t, 4>(dstVec.getShape().begin(),
+                                     dstVec.getShape().end());
+    }
+    if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
+      auto insert = writeOp.vector().getDefiningOp<InsertStridedSliceOp>();
+      if (!insert)
+        return llvm::None;
+      ArrayRef<int64_t> shape = insert.getSourceVectorType().getShape();
+      return SmallVector<int64_t, 4>(shape.begin(), shape.end());
+    }
     return llvm::None;
   }
 
   static LogicalResult filter(Operation *op) {
-    return success(isa<AddFOp, SelectOp, CmpFOp, ContractionOp>(op));
-  }
-};
-
-struct TestVectorSlicesConversion
-    : public PassWrapper<TestVectorSlicesConversion, FunctionPass> {
-  StringRef getArgument() const final {
-    return "test-vector-slices-conversion";
-  }
-  StringRef getDescription() const final {
-    return "Test conversion patterns that lower slices ops in the vector "
-           "dialect";
-  }
-  void runOnFunction() override {
-    RewritePatternSet patterns(&getContext());
-    populateVectorSlicesLoweringPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    return success(isa<AddFOp, SelectOp, CmpFOp, ContractionOp, TransferReadOp,
+                       TransferWriteOp>(op));
   }
 };
 
@@ -178,12 +184,12 @@ struct TestVectorUnrollingPatterns
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    patterns.add<UnrollVectorPattern>(
-        ctx, UnrollVectorOptions()
-                 .setNativeShape(ArrayRef<int64_t>{2, 2})
-                 .setFilterConstraint([](Operation *op) {
-                   return success(isa<AddFOp, vector::FMAOp>(op));
-                 }));
+    populateVectorUnrollPatterns(
+        patterns, UnrollVectorOptions()
+                      .setNativeShape(ArrayRef<int64_t>{2, 2})
+                      .setFilterConstraint([](Operation *op) {
+                        return success(isa<AddFOp, vector::FMAOp>(op));
+                      }));
 
     if (unrollBasedOnType) {
       UnrollVectorOptions::NativeShapeFnType nativeShapeFn =
@@ -199,22 +205,21 @@ struct TestVectorUnrollingPatterns
         }
         return nativeShape;
       };
-      patterns.add<UnrollVectorPattern>(
-          ctx, UnrollVectorOptions()
-                   .setNativeShapeFn(nativeShapeFn)
-                   .setFilterConstraint([](Operation *op) {
-                     return success(isa<ContractionOp>(op));
-                   }));
+      populateVectorUnrollPatterns(patterns,
+                                   UnrollVectorOptions()
+                                       .setNativeShapeFn(nativeShapeFn)
+                                       .setFilterConstraint([](Operation *op) {
+                                         return success(isa<ContractionOp>(op));
+                                       }));
     } else {
-      patterns.add<UnrollVectorPattern>(
-          ctx, UnrollVectorOptions()
-                   .setNativeShape(ArrayRef<int64_t>{2, 2, 2})
-                   .setFilterConstraint([](Operation *op) {
-                     return success(isa<ContractionOp>(op));
-                   }));
+      populateVectorUnrollPatterns(
+          patterns, UnrollVectorOptions()
+                        .setNativeShape(ArrayRef<int64_t>{2, 2, 2})
+                        .setFilterConstraint([](Operation *op) {
+                          return success(isa<ContractionOp>(op));
+                        }));
     }
     populateVectorToVectorCanonicalizationPatterns(patterns);
-    populateVectorToVectorTransformationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 
@@ -358,8 +363,8 @@ struct TestVectorTransferUnrollingPatterns
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    patterns.add<UnrollVectorPattern>(
-        ctx,
+    populateVectorUnrollPatterns(
+        patterns,
         UnrollVectorOptions()
             .setNativeShape(ArrayRef<int64_t>{2, 2})
             .setFilterConstraint([](Operation *op) {
@@ -367,7 +372,6 @@ struct TestVectorTransferUnrollingPatterns
                   isa<vector::TransferReadOp, vector::TransferWriteOp>(op));
             }));
     populateVectorToVectorCanonicalizationPatterns(patterns);
-    populateVectorToVectorTransformationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
@@ -462,8 +466,6 @@ namespace mlir {
 namespace test {
 void registerTestVectorConversions() {
   PassRegistration<TestVectorToVectorConversion>();
-
-  PassRegistration<TestVectorSlicesConversion>();
 
   PassRegistration<TestVectorContractionConversion>();
 
