@@ -379,7 +379,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
 
   // Rather than sort & fold the 32-byte entries directly, we create a
   // vector of pointers to entries and sort & fold that instead.
-  cuPtrVector.reserve(cuCount);
+  cuPtrVector.reserve(cuVector.size());
   for (CompactUnwindEntry<Ptr> &cuEntry : cuVector)
     cuPtrVector.emplace_back(&cuEntry);
   llvm::sort(cuPtrVector, [](const CompactUnwindEntry<Ptr> *a,
