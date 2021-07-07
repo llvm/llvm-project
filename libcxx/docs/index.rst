@@ -32,7 +32,7 @@ Getting Started with libc++
 ---------------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    ReleaseNotes
    UsingLibcxx
