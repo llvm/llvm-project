@@ -4,7 +4,7 @@
 ;; variadic dbg_value using %y becomes undef.
 
 ; CHECK: ![[C:[0-9]+]] = !DILocalVariable(name: "c",
-; CHECK: DBG_VALUE_LIST ![[C]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $noreg, $noreg, debug-location
+; CHECK: DBG_VALUE $noreg, $noreg, ![[C]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value),  debug-location
 
 target triple = "x86_64-pc-windows-msvc19.16.27034"
 define dso_local i32 @"?foo@@YAHHH@Z"(i32 %a, i32 %b) local_unnamed_addr !dbg !8 {
