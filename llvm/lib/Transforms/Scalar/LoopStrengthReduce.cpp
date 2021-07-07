@@ -2963,7 +2963,7 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
     // The increment must be loop-invariant so it can be kept in a register.
     const SCEV *PrevExpr = SE.getSCEV(PrevIV);
     const SCEV *IncExpr = SE.getMinusSCEV(OperExpr, PrevExpr);
-    if (isa<SCEVCouldNotCompute>(IncExpr) || !SE.isLoopInvariant(IncExpr, L))
+    if (!SE.isLoopInvariant(IncExpr, L))
       continue;
 
     if (Chain.isProfitableIncrement(OperExpr, IncExpr, SE)) {
@@ -3316,9 +3316,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
 
         // x == y  -->  x - y == 0
         const SCEV *N = SE.getSCEV(NV);
-        if (SE.isLoopInvariant(N, L) && isSafeToExpand(N, SE) &&
-            (!NV->getType()->isPointerTy() ||
-             SE.getPointerBase(N) == SE.getPointerBase(S))) {
+        if (SE.isLoopInvariant(N, L) && isSafeToExpand(N, SE)) {
           // S is normalized, so normalize N before folding it into S
           // to keep the result normalized.
           N = normalizeForPostIncUse(N, TmpPostIncLoops, SE);

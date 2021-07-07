@@ -57,8 +57,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
     // Test whether the difference is known to be great enough that memory of
     // the given sizes don't overlap. This assumes that ASizeInt and BSizeInt
     // are non-zero, which is special-cased above.
-    if (!isa<SCEVCouldNotCompute>(BA) &&
-        ASizeInt.ule(SE.getUnsignedRange(BA).getUnsignedMin()) &&
+    if (ASizeInt.ule(SE.getUnsignedRange(BA).getUnsignedMin()) &&
         (-BSizeInt).uge(SE.getUnsignedRange(BA).getUnsignedMax()))
       return AliasResult::NoAlias;
 
@@ -72,8 +71,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
     // Test whether the difference is known to be great enough that memory of
     // the given sizes don't overlap. This assumes that ASizeInt and BSizeInt
     // are non-zero, which is special-cased above.
-    if (!isa<SCEVCouldNotCompute>(AB) &&
-        BSizeInt.ule(SE.getUnsignedRange(AB).getUnsignedMin()) &&
+    if (BSizeInt.ule(SE.getUnsignedRange(AB).getUnsignedMin()) &&
         (-ASizeInt).uge(SE.getUnsignedRange(AB).getUnsignedMax()))
       return AliasResult::NoAlias;
   }
