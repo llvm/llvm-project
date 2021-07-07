@@ -1035,26 +1035,6 @@ func @insert_strided_slice3(%arg0: vector<2x4xf32>, %arg1: vector<16x4x8xf32>) -
 
 // -----
 
-func @extract_strides(%arg0: vector<3x3xf32>) -> vector<1x1xf32> {
-  %0 = vector.extract_slices %arg0, [2, 2], [1, 1]
-    : vector<3x3xf32> into tuple<vector<2x2xf32>, vector<2x1xf32>, vector<1x2xf32>, vector<1x1xf32>>
-  %1 = vector.tuple_get %0, 3 : tuple<vector<2x2xf32>, vector<2x1xf32>, vector<1x2xf32>, vector<1x1xf32>>
-  return %1 : vector<1x1xf32>
-}
-// CHECK-LABEL: @extract_strides(
-// CHECK-SAME: %[[ARG:.*]]: vector<3x3xf32>)
-//      CHECK: %[[VAL_1:.*]] = constant 0.000000e+00 : f32
-//      CHECK: %[[VAL_2:.*]] = splat %[[VAL_1]] : vector<1x1xf32>
-//      CHECK: %[[A:.*]] = llvm.mlir.cast %[[ARG]] : vector<3x3xf32> to !llvm.array<3 x vector<3xf32>>
-//      CHECK: %[[T2:.*]] = llvm.extractvalue %[[A]][2] : !llvm.array<3 x vector<3xf32>>
-//      CHECK: %[[T3:.*]] = llvm.shufflevector %[[T2]], %[[T2]] [2] : vector<3xf32>, vector<3xf32>
-//      CHECK: %[[VAL_6:.*]] = llvm.mlir.cast %[[VAL_2]] : vector<1x1xf32> to !llvm.array<1 x vector<1xf32>>
-//      CHECK: %[[T4:.*]] = llvm.insertvalue %[[T3]], %[[VAL_6]][0] : !llvm.array<1 x vector<1xf32>>
-//      CHECK: %[[VAL_8:.*]] = llvm.mlir.cast %[[T4]] : !llvm.array<1 x vector<1xf32>> to vector<1x1xf32>
-//      CHECK: return %[[VAL_8]] : vector<1x1xf32>
-
-// -----
-
 func @vector_fma(%a: vector<8xf32>, %b: vector<2x4xf32>) -> (vector<8xf32>, vector<2x4xf32>) {
   // CHECK-LABEL: @vector_fma
   //  CHECK-SAME: %[[A:.*]]: vector<8xf32>

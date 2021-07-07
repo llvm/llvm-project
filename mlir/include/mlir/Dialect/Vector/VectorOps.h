@@ -44,21 +44,6 @@ struct BitmaskEnumStorage;
 void populateVectorToVectorCanonicalizationPatterns(
     RewritePatternSet &patterns);
 
-/// Collect a set of vector-to-vector transformation patterns.
-void populateVectorToVectorTransformationPatterns(RewritePatternSet &patterns);
-
-/// Collect a set of patterns to split transfer read/write ops.
-///
-/// These patterns unrolls transfer read/write ops if the vector consumers/
-/// producers are extract/insert slices op. Transfer ops can map to hardware
-/// load/store functionalities, where the vector size matters for bandwith
-/// considerations. So these patterns should be collected separately, instead
-/// of being generic canonicalization patterns. Also one can let the
-/// `ignoreFilter` to return true to fail matching for fine-grained control.
-void populateSplitVectorTransferPatterns(
-    RewritePatternSet &patterns,
-    std::function<bool(Operation *)> ignoreFilter = nullptr);
-
 /// Collect a set of leading one dimension removal patterns.
 ///
 /// These patterns insert vector.shape_cast to remove leading one dimensions
@@ -73,16 +58,6 @@ void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns);
 /// extract ops where suitable. With them, bitcast will happen on smaller
 /// vectors and there are more chances to share extract/insert ops.
 void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns);
-
-/// Collect a set of vector slices transformation patterns:
-///    ExtractSlicesOpLowering, InsertSlicesOpLowering
-/// Useful for clients that want to express all vector "slices"
-/// ops in terms of more elementary vector "slice" ops. If all
-/// "produced" tuple values are "consumed" (the most common
-/// use for "slices" ops), this lowering removes all tuple related
-/// operations as well (through DCE and folding). If tuple values
-/// "leak" coming in, however, some tuple related ops will remain.
-void populateVectorSlicesLoweringPatterns(RewritePatternSet &patterns);
 
 /// Collect a set of transfer read/write lowering patterns.
 ///
