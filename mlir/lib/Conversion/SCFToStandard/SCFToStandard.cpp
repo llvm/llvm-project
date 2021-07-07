@@ -194,6 +194,13 @@ struct IfLowering : public OpRewritePattern<IfOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
+struct ExecuteRegionLowering : public OpRewritePattern<ExecuteRegionOp> {
+  using OpRewritePattern<ExecuteRegionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExecuteRegionOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
 struct ParallelLowering : public OpRewritePattern<mlir::scf::ParallelOp> {
   using OpRewritePattern<mlir::scf::ParallelOp>::OpRewritePattern;
 
@@ -401,6 +408,38 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
 }
 
 LogicalResult
+ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
+                                       PatternRewriter &rewriter) const {
+  auto loc = op.getLoc();
+
+  auto *condBlock = rewriter.getInsertionBlock();
+  auto opPosition = rewriter.getInsertionPoint();
+  auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+
+  auto &region = op.region();
+  rewriter.setInsertionPointToEnd(condBlock);
+  rewriter.create<BranchOp>(loc, &region.front());
+
+  for (Block &block : region) {
+    if (auto terminator = dyn_cast<scf::YieldOp>(block.getTerminator())) {
+      ValueRange terminatorOperands = terminator->getOperands();
+      rewriter.setInsertionPointToEnd(&block);
+      rewriter.create<BranchOp>(loc, remainingOpsBlock, terminatorOperands);
+      rewriter.eraseOp(terminator);
+    }
+  }
+
+  rewriter.inlineRegionBefore(region, remainingOpsBlock);
+
+  SmallVector<Value> vals;
+  for (auto arg : remainingOpsBlock->addArguments(op->getResultTypes())) {
+    vals.push_back(arg);
+  }
+  rewriter.replaceOp(op, vals);
+  return success();
+}
+
+LogicalResult
 ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
                                   PatternRewriter &rewriter) const {
   Location loc = parallelOp.getLoc();
@@ -569,8 +608,8 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
 }
 
 void mlir::populateLoopToStdConversionPatterns(RewritePatternSet &patterns) {
-  patterns.add<ForLowering, IfLowering, ParallelLowering, WhileLowering>(
-      patterns.getContext());
+  patterns.add<ForLowering, IfLowering, ParallelLowering, WhileLowering,
+               ExecuteRegionLowering>(patterns.getContext());
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
 
@@ -580,7 +619,8 @@ void SCFToStandardPass::runOnOperation() {
   // Configure conversion to lower out scf.for, scf.if, scf.parallel and
   // scf.while. Anything else is fine.
   ConversionTarget target(getContext());
-  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::ParallelOp, scf::WhileOp>();
+  target.addIllegalOp<scf::ForOp, scf::IfOp, scf::ParallelOp, scf::WhileOp,
+                      scf::ExecuteRegionOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
