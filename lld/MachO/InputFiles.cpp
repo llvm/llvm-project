@@ -227,6 +227,20 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
 InputFile::InputFile(Kind kind, const InterfaceFile &interface)
     : id(idCount++), fileKind(kind), name(saver.save(interface.getPath())) {}
 
+// Some sections comprise of fixed-size records, so instead of splitting them at
+// symbol boundaries, we split them based on size. Records are distinct from
+// literals in that they may contain references to other sections, instead of
+// being leaf nodes in the InputSection graph.
+//
+// Note that "record" is a term I came up with. In contrast, "literal" is a term
+// used by the Mach-O format.
+static Optional<size_t> getRecordSize(StringRef segname, StringRef name) {
+  if (name == section_names::cfString)
+    if (config->icfLevel != ICFLevel::none && segname == segment_names::data)
+      return target->wordSize == 8 ? 32 : 16;
+  return {};
+}
+
 template <class Section>
 void ObjFile::parseSections(ArrayRef<Section> sections) {
   subsections.reserve(sections.size());
@@ -249,6 +263,24 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
     uint32_t align = 1 << sec.align;
     uint32_t flags = sec.flags;
 
+    auto splitRecords = [&](int recordSize) -> void {
+      subsections.push_back({});
+      if (data.size() == 0)
+        return;
+
+      SubsectionMap &subsecMap = subsections.back();
+      subsecMap.reserve(data.size() / recordSize);
+      auto *isec = make<ConcatInputSection>(
+          segname, name, this, data.slice(0, recordSize), align, flags);
+      subsecMap.push_back({0, isec});
+      for (uint64_t off = recordSize; off < data.size(); off += recordSize) {
+        // Copying requires less memory than constructing a fresh InputSection.
+        auto *copy = make<ConcatInputSection>(*isec);
+        copy->data = data.slice(off, recordSize);
+        subsecMap.push_back({off, copy});
+      }
+    };
+
     if (sectionType(sec.flags) == S_CSTRING_LITERALS ||
         (config->dedupLiterals && isWordLiteralSection(sec.flags))) {
       if (sec.nreloc && config->dedupLiterals)
@@ -268,17 +300,8 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
                                              flags);
       }
       subsections.push_back({{0, isec}});
-    } else if (config->icfLevel != ICFLevel::none &&
-               (name == section_names::cfString &&
-                segname == segment_names::data)) {
-      uint64_t literalSize = target->wordSize == 8 ? 32 : 16;
-      subsections.push_back({});
-      SubsectionMap &subsecMap = subsections.back();
-      for (uint64_t off = 0; off < data.size(); off += literalSize)
-        subsecMap.push_back(
-            {off, make<ConcatInputSection>(segname, name, this,
-                                           data.slice(off, literalSize), align,
-                                           flags)});
+    } else if (auto recordSize = getRecordSize(segname, name)) {
+      splitRecords(*recordSize);
     } else if (segname == segment_names::llvm) {
       // ld64 does not appear to emit contents from sections within the __LLVM
       // segment. Symbols within those sections point to bitcode metadata
