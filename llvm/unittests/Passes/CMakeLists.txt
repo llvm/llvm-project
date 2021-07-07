@@ -12,12 +12,12 @@ endif()
 # work with DLLs on Windows (where a shared library can't have undefined
 # references), so just skip this testcase on Windows.
 if (NOT WIN32)
-  set(LLVM_LINK_COMPONENTS Support Passes Core)
+  set(LLVM_LINK_COMPONENTS Support Passes Core LLVMAsmParser)
   add_llvm_unittest(PluginsTests
     PluginsTest.cpp
     )
   export_executable_symbols_for_plugins(PluginsTests)
-  target_link_libraries(PluginsTests PRIVATE LLVMAsmParser LLVMTestingSupport)
+  target_link_libraries(PluginsTests PRIVATE LLVMTestingSupport)
 
   set(LLVM_LINK_COMPONENTS)
   foreach(PLUGIN TestPlugin DoublerPlugin)
