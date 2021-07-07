@@ -4138,15 +4138,6 @@ const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
   if (LHS == RHS)
     return getZero(LHS->getType());
 
-  // If we subtract two pointers with different pointer bases, bail.
-  // Eventually, we're going to add an assertion to getMulExpr that we
-  // can't multiply by a pointer.
-  if (RHS->getType()->isPointerTy()) {
-    if (!LHS->getType()->isPointerTy() ||
-        getPointerBase(LHS) != getPointerBase(RHS))
-      return getCouldNotCompute();
-  }
-
   // We represent LHS - RHS as LHS + (-1)*RHS. This transformation
   // makes it so that we cannot make much use of NUW.
   auto AddFlags = SCEV::FlagAnyWrap;
@@ -8038,16 +8029,6 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
   }
   case ICmpInst::ICMP_EQ: {                     // while (X == Y)
     // Convert to: while (X-Y == 0)
-    if (LHS->getType()->isPointerTy()) {
-      LHS = getLosslessPtrToIntExpr(LHS);
-      if (isa<SCEVCouldNotCompute>(LHS))
-        return LHS;
-    }
-    if (RHS->getType()->isPointerTy()) {
-      RHS = getLosslessPtrToIntExpr(RHS);
-      if (isa<SCEVCouldNotCompute>(RHS))
-        return RHS;
-    }
     ExitLimit EL = howFarToNonZero(getMinusSCEV(LHS, RHS), L);
     if (EL.hasAnyInfo()) return EL;
     break;
@@ -10085,13 +10066,10 @@ bool ScalarEvolution::isKnownPredicateViaConstantRanges(
   if (Pred == CmpInst::ICMP_EQ)
     return false;
 
-  if (Pred == CmpInst::ICMP_NE) {
-    if (CheckRanges(getSignedRange(LHS), getSignedRange(RHS)) ||
-        CheckRanges(getUnsignedRange(LHS), getUnsignedRange(RHS)))
-      return true;
-    auto *Diff = getMinusSCEV(LHS, RHS);
-    return !isa<SCEVCouldNotCompute>(Diff) && isKnownNonZero(Diff);
-  }
+  if (Pred == CmpInst::ICMP_NE)
+    return CheckRanges(getSignedRange(LHS), getSignedRange(RHS)) ||
+           CheckRanges(getUnsignedRange(LHS), getUnsignedRange(RHS)) ||
+           isKnownNonZero(getMinusSCEV(LHS, RHS));
 
   if (CmpInst::isSigned(Pred))
     return CheckRanges(getSignedRange(LHS), getSignedRange(RHS));
@@ -10611,10 +10589,6 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
                                    Context);
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
       return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, Context);
-
-    // Don't try to getNotSCEV pointers.
-    if (LHS->getType()->isPointerTy() || FoundLHS->getType()->isPointerTy())
-      return false;
 
     // There's no clear preference between forms 3. and 4., try both.
     return isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
