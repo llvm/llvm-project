@@ -162,22 +162,20 @@ define i32 @oradd(i32 %i, i32 %y) {
 ; CHECK-T1-LABEL: oradd:
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    lsls r0, r0, #1
+; CHECK-T1-NEXT:    adds r0, r1, r0
 ; CHECK-T1-NEXT:    adds r0, r0, #1
-; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: oradd:
 ; CHECK-T2:       @ %bb.0: @ %entry
-; CHECK-T2-NEXT:    lsls r0, r0, #1
+; CHECK-T2-NEXT:    add.w r0, r1, r0, lsl #1
 ; CHECK-T2-NEXT:    adds r0, #1
-; CHECK-T2-NEXT:    add r0, r1
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-A-LABEL: oradd:
 ; CHECK-A:       @ %bb.0: @ %entry
-; CHECK-A-NEXT:    mov r2, #1
-; CHECK-A-NEXT:    orr r0, r2, r0, lsl #1
-; CHECK-A-NEXT:    add r0, r0, r1
+; CHECK-A-NEXT:    add r0, r1, r0, lsl #1
+; CHECK-A-NEXT:    add r0, r0, #1
 ; CHECK-A-NEXT:    bx lr
 entry:
   %mul = shl i32 %i, 1
@@ -190,22 +188,20 @@ define i32 @orgep(i32 %i, i32* %x, i32* %y) {
 ; CHECK-T1-LABEL: orgep:
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    lsls r0, r0, #3
-; CHECK-T1-NEXT:    adds r0, r0, #4
-; CHECK-T1-NEXT:    ldr r0, [r1, r0]
+; CHECK-T1-NEXT:    adds r0, r1, r0
+; CHECK-T1-NEXT:    ldr r0, [r0, #4]
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: orgep:
 ; CHECK-T2:       @ %bb.0: @ %entry
-; CHECK-T2-NEXT:    lsls r0, r0, #3
-; CHECK-T2-NEXT:    adds r0, #4
-; CHECK-T2-NEXT:    ldr r0, [r1, r0]
+; CHECK-T2-NEXT:    add.w r0, r1, r0, lsl #3
+; CHECK-T2-NEXT:    ldr r0, [r0, #4]
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-A-LABEL: orgep:
 ; CHECK-A:       @ %bb.0: @ %entry
-; CHECK-A-NEXT:    mov r2, #4
-; CHECK-A-NEXT:    orr r0, r2, r0, lsl #3
-; CHECK-A-NEXT:    ldr r0, [r1, r0]
+; CHECK-A-NEXT:    add r0, r1, r0, lsl #3
+; CHECK-A-NEXT:    ldr r0, [r0, #4]
 ; CHECK-A-NEXT:    bx lr
 entry:
   %mul = shl i32 %i, 1
@@ -219,31 +215,24 @@ define i32 @orgeps(i32 %i, i32* %x, i32* %y) {
 ; CHECK-T1-LABEL: orgeps:
 ; CHECK-T1:       @ %bb.0: @ %entry
 ; CHECK-T1-NEXT:    lsls r0, r0, #3
-; CHECK-T1-NEXT:    adds r2, r0, #4
-; CHECK-T1-NEXT:    ldr r2, [r1, r2]
-; CHECK-T1-NEXT:    adds r0, r0, r1
+; CHECK-T1-NEXT:    adds r0, r1, r0
+; CHECK-T1-NEXT:    ldr r1, [r0, #4]
 ; CHECK-T1-NEXT:    ldr r0, [r0, #8]
-; CHECK-T1-NEXT:    adds r0, r0, r2
+; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: orgeps:
 ; CHECK-T2:       @ %bb.0: @ %entry
-; CHECK-T2-NEXT:    lsls r2, r0, #3
 ; CHECK-T2-NEXT:    add.w r0, r1, r0, lsl #3
-; CHECK-T2-NEXT:    adds r2, #4
-; CHECK-T2-NEXT:    ldr r0, [r0, #8]
-; CHECK-T2-NEXT:    ldr r2, [r1, r2]
-; CHECK-T2-NEXT:    add r0, r2
+; CHECK-T2-NEXT:    ldrd r0, r1, [r0, #4]
+; CHECK-T2-NEXT:    add r0, r1
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-A-LABEL: orgeps:
 ; CHECK-A:       @ %bb.0: @ %entry
-; CHECK-A-NEXT:    mov r2, #4
-; CHECK-A-NEXT:    orr r2, r2, r0, lsl #3
 ; CHECK-A-NEXT:    add r0, r1, r0, lsl #3
-; CHECK-A-NEXT:    ldr r2, [r1, r2]
-; CHECK-A-NEXT:    ldr r0, [r0, #8]
-; CHECK-A-NEXT:    add r0, r0, r2
+; CHECK-A-NEXT:    ldrd r0, r1, [r0, #4]
+; CHECK-A-NEXT:    add r0, r1, r0
 ; CHECK-A-NEXT:    bx lr
 entry:
   %mul = shl i32 %i, 1
