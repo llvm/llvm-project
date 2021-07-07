@@ -587,3 +587,36 @@ func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, %arg5
   // CHECK:   return
   return
 }
+
+// CHECK-LABEL: func @func_execute_region_elim_multi_yield
+func @func_execute_region_elim_multi_yield() {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 {
+      %c = "test.cmp"() : () -> i1
+      cond_br %c, ^bb2, ^bb3
+    ^bb2:
+      %x = "test.val1"() : () -> i64
+      scf.yield %x : i64
+    ^bb3:
+      %y = "test.val2"() : () -> i64
+      scf.yield %y : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  return
+}
+
+// CHECK-NOT: execute_region
+// CHECK:     "test.foo"
+// CHECK:     br ^[[rentry:.+]]
+// CHECK:   ^[[rentry]]
+// CHECK:     %[[cmp:.+]] = "test.cmp"
+// CHECK:     cond_br %[[cmp]], ^[[bb1:.+]], ^[[bb2:.+]]
+// CHECK:   ^[[bb1]]:
+// CHECK:     %[[x:.+]] = "test.val1"
+// CHECK:     br ^[[bb3:.+]](%[[x]] : i64)
+// CHECK:   ^[[bb2]]:
+// CHECK:     %[[y:.+]] = "test.val2"
+// CHECK:     br ^[[bb3]](%[[y:.+]] : i64)
+// CHECK:   ^[[bb3]](%[[z:.+]]: i64):
+// CHECK:     "test.bar"(%[[z]])
+// CHECK:     return
