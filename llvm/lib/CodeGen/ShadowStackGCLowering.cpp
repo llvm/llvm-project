@@ -89,6 +89,7 @@ private:
 } // end anonymous namespace
 
 char ShadowStackGCLowering::ID = 0;
+char &llvm::ShadowStackGCLoweringID = ShadowStackGCLowering::ID;
 
 INITIALIZE_PASS_BEGIN(ShadowStackGCLowering, DEBUG_TYPE,
                       "Shadow Stack GC Lowering", false, false)
