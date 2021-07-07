@@ -40,6 +40,7 @@
 #include "machine.h"
 #include "omptargetplugin.h"
 #include "print_tracing.h"
+#include "trace.h"
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
