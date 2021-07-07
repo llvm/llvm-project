@@ -888,9 +888,6 @@ void AMDGPUPassConfig::addIRPasses() {
   // A call to propagate attributes pass in the backend in case opt was not run.
   addPass(createAMDGPUPropagateAttributesEarlyPass(&TM));
 
-  addPass(createAtomicExpandPass());
-
-
   addPass(createAMDGPULowerIntrinsicsPass());
 
   // Function calls are not supported, so make sure we inline everything.
@@ -921,8 +918,12 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSPass());
   }
 
-  if (TM.getOptLevel() > CodeGenOpt::None) {
+  if (TM.getOptLevel() > CodeGenOpt::None)
     addPass(createInferAddressSpacesPass());
+
+  addPass(createAtomicExpandPass());
+
+  if (TM.getOptLevel() > CodeGenOpt::None) {
     addPass(createAMDGPUPromoteAlloca());
 
     if (EnableSROA)
