@@ -474,6 +474,61 @@ func @scf_for_with_tensor.insert_slice(%A : tensor<?xf32>,
 
 // -----
 
+func private @some_use(tensor<?xf32>) -> ()
+
+// CHECK-LABEL: func @scf_for_deps
+func @scf_for_deps(%A : tensor<?xf32> {linalg.inplaceable = true},
+                   %B : tensor<?xf32> {linalg.inplaceable = true},
+                   %lb : index, %ub : index, %step : index)
+  -> (tensor<?xf32>, tensor<?xf32>)
+{
+  // %r0 must be out of place because one use of %t in the subsequent production 
+  // of %r1 is read.
+  //      CHECK: scf.for
+  // CHECK-NEXT: scf.yield
+  // CHECK-NEXT: {__inplace_results_attr__ = ["false"]}
+  %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
+    scf.yield %t : tensor<?xf32>
+  }
+
+  // %r1 bufferizes inplace fine.
+  //      CHECK: scf.for
+  // CHECK-NEXT: call
+  // CHECK-NEXT: scf.yield
+  // CHECK-NEXT: {__inplace_results_attr__ = ["true"]}
+  %r1 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
+    call @some_use(%t) : (tensor<?xf32>) -> ()
+    scf.yield %t : tensor<?xf32>
+  }
+
+  // %r2 must be out of place because one use of %t in the subsequent production 
+  // of %r3 is read.
+  //      CHECK: linalg.tiled_loop
+  // CHECK-NEXT: linalg.yield
+  // CHECK-NEXT: {__inplace_results_attr__ = ["false"]}
+  %r2 = linalg.tiled_loop (%i) = (%lb) to (%ub) step (%step)
+        ins()
+        outs(%t = %B: tensor<?xf32>) {
+    linalg.yield %t : tensor<?xf32>
+  }
+
+  // %r3 bufferizes inplace fine.
+  //      CHECK: linalg.tiled_loop
+  // CHECK-NEXT: call
+  // CHECK-NEXT: linalg.yield
+  // CHECK-NEXT: {__inplace_results_attr__ = ["true"]}
+  %r3 = linalg.tiled_loop (%i) = (%lb) to (%ub) step (%step)
+        ins()
+        outs(%t = %B: tensor<?xf32>) {
+    call @some_use(%t) : (tensor<?xf32>) -> ()
+    linalg.yield %t : tensor<?xf32>
+  }
+
+  return %r1, %r3: tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Cross function boundary cases.
 //===----------------------------------------------------------------------===//
