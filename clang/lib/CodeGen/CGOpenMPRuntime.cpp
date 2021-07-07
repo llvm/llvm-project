@@ -8997,11 +8997,17 @@ public:
           // If one component is a pointer and another one is a kind of
           // dereference of this pointer (array subscript, section, dereference,
           // etc.), it is not an overlapping.
+          // Same, if one component is a base and another component is a
+          // dereferenced pointer memberexpr with the same base.
           if (!isa<MemberExpr>(It->getAssociatedExpression()) ||
-              std::prev(It)
-                  ->getAssociatedExpression()
-                  ->getType()
-                  ->isPointerType())
+              (std::prev(It)->getAssociatedDeclaration() &&
+               std::prev(It)
+                   ->getAssociatedDeclaration()
+                   ->getType()
+                   ->isPointerType()) ||
+              (It->getAssociatedDeclaration() &&
+               It->getAssociatedDeclaration()->getType()->isPointerType() &&
+               std::next(It) != CE && std::next(It) != SE))
             continue;
           const MapData &BaseData = CI == CE ? L : L1;
           OMPClauseMappableExprCommon::MappableExprComponentListRef SubData =
@@ -9061,7 +9067,7 @@ public:
             const auto *FD2 = cast<FieldDecl>(SI->getAssociatedDeclaration());
             if (FD1->getParent() == FD2->getParent())
               return FD1->getFieldIndex() < FD2->getFieldIndex();
-            const auto It =
+            const auto *It =
                 llvm::find_if(Layout, [FD1, FD2](const FieldDecl *FD) {
                   return FD == FD1 || FD == FD2;
                 });
