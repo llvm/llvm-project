@@ -37,6 +37,10 @@ public:
   CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
                          lldb::BreakpointLocationSP bp_loc_sp,
                          StructuredData::ObjectSP extra_args_sp);
+  llvm::Error RegisterWatchpointCallback(void *baton, const char *body);
+  llvm::Expected<bool> CallWatchpointCallback(void *baton,
+                                              lldb::StackFrameSP stop_frame_sp,
+                                              lldb::WatchpointSP wp_sp);
   llvm::Error LoadModule(llvm::StringRef filename);
   llvm::Error CheckSyntax(llvm::StringRef buffer);
   llvm::Error ChangeIO(FILE *out, FILE *err);
