@@ -8,7 +8,6 @@
 
 #include "src/string/memcmp.h"
 #include "utils/UnitTest/Test.h"
-#include <cstring>
 
 TEST(LlvmLibcMemcmpTest, CmpZeroByte) {
   const char *lhs = "ab";
@@ -39,14 +38,19 @@ TEST(LlvmLibcMemcmpTest, Sweep) {
   char lhs[kMaxSize];
   char rhs[kMaxSize];
 
-  memset(lhs, 'a', sizeof(lhs));
-  memset(rhs, 'a', sizeof(rhs));
-  for (int i = 0; i < kMaxSize; ++i)
+  const auto reset = [](char *const ptr) {
+    for (size_t i = 0; i < kMaxSize; ++i)
+      ptr[i] = 'a';
+  };
+
+  reset(lhs);
+  reset(rhs);
+  for (size_t i = 0; i < kMaxSize; ++i)
     EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, i), 0);
 
-  memset(lhs, 'a', sizeof(lhs));
-  memset(rhs, 'a', sizeof(rhs));
-  for (int i = 0; i < kMaxSize; ++i) {
+  reset(lhs);
+  reset(rhs);
+  for (size_t i = 0; i < kMaxSize; ++i) {
     rhs[i] = 'b';
     EXPECT_EQ(__llvm_libc::memcmp(lhs, rhs, kMaxSize), -1);
     rhs[i] = 'a';

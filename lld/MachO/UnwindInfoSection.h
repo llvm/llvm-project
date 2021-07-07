@@ -28,7 +28,7 @@ template <class Ptr> struct CompactUnwindEntry {
 class UnwindInfoSection : public SyntheticSection {
 public:
   bool isNeeded() const override {
-    return !compactUnwindSection->inputs.empty();
+    return !compactUnwindSection->inputs.empty() && !allEntriesAreOmitted;
   }
   uint64_t getSize() const override { return unwindInfoSize; }
   virtual void addInput(ConcatInputSection *) = 0;
@@ -43,6 +43,7 @@ protected:
 
   ConcatOutputSection *compactUnwindSection;
   uint64_t unwindInfoSize = 0;
+  bool allEntriesAreOmitted = true;
 };
 
 UnwindInfoSection *makeUnwindInfoSection();
