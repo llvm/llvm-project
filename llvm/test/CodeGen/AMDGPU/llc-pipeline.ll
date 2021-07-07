@@ -34,7 +34,6 @@
 ; GCN-O0-NEXT:     Fix function bitcasts for AMDGPU
 ; GCN-O0-NEXT:     FunctionPass Manager
 ; GCN-O0-NEXT:       Early propagate attributes from kernels to functions
-; GCN-O0-NEXT:       Expand Atomic instructions
 ; GCN-O0-NEXT:     AMDGPU Lower Intrinsics
 ; GCN-O0-NEXT:     AMDGPU Inline All Functions
 ; GCN-O0-NEXT:     CallGraph Construction
@@ -44,6 +43,7 @@
 ; GCN-O0-NEXT:     Lower OpenCL enqueued blocks
 ; GCN-O0-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:     FunctionPass Manager
+; GCN-O0-NEXT:     Expand Atomic instructions
 ; GCN-O0-NEXT:       Lower Garbage Collection Instructions
 ; GCN-O0-NEXT:       Shadow Stack GC Lowering
 ; GCN-O0-NEXT:       Lower constant intrinsics
@@ -177,7 +177,6 @@
 ; GCN-O1-NEXT:     Fix function bitcasts for AMDGPU
 ; GCN-O1-NEXT:     FunctionPass Manager
 ; GCN-O1-NEXT:       Early propagate attributes from kernels to functions
-; GCN-O1-NEXT:       Expand Atomic instructions
 ; GCN-O1-NEXT:     AMDGPU Lower Intrinsics
 ; GCN-O1-NEXT:     AMDGPU Inline All Functions
 ; GCN-O1-NEXT:     CallGraph Construction
@@ -188,6 +187,7 @@
 ; GCN-O1-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:     FunctionPass Manager
 ; GCN-O1-NEXT:       Infer address spaces
+; GCN-O1-NEXT:       Expand Atomic instructions
 ; GCN-O1-NEXT:       AMDGPU Promote Alloca
 ; GCN-O1-NEXT:       Dominator Tree Construction
 ; GCN-O1-NEXT:       SROA
@@ -425,7 +425,6 @@
 ; GCN-O1-OPTS-NEXT:     Fix function bitcasts for AMDGPU
 ; GCN-O1-OPTS-NEXT:     FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:       Early propagate attributes from kernels to functions
-; GCN-O1-OPTS-NEXT:       Expand Atomic instructions
 ; GCN-O1-OPTS-NEXT:     AMDGPU Lower Intrinsics
 ; GCN-O1-OPTS-NEXT:     AMDGPU Inline All Functions
 ; GCN-O1-OPTS-NEXT:     CallGraph Construction
@@ -436,6 +435,7 @@
 ; GCN-O1-OPTS-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:     FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:       Infer address spaces
+; GCN-O1-OPTS-NEXT:       Expand Atomic instructions
 ; GCN-O1-OPTS-NEXT:       AMDGPU Promote Alloca
 ; GCN-O1-OPTS-NEXT:       Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:       SROA
@@ -706,7 +706,6 @@
 ; GCN-O2-NEXT:     Fix function bitcasts for AMDGPU
 ; GCN-O2-NEXT:     FunctionPass Manager
 ; GCN-O2-NEXT:       Early propagate attributes from kernels to functions
-; GCN-O2-NEXT:       Expand Atomic instructions
 ; GCN-O2-NEXT:     AMDGPU Lower Intrinsics
 ; GCN-O2-NEXT:     AMDGPU Inline All Functions
 ; GCN-O2-NEXT:     CallGraph Construction
@@ -717,6 +716,7 @@
 ; GCN-O2-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:     FunctionPass Manager
 ; GCN-O2-NEXT:       Infer address spaces
+; GCN-O2-NEXT:       Expand Atomic instructions
 ; GCN-O2-NEXT:       AMDGPU Promote Alloca
 ; GCN-O2-NEXT:       Dominator Tree Construction
 ; GCN-O2-NEXT:       SROA
@@ -988,7 +988,6 @@
 ; GCN-O3-NEXT:     Fix function bitcasts for AMDGPU
 ; GCN-O3-NEXT:     FunctionPass Manager
 ; GCN-O3-NEXT:       Early propagate attributes from kernels to functions
-; GCN-O3-NEXT:       Expand Atomic instructions
 ; GCN-O3-NEXT:     AMDGPU Lower Intrinsics
 ; GCN-O3-NEXT:     AMDGPU Inline All Functions
 ; GCN-O3-NEXT:     CallGraph Construction
@@ -999,6 +998,7 @@
 ; GCN-O3-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:     FunctionPass Manager
 ; GCN-O3-NEXT:       Infer address spaces
+; GCN-O3-NEXT:       Expand Atomic instructions
 ; GCN-O3-NEXT:       AMDGPU Promote Alloca
 ; GCN-O3-NEXT:       Dominator Tree Construction
 ; GCN-O3-NEXT:       SROA
