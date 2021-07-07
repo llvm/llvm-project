@@ -67,3 +67,11 @@ unsigned int func5(void);
 FnTy test5(void) {
   return (FnTy)&func5;
 }
+
+void test6() {
+  struct {
+    int hello;
+    doesnotexist world; // expected-error {{unknown type name 'doesnotexist'}}
+  } foo;
+  void **repro = (void **)&foo.hello; // expected-warning {{cast from 'int *' to 'void **' increases required alignment from 4 to 8}}
+}
