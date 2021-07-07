@@ -542,12 +542,21 @@ static bool bufferizesToMemoryRead(OpOperand &opOperand) {
     return false;
   // scf::ForOp alone doesn't bufferize to a memory read, one of the uses of its
   // matching bbArg may.
-  if (isa<scf::ForOp>(opOperand.getOwner()))
+  if (auto forOp = dyn_cast<scf::ForOp>(opOperand.getOwner())) {
+    for (OpOperand &use :
+         forOp.getRegionIterArgForOpOperand(opOperand).getUses())
+      if (bufferizesToMemoryRead(use))
+        return true;
     return false;
+  }
   // TiledLoop alone doesn't bufferize to a memory read, one of the uses of its
   // matching bbArg may.
-  if (isa<TiledLoopOp>(opOperand.getOwner()))
+  if (auto tiledLoopOp = dyn_cast<TiledLoopOp>(opOperand.getOwner())) {
+    for (OpOperand &use : tiledLoopOp.getTiedBlockArgument(opOperand).getUses())
+      if (bufferizesToMemoryRead(use))
+        return true;
     return false;
+  }
   // CallOpInterface alone doesn't bufferize to a memory read, one of the uses
   // of the matching bbArg may. It is the responsibility of the caller to
   // inspect bbArgs. In the absence of a BufferizationAliasInfo, we need to be
@@ -1685,6 +1694,8 @@ static LogicalResult bufferize(OpBuilder &b, scf::ForOp forOp,
         b.create<linalg::CopyOp>(forOp.getLoc(), operandBuffer, resultBuffer);
     }
     BlockArgument bbArg = forOp.getRegionIterArgForOpOperand(opOperand);
+    aliasInfo.createAliasInfoEntry(resultBuffer);
+    aliasInfo.insertNewBufferEquivalence(bbArg, resultBuffer);
     map(bvm, bbArg, resultBuffer);
     map(bvm, opResult, resultBuffer);
   }
