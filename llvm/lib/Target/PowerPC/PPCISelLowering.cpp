@@ -14496,10 +14496,12 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
   SDLoc dl(SVN);
   bool IsLittleEndian = Subtarget.isLittleEndian();
 
-  // On little endian targets, do these combines on all VSX targets since
-  // canonical shuffles match efficient permutes. On big endian targets,
-  // this is only useful for targets with direct moves.
-  if (!Subtarget.hasDirectMove() && !(IsLittleEndian && Subtarget.hasVSX()))
+  // On big endian targets this is only useful for subtargets with direct moves.
+  // On little endian targets it would be useful for all subtargets with VSX.
+  // However adding special handling for LE subtargets without direct moves
+  // would be wasted effort since the minimum arch for LE is ISA 2.07 (Power8)
+  // which includes direct moves.
+  if (!Subtarget.hasDirectMove())
     return Res;
 
   // If this is not a shuffle of a shuffle and the first element comes from
