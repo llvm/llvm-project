@@ -73,7 +73,7 @@ define void @f6(i64 %addr, i64 %index) {
 ; CHECK-LABEL: f6:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    nill %r2, 65528
-; CHECK-NEXT:    lb %r0, 6(%r3,%r2)
+; CHECK-NEXT:    lb %r0, 6(%r2,%r3)
 ; CHECK-NEXT:    br %r14
   %aligned = and i64 %addr, -8
   %or = or i64 %aligned, 6
