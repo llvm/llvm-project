@@ -1813,6 +1813,11 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
         Assert(Attrs.getInAllocaType() == PTy->getElementType(),
                "Attribute 'inalloca' type does not match parameter!", V);
       }
+
+      if (Attrs.hasAttribute(Attribute::ElementType)) {
+        Assert(Attrs.getElementType() == PTy->getElementType(),
+               "Attribute 'elementtype' type does not match parameter!", V);
+      }
     }
   }
 }
@@ -1874,6 +1879,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (!IsIntrinsic) {
       Assert(!ArgAttrs.hasAttribute(Attribute::ImmArg),
              "immarg attribute only applies to intrinsics",V);
+      Assert(!ArgAttrs.hasAttribute(Attribute::ElementType),
+             "Attribute 'elementtype' can only be applied to intrinsics.", V);
     }
 
     verifyParameterAttrs(ArgAttrs, Ty, V);
@@ -2330,6 +2337,9 @@ void Verifier::visitFunction(const Function &F) {
   // checking for Attributes that can/can not ever be on functions.
   Assert(!Attrs.hasFnAttribute(Attribute::Builtin),
          "Attribute 'builtin' can only be applied to a callsite.", &F);
+
+  Assert(!Attrs.hasAttrSomewhere(Attribute::ElementType),
+         "Attribute 'elementtype' can only be applied to a callsite.", &F);
 
   // Check that this function meets the restrictions on this calling convention.
   // Sometimes varargs is used for perfectly forwarding thunks, so some of these
