@@ -138,6 +138,10 @@ class Function;
 
 /// Abstract Attribute helper functions.
 namespace AA {
+/// Return true if \p V is a valid value in \p Scope, that is a constant or an
+/// instruction/argument of \p Scope.
+bool isValidInScope(const Value &V, const Function *Scope);
+
 /// Try to convert \p V to type \p Ty without introducing new instructions. If
 /// this is not possible return `nullptr`. Note: this function basically knows
 /// how to cast various constants.
