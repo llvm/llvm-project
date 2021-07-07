@@ -202,6 +202,7 @@ namespace std {
 #include <__availability>
 #include <__config>
 #include <__utility/forward.h>
+#include <__variant/monostate.h>
 #include <__tuple>
 #include <array>
 #include <compare>
@@ -1703,26 +1704,6 @@ inline _LIBCPP_INLINE_VISIBILITY
 }
 #endif
 
-struct _LIBCPP_TEMPLATE_VIS monostate {};
-
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator<(monostate, monostate) noexcept { return false; }
-
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator>(monostate, monostate) noexcept { return false; }
-
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator<=(monostate, monostate) noexcept { return true; }
-
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator>=(monostate, monostate) noexcept { return true; }
-
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator==(monostate, monostate) noexcept { return true; }
-
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator!=(monostate, monostate) noexcept { return false; }
-
 template <class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
 auto swap(variant<_Types...>& __lhs,
@@ -1752,17 +1733,6 @@ struct _LIBCPP_TEMPLATE_VIS hash<
                      },
                      __v);
     return __hash_combine(__res, hash<size_t>{}(__v.index()));
-  }
-};
-
-template <>
-struct _LIBCPP_TEMPLATE_VIS hash<monostate> {
-  using argument_type = monostate;
-  using result_type = size_t;
-
-  inline _LIBCPP_INLINE_VISIBILITY
-  result_type operator()(const argument_type&) const _NOEXCEPT {
-    return 66740831; // return a fundamentally attractive random value.
   }
 };
 
