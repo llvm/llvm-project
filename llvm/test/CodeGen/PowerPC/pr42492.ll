@@ -8,22 +8,20 @@ define void @f(i8*, i8*, i64*) {
 ; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    beqlr 0
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    ld 6, 8(5)
 ; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    add 3, 3, 4
-; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:    li 4, 15
+; CHECK-NEXT:    cmpldi 3, 15
+; CHECK-NEXT:    isellt 3, 3, 4
+; CHECK-NEXT:    addi 4, 3, 1
+; CHECK-NEXT:    ld 3, 8(5)
+; CHECK-NEXT:    mtctr 4
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    addi 7, 4, 1
-; CHECK-NEXT:    sldi 6, 6, 4
-; CHECK-NEXT:    cmplwi 4, 14
-; CHECK-NEXT:    bc 12, 1, .LBB0_4
+; CHECK-NEXT:    sldi 3, 3, 4
+; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    cmpd 3, 4
-; CHECK-NEXT:    mr 4, 7
-; CHECK-NEXT:    bc 4, 2, .LBB0_2
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    std 6, 8(5)
+; CHECK-NEXT:    std 3, 8(5)
 ; CHECK-NEXT:    blr
 
   %4 = icmp eq i8* %0, %1

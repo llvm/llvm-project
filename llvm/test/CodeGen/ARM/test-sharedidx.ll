@@ -75,8 +75,8 @@ for.body.2:                                       ; preds = %for.body.1
 
 for.body.3:                                       ; preds = %for.body.2
 ; CHECK: %for.body.3
-; CHECK: ldrb {{r[0-9]+|lr}}, [{{r[0-9]+|lr}}, {{r[0-9]+|lr}}]!
-; CHECK: ldrb {{r[0-9]+|lr}}, [{{r[0-9]+|lr}}, {{r[0-9]+|lr}}]!
+; CHECK: ldrb {{r[0-9]+|lr}}, [{{r[0-9]+|lr}}, {{r[0-9]+|lr}}]
+; CHECK: ldrb {{r[0-9]+|lr}}, [{{r[0-9]+|lr}}, {{r[0-9]+|lr}}]
   %arrayidx.3 = getelementptr inbounds i8, i8* %a, i32 %add5.2
   %6 = load i8, i8* %arrayidx.3, align 1
   %conv6.3 = zext i8 %6 to i32

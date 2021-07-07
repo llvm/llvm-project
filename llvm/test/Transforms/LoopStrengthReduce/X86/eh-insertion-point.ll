@@ -10,22 +10,19 @@ declare void @use1(i1)
 define void @is_not_null(i8* %baseptr) local_unnamed_addr align 2 personality i8* undef {
 ; CHECK-LABEL: @is_not_null(
 ; CHECK-NEXT:  preheader:
-; CHECK-NEXT:    [[BASEPTR1:%.*]] = ptrtoint i8* [[BASEPTR:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[BASEPTR1]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* null, i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i8* [ [[SCEVGEP2:%.*]], [[LATCH:%.*]] ], [ [[SCEVGEP]], [[PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi i8* [ [[INCPTR:%.*]], [[LATCH:%.*]] ], [ [[BASEPTR:%.*]], [[PREHEADER:%.*]] ]
 ; CHECK-NEXT:    invoke void @maybe_throws()
 ; CHECK-NEXT:    to label [[LATCH]] unwind label [[LPAD:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    catch i8* null
-; CHECK-NEXT:    [[PTR_IS_NOT_NULL:%.*]] = icmp ne i8* [[LSR_IV]], null
+; CHECK-NEXT:    [[PTR_IS_NOT_NULL:%.*]] = icmp ne i8* [[PTR]], null
 ; CHECK-NEXT:    call void @use1(i1 [[PTR_IS_NOT_NULL]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       latch:
-; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, i8* [[LSR_IV]], i64 -1
+; CHECK-NEXT:    [[INCPTR]] = getelementptr inbounds i8, i8* [[PTR]], i64 1
 ; CHECK-NEXT:    br label [[HEADER]]
 ;
 preheader:
