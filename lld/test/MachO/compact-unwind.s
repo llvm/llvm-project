@@ -62,6 +62,16 @@
 # CHECK-NEXT: __DATA_CONST __got          0x{{[0-9A-F]*}}  pointer
 # CHECK-NOT:  __TEXT
 
+## Check that we don't create an __unwind_info section if no unwind info
+## remains after dead-stripping.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin19.0.0 \
+# RUN:   %t/empty-after-dead-strip.s -o %t/x86_64-empty-after-dead-strip.o
+# RUN: %lld -dylib -dead_strip -arch x86_64 -lSystem \
+# RUN:   %t/x86_64-empty-after-dead-strip.o -o %t/x86_64-empty-after-strip.dylib
+# RUN: llvm-objdump --macho --unwind-info %t/x86_64-empty-after-strip.dylib | \
+# RUN:   FileCheck %s --check-prefixes=NOUNWIND --allow-empty
+# NOUNWIND-NOT: Contents of __unwind_info section:
+
 #--- my-personality.s
 .globl _my_personality, _exception0
 .text
@@ -144,5 +154,18 @@ _stripped:
 .section __TEXT,__gcc_except_tab
 _exception1:
   .space 1
+
+.subsections_via_symbols
+
+#--- empty-after-dead-strip.s
+.text
+
+## Local symbol with unwind info.
+## The symbol is removed by -dead_strip.
+_foo :
+  .cfi_startproc
+  .cfi_def_cfa_offset 16
+  retq
+  .cfi_endproc
 
 .subsections_via_symbols
