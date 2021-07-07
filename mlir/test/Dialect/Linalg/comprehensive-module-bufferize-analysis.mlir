@@ -485,9 +485,11 @@ func @scf_for_deps(%A : tensor<?xf32> {linalg.inplaceable = true},
   // %r0 must be out of place because one use of %t in the subsequent production 
   // of %r1 is read.
   //      CHECK: scf.for
+  // CHECK-NEXT: call
   // CHECK-NEXT: scf.yield
   // CHECK-NEXT: {__inplace_results_attr__ = ["false"]}
   %r0 = scf.for %i = %lb to %ub step %step iter_args(%t = %A) -> (tensor<?xf32>) {
+    call @some_use(%t) : (tensor<?xf32>) -> ()
     scf.yield %t : tensor<?xf32>
   }
 
@@ -504,11 +506,13 @@ func @scf_for_deps(%A : tensor<?xf32> {linalg.inplaceable = true},
   // %r2 must be out of place because one use of %t in the subsequent production 
   // of %r3 is read.
   //      CHECK: linalg.tiled_loop
+  // CHECK-NEXT: call
   // CHECK-NEXT: linalg.yield
   // CHECK-NEXT: {__inplace_results_attr__ = ["false"]}
   %r2 = linalg.tiled_loop (%i) = (%lb) to (%ub) step (%step)
         ins()
         outs(%t = %B: tensor<?xf32>) {
+    call @some_use(%t) : (tensor<?xf32>) -> ()
     linalg.yield %t : tensor<?xf32>
   }
 
