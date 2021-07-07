@@ -776,6 +776,27 @@ public:
       return LT.first * 2 * OpCost;
     }
 
+    // An 'Expand' of URem and SRem is special because it may default
+    // to expanding the operation into a sequence of sub-operations
+    // i.e. X % Y -> X-(X/Y)*Y.
+    if (ISD == ISD::UREM || ISD == ISD::SREM) {
+      bool IsSigned = ISD == ISD::SREM;
+      if (TLI->isOperationLegalOrCustom(IsSigned ? ISD::SDIVREM : ISD::UDIVREM,
+                                        LT.second) ||
+          TLI->isOperationLegalOrCustom(IsSigned ? ISD::SDIV : ISD::UDIV,
+                                        LT.second)) {
+        unsigned DivOpc = IsSigned ? Instruction::SDiv : Instruction::UDiv;
+        InstructionCost DivCost = thisT()->getArithmeticInstrCost(
+            DivOpc, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo,
+            Opd2PropInfo);
+        InstructionCost MulCost =
+            thisT()->getArithmeticInstrCost(Instruction::Mul, Ty, CostKind);
+        InstructionCost SubCost =
+            thisT()->getArithmeticInstrCost(Instruction::Sub, Ty, CostKind);
+        return DivCost + MulCost + SubCost;
+      }
+    }
+
     // We cannot scalarize scalable vectors, so return Invalid.
     if (isa<ScalableVectorType>(Ty))
       return InstructionCost::getInvalid();
