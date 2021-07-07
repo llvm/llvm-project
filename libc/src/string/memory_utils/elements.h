@@ -211,8 +211,8 @@ template <typename T> struct HeadTail {
   }
 
   static int ThreeWayCompare(const char *lhs, const char *rhs, size_t size) {
-    if (const int result = T::ThreeWayCompare(lhs, rhs))
-      return result;
+    if (!T::Equals(lhs, rhs))
+      return T::ThreeWayCompare(lhs, rhs);
     return Tail<T>::ThreeWayCompare(lhs, rhs, size);
   }
 
@@ -251,8 +251,8 @@ template <typename T> struct Loop {
 
   static int ThreeWayCompare(const char *lhs, const char *rhs, size_t size) {
     for (size_t offset = 0; offset < size - T::kSize; offset += T::kSize)
-      if (const int result = T::ThreeWayCompare(lhs + offset, rhs + offset))
-        return result;
+      if (!T::Equals(lhs + offset, rhs + offset))
+        return T::ThreeWayCompare(lhs + offset, rhs + offset);
     return Tail<T>::ThreeWayCompare(lhs, rhs, size);
   }
 
@@ -327,8 +327,8 @@ public:
     }
 
     static int ThreeWayCompare(const char *lhs, const char *rhs, size_t size) {
-      if (const int result = AlignmentT::ThreeWayCompare(lhs, rhs))
-        return result;
+      if (!AlignmentT::Equals(lhs, rhs))
+        return AlignmentT::ThreeWayCompare(lhs, rhs);
       internal::AlignHelper<AlignOn, Alignment>::Bump(lhs, rhs, size);
       return NextT::ThreeWayCompare(lhs, rhs, size);
     }
@@ -370,12 +370,18 @@ template <size_t Size> struct Builtin {
 #endif
   }
 
+#if __has_builtin(__builtin_memcmp_inline)
+#define LLVM_LIBC_MEMCMP __builtin_memcmp_inline
+#else
+#define LLVM_LIBC_MEMCMP __builtin_memcmp
+#endif
+
   static bool Equals(const char *lhs, const char *rhs) {
-    return __builtin_memcmp(lhs, rhs, kSize) == 0;
+    return LLVM_LIBC_MEMCMP(lhs, rhs, kSize) == 0;
   }
 
   static int ThreeWayCompare(const char *lhs, const char *rhs) {
-    return __builtin_memcmp(lhs, rhs, kSize);
+    return LLVM_LIBC_MEMCMP(lhs, rhs, kSize);
   }
 
   static void SplatSet(char *dst, const unsigned char value) {
@@ -428,6 +434,8 @@ template <typename T> struct Scalar {
     Store(dst, GetSplattedValue(value));
   }
 
+  static int ScalarThreeWayCompare(T a, T b);
+
 private:
   static T Load(const char *ptr) {
     T value;
@@ -440,7 +448,6 @@ private:
   static T GetSplattedValue(const unsigned char value) {
     return T(~0) / T(0xFF) * T(value);
   }
-  static int ScalarThreeWayCompare(T a, T b);
 };
 
 template <>
@@ -457,23 +464,15 @@ inline int Scalar<uint16_t>::ScalarThreeWayCompare(uint16_t a, uint16_t b) {
 }
 template <>
 inline int Scalar<uint32_t>::ScalarThreeWayCompare(uint32_t a, uint32_t b) {
-  const int64_t la = Endian::ToBigEndian(a);
-  const int64_t lb = Endian::ToBigEndian(b);
-  if (la < lb)
-    return -1;
-  if (la > lb)
-    return 1;
-  return 0;
+  const uint32_t la = Endian::ToBigEndian(a);
+  const uint32_t lb = Endian::ToBigEndian(b);
+  return la > lb ? 1 : la < lb ? -1 : 0;
 }
 template <>
 inline int Scalar<uint64_t>::ScalarThreeWayCompare(uint64_t a, uint64_t b) {
-  const __int128_t la = Endian::ToBigEndian(a);
-  const __int128_t lb = Endian::ToBigEndian(b);
-  if (la < lb)
-    return -1;
-  if (la > lb)
-    return 1;
-  return 0;
+  const uint64_t la = Endian::ToBigEndian(a);
+  const uint64_t lb = Endian::ToBigEndian(b);
+  return la > lb ? 1 : la < lb ? -1 : 0;
 }
 
 using UINT8 = Scalar<uint8_t>;   // 1 Byte
@@ -494,6 +493,7 @@ using _128 = Repeated<_8, 16>;
 } // namespace scalar
 } // namespace __llvm_libc
 
+#include <src/string/memory_utils/elements_aarch64.h>
 #include <src/string/memory_utils/elements_x86.h>
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ELEMENTS_H
