@@ -258,10 +258,13 @@ static void getExtensionFeatures(const Driver &D,
         << MArch << Error << Ext;
       return;
     }
-    if (Ext == "zvamo" || Ext == "zvlsseg") {
+    if (Ext == "zvlsseg") {
       Features.push_back("+experimental-v");
-      Features.push_back("+experimental-zvamo");
       Features.push_back("+experimental-zvlsseg");
+    } else if (Ext == "zvamo") {
+      Features.push_back("+experimental-v");
+      Features.push_back("+experimental-zvlsseg");
+      Features.push_back("+experimental-zvamo");
     } else if (isExperimentalExtension(Ext))
       Features.push_back(Args.MakeArgString("+experimental-" + Ext));
     else
@@ -429,7 +432,6 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
       break;
     case 'v':
       Features.push_back("+experimental-v");
-      Features.push_back("+experimental-zvamo");
       Features.push_back("+experimental-zvlsseg");
       break;
     }
