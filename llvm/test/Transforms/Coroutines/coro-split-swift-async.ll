@@ -16,7 +16,7 @@
 ; dbg.declare and not stashed into an alloca. They will get lowered to
 ; an entry value in the backend.
 
-; CHECK: define internal swiftcc void @"$s1a1fyS2iYF.resume.0"(i8* %0, i8* %1, i8* swiftasync %2)
+; CHECK: define internal swiftcc void @"$s1a1fyS2iYFTY0_"(i8* %0, i8* %1, i8* swiftasync %2)
 ; CHECK: entryresume.0:
 ; CHECK-NEXT:   call void @llvm.dbg.declare(metadata i8* %2, metadata ![[X:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 64, DW_OP_plus_uconst, 24))
 ; CHECK: ![[X]] = !DILocalVariable(name: "x",
