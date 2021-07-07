@@ -15251,9 +15251,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     LoadSDNode *LD = cast<LoadSDNode>(N->getOperand(0));
 
     // Can't split volatile or atomic loads.
-    // FIXME: Disabling this to unblock the big endian bot until I can get it
-    // fixed.
-    if (!LD->isSimple() || !Subtarget.hasLDBRX())
+    if (!LD->isSimple())
       return SDValue();
     SDValue BasePtr = LD->getBasePtr();
     SDValue Lo = DAG.getLoad(MVT::i32, dl, LD->getChain(), BasePtr,
@@ -15261,8 +15259,9 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     Lo = DAG.getNode(ISD::BSWAP, dl, MVT::i32, Lo);
     BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
                           DAG.getIntPtrConstant(4, dl));
-    SDValue Hi = DAG.getLoad(MVT::i32, dl, LD->getChain(), BasePtr,
-                             LD->getPointerInfo(), LD->getAlignment());
+    MachineMemOperand *NewMMO = DAG.getMachineFunction().getMachineMemOperand(
+        LD->getMemOperand(), 4, 4);
+    SDValue Hi = DAG.getLoad(MVT::i32, dl, LD->getChain(), BasePtr, NewMMO);
     Hi = DAG.getNode(ISD::BSWAP, dl, MVT::i32, Hi);
     SDValue Res;
     if (Subtarget.isLittleEndian())
