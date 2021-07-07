@@ -110,7 +110,7 @@ define i32 @user(i32* %a, i32* %b, i32 %x) nounwind {
 ; X64-NEXT:    addl (%rdi,%r8), %eax
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    addq %rdx, %rdi
-; X64-NEXT:    cmpq %rdi, %rsi
+; X64-NEXT:    cmpq %rsi, %rdi
 ; X64-NEXT:    jne .LBB1_1
 ; X64-NEXT:  # %bb.2: # %exit
 ; X64-NEXT:    retq
@@ -137,7 +137,7 @@ define i32 @user(i32* %a, i32* %b, i32 %x) nounwind {
 ; X32-NEXT:    addl (%esi,%ebx), %eax
 ; X32-NEXT:    movl %eax, (%esi)
 ; X32-NEXT:    addl %edi, %esi
-; X32-NEXT:    cmpl %esi, %edx
+; X32-NEXT:    cmpl %edx, %esi
 ; X32-NEXT:    jne .LBB1_1
 ; X32-NEXT:  # %bb.2: # %exit
 ; X32-NEXT:    popl %esi
