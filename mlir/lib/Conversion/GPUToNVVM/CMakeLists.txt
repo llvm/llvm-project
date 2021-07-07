@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIRGPUToNVVMTransforms
   LINK_LIBS PUBLIC
   MLIRGPUOps
   MLIRGPUToGPURuntimeTransforms
+  MLIRLLVMCommonConversion
   MLIRLLVMIR
   MLIRMemRef
   MLIRNVVMIR

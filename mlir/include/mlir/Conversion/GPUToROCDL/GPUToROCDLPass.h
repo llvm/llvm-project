@@ -8,7 +8,7 @@
 #ifndef MLIR_CONVERSION_GPUTOROCDL_GPUTOROCDLPASS_H_
 #define MLIR_CONVERSION_GPUTOROCDL_GPUTOROCDLPASS_H_
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include <memory>
 
 namespace mlir {
