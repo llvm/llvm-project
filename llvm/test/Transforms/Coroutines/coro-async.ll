@@ -1,5 +1,5 @@
 ; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK %s
-; RUN: opt < %s -enable-coroutines -O0 -S
+; RUN: opt < %s -enable-coroutines -O0 -S | FileCheck --check-prefixes=CHECK-O0 %s
 target datalayout = "p:64:64:64"
 
 %async.task = type { i64 }
@@ -64,6 +64,7 @@ entry:
 define swiftcc void @my_async_function(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor) !dbg !1 {
 entry:
   %tmp = alloca { i64, i64 }, align 8
+  %vector = alloca <4 x double>, align 16
   %proj.1 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %tmp, i64 0, i32 0
   %proj.2 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %tmp, i64 0, i32 1
 
@@ -95,6 +96,7 @@ entry:
   store i8* %async.ctxt, i8** %callee_context.caller_context.addr
   %resume_proj_fun = bitcast i8*(i8*)* @__swift_async_resume_project_context to i8*
   %callee = bitcast void(i8*, %async.task*, %async.actor*)* @asyncSuspend to i8*
+  %vector_spill = load <4 x double>, <4 x double>* %vector, align 16
   %res = call {i8*, i8*, i8*} (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 0,
                                                   i8* %resume.func_ptr,
                                                   i8* %resume_proj_fun,
@@ -108,7 +110,7 @@ entry:
   call void @some_user(i64 %val)
   %val.2 = load i64, i64* %proj.2
   call void @some_user(i64 %val.2)
-
+  store <4 x double> %vector_spill, <4 x double>* %vector, align 16
   tail call swiftcc void @asyncReturn(i8* %async.ctxt, %async.task* %task.2, %async.actor* %actor)
   call i1 (i8*, i1, ...) @llvm.coro.end.async(i8* %hdl, i1 0)
   unreachable
@@ -126,6 +128,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
 ; CHECK: @my_async_function2_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 
 ; CHECK-LABEL: define swiftcc void @my_async_function(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor)
+; CHECK-O0-LABEL: define swiftcc void @my_async_function(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor)
 ; CHECK-SAME: !dbg ![[SP1:[0-9]+]] {
 ; CHECK: coro.return:
 ; CHECK:   [[FRAMEPTR:%.*]] = getelementptr inbounds i8, i8* %async.ctxt, i64 128
@@ -151,16 +154,23 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
 ; CHECK:   store i8* bitcast (void (i8*, i8*, i8*)* @my_async_functionTQ0_ to i8*), i8** [[RETURN_TO_CALLER_ADDR]]
 ; CHECK:   [[CALLER_CONTEXT_ADDR:%.*]] = bitcast i8* [[CALLEE_CTXT]] to i8**
 ; CHECK:   store i8* %async.ctxt, i8** [[CALLER_CONTEXT_ADDR]]
+; Make sure the spill is underaligned to the max context alignment (16).
+; CHECK-O0:   [[VECTOR_SPILL:%.*]] = load <4 x double>, <4 x double>* {{.*}}
+; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds %my_async_function.Frame, %my_async_function.Frame* {{.*}}, i32 0, i32 1
+; CHECK-O0:   store <4 x double> [[VECTOR_SPILL]], <4 x double>* [[VECTOR_SPILL_ADDR]], align 16
 ; CHECK:   tail call swiftcc void @asyncSuspend(i8* [[CALLEE_CTXT]], %async.task* %task, %async.actor* %actor)
 ; CHECK:   ret void
 ; CHECK: }
 
 ; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(i8* nocapture readonly swiftasync %0, i8* %1, i8* nocapture readnone %2)
+; CHECK-O0-LABEL: define internal swiftcc void @my_async_functionTQ0_(i8* swiftasync %0, i8* %1, i8* %2)
 ; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
 ; CHECK:   [[CALLER_CONTEXT_ADDR:%.*]] = bitcast i8* %0 to i8**
 ; CHECK:   [[CALLER_CONTEXT:%.*]] = load i8*, i8** [[CALLER_CONTEXT_ADDR]]
 ; CHECK:   [[FRAME_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALLER_CONTEXT]], i64 128
+; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds %my_async_function.Frame, %my_async_function.Frame* {{.*}}, i32 0, i32 1
+; CHECK-O0:   load <4 x double>, <4 x double>* [[VECTOR_SPILL_ADDR]], align 16
 ; CHECK:   [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, i8* [[CALLER_CONTEXT]], i64 160
 ; CHECK:   [[CAST1:%.*]] = bitcast i8* [[CALLEE_CTXT_SPILL_ADDR]] to i8**
 ; CHECK:   [[CALLEE_CTXT_RELOAD:%.*]] = load i8*, i8** [[CAST1]]

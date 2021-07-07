@@ -336,7 +336,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
     // To avoid solving any ILP problems, always add entire arrays instead of
     // just the elements that are accessed.
     auto ArrayElts = isl::set::universe(AccRelMap.get_space().range());
-    AllElts = AllElts.add_set(ArrayElts);
+    AllElts = AllElts.unite(ArrayElts);
 
     if (MA->isRead()) {
       // Reject load after store to same location.
@@ -350,7 +350,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
         R << ", loading: " << AccRel << ")";
         S->getFunction().getContext().diagnose(R);
 
-        IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+        IncompatibleElts = IncompatibleElts.unite(ArrayElts);
       }
 
       Loads = Loads.unite(AccRel);
@@ -367,7 +367,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
       R << "store is in a non-affine subregion";
       S->getFunction().getContext().diagnose(R);
 
-      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+      IncompatibleElts = IncompatibleElts.unite(ArrayElts);
     }
 
     // Do not allow more than one store to the same location.
@@ -380,7 +380,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
       R << ", storing: " << AccRel << ")";
       S->getFunction().getContext().diagnose(R);
 
-      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+      IncompatibleElts = IncompatibleElts.unite(ArrayElts);
     }
 
     Stores = Stores.unite(AccRel);

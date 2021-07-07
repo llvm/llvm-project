@@ -1,4 +1,4 @@
-include(AddLLVM) # for configure_lit_site_cfg and add_lit_target
+include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
 macro(pythonize_bool var)
   if (${var})
     set(${var} True)
