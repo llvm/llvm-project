@@ -764,11 +764,18 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
-  if (ExtraCode)
-    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
+  MachineOperand MO = MI->getOperand(OpNo);
+  if (ExtraCode) {
+    if (ExtraCode[0] == 'N' && !ExtraCode[1] && MO.isReg() &&
+        SystemZ::GR128BitRegClass.contains(MO.getReg()))
+      MO.setReg(MRI.getSubReg(MO.getReg(), SystemZ::subreg_l64));
+    else
+      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  }
   SystemZMCInstLower Lower(MF->getContext(), *this);
-  MCOperand MO(Lower.lowerOperand(MI->getOperand(OpNo)));
-  SystemZInstPrinter::printOperand(MO, MAI, OS);
+  MCOperand MCOp(Lower.lowerOperand(MO));
+  SystemZInstPrinter::printOperand(MCOp, MAI, OS);
   return false;
 }
 
