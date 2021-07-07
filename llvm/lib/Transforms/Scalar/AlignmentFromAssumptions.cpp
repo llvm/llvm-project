@@ -135,6 +135,8 @@ static Align getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
   PtrSCEV = SE->getTruncateOrZeroExtend(
       PtrSCEV, SE->getEffectiveSCEVType(AASCEV->getType()));
   const SCEV *DiffSCEV = SE->getMinusSCEV(PtrSCEV, AASCEV);
+  if (isa<SCEVCouldNotCompute>(DiffSCEV))
+    return Align(1);
 
   // On 32-bit platforms, DiffSCEV might now have type i32 -- we've always
   // sign-extended OffSCEV to i64, so make sure they agree again.

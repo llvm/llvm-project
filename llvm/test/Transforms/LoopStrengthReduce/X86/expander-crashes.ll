@@ -11,42 +11,33 @@ target triple = "x86_64-apple-macosx10.15.0"
 define i64 @blam(%struct.hoge* %start, %struct.hoge* %end, %struct.hoge* %ptr.2) {
 ; CHECK-LABEL: @blam(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START9:%.*]] = ptrtoint %struct.hoge* [[START:%.*]] to i64
-; CHECK-NEXT:    [[START6:%.*]] = bitcast %struct.hoge* [[START]] to i8*
-; CHECK-NEXT:    [[END8:%.*]] = bitcast %struct.hoge* [[END:%.*]] to i8*
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint %struct.hoge* [[START]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[START9]]
-; CHECK-NEXT:    [[UGLYGEP10:%.*]] = getelementptr i8, i8* [[END8]], i64 [[TMP1]]
+; CHECK-NEXT:    [[START1:%.*]] = ptrtoint %struct.hoge* [[START:%.*]] to i64
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
 ; CHECK:       loop.1.header:
-; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi i64 [ [[LSR_IV_NEXT5:%.*]], [[LOOP_1_HEADER]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT5]] = add i64 [[LSR_IV4]], -16
-; CHECK-NEXT:    [[SCEVGEP11:%.*]] = getelementptr i8, i8* [[UGLYGEP10]], i64 [[LSR_IV_NEXT5]]
-; CHECK-NEXT:    [[SCEVGEP1112:%.*]] = bitcast i8* [[SCEVGEP11]] to %struct.hoge*
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq %struct.hoge* [[SCEVGEP1112]], null
+; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi i64 [ [[LSR_IV_NEXT6:%.*]], [[LOOP_1_HEADER]] ], [ [[START1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi %struct.hoge* [ [[IV_NEXT:%.*]], [[LOOP_1_HEADER]] ], [ [[START]], [[ENTRY]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds [[STRUCT_HOGE:%.*]], %struct.hoge* [[IV]], i64 1
+; CHECK-NEXT:    [[LSR_IV_NEXT6]] = add nuw i64 [[LSR_IV5]], 16
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq %struct.hoge* [[IV_NEXT]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_2_PH:%.*]], label [[LOOP_1_HEADER]]
 ; CHECK:       loop.2.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], [[LSR_IV_NEXT5]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[LSR_IV_NEXT5]], -1
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[START6]], i64 [[TMP3]]
-; CHECK-NEXT:    [[UGLYGEP7:%.*]] = bitcast i8* [[UGLYGEP]] to %struct.hoge*
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER:%.*]]
 ; CHECK:       loop.2.header:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], [[LOOP_2_LATCH:%.*]] ], [ [[TMP2]], [[LOOP_2_PH]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi %struct.hoge* [ [[IV2_NEXT:%.*]], [[LOOP_2_LATCH]] ], [ [[UGLYGEP7]], [[LOOP_2_PH]] ]
-; CHECK-NEXT:    [[IV23:%.*]] = bitcast %struct.hoge* [[IV2]] to i32*
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[LSR_IV1]], 12
-; CHECK-NEXT:    call void @use.i64(i64 [[TMP4]])
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[IV23]], i64 2
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i64 [ [[LSR_IV_NEXT3:%.*]], [[LOOP_2_LATCH:%.*]] ], [ [[LSR_IV_NEXT6]], [[LOOP_2_PH]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi %struct.hoge* [ [[IV2_NEXT:%.*]], [[LOOP_2_LATCH]] ], [ [[IV_NEXT]], [[LOOP_2_PH]] ]
+; CHECK-NEXT:    [[IV24:%.*]] = bitcast %struct.hoge* [[IV2]] to i32*
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV2]], 12
+; CHECK-NEXT:    call void @use.i64(i64 [[TMP0]])
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[IV24]], i64 2
 ; CHECK-NEXT:    store i32 10, i32* [[SCEVGEP]], align 8
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp ugt %struct.hoge* [[IV2]], [[PTR_2:%.*]]
 ; CHECK-NEXT:    br i1 [[EC_2]], label [[LOOP_2_EXIT:%.*]], label [[LOOP_2_LATCH]]
 ; CHECK:       loop.2.latch:
-; CHECK-NEXT:    [[IV2_NEXT]] = getelementptr inbounds [[STRUCT_HOGE:%.*]], %struct.hoge* [[IV2]], i64 1
-; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add i64 [[LSR_IV1]], 16
+; CHECK-NEXT:    [[IV2_NEXT]] = getelementptr inbounds [[STRUCT_HOGE]], %struct.hoge* [[IV2]], i64 1
+; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add i64 [[LSR_IV2]], 16
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER]]
 ; CHECK:       loop.2.exit:
-; CHECK-NEXT:    ret i64 [[LSR_IV1]]
+; CHECK-NEXT:    ret i64 [[LSR_IV2]]
 ;
 entry:
   br label %loop.1.header
