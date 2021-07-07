@@ -1,10 +1,10 @@
-.. _cxx2a-status:
+.. _cxx20-status:
 
 ================================
 libc++ C++20 Status
 ================================
 
-.. include:: Helpers/Styles.rst
+.. include:: ../Helpers/Styles.rst
 
 .. contents::
    :local:
@@ -28,13 +28,13 @@ The groups that have contributed papers:
 
 .. note:: "Nothing to do" means that no library changes were needed to implement this change.
 
-.. _paper-status-cxx2a:
+.. _paper-status-cxx20:
 
 Paper Status
 ====================================
 
 .. csv-table::
-   :file: Cxx2aStatusPaperStatus.csv
+   :file: Cxx20Papers.csv
    :header-rows: 1
    :widths: auto
 
@@ -46,13 +46,13 @@ Paper Status
    .. [#note-P0883] P0883: shared_ptr and floating-point changes weren't applied as they themselves aren't implemented yet.
 
 
-.. _issues-status-cxx2a:
+.. _issues-status-cxx20:
 
 Library Working Group Issues Status
 ====================================
 
 .. csv-table::
-   :file: Cxx2aStatusIssuesStatus.csv
+   :file: Cxx20Issues.csv
    :header-rows: 1
    :widths: auto
 

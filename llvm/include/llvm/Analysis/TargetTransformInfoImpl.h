@@ -721,6 +721,8 @@ public:
     return true;
   }
 
+  bool isElementTypeLegalForScalableVector(Type *Ty) const { return true; }
+
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                unsigned ChainSizeInBytes,
                                VectorType *VecTy) const {

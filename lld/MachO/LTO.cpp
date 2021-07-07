@@ -76,6 +76,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 
     // FIXME: What about other output types? And we can probably be less
     // restrictive with -flat_namespace, but it's an infrequent use case.
+    // FIXME: Honor config->exportDynamic.
     r.VisibleToRegularObj = config->outputType != MH_EXECUTE ||
                             config->namespaceKind == NamespaceKind::flat ||
                             sym->isUsedInRegularObj;

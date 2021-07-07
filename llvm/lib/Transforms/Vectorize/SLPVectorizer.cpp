@@ -8318,7 +8318,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // No need to analyze deleted, vectorized and non-vectorizable
       // instructions.
       if (!VisitedInstrs.count(P) && !R.isDeleted(P) &&
-          !P->getType()->isVectorTy())
+          isValidElementType(P->getType()))
         Incoming.push_back(P);
     }
 
@@ -8346,10 +8346,15 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
 
     // Sort by type, parent, operands.
-    stable_sort(Incoming, [&PHIToOpcodes](Value *V1, Value *V2) {
-      if (V1->getType() < V2->getType())
+    stable_sort(Incoming, [this, &PHIToOpcodes](Value *V1, Value *V2) {
+      assert(isValidElementType(V1->getType()) &&
+             isValidElementType(V2->getType()) &&
+             "Expected vectorizable types only.");
+      // It is fine to compare type IDs here, since we expect only vectorizable
+      // types, like ints, floats and pointers, we don't care about other type.
+      if (V1->getType()->getTypeID() < V2->getType()->getTypeID())
         return true;
-      if (V1->getType() > V2->getType())
+      if (V1->getType()->getTypeID() > V2->getType()->getTypeID())
         return false;
       ArrayRef<Value *> Opcodes1 = PHIToOpcodes[V1];
       ArrayRef<Value *> Opcodes2 = PHIToOpcodes[V2];
@@ -8363,10 +8368,15 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           continue;
         if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
           if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
-            if (I1->getParent() < I2->getParent())
-              return true;
-            if (I1->getParent() > I2->getParent())
-              return false;
+            DomTreeNodeBase<BasicBlock> *NodeI1 = DT->getNode(I1->getParent());
+            DomTreeNodeBase<BasicBlock> *NodeI2 = DT->getNode(I2->getParent());
+            assert(NodeI1 && "Should only process reachable instructions");
+            assert(NodeI2 && "Should only process reachable instructions");
+            assert((NodeI1 == NodeI2) ==
+                       (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
+                   "Different nodes should have different DFS numbers");
+            if (NodeI1 != NodeI2)
+              return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
             InstructionsState S = getSameOpcode({I1, I2});
             if (S.getOpcode())
               continue;

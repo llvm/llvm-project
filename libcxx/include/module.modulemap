@@ -474,28 +474,35 @@ module std [system] {
     export *
 
     module __iterator {
-      module advance                { header "__iterator/advance.h"               }
-      module back_insert_iterator   { header "__iterator/back_insert_iterator.h"  }
-      module concepts               { header "__iterator/concepts.h"              }
-      module default_sentinel       { header "__iterator/default_sentinel.h"      }
-      module front_insert_iterator  { header "__iterator/front_insert_iterator.h" }
-      module incrementable_traits   { header "__iterator/incrementable_traits.h"  }
-      module insert_iterator        { header "__iterator/insert_iterator.h"       }
-      module istream_iterator       { header "__iterator/istream_iterator.h"      }
-      module istreambuf_iterator    { header "__iterator/istreambuf_iterator.h"   }
-      module iter_move              { header "__iterator/iter_move.h"             }
-      module iter_swap              { header "__iterator/iter_swap.h"             }
-      module iterator               { header "__iterator/iterator.h"              }
-      module iterator_traits        { header "__iterator/iterator_traits.h"       }
-      module move_iterator          { header "__iterator/move_iterator.h"         }
-      module next                   { header "__iterator/next.h"                  }
-      module ostream_iterator       { header "__iterator/ostream_iterator.h"      }
-      module ostreambuf_iterator    { header "__iterator/ostreambuf_iterator.h"   }
-      module prev                   { header "__iterator/prev.h"                  }
-      module projected              { header "__iterator/projected.h"             }
-      module readable_traits        { header "__iterator/readable_traits.h"       }
-      module reverse_iterator       { header "__iterator/reverse_iterator.h"      }
-      module wrap_iter              { header "__iterator/wrap_iter.h"             }
+      module access                { header "__iterator/access.h" }
+      module advance               { header "__iterator/advance.h" }
+      module back_insert_iterator  { header "__iterator/back_insert_iterator.h" }
+      module concepts              { header "__iterator/concepts.h" }
+      module data                  { header "__iterator/data.h" }
+      module default_sentinel      { header "__iterator/default_sentinel.h" }
+      module distance              { header "__iterator/distance.h" }
+      module empty                 { header "__iterator/empty.h" }
+      module erase_if_container    { header "__iterator/erase_if_container.h" }
+      module front_insert_iterator { header "__iterator/front_insert_iterator.h" }
+      module incrementable_traits  { header "__iterator/incrementable_traits.h" }
+      module insert_iterator       { header "__iterator/insert_iterator.h" }
+      module istream_iterator      { header "__iterator/istream_iterator.h" }
+      module istreambuf_iterator   { header "__iterator/istreambuf_iterator.h" }
+      module iter_move             { header "__iterator/iter_move.h" }
+      module iter_swap             { header "__iterator/iter_swap.h" }
+      module iterator              { header "__iterator/iterator.h" }
+      module iterator_traits       { header "__iterator/iterator_traits.h" }
+      module move_iterator         { header "__iterator/move_iterator.h" }
+      module next                  { header "__iterator/next.h" }
+      module ostream_iterator      { header "__iterator/ostream_iterator.h" }
+      module ostreambuf_iterator   { header "__iterator/ostreambuf_iterator.h" }
+      module prev                  { header "__iterator/prev.h" }
+      module projected             { header "__iterator/projected.h" }
+      module readable_traits       { header "__iterator/readable_traits.h" }
+      module reverse_access        { header "__iterator/reverse_access.h" }
+      module reverse_iterator      { header "__iterator/reverse_iterator.h" }
+      module size                  { header "__iterator/size.h" }
+      module wrap_iter             { header "__iterator/wrap_iter.h" }
     }
   }
   module latch {
@@ -528,9 +535,9 @@ module std [system] {
     module __memory {
       module addressof                { header "__memory/addressof.h"                }
       module allocation_guard         { header "__memory/allocation_guard.h"         }
-      module allocator_traits         { header "__memory/allocator_traits.h"         }
-      module allocator_arg_t          { header "__memory/allocator_arg_t.h"          }
       module allocator                { header "__memory/allocator.h"                }
+      module allocator_arg_t          { header "__memory/allocator_arg_t.h"          }
+      module allocator_traits         { header "__memory/allocator_traits.h"         }
       module auto_ptr                 { header "__memory/auto_ptr.h"                 }
       module compressed_pair          { header "__memory/compressed_pair.h"          }
       module construct_at             { header "__memory/construct_at.h"             }
@@ -739,8 +746,6 @@ module std [system] {
   }
 
   // __config not modularised due to a bug in Clang
-  // __functional(_03)?_base not modularised since it's designed for textual inclusion
-  // libcpp_version not modularised since it's just a version number
   // FIXME: These should be private.
   module __availability      { header "__availability"      export * }
   module __bit_reference     { header "__bit_reference"     export * }

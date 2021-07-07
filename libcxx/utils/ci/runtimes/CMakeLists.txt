@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.13.4)
 project(LLVM_RUNTIMES C CXX ASM)
 
-set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
-
 find_package(Python3 COMPONENTS Interpreter)
 if(NOT Python3_Interpreter_FOUND)
   message(WARNING "Python3 not found, using python2 as a fallback")

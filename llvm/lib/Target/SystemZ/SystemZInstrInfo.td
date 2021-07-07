@@ -2165,8 +2165,12 @@ let Predicates = [FeatureDeflateConversion],
 
 // Execute.
 let hasSideEffects = 1 in {
-  def EX   : SideEffectBinaryRX<"ex", 0x44, GR64>;
-  def EXRL : SideEffectBinaryRILPC<"exrl", 0xC60, GR64>;
+  def EX   : SideEffectBinaryRX<"ex", 0x44, ADDR64>;
+  def EXRL : SideEffectBinaryRILPC<"exrl", 0xC60, ADDR64>;
+  let hasNoSchedulingInfo = 1 in
+    def EXRL_Pseudo : Pseudo<(outs), (ins i64imm:$TargetOpc, ADDR64:$lenMinus1,
+                                          bdaddr12only:$bdl1, bdaddr12only:$bd2),
+                                          []>;
 }
 
 //===----------------------------------------------------------------------===//

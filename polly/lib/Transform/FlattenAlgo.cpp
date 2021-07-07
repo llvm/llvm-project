@@ -29,7 +29,7 @@ bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
   auto ParamDims = Set.dim(isl::dim::param);
   Set = Set.project_out(isl::dim::param, 0, ParamDims);
   Set = Set.project_out(isl::dim::set, 0, dim);
-  auto SetDims = Set.dim(isl::dim::set);
+  auto SetDims = Set.tuple_dim();
   Set = Set.project_out(isl::dim::set, 1, SetDims - 1);
   return bool(Set.is_bounded());
 }
@@ -40,7 +40,7 @@ bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
 /// Min_p <= x <= Max_p.
 bool isDimBoundedByParameter(isl::set Set, unsigned dim) {
   Set = Set.project_out(isl::dim::set, 0, dim);
-  auto SetDims = Set.dim(isl::dim::set);
+  auto SetDims = Set.tuple_dim();
   Set = Set.project_out(isl::dim::set, 1, SetDims - 1);
   return bool(Set.is_bounded());
 }
@@ -135,7 +135,7 @@ isl_size scheduleScatterDims(const isl::union_map &Schedule) {
     if (Map.is_null())
       continue;
 
-    Dims = std::max(Dims, Map.dim(isl::dim::out));
+    Dims = std::max(Dims, Map.range_tuple_dim());
   }
   return Dims;
 }
@@ -144,7 +144,7 @@ isl_size scheduleScatterDims(const isl::union_map &Schedule) {
 isl::union_pw_aff scheduleExtractDimAff(isl::union_map UMap, unsigned pos) {
   auto SingleUMap = isl::union_map::empty(UMap.get_space());
   for (isl::map Map : UMap.get_map_list()) {
-    unsigned MapDims = Map.dim(isl::dim::out);
+    unsigned MapDims = Map.range_tuple_dim();
     isl::map SingleMap = Map.project_out(isl::dim::out, 0, pos);
     SingleMap = SingleMap.project_out(isl::dim::out, 1, MapDims - pos - 1);
     SingleUMap = SingleUMap.add_map(SingleMap);
@@ -179,7 +179,7 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
   auto ScatterSet = isl::set(Schedule.range());
 
   auto ParamSpace = Schedule.get_space().params();
-  auto Dims = ScatterSet.dim(isl::dim::set);
+  auto Dims = ScatterSet.tuple_dim();
   assert(Dims >= 2);
 
   // Would cause an infinite loop.

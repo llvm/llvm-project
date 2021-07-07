@@ -121,7 +121,7 @@ static bool isDimBoundedByConstant(isl::set Set, unsigned dim) {
   auto ParamDims = Set.dim(isl::dim::param);
   Set = Set.project_out(isl::dim::param, 0, ParamDims);
   Set = Set.project_out(isl::dim::set, 0, dim);
-  auto SetDims = Set.dim(isl::dim::set);
+  auto SetDims = Set.tuple_dim();
   Set = Set.project_out(isl::dim::set, 1, SetDims - 1);
   return bool(Set.is_bounded());
 }
@@ -350,7 +350,7 @@ ScopArrayInfo *MaximalStaticExpander::expandAccess(Scop &S, MemoryAccess *MA) {
   // Get the current AM.
   auto CurrentAccessMap = MA->getAccessRelation();
 
-  unsigned in_dimensions = CurrentAccessMap.dim(isl::dim::in);
+  unsigned in_dimensions = CurrentAccessMap.domain_tuple_dim();
 
   // Get domain from the current AM.
   auto Domain = CurrentAccessMap.domain();

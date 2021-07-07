@@ -296,8 +296,8 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
   return 0;
 }
 
-static void ShowCandidate(uptr untagged_addr, tag_t *candidate, tag_t *left,
-                          tag_t *right) {
+static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
+                                      tag_t *left, tag_t *right) {
   Decorator d;
   uptr mem = ShadowToMem(reinterpret_cast<uptr>(candidate));
   HwasanChunkView chunk = FindHeapChunkByAddress(mem);
@@ -386,36 +386,14 @@ void PrintAddressDescription(
            d.Default());
   }
 
-  // Check if this looks like a heap buffer overflow by scanning
-  // the shadow left and right and looking for the first adjacent
-  // object with a different memory tag. If that tag matches addr_tag,
-  // check the allocator if it has a live chunk there.
   tag_t addr_tag = GetTagFromPointer(tagged_addr);
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
-  tag_t *candidate = nullptr, *left = tag_ptr, *right = tag_ptr;
-  uptr candidate_distance = 0;
-  for (; candidate_distance < 1000; candidate_distance++) {
-    if (TagsEqual(addr_tag, left)) {
-      candidate = left;
-      break;
-    }
-    --left;
-    if (TagsEqual(addr_tag, right)) {
-      candidate = right;
-      break;
-    }
-    ++right;
-  }
 
-  constexpr auto kCloseCandidateDistance = 1;
-
-  if (candidate && candidate_distance <= kCloseCandidateDistance) {
-    ShowCandidate(untagged_addr, candidate, left, right);
-    num_descriptions_printed++;
-  }
-
+  bool on_stack = false;
+  // Check stack first. If the address is on the stack of a live thread, we
+  // know it cannot be a heap / global overflow.
   hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
     if (t->AddrIsInStack(untagged_addr)) {
+      on_stack = true;
       // TODO(fmayer): figure out how to distinguish use-after-return and
       // stack-buffer-overflow.
       Printf("%s", d.Error());
@@ -433,6 +411,35 @@ void PrintAddressDescription(
       num_descriptions_printed++;
     }
   });
+
+  // Check if this looks like a heap buffer overflow by scanning
+  // the shadow left and right and looking for the first adjacent
+  // object with a different memory tag. If that tag matches addr_tag,
+  // check the allocator if it has a live chunk there.
+  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
+  tag_t *candidate = nullptr, *left = tag_ptr, *right = tag_ptr;
+  uptr candidate_distance = 0;
+  for (; candidate_distance < 1000; candidate_distance++) {
+    if (MemIsShadow(reinterpret_cast<uptr>(left)) &&
+        TagsEqual(addr_tag, left)) {
+      candidate = left;
+      break;
+    }
+    --left;
+    if (MemIsShadow(reinterpret_cast<uptr>(right)) &&
+        TagsEqual(addr_tag, right)) {
+      candidate = right;
+      break;
+    }
+    ++right;
+  }
+
+  constexpr auto kCloseCandidateDistance = 1;
+
+  if (!on_stack && candidate && candidate_distance <= kCloseCandidateDistance) {
+    ShowHeapOrGlobalCandidate(untagged_addr, candidate, left, right);
+    num_descriptions_printed++;
+  }
 
   hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
     // Scan all threads' ring buffers to find if it's a heap-use-after-free.
@@ -472,7 +479,7 @@ void PrintAddressDescription(
   });
 
   if (candidate && num_descriptions_printed == 0) {
-    ShowCandidate(untagged_addr, candidate, left, right);
+    ShowHeapOrGlobalCandidate(untagged_addr, candidate, left, right);
     num_descriptions_printed++;
   }
 

@@ -1,9 +1,10 @@
 /// Test instrumentation can handle various linkages.
+// REQUIRES: lld-available
 // RUN: %clang_profgen -fcoverage-mapping %s -o %t
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s
 
-// RUN: %clang_profgen -fcoverage-mapping -ffunction-sections -Wl,--gc-sections %s -o %t
+// RUN: %clang_profgen -fcoverage-mapping -ffunction-sections -fuse-ld=lld -Wl,--gc-sections %s -o %t
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s
 

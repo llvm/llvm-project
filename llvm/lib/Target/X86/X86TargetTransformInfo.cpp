@@ -2298,6 +2298,33 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                    LTDest.second, LTSrc.second))
       return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
 
+  // Fallback, for i8/i16 sitofp/uitofp cases we need to extend to i32 for
+  // sitofp.
+  if ((ISD == ISD::SINT_TO_FP || ISD == ISD::UINT_TO_FP) &&
+      1 < Src->getScalarSizeInBits() && Src->getScalarSizeInBits() < 32) {
+    Type *ExtSrc = Src->getWithNewBitWidth(32);
+    unsigned ExtOpc =
+        (ISD == ISD::SINT_TO_FP) ? Instruction::SExt : Instruction::ZExt;
+
+    // For scalar loads the extend would be free.
+    InstructionCost ExtCost = 0;
+    if (!(Src->isIntegerTy() && I && isa<LoadInst>(I->getOperand(0))))
+      ExtCost = getCastInstrCost(ExtOpc, ExtSrc, Src, CCH, CostKind);
+
+    return ExtCost + getCastInstrCost(Instruction::SIToFP, Dst, ExtSrc,
+                                      TTI::CastContextHint::None, CostKind);
+  }
+
+  // Fallback for fptosi/fptoui i8/i16 cases we need to truncate from fptosi
+  // i32.
+  if ((ISD == ISD::FP_TO_SINT || ISD == ISD::FP_TO_UINT) &&
+      1 < Dst->getScalarSizeInBits() && Dst->getScalarSizeInBits() < 32) {
+    Type *TruncDst = Dst->getWithNewBitWidth(32);
+    return getCastInstrCost(Instruction::FPToSI, TruncDst, Src, CCH, CostKind) +
+           getCastInstrCost(Instruction::Trunc, Dst, TruncDst,
+                            TTI::CastContextHint::None, CostKind);
+  }
+
   return AdjustCost(
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
