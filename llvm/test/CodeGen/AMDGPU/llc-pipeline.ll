@@ -44,11 +44,6 @@
 ; GCN-O0-NEXT:     Lower OpenCL enqueued blocks
 ; GCN-O0-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:     FunctionPass Manager
-; GCN-O0-NEXT:       Dominator Tree Construction
-; GCN-O0-NEXT:       Post-Dominator Tree Construction
-; GCN-O0-NEXT:       Natural Loop Information
-; GCN-O0-NEXT:       Legacy Divergence Analysis
-; GCN-O0-NEXT:       AMDGPU IR optimizations
 ; GCN-O0-NEXT:       Lower Garbage Collection Instructions
 ; GCN-O0-NEXT:       Shadow Stack GC Lowering
 ; GCN-O0-NEXT:       Lower constant intrinsics
@@ -72,13 +67,11 @@
 ; GCN-O0-NEXT:       Function Alias Analysis Results
 ; GCN-O0-NEXT:       Flatten the CFG
 ; GCN-O0-NEXT:       Dominator Tree Construction
-; GCN-O0-NEXT:       Post-Dominator Tree Construction
-; GCN-O0-NEXT:       Natural Loop Information
-; GCN-O0-NEXT:       Legacy Divergence Analysis
-; GCN-O0-NEXT:       AMDGPU IR late optimizations
 ; GCN-O0-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O0-NEXT:       Function Alias Analysis Results
+; GCN-O0-NEXT:       Natural Loop Information
 ; GCN-O0-NEXT:       Code sinking
+; GCN-O0-NEXT:       Post-Dominator Tree Construction
 ; GCN-O0-NEXT:       Legacy Divergence Analysis
 ; GCN-O0-NEXT:       Unify divergent function exit nodes
 ; GCN-O0-NEXT:       Lazy Value Information Analysis
