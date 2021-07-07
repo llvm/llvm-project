@@ -785,6 +785,19 @@ public:
   bool addGCPasses() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
+
+  /// Check if a pass is enabled given \p Opt option. The option always
+  /// overrides defaults if explicitely used. Otherwise its default will
+  /// be used given that a pass shall work at an optimization \p Level
+  /// minimum.
+  bool isPassEnabled(const cl::opt<bool> &Opt,
+                     CodeGenOpt::Level Level = CodeGenOpt::Default) const {
+    if (Opt.getNumOccurrences())
+      return Opt;
+    if (TM->getOptLevel() < Level)
+      return false;
+    return Opt;
+  }
 };
 
 std::unique_ptr<CSEConfigBase> AMDGPUPassConfig::getCSEConfig() const {
@@ -928,9 +941,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
     if (EnableSROA)
       addPass(createSROAPass());
-    if (EnableScalarIRPasses.getNumOccurrences()
-            ? EnableScalarIRPasses
-            : TM.getOptLevel() > CodeGenOpt::Less)
+    if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
 
     if (EnableAMDGPUAliasAnalysis) {
@@ -962,9 +973,7 @@ void AMDGPUPassConfig::addIRPasses() {
   //   %1 = shl %a, 2
   //
   // but EarlyCSE can do neither of them.
-  if (EnableScalarIRPasses.getNumOccurrences()
-          ? EnableScalarIRPasses
-          : TM.getOptLevel() > CodeGenOpt::Less)
+  if (isPassEnabled(EnableScalarIRPasses))
     addEarlyCSEOrGVNPass();
 }
 
@@ -980,9 +989,7 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
 
   TargetPassConfig::addCodeGenPrepare();
 
-  if (EnableLoadStoreVectorizer.getNumOccurrences()
-          ? EnableLoadStoreVectorizer
-          : TM->getOptLevel() > CodeGenOpt::Less)
+  if (isPassEnabled(EnableLoadStoreVectorizer))
     addPass(createLoadStoreVectorizerPass());
 
   // LowerSwitch pass may introduce unreachable blocks that can
@@ -1107,9 +1114,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
   if (EnableDPPCombine)
     addPass(&GCNDPPCombineID);
   addPass(&SILoadStoreOptimizerID);
-  if (EnableSDWAPeephole.getNumOccurrences()
-          ? EnableSDWAPeephole
-          : TM->getOptLevel() > CodeGenOpt::Less) {
+  if (isPassEnabled(EnableSDWAPeephole)) {
     addPass(&SIPeepholeSDWAID);
     addPass(&EarlyMachineLICMID);
     addPass(&MachineCSEID);
@@ -1200,9 +1205,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
 
-  if (EnablePreRAOptimizations.getNumOccurrences()
-          ? EnablePreRAOptimizations
-          : TM->getOptLevel() > CodeGenOpt::Less)
+  if (isPassEnabled(EnablePreRAOptimizations))
     insertPass(&RenameIndependentSubregsID, &GCNPreRAOptimizationsID);
 
   // This is not an essential optimization and it has a noticeable impact on
