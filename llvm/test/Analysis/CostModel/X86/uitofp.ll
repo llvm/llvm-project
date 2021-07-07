@@ -253,7 +253,7 @@ define i32 @uitofp_i16_float() {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_v2i16_v2f32 = uitofp <2 x i16> undef to <2 x float>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cvt_v4i16_v4f32 = uitofp <4 x i16> undef to <4 x float>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cvt_v8i16_v8f32 = uitofp <8 x i16> undef to <8 x float>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %cvt_v16i16_v16f32 = uitofp <16 x i16> undef to <16 x float>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %cvt_v16i16_v16f32 = uitofp <16 x i16> undef to <16 x float>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'uitofp_i16_float'
