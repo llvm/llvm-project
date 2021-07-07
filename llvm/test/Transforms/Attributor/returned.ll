@@ -917,14 +917,14 @@ if.end:                                           ; preds = %if.then, %entry
 define double* @bitcast(i32* %b) #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@bitcast
-; IS__TUNIT____-SAME: (i32* nofree readnone returned "no-capture-maybe-returned" [[B:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-SAME: (i32* nofree readnone "no-capture-maybe-returned" [[B:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__TUNIT____-NEXT:    ret double* [[BC0]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@bitcast
-; IS__CGSCC____-SAME: (i32* nofree readnone returned "no-capture-maybe-returned" [[B:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i32* nofree readnone "no-capture-maybe-returned" [[B:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__CGSCC____-NEXT:    ret double* [[BC0]]
@@ -947,7 +947,7 @@ entry:
 define double* @bitcasts_select_and_phi(i32* %b) #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@bitcasts_select_and_phi
-; IS__TUNIT____-SAME: (i32* nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq double* [[BC0]], null
@@ -966,7 +966,7 @@ define double* @bitcasts_select_and_phi(i32* %b) #0 {
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@bitcasts_select_and_phi
-; IS__CGSCC____-SAME: (i32* nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq double* [[BC0]], null
@@ -1016,7 +1016,7 @@ if.end:                                           ; preds = %if.then, %entry
 define double* @ret_arg_arg_undef(i32* %b) #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@ret_arg_arg_undef
-; IS__TUNIT____-SAME: (i32* nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq double* [[BC0]], null
@@ -1033,7 +1033,7 @@ define double* @ret_arg_arg_undef(i32* %b) #0 {
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ret_arg_arg_undef
-; IS__CGSCC____-SAME: (i32* nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq double* [[BC0]], null
@@ -1081,7 +1081,7 @@ ret_undef:
 define double* @ret_undef_arg_arg(i32* %b) #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@ret_undef_arg_arg
-; IS__TUNIT____-SAME: (i32* nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq double* [[BC0]], null
@@ -1098,7 +1098,7 @@ define double* @ret_undef_arg_arg(i32* %b) #0 {
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ret_undef_arg_arg
-; IS__CGSCC____-SAME: (i32* nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq double* [[BC0]], null
@@ -1146,7 +1146,7 @@ ret_arg1:
 define double* @ret_undef_arg_undef(i32* %b) #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@ret_undef_arg_undef
-; IS__TUNIT____-SAME: (i32* nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq double* [[BC0]], null
@@ -1162,7 +1162,7 @@ define double* @ret_undef_arg_undef(i32* %b) #0 {
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ret_undef_arg_undef
-; IS__CGSCC____-SAME: (i32* nofree readnone returned [[B:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-SAME: (i32* nofree readnone [[B:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[BC0:%.*]] = bitcast i32* [[B]] to double*
 ; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq double* [[BC0]], null
@@ -1513,14 +1513,12 @@ define i32* @ret_const() #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@ret_const
 ; IS__TUNIT____-SAME: () #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[BC:%.*]] = bitcast i8* @G to i32*
-; IS__TUNIT____-NEXT:    ret i32* [[BC]]
+; IS__TUNIT____-NEXT:    ret i32* bitcast (i8* @G to i32*)
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ret_const
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[BC:%.*]] = bitcast i8* @G to i32*
-; IS__CGSCC____-NEXT:    ret i32* [[BC]]
+; IS__CGSCC____-NEXT:    ret i32* bitcast (i8* @G to i32*)
 ;
   %bc = bitcast i8* @G to i32*
   ret i32* %bc
@@ -1543,14 +1541,12 @@ define i32* @dont_use_const() #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@dont_use_const
 ; IS__TUNIT____-SAME: () #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    [[C:%.*]] = musttail call i32* @ret_const() #[[ATTR5]]
-; IS__TUNIT____-NEXT:    ret i32* [[C]]
+; IS__TUNIT____-NEXT:    ret i32* bitcast (i8* @G to i32*)
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@dont_use_const
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[C:%.*]] = musttail call i32* @ret_const() #[[ATTR6]]
-; IS__CGSCC____-NEXT:    ret i32* [[C]]
+; IS__CGSCC____-NEXT:    ret i32* bitcast (i8* @G to i32*)
 ;
   %c = musttail call i32* @ret_const()
   ret i32* %c

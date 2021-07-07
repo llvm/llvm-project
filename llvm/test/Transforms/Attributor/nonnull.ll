@@ -1671,14 +1671,12 @@ define i8* @nonnull_function_ptr_1() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nonnull_function_ptr_1
 ; IS__TUNIT____-SAME: () #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    [[BC:%.*]] = bitcast i8* ()* @nonnull_function_ptr_1 to i8*
-; IS__TUNIT____-NEXT:    ret i8* [[BC]]
+; IS__TUNIT____-NEXT:    ret i8* bitcast (i8* ()* @nonnull_function_ptr_1 to i8*)
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nonnull_function_ptr_1
 ; IS__CGSCC____-SAME: () #[[ATTR1]] {
-; IS__CGSCC____-NEXT:    [[BC:%.*]] = bitcast i8* ()* @nonnull_function_ptr_1 to i8*
-; IS__CGSCC____-NEXT:    ret i8* [[BC]]
+; IS__CGSCC____-NEXT:    ret i8* bitcast (i8* ()* @nonnull_function_ptr_1 to i8*)
 ;
   %bc = bitcast i8*()* @nonnull_function_ptr_1 to i8*
   ret i8* %bc
@@ -1689,14 +1687,12 @@ define i8* @nonnull_function_ptr_2() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nonnull_function_ptr_2
 ; IS__TUNIT____-SAME: () #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    [[BC:%.*]] = bitcast i8* ()* @function_decl to i8*
-; IS__TUNIT____-NEXT:    ret i8* [[BC]]
+; IS__TUNIT____-NEXT:    ret i8* bitcast (i8* ()* @function_decl to i8*)
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nonnull_function_ptr_2
 ; IS__CGSCC____-SAME: () #[[ATTR1]] {
-; IS__CGSCC____-NEXT:    [[BC:%.*]] = bitcast i8* ()* @function_decl to i8*
-; IS__CGSCC____-NEXT:    ret i8* [[BC]]
+; IS__CGSCC____-NEXT:    ret i8* bitcast (i8* ()* @function_decl to i8*)
 ;
   %bc = bitcast i8*()* @function_decl to i8*
   ret i8* %bc
