@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/ThreadPostMortemTrace.h"
+#include "ThreadPostMortemTrace.h"
 
 #include <memory>
 
