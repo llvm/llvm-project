@@ -217,6 +217,28 @@ def LogOp : ComplexUnaryOp<"log", [SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Log1pOp
+//===----------------------------------------------------------------------===//
+
+def Log1pOp : ComplexUnaryOp<"log1p", [SameOperandsAndResultType]> {
+  let summary = "computes natural logarithm of a complex number";
+  let description = [{
+    The `log` op takes a single complex number and computes the natural
+    logarithm of one plus the given value, i.e. `log(1 + x)` or `log_e(1 + x)`,
+    where `x` is the input value. `e` denotes Euler's number and is
+    approximately equal to 2.718281.
+
+    Example:
+
+    ```mlir
+    %a = complex.log1p %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // MulOp
 //===----------------------------------------------------------------------===//
 
