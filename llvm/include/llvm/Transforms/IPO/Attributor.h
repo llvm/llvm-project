@@ -147,6 +147,17 @@ bool isValidInScope(const Value &V, const Function *Scope);
 /// how to cast various constants.
 Value *getWithType(Value &V, Type &Ty);
 
+/// Return the combination of \p A and \p B such that the result is a possible
+/// value of both. \p B is potentially casted to match the type \p Ty or the
+/// type of \p A if \p Ty is null.
+///
+/// Examples:
+///        X + none  => X
+/// not_none + undef => not_none
+///          V1 + V2 => nullptr
+Optional<Value *>
+combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
+                                     const Optional<Value *> &B, Type *Ty);
 } // namespace AA
 
 /// The value passed to the line option that defines the maximal initialization
