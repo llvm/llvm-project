@@ -44,6 +44,10 @@ automodapi_toctreedirnm = 'python_api'
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.intersphinx']
 
+autodoc_default_options = {
+    'special-members': '__int__, __len__, __hex__, __oct__, __iter__',
+}
+
 # Unless we only generate the basic manpage we need the plugin for generating
 # the Python API documentation.
 if not building_man_page:
