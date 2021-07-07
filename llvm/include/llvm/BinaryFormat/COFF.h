@@ -439,7 +439,8 @@ struct AuxiliaryWeakExternal {
 enum WeakExternalCharacteristics : unsigned {
   IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1,
   IMAGE_WEAK_EXTERN_SEARCH_LIBRARY = 2,
-  IMAGE_WEAK_EXTERN_SEARCH_ALIAS = 3
+  IMAGE_WEAK_EXTERN_SEARCH_ALIAS = 3,
+  IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY = 4
 };
 
 struct AuxiliarySectionDefinition {
