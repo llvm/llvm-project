@@ -18134,6 +18134,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     Ops.push_back(EmitScalarExpr(E->getArg(i)));
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
+  unsigned NF = 1;
 
   // Required for overloaded intrinsics.
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
