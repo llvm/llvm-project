@@ -11,6 +11,8 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 
+#include <numeric>
+
 using namespace mlir;
 
 constexpr StringRef mlir::getReassociationAttrName() { return "reassociation"; }
@@ -145,37 +147,40 @@ ParseResult mlir::parseReshapeLikeOp(OpAsmParser &parser,
   return success();
 }
 
-Optional<SmallVector<ReassociationIndices>>
-mlir::collapseReassociationIndices(ArrayRef<AffineMap> mapsProducer,
-                                   ArrayRef<AffineMap> mapsConsumer,
-                                   MLIRContext *context) {
+Optional<SmallVector<ReassociationIndices>> mlir::composeReassociationIndices(
+    ArrayRef<ReassociationIndices> producerReassociations,
+    ArrayRef<ReassociationIndices> consumerReassociations,
+    MLIRContext *context) {
+  SmallVector<ReassociationIndices> composedIndices;
   // Make the producer the larger sized vector. If they are of same size, the
   // resulting reshape is not a supported reshape op.
-  if (mapsProducer.size() == mapsConsumer.size())
+  if (producerReassociations.size() == consumerReassociations.size())
     return llvm::None;
-  if (mapsProducer.size() < mapsConsumer.size())
-    std::swap(mapsProducer, mapsConsumer);
+  if (producerReassociations.size() < consumerReassociations.size())
+    std::swap(producerReassociations, consumerReassociations);
 
   // Handle the corner case of the result being a rank 0 shaped type. Return an
   // empty reassociation.
-  if (mapsConsumer.empty())
-    return SmallVector<ReassociationIndices>{};
-  if (mapsProducer.size() != mapsConsumer[0].getNumDims())
+  if (consumerReassociations.empty())
+    return composedIndices;
+
+  size_t consumerDims = std::accumulate(
+      consumerReassociations.begin(), consumerReassociations.end(), 0,
+      [](size_t all, ReassociationIndicesRef indices) {
+        return all + indices.size();
+      });
+  if (producerReassociations.size() != consumerDims)
     return llvm::None;
 
-  unsigned currDim = 0;
-  SmallVector<ReassociationIndices> reassociationMaps;
-  for (AffineMap rhs : mapsConsumer) {
+  for (ReassociationIndicesRef consumerIndices : consumerReassociations) {
     ReassociationIndices reassociations;
-    for (AffineExpr rhsExpr : rhs.getResults()) {
-      AffineDimExpr dimExpr = rhsExpr.cast<AffineDimExpr>();
-      for (int i = 0, e = mapsProducer[dimExpr.getPosition()].getNumResults();
-           i < e; ++i)
-        reassociations.push_back(currDim++);
+    for (int64_t consumerIndex : consumerIndices) {
+      for (int64_t producerIndex : producerReassociations[consumerIndex])
+        reassociations.push_back(producerIndex);
     }
-    reassociationMaps.push_back(std::move(reassociations));
+    composedIndices.push_back(std::move(reassociations));
   }
-  return reassociationMaps;
+  return composedIndices;
 }
 
 bool mlir::isReassociationValid(ArrayRef<AffineMap> reassociation,

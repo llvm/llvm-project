@@ -28,27 +28,22 @@ using ReassociationExprs = SmallVector<AffineExpr, 2>;
 /// Attribute name for the ArrayAttr which encodes reassociation indices.
 constexpr StringRef getReassociationAttrName();
 
-/// Collapse reassociation maps that are used in pair of reshape ops where one
+/// Compose reassociation maps that are used in pair of reshape ops where one
 /// is a producer and other is the consumer. Only valid to use this method when
 /// both the producer and consumer are collapsing dimensions or both are
 /// expanding dimensions.
 ///
 /// For example,
-///   mapsProducer = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1)>,
-///                   affine_map<(d0, d1, d2, d3, d4) -> (d2)>,
-///                   affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>]
-///   mapsConsumer = [affine_map<(d0, d1, d2) -> (d0, d1)>,
-///                   affine_map<(d0, d1, d2) -> (d2)>]
+///   producerReassociation = [[0, 1], [2], [3, 4]]
+///   consumerReassociation = [[0, 1], [2]]
 ///
 /// is folded into
 ///
-///   result = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>,
-///             affine_map<(d0, d1, d2, d3, d4) -> (d3, d4)>]
-/// TODO: Use reassociation indices instead of affine maps here.
-Optional<SmallVector<ReassociationIndices>>
-collapseReassociationIndices(ArrayRef<AffineMap> mapsProducer,
-                             ArrayRef<AffineMap> mapsConsumer,
-                             MLIRContext *context);
+///   result = [[0, 1, 2], [3, 4]].
+Optional<SmallVector<ReassociationIndices>> composeReassociationIndices(
+    ArrayRef<ReassociationIndices> producerReassociations,
+    ArrayRef<ReassociationIndices> consumerReassociations,
+    MLIRContext *context);
 
 /// Return the reassociations maps to use to reshape given the source type and
 /// the target type when possible. Return llvm::None when this computation
@@ -210,8 +205,8 @@ struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
 
     ShapedType resultType = reshapeOp.getResultType();
     Optional<SmallVector<ReassociationIndices>> reassociationIndices =
-        collapseReassociationIndices(srcReshapeOp.getReassociationMaps(),
-                                     reshapeOp.getReassociationMaps(),
+        composeReassociationIndices(srcReshapeOp.getReassociationIndices(),
+                                     reshapeOp.getReassociationIndices(),
                                      rewriter.getContext());
     if (!reassociationIndices)
       return failure();
