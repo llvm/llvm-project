@@ -4,5 +4,5 @@
 
 RUN: llvm-nm -V | FileCheck %s
 RUN: llvm-nm --version | FileCheck %s
-CHECK: LLVM version
 CHECK: GNU
+CHECK: LLVM version
