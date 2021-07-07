@@ -7252,8 +7252,15 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
 
   const RecurrenceDescriptor &RdxDesc =
       Legal->getReductionVars()[cast<PHINode>(ReductionPhi)];
-  InstructionCost BaseCost =
-      TTI.getArithmeticReductionCost(RdxDesc.getOpcode(), VectorTy, CostKind);
+
+  InstructionCost BaseCost = TTI.getArithmeticReductionCost(
+      RdxDesc.getOpcode(), VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+
+  // If we're using ordered reductions then we can just return the base cost
+  // here, since getArithmeticReductionCost calculates the full ordered
+  // reduction cost when FP reassociation is not allowed.
+  if (useOrderedReductions(RdxDesc))
+    return BaseCost;
 
   // Get the operand that was not the reduction chain and match it to one of the
   // patterns, returning the better cost if it is found.

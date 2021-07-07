@@ -1594,11 +1594,15 @@ InstructionCost ARMTTIImpl::getGatherScatterOpCost(
 
 InstructionCost
 ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                       Optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) {
+  if (TTI::requiresOrderedReduction(FMF))
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+
   EVT ValVT = TLI->getValueType(DL, ValTy);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   if (!ST->hasMVEIntegerOps() || !ValVT.isSimple() || ISD != ISD::ADD)
-    return BaseT::getArithmeticReductionCost(Opcode, ValTy, CostKind);
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
 
@@ -1610,7 +1614,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   if (const auto *Entry = CostTableLookup(CostTblAdd, ISD, LT.second))
     return Entry->Cost * ST->getMVEVectorCostFactor(CostKind) * LT.first;
 
-  return BaseT::getArithmeticReductionCost(Opcode, ValTy, CostKind);
+  return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 }
 
 InstructionCost

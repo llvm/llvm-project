@@ -622,6 +622,7 @@ public:
   }
 
   InstructionCost getArithmeticReductionCost(unsigned, VectorType *,
+                                             Optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind) const {
     return 1;
   }
