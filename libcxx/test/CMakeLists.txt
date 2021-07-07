@@ -122,7 +122,7 @@ if (NOT DEFINED LIBCXX_TEST_DEPS)
 endif()
 
 if (LIBCXX_INCLUDE_TESTS)
-  include(AddLLVM) # for configure_lit_site_cfg and add_lit_target
+  include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
 
   configure_lit_site_cfg(
     "${LIBCXX_TEST_CONFIG}"
