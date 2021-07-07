@@ -3554,7 +3554,7 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
   const auto *FD = cast<FunctionDecl>(GD.getCanonicalDecl().getDecl());
   Name = getFunctionName(FD);
   // Use mangled name as linkage name for C/C++ functions.
-  if (FD->hasPrototype()) {
+  if (FD->getType()->getAs<FunctionProtoType>()) {
     LinkageName = CGM.getMangledName(GD);
     Flags |= llvm::DINode::FlagPrototyped;
   }
