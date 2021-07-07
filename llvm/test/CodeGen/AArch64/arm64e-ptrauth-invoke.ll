@@ -20,17 +20,16 @@
 ; CHECK-NEXT: [[POSTCALL:L.*]]:
 ; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  mov x19, x0
+; CHECK-NEXT: [[CALLBB:L.*]]:
 ; CHECK-NEXT:  bl _foo
 ; CHECK-NEXT:  mov x0, x19
-; CHECK-NEXT: [[EXITBB:LBB[0-9_]+]]:
 ; CHECK-NEXT:  ldp x29, x30, [sp, #16]
 ; CHECK-NEXT:  ldp x20, x19, [sp], #32
 ; CHECK-NEXT:  retab
 ; CHECK-NEXT: [[LPADBB:LBB[0-9_]+]]:
 ; CHECK-NEXT: [[LPAD:L.*]]:
-; CHECK-NEXT:  bl _foo
-; CHECK-NEXT:  mov w0, #-1
-; CHECK-NEXT:  b [[EXITBB]]
+; CHECK-NEXT:  mov w19, #-1
+; CHECK-NEXT:  b [[CALLBB]]
 
 ; CHECK-LABEL: GCC_except_table{{.*}}:
 ; CHECK-NEXT: [[EXCEPT]]:
@@ -71,17 +70,16 @@ continuebb:
 ; CHECK-NEXT: [[POSTCALL:L.*]]:
 ; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  mov x19, x0
+; CHECK-NEXT: [[CALLBB:L.*]]:
 ; CHECK-NEXT:  bl _foo
 ; CHECK-NEXT:  mov x0, x19
-; CHECK-NEXT: [[EXITBB:LBB[0-9_]+]]:
 ; CHECK-NEXT:  ldp x29, x30, [sp, #16]
 ; CHECK-NEXT:  ldp x20, x19, [sp], #32
 ; CHECK-NEXT:  retab
 ; CHECK-NEXT: [[LPADBB:LBB[0-9_]+]]:
 ; CHECK-NEXT: [[LPAD:L.*]]:
-; CHECK-NEXT:  bl _foo
-; CHECK-NEXT:  mov w0, #-1
-; CHECK-NEXT:  b [[EXITBB]]
+; CHECK-NEXT:  mov w19, #-1
+; CHECK-NEXT:  b [[CALLBB]]
 
 ; CHECK-LABEL: GCC_except_table{{.*}}:
 ; CHECK-NEXT: [[EXCEPT]]:
