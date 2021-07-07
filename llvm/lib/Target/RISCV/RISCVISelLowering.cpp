@@ -314,6 +314,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZfh()) {
     setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
+    setOperationAction(ISD::LRINT, MVT::f16, Legal);
+    setOperationAction(ISD::LLRINT, MVT::f16, Legal);
+    setOperationAction(ISD::LROUND, MVT::f16, Legal);
+    setOperationAction(ISD::LLROUND, MVT::f16, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
@@ -326,6 +330,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtF()) {
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+    setOperationAction(ISD::LRINT, MVT::f32, Legal);
+    setOperationAction(ISD::LLRINT, MVT::f32, Legal);
+    setOperationAction(ISD::LROUND, MVT::f32, Legal);
+    setOperationAction(ISD::LLROUND, MVT::f32, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -343,6 +351,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtD()) {
     setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+    setOperationAction(ISD::LRINT, MVT::f64, Legal);
+    setOperationAction(ISD::LLRINT, MVT::f64, Legal);
+    setOperationAction(ISD::LROUND, MVT::f64, Legal);
+    setOperationAction(ISD::LLROUND, MVT::f64, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
