@@ -600,6 +600,7 @@ module std [system] {
       module access                 { header "__ranges/access.h"                }
       module all                    { header "__ranges/all.h"                   }
       module concepts               { header "__ranges/concepts.h"              }
+      module copyable_box           { header "__ranges/copyable_box.h"          }
       module data                   { header "__ranges/data.h"                  }
       module empty                  { header "__ranges/empty.h"                 }
       module empty_view             { header "__ranges/empty_view.h"            }
