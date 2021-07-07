@@ -920,6 +920,7 @@ protected:
   const parser::Name *ResolveName(const parser::Name &);
   bool PassesSharedLocalityChecks(const parser::Name &name, Symbol &symbol);
   Symbol *NoteInterfaceName(const parser::Name &);
+  bool IsUplevelReference(const Symbol &);
 
 private:
   // The attribute corresponding to the statement containing an ObjectDecl
@@ -971,7 +972,6 @@ private:
   void AddSaveName(std::set<SourceName> &, const SourceName &);
   void SetSaveAttr(Symbol &);
   bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
-  bool IsUplevelReference(const Symbol &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
@@ -6186,13 +6186,19 @@ void ResolveNamesVisitor::HandleProcedureName(
         symbol->attrs().test(Attr::ABSTRACT)) {
       Say(name, "Abstract interface '%s' may not be called"_err_en_US);
     } else if (IsProcedure(*symbol) || symbol->has<DerivedTypeDetails>() ||
-        symbol->has<ObjectEntityDetails>() ||
         symbol->has<AssocEntityDetails>()) {
-      // Symbols with DerivedTypeDetails, ObjectEntityDetails and
-      // AssocEntityDetails are accepted here as procedure-designators because
-      // this means the related FunctionReference are mis-parsed structure
-      // constructors or array references that will be fixed later when
-      // analyzing expressions.
+      // Symbols with DerivedTypeDetails and AssocEntityDetails are accepted
+      // here as procedure-designators because this means the related
+      // FunctionReference are mis-parsed structure constructors or array
+      // references that will be fixed later when analyzing expressions.
+    } else if (symbol->has<ObjectEntityDetails>()) {
+      // Symbols with ObjectEntityDetails are also accepted because this can be
+      // a mis-parsed array references that will be fixed later. Ensure that if
+      // this is a symbol from a host procedure, a symbol with HostAssocDetails
+      // is created for the current scope.
+      if (IsUplevelReference(*symbol)) {
+        MakeHostAssocSymbol(name, *symbol);
+      }
     } else if (symbol->test(Symbol::Flag::Implicit)) {
       Say(name,
           "Use of '%s' as a procedure conflicts with its implicit definition"_err_en_US);
@@ -6589,6 +6595,12 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
   // Resolve unrestricted specific intrinsic procedures as in "p => cos".
   if (const parser::Name * name{parser::Unwrap<parser::Name>(expr)}) {
     if (NameIsKnownOrIntrinsic(*name)) {
+      // If the name is known because it is an object entity from a host
+      // procedure, create a host associated symbol.
+      if (Symbol * symbol{name->symbol}; symbol &&
+          symbol->has<ObjectEntityDetails>() && IsUplevelReference(*symbol)) {
+        MakeHostAssocSymbol(*name, *symbol);
+      }
       return false;
     }
   }
