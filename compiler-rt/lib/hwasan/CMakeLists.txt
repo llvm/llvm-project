@@ -7,6 +7,7 @@ set(HWASAN_RTL_SOURCES
   hwasan_allocation_functions.cpp
   hwasan_dynamic_shadow.cpp
   hwasan_exceptions.cpp
+  hwasan_fuchsia.cpp
   hwasan_globals.cpp
   hwasan_interceptors.cpp
   hwasan_interceptors_vfork.S
