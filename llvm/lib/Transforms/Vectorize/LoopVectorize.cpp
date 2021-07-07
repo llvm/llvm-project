@@ -4003,16 +4003,14 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths(VPTransformState &State) {
           break;
         }
       } else if (auto *SI = dyn_cast<ShuffleVectorInst>(I)) {
-        auto Elements0 = cast<FixedVectorType>(SI->getOperand(0)->getType())
-                             ->getNumElements();
+        auto Elements0 =
+            cast<VectorType>(SI->getOperand(0)->getType())->getElementCount();
         auto *O0 = B.CreateZExtOrTrunc(
-            SI->getOperand(0),
-            FixedVectorType::get(ScalarTruncatedTy, Elements0));
-        auto Elements1 = cast<FixedVectorType>(SI->getOperand(1)->getType())
-                             ->getNumElements();
+            SI->getOperand(0), VectorType::get(ScalarTruncatedTy, Elements0));
+        auto Elements1 =
+            cast<VectorType>(SI->getOperand(1)->getType())->getElementCount();
         auto *O1 = B.CreateZExtOrTrunc(
-            SI->getOperand(1),
-            FixedVectorType::get(ScalarTruncatedTy, Elements1));
+            SI->getOperand(1), VectorType::get(ScalarTruncatedTy, Elements1));
 
         NewI = B.CreateShuffleVector(O0, O1, SI->getShuffleMask());
       } else if (isa<LoadInst>(I) || isa<PHINode>(I)) {
