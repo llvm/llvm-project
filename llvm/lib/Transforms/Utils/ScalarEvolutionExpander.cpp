@@ -453,8 +453,6 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
                                     PointerType *PTy,
                                     Type *Ty,
                                     Value *V) {
-  Type *OriginalElTy = PTy->getElementType();
-  Type *ElTy = OriginalElTy;
   SmallVector<Value *, 4> GepIndices;
   SmallVector<const SCEV *, 8> Ops(op_begin, op_end);
   bool AnyNonZeroIndices = false;
@@ -465,93 +463,97 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
 
   Type *IntIdxTy = DL.getIndexType(PTy);
 
-  // Descend down the pointer's type and attempt to convert the other
-  // operands into GEP indices, at each level. The first index in a GEP
-  // indexes into the array implied by the pointer operand; the rest of
-  // the indices index into the element or field type selected by the
-  // preceding index.
-  for (;;) {
-    // If the scale size is not 0, attempt to factor out a scale for
-    // array indexing.
-    SmallVector<const SCEV *, 8> ScaledOps;
-    if (ElTy->isSized()) {
-      const SCEV *ElSize = SE.getSizeOfExpr(IntIdxTy, ElTy);
-      if (!ElSize->isZero()) {
-        SmallVector<const SCEV *, 8> NewOps;
-        for (const SCEV *Op : Ops) {
-          const SCEV *Remainder = SE.getConstant(Ty, 0);
-          if (FactorOutConstant(Op, Remainder, ElSize, SE, DL)) {
-            // Op now has ElSize factored out.
-            ScaledOps.push_back(Op);
-            if (!Remainder->isZero())
-              NewOps.push_back(Remainder);
-            AnyNonZeroIndices = true;
-          } else {
-            // The operand was not divisible, so add it to the list of operands
-            // we'll scan next iteration.
-            NewOps.push_back(Op);
+  // For opaque pointers, always generate i8 GEP.
+  if (!PTy->isOpaque()) {
+    // Descend down the pointer's type and attempt to convert the other
+    // operands into GEP indices, at each level. The first index in a GEP
+    // indexes into the array implied by the pointer operand; the rest of
+    // the indices index into the element or field type selected by the
+    // preceding index.
+    Type *ElTy = PTy->getElementType();
+    for (;;) {
+      // If the scale size is not 0, attempt to factor out a scale for
+      // array indexing.
+      SmallVector<const SCEV *, 8> ScaledOps;
+      if (ElTy->isSized()) {
+        const SCEV *ElSize = SE.getSizeOfExpr(IntIdxTy, ElTy);
+        if (!ElSize->isZero()) {
+          SmallVector<const SCEV *, 8> NewOps;
+          for (const SCEV *Op : Ops) {
+            const SCEV *Remainder = SE.getConstant(Ty, 0);
+            if (FactorOutConstant(Op, Remainder, ElSize, SE, DL)) {
+              // Op now has ElSize factored out.
+              ScaledOps.push_back(Op);
+              if (!Remainder->isZero())
+                NewOps.push_back(Remainder);
+              AnyNonZeroIndices = true;
+            } else {
+              // The operand was not divisible, so add it to the list of
+              // operands we'll scan next iteration.
+              NewOps.push_back(Op);
+            }
+          }
+          // If we made any changes, update Ops.
+          if (!ScaledOps.empty()) {
+            Ops = NewOps;
+            SimplifyAddOperands(Ops, Ty, SE);
           }
         }
-        // If we made any changes, update Ops.
-        if (!ScaledOps.empty()) {
-          Ops = NewOps;
-          SimplifyAddOperands(Ops, Ty, SE);
+      }
+
+      // Record the scaled array index for this level of the type. If
+      // we didn't find any operands that could be factored, tentatively
+      // assume that element zero was selected (since the zero offset
+      // would obviously be folded away).
+      Value *Scaled =
+          ScaledOps.empty()
+              ? Constant::getNullValue(Ty)
+              : expandCodeForImpl(SE.getAddExpr(ScaledOps), Ty, false);
+      GepIndices.push_back(Scaled);
+
+      // Collect struct field index operands.
+      while (StructType *STy = dyn_cast<StructType>(ElTy)) {
+        bool FoundFieldNo = false;
+        // An empty struct has no fields.
+        if (STy->getNumElements() == 0) break;
+        // Field offsets are known. See if a constant offset falls within any of
+        // the struct fields.
+        if (Ops.empty())
+          break;
+        if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Ops[0]))
+          if (SE.getTypeSizeInBits(C->getType()) <= 64) {
+            const StructLayout &SL = *DL.getStructLayout(STy);
+            uint64_t FullOffset = C->getValue()->getZExtValue();
+            if (FullOffset < SL.getSizeInBytes()) {
+              unsigned ElIdx = SL.getElementContainingOffset(FullOffset);
+              GepIndices.push_back(
+                  ConstantInt::get(Type::getInt32Ty(Ty->getContext()), ElIdx));
+              ElTy = STy->getTypeAtIndex(ElIdx);
+              Ops[0] =
+                  SE.getConstant(Ty, FullOffset - SL.getElementOffset(ElIdx));
+              AnyNonZeroIndices = true;
+              FoundFieldNo = true;
+            }
+          }
+        // If no struct field offsets were found, tentatively assume that
+        // field zero was selected (since the zero offset would obviously
+        // be folded away).
+        if (!FoundFieldNo) {
+          ElTy = STy->getTypeAtIndex(0u);
+          GepIndices.push_back(
+            Constant::getNullValue(Type::getInt32Ty(Ty->getContext())));
         }
       }
-    }
 
-    // Record the scaled array index for this level of the type. If
-    // we didn't find any operands that could be factored, tentatively
-    // assume that element zero was selected (since the zero offset
-    // would obviously be folded away).
-    Value *Scaled =
-        ScaledOps.empty()
-            ? Constant::getNullValue(Ty)
-            : expandCodeForImpl(SE.getAddExpr(ScaledOps), Ty, false);
-    GepIndices.push_back(Scaled);
-
-    // Collect struct field index operands.
-    while (StructType *STy = dyn_cast<StructType>(ElTy)) {
-      bool FoundFieldNo = false;
-      // An empty struct has no fields.
-      if (STy->getNumElements() == 0) break;
-      // Field offsets are known. See if a constant offset falls within any of
-      // the struct fields.
-      if (Ops.empty())
+      if (ArrayType *ATy = dyn_cast<ArrayType>(ElTy))
+        ElTy = ATy->getElementType();
+      else
+        // FIXME: Handle VectorType.
+        // E.g., If ElTy is scalable vector, then ElSize is not a compile-time
+        // constant, therefore can not be factored out. The generated IR is less
+        // ideal with base 'V' cast to i8* and do ugly getelementptr over that.
         break;
-      if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Ops[0]))
-        if (SE.getTypeSizeInBits(C->getType()) <= 64) {
-          const StructLayout &SL = *DL.getStructLayout(STy);
-          uint64_t FullOffset = C->getValue()->getZExtValue();
-          if (FullOffset < SL.getSizeInBytes()) {
-            unsigned ElIdx = SL.getElementContainingOffset(FullOffset);
-            GepIndices.push_back(
-                ConstantInt::get(Type::getInt32Ty(Ty->getContext()), ElIdx));
-            ElTy = STy->getTypeAtIndex(ElIdx);
-            Ops[0] =
-                SE.getConstant(Ty, FullOffset - SL.getElementOffset(ElIdx));
-            AnyNonZeroIndices = true;
-            FoundFieldNo = true;
-          }
-        }
-      // If no struct field offsets were found, tentatively assume that
-      // field zero was selected (since the zero offset would obviously
-      // be folded away).
-      if (!FoundFieldNo) {
-        ElTy = STy->getTypeAtIndex(0u);
-        GepIndices.push_back(
-          Constant::getNullValue(Type::getInt32Ty(Ty->getContext())));
-      }
     }
-
-    if (ArrayType *ATy = dyn_cast<ArrayType>(ElTy))
-      ElTy = ATy->getElementType();
-    else
-      // FIXME: Handle VectorType.
-      // E.g., If ElTy is scalable vector, then ElSize is not a compile-time
-      // constant, therefore can not be factored out. The generated IR is less
-      // ideal with base 'V' cast to i8* and do ugly getelementptr over that.
-      break;
   }
 
   // If none of the operands were convertible to proper GEP indices, cast
@@ -559,8 +561,9 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
   // better than ptrtoint+arithmetic+inttoptr at least.
   if (!AnyNonZeroIndices) {
     // Cast the base to i8*.
-    V = InsertNoopCastOfTo(V,
-       Type::getInt8PtrTy(Ty->getContext(), PTy->getAddressSpace()));
+    if (!PTy->isOpaque())
+      V = InsertNoopCastOfTo(V,
+         Type::getInt8PtrTy(Ty->getContext(), PTy->getAddressSpace()));
 
     assert(!isa<Instruction>(V) ||
            SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
@@ -636,7 +639,8 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     Value *Casted = V;
     if (V->getType() != PTy)
       Casted = InsertNoopCastOfTo(Casted, PTy);
-    Value *GEP = Builder.CreateGEP(OriginalElTy, Casted, GepIndices, "scevgep");
+    Value *GEP = Builder.CreateGEP(PTy->getElementType(), Casted, GepIndices,
+                                   "scevgep");
     Ops.push_back(SE.getUnknown(GEP));
   }
 
