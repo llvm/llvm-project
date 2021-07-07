@@ -1432,3 +1432,24 @@ func @dim_of_unranked(%unranked: memref<*xi32>) -> index {
 
 // CHECK32: %[[SIZE:.*]] = llvm.load %{{.*}} : !llvm.ptr<i32>
 // CHECK32-NEXT: llvm.return %[[SIZE]] : i32
+
+// -----
+
+func @switchLower(%arg0: i32, %arg1 : i32, %arg2 : i32) -> i32 {
+    switch %arg0 : i32, [
+      default: ^bb2,
+      115: ^bb1
+    ]
+  ^bb1:
+    llvm.return %arg1 : i32
+  ^bb2:
+    llvm.return %arg2 : i32
+}
+
+// CHECK: llvm.switch %arg0, ^[[bb2:.+]] [
+// CHECK-NEXT:      115: ^[[bb1:.+]]
+// CHECK-NEXT:    ]
+// CHECK:  ^[[bb1]]:
+// CHECK:    llvm.return %arg1 : i32
+// CHECK:  ^[[bb2]]:
+// CHECK:    llvm.return %arg2 : i32
