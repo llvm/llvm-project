@@ -23,7 +23,7 @@ add_mlir_public_c_api_library(MLIRCAPIGPU
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
-  MLIRGPU
+  MLIRGPUTransforms
   MLIRPass
 )
 
