@@ -60,8 +60,7 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
   } else if (name == "sum") {
     return FoldSum<T>(context, std::move(funcRef));
   }
-  // TODO: cshift, dot_product, eoshift, matmul, pack, spread, transfer,
-  // transpose, unpack
+  // TODO: dot_product, matmul, transfer
   return Expr<T>{std::move(funcRef)};
 }
 
