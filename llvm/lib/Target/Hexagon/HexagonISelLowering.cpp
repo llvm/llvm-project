@@ -35,6 +35,8 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InlineAsm.h"
@@ -1912,25 +1914,57 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
-void
+bool
 HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
-      const SDLoc &dl) const {
+      const SDLoc &dl, SelectionDAG &DAG) const {
   auto *CA = dyn_cast<ConstantSDNode>(Ptr);
   if (!CA)
-    return;
+    return true;
   unsigned Addr = CA->getZExtValue();
   Align HaveAlign =
       Addr != 0 ? Align(1ull << countTrailingZeros(Addr)) : NeedAlign;
-  if (HaveAlign < NeedAlign) {
-    std::string ErrMsg;
-    raw_string_ostream O(ErrMsg);
-    O << "Misaligned constant address: " << format_hex(Addr, 10)
-      << " has alignment " << HaveAlign.value()
-      << ", but the memory access requires " << NeedAlign.value();
-    if (DebugLoc DL = dl.getDebugLoc())
-      DL.print(O << ", at ");
-    report_fatal_error(O.str());
-  }
+  if (HaveAlign >= NeedAlign)
+    return true;
+
+  static int DK_MisalignedTrap = llvm::getNextAvailablePluginDiagnosticKind();
+
+  struct DiagnosticInfoMisalignedTrap : public DiagnosticInfo {
+    DiagnosticInfoMisalignedTrap(StringRef M)
+      : DiagnosticInfo(DK_MisalignedTrap, DS_Remark), Msg(M) {}
+    void print(DiagnosticPrinter &DP) const override {
+      DP << Msg;
+    }
+    static bool classof(const DiagnosticInfo *DI) {
+      return DI->getKind() == DK_MisalignedTrap;
+    }
+    StringRef Msg;
+  };
+
+  std::string ErrMsg;
+  raw_string_ostream O(ErrMsg);
+  O << "Misaligned constant address: " << format_hex(Addr, 10)
+    << " has alignment " << HaveAlign.value()
+    << ", but the memory access requires " << NeedAlign.value();
+  if (DebugLoc DL = dl.getDebugLoc())
+    DL.print(O << ", at ");
+  O << ". The instruction has been replaced with a trap.";
+
+  DAG.getContext()->diagnose(DiagnosticInfoMisalignedTrap(O.str()));
+  return false;
+}
+
+SDValue
+HexagonTargetLowering::replaceMemWithUndef(SDValue Op, SelectionDAG &DAG)
+      const {
+  const SDLoc &dl(Op);
+  auto *LS = cast<LSBaseSDNode>(Op.getNode());
+  assert(!LS->isIndexed() && "Not expecting indexed ops on constant address");
+
+  SDValue Chain = LS->getChain();
+  SDValue Trap = DAG.getNode(ISD::TRAP, dl, MVT::Other, Chain);
+  if (LS->getOpcode() == ISD::LOAD)
+    return DAG.getMergeValues({DAG.getUNDEF(ty(Op)), Trap}, dl);
+  return Trap;
 }
 
 // Bit-reverse Load Intrinsic: Check if the instruction is a bit reverse load
@@ -2902,7 +2936,9 @@ HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
   }
 
   Align ClaimAlign = LN->getAlign();
-  validateConstPtrAlignment(LN->getBasePtr(), ClaimAlign, dl);
+  if (!validateConstPtrAlignment(LN->getBasePtr(), ClaimAlign, dl, DAG))
+    return replaceMemWithUndef(Op, DAG);
+
   // Call LowerUnalignedLoad for all loads, it recognizes loads that
   // don't need extra aligning.
   SDValue LU = LowerUnalignedLoad(SDValue(LN, 0), DAG);
@@ -2934,7 +2970,8 @@ HexagonTargetLowering::LowerStore(SDValue Op, SelectionDAG &DAG) const {
   }
 
   Align ClaimAlign = SN->getAlign();
-  validateConstPtrAlignment(SN->getBasePtr(), ClaimAlign, dl);
+  if (!validateConstPtrAlignment(SN->getBasePtr(), ClaimAlign, dl, DAG))
+    return replaceMemWithUndef(Op, DAG);
 
   MVT StoreTy = SN->getMemoryVT().getSimpleVT();
   Align NeedAlign = Subtarget.getTypeAlignment(StoreTy);
