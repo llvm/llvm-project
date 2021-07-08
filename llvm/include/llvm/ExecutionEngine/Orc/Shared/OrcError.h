@@ -1,4 +1,4 @@
-//===------ OrcError.h - Reject symbol lookup requests ------*- C++ -*-===//
+//===--------------- OrcError.h - Orc Error Types ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//   Define an error category, error codes, and helper utilities for Orc.
+// Define an error category, error codes, and helper utilities for Orc.
 //
 //===----------------------------------------------------------------------===//
 
