@@ -467,9 +467,14 @@ bool InstrProfiling::lowerIntrinsics(Function *F) {
 }
 
 bool InstrProfiling::isRuntimeCounterRelocationEnabled() const {
+  // Mach-O don't support weak external references.
+  if (TT.isOSBinFormatMachO())
+    return false;
+
   if (RuntimeCounterRelocation.getNumOccurrences() > 0)
     return RuntimeCounterRelocation;
 
+  // Fuchsia uses runtime counter relocation by default.
   return TT.isOSFuchsia();
 }
 
@@ -690,10 +695,19 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
       Type *Int64Ty = Type::getInt64Ty(M->getContext());
       GlobalVariable *Bias = M->getGlobalVariable(getInstrProfCounterBiasVarName());
       if (!Bias) {
+        // Compiler must define this variable when runtime counter relocation
+        // is being used. Runtime has a weak external reference that is used
+        // to check whether that's the case or not.
         Bias = new GlobalVariable(*M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
                                   Constant::getNullValue(Int64Ty),
                                   getInstrProfCounterBiasVarName());
         Bias->setVisibility(GlobalVariable::HiddenVisibility);
+        // A definition that's weak (linkonce_odr) without being in a COMDAT
+        // section wouldn't lead to link errors, but it would lead to a dead
+        // data word from every TU but one. Putting it in COMDAT ensures there
+        // will be exactly one data slot in the link.
+        if (TT.supportsCOMDAT())
+          Bias->setComdat(M->getOrInsertComdat(Bias->getName()));
       }
       LI = Builder.CreateLoad(Int64Ty, Bias);
     }
