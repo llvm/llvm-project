@@ -178,9 +178,6 @@ public:
 
     _LIBCPP_UNREACHABLE();
   }
-
-  // TODO: Remove this workaround for broken Clang modules.
-  using __function_like::operator&;
 };
 
 inline constexpr auto advance = __advance_fn(__function_like::__tag());
