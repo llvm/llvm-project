@@ -431,6 +431,7 @@ static bool mustPreserveGV(const GlobalValue &GV) {
   if (const Function *F = dyn_cast<Function>(&GV))
     return F->isDeclaration() || AMDGPU::isEntryFunctionCC(F->getCallingConv());
 
+  GV.removeDeadConstantUsers();
   return !GV.use_empty();
 }
 
@@ -595,9 +596,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
         if (InternalizeSymbols) {
-          // Global variables may have dead uses which need to be removed.
-          // Otherwise these useless global variables will not get internalized.
-          PM.addPass(GlobalDCEPass());
           PM.addPass(InternalizePass(mustPreserveGV));
         }
         PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
