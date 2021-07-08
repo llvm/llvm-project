@@ -140,17 +140,6 @@ steps:
   #
   - wait
 
-  - label: "GCC Previous/C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-gcc-prev"
-    artifact_paths:
-      - "**/test-results.xml"
-    agents:
-      queue: "libcxx-builders"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-
   - label: "-fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
     artifact_paths:
