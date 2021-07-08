@@ -371,13 +371,9 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
       // store unique printf id in the buffer
       //
-      SmallVector<Value *, 1> ZeroIdxList;
-      ConstantInt *zeroInt =
-          ConstantInt::get(Ctx, APInt(32, StringRef("0"), 10));
-      ZeroIdxList.push_back(zeroInt);
-
       GetElementPtrInst *BufferIdx = GetElementPtrInst::Create(
-          I8Ty, pcall, ZeroIdxList, "PrintBuffID", Brnch);
+          I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 0)), "PrintBuffID",
+          Brnch);
 
       Type *idPointer = PointerType::get(I32Ty, AMDGPUAS::GLOBAL_ADDRESS);
       Value *id_gep_cast =
@@ -385,14 +381,11 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
       new StoreInst(ConstantInt::get(I32Ty, UniqID), id_gep_cast, Brnch);
 
-      SmallVector<Value *, 2> FourthIdxList;
-      ConstantInt *fourInt =
-          ConstantInt::get(Ctx, APInt(32, StringRef("4"), 10));
-
-      FourthIdxList.push_back(fourInt); // 1st 4 bytes hold the printf_id
+      // 1st 4 bytes hold the printf_id
       // the following GEP is the buffer pointer
-      BufferIdx = GetElementPtrInst::Create(I8Ty, pcall, FourthIdxList,
-                                            "PrintBuffGep", Brnch);
+      BufferIdx = GetElementPtrInst::Create(
+          I8Ty, pcall, ConstantInt::get(Ctx, APInt(32, 4)), "PrintBuffGep",
+          Brnch);
 
       Type *Int32Ty = Type::getInt32Ty(Ctx);
       Type *Int64Ty = Type::getInt64Ty(Ctx);
