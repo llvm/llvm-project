@@ -528,7 +528,7 @@ static void compileBitcodeFiles() {
   // FIXME: Remove this once LTO.cpp honors config->exportDynamic.
   if (config->exportDynamic)
     for (InputFile *file : inputFiles)
-      if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file)) {
+      if (isa<BitcodeFile>(file)) {
         warn("the effect of -export_dynamic on LTO is not yet implemented");
         break;
       }

@@ -1,3 +1,10 @@
 RUN: llvm-nm --help 2>&1 | FileCheck --implicit-check-not="General Options:" %s
-CHECK: Generic Options:
-CHECK: llvm-nm Options:
+RUN: llvm-nm -h 2>&1 | FileCheck --implicit-check-not="General Options:" %s
+CHECK: OPTIONS:
+CHECK:   --debug-syms
+CHECK:   --demangle
+CHECK:   --format=<format>
+CHECK: llvm-nm Mach-O Specific Options:
+CHECK:   --arch=<value>
+CHECK:   -s
+CHECK: Pass @FILE {{.*}}

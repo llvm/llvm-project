@@ -768,6 +768,9 @@ public:
     // anything.
     disablePass(&StackMapLivenessID);
     disablePass(&FuncletLayoutID);
+    // Garbage collection is not supported.
+    disablePass(&GCLoweringID);
+    disablePass(&ShadowStackGCLoweringID);
   }
 
   AMDGPUTargetMachine &getAMDGPUTargetMachine() const {

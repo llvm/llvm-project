@@ -175,9 +175,9 @@ struct SimplifyDeadAlloc : public OpRewritePattern<T> {
   LogicalResult matchAndRewrite(T alloc,
                                 PatternRewriter &rewriter) const override {
     if (llvm::any_of(alloc->getUsers(), [&](Operation *op) {
-        if (auto storeOp = dyn_cast<StoreOp>(op))
-          return storeOp.value() == alloc;
-        return !isa<DeallocOp>(op);
+          if (auto storeOp = dyn_cast<StoreOp>(op))
+            return storeOp.value() == alloc;
+          return !isa<DeallocOp>(op);
         }))
       return failure();
 
@@ -677,9 +677,9 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
 
   if (auto sizeInterface =
           dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
-    assert(sizeInterface.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic subview size");
-    return sizeInterface.getDynamicSize(unsignedIndex);
+    int64_t nthDynamicIndex =
+        memrefType.getRelativeIndexOfDynamicDim(unsignedIndex);
+    return sizeInterface.sizes()[nthDynamicIndex];
   }
 
   // dim(memrefcast) -> dim

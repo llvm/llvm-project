@@ -331,12 +331,82 @@ public:
   }
 
 private:
-  struct LocalSymbolNamedDependencies {
+  // Symbol name dependencies:
+  // Internal: Defined in this graph.
+  // External: Defined externally.
+  struct BlockSymbolDependencies {
     SymbolNameSet Internal, External;
   };
 
-  using LocalSymbolNamedDependenciesMap =
-      DenseMap<const Symbol *, LocalSymbolNamedDependencies>;
+  // Lazily populated map of blocks to BlockSymbolDependencies values.
+  class BlockDependenciesMap {
+  public:
+    BlockDependenciesMap(ExecutionSession &ES,
+                         DenseMap<const Block *, DenseSet<Block *>> BlockDeps)
+        : ES(ES), BlockDeps(std::move(BlockDeps)) {}
+
+    const BlockSymbolDependencies &operator[](const Block &B) {
+      // Check the cache first.
+      auto I = BlockTransitiveDepsCache.find(&B);
+      if (I != BlockTransitiveDepsCache.end())
+        return I->second;
+
+      // No value. Populate the cache.
+      BlockSymbolDependencies BTDCacheVal;
+      auto BDI = BlockDeps.find(&B);
+      assert(BDI != BlockDeps.end() && "No block dependencies");
+
+      for (auto *BDep : BDI->second) {
+        auto &BID = getBlockImmediateDeps(*BDep);
+        for (auto &ExternalDep : BID.External)
+          BTDCacheVal.External.insert(ExternalDep);
+        for (auto &InternalDep : BID.Internal)
+          BTDCacheVal.Internal.insert(InternalDep);
+      }
+
+      return BlockTransitiveDepsCache
+          .insert(std::make_pair(&B, std::move(BTDCacheVal)))
+          .first->second;
+    }
+
+    SymbolStringPtr &getInternedName(Symbol &Sym) {
+      auto I = NameCache.find(&Sym);
+      if (I != NameCache.end())
+        return I->second;
+
+      return NameCache.insert(std::make_pair(&Sym, ES.intern(Sym.getName())))
+          .first->second;
+    }
+
+  private:
+    BlockSymbolDependencies &getBlockImmediateDeps(Block &B) {
+      // Check the cache first.
+      auto I = BlockImmediateDepsCache.find(&B);
+      if (I != BlockImmediateDepsCache.end())
+        return I->second;
+
+      BlockSymbolDependencies BIDCacheVal;
+      for (auto &E : B.edges()) {
+        auto &Tgt = E.getTarget();
+        if (Tgt.getScope() != Scope::Local) {
+          if (Tgt.isExternal())
+            BIDCacheVal.External.insert(getInternedName(Tgt));
+          else
+            BIDCacheVal.Internal.insert(getInternedName(Tgt));
+        }
+      }
+
+      return BlockImmediateDepsCache
+          .insert(std::make_pair(&B, std::move(BIDCacheVal)))
+          .first->second;
+    }
+
+    ExecutionSession &ES;
+    DenseMap<const Block *, DenseSet<Block *>> BlockDeps;
+    DenseMap<const Symbol *, SymbolStringPtr> NameCache;
+    DenseMap<const Block *, BlockSymbolDependencies> BlockImmediateDepsCache;
+    DenseMap<const Block *, BlockSymbolDependencies> BlockTransitiveDepsCache;
+  };
 
   Error claimOrExternalizeWeakAndCommonSymbols(LinkGraph &G) {
     auto &ES = Layer.getExecutionSession();
@@ -384,7 +454,7 @@ private:
 
   Error computeNamedSymbolDependencies(LinkGraph &G) {
     auto &ES = MR->getTargetJITDylib().getExecutionSession();
-    auto LocalDeps = computeLocalDeps(G);
+    auto BlockDeps = computeBlockNonLocalDeps(G);
 
     // Compute dependencies for symbols defined in the JITLink graph.
     for (auto *Sym : G.defined_symbols()) {
@@ -395,58 +465,41 @@ private:
       assert(Sym->hasName() &&
              "Defined non-local jitlink::Symbol should have a name");
 
-      SymbolNameSet ExternalSymDeps, InternalSymDeps;
-
-      // Find internal and external named symbol dependencies.
-      for (auto &E : Sym->getBlock().edges()) {
-        auto &TargetSym = E.getTarget();
-
-        if (TargetSym.getScope() != Scope::Local) {
-          if (TargetSym.isExternal())
-            ExternalSymDeps.insert(ES.intern(TargetSym.getName()));
-          else if (&TargetSym != Sym)
-            InternalSymDeps.insert(ES.intern(TargetSym.getName()));
-        } else {
-          assert(TargetSym.isDefined() &&
-                 "local symbols must be defined");
-          auto I = LocalDeps.find(&TargetSym);
-          if (I != LocalDeps.end()) {
-            for (auto &S : I->second.External)
-              ExternalSymDeps.insert(S);
-            for (auto &S : I->second.Internal)
-              InternalSymDeps.insert(S);
-          }
-        }
-      }
-
-      if (ExternalSymDeps.empty() && InternalSymDeps.empty())
+      auto &SymDeps = BlockDeps[Sym->getBlock()];
+      if (SymDeps.External.empty() && SymDeps.Internal.empty())
         continue;
 
       auto SymName = ES.intern(Sym->getName());
-      if (!ExternalSymDeps.empty())
-        ExternalNamedSymbolDeps[SymName] = std::move(ExternalSymDeps);
-      if (!InternalSymDeps.empty())
-        InternalNamedSymbolDeps[SymName] = std::move(InternalSymDeps);
+      if (!SymDeps.External.empty())
+        ExternalNamedSymbolDeps[SymName] = SymDeps.External;
+      if (!SymDeps.Internal.empty())
+        InternalNamedSymbolDeps[SymName] = SymDeps.Internal;
     }
 
     for (auto &P : Layer.Plugins) {
-      auto SyntheticLocalDeps = P->getSyntheticSymbolLocalDependencies(*MR);
-      if (SyntheticLocalDeps.empty())
+      auto SynthDeps = P->getSyntheticSymbolDependencies(*MR);
+      if (SynthDeps.empty())
         continue;
 
-      for (auto &KV : SyntheticLocalDeps) {
+      DenseSet<Block *> BlockVisited;
+      for (auto &KV : SynthDeps) {
         auto &Name = KV.first;
-        auto &LocalDepsForName = KV.second;
-        for (auto *Local : LocalDepsForName) {
-          assert(Local->getScope() == Scope::Local &&
-                 "Dependence on non-local symbol");
-          auto LocalNamedDepsItr = LocalDeps.find(Local);
-          if (LocalNamedDepsItr == LocalDeps.end())
-            continue;
-          for (auto &S : LocalNamedDepsItr->second.Internal)
-            InternalNamedSymbolDeps[Name].insert(S);
-          for (auto &S : LocalNamedDepsItr->second.External)
-            ExternalNamedSymbolDeps[Name].insert(S);
+        auto &DepsForName = KV.second;
+        for (auto *Sym : DepsForName) {
+          if (Sym->getScope() == Scope::Local) {
+            auto &BDeps = BlockDeps[Sym->getBlock()];
+            for (auto &S : BDeps.Internal)
+              InternalNamedSymbolDeps[Name].insert(S);
+            for (auto &S : BDeps.External)
+              ExternalNamedSymbolDeps[Name].insert(S);
+          } else {
+            if (Sym->isExternal())
+              ExternalNamedSymbolDeps[Name].insert(
+                  BlockDeps.getInternedName(*Sym));
+            else
+              InternalNamedSymbolDeps[Name].insert(
+                  BlockDeps.getInternedName(*Sym));
+          }
         }
       }
     }
@@ -454,81 +507,69 @@ private:
     return Error::success();
   }
 
-  LocalSymbolNamedDependenciesMap computeLocalDeps(LinkGraph &G) {
-    DenseMap<jitlink::Symbol *, DenseSet<jitlink::Symbol *>> DepMap;
-
-    // For all local symbols:
-    // (1) Add their named dependencies.
-    // (2) Add them to the worklist for further iteration if they have any
-    //     depend on any other local symbols.
-    struct WorklistEntry {
-      WorklistEntry(Symbol *Sym, DenseSet<Symbol *> LocalDeps)
-          : Sym(Sym), LocalDeps(std::move(LocalDeps)) {}
-
-      Symbol *Sym = nullptr;
-      DenseSet<Symbol *> LocalDeps;
+  BlockDependenciesMap computeBlockNonLocalDeps(LinkGraph &G) {
+    // First calculate the reachable-via-non-local-symbol blocks for each block.
+    struct BlockInfo {
+      DenseSet<Block *> Dependencies;
+      DenseSet<Block *> Dependants;
+      bool DependenciesChanged = true;
     };
-    std::vector<WorklistEntry> Worklist;
-    for (auto *Sym : G.defined_symbols())
-      if (Sym->getScope() == Scope::Local) {
-        auto &SymNamedDeps = DepMap[Sym];
-        DenseSet<Symbol *> LocalDeps;
+    DenseMap<Block *, BlockInfo> BlockInfos;
+    SmallVector<Block *> WorkList;
 
-        for (auto &E : Sym->getBlock().edges()) {
-          auto &TargetSym = E.getTarget();
-          if (TargetSym.getScope() != Scope::Local)
-            SymNamedDeps.insert(&TargetSym);
-          else {
-            assert(TargetSym.isDefined() &&
-                   "local symbols must be defined");
-            LocalDeps.insert(&TargetSym);
+    // Pre-allocate map entries. This prevents any iterator/reference
+    // invalidation in the next loop.
+    for (auto *B : G.blocks())
+      (void)BlockInfos[B];
+
+    // Build initial worklist, record block dependencies/dependants and
+    // non-local symbol dependencies.
+    for (auto *B : G.blocks()) {
+      auto &BI = BlockInfos[B];
+      for (auto &E : B->edges()) {
+        if (E.getTarget().getScope() == Scope::Local) {
+          auto &TgtB = E.getTarget().getBlock();
+          if (&TgtB != B) {
+            BI.Dependencies.insert(&TgtB);
+            BlockInfos[&TgtB].Dependants.insert(B);
           }
         }
-
-        if (!LocalDeps.empty())
-          Worklist.push_back(WorklistEntry(Sym, std::move(LocalDeps)));
       }
 
-    // Loop over all local symbols with local dependencies, propagating
-    // their respective non-local dependencies. Iterate until we hit a stable
-    // state.
-    bool Changed;
-    do {
-      Changed = false;
-      for (auto &WLEntry : Worklist) {
-        auto *Sym = WLEntry.Sym;
-        auto &NamedDeps = DepMap[Sym];
-        auto &LocalDeps = WLEntry.LocalDeps;
+      // If this node has both dependants and dependencies then add it to the
+      // worklist to propagate the dependencies to the dependants.
+      if (!BI.Dependants.empty() && !BI.Dependencies.empty())
+        WorkList.push_back(B);
+    }
 
-        for (auto *TargetSym : LocalDeps) {
-          auto I = DepMap.find(TargetSym);
-          if (I != DepMap.end())
-            for (const auto &S : I->second)
-              Changed |= NamedDeps.insert(S).second;
+    // Propagate block-level dependencies through the block-dependence graph.
+    while (!WorkList.empty()) {
+      auto *B = WorkList.back();
+      WorkList.pop_back();
+
+      auto &BI = BlockInfos[B];
+      assert(BI.DependenciesChanged &&
+             "Block in worklist has unchanged dependencies");
+      BI.DependenciesChanged = false;
+      for (auto *Dependant : BI.Dependants) {
+        auto &DependantBI = BlockInfos[Dependant];
+        for (auto *Dependency : BI.Dependencies) {
+          if (Dependant != Dependency &&
+              DependantBI.Dependencies.insert(Dependency).second)
+            if (!DependantBI.DependenciesChanged) {
+              DependantBI.DependenciesChanged = true;
+              WorkList.push_back(Dependant);
+            }
         }
-      }
-    } while (Changed);
-
-    // Intern the results to produce a mapping of jitlink::Symbol* to internal
-    // and external symbol names.
-    auto &ES = Layer.getExecutionSession();
-    LocalSymbolNamedDependenciesMap Result;
-    for (auto &KV : DepMap) {
-      auto *Local = KV.first;
-      assert(Local->getScope() == Scope::Local &&
-             "DepMap keys should all be local symbols");
-      auto &LocalNamedDeps = Result[Local];
-      for (auto *Named : KV.second) {
-        assert(Named->getScope() != Scope::Local &&
-               "DepMap values should all be non-local symbol sets");
-        if (Named->isExternal())
-          LocalNamedDeps.External.insert(ES.intern(Named->getName()));
-        else
-          LocalNamedDeps.Internal.insert(ES.intern(Named->getName()));
       }
     }
 
-    return Result;
+    DenseMap<const Block *, DenseSet<Block *>> BlockDeps;
+    for (auto &KV : BlockInfos)
+      BlockDeps[KV.first] = std::move(KV.second.Dependencies);
+
+    return BlockDependenciesMap(Layer.getExecutionSession(),
+                                std::move(BlockDeps));
   }
 
   void registerDependencies(const SymbolDependenceMap &QueryDeps) {

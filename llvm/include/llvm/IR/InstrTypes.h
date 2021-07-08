@@ -1728,14 +1728,29 @@ public:
 
   /// Extract the byval type for a call or parameter.
   Type *getParamByValType(unsigned ArgNo) const {
-    Type *Ty = Attrs.getParamByValType(ArgNo);
-    return Ty ? Ty : getArgOperand(ArgNo)->getType()->getPointerElementType();
+    if (auto *Ty = Attrs.getParamByValType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamByValType(ArgNo);
+    return nullptr;
   }
 
   /// Extract the preallocated type for a call or parameter.
   Type *getParamPreallocatedType(unsigned ArgNo) const {
-    Type *Ty = Attrs.getParamPreallocatedType(ArgNo);
-    return Ty ? Ty : getArgOperand(ArgNo)->getType()->getPointerElementType();
+    if (auto *Ty = Attrs.getParamPreallocatedType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamPreallocatedType(ArgNo);
+    return nullptr;
+  }
+
+  /// Extract the preallocated type for a call or parameter.
+  Type *getParamInAllocaType(unsigned ArgNo) const {
+    if (auto *Ty = Attrs.getParamInAllocaType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamInAllocaType(ArgNo);
+    return nullptr;
   }
 
   /// Extract the number of dereferenceable bytes for a call or

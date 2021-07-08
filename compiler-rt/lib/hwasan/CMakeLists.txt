@@ -7,6 +7,7 @@ set(HWASAN_RTL_SOURCES
   hwasan_allocation_functions.cpp
   hwasan_dynamic_shadow.cpp
   hwasan_exceptions.cpp
+  hwasan_fuchsia.cpp
   hwasan_globals.cpp
   hwasan_interceptors.cpp
   hwasan_interceptors_vfork.S
@@ -43,6 +44,11 @@ set(HWASAN_RTL_HEADERS
 
 set(HWASAN_DEFINITIONS)
 append_list_if(COMPILER_RT_HWASAN_WITH_INTERCEPTORS HWASAN_WITH_INTERCEPTORS=1 HWASAN_DEFINITIONS)
+
+if(FUCHSIA)
+  # Set this explicitly on Fuchsia, otherwise the default value is set to HWASAN_WITH_INTERCEPTORS.
+  list(APPEND HWASAN_DEFINITIONS HWASAN_REPLACE_OPERATORS_NEW_AND_DELETE=1)
+endif()
 
 set(HWASAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF HWASAN_RTL_CFLAGS)
