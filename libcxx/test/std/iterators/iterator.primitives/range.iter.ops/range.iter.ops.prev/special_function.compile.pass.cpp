@@ -9,8 +9,12 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
+
+// Clang has a bug when modules are enabled that causes `__function_like::operator&`
+// not to be picked up by the derived class.
 // XFAIL: clang-11 && modules-build
 // XFAIL: clang-12 && modules-build
+// XFAIL: clang-13 && modules-build
 
 // ranges::prev
 
