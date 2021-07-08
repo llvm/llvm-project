@@ -17,6 +17,7 @@
 #include "ARMSubtarget.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -972,30 +973,18 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     }
   }
   // A phi node we want to perform this function on should be from the
-  // loop header, and shouldn't have more than 2 incoming values
-  if (Phi->getParent() != L->getHeader() ||
-      Phi->getNumIncomingValues() != 2)
+  // loop header.
+  if (Phi->getParent() != L->getHeader())
     return false;
 
-  // The phi must be an induction variable
-  int IncrementingBlock = -1;
-
-  for (int i = 0; i < 2; i++)
-    if (auto *Op = dyn_cast<Instruction>(Phi->getIncomingValue(i)))
-      if (Op->getOpcode() == Instruction::Add &&
-          (Op->getOperand(0) == Phi || Op->getOperand(1) == Phi))
-        IncrementingBlock = i;
-  if (IncrementingBlock == -1)
+  // We're looking for a simple add recurrence.
+  BinaryOperator *IncInstruction;
+  Value *Start, *IncrementPerRound;
+  if (!matchSimpleRecurrence(Phi, IncInstruction, Start, IncrementPerRound) ||
+      IncInstruction->getOpcode() != Instruction::Add)
     return false;
 
-  Instruction *IncInstruction =
-      cast<Instruction>(Phi->getIncomingValue(IncrementingBlock));
-
-  // If the phi is not used by anything else, we can just adapt it when
-  // replacing the instruction; if it is, we'll have to duplicate it
-  PHINode *NewPhi;
-  Value *IncrementPerRound = IncInstruction->getOperand(
-      (IncInstruction->getOperand(0) == Phi) ? 1 : 0);
+  int IncrementingBlock = Phi->getIncomingValue(0) == IncInstruction ? 0 : 1;
 
   // Get the value that is added to/multiplied with the phi
   Value *OffsSecondOperand = Offs->getOperand(OffsSecondOp);
@@ -1012,6 +1001,9 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
         !L->contains(cast<Instruction>(IncrementPerRound))))
     return false;
 
+  // If the phi is not used by anything else, we can just adapt it when
+  // replacing the instruction; if it is, we'll have to duplicate it
+  PHINode *NewPhi;
   if (Phi->getNumUses() == 2) {
     // No other users -> reuse existing phi (One user is the instruction
     // we're looking at, the other is the phi increment)
