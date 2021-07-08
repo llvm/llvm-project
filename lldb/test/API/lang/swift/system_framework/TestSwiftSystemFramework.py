@@ -28,7 +28,8 @@ class TestSwiftSystemFramework(lldbtest.TestBase):
             for line in logfile:
                 if ") rejecting framework path " in line:
                     pos += 1
-                elif "/System/Library/Frameworks" in line:
+                elif ("reflection metadata" not in line) and \
+                     ("/System/Library/Frameworks" in line):
                     neg += 1
 
         self.assertGreater(pos, 0, "sanity check failed")
