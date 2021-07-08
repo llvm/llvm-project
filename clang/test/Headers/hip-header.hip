@@ -116,3 +116,19 @@ __device__ double test_isnan() {
 
   return r ;
 }
+
+// Check that device malloc and free do not conflict with std headers.
+#include <cstdlib>
+// CHECK-LABEL: define{{.*}}@_Z11test_malloc
+// CHECK: call {{.*}}i8* @malloc(i64
+// CHECK: define weak {{.*}}i8* @malloc(i64
+__device__ void test_malloc(void *a) {
+  a = malloc(42);
+}
+
+// CHECK-LABEL: define{{.*}}@_Z9test_free
+// CHECK: call {{.*}}i8* @free(i8*
+// CHECK: define weak {{.*}}i8* @free(i8*
+__device__ void test_free(void *a) {
+  free(a);
+}
