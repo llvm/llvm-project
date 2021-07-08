@@ -458,10 +458,6 @@ static LogicalResult verify(FillOp op) {
   Type fillType = op.value().getType();
   if (getElementTypeOrSelf(output->get()) != fillType)
     return op.emitOpError("expects fill type to match view elemental type");
-  if (!op.getNumResults() && !output->get().getType().isa<MemRefType>()) {
-    return op.emitOpError(
-        "expected fill op with no result value to use memref type");
-  }
   return success();
 }
 

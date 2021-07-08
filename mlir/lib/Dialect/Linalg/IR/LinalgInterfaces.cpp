@@ -338,10 +338,12 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
     return op->emitOpError("expected at least one output operand");
   if (failed(OpTrait::impl::verifyNOperands(op, numInputs + numOutputs)))
     return failure();
-  // Should have at least one output tensor per result tensor.
-  // Can also have outbut buffers that do not correspond to results.
-  if (op->getNumResults() > linalgOp.getOutputTensorOperands().size())
-    return op->emitOpError("unexpected #results > #outputs");
+  // Verify the number of results matches the number of output tensors.
+  if (op->getNumResults() != linalgOp.getOutputTensorOperands().size())
+    return op->emitOpError("expected the number of results (")
+           << op->getNumResults()
+           << ") to be equal to the number of output tensors ("
+           << linalgOp.getOutputTensorOperands().size() << ")";
 
   // Before checking indexing maps, we need to make sure the attributes
   // referenced by it are valid.
@@ -394,10 +396,6 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
         "all have buffer type");
 
   for (OpOperand *opOperand : linalgOp.getOutputTensorOperands()) {
-    // TODO: Enforce one output tensor per result?
-    if (opOperand->getOperandNumber() - linalgOp.getNumInputs() >=
-        linalgOp->getNumResults())
-      continue;
     OpResult result = linalgOp.getTiedOpResult(opOperand);
     if (result.getType() != opOperand->get().getType())
       return op->emitOpError("expected type of operand #")
