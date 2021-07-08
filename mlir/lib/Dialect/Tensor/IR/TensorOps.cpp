@@ -271,13 +271,21 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
     return Value{*dynExtents};
   }
 
+  // dim(insert_slice.result()) -> dim(insert_slice.dest())
+  if (auto insertSliceOp =
+          dyn_cast_or_null<tensor::InsertSliceOp>(definingOp)) {
+    this->sourceMutable().assign(insertSliceOp.dest());
+    return getResult();
+  }
+
   // The size at the given index is now known to be a dynamic size.
   unsigned unsignedIndex = index.getValue().getZExtValue();
 
-  if (auto sliceOp = dyn_cast_or_null<tensor::ExtractSliceOp>(definingOp)) {
-    assert(sliceOp.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic slice size");
-    return sliceOp.getDynamicSize(unsignedIndex);
+  if (auto sizeInterface =
+          dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
+    int64_t nthDynamicIndex =
+        tensorType.getRelativeIndexOfDynamicDim(unsignedIndex);
+    return sizeInterface.sizes()[nthDynamicIndex];
   }
 
   // dim(cast) -> dim
