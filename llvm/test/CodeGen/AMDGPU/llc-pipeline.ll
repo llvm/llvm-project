@@ -492,51 +492,51 @@
 ; GCN-O1-OPTS-NEXT:         Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:         Natural Loop Information
 ; GCN-O1-OPTS-NEXT:         CodeGen Prepare
-; GCN-O1-OPTS-NEXT:       Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O1-OPTS-NEXT:       Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:       Natural Loop Information
-; GCN-O1-OPTS-NEXT:       Scalar Evolution Analysis
-; GCN-O1-OPTS-NEXT:       GPU Load and Store Vectorizer
-; GCN-O1-OPTS-NEXT:       Lazy Value Information Analysis
-; GCN-O1-OPTS-NEXT:       Lower SwitchInst's to branches
-; GCN-O1-OPTS-NEXT:       Lower invoke and unwind, for unwindless code generators
-; GCN-O1-OPTS-NEXT:       Remove unreachable blocks from the CFG
-; GCN-O1-OPTS-NEXT:       Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O1-OPTS-NEXT:       Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:       Flatten the CFG
-; GCN-O1-OPTS-NEXT:       Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:       Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:       Natural Loop Information
-; GCN-O1-OPTS-NEXT:       Legacy Divergence Analysis
-; GCN-O1-OPTS-NEXT:       AMDGPU IR late optimizations
-; GCN-O1-OPTS-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O1-OPTS-NEXT:       Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:       Code sinking
-; GCN-O1-OPTS-NEXT:       Legacy Divergence Analysis
-; GCN-O1-OPTS-NEXT:       Unify divergent function exit nodes
-; GCN-O1-OPTS-NEXT:       Lazy Value Information Analysis
-; GCN-O1-OPTS-NEXT:       Lower SwitchInst's to branches
-; GCN-O1-OPTS-NEXT:       Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:       Natural Loop Information
-; GCN-O1-OPTS-NEXT:       Convert irreducible control-flow into natural loops
-; GCN-O1-OPTS-NEXT:       Fixup each natural loop to have a single exit block
-; GCN-O1-OPTS-NEXT:       Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:       Dominance Frontier Construction
-; GCN-O1-OPTS-NEXT:       Detect single entry single exit regions
-; GCN-O1-OPTS-NEXT:       Region Pass Manager
-; GCN-O1-OPTS-NEXT:         Structurize control flow
-; GCN-O1-OPTS-NEXT:       Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:       Natural Loop Information
-; GCN-O1-OPTS-NEXT:       Legacy Divergence Analysis
-; GCN-O1-OPTS-NEXT:       Basic Alias Analysis (stateless AA impl)
-; GCN-O1-OPTS-NEXT:       Function Alias Analysis Results
-; GCN-O1-OPTS-NEXT:       Memory SSA
-; GCN-O1-OPTS-NEXT:       AMDGPU Annotate Uniform Values
-; GCN-O1-OPTS-NEXT:       SI annotate control flow
-; GCN-O1-OPTS-NEXT:       LCSSA Verifier
-; GCN-O1-OPTS-NEXT:       Loop-Closed SSA Form Pass
+; GCN-O1-OPTS-NEXT:         Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:         Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:         Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:         Natural Loop Information
+; GCN-O1-OPTS-NEXT:         Scalar Evolution Analysis
+; GCN-O1-OPTS-NEXT:         GPU Load and Store Vectorizer
+; GCN-O1-OPTS-NEXT:         Lazy Value Information Analysis
+; GCN-O1-OPTS-NEXT:         Lower SwitchInst's to branches
+; GCN-O1-OPTS-NEXT:         Lower invoke and unwind, for unwindless code generators
+; GCN-O1-OPTS-NEXT:         Remove unreachable blocks from the CFG
+; GCN-O1-OPTS-NEXT:         Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:         Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:         Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:         Flatten the CFG
+; GCN-O1-OPTS-NEXT:         Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:         Post-Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:         Natural Loop Information
+; GCN-O1-OPTS-NEXT:         Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:         AMDGPU IR late optimizations
+; GCN-O1-OPTS-NEXT:         Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:         Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:         Code sinking
+; GCN-O1-OPTS-NEXT:         Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:         Unify divergent function exit nodes
+; GCN-O1-OPTS-NEXT:         Lazy Value Information Analysis
+; GCN-O1-OPTS-NEXT:         Lower SwitchInst's to branches
+; GCN-O1-OPTS-NEXT:         Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:         Natural Loop Information
+; GCN-O1-OPTS-NEXT:         Convert irreducible control-flow into natural loops
+; GCN-O1-OPTS-NEXT:         Fixup each natural loop to have a single exit block
+; GCN-O1-OPTS-NEXT:         Post-Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:         Dominance Frontier Construction
+; GCN-O1-OPTS-NEXT:         Detect single entry single exit regions
+; GCN-O1-OPTS-NEXT:         Region Pass Manager
+; GCN-O1-OPTS-NEXT:           Structurize control flow
+; GCN-O1-OPTS-NEXT:         Post-Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:         Natural Loop Information
+; GCN-O1-OPTS-NEXT:         Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:         Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:         Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:         Memory SSA
+; GCN-O1-OPTS-NEXT:         AMDGPU Annotate Uniform Values
+; GCN-O1-OPTS-NEXT:         SI annotate control flow
+; GCN-O1-OPTS-NEXT:         LCSSA Verifier
+; GCN-O1-OPTS-NEXT:         Loop-Closed SSA Form Pass
 ; GCN-O1-OPTS-NEXT:       DummyCGSCCPass
 ; GCN-O1-OPTS-NEXT:       FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:         Safe Stack instrumentation pass
