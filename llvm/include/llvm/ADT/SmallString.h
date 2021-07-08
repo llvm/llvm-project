@@ -19,22 +19,10 @@
 
 namespace llvm {
 
-namespace impl {
-template <typename T> struct SmallStringConversionHelper1 {
-  operator StringRef() const { return static_cast<const T *>(this)->str(); }
-};
-struct SmallStringConversionHelper2 {
-  explicit operator StringRef() const = delete;
-};
-} // namespace impl
-
 /// SmallString - A SmallString is just a SmallVector with methods and accessors
 /// that make it work better as a string (e.g. operator+ etc).
-template <unsigned InternalLen>
-class SmallString
-    : public SmallVector<char, InternalLen>,
-      public impl::SmallStringConversionHelper1<SmallString<InternalLen>>,
-      public impl::SmallStringConversionHelper2 {
+template<unsigned InternalLen>
+class SmallString : public SmallVector<char, InternalLen> {
 public:
   /// Default ctor - Initialize to empty.
   SmallString() = default;
@@ -278,6 +266,7 @@ public:
   }
 
   /// Implicit conversion to StringRef.
+  operator StringRef() const { return str(); }
 
   explicit operator std::string() const {
     return std::string(this->data(), this->size());
