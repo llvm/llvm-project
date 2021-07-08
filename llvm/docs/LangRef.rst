@@ -6841,7 +6841,7 @@ See :doc:`TypeMetadata`.
 The ``associated`` metadata may be attached to a global variable definition with
 a single argument that references a global object (optionally through an alias).
 
-This metadata lowers to the ELF section flag ``SHF_LINK_INFO`` which prevents
+This metadata lowers to the ELF section flag ``SHF_LINK_ORDER`` which prevents
 discarding of the global variable in linker GC unless the referenced object is
 also discarded. The linker support for this feature is spotty. For best
 compatibility, globals carrying this metadata should:
