@@ -4394,6 +4394,14 @@ multiclass SVE_SETCC_Pat<CondCode cc, CondCode invcc, ValueType predvt,
             (cmp $Op1, $Op3, $Op2)>;
 }
 
+multiclass SVE_SETCC_Pat_With_Zero<CondCode cc, CondCode invcc, ValueType predvt,
+                                   ValueType intvt, Instruction cmp> {
+  def : Pat<(predvt (AArch64setcc_z predvt:$Op1, intvt:$Op2, (SVEDup0), cc)),
+            (cmp $Op1, $Op2)>;
+  def : Pat<(predvt (AArch64setcc_z predvt:$Op1, (SVEDup0), intvt:$Op2, invcc)),
+            (cmp $Op1, $Op2)>;
+}
+
 multiclass sve_int_cmp_0<bits<3> opc, string asm, CondCode cc, CondCode invcc> {
   def _B : sve_int_cmp<0b0, 0b00, opc, asm, PPR8, ZPR8, ZPR8>;
   def _H : sve_int_cmp<0b0, 0b01, opc, asm, PPR16, ZPR16, ZPR16>;
@@ -4754,10 +4762,13 @@ multiclass sve_fp_3op_p_pd<bits<3> opc, string asm, SDPatternOperator op> {
   def : SVE_3_Op_Pat<nxv2i1, op, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_fp_3op_p_pd_cc<bits<3> opc, string asm, SDPatternOperator op,
+multiclass sve_fp_3op_p_pd_cc<bits<3> opc, string asm,
                               CondCode cc1, CondCode cc2,
-                              CondCode invcc1, CondCode invcc2>
-: sve_fp_3op_p_pd<opc, asm, op> {
+                              CondCode invcc1, CondCode invcc2> {
+  def _H : sve_fp_3op_p_pd<0b01, opc, asm, PPR16, ZPR16>;
+  def _S : sve_fp_3op_p_pd<0b10, opc, asm, PPR32, ZPR32>;
+  def _D : sve_fp_3op_p_pd<0b11, opc, asm, PPR64, ZPR64>;
+
   defm : SVE_SETCC_Pat<cc1, invcc1, nxv8i1,  nxv8f16, !cast<Instruction>(NAME # _H)>;
   defm : SVE_SETCC_Pat<cc1, invcc1, nxv4i1,  nxv4f16, !cast<Instruction>(NAME # _H)>;
   defm : SVE_SETCC_Pat<cc1, invcc1, nxv2i1,  nxv2f16, !cast<Instruction>(NAME # _H)>;
@@ -4797,10 +4808,26 @@ class sve_fp_2op_p_pd<bits<2> sz, bits<3> opc, string asm, PPRRegOp pprty,
   let Inst{3-0}   = Pd;
 }
 
-multiclass sve_fp_2op_p_pd<bits<3> opc, string asm> {
+multiclass sve_fp_2op_p_pd<bits<3> opc, string asm,
+                           CondCode cc1, CondCode cc2,
+                           CondCode invcc1, CondCode invcc2> {
   def _H : sve_fp_2op_p_pd<0b01, opc, asm, PPR16, ZPR16>;
   def _S : sve_fp_2op_p_pd<0b10, opc, asm, PPR32, ZPR32>;
   def _D : sve_fp_2op_p_pd<0b11, opc, asm, PPR64, ZPR64>;
+
+  defm : SVE_SETCC_Pat_With_Zero<cc1, invcc1, nxv8i1,  nxv8f16, !cast<Instruction>(NAME # _H)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc1, invcc1, nxv4i1,  nxv4f16, !cast<Instruction>(NAME # _H)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc1, invcc1, nxv2i1,  nxv2f16, !cast<Instruction>(NAME # _H)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc1, invcc1, nxv4i1,  nxv4f32, !cast<Instruction>(NAME # _S)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc1, invcc1, nxv2i1,  nxv2f32, !cast<Instruction>(NAME # _S)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc1, invcc1, nxv2i1,  nxv2f64, !cast<Instruction>(NAME # _D)>;
+
+  defm : SVE_SETCC_Pat_With_Zero<cc2, invcc2, nxv8i1,  nxv8f16, !cast<Instruction>(NAME # _H)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc2, invcc2, nxv4i1,  nxv4f16, !cast<Instruction>(NAME # _H)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc2, invcc2, nxv2i1,  nxv2f16, !cast<Instruction>(NAME # _H)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc2, invcc2, nxv4i1,  nxv4f32, !cast<Instruction>(NAME # _S)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc2, invcc2, nxv2i1,  nxv2f32, !cast<Instruction>(NAME # _S)>;
+  defm : SVE_SETCC_Pat_With_Zero<cc2, invcc2, nxv2i1,  nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 

@@ -110,10 +110,6 @@ public:
   /// size. Otherwise, abort.
   int64_t getNumDynamicDims() const;
 
-  /// If `dim` is a dynamic dim, return its relative index among the dynamic
-  /// dims. Otherwise, abort. The result is guaranteed to be nonnegative.
-  int64_t getRelativeIndexOfDynamicDim(unsigned dim) const;
-
   /// If this is ranked type, return the size of the specified dimension.
   /// Otherwise, abort.
   int64_t getDimSize(unsigned idx) const;
