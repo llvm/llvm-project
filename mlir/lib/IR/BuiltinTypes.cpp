@@ -427,6 +427,15 @@ int64_t ShapedType::getNumDynamicDims() const {
   return llvm::count_if(getShape(), isDynamic);
 }
 
+int64_t ShapedType::getRelativeIndexOfDynamicDim(unsigned dim) const {
+  assert(isDynamicDim(dim) && "expected a dynamic dim");
+  int nthDynamicIndex = -1;
+  for (unsigned idx = 0; idx <= dim; ++idx)
+    if (isDynamicDim(idx))
+      ++nthDynamicIndex;
+  return nthDynamicIndex;
+}
+
 bool ShapedType::hasStaticShape() const {
   return hasRank() && llvm::none_of(getShape(), isDynamic);
 }
