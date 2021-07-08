@@ -256,6 +256,20 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  Value applyfn__exp(Value x) {
+    OpBuilder builder = getBuilder();
+    if (isFloatingPoint(x))
+      return builder.create<math::ExpOp>(x.getLoc(), x);
+    llvm_unreachable("unsupported non numeric type");
+  }
+
+  Value applyfn__log(Value x) {
+    OpBuilder builder = getBuilder();
+    if (isFloatingPoint(x))
+      return builder.create<math::LogOp>(x.getLoc(), x);
+    llvm_unreachable("unsupported non numeric type");
+  }
+
   Value applyfn__sub(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))

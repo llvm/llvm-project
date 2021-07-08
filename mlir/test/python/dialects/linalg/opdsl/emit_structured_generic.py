@@ -84,6 +84,13 @@ def fill_rng_poly(
   O[D.m, D.n] = cast(T, (offset + cast(F64, rand2)) * scaling + min)
 
 
+@linalg_structured_op
+def soft_plus_poly(
+    I=TensorDef(T, S.M, S.N), O=TensorDef(U, S.M, S.N, output=True)):
+  O[D.m, D.n] = \
+      PrimFn.log(cast(U, const(1.0)) + cast(U, PrimFn.exp(I[D.m, D.n])))
+
+
 with Context() as ctx, Location.unknown():
   module = Module.create()
   f16 = F16Type.get()
@@ -298,6 +305,20 @@ with Context() as ctx, Location.unknown():
                                  RankedTensorType.get((4, 16), i32))
     def test_i32_fill_rng(min, max, seed, init_result):
       return fill_rng_poly(min, max, seed, outs=[init_result])
+
+    # CHECK-LABEL: @test_f32_soft_plus
+    # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
+    # CHECK-NEXT:   %[[C1:.+]] = constant 1.000000e+00 : f64
+    # CHECK-NEXT:   %[[C1_CAST:.+]] = fptrunc %[[C1]] : f64 to f32
+    # CHECK-NEXT:   %[[EXP:.+]] = math.exp %[[IN]] : f32
+    # CHECK-NEXT:   %[[SUM:.+]] = addf %[[C1_CAST]], %[[EXP]] : f32
+    # CHECK-NEXT:   %[[LOG:.+]] = math.log %[[SUM]] : f32
+    # CHECK-NEXT:   linalg.yield %[[LOG]] : f32
+    # CHECK-NEXT: -> tensor<4x16xf32>
+    @builtin.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
+    def test_f32_soft_plus(input, init_result):
+      return soft_plus_poly(input, outs=[init_result])
 
 
 print(module)
