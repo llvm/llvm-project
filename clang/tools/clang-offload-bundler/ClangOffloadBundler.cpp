@@ -1144,7 +1144,7 @@ static Error UnbundleArchive() {
 
   StringRef IFName = InputFileNames.front();
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFileOrSTDIN(IFName, -1, false);
+      MemoryBuffer::getFileOrSTDIN(IFName, true, false);
   if (std::error_code EC = BufOrErr.getError())
     return createFileError(InputFileNames.front(), EC);
 
