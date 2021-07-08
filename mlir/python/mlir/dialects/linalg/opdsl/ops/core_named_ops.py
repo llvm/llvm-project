@@ -209,3 +209,16 @@ def fill_rng_2d(
   offset = cast(F64, const(2147483647))
   scaling = (max - min) * inv_range
   O[D.m, D.n] = cast(T, (offset + cast(F64, rand2)) * scaling + min)
+
+
+@linalg_structured_op
+def soft_plus_2d(
+    I=TensorDef(T, S.M, S.N), O=TensorDef(U, S.M, S.N, output=True)):
+  """Implements the soft plus operator.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  domain(D.m, D.n)
+  O[D.m, D.n] = \
+      PrimFn.log(cast(U, const(1.0)) + PrimFn.exp(cast(U, I[D.m, D.n])))
