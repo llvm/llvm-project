@@ -8,6 +8,8 @@
 
 #include "X86Counter.h"
 
+#if defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES)
+
 // FIXME: Use appropriate wrappers for poll.h and mman.h
 // to support Windows and remove this linux-only guard.
 #ifdef __linux__
@@ -32,7 +34,6 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#if defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES)
 namespace llvm {
 namespace exegesis {
 
@@ -178,6 +179,7 @@ llvm::Error X86LbrCounter::checkLbrSupport() {
   }
 
   counter.stop();
+  (void)Sum;
 
   auto ResultOrError = counter.doReadCounter(nullptr, nullptr);
   if (ResultOrError)
