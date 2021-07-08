@@ -80,7 +80,9 @@ getSymbolStrings(ArrayRef<Symbol *> syms) {
     auto *chunk = syms[i]->getChunk();
     if (chunk == nullptr)
       return;
-    uint64_t fileOffset = chunk->outputSec->getOffset() + chunk->outSecOff;
+    uint64_t fileOffset = chunk->outputSec != nullptr
+                              ? chunk->outputSec->getOffset() + chunk->outSecOff
+                              : 0;
     uint64_t vma = -1;
     uint64_t size = 0;
     if (auto *DD = dyn_cast<DefinedData>(syms[i])) {
@@ -138,9 +140,11 @@ void lld::wasm::writeMapFile(ArrayRef<OutputSection *> outputSections) {
                     oseg->size);
         os << oseg->name << '\n';
         for (auto *chunk : oseg->inputSegments) {
-          writeHeader(os, chunk->getVA(),
-                      chunk->outputSec->getOffset() + chunk->outSecOff,
-                      chunk->getSize());
+          uint64_t offset =
+              chunk->outputSec != nullptr
+                  ? chunk->outputSec->getOffset() + chunk->outSecOff
+                  : 0;
+          writeHeader(os, chunk->getVA(), offset, chunk->getSize());
           os.indent(8) << toString(chunk) << '\n';
           for (Symbol *sym : sectionSyms[chunk])
             os << symStr[sym] << '\n';

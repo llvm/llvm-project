@@ -10,6 +10,9 @@ wasm_global:
 bar:
     .functype bar () -> ()
     i32.const   somedata
+    i32.const   somezeroes
+    drop
+    drop
     end_function
 
 write_global:
@@ -30,8 +33,14 @@ somedata:
     .int32 123
 .size somedata, 4
 
+.section .bss.somezeroes,"",@
+somezeroes:
+    .int32 0
+.size somezeroes, 4
+
 .section .debug_info,"",@
     .int32 bar
+
 
 #      CHECK:    Addr      Off     Size Out     In      Symbol
 # CHECK-NEXT:       -        8        a TYPE
@@ -42,19 +51,22 @@ somedata:
 # CHECK-NEXT:       0        0        0         __stack_pointer
 # CHECK-NEXT:       1        0        0         wasm_global
 # CHECK-NEXT:       -       33       15 EXPORT
-# CHECK-NEXT:       -       48       26 CODE
-# CHECK-NEXT:       -       49        9         {{.*}}{{/|\\}}map-file.s.tmp1.o:(bar)
-# CHECK-NEXT:       -       49        9                 bar
-# CHECK-NEXT:       -       52        b         {{.*}}{{/|\\}}map-file.s.tmp1.o:(write_global)
-# CHECK-NEXT:       -       52        b                 write_global
-# CHECK-NEXT:       -       5d        f         {{.*}}{{/|\\}}map-file.s.tmp1.o:(_start)
-# CHECK-NEXT:       -       5d        f                 _start
-# CHECK-NEXT:       -       6e        d DATA
-# CHECK-NEXT:     400       6f        4 .data
-# CHECK-NEXT:     400       75        4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.data.somedata)
-# CHECK-NEXT:     400       75        4                 somedata
-# CHECK-NEXT:       -       7b       12 CUSTOM(.debug_info)
-# CHECK-NEXT:       -       8d       50 CUSTOM(name)
+# CHECK-NEXT:       -       48       2e CODE
+# CHECK-NEXT:       -       49       11         {{.*}}{{/|\\}}map-file.s.tmp1.o:(bar)
+# CHECK-NEXT:       -       49       11                 bar
+# CHECK-NEXT:       -       5a        b         {{.*}}{{/|\\}}map-file.s.tmp1.o:(write_global)
+# CHECK-NEXT:       -       5a        b                 write_global
+# CHECK-NEXT:       -       65        f         {{.*}}{{/|\\}}map-file.s.tmp1.o:(_start)
+# CHECK-NEXT:       -       65        f                 _start
+# CHECK-NEXT:       -       76        d DATA
+# CHECK-NEXT:     400       77        4 .data
+# CHECK-NEXT:     400       7d        4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.data.somedata)
+# CHECK-NEXT:     400       7d        4                 somedata
+# CHECK-NEXT:     404       76        4 .bss
+# CHECK-NEXT:     404        0        4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.bss.somezeroes)
+# CHECK-NEXT:     404        0        4                 somezeroes
+# CHECK-NEXT:       -       83       12 CUSTOM(.debug_info)
+# CHECK-NEXT:       -       95       50 CUSTOM(name)
 
 # RUN: not wasm-ld %t1.o -o /dev/null -Map=/ 2>&1 \
 # RUN:  | FileCheck -check-prefix=FAIL %s
