@@ -11497,11 +11497,108 @@ bool ScalarEvolution::canIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
   return (std::move(MinValue) + MaxStrideMinusOne).ugt(MinRHS);
 }
 
-const SCEV *ScalarEvolution::computeBECount(const SCEV *Delta,
-                                            const SCEV *Step) {
-  const SCEV *One = getOne(Step->getType());
-  Delta = getAddExpr(Delta, getMinusSCEV(Step, One));
-  return getUDivExpr(Delta, Step);
+const SCEV *ScalarEvolution::computeBECount(bool IsSigned, const SCEV *Start,
+                                            const SCEV *End,
+                                            const SCEV *Stride) {
+  // The basic formula here is ceil((End - Start) / Stride).  Since SCEV
+  // doesn't natively have division that rounds up, we need to convert to
+  // floor division.
+  //
+  // MayOverflow is whether adding (End - Start) + (Stride - 1)
+  // can overflow if Stride is positive. It's a precondition of the
+  // function that "End - Start" doesn't overflow. We handle the case where
+  // Stride isn't positive later.
+  //
+  // In practice, the arithmetic almost never overflows, but we have to prove
+  // it.  We have a variety of ways to come up with a proof.
+  const SCEV *One = getOne(Stride->getType());
+  bool MayOverflow = [&] {
+    if (auto *StrideC = dyn_cast<SCEVConstant>(Stride)) {
+      if (StrideC->getAPInt().isPowerOf2()) {
+        // Suppose Stride is a power of two, and Start/End are unsigned
+        // integers.  Let UMAX be the largest representable unsigned
+        // integer.
+        //
+        // By the preconditions of this function (see comment in header), we
+        // know "(Start + Stride * N)" >= End, and this doesn't overflow.
+        // As a formula:
+        //
+        //   End <= (Start + Stride * N) <= UMAX
+        //
+        // Subtracting Start from all the terms:
+        //
+        //   End - Start <= Stride * N <= UMAX - Start
+        //
+        // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
+        //
+        //   End - Start <= Stride * N <= UMAX
+        //
+        // Stride * N is a multiple of Stride. Therefore,
+        //
+        //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
+        //
+        // Since Stride is a power of two, UMAX + 1 is divisible by Stride.
+        // Therefore, UMAX mod Stride == Stride - 1.  So we can write:
+        //
+        //   End - Start <= Stride * N <= UMAX - Stride - 1
+        //
+        // Dropping the middle term:
+        //
+        //   End - Start <= UMAX - Stride - 1
+        //
+        // Adding Stride - 1 to both sides:
+        //
+        //   (End - Start) + (Stride - 1) <= UMAX
+        //
+        // In other words, the addition doesn't have unsigned overflow.
+        //
+        // A similar proof works if we treat Start/End as signed values.
+        // Just rewrite steps before "End - Start <= Stride * N <= UMAX" to
+        // use signed max instead of unsigned max. Note that we're trying
+        // to prove a lack of unsigned overflow in either case.
+        return false;
+      }
+    }
+    if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
+      // If Start is equal to Stride, (End - Start) + (Stride - 1) == End - 1.
+      // If !IsSigned, 0 <u Stride == Start <=u End; so 0 <u End - 1 <u End.
+      // If IsSigned, 0 <s Stride == Start <=s End; so 0 <s End - 1 <s End.
+      //
+      // If Start is equal to Stride - 1, (End - Start) + Stride - 1 == End.
+      return false;
+    }
+    if (IsSigned && isKnownNonNegative(Start)) {
+      // IsSigned implies "Start <=s End <=s INT_MAX".
+      // "isKnownNonNegative(Start)" implies "Start >=s 0".
+      // Therefore, "0 <=s End - Start <=s INT_MAX - Start <= INT_MAX".
+      // IsSigned also implies "0 <=s Stride - 1 <s INT_MAX". Therefore,
+      // "(End - Start) + (Stride - 1) <u INT_MAX * 2 <u UINT_MAX".
+      return false;
+    }
+    return true;
+  }();
+
+  // Force the stride to at least one, so we don't divide by zero. The stride
+  // can be zero if Delta is zero. We don't actually care what value we use
+  // for Stride in this case, as long as it isn't zero.
+  Stride = getUMaxExpr(Stride, One);
+
+  const SCEV *Delta = getMinusSCEV(End, Start);
+  if (!MayOverflow) {
+    // floor((D + (S - 1)) / S)
+    // We prefer this formulation if it's legal because it's fewer operations.
+    return getUDivExpr(getAddExpr(Delta, getMinusSCEV(Stride, One)), Stride);
+  }
+  return getUDivCeilSCEV(Delta, Stride);
+}
+
+const SCEV *ScalarEvolution::getUDivCeilSCEV(const SCEV *N, const SCEV *D) {
+  // umin(N, 1) + floor((N - umin(N, 1)) / D)
+  // This is equivalent to "1 + floor((N - 1) / D)" for N != 0. The umin
+  // expression fixes the case of N=0.
+  const SCEV *MinNOne = getUMinExpr(N, getOne(N->getType()));
+  const SCEV *NMinusOne = getMinusSCEV(N, MinNOne);
+  return getAddExpr(MinNOne, getUDivExpr(NMinusOne, D));
 }
 
 const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
@@ -11540,8 +11637,8 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
   APInt MaxEnd = IsSigned ? APIntOps::smin(getSignedRangeMax(End), Limit)
                           : APIntOps::umin(getUnsignedRangeMax(End), Limit);
 
-  MaxBECount = computeBECount(getConstant(MaxEnd - MinStart) /* Delta */,
-                              getConstant(StrideForMaxBECount) /* Step */);
+  MaxBECount = getUDivCeilSCEV(getConstant(MaxEnd - MinStart) /* Delta */,
+                               getConstant(StrideForMaxBECount) /* Step */);
 
   return MaxBECount;
 }
@@ -11699,7 +11796,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // is the LHS value of the less-than comparison the first time it is evaluated
   // and End is the RHS.
   const SCEV *BECountIfBackedgeTaken =
-    computeBECount(getMinusSCEV(End, Start), Stride);
+      computeBECount(IsSigned, Start, End, Stride);
   // If the loop entry is guarded by the result of the backedge test of the
   // first loop iteration, then we know the backedge will be taken at least
   // once and so the backedge taken count is as above. If not then we use the
@@ -11718,7 +11815,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       End = RHS;
     else
       End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
-    BECount = computeBECount(getMinusSCEV(End, Start), Stride);
+    BECount = computeBECount(IsSigned, Start, End, Stride);
   }
 
   const SCEV *MaxBECount;
@@ -11804,7 +11901,7 @@ ScalarEvolution::howManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
       return End;
   }
 
-  const SCEV *BECount = computeBECount(getMinusSCEV(Start, End), Stride);
+  const SCEV *BECount = computeBECount(IsSigned, End, Start, Stride);
 
   APInt MaxStart = IsSigned ? getSignedRangeMax(Start)
                             : getUnsignedRangeMax(Start);
@@ -11825,11 +11922,8 @@ ScalarEvolution::howManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
 
   const SCEV *MaxBECount = isa<SCEVConstant>(BECount)
                                ? BECount
-                               : computeBECount(getConstant(MaxStart - MinEnd),
-                                                getConstant(MinStride));
-
-  if (isa<SCEVCouldNotCompute>(MaxBECount))
-    MaxBECount = BECount;
+                               : getUDivCeilSCEV(getConstant(MaxStart - MinEnd),
+                                                 getConstant(MinStride));
 
   return ExitLimit(BECount, MaxBECount, false, Predicates);
 }
