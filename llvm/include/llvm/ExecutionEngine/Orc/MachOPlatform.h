@@ -111,8 +111,8 @@ private:
                           jitlink::LinkGraph &G,
                           jitlink::PassConfiguration &Config) override;
 
-    LocalDependenciesMap getSyntheticSymbolLocalDependencies(
-        MaterializationResponsibility &MR) override;
+    SyntheticSymbolDependenciesMap
+    getSyntheticSymbolDependencies(MaterializationResponsibility &MR) override;
 
     // FIXME: We should be tentatively tracking scraped sections and discarding
     // if the MR fails.
@@ -129,9 +129,9 @@ private:
 
   private:
     using InitSymbolDepMap =
-        DenseMap<MaterializationResponsibility *, JITLinkSymbolVector>;
+        DenseMap<MaterializationResponsibility *, JITLinkSymbolSet>;
 
-    void preserveInitSectionIfPresent(JITLinkSymbolVector &Syms,
+    void preserveInitSectionIfPresent(JITLinkSymbolSet &Symbols,
                                       jitlink::LinkGraph &G,
                                       StringRef SectionName);
 
