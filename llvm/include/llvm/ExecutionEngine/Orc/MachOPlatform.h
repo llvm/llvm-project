@@ -17,7 +17,7 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/Shared/CommonOrcRuntimeTypes.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 
 #include <future>
 #include <thread>
@@ -32,13 +32,13 @@ bool objCRegistrationEnabled();
 
 class MachOJITDylibInitializers {
 public:
-  using RawPointerSectionList = std::vector<shared::ExecutorAddressRange>;
+  using RawPointerSectionList = std::vector<ExecutorAddressRange>;
 
   void setObjCImageInfoAddr(JITTargetAddress ObjCImageInfoAddr) {
     this->ObjCImageInfoAddr = ObjCImageInfoAddr;
   }
 
-  void addModInitsSection(shared::ExecutorAddressRange ModInit) {
+  void addModInitsSection(ExecutorAddressRange ModInit) {
     ModInitSections.push_back(std::move(ModInit));
   }
 
@@ -46,7 +46,7 @@ public:
     return ModInitSections;
   }
 
-  void addObjCSelRefsSection(shared::ExecutorAddressRange ObjCSelRefs) {
+  void addObjCSelRefsSection(ExecutorAddressRange ObjCSelRefs) {
     ObjCSelRefsSections.push_back(std::move(ObjCSelRefs));
   }
 
@@ -54,7 +54,7 @@ public:
     return ObjCSelRefsSections;
   }
 
-  void addObjCClassListSection(shared::ExecutorAddressRange ObjCClassList) {
+  void addObjCClassListSection(ExecutorAddressRange ObjCClassList) {
     ObjCClassListSections.push_back(std::move(ObjCClassList));
   }
 
@@ -145,9 +145,9 @@ private:
   };
 
   void registerInitInfo(JITDylib &JD, JITTargetAddress ObjCImageInfoAddr,
-                        shared::ExecutorAddressRange ModInits,
-                        shared::ExecutorAddressRange ObjCSelRefs,
-                        shared::ExecutorAddressRange ObjCClassList);
+                        ExecutorAddressRange ModInits,
+                        ExecutorAddressRange ObjCSelRefs,
+                        ExecutorAddressRange ObjCClassList);
 
   ExecutionSession &ES;
   ObjectLinkingLayer &ObjLinkingLayer;
