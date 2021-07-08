@@ -314,17 +314,14 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
     return;
 
   Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) -> Error {
-    JITLinkSymbolVector InitSectionSymbols;
-    preserveInitSectionIfPresent(InitSectionSymbols, G,
-                                 "__DATA,__mod_init_func");
-    preserveInitSectionIfPresent(InitSectionSymbols, G,
-                                 "__DATA,__objc_selrefs");
-    preserveInitSectionIfPresent(InitSectionSymbols, G,
-                                 "__DATA,__objc_classlist");
+    JITLinkSymbolSet InitSectionSyms;
+    preserveInitSectionIfPresent(InitSectionSyms, G, "__DATA,__mod_init_func");
+    preserveInitSectionIfPresent(InitSectionSyms, G, "__DATA,__objc_selrefs");
+    preserveInitSectionIfPresent(InitSectionSyms, G, "__DATA,__objc_classlist");
 
-    if (!InitSectionSymbols.empty()) {
+    if (!InitSectionSyms.empty()) {
       std::lock_guard<std::mutex> Lock(InitScraperMutex);
-      InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
+      InitSymbolDeps[&MR] = std::move(InitSectionSyms);
     }
 
     if (auto Err = processObjCImageInfo(G, MR))
@@ -398,27 +395,26 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
   });
 }
 
-ObjectLinkingLayer::Plugin::LocalDependenciesMap
-MachOPlatform::InitScraperPlugin::getSyntheticSymbolLocalDependencies(
+ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
+MachOPlatform::InitScraperPlugin::getSyntheticSymbolDependencies(
     MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(InitScraperMutex);
   auto I = InitSymbolDeps.find(&MR);
   if (I != InitSymbolDeps.end()) {
-    LocalDependenciesMap Result;
+    SyntheticSymbolDependenciesMap Result;
     Result[MR.getInitializerSymbol()] = std::move(I->second);
     InitSymbolDeps.erase(&MR);
     return Result;
   }
-  return LocalDependenciesMap();
+  return SyntheticSymbolDependenciesMap();
 }
 
 void MachOPlatform::InitScraperPlugin::preserveInitSectionIfPresent(
-    JITLinkSymbolVector &Symbols, jitlink::LinkGraph &G,
-    StringRef SectionName) {
+    JITLinkSymbolSet &Symbols, jitlink::LinkGraph &G, StringRef SectionName) {
   if (auto *Sec = G.findSectionByName(SectionName)) {
     auto SecBlocks = Sec->blocks();
     if (!llvm::empty(SecBlocks))
-      Symbols.push_back(
+      Symbols.insert(
           &G.addAnonymousSymbol(**SecBlocks.begin(), 0, 0, false, true));
   }
 }
