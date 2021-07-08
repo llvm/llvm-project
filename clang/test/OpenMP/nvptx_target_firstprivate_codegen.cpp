@@ -35,7 +35,7 @@ int foo(int n, double *ptr) {
 
   // TCHECK:  define {{.*}}void @__omp_offloading_{{.+}}([10 x float] addrspace(1)* noalias [[B_IN:%.+]], i{{[0-9]+}} [[A_IN:%.+]], [[TTII]]* noalias [[E_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
-  // TCHECK: alloca [[TTII]],
+  // TCHECK-NOT: alloca [[TTII]],
   // TCHECK: alloca i{{[0-9]+}},
   // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
   // TCHECK:  ret void
