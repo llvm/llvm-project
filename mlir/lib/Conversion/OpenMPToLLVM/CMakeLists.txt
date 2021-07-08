@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIROpenMPToLLVM
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRLLVMCommonConversion
   MLIRLLVMIR
   MLIROpenMP
   MLIRStandardToLLVM
