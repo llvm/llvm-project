@@ -36,7 +36,7 @@ TEST(LockFileManagerTest, Basic) {
   }
 
   // Now that the lock is out of scope, the file should be gone.
-  EXPECT_FALSE(sys::fs::exists(StringRef(LockedFile)));
+  EXPECT_FALSE(sys::fs::exists(LockedFile.str()));
 }
 
 TEST(LockFileManagerTest, LinkLockExists) {
@@ -52,7 +52,7 @@ TEST(LockFileManagerTest, LinkLockExists) {
   sys::path::append(TmpFileLock, "file.lock-000");
 
   int FD;
-  std::error_code EC = sys::fs::openFileForWrite(StringRef(TmpFileLock), FD);
+  std::error_code EC = sys::fs::openFileForWrite(TmpFileLock.str(), FD);
   ASSERT_FALSE(EC);
 
   int Ret = close(FD);
@@ -61,7 +61,7 @@ TEST(LockFileManagerTest, LinkLockExists) {
   EC = sys::fs::create_link(TmpFileLock.str(), FileLocK.str());
   ASSERT_FALSE(EC);
 
-  EC = sys::fs::remove(StringRef(TmpFileLock));
+  EC = sys::fs::remove(TmpFileLock.str());
   ASSERT_FALSE(EC);
 
   {
@@ -72,7 +72,7 @@ TEST(LockFileManagerTest, LinkLockExists) {
   }
 
   // Now that the lock is out of scope, the file should be gone.
-  EXPECT_FALSE(sys::fs::exists(StringRef(LockedFile)));
+  EXPECT_FALSE(sys::fs::exists(LockedFile.str()));
 }
 
 

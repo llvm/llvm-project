@@ -1604,7 +1604,7 @@ private:
     }
 
     // Remove trailing slash(es), being careful not to remove the root path
-    StringRef Trimmed(Name);
+    StringRef Trimmed = Name;
     size_t RootPathLen = sys::path::root_path(Trimmed, path_style).size();
     while (Trimmed.size() > RootPathLen &&
            sys::path::is_separator(Trimmed.back(), path_style))
