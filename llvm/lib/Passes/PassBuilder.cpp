@@ -1922,6 +1922,10 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   for (auto &C : PipelineStartEPCallbacks)
     C(MPM, Level);
+
+  if (PGOOpt && PGOOpt->DebugInfoForProfiling)
+    MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
+
   for (auto &C : PipelineEarlySimplificationEPCallbacks)
     C(MPM, Level);
 
