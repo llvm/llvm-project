@@ -14,7 +14,7 @@
 #
 # Original C code, the PHI is of the value of 'bar' after the control flow.
 # Compiled at -O0, applied -mem2reg, llc -O0, then manually added the PHI
-# instruction label.
+# instruction label. Additional variable locations removed.
 #
 #    void ext(long);
 #    long getlong(void);
@@ -115,14 +115,11 @@ body:             |
     %3:gr64 = COPY $rdi
     %4:gr64 = COPY killed %3
     %6:gr64 = COPY killed %5
-    DBG_VALUE %4, $noreg, !12, !DIExpression(), debug-location !13
-    DBG_VALUE %6, $noreg, !14, !DIExpression(), debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     $rdi = COPY %4, debug-location !13
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, debug-location !13
     ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %9:gr64 = ADD64ri32 %4, 12, implicit-def $eflags, debug-location !13
-    DBG_VALUE %9, $noreg, !12, !DIExpression(), debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     $rdi = COPY %9, debug-location !13
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, debug-location !13
@@ -138,7 +135,6 @@ body:             |
   ; CHECK-LABEL:        bb.1.if.then:
   bb.1.if.then:
     %10:gr64 = ADD64ri32 %9, 1, implicit-def $eflags, debug-location !13
-    DBG_VALUE %10, $noreg, !12, !DIExpression(), debug-location !13
 
   ; Verify that the vreg is different immediately after register coalescing.
   ; DOESCOALESCE-NOT:   %10:gr64 ADD64ri32
@@ -153,7 +149,6 @@ body:             |
   ; CHECK:              DBG_PHI $rbx, 1
     DBG_INSTR_REF 1, 0, !12, !DIExpression(), debug-location !13
     %14:gr64 = ADD64rr killed %2, %6, implicit-def $eflags, debug-location !13
-    DBG_VALUE %14, $noreg, !12, !DIExpression(), debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     $rdi = COPY %14, debug-location !13
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, debug-location !13
