@@ -45,11 +45,8 @@ class TestSwiftDeploymentTarget(TestBase):
     @swiftTest
     def test_swift_deployment_target_dlopen(self):
         self.build()
-        # Create the target
-        target = self.dbg.CreateTarget(self.getBuildArtifact("dlopen_module"))
-        self.assertTrue(target, VALID_TARGET)
-
-        (_, _, self.thread, _) = lldbutil.run_to_source_breakpoint(self,
-            'break here', lldb.SBFileSpec('NewerTarget.swift'))
+        lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('NewerTarget.swift'),
+            exe_name="dlopen_module")
         self.expect("p self", substrs=['i = 23'])
 
