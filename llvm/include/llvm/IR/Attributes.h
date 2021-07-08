@@ -802,6 +802,14 @@ template <> struct DenseMapInfo<AttributeList> {
 /// value, however, is not. So this can be used as a quick way to test for
 /// equality, presence of attributes, etc.
 class AttrBuilder {
+  // Indices into the TypeAttrs array.
+  static const unsigned ByValTypeIndex = 0;
+  static const unsigned StructRetTypeIndex = 1;
+  static const unsigned ByRefTypeIndex = 2;
+  static const unsigned PreallocatedTypeIndex = 3;
+  static const unsigned InAllocaTypeIndex = 4;
+  static const unsigned NumTypeIndices = 5;
+
   std::bitset<Attribute::EndAttrKinds> Attrs;
   std::map<SmallString<32>, SmallString<32>, std::less<>> TargetDepAttrs;
   MaybeAlign Alignment;
@@ -810,11 +818,9 @@ class AttrBuilder {
   uint64_t DerefOrNullBytes = 0;
   uint64_t AllocSizeArgs = 0;
   uint64_t VScaleRangeArgs = 0;
-  Type *ByValType = nullptr;
-  Type *StructRetType = nullptr;
-  Type *ByRefType = nullptr;
-  Type *PreallocatedType = nullptr;
-  Type *InAllocaType = nullptr;
+  std::array<Type *, NumTypeIndices> TypeAttrs = {};
+
+  Optional<unsigned> kindToTypeIndex(Attribute::AttrKind Kind) const;
 
 public:
   AttrBuilder() = default;
@@ -898,19 +904,19 @@ public:
   uint64_t getDereferenceableOrNullBytes() const { return DerefOrNullBytes; }
 
   /// Retrieve the byval type.
-  Type *getByValType() const { return ByValType; }
+  Type *getByValType() const { return TypeAttrs[ByValTypeIndex]; }
 
   /// Retrieve the sret type.
-  Type *getStructRetType() const { return StructRetType; }
+  Type *getStructRetType() const { return TypeAttrs[StructRetTypeIndex]; }
 
   /// Retrieve the byref type.
-  Type *getByRefType() const { return ByRefType; }
+  Type *getByRefType() const { return TypeAttrs[ByRefTypeIndex]; }
 
   /// Retrieve the preallocated type.
-  Type *getPreallocatedType() const { return PreallocatedType; }
+  Type *getPreallocatedType() const { return TypeAttrs[PreallocatedTypeIndex]; }
 
   /// Retrieve the inalloca type.
-  Type *getInAllocaType() const { return InAllocaType; }
+  Type *getInAllocaType() const { return TypeAttrs[InAllocaTypeIndex]; }
 
   /// Retrieve the allocsize args, if the allocsize attribute exists.  If it
   /// doesn't exist, pair(0, 0) is returned.
@@ -958,6 +964,9 @@ public:
 
   /// This turns two ints into the form used internally in Attribute.
   AttrBuilder &addVScaleRangeAttr(unsigned MinValue, unsigned MaxValue);
+
+  /// Add a type attribute with the given type.
+  AttrBuilder &addTypeAttr(Attribute::AttrKind Kind, Type *Ty);
 
   /// This turns a byval type into the form used internally in Attribute.
   AttrBuilder &addByValAttr(Type *Ty);
