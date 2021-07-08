@@ -323,7 +323,8 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       Type *SizetTy = Type::getInt32Ty(Ctx);
 
       Type *Tys_alloc[1] = {SizetTy};
-      Type *I8Ptr = PointerType::get(Type::getInt8Ty(Ctx), 1);
+      Type *I8Ty = Type::getInt8Ty(Ctx);
+      Type *I8Ptr = PointerType::get(I8Ty, 1);
       FunctionType *FTy_alloc = FunctionType::get(I8Ptr, Tys_alloc, false);
       FunctionCallee PrintfAllocFn =
           M.getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
@@ -355,7 +356,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       // basicblock splits after buffer overflow check
       //
       ConstantPointerNull *zeroIntPtr =
-          ConstantPointerNull::get(PointerType::get(Type::getInt8Ty(Ctx), 1));
+          ConstantPointerNull::get(PointerType::get(I8Ty, 1));
       auto *cmp = cast<ICmpInst>(Builder.CreateICmpNE(pcall, zeroIntPtr, ""));
       if (!CI->use_empty()) {
         Value *result =
@@ -376,7 +377,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       ZeroIdxList.push_back(zeroInt);
 
       GetElementPtrInst *BufferIdx = GetElementPtrInst::Create(
-          nullptr, pcall, ZeroIdxList, "PrintBuffID", Brnch);
+          I8Ty, pcall, ZeroIdxList, "PrintBuffID", Brnch);
 
       Type *idPointer = PointerType::get(I32Ty, AMDGPUAS::GLOBAL_ADDRESS);
       Value *id_gep_cast =
@@ -390,7 +391,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 
       FourthIdxList.push_back(fourInt); // 1st 4 bytes hold the printf_id
       // the following GEP is the buffer pointer
-      BufferIdx = GetElementPtrInst::Create(nullptr, pcall, FourthIdxList,
+      BufferIdx = GetElementPtrInst::Create(I8Ty, pcall, FourthIdxList,
                                             "PrintBuffGep", Brnch);
 
       Type *Int32Ty = Type::getInt32Ty(Ctx);
@@ -532,7 +533,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           (void)StBuff;
           if (I + 1 == E && ArgCount + 1 == CI->getNumArgOperands())
             break;
-          BufferIdx = GetElementPtrInst::Create(nullptr, BufferIdx, BuffOffset,
+          BufferIdx = GetElementPtrInst::Create(I8Ty, BufferIdx, BuffOffset,
                                                 "PrintBuffNextPtr", Brnch);
           LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:\n"
                             << *BufferIdx << '\n');
