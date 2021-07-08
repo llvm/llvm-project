@@ -301,7 +301,6 @@ FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass())
 FUNCTION_PASS("scalarizer", ScalarizerPass())
 FUNCTION_PASS("separate-const-offset-from-gep", SeparateConstOffsetFromGEPPass())
 FUNCTION_PASS("sccp", SCCPPass())
-FUNCTION_PASS("simplifycfg", SimplifyCFGPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
@@ -352,7 +351,7 @@ FUNCTION_PASS_WITH_PARAMS("msan",
                            },
                           parseMSanPassOptions,
                           "recover;kernel;track-origins=N")
-FUNCTION_PASS_WITH_PARAMS("simplify-cfg",
+FUNCTION_PASS_WITH_PARAMS("simplifycfg",
                           "SimplifyCFGPass",
                            [](SimplifyCFGOptions Opts) {
                              return SimplifyCFGPass(Opts);

@@ -1,7 +1,7 @@
 ; Test that patterns of transformations which disconnect a region of the call
 ; graph mid-traversal and then invalidate it function correctly.
 ;
-; RUN: opt -S -passes='cgscc(inline,function(simplify-cfg))' < %s | FileCheck %s
+; RUN: opt -S -passes='cgscc(inline,function(simplifycfg))' < %s | FileCheck %s
 
 define internal void @test_scc_internal(i1 %flag) {
 ; CHECK-NOT: @test_scc_internal

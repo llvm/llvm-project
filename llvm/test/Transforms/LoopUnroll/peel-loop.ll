@@ -1,6 +1,6 @@
 ; RUN: opt < %s -S -loop-unroll -unroll-force-peel-count=3 -verify-dom-info -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine | FileCheck %s
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll,simplify-cfg,instcombine' -unroll-force-peel-count=3 -verify-dom-info | FileCheck %s
-; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll<peeling;no-runtime>,simplify-cfg,instcombine' -unroll-force-peel-count=3 -verify-dom-info | FileCheck %s
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll,simplifycfg,instcombine' -unroll-force-peel-count=3 -verify-dom-info | FileCheck %s
+; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop-unroll<peeling;no-runtime>,simplifycfg,instcombine' -unroll-force-peel-count=3 -verify-dom-info | FileCheck %s
 
 ; Basic loop peeling - check that we can peel-off the first 3 loop iterations
 ; when explicitly requested.
