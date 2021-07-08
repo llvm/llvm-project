@@ -27,7 +27,7 @@ isl::union_set unionSpace(const isl::union_set &USet) {
   for (isl::set Set : USet.get_set_list()) {
     isl::space Space = Set.get_space();
     isl::set Universe = isl::set::universe(Space);
-    Result = Result.add_set(Universe);
+    Result = Result.unite(Universe);
   }
   return Result;
 }
@@ -120,7 +120,7 @@ bool checkIsConflictingNonsymmetricCommon(
   auto NewSpace = isl::space(Ctx, 0, 1);
   NewSpace = NewSpace.set_tuple_id(isl::dim::set, NewId);
   auto NewSet = isl::set::universe(NewSpace);
-  Universe = Universe.add_set(NewSet);
+  Universe = Universe.unite(NewSet);
 
   // Using the universe, fill missing data.
   isl::union_set ExistingOccupied;

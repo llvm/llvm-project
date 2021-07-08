@@ -3699,7 +3699,6 @@ public:
   inline ctx get_ctx() const;
   inline void dump() const;
 
-  inline union_set add_set(set set) const;
   inline union_set affine_hull() const;
   inline union_set align_params(space model) const;
   inline union_set apply(union_map umap) const;
@@ -19739,12 +19738,6 @@ void union_set::dump() const {
   isl_union_set_dump(get());
 }
 
-
-union_set union_set::add_set(set set) const
-{
-  auto res = isl_union_set_add_set(copy(), set.release());
-  return manage(res);
-}
 
 union_set union_set::affine_hull() const
 {

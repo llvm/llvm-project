@@ -399,10 +399,6 @@ public:
   /// supports unified addressing
   void processRequiresDirective(const OMPRequiresDecl *D) override;
 
-  /// Returns default address space for the constant firstprivates, __constant__
-  /// address space by default.
-  unsigned getDefaultFirstprivateAddressSpace() const override;
-
   /// Checks if the variable has associated OMPAllocateDeclAttr attribute with
   /// the predefined allocator and translates it into the corresponding address
   /// space.

@@ -165,6 +165,14 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
   for (size_t i = 0; i < isec->relocs.size(); ++i) {
     Reloc &r = isec->relocs[i];
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
+
+    if (r.offset % sizeof(CompactUnwindEntry<Ptr>) == 0) {
+      if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+        if (!cast<ConcatInputSection>(referentIsec)->shouldOmitFromOutput())
+          allEntriesAreOmitted = false;
+      continue;
+    }
+
     if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
         offsetof(CompactUnwindEntry<Ptr>, personality))
       continue;
@@ -379,7 +387,7 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
 
   // Rather than sort & fold the 32-byte entries directly, we create a
   // vector of pointers to entries and sort & fold that instead.
-  cuPtrVector.reserve(cuCount);
+  cuPtrVector.reserve(cuVector.size());
   for (CompactUnwindEntry<Ptr> &cuEntry : cuVector)
     cuPtrVector.emplace_back(&cuEntry);
   llvm::sort(cuPtrVector, [](const CompactUnwindEntry<Ptr> *a,
@@ -401,6 +409,13 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
                          return a->functionAddress < b->functionAddress;
                        }),
       cuPtrVector.end());
+
+  // If there are no entries left after adding explicit "no unwind info"
+  // entries and removing entries for dead-stripped functions, don't write
+  // an __unwind_info section at all.
+  assert(allEntriesAreOmitted == cuPtrVector.empty());
+  if (cuPtrVector.empty())
+    return;
 
   // Fold adjacent entries with matching encoding+personality+lsda
   // We use three iterators on the same cuPtrVector to fold in-situ:
@@ -531,6 +546,8 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
 
 template <class Ptr>
 void UnwindInfoSectionImpl<Ptr>::writeTo(uint8_t *buf) const {
+  assert(!cuPtrVector.empty() && "call only if there is unwind info");
+
   // section header
   auto *uip = reinterpret_cast<unwind_info_section_header *>(buf);
   uip->version = 1;

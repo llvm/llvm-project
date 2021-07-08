@@ -523,63 +523,6 @@ def Vector_ExtractOp :
   let hasFolder = 1;
 }
 
-def Vector_ExtractSlicesOp :
-  Vector_Op<"extract_slices", [NoSideEffect]>,
-    Arguments<(ins AnyVector:$vector, I64ArrayAttr:$sizes,
-                   I64ArrayAttr:$strides)>,
-    Results<(outs TupleOf<[AnyVector]>)> {
-  let summary = "vector extract slices operation";
-  let description = [{
-    Takes an N-d vector and returns a tuple of vector slices of 'vector',
-    based on 'sizes' and 'strides' parameters.
-
-    The arguments 'sizes' and 'strides' represent a specification for
-    generating the unrolling of 'vector' shape, which has all slices of shape
-    'sizes' except for slices at dimension boundaries when 'vector' dimension
-    sizes are not a multiple of 'sizes'.
-
-    Each slice is returned at the tuple element index corresponding to the
-    linear index of the slice w.r.t the unrolling scheme represented by 'sizes'.
-    Currently, only unit strides are supported.
-
-    Example:
-
-    ```mlir
-    %0 = vector.transfer_read ...: vector<4x2xf32>
-
-    %1 = vector.extract_slices %0, [2, 2], [1, 1]
-      : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
-
-    // Example with partial slices at dimension boundaries.
-    %2 = vector.transfer_read ...: vector<4x3xf32>
-
-    %3 = vector.extract_slices %2, [2, 2], [1, 1]
-      : vector<4x3xf32> into tuple<vector<2x2xf32>, vector<2x1xf32>,
-                                   vector<2x2xf32>, vector<2x1xf32>>
-    ```
-  }];
-  let builders = [
-    OpBuilder<(ins "TupleType":$tupleType, "Value":$vector,
-      "ArrayRef<int64_t>":$sizes, "ArrayRef<int64_t>":$strides)>
-  ];
-  let extraClassDeclaration = [{
-    VectorType getSourceVectorType() {
-      return vector().getType().cast<VectorType>();
-    }
-    TupleType getResultTupleType() {
-      return getResult().getType().cast<TupleType>();
-    }
-    void getSizes(SmallVectorImpl<int64_t> &results);
-    void getStrides(SmallVectorImpl<int64_t> &results);
-    static StringRef getSizesAttrName() { return "sizes"; }
-    static StringRef getStridesAttrName() { return "strides"; }
-  }];
-  let assemblyFormat = [{
-    $vector `,` $sizes `,` $strides attr-dict `:` type($vector) `into`
-    type(results)
-  }];
-}
-
 def Vector_ExtractMapOp :
   Vector_Op<"extract_map", [NoSideEffect]>,
     Arguments<(ins AnyVector:$vector, Variadic<Index>:$ids)>,
@@ -652,7 +595,7 @@ def Vector_FMAOp :
   Op<Vector_Dialect, "fma", [
        NoSideEffect, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
        DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
-     ]>,
+     ] # ElementwiseMappable.traits>,
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyVector:$acc)>,
     Results<(outs AnyVector:$result)> {
   let summary = "vector fused multiply-add";
@@ -767,63 +710,6 @@ def Vector_InsertOp :
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
-}
-
-def Vector_InsertSlicesOp :
-  Vector_Op<"insert_slices", [NoSideEffect]>,
-    Arguments<(ins TupleOf<[AnyVector]>:$vectors, I64ArrayAttr:$sizes,
-                   I64ArrayAttr:$strides)>,
-    Results<(outs AnyVector)> {
-  let summary = "vector insert slices operation";
-  let description = [{
-    Takes a tuple of vector slices and inserts them into the vector result
-    according to the 'sizes' and 'strides' parameters.
-
-    The arguments 'sizes' and 'strides' represent a specification for
-    generating the unrolling of 'vector' shape, which has all slices of shape
-    'sizes' except for slices at dimension boundaries when 'vector' dimension
-    sizes are not a multiple of 'sizes'.
-
-    Each slice in 'vectors' is at the tuple element index corresponding to the
-    linear index of the slice w.r.t the unrolling scheme represented by 'sizes'.
-    Currently, only unit strides are supported.
-
-    Example:
-
-    ```mlir
-    %0 = vector.extract_slices %0, [2, 2], [1, 1]
-      : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
-
-    %1 = vector.insert_slices %0, [2, 2], [1, 1]
-      : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
-
-    // Example with partial slices at dimension boundaries.
-    %3 = vector.extract_slices %2, [2, 2], [1, 1]
-      : vector<4x3xf32> into tuple<vector<2x2xf32>, vector<2x1xf32>,
-                                   vector<2x2xf32>, vector<2x1xf32>>
-
-    %4 = vector.insert_slices %3, [2, 2], [1, 1]
-      : tuple<vector<2x2xf32>, vector<2x1xf32>,
-              vector<2x2xf32>, vector<2x1xf32>> into vector<4x3xf32>
-    ```
-  }];
-
-  let extraClassDeclaration = [{
-    TupleType getSourceTupleType() {
-      return vectors().getType().cast<TupleType>();
-    }
-    VectorType getResultVectorType() {
-      return getResult().getType().cast<VectorType>();
-    }
-    void getSizes(SmallVectorImpl<int64_t> &results);
-    void getStrides(SmallVectorImpl<int64_t> &results);
-    static StringRef getSizesAttrName() { return "sizes"; }
-    static StringRef getStridesAttrName() { return "strides"; }
-  }];
-  let assemblyFormat = [{
-    $vectors `,` $sizes `,` $strides attr-dict `:` type($vectors) `into`
-    type(results)
-  }];
 }
 
 def Vector_InsertMapOp :
@@ -2011,8 +1897,8 @@ def Vector_CompressStoreOp :
 
 def Vector_ShapeCastOp :
   Vector_Op<"shape_cast", [NoSideEffect]>,
-    Arguments<(ins AnyTypeOf<[AnyVector, TupleOf<[AnyVector]>]>:$source)>,
-    Results<(outs AnyTypeOf<[AnyVector, TupleOf<[AnyVector]>]>:$result)> {
+    Arguments<(ins AnyVector:$source)>,
+    Results<(outs AnyVector:$result)> {
   let summary = "shape_cast casts between vector shapes";
   let description = [{
     The shape_cast operation casts between an n-D source vector shape and
@@ -2027,9 +1913,6 @@ def Vector_ShapeCastOp :
     sequence of result dims (or a single result dim), in result dimension list
     order (i.e. 0 <= j < k). The product of all source dimension sizes and all
     result dimension sizes must match.
-
-    If the source/result types are a tuple of vectors, the casting operation
-    described above is applied to each source/result tuple element pair.
 
     It is currently assumed that this operation does not require moving data,
     and that it will be folded away before lowering vector operations.
@@ -2048,10 +1931,6 @@ def Vector_ShapeCastOp :
     // Example casting to a higher vector rank.
     %3 = vector.shape_cast %2 : vector<10x12x8xf32> to vector<5x2x3x4x8xf32>
 
-    // Example casting a tuple of vectors of same rank, where tuple elements
-    // may have different shapes.
-    %5 = vector.shape_cast %4 : tuple<vector<3x4x2xf32>, vector<3x3x2xf32>> to
-                                tuple<vector<12x2xf32>, vector<9x2xf32>>
     ```
   }];
   let extraClassDeclaration = [{
@@ -2302,43 +2181,6 @@ def Vector_TransposeOp :
     $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
   }];
   let hasCanonicalizer = 1;
-  let hasFolder = 1;
-}
-
-def Vector_TupleGetOp :
-  Vector_Op<"tuple_get", [NoSideEffect]>,
-    Arguments<(ins TupleOf<[AnyVector]>:$vectors, APIntAttr:$index)>,
-    Results<(outs AnyVector)> {
-  let summary = "vector tuple get operation";
-  let description = [{
-    Returns the tuple element of 'vectors' at 'index'.
-
-    Note that this operation is used during the vector op unrolling
-    transformation and should be removed before lowering to lower-level
-    dialects.
-
-    Example:
-
-    ```mlir
-    %4 = vector.tuple %0, %1, %2, %3
-      : vector<2x2xf32>, vector<2x1xf32>, vector<2x2xf32>, vector<2x1xf32>>
-
-    %5 = vector.tuple_get %4, 1
-      : tuple<vector<2x2xf32>, vector<2x1xf32>,
-              vector<2x2xf32>, vector<2x1xf32>>
-    ```
-  }];
-
-  let extraClassDeclaration = [{
-    VectorType getResultVectorType() {
-      return getResult().getType().cast<VectorType>();
-    }
-    int64_t getIndex() {
-      auto index = (*this)->getAttrOfType<IntegerAttr>("index");
-      return index.getValue().getSExtValue();
-    }
-    static StringRef getIndexAttrName() { return "index"; }
-  }];
   let hasFolder = 1;
 }
 

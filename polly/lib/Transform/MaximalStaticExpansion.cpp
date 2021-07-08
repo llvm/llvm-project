@@ -189,7 +189,7 @@ bool MaximalStaticExpander::isExpandable(
     for (auto Write : Writes) {
       auto MapDeps = filterDependences(S, Dependences, Write);
       for (isl::map Map : MapDeps.get_map_list())
-        WriteDomain = WriteDomain.add_set(Map.range());
+        WriteDomain = WriteDomain.unite(Map.range());
     }
 
     // For now, read from original scalar is not possible.

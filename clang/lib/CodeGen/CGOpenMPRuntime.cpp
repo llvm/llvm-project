@@ -8224,10 +8224,6 @@ private:
     // 'private ptr' and 'map to' flag. Return the right flags if the captured
     // declaration is known as first-private in this handler.
     if (FirstPrivateDecls.count(Cap.getCapturedVar())) {
-      if (Cap.getCapturedVar()->getType().isConstant(CGF.getContext()) &&
-          Cap.getCaptureKind() == CapturedStmt::VCK_ByRef)
-        return MappableExprsHandler::OMP_MAP_ALWAYS |
-               MappableExprsHandler::OMP_MAP_TO;
       if (Cap.getCapturedVar()->getType()->isAnyPointerType())
         return MappableExprsHandler::OMP_MAP_TO |
                MappableExprsHandler::OMP_MAP_PTR_AND_OBJ;
@@ -9163,30 +9159,15 @@ public:
       CombinedInfo.Types.push_back(getMapModifiersForPrivateClauses(CI));
       const VarDecl *VD = CI.getCapturedVar();
       auto I = FirstPrivateDecls.find(VD);
-      if (I != FirstPrivateDecls.end() &&
-          VD->getType().isConstant(CGF.getContext())) {
-        llvm::Constant *Addr =
-            CGF.CGM.getOpenMPRuntime().registerTargetFirstprivateCopy(CGF, VD);
-        // Copy the value of the original variable to the new global copy.
-        CGF.Builder.CreateMemCpy(
-            CGF.MakeNaturalAlignAddrLValue(Addr, ElementType).getAddress(CGF),
-            Address(CV, CGF.getContext().getTypeAlignInChars(ElementType)),
-            CombinedInfo.Sizes.back(), /*IsVolatile=*/false);
-        // Use new global variable as the base pointers.
-        CombinedInfo.Exprs.push_back(VD->getCanonicalDecl());
-        CombinedInfo.BasePointers.push_back(Addr);
-        CombinedInfo.Pointers.push_back(Addr);
+      CombinedInfo.Exprs.push_back(VD->getCanonicalDecl());
+      CombinedInfo.BasePointers.push_back(CV);
+      if (I != FirstPrivateDecls.end() && ElementType->isAnyPointerType()) {
+        Address PtrAddr = CGF.EmitLoadOfReference(CGF.MakeAddrLValue(
+            CV, ElementType, CGF.getContext().getDeclAlign(VD),
+            AlignmentSource::Decl));
+        CombinedInfo.Pointers.push_back(PtrAddr.getPointer());
       } else {
-        CombinedInfo.Exprs.push_back(VD->getCanonicalDecl());
-        CombinedInfo.BasePointers.push_back(CV);
-        if (I != FirstPrivateDecls.end() && ElementType->isAnyPointerType()) {
-          Address PtrAddr = CGF.EmitLoadOfReference(CGF.MakeAddrLValue(
-              CV, ElementType, CGF.getContext().getDeclAlign(VD),
-              AlignmentSource::Decl));
-          CombinedInfo.Pointers.push_back(PtrAddr.getPointer());
-        } else {
-          CombinedInfo.Pointers.push_back(CV);
-        }
+        CombinedInfo.Pointers.push_back(CV);
       }
       if (I != FirstPrivateDecls.end())
         IsImplicit = I->getSecond();
@@ -10577,45 +10558,6 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
     return true;
   }
   return false;
-}
-
-llvm::Constant *
-CGOpenMPRuntime::registerTargetFirstprivateCopy(CodeGenFunction &CGF,
-                                                const VarDecl *VD) {
-  assert(VD->getType().isConstant(CGM.getContext()) &&
-         "Expected constant variable.");
-  StringRef VarName;
-  llvm::Constant *Addr;
-  llvm::GlobalValue::LinkageTypes Linkage;
-  QualType Ty = VD->getType();
-  SmallString<128> Buffer;
-  {
-    unsigned DeviceID;
-    unsigned FileID;
-    unsigned Line;
-    getTargetEntryUniqueInfo(CGM.getContext(), VD->getLocation(), DeviceID,
-                             FileID, Line);
-    llvm::raw_svector_ostream OS(Buffer);
-    OS << "__omp_offloading_firstprivate_" << llvm::format("_%x", DeviceID)
-       << llvm::format("_%x_", FileID);
-    if (CGM.getLangOpts().CPlusPlus) {
-      CGM.getCXXABI().getMangleContext().mangleTypeName(VD->getType(), OS);
-      OS << "_";
-    }
-    OS << VD->getName() << "_l" << Line;
-    VarName = OS.str();
-  }
-  Linkage = llvm::GlobalValue::InternalLinkage;
-  Addr =
-      getOrCreateInternalVariable(CGM.getTypes().ConvertTypeForMem(Ty), VarName,
-                                  getDefaultFirstprivateAddressSpace());
-  cast<llvm::GlobalValue>(Addr)->setLinkage(Linkage);
-  CharUnits VarSize = CGM.getContext().getTypeSizeInChars(Ty);
-  CGM.addCompilerUsedGlobal(cast<llvm::GlobalValue>(Addr));
-  OffloadEntriesInfoManager.registerDeviceGlobalVarEntryInfo(
-      VarName, Addr, VarSize,
-      OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryTo, Linkage);
-  return Addr;
 }
 
 void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,

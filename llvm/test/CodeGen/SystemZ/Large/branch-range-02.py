@@ -1,6 +1,6 @@
 # Test normal conditional branches in cases where block alignments cause
 # some branches to be out of range.
-# RUN: python %s | llc -mtriple=s390x-linux-gnu -align-all-blocks=8 | FileCheck %s
+# RUN: %python %s | llc -mtriple=s390x-linux-gnu -align-all-blocks=8 | FileCheck %s
 
 # Construct:
 #

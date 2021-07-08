@@ -10,8 +10,9 @@ add_mlir_conversion_library(MLIRGPUToROCDLTransforms
   MLIRGPUToROCDLIncGen
 
   LINK_LIBS PUBLIC
-  MLIRGPU
+  MLIRGPUOps
   MLIRGPUToGPURuntimeTransforms
+  MLIRLLVMCommonConversion
   MLIRLLVMIR
   MLIRROCDLIR
   MLIRPass

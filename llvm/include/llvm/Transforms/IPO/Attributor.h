@@ -138,11 +138,26 @@ class Function;
 
 /// Abstract Attribute helper functions.
 namespace AA {
+/// Return true if \p V is a valid value in \p Scope, that is a constant or an
+/// instruction/argument of \p Scope.
+bool isValidInScope(const Value &V, const Function *Scope);
+
 /// Try to convert \p V to type \p Ty without introducing new instructions. If
 /// this is not possible return `nullptr`. Note: this function basically knows
 /// how to cast various constants.
 Value *getWithType(Value &V, Type &Ty);
 
+/// Return the combination of \p A and \p B such that the result is a possible
+/// value of both. \p B is potentially casted to match the type \p Ty or the
+/// type of \p A if \p Ty is null.
+///
+/// Examples:
+///        X + none  => X
+/// not_none + undef => not_none
+///          V1 + V2 => nullptr
+Optional<Value *>
+combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
+                                     const Optional<Value *> &B, Type *Ty);
 } // namespace AA
 
 /// The value passed to the line option that defines the maximal initialization
@@ -1414,12 +1429,16 @@ struct Attributor {
   /// uses should be changed too.
   bool changeValueAfterManifest(Value &V, Value &NV,
                                 bool ChangeDroppable = true) {
-    bool Changed = false;
-    for (auto &U : V.uses())
-      if (ChangeDroppable || !U.getUser()->isDroppable())
-        Changed |= changeUseAfterManifest(U, NV);
-
-    return Changed;
+    auto &Entry = ToBeChangedValues[&V];
+    Value *&CurNV = Entry.first;
+    if (CurNV && (CurNV->stripPointerCasts() == NV.stripPointerCasts() ||
+                  isa<UndefValue>(CurNV)))
+      return false;
+    assert((!CurNV || CurNV == &NV || isa<UndefValue>(NV)) &&
+           "Value replacement was registered twice with different values!");
+    CurNV = &NV;
+    Entry.second = ChangeDroppable;
+    return true;
   }
 
   /// Record that \p I is to be replaced with `unreachable` after information
@@ -1874,6 +1893,10 @@ private:
   /// Uses we replace with a new value after manifest is done. We will remove
   /// then trivially dead instructions as well.
   DenseMap<Use *, Value *> ToBeChangedUses;
+
+  /// Values we replace with a new value after manifest is done. We will remove
+  /// then trivially dead instructions as well.
+  DenseMap<Value *, std::pair<Value *, bool>> ToBeChangedValues;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
   SmallDenseSet<WeakVH, 16> ToBeChangedToUnreachableInsts;
