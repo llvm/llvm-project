@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+sse4.2 < %s | FileCheck %s --check-prefix=SSE
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx < %s | FileCheck %s --check-prefix=AVX1
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx2 < %s | FileCheck %s --check-prefix=AVX2
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512f < %s | FileCheck %s --check-prefix=AVX512
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512f < %s | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512f,+avx512vl < %s | FileCheck %s --check-prefixes=AVX512,AVX512VL
 
 ;
 ; vXf32
@@ -134,18 +135,26 @@ define <4 x float> @gather_v4f32_ptr_v4i32(<4 x float*> %ptr, <4 x i32> %trigger
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: gather_v4f32_ptr_v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512-NEXT:    vptestnmd %zmm1, %zmm1, %k0
-; AVX512-NEXT:    kshiftlw $12, %k0, %k0
-; AVX512-NEXT:    kshiftrw $12, %k0, %k1
-; AVX512-NEXT:    vgatherqps (,%zmm0), %ymm2 {%k1}
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: gather_v4f32_ptr_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vgatherqps (,%zmm0), %ymm2 {%k1}
+; AVX512F-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: gather_v4f32_ptr_v4i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vptestnmd %xmm1, %xmm1, %k1
+; AVX512VL-NEXT:    vgatherqps (,%ymm0), %xmm2 {%k1}
+; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
   %res = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %ptr, i32 4, <4 x i1> %mask, <4 x float> %passthru)
   ret <4 x float> %res
@@ -293,18 +302,25 @@ define <4 x float> @gather_v4f32_v4i32_v4i32(float* %base, <4 x i32> %idx, <4 x 
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: gather_v4f32_v4i32_v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vptestnmd %zmm1, %zmm1, %k0
-; AVX512-NEXT:    kshiftlw $12, %k0, %k0
-; AVX512-NEXT:    kshiftrw $12, %k0, %k1
-; AVX512-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm2 {%k1}
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: gather_v4f32_v4i32_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm2 {%k1}
+; AVX512F-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: gather_v4f32_v4i32_v4i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vptestnmd %xmm1, %xmm1, %k1
+; AVX512VL-NEXT:    vgatherdps (%rdi,%xmm0,4), %xmm2 {%k1}
+; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512VL-NEXT:    retq
   %vptr0 = insertelement <4 x float*> undef, float* %base, i32 0
   %vptr1 = shufflevector <4 x float*> %vptr0, <4 x float*> undef, <4 x i32> zeroinitializer
   %vptr2 = getelementptr float, <4 x float*> %vptr1, <4 x i32> %idx
@@ -450,18 +466,26 @@ define <4 x float> @gather_v4f32_v4i64_v4i32(float* %base, <4 x i64> %idx, <4 x 
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: gather_v4f32_v4i64_v4i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512-NEXT:    vptestnmd %zmm1, %zmm1, %k0
-; AVX512-NEXT:    kshiftlw $12, %k0, %k0
-; AVX512-NEXT:    kshiftrw $12, %k0, %k1
-; AVX512-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm2 {%k1}
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: gather_v4f32_v4i64_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm2 {%k1}
+; AVX512F-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: gather_v4f32_v4i64_v4i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vptestnmd %xmm1, %xmm1, %k1
+; AVX512VL-NEXT:    vgatherqps (%rdi,%ymm0,4), %xmm2 {%k1}
+; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %vptr0 = insertelement <4 x float*> undef, float* %base, i32 0
   %vptr1 = shufflevector <4 x float*> %vptr0, <4 x float*> undef, <4 x i32> zeroinitializer
   %vptr2 = getelementptr float, <4 x float*> %vptr1, <4 x i64> %idx
@@ -1651,20 +1675,32 @@ define <8 x i32> @gather_v8i32_v8i32(<8 x i32> %trigger) {
 ; AVX2-NEXT:    jne .LBB4_45
 ; AVX2-NEXT:    jmp .LBB4_46
 ;
-; AVX512-LABEL: gather_v8i32_v8i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k0
-; AVX512-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12]
-; AVX512-NEXT:    kmovw %k1, %k2
-; AVX512-NEXT:    vpgatherdd c(,%zmm0), %zmm1 {%k2}
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28]
-; AVX512-NEXT:    vpgatherdd c(,%zmm0), %zmm2 {%k1}
-; AVX512-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
-; AVX512-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: gather_v8i32_v8i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12]
+; AVX512F-NEXT:    kmovw %k1, %k2
+; AVX512F-NEXT:    vpgatherdd c(,%zmm0), %zmm1 {%k2}
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28]
+; AVX512F-NEXT:    vpgatherdd c(,%zmm0), %zmm2 {%k1}
+; AVX512F-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
+; AVX512F-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: gather_v8i32_v8i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [12,12,12,12,12,12,12,12]
+; AVX512VL-NEXT:    kmovw %k1, %k2
+; AVX512VL-NEXT:    vpgatherdd c(,%ymm0), %ymm1 {%k2}
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [28,28,28,28,28,28,28,28]
+; AVX512VL-NEXT:    vpgatherdd c(,%ymm0), %ymm2 {%k1}
+; AVX512VL-NEXT:    vpaddd %ymm2, %ymm2, %ymm0
+; AVX512VL-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; AVX512VL-NEXT:    retq
   %1 = icmp eq <8 x i32> %trigger, zeroinitializer
   %2 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> getelementptr (%struct.a, <8 x %struct.a*> <%struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c>, <8 x i64> zeroinitializer, i32 0, <8 x i64> <i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3, i64 3>), i32 4, <8 x i1> %1, <8 x i32> undef)
   %3 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> getelementptr (%struct.a, <8 x %struct.a*> <%struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c, %struct.a* @c>, <8 x i64> zeroinitializer, i32 3), i32 4, <8 x i1> %1, <8 x i32> undef)
