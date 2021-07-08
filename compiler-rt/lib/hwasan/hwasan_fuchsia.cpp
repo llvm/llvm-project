@@ -172,6 +172,10 @@ void HwasanTSDThreadInit() {}
 // function is unneeded.
 void InstallAtExitHandler() {}
 
+// TODO(fxbug.dev/81499): Once we finalize the tagged pointer ABI in zircon, we should come back
+// here and implement the appropriate check that TBI is enabled.
+void InitializeOsSupport() {}
+
 }  // namespace __hwasan
 
 extern "C" {
