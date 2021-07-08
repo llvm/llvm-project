@@ -735,6 +735,10 @@ module std [system] {
   module variant {
     header "variant"
     export *
+
+    module __variant {
+      module monostate { header "__variant/monostate.h" }
+    }
   }
   module vector {
     header "vector"

@@ -237,6 +237,7 @@ set(files
   __utility/rel_ops.h
   __utility/swap.h
   __utility/to_underlying.h
+  __variant/monostate.h
   algorithm
   any
   array
