@@ -10,8 +10,8 @@
 
 #include "../PassDetail.h"
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/AMX/Transforms.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
