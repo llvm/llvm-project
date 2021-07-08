@@ -365,7 +365,7 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInElseRegion(
     unsigned BBNum = MBB->getNumber();
     if (OldVarInfo.AliveBlocks.test(BBNum)) {
       NewVarInfo.AliveBlocks.set(BBNum);
-      LLVM_DEBUG(dbgs() << "Removing ALiveBlock " << printMBBReference(*MBB)
+      LLVM_DEBUG(dbgs() << "Removing AliveBlock " << printMBBReference(*MBB)
                         << '\n');
       OldVarInfo.AliveBlocks.reset(BBNum);
     }
