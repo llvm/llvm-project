@@ -48,9 +48,22 @@
 #include <unistd.h>      // For syscall()
 #endif
 
-pthread_t
-llvm::llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
-                                  llvm::Optional<unsigned> StackSizeInBytes) {
+static void *threadFuncSync(void *Arg) {
+  SyncThreadInfo *TI = static_cast<SyncThreadInfo *>(Arg);
+  TI->UserFn(TI->UserData);
+  return nullptr;
+}
+
+static void *threadFuncAsync(void *Arg) {
+  std::unique_ptr<AsyncThreadInfo> Info(static_cast<AsyncThreadInfo *>(Arg));
+  (*Info)();
+  return nullptr;
+}
+
+static void
+llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
+                            llvm::Optional<unsigned> StackSizeInBytes,
+                            JoiningPolicy JP) {
   int errnum;
 
   // Construct the attributes object.
@@ -77,31 +90,16 @@ llvm::llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
   if ((errnum = ::pthread_create(&Thread, &Attr, ThreadFunc, Arg)) != 0)
     ReportErrnumFatal("pthread_create failed", errnum);
 
-  return Thread;
-}
-
-void llvm::llvm_thread_detach_impl(pthread_t Thread) {
-  int errnum;
-
-  if ((errnum = ::pthread_detach(Thread)) != 0) {
-    ReportErrnumFatal("pthread_detach failed", errnum);
+  if (JP == JoiningPolicy::Join) {
+    // Wait for the thread
+    if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
+      ReportErrnumFatal("pthread_join failed", errnum);
+    }
+  } else if (JP == JoiningPolicy::Detach) {
+    if ((errnum = ::pthread_detach(Thread)) != 0) {
+      ReportErrnumFatal("pthread_detach failed", errnum);
+    }
   }
-}
-
-void llvm::llvm_thread_join_impl(pthread_t Thread) {
-  int errnum;
-
-  if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
-    ReportErrnumFatal("pthread_join failed", errnum);
-  }
-}
-
-pthread_t llvm::llvm_thread_get_id_impl(pthread_t Thread) {
-  return Thread;
-}
-
-pthread_t llvm::llvm_thread_get_current_id_impl() {
-  return ::pthread_self();
 }
 
 uint64_t llvm::get_threadid() {
