@@ -5039,7 +5039,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getValue() << A->getOption().getName();
   }
 
-  if (!TC.useIntegratedAs())
+  // If toolchain choose to use MCAsmParser for inline asm don't pass the
+  // option to disable integrated-as explictly.
+  if (!TC.useIntegratedAs() && !TC.parseInlineAsmUsingAsmParser())
     CmdArgs.push_back("-no-integrated-as");
 
   if (Args.hasArg(options::OPT_fdebug_pass_structure)) {

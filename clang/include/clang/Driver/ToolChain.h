@@ -380,6 +380,10 @@ public:
   /// Check if the toolchain should use the integrated assembler.
   virtual bool useIntegratedAs() const;
 
+  /// Check if the toolchain should use AsmParser to parse inlineAsm when
+  /// integrated assembler is not default.
+  virtual bool parseInlineAsmUsingAsmParser() const { return false; }
+
   /// IsMathErrnoDefault - Does this tool chain use -fmath-errno by default.
   virtual bool IsMathErrnoDefault() const { return true; }
 
