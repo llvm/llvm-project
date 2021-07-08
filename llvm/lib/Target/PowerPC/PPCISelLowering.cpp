@@ -14524,18 +14524,15 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     int NumEltsIn = SToVLHS ? SToVLHS.getValueType().getVectorNumElements()
                             : SToVRHS.getValueType().getVectorNumElements();
     int NumEltsOut = ShuffV.size();
-    unsigned InElemSizeInBits =
-        SToVLHS ? SToVLHS.getValueType().getScalarSizeInBits()
-                : SToVRHS.getValueType().getScalarSizeInBits();
-    unsigned OutElemSizeInBits = SToVLHS
-                                     ? LHS.getValueType().getScalarSizeInBits()
-                                     : RHS.getValueType().getScalarSizeInBits();
-
     // The width of the "valid lane" (i.e. the lane that contains the value that
     // is vectorized) needs to be expressed in terms of the number of elements
     // of the shuffle. It is thereby the ratio of the values before and after
     // any bitcast.
-    unsigned ValidLaneWidth = InElemSizeInBits / OutElemSizeInBits;
+    unsigned ValidLaneWidth =
+        SToVLHS ? SToVLHS.getValueType().getScalarSizeInBits() /
+                      LHS.getValueType().getScalarSizeInBits()
+                : SToVRHS.getValueType().getVectorNumElements() /
+                      RHS.getValueType().getScalarSizeInBits();
 
     // Initially assume that neither input is permuted. These will be adjusted
     // accordingly if either input is.
@@ -14548,9 +14545,10 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     // ISD::SCALAR_TO_VECTOR.
     // On big endian systems, this only makes sense for element sizes smaller
     // than 64 bits since for 64-bit elements, all instructions already put
-    // the value into element zero.
+    // the value into element zero. Since scalar size of LHS and RHS may differ
+    // after isScalarToVec, this should be checked using their own sizes.
     if (SToVLHS) {
-      if (!IsLittleEndian && InElemSizeInBits >= 64)
+      if (!IsLittleEndian && SToVLHS.getValueType().getScalarSizeInBits() >= 64)
         return Res;
       // Set up the values for the shuffle vector fixup.
       LHSMaxIdx = NumEltsOut / NumEltsIn;
@@ -14560,7 +14558,7 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       LHS = SToVLHS;
     }
     if (SToVRHS) {
-      if (!IsLittleEndian && InElemSizeInBits >= 64)
+      if (!IsLittleEndian && SToVRHS.getValueType().getScalarSizeInBits() >= 64)
         return Res;
       RHSMinIdx = NumEltsOut;
       RHSMaxIdx = NumEltsOut / NumEltsIn + RHSMinIdx;
