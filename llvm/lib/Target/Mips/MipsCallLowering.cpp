@@ -544,7 +544,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   } else
     MIB.add(Info.Callee);
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  MIB.addRegMask(TRI->getCallPreservedMask(MF, F.getCallingConv()));
+  MIB.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
   TargetLowering::ArgListTy FuncOrigArgs;
   FuncOrigArgs.reserve(Info.OrigArgs.size());
@@ -572,7 +572,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     const Function *CF = static_cast<const Function *>(Info.Callee.getGlobal());
     IsCalleeVarArg = CF->isVarArg();
   }
-  MipsCCState CCInfo(F.getCallingConv(), IsCalleeVarArg, MF, ArgLocs,
+  MipsCCState CCInfo(Info.CallConv, IsCalleeVarArg, MF, ArgLocs,
                      F.getContext());
 
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(Info.CallConv),
@@ -620,7 +620,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     subTargetRegTypeForCallingConv(F, ArgInfos, OrigRetIndices, Ins);
 
     SmallVector<CCValAssign, 8> ArgLocs;
-    MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
+    MipsCCState CCInfo(Info.CallConv, F.isVarArg(), MF, ArgLocs,
                        F.getContext());
 
     CCInfo.AnalyzeCallResult(Ins, TLI.CCAssignFnForReturn(), Info.OrigRet.Ty,
