@@ -444,6 +444,7 @@ struct ErrorNonSelfAMDGPU : ErrorBase {
   int device_id;
   u8 shadow_val;
   char bug_desc[512];
+  AddressDescription addr_description;
 
   ErrorNonSelfAMDGPU() = default;
   ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack, uptr *dev_address,

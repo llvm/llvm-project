@@ -651,7 +651,9 @@ ErrorNonSelfAMDGPU::ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack,
       wg(),
       nactive_threads(n_addrs),
       device_id(0),
-      shadow_val(0) {
+      shadow_val(0),
+      // describe only a single device address.
+      addr_description(dev_address[0], (uptr)access_size_, false) {
   if (nactive_threads > wavesize)
     nactive_threads = wavesize;
 
@@ -683,7 +685,7 @@ void ErrorNonSelfAMDGPU::PrintThreadsAndAddresses() {
     per_row_count++;
   }
   str.append("\n");
-  Printf("%s", str.data());
+  Printf("%s\n", str.data());
 }
 
 void ErrorNonSelfAMDGPU::Print() {
@@ -697,6 +699,7 @@ void ErrorNonSelfAMDGPU::Print() {
          wg.idz);
   Printf("%s", d.Location());
   PrintThreadsAndAddresses();
+  addr_description.Print(bug_desc, true);
   Printf("%s", d.Default());
 
   // print shadow memory region for single address
