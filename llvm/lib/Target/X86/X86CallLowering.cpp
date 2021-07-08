@@ -142,7 +142,7 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     MachineRegisterInfo &MRI = MF.getRegInfo();
     const DataLayout &DL = MF.getDataLayout();
 
-    ArgInfo OrigRetInfo(VRegs, Val->getType());
+    ArgInfo OrigRetInfo(VRegs, Val->getType(), 0);
     setArgFlags(OrigRetInfo, AttributeList::ReturnIndex, DL, F);
 
     SmallVector<ArgInfo, 4> SplitRetInfos;
@@ -261,7 +261,7 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         Arg.hasAttribute(Attribute::Nest) || VRegs[Idx].size() > 1)
       return false;
 
-    ArgInfo OrigArg(VRegs[Idx], Arg.getType());
+    ArgInfo OrigArg(VRegs[Idx], Arg.getType(), Idx);
     setArgFlags(OrigArg, Idx + AttributeList::FirstArgIndex, DL, F);
     splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
     Idx++;

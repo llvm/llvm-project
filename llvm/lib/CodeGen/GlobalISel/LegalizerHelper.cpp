@@ -546,11 +546,12 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
               Type *OpType) {
   auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
 
+  // FIXME: What does the original arg index mean here?
   SmallVector<CallLowering::ArgInfo, 3> Args;
   for (unsigned i = 1; i < MI.getNumOperands(); i++)
-    Args.push_back({MI.getOperand(i).getReg(), OpType});
-  return createLibcall(MIRBuilder, Libcall, {MI.getOperand(0).getReg(), OpType},
-                       Args);
+    Args.push_back({MI.getOperand(i).getReg(), OpType, 0});
+  return createLibcall(MIRBuilder, Libcall,
+                       {MI.getOperand(0).getReg(), OpType, 0}, Args);
 }
 
 LegalizerHelper::LegalizeResult
@@ -570,7 +571,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
       OpTy = Type::getInt8PtrTy(Ctx, OpLLT.getAddressSpace());
     else
       OpTy = IntegerType::get(Ctx, OpLLT.getSizeInBits());
-    Args.push_back({Reg, OpTy});
+    Args.push_back({Reg, OpTy, 0});
   }
 
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
@@ -605,7 +606,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   CallLowering::CallLoweringInfo Info;
   Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
   Info.Callee = MachineOperand::CreateES(Name);
-  Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx));
+  Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0);
   Info.IsTailCall = MI.getOperand(MI.getNumOperands() - 1).getImm() &&
                     isLibCallInTailPosition(MIRBuilder.getTII(), MI);
 
@@ -664,8 +665,9 @@ static LegalizerHelper::LegalizeResult
 conversionLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, Type *ToType,
                   Type *FromType) {
   RTLIB::Libcall Libcall = getConvRTLibDesc(MI.getOpcode(), ToType, FromType);
-  return createLibcall(MIRBuilder, Libcall, {MI.getOperand(0).getReg(), ToType},
-                       {{MI.getOperand(1).getReg(), FromType}});
+  return createLibcall(MIRBuilder, Libcall,
+                       {MI.getOperand(0).getReg(), ToType, 0},
+                       {{MI.getOperand(1).getReg(), FromType, 0}});
 }
 
 LegalizerHelper::LegalizeResult
