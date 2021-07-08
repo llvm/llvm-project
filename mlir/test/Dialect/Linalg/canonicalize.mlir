@@ -890,3 +890,15 @@ func @init_canonicalize(%i : index) {
 
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @rank_reducing_init_extract
+func @rank_reducing_init_extract(%sz : index, %idx : index) -> tensor<2xf32> {
+  // CHECK: linalg.init_tensor [2] : tensor<2xf32>
+  %a = linalg.init_tensor [%sz, 2] : tensor<?x2xf32>
+
+  // CHECK-NOT: extract
+  %r = tensor.extract_slice %a[%idx, 0] [1, 2] [1, 1] : tensor<?x2xf32> to tensor<2xf32>
+  return %r: tensor<2xf32>
+}

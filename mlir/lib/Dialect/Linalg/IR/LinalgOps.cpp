@@ -772,11 +772,11 @@ struct FoldInitTensorWithExtractSliceOp
                                 PatternRewriter &rewriter) const override {
     if (!sliceOp.source().getDefiningOp<linalg::InitTensorOp>())
       return failure();
+    // ExtractSliceOp may be rank-reducing; its dynamic sizes must be preserved
+    // as well as its result type.
     rewriter.replaceOpWithNewOp<linalg::InitTensorOp>(
         sliceOp, sliceOp.sizes(),
-        llvm::to_vector<4>(llvm::map_range(
-            sliceOp.static_sizes(),
-            [](Attribute attr) { return attr.cast<IntegerAttr>().getInt(); })),
+        sliceOp.result().getType().cast<RankedTensorType>().getShape(),
         sliceOp.getSourceType().getElementType());
     return success();
   }
