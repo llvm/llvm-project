@@ -6067,8 +6067,7 @@ bool Process::CallVoidArgVoidPtrReturn(const Address *address,
   return false;
 }
 
-llvm::Expected<const MemoryTagManager *>
-Process::GetMemoryTagManager(lldb::addr_t addr, lldb::addr_t end_addr) {
+llvm::Expected<const MemoryTagManager *> Process::GetMemoryTagManager() {
   Architecture *arch = GetTarget().GetArchitecturePlugin();
   const MemoryTagManager *tag_manager =
       arch ? arch->GetMemoryTagManager() : nullptr;
@@ -6084,66 +6083,22 @@ Process::GetMemoryTagManager(lldb::addr_t addr, lldb::addr_t end_addr) {
                                    "Process does not support memory tagging");
   }
 
-  ptrdiff_t len = tag_manager->AddressDiff(end_addr, addr);
-  if (len <= 0) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "End address (0x%" PRIx64
-        ") must be greater than the start address (0x%" PRIx64 ")",
-        end_addr, addr);
-  }
-
-  // Region lookup is not address size aware so mask the address
-  MemoryRegionInfo::RangeType tag_range(tag_manager->RemoveNonAddressBits(addr),
-                                        len);
-  tag_range = tag_manager->ExpandToGranule(tag_range);
-
-  // Make a copy so we can use the original range in errors
-  MemoryRegionInfo::RangeType remaining_range(tag_range);
-
-  // While we haven't found a matching memory region for some of the range
-  while (remaining_range.IsValid()) {
-    MemoryRegionInfo region;
-    Status status = GetMemoryRegionInfo(remaining_range.GetRangeBase(), region);
-
-    if (status.Fail() || region.GetMemoryTagged() != MemoryRegionInfo::eYes) {
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "Address range 0x%lx:0x%lx is not in a memory tagged region",
-          tag_range.GetRangeBase(), tag_range.GetRangeEnd());
-    }
-
-    if (region.GetRange().GetRangeEnd() >= remaining_range.GetRangeEnd()) {
-      // We've found a region for the whole range or the last piece of a range
-      remaining_range.SetByteSize(0);
-    } else {
-      // We've found some part of the range, look for the rest
-      remaining_range.SetRangeBase(region.GetRange().GetRangeEnd());
-    }
-  }
-
   return tag_manager;
 }
 
 llvm::Expected<std::vector<lldb::addr_t>>
-Process::ReadMemoryTags(const MemoryTagManager *tag_manager, lldb::addr_t addr,
-                        size_t len) {
-  if (!tag_manager) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "A memory tag manager is required for reading memory tags.");
-  }
+Process::ReadMemoryTags(lldb::addr_t addr, size_t len) {
+  llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
+      GetMemoryTagManager();
+  if (!tag_manager_or_err)
+    return tag_manager_or_err.takeError();
 
-  MemoryTagManager::TagRange range(tag_manager->RemoveNonAddressBits(addr),
-                                   len);
-  range = tag_manager->ExpandToGranule(range);
-
+  const MemoryTagManager *tag_manager = *tag_manager_or_err;
   llvm::Expected<std::vector<uint8_t>> tag_data =
-      DoReadMemoryTags(range.GetRangeBase(), range.GetByteSize(),
-                       tag_manager->GetAllocationTagType());
+      DoReadMemoryTags(addr, len, tag_manager->GetAllocationTagType());
   if (!tag_data)
     return tag_data.takeError();
 
-  return tag_manager->UnpackTagsData(
-      *tag_data, range.GetByteSize() / tag_manager->GetGranuleSize());
+  return tag_manager->UnpackTagsData(*tag_data,
+                                     len / tag_manager->GetGranuleSize());
 }

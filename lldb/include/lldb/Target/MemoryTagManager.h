@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_MEMORYTAGMANAGER_H
 #define LLDB_TARGET_MEMORYTAGMANAGER_H
 
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"
@@ -56,6 +57,20 @@ public:
   // 0-16, we want addresses 8-24. So the range must be
   // expanded to 2 granules.
   virtual TagRange ExpandToGranule(TagRange range) const = 0;
+
+  // Given a range addr to end_addr, check that:
+  // * end_addr >= addr (when memory tags are removed)
+  // * the granule aligned range is completely covered by tagged memory
+  //   (which may include one or more memory regions)
+  //
+  // If so, return a modified range which will have been expanded
+  // to be granule aligned.
+  //
+  // Tags in the input addresses are ignored and not present
+  // in the returned range.
+  virtual llvm::Expected<TagRange> MakeTaggedRange(
+      lldb::addr_t addr, lldb::addr_t end_addr,
+      const lldb_private::MemoryRegionInfos &memory_regions) const = 0;
 
   // Return the type value to use in GDB protocol qMemTags packets to read
   // allocation tags. This is named "Allocation" specifically because the spec

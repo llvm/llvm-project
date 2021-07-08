@@ -68,7 +68,7 @@ protected:
 
     Process *process = m_exe_ctx.GetProcessPtr();
     llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
-        process->GetMemoryTagManager(start_addr, end_addr);
+        process->GetMemoryTagManager();
 
     if (!tag_manager_or_err) {
       result.SetError(Status(tag_manager_or_err.takeError()));
@@ -76,9 +76,21 @@ protected:
     }
 
     const MemoryTagManager *tag_manager = *tag_manager_or_err;
-    ptrdiff_t len = tag_manager->AddressDiff(end_addr, start_addr);
-    llvm::Expected<std::vector<lldb::addr_t>> tags =
-        process->ReadMemoryTags(tag_manager, start_addr, len);
+
+    MemoryRegionInfos memory_regions;
+    // If this fails the list of regions is cleared, so we don't need to read
+    // the return status here.
+    process->GetMemoryRegions(memory_regions);
+    llvm::Expected<MemoryTagManager::TagRange> tagged_range =
+        tag_manager->MakeTaggedRange(start_addr, end_addr, memory_regions);
+
+    if (!tagged_range) {
+      result.SetError(Status(tagged_range.takeError()));
+      return false;
+    }
+
+    llvm::Expected<std::vector<lldb::addr_t>> tags = process->ReadMemoryTags(
+        tagged_range->GetRangeBase(), tagged_range->GetByteSize());
 
     if (!tags) {
       result.SetError(Status(tags.takeError()));
@@ -89,8 +101,7 @@ protected:
                                     tag_manager->GetLogicalTag(start_addr));
     result.AppendMessage("Allocation tags:");
 
-    MemoryTagManager::TagRange initial_range(start_addr, len);
-    addr_t addr = tag_manager->ExpandToGranule(initial_range).GetRangeBase();
+    addr_t addr = tagged_range->GetRangeBase();
     for (auto tag : *tags) {
       addr_t next_addr = addr + tag_manager->GetGranuleSize();
       // Showing tagged adresses here until we have non address bit handling
