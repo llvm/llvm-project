@@ -1018,8 +1018,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     NewPhi = Phi;
   } else {
     // There are other users -> create a new phi
-    NewPhi = PHINode::Create(Phi->getType(), 0, "NewPhi", Phi);
-    std::vector<Value *> Increases;
+    NewPhi = PHINode::Create(Phi->getType(), 2, "NewPhi", Phi);
     // Copy the incoming values of the old phi
     NewPhi->addIncoming(Phi->getIncomingValue(IncrementingBlock == 1 ? 0 : 1),
                         Phi->getIncomingBlock(IncrementingBlock == 1 ? 0 : 1));
