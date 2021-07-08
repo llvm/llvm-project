@@ -392,7 +392,7 @@ bool MipsCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     SmallVector<ArgInfo, 8> RetInfos;
     SmallVector<unsigned, 8> OrigArgIndices;
 
-    ArgInfo ArgRetInfo(VRegs, Val->getType());
+    ArgInfo ArgRetInfo(VRegs, Val->getType(), 0);
     setArgFlags(ArgRetInfo, AttributeList::ReturnIndex, DL, F);
     splitToValueTypes(DL, ArgRetInfo, 0, RetInfos, OrigArgIndices);
 
@@ -436,7 +436,7 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   SmallVector<unsigned, 8> OrigArgIndices;
   unsigned i = 0;
   for (auto &Arg : F.args()) {
-    ArgInfo AInfo(VRegs[i], Arg.getType());
+    ArgInfo AInfo(VRegs[i], Arg.getType(), i);
     setArgFlags(AInfo, i + AttributeList::FirstArgIndex, DL, F);
     ArgInfos.push_back(AInfo);
     OrigArgIndices.push_back(i);
@@ -682,7 +682,8 @@ void MipsCallLowering::splitToValueTypes(
   ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitEVTs);
 
   for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
-    ArgInfo Info = ArgInfo{OrigArg.Regs[i], SplitEVTs[i].getTypeForEVT(Ctx)};
+    ArgInfo Info = ArgInfo{OrigArg.Regs[i], SplitEVTs[i].getTypeForEVT(Ctx),
+                           OriginalIndex};
     Info.Flags = OrigArg.Flags;
     SplitArgs.push_back(Info);
     SplitArgsOrigIndices.push_back(OriginalIndex);
