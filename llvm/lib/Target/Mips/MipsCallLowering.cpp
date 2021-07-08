@@ -390,14 +390,13 @@ bool MipsCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
 
     SmallVector<ArgInfo, 8> RetInfos;
-    SmallVector<unsigned, 8> OrigArgIndices;
 
     ArgInfo ArgRetInfo(VRegs, Val->getType(), 0);
     setArgFlags(ArgRetInfo, AttributeList::ReturnIndex, DL, F);
-    splitToValueTypes(DL, ArgRetInfo, 0, RetInfos, OrigArgIndices);
+    splitToValueTypes(ArgRetInfo, RetInfos, DL, F.getCallingConv());
 
     SmallVector<ISD::OutputArg, 8> Outs;
-    subTargetRegTypeForCallingConv(F, RetInfos, OrigArgIndices, Outs);
+    subTargetRegTypeForCallingConv(F, RetInfos, Outs);
 
     SmallVector<CCValAssign, 16> ArgLocs;
     MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
@@ -433,18 +432,16 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
 
   SmallVector<ArgInfo, 8> ArgInfos;
-  SmallVector<unsigned, 8> OrigArgIndices;
   unsigned i = 0;
   for (auto &Arg : F.args()) {
     ArgInfo AInfo(VRegs[i], Arg.getType(), i);
     setArgFlags(AInfo, i + AttributeList::FirstArgIndex, DL, F);
     ArgInfos.push_back(AInfo);
-    OrigArgIndices.push_back(i);
     ++i;
   }
 
   SmallVector<ISD::InputArg, 8> Ins;
-  subTargetRegTypeForCallingConv(F, ArgInfos, OrigArgIndices, Ins);
+  subTargetRegTypeForCallingConv(F, ArgInfos, Ins);
 
   SmallVector<CCValAssign, 16> ArgLocs;
   MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
@@ -550,7 +547,6 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   FuncOrigArgs.reserve(Info.OrigArgs.size());
 
   SmallVector<ArgInfo, 8> ArgInfos;
-  SmallVector<unsigned, 8> OrigArgIndices;
   unsigned i = 0;
   for (auto &Arg : Info.OrigArgs) {
 
@@ -559,12 +555,11 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     FuncOrigArgs.push_back(Entry);
 
     ArgInfos.push_back(Arg);
-    OrigArgIndices.push_back(i);
     ++i;
   }
 
   SmallVector<ISD::OutputArg, 8> Outs;
-  subTargetRegTypeForCallingConv(F, ArgInfos, OrigArgIndices, Outs);
+  subTargetRegTypeForCallingConv(F, ArgInfos, Outs);
 
   SmallVector<CCValAssign, 8> ArgLocs;
   bool IsCalleeVarArg = false;
@@ -612,12 +607,10 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   if (!Info.OrigRet.Ty->isVoidTy()) {
     ArgInfos.clear();
-    SmallVector<unsigned, 8> OrigRetIndices;
-
-    splitToValueTypes(DL, Info.OrigRet, 0, ArgInfos, OrigRetIndices);
+    splitToValueTypes(Info.OrigRet, ArgInfos, DL, Info.CallConv);
 
     SmallVector<ISD::InputArg, 8> Ins;
-    subTargetRegTypeForCallingConv(F, ArgInfos, OrigRetIndices, Ins);
+    subTargetRegTypeForCallingConv(F, ArgInfos, Ins);
 
     SmallVector<CCValAssign, 8> ArgLocs;
     MipsCCState CCInfo(Info.CallConv, F.isVarArg(), MF, ArgLocs,
@@ -640,7 +633,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 template <typename T>
 void MipsCallLowering::subTargetRegTypeForCallingConv(
     const Function &F, ArrayRef<ArgInfo> Args,
-    ArrayRef<unsigned> OrigArgIndices, SmallVectorImpl<T> &ISDArgs) const {
+    SmallVectorImpl<T> &ISDArgs) const {
   const DataLayout &DL = F.getParent()->getDataLayout();
   const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
 
@@ -661,31 +654,9 @@ void MipsCallLowering::subTargetRegTypeForCallingConv(
       else
         Flags.setOrigAlign(Align(1));
 
-      ISDArgs.emplace_back(Flags, RegisterVT, VT, true, OrigArgIndices[ArgNo],
+      ISDArgs.emplace_back(Flags, RegisterVT, VT, true, Arg.OrigArgIndex,
                            0);
     }
     ++ArgNo;
-  }
-}
-
-// FIXME: This should be removed and the generic version used
-void MipsCallLowering::splitToValueTypes(
-    const DataLayout &DL, const ArgInfo &OrigArg, unsigned OriginalIndex,
-    SmallVectorImpl<ArgInfo> &SplitArgs,
-    SmallVectorImpl<unsigned> &SplitArgsOrigIndices) const {
-
-  SmallVector<EVT, 4> SplitEVTs;
-  SmallVector<Register, 4> SplitVRegs;
-  const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
-  LLVMContext &Ctx = OrigArg.Ty->getContext();
-
-  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitEVTs);
-
-  for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
-    ArgInfo Info = ArgInfo{OrigArg.Regs[i], SplitEVTs[i].getTypeForEVT(Ctx),
-                           OriginalIndex};
-    Info.Flags = OrigArg.Flags;
-    SplitArgs.push_back(Info);
-    SplitArgsOrigIndices.push_back(OriginalIndex);
   }
 }
