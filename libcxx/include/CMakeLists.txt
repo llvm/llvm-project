@@ -186,6 +186,7 @@ set(files
   __ranges/all.h
   __ranges/concepts.h
   __ranges/copyable_box.h
+  __ranges/dangling.h
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/empty_view.h

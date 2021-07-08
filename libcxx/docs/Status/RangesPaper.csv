@@ -133,7 +133,7 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.dangling] <http://wg21.link/range.dangling>`_,"| ranges::dangling
 | ranges::borrowed_iterator_t
 | ranges::borrowed_subrange_t","| [range.range]
-| [range.subrange]",Unassigned,Not started
+| [range.subrange]",Christopher Di Bella,✅
 `[range.all] <http://wg21.link/range.all>`_,`view::all <https://llvm.org/D102028>`_,"[range.subrange], [range.view.ref]",Zoe Carver,✅
 `[range.view.ref] <http://wg21.link/range.view>`_,`ref-view <https://llvm.org/D102020>`_,[view.interface],Zoe Carver,✅
 `[range.filter] <http://wg21.link/range.filter>`_,filter_view,[range.all],Louis Dionne,Not started
