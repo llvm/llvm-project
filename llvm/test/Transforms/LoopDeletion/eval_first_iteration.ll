@@ -1046,3 +1046,192 @@ done:                                             ; preds = %backedge
   %sum.next.lcssa = phi i32 [ %sum.next, %backedge ]
   ret i32 %sum.next.lcssa
 }
+
+
+
+; Switch tests
+
+; Here switch will always jump to the default label
+define i32 @test_switch_ne_default() {
+; CHECK-LABEL: @test_switch_ne_default(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 4, [[SUM]]
+; CHECK-NEXT:    switch i32 [[SUB]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[ONZERO:%.*]]
+; CHECK-NEXT:    i32 1, label [[ONONE:%.*]]
+; CHECK-NEXT:    i32 2, label [[ONTWO:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       onzero:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       onone:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       ontwo:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ [[SUB]], [[DEFAULT]] ], [ 0, [[ONZERO]] ], [ 1, [[ONONE]] ], [ 2, [[ONTWO]] ]
+; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], 4
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK:       done:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %backedge, %entry
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %backedge ]
+  %sub = sub i32 4, %sum
+  switch i32 %sub, label %default [
+  i32 0, label %onzero
+  i32 1, label %onone
+  i32 2, label %ontwo
+  ]
+
+default:                                          ; preds = %loop
+  br label %backedge
+
+onzero:                                           ; preds = %loop
+  br label %backedge
+
+onone:                                            ; preds = %loop
+  br label %backedge
+
+ontwo:                                            ; preds = %loop
+  br label %backedge
+
+backedge:                                         ; preds = %ontwo, %onone, %onzero, %default
+  %merge.phi = phi i32 [ %sub, %default ], [ 0, %onzero ], [ 1, %onone ], [ 2, %ontwo ]
+  %sum.next = add i32 %sum, %merge.phi
+  %loop.cond = icmp ne i32 %sum.next, 4
+  br i1 %loop.cond, label %loop, label %done
+
+done:                                             ; preds = %backedge
+  %sum.next.lcssa = phi i32 [ %sum.next, %backedge ]
+  ret i32 %sum.next.lcssa
+}
+
+; Here switch will always jump to the %ontwo label
+define i32 @test_switch_ne_one_case() {
+; CHECK-LABEL: @test_switch_ne_one_case(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 4, [[SUM]]
+; CHECK-NEXT:    switch i32 [[SUB]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[ONZERO:%.*]]
+; CHECK-NEXT:    i32 1, label [[ONONE:%.*]]
+; CHECK-NEXT:    i32 4, label [[ONTWO:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       onzero:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       onone:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       ontwo:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 2, [[DEFAULT]] ], [ 0, [[ONZERO]] ], [ 1, [[ONONE]] ], [ [[SUB]], [[ONTWO]] ]
+; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], 4
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK:       done:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %backedge, %entry
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %backedge ]
+  %sub = sub i32 4, %sum
+  switch i32 %sub, label %default [
+  i32 0, label %onzero
+  i32 1, label %onone
+  i32 4, label %ontwo
+  ]
+
+default:                                          ; preds = %loop
+  br label %backedge
+
+onzero:                                           ; preds = %loop
+  br label %backedge
+
+onone:                                            ; preds = %loop
+  br label %backedge
+
+ontwo:                                            ; preds = %loop
+  br label %backedge
+
+backedge:                                         ; preds = %ontwo, %onone, %onzero, %default
+  %merge.phi = phi i32 [ 2, %default ], [ 0, %onzero ], [ 1, %onone ], [ %sub, %ontwo ]
+  %sum.next = add i32 %sum, %merge.phi
+  %loop.cond = icmp ne i32 %sum.next, 4
+  br i1 %loop.cond, label %loop, label %done
+
+done:                                             ; preds = %backedge
+  %sum.next.lcssa = phi i32 [ %sum.next, %backedge ]
+  ret i32 %sum.next.lcssa
+}
+
+; Here switch will always jump to the %backedge label, but there are two jumps to this label in switch
+define i32 @test_switch_ne_one_case_identical_jumps() {
+; CHECK-LABEL: @test_switch_ne_one_case_identical_jumps(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SUM_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 2, [[SUM]]
+; CHECK-NEXT:    switch i32 [[SUB]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[FIRST_BLOCK:%.*]]
+; CHECK-NEXT:    i32 1, label [[BACKEDGE]]
+; CHECK-NEXT:    i32 2, label [[BACKEDGE]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       first_block:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[MERGE_PHI:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 1, [[FIRST_BLOCK]] ], [ [[SUB]], [[LOOP]] ], [ [[SUB]], [[LOOP]] ]
+; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[MERGE_PHI]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], 2
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK:       done:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %backedge, %entry
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %backedge ]
+  %sub = sub i32 2, %sum
+  switch i32 %sub, label %default [
+  i32 0, label %first_block
+  i32 1, label %backedge
+  i32 2, label %backedge
+  ]
+
+default:                                          ; preds = %loop
+  br label %backedge
+
+first_block:                                      ; preds = %loop
+  br label %backedge
+
+backedge:                                         ; preds = %first_block, %default, %loop, %loop
+  %merge.phi = phi i32 [ 0, %default ], [ 1, %first_block ], [ %sub, %loop ], [ %sub, %loop ]
+  %sum.next = add i32 %sum, %merge.phi
+  %loop.cond = icmp ne i32 %sum.next, 2
+  br i1 %loop.cond, label %loop, label %done
+
+done:                                             ; preds = %backedge
+  %sum.next.lcssa = phi i32 [ %sum.next, %backedge ]
+  ret i32 %sum.next.lcssa
+}
