@@ -991,8 +991,7 @@ public:
         Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr = "",
         Instruction *InsertBefore = nullptr),
       "Use the version with explicit element type instead") {
-    return CreateInBounds(Ptr->getType()->getPointerElementType(), Ptr, IdxList,
-                          NameStr, InsertBefore);
+    return CreateInBounds(nullptr, Ptr, IdxList, NameStr, InsertBefore);
   }
 
   /// Create an "inbounds" getelementptr. See the documentation for the
@@ -1011,8 +1010,7 @@ public:
         Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr,
         BasicBlock *InsertAtEnd),
       "Use the version with explicit element type instead") {
-    return CreateInBounds(Ptr->getType()->getPointerElementType(), Ptr, IdxList,
-                          NameStr, InsertAtEnd);
+    return CreateInBounds(nullptr, Ptr, IdxList, NameStr, InsertAtEnd);
   }
 
   static GetElementPtrInst *CreateInBounds(Type *PointeeType, Value *Ptr,
