@@ -19,18 +19,20 @@ namespace llvm {
 namespace orc {
 namespace shared {
 
+// Placeholder for future replacement for JITTargetAddress.
+using ExecutorAddress = uint64_t;
+
 /// Represents an address range in the exceutor process.
 struct ExecutorAddressRange {
   ExecutorAddressRange() = default;
-  ExecutorAddressRange(JITTargetAddress StartAddress,
-                       JITTargetAddress EndAddress)
+  ExecutorAddressRange(ExecutorAddress StartAddress, ExecutorAddress EndAddress)
       : StartAddress(StartAddress), EndAddress(EndAddress) {}
 
   bool empty() const { return StartAddress == EndAddress; }
   size_t size() const { return EndAddress - StartAddress; }
 
-  JITTargetAddress StartAddress = 0;
-  JITTargetAddress EndAddress = 0;
+  ExecutorAddress StartAddress = 0;
+  ExecutorAddress EndAddress = 0;
 };
 
 using SPSExecutorAddressRange =
