@@ -366,7 +366,7 @@ int foo(int n, double *ptr) {
 
   // TCHECK:  define weak void @__omp_offloading_{{.+}}(double* [[PTR_IN:%.+]], [[TTII]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[E:%.+]])
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca double*,
-  // TCHECK: alloca [[TTII]],
+  // TCHECK-NOT: alloca [[TTII]],
   // TCHECK-NOT: alloca double*,
   // TCHECK:  store double* [[PTR_IN]], double** [[PTR_ADDR]],
   // TCHECK-NOT: store double* %
