@@ -864,7 +864,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
     // End the token if this is whitespace.
     if (isWhitespace(C)) {
       if (!Token.empty())
-        NewArgv.push_back(Saver.save(StringRef(Token)).data());
+        NewArgv.push_back(Saver.save(Token.str()).data());
       // Mark the end of lines in response files.
       if (MarkEOLs && C == '\n')
         NewArgv.push_back(nullptr);
@@ -878,7 +878,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
 
   // Append the last token after hitting EOF with no whitespace.
   if (!Token.empty())
-    NewArgv.push_back(Saver.save(StringRef(Token)).data());
+    NewArgv.push_back(Saver.save(Token.str()).data());
 }
 
 /// Backslashes are interpreted in a rather complicated way in the Windows-style

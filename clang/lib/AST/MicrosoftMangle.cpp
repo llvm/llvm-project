@@ -3676,7 +3676,7 @@ void MicrosoftMangleContextImpl::mangleCXXRTTICompleteObjectLocator(
   assert(VFTableMangling.startswith("??_7") ||
          VFTableMangling.startswith("??_S"));
 
-  Out << "??_R4" << StringRef(VFTableMangling).drop_front(4);
+  Out << "??_R4" << VFTableMangling.str().drop_front(4);
 }
 
 void MicrosoftMangleContextImpl::mangleSEHFilterExpression(

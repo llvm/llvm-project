@@ -230,7 +230,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     raw_svector_ostream OS(Name);
     Msymtab.printSymbolName(OS, Msym);
   }
-  setStr(Sym.Name, Saver.save(StringRef(Name)));
+  setStr(Sym.Name, Saver.save(Name.str()));
 
   auto Flags = Msymtab.getSymbolFlags(Msym);
   if (Flags & object::BasicSymbolRef::SF_Undefined)

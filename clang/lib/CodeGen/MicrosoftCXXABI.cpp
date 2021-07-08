@@ -4338,7 +4338,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
   };
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), TIType, /*isConstant=*/true, getLinkageForRTTI(T),
-      llvm::ConstantStruct::get(TIType, Fields), StringRef(MangledName));
+      llvm::ConstantStruct::get(TIType, Fields), MangledName.str());
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   GV->setSection(".xdata");
   if (GV->isWeakForLinker())
