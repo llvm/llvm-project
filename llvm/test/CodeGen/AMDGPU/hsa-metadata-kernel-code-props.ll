@@ -16,7 +16,7 @@
 ; CHECK:     PrivateSegmentFixedSize: 0
 ; CHECK:     KernargSegmentAlign:     8
 ; CHECK:     WavefrontSize:           64
-; CHECK:     NumSGPRs:                8
+; CHECK:     NumSGPRs:                6
 ; CHECK:     NumVGPRs:                {{3|6}}
 ; CHECK:     MaxFlatWorkGroupSize:    1024
 define amdgpu_kernel void @test(
@@ -39,7 +39,7 @@ entry:
 ; CHECK:     PrivateSegmentFixedSize: 0
 ; CHECK:     KernargSegmentAlign:     8
 ; CHECK:     WavefrontSize:           64
-; CHECK:     NumSGPRs:                8
+; CHECK:     NumSGPRs:                6
 ; CHECK:     NumVGPRs:                {{3|6}}
 ; CHECK:     MaxFlatWorkGroupSize:    256
 define amdgpu_kernel void @test_max_flat_workgroup_size(
