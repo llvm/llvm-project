@@ -8674,16 +8674,103 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
 
 bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   bool Changed = false;
+  // Sort by type, base pointers and values operand. Value operands must be
+  // compatible (have the same opcode, same parent), otherwise it is
+  // definitely not profitable to try to vectorize them.
+  auto &&StoreSorter = [this](StoreInst *V, StoreInst *V2) {
+    if (V->getPointerOperandType()->getTypeID() <
+        V2->getPointerOperandType()->getTypeID())
+      return true;
+    if (V->getPointerOperandType()->getTypeID() >
+        V2->getPointerOperandType()->getTypeID())
+      return false;
+    // UndefValues are compatible with all other values.
+    if (isa<UndefValue>(V->getValueOperand()) ||
+        isa<UndefValue>(V2->getValueOperand()))
+      return false;
+    if (auto *I1 = dyn_cast<Instruction>(V->getValueOperand()))
+      if (auto *I2 = dyn_cast<Instruction>(V2->getValueOperand())) {
+        DomTreeNodeBase<llvm::BasicBlock> *NodeI1 =
+            DT->getNode(I1->getParent());
+        DomTreeNodeBase<llvm::BasicBlock> *NodeI2 =
+            DT->getNode(I2->getParent());
+        assert(NodeI1 && "Should only process reachable instructions");
+        assert(NodeI1 && "Should only process reachable instructions");
+        assert((NodeI1 == NodeI2) ==
+                   (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
+               "Different nodes should have different DFS numbers");
+        if (NodeI1 != NodeI2)
+          return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
+        InstructionsState S = getSameOpcode({I1, I2});
+        if (S.getOpcode())
+          return false;
+        return I1->getOpcode() < I2->getOpcode();
+      }
+    if (isa<Constant>(V->getValueOperand()) &&
+        isa<Constant>(V2->getValueOperand()))
+      return false;
+    return V->getValueOperand()->getValueID() <
+           V2->getValueOperand()->getValueID();
+  };
+
+  auto &&AreCompatibleStores = [](StoreInst *V1, StoreInst *V2) {
+    if (V1 == V2)
+      return true;
+    if (V1->getPointerOperandType() != V2->getPointerOperandType())
+      return false;
+    // Undefs are compatible with any other value.
+    if (isa<UndefValue>(V1->getValueOperand()) ||
+        isa<UndefValue>(V2->getValueOperand()))
+      return true;
+    if (auto *I1 = dyn_cast<Instruction>(V1->getValueOperand()))
+      if (auto *I2 = dyn_cast<Instruction>(V2->getValueOperand())) {
+        if (I1->getParent() != I2->getParent())
+          return false;
+        InstructionsState S = getSameOpcode({I1, I2});
+        return S.getOpcode() > 0;
+      }
+    if (isa<Constant>(V1->getValueOperand()) &&
+        isa<Constant>(V2->getValueOperand()))
+      return true;
+    return V1->getValueOperand()->getValueID() ==
+           V2->getValueOperand()->getValueID();
+  };
+
   // Attempt to sort and vectorize each of the store-groups.
-  for (StoreListMap::iterator it = Stores.begin(), e = Stores.end(); it != e;
-       ++it) {
-    if (it->second.size() < 2)
+  for (auto &Pair : Stores) {
+    if (Pair.second.size() < 2)
       continue;
 
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
-                      << it->second.size() << ".\n");
+                      << Pair.second.size() << ".\n");
 
-    Changed |= vectorizeStores(it->second, R);
+    stable_sort(Pair.second, StoreSorter);
+
+    // Try to vectorize elements based on their compatibility.
+    for (ArrayRef<StoreInst *>::iterator IncIt = Pair.second.begin(),
+                                         E = Pair.second.end();
+         IncIt != E;) {
+
+      // Look for the next elements with the same type.
+      ArrayRef<StoreInst *>::iterator SameTypeIt = IncIt;
+      Type *EltTy = (*IncIt)->getPointerOperand()->getType();
+
+      while (SameTypeIt != E && AreCompatibleStores(*SameTypeIt, *IncIt))
+        ++SameTypeIt;
+
+      // Try to vectorize them.
+      unsigned NumElts = (SameTypeIt - IncIt);
+      LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize starting at stores ("
+                        << NumElts << ")\n");
+      if (NumElts > 1 && !EltTy->getPointerElementType()->isVectorTy() &&
+          vectorizeStores(makeArrayRef(IncIt, NumElts), R)) {
+        // Success start over because instructions might have been changed.
+        Changed = true;
+      }
+
+      // Start over at the next instruction of a different type (or the end).
+      IncIt = SameTypeIt;
+    }
   }
   return Changed;
 }
