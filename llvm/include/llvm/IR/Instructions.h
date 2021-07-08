@@ -333,9 +333,8 @@ public:
             AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly two operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 2);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Return true if this is a store to a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
@@ -463,9 +462,8 @@ public:
             BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 0);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 0); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Returns the ordering constraint of this fence instruction.
   AtomicOrdering getOrdering() const {
@@ -547,9 +545,8 @@ public:
                     BasicBlock *InsertAtEnd);
 
   // allocate space for exactly three operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 3);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 3); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   using VolatileField = BoolBitfieldElementT<0>;
   using WeakField = BoolBitfieldElementT<VolatileField::NextBit>;
@@ -792,9 +789,8 @@ public:
                 BasicBlock *InsertAtEnd);
 
   // allocate space for exactly two operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 2);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   using VolatileField = BoolBitfieldElementT<0>;
   using AtomicOrderingField =
@@ -2040,7 +2036,8 @@ public:
   ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
                     const Twine &NameStr, BasicBlock *InsertAtEnd);
 
-  void *operator new(size_t s) { return User::operator new(s, 2); }
+  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
 
   /// Swap the operands and adjust the mask to preserve the semantics
   /// of the instruction.
@@ -2497,9 +2494,8 @@ protected:
 
 public:
   // allocate space for exactly two operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 2);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 2); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   static InsertValueInst *Create(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> Idxs,
@@ -2875,9 +2871,7 @@ private:
                           const Twine &NameStr, BasicBlock *InsertAtEnd);
 
   // Allocate space for exactly zero operands.
-  void *operator new(size_t s) {
-    return User::operator new(s);
-  }
+  void *operator new(size_t S) { return User::operator new(S); }
 
   void growOperands(unsigned Size);
   void init(unsigned NumReservedValues, const Twine &NameStr);
@@ -2889,6 +2883,8 @@ protected:
   LandingPadInst *cloneImpl() const;
 
 public:
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
   /// Constructors - NumReservedClauses is a hint for the number of incoming
   /// clauses that this landingpad will have (use 0 if you really have no idea).
   static LandingPadInst *Create(Type *RetTy, unsigned NumReservedClauses,
@@ -3207,9 +3203,7 @@ class SwitchInst : public Instruction {
              BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) {
-    return User::operator new(s);
-  }
+  void *operator new(size_t S) { return User::operator new(S); }
 
   void init(Value *Value, BasicBlock *Default, unsigned NumReserved);
   void growOperands();
@@ -3221,6 +3215,8 @@ protected:
   SwitchInst *cloneImpl() const;
 
 public:
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
   // -2
   static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L-1);
 
@@ -3605,9 +3601,7 @@ class IndirectBrInst : public Instruction {
   IndirectBrInst(Value *Address, unsigned NumDests, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) {
-    return User::operator new(s);
-  }
+  void *operator new(size_t S) { return User::operator new(S); }
 
   void init(Value *Address, unsigned NumDests);
   void growOperands();
@@ -3619,6 +3613,8 @@ protected:
   IndirectBrInst *cloneImpl() const;
 
 public:
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+
   /// Iterator type that casts an operand to a basic block.
   ///
   /// This only makes sense because the successors are stored as adjacent
@@ -4256,7 +4252,7 @@ class CatchSwitchInst : public Instruction {
                   BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) { return User::operator new(s); }
+  void *operator new(size_t S) { return User::operator new(S); }
 
   void init(Value *ParentPad, BasicBlock *UnwindDest, unsigned NumReserved);
   void growOperands(unsigned Size);
@@ -4268,6 +4264,8 @@ protected:
   CatchSwitchInst *cloneImpl() const;
 
 public:
+  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+
   static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumHandlers,
                                  const Twine &NameStr = "",
@@ -4696,9 +4694,8 @@ public:
   explicit UnreachableInst(LLVMContext &C, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
-  void *operator new(size_t s) {
-    return User::operator new(s, 0);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 0); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   unsigned getNumSuccessors() const { return 0; }
 
