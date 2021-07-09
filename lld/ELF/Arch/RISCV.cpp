@@ -24,6 +24,7 @@ class RISCV final : public TargetInfo {
 public:
   RISCV();
   uint32_t calcEFlags() const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
@@ -132,6 +133,28 @@ uint32_t RISCV::calcEFlags() const {
   }
 
   return target;
+}
+
+int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
+  case R_RISCV_32:
+  case R_RISCV_TLS_DTPMOD32:
+  case R_RISCV_TLS_DTPREL32:
+    return SignExtend64<32>(read32le(buf));
+  case R_RISCV_64:
+    return read64le(buf);
+  case R_RISCV_RELATIVE:
+  case R_RISCV_IRELATIVE:
+    return config->is64 ? read64le(buf) : read32le(buf);
+  case R_RISCV_NONE:
+  case R_RISCV_JUMP_SLOT:
+    // These relocations are defined as not having an implicit addend.
+    return 0;
+  }
 }
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
