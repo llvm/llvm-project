@@ -31,6 +31,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -158,7 +159,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
       Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
       break;
     }
-    // FALLTHRU
+    LLVM_FALLTHROUGH;
   default:
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                     " missing .globaltype");
