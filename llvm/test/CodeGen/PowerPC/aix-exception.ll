@@ -111,7 +111,7 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:    .byte   0x41                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; ASM:                                    # OnConditionDirective = 0, -IsCRSaved, +IsLRSaved
 ; ASM:    .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; ASM:    .byte   0x40                            # -HasVectorInfo, +HasExtensionTable, NumOfGPRsSaved = 0
+; ASM:    .byte   0x80                            # +HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
 ; ASM:    .byte   0x00                            # NumberOfFixedParms = 0
 ; ASM:    .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; ASM:    .vbyte  4, L.._Z9catchFuncv0-._Z9catchFuncv # Function size

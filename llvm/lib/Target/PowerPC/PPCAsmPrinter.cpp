@@ -2107,8 +2107,8 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   SecondHalfOfMandatoryField |= (GPRSaved << TracebackTable::GPRSavedShift) &
                                 TracebackTable::GPRSavedMask;
 
-  GENBOOLCOMMENT("", SecondHalfOfMandatoryField, HasVectorInfo);
-  GENBOOLCOMMENT(", ", SecondHalfOfMandatoryField, HasExtensionTable);
+  GENBOOLCOMMENT("", SecondHalfOfMandatoryField, HasExtensionTable);
+  GENBOOLCOMMENT(", ", SecondHalfOfMandatoryField, HasVectorInfo);
   GENVALUECOMMENT(", NumOfGPRsSaved", SecondHalfOfMandatoryField, GPRSaved);
   EmitComment();
   OutStreamer->emitIntValueInHexWithPadding(
