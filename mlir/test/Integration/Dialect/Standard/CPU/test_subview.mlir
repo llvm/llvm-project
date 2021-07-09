@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-memref-to-llvm -convert-std-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext | FileCheck %s
 

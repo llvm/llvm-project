@@ -1,33 +1,11 @@
-// RUN: mlir-opt -split-input-file -convert-std-to-llvm %s | FileCheck %s
-// RUN: mlir-opt -split-input-file -convert-std-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
-
-// CHECK-LABEL: func @check_strided_memref_arguments(
-// CHECK-COUNT-2: !llvm.ptr<f32>
-// CHECK-COUNT-5: i64
-// CHECK-COUNT-2: !llvm.ptr<f32>
-// CHECK-COUNT-5: i64
-// CHECK-COUNT-2: !llvm.ptr<f32>
-// CHECK-COUNT-5: i64
-func @check_strided_memref_arguments(%static: memref<10x20xf32, affine_map<(i,j)->(20 * i + j + 1)>>,
-                                     %dynamic : memref<?x?xf32, affine_map<(i,j)[M]->(M * i + j + 1)>>,
-                                     %mixed : memref<10x?xf32, affine_map<(i,j)[M]->(M * i + j + 1)>>) {
-  return
-}
-
-// CHECK-LABEL: func @check_arguments
-// CHECK-COUNT-2: !llvm.ptr<f32>
-// CHECK-COUNT-5: i64
-// CHECK-COUNT-2: !llvm.ptr<f32>
-// CHECK-COUNT-5: i64
-// CHECK-COUNT-2: !llvm.ptr<f32>
-// CHECK-COUNT-5: i64
-func @check_arguments(%static: memref<10x20xf32>, %dynamic : memref<?x?xf32>, %mixed : memref<10x?xf32>) {
-  return
-}
+// RUN: mlir-opt -split-input-file -convert-memref-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-memref-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
 
 // CHECK-LABEL: func @mixed_alloc(
-//       CHECK:   %[[M:.*]]: i64, %[[N:.*]]: i64) -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)> {
+//       CHECK:   %[[Marg:.*]]: index, %[[Narg:.*]]: index)
 func @mixed_alloc(%arg0: index, %arg1: index) -> memref<?x42x?xf32> {
+//       CHECK:  %[[M:.*]] = llvm.mlir.cast %[[Marg]]
+//       CHECK:  %[[N:.*]] = llvm.mlir.cast %[[Narg]]
 //       CHECK:  %[[c42:.*]] = llvm.mlir.constant(42 : index) : i64
 //  CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.mul %[[N]], %[[c42]] : i64
@@ -49,9 +27,10 @@ func @mixed_alloc(%arg0: index, %arg1: index) -> memref<?x42x?xf32> {
 //  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[one]], %{{.*}}[4, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
   %0 = memref.alloc(%arg0, %arg1) : memref<?x42x?xf32>
-//  CHECK-NEXT:  llvm.return %{{.*}} : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
   return %0 : memref<?x42x?xf32>
 }
+
+// -----
 
 // CHECK-LABEL: func @mixed_dealloc
 func @mixed_dealloc(%arg0: memref<?x42x?xf32>) {
@@ -59,13 +38,16 @@ func @mixed_dealloc(%arg0: memref<?x42x?xf32>) {
 // CHECK-NEXT:  %[[ptri8:.*]] = llvm.bitcast %[[ptr]] : !llvm.ptr<f32> to !llvm.ptr<i8>
 // CHECK-NEXT:  llvm.call @free(%[[ptri8]]) : (!llvm.ptr<i8>) -> ()
   memref.dealloc %arg0 : memref<?x42x?xf32>
-// CHECK-NEXT:  llvm.return
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @dynamic_alloc(
-//       CHECK:   %[[M:.*]]: i64, %[[N:.*]]: i64) -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)> {
+//       CHECK:   %[[Marg:.*]]: index, %[[Narg:.*]]: index)
 func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+//       CHECK:  %[[M:.*]] = llvm.mlir.cast %[[Marg]]
+//       CHECK:  %[[N:.*]] = llvm.mlir.cast %[[Narg]]
 //  CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : i64
 //  CHECK-NEXT:  %[[sz:.*]] = llvm.mul %[[N]], %[[M]] : i64
 //  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<f32>
@@ -83,15 +65,16 @@ func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  llvm.insertvalue %[[one]], %{{.*}}[4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
-//  CHECK-NEXT:  llvm.return %{{.*}} : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   return %0 : memref<?x?xf32>
 }
 
 // -----
 
 // CHECK-LABEL: func @dynamic_alloca
-// CHECK: %[[M:.*]]: i64, %[[N:.*]]: i64) -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)> {
+// CHECK: %[[Marg:.*]]: index, %[[Narg:.*]]: index)
 func @dynamic_alloca(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+//       CHECK:  %[[M:.*]] = llvm.mlir.cast %[[Marg]]
+//       CHECK:  %[[N:.*]] = llvm.mlir.cast %[[Narg]]
 //  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : i64
 //  CHECK-NEXT:  %[[num_elems:.*]] = llvm.mul %[[N]], %[[M]] : i64
 //  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr<f32>
@@ -120,6 +103,8 @@ func @dynamic_alloca(%arg0: index, %arg1: index) -> memref<?x?xf32> {
   return %0 : memref<?x?xf32>
 }
 
+// -----
+
 // CHECK-LABEL: func @dynamic_dealloc
 func @dynamic_dealloc(%arg0: memref<?x?xf32>) {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -129,8 +114,10 @@ func @dynamic_dealloc(%arg0: memref<?x?xf32>) {
   return
 }
 
-// CHECK-LABEL: func @stdlib_aligned_alloc({{.*}}) -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)> {
-// ALIGNED-ALLOC-LABEL: func @stdlib_aligned_alloc({{.*}}) -> !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)> {
+// -----
+
+// CHECK-LABEL: func @stdlib_aligned_alloc({{.*}})
+// ALIGNED-ALLOC-LABEL: func @stdlib_aligned_alloc({{.*}})
 func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
 // ALIGNED-ALLOC-NEXT:  %[[sz1:.*]] = llvm.mlir.constant(32 : index) : i64
 // ALIGNED-ALLOC-NEXT:  %[[sz2:.*]] = llvm.mlir.constant(18 : index) : i64
@@ -175,12 +162,13 @@ func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
   return %0 : memref<32x18xf32>
 }
 
+// -----
+
 // CHECK-LABEL: func @mixed_load(
-// CHECK-COUNT-2: !llvm.ptr<f32>,
-// CHECK-COUNT-5: {{%[a-zA-Z0-9]*}}: i64
-// CHECK:         %[[I:.*]]: i64,
-// CHECK:         %[[J:.*]]: i64)
+// CHECK:         %{{.*}}, %[[Iarg:.*]]: index, %[[Jarg:.*]]: index)
 func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
+//       CHECK:  %[[I:.*]] = llvm.mlir.cast %[[Iarg]]
+//       CHECK:  %[[J:.*]] = llvm.mlir.cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
@@ -191,17 +179,13 @@ func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @dynamic_load(
-// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm.ptr<f32>
-// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm.ptr<f32>
-// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: i64
+// CHECK:         %{{.*}}, %[[Iarg:.*]]: index, %[[Jarg:.*]]: index)
 func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
+//       CHECK:  %[[I:.*]] = llvm.mlir.cast %[[Iarg]]
+//       CHECK:  %[[J:.*]] = llvm.mlir.cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
@@ -212,17 +196,13 @@ func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @prefetch
-// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm.ptr<f32>
-// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm.ptr<f32>
-// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: i64
+// CHECK:         %{{.*}}, %[[Iarg:.*]]: index, %[[Jarg:.*]]: index)
 func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
+//      CHECK:  %[[I:.*]] = llvm.mlir.cast %[[Iarg]]
+//      CHECK:  %[[J:.*]] = llvm.mlir.cast %[[Jarg]]
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
@@ -246,17 +226,13 @@ func @prefetch(%A : memref<?x?xf32>, %i : index, %j : index) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @dynamic_store
-// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm.ptr<f32>
-// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm.ptr<f32>
-// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: i64
+// CHECK:         %{{.*}}, %[[Iarg:.*]]: index, %[[Jarg:.*]]: index
 func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %val : f32) {
+//       CHECK:  %[[I:.*]] = llvm.mlir.cast %[[Iarg]]
+//       CHECK:  %[[J:.*]] = llvm.mlir.cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
@@ -267,17 +243,13 @@ func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %val : f
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @mixed_store
-// CHECK-SAME:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm.ptr<f32>
-// CHECK-SAME:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm.ptr<f32>
-// CHECK-SAME:         %[[ARG2:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG3:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG4:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG5:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[ARG6:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[I:[a-zA-Z0-9]*]]: i64
-// CHECK-SAME:         %[[J:[a-zA-Z0-9]*]]: i64
+// CHECK:         %{{.*}}, %[[Iarg:.*]]: index, %[[Jarg:.*]]: index
 func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val : f32) {
+//       CHECK:  %[[I:.*]] = llvm.mlir.cast %[[Iarg]]
+//       CHECK:  %[[J:.*]] = llvm.mlir.cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] : i64
@@ -288,12 +260,16 @@ func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val : f32)
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @memref_cast_static_to_dynamic
 func @memref_cast_static_to_dynamic(%static : memref<10x42xf32>) {
 // CHECK-NOT: llvm.bitcast
   %0 = memref.cast %static : memref<10x42xf32> to memref<?x?xf32>
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @memref_cast_static_to_mixed
 func @memref_cast_static_to_mixed(%static : memref<10x42xf32>) {
@@ -302,12 +278,16 @@ func @memref_cast_static_to_mixed(%static : memref<10x42xf32>) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @memref_cast_dynamic_to_static
 func @memref_cast_dynamic_to_static(%dynamic : memref<?x?xf32>) {
 // CHECK-NOT: llvm.bitcast
   %0 = memref.cast %dynamic : memref<?x?xf32> to memref<10x12xf32>
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @memref_cast_dynamic_to_mixed
 func @memref_cast_dynamic_to_mixed(%dynamic : memref<?x?xf32>) {
@@ -316,12 +296,16 @@ func @memref_cast_dynamic_to_mixed(%dynamic : memref<?x?xf32>) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @memref_cast_mixed_to_dynamic
 func @memref_cast_mixed_to_dynamic(%mixed : memref<42x?xf32>) {
 // CHECK-NOT: llvm.bitcast
   %0 = memref.cast %mixed : memref<42x?xf32> to memref<?x?xf32>
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @memref_cast_mixed_to_static
 func @memref_cast_mixed_to_static(%mixed : memref<42x?xf32>) {
@@ -330,12 +314,16 @@ func @memref_cast_mixed_to_static(%mixed : memref<42x?xf32>) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @memref_cast_mixed_to_mixed
 func @memref_cast_mixed_to_mixed(%mixed : memref<42x?xf32>) {
 // CHECK-NOT: llvm.bitcast
   %0 = memref.cast %mixed : memref<42x?xf32> to memref<?x1xf32>
   return
 }
+
+// -----
 
 // CHECK-LABEL: func @memref_cast_ranked_to_unranked
 func @memref_cast_ranked_to_unranked(%arg : memref<42x2x?xf32>) {
@@ -351,6 +339,8 @@ func @memref_cast_ranked_to_unranked(%arg : memref<42x2x?xf32>) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @memref_cast_unranked_to_ranked
 func @memref_cast_unranked_to_ranked(%arg : memref<*xf32>) {
 //      CHECK: %[[p:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(i64, ptr<i8>)>
@@ -359,48 +349,46 @@ func @memref_cast_unranked_to_ranked(%arg : memref<*xf32>) {
   return
 }
 
+// -----
+
 // CHECK-LABEL: func @mixed_memref_dim
 func @mixed_memref_dim(%mixed : memref<42x?x?x13x?xf32>) {
 // CHECK: llvm.mlir.constant(42 : index) : i64
   %c0 = constant 0 : index
   %0 = memref.dim %mixed, %c0 : memref<42x?x?x13x?xf32>
-// CHECK: llvm.extractvalue %[[ld:.*]][3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
   %c1 = constant 1 : index
   %1 = memref.dim %mixed, %c1 : memref<42x?x?x13x?xf32>
-// CHECK: llvm.extractvalue %[[ld]][3, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[3, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
   %c2 = constant 2 : index
   %2 = memref.dim %mixed, %c2 : memref<42x?x?x13x?xf32>
 // CHECK: llvm.mlir.constant(13 : index) : i64
   %c3 = constant 3 : index
   %3 = memref.dim %mixed, %c3 : memref<42x?x?x13x?xf32>
-// CHECK: llvm.extractvalue %[[ld]][3, 4] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
+// CHECK: llvm.extractvalue %{{.*}}[3, 4] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<5 x i64>, array<5 x i64>)>
   %c4 = constant 4 : index
   %4 = memref.dim %mixed, %c4 : memref<42x?x?x13x?xf32>
   return
 }
 
+// -----
+
 // CHECK-LABEL: @memref_dim_with_dyn_index
-// CHECK-SAME: %[[ALLOC_PTR:.*]]: !llvm.ptr<f32>, %[[ALIGN_PTR:.*]]: !llvm.ptr<f32>, %[[OFFSET:.*]]: i64, %[[SIZE0:.*]]: i64, %[[SIZE1:.*]]: i64, %[[STRIDE0:.*]]: i64, %[[STRIDE1:.*]]: i64, %[[IDX:.*]]: i64) -> i64
+// CHECK: %{{.*}}, %[[IDXarg:.*]]: index
 func @memref_dim_with_dyn_index(%arg : memref<3x?xf32>, %idx : index) -> index {
-  // CHECK-NEXT: %[[DESCR0:.*]] = llvm.mlir.undef : [[DESCR_TY:!llvm.struct<\(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>\)>]]
-  // CHECK-NEXT: %[[DESCR1:.*]] = llvm.insertvalue %[[ALLOC_PTR]], %[[DESCR0]][0] : [[DESCR_TY]]
-  // CHECK-NEXT: %[[DESCR2:.*]] = llvm.insertvalue %[[ALIGN_PTR]], %[[DESCR1]][1] : [[DESCR_TY]]
-  // CHECK-NEXT: %[[DESCR3:.*]] = llvm.insertvalue %[[OFFSET]],    %[[DESCR2]][2] : [[DESCR_TY]]
-  // CHECK-NEXT: %[[DESCR4:.*]] = llvm.insertvalue %[[SIZE0]],     %[[DESCR3]][3, 0] : [[DESCR_TY]]
-  // CHECK-NEXT: %[[DESCR5:.*]] = llvm.insertvalue %[[STRIDE0]],   %[[DESCR4]][4, 0] : [[DESCR_TY]]
-  // CHECK-NEXT: %[[DESCR6:.*]] = llvm.insertvalue %[[SIZE1]],     %[[DESCR5]][3, 1] : [[DESCR_TY]]
-  // CHECK-NEXT: %[[DESCR7:.*]] = llvm.insertvalue %[[STRIDE1]],   %[[DESCR6]][4, 1] : [[DESCR_TY]]
   // CHECK-DAG: %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
   // CHECK-DAG: %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
-  // CHECK-DAG: %[[SIZES:.*]] = llvm.extractvalue %[[DESCR7]][3] : [[DESCR_TY]]
+  // CHECK-DAG: %[[SIZES:.*]] = llvm.extractvalue %{{.*}}[3] : ![[DESCR_TY:.*]]
   // CHECK-DAG: %[[SIZES_PTR:.*]] = llvm.alloca %[[C1]] x !llvm.array<2 x i64> : (i64) -> !llvm.ptr<array<2 x i64>>
   // CHECK-DAG: llvm.store %[[SIZES]], %[[SIZES_PTR]] : !llvm.ptr<array<2 x i64>>
+  // CHECK-DAG: %[[IDX:.*]] = llvm.mlir.cast %[[IDXarg]]
   // CHECK-DAG: %[[RESULT_PTR:.*]] = llvm.getelementptr %[[SIZES_PTR]][%[[C0]], %[[IDX]]] : (!llvm.ptr<array<2 x i64>>, i64, i64) -> !llvm.ptr<i64>
   // CHECK-DAG: %[[RESULT:.*]] = llvm.load %[[RESULT_PTR]] : !llvm.ptr<i64>
-  // CHECK-DAG: llvm.return %[[RESULT]] : i64
   %result = memref.dim %arg, %idx : memref<3x?xf32>
   return %result : index
 }
+
+// -----
 
 // CHECK-LABEL: @memref_reinterpret_cast_ranked_to_static_shape
 func @memref_reinterpret_cast_ranked_to_static_shape(%input : memref<2x3xf32>) {
@@ -409,7 +397,8 @@ func @memref_reinterpret_cast_ranked_to_static_shape(%input : memref<2x3xf32>) {
            : memref<2x3xf32> to memref<6x1xf32>
   return
 }
-// CHECK: [[INPUT:%.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1] : [[TY:!.*]]
+// CHECK: [[INPUT:%.*]] = llvm.mlir.cast %{{.*}} :
+// CHECK: to [[TY:!.*]]
 // CHECK: [[OUT_0:%.*]] = llvm.mlir.undef : [[TY]]
 // CHECK: [[BASE_PTR:%.*]] = llvm.extractvalue [[INPUT]][0] : [[TY]]
 // CHECK: [[ALIGNED_PTR:%.*]] = llvm.extractvalue [[INPUT]][1] : [[TY]]
@@ -426,6 +415,8 @@ func @memref_reinterpret_cast_ranked_to_static_shape(%input : memref<2x3xf32>) {
 // CHECK: [[STRIDE_1:%.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK: [[OUT_7:%.*]] = llvm.insertvalue [[STRIDE_1]], [[OUT_6]][4, 1] : [[TY]]
 
+// -----
+
 // CHECK-LABEL: @memref_reinterpret_cast_unranked_to_dynamic_shape
 func @memref_reinterpret_cast_unranked_to_dynamic_shape(%offset: index,
                                                         %size_0 : index,
@@ -439,10 +430,15 @@ func @memref_reinterpret_cast_unranked_to_dynamic_shape(%offset: index,
            : memref<*xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
   return
 }
-// CHECK-SAME: ([[OFFSET:%[a-z,0-9]+]]: i64,
-// CHECK-SAME: [[SIZE_0:%[a-z,0-9]+]]: i64, [[SIZE_1:%[a-z,0-9]+]]: i64,
-// CHECK-SAME: [[STRIDE_0:%[a-z,0-9]+]]: i64, [[STRIDE_1:%[a-z,0-9]+]]: i64,
-// CHECK: [[INPUT:%.*]] = llvm.insertvalue {{.*}}[1] : !llvm.struct<(i64, ptr<i8>)>
+// CHECK-SAME: ([[OFFSETarg:%[a-z,0-9]+]]: index,
+// CHECK-SAME: [[SIZE_0arg:%[a-z,0-9]+]]: index, [[SIZE_1arg:%[a-z,0-9]+]]: index,
+// CHECK-SAME: [[STRIDE_0arg:%[a-z,0-9]+]]: index, [[STRIDE_1arg:%[a-z,0-9]+]]: index,
+// CHECK: [[INPUT:%.*]] = llvm.mlir.cast
+// CHECK: [[OFFSET:%.*]] = llvm.mlir.cast [[OFFSETarg]]
+// CHECK: [[SIZE_0:%.*]] = llvm.mlir.cast [[SIZE_0arg]]
+// CHECK: [[SIZE_1:%.*]] = llvm.mlir.cast [[SIZE_1arg]]
+// CHECK: [[STRIDE_0:%.*]] = llvm.mlir.cast [[STRIDE_0arg]]
+// CHECK: [[STRIDE_1:%.*]] = llvm.mlir.cast [[STRIDE_1arg]]
 // CHECK: [[OUT_0:%.*]] = llvm.mlir.undef : [[TY:!.*]]
 // CHECK: [[DESCRIPTOR:%.*]] = llvm.extractvalue [[INPUT]][1] : !llvm.struct<(i64, ptr<i8>)>
 // CHECK: [[BASE_PTR_PTR:%.*]] = llvm.bitcast [[DESCRIPTOR]] : !llvm.ptr<i8> to !llvm.ptr<ptr<f32>>
@@ -460,14 +456,16 @@ func @memref_reinterpret_cast_unranked_to_dynamic_shape(%offset: index,
 // CHECK: [[OUT_6:%.*]] = llvm.insertvalue [[SIZE_1]], [[OUT_5]][3, 1] : [[TY]]
 // CHECK: [[OUT_7:%.*]] = llvm.insertvalue [[STRIDE_1]], [[OUT_6]][4, 1] : [[TY]]
 
+// -----
+
 // CHECK-LABEL: @memref_reshape
 func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
   %output = memref.reshape %input(%shape)
                 : (memref<2x3xf32>, memref<?xindex>) -> memref<*xf32>
   return
 }
-// CHECK: [[INPUT:%.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1] : [[INPUT_TY:!.*]]
-// CHECK: [[SHAPE:%.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : [[SHAPE_TY:!.*]]
+// CHECK: [[INPUT:%.*]] = llvm.mlir.cast %{{.*}} to [[INPUT_TY:!.*]]
+// CHECK: [[SHAPE:%.*]] = llvm.mlir.cast %{{.*}} to [[SHAPE_TY:!.*]]
 // CHECK: [[RANK:%.*]] = llvm.extractvalue [[SHAPE]][3, 0] : [[SHAPE_TY]]
 // CHECK: [[UNRANKED_OUT_O:%.*]] = llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
 // CHECK: [[UNRANKED_OUT_1:%.*]] = llvm.insertvalue [[RANK]], [[UNRANKED_OUT_O]][0] : !llvm.struct<(i64, ptr<i8>)>
@@ -528,7 +526,7 @@ func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
 // CHECK:   llvm.br ^bb1([[STRIDE_COND]], [[UPDATE_STRIDE]] : i64, i64)
 
 // CHECK: ^bb3:
-// CHECK:   llvm.return
+// CHECK:   return
 
 // -----
 
