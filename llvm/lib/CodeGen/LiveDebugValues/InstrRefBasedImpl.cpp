@@ -1827,16 +1827,22 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
 
   // Various optimizations may have happened to the value during codegen,
   // recorded in the value substitution table. Apply any substitutions to
-  // the instruction / operand number in this DBG_INSTR_REF.
-  auto Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
-  // Collect any subregister extractions performed during optimization.
+  // the instruction / operand number in this DBG_INSTR_REF, and collect
+  // any subregister extractions performed during optimization.
+
+  // Create dummy substitution with Src set, for lookup.
+  auto SoughtSub =
+      MachineFunction::DebugSubstitution({InstNo, OpNo}, {0, 0}, 0);
+
   SmallVector<unsigned, 4> SeenSubregs;
-  while (Sub != MF.DebugValueSubstitutions.end()) {
-    std::tie(InstNo, OpNo) = Sub->second.Dest;
-    unsigned Subreg = Sub->second.Subreg;
-    if (Subreg)
+  auto LowerBoundIt = llvm::lower_bound(MF.DebugValueSubstitutions, SoughtSub);
+  while (LowerBoundIt != MF.DebugValueSubstitutions.end() &&
+         LowerBoundIt->Src == SoughtSub.Src) {
+    std::tie(InstNo, OpNo) = LowerBoundIt->Dest;
+    SoughtSub.Src = LowerBoundIt->Dest;
+    if (unsigned Subreg = LowerBoundIt->Subreg)
       SeenSubregs.push_back(Subreg);
-    Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
+    LowerBoundIt = llvm::lower_bound(MF.DebugValueSubstitutions, SoughtSub);
   }
 
   // Default machine value number is <None> -- if no instruction defines
@@ -3542,6 +3548,21 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
     BBNumToRPO[MBB->getNumber()] = RPONumber;
     ++RPONumber;
   }
+
+  // Order value substitutions by their "source" operand pair, for quick lookup.
+  llvm::sort(MF.DebugValueSubstitutions);
+
+#ifdef EXPENSIVE_CHECKS
+  // As an expensive check, test whether there are any duplicate substitution
+  // sources in the collection.
+  if (MF.DebugValueSubstitutions.size() > 2) {
+    for (auto It = MF.DebugValueSubstitutions.begin();
+         It != std::prev(MF.DebugValueSubstitutions.end()); ++It) {
+      assert(It->Src != std::next(It)->Src && "Duplicate variable location "
+                                              "substitution seen");
+    }
+  }
+#endif
 }
 
 /// Calculate the liveness information for the given machine function and
