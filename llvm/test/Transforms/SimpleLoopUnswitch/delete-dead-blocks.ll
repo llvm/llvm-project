@@ -1,6 +1,6 @@
 ; RUN: opt < %s -simple-loop-unswitch -enable-nontrivial-unswitch -S 2>&1 | FileCheck %s
-; RUN: opt < %s -passes='unswitch<nontrivial>' -S 2>&1 | FileCheck %s
-; RUN: opt < %s -passes='loop-mssa(unswitch<nontrivial>)' -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='simple-loop-unswitch<nontrivial>' -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='loop-mssa(simple-loop-unswitch<nontrivial>)' -S 2>&1 | FileCheck %s
 ;
 ; Checking that (dead) blocks from inner loop are deleted after unswitch.
 ;

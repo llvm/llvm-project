@@ -217,7 +217,7 @@ void MemoryOpRemark::visitIntrinsicCall(const IntrinsicInst &II) {
   }
 
   auto R = makeRemark(RemarkPass.data(), remarkName(RK_IntrinsicCall), &II);
-  visitCallee(StringRef(CallTo), /*KnownLibCall=*/true, *R);
+  visitCallee(CallTo.str(), /*KnownLibCall=*/true, *R);
   visitSizeOperand(II.getOperand(2), *R);
 
   auto *CIVolatile = dyn_cast<ConstantInt>(II.getOperand(3));

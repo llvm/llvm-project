@@ -30,6 +30,19 @@ THREADLOCAL uptr __hwasan_tls;
 
 namespace __hwasan {
 
+bool InitShadow() {
+  __sanitizer::InitShadowBounds();
+  CHECK_NE(__sanitizer::ShadowBounds.shadow_limit, 0);
+
+  return true;
+}
+
+bool MemIsApp(uptr p) {
+  CHECK(GetTagFromPointer(p) == 0);
+  return __sanitizer::ShadowBounds.shadow_limit <= p &&
+         p <= (__sanitizer::ShadowBounds.memory_limit - 1);
+}
+
 // These are known parameters passed to the hwasan runtime on thread creation.
 struct Thread::InitState {
   uptr stack_bottom, stack_top;
@@ -129,6 +142,26 @@ static void ThreadExitHook(void *hook, thrd_t self) {
   atomic_signal_fence(memory_order_seq_cst);
   hwasanThreadList().ReleaseThread(thread);
 }
+
+// Not implemented because Fuchsia does not use signal handlers.
+void HwasanOnDeadlySignal(int signo, void *info, void *context) {}
+
+// Not implemented because Fuchsia does not use interceptors.
+void InitializeInterceptors() {}
+
+// Not implemented because this is only relevant for Android.
+void AndroidTestTlsSlot() {}
+
+// TSD was normally used on linux as a means of calling the hwasan thread exit
+// handler passed to pthread_key_create. This is not needed on Fuchsia because
+// we will be using __sanitizer_thread_exit_hook.
+void HwasanTSDInit() {}
+void HwasanTSDThreadInit() {}
+
+// On linux, this just would call `atexit(HwasanAtExit)`. The functions in
+// HwasanAtExit are unimplemented for Fuchsia and effectively no-ops, so this
+// function is unneeded.
+void InstallAtExitHandler() {}
 
 }  // namespace __hwasan
 

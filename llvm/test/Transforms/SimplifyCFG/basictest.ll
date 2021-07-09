@@ -2,7 +2,7 @@
 ; Test CFG simplify removal of branch instructions.
 ;
 ; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
-; RUN: opt < %s -passes=simplify-cfg -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -S | FileCheck %s
 
 define void @test1() {
 ; CHECK-LABEL: @test1(

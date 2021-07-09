@@ -4813,10 +4813,9 @@ void UnitTest::AddTestPartResult(
       // with clang/gcc we can achieve the same effect on x86 by invoking int3
       asm("int3");
 #else
-      // Dereference nullptr through a volatile pointer to prevent the compiler
-      // from removing. We use this rather than abort() or __builtin_trap() for
-      // portability: some debuggers don't correctly trap abort().
-      *static_cast<volatile int*>(nullptr) = 1;
+      // While some debuggers don't correctly trap abort(), we can't perform
+      // volatile store to null since it will be removed by clang and not trap.
+      __builtin_trap();
 #endif  // GTEST_OS_WINDOWS
     } else if (GTEST_FLAG(throw_on_failure)) {
 #if GTEST_HAS_EXCEPTIONS

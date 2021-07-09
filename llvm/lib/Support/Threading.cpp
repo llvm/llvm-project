@@ -15,7 +15,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/thread.h"
 
 #include <cassert>
 #include <errno.h>
@@ -77,6 +76,11 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
 #ifdef _WIN32
 #include "Windows/Threading.inc"
 #endif
+
+// Must be included after Threading.inc to provide definition for llvm::thread
+// because FreeBSD's condvar.h (included by user.h) misuses the "thread"
+// keyword.
+#include "llvm/Support/thread.h"
 
 #if defined(__APPLE__)
   // Darwin's default stack size for threads except the main one is only 512KB,

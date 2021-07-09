@@ -1395,7 +1395,19 @@ static void setConfigs(opt::InputArgList &args) {
   config->writeAddends = args.hasFlag(OPT_apply_dynamic_relocs,
                                       OPT_no_apply_dynamic_relocs, false) ||
                          !config->isRela;
-
+  // Validation of dynamic relocation addends is on by default for assertions
+  // builds (for supported targets) and disabled otherwise. Ideally we would
+  // enable the debug checks for all targets, but currently not all targets
+  // have support for reading Elf_Rel addends, so we only enable for a subset.
+#ifndef NDEBUG
+  bool checkDynamicRelocsDefault = m == EM_ARM || m == EM_386 || m == EM_MIPS ||
+                                   m == EM_X86_64 || m == EM_RISCV;
+#else
+  bool checkDynamicRelocsDefault = false;
+#endif
+  config->checkDynamicRelocs =
+      args.hasFlag(OPT_check_dynamic_relocations,
+                   OPT_no_check_dynamic_relocations, checkDynamicRelocsDefault);
   config->tocOptimize =
       args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
   config->pcRelOptimize =

@@ -83,7 +83,7 @@ void testGlobalPointerPlacementNew() {
 //----- Other cases
 void testNewMemoryIsInHeap() {
   int *p = new int;
-  if (global != p) // condition is always true as 'p' wraps a heap region that 
+  if (global != p) // condition is always true as 'p' wraps a heap region that
                    // is different from a region wrapped by 'global'
     global = p; // pointer escapes
 }
@@ -263,13 +263,13 @@ void testUninitFree() {
 void testUninitDeleteSink() {
   int *x;
   delete x; // expected-warning{{Argument to 'delete' is uninitialized}}
-  (*(volatile int *)0 = 1); // no warn
+  (*(volatile int *)0 = 1); // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
 }
 
 void testUninitDeleteArraySink() {
   int *x;
   delete[] x; // expected-warning{{Argument to 'delete[]' is uninitialized}}
-  (*(volatile int *)0 = 1); // no warn
+  (*(volatile int *)0 = 1); // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
 }
 
 namespace reference_count {

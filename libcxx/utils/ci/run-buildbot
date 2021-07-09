@@ -285,13 +285,6 @@ generic-gcc)
     generate-cmake
     check-cxx-cxxabi
 ;;
-generic-gcc-prev)
-    export CC=gcc-10
-    export CXX=g++-10
-    clean
-    generate-cmake
-    check-cxx-cxxabi
-;;
 generic-asan)
     export CC=clang
     export CXX=clang++

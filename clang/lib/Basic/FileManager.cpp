@@ -611,7 +611,7 @@ StringRef FileManager::getCanonicalName(const DirectoryEntry *Dir) {
 
   SmallString<4096> CanonicalNameBuf;
   if (!FS->getRealPath(Dir->getName(), CanonicalNameBuf))
-    CanonicalName = StringRef(CanonicalNameBuf).copy(CanonicalNameStorage);
+    CanonicalName = CanonicalNameBuf.str().copy(CanonicalNameStorage);
 
   CanonicalNames.insert({Dir, CanonicalName});
   return CanonicalName;
@@ -627,7 +627,7 @@ StringRef FileManager::getCanonicalName(const FileEntry *File) {
 
   SmallString<4096> CanonicalNameBuf;
   if (!FS->getRealPath(File->getName(), CanonicalNameBuf))
-    CanonicalName = StringRef(CanonicalNameBuf).copy(CanonicalNameStorage);
+    CanonicalName = CanonicalNameBuf.str().copy(CanonicalNameStorage);
 
   CanonicalNames.insert({File, CanonicalName});
   return CanonicalName;
