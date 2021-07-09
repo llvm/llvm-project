@@ -335,7 +335,8 @@ def RetCC_Mips : CallingConv<[
   CCIfSubtarget<"isABI_N32()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_N64()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_P32()", CCDelegateTo<RetCC_NanoMipsP32>>,
-  CCIfSubtarget<"isABI_O32()", CCDelegateTo<RetCC_MipsO32>>,
+  // nanoMIPS cannot fall back to O32 for return values using more than 2 regs.
+  CCIfSubtargetNot<"isABI_P32()", CCDelegateTo<RetCC_MipsO32>>,
 ]>;
 
 def CC_Mips_ByVal : CallingConv<[
