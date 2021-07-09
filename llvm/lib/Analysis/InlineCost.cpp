@@ -2211,7 +2211,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   // proportional to the size of the tree or the size of jump table range.
   //
   // NB: We convert large switches which are just used to initialize large phi
-  // nodes to lookup tables instead in simplify-cfg, so this shouldn't prevent
+  // nodes to lookup tables instead in simplifycfg, so this shouldn't prevent
   // inlining those. It will prevent inlining in cases where the optimization
   // does not (yet) fire.
 
