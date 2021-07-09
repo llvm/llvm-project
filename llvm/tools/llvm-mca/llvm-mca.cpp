@@ -579,7 +579,7 @@ int main(int argc, char **argv) {
       auto P = std::make_unique<mca::Pipeline>();
       P->appendStage(std::make_unique<mca::EntryStage>(S));
       P->appendStage(std::make_unique<mca::InstructionTables>(SM));
-      mca::PipelinePrinter Printer(*P, mca::View::OK_READABLE);
+      mca::PipelinePrinter Printer(*P);
 
       // Create the views for this pipeline, execute, and emit a report.
       if (PrintInstructionInfoView) {
@@ -614,8 +614,7 @@ int main(int argc, char **argv) {
 
     // Create a basic pipeline simulating an out-of-order backend.
     auto P = MCA.createDefaultPipeline(PO, S, *CB);
-    mca::PipelinePrinter Printer(*P, PrintJson ? mca::View::OK_JSON
-                                               : mca::View::OK_READABLE);
+    mca::PipelinePrinter Printer(*P);
 
     // When we output JSON, we add a view that contains the instructions
     // and CPU resource information.

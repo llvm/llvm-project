@@ -36,11 +36,9 @@ namespace mca {
 class PipelinePrinter {
   Pipeline &P;
   llvm::SmallVector<std::unique_ptr<View>, 8> Views;
-  View::OutputKind OutputKind;
 
 public:
-  PipelinePrinter(Pipeline &pipeline, View::OutputKind OutputKind)
-      : P(pipeline), OutputKind(OutputKind) {}
+  PipelinePrinter(Pipeline &pipeline) : P(pipeline) {}
 
   void addView(std::unique_ptr<View> V) {
     P.addEventListener(V.get());
