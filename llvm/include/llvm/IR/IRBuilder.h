@@ -1786,7 +1786,8 @@ public:
 
   Value *CreateGEP(Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "") {
-    return CreateGEP(nullptr, Ptr, IdxList, Name);
+    return CreateGEP(
+        Ptr->getType()->getPointerElementType(), Ptr, IdxList, Name);
   }
 
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
@@ -1805,7 +1806,8 @@ public:
 
   Value *CreateInBoundsGEP(Value *Ptr, ArrayRef<Value *> IdxList,
                            const Twine &Name = "") {
-    return CreateInBoundsGEP(nullptr, Ptr, IdxList, Name);
+    return CreateInBoundsGEP(
+        Ptr->getType()->getPointerElementType(), Ptr, IdxList, Name);
   }
 
   Value *CreateInBoundsGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
@@ -1824,7 +1826,7 @@ public:
   }
 
   Value *CreateGEP(Value *Ptr, Value *Idx, const Twine &Name = "") {
-    return CreateGEP(nullptr, Ptr, Idx, Name);
+    return CreateGEP(Ptr->getType()->getPointerElementType(), Ptr, Idx, Name);
   }
 
   Value *CreateGEP(Type *Ty, Value *Ptr, Value *Idx, const Twine &Name = "") {
@@ -1843,7 +1845,8 @@ public:
   }
 
   Value *CreateConstGEP1_32(Value *Ptr, unsigned Idx0, const Twine &Name = "") {
-    return CreateConstGEP1_32(nullptr, Ptr, Idx0, Name);
+    return CreateConstGEP1_32(
+        Ptr->getType()->getPointerElementType(), Ptr, Idx0, Name);
   }
 
   Value *CreateConstGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,
@@ -1903,7 +1906,8 @@ public:
   }
 
   Value *CreateConstGEP1_64(Value *Ptr, uint64_t Idx0, const Twine &Name = "") {
-    return CreateConstGEP1_64(nullptr, Ptr, Idx0, Name);
+    return CreateConstGEP1_64(
+        Ptr->getType()->getPointerElementType(), Ptr, Idx0, Name);
   }
 
   Value *CreateConstInBoundsGEP1_64(Type *Ty, Value *Ptr, uint64_t Idx0,
@@ -1918,7 +1922,8 @@ public:
 
   Value *CreateConstInBoundsGEP1_64(Value *Ptr, uint64_t Idx0,
                                     const Twine &Name = "") {
-    return CreateConstInBoundsGEP1_64(nullptr, Ptr, Idx0, Name);
+    return CreateConstInBoundsGEP1_64(
+        Ptr->getType()->getPointerElementType(), Ptr, Idx0, Name);
   }
 
   Value *CreateConstGEP2_64(Type *Ty, Value *Ptr, uint64_t Idx0, uint64_t Idx1,
@@ -1936,7 +1941,8 @@ public:
 
   Value *CreateConstGEP2_64(Value *Ptr, uint64_t Idx0, uint64_t Idx1,
                             const Twine &Name = "") {
-    return CreateConstGEP2_64(nullptr, Ptr, Idx0, Idx1, Name);
+    return CreateConstGEP2_64(
+        Ptr->getType()->getPointerElementType(), Ptr, Idx0, Idx1, Name);
   }
 
   Value *CreateConstInBoundsGEP2_64(Type *Ty, Value *Ptr, uint64_t Idx0,
@@ -1954,7 +1960,8 @@ public:
 
   Value *CreateConstInBoundsGEP2_64(Value *Ptr, uint64_t Idx0, uint64_t Idx1,
                                     const Twine &Name = "") {
-    return CreateConstInBoundsGEP2_64(nullptr, Ptr, Idx0, Idx1, Name);
+    return CreateConstInBoundsGEP2_64(
+        Ptr->getType()->getPointerElementType(), Ptr, Idx0, Idx1, Name);
   }
 
   Value *CreateStructGEP(Type *Ty, Value *Ptr, unsigned Idx,
@@ -1963,7 +1970,8 @@ public:
   }
 
   Value *CreateStructGEP(Value *Ptr, unsigned Idx, const Twine &Name = "") {
-    return CreateConstInBoundsGEP2_32(nullptr, Ptr, 0, Idx, Name);
+    return CreateConstInBoundsGEP2_32(
+        Ptr->getType()->getPointerElementType(), Ptr, 0, Idx, Name);
   }
 
   /// Same as CreateGlobalString, but return a pointer with "i8*" type
