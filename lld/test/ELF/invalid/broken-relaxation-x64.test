@@ -1,6 +1,4 @@
 # REQUIRES: x86
-# Needs https://reviews.llvm.org/D101451 to read the implicit addends.
-# XFAIL: *
 
 # RUN: yaml2obj %s -o %t.o
 # RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
