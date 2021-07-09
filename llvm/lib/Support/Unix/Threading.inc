@@ -48,9 +48,10 @@
 #include <unistd.h>      // For syscall()
 #endif
 
+namespace llvm {
 pthread_t
-llvm::llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
-                                  llvm::Optional<unsigned> StackSizeInBytes) {
+llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
+                            llvm::Optional<unsigned> StackSizeInBytes) {
   int errnum;
 
   // Construct the attributes object.
@@ -80,7 +81,7 @@ llvm::llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
   return Thread;
 }
 
-void llvm::llvm_thread_detach_impl(pthread_t Thread) {
+void llvm_thread_detach_impl(pthread_t Thread) {
   int errnum;
 
   if ((errnum = ::pthread_detach(Thread)) != 0) {
@@ -88,7 +89,7 @@ void llvm::llvm_thread_detach_impl(pthread_t Thread) {
   }
 }
 
-void llvm::llvm_thread_join_impl(pthread_t Thread) {
+void llvm_thread_join_impl(pthread_t Thread) {
   int errnum;
 
   if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
@@ -96,13 +97,15 @@ void llvm::llvm_thread_join_impl(pthread_t Thread) {
   }
 }
 
-pthread_t llvm::llvm_thread_get_id_impl(pthread_t Thread) {
+pthread_t llvm_thread_get_id_impl(pthread_t Thread) {
   return Thread;
 }
 
-pthread_t llvm::llvm_thread_get_current_id_impl() {
+pthread_t llvm_thread_get_current_id_impl() {
   return ::pthread_self();
 }
+
+} // namespace llvm
 
 uint64_t llvm::get_threadid() {
 #if defined(__APPLE__)

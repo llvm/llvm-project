@@ -23,10 +23,10 @@
 #undef MemoryFence
 #endif
 
+namespace llvm {
 HANDLE
-llvm::llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *),
-                                  void *Arg,
-                                  llvm::Optional<unsigned> StackSizeInBytes) {
+llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *), void *Arg,
+                            llvm::Optional<unsigned> StackSizeInBytes) {
   HANDLE hThread = (HANDLE)::_beginthreadex(
       NULL, StackSizeInBytes.getValueOr(0), ThreadFunc, Arg, 0, NULL);
 
@@ -37,25 +37,27 @@ llvm::llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *),
   return hThread;
 }
 
-void llvm::llvm_thread_join_impl(HANDLE hThread) {
+void llvm_thread_join_impl(HANDLE hThread) {
   if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
     ReportLastErrorFatal("WaitForSingleObject failed");
   }
 }
 
-void llvm::llvm_thread_detach_impl(HANDLE hThread) {
+void llvm_thread_detach_impl(HANDLE hThread) {
   if (::CloseHandle(hThread) == FALSE) {
     ReportLastErrorFatal("CloseHandle failed");
   }
 }
 
-DWORD llvm::llvm_thread_get_id_impl(HANDLE hThread) {
+DWORD llvm_thread_get_id_impl(HANDLE hThread) {
   return ::GetThreadId(hThread);
 }
 
-DWORD llvm::llvm_thread_get_current_id_impl() {
+DWORD llvm_thread_get_current_id_impl() {
   return ::GetCurrentThreadId();
 }
+
+} // namespace llvm
 
 uint64_t llvm::get_threadid() {
   return uint64_t(::GetCurrentThreadId());
