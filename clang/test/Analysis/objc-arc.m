@@ -119,7 +119,7 @@ void rdar9424882() {
   id x = [NSObject alloc]; // expected-warning {{Value stored to 'x' during its initialization is never read}}
 }
 
-// Test
+// Test 
 typedef const void *CFTypeRef;
 typedef const struct __CFString *CFStringRef;
 
@@ -208,7 +208,7 @@ void dispatch_set_context(dispatch_object_t object, const void *context);
 
 void rdar11059275(dispatch_object_t object) {
   NSObject *o = [[NSObject alloc] init];
-  dispatch_set_context(object, CFBridgingRetain(o)); // no-warning
+  dispatch_set_context(object, CFBridgingRetain(o)); // no-warning  
 }
 void rdar11059275_positive() {
   NSObject *o = [[NSObject alloc] init]; // expected-warning {{leak}}
@@ -227,7 +227,7 @@ id rdar14061675() {
   // ARC produces an implicit cast here. We need to make sure the combination
   // of that and the inlined call don't produce a spurious edge cycle.
   id result = rdar14061675_helper();
-  *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+  *(volatile int *)0 = 1; // expected-warning{{Dereference of null pointer}}
   return result;
 }
 

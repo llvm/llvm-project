@@ -533,16 +533,21 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
 }
 
 static void CheckForNullPointerDereference(Sema &S, Expr *E) {
-  // Check to see if we are dereferencing a null pointer.
-  // If so, this is undefined behavior that the optimizer will delete,
-  // so warn about it. People sometimes try to use this to get a deterministic
-  // trap and are surprised by clang's behavior. This only handles the pattern
-  // "*null", which is a very syntactic check.
+  // Check to see if we are dereferencing a null pointer.  If so,
+  // and if not volatile-qualified, this is undefined behavior that the
+  // optimizer will delete, so warn about it.  People sometimes try to use this
+  // to get a deterministic trap and are surprised by clang's behavior.  This
+  // only handles the pattern "*null", which is a very syntactic check.
   const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreParenCasts());
   if (UO && UO->getOpcode() == UO_Deref &&
       UO->getSubExpr()->getType()->isPointerType()) {
-    if (UO->getSubExpr()->IgnoreParenCasts()->isNullPointerConstant(
-            S.Context, Expr::NPC_ValueDependentIsNotNull)) {
+    const LangAS AS =
+        UO->getSubExpr()->getType()->getPointeeType().getAddressSpace();
+    if ((!isTargetAddressSpace(AS) ||
+         (isTargetAddressSpace(AS) && toTargetAddressSpace(AS) == 0)) &&
+        UO->getSubExpr()->IgnoreParenCasts()->isNullPointerConstant(
+            S.Context, Expr::NPC_ValueDependentIsNotNull) &&
+        !UO->getType().isVolatileQualified()) {
       S.DiagRuntimeBehavior(UO->getOperatorLoc(), UO,
                             S.PDiag(diag::warn_indirection_through_null)
                                 << UO->getSubExpr()->getSourceRange());

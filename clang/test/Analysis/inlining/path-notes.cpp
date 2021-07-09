@@ -278,7 +278,7 @@ namespace PR17746 {
   class Inner {
   public:
     ~Inner() {
-      *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+      *(volatile int *)0 = 1; // expected-warning {{Dereference of null pointer}}
       // expected-note@-1 {{Dereference of null pointer}}
     }
   };
