@@ -48,6 +48,7 @@ public:
   }
 
   void printReport(llvm::raw_ostream &OS) const;
+  json::Object getJSONReportRegion() const;
 };
 } // namespace mca
 } // namespace llvm
