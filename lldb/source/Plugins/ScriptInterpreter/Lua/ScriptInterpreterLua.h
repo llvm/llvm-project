@@ -43,7 +43,8 @@ public:
 
   void ExecuteInterpreterLoop() override;
 
-  bool LoadScriptingModule(const char *filename, bool init_session,
+  bool LoadScriptingModule(const char *filename,
+                           const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
                            FileSpec extra_search_dir = {}) override;
