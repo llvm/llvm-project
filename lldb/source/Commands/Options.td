@@ -757,6 +757,8 @@ let Command = "script import" in {
     Group<1>, Desc<"Resolve non-absolute paths relative to the location of the "
     "current command file. This argument can only be used when the command is "
     "being sourced from a file.">;
+  def silent : Option<"silent", "s">, Group<1>,
+    Desc<"If true don't print any script output while importing.">;
 }
 
 let Command = "script add" in {

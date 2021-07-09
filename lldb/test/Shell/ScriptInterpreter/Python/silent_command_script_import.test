@@ -1,0 +1,8 @@
+# REQUIRES: python
+
+# RUN: %lldb --script-language python -o 'command script import lldb.macosx.crashlog' 2>&1 | FileCheck %s
+# RUN: %lldb --script-language python -o 'command script import -s lldb.macosx.crashlog' 2>&1 | FileCheck %s --check-prefix SILENT
+# RUN: %lldb --script-language python -o 'command script import --silent lldb.macosx.crashlog' 2>&1 | FileCheck %s --check-prefix SILENT
+
+CHECK: commands have been installed
+SILENT-NOT: commands have been installed
