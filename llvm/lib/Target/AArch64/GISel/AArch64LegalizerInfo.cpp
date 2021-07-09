@@ -346,7 +346,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
       .lowerIfMemSizeNotPow2()
-      .customIf(IsPtrVecPred);
+      .customIf(IsPtrVecPred)
+      .scalarizeIf(typeIs(0, v2s16), 0);
 
   // Constants
   getActionDefinitionsBuilder(G_CONSTANT)
