@@ -217,7 +217,7 @@ struct ExtensionNodeRewriter
   isl::schedule visitLeaf(const isl::schedule_node &Leaf,
                           const isl::union_set &Domain,
                           isl::union_map &Extensions) {
-    isl::ctx Ctx = Leaf.get_ctx();
+    isl::ctx Ctx = Leaf.ctx();
     Extensions = isl::union_map::empty(isl::space::params_alloc(Ctx, 0));
     return isl::schedule::from_domain(Domain);
   }
@@ -536,7 +536,7 @@ isl::schedule polly::hoistExtensionNodes(isl::schedule Sched) {
 }
 
 isl::schedule polly::applyFullUnroll(isl::schedule_node BandToUnroll) {
-  isl::ctx Ctx = BandToUnroll.get_ctx();
+  isl::ctx Ctx = BandToUnroll.ctx();
 
   // Remove the loop's mark, the loop will disappear anyway.
   BandToUnroll = removeMark(BandToUnroll);
@@ -589,7 +589,7 @@ isl::schedule polly::applyFullUnroll(isl::schedule_node BandToUnroll) {
 isl::schedule polly::applyPartialUnroll(isl::schedule_node BandToUnroll,
                                         int Factor) {
   assert(Factor > 0 && "Positive unroll factor required");
-  isl::ctx Ctx = BandToUnroll.get_ctx();
+  isl::ctx Ctx = BandToUnroll.ctx();
 
   // Remove the mark, save the attribute for later use.
   BandAttr *Attr;
@@ -673,7 +673,7 @@ isl::union_set polly::getIsolateOptions(isl::set IsolateDomain,
   IsolateRelation = IsolateRelation.move_dims(isl::dim::out, 0, isl::dim::in,
                                               Dims - OutDimsNum, OutDimsNum);
   isl::set IsolateOption = IsolateRelation.wrap();
-  isl::id Id = isl::id::alloc(IsolateOption.get_ctx(), "isolate", nullptr);
+  isl::id Id = isl::id::alloc(IsolateOption.ctx(), "isolate", nullptr);
   IsolateOption = IsolateOption.set_tuple_id(Id);
   return isl::union_set(IsolateOption);
 }
@@ -697,11 +697,10 @@ isl::schedule_node polly::tileNode(isl::schedule_node Node,
   for (auto i : seq<isl_size>(0, Dims)) {
     auto tileSize =
         i < (isl_size)TileSizes.size() ? TileSizes[i] : DefaultTileSize;
-    Sizes = Sizes.set_val(i, isl::val(Node.get_ctx(), tileSize));
+    Sizes = Sizes.set_val(i, isl::val(Node.ctx(), tileSize));
   }
   auto TileLoopMarkerStr = IdentifierString + " - Tiles";
-  auto TileLoopMarker =
-      isl::id::alloc(Node.get_ctx(), TileLoopMarkerStr, nullptr);
+  auto TileLoopMarker = isl::id::alloc(Node.ctx(), TileLoopMarkerStr, nullptr);
   Node = Node.insert_mark(TileLoopMarker);
   Node = Node.child(0);
   Node =
@@ -709,7 +708,7 @@ isl::schedule_node polly::tileNode(isl::schedule_node Node,
   Node = Node.child(0);
   auto PointLoopMarkerStr = IdentifierString + " - Points";
   auto PointLoopMarker =
-      isl::id::alloc(Node.get_ctx(), PointLoopMarkerStr, nullptr);
+      isl::id::alloc(Node.ctx(), PointLoopMarkerStr, nullptr);
   Node = Node.insert_mark(PointLoopMarker);
   return Node.child(0);
 }
@@ -718,6 +717,6 @@ isl::schedule_node polly::applyRegisterTiling(isl::schedule_node Node,
                                               ArrayRef<int> TileSizes,
                                               int DefaultTileSize) {
   Node = tileNode(Node, "Register tiling", TileSizes, DefaultTileSize);
-  auto Ctx = Node.get_ctx();
+  auto Ctx = Node.ctx();
   return Node.band_set_ast_build_options(isl::union_set(Ctx, "{unroll[x]}"));
 }
