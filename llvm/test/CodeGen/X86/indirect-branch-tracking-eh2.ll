@@ -3,51 +3,38 @@
 
 ; NUM-COUNT-3: endbr64
 
-;SJLJ:       main:                                  # @main
-;SJLJ-NEXT: .Lfunc_begin0:
-;SJLJ-NEXT: # %bb.0:                                # %entry
-;SJLJ-NEXT:         endbr64
-;SJLJ-NEXT:         pushq   %rbp
-;SJLJ:               callq   _Unwind_SjLj_Register
-;SJLJ-NEXT: .Ltmp0:
-;SJLJ-NEXT:         callq   _Z3foov
-;SJLJ-NEXT: .Ltmp1:
-;SJLJ-NEXT: # %bb.1:                                # %invoke.cont
-;SJLJ-NEXT:         movl
-;SJLJ-NEXT: .LBB0_7:                                # %return
-;SJLJ:               callq   _Unwind_SjLj_Unregister
-;SJLJ:               retq
-;SJLJ-NEXT: .LBB0_9:
-;SJLJ-NEXT:         endbr64
-;SJLJ-NEXT:         movl
-;SJLJ-NEXT:         cmpl
-;SJLJ-NEXT:         jb      .LBB0_10
-;SJLJ-NEXT: # %bb.11:
-;SJLJ-NEXT:         ud2
-;SJLJ-NEXT: .LBB0_10:
-;SJLJ-NEXT:         leaq    .LJTI0_0(%rip), %rcx
-;SJLJ-NEXT:         jmpq    *(%rcx,%rax,8)
-;SJLJ-NEXT: .LBB0_2:                                # %lpad
-;SJLJ-NEXT: .Ltmp2:
-;SJLJ-NEXT:         endbr64
-;SJLJ:               jne     .LBB0_4
-;SJLJ-NEXT: # %bb.3:                                # %catch3
-;SJLJ:               callq   __cxa_begin_catch
-;SJLJ:               jmp     .LBB0_6
-;SJLJ-NEXT: .LBB0_4:                                # %catch.fallthrough
-;SJLJ-NEXT:         cmpl
-;SJLJ-NEXT:         jne     .LBB0_8
-;SJLJ-NEXT: # %bb.5:                                # %catch
-;SJLJ:               callq   __cxa_begin_catch
-;SJLJ:               cmpb
-;SJLJ-NEXT: .LBB0_6:                                # %return
-;SJLJ:               callq   __cxa_end_catch
-;SJLJ-NEXT:         jmp     .LBB0_7
-;SJLJ-NEXT: .LBB0_8:                                # %eh.resume
-;SJLJ-NEXT:         movl
-;SJLJ-NEXT: .Lfunc_end0:
-;SJLJ:      .LJTI0_0:
-;SJLJ-NEXT:         .quad   .LBB0_2
+; SJLJ-LABEL: main:
+; SJLJ:       # %bb.0: # %entry
+; SJLJ-NEXT:    endbr64
+; SJLJ:         callq _Unwind_SjLj_Register@PLT
+; SJLJ-NEXT:  .Ltmp0:
+; SJLJ-NEXT:    callq _Z3foov
+; SJLJ-NEXT:  .Ltmp1:
+; SJLJ-NEXT:  # %bb.1: # %invoke.cont
+; SJLJ:       .LBB0_6: # %return
+; SJLJ:         callq _Unwind_SjLj_Unregister@PLT
+; SJLJ:         retq
+; SJLJ-NEXT:  .LBB0_7:
+; SJLJ-NEXT:    endbr64
+; SJLJ:         jb .LBB0_8
+; SJLJ-NEXT:  # %bb.9:
+; SJLJ-NEXT:    ud2
+; SJLJ-NEXT:  .LBB0_8:
+; SJLJ:         jmpq *(%rcx,%rax,8)
+; SJLJ-NEXT:  .LBB0_2: # %lpad
+; SJLJ-NEXT:  .Ltmp2:
+; SJLJ-NEXT:    endbr64
+; SJLJ:         jne .LBB0_4
+; SJLJ-NEXT:  # %bb.3: # %catch3
+; SJLJ:         callq __cxa_begin_catch
+; SJLJ:         jmp .LBB0_5
+; SJLJ-NEXT:  .LBB0_4: # %catch
+; SJLJ:         callq __cxa_begin_catch
+; SJLJ:         cmpb $3, %al
+; SJLJ-NEXT:  .LBB0_5: # %return
+; SJLJ-NEXT:    setne %cl
+; SJLJ:         callq __cxa_end_catch
+; SJLJ-NEXT:    jmp .LBB0_6
 
 @_ZTIi = external dso_local constant i8*
 @_ZTIc = external dso_local constant i8*
