@@ -32,6 +32,7 @@ public:
   RelType getDynRel(RelType type) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -378,6 +379,12 @@ void X86_64::writeGotPltHeader(uint8_t *buf) const {
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // See comments in X86::writeGotPlt.
   write64le(buf, s.getPltVA() + 6);
+}
+
+void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
+  // An x86 entry is the address of the ifunc resolver function (for -z rel).
+  if (config->writeAddends)
+    write64le(buf, s.getVA());
 }
 
 void X86_64::writePltHeader(uint8_t *buf) const {
