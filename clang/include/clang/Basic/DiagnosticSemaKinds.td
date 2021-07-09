@@ -6814,13 +6814,13 @@ def ext_typecheck_indirection_through_void_pointer : ExtWarn<
   "ISO C++ does not allow indirection on operand of type %0">,
   InGroup<DiagGroup<"void-ptr-dereference">>;
 def warn_indirection_through_null : Warning<
-  "indirection of null pointer will be deleted, not trap">,
+  "indirection of non-volatile null pointer will be deleted, not trap">,
   InGroup<NullDereference>;
 def warn_binding_null_to_reference : Warning<
   "binding dereferenced null pointer to reference has undefined behavior">,
   InGroup<NullDereference>;
 def note_indirection_through_null : Note<
-  "consider using __builtin_trap()">;
+  "consider using __builtin_trap() or qualifying pointer with 'volatile'">;
 def warn_pointer_indirection_from_incompatible_type : Warning<
   "dereference of type %1 that was reinterpret_cast from type %0 has undefined "
   "behavior">,

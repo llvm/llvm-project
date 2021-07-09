@@ -9,13 +9,13 @@ void testLoop() {
     work();
     work();
     if (y == 2)
-      *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+      *(volatile int *)0 = 1; // expected-warning {{Dereference of null pointer}}
     work();
     work();
     (void)y;
   }
 
-  *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+  *(volatile int *)0 = 1; // no-warning
 }
 
 class MagicVector {
@@ -30,7 +30,7 @@ public:
 
 MagicVector get(bool fail = false) {
   if (fail)
-    *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+    *(volatile int *)0 = 1; // expected-warning {{Dereference of null pointer}}
   return MagicVector{};
 }
 
@@ -39,13 +39,13 @@ void testLoopOpaqueCollection() {
     work();
     work();
     if (y == 2)
-      *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+      *(volatile int *)0 = 1; // expected-warning {{Dereference of null pointer}}
     work();
     work();
     (void)y;
   }
 
-  *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+  *(volatile int *)0 = 1; // expected-warning {{Dereference of null pointer}}
 }
 
 
@@ -74,13 +74,13 @@ void testLoopOpaqueIterator() {
     work();
     work();
     if (y == 2)
-      *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+      *(volatile int *)0 = 1; // expected-warning {{Dereference of null pointer}}
     work();
     work();
     (void)y;
   }
 
-  *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+  *(volatile int *)0 = 1; // expected-warning {{Dereference of null pointer}}
 }
 
 
@@ -89,13 +89,13 @@ void testLoopErrorInRange() {
     work();
     work();
     if (y == 2)
-      *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+      *(volatile int *)0 = 1; // no-warning
     work();
     work();
     (void)y;
   }
 
-  *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+  *(volatile int *)0 = 1; // no-warning
 }
 
 void testForRangeInit() {

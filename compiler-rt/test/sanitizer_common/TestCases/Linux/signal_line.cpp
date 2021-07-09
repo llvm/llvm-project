@@ -14,11 +14,13 @@
 int main(int argc, char **argv) {
   int n = atoi(argv[1]);
 
-  *((volatile int *)(n - 1)) = __LINE__;
+  if (n == 1)
+    *((volatile int *)0x0) = __LINE__;
+  // CHECK1: #{{[0-9]+ .*}}main {{.*}}signal_line.cpp:[[@LINE-1]]:[[TAB:[0-9]+]]
+  // CHECK1: SUMMARY: [[SAN]]: SEGV {{.*}}signal_line.cpp:[[@LINE-2]]:[[TAB]] in main
 
-  // CHECK1: #{{[0-9]+ .*}}main {{.*}}signal_line.cpp:[[@LINE-2]]:[[TAB:[0-9]+]]
-  // CHECK1: SUMMARY: [[SAN]]: SEGV {{.*}}signal_line.cpp:[[@LINE-3]]:[[TAB]] in main
-
-  // CHECK2: #{{[0-9]+ .*}}main {{.*}}signal_line.cpp:[[@LINE-5]]:[[TAB:[0-9]+]]
-  // CHECK2: SUMMARY: [[SAN]]: SEGV {{.*}}signal_line.cpp:[[@LINE-6]]:[[TAB]] in main
+  if (n == 2)
+    *((volatile int *)0x1) = __LINE__;
+  // CHECK2: #{{[0-9]+ .*}}main {{.*}}signal_line.cpp:[[@LINE-1]]:[[TAB:[0-9]+]]
+  // CHECK2: SUMMARY: [[SAN]]: SEGV {{.*}}signal_line.cpp:[[@LINE-2]]:[[TAB]] in main
 }
