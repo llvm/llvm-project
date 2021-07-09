@@ -1,5 +1,3 @@
-# REQUIRES: python
-
 # RUN: rm -rf %t && mkdir -p %t/foo/bar/baz
 # RUN: split-file %S/Inputs/relative.split %t/foo
 # RUN: split-file %S/Inputs/hello.split %t/foo/bar
