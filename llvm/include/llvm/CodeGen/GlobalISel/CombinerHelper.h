@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Support/Alignment.h"
@@ -596,7 +597,7 @@ private:
   /// \param [in] MemSizeInBits - The number of bits each load should produce.
   ///
   /// \returns The lowest-index load found and the lowest index on success.
-  Optional<std::pair<MachineInstr *, int64_t>> findLoadOffsetsForLoadOrCombine(
+  Optional<std::pair<GZExtLoad *, int64_t>> findLoadOffsetsForLoadOrCombine(
       SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
       const SmallVector<Register, 8> &RegsToVisit,
       const unsigned MemSizeInBits);

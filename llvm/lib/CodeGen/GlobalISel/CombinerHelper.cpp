@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -441,16 +442,13 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
   // to find a safe place to sink it) whereas the extend is freely movable.
   // It also prevents us from duplicating the load for the volatile case or just
   // for performance.
-
-  if (MI.getOpcode() != TargetOpcode::G_LOAD &&
-      MI.getOpcode() != TargetOpcode::G_SEXTLOAD &&
-      MI.getOpcode() != TargetOpcode::G_ZEXTLOAD)
+  GAnyLoad *LoadMI = dyn_cast<GAnyLoad>(&MI);
+  if (!LoadMI)
     return false;
 
-  auto &LoadValue = MI.getOperand(0);
-  assert(LoadValue.isReg() && "Result wasn't a register?");
+  Register LoadReg = LoadMI->getDstReg();
 
-  LLT LoadValueTy = MRI.getType(LoadValue.getReg());
+  LLT LoadValueTy = MRI.getType(LoadReg);
   if (!LoadValueTy.isScalar())
     return false;
 
@@ -472,17 +470,16 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
   // and emit a variant of (extend (trunc X)) for the others according to the
   // relative type sizes. At the same time, pick an extend to use based on the
   // extend involved in the chosen type.
-  unsigned PreferredOpcode = MI.getOpcode() == TargetOpcode::G_LOAD
-                                 ? TargetOpcode::G_ANYEXT
-                                 : MI.getOpcode() == TargetOpcode::G_SEXTLOAD
-                                       ? TargetOpcode::G_SEXT
-                                       : TargetOpcode::G_ZEXT;
+  unsigned PreferredOpcode =
+      isa<GLoad>(&MI)
+          ? TargetOpcode::G_ANYEXT
+          : isa<GSExtLoad>(&MI) ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
   Preferred = {LLT(), PreferredOpcode, nullptr};
-  for (auto &UseMI : MRI.use_nodbg_instructions(LoadValue.getReg())) {
+  for (auto &UseMI : MRI.use_nodbg_instructions(LoadReg)) {
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
         (UseMI.getOpcode() == TargetOpcode::G_ANYEXT)) {
-      const auto &MMO = **MI.memoperands_begin();
+      const auto &MMO = LoadMI->getMMO();
       // For atomics, only form anyextending loads.
       if (MMO.isAtomic() && UseMI.getOpcode() != TargetOpcode::G_ANYEXT)
         continue;
@@ -493,9 +490,9 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
         MMDesc.AlignInBits = MMO.getAlign().value() * 8;
         MMDesc.Ordering = MMO.getSuccessOrdering();
         LLT UseTy = MRI.getType(UseMI.getOperand(0).getReg());
-        LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
-        if (LI->getAction({MI.getOpcode(), {UseTy, SrcTy}, {MMDesc}}).Action !=
-            LegalizeActions::Legal)
+        LLT SrcTy = MRI.getType(LoadMI->getPointerReg());
+        if (LI->getAction({LoadMI->getOpcode(), {UseTy, SrcTy}, {MMDesc}})
+                .Action != LegalizeActions::Legal)
           continue;
       }
       Preferred = ChoosePreferredUse(Preferred,
@@ -668,12 +665,12 @@ bool CombinerHelper::matchSextTruncSextLoad(MachineInstr &MI) {
   uint64_t SizeInBits = MI.getOperand(2).getImm();
   // If the source is a G_SEXTLOAD from the same bit width, then we don't
   // need any extend at all, just a truncate.
-  if (auto *LoadMI = getOpcodeDef(TargetOpcode::G_SEXTLOAD, LoadUser, MRI)) {
-    const auto &MMO = **LoadMI->memoperands_begin();
+  if (auto *LoadMI = getOpcodeDef<GSExtLoad>(LoadUser, MRI)) {
     // If truncating more than the original extended value, abort.
-    if (TruncSrc && MRI.getType(TruncSrc).getSizeInBits() < MMO.getSizeInBits())
+    auto LoadSizeBits = LoadMI->getMemSizeInBits();
+    if (TruncSrc && MRI.getType(TruncSrc).getSizeInBits() < LoadSizeBits)
       return false;
-    if (MMO.getSizeInBits() == SizeInBits)
+    if (LoadSizeBits == SizeInBits)
       return true;
   }
   return false;
@@ -695,20 +692,16 @@ bool CombinerHelper::matchSextInRegOfLoad(
     return false;
 
   Register SrcReg = MI.getOperand(1).getReg();
-  MachineInstr *LoadDef = getOpcodeDef(TargetOpcode::G_LOAD, SrcReg, MRI);
-  if (!LoadDef || !MRI.hasOneNonDBGUse(LoadDef->getOperand(0).getReg()))
+  auto *LoadDef = getOpcodeDef<GLoad>(SrcReg, MRI);
+  if (!LoadDef || !MRI.hasOneNonDBGUse(LoadDef->getOperand(0).getReg()) ||
+      !LoadDef->isSimple())
     return false;
 
   // If the sign extend extends from a narrower width than the load's width,
   // then we can narrow the load width when we combine to a G_SEXTLOAD.
-  auto &MMO = **LoadDef->memoperands_begin();
-  // Don't do this for non-simple loads.
-  if (MMO.isAtomic() || MMO.isVolatile())
-    return false;
-
   // Avoid widening the load at all.
-  unsigned NewSizeBits =
-      std::min((uint64_t)MI.getOperand(2).getImm(), MMO.getSizeInBits());
+  unsigned NewSizeBits = std::min((uint64_t)MI.getOperand(2).getImm(),
+                                  LoadDef->getMemSizeInBits());
 
   // Don't generate G_SEXTLOADs with a < 1 byte width.
   if (NewSizeBits < 8)
@@ -717,7 +710,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
   // anyway for most targets.
   if (!isPowerOf2_32(NewSizeBits))
     return false;
-  MatchInfo = std::make_tuple(LoadDef->getOperand(0).getReg(), NewSizeBits);
+  MatchInfo = std::make_tuple(LoadDef->getDstReg(), NewSizeBits);
   return true;
 }
 
@@ -727,8 +720,7 @@ void CombinerHelper::applySextInRegOfLoad(
   Register LoadReg;
   unsigned ScalarSizeBits;
   std::tie(LoadReg, ScalarSizeBits) = MatchInfo;
-  auto *LoadDef = MRI.getVRegDef(LoadReg);
-  assert(LoadDef && "Expected a load reg");
+  GLoad *LoadDef = cast<GLoad>(MRI.getVRegDef(LoadReg));
 
   // If we have the following:
   // %ld = G_LOAD %ptr, (load 2)
@@ -736,13 +728,13 @@ void CombinerHelper::applySextInRegOfLoad(
   //    ==>
   // %ld = G_SEXTLOAD %ptr (load 1)
 
-  auto &MMO = **LoadDef->memoperands_begin();
+  auto &MMO = LoadDef->getMMO();
   Builder.setInstrAndDebugLoc(*LoadDef);
   auto &MF = Builder.getMF();
   auto PtrInfo = MMO.getPointerInfo();
   auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, ScalarSizeBits / 8);
   Builder.buildLoadInstr(TargetOpcode::G_SEXTLOAD, MI.getOperand(0).getReg(),
-                         LoadDef->getOperand(1).getReg(), *NewMMO);
+                         LoadDef->getPointerReg(), *NewMMO);
   MI.eraseFromParent();
 }
 
@@ -3436,7 +3428,7 @@ CombinerHelper::findCandidatesForLoadOrCombine(const MachineInstr *Root) const {
 /// e.g. x[i] << 24
 ///
 /// \returns The load instruction and the byte offset it is moved into.
-static Optional<std::pair<MachineInstr *, int64_t>>
+static Optional<std::pair<GZExtLoad *, int64_t>>
 matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
                          const MachineRegisterInfo &MRI) {
   assert(MRI.hasOneNonDBGUse(Reg) &&
@@ -3453,18 +3445,17 @@ matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
     return None;
 
   // TODO: Handle other types of loads.
-  auto *Load = getOpcodeDef(TargetOpcode::G_ZEXTLOAD, MaybeLoad, MRI);
+  auto *Load = getOpcodeDef<GZExtLoad>(MaybeLoad, MRI);
   if (!Load)
     return None;
 
-  const auto &MMO = **Load->memoperands_begin();
-  if (!MMO.isUnordered() || MMO.getSizeInBits() != MemSizeInBits)
+  if (!Load->isUnordered() || Load->getMemSizeInBits() != MemSizeInBits)
     return None;
 
   return std::make_pair(Load, Shift / MemSizeInBits);
 }
 
-Optional<std::pair<MachineInstr *, int64_t>>
+Optional<std::pair<GZExtLoad *, int64_t>>
 CombinerHelper::findLoadOffsetsForLoadOrCombine(
     SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
     const SmallVector<Register, 8> &RegsToVisit, const unsigned MemSizeInBits) {
@@ -3476,7 +3467,7 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
   int64_t LowestIdx = INT64_MAX;
 
   // The load which uses the lowest index.
-  MachineInstr *LowestIdxLoad = nullptr;
+  GZExtLoad *LowestIdxLoad = nullptr;
 
   // Keeps track of the load indices we see. We shouldn't see any indices twice.
   SmallSet<int64_t, 8> SeenIdx;
@@ -3505,7 +3496,7 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
     auto LoadAndPos = matchLoadAndBytePosition(Reg, MemSizeInBits, MRI);
     if (!LoadAndPos)
       return None;
-    MachineInstr *Load;
+    GZExtLoad *Load;
     int64_t DstPos;
     std::tie(Load, DstPos) = *LoadAndPos;
 
@@ -3518,10 +3509,10 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
       return None;
 
     // Make sure that the MachineMemOperands of every seen load are compatible.
-    const MachineMemOperand *LoadMMO = *Load->memoperands_begin();
+    auto &LoadMMO = Load->getMMO();
     if (!MMO)
-      MMO = LoadMMO;
-    if (MMO->getAddrSpace() != LoadMMO->getAddrSpace())
+      MMO = &LoadMMO;
+    if (MMO->getAddrSpace() != LoadMMO.getAddrSpace())
       return None;
 
     // Find out what the base pointer and index for the load is.
@@ -3643,7 +3634,7 @@ bool CombinerHelper::matchLoadOrCombine(
   // Also verify that each of these ends up putting a[i] into the same memory
   // offset as a load into a wide type would.
   SmallDenseMap<int64_t, int64_t, 8> MemOffset2Idx;
-  MachineInstr *LowestIdxLoad;
+  GZExtLoad *LowestIdxLoad;
   int64_t LowestIdx;
   auto MaybeLoadInfo = findLoadOffsetsForLoadOrCombine(
       MemOffset2Idx, *RegsToVisit, NarrowMemSizeInBits);
@@ -3683,8 +3674,8 @@ bool CombinerHelper::matchLoadOrCombine(
 
   // We wil reuse the pointer from the load which ends up at byte offset 0. It
   // may not use index 0.
-  Register Ptr = LowestIdxLoad->getOperand(1).getReg();
-  const MachineMemOperand &MMO = **LowestIdxLoad->memoperands_begin();
+  Register Ptr = LowestIdxLoad->getPointerReg();
+  const MachineMemOperand &MMO = LowestIdxLoad->getMMO();
   LegalityQuery::MemDesc MMDesc;
   MMDesc.MemoryTy = Ty;
   MMDesc.AlignInBits = MMO.getAlign().value() * 8;
