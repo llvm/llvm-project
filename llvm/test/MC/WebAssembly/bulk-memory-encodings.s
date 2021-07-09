@@ -1,5 +1,5 @@
-# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+bulk-memory < %s | FileCheck %s
-# RUN: llvm-mc -show-encoding -triple=wasm64-unknown-unknown -mattr=+bulk-memory < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -no-type-check -triple=wasm32-unknown-unknown -mattr=+bulk-memory < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -no-type-check -triple=wasm64-unknown-unknown -mattr=+bulk-memory < %s | FileCheck %s
 
 main:
     .functype main () -> ()

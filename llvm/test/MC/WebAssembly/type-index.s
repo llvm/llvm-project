@@ -6,13 +6,15 @@
 
 test0:
     .functype   test0 (i32) -> (i32)
-    call_indirect (f64) -> (f64)
+    f64.const 1.0
+    local.get 0
+    call_indirect (f64) -> (i32)
     end_function
 
 # CHECK:	.text
 # CHECK-LABEL: test0:
 # CHECK-NEXT:	.functype	test0 (i32) -> (i32)
-# CHECK-NEXT:	call_indirect	__indirect_function_table, (f64) -> (f64)
+# CHECK:	    call_indirect	__indirect_function_table, (f64) -> (i32)
 # CHECK-NEXT:	end_function
 
 # BIN:      --- !WASM
@@ -30,7 +32,7 @@ test0:
 # BIN-NEXT:         ParamTypes:
 # BIN-NEXT:           - F64
 # BIN-NEXT:         ReturnTypes:
-# BIN-NEXT:           - F64
+# BIN-NEXT:           - I32
 # BIN-NEXT:   - Type:            IMPORT
 # BIN-NEXT:     Imports:
 # BIN-NEXT:       - Module:          env
@@ -52,14 +54,14 @@ test0:
 # BIN-NEXT:     Relocations:
 # BIN-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 # BIN-NEXT:         Index:           1
-# BIN-NEXT:         Offset:          0x4
+# BIN-NEXT:         Offset:          0xF
 # BIN-NEXT:       - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:         Index:           1
-# BIN-NEXT:         Offset:          0x9
+# BIN-NEXT:         Offset:          0x14
 # BIN-NEXT:     Functions:
 # BIN-NEXT:       - Index:           0
 # BIN-NEXT:         Locals:          []
-# BIN-NEXT:         Body:            11818080800080808080000B
+# BIN-NEXT:         Body:            44000000000000F03F200011818080800080808080000B
 # BIN-NEXT:   - Type:            CUSTOM
 # BIN-NEXT:     Name:            linking
 # BIN-NEXT:     Version:         2

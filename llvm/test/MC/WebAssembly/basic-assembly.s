@@ -2,6 +2,9 @@
 # Check that it converts to .o without errors, but don't check any output:
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+reference-types,+atomics,+simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
 
+.functype   something1 () -> ()
+.functype   something2 (i64) -> (i32, f64)
+.globaltype __stack_pointer, i32
 
 empty_func:
     .functype empty_func () -> ()
@@ -18,31 +21,37 @@ test0:
     local.get   2
     local.set   2
     # Immediates:
-    i32.const   -1
-    f64.const   0x1.999999999999ap1
     f32.const   -1.0
+    drop
     f32.const   -infinity
-    f32.const   nan
+    drop
     v128.const  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+    drop
     v128.const  0, 1, 2, 3, 4, 5, 6, 7
-    # Indirect addressing:
+    drop
     local.get   0
+    f64.const   0x1.999999999999ap1
+    # Indirect addressing:
     f64.store   1234:p2align=4
+    i32.const   -1
+    f64.const   nan
     f64.store   1234     # Natural alignment (3)
     # Loops, conditionals, binary ops, calls etc:
-    block       i32
+    block       f32
+    f32.const   2.0
     i32.const   1
     local.get   0
     i32.ge_s
     br_if       0        # 0: down to label0
 .LBB0_1:
-    loop        i32      # label1:
+    loop        void      # label1:
     call        something1
     i64.const   1234
     call        something2
     i32.const   0
     call_indirect (i32, f64) -> ()
     i32.const   1
+    i32.const   2
     i32.add
     local.tee   0
     local.get   0
@@ -51,17 +60,15 @@ test0:
 .LBB0_2:
     end_loop
     end_block            # label0:
-    local.get   4
-    local.get   5
+    drop
+    block       i32
     block       void
-    block       i64
-    block       f32
-    block       f64
+    block       void
+    block       void
     block       () -> (i32, i32)
     i32.const   1
     i32.const   2
     end_block
-    drop
     drop
     br_table {0, 1, 2}   # 2 entries, default
     end_block            # first entry jumps here.
@@ -78,14 +85,21 @@ test0:
     end_if
     else
     end_if
+    drop
+    local.get   4
+    local.get   5
     f32x4.add
+    drop
     # Test correct parsing of instructions with / and : in them:
     # TODO: enable once instruction has been added.
     #i32x4.trunc_sat_f32x4_s
+    f32.const   1.0
     i32.trunc_f32_s
     try
     i32.atomic.load 0
+    i32.const   0
     memory.atomic.notify 0
+    drop
 .LBB0_3:
     catch       __cpp_exception
     local.set   0
@@ -97,6 +111,7 @@ test0:
 .LBB0_4:
     #i32.trunc_sat_f32_s
     global.get  __stack_pointer
+    global.set  __stack_pointer
     end_function
 
     .section    .rodata..L.str,"",@
@@ -115,7 +130,6 @@ test0:
     .int32      test0
 
     .ident      "clang version 9.0.0 (trunk 364502) (llvm/trunk 364571)"
-    .globaltype __stack_pointer, i32
 
 .tabletype empty_eref_table, externref
 empty_eref_table:
@@ -125,6 +139,8 @@ empty_fref_table:
 
 
 # CHECK:           .text
+# CHECK:           .globaltype __stack_pointer, i32
+
 # CHECK-LABEL: empty_func:
 # CHECK-NEXT:      .functype	empty_func () -> ()
 # CHECK-NEXT:      end_function
@@ -135,29 +151,35 @@ empty_fref_table:
 # CHECK-NEXT:      .local      f32, f64
 # CHECK-NEXT:      local.get   2
 # CHECK-NEXT:      local.set   2
-# CHECK-NEXT:      i32.const   -1
-# CHECK-NEXT:      f64.const   0x1.999999999999ap1
 # CHECK-NEXT:      f32.const   -0x1p0
+# CHECK-NEXT:      drop
 # CHECK-NEXT:      f32.const   -infinity
-# CHECK-NEXT:      f32.const   nan
+# CHECK-NEXT:      drop
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+# CHECK-NEXT:      drop
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7
+# CHECK-NEXT:      drop
 # CHECK-NEXT:      local.get   0
+# CHECK-NEXT:      f64.const   0x1.999999999999ap1
 # CHECK-NEXT:      f64.store   1234:p2align=4
+# CHECK-NEXT:      i32.const   -1
+# CHECK-NEXT:      f64.const   nan
 # CHECK-NEXT:      f64.store   1234
-# CHECK-NEXT:      block       i32
+# CHECK-NEXT:      block       f32
+# CHECK-NEXT:      f32.const   0x1p1
 # CHECK-NEXT:      i32.const   1
 # CHECK-NEXT:      local.get   0
 # CHECK-NEXT:      i32.ge_s
 # CHECK-NEXT:      br_if       0       # 0: down to label0
 # CHECK-NEXT:  .LBB0_1:
-# CHECK-NEXT:      loop        i32     # label1:
+# CHECK-NEXT:      loop                # label1:
 # CHECK-NEXT:      call        something1
 # CHECK-NEXT:      i64.const   1234
 # CHECK-NEXT:      call        something2
 # CHECK-NEXT:      i32.const   0
 # CHECK-NEXT:      call_indirect __indirect_function_table, (i32, f64) -> ()
 # CHECK-NEXT:      i32.const   1
+# CHECK-NEXT:      i32.const   2
 # CHECK-NEXT:      i32.add
 # CHECK-NEXT:      local.tee   0
 # CHECK-NEXT:      local.get   0
@@ -166,17 +188,15 @@ empty_fref_table:
 # CHECK-NEXT:  .LBB0_2:
 # CHECK-NEXT:      end_loop
 # CHECK-NEXT:      end_block           # label0:
-# CHECK-NEXT:      local.get   4
-# CHECK-NEXT:      local.get   5
+# CHECK-NEXT:      drop
+# CHECK-NEXT:      block       i32
 # CHECK-NEXT:      block
-# CHECK-NEXT:      block       i64
-# CHECK-NEXT:      block       f32
-# CHECK-NEXT:      block       f64
+# CHECK-NEXT:      block
+# CHECK-NEXT:      block
 # CHECK-NEXT:      block       () -> (i32, i32)
 # CHECK-NEXT:      i32.const   1
 # CHECK-NEXT:      i32.const   2
 # CHECK-NEXT:      end_block
-# CHECK-NEXT:      drop
 # CHECK-NEXT:      drop
 # CHECK-NEXT:      br_table {0, 1, 2}  # 1: down to label4
 # CHECK-NEXT:                          # 2: down to label3
@@ -194,11 +214,18 @@ empty_fref_table:
 # CHECK-NEXT:      end_if
 # CHECK-NEXT:      else
 # CHECK-NEXT:      end_if
+# CHECK-NEXT:      drop
+# CHECK-NEXT:      local.get   4
+# CHECK-NEXT:      local.get   5
 # CHECK-NEXT:      f32x4.add
+# CHECK-NEXT:      drop
+# CHECK-NEXT:      f32.const   0x1p0
 # CHECK-NEXT:      i32.trunc_f32_s
 # CHECK-NEXT:      try
 # CHECK-NEXT:      i32.atomic.load 0
+# CHECK-NEXT:      i32.const   0
 # CHECK-NEXT:      memory.atomic.notify 0
+# CHECK-NEXT:      drop
 # CHECK-NEXT:  .LBB0_3:
 # CHECK-NEXT:      catch       __cpp_exception
 # CHECK-NEXT:      local.set   0
@@ -209,6 +236,7 @@ empty_fref_table:
 # CHECK-NEXT:      throw       0
 # CHECK-NEXT:  .LBB0_4:
 # CHECK-NEXT:      global.get  __stack_pointer
+# CHECK-NEXT:      global.set  __stack_pointer
 # CHECK-NEXT:      end_function
 
 # CHECK:           .section    .rodata..L.str,"",@
@@ -224,8 +252,6 @@ empty_fref_table:
 # CHECK:           .section    .init_array.42,"",@
 # CHECK-NEXT:      .p2align    2
 # CHECK-NEXT:      .int32      test0
-
-# CHECK:           .globaltype __stack_pointer, i32
 
 # CHECK:           .tabletype empty_eref_table, externref
 # CHECK-NEXT: empty_eref_table:
