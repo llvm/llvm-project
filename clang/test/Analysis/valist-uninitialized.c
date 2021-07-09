@@ -145,7 +145,7 @@ void is_sink(int fst, ...) {
   va_list va;
   va_end(va); // expected-warning{{va_end() is called on an uninitialized va_list}}
   // expected-note@-1{{va_end() is called on an uninitialized va_list}}
-  *((volatile int *)0) = 1;
+  *((volatile int *)0) = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
 }
 
 // NOTE: this is invalid, as the man page of va_end requires that "Each invocation of va_start()

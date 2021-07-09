@@ -39,14 +39,13 @@ void test_sizeof(){
 
 // PR3418
 int test_leading_extension() {
-  __extension__ (*(char*)0) = 1; // expected-warning {{indirection of non-volatile null pointer}} \
-                                 // expected-note {{consider using __builtin_trap}}
+  __extension__(*(char *)0) = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
   return 0;
 }
 
 // PR3972
 int test5(int);
-int test6(void) { 
+int test6(void) {
   return test5(      // expected-note {{to match}}
                test5(1)
                  ; // expected-error {{expected ')'}}
