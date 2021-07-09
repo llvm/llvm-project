@@ -224,10 +224,10 @@ define <2 x half> @chain_hi_to_lo_global() {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    global_load_ushort v0, v[0:1], off
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    global_load_short_d16_hi v0, v[1:2], off
+; GCN-NEXT:    global_load_short_d16_hi v0, v[2:3], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -292,10 +292,10 @@ define <2 x half> @chain_hi_to_lo_flat() {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_load_short_d16_hi v0, v[1:2]
+; GCN-NEXT:    flat_load_short_d16_hi v0, v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
