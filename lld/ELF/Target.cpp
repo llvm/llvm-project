@@ -130,6 +130,8 @@ ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
 TargetInfo::~TargetInfo() {}
 
 int64_t TargetInfo::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  internalLinkerError(getErrorLocation(buf),
+                      "cannot read addend for relocation " + toString(type));
   return 0;
 }
 
