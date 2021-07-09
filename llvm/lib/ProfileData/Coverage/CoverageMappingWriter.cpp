@@ -63,7 +63,7 @@ void CoverageFilenamesSectionWriter::write(raw_ostream &OS, bool Compress) {
   encodeULEB128(Filenames.size(), OS);
   encodeULEB128(FilenamesStr.size(), OS);
   encodeULEB128(doCompression ? CompressedStr.size() : 0U, OS);
-  OS << (doCompression ? StringRef(CompressedStr) : StringRef(FilenamesStr));
+  OS << (doCompression ? CompressedStr.str() : StringRef(FilenamesStr));
 }
 
 namespace {

@@ -16,6 +16,7 @@ add_mlir_conversion_library(MLIRGPUToNVVMTransforms
   MLIRLLVMCommonConversion
   MLIRLLVMIR
   MLIRMemRef
+  MLIRMemRefToLLVM
   MLIRNVVMIR
   MLIRPass
   MLIRStandardToLLVM

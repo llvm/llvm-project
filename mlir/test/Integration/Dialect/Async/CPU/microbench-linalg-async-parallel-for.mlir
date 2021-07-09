@@ -8,6 +8,7 @@
 // RUN:               -convert-scf-to-std                                      \
 // RUN:               -std-expand                                              \
 // RUN:               -convert-vector-to-llvm                                  \
+// RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
@@ -20,6 +21,7 @@
 // RUN:               -convert-linalg-to-loops                                 \
 // RUN:               -convert-scf-to-std                                      \
 // RUN:               -convert-vector-to-llvm                                  \
+// RUN:               -convert-memref-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \

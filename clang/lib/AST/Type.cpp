@@ -3142,6 +3142,7 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_SpirFunction: return "spir_function";
   case CC_OpenCLKernel: return "opencl_kernel";
   case CC_Swift: return "swiftcall";
+  case CC_SwiftAsync: return "swiftasynccall";
   case CC_PreserveMost: return "preserve_most";
   case CC_PreserveAll: return "preserve_all";
   }
@@ -3558,6 +3559,7 @@ bool AttributedType::isCallingConv() const {
   case attr::ThisCall:
   case attr::RegCall:
   case attr::SwiftCall:
+  case attr::SwiftAsyncCall:
   case attr::VectorCall:
   case attr::AArch64VectorPcs:
   case attr::Pascal:

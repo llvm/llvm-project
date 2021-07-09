@@ -318,53 +318,63 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     Value *LHS, *RHS;
     BasicBlock *IfTrue, *IfFalse;
     auto *Term = BB->getTerminator();
-    // TODO: Handle switch.
-    if (!match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
-                          m_BasicBlock(IfTrue), m_BasicBlock(IfFalse)))) {
-      MarkAllSuccessorsLive(BB);
-      continue;
-    }
+    if (match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+                         m_BasicBlock(IfTrue), m_BasicBlock(IfFalse)))) {
+      if (!LHS->getType()->isIntegerTy()) {
+        MarkAllSuccessorsLive(BB);
+        continue;
+      }
 
-    if (!LHS->getType()->isIntegerTy()) {
-      MarkAllSuccessorsLive(BB);
-      continue;
-    }
-
-    // Can we prove constant true or false for this condition?
-    LHS = getValueOnFirstIteration(LHS, FirstIterValue, SQ);
-    RHS = getValueOnFirstIteration(RHS, FirstIterValue, SQ);
-    auto *KnownCondition = SimplifyICmpInst(Pred, LHS, RHS, SQ);
-    if (!KnownCondition) {
-      // Failed to simplify.
-      MarkAllSuccessorsLive(BB);
-      continue;
-    }
-    if (isa<UndefValue>(KnownCondition)) {
-      // TODO: According to langref, branching by undef is undefined behavior.
-      // It means that, theoretically, we should be able to just continue
-      // without marking any successors as live. However, we are not certain
-      // how correct our compiler is at handling such cases. So we are being
-      // very conservative here.
-      //
-      // If there is a non-loop successor, always assume this branch leaves the
-      // loop. Otherwise, arbitrarily take IfTrue.
-      //
-      // Once we are certain that branching by undef is handled correctly by
-      // other transforms, we should not mark any successors live here.
-      if (L->contains(IfTrue) && L->contains(IfFalse))
+      // Can we prove constant true or false for this condition?
+      LHS = getValueOnFirstIteration(LHS, FirstIterValue, SQ);
+      RHS = getValueOnFirstIteration(RHS, FirstIterValue, SQ);
+      auto *KnownCondition = SimplifyICmpInst(Pred, LHS, RHS, SQ);
+      if (!KnownCondition) {
+        // Failed to simplify.
+        MarkAllSuccessorsLive(BB);
+        continue;
+      }
+      if (isa<UndefValue>(KnownCondition)) {
+        // TODO: According to langref, branching by undef is undefined behavior.
+        // It means that, theoretically, we should be able to just continue
+        // without marking any successors as live. However, we are not certain
+        // how correct our compiler is at handling such cases. So we are being
+        // very conservative here.
+        //
+        // If there is a non-loop successor, always assume this branch leaves the
+        // loop. Otherwise, arbitrarily take IfTrue.
+        //
+        // Once we are certain that branching by undef is handled correctly by
+        // other transforms, we should not mark any successors live here.
+        if (L->contains(IfTrue) && L->contains(IfFalse))
+          MarkLiveEdge(BB, IfTrue);
+        continue;
+      }
+      auto *ConstCondition = dyn_cast<ConstantInt>(KnownCondition);
+      if (!ConstCondition) {
+        // Non-constant condition, cannot analyze any further.
+        MarkAllSuccessorsLive(BB);
+        continue;
+      }
+      if (ConstCondition->isAllOnesValue())
         MarkLiveEdge(BB, IfTrue);
-      continue;
-    }
-    auto *ConstCondition = dyn_cast<ConstantInt>(KnownCondition);
-    if (!ConstCondition) {
-      // Non-constant condition, cannot analyze any further.
+      else
+        MarkLiveEdge(BB, IfFalse);
+    } else if (SwitchInst *SI = dyn_cast<SwitchInst>(Term)) {
+      auto *SwitchValue = SI->getCondition();
+      auto *SwitchValueOnFirstIter =
+          getValueOnFirstIteration(SwitchValue, FirstIterValue, SQ);
+      auto *ConstSwitchValue = dyn_cast<ConstantInt>(SwitchValueOnFirstIter);
+      if (!ConstSwitchValue) {
+        MarkAllSuccessorsLive(BB);
+        continue;
+      }
+      auto CaseIterator = SI->findCaseValue(ConstSwitchValue);
+      MarkLiveEdge(BB, CaseIterator->getCaseSuccessor());
+    } else {
       MarkAllSuccessorsLive(BB);
       continue;
     }
-    if (ConstCondition->isAllOnesValue())
-      MarkLiveEdge(BB, IfTrue);
-    else
-      MarkLiveEdge(BB, IfFalse);
   }
 
   // We can break the latch if it wasn't live.

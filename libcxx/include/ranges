@@ -101,6 +101,14 @@ namespace std::ranges {
 
   template<class T>
     inline constexpr bool enable_borrowed_range<drop_view<T>> = enable_borrowed_range<T>;
+
+  // [range.transform], transform view
+  template<input_range V, copy_constructible F>
+    requires view<V> && is_object_v<F> &&
+             regular_invocable<F&, range_reference_t<V>> &&
+             can-reference<invoke_result_t<F&, range_reference_t<V>>>
+  class transform_view;
+
 }
 
 */
@@ -118,6 +126,7 @@ namespace std::ranges {
 #include <__ranges/ref_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
+#include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.

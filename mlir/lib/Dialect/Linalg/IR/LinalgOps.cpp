@@ -256,6 +256,20 @@ public:
     llvm_unreachable("unsupported non numeric type");
   }
 
+  Value applyfn__exp(Value x) {
+    OpBuilder builder = getBuilder();
+    if (isFloatingPoint(x))
+      return builder.create<math::ExpOp>(x.getLoc(), x);
+    llvm_unreachable("unsupported non numeric type");
+  }
+
+  Value applyfn__log(Value x) {
+    OpBuilder builder = getBuilder();
+    if (isFloatingPoint(x))
+      return builder.create<math::LogOp>(x.getLoc(), x);
+    llvm_unreachable("unsupported non numeric type");
+  }
+
   Value applyfn__sub(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
@@ -458,10 +472,6 @@ static LogicalResult verify(FillOp op) {
   Type fillType = op.value().getType();
   if (getElementTypeOrSelf(output->get()) != fillType)
     return op.emitOpError("expects fill type to match view elemental type");
-  if (!op.getNumResults() && !output->get().getType().isa<MemRefType>()) {
-    return op.emitOpError(
-        "expected fill op with no result value to use memref type");
-  }
   return success();
 }
 
@@ -762,11 +772,11 @@ struct FoldInitTensorWithExtractSliceOp
                                 PatternRewriter &rewriter) const override {
     if (!sliceOp.source().getDefiningOp<linalg::InitTensorOp>())
       return failure();
+    // ExtractSliceOp may be rank-reducing; its dynamic sizes must be preserved
+    // as well as its result type.
     rewriter.replaceOpWithNewOp<linalg::InitTensorOp>(
         sliceOp, sliceOp.sizes(),
-        llvm::to_vector<4>(llvm::map_range(
-            sliceOp.static_sizes(),
-            [](Attribute attr) { return attr.cast<IntegerAttr>().getInt(); })),
+        sliceOp.result().getType().cast<RankedTensorType>().getShape(),
         sliceOp.getSourceType().getElementType());
     return success();
   }

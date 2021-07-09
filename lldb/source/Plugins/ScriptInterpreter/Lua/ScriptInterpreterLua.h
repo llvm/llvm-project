@@ -11,6 +11,7 @@
 
 #include <vector>
 
+#include "lldb/Breakpoint/WatchpointOptions.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Status.h"
@@ -42,7 +43,8 @@ public:
 
   void ExecuteInterpreterLoop() override;
 
-  bool LoadScriptingModule(const char *filename, bool init_session,
+  bool LoadScriptingModule(const char *filename,
+                           const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
                            FileSpec extra_search_dir = {}) override;
@@ -63,6 +65,10 @@ public:
                                          lldb::user_id_t break_id,
                                          lldb::user_id_t break_loc_id);
 
+  static bool WatchpointCallbackFunction(void *baton,
+                                         StoppointCallbackContext *context,
+                                         lldb::user_id_t watch_id);
+
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
@@ -77,8 +83,15 @@ public:
       std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       CommandReturnObject &result) override;
 
+  void
+  CollectDataForWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                          CommandReturnObject &result) override;
+
   Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                       const char *command_body_text) override;
+
+  void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                    const char *command_body_text) override;
 
   Status SetBreakpointCommandCallbackFunction(
       BreakpointOptions &bp_options, const char *function_name,
@@ -89,6 +102,10 @@ private:
   bool m_session_is_active = false;
 
   Status RegisterBreakpointCallback(BreakpointOptions &bp_options,
+                                    const char *command_body_text,
+                                    StructuredData::ObjectSP extra_args_sp);
+
+  Status RegisterWatchpointCallback(WatchpointOptions *wp_options,
                                     const char *command_body_text,
                                     StructuredData::ObjectSP extra_args_sp);
 };

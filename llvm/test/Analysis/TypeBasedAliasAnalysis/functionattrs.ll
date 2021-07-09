@@ -72,13 +72,13 @@ define i32 @test3_no(i8* %p) nounwind {
 declare void @callee(i32* %p) nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1) nounwind
 
-; CHECK: attributes #0 = { nofree norecurse nosync nounwind readnone willreturn mustprogress }
-; CHECK: attributes #1 = { nofree norecurse nosync nounwind willreturn  writeonly mustprogress }
+; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn writeonly }
 ; CHECK: attributes #2 = { nofree nounwind readonly }
 ; CHECK: attributes #3 = { nounwind }
-; CHECK: attributes #4 = { nofree nosync nounwind readnone willreturn mustprogress }
-; CHECK: attributes #5 = { nofree nosync nounwind willreturn mustprogress }
-; CHECK: attributes #6 = { nofree norecurse nosync nounwind willreturn mustprogress }
+; CHECK: attributes #4 = { mustprogress nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #5 = { mustprogress nofree nosync nounwind willreturn }
+; CHECK: attributes #6 = { mustprogress nofree norecurse nosync nounwind willreturn }
 ; CHECK: attributes #7 = { argmemonly nofree nounwind willreturn }
 
 ; Root note.

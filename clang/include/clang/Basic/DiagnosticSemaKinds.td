@@ -3145,7 +3145,8 @@ def warn_nsdictionary_duplicate_key : Warning<
 def note_nsdictionary_duplicate_key_here : Note<
   "previous equal key is here">;
 def err_swift_param_attr_not_swiftcall : Error<
-  "'%0' parameter can only be used with swiftcall calling convention">;
+  "'%0' parameter can only be used with swiftcall%select{ or swiftasynccall|}1 "
+  "calling convention%select{|s}1">;
 def err_swift_indirect_result_not_first : Error<
   "'swift_indirect_result' parameters must be first parameters of function">;
 def err_swift_error_result_not_after_swift_context : Error<

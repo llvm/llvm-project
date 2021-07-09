@@ -169,6 +169,13 @@ Changes to the LLVM tools
   ``--section-details`` respectively, to match llvm-readelf.
   (`D105055 <https://reviews.llvm.org/D105055>`_)
 
+* The llvm-nm short aliases ``-M`` (``--print-armap``), ``-U``
+  (``--defined-only``), and ``-W`` (``--no-weak``) are now deprecated.
+  Use the long form versions instead.
+  The alias ``--just-symbol-name`` is now deprecated in favor of
+  ``--format=just-symbols`` and ``-j``.
+  (`D105330 <https://reviews.llvm.org/D105330>`_)
+
 Changes to LLDB
 ---------------------------------
 

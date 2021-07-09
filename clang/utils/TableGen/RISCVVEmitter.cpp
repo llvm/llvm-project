@@ -141,6 +141,7 @@ enum RISCVExtension : uint8_t {
   D = 1 << 2,
   Zfh = 1 << 3,
   Zvamo = 1 << 4,
+  Zvlsseg = 1 << 5,
 };
 
 // TODO refactor RVVIntrinsic class design after support all intrinsic
@@ -784,6 +785,8 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   }
   if (RequiredExtension == "Zvamo")
     RISCVExtensions |= RISCVExtension::Zvamo;
+  if (RequiredExtension == "Zvlsseg")
+    RISCVExtensions |= RISCVExtension::Zvlsseg;
 
   // Init OutputType and InputTypes
   OutputType = OutInTypes[0];
@@ -1237,6 +1240,8 @@ bool RVVEmitter::emitExtDefStr(uint8_t Extents, raw_ostream &OS) {
     OS << LS << "defined(__riscv_zfh)";
   if (Extents & RISCVExtension::Zvamo)
     OS << LS << "defined(__riscv_zvamo)";
+  if (Extents & RISCVExtension::Zvlsseg)
+    OS << LS << "defined(__riscv_zvlsseg)";
   OS << "\n";
   return true;
 }

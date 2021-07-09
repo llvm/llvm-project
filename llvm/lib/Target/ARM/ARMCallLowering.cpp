@@ -186,7 +186,7 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   if (!isSupportedType(DL, TLI, Val->getType()))
     return false;
 
-  ArgInfo OrigRetInfo(VRegs, Val->getType());
+  ArgInfo OrigRetInfo(VRegs, Val->getType(), 0);
   setArgFlags(OrigRetInfo, AttributeList::ReturnIndex, DL, F);
 
   SmallVector<ArgInfo, 4> SplitRetInfos;
@@ -388,7 +388,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 8> SplitArgInfos;
   unsigned Idx = 0;
   for (auto &Arg : F.args()) {
-    ArgInfo OrigArgInfo(VRegs[Idx], Arg.getType());
+    ArgInfo OrigArgInfo(VRegs[Idx], Arg.getType(), Idx);
 
     setArgFlags(OrigArgInfo, Idx + AttributeList::FirstArgIndex, DL, F);
     splitToValueTypes(OrigArgInfo, SplitArgInfos, DL, F.getCallingConv());

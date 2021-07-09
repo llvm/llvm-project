@@ -38,13 +38,13 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
         SSA value. If the reference is an SSA value, the SSA value corresponds
         to a region of a lambda-like operation.
       }],
-      "CallInterfaceCallable", "getCallableForCallee"
+      "::mlir::CallInterfaceCallable", "getCallableForCallee"
     >,
     InterfaceMethod<[{
         Returns the operands within this call that are used as arguments to the
         callee.
       }],
-      "Operation::operand_range", "getArgOperands"
+      "::mlir::Operation::operand_range", "getArgOperands"
     >,
   ];
 
@@ -76,13 +76,13 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
         return null in the case of an external callable object, e.g. an external
         function.
       }],
-      "Region *", "getCallableRegion"
+      "::mlir::Region *", "getCallableRegion"
     >,
     InterfaceMethod<[{
         Returns the results types that the callable region produces when
         executed.
       }],
-      "ArrayRef<Type>", "getCallableResults"
+      "::mlir::ArrayRef<::mlir::Type>", "getCallableResults"
     >,
   ];
 }

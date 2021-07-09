@@ -634,7 +634,7 @@ parseInvocationList(StringRef FileContent, llvm::sys::path::Style PathStyle) {
     SmallString<32> NativeSourcePath(SourcePath);
     llvm::sys::path::native(NativeSourcePath, PathStyle);
 
-    StringRef InvocationKey(NativeSourcePath);
+    StringRef InvocationKey = NativeSourcePath;
 
     if (InvocationList.find(InvocationKey) != InvocationList.end())
       return llvm::make_error<IndexError>(

@@ -17,7 +17,7 @@ constexpr bool is_addressable = requires(T t) {
 };
 
 template <class T>
-[[nodiscard]] constexpr bool is_function_like() {
+constexpr bool is_function_like() {
   using X = std::remove_cvref_t<T>;
   static_assert(!is_addressable<X>);
   static_assert(!is_addressable<X const>);

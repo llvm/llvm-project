@@ -162,7 +162,7 @@ let isMoveImm = 1 in {
   let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
     def S_MOV_B32 : SOP1_32 <"s_mov_b32">;
     def S_MOV_B64 : SOP1_64 <"s_mov_b64">;
-  } // End isRematerializeable = 1
+  } // End isReMaterializable = 1
 
   let Uses = [SCC] in {
     def S_CMOV_B32 : SOP1_32 <"s_cmov_b32">;
@@ -197,12 +197,14 @@ def : GCNPat <
 >;
 }
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def S_BREV_B32 : SOP1_32 <"s_brev_b32",
   [(set i32:$sdst, (bitreverse i32:$src0))]
 >;
 def S_BREV_B64 : SOP1_64 <"s_brev_b64",
   [(set i64:$sdst, (bitreverse i64:$src0))]
 >;
+} // End isReMaterializable = 1, isAsCheapAsAMove = 1
 
 let Defs = [SCC] in {
 def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32">;
@@ -215,6 +217,7 @@ def S_BCNT1_I32_B64 : SOP1_32_64 <"s_bcnt1_i32_b64",
 >;
 } // End Defs = [SCC]
 
+let isReMaterializable = 1 in {
 def S_FF0_I32_B32 : SOP1_32 <"s_ff0_i32_b32">;
 def S_FF0_I32_B64 : SOP1_32_64 <"s_ff0_i32_b64">;
 def S_FF1_I32_B64 : SOP1_32_64 <"s_ff1_i32_b64",
@@ -242,11 +245,13 @@ def S_SEXT_I32_I8 : SOP1_32 <"s_sext_i32_i8",
 def S_SEXT_I32_I16 : SOP1_32 <"s_sext_i32_i16",
   [(set i32:$sdst, (sext_inreg i32:$src0, i16))]
 >;
+} // End isReMaterializable = 1
 
 def S_BITSET0_B32 : SOP1_32    <"s_bitset0_b32", [], 1>;
 def S_BITSET0_B64 : SOP1_64_32 <"s_bitset0_b64", [], 1>;
 def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32", [], 1>;
 def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64", [], 1>;
+
 def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
@@ -318,6 +323,7 @@ let SubtargetPredicate = isGFX9Plus in {
     def S_ANDN2_WREXEC_B64   : SOP1_64<"s_andn2_wrexec_b64">;
   } // End hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC]
 
+  let isReMaterializable = 1 in
   def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32">;
 } // End SubtargetPredicate = isGFX9Plus
 
@@ -610,6 +616,7 @@ def S_ASHR_I64 : SOP2_64_32 <"s_ashr_i64",
 >;
 } // End Defs = [SCC]
 
+let isReMaterializable = 1 in {
 def S_BFM_B32 : SOP2_32 <"s_bfm_b32",
   [(set i32:$sdst, (UniformBinFrag<AMDGPUbfm> i32:$src0, i32:$src1))]>;
 def S_BFM_B64 : SOP2_64_32_32 <"s_bfm_b64">;
@@ -619,7 +626,7 @@ def S_MUL_I32 : SOP2_32 <"s_mul_i32",
   [(set i32:$sdst, (mul i32:$src0, i32:$src1))]> {
   let isCommutable = 1;
 }
-
+} // End isReMaterializable = 1
 } // End AddedComplexity = 1
 
 let Defs = [SCC] in {
@@ -654,9 +661,11 @@ let SubtargetPredicate = isGFX8GFX9 in {
 }
 
 let SubtargetPredicate = isGFX9Plus in {
-  def S_PACK_LL_B32_B16 : SOP2_32<"s_pack_ll_b32_b16">;
-  def S_PACK_LH_B32_B16 : SOP2_32<"s_pack_lh_b32_b16">;
-  def S_PACK_HH_B32_B16 : SOP2_32<"s_pack_hh_b32_b16">;
+  let isReMaterializable = 1 in {
+    def S_PACK_LL_B32_B16 : SOP2_32<"s_pack_ll_b32_b16">;
+    def S_PACK_LH_B32_B16 : SOP2_32<"s_pack_lh_b32_b16">;
+    def S_PACK_HH_B32_B16 : SOP2_32<"s_pack_hh_b32_b16">;
+  } // End isReMaterializable = 1
 
   let Defs = [SCC] in {
     def S_LSHL1_ADD_U32 : SOP2_32<"s_lshl1_add_u32",
@@ -673,12 +682,12 @@ let SubtargetPredicate = isGFX9Plus in {
     >;
   } // End Defs = [SCC]
 
-  let isCommutable = 1 in {
+  let isCommutable = 1, isReMaterializable = 1 in {
     def S_MUL_HI_U32 : SOP2_32<"s_mul_hi_u32",
       [(set i32:$sdst, (UniformBinFrag<mulhu> SSrc_b32:$src0, SSrc_b32:$src1))]>;
     def S_MUL_HI_I32 : SOP2_32<"s_mul_hi_i32",
       [(set i32:$sdst, (UniformBinFrag<mulhs> SSrc_b32:$src0, SSrc_b32:$src1))]>;
-  }
+  } // End isCommutable = 1, isReMaterializable = 1
 } // End SubtargetPredicate = isGFX9Plus
 
 //===----------------------------------------------------------------------===//

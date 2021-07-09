@@ -2561,3 +2561,36 @@ entry:
   ret double %vecext
 ; FIXME: add check patterns when variable element extraction is implemented
 }
+
+; To check when LHS is i32 to vector and RHS is i64 to vector,
+; the combination should be skipped properly.
+define <2 x i64> @buildi2(i64 %arg, i32 %arg1) {
+; CHECK-LABEL: buildi2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sldi r4, r4, 32
+; CHECK-NEXT:    mtfprd f1, r3
+; CHECK-NEXT:    mtfprd f0, r4
+; CHECK-NEXT:    xxmrghd v2, vs0, vs1
+; CHECK-NEXT:    blr
+;
+; CHECK-LE-LABEL: buildi2:
+; CHECK-LE:       # %bb.0: # %entry
+; CHECK-LE-NEXT:    mtfprwz f0, r4
+; CHECK-LE-NEXT:    mtfprd f1, r3
+; CHECK-LE-NEXT:    xxmrgld v2, vs1, vs0
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-AIX-LABEL: buildi2:
+; CHECK-AIX:       # %bb.0: # %entry
+; CHECK-AIX-NEXT:    sldi 4, 4, 32
+; CHECK-AIX-NEXT:    mtfprd 1, 3
+; CHECK-AIX-NEXT:    mtfprd 0, 4
+; CHECK-AIX-NEXT:    xxmrghd 34, 0, 1
+; CHECK-AIX-NEXT:    blr
+entry:
+  %lhs.i32 = insertelement <4 x i32> undef, i32 %arg1, i32 0
+  %rhs = insertelement <2 x i64> undef, i64 %arg, i32 0
+  %lhs = bitcast <4 x i32> %lhs.i32 to <2 x i64>
+  %shuffle = shufflevector <2 x i64> %lhs, <2 x i64> %rhs, <2 x i32> <i32 0, i32 2>
+  ret <2 x i64> %shuffle
+}

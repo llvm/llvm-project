@@ -270,10 +270,18 @@ namespace llvm {
   /// operations.
   FunctionPass *createGCLoweringPass();
 
+  /// GCLowering Pass - Used by gc.root to perform its default lowering
+  /// operations.
+  extern char &GCLoweringID;
+
   /// ShadowStackGCLowering - Implements the custom lowering mechanism
   /// used by the shadow stack GC.  Only runs on functions which opt in to
   /// the shadow stack collector.
   FunctionPass *createShadowStackGCLoweringPass();
+
+  /// ShadowStackGCLowering - Implements the custom lowering mechanism
+  /// used by the shadow stack GC.
+  extern char &ShadowStackGCLoweringID;
 
   /// GCMachineCodeAnalysis - Target-independent pass to mark safe points
   /// in machine code. Must be added very late during code generation, just

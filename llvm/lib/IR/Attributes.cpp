@@ -366,162 +366,13 @@ std::pair<unsigned, unsigned> Attribute::getVScaleRangeArgs() const {
 std::string Attribute::getAsString(bool InAttrGrp) const {
   if (!pImpl) return {};
 
-  if (hasAttribute(Attribute::SanitizeAddress))
-    return "sanitize_address";
-  if (hasAttribute(Attribute::SanitizeHWAddress))
-    return "sanitize_hwaddress";
-  if (hasAttribute(Attribute::SanitizeMemTag))
-    return "sanitize_memtag";
-  if (hasAttribute(Attribute::AlwaysInline))
-    return "alwaysinline";
-  if (hasAttribute(Attribute::ArgMemOnly))
-    return "argmemonly";
-  if (hasAttribute(Attribute::Builtin))
-    return "builtin";
-  if (hasAttribute(Attribute::Convergent))
-    return "convergent";
-  if (hasAttribute(Attribute::SwiftError))
-    return "swifterror";
-  if (hasAttribute(Attribute::SwiftSelf))
-    return "swiftself";
-  if (hasAttribute(Attribute::SwiftAsync))
-    return "swiftasync";
-  if (hasAttribute(Attribute::InaccessibleMemOnly))
-    return "inaccessiblememonly";
-  if (hasAttribute(Attribute::InaccessibleMemOrArgMemOnly))
-    return "inaccessiblemem_or_argmemonly";
-  if (hasAttribute(Attribute::InlineHint))
-    return "inlinehint";
-  if (hasAttribute(Attribute::InReg))
-    return "inreg";
-  if (hasAttribute(Attribute::JumpTable))
-    return "jumptable";
-  if (hasAttribute(Attribute::MinSize))
-    return "minsize";
-  if (hasAttribute(Attribute::Naked))
-    return "naked";
-  if (hasAttribute(Attribute::Nest))
-    return "nest";
-  if (hasAttribute(Attribute::NoAlias))
-    return "noalias";
-  if (hasAttribute(Attribute::NoBuiltin))
-    return "nobuiltin";
-  if (hasAttribute(Attribute::NoCallback))
-    return "nocallback";
-  if (hasAttribute(Attribute::NoCapture))
-    return "nocapture";
-  if (hasAttribute(Attribute::NoDuplicate))
-    return "noduplicate";
-  if (hasAttribute(Attribute::NoFree))
-    return "nofree";
-  if (hasAttribute(Attribute::NoImplicitFloat))
-    return "noimplicitfloat";
-  if (hasAttribute(Attribute::NoInline))
-    return "noinline";
-  if (hasAttribute(Attribute::NonLazyBind))
-    return "nonlazybind";
-  if (hasAttribute(Attribute::NoMerge))
-    return "nomerge";
-  if (hasAttribute(Attribute::NonNull))
-    return "nonnull";
-  if (hasAttribute(Attribute::NoRedZone))
-    return "noredzone";
-  if (hasAttribute(Attribute::NoReturn))
-    return "noreturn";
-  if (hasAttribute(Attribute::NoSync))
-    return "nosync";
-  if (hasAttribute(Attribute::NullPointerIsValid))
-    return "null_pointer_is_valid";
-  if (hasAttribute(Attribute::WillReturn))
-    return "willreturn";
-  if (hasAttribute(Attribute::NoCfCheck))
-    return "nocf_check";
-  if (hasAttribute(Attribute::NoRecurse))
-    return "norecurse";
-  if (hasAttribute(Attribute::NoProfile))
-    return "noprofile";
-  if (hasAttribute(Attribute::NoUnwind))
-    return "nounwind";
-  if (hasAttribute(Attribute::NoSanitizeCoverage))
-    return "nosanitize_coverage";
-  if (hasAttribute(Attribute::OptForFuzzing))
-    return "optforfuzzing";
-  if (hasAttribute(Attribute::OptimizeNone))
-    return "optnone";
-  if (hasAttribute(Attribute::OptimizeForSize))
-    return "optsize";
-  if (hasAttribute(Attribute::ReadNone))
-    return "readnone";
-  if (hasAttribute(Attribute::ReadOnly))
-    return "readonly";
-  if (hasAttribute(Attribute::WriteOnly))
-    return "writeonly";
-  if (hasAttribute(Attribute::Returned))
-    return "returned";
-  if (hasAttribute(Attribute::ReturnsTwice))
-    return "returns_twice";
-  if (hasAttribute(Attribute::SExt))
-    return "signext";
-  if (hasAttribute(Attribute::SpeculativeLoadHardening))
-    return "speculative_load_hardening";
-  if (hasAttribute(Attribute::Speculatable))
-    return "speculatable";
-  if (hasAttribute(Attribute::StackProtect))
-    return "ssp";
-  if (hasAttribute(Attribute::StackProtectReq))
-    return "sspreq";
-  if (hasAttribute(Attribute::StackProtectStrong))
-    return "sspstrong";
-  if (hasAttribute(Attribute::SafeStack))
-    return "safestack";
-  if (hasAttribute(Attribute::ShadowCallStack))
-    return "shadowcallstack";
-  if (hasAttribute(Attribute::StrictFP))
-    return "strictfp";
-  if (hasAttribute(Attribute::SanitizeThread))
-    return "sanitize_thread";
-  if (hasAttribute(Attribute::SanitizeMemory))
-    return "sanitize_memory";
-  if (hasAttribute(Attribute::UWTable))
-    return "uwtable";
-  if (hasAttribute(Attribute::ZExt))
-    return "zeroext";
-  if (hasAttribute(Attribute::Cold))
-    return "cold";
-  if (hasAttribute(Attribute::Hot))
-    return "hot";
-  if (hasAttribute(Attribute::ImmArg))
-    return "immarg";
-  if (hasAttribute(Attribute::NoUndef))
-    return "noundef";
-  if (hasAttribute(Attribute::MustProgress))
-    return "mustprogress";
+  if (isEnumAttribute())
+    return getNameFromAttrKind(getKindAsEnum()).str();
 
   if (isTypeAttribute()) {
-    std::string Result;
-    raw_string_ostream OS(Result);
-
-    switch (getKindAsEnum()) {
-    case Attribute::ByVal:
-      Result += "byval";
-      break;
-    case Attribute::StructRet:
-      Result += "sret";
-      break;
-    case Attribute::ByRef:
-      Result += "byref";
-      break;
-    case Attribute::Preallocated:
-      Result += "preallocated";
-      break;
-    case Attribute::InAlloca:
-      Result += "inalloca";
-      break;
-    default:
-      llvm_unreachable("unhandled type attribute");
-    }
-
+    std::string Result = getNameFromAttrKind(getKindAsEnum()).str();
     Result += '(';
+    raw_string_ostream OS(Result);
     getValueAsType()->print(OS, false, true);
     OS.flush();
     Result += ')';
@@ -1746,10 +1597,25 @@ void AttrBuilder::clear() {
   DerefBytes = DerefOrNullBytes = 0;
   AllocSizeArgs = 0;
   VScaleRangeArgs = 0;
-  ByValType = nullptr;
-  StructRetType = nullptr;
-  ByRefType = nullptr;
-  PreallocatedType = nullptr;
+  TypeAttrs = {};
+}
+
+Optional<unsigned>
+AttrBuilder::kindToTypeIndex(Attribute::AttrKind Kind) const {
+  switch (Kind) {
+  case Attribute::ByVal:
+    return ByValTypeIndex;
+  case Attribute::ByRef:
+    return ByRefTypeIndex;
+  case Attribute::InAlloca:
+    return InAllocaTypeIndex;
+  case Attribute::Preallocated:
+    return PreallocatedTypeIndex;
+  case Attribute::StructRet:
+    return StructRetTypeIndex;
+  default:
+    return None;
+  }
 }
 
 AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
@@ -1761,18 +1627,12 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
   Attribute::AttrKind Kind = Attr.getKindAsEnum();
   Attrs[Kind] = true;
 
-  if (Kind == Attribute::Alignment)
+  if (Optional<unsigned> TypeIndex = kindToTypeIndex(Kind))
+    TypeAttrs[*TypeIndex] = Attr.getValueAsType();
+  else if (Kind == Attribute::Alignment)
     Alignment = Attr.getAlignment();
   else if (Kind == Attribute::StackAlignment)
     StackAlignment = Attr.getStackAlignment();
-  else if (Kind == Attribute::ByVal)
-    ByValType = Attr.getValueAsType();
-  else if (Kind == Attribute::StructRet)
-    StructRetType = Attr.getValueAsType();
-  else if (Kind == Attribute::ByRef)
-    ByRefType = Attr.getValueAsType();
-  else if (Kind == Attribute::Preallocated)
-    PreallocatedType = Attr.getValueAsType();
   else if (Kind == Attribute::Dereferenceable)
     DerefBytes = Attr.getDereferenceableBytes();
   else if (Kind == Attribute::DereferenceableOrNull)
@@ -1781,8 +1641,6 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
     AllocSizeArgs = Attr.getValueAsInt();
   else if (Kind == Attribute::VScaleRange)
     VScaleRangeArgs = Attr.getValueAsInt();
-  else if (Kind == Attribute::InAlloca)
-    InAllocaType = Attr.getValueAsType();
 
   return *this;
 }
@@ -1796,20 +1654,12 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
   assert((unsigned)Val < Attribute::EndAttrKinds && "Attribute out of range!");
   Attrs[Val] = false;
 
-  if (Val == Attribute::Alignment)
+  if (Optional<unsigned> TypeIndex = kindToTypeIndex(Val))
+    TypeAttrs[*TypeIndex] = nullptr;
+  else if (Val == Attribute::Alignment)
     Alignment.reset();
   else if (Val == Attribute::StackAlignment)
     StackAlignment.reset();
-  else if (Val == Attribute::ByVal)
-    ByValType = nullptr;
-  else if (Val == Attribute::StructRet)
-    StructRetType = nullptr;
-  else if (Val == Attribute::ByRef)
-    ByRefType = nullptr;
-  else if (Val == Attribute::Preallocated)
-    PreallocatedType = nullptr;
-  else if (Val == Attribute::InAlloca)
-    InAllocaType = nullptr;
   else if (Val == Attribute::Dereferenceable)
     DerefBytes = 0;
   else if (Val == Attribute::DereferenceableOrNull)
@@ -1915,34 +1765,32 @@ AttrBuilder &AttrBuilder::addVScaleRangeAttrFromRawRepr(uint64_t RawArgs) {
   return *this;
 }
 
-AttrBuilder &AttrBuilder::addByValAttr(Type *Ty) {
-  Attrs[Attribute::ByVal] = true;
-  ByValType = Ty;
+AttrBuilder &AttrBuilder::addTypeAttr(Attribute::AttrKind Kind, Type *Ty) {
+  Optional<unsigned> TypeIndex = kindToTypeIndex(Kind);
+  assert(TypeIndex && "Not a type attribute");
+  Attrs[Kind] = true;
+  TypeAttrs[*TypeIndex] = Ty;
   return *this;
+}
+
+AttrBuilder &AttrBuilder::addByValAttr(Type *Ty) {
+  return addTypeAttr(Attribute::ByVal, Ty);
 }
 
 AttrBuilder &AttrBuilder::addStructRetAttr(Type *Ty) {
-  Attrs[Attribute::StructRet] = true;
-  StructRetType = Ty;
-  return *this;
+  return addTypeAttr(Attribute::StructRet, Ty);
 }
 
 AttrBuilder &AttrBuilder::addByRefAttr(Type *Ty) {
-  Attrs[Attribute::ByRef] = true;
-  ByRefType = Ty;
-  return *this;
+  return addTypeAttr(Attribute::ByRef, Ty);
 }
 
 AttrBuilder &AttrBuilder::addPreallocatedAttr(Type *Ty) {
-  Attrs[Attribute::Preallocated] = true;
-  PreallocatedType = Ty;
-  return *this;
+  return addTypeAttr(Attribute::Preallocated, Ty);
 }
 
 AttrBuilder &AttrBuilder::addInAllocaAttr(Type *Ty) {
-  Attrs[Attribute::InAlloca] = true;
-  InAllocaType = Ty;
-  return *this;
+  return addTypeAttr(Attribute::InAlloca, Ty);
 }
 
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
@@ -1962,23 +1810,12 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   if (!AllocSizeArgs)
     AllocSizeArgs = B.AllocSizeArgs;
 
-  if (!ByValType)
-    ByValType = B.ByValType;
-
-  if (!StructRetType)
-    StructRetType = B.StructRetType;
-
-  if (!ByRefType)
-    ByRefType = B.ByRefType;
-
-  if (!PreallocatedType)
-    PreallocatedType = B.PreallocatedType;
-
-  if (!InAllocaType)
-    InAllocaType = B.InAllocaType;
-
   if (!VScaleRangeArgs)
     VScaleRangeArgs = B.VScaleRangeArgs;
+
+  for (unsigned Index = 0; Index < NumTypeIndices; ++Index)
+    if (!TypeAttrs[Index])
+      TypeAttrs[Index] = B.TypeAttrs[Index];
 
   Attrs |= B.Attrs;
 
@@ -2005,23 +1842,12 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
   if (B.AllocSizeArgs)
     AllocSizeArgs = 0;
 
-  if (B.ByValType)
-    ByValType = nullptr;
-
-  if (B.StructRetType)
-    StructRetType = nullptr;
-
-  if (B.ByRefType)
-    ByRefType = nullptr;
-
-  if (B.PreallocatedType)
-    PreallocatedType = nullptr;
-
-  if (B.InAllocaType)
-    InAllocaType = nullptr;
-
   if (B.VScaleRangeArgs)
     VScaleRangeArgs = 0;
+
+  for (unsigned Index = 0; Index < NumTypeIndices; ++Index)
+    if (B.TypeAttrs[Index])
+      TypeAttrs[Index] = nullptr;
 
   Attrs &= ~B.Attrs;
 
@@ -2081,10 +1907,7 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
       return false;
 
   return Alignment == B.Alignment && StackAlignment == B.StackAlignment &&
-         DerefBytes == B.DerefBytes && ByValType == B.ByValType &&
-         StructRetType == B.StructRetType && ByRefType == B.ByRefType &&
-         PreallocatedType == B.PreallocatedType &&
-         InAllocaType == B.InAllocaType &&
+         DerefBytes == B.DerefBytes && TypeAttrs == B.TypeAttrs &&
          VScaleRangeArgs == B.VScaleRangeArgs;
 }
 

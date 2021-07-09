@@ -32,11 +32,13 @@ public:
   RelType getDynRel(RelType type) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                          unsigned size) const override;
 
@@ -379,6 +381,12 @@ void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   write64le(buf, s.getPltVA() + 6);
 }
 
+void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
+  // An x86 entry is the address of the ifunc resolver function (for -z rel).
+  if (config->writeAddends)
+    write64le(buf, s.getVA());
+}
+
 void X86_64::writePltHeader(uint8_t *buf) const {
   const uint8_t pltData[] = {
       0xff, 0x35, 0, 0, 0, 0, // pushq GOTPLT+8(%rip)
@@ -672,6 +680,55 @@ void X86_64::applyJumpInstrMod(uint8_t *loc, JumpModType type,
     break;
   case J_UNKNOWN:
     llvm_unreachable("Unknown Jump Relocation");
+  }
+}
+
+int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  case R_X86_64_8:
+  case R_X86_64_PC8:
+    return SignExtend64<8>(*buf);
+  case R_X86_64_16:
+  case R_X86_64_PC16:
+    return SignExtend64<16>(read16le(buf));
+  case R_X86_64_32:
+  case R_X86_64_32S:
+  case R_X86_64_TPOFF32:
+  case R_X86_64_GOT32:
+  case R_X86_64_GOTPC32:
+  case R_X86_64_GOTPC32_TLSDESC:
+  case R_X86_64_GOTPCREL:
+  case R_X86_64_GOTPCRELX:
+  case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_PC32:
+  case R_X86_64_GOTTPOFF:
+  case R_X86_64_PLT32:
+  case R_X86_64_TLSGD:
+  case R_X86_64_TLSLD:
+  case R_X86_64_DTPOFF32:
+  case R_X86_64_SIZE32:
+    return SignExtend64<32>(read32le(buf));
+  case R_X86_64_64:
+  case R_X86_64_TPOFF64:
+  case R_X86_64_DTPOFF64:
+  case R_X86_64_DTPMOD64:
+  case R_X86_64_PC64:
+  case R_X86_64_SIZE64:
+  case R_X86_64_GLOB_DAT:
+  case R_X86_64_GOT64:
+  case R_X86_64_GOTOFF64:
+  case R_X86_64_GOTPC64:
+  case R_X86_64_IRELATIVE:
+  case R_X86_64_RELATIVE:
+    return read64le(buf);
+  case R_X86_64_JUMP_SLOT:
+  case R_X86_64_NONE:
+    // These relocations are defined as not having an implicit addend.
+    return 0;
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
   }
 }
 

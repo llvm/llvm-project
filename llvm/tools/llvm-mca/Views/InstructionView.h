@@ -45,7 +45,7 @@ public:
   virtual ~InstructionView() = default;
 
   StringRef getNameAsString() const override {
-    return "Instructions and CPU resources";
+    return "Instructions";
   }
   // Return a reference to a string representing a given machine instruction.
   // The result should be used or copied before the next call to
@@ -56,6 +56,7 @@ public:
   llvm::MCInstPrinter &getInstPrinter() const { return MCIP; }
   llvm::ArrayRef<llvm::MCInst> getSource() const { return Source; }
   json::Value toJSON() const override;
+  json::Object getJSONResources() const;
   virtual void printViewJSON(llvm::raw_ostream &OS) override {
     json::Value JV = toJSON();
     OS << formatv("{0:2}", JV) << "\n";

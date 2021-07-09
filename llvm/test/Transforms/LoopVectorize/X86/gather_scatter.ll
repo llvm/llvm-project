@@ -1993,144 +1993,34 @@ define void @test_gather_not_profitable_pr48429(i32 %d, float* readonly %ptr, fl
 ; FVW2-NEXT:    [[IND_END:%.*]] = getelementptr float, float* [[PTR]], i64 [[N_VEC]]
 ; FVW2-NEXT:    [[TMP12:%.*]] = shl i64 [[N_VEC]], 4
 ; FVW2-NEXT:    [[IND_END14:%.*]] = getelementptr float, float* [[DEST]], i64 [[TMP12]]
-; FVW2-NEXT:    [[TMP13:%.*]] = add nsw i64 [[N_VEC]], -4
-; FVW2-NEXT:    [[TMP14:%.*]] = lshr exact i64 [[TMP13]], 2
-; FVW2-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[TMP14]], 1
-; FVW2-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP15]], 3
-; FVW2-NEXT:    [[TMP16:%.*]] = icmp ult i64 [[TMP13]], 12
-; FVW2-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
-; FVW2:       vector.ph.new:
-; FVW2-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP15]], 9223372036854775804
 ; FVW2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FVW2:       vector.body:
-; FVW2-NEXT:    [[POINTER_PHI:%.*]] = phi float* [ [[DEST]], [[VECTOR_PH_NEW]] ], [ [[PTR_IND_3:%.*]], [[VECTOR_BODY]] ]
-; FVW2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY]] ]
-; FVW2-NEXT:    [[NITER:%.*]] = phi i64 [ [[UNROLL_ITER]], [[VECTOR_PH_NEW]] ], [ [[NITER_NSUB_3:%.*]], [[VECTOR_BODY]] ]
+; FVW2-NEXT:    [[POINTER_PHI:%.*]] = phi float* [ [[DEST]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; FVW2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FVW2-NEXT:    [[NEXT_GEP:%.*]] = getelementptr float, float* [[PTR]], i64 [[INDEX]]
-; FVW2-NEXT:    [[TMP17:%.*]] = getelementptr float, float* [[POINTER_PHI]], <2 x i64> <i64 0, i64 16>
-; FVW2-NEXT:    [[TMP18:%.*]] = getelementptr float, float* [[POINTER_PHI]], <2 x i64> <i64 32, i64 48>
-; FVW2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, float* [[NEXT_GEP]], i64 [[IDXPROM]]
-; FVW2-NEXT:    [[TMP20:%.*]] = bitcast float* [[TMP19]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, <2 x float>* [[TMP20]], align 4, !alias.scope !7
-; FVW2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, float* [[TMP19]], i64 2
-; FVW2-NEXT:    [[TMP22:%.*]] = bitcast float* [[TMP21]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD16:%.*]] = load <2 x float>, <2 x float>* [[TMP22]], align 4, !alias.scope !7
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD]], <2 x float*> [[TMP17]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD16]], <2 x float*> [[TMP18]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[TMP23:%.*]] = bitcast float* [[NEXT_GEP]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD17:%.*]] = load <2 x float>, <2 x float>* [[TMP23]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP24:%.*]] = getelementptr float, float* [[NEXT_GEP]], i64 2
-; FVW2-NEXT:    [[TMP25:%.*]] = bitcast float* [[TMP24]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD18:%.*]] = load <2 x float>, <2 x float>* [[TMP25]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP26:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP17]], i64 1
-; FVW2-NEXT:    [[TMP27:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP18]], i64 1
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD17]], <2 x float*> [[TMP26]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD18]], <2 x float*> [[TMP27]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[INDEX_NEXT:%.*]] = or i64 [[INDEX]], 4
-; FVW2-NEXT:    [[PTR_IND:%.*]] = getelementptr float, float* [[POINTER_PHI]], i64 64
-; FVW2-NEXT:    [[NEXT_GEP_1:%.*]] = getelementptr float, float* [[PTR]], i64 [[INDEX_NEXT]]
-; FVW2-NEXT:    [[TMP28:%.*]] = getelementptr float, float* [[PTR_IND]], <2 x i64> <i64 0, i64 16>
-; FVW2-NEXT:    [[TMP29:%.*]] = getelementptr float, float* [[PTR_IND]], <2 x i64> <i64 32, i64 48>
-; FVW2-NEXT:    [[TMP30:%.*]] = getelementptr inbounds float, float* [[NEXT_GEP_1]], i64 [[IDXPROM]]
-; FVW2-NEXT:    [[TMP31:%.*]] = bitcast float* [[TMP30]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD_1:%.*]] = load <2 x float>, <2 x float>* [[TMP31]], align 4, !alias.scope !7
-; FVW2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, float* [[TMP30]], i64 2
-; FVW2-NEXT:    [[TMP33:%.*]] = bitcast float* [[TMP32]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD16_1:%.*]] = load <2 x float>, <2 x float>* [[TMP33]], align 4, !alias.scope !7
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD_1]], <2 x float*> [[TMP28]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD16_1]], <2 x float*> [[TMP29]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[TMP34:%.*]] = bitcast float* [[NEXT_GEP_1]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD17_1:%.*]] = load <2 x float>, <2 x float>* [[TMP34]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP35:%.*]] = getelementptr float, float* [[NEXT_GEP_1]], i64 2
-; FVW2-NEXT:    [[TMP36:%.*]] = bitcast float* [[TMP35]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD18_1:%.*]] = load <2 x float>, <2 x float>* [[TMP36]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP37:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP28]], i64 1
-; FVW2-NEXT:    [[TMP38:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP29]], i64 1
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD17_1]], <2 x float*> [[TMP37]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD18_1]], <2 x float*> [[TMP38]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[INDEX_NEXT_1:%.*]] = or i64 [[INDEX]], 8
-; FVW2-NEXT:    [[PTR_IND_1:%.*]] = getelementptr float, float* [[POINTER_PHI]], i64 128
-; FVW2-NEXT:    [[NEXT_GEP_2:%.*]] = getelementptr float, float* [[PTR]], i64 [[INDEX_NEXT_1]]
-; FVW2-NEXT:    [[TMP39:%.*]] = getelementptr float, float* [[PTR_IND_1]], <2 x i64> <i64 0, i64 16>
-; FVW2-NEXT:    [[TMP40:%.*]] = getelementptr float, float* [[PTR_IND_1]], <2 x i64> <i64 32, i64 48>
-; FVW2-NEXT:    [[TMP41:%.*]] = getelementptr inbounds float, float* [[NEXT_GEP_2]], i64 [[IDXPROM]]
-; FVW2-NEXT:    [[TMP42:%.*]] = bitcast float* [[TMP41]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD_2:%.*]] = load <2 x float>, <2 x float>* [[TMP42]], align 4, !alias.scope !7
-; FVW2-NEXT:    [[TMP43:%.*]] = getelementptr inbounds float, float* [[TMP41]], i64 2
-; FVW2-NEXT:    [[TMP44:%.*]] = bitcast float* [[TMP43]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD16_2:%.*]] = load <2 x float>, <2 x float>* [[TMP44]], align 4, !alias.scope !7
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD_2]], <2 x float*> [[TMP39]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD16_2]], <2 x float*> [[TMP40]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[TMP45:%.*]] = bitcast float* [[NEXT_GEP_2]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD17_2:%.*]] = load <2 x float>, <2 x float>* [[TMP45]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP46:%.*]] = getelementptr float, float* [[NEXT_GEP_2]], i64 2
-; FVW2-NEXT:    [[TMP47:%.*]] = bitcast float* [[TMP46]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD18_2:%.*]] = load <2 x float>, <2 x float>* [[TMP47]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP48:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP39]], i64 1
-; FVW2-NEXT:    [[TMP49:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP40]], i64 1
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD17_2]], <2 x float*> [[TMP48]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD18_2]], <2 x float*> [[TMP49]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[INDEX_NEXT_2:%.*]] = or i64 [[INDEX]], 12
-; FVW2-NEXT:    [[PTR_IND_2:%.*]] = getelementptr float, float* [[POINTER_PHI]], i64 192
-; FVW2-NEXT:    [[NEXT_GEP_3:%.*]] = getelementptr float, float* [[PTR]], i64 [[INDEX_NEXT_2]]
-; FVW2-NEXT:    [[TMP50:%.*]] = getelementptr float, float* [[PTR_IND_2]], <2 x i64> <i64 0, i64 16>
-; FVW2-NEXT:    [[TMP51:%.*]] = getelementptr float, float* [[PTR_IND_2]], <2 x i64> <i64 32, i64 48>
-; FVW2-NEXT:    [[TMP52:%.*]] = getelementptr inbounds float, float* [[NEXT_GEP_3]], i64 [[IDXPROM]]
-; FVW2-NEXT:    [[TMP53:%.*]] = bitcast float* [[TMP52]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD_3:%.*]] = load <2 x float>, <2 x float>* [[TMP53]], align 4, !alias.scope !7
-; FVW2-NEXT:    [[TMP54:%.*]] = getelementptr inbounds float, float* [[TMP52]], i64 2
-; FVW2-NEXT:    [[TMP55:%.*]] = bitcast float* [[TMP54]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD16_3:%.*]] = load <2 x float>, <2 x float>* [[TMP55]], align 4, !alias.scope !7
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD_3]], <2 x float*> [[TMP50]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD16_3]], <2 x float*> [[TMP51]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[TMP56:%.*]] = bitcast float* [[NEXT_GEP_3]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD17_3:%.*]] = load <2 x float>, <2 x float>* [[TMP56]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP57:%.*]] = getelementptr float, float* [[NEXT_GEP_3]], i64 2
-; FVW2-NEXT:    [[TMP58:%.*]] = bitcast float* [[TMP57]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD18_3:%.*]] = load <2 x float>, <2 x float>* [[TMP58]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP59:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP50]], i64 1
-; FVW2-NEXT:    [[TMP60:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP51]], i64 1
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD17_3]], <2 x float*> [[TMP59]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD18_3]], <2 x float*> [[TMP60]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[INDEX_NEXT_3]] = add nuw i64 [[INDEX]], 16
-; FVW2-NEXT:    [[PTR_IND_3]] = getelementptr float, float* [[POINTER_PHI]], i64 256
-; FVW2-NEXT:    [[NITER_NSUB_3]] = add i64 [[NITER]], -4
-; FVW2-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NSUB_3]], 0
-; FVW2-NEXT:    br i1 [[NITER_NCMP_3]], label [[MIDDLE_BLOCK_UNR_LCSSA]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
-; FVW2:       middle.block.unr-lcssa:
-; FVW2-NEXT:    [[POINTER_PHI_UNR:%.*]] = phi float* [ [[DEST]], [[VECTOR_PH]] ], [ [[PTR_IND_3]], [[VECTOR_BODY]] ]
-; FVW2-NEXT:    [[INDEX_UNR:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT_3]], [[VECTOR_BODY]] ]
-; FVW2-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
-; FVW2-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY_EPIL:%.*]]
-; FVW2:       vector.body.epil:
-; FVW2-NEXT:    [[POINTER_PHI_EPIL:%.*]] = phi float* [ [[PTR_IND_EPIL:%.*]], [[VECTOR_BODY_EPIL]] ], [ [[POINTER_PHI_UNR]], [[MIDDLE_BLOCK_UNR_LCSSA]] ]
-; FVW2-NEXT:    [[INDEX_EPIL:%.*]] = phi i64 [ [[INDEX_NEXT_EPIL:%.*]], [[VECTOR_BODY_EPIL]] ], [ [[INDEX_UNR]], [[MIDDLE_BLOCK_UNR_LCSSA]] ]
-; FVW2-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ [[EPIL_ITER_SUB:%.*]], [[VECTOR_BODY_EPIL]] ], [ [[XTRAITER]], [[MIDDLE_BLOCK_UNR_LCSSA]] ]
-; FVW2-NEXT:    [[NEXT_GEP_EPIL:%.*]] = getelementptr float, float* [[PTR]], i64 [[INDEX_EPIL]]
-; FVW2-NEXT:    [[TMP61:%.*]] = getelementptr float, float* [[POINTER_PHI_EPIL]], <2 x i64> <i64 0, i64 16>
-; FVW2-NEXT:    [[TMP62:%.*]] = getelementptr float, float* [[POINTER_PHI_EPIL]], <2 x i64> <i64 32, i64 48>
-; FVW2-NEXT:    [[TMP63:%.*]] = getelementptr inbounds float, float* [[NEXT_GEP_EPIL]], i64 [[IDXPROM]]
-; FVW2-NEXT:    [[TMP64:%.*]] = bitcast float* [[TMP63]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD_EPIL:%.*]] = load <2 x float>, <2 x float>* [[TMP64]], align 4, !alias.scope !7
-; FVW2-NEXT:    [[TMP65:%.*]] = getelementptr inbounds float, float* [[TMP63]], i64 2
-; FVW2-NEXT:    [[TMP66:%.*]] = bitcast float* [[TMP65]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD16_EPIL:%.*]] = load <2 x float>, <2 x float>* [[TMP66]], align 4, !alias.scope !7
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD_EPIL]], <2 x float*> [[TMP61]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD16_EPIL]], <2 x float*> [[TMP62]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[TMP67:%.*]] = bitcast float* [[NEXT_GEP_EPIL]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD17_EPIL:%.*]] = load <2 x float>, <2 x float>* [[TMP67]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP68:%.*]] = getelementptr float, float* [[NEXT_GEP_EPIL]], i64 2
-; FVW2-NEXT:    [[TMP69:%.*]] = bitcast float* [[TMP68]] to <2 x float>*
-; FVW2-NEXT:    [[WIDE_LOAD18_EPIL:%.*]] = load <2 x float>, <2 x float>* [[TMP69]], align 4, !alias.scope !14
-; FVW2-NEXT:    [[TMP70:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP61]], i64 1
-; FVW2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP62]], i64 1
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD17_EPIL]], <2 x float*> [[TMP70]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD18_EPIL]], <2 x float*> [[TMP71]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
-; FVW2-NEXT:    [[INDEX_NEXT_EPIL]] = add nuw i64 [[INDEX_EPIL]], 4
-; FVW2-NEXT:    [[PTR_IND_EPIL]] = getelementptr float, float* [[POINTER_PHI_EPIL]], i64 64
-; FVW2-NEXT:    [[EPIL_ITER_SUB]] = add i64 [[EPIL_ITER]], -1
-; FVW2-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_SUB]], 0
-; FVW2-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[MIDDLE_BLOCK]], label [[VECTOR_BODY_EPIL]], !llvm.loop [[LOOP16:![0-9]+]]
+; FVW2-NEXT:    [[TMP13:%.*]] = getelementptr float, float* [[POINTER_PHI]], <2 x i64> <i64 0, i64 16>
+; FVW2-NEXT:    [[TMP14:%.*]] = getelementptr float, float* [[POINTER_PHI]], <2 x i64> <i64 32, i64 48>
+; FVW2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, float* [[NEXT_GEP]], i64 [[IDXPROM]]
+; FVW2-NEXT:    [[TMP16:%.*]] = bitcast float* [[TMP15]] to <2 x float>*
+; FVW2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, <2 x float>* [[TMP16]], align 4, !alias.scope !7
+; FVW2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, float* [[TMP15]], i64 2
+; FVW2-NEXT:    [[TMP18:%.*]] = bitcast float* [[TMP17]] to <2 x float>*
+; FVW2-NEXT:    [[WIDE_LOAD16:%.*]] = load <2 x float>, <2 x float>* [[TMP18]], align 4, !alias.scope !7
+; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD]], <2 x float*> [[TMP13]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
+; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD16]], <2 x float*> [[TMP14]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
+; FVW2-NEXT:    [[TMP19:%.*]] = bitcast float* [[NEXT_GEP]] to <2 x float>*
+; FVW2-NEXT:    [[WIDE_LOAD17:%.*]] = load <2 x float>, <2 x float>* [[TMP19]], align 4, !alias.scope !14
+; FVW2-NEXT:    [[TMP20:%.*]] = getelementptr float, float* [[NEXT_GEP]], i64 2
+; FVW2-NEXT:    [[TMP21:%.*]] = bitcast float* [[TMP20]] to <2 x float>*
+; FVW2-NEXT:    [[WIDE_LOAD18:%.*]] = load <2 x float>, <2 x float>* [[TMP21]], align 4, !alias.scope !14
+; FVW2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP13]], i64 1
+; FVW2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, <2 x float*> [[TMP14]], i64 1
+; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD17]], <2 x float*> [[TMP22]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
+; FVW2-NEXT:    call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> [[WIDE_LOAD18]], <2 x float*> [[TMP23]], i32 4, <2 x i1> <i1 true, i1 true>), !alias.scope !10, !noalias !12
+; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; FVW2-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; FVW2-NEXT:    [[PTR_IND]] = getelementptr float, float* [[POINTER_PHI]], i64 64
+; FVW2-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; FVW2:       middle.block:
 ; FVW2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; FVW2-NEXT:    br i1 [[CMP_N]], label [[FOR_END]], label [[FOR_BODY_PREHEADER]]
@@ -2142,15 +2032,15 @@ define void @test_gather_not_profitable_pr48429(i32 %d, float* readonly %ptr, fl
 ; FVW2-NEXT:    [[PTR_ADDR_012:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[PTR_ADDR_012_PH]], [[FOR_BODY_PREHEADER]] ]
 ; FVW2-NEXT:    [[DEST_ADDR_011:%.*]] = phi float* [ [[ADD_PTR6:%.*]], [[FOR_BODY]] ], [ [[DEST_ADDR_011_PH]], [[FOR_BODY_PREHEADER]] ]
 ; FVW2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[PTR_ADDR_012]], i64 [[IDXPROM]]
-; FVW2-NEXT:    [[TMP72:%.*]] = load float, float* [[ARRAYIDX]], align 4
-; FVW2-NEXT:    store float [[TMP72]], float* [[DEST_ADDR_011]], align 4
-; FVW2-NEXT:    [[TMP73:%.*]] = load float, float* [[PTR_ADDR_012]], align 4
+; FVW2-NEXT:    [[TMP25:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; FVW2-NEXT:    store float [[TMP25]], float* [[DEST_ADDR_011]], align 4
+; FVW2-NEXT:    [[TMP26:%.*]] = load float, float* [[PTR_ADDR_012]], align 4
 ; FVW2-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[DEST_ADDR_011]], i64 1
-; FVW2-NEXT:    store float [[TMP73]], float* [[ARRAYIDX5]], align 4
+; FVW2-NEXT:    store float [[TMP26]], float* [[ARRAYIDX5]], align 4
 ; FVW2-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[PTR_ADDR_012]], i64 1
 ; FVW2-NEXT:    [[ADD_PTR6]] = getelementptr inbounds float, float* [[DEST_ADDR_011]], i64 16
 ; FVW2-NEXT:    [[CMP_NOT:%.*]] = icmp eq float* [[INCDEC_PTR]], [[ADD_PTR]]
-; FVW2-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; FVW2-NEXT:    br i1 [[CMP_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; FVW2:       for.end:
 ; FVW2-NEXT:    ret void
 ;

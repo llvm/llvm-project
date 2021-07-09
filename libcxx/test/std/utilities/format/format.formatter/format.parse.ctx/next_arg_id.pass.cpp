@@ -39,8 +39,8 @@ void test_exception() {
     context.next_arg_id();
     assert(false);
   } catch (const std::format_error& e) {
-    assert(strcmp(e.what(), "Using automatic argument numbering in manual "
-                            "argument numbering mode") == 0);
+    LIBCPP_ASSERT(strcmp(e.what(), "Using automatic argument numbering in manual "
+                                   "argument numbering mode") == 0);
     return;
   }
   assert(false);

@@ -258,7 +258,10 @@ void GuardedPoolAllocator::trapOnAddress(uintptr_t Address, Error E) {
   // Raise a SEGV by touching first guard page.
   volatile char *p = reinterpret_cast<char *>(State.GuardedPagePool);
   *p = 0;
-  __builtin_unreachable();
+  // Normally, would be __builtin_unreachable(), but because of
+  // https://bugs.llvm.org/show_bug.cgi?id=47480, unreachable will DCE the
+  // volatile store above, even though it has side effects.
+  __builtin_trap();
 }
 
 void GuardedPoolAllocator::stop() {
