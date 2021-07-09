@@ -924,6 +924,9 @@ public:
     return base_ == other;
   }
 
+  constexpr const I& base() const& { return base_; }
+  constexpr I base() && { return std::move(base_); }
+
 private:
   I base_ = I();
 };
