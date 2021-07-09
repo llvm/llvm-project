@@ -1791,7 +1791,7 @@ private:
   /// less-than comparison will execute.  If not computable, return
   /// CouldNotCompute.
   ///
-  /// \p Pred specifies the kind of less-than comparison.
+  /// \p isSigned specifies whether the less-than is signed.
   ///
   /// \p ControlsExit is true when the LHS < RHS condition directly controls
   /// the branch (loops exits only if condition is true). In this case, we can
@@ -1800,12 +1800,12 @@ private:
   /// If \p AllowPredicates is set, this call will try to use a minimal set of
   /// SCEV predicates in order to return an exact answer.
   ExitLimit howManyLessThans(const SCEV *LHS, const SCEV *RHS, const Loop *L,
-                             ICmpInst::Predicate Pred, bool ControlsExit,
-                             bool AllowPredicates);
+                             bool isSigned, bool ControlsExit,
+                             bool AllowPredicates = false);
 
   ExitLimit howManyGreaterThans(const SCEV *LHS, const SCEV *RHS, const Loop *L,
                                 bool isSigned, bool IsSubExpr,
-                                bool AllowPredicates);
+                                bool AllowPredicates = false);
 
   /// Return a predecessor of BB (which may not be an immediate predecessor)
   /// which has exactly one successor from which BB is reachable, or null if
@@ -2023,38 +2023,11 @@ private:
   createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI);
 
   /// Compute the backedge taken count knowing the interval difference, and
-  /// the stride for an inequality.
-  ///
-  /// Caller must ensure that non-negative N exists such that
-  /// (Start + Stride * N) >= End, and that computing "(Start + Stride * N)"
-  /// doesn't overflow. In other words:
-  /// 1. If IsSigned is true, Start <=s End. Otherwise, Start <=u End.
-  /// 2. If End is not equal to start and IsSigned is true, Stride >s 0. If
-  ///    End is not equal to start and IsSigned is false, Stride >u 0.
-  /// 3. The index variable doesn't overflow.
-  ///
-  /// If the preconditions hold, the backedge taken count is N.
-  ///
-  /// IsSigned determines whether End, Start, and Stride are treated as
-  /// signed values, for the purpose of optimizing the form of the result.
-  ///
-  /// This function tries to use an optimized form:
-  /// ((End - Start) + (Stride - 1)) /u Stride
-  ///
-  /// If it can't prove the addition doesn't overflow in that form, it uses
-  /// getUDivCeilSCEV.
-  const SCEV *computeBECount(bool IsSigned, const SCEV *Start, const SCEV *End,
-                             const SCEV *Stride);
-
-  /// Compute ceil(N / D). N and D are treated as unsigned values.
-  ///
-  /// Since SCEV doesn't have native ceiling division, this generates a
-  /// SCEV expression of the following form:
-  ///
-  /// umin(N, 1) + floor((N - umin(N, 1)) / D)
-  ///
-  /// A denominator of zero or poison is handled the same way as getUDivExpr().
-  const SCEV *getUDivCeilSCEV(const SCEV *N, const SCEV *D);
+  /// the stride for an inequality.  Result takes the form:
+  /// (Delta + (Stride - 1)) udiv Stride.
+  /// Caller must ensure that this expression either does not overflow or
+  /// that the result is undefined if it does.
+  const SCEV *computeBECount(const SCEV *Delta, const SCEV *Stride);
 
   /// Compute the maximum backedge count based on the range of values
   /// permitted by Start, End, and Stride. This is for loops of the form
