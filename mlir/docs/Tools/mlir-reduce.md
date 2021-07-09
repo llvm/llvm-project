@@ -20,18 +20,18 @@ then `mlir-reduce` will do the remining works for you.
 
 ## How to Use it
 
-`mlir-reduce` adopts reduction-tree algorithm to reduce the input. it generates
-several reduced outputs and do the further reduction in between them according
+`mlir-reduce` adopts the reduction-tree algorithm to reduce the input. It
+generates several reduced outputs and further reduces in between them according
 to the tree traversal strategy. The different strategies may lead to different
-result and different time complexity. You can run as
+results and different time complexity. You can run as
 `-reduction-tree='traversal-mode=0'` to select the mode for example.
 
-### Write the script for testing interesting
+### Write the script for testing interestingness
 
-As mentioned, you need to provide a command to specify `mlir-reduce` which case
-you're interesting. For each intermediate output generated during reduction,
-`mlir-reduce` will run the command over the it, the script should returns 1 for
-interesting case, 0 otherwise. The sample script,
+As mentioned, you need to provide a command to `mlir-reduce` which identifies
+cases you're interested in. For each intermediate output generated during
+reduction, `mlir-reduce` will run the command over the it, the script should
+returns 1 for interesting case, 0 otherwise. The sample script,
 
 ```shell
 mlir-opt -convert-vector-to-spirv $1 | grep "failed to materialize"
