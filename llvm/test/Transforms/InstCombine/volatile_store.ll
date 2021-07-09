@@ -25,6 +25,7 @@ define void @volatile_store_before_unreachable(i1 %c, i8* %p) {
 ; CHECK-LABEL: @volatile_store_before_unreachable(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
+; CHECK-NEXT:    store volatile i8 0, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
