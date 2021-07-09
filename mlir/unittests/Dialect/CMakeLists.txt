@@ -7,5 +7,4 @@ target_link_libraries(MLIRDialectTests
   MLIRDialect)
 
 add_subdirectory(Quant)
-add_subdirectory(SparseTensor)
 add_subdirectory(SPIRV)
