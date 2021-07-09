@@ -371,7 +371,7 @@ function(add_compiler_rt_runtime name type)
         add_custom_command(TARGET ${libname}
           POST_BUILD  
           COMMAND codesign --sign - $<TARGET_FILE:${libname}>
-          WORKING_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+          WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
         )
       endif()
     endif()
@@ -511,7 +511,7 @@ macro(add_compiler_rt_resource_file target_name file_name component)
   add_custom_target(${target_name} DEPENDS ${dst_file})
   # Install in Clang resource directory.
   install(FILES ${file_name}
-    DESTINATION ${COMPILER_RT_INSTALL_PATH}/share
+    DESTINATION ${COMPILER_RT_INSTALL_DATA_DIR}
     COMPONENT ${component})
   add_dependencies(${component} ${target_name})
 
@@ -528,7 +528,7 @@ macro(add_compiler_rt_script name)
   add_custom_target(${name} DEPENDS ${dst})
   install(FILES ${dst}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    DESTINATION ${COMPILER_RT_INSTALL_PATH}/bin)
+    DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR})
 endmacro(add_compiler_rt_script src name)
 
 # Builds custom version of libc++ and installs it in <prefix>.
