@@ -25,6 +25,7 @@ config.clangd_source_dir = "@CMAKE_CURRENT_SOURCE_DIR@/.."
 config.clangd_binary_dir = "@CMAKE_CURRENT_BINARY_DIR@/.."
 config.clangd_build_xpc = @CLANGD_BUILD_XPC@
 config.clangd_enable_remote = @CLANGD_ENABLE_REMOTE@
+config.clangd_tidy_checks = @CLANGD_TIDY_CHECKS@
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 
 # Delegate logic to lit.cfg.py.
