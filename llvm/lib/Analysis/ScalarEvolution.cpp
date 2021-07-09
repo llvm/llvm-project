@@ -8091,9 +8091,8 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
   }
   case ICmpInst::ICMP_SLT:
   case ICmpInst::ICMP_ULT: {                    // while (X < Y)
-    bool IsSigned = Pred == ICmpInst::ICMP_SLT;
-    ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, ControlsExit,
-                                    AllowPredicates);
+    ExitLimit EL =
+        howManyLessThans(LHS, RHS, L, Pred, ControlsExit, AllowPredicates);
     if (EL.hasAnyInfo()) return EL;
     break;
   }
@@ -11645,9 +11644,12 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
 
 ScalarEvolution::ExitLimit
 ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
-                                  const Loop *L, bool IsSigned,
+                                  const Loop *L, ICmpInst::Predicate Pred,
                                   bool ControlsExit, bool AllowPredicates) {
   SmallPtrSet<const SCEVPredicate *, 4> Predicates;
+
+  assert(ICmpInst::isLT(Pred) && "Unexpected pred");
+  bool IsSigned = ICmpInst::isSigned(Pred);
 
   const SCEVAddRecExpr *IV = dyn_cast<SCEVAddRecExpr>(LHS);
   bool PredicatedIV = false;
@@ -11666,7 +11668,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
   auto WrapType = IsSigned ? SCEV::FlagNSW : SCEV::FlagNUW;
   bool NoWrap = ControlsExit && IV->getNoWrapFlags(WrapType);
-  ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
 
   const SCEV *Stride = IV->getStepRecurrence(*this);
 
@@ -11779,7 +11780,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       return RHS;
   }
 
-  const SCEV *End = RHS;
   // When the RHS is not invariant, we do not know the end bound of the loop and
   // cannot calculate the ExactBECount needed by ExitLimit. However, we can
   // calculate the MaxBECount, given the start, stride and max value for the end
@@ -11796,7 +11796,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // is the LHS value of the less-than comparison the first time it is evaluated
   // and End is the RHS.
   const SCEV *BECountIfBackedgeTaken =
-      computeBECount(IsSigned, Start, End, Stride);
+      computeBECount(IsSigned, Start, RHS, Stride);
   // If the loop entry is guarded by the result of the backedge test of the
   // first loop iteration, then we know the backedge will be taken at least
   // once and so the backedge taken count is as above. If not then we use the
@@ -11805,13 +11805,15 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // result is as above, and if not max(End,Start) is Start so we get a backedge
   // count of zero.
   const SCEV *BECount;
-  if (isLoopEntryGuardedByCond(L, Cond, getMinusSCEV(OrigStart, Stride), OrigRHS))
+  if (isLoopEntryGuardedByCond(L, Pred, getMinusSCEV(OrigStart, Stride),
+                               OrigRHS))
     BECount = BECountIfBackedgeTaken;
   else {
+    const SCEV *End;
     // If we know that RHS >= Start in the context of loop, then we know that
     // max(RHS, Start) = RHS at this point.
-    if (isLoopEntryGuardedByCond(
-            L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, OrigRHS, OrigStart))
+    if (isLoopEntryGuardedByCond(L, ICmpInst::getInversePredicate(Pred),
+                                 OrigRHS, OrigStart))
       End = RHS;
     else
       End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
