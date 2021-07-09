@@ -194,6 +194,7 @@ set(files
   __ranges/ref_view.h
   __ranges/size.h
   __ranges/subrange.h
+  __ranges/transform_view.h
   __ranges/view_interface.h
   __split_buffer
   __std_stream
