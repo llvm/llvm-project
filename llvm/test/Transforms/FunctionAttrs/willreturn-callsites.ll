@@ -22,7 +22,7 @@ define void @test_fn_mustprogress(i32* %ptr) mustprogress {
 }
 
 define void @test_fn_willreturn(i32* %ptr) willreturn {
-; CHECK: Function Attrs: willreturn
+; CHECK: Function Attrs: mustprogress willreturn
 ; CHECK-LABEL: @test_fn_willreturn(
 ; CHECK-NOT:     call void @decl_readonly() #
 ; CHECK-NOT :    call void @decl_readnone() #
@@ -38,7 +38,7 @@ define void @test_fn_willreturn(i32* %ptr) willreturn {
 }
 
 define void @test_fn_mustprogress_readonly_calls(i32* %ptr) mustprogress {
-; CHECK: Function Attrs: nofree readonly willreturn mustprogress
+; CHECK: Function Attrs: mustprogress nofree readonly willreturn
 ; CHECK-LABEL: @test_fn_mustprogress_readonly_calls(
 ; CHECK-NOT:     call void @decl_readonly() #
 ; CHECK-NOT:     call void @decl_readnone() #
@@ -50,7 +50,7 @@ define void @test_fn_mustprogress_readonly_calls(i32* %ptr) mustprogress {
 }
 
 define void @test_fn_mustprogress_readonly_calls_but_stores(i32* %ptr) mustprogress {
-; CHECK: Function Attrs: nofree mustprogress
+; CHECK: Function Attrs: mustprogress nofree
 ; CHECK-LABEL: @test_fn_mustprogress_readonly_calls_but_stores(
 ; CHECK-NOT:     call void @decl_readonly() #
 ; CHECK-NOT:     call void @decl_readnone() #
