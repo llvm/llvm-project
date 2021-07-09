@@ -431,11 +431,4 @@ void Thread::InitStackAndTls(const InitState *) {
 
 } // namespace __hwasan
 
-// Entry point for interoperability between __hwasan_tag_mismatch (ASM) and the
-// rest of the mismatch handling code (C++).
-void __hwasan_tag_mismatch4(uptr addr, uptr access_info, uptr *registers_frame,
-                            size_t outsize) {
-  __hwasan::HwasanTagMismatch(addr, access_info, registers_frame, outsize);
-}
-
 #endif // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
