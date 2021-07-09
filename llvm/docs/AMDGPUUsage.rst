@@ -12187,8 +12187,22 @@ Here is an example of a minimal assembly source file, defining one HSA kernel:
        .sgpr_count: 2
        .vgpr_count: 3
        .max_flat_workgroup_size: 256
-   ...
+       .args:
+         - .size: 8
+           .offset: 0
+           .value_kind: global_buffer
+           .address_space: global
+           .actual_access: write_only
+   //...
    .end_amdgpu_metadata
+
+This kernel is equivalent to the following HIP program:
+
+.. code::
+   :number-lines:
+   __global__ void hello_world(float *p) {
+       *p = 3.14159f;
+   }
 
 If an assembly source file contains multiple kernels and/or functions, the
 :ref:`amdgpu-amdhsa-assembler-symbol-next_free_vgpr` and
