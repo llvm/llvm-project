@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpImplementation.h"
@@ -24,15 +25,31 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
+#include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::omp;
+
+namespace {
+/// Model for pointer-like types that already provide a `getElementType` method.
+template <typename T>
+struct PointerLikeModel
+    : public PointerLikeType::ExternalModel<PointerLikeModel<T>, T> {
+  Type getElementType(Type pointer) const {
+    return pointer.cast<T>().getElementType();
+  }
+};
+} // end namespace
 
 void OpenMPDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
       >();
+
+  LLVM::LLVMPointerType::attachInterface<
+      PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
+  MemRefType::attachInterface<PointerLikeModel<MemRefType>>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -439,6 +456,27 @@ parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
   return success();
 }
 
+/// reduction-init ::= `reduction` `(` reduction-entry-list `)`
+/// reduction-entry-list ::= reduction-entry
+///                        | reduction-entry-list `,` reduction-entry
+/// reduction-entry ::= symbol-ref `->` ssa-id `:` type
+static ParseResult
+parseReductionVarList(OpAsmParser &parser,
+                      SmallVectorImpl<SymbolRefAttr> &symbols,
+                      SmallVectorImpl<OpAsmParser::OperandType> &operands,
+                      SmallVectorImpl<Type> &types) {
+  if (failed(parser.parseLParen()))
+    return failure();
+
+  do {
+    if (parser.parseAttribute(symbols.emplace_back()) || parser.parseArrow() ||
+        parser.parseOperand(operands.emplace_back()) ||
+        parser.parseColonType(types.emplace_back()))
+      return failure();
+  } while (succeeded(parser.parseOptionalComma()));
+  return parser.parseRParen();
+}
+
 /// Parses an OpenMP Workshare Loop operation
 ///
 /// operation ::= `omp.wsloop` loop-control clause-list
@@ -503,9 +541,11 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType> linears;
   SmallVector<Type> linearTypes;
   SmallVector<OpAsmParser::OperandType> linearSteps;
+  SmallVector<SymbolRefAttr> reductionSymbols;
+  SmallVector<OpAsmParser::OperandType> reductionVars;
+  SmallVector<Type> reductionVarTypes;
   SmallString<8> schedule;
   Optional<OpAsmParser::OperandType> scheduleChunkSize;
-  std::array<int, 9> segments{numIVs, numIVs, numIVs, 0, 0, 0, 0, 0, 0};
 
   const StringRef opName = result.name.getStringRef();
   StringRef keyword;
@@ -519,8 +559,10 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
     lastprivateClausePos,
     linearClausePos,
     linearStepPos,
+    reductionVarPos,
     scheduleClausePos,
   };
+  std::array<int, 10> segments{numIVs, numIVs, numIVs, 0, 0, 0, 0, 0, 0, 0};
 
   while (succeeded(parser.parseOptionalKeyword(&keyword))) {
     if (keyword == "private") {
@@ -592,6 +634,13 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
     } else if (keyword == "inclusive") {
       auto attr = UnitAttr::get(parser.getBuilder().getContext());
       result.addAttribute("inclusive", attr);
+    } else if (keyword == "reduction") {
+      if (segments[reductionVarPos])
+        return allowedOnce(parser, "reduction", opName);
+      if (failed(parseReductionVarList(parser, reductionSymbols, reductionVars,
+                                       reductionVarTypes)))
+        return failure();
+      segments[reductionVarPos] = reductionVars.size();
     }
   }
 
@@ -619,6 +668,17 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
                            linearSteps[0].location, result.operands);
   }
 
+  if (segments[reductionVarPos]) {
+    if (failed(parser.resolveOperands(reductionVars, reductionVarTypes,
+                                      parser.getNameLoc(), result.operands))) {
+      return failure();
+    }
+    SmallVector<Attribute> reductions(reductionSymbols.begin(),
+                                      reductionSymbols.end());
+    result.addAttribute("reductions",
+                        parser.getBuilder().getArrayAttr(reductions));
+  }
+
   if (!schedule.empty()) {
     schedule[0] = llvm::toUpper(schedule[0]);
     auto attr = parser.getBuilder().getStringAttr(schedule);
@@ -635,7 +695,8 @@ static ParseResult parseWsLoopOp(OpAsmParser &parser, OperationState &result) {
   // Now parse the body.
   Region *body = result.addRegion();
   SmallVector<Type> ivTypes(numIVs, loopVarType);
-  if (parser.parseRegion(*body, ivs, ivTypes))
+  SmallVector<OpAsmParser::OperandType> blockArgs(ivs);
+  if (parser.parseRegion(*body, blockArgs, ivTypes))
     return failure();
   return success();
 }
@@ -694,11 +755,102 @@ static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
     p << " ordered(" << ordered << ")";
   }
 
+  if (!op.reduction_vars().empty()) {
+    p << " reduction(";
+    for (unsigned i = 0, e = op.getNumReductionVars(); i < e; ++i) {
+      if (i != 0)
+        p << ", ";
+      p << (*op.reductions())[i] << " -> " << op.reduction_vars()[i] << " : "
+        << op.reduction_vars()[i].getType();
+    }
+    p << ")";
+  }
+
   if (op.inclusive()) {
     p << " inclusive";
   }
 
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+}
+
+//===----------------------------------------------------------------------===//
+// ReductionOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseAtomicReductionRegion(OpAsmParser &parser,
+                                              Region &region) {
+  if (parser.parseOptionalKeyword("atomic"))
+    return success();
+  return parser.parseRegion(region);
+}
+
+static void printAtomicReductionRegion(OpAsmPrinter &printer,
+                                       ReductionDeclareOp op, Region &region) {
+  if (region.empty())
+    return;
+  printer << "atomic ";
+  printer.printRegion(region);
+}
+
+static LogicalResult verifyReductionDeclareOp(ReductionDeclareOp op) {
+  if (op.initializerRegion().empty())
+    return op.emitOpError() << "expects non-empty initializer region";
+  Block &initializerEntryBlock = op.initializerRegion().front();
+  if (initializerEntryBlock.getNumArguments() != 1 ||
+      initializerEntryBlock.getArgument(0).getType() != op.type()) {
+    return op.emitOpError() << "expects initializer region with one argument "
+                               "of the reduction type";
+  }
+
+  for (YieldOp yieldOp : op.initializerRegion().getOps<YieldOp>()) {
+    if (yieldOp.results().size() != 1 ||
+        yieldOp.results().getTypes()[0] != op.type())
+      return op.emitOpError() << "expects initializer region to yield a value "
+                                 "of the reduction type";
+  }
+
+  if (op.reductionRegion().empty())
+    return op.emitOpError() << "expects non-empty reduction region";
+  Block &reductionEntryBlock = op.reductionRegion().front();
+  if (reductionEntryBlock.getNumArguments() != 2 ||
+      reductionEntryBlock.getArgumentTypes()[0] !=
+          reductionEntryBlock.getArgumentTypes()[1] ||
+      reductionEntryBlock.getArgumentTypes()[0] != op.type())
+    return op.emitOpError() << "expects reduction region with two arguments of "
+                               "the reduction type";
+  for (YieldOp yieldOp : op.reductionRegion().getOps<YieldOp>()) {
+    if (yieldOp.results().size() != 1 ||
+        yieldOp.results().getTypes()[0] != op.type())
+      return op.emitOpError() << "expects reduction region to yield a value "
+                                 "of the reduction type";
+  }
+
+  if (op.atomicReductionRegion().empty())
+    return success();
+
+  Block &atomicReductionEntryBlock = op.atomicReductionRegion().front();
+  if (atomicReductionEntryBlock.getNumArguments() != 2 ||
+      atomicReductionEntryBlock.getArgumentTypes()[0] !=
+          atomicReductionEntryBlock.getArgumentTypes()[1])
+    return op.emitOpError() << "expects atomic reduction region with two "
+                               "arguments of the same type";
+  auto ptrType = atomicReductionEntryBlock.getArgumentTypes()[0]
+                     .dyn_cast<PointerLikeType>();
+  if (!ptrType || ptrType.getElementType() != op.type())
+    return op.emitOpError() << "expects atomic reduction region arguments to "
+                               "be accumulators containing the reduction type";
+  return success();
+}
+
+static LogicalResult verifyReductionOp(ReductionOp op) {
+  // TODO: generalize this to an op interface when there is more than one op
+  // that supports reductions.
+  auto container = op->getParentOfType<WsLoopOp>();
+  for (unsigned i = 0, e = container.getNumReductionVars(); i < e; ++i)
+    if (container.reduction_vars()[i] == op.accumulator())
+      return success();
+
+  return op.emitOpError() << "the accumulator is not used by the parent";
 }
 
 //===----------------------------------------------------------------------===//
@@ -712,8 +864,8 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
         /*private_vars=*/ValueRange(),
         /*firstprivate_vars=*/ValueRange(), /*lastprivate_vars=*/ValueRange(),
         /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
-        /*schedule_val=*/nullptr, /*schedule_chunk_var=*/nullptr,
-        /*collapse_val=*/nullptr,
+        /*reduction_vars=*/ValueRange(), /*schedule_val=*/nullptr,
+        /*schedule_chunk_var=*/nullptr, /*collapse_val=*/nullptr,
         /*nowait=*/nullptr, /*ordered_val=*/nullptr, /*order_val=*/nullptr,
         /*inclusive=*/nullptr, /*buildBody=*/false);
   state.addAttributes(attributes);
@@ -724,7 +876,7 @@ void WsLoopOp::build(OpBuilder &, OperationState &state, TypeRange resultTypes,
   state.addOperands(operands);
   state.addAttributes(attributes);
   (void)state.addRegion();
-  assert(resultTypes.size() == 0u && "mismatched number of return types");
+  assert(resultTypes.empty() && "mismatched number of return types");
   state.addTypes(resultTypes);
 }
 
@@ -733,10 +885,11 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &result,
                      ValueRange upperBounds, ValueRange steps,
                      ValueRange privateVars, ValueRange firstprivateVars,
                      ValueRange lastprivateVars, ValueRange linearVars,
-                     ValueRange linearStepVars, StringAttr scheduleVal,
-                     Value scheduleChunkVar, IntegerAttr collapseVal,
-                     UnitAttr nowait, IntegerAttr orderedVal,
-                     StringAttr orderVal, UnitAttr inclusive, bool buildBody) {
+                     ValueRange linearStepVars, ValueRange reductionVars,
+                     StringAttr scheduleVal, Value scheduleChunkVar,
+                     IntegerAttr collapseVal, UnitAttr nowait,
+                     IntegerAttr orderedVal, StringAttr orderVal,
+                     UnitAttr inclusive, bool buildBody) {
   result.addOperands(lowerBounds);
   result.addOperands(upperBounds);
   result.addOperands(steps);
@@ -770,6 +923,7 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &result,
            static_cast<int32_t>(lastprivateVars.size()),
            static_cast<int32_t>(linearVars.size()),
            static_cast<int32_t>(linearStepVars.size()),
+           static_cast<int32_t>(reductionVars.size()),
            static_cast<int32_t>(scheduleChunkVar != nullptr ? 1 : 0)}));
 
   Region *bodyRegion = result.addRegion();
@@ -779,6 +933,45 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &result,
     SmallVector<Type, 8> argTypes(numIVs, steps.getType().front());
     builder.createBlock(bodyRegion, {}, argTypes);
   }
+}
+
+static LogicalResult verifyWsLoopOp(WsLoopOp op) {
+  if (op.getNumReductionVars() != 0) {
+    if (!op.reductions() ||
+        op.reductions()->size() != op.getNumReductionVars()) {
+      return op.emitOpError() << "expected as many reduction symbol references "
+                                 "as reduction variables";
+    }
+  } else {
+    if (op.reductions())
+      return op.emitOpError() << "unexpected reduction symbol references";
+    return success();
+  }
+
+  DenseSet<Value> accumulators;
+  for (auto args : llvm::zip(op.reduction_vars(), *op.reductions())) {
+    Value accum = std::get<0>(args);
+    if (!accumulators.insert(accum).second) {
+      return op.emitOpError() << "accumulator variable used more than once";
+    }
+    Type varType = accum.getType().cast<PointerLikeType>();
+    auto symbolRef = std::get<1>(args).cast<SymbolRefAttr>();
+    auto decl =
+        SymbolTable::lookupNearestSymbolFrom<ReductionDeclareOp>(op, symbolRef);
+    if (!decl) {
+      return op.emitOpError() << "expected symbol reference " << symbolRef
+                              << " to point to a reduction declaration";
+    }
+
+    if (decl.getAccumulatorType() && decl.getAccumulatorType() != varType) {
+      return op.emitOpError()
+             << "expected accumulator (" << varType
+             << ") to be the same type as reduction declaration ("
+             << decl.getAccumulatorType() << ")";
+    }
+  }
+
+  return success();
 }
 
 #define GET_OP_CLASSES
