@@ -1176,6 +1176,10 @@ bool SampleProfileLoader::tryInlineCandidate(
   InlineFunctionInfo IFI(nullptr, GetAC);
   IFI.UpdateProfile = false;
   if (InlineFunction(CB, IFI).isSuccess()) {
+    // Merge the attributes based on the inlining.
+    AttributeFuncs::mergeAttributesForInlining(*BB->getParent(),
+                                               *CalledFunction);
+
     // The call to InlineFunction erases I, so we can't pass it here.
     emitInlinedInto(*ORE, DLoc, BB, *CalledFunction, *BB->getParent(), Cost,
                     true, CSINLINE_DEBUG);
