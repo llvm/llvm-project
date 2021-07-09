@@ -803,12 +803,14 @@ template <> struct DenseMapInfo<AttributeList> {
 /// equality, presence of attributes, etc.
 class AttrBuilder {
   // Indices into the TypeAttrs array.
-  static const unsigned ByValTypeIndex = 0;
-  static const unsigned StructRetTypeIndex = 1;
-  static const unsigned ByRefTypeIndex = 2;
-  static const unsigned PreallocatedTypeIndex = 3;
-  static const unsigned InAllocaTypeIndex = 4;
-  static const unsigned NumTypeIndices = 5;
+  enum : unsigned {
+    ByValTypeIndex = 0,
+    StructRetTypeIndex = 1,
+    ByRefTypeIndex = 2,
+    PreallocatedTypeIndex = 3,
+    InAllocaTypeIndex = 4,
+    NumTypeIndices = 5,
+  };
 
   std::bitset<Attribute::EndAttrKinds> Attrs;
   std::map<SmallString<32>, SmallString<32>, std::less<>> TargetDepAttrs;
