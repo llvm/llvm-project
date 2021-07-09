@@ -2169,18 +2169,32 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
       // info for it, so defer to SwiftASTContext.
       if (llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context))
         return ReconstructType({this, type}).GetBitSize(exe_scope);
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Couldn't compute size of type %s using SwiftLanguageRuntime.",
+                AsMangledName(type));
+      return {};
     }
 
     // If there is no process, we can still try to get the static size
     // information out of DWARF. Because it is stored in the Type
     // object we need to look that up by name again.
     if (TypeSP type_sp = LookupTypeInModule(type)) {
-      if (auto byte_size = type_sp->GetByteSize(exe_scope))
+      struct SwiftType : public Type {
+        /// Avoid a potential infinite recursion because
+        /// Type::GetByteSize() may call into this function again.
+        llvm::Optional<uint64_t> GetStaticByteSize() {
+          if (m_byte_size_has_value)
+            return m_byte_size;
+          return {};
+        }
+      };
+      if (auto byte_size =
+              reinterpret_cast<SwiftType *>(type_sp.get())->GetStaticByteSize())
         return *byte_size * 8;
       else return {};
     }
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "Couldn't compute size of type %s without a process.",
+              "Couldn't compute size of type %s using static debug info.",
               AsMangledName(type));
     return {};
   };
@@ -3178,9 +3192,10 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
   // alignment information out of DWARF. Because it is stored in the
   // Type object we need to look that up by name again.
   if (TypeSP type_sp = LookupTypeInModule(type))
-    return type_sp->GetLayoutCompilerType().GetTypeBitAlign(exe_scope);
+    if (type_sp->GetLayoutCompilerType().GetOpaqueQualType() != type)
+      return type_sp->GetLayoutCompilerType().GetTypeBitAlign(exe_scope);
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-            "Couldn't compute alignment of type %s without a process.",
+            "Couldn't compute alignment of type %s using static debug info.",
             AsMangledName(type));
   return {};
 }
