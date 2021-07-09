@@ -596,8 +596,15 @@ void positiveUnusedReferenceIsRemoved() {
   // CHECK-FIXES: int i = 0; // Foo bar.
   auto TrailingCommentRemoved = ExpensiveTypeReference(); // Trailing comment.
   // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'TrailingCommentRemoved' is copy-constructed from a const reference but is never used;
-  // CHECK-FIXES-NOT: auto TrailingCommentRemoved = ExpensiveTypeReference(); // Trailing comment.
+  // CHECK-FIXES-NOT: auto TrailingCommentRemoved = ExpensiveTypeReference();
+  // CHECK-FIXES-NOT: // Trailing comment.
   // clang-format on
+
+  auto UnusedAndUnnecessary = ExpensiveTypeReference();
+  // Comments on a new line should not be deleted.
+  // CHECK-MESSAGES: [[@LINE-2]]:8: warning: the variable 'UnusedAndUnnecessary' is copy-constructed
+  // CHECK-FIXES-NOT: auto UnusedAndUnnecessary = ExpensiveTypeReference();
+  // CHECK-FIXES: // Comments on a new line should not be deleted.
 }
 
 void negativeloopedOverObjectIsModified() {
