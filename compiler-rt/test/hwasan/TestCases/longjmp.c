@@ -3,24 +3,34 @@
 
 // REQUIRES: stable-runtime, pointer-tagging
 
+#include <setjmp.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <sanitizer/hwasan_interface.h>
+#include <unistd.h>
+
+static int *volatile p;
 
 __attribute__((noinline))
-int f(void *caller_frame) {
+int f(jmp_buf buf) {
   int z = 0;
-  int *volatile p = &z;
+  p = &z;
   // Tag of local is never zero.
   assert(__hwasan_tag_pointer(p, 0) != p);
 #ifndef NEGATIVE
-  // This will destroy shadow of "z", and the following load will crash.
-  __hwasan_handle_longjmp(caller_frame);
+  // This will destroy shadow of "z", the p[0] in main will crash.
+  longjmp(buf, 1);
 #endif
   return p[0];
 }
 
 int main() {
-  return f(__builtin_frame_address(0));
-  // CHECK: READ of size 8 at {{.*}} tags: {{.*}}/00 (ptr/mem)
+  jmp_buf buf;
+  if (setjmp(buf)) {
+    return p[0];
+  } else {
+    f(buf);
+  }
+  return 0;
+  // CHECK: READ of size 4 at {{.*}} tags: {{.*}}/00 (ptr/mem)
 }
