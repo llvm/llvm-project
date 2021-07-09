@@ -36,6 +36,12 @@ llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 // CHECK: @int_global_undef = internal global i64 undef
 llvm.mlir.global internal @int_global_undef() : i64
 
+// CHECK: @explicit_undef = global i32 undef
+llvm.mlir.global external @explicit_undef() : i32 {
+  %0 = llvm.mlir.undef : i32
+  llvm.return %0 : i32
+}
+
 // CHECK: @int_gep = internal constant i32* getelementptr (i32, i32* @i32_global, i32 2)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr<i32> {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr<i32>
