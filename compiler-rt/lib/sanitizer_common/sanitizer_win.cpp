@@ -541,13 +541,7 @@ bool IsAbsolutePath(const char *path) {
          IsPathSeparator(path[2]);
 }
 
-void SleepForSeconds(int seconds) {
-  Sleep(seconds * 1000);
-}
-
-void SleepForMillis(int millis) {
-  Sleep(millis);
-}
+void internal_usleep(u64 useconds) { Sleep(useconds / 1000); }
 
 u64 NanoTime() {
   static LARGE_INTEGER frequency = {};
