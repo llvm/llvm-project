@@ -148,7 +148,7 @@ int global2 = *(int*)((char*)&global1+1);
 // BLFILE: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
 // BLFUNC: attributes [[WITH]] = { noinline nounwind sanitize_address{{.*}} }
-// BLFUNC: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
+// BLFUNC: attributes [[NOATTR]] = { mustprogress noinline nounwind{{.*}} }
 
 // ASAN: attributes [[WITH]] = { noinline nounwind sanitize_address{{.*}} }
-// ASAN: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
+// ASAN: attributes [[NOATTR]] = { mustprogress noinline nounwind{{.*}} }
