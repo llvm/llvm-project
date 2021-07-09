@@ -69,3 +69,5 @@ API Changes
 - The `LIBCXXABI_ENABLE_PIC` CMake option was removed. If you are building your
   own libc++abi from source and were using `LIBCXXABI_ENABLE_PIC`, please use
   `CMAKE_POSITION_INDEPENDENT_CODE=ON` instead.
+
+- When the header <variant> is included, it will no longer include <array> transitively.
