@@ -3,10 +3,10 @@
 ## Elf32_Rel dynamic relocations by default, but can use Elf32_Rela with -z rela.
 
 # RUN: llvm-mc -filetype=obj -triple=i386 %s -o %t.o
-# RUN: ld.lld -shared %t.o -o %t.so
-# RUN: llvm-readobj -d -r -x .data %t.so | FileCheck --check-prefix=REL %s
+# RUN: ld.lld -shared %t.o -o %t.so --noinhibit-exec
+# RUN: llvm-readobj -d -r -x .data -x .got.plt %t.so | FileCheck --check-prefix=REL %s
 # RUN: ld.lld -shared -z rel %t.o -o %t1.so
-# RUN: llvm-readobj -d -r -x .data %t1.so | FileCheck --check-prefix=REL %s
+# RUN: llvm-readobj -d -r -x .data -x .got.plt %t1.so | FileCheck --check-prefix=REL %s
 
 # REL:      REL      {{.*}}
 # REL-NEXT: RELSZ    32 (bytes)
@@ -26,11 +26,16 @@
 # REL-NEXT:   R_386_JUMP_SLOT func
 # REL-NEXT: }
 
-# REL:      Hex dump of section '.data':
-# REL-NEXT: 0x000042d0 d0420000 2a000000
+# REL-LABEL: Hex dump of section '.data':
+# REL-NEXT:  0x000042d0 d0420000 2a000000
+##                       ^--- R_386_RELATIVE addend (0x42d0)
+##                                ^--- R_386_32 addend (0x2a)
+# REL-LABEL: Hex dump of section '.got.plt':
+# REL-NEXT:  0x000042d8 48320000 00000000 00000000 36120000
+##  R_386_JUMP_SLOT target (0x1236) ---------------^
 
 # RUN: ld.lld -shared -z rel -z rela %t.o -o %t2.so
-# RUN: llvm-readobj -d -r %t2.so | FileCheck --check-prefix=RELA %s
+# RUN: llvm-readobj -d -r -x .data -x .got.plt %t2.so | FileCheck --check-prefix=RELA %s
 
 # RELA:      RELA      {{.*}}
 # RELA-NEXT: RELASZ    48 (bytes)
@@ -49,6 +54,15 @@
 # RELA-NEXT: .rela.plt {
 # RELA-NEXT:   R_386_JUMP_SLOT func 0x0
 # RELA-NEXT: }
+
+# RELA-LABEL: Hex dump of section '.data':
+# RELA-NEXT:  0x000042f0 00000000 2a000000
+##                                ^--- R_386_32 addend (0x2a)
+## TODO: we should probably clear the R_386_32 addend that was copied from the .o?
+## no addend written for R_386_RELATIVE
+# RELA-LABEL: Hex dump of section '.got.plt':
+# RELA-NEXT:  0x000042f8 68320000 00000000 00000000 56120000
+##  R_386_JUMP_SLOT target (0x1256) ----------------^
 
 .globl _start
 _start:

@@ -2056,7 +2056,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       for (const SymbolTableEntry &e : part.dynSymTab->getSymbols())
         syms.insert(e.sym);
       for (DynamicReloc &reloc : part.relaDyn->relocs)
-        if (reloc.sym && !reloc.useSymVA && syms.insert(reloc.sym).second)
+        if (reloc.sym && reloc.needsDynSymIndex() &&
+            syms.insert(reloc.sym).second)
           part.dynSymTab->addSymbol(reloc.sym);
     }
   }
