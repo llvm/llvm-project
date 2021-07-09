@@ -194,7 +194,7 @@ static std::error_code WildcardExpand(StringRef Arg,
 
     // Append FileName to Dir, and remove it afterwards.
     llvm::sys::path::append(Dir, FileName);
-    Args.push_back(Saver.save(StringRef(Dir)).data());
+    Args.push_back(Saver.save(Dir.str()).data());
     Dir.resize(DirSize);
   } while (FindNextFileW(FindHandle, &FileData));
 
