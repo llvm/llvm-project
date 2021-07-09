@@ -335,7 +335,7 @@ def RetCC_Mips : CallingConv<[
   CCIfSubtarget<"isABI_N32()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_N64()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_P32()", CCDelegateTo<RetCC_NanoMipsP32>>,
-  CCDelegateTo<RetCC_MipsO32>
+  CCIfSubtarget<"isABI_O32()", CCDelegateTo<RetCC_MipsO32>>,
 ]>;
 
 def CC_Mips_ByVal : CallingConv<[
