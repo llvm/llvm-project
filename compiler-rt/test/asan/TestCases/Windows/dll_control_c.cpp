@@ -12,7 +12,7 @@
 static void __declspec(noinline) CrashOnProcessDetach() {
   printf("CrashOnProcessDetach\n");
   fflush(stdout);
-  *static_cast<volatile int *>(0) = 0x356;
+  __builtin_trap();
 }
 
 bool g_is_child = false;
