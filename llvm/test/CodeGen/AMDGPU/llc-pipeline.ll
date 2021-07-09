@@ -22,8 +22,8 @@
 ; GCN-O0-NEXT: Target Transform Information
 ; GCN-O0-NEXT: Assumption Cache Tracker
 ; GCN-O0-NEXT: Profile summary info
-; GCN-O0-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O0-NEXT: Argument Register Usage Information Storage
+; GCN-O0-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O0-NEXT: Register Usage Information Storage
 ; GCN-O0-NEXT: Machine Branch Probability Analysis
 ; GCN-O0-NEXT:   ModulePass Manager
@@ -43,9 +43,7 @@
 ; GCN-O0-NEXT:     Lower OpenCL enqueued blocks
 ; GCN-O0-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:     FunctionPass Manager
-; GCN-O0-NEXT:     Expand Atomic instructions
-; GCN-O0-NEXT:       Lower Garbage Collection Instructions
-; GCN-O0-NEXT:       Shadow Stack GC Lowering
+; GCN-O0-NEXT:       Expand Atomic instructions
 ; GCN-O0-NEXT:       Lower constant intrinsics
 ; GCN-O0-NEXT:       Remove unreachable blocks from the CFG
 ; GCN-O0-NEXT:       Expand vector predication intrinsics
@@ -165,8 +163,8 @@
 ; GCN-O1-NEXT: External Alias Analysis
 ; GCN-O1-NEXT: Type-Based Alias Analysis
 ; GCN-O1-NEXT: Scoped NoAlias Alias Analysis
-; GCN-O1-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O1-NEXT: Argument Register Usage Information Storage
+; GCN-O1-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O1-NEXT: Machine Branch Probability Analysis
 ; GCN-O1-NEXT: Register Usage Information Storage
 ; GCN-O1-NEXT:   ModulePass Manager
@@ -209,8 +207,6 @@
 ; GCN-O1-NEXT:       Lazy Branch Probability Analysis
 ; GCN-O1-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O1-NEXT:       Expand memcmp() to load/stores
-; GCN-O1-NEXT:       Lower Garbage Collection Instructions
-; GCN-O1-NEXT:       Shadow Stack GC Lowering
 ; GCN-O1-NEXT:       Lower constant intrinsics
 ; GCN-O1-NEXT:       Remove unreachable blocks from the CFG
 ; GCN-O1-NEXT:       Natural Loop Information
@@ -414,8 +410,8 @@
 ; GCN-O1-OPTS-NEXT: External Alias Analysis
 ; GCN-O1-OPTS-NEXT: Type-Based Alias Analysis
 ; GCN-O1-OPTS-NEXT: Scoped NoAlias Alias Analysis
-; GCN-O1-OPTS-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O1-OPTS-NEXT: Argument Register Usage Information Storage
+; GCN-O1-OPTS-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O1-OPTS-NEXT: Machine Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT: Register Usage Information Storage
 ; GCN-O1-OPTS-NEXT:   ModulePass Manager
@@ -476,8 +472,6 @@
 ; GCN-O1-OPTS-NEXT:       Lazy Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:       Expand memcmp() to load/stores
-; GCN-O1-OPTS-NEXT:       Lower Garbage Collection Instructions
-; GCN-O1-OPTS-NEXT:       Shadow Stack GC Lowering
 ; GCN-O1-OPTS-NEXT:       Lower constant intrinsics
 ; GCN-O1-OPTS-NEXT:       Remove unreachable blocks from the CFG
 ; GCN-O1-OPTS-NEXT:       Natural Loop Information
@@ -696,8 +690,8 @@
 ; GCN-O2-NEXT: External Alias Analysis
 ; GCN-O2-NEXT: Type-Based Alias Analysis
 ; GCN-O2-NEXT: Scoped NoAlias Alias Analysis
-; GCN-O2-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O2-NEXT: Argument Register Usage Information Storage
+; GCN-O2-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O2-NEXT: Machine Branch Probability Analysis
 ; GCN-O2-NEXT: Register Usage Information Storage
 ; GCN-O2-NEXT:   ModulePass Manager
@@ -759,8 +753,6 @@
 ; GCN-O2-NEXT:       Lazy Branch Probability Analysis
 ; GCN-O2-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:       Expand memcmp() to load/stores
-; GCN-O2-NEXT:       Lower Garbage Collection Instructions
-; GCN-O2-NEXT:       Shadow Stack GC Lowering
 ; GCN-O2-NEXT:       Lower constant intrinsics
 ; GCN-O2-NEXT:       Remove unreachable blocks from the CFG
 ; GCN-O2-NEXT:       Natural Loop Information
@@ -980,8 +972,8 @@
 ; GCN-O3-NEXT: External Alias Analysis
 ; GCN-O3-NEXT: Type-Based Alias Analysis
 ; GCN-O3-NEXT: Scoped NoAlias Alias Analysis
-; GCN-O3-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O3-NEXT: Argument Register Usage Information Storage
+; GCN-O3-NEXT: Create Garbage Collector Module Metadata
 ; GCN-O3-NEXT: Machine Branch Probability Analysis
 ; GCN-O3-NEXT: Register Usage Information Storage
 ; GCN-O3-NEXT:   ModulePass Manager
@@ -1048,8 +1040,6 @@
 ; GCN-O3-NEXT:       Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:       Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:       Expand memcmp() to load/stores
-; GCN-O3-NEXT:       Lower Garbage Collection Instructions
-; GCN-O3-NEXT:       Shadow Stack GC Lowering
 ; GCN-O3-NEXT:       Lower constant intrinsics
 ; GCN-O3-NEXT:       Remove unreachable blocks from the CFG
 ; GCN-O3-NEXT:       Natural Loop Information

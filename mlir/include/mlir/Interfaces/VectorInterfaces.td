@@ -28,17 +28,17 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         `targetShape`. Return `None` if the op cannot be unrolled to the target
         vector shape.
       }],
-      /*retTy=*/"Optional<SmallVector<int64_t, 4>>",
+      /*retTy=*/"::mlir::Optional<::mlir::SmallVector<int64_t, 4>>",
       /*methodName=*/"getShapeForUnroll",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert($_op->getNumResults() == 1);
         auto vt = $_op.getResult().getType().
-          template dyn_cast<VectorType>();
+          template dyn_cast<::mlir::VectorType>();
         if (!vt)
-          return None;
-        SmallVector<int64_t, 4> res(vt.getShape().begin(), vt.getShape().end());
+          return ::mlir::None;
+        ::mlir::SmallVector<int64_t, 4> res(vt.getShape().begin(), vt.getShape().end());
         return res;
       }]
     >,
@@ -54,7 +54,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
   let methods = [
     StaticInterfaceMethod<
       /*desc=*/"Return the `in_bounds` attribute name.",
-      /*retTy=*/"StringRef",
+      /*retTy=*/"::mlir::StringRef",
       /*methodName=*/"getInBoundsAttrName",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -62,7 +62,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     StaticInterfaceMethod<
       /*desc=*/"Return the `permutation_map` attribute name.",
-      /*retTy=*/"StringRef",
+      /*retTy=*/"::mlir::StringRef",
       /*methodName=*/"getPermutationMapAttrName",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -78,13 +78,13 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*defaultImplementation=*/[{
         return $_op.isBroadcastDim(dim)
             || ($_op.in_bounds()
-                && $_op.in_bounds()->template cast<ArrayAttr>()[dim]
-                                    .template cast<BoolAttr>().getValue());
+                && $_op.in_bounds()->template cast<::mlir::ArrayAttr>()[dim]
+                                    .template cast<::mlir::BoolAttr>().getValue());
       }]
     >,
     InterfaceMethod<
       /*desc=*/"Return the memref or ranked tensor operand.",
-      /*retTy=*/"Value",
+      /*retTy=*/"::mlir::Value",
       /*methodName=*/"source",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.source();"
@@ -92,7 +92,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the vector operand or result.",
-      /*retTy=*/"Value",
+      /*retTy=*/"::mlir::Value",
       /*methodName=*/"vector",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.vector();"
@@ -100,7 +100,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the indices operands.",
-      /*retTy=*/"ValueRange",
+      /*retTy=*/"::mlir::ValueRange",
       /*methodName=*/"indices",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.indices();"
@@ -108,7 +108,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the permutation map.",
-      /*retTy=*/"AffineMap",
+      /*retTy=*/"::mlir::AffineMap",
       /*methodName=*/"permutation_map",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.permutation_map();"
@@ -122,8 +122,8 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto expr = $_op.permutation_map().getResult(idx);
-        return expr.template isa<AffineConstantExpr>() &&
-               expr.template dyn_cast<AffineConstantExpr>().getValue() == 0;
+        return expr.template isa<::mlir::AffineConstantExpr>() &&
+               expr.template dyn_cast<::mlir::AffineConstantExpr>().getValue() == 0;
       }]
     >,
     InterfaceMethod<
@@ -143,7 +143,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the `in_bounds` boolean ArrayAttr.",
-      /*retTy=*/"Optional<ArrayAttr>",
+      /*retTy=*/"::mlir::Optional<::mlir::ArrayAttr>",
       /*methodName=*/"in_bounds",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.in_bounds();"
@@ -151,34 +151,34 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Return the ShapedType.",
-      /*retTy=*/"ShapedType",
+      /*retTy=*/"::mlir::ShapedType",
       /*methodName=*/"getShapedType",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/
-        "return $_op.source().getType().template cast<ShapedType>();"
+        "return $_op.source().getType().template cast<::mlir::ShapedType>();"
     >,
     InterfaceMethod<
       /*desc=*/"Return the VectorType.",
-      /*retTy=*/"VectorType",
+      /*retTy=*/"::mlir::VectorType",
       /*methodName=*/"getVectorType",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.vector().getType().template dyn_cast<VectorType>();
+        return $_op.vector().getType().template dyn_cast<::mlir::VectorType>();
         }]
     >,
     InterfaceMethod<
       /*desc=*/"Return the mask type if the op has a mask.",
-      /*retTy=*/"VectorType",
+      /*retTy=*/"::mlir::VectorType",
       /*methodName=*/"getMaskType",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return $_op.mask()
-            ? mlir::vector::detail::transferMaskType(
+            ? ::mlir::vector::detail::transferMaskType(
                 $_op.getVectorType(), $_op.permutation_map())
-            : VectorType();
+            : ::mlir::VectorType();
       }]
     >,
     InterfaceMethod<
@@ -232,7 +232,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       }],
       /*retTy=*/"void",
       /*methodName=*/"zipResultAndIndexing",
-      /*args=*/(ins "llvm::function_ref<void(int64_t, int64_t)>":$fun),
+      /*args=*/(ins "::llvm::function_ref<void(int64_t, int64_t)>":$fun),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         for (int64_t resultIdx = 0,

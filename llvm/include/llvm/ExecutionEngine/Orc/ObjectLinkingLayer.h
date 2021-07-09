@@ -64,8 +64,9 @@ public:
   /// configured.
   class Plugin {
   public:
-    using JITLinkSymbolVector = std::vector<const jitlink::Symbol *>;
-    using LocalDependenciesMap = DenseMap<SymbolStringPtr, JITLinkSymbolVector>;
+    using JITLinkSymbolSet = DenseSet<jitlink::Symbol *>;
+    using SyntheticSymbolDependenciesMap =
+        DenseMap<SymbolStringPtr, JITLinkSymbolSet>;
 
     virtual ~Plugin();
     virtual void modifyPassConfig(MaterializationResponsibility &MR,
@@ -89,12 +90,12 @@ public:
                                              ResourceKey SrcKey) = 0;
 
     /// Return any dependencies that synthetic symbols (e.g. init symbols)
-    /// have on locally scoped jitlink::Symbols. This is used by the
-    /// ObjectLinkingLayer to update the dependencies for the synthetic
-    /// symbols.
-    virtual LocalDependenciesMap
-    getSyntheticSymbolLocalDependencies(MaterializationResponsibility &MR) {
-      return LocalDependenciesMap();
+    /// have on symbols in the LinkGraph.
+    /// This is used by the ObjectLinkingLayer to update the dependencies for
+    /// the synthetic symbols.
+    virtual SyntheticSymbolDependenciesMap
+    getSyntheticSymbolDependencies(MaterializationResponsibility &MR) {
+      return SyntheticSymbolDependenciesMap();
     }
   };
 
