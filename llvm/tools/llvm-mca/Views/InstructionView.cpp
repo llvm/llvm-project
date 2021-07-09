@@ -19,6 +19,8 @@
 namespace llvm {
 namespace mca {
 
+InstructionView::~InstructionView() = default;
+
 StringRef InstructionView::printInstructionString(const llvm::MCInst &MCI) const {
   InstructionString = "";
   MCIP.printInst(&MCI, 0, "", STI, InstrStream);
@@ -36,9 +38,11 @@ json::Value InstructionView::toJSON() const {
   return SourceInfo;
 }
 
-json::Object InstructionView::getJSONResources() const {
+json::Object InstructionView::getJSONTargetInfo(const MCSubtargetInfo &STI) {
   json::Array Resources;
   const MCSchedModel &SM = STI.getSchedModel();
+  StringRef MCPU = STI.getCPU();
+
   for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
     unsigned NumUnits = ProcResource.NumUnits;
