@@ -1,7 +1,7 @@
-RUN: %cpp_compiler %S/NullDerefTest.cpp -o %t-NullDerefTest
+RUN: %cpp_compiler %S/TrapTest.cpp -o %t-TrapTest
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 
-RUN: not %run %t-NullDerefTest %S/hi.txt 2>&1 | FileCheck %s --check-prefix=SingleInput
+RUN: not %run %t-TrapTest %S/hi.txt 2>&1 | FileCheck %s --check-prefix=SingleInput
 SingleInput-NOT: Test unit written to ./crash-
 
 RUN: rm -rf  %tmp/SINGLE_INPUTS
