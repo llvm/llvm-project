@@ -523,6 +523,7 @@ int main(int argc, char **argv) {
       *STI, *MRI, mc::InitMCTargetOptionsFromFlags()));
   assert(MAB && "Unable to create asm backend!");
 
+  json::Object JSONOutput;
   for (const std::unique_ptr<mca::CodeRegion> &Region : Regions) {
     // Skip empty code regions.
     if (Region->empty())
@@ -530,7 +531,8 @@ int main(int argc, char **argv) {
 
     // Don't print the header of this region if it is the default region, and
     // it doesn't have an end location.
-    if (Region->startLoc().isValid() || Region->endLoc().isValid()) {
+    if (!PrintJson &&
+        (Region->startLoc().isValid() || Region->endLoc().isValid())) {
       TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
       StringRef Desc = Region->getDescription();
       if (!Desc.empty())
@@ -590,7 +592,14 @@ int main(int argc, char **argv) {
       if (!runPipeline(*P))
         return 1;
 
-      Printer.printReport(TOF->os());
+      if (PrintJson) {
+        JSONOutput.try_emplace(!Region->getDescription().empty()
+                                   ? Region->getDescription().str()
+                                   : "main",
+                               Printer.getJSONReportRegion());
+      } else {
+        Printer.printReport(TOF->os());
+      }
       continue;
     }
 
@@ -610,9 +619,13 @@ int main(int argc, char **argv) {
 
     // When we output JSON, we add a view that contains the instructions
     // and CPU resource information.
-    if (PrintJson)
-      Printer.addView(
-          std::make_unique<mca::InstructionView>(*STI, *IP, Insts, MCPU));
+    if (PrintJson) {
+      auto IV = std::make_unique<mca::InstructionView>(*STI, *IP, Insts, MCPU);
+      if (JSONOutput.find("Resources") == JSONOutput.end()) {
+        JSONOutput.try_emplace("Resources", IV->getJSONResources());
+      }
+      Printer.addView(std::move(IV));
+    }
 
     if (PrintSummaryView)
       Printer.addView(
@@ -659,11 +672,21 @@ int main(int argc, char **argv) {
     if (!runPipeline(*P))
       return 1;
 
-    Printer.printReport(TOF->os());
+    if (PrintJson) {
+      JSONOutput.try_emplace(!Region->getDescription().empty()
+                                 ? Region->getDescription().str()
+                                 : "main",
+                             Printer.getJSONReportRegion());
+    } else {
+      Printer.printReport(TOF->os());
+    }
 
     // Clear the InstrBuilder internal state in preparation for another round.
     IB.clear();
   }
+
+  if (PrintJson)
+    TOF->os() << formatv("{0:2}", json::Value(std::move(JSONOutput))) << "\n";
 
   TOF->keep();
   return 0;
