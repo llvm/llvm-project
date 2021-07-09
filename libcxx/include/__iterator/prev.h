@@ -61,9 +61,6 @@ struct __prev_fn final : private __function_like {
     ranges::advance(__x, -__n, __bound);
     return __x;
   }
-
-  // TODO: Remove this workaround for broken Clang modules.
-  using __function_like::operator&;
 };
 
 inline constexpr auto prev = __prev_fn(__function_like::__tag());

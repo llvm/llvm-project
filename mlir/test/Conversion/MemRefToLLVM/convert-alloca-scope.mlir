@@ -1,6 +1,6 @@
-// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-memref-to-llvm %s | FileCheck %s
 
-// CHECK-LABEL: llvm.func @empty
+// CHECK-LABEL: @empty
 func @empty() {
   // CHECK: llvm.intr.stacksave 
   // CHECK: llvm.br
@@ -9,11 +9,10 @@ func @empty() {
   }
   // CHECK: llvm.intr.stackrestore 
   // CHECK: llvm.br
-  // CHECK: llvm.return
   return
 }
 
-// CHECK-LABEL: llvm.func @returns_nothing
+// CHECK-LABEL: @returns_nothing
 func @returns_nothing(%b: f32) {
   %a = constant 10.0 : f32
   // CHECK: llvm.intr.stacksave 
@@ -22,11 +21,10 @@ func @returns_nothing(%b: f32) {
     memref.alloca_scope.return
   }
   // CHECK: llvm.intr.stackrestore 
-  // CHECK: llvm.return
   return
 }
 
-// CHECK-LABEL: llvm.func @returns_one_value
+// CHECK-LABEL: @returns_one_value
 func @returns_one_value(%b: f32) -> f32 {
   %a = constant 10.0 : f32
   // CHECK: llvm.intr.stacksave 
@@ -35,11 +33,10 @@ func @returns_one_value(%b: f32) -> f32 {
     memref.alloca_scope.return %c: f32
   }
   // CHECK: llvm.intr.stackrestore 
-  // CHECK: llvm.return
   return %result : f32
 }
 
-// CHECK-LABEL: llvm.func @returns_multiple_values
+// CHECK-LABEL: @returns_multiple_values
 func @returns_multiple_values(%b: f32) -> f32 {
   %a = constant 10.0 : f32
   // CHECK: llvm.intr.stacksave 
@@ -49,7 +46,6 @@ func @returns_multiple_values(%b: f32) -> f32 {
     memref.alloca_scope.return %c, %d: f32, f32
   }
   // CHECK: llvm.intr.stackrestore 
-  // CHECK: llvm.return
   %result = std.addf %result1, %result2 : f32
   return %result : f32
 }

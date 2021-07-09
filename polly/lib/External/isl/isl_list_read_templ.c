@@ -29,6 +29,8 @@ static __isl_give LIST(EL) *FN(isl_stream_read,LIST(EL_BASE))(isl_stream *s)
 		return NULL;
 	if (isl_stream_eat(s, '(') < 0)
 		return FN(LIST(EL),free)(list);
+	if (isl_stream_eat_if_available(s, ')'))
+		return list;
 	do {
 		EL *el;
 

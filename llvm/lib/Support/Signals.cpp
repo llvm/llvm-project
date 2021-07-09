@@ -165,8 +165,8 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
     }
   }
 
-  Optional<StringRef> Redirects[] = {StringRef(InputFile),
-                                     StringRef(OutputFile), StringRef("")};
+  Optional<StringRef> Redirects[] = {InputFile.str(), OutputFile.str(),
+                                     StringRef("")};
   StringRef Args[] = {"llvm-symbolizer", "--functions=linkage", "--inlining",
 #ifdef _WIN32
                       // Pass --relative-address on Windows so that we don't

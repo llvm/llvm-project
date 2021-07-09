@@ -621,12 +621,12 @@ public:
     return 0;
   }
 
-  InstructionCost getArithmeticReductionCost(unsigned, VectorType *, bool,
+  InstructionCost getArithmeticReductionCost(unsigned, VectorType *,
                                              TTI::TargetCostKind) const {
     return 1;
   }
 
-  InstructionCost getMinMaxReductionCost(VectorType *, VectorType *, bool, bool,
+  InstructionCost getMinMaxReductionCost(VectorType *, VectorType *, bool,
                                          TTI::TargetCostKind) const {
     return 1;
   }
@@ -1112,26 +1112,6 @@ public:
       if (CI)
         Idx = CI->getZExtValue();
 
-      // Try to match a reduction (a series of shufflevector and vector ops
-      // followed by an extractelement).
-      unsigned RdxOpcode;
-      VectorType *RdxType;
-      bool IsPairwise;
-      switch (TTI::matchVectorReduction(EEI, RdxOpcode, RdxType, IsPairwise)) {
-      case TTI::RK_Arithmetic:
-        return TargetTTI->getArithmeticReductionCost(RdxOpcode, RdxType,
-                                                     IsPairwise, CostKind);
-      case TTI::RK_MinMax:
-        return TargetTTI->getMinMaxReductionCost(
-            RdxType, cast<VectorType>(CmpInst::makeCmpResultType(RdxType)),
-            IsPairwise, /*IsUnsigned=*/false, CostKind);
-      case TTI::RK_UnsignedMinMax:
-        return TargetTTI->getMinMaxReductionCost(
-            RdxType, cast<VectorType>(CmpInst::makeCmpResultType(RdxType)),
-            IsPairwise, /*IsUnsigned=*/true, CostKind);
-      case TTI::RK_None:
-        break;
-      }
       return TargetTTI->getVectorInstrCost(Opcode, U->getOperand(0)->getType(),
                                            Idx);
     }

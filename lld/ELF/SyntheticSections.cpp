@@ -989,7 +989,9 @@ void MipsGotSection::build() {
       // for the TP-relative offset as we don't know how much other data will
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || config->shared)
-        mainPart->relaDyn->addReloc(target->tlsGotRel, this, offset, s);
+        mainPart->relaDyn->addReloc({target->tlsGotRel, this, offset,
+                                     DynamicReloc::AgainstSymbolWithTargetVA,
+                                     *s, 0, R_ABS});
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -997,7 +999,7 @@ void MipsGotSection::build() {
       if (s == nullptr) {
         if (!config->shared)
           continue;
-        mainPart->relaDyn->addReloc(target->tlsModuleIndexRel, this, offset, s);
+        mainPart->relaDyn->addReloc({target->tlsModuleIndexRel, this, offset});
       } else {
         // When building a shared library we still need a dynamic relocation
         // for the module index. Therefore only checking for
@@ -1005,13 +1007,15 @@ void MipsGotSection::build() {
         // thread-locals that have been marked as local through a linker script)
         if (!s->isPreemptible && !config->shared)
           continue;
-        mainPart->relaDyn->addReloc(target->tlsModuleIndexRel, this, offset, s);
+        mainPart->relaDyn->addSymbolReloc(target->tlsModuleIndexRel, this,
+                                          offset, *s);
         // However, we can skip writing the TLS offset reloc for non-preemptible
         // symbols since it is known even in shared libraries
         if (!s->isPreemptible)
           continue;
         offset += config->wordsize;
-        mainPart->relaDyn->addReloc(target->tlsOffsetRel, this, offset, s);
+        mainPart->relaDyn->addSymbolReloc(target->tlsOffsetRel, this, offset,
+                                          *s);
       }
     }
 
@@ -1023,7 +1027,8 @@ void MipsGotSection::build() {
     // Dynamic relocations for "global" entries.
     for (const std::pair<Symbol *, size_t> &p : got.global) {
       uint64_t offset = p.second * config->wordsize;
-      mainPart->relaDyn->addReloc(target->relativeRel, this, offset, p.first);
+      mainPart->relaDyn->addSymbolReloc(target->relativeRel, this, offset,
+                                        *p.first);
     }
     if (!config->isPic)
       continue;
@@ -1034,13 +1039,14 @@ void MipsGotSection::build() {
       for (size_t pi = 0; pi < pageCount; ++pi) {
         uint64_t offset = (l.second.firstIndex + pi) * config->wordsize;
         mainPart->relaDyn->addReloc({target->relativeRel, this, offset, l.first,
-                                 int64_t(pi * 0x10000)});
+                                     int64_t(pi * 0x10000)});
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
       uint64_t offset = p.second * config->wordsize;
-      mainPart->relaDyn->addReloc({target->relativeRel, this, offset, true,
-                               p.first.first, p.first.second});
+      mainPart->relaDyn->addReloc({target->relativeRel, this, offset,
+                                   DynamicReloc::AddendOnlyWithTargetVA,
+                                   *p.first.first, p.first.second, R_ABS});
     }
   }
 }
@@ -1568,16 +1574,26 @@ uint64_t DynamicReloc::getOffset() const {
 }
 
 int64_t DynamicReloc::computeAddend() const {
-  if (useSymVA)
-    return sym->getVA(addend);
-  if (!outputSec)
+  switch (kind) {
+  case AddendOnly:
+    assert(sym == nullptr);
     return addend;
-  // See the comment in the DynamicReloc ctor.
-  return getMipsPageAddr(outputSec->addr) + addend;
+  case AgainstSymbol:
+    assert(sym != nullptr);
+    return addend;
+  case AddendOnlyWithTargetVA:
+  case AgainstSymbolWithTargetVA:
+    return InputSection::getRelocTargetVA(inputSec->file, type, addend,
+                                          getOffset(), *sym, expr);
+  case MipsMultiGotPage:
+    assert(sym == nullptr);
+    return getMipsPageAddr(outputSec->addr) + addend;
+  }
+  llvm_unreachable("Unknown DynamicReloc::Kind enum");
 }
 
 uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
-  if (sym && !useSymVA)
+  if (needsDynSymIndex())
     return symTab->getSymbolIndex(sym);
   return 0;
 }
@@ -1588,21 +1604,51 @@ RelocationBaseSection::RelocationBaseSection(StringRef name, uint32_t type,
     : SyntheticSection(SHF_ALLOC, type, config->wordsize, name),
       dynamicTag(dynamicTag), sizeDynamicTag(sizeDynamicTag) {}
 
-void RelocationBaseSection::addReloc(RelType dynType, InputSectionBase *isec,
-                                     uint64_t offsetInSec, Symbol *sym) {
-  addReloc({dynType, isec, offsetInSec, false, sym, 0});
+void RelocationBaseSection::addSymbolReloc(RelType dynType,
+                                           InputSectionBase *isec,
+                                           uint64_t offsetInSec, Symbol &sym,
+                                           int64_t addend,
+                                           Optional<RelType> addendRelType) {
+  addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
+           R_ADDEND, addendRelType ? *addendRelType : target->noneRel);
 }
 
-void RelocationBaseSection::addReloc(RelType dynType,
+void RelocationBaseSection::addRelativeReloc(
+    RelType dynType, InputSectionBase *inputSec, uint64_t offsetInSec,
+    Symbol &sym, int64_t addend, RelType addendRelType, RelExpr expr) {
+  // This function should only be called for non-preemptible symbols or
+  // RelExpr values that refer to an address inside the output file (e.g. the
+  // address of the GOT entry for a potentially preemptible symbol).
+  assert((!sym.isPreemptible || expr == R_GOT) &&
+         "cannot add relative relocation against preemptible symbol");
+  assert(expr != R_ADDEND && "expected non-addend relocation expression");
+  addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, inputSec, offsetInSec,
+           sym, addend, expr, addendRelType);
+}
+
+void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
+    RelType dynType, InputSectionBase *isec, uint64_t offsetInSec, Symbol &sym,
+    RelType addendRelType) {
+  // No need to write an addend to the section for preemptible symbols.
+  if (sym.isPreemptible)
+    addReloc({dynType, isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
+              R_ABS});
+  else
+    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec, offsetInSec,
+             sym, 0, R_ABS, addendRelType);
+}
+
+void RelocationBaseSection::addReloc(DynamicReloc::Kind kind, RelType dynType,
                                      InputSectionBase *inputSec,
-                                     uint64_t offsetInSec, Symbol *sym,
+                                     uint64_t offsetInSec, Symbol &sym,
                                      int64_t addend, RelExpr expr,
-                                     RelType type) {
+                                     RelType addendRelType) {
   // Write the addends to the relocated address if required. We skip
   // it if the written value would be zero.
   if (config->writeAddends && (expr != R_ADDEND || addend != 0))
-    inputSec->relocations.push_back({expr, type, offsetInSec, addend, sym});
-  addReloc({dynType, inputSec, offsetInSec, expr != R_ADDEND, sym, addend});
+    inputSec->relocations.push_back(
+        {expr, addendRelType, offsetInSec, addend, &sym});
+  addReloc({dynType, inputSec, offsetInSec, kind, sym, addend, expr});
 }
 
 void RelocationBaseSection::addReloc(const DynamicReloc &reloc) {

@@ -7,6 +7,7 @@ target_link_libraries(MLIRExecutionEngineTests
   PRIVATE
   MLIRExecutionEngine
   MLIRLinalgToLLVM
+  MLIRMemRefToLLVM
   ${dialect_libs}
 
 )

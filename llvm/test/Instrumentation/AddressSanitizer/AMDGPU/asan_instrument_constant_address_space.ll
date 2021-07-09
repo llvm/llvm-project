@@ -12,7 +12,7 @@ entry:
 ;
 ; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint i32 addrspace(4)* %a to i64
 ; CHECK:   lshr i64 %[[LOAD_ADDR]], 3
-; CHECK:   {{or|add}}
+; CHECK:   add i64 %{{.*}}, 2147450880
 ; CHECK:   %[[LOAD_SHADOW_PTR:[^ ]*]] = inttoptr
 ; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, i8* %[[LOAD_SHADOW_PTR]]
 ; CHECK:   icmp ne i8
