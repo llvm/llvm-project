@@ -3448,6 +3448,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "SizeOptsTableGen",
+    strip_include_prefix = "tools/llvm-size",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-size/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-size/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-size",
     srcs = glob([
@@ -3458,6 +3470,8 @@ cc_binary(
     stamp = 0,
     deps = [
         ":Object",
+        ":Option",
+        ":SizeOptsTableGen",
         ":Support",
     ],
 )
