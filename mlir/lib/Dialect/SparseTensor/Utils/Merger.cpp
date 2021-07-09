@@ -201,6 +201,10 @@ static char kindToOpSymbol(Kind kind) {
   case Kind::kMulF:
   case Kind::kMulI:
     return '*';
+  case Kind::kDivF:
+  case Kind::kDivS:
+  case Kind::kDivU:
+    return '/';
   case Kind::kAddF:
   case Kind::kAddI:
     return '+';
@@ -302,17 +306,51 @@ unsigned Merger::buildLattices(unsigned e, unsigned idx) {
   }
   case Kind::kMulF:
   case Kind::kMulI:
+    // A multiplicative operation only needs to be performed
+    // for the conjunction of sparse iteration spaces.
+    //
+    //  x*y|!y | y |
+    //  ---+---+---+
+    //  !x | 0 | 0 |
+    //   x | 0 |x*y|
+    return takeConj(kind, // take binary conjunction
+                    buildLattices(tensorExps[e].children.e0, idx),
+                    buildLattices(tensorExps[e].children.e1, idx));
+  case Kind::kDivF:
+  case Kind::kDivS:
+  case Kind::kDivU:
+    // A division is tricky, since 0/0, 0/c, c/0 all have
+    // specific outcomes for floating-point and integers.
+    // Thus, we need to traverse the full iteration space.
+    //
+    //  x/y|!y | y |
+    //  ---+---+---+
+    //  !x |0/0|0/y|   FP: 0/0=NaN,c/0=Inf,0/c=0 with c true nonzero
+    //   x |x/0|x/y|  INT: x/0=exception for any x
+    //
+    // TODO: for now we "fixed" this by only accepting x/c cases
+    //       during expression building, so that the conjunction
+    //       rules applies (viz. x/c = x*(1/c) as far as lattice
+    //       construction is concerned).
     return takeConj(kind, // take binary conjunction
                     buildLattices(tensorExps[e].children.e0, idx),
                     buildLattices(tensorExps[e].children.e1, idx));
   case Kind::kSubF:
   case Kind::kSubI:
+    // Special case: 0-y is -y.
     if (tensorExps[tensorExps[e].children.e0].kind == Kind::kZero)
       return mapZero(kind, // maps to 0-y with just y's lattices
                      buildLattices(tensorExps[e].children.e1, idx));
     LLVM_FALLTHROUGH;
   case Kind::kAddF:
   case Kind::kAddI:
+    // An additive operation needs to be performed
+    // for the disjunction of sparse iteration spaces.
+    //
+    //  x+y|!y | y |    x-y|!y | y |
+    //  ---+---+---+    ---+---+---+
+    //  !x | 0 | y |    !x | 0 |-y |
+    //   x | x |x+y|     x | x |x-y|
     return takeDisj(kind, // take binary disjunction
                     buildLattices(tensorExps[e].children.e0, idx),
                     buildLattices(tensorExps[e].children.e1, idx));
@@ -323,6 +361,16 @@ unsigned Merger::buildLattices(unsigned e, unsigned idx) {
 Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   Operation *yield = op.region().front().getTerminator();
   return buildTensorExp(op, yield->getOperand(0));
+}
+
+bool Merger::maybeZero(unsigned e) {
+  if (tensorExps[e].kind == Kind::kInvariant) {
+    if (auto c = tensorExps[e].val.getDefiningOp<ConstantIntOp>())
+      return c.getValue() == 0;
+    if (auto c = tensorExps[e].val.getDefiningOp<ConstantFloatOp>())
+      return c.getValue().isZero();
+  }
+  return true;
 }
 
 Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
@@ -357,6 +405,7 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
     }
   }
   // Construct binary operations if subexpressions can be built.
+  // TODO: see buildLattices() for an explanation of rejecting certain divisions
   if (def->getNumOperands() == 2) {
     auto x = buildTensorExp(op, def->getOperand(0));
     auto y = buildTensorExp(op, def->getOperand(1));
@@ -367,6 +416,12 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
         return addExp(Kind::kMulF, e0, e1);
       if (isa<MulIOp>(def))
         return addExp(Kind::kMulI, e0, e1);
+      if (isa<DivFOp>(def) && !maybeZero(e1))
+        return addExp(Kind::kDivF, e0, e1);
+      if (isa<SignedDivIOp>(def) && !maybeZero(e1))
+        return addExp(Kind::kDivS, e0, e1);
+      if (isa<UnsignedDivIOp>(def) && !maybeZero(e1))
+        return addExp(Kind::kDivU, e0, e1);
       if (isa<AddFOp>(def))
         return addExp(Kind::kAddF, e0, e1);
       if (isa<AddIOp>(def))

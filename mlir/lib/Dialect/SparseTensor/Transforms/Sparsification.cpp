@@ -646,6 +646,12 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
     return rewriter.create<MulFOp>(loc, v0, v1);
   case Kind::kMulI:
     return rewriter.create<MulIOp>(loc, v0, v1);
+  case Kind::kDivF:
+    return rewriter.create<DivFOp>(loc, v0, v1);
+  case Kind::kDivS:
+    return rewriter.create<SignedDivIOp>(loc, v0, v1);
+  case Kind::kDivU:
+    return rewriter.create<UnsignedDivIOp>(loc, v0, v1);
   case Kind::kAddF:
     return rewriter.create<AddFOp>(loc, v0, v1);
   case Kind::kAddI:
