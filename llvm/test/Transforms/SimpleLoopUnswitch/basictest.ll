@@ -1,5 +1,5 @@
-; RUN: opt -passes='loop(unswitch),verify<loops>' -S < %s | FileCheck %s
-; RUN: opt -verify-memoryssa -passes='loop-mssa(unswitch),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -passes='loop(simple-loop-unswitch),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -verify-memoryssa -passes='loop-mssa(simple-loop-unswitch),verify<loops>' -S < %s | FileCheck %s
 
 define i32 @test(i32* %A, i1 %C) {
 entry:
