@@ -158,7 +158,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
       Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
       break;
     }
-    // FALL-THROUGH:
+    // FALLTHRU
   default:
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                     " missing .globaltype");
