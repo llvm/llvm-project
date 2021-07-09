@@ -531,6 +531,12 @@ public:
   void addRelativeReloc(RelType dynType, InputSectionBase *isec,
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
                         RelType addendRelType, RelExpr expr);
+  /// Add a dynamic relocation using the target address of \p sym as the addend
+  /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
+  void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
+                                          InputSectionBase *isec,
+                                          uint64_t offsetInSec, Symbol &sym,
+                                          RelType addendRelType);
   void addReloc(DynamicReloc::Kind kind, RelType dynType,
                 InputSectionBase *inputSec, uint64_t offsetInSec, Symbol &sym,
                 int64_t addend, RelExpr expr, RelType addendRelType);
