@@ -17,6 +17,5 @@ add_mlir_conversion_library(MLIRStandardToLLVM
   MLIRLLVMCommonConversion
   MLIRLLVMIR
   MLIRMath
-  MLIRMemRef
   MLIRTransforms
   )
