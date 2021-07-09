@@ -157,23 +157,34 @@ Value *SimplifySubInst(Value *LHS, Value *RHS, bool isNSW, bool isNUW,
                        const SimplifyQuery &Q);
 
 /// Given operands for an FAdd, fold the result or return null.
-Value *SimplifyFAddInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                        const SimplifyQuery &Q);
+Value *
+SimplifyFAddInst(Value *LHS, Value *RHS, FastMathFlags FMF,
+                 const SimplifyQuery &Q,
+                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
+                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 
 /// Given operands for an FSub, fold the result or return null.
-Value *SimplifyFSubInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                        const SimplifyQuery &Q);
+Value *
+SimplifyFSubInst(Value *LHS, Value *RHS, FastMathFlags FMF,
+                 const SimplifyQuery &Q,
+                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
+                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 
 /// Given operands for an FMul, fold the result or return null.
-Value *SimplifyFMulInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                        const SimplifyQuery &Q);
+Value *
+SimplifyFMulInst(Value *LHS, Value *RHS, FastMathFlags FMF,
+                 const SimplifyQuery &Q,
+                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
+                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 
 /// Given operands for the multiplication of a FMA, fold the result or return
 /// null. In contrast to SimplifyFMulInst, this function will not perform
 /// simplifications whose unrounded results differ when rounded to the argument
 /// type.
 Value *SimplifyFMAFMul(Value *LHS, Value *RHS, FastMathFlags FMF,
-                       const SimplifyQuery &Q);
+                       const SimplifyQuery &Q,
+                       fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
+                       RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 
 /// Given operands for a Mul, fold the result or return null.
 Value *SimplifyMulInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
@@ -185,8 +196,11 @@ Value *SimplifySDivInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 Value *SimplifyUDivInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 
 /// Given operands for an FDiv, fold the result or return null.
-Value *SimplifyFDivInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                        const SimplifyQuery &Q);
+Value *
+SimplifyFDivInst(Value *LHS, Value *RHS, FastMathFlags FMF,
+                 const SimplifyQuery &Q,
+                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
+                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 
 /// Given operands for an SRem, fold the result or return null.
 Value *SimplifySRemInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
@@ -195,8 +209,11 @@ Value *SimplifySRemInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 Value *SimplifyURemInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 
 /// Given operands for an FRem, fold the result or return null.
-Value *SimplifyFRemInst(Value *LHS, Value *RHS, FastMathFlags FMF,
-                        const SimplifyQuery &Q);
+Value *
+SimplifyFRemInst(Value *LHS, Value *RHS, FastMathFlags FMF,
+                 const SimplifyQuery &Q,
+                 fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
+                 RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 
 /// Given operands for a Shl, fold the result or return null.
 Value *SimplifyShlInst(Value *Op0, Value *Op1, bool isNSW, bool isNUW,
