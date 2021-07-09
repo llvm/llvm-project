@@ -7517,7 +7517,7 @@ class HorizontalReduction {
   }
 
   /// Checks if the instruction is in basic block \p BB.
-  /// For a min/max reduction check that both compare and select are in \p BB.
+  /// For a cmp+sel min/max reduction check that both ops are in \p BB.
   static bool hasSameParent(Instruction *I, BasicBlock *BB) {
     if (isCmpSelMinMax(I)) {
       auto *Sel = cast<SelectInst>(I);
@@ -7624,8 +7624,8 @@ public:
     // potential candidate for the reduction.
     unsigned LeafOpcode = 0;
 
-    // Post order traverse the reduction tree starting at B. We only handle true
-    // trees containing only binary operators.
+    // Post-order traverse the reduction tree starting at Inst. We only handle
+    // true trees containing binary operators or selects.
     SmallVector<std::pair<Instruction *, unsigned>, 32> Stack;
     Stack.push_back(std::make_pair(Inst, getFirstOperandIndex(Inst)));
     initReductionOps(Inst);
@@ -7661,7 +7661,7 @@ public:
         continue;
       }
 
-      // Visit left or right.
+      // Visit operands.
       Value *EdgeVal = TreeN->getOperand(EdgeToVisit);
       auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
       if (!EdgeInst) {
