@@ -2971,6 +2971,13 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSection *sec : outputSections)
     if (sec->type != SHT_REL && sec->type != SHT_RELA)
       sec->writeTo<ELFT>(Out::bufferStart + sec->offset);
+
+  // Finally, check that all dynamic relocation addends were written correctly.
+  if (config->checkDynamicRelocs && config->writeAddends) {
+    for (OutputSection *sec : outputSections)
+      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+        sec->checkDynRelAddends(Out::bufferStart);
+  }
 }
 
 // Computes a hash value of Data using a given hash function.

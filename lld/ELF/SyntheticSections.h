@@ -538,6 +538,11 @@ public:
   size_t getSize() const override { return relocs.size() * this->entsize; }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
   void finalizeContents() override;
+  static bool classof(const SectionBase *d) {
+    return SyntheticSection::classof(d) &&
+           (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
+            d->type == llvm::ELF::SHT_RELR);
+  }
   int32_t dynamicTag, sizeDynamicTag;
   std::vector<DynamicReloc> relocs;
 
