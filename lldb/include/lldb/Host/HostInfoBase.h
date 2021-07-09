@@ -33,8 +33,8 @@ struct SharedCacheImageInfo {
 class HostInfoBase {
 private:
   // Static class, unconstructable.
-  HostInfoBase() {}
-  ~HostInfoBase() {}
+  HostInfoBase() = default;
+  ~HostInfoBase() = default;
 
 public:
   /// A helper function for determining the liblldb location. It receives a

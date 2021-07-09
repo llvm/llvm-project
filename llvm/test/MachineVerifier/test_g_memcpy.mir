@@ -18,33 +18,38 @@ body:             |
     G_MEMCPY %0, %1, %2, 0
 
     ; CHECK: *** Bad machine code: memcpy/memmove must have 2 memory operands ***
-    G_MEMCPY %0, %1, %2, 0 :: (load 4)
+    G_MEMCPY %0, %1, %2, 0 :: (load (s32))
 
     ; CHECK: *** Bad machine code: memcpy/memmove must have 2 memory operands ***
-    G_MEMCPY %0, %1, %2, 0 :: (store 4)
+    G_MEMCPY %0, %1, %2, 0 :: (store (s32))
 
     ; CHECK: *** Bad machine code: wrong memory operand types ***
-    G_MEMCPY %0, %1, %2, 0 :: (load 4), (store 4)
+    G_MEMCPY %0, %1, %2, 0 :: (load (s32)), (store (s32))
 
     ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
-    G_MEMCPY %0, %1, %2, 0 :: (store 8), (load 4)
+    G_MEMCPY %0, %1, %2, 0 :: (store (s64)), (load (s32))
 
     ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
-    G_MEMCPY %0, %1, %2, 0 :: (store unknown-size), (load 4)
+    G_MEMCPY %0, %1, %2, 0 :: (store unknown-size), (load (s32))
 
     ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
-    G_MEMCPY %0, %1, %2, 0 :: (store 8), (load unknown-size)
+    G_MEMCPY %0, %1, %2, 0 :: (store (s64)), (load unknown-size)
 
     ; CHECK: *** Bad machine code: inconsistent store address space ***
-    G_MEMCPY %0, %1, %2, 0 :: (store 4, addrspace 1), (load 4)
+    G_MEMCPY %0, %1, %2, 0 :: (store (s32), addrspace 1), (load (s32))
 
     ; CHECK: *** Bad machine code: inconsistent load address space ***
-    G_MEMCPY %0, %1, %2, 0 :: (store 4), (load 4, addrspace 1)
+    G_MEMCPY %0, %1, %2, 0 :: (store (s32)), (load (s32), addrspace 1)
 
     ; CHECK: *** Bad machine code: memory instruction operand must be a pointer ***
-    G_MEMCPY %2, %0, %2, 0 :: (store 4), (load 4)
+    G_MEMCPY %2, %0, %2, 0 :: (store (s32)), (load (s32))
 
     ; CHECK: *** Bad machine code: memory instruction operand must be a pointer ***
-    G_MEMCPY %0, %2, %2, 0 :: (store 4), (load 4)
+    G_MEMCPY %0, %2, %2, 0 :: (store (s32)), (load (s32))
 
+    ; CHECK: *** Bad machine code: 'tail' flag (operand 3) must be an immediate 0 or 1 ***
+    G_MEMCPY %0, %0, %2, %0 :: (store 4), (load 4)
+
+    ; CHECK: *** Bad machine code: 'tail' flag (operand 3) must be an immediate 0 or 1 ***
+    G_MEMCPY %0, %0, %2, 2 :: (store 4), (load 4)
 ...

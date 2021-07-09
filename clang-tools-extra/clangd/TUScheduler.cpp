@@ -1380,11 +1380,13 @@ bool ASTWorker::blockUntilIdle(Deadline Timeout) const {
   };
   // Make sure ASTWorker has processed all requests, which might issue new
   // updates to PreamblePeer.
-  WaitUntilASTWorkerIsIdle();
+  if (!WaitUntilASTWorkerIsIdle())
+    return false;
   // Now that ASTWorker processed all requests, ensure PreamblePeer has served
   // all update requests. This might create new PreambleRequests for the
   // ASTWorker.
-  PreamblePeer.blockUntilIdle(Timeout);
+  if (!PreamblePeer.blockUntilIdle(Timeout))
+    return false;
   assert(Requests.empty() &&
          "No new normal tasks can be scheduled concurrently with "
          "blockUntilIdle(): ASTWorker isn't threadsafe");

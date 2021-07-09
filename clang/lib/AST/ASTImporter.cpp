@@ -496,6 +496,7 @@ namespace clang {
     ExpectedDecl VisitAccessSpecDecl(AccessSpecDecl *D);
     ExpectedDecl VisitStaticAssertDecl(StaticAssertDecl *D);
     ExpectedDecl VisitTranslationUnitDecl(TranslationUnitDecl *D);
+    ExpectedDecl VisitBindingDecl(BindingDecl *D);
     ExpectedDecl VisitNamespaceDecl(NamespaceDecl *D);
     ExpectedDecl VisitNamespaceAliasDecl(NamespaceAliasDecl *D);
     ExpectedDecl VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias);
@@ -2287,6 +2288,35 @@ ExpectedDecl ASTNodeImporter::VisitTranslationUnitDecl(TranslationUnitDecl *D) {
     Importer.getToContext().getTranslationUnitDecl();
 
   Importer.MapImported(D, ToD);
+
+  return ToD;
+}
+
+ExpectedDecl ASTNodeImporter::VisitBindingDecl(BindingDecl *D) {
+  DeclContext *DC, *LexicalDC;
+  DeclarationName Name;
+  SourceLocation Loc;
+  NamedDecl *ToND;
+  if (Error Err = ImportDeclParts(D, DC, LexicalDC, Name, ToND, Loc))
+    return std::move(Err);
+  if (ToND)
+    return ToND;
+
+  Error Err = Error::success();
+  QualType ToType = importChecked(Err, D->getType());
+  Expr *ToBinding = importChecked(Err, D->getBinding());
+  ValueDecl *ToDecomposedDecl = importChecked(Err, D->getDecomposedDecl());
+  if (Err)
+    return std::move(Err);
+
+  BindingDecl *ToD;
+  if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, Loc,
+                              Name.getAsIdentifierInfo()))
+    return ToD;
+
+  ToD->setBinding(ToType, ToBinding);
+  ToD->setDecomposedDecl(ToDecomposedDecl);
+  addDeclToContexts(D, ToD);
 
   return ToD;
 }

@@ -1516,8 +1516,9 @@ static void printDialectSymbol(raw_ostream &os, StringRef symPrefix,
     return;
   }
 
-  // TODO: escape the symbol name, it could contain " characters.
-  os << "<\"" << symString << "\">";
+  os << "<\"";
+  llvm::printEscapedString(symString, os);
+  os << "\">";
 }
 
 /// Returns true if the given string can be represented as a bare identifier.

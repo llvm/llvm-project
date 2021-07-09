@@ -24,7 +24,7 @@ StreamGDBRemote::StreamGDBRemote(uint32_t flags, uint32_t addr_size,
                                  ByteOrder byte_order)
     : StreamString(flags, addr_size, byte_order) {}
 
-StreamGDBRemote::~StreamGDBRemote() {}
+StreamGDBRemote::~StreamGDBRemote() = default;
 
 int StreamGDBRemote::PutEscapedBytes(const void *s, size_t src_len) {
   int bytes_written = 0;

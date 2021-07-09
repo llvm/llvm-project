@@ -1421,10 +1421,9 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
       return Builder.CreateAlignedLoad(ValTy, Ptr, Alignment);
 
   // Convert the mask from an integer type to a vector of i1.
-  unsigned NumElts =
-      cast<FixedVectorType>(Passthru->getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
   Mask = getX86MaskVec(Builder, Mask, NumElts);
-  return Builder.CreateMaskedLoad(Ptr, Alignment, Mask, Passthru);
+  return Builder.CreateMaskedLoad(ValTy, Ptr, Alignment, Mask, Passthru);
 }
 
 static Value *upgradeAbs(IRBuilder<> &Builder, CallInst &CI) {

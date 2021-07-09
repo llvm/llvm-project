@@ -16,7 +16,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:sreg_64(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load 8 from %ir.fptr.kernarg.offset.cast, align 16, addrspace 4)
+  ; CHECK:   [[LOAD:%[0-9]+]]:sreg_64(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p0) from %ir.fptr.kernarg.offset.cast, align 16, addrspace 4)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; CHECK:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]

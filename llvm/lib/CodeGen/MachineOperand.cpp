@@ -1121,10 +1121,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (getFailureOrdering() != AtomicOrdering::NotAtomic)
     OS << toIRString(getFailureOrdering()) << ' ';
 
-  if (getSize() == MemoryLocation::UnknownSize)
-    OS << "unknown-size";
+  if (getMemoryType().isValid())
+    OS << '(' << getMemoryType() << ')';
   else
-    OS << getSize();
+    OS << "unknown-size";
 
   if (const Value *Val = getValue()) {
     OS << ((isLoad() && isStore()) ? " on " : isLoad() ? " from " : " into ");

@@ -1,6 +1,6 @@
 ; Test that in some simple cases allocas will not live on the frame even
 ; though their pointers are stored.
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
 
 %handle = type { i8* }
 

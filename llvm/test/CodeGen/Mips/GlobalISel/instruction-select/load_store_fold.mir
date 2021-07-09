@@ -25,13 +25,13 @@ body:             |
     ; MIPS32-LABEL: name: _16_bit_positive_offset
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LBu:%[0-9]+]]:gpr32 = LBu [[COPY]], 32767 :: (load 1)
+    ; MIPS32: [[LBu:%[0-9]+]]:gpr32 = LBu [[COPY]], 32767 :: (load (s8))
     ; MIPS32: $v0 = COPY [[LBu]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 32767
     %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
-    %4:gprb(s32) = G_ZEXTLOAD %2(p0) :: (load 1)
+    %4:gprb(s32) = G_ZEXTLOAD %2(p0) :: (load (s8))
     $v0 = COPY %4(s32)
     RetRA implicit $v0
 
@@ -50,14 +50,14 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; MIPS32: SB [[COPY]], [[COPY1]], -32768 :: (store 1)
+    ; MIPS32: SB [[COPY]], [[COPY1]], -32768 :: (store (s8))
     ; MIPS32: RetRA
     %2:gprb(s32) = COPY $a0
     %1:gprb(p0) = COPY $a1
     %3:gprb(s32) = G_CONSTANT i32 -32768
     %4:gprb(p0) = G_PTR_ADD %1, %3(s32)
     %5:gprb(s32) = COPY %2(s32)
-    G_STORE %5(s32), %4(p0) :: (store 1)
+    G_STORE %5(s32), %4(p0) :: (store (s8))
     RetRA
 
 ...
@@ -77,14 +77,14 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 32768
     ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu [[COPY1]], [[ORi]]
-    ; MIPS32: SB [[COPY]], [[ADDu]], 0 :: (store 1)
+    ; MIPS32: SB [[COPY]], [[ADDu]], 0 :: (store (s8))
     ; MIPS32: RetRA
     %2:gprb(s32) = COPY $a0
     %1:gprb(p0) = COPY $a1
     %3:gprb(s32) = G_CONSTANT i32 32768
     %4:gprb(p0) = G_PTR_ADD %1, %3(s32)
     %5:gprb(s32) = COPY %2(s32)
-    G_STORE %5(s32), %4(p0) :: (store 1)
+    G_STORE %5(s32), %4(p0) :: (store (s8))
     RetRA
 
 ...
@@ -104,13 +104,13 @@ body:             |
     ; MIPS32: [[LUi:%[0-9]+]]:gpr32 = LUi 65535
     ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi [[LUi]], 32767
     ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu [[COPY]], [[ORi]]
-    ; MIPS32: [[LB:%[0-9]+]]:gpr32 = LB [[ADDu]], 0 :: (load 1)
+    ; MIPS32: [[LB:%[0-9]+]]:gpr32 = LB [[ADDu]], 0 :: (load (s8))
     ; MIPS32: $v0 = COPY [[LB]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 -32769
     %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
-    %4:gprb(s32) = G_SEXTLOAD %2(p0) :: (load 1)
+    %4:gprb(s32) = G_SEXTLOAD %2(p0) :: (load (s8))
     $v0 = COPY %4(s32)
     RetRA implicit $v0
 
@@ -128,13 +128,13 @@ body:             |
     ; MIPS32-LABEL: name: fold_f32_load
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LWC1_:%[0-9]+]]:fgr32 = LWC1 [[COPY]], 40 :: (load 4)
+    ; MIPS32: [[LWC1_:%[0-9]+]]:fgr32 = LWC1 [[COPY]], 40 :: (load (s32))
     ; MIPS32: $f0 = COPY [[LWC1_]]
     ; MIPS32: RetRA implicit $f0
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 40
     %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
-    %3:fprb(s32) = G_LOAD %2(p0) :: (load 4)
+    %3:fprb(s32) = G_LOAD %2(p0) :: (load (s32))
     $f0 = COPY %3(s32)
     RetRA implicit $f0
 
@@ -153,13 +153,13 @@ body:             |
     ; MIPS32: liveins: $a2, $d6
     ; MIPS32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a2
-    ; MIPS32: SDC1 [[COPY]], [[COPY1]], -80 :: (store 8)
+    ; MIPS32: SDC1 [[COPY]], [[COPY1]], -80 :: (store (s64))
     ; MIPS32: RetRA
     %0:fprb(s64) = COPY $d6
     %1:gprb(p0) = COPY $a2
     %2:gprb(s32) = G_CONSTANT i32 -80
     %3:gprb(p0) = G_PTR_ADD %1, %2(s32)
-    G_STORE %0(s64), %3(p0) :: (store 8)
+    G_STORE %0(s64), %3(p0) :: (store (s64))
     RetRA
 
 ...
@@ -176,13 +176,13 @@ body:             |
     ; MIPS32-LABEL: name: fold_i16_load
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[LHu:%[0-9]+]]:gpr32 = LHu [[COPY]], -20 :: (load 2)
+    ; MIPS32: [[LHu:%[0-9]+]]:gpr32 = LHu [[COPY]], -20 :: (load (s16))
     ; MIPS32: $v0 = COPY [[LHu]]
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 -20
     %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
-    %4:gprb(s32) = G_LOAD %2(p0) :: (load 2)
+    %4:gprb(s32) = G_LOAD %2(p0) :: (load (s16))
     $v0 = COPY %4(s32)
     RetRA implicit $v0
 
@@ -201,13 +201,13 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; MIPS32: SW [[COPY]], [[COPY1]], 40 :: (store 4)
+    ; MIPS32: SW [[COPY]], [[COPY1]], 40 :: (store (s32))
     ; MIPS32: RetRA
     %0:gprb(s32) = COPY $a0
     %1:gprb(p0) = COPY $a1
     %2:gprb(s32) = G_CONSTANT i32 40
     %3:gprb(p0) = G_PTR_ADD %1, %2(s32)
-    G_STORE %0(s32), %3(p0) :: (store 4)
+    G_STORE %0(s32), %3(p0) :: (store (s32))
     RetRA
 
 ...

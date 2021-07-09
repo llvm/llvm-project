@@ -4655,6 +4655,7 @@ bool SimplifyCFGOpt::simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
   return false;
 }
 
+// WARNING: keep in sync with InstCombinerImpl::visitUnreachableInst()!
 bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   BasicBlock *BB = UI->getParent();
 
@@ -4665,46 +4666,27 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   while (UI->getIterator() != BB->begin()) {
     BasicBlock::iterator BBI = UI->getIterator();
     --BBI;
-    // Do not delete instructions that can have side effects which might cause
-    // the unreachable to not be reachable; specifically, calls and volatile
-    // operations may have this effect.
-    if (isa<CallInst>(BBI) && !isa<DbgInfoIntrinsic>(BBI))
-      break;
 
-    if (BBI->mayHaveSideEffects()) {
-      if (auto *SI = dyn_cast<StoreInst>(BBI)) {
-        if (SI->isVolatile())
-          break;
-      } else if (auto *LI = dyn_cast<LoadInst>(BBI)) {
-        if (LI->isVolatile())
-          break;
-      } else if (auto *RMWI = dyn_cast<AtomicRMWInst>(BBI)) {
-        if (RMWI->isVolatile())
-          break;
-      } else if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(BBI)) {
-        if (CXI->isVolatile())
-          break;
-      } else if (isa<CatchPadInst>(BBI)) {
-        // A catchpad may invoke exception object constructors and such, which
-        // in some languages can be arbitrary code, so be conservative by
-        // default.
-        // For CoreCLR, it just involves a type test, so can be removed.
-        if (classifyEHPersonality(BB->getParent()->getPersonalityFn()) !=
-            EHPersonality::CoreCLR)
-          break;
-      } else if (!isa<FenceInst>(BBI) && !isa<VAArgInst>(BBI) &&
-                 !isa<LandingPadInst>(BBI)) {
-        break;
-      }
-      // Note that deleting LandingPad's here is in fact okay, although it
-      // involves a bit of subtle reasoning. If this inst is a LandingPad,
-      // all the predecessors of this block will be the unwind edges of Invokes,
-      // and we can therefore guarantee this block will be erased.
-    }
+    if (!isGuaranteedToTransferExecutionToSuccessor(&*BBI))
+      break; // Can not drop any more instructions. We're done here.
+    // Otherwise, this instruction can be freely erased,
+    // even if it is not side-effect free.
+
+    // Temporarily disable removal of volatile stores preceding unreachable,
+    // pending a potential LangRef change permitting volatile stores to trap.
+    // TODO: Either remove this code, or properly integrate the check into
+    // isGuaranteedToTransferExecutionToSuccessor().
+    if (auto *SI = dyn_cast<StoreInst>(&*BBI))
+      if (SI->isVolatile())
+        break; // Can not drop this instruction. We're done here.
+
+    // Note that deleting EH's here is in fact okay, although it involves a bit
+    // of subtle reasoning. If this inst is an EH, all the predecessors of this
+    // block will be the unwind edges of Invoke/CatchSwitch/CleanupReturn,
+    // and we can therefore guarantee this block will be erased.
 
     // Delete this instruction (any uses are guaranteed to be dead)
-    if (!BBI->use_empty())
-      BBI->replaceAllUsesWith(UndefValue::get(BBI->getType()));
+    BBI->replaceAllUsesWith(PoisonValue::get(BBI->getType()));
     BBI->eraseFromParent();
     Changed = true;
   }

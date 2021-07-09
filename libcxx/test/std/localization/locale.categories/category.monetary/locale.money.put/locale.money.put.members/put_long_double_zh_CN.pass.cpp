@@ -21,7 +21,7 @@
 //               long double units) const;
 
 // TODO For zh_CN GLIBC puts the negative sign after the currency symbol.
-// XFAIL: linux-gnu
+// XFAIL: target={{.*}}-linux-gnu{{.*}}
 
 #include <locale>
 #include <ios>

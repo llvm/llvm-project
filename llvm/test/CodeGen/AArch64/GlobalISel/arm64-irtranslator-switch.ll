@@ -784,7 +784,7 @@ define void @jt_multiple_jump_tables(%1* %arg, i32 %arg1, i32* %arg2) {
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[MUL]](s64)
   ; CHECK:   [[C112:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load 8 from %ir.tmp59)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load (p0) from %ir.tmp59)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   $x0 = COPY [[COPY]](p0)
   ; CHECK:   $x1 = COPY [[LOAD]](p0)
@@ -1106,7 +1106,7 @@ define void @jt_2_tables_phi_edge_from_second() {
   ; CHECK:   [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; CHECK:   [[C20:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
   ; CHECK:   [[C21:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load 4 from `i32* undef`, align 8)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p0) :: (load (s32) from `i32* undef`, align 8)
   ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C]]
   ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.6
   ; CHECK:   G_BR %bb.19

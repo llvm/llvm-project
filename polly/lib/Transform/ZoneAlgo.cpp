@@ -336,7 +336,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
     // To avoid solving any ILP problems, always add entire arrays instead of
     // just the elements that are accessed.
     auto ArrayElts = isl::set::universe(AccRelMap.get_space().range());
-    AllElts = AllElts.add_set(ArrayElts);
+    AllElts = AllElts.unite(ArrayElts);
 
     if (MA->isRead()) {
       // Reject load after store to same location.
@@ -350,7 +350,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
         R << ", loading: " << AccRel << ")";
         S->getFunction().getContext().diagnose(R);
 
-        IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+        IncompatibleElts = IncompatibleElts.unite(ArrayElts);
       }
 
       Loads = Loads.unite(AccRel);
@@ -367,7 +367,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
       R << "store is in a non-affine subregion";
       S->getFunction().getContext().diagnose(R);
 
-      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+      IncompatibleElts = IncompatibleElts.unite(ArrayElts);
     }
 
     // Do not allow more than one store to the same location.
@@ -380,7 +380,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
       R << ", storing: " << AccRel << ")";
       S->getFunction().getContext().diagnose(R);
 
-      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+      IncompatibleElts = IncompatibleElts.unite(ArrayElts);
     }
 
     Stores = Stores.unite(AccRel);
@@ -685,11 +685,10 @@ isl::map ZoneAlgorithm::getDefToTarget(ScopStmt *DefStmt,
                    TargetStmt->getSurroundingLoop())) {
     isl::set DefDomain = getDomainFor(DefStmt);
     isl::set TargetDomain = getDomainFor(TargetStmt);
-    assert(DefDomain.dim(isl::dim::set) <= TargetDomain.dim(isl::dim::set));
+    assert(DefDomain.tuple_dim() <= TargetDomain.tuple_dim());
 
     Result = isl::map::from_domain_and_range(DefDomain, TargetDomain);
-    for (unsigned i = 0, DefDims = DefDomain.dim(isl::dim::set); i < DefDims;
-         i += 1)
+    for (unsigned i = 0, DefDims = DefDomain.tuple_dim(); i < DefDims; i += 1)
       Result = Result.equate(isl::dim::in, i, isl::dim::out, i);
   }
 

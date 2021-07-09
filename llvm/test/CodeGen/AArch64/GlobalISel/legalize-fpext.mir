@@ -19,15 +19,15 @@ body:             |
     ; CHECK: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
     ; CHECK: [[FPEXT:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV]](<2 x s32>)
     ; CHECK: [[FPEXT1:%[0-9]+]]:_(<2 x s64>) = G_FPEXT [[UV1]](<2 x s32>)
-    ; CHECK: G_STORE [[FPEXT]](<2 x s64>), [[COPY1]](p0) :: (store 16, align 32)
+    ; CHECK: G_STORE [[FPEXT]](<2 x s64>), [[COPY1]](p0) :: (store (<2 x s64>), align 32)
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; CHECK: G_STORE [[FPEXT1]](<2 x s64>), [[PTR_ADD]](p0) :: (store 16 into unknown-address + 16)
+    ; CHECK: G_STORE [[FPEXT1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     ; CHECK: RET_ReallyLR
     %0:_(<4 x s32>) = COPY $q0
     %1:_(p0) = COPY $x0
     %2:_(<4 x s64>) = G_FPEXT %0(<4 x s32>)
-    G_STORE %2(<4 x s64>), %1(p0) :: (store 32)
+    G_STORE %2(<4 x s64>), %1(p0) :: (store (<4 x s64>))
     RET_ReallyLR
 
 ...

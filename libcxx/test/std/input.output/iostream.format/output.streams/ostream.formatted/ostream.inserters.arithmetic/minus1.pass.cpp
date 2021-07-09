@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.12
 
 // <ostream>
 

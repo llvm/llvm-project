@@ -500,7 +500,7 @@ isl_bool isl_map_align_params_map_map_and_test(__isl_keep isl_map *map1,
 	isl_bool (*fn)(__isl_keep isl_map *map1, __isl_keep isl_map *map2));
 
 __isl_give isl_set *isl_set_substitute(__isl_take isl_set *set,
-	enum isl_dim_type type, unsigned pos, __isl_keep isl_aff *subs);
+	unsigned pos, __isl_keep isl_aff *subs);
 
 __isl_give isl_set *isl_set_gist_params_basic_set(__isl_take isl_set *set,
 	__isl_take isl_basic_set *context);

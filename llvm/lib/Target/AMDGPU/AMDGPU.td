@@ -1196,7 +1196,8 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
-   FeaturePackedTID]>;
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard]>;
 
 // Features for GFX 11.0.0 and 11.0.1
 def FeatureISAVersion11_0 : FeatureSet<

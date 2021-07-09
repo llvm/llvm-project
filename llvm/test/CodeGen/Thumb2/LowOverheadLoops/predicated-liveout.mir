@@ -94,8 +94,8 @@ body:             |
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r3
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed $r3, 1, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r1, renamable $q1 = MVE_VLDRBU16_post killed renamable $r1, 8, 0, $noreg :: (load 8 from %ir.input_2_cast, align 1)
-  ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRBU16_post killed renamable $r0, 8, 0, $noreg :: (load 8 from %ir.input_1_cast, align 1)
+  ; CHECK:   renamable $r1, renamable $q1 = MVE_VLDRBU16_post killed renamable $r1, 8, 0, $noreg :: (load (s64) from %ir.input_2_cast, align 1)
+  ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRBU16_post killed renamable $r0, 8, 0, $noreg :: (load (s64) from %ir.input_1_cast, align 1)
   ; CHECK:   renamable $q1 = MVE_VADDi16 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
   ; CHECK:   renamable $q0 = MVE_VADDi16 killed renamable $q1, killed renamable $q0, 0, killed $noreg, undef renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
@@ -136,8 +136,8 @@ body:             |
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 8, 14, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1
     MVE_VPST 1, implicit $vpr
-    renamable $r1, renamable $q1 = MVE_VLDRBU16_post killed renamable $r1, 8, 1, renamable $vpr :: (load 8 from %ir.input_2_cast, align 1)
-    renamable $r0, renamable $q2 = MVE_VLDRBU16_post killed renamable $r0, 8, 1, renamable $vpr :: (load 8 from %ir.input_1_cast, align 1)
+    renamable $r1, renamable $q1 = MVE_VLDRBU16_post killed renamable $r1, 8, 1, renamable $vpr :: (load (s64) from %ir.input_2_cast, align 1)
+    renamable $r0, renamable $q2 = MVE_VLDRBU16_post killed renamable $r0, 8, 1, renamable $vpr :: (load (s64) from %ir.input_1_cast, align 1)
     renamable $q1 = MVE_VADDi16 killed renamable $q2, killed renamable $q1, 1, renamable $vpr, undef renamable $q1
     renamable $q0 = MVE_VADDi16 killed renamable $q1, killed renamable $q0, 1, killed renamable $vpr, undef renamable $q0
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr

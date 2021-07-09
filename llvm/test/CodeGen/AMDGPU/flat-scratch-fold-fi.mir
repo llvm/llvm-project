@@ -8,10 +8,10 @@ stack:
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: test_fold_fi_scratch_load_vgpr
-    ; GCN: [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %stack.0, 4, 0, implicit $exec, implicit $flat_scr :: (load 4 from %stack.0, addrspace 5)
+    ; GCN: [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %stack.0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; GCN: S_ENDPGM 0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
-    %1:vgpr_32 = SCRATCH_LOAD_DWORD %0:vgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (load 4 from %stack.0, addrspace 5)
+    %1:vgpr_32 = SCRATCH_LOAD_DWORD %0:vgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -23,10 +23,10 @@ stack:
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: test_fold_fi_scratch_load_sgpr
-    ; GCN: [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %stack.0, 4, 0, implicit $exec, implicit $flat_scr :: (load 4 from %stack.0, addrspace 5)
+    ; GCN: [[SCRATCH_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %stack.0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; GCN: S_ENDPGM 0
     %0:sgpr_32 = S_MOV_B32 %stack.0
-    %1:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %0:sgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (load 4 from %stack.0, addrspace 5)
+    %1:vgpr_32 = SCRATCH_LOAD_DWORD_SADDR %0:sgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -39,11 +39,11 @@ body:             |
   bb.0.entry:
     ; GCN-LABEL: name: test_fold_fi_scratch_store_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN: SCRATCH_STORE_DWORD_SADDR [[DEF]], %stack.0, 4, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.0, addrspace 5)
+    ; GCN: SCRATCH_STORE_DWORD_SADDR [[DEF]], %stack.0, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN: S_ENDPGM 0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     %1:vgpr_32 = IMPLICIT_DEF
-    SCRATCH_STORE_DWORD %1:vgpr_32, %0:vgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.0, addrspace 5)
+    SCRATCH_STORE_DWORD %1:vgpr_32, %0:vgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -57,11 +57,11 @@ body:             |
     ; GCN-LABEL: name: test_no_fold_fi_scratch_store_vgpr
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN: SCRATCH_STORE_DWORD [[V_MOV_B32_e32_]], [[DEF]], 4, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.0, addrspace 5)
+    ; GCN: SCRATCH_STORE_DWORD [[V_MOV_B32_e32_]], [[DEF]], 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN: S_ENDPGM 0
     %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     %1:vgpr_32 = IMPLICIT_DEF
-    SCRATCH_STORE_DWORD %0:vgpr_32, %1:vgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.0, addrspace 5)
+    SCRATCH_STORE_DWORD %0:vgpr_32, %1:vgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -74,11 +74,11 @@ body:             |
   bb.0.entry:
     ; GCN-LABEL: name: test_fold_fi_scratch_store_sgpr
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN: SCRATCH_STORE_DWORD_SADDR [[DEF]], %stack.0, 4, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.0, addrspace 5)
+    ; GCN: SCRATCH_STORE_DWORD_SADDR [[DEF]], %stack.0, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     ; GCN: S_ENDPGM 0
     %0:sgpr_32 = S_MOV_B32 %stack.0
     %1:vgpr_32 = IMPLICIT_DEF
-    SCRATCH_STORE_DWORD_SADDR %1:vgpr_32, %0:sgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (store 4 into %stack.0, addrspace 5)
+    SCRATCH_STORE_DWORD_SADDR %1:vgpr_32, %0:sgpr_32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
     S_ENDPGM 0
 
 ...

@@ -237,7 +237,7 @@ struct ExtensionNodeRewriter
     isl::union_map NewPartialSchedMap = isl::union_map::from(PartialSched);
     unsigned BandDims = isl_schedule_node_band_n_member(OldNode.get());
     for (isl::map Ext : NewChildExtensions.get_map_list()) {
-      unsigned ExtDims = Ext.dim(isl::dim::in);
+      unsigned ExtDims = Ext.domain_tuple_dim();
       assert(ExtDims >= BandDims);
       unsigned OuterDims = ExtDims - BandDims;
 
@@ -485,7 +485,7 @@ static isl::basic_set isDivisibleBySet(isl::ctx &Ctx, long Factor,
 /// @param Set         A set, which should be modified.
 /// @param VectorWidth A parameter, which determines the constraint.
 static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
-  unsigned Dims = Set.dim(isl::dim::set);
+  unsigned Dims = Set.tuple_dim();
   isl::space Space = Set.get_space();
   isl::local_space LocalSpace = isl::local_space(Space);
   isl::constraint ExtConstr = isl::constraint::alloc_inequality(LocalSpace);
@@ -651,7 +651,7 @@ isl::schedule polly::applyPartialUnroll(isl::schedule_node BandToUnroll,
 
 isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
                                        int VectorWidth) {
-  isl_size Dims = ScheduleRange.dim(isl::dim::set);
+  isl_size Dims = ScheduleRange.tuple_dim();
   isl::set LoopPrefixes =
       ScheduleRange.drop_constraints_involving_dims(isl::dim::set, Dims - 1, 1);
   auto ExtentPrefixes = addExtentConstraints(LoopPrefixes, VectorWidth);
@@ -663,7 +663,7 @@ isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
 
 isl::union_set polly::getIsolateOptions(isl::set IsolateDomain,
                                         isl_size OutDimsNum) {
-  isl_size Dims = IsolateDomain.dim(isl::dim::set);
+  isl_size Dims = IsolateDomain.tuple_dim();
   assert(OutDimsNum <= Dims &&
          "The isl::set IsolateDomain is used to describe the range of schedule "
          "dimensions values, which should be isolated. Consequently, the "

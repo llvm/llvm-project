@@ -41,10 +41,10 @@ define void @void_a31i32_i32([31 x i32] %arg0, i32 %arg1) {
   ; FIXED:   [[COPY29:%[0-9]+]]:_(s32) = COPY $vgpr29
   ; FIXED:   [[COPY30:%[0-9]+]]:_(s32) = COPY $vgpr30
   ; FIXED:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %fixed-stack.0
-  ; FIXED:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load 4 from %fixed-stack.0, align 16, addrspace 5)
+  ; FIXED:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p5) :: (invariant load (s32) from %fixed-stack.0, align 16, addrspace 5)
   ; FIXED:   [[COPY31:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; FIXED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; FIXED:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; FIXED:   G_STORE [[LOAD]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
   ; FIXED:   [[COPY32:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY31]]
   ; FIXED:   S_SETPC_B64_return [[COPY32]]
   ; VARABI-LABEL: name: void_a31i32_i32
@@ -84,7 +84,7 @@ define void @void_a31i32_i32([31 x i32] %arg0, i32 %arg1) {
   ; VARABI:   [[COPY31:%[0-9]+]]:_(s32) = COPY $vgpr31
   ; VARABI:   [[COPY32:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; VARABI:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; VARABI:   G_STORE [[COPY31]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+  ; VARABI:   G_STORE [[COPY31]](s32), [[DEF]](p1) :: (store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
   ; VARABI:   [[COPY33:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY32]]
   ; VARABI:   S_SETPC_B64_return [[COPY33]]
   store i32 %arg1, i32 addrspace(1)* undef

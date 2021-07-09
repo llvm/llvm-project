@@ -21,42 +21,37 @@
 #include "atomic_helpers.h"
 
 struct UserType {
-    int i;
+  int i;
 
-    UserType() noexcept {}
-    constexpr explicit UserType(int d) noexcept : i(d) {}
+  UserType() noexcept {}
+  constexpr explicit UserType(int d) noexcept : i(d) {}
 
-    friend bool operator==(const UserType& x, const UserType& y) {
-        return x.i == y.i;
-    }
+  friend bool operator==(const UserType& x, const UserType& y) { return x.i == y.i; }
 };
 
 template <class Tp>
 struct TestFunc {
-    void operator()() const {
-        typedef std::atomic<Tp> Atomic;
-        static_assert(std::is_literal_type<Atomic>::value, "");
-        constexpr Tp t(42);
-        {
-            constexpr Atomic a(t);
-            assert(a == t);
-        }
-        {
-            constexpr Atomic a{t};
-            assert(a == t);
-        }
-        {
-            constexpr Atomic a = ATOMIC_VAR_INIT(t);
-            assert(a == t);
-        }
+  void operator()() const {
+    typedef std::atomic<Tp> Atomic;
+    constexpr Tp t(42);
+    {
+      constexpr Atomic a(t);
+      assert(a == t);
     }
+    {
+      constexpr Atomic a{t};
+      assert(a == t);
+    }
+    {
+      constexpr Atomic a = ATOMIC_VAR_INIT(t);
+      assert(a == t);
+    }
+  }
 };
 
-
-int main(int, char**)
-{
-    TestFunc<UserType>()();
-    TestEachIntegralType<TestFunc>()();
+int main(int, char**) {
+  TestFunc<UserType>()();
+  TestEachIntegralType<TestFunc>()();
 
   return 0;
 }

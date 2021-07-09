@@ -148,8 +148,8 @@ body:             |
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %2:gr64, %3:gr64 = STATEPOINT 2882400000, 0, 0, @bar, 2, 0, 2, 0, 2, 1, 2, 0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %4:gr32 = MOV32rm killed %3, 1, $noreg, 0, $noreg :: (load 4 from %ir.rel1, addrspace 1)
-    %5:gr32 = ADD32rm %4, killed %2, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %ir.rel2, addrspace 1)
+    %4:gr32 = MOV32rm killed %3, 1, $noreg, 0, $noreg :: (load (s32) from %ir.rel1, addrspace 1)
+    %5:gr32 = ADD32rm %4, killed %2, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.rel2, addrspace 1)
     $eax = COPY %5
     RET 0, $eax
 

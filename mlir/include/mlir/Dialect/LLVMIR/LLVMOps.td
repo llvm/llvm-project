@@ -1516,10 +1516,11 @@ def LLVM_MaskedLoadOp : LLVM_Op<"intr.masked.load"> {
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   string llvmBuilder = [{
+    llvm::Type *Ty = $data->getType()->getPointerElementType();
     $res = $pass_thru.empty() ? builder.CreateMaskedLoad(
-      $data, llvm::Align($alignment), $mask) :
+      Ty, $data, llvm::Align($alignment), $mask) :
       builder.CreateMaskedLoad(
-        $data, llvm::Align($alignment), $mask, $pass_thru[0]);
+        Ty, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
@@ -1545,10 +1546,14 @@ def LLVM_masked_gather : LLVM_Op<"intr.masked.gather"> {
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   string llvmBuilder = [{
+    llvm::VectorType *PtrVecTy = cast<llvm::VectorType>($ptrs->getType());
+    llvm::Type *Ty = llvm::VectorType::get(
+      PtrVecTy->getElementType()->getPointerElementType(),
+      PtrVecTy->getElementCount());
     $res = $pass_thru.empty() ? builder.CreateMaskedGather(
-      $ptrs, llvm::Align($alignment), $mask) :
+      Ty, $ptrs, llvm::Align($alignment), $mask) :
       builder.CreateMaskedGather(
-        $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
+        Ty, $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";

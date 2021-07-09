@@ -8,6 +8,7 @@
 
 #include "Driver.h"
 #include "Config.h"
+#include "ICF.h"
 #include "InputFiles.h"
 #include "LTO.h"
 #include "MarkLive.h"
@@ -18,6 +19,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "UnwindInfoSection.h"
 #include "Writer.h"
 
 #include "lld/Common/Args.h"
@@ -523,6 +525,14 @@ static void initLLVM() {
 }
 
 static void compileBitcodeFiles() {
+  // FIXME: Remove this once LTO.cpp honors config->exportDynamic.
+  if (config->exportDynamic)
+    for (InputFile *file : inputFiles)
+      if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file)) {
+        warn("the effect of -export_dynamic on LTO is not yet implemented");
+        break;
+      }
+
   TimeTraceScope timeScope("LTO");
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
@@ -544,20 +554,19 @@ static void replaceCommonSymbols() {
     if (common == nullptr)
       continue;
 
-    auto *isec =
-        make<ConcatInputSection>(segment_names::data, section_names::common);
-    isec->file = common->getFile();
-    isec->align = common->align;
     // Casting to size_t will truncate large values on 32-bit architectures,
     // but it's not really worth supporting the linking of 64-bit programs on
     // 32-bit archs.
-    isec->data = {nullptr, static_cast<size_t>(common->size)};
-    isec->flags = S_ZEROFILL;
+    ArrayRef<uint8_t> data = {nullptr, static_cast<size_t>(common->size)};
+    auto *isec = make<ConcatInputSection>(
+        segment_names::data, section_names::common, common->getFile(), data,
+        common->align, S_ZEROFILL);
     inputSections.push_back(isec);
 
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
     // and pass them on here.
-    replaceSymbol<Defined>(sym, sym->getName(), isec->file, isec, /*value=*/0,
+    replaceSymbol<Defined>(sym, sym->getName(), isec->getFile(), isec,
+                           /*value=*/0,
                            /*size=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern,
@@ -841,6 +850,20 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
 }
 
 static bool dataConstDefault(const InputArgList &args) {
+  static const std::map<PlatformKind, VersionTuple> minVersion = {
+      {PlatformKind::macOS, VersionTuple(10, 15)},
+      {PlatformKind::iOS, VersionTuple(13, 0)},
+      {PlatformKind::iOSSimulator, VersionTuple(13, 0)},
+      {PlatformKind::tvOS, VersionTuple(13, 0)},
+      {PlatformKind::tvOSSimulator, VersionTuple(13, 0)},
+      {PlatformKind::watchOS, VersionTuple(6, 0)},
+      {PlatformKind::watchOSSimulator, VersionTuple(6, 0)},
+      {PlatformKind::bridgeOS, VersionTuple(4, 0)}};
+  auto it = minVersion.find(config->platformInfo.target.Platform);
+  if (it != minVersion.end())
+    if (config->platformInfo.minimum < it->second)
+      return false;
+
   switch (config->outputType) {
   case MH_EXECUTE:
     return !args.hasArg(OPT_no_pie);
@@ -969,6 +992,48 @@ void createFiles(const InputArgList &args) {
   }
 }
 
+static void gatherInputSections() {
+  TimeTraceScope timeScope("Gathering input sections");
+  int inputOrder = 0;
+  for (const InputFile *file : inputFiles) {
+    for (const SubsectionMap &map : file->subsections) {
+      for (const SubsectionEntry &entry : map) {
+        if (auto *isec = dyn_cast<ConcatInputSection>(entry.isec)) {
+          if (isec->isCoalescedWeak())
+            continue;
+          if (isec->getSegName() == segment_names::ld) {
+            assert(isec->getName() == section_names::compactUnwind);
+            in.unwindInfo->addInput(isec);
+            continue;
+          }
+          isec->outSecOff = inputOrder++;
+          inputSections.push_back(isec);
+        } else if (auto *isec = dyn_cast<CStringInputSection>(entry.isec)) {
+          if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
+            in.cStringSection->inputOrder = inputOrder++;
+          in.cStringSection->addInput(isec);
+        } else if (auto *isec = dyn_cast<WordLiteralInputSection>(entry.isec)) {
+          if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
+            in.wordLiteralSection->inputOrder = inputOrder++;
+          in.wordLiteralSection->addInput(isec);
+        } else {
+          llvm_unreachable("unexpected input section kind");
+        }
+      }
+    }
+  }
+  assert(inputOrder <= UnspecifiedInputOrder);
+}
+
+static void foldIdenticalLiterals() {
+  // We always create a cStringSection, regardless of whether dedupLiterals is
+  // true. If it isn't, we simply create a non-deduplicating CStringSection.
+  // Either way, we must unconditionally finalize it here.
+  in.cStringSection->finalizeContents();
+  if (in.wordLiteralSection)
+    in.wordLiteralSection->finalizeContents();
+}
+
 bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -1049,6 +1114,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->mapFile = args.getLastArgValue(OPT_map);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
+  if (const Arg *arg = args.getLastArg(OPT_final_output))
+    config->finalOutput = arg->getValue();
+  else
+    config->finalOutput = config->outputFile;
   config->astPaths = args.getAllArgValues(OPT_add_ast_path);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
@@ -1064,12 +1133,22 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     addFile(arg->getValue(), /*forceLoadArchive=*/false, /*isExplicit=*/false,
             /*isBundleLoader=*/true);
   }
+  if (const Arg *arg = args.getLastArg(OPT_umbrella)) {
+    if (config->outputType != MH_DYLIB)
+      warn("-umbrella used, but not creating dylib");
+    config->umbrella = arg->getValue();
+  }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPassManager =
       args.hasFlag(OPT_no_lto_legacy_pass_manager, OPT_lto_legacy_pass_manager,
                    LLVM_ENABLE_NEW_PASS_MANAGER);
+  config->ltoo = args::getInteger(args, OPT_lto_O, 2);
+  if (config->ltoo > 3)
+    error("--lto-O: invalid optimization level: " + Twine(config->ltoo));
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
+  config->archMultiple = args.hasArg(OPT_arch_multiple);
+  config->exportDynamic = args.hasArg(OPT_export_dynamic);
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
   config->forceLoadSwift = args.hasArg(OPT_force_load_swift_libs);
   config->deadStripDylibs = args.hasArg(OPT_dead_strip_dylibs);
@@ -1104,7 +1183,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     else
       config->installName = arg->getValue();
   } else if (config->outputType == MH_DYLIB) {
-    config->installName = config->outputFile;
+    config->installName = config->finalOutput;
   }
 
   if (args.hasArg(OPT_mark_dead_strippable_dylib)) {
@@ -1327,24 +1406,16 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
     }
 
-    {
-      TimeTraceScope timeScope("Gathering input sections");
-      // Gather all InputSections into one vector.
-      for (const InputFile *file : inputFiles) {
-        for (const SubsectionMap &map : file->subsections) {
-          for (const SubsectionEntry &entry : map) {
-            if (auto concatIsec = dyn_cast<ConcatInputSection>(entry.isec))
-              if (concatIsec->isCoalescedWeak())
-                continue;
-            inputSections.push_back(entry.isec);
-          }
-        }
-      }
-      assert(inputSections.size() < UnspecifiedInputOrder);
-    }
+    gatherInputSections();
 
     if (config->deadStrip)
       markLive();
+
+    // ICF assumes that all literals have been folded already, so we must run
+    // foldIdenticalLiterals before foldIdenticalSections.
+    foldIdenticalLiterals();
+    if (config->icfLevel != ICFLevel::none)
+      foldIdenticalSections();
 
     // Write to an output file.
     if (target->wordSize == 8)

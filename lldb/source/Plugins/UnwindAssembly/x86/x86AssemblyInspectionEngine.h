@@ -47,7 +47,7 @@ public:
   struct lldb_reg_info {
     const char *name = nullptr;
     uint32_t lldb_regnum = LLDB_INVALID_REGNUM;
-    lldb_reg_info() {}
+    lldb_reg_info() = default;
   };
   void Initialize(std::vector<lldb_reg_info> &reg_info);
 

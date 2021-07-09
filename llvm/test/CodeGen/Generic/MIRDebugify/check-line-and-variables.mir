@@ -50,17 +50,17 @@ body:             |
     %0:gr32 = COPY $edi
     %1:gr32 = COPY killed %0
     %3:gr32 = COPY killed %2
-    MOV32mr %stack.0.a.addr, 1, $noreg, 0, $noreg, %1 :: (store 4 into %ir.a.addr)
-    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, %3 :: (store 4 into %ir.b.addr)
-    %14:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg :: (load 4 from %ir.a.addr)
-    %13:gr32 = ADD32rm killed %14, %stack.1.b.addr, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load 4 from %ir.b.addr)
+    MOV32mr %stack.0.a.addr, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %ir.a.addr)
+    MOV32mr %stack.1.b.addr, 1, $noreg, 0, $noreg, %3 :: (store (s32) into %ir.b.addr)
+    %14:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg :: (load (s32) from %ir.a.addr)
+    %13:gr32 = ADD32rm killed %14, %stack.1.b.addr, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s32) from %ir.b.addr)
     ; dead-mi-elimination will remove %15:gr32 = ...
-    %15:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg :: (load 4 from %ir.a.addr)
-    MOV32mr %stack.2.c, 1, $noreg, 0, $noreg, killed %13 :: (store 4 into %ir.c)
-    %9:gr32 = MOV32rm %stack.2.c, 1, $noreg, 0, $noreg :: (load 4 from %ir.c)
+    %15:gr32 = MOV32rm %stack.0.a.addr, 1, $noreg, 0, $noreg :: (load (s32) from %ir.a.addr)
+    MOV32mr %stack.2.c, 1, $noreg, 0, $noreg, killed %13 :: (store (s32) into %ir.c)
+    %9:gr32 = MOV32rm %stack.2.c, 1, $noreg, 0, $noreg :: (load (s32) from %ir.c)
     %8:gr32 = SHL32ri killed %9, 1, implicit-def $eflags
-    MOV32mr $noreg, 1, $noreg, @ga, $noreg, killed %8 :: (store 4 into @ga)
-    %5:gr32 = MOV32rm %stack.2.c, 1, $noreg, 0, $noreg :: (load 4 from %ir.c)
+    MOV32mr $noreg, 1, $noreg, @ga, $noreg, killed %8 :: (store (s32) into @ga)
+    %5:gr32 = MOV32rm %stack.2.c, 1, $noreg, 0, $noreg :: (load (s32) from %ir.c)
     $eax = COPY %5
     RETQ implicit $eax
 

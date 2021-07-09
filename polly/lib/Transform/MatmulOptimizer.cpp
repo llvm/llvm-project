@@ -317,7 +317,7 @@ static bool containsOnlyMatrMultAcc(isl::map PartialSchedule,
                                     MatMulInfoTy &MMI) {
   auto InputDimId = PartialSchedule.get_tuple_id(isl::dim::in);
   auto *Stmt = static_cast<ScopStmt *>(InputDimId.get_user());
-  isl_size OutDimNum = PartialSchedule.dim(isl::dim::out);
+  isl_size OutDimNum = PartialSchedule.range_tuple_dim();
   assert(OutDimNum > 2 && "In case of the matrix multiplication the loop nest "
                           "and, consequently, the corresponding scheduling "
                           "functions have at least three dimensions.");
@@ -729,7 +729,7 @@ static isl::schedule_node optimizePackedB(isl::schedule_node Node,
 
   // Insert into the schedule tree.
   isl::map ExtMap = MapOldIndVar.project_out(
-      isl::dim::out, 2, MapOldIndVar.dim(isl::dim::out) - 2);
+      isl::dim::out, 2, MapOldIndVar.range_tuple_dim() - 2);
   ExtMap = ExtMap.reverse();
   ExtMap = ExtMap.fix_si(isl::dim::out, MMI.i, 0);
   ExtMap = ExtMap.intersect_range(Domain);
@@ -870,9 +870,9 @@ getInductionVariablesSubstitution(isl::schedule_node Node,
   auto Child = Node.child(0);
   auto UnMapOldIndVar = Child.get_prefix_schedule_union_map();
   auto MapOldIndVar = isl::map::from_union_map(UnMapOldIndVar);
-  if (MapOldIndVar.dim(isl::dim::out) > 9)
+  if (MapOldIndVar.range_tuple_dim() > 9)
     return MapOldIndVar.project_out(isl::dim::out, 0,
-                                    MapOldIndVar.dim(isl::dim::out) - 9);
+                                    MapOldIndVar.range_tuple_dim() - 9);
   return MapOldIndVar;
 }
 
@@ -896,7 +896,7 @@ isolateAndUnrollMatMulInnerLoops(isl::schedule_node Node,
   isl::schedule_node Child = Node.get_child(0);
   isl::union_map UnMapOldIndVar = Child.get_prefix_schedule_relation();
   isl::set Prefix = isl::map::from_union_map(UnMapOldIndVar).range();
-  isl_size Dims = Prefix.dim(isl::dim::set);
+  isl_size Dims = Prefix.tuple_dim();
   Prefix = Prefix.project_out(isl::dim::set, Dims - 1, 1);
   Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Nr);
   Prefix = getPartialTilePrefixes(Prefix, MicroKernelParams.Mr);
@@ -955,7 +955,7 @@ getBandNodeWithOriginDimOrder(isl::schedule_node Node) {
   auto Domain = Node.get_universe_domain();
   assert(isl_union_set_n_set(Domain.get()) == 1);
   if (Node.get_schedule_depth() != 0 ||
-      (isl::set(Domain).dim(isl::dim::set) !=
+      (isl::set(Domain).tuple_dim() !=
        isl_schedule_node_band_n_member(Node.get())))
     return Node;
   Node = isl::manage(isl_schedule_node_delete(Node.copy()));

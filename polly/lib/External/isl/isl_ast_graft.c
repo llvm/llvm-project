@@ -110,24 +110,24 @@ static isl_bool equal_independent_guards(__isl_keep isl_ast_graft_list *list,
 {
 	int i;
 	isl_size n;
-	int depth;
+	isl_size depth;
 	isl_size dim;
 	isl_ast_graft *graft_0;
 	isl_bool equal = isl_bool_true;
 	isl_bool skip;
 
 	n = isl_ast_graft_list_n_ast_graft(list);
-	if (n < 0)
+	depth = isl_ast_build_get_depth(build);
+	if (n < 0 || depth < 0)
 		return isl_bool_error;
 	graft_0 = isl_ast_graft_list_get_ast_graft(list, 0);
 	if (!graft_0)
 		return isl_bool_error;
 
-	depth = isl_ast_build_get_depth(build);
 	dim = isl_set_dim(graft_0->guard, isl_dim_set);
 	if (dim < 0)
-		return isl_bool_error;
-	if (dim <= depth)
+		skip = isl_bool_error;
+	else if (dim <= depth)
 		skip = isl_bool_false;
 	else
 		skip = isl_set_involves_dims(graft_0->guard,
@@ -161,12 +161,12 @@ static isl_bool equal_independent_guards(__isl_keep isl_ast_graft_list *list,
 static __isl_give isl_set *hoist_guard(__isl_take isl_set *guard,
 	__isl_keep isl_ast_build *build)
 {
-	int depth;
+	isl_size depth;
 	isl_size dim;
 
 	depth = isl_ast_build_get_depth(build);
 	dim = isl_set_dim(guard, isl_dim_set);
-	if (dim < 0)
+	if (depth < 0 || dim < 0)
 		return isl_set_free(guard);
 	if (depth < dim) {
 		guard = isl_set_remove_divs_involving_dims(guard,
@@ -473,13 +473,14 @@ static __isl_give isl_ast_graft_list *graft_extend_body(
 	__isl_keep isl_ast_build *build)
 {
 	isl_size n;
-	int depth;
+	isl_size depth;
 	isl_ast_graft *last;
 	isl_space *space;
 	isl_basic_set *enforced;
 
 	n = isl_ast_graft_list_n_ast_graft(list);
-	if (n < 0 || !graft)
+	depth = isl_ast_build_get_depth(build);
+	if (n < 0 || depth < 0 || !graft)
 		goto error;
 	extend_body(body, isl_ast_node_copy(graft->node));
 	if (!*body)
@@ -487,7 +488,6 @@ static __isl_give isl_ast_graft_list *graft_extend_body(
 
 	last = isl_ast_graft_list_get_ast_graft(list, n - 1);
 
-	depth = isl_ast_build_get_depth(build);
 	space = isl_ast_build_get_space(build, 1);
 	enforced = isl_basic_set_empty(space);
 	enforced = update_enforced(enforced, last, depth);
@@ -760,18 +760,18 @@ __isl_give isl_basic_set *isl_ast_graft_list_extract_shared_enforced(
 {
 	int i;
 	isl_size n;
-	int depth;
+	isl_size depth;
 	isl_space *space;
 	isl_basic_set *enforced;
 
 	n = isl_ast_graft_list_n_ast_graft(list);
-	if (n < 0)
+	depth = isl_ast_build_get_depth(build);
+	if (n < 0 || depth < 0)
 		return NULL;
 
 	space = isl_ast_build_get_space(build, 1);
 	enforced = isl_basic_set_empty(space);
 
-	depth = isl_ast_build_get_depth(build);
 	for (i = 0; i < n; ++i) {
 		isl_ast_graft *graft;
 

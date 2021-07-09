@@ -1250,6 +1250,7 @@ public:
   inline boolean domain_is_wrapping() const;
   inline map domain_map() const;
   inline map domain_product(map map2) const;
+  inline isl_size domain_tuple_dim() const;
   inline map drop_constraints_involving_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline map drop_constraints_not_involving_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline map drop_unused_params() const;
@@ -1380,6 +1381,7 @@ public:
   inline map range_map() const;
   inline map range_product(map map2) const;
   inline map range_reverse() const;
+  inline isl_size range_tuple_dim() const;
   inline map remove_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline map remove_divs() const;
   inline map remove_divs_involving_dims(isl::dim type, unsigned int first, unsigned int n) const;
@@ -2922,6 +2924,7 @@ public:
   inline set subtract(set set2) const;
   inline set sum(set set2) const;
   inline map translation() const;
+  inline isl_size tuple_dim() const;
   inline set unbind_params(multi_id tuple) const;
   inline map unbind_params_insert_domain(multi_id domain) const;
   inline set unite(set set2) const;
@@ -3696,7 +3699,6 @@ public:
   inline ctx get_ctx() const;
   inline void dump() const;
 
-  inline union_set add_set(set set) const;
   inline union_set affine_hull() const;
   inline union_set align_params(space model) const;
   inline union_set apply(union_map umap) const;
@@ -8336,6 +8338,12 @@ map map::domain_product(map map2) const
   return manage(res);
 }
 
+isl_size map::domain_tuple_dim() const
+{
+  auto res = isl_map_domain_tuple_dim(get());
+  return res;
+}
+
 map map::drop_constraints_involving_dims(isl::dim type, unsigned int first, unsigned int n) const
 {
   auto res = isl_map_drop_constraints_involving_dims(copy(), static_cast<enum isl_dim_type>(type), first, n);
@@ -9124,6 +9132,12 @@ map map::range_reverse() const
 {
   auto res = isl_map_range_reverse(copy());
   return manage(res);
+}
+
+isl_size map::range_tuple_dim() const
+{
+  auto res = isl_map_range_tuple_dim(get());
+  return res;
 }
 
 map map::remove_dims(isl::dim type, unsigned int first, unsigned int n) const
@@ -16338,6 +16352,12 @@ map set::translation() const
   return manage(res);
 }
 
+isl_size set::tuple_dim() const
+{
+  auto res = isl_set_tuple_dim(get());
+  return res;
+}
+
 set set::unbind_params(multi_id tuple) const
 {
   auto res = isl_set_unbind_params(copy(), tuple.release());
@@ -19718,12 +19738,6 @@ void union_set::dump() const {
   isl_union_set_dump(get());
 }
 
-
-union_set union_set::add_set(set set) const
-{
-  auto res = isl_union_set_add_set(copy(), set.release());
-  return manage(res);
-}
 
 union_set union_set::affine_hull() const
 {

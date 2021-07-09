@@ -25,9 +25,9 @@ namespace lldb_private {
 
 class ObjectFileJITDelegate {
 public:
-  ObjectFileJITDelegate() {}
+  ObjectFileJITDelegate() = default;
 
-  virtual ~ObjectFileJITDelegate() {}
+  virtual ~ObjectFileJITDelegate() = default;
 
   virtual lldb::ByteOrder GetByteOrder() const = 0;
 
@@ -711,6 +711,8 @@ protected:
   ///     Returns \b true if the architecture was changed, \b
   ///     false otherwise.
   bool SetModulesArchitecture(const ArchSpec &new_arch);
+
+  ConstString GetNextSyntheticSymbolName();
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);

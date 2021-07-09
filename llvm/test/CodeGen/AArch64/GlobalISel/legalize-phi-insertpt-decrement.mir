@@ -43,28 +43,30 @@ body:             |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C]](s64)
+  ; CHECK:   [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 -1
   ; CHECK:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+  ; CHECK:   [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK: bb.1.bb1:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[PHI:%[0-9]+]]:_(p0) = G_PHI %6(p0), %bb.2, [[DEF]](p0), %bb.0
-  ; CHECK:   [[PHI1:%[0-9]+]]:_(s16) = G_PHI %20(s16), %bb.2, [[DEF1]](s16), %bb.0
+  ; CHECK:   [[PHI1:%[0-9]+]]:_(s16) = G_PHI %20(s16), %bb.2, [[DEF2]](s16), %bb.0
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[PHI1]](s16)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.3
   ; CHECK: bb.2.bb3:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[INTTOPTR]], [[C1]](s64)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[PHI]](p0) :: (load 2 from %ir.lsr.iv)
+  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[INTTOPTR]], [[C2]](s64)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[PHI]](p0) :: (load (s16) from %ir.lsr.iv)
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s16)
-  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ZEXT]](s32), [[C2]]
+  ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ZEXT]](s32), [[C3]]
   ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[GEP]](p0) :: (load 2 from %ir.tmp5)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from %ir.tmp5)
   ; CHECK:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s16)
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY [[C3]](s32)
   ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ZEXT1]](s32), [[COPY]]
-  ; CHECK:   [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PHI]], [[C1]](s64)
+  ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PHI]], [[C2]](s64)
   ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[ICMP1]](s32)
   ; CHECK:   G_BRCOND [[TRUNC1]](s1), %bb.3
   ; CHECK:   G_BR %bb.1
@@ -85,9 +87,9 @@ body:             |
   bb.3.bb3:
     %4:_(s64) = G_CONSTANT i64 4
     %5:_(p0) = G_PTR_ADD %2, %4(s64)
-    %6:_(s16) = G_LOAD %0(p0) :: (load 2 from %ir.lsr.iv)
+    %6:_(s16) = G_LOAD %0(p0) :: (load (s16) from %ir.lsr.iv)
     %8:_(s1) = G_ICMP intpred(eq), %6(s16), %7
-    %9:_(s16) = G_LOAD %5(p0) :: (load 2 from %ir.tmp5)
+    %9:_(s16) = G_LOAD %5(p0) :: (load (s16) from %ir.tmp5)
     %10:_(s1) = G_ICMP intpred(eq), %9(s16), %7
     %11:_(p0) = G_PTR_ADD %0, %4(s64)
     G_BRCOND %8(s1), %bb.4

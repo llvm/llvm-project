@@ -95,6 +95,7 @@ private:
   bool fixLdsBranchVmemWARHazard(MachineInstr *MI);
   bool fixLdsDirectVALUHazard(MachineInstr *MI);
   bool fixLdsDirectVMEMHazard(MachineInstr *MI);
+  bool fixVALUPartialForwardingHazard(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);

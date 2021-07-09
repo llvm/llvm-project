@@ -211,7 +211,7 @@ entry:
 define float* @scc_A(i32* dereferenceable_or_null(4) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind readnone
 ; CHECK-LABEL: define {{[^@]+}}@scc_A
-; CHECK-SAME: (i32* nofree readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (i32* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32* [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -257,7 +257,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i64* @scc_B(double* dereferenceable_or_null(8) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind readnone
 ; CHECK-LABEL: define {{[^@]+}}@scc_B
-; CHECK-SAME: (double* nofree readnone returned dereferenceable_or_null(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (double* nofree readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne double* [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -303,7 +303,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i8* @scc_C(i16* dereferenceable_or_null(2) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind readnone
 ; CHECK-LABEL: define {{[^@]+}}@scc_C
-; CHECK-SAME: (i16* nofree readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i16* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i16* [[A]] to i32*
 ; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[BC]]) #[[ATTR2]]

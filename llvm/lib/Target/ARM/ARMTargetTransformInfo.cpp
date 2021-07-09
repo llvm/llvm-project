@@ -201,7 +201,7 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       Type *IntTy32 = Type::getInt32Ty(II.getContext());
       Metadata *M[] = {
           ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0)),
-          ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0xFFFF))};
+          ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0x10000))};
       II.setMetadata(LLVMContext::MD_range, MDNode::get(II.getContext(), M));
       return &II;
     }
@@ -335,6 +335,11 @@ InstructionCost ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   if ((Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
        Opcode == Instruction::SRem || Opcode == Instruction::URem) &&
       Idx == 1)
+    return 0;
+
+  // Leave any gep offsets for the CodeGenPrepare, which will do a better job at
+  // splitting any large offsets.
+  if (Opcode == Instruction::GetElementPtr && Idx != 0)
     return 0;
 
   if (Opcode == Instruction::And) {

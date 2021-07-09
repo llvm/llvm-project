@@ -418,7 +418,7 @@ public:
       : IOHandler(debugger, IOHandler::Type::PythonInterpreter),
         m_python(python) {}
 
-  ~IOHandlerPythonInterpreter() override {}
+  ~IOHandlerPythonInterpreter() override = default;
 
   ConstString GetControlSequence(char ch) override {
     if (ch == 'd')

@@ -557,7 +557,7 @@ mlirBlockPrint(MlirBlock block, MlirStringCallback callback, void *userData);
 static inline bool mlirValueIsNull(MlirValue value) { return !value.ptr; }
 
 /// Returns 1 if two values are equal, 0 otherwise.
-bool mlirValueEqual(MlirValue value1, MlirValue value2);
+MLIR_CAPI_EXPORTED bool mlirValueEqual(MlirValue value1, MlirValue value2);
 
 /// Returns 1 if the value is a block argument, 0 otherwise.
 MLIR_CAPI_EXPORTED bool mlirValueIsABlockArgument(MlirValue value);

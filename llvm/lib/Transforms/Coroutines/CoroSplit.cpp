@@ -765,8 +765,8 @@ Value *CoroCloner::deriveNewFramePointer() {
   // context header.
   case coro::ABI::Async: {
     auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
-    auto *CalleeContext =
-        NewF->getArg(ActiveAsyncSuspend->getStorageArgumentIndex());
+    auto ContextIdx = ActiveAsyncSuspend->getStorageArgumentIndex() & 0xff;
+    auto *CalleeContext = NewF->getArg(ContextIdx);
     auto *FramePtrTy = Shape.FrameTy->getPointerTo();
     auto *ProjectionFunc =
         ActiveAsyncSuspend->getAsyncContextProjectionFunction();
@@ -824,6 +824,13 @@ static void addAsyncContextAttrs(AttributeList &Attrs, LLVMContext &Context,
                                  unsigned ParamIndex) {
   AttrBuilder ParamAttrs;
   ParamAttrs.addAttribute(Attribute::SwiftAsync);
+  Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
+}
+
+static void addSwiftSelfAttrs(AttributeList &Attrs, LLVMContext &Context,
+                              unsigned ParamIndex) {
+  AttrBuilder ParamAttrs;
+  ParamAttrs.addAttribute(Attribute::SwiftSelf);
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
 }
 
@@ -906,6 +913,21 @@ void CoroCloner::create() {
                          Shape.FrameSize, Shape.FrameAlign);
     break;
   case coro::ABI::Async: {
+    auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
+    if (OrigF.hasParamAttribute(Shape.AsyncLowering.ContextArgNo,
+                                Attribute::SwiftAsync)) {
+      uint32_t ArgAttributeIndices =
+          ActiveAsyncSuspend->getStorageArgumentIndex();
+      auto ContextArgIndex = ArgAttributeIndices & 0xff;
+      addAsyncContextAttrs(NewAttrs, Context, ContextArgIndex);
+
+      // `swiftasync` must preceed `swiftself` so 0 is not a valid index for
+      // `swiftself`.
+      auto SwiftSelfIndex = ArgAttributeIndices >> 8;
+      if (SwiftSelfIndex)
+        addSwiftSelfAttrs(NewAttrs, Context, SwiftSelfIndex);
+    }
+
     // Transfer the original function's attributes.
     auto FnAttrs = OrigF.getAttributes().getFnAttributes();
     NewAttrs =
@@ -945,15 +967,8 @@ void CoroCloner::create() {
   // followed by a return.
   // Don't change returns to unreachable because that will trip up the verifier.
   // These returns should be unreachable from the clone.
-  case coro::ABI::Async: {
-    auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
-    if (OrigF.hasParamAttribute(Shape.AsyncLowering.ContextArgNo,
-                                Attribute::SwiftAsync)) {
-      auto ContextArgIndex = ActiveAsyncSuspend->getStorageArgumentIndex();
-      addAsyncContextAttrs(NewAttrs, Context, ContextArgIndex);
-    }
+  case coro::ABI::Async:
     break;
-  }
   }
 
   NewF->setAttributes(NewAttrs);
@@ -1134,17 +1149,6 @@ static void postSplitCleanup(Function &F) {
   // pass to FPM below because it will also verify all the global data.
   if (verifyFunction(F, &errs()))
     report_fatal_error("Broken function");
-
-  legacy::FunctionPassManager FPM(F.getParent());
-
-  FPM.add(createSCCPPass());
-  FPM.add(createCFGSimplificationPass());
-  FPM.add(createEarlyCSEPass());
-  FPM.add(createCFGSimplificationPass());
-
-  FPM.doInitialization();
-  FPM.run(F);
-  FPM.doFinalization();
 }
 
 // Assuming we arrived at the block NewBlock from Prev instruction, store
@@ -1596,8 +1600,23 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     auto *Suspend = cast<CoroSuspendAsyncInst>(Shape.CoroSuspends[Idx]);
 
     // Create the clone declaration.
+    auto ResumeNameSuffix = ".resume.";
+    auto ProjectionFunctionName =
+        Suspend->getAsyncContextProjectionFunction()->getName();
+    bool UseSwiftMangling = false;
+    if (ProjectionFunctionName.equals("__swift_async_resume_project_context")) {
+      ResumeNameSuffix = "TQ";
+      UseSwiftMangling = true;
+    } else if (ProjectionFunctionName.equals(
+                   "__swift_async_resume_get_context")) {
+      ResumeNameSuffix = "TY";
+      UseSwiftMangling = true;
+    }
     auto *Continuation = createCloneDeclaration(
-        F, Shape, ".resume." + Twine(Idx), NextF, Suspend);
+        F, Shape,
+        UseSwiftMangling ? ResumeNameSuffix + Twine(Idx) + "_"
+                         : ResumeNameSuffix + Twine(Idx),
+        NextF, Suspend);
     Clones.push_back(Continuation);
 
     // Insert a branch to a new return block immediately before the suspend
@@ -2119,28 +2138,21 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   // Split all the coroutines.
   for (LazyCallGraph::Node *N : Coroutines) {
     Function &F = N->getFunction();
-    Attribute Attr = F.getFnAttribute(CORO_PRESPLIT_ATTR);
-    StringRef Value = Attr.getValueAsString();
     LLVM_DEBUG(dbgs() << "CoroSplit: Processing coroutine '" << F.getName()
-                      << "' state: " << Value << "\n");
-    if (Value == UNPREPARED_FOR_SPLIT) {
-      // Enqueue a second iteration of the CGSCC pipeline on this SCC.
-      UR.CWorklist.insert(&C);
-      F.addFnAttr(CORO_PRESPLIT_ATTR, PREPARED_FOR_SPLIT);
-      continue;
-    }
+                      << "' state: "
+                      << F.getFnAttribute(CORO_PRESPLIT_ATTR).getValueAsString()
+                      << "\n");
     F.removeFnAttr(CORO_PRESPLIT_ATTR);
 
     SmallVector<Function *, 4> Clones;
     const coro::Shape Shape = splitCoroutine(F, Clones, ReuseFrameSlot);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
 
-    if ((Shape.ABI == coro::ABI::Async || Shape.ABI == coro::ABI::Retcon ||
-         Shape.ABI == coro::ABI::RetconOnce) &&
-        !Shape.CoroSuspends.empty()) {
-      // Run the CGSCC pipeline on the newly split functions.
-      // All clones will be in the same RefSCC, so choose a random clone.
-      UR.RCWorklist.insert(CG.lookupRefSCC(CG.get(*Clones[0])));
+    if (!Shape.CoroSuspends.empty()) {
+      // Run the CGSCC pipeline on the original and newly split functions.
+      UR.CWorklist.insert(&C);
+      for (Function *Clone : Clones)
+        UR.CWorklist.insert(CG.lookupSCC(CG.get(*Clone)));
     }
   }
 

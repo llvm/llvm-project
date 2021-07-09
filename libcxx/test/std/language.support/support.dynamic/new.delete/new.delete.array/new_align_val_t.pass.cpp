@@ -16,11 +16,11 @@
 // However, support for that was broken prior to Clang 8 and AppleClang 11.
 // UNSUPPORTED: apple-clang-9, apple-clang-10
 // UNSUPPORTED: clang-5, clang-6, clang-7
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.12
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.11
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.10
-// XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.9
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
+
+// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// nor does the dynamic library shipped with z/OS.
+// UNSUPPORTED: target={{.+}}-zos{{.*}}
 
 // test operator new
 

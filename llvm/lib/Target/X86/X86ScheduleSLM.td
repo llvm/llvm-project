@@ -111,6 +111,7 @@ defm : SLMWriteResPair<WriteIMul32Reg, [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul64,    [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul64Imm, [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul64Reg, [SLM_IEC_RSV1],  3>;
+def  : WriteRes<WriteIMulH, [SLM_FPC_RSV0]>;
 
 defm : X86WriteRes<WriteBSWAP32, [SLM_IEC_RSV01], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64, [SLM_IEC_RSV01], 1, [1], 1>;
@@ -224,6 +225,10 @@ defm : SLMWriteResPair<WriteFMul64,   [SLM_FPC_RSV0, SLMFPMultiplier], 5, [1,2]>
 defm : SLMWriteResPair<WriteFMul64X,  [SLM_FPC_RSV0, SLMFPMultiplier], 7, [1,4]>;
 defm : SLMWriteResPair<WriteFMul64Y,  [SLM_FPC_RSV0, SLMFPMultiplier], 7, [1,4]>;
 defm : X86WriteResPairUnsupported<WriteFMul64Z>;
+defm : X86WriteResPairUnsupported<WriteFMA>;
+defm : X86WriteResPairUnsupported<WriteFMAX>;
+defm : X86WriteResPairUnsupported<WriteFMAY>;
+defm : X86WriteResPairUnsupported<WriteFMAZ>;
 defm : SLMWriteResPair<WriteFDiv,     [SLM_FPC_RSV0, SLMFPDivider], 19, [1,17]>;
 defm : SLMWriteResPair<WriteFDivX,    [SLM_FPC_RSV0, SLMFPDivider], 39, [1,39]>;
 defm : SLMWriteResPair<WriteFDivY,    [SLM_FPC_RSV0, SLMFPDivider], 39, [1,39]>;
@@ -270,6 +275,13 @@ defm : SLMWriteResPair<WriteFVarShuffle, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteFVarShuffleY,[SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WriteFVarShuffleZ>;
 defm : SLMWriteResPair<WriteFBlend,  [SLM_FPC_RSV0],  1>;
+defm : X86WriteResPairUnsupported<WriteFBlendY>;
+defm : X86WriteResPairUnsupported<WriteFBlendZ>;
+defm : SLMWriteResPair<WriteFVarBlend, [SLM_FPC_RSV0], 4, [4], 3>;
+defm : X86WriteResPairUnsupported<WriteFVarBlendY>;
+defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
+defm : X86WriteResPairUnsupported<WriteFShuffle256>;
+defm : X86WriteResPairUnsupported<WriteFVarShuffle256>;
 
 // Conversion between integer and float.
 defm : SLMWriteResPair<WriteCvtSS2I,   [SLM_FPC_RSV01], 4>;
@@ -298,6 +310,17 @@ defm : SLMWriteResPair<WriteCvtSD2SS,  [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteCvtPD2PS,  [SLM_FPC_RSV01], 4>;
 defm : SLMWriteResPair<WriteCvtPD2PSY, [SLM_FPC_RSV01], 4>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2PSZ>;
+
+defm : X86WriteResPairUnsupported<WriteCvtPH2PS>;
+defm : X86WriteResPairUnsupported<WriteCvtPH2PSY>;
+defm : X86WriteResPairUnsupported<WriteCvtPH2PSZ>;
+
+defm : X86WriteResUnsupported<WriteCvtPS2PH>;
+defm : X86WriteResUnsupported<WriteCvtPS2PHY>;
+defm : X86WriteResUnsupported<WriteCvtPS2PHZ>;
+defm : X86WriteResUnsupported<WriteCvtPS2PHSt>;
+defm : X86WriteResUnsupported<WriteCvtPS2PHYSt>;
+defm : X86WriteResUnsupported<WriteCvtPS2PHZSt>;
 
 // Vector integer operations.
 def  : WriteRes<WriteVecLoad,         [SLM_MEC_RSV]> { let Latency = 3; }
@@ -330,6 +353,10 @@ defm : SLMWriteResPair<WriteVecShiftImm, [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecShiftImmX,[SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteVecShiftImmY,[SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WriteVecShiftImmZ>;
+defm : SLMWriteResPair<WriteVarVecShift,  [SLM_FPC_RSV0],  1>;
+defm : X86WriteResPairUnsupported<WriteVarVecShiftY>;
+defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
+
 defm : SLMWriteResPair<WriteVecLogic, [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecLogicX,[SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteVecLogicY,[SLM_FPC_RSV01], 1>;
@@ -361,6 +388,9 @@ defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : SLMWriteResPair<WriteBlend,  [SLM_FPC_RSV0],  1>;
 defm : SLMWriteResPair<WriteBlendY, [SLM_FPC_RSV0],  1>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
+defm : SLMWriteResPair<WriteVarBlend, [SLM_FPC_RSV0], 1>;
+defm : X86WriteResPairUnsupported<WriteVarBlendY>;
+defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 defm : SLMWriteResPair<WriteMPSAD,  [SLM_FPC_RSV0],  7>;
 defm : SLMWriteResPair<WriteMPSADY, [SLM_FPC_RSV0],  7>;
 defm : X86WriteResPairUnsupported<WriteMPSADZ>;
@@ -369,6 +399,9 @@ defm : SLMWriteResPair<WritePSADBWX, [SLM_FPC_RSV0],  4>;
 defm : SLMWriteResPair<WritePSADBWY, [SLM_FPC_RSV0],  4>;
 defm : X86WriteResPairUnsupported<WritePSADBWZ>;
 defm : SLMWriteResPair<WritePHMINPOS,  [SLM_FPC_RSV0],   4>;
+defm : X86WriteResPairUnsupported<WriteShuffle256>;
+defm : X86WriteResPairUnsupported<WriteVarShuffle256>;
+defm : X86WriteResPairUnsupported<WriteVPMOV256>;
 
 // Vector insert/extract operations.
 defm : SLMWriteResPair<WriteVecInsert, [SLM_FPC_RSV0],  1>;
@@ -423,40 +456,6 @@ def : WriteRes<WriteSystem,     [SLM_FPC_RSV0]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [SLM_FPC_RSV0]> { let Latency = 100; }
 def : WriteRes<WriteFence, [SLM_MEC_RSV]>;
 def : WriteRes<WriteNop, []>;
-
-// AVX/FMA is not supported on that architecture, but we should define the basic
-// scheduling resources anyway.
-def  : WriteRes<WriteIMulH, [SLM_FPC_RSV0]>;
-defm : X86WriteResPairUnsupported<WriteFBlendY>;
-defm : X86WriteResPairUnsupported<WriteFBlendZ>;
-defm : SLMWriteResPair<WriteVarBlend, [SLM_FPC_RSV0], 1>;
-defm : X86WriteResPairUnsupported<WriteVarBlendY>;
-defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
-defm : SLMWriteResPair<WriteFVarBlend, [SLM_FPC_RSV0], 4, [4], 3>;
-defm : X86WriteResPairUnsupported<WriteFVarBlendY>;
-defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
-defm : X86WriteResPairUnsupported<WriteFShuffle256>;
-defm : X86WriteResPairUnsupported<WriteFVarShuffle256>;
-defm : X86WriteResPairUnsupported<WriteShuffle256>;
-defm : X86WriteResPairUnsupported<WriteVPMOV256>;
-defm : X86WriteResPairUnsupported<WriteVarShuffle256>;
-defm : SLMWriteResPair<WriteVarVecShift,  [SLM_FPC_RSV0],  1>;
-defm : X86WriteResPairUnsupported<WriteVarVecShiftY>;
-defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
-defm : X86WriteResPairUnsupported<WriteFMA>;
-defm : X86WriteResPairUnsupported<WriteFMAX>;
-defm : X86WriteResPairUnsupported<WriteFMAY>;
-defm : X86WriteResPairUnsupported<WriteFMAZ>;
-
-defm : X86WriteResPairUnsupported<WriteCvtPH2PS>;
-defm : X86WriteResPairUnsupported<WriteCvtPH2PSY>;
-defm : X86WriteResPairUnsupported<WriteCvtPH2PSZ>;
-defm : X86WriteResUnsupported<WriteCvtPS2PH>;
-defm : X86WriteResUnsupported<WriteCvtPS2PHY>;
-defm : X86WriteResUnsupported<WriteCvtPS2PHZ>;
-defm : X86WriteResUnsupported<WriteCvtPS2PHSt>;
-defm : X86WriteResUnsupported<WriteCvtPS2PHYSt>;
-defm : X86WriteResUnsupported<WriteCvtPS2PHZSt>;
 
 // Remaining SLM instrs.
 

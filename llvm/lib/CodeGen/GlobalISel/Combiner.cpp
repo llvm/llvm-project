@@ -153,8 +153,14 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
     MFChanged |= Changed;
   } while (Changed);
 
-  assert(!CSEInfo || (!errorToBool(CSEInfo->verify()) &&
-                         "CSEInfo is not consistent. Likely missing calls to "
-                         "observer on mutations"));
+#ifndef NDEBUG
+  if (CSEInfo) {
+    if (auto E = CSEInfo->verify()) {
+      errs() << E << '\n';
+      assert(false && "CSEInfo is not consistent. Likely missing calls to "
+                      "observer on mutations.");
+    }
+  }
+#endif
   return MFChanged;
 }

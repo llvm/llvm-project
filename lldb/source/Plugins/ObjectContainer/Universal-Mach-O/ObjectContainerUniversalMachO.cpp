@@ -79,7 +79,7 @@ ObjectContainerUniversalMachO::ObjectContainerUniversalMachO(
   memset(&m_header, 0, sizeof(m_header));
 }
 
-ObjectContainerUniversalMachO::~ObjectContainerUniversalMachO() {}
+ObjectContainerUniversalMachO::~ObjectContainerUniversalMachO() = default;
 
 bool ObjectContainerUniversalMachO::ParseHeader() {
   bool success = ParseHeader(m_data, m_header, m_fat_archs);

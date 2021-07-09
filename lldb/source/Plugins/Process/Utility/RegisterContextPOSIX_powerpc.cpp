@@ -95,7 +95,7 @@ RegisterContextPOSIX_powerpc::RegisterContextPOSIX_powerpc(
   m_register_info_up.reset(register_info);
 }
 
-RegisterContextPOSIX_powerpc::~RegisterContextPOSIX_powerpc() {}
+RegisterContextPOSIX_powerpc::~RegisterContextPOSIX_powerpc() = default;
 
 void RegisterContextPOSIX_powerpc::Invalidate() {}
 

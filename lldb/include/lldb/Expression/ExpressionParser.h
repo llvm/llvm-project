@@ -41,7 +41,7 @@ public:
       : m_expr(expr), m_generate_debug_info(generate_debug_info) {}
 
   /// Destructor
-  virtual ~ExpressionParser(){};
+  virtual ~ExpressionParser() = default;
 
   /// Attempts to find possible command line completions for the given
   /// expression.

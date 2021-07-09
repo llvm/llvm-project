@@ -46,7 +46,7 @@ typedef SmallVector<Instruction *, 2> InstrList;
 IRForTarget::FunctionValueCache::FunctionValueCache(Maker const &maker)
     : m_maker(maker), m_values() {}
 
-IRForTarget::FunctionValueCache::~FunctionValueCache() {}
+IRForTarget::FunctionValueCache::~FunctionValueCache() = default;
 
 llvm::Value *
 IRForTarget::FunctionValueCache::GetValue(llvm::Function *function) {

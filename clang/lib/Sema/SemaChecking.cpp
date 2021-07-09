@@ -3265,6 +3265,8 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_divde:
   case PPC::BI__builtin_divdeu:
   case PPC::BI__builtin_bpermd:
+  case PPC::BI__builtin_ppc_ldarx:
+  case PPC::BI__builtin_ppc_stdcx:
     return true;
   }
   return false;
@@ -14475,7 +14477,8 @@ static getBaseAlignmentAndOffsetFromLValue(const Expr *E, ASTContext &Ctx) {
   case Stmt::MemberExprClass: {
     auto *ME = cast<MemberExpr>(E);
     auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
-    if (!FD || FD->getType()->isReferenceType())
+    if (!FD || FD->getType()->isReferenceType() ||
+        FD->getParent()->isInvalidDecl())
       break;
     Optional<std::pair<CharUnits, CharUnits>> P;
     if (ME->isArrow())

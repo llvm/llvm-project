@@ -73,6 +73,24 @@ define void @masked_scatter_nxv2f64(<vscale x 2 x double> %data, <vscale x 2 x d
   ret void
 }
 
+define void @masked_scatter_splat_constant_pointer (<vscale x 4 x i1> %pg) {
+; CHECK-LABEL: masked_scatter_splat_constant_pointer:
+; CHECK:       // %bb.0: // %vector.body
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
+; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
+; CHECK-NEXT:    st1w { z0.d }, p2, [x8, z0.d, lsl #2]
+; CHECK-NEXT:    st1w { z0.d }, p0, [x8, z0.d, lsl #2]
+; CHECK-NEXT:    ret
+vector.body:
+  call void @llvm.masked.scatter.nxv4i32.nxv4p0i32(<vscale x 4 x i32> undef,
+    <vscale x 4 x i32*> shufflevector (<vscale x 4 x i32*> insertelement (<vscale x 4 x i32*> poison, i32* undef, i32 0), <vscale x 4 x i32*> poison, <vscale x 4 x i32> zeroinitializer),
+    i32 4,
+    <vscale x 4 x i1> %pg)
+  ret void
+}
+
 declare void @llvm.masked.scatter.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half*>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv2bf16(<vscale x 2 x bfloat>, <vscale x 2 x bfloat*>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float*>, i32, <vscale x 2 x i1>)
@@ -81,4 +99,5 @@ declare void @llvm.masked.scatter.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i16*
 declare void @llvm.masked.scatter.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32*>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64*>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8*>, i32, <vscale x 2 x i1>)
+declare void @llvm.masked.scatter.nxv4i32.nxv4p0i32(<vscale x 4 x i32>, <vscale x 4 x i32*>, i32, <vscale x 4 x i1>)
 attributes #0 = { "target-features"="+sve,+bf16" }

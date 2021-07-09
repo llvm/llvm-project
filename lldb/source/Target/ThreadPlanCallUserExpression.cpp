@@ -43,7 +43,7 @@ ThreadPlanCallUserExpression::ThreadPlanCallUserExpression(
   SetOkayToDiscard(false);
 }
 
-ThreadPlanCallUserExpression::~ThreadPlanCallUserExpression() {}
+ThreadPlanCallUserExpression::~ThreadPlanCallUserExpression() = default;
 
 void ThreadPlanCallUserExpression::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {

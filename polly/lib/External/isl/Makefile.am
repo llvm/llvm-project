@@ -15,16 +15,17 @@ AUTOMAKE_OPTIONS = nostdinc subdir-objects
 lib_LTLIBRARIES = libisl.la
 noinst_PROGRAMS = isl_test isl_polyhedron_sample isl_pip \
 	isl_polyhedron_minimize isl_polytope_scan \
-	isl_polyhedron_detect_equalities isl_cat \
+	isl_polyhedron_detect_equalities \
+	isl_polyhedron_remove_redundant_equalities isl_cat \
 	isl_closure isl_bound isl_schedule isl_codegen isl_test_int \
 	isl_flow isl_flow_cmp isl_schedule_cmp
 TESTS = isl_test codegen_test.sh pip_test.sh bound_test.sh isl_test_int \
 	flow_test.sh schedule_test.sh
 if HAVE_CPP_ISL_H
-  CPP_H = include/isl/cpp.h
+  CPP_H = include/isl/cpp.h include/isl/typed_cpp.h
 if HAVE_CXX11
-  noinst_PROGRAMS += isl_test_cpp
-  TESTS += isl_test_cpp
+  noinst_PROGRAMS += isl_test2 isl_test_cpp
+  TESTS += isl_test2 isl_test_cpp isl_test_cpp_failed.sh
 endif
 endif
 if HAVE_CLANG
@@ -229,6 +230,12 @@ libisl_la_LDFLAGS = -version-info @versioninfo@ \
 isl_test_LDFLAGS = @MP_LDFLAGS@
 isl_test_LDADD = libisl.la @MP_LIBS@
 
+isl_test2_SOURCES = \
+	isl_test2.cc \
+	include/isl/cpp.h
+isl_test2_LDFLAGS = @MP_LDFLAGS@
+isl_test2_LDADD = libisl.la @MP_LIBS@
+
 isl_test_int_LDFLAGS = @MP_LDFLAGS@
 isl_test_int_LDADD = libisl.la @MP_LIBS@
 
@@ -289,6 +296,10 @@ isl_polyhedron_detect_equalities_LDADD = libisl.la
 isl_polyhedron_detect_equalities_SOURCES = \
 	polyhedron_detect_equalities.c
 
+isl_polyhedron_remove_redundant_equalities_LDADD = libisl.la
+isl_polyhedron_remove_redundant_equalities_SOURCES = \
+	polyhedron_remove_redundant_equalities.c
+
 isl_cat_LDADD = libisl.la
 isl_cat_SOURCES = \
 	cat.c
@@ -297,11 +308,24 @@ isl_closure_LDADD = libisl.la
 isl_closure_SOURCES = \
 	closure.c
 
+isl_test_cpp_CPPFLAGS = $(AM_CPPFLAGS) -UCOMPILE_ERROR
 isl_test_cpp_SOURCES = \
 	isl_test_cpp.cc \
 	include/isl/cpp.h
 isl_test_cpp_LDFLAGS = @MP_LDFLAGS@
 isl_test_cpp_LDADD = libisl.la @MP_LIBS@
+
+# This program is not meant to be compiled by default.
+# In fact it is meant not to be compilable.
+# It is identical to isl_test_cpp, except that it gets compiled
+# with the COMPILE_ERROR flag set.
+EXTRA_PROGRAMS = isl_test_cpp_failed
+isl_test_cpp_failed_CPPFLAGS = $(AM_CPPFLAGS) -DCOMPILE_ERROR
+isl_test_cpp_failed_SOURCES = \
+	isl_test_cpp.cc \
+	include/isl/cpp.h
+isl_test_cpp_failed_LDFLAGS = @MP_LDFLAGS@
+isl_test_cpp_failed_LDADD = libisl.la @MP_LIBS@
 
 isl_test_cpp_checked_SOURCES = \
 	isl_test_cpp-checked.cc \
@@ -332,20 +356,18 @@ interface/isl.py: interface/extract_interface$(BUILD_EXEEXT) libdep.a \
 			> $@ || (rm $@ && false)
 
 include/isl/cpp.h: interface/extract_interface$(BUILD_EXEEXT) libdep.a \
-		cpp/cpp.h.top cpp/cpp.h.pre cpp/cpp.h.bot
-	$(MKDIR_P) "include/isl/cpp" && \
-	(cat $(srcdir)/cpp/cpp.h.top $(srcdir)/all.h \
-	    $(srcdir)/cpp/cpp.h.pre && \
+		cpp/cpp.h.top cpp/cpp.h.bot
+	$(MKDIR_P) "include/isl" && \
+	(cat $(srcdir)/cpp/cpp.h.top $(srcdir)/all.h && \
 		interface/extract_interface$(BUILD_EXEEXT) --language=cpp \
 			$(includes) $(srcdir)/all.h && \
 		cat $(srcdir)/cpp/cpp.h.bot) \
 			> $@ || (rm $@ && false)
 
 include/isl/cpp-checked.h: interface/extract_interface$(BUILD_EXEEXT) libdep.a \
-		cpp/cpp-checked.h.top \
-		cpp/cpp-checked.h.pre cpp/cpp-checked.h.bot
-	(cat $(srcdir)/cpp/cpp-checked.h.top $(srcdir)/all.h \
-	    $(srcdir)/cpp/cpp-checked.h.pre && \
+		cpp/cpp-checked.h.top cpp/cpp-checked.h.bot
+	$(MKDIR_P) "include/isl" && \
+	(cat $(srcdir)/cpp/cpp-checked.h.top $(srcdir)/all.h && \
 		interface/extract_interface$(BUILD_EXEEXT) \
 			--language=cpp-checked \
 			$(includes) $(srcdir)/all.h && \
@@ -357,11 +379,22 @@ include/isl/cpp-checked-conversion.h: \
 		libdep.a \
 		cpp/cpp-checked-conversion.h.top \
 		cpp/cpp-checked-conversion.h.bot
+	$(MKDIR_P) "include/isl" && \
 	(cat $(srcdir)/cpp/cpp-checked-conversion.h.top && \
 		interface/extract_interface$(BUILD_EXEEXT) \
 			--language=cpp-checked-conversion \
 			$(includes) $(srcdir)/all.h && \
 		cat $(srcdir)/cpp/cpp-checked-conversion.h.bot) \
+			> $@ || (rm $@ && false)
+
+include/isl/typed_cpp.h: interface/extract_interface$(BUILD_EXEEXT) \
+		libdep.a cpp/typed_cpp.h.top cpp/typed_cpp.h.bot
+	$(MKDIR_P) "include/isl" && \
+	(cat $(srcdir)/cpp/typed_cpp.h.top && \
+		interface/extract_interface$(BUILD_EXEEXT) \
+			--language=template-cpp \
+			$(includes) $(srcdir)/all.h && \
+		cat $(srcdir)/cpp/typed_cpp.h.bot) \
 			> $@ || (rm $@ && false)
 endif
 endif
@@ -435,7 +468,8 @@ if HAVE_CXX11
     CPP_INTERFACES = \
 	include/isl/cpp.h \
 	include/isl/cpp-checked.h \
-	include/isl/cpp-checked-conversion.h
+	include/isl/cpp-checked-conversion.h \
+	include/isl/typed_cpp.h
 endif
 endif
 BUILT_SOURCES = gitversion.h $(CPP_INTERFACES)
@@ -478,6 +512,7 @@ EXTRA_DIST = \
 	isl_list_macro.h \
 	isl_list_templ.c \
 	isl_list_templ.h \
+	isl_list_read_templ.c \
 	isl_map_bound_templ.c \
 	isl_map_lexopt_templ.c \
 	isl_maybe_ast_graft_list.h \
@@ -524,6 +559,7 @@ EXTRA_DIST = \
 	isl_multi_unbind_params_templ.c \
 	isl_multi_union_add_templ.c \
 	isl_multi_zero_templ.c \
+	isl_multi_zero_space_templ.c \
 	isl_opt_mpa_templ.c \
 	opt_type.h \
 	print_templ.c \
@@ -549,6 +585,7 @@ EXTRA_DIST = \
 	isl_pw_neg_templ.c \
 	isl_pw_opt_templ.c \
 	isl_pw_pullback_templ.c \
+	isl_pw_range_tuple_id_templ.c \
 	isl_pw_sub_templ.c \
 	isl_pw_union_opt.c \
 	read_in_string_templ.c \
@@ -593,6 +630,7 @@ EXTRA_DIST = \
 	cpp \
 	python \
 	isl_test_cpp-generic.cc \
+	isl_test_cpp_failed.sh \
 	isl_test_python.py \
 	test_inputs
 

@@ -22,7 +22,7 @@ class NameToDIE {
 public:
   NameToDIE() : m_map() {}
 
-  ~NameToDIE() {}
+  ~NameToDIE() = default;
 
   void Dump(lldb_private::Stream *s);
 

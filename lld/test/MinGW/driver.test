@@ -303,3 +303,12 @@ RUN: ld.lld -### -m i386pep foo.o 2>&1 | FileCheck -check-prefix NO-FATAL_WARNIN
 RUN: ld.lld -### -m i386pep foo.o -no-fatal-warnings 2>&1 | FileCheck -check-prefix NO-FATAL_WARNINGS %s
 RUN: ld.lld -### -m i386pep foo.o --no-fatal-warnings 2>&1 | FileCheck -check-prefix NO-FATAL_WARNINGS %s
 NO-FATAL_WARNINGS: -WX:no
+
+RUN: ld.lld -### -m i386pep foo.o 2>&1 | FileCheck -check-prefix NO-FIXUP %s
+NO-FIXUP-NOT: -stdcall-fixup
+
+RUN: ld.lld -### -m i386pep foo.o --enable-stdcall-fixup --disable-stdcall-fixup 2>&1 | FileCheck -check-prefix DISABLE-FIXUP %s
+DISABLE-FIXUP: -stdcall-fixup:no
+
+RUN: ld.lld -### -m i386pep foo.o --disable-stdcall-fixup --enable-stdcall-fixup 2>&1 | FileCheck -check-prefix ENABLE-FIXUP %s
+ENABLE-FIXUP: -stdcall-fixup{{ }}

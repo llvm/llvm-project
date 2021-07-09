@@ -2338,6 +2338,23 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
   if (!reassociationCanBreakAddressingModePattern(ISD::ADD, DL, N0, N1)) {
     if (SDValue RADD = reassociateOps(ISD::ADD, DL, N0, N1, N->getFlags()))
       return RADD;
+
+    // Reassociate (add (or x, c), y) -> (add add(x, y), c)) if (or x, c) is
+    // equivalent to (add x, c).
+    auto ReassociateAddOr = [&](SDValue N0, SDValue N1) {
+      if (N0.getOpcode() == ISD::OR && N0.hasOneUse() &&
+          isConstantOrConstantVector(N0.getOperand(1), /* NoOpaque */ true) &&
+          DAG.haveNoCommonBitsSet(N0.getOperand(0), N0.getOperand(1))) {
+        return DAG.getNode(ISD::ADD, DL, VT,
+                           DAG.getNode(ISD::ADD, DL, VT, N1, N0.getOperand(0)),
+                           N0.getOperand(1));
+      }
+      return SDValue();
+    };
+    if (SDValue Add = ReassociateAddOr(N0, N1))
+      return Add;
+    if (SDValue Add = ReassociateAddOr(N1, N0))
+      return Add;
   }
   // fold ((0-A) + B) -> B-A
   if (N0.getOpcode() == ISD::SUB && isNullOrNullSplat(N0.getOperand(0)))
@@ -3549,7 +3566,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     }
   }
 
-  // canonicalize (sub X, (vscale * C)) to (add X,  (vscale * -C))
+  // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C))
   if (N1.getOpcode() == ISD::VSCALE) {
     const APInt &IntVal = N1.getConstantOperandAPInt(0);
     return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
@@ -4462,6 +4479,10 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
       return DAG.getConstant(0, DL, VT);
   }
 
+  // fold (mulhs c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::MULHS, DL, VT, {N0, N1}))
+    return C;
+
   // fold (mulhs x, 0) -> 0
   if (isNullConstant(N1))
     return N1;
@@ -4509,6 +4530,10 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
         ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       return DAG.getConstant(0, DL, VT);
   }
+
+  // fold (mulhu c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::MULHU, DL, VT, {N0, N1}))
+    return C;
 
   // fold (mulhu x, 0) -> 0
   if (isNullConstant(N1))
@@ -9736,14 +9761,14 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   if (refineUniformBase(BasePtr, Index, DAG)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(
-        DAG.getVTList(MVT::Other), StoreVal.getValueType(), DL, Ops,
+        DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL, Ops,
         MSC->getMemOperand(), MSC->getIndexType(), MSC->isTruncatingStore());
   }
 
   if (refineIndexType(MSC, Index, MSC->isIndexScaled(), DAG)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(
-        DAG.getVTList(MVT::Other), StoreVal.getValueType(), DL, Ops,
+        DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL, Ops,
         MSC->getMemOperand(), MSC->getIndexType(), MSC->isTruncatingStore());
   }
 
@@ -9792,7 +9817,7 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   if (refineUniformBase(BasePtr, Index, DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
-                               PassThru.getValueType(), DL, Ops,
+                               MGT->getMemoryVT(), DL, Ops,
                                MGT->getMemOperand(), MGT->getIndexType(),
                                MGT->getExtensionType());
   }
@@ -9800,7 +9825,7 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   if (refineIndexType(MGT, Index, MGT->isIndexScaled(), DAG)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(DAG.getVTList(N->getValueType(0), MVT::Other),
-                               PassThru.getValueType(), DL, Ops,
+                               MGT->getMemoryVT(), DL, Ops,
                                MGT->getMemOperand(), MGT->getIndexType(),
                                MGT->getExtensionType());
   }
@@ -12031,6 +12056,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
     AddToWorklist(ExtLoad.getNode());
     return SDValue(N, 0);   // Return N so it doesn't get rechecked!
   }
+
   // fold (sext_inreg (zextload x)) -> (sextload x) iff load has one use
   if (ISD::isZEXTLoad(N0.getNode()) && ISD::isUNINDEXEDLoad(N0.getNode()) &&
       N0.hasOneUse() &&
@@ -12921,11 +12947,6 @@ ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
   return DAG.getBuildVector(VT, DL, Ops);
 }
 
-static bool isContractable(SDNode *N) {
-  SDNodeFlags F = N->getFlags();
-  return F.hasAllowContract() || F.hasAllowReassociation();
-}
-
 /// Try to perform FMA combining on a given FADD node.
 SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   SDValue N0 = N->getOperand(0);
@@ -12947,13 +12968,12 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  bool CanFuse = Options.UnsafeFPMath || isContractable(N);
   bool CanReassociate =
       Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
   bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                              CanFuse || HasFMAD);
+                              Options.UnsafeFPMath || HasFMAD);
   // If the addition is not contractable, do not combine.
-  if (!AllowFusionGlobally && !isContractable(N))
+  if (!AllowFusionGlobally && !N->getFlags().hasAllowContract())
     return SDValue();
 
   if (TLI.generateFMAsInMachineCombiner(VT, OptLevel))
@@ -12968,7 +12988,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   auto isContractableFMUL = [AllowFusionGlobally](SDValue N) {
     if (N.getOpcode() != ISD::FMUL)
       return false;
-    return AllowFusionGlobally || isContractable(N.getNode());
+    return AllowFusionGlobally || N->getFlags().hasAllowContract();
   };
   // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
@@ -13157,12 +13177,11 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     return SDValue();
 
   const SDNodeFlags Flags = N->getFlags();
-  bool CanFuse = Options.UnsafeFPMath || isContractable(N);
   bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                              CanFuse || HasFMAD);
+                              Options.UnsafeFPMath || HasFMAD);
 
   // If the subtraction is not contractable, do not combine.
-  if (!AllowFusionGlobally && !isContractable(N))
+  if (!AllowFusionGlobally && !N->getFlags().hasAllowContract())
     return SDValue();
 
   if (TLI.generateFMAsInMachineCombiner(VT, OptLevel))
@@ -13178,7 +13197,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   auto isContractableFMUL = [AllowFusionGlobally](SDValue N) {
     if (N.getOpcode() != ISD::FMUL)
       return false;
-    return AllowFusionGlobally || isContractable(N.getNode());
+    return AllowFusionGlobally || N->getFlags().hasAllowContract();
   };
 
   // fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
@@ -13308,13 +13327,23 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     }
   }
 
+  auto isReassociable = [Options](SDNode *N) {
+    return Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
+  };
+
+  auto isContractableAndReassociableFMUL = [isContractableFMUL,
+                                            isReassociable](SDValue N) {
+    return isContractableFMUL(N) && isReassociable(N.getNode());
+  };
+
   // More folding opportunities when target permits.
-  if (Aggressive) {
+  if (Aggressive && isReassociable(N)) {
+    bool CanFuse = Options.UnsafeFPMath || N->getFlags().hasAllowContract();
     // fold (fsub (fma x, y, (fmul u, v)), z)
     //   -> (fma x, y (fma u, v, (fneg z)))
     if (CanFuse && N0.getOpcode() == PreferredFusedOpcode &&
-        isContractableFMUL(N0.getOperand(2)) && N0->hasOneUse() &&
-        N0.getOperand(2)->hasOneUse()) {
+        isContractableAndReassociableFMUL(N0.getOperand(2)) &&
+        N0->hasOneUse() && N0.getOperand(2)->hasOneUse()) {
       return DAG.getNode(PreferredFusedOpcode, SL, VT, N0.getOperand(0),
                          N0.getOperand(1),
                          DAG.getNode(PreferredFusedOpcode, SL, VT,
@@ -13326,7 +13355,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     // fold (fsub x, (fma y, z, (fmul u, v)))
     //   -> (fma (fneg y), z, (fma (fneg u), v, x))
     if (CanFuse && N1.getOpcode() == PreferredFusedOpcode &&
-        isContractableFMUL(N1.getOperand(2)) &&
+        isContractableAndReassociableFMUL(N1.getOperand(2)) &&
         N1->hasOneUse() && NoSignedZero) {
       SDValue N20 = N1.getOperand(2).getOperand(0);
       SDValue N21 = N1.getOperand(2).getOperand(1);
@@ -13337,7 +13366,6 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
                       DAG.getNode(ISD::FNEG, SL, VT, N20), N21, N0));
     }
 
-
     // fold (fsub (fma x, y, (fpext (fmul u, v))), z)
     //   -> (fma x, y (fma (fpext u), (fpext v), (fneg z)))
     if (N0.getOpcode() == PreferredFusedOpcode &&
@@ -13345,7 +13373,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
       SDValue N02 = N0.getOperand(2);
       if (N02.getOpcode() == ISD::FP_EXTEND) {
         SDValue N020 = N02.getOperand(0);
-        if (isContractableFMUL(N020) &&
+        if (isContractableAndReassociableFMUL(N020) &&
             TLI.isFPExtFoldable(DAG, PreferredFusedOpcode, VT,
                                 N020.getValueType())) {
           return DAG.getNode(
@@ -13369,7 +13397,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
       SDValue N00 = N0.getOperand(0);
       if (N00.getOpcode() == PreferredFusedOpcode) {
         SDValue N002 = N00.getOperand(2);
-        if (isContractableFMUL(N002) &&
+        if (isContractableAndReassociableFMUL(N002) &&
             TLI.isFPExtFoldable(DAG, PreferredFusedOpcode, VT,
                                 N00.getValueType())) {
           return DAG.getNode(
@@ -13391,7 +13419,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
         N1.getOperand(2).getOpcode() == ISD::FP_EXTEND &&
         N1->hasOneUse()) {
       SDValue N120 = N1.getOperand(2).getOperand(0);
-      if (isContractableFMUL(N120) &&
+      if (isContractableAndReassociableFMUL(N120) &&
           TLI.isFPExtFoldable(DAG, PreferredFusedOpcode, VT,
                               N120.getValueType())) {
         SDValue N1200 = N120.getOperand(0);
@@ -13418,7 +13446,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
       SDValue N100 = CvtSrc.getOperand(0);
       SDValue N101 = CvtSrc.getOperand(1);
       SDValue N102 = CvtSrc.getOperand(2);
-      if (isContractableFMUL(N102) &&
+      if (isContractableAndReassociableFMUL(N102) &&
           TLI.isFPExtFoldable(DAG, PreferredFusedOpcode, VT,
                               CvtSrc.getValueType())) {
         SDValue N1020 = N102.getOperand(0);

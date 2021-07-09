@@ -217,10 +217,10 @@ define float @fadd_fma_fmul_fmf(float %a, float %b, float %c, float %d, float %n
 ; CHECK-NEXT:    fmadd s2, s2, s3, s4
 ; CHECK-NEXT:    fmadd s0, s0, s1, s2
 ; CHECK-NEXT:    ret
-  %m1 = fmul float %a, %b
-  %m2 = fmul float %c, %d
+  %m1 = fmul contract float %a, %b
+  %m2 = fmul contract float %c, %d
   %a1 = fadd contract float %m1, %m2
-  %a2 = fadd reassoc float %n0, %a1
+  %a2 = fadd contract reassoc float %n0, %a1
   ret float %a2
 }
 

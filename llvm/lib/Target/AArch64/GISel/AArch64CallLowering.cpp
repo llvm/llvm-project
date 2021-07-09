@@ -66,10 +66,10 @@ static void applyStackPassedSmallTypeDAGHack(EVT OrigVT, MVT &ValVT,
 }
 
 // Account for i1/i8/i16 stack passed value hack
-static uint64_t getStackValueStoreSizeHack(const CCValAssign &VA) {
+static LLT getStackValueStoreTypeHack(const CCValAssign &VA) {
   const MVT ValVT = VA.getValVT();
-  return (ValVT == MVT::i8 || ValVT == MVT::i16) ? ValVT.getStoreSize()
-                                                 : VA.getLocVT().getStoreSize();
+  return (ValVT == MVT::i8 || ValVT == MVT::i16) ? LLT(ValVT)
+                                                 : LLT(VA.getLocVT());
 }
 
 namespace {
@@ -146,9 +146,9 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  uint64_t getStackValueStoreSize(const DataLayout &,
-                                  const CCValAssign &VA) const override {
-    return getStackValueStoreSizeHack(VA);
+  LLT getStackValueStoreType(const DataLayout &,
+                             const CCValAssign &VA) const override {
+    return getStackValueStoreTypeHack(VA);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -157,7 +157,7 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
@@ -170,11 +170,9 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     if (VA.getValVT() == MVT::i8 || VA.getValVT() == MVT::i16)
       std::swap(ValTy, LocTy);
 
-    MemSize = LocTy.getSizeInBytes();
-
     auto MMO = MF.getMachineMemOperand(
-        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant,
-        MemSize, inferAlignFromPtrInfo(MF, MPO));
+        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, LocTy,
+        inferAlignFromPtrInfo(MF, MPO));
 
     if (RealRegTy.getSizeInBits() == ValTy.getSizeInBits()) {
       // No extension information, or no extension necessary. Load into the
@@ -264,9 +262,9 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   /// we invert the interpretation of ValVT and LocVT in certain cases. This is
   /// for compatability with the DAG call lowering implementation, which we're
   /// currently building on top of.
-  uint64_t getStackValueStoreSize(const DataLayout &,
-                                  const CCValAssign &VA) const override {
-    return getStackValueStoreSizeHack(VA);
+  LLT getStackValueStoreType(const DataLayout &,
+                             const CCValAssign &VA) const override {
+    return getStackValueStoreTypeHack(VA);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -276,18 +274,18 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
-    auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size,
+    auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, MemTy,
                                        inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
   }
 
   void assignValueToAddress(const CallLowering::ArgInfo &Arg, unsigned RegIndex,
-                            Register Addr, uint64_t MemSize,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
-    unsigned MaxSize = MemSize * 8;
+                            Register Addr, LLT MemTy, MachinePointerInfo &MPO,
+                            CCValAssign &VA) override {
+    unsigned MaxSize = MemTy.getSizeInBytes() * 8;
     // For varargs, we always want to extend them to 8 bytes, in which case
     // we disable setting a max.
     if (!Arg.IsFixed)
@@ -300,7 +298,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 
       if (VA.getValVT() == MVT::i8 || VA.getValVT() == MVT::i16) {
         std::swap(ValVT, LocVT);
-        MemSize = VA.getValVT().getStoreSize();
+        MemTy = LLT(VA.getValVT());
       }
 
       ValVReg = extendRegister(ValVReg, VA, MaxSize);
@@ -310,10 +308,10 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
         ValVReg = MIRBuilder.buildTrunc(RegTy, ValVReg).getReg(0);
     } else {
       // The store does not cover the full allocated stack slot.
-      MemSize = VA.getValVT().getStoreSize();
+      MemTy = LLT(VA.getValVT());
     }
 
-    assignValueToAddress(ValVReg, Addr, MemSize, MPO, VA);
+    assignValueToAddress(ValVReg, Addr, MemTy, MPO, VA);
   }
 
   MachineInstrBuilder MIB;

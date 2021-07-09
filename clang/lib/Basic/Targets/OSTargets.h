@@ -675,6 +675,7 @@ protected:
     Builder.defineMacro("_POWER");
 
     Builder.defineMacro("_AIX");
+    Builder.defineMacro("__TOS_AIX__");
 
     if (Opts.C11) {
       Builder.defineMacro("__STDC_NO_ATOMICS__");
@@ -700,6 +701,7 @@ protected:
     if (OsVersion >= std::make_pair(6, 1)) Builder.defineMacro("_AIX61");
     if (OsVersion >= std::make_pair(7, 1)) Builder.defineMacro("_AIX71");
     if (OsVersion >= std::make_pair(7, 2)) Builder.defineMacro("_AIX72");
+    if (OsVersion >= std::make_pair(7, 3)) Builder.defineMacro("_AIX73");
 
     // FIXME: Do not define _LONG_LONG when -fno-long-long is specified.
     Builder.defineMacro("_LONG_LONG");
@@ -948,8 +950,16 @@ class LLVM_LIBRARY_VISIBILITY EmscriptenTargetInfo
   }
 
 public:
-  explicit EmscriptenTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : WebAssemblyOSTargetInfo<Target>(Triple, Opts) {}
+  explicit EmscriptenTargetInfo(const llvm::Triple &Triple,
+                                const TargetOptions &Opts)
+      : WebAssemblyOSTargetInfo<Target>(Triple, Opts) {
+    // Keeping the alignment of long double to 8 bytes even though its size is
+    // 16 bytes allows emscripten to have an 8-byte-aligned max_align_t which
+    // in turn gives is a 8-byte aligned malloc.
+    // Emscripten's ABI is unstable and we may change this back to 128 to match
+    // the WebAssembly default in the future.
+    this->LongDoubleAlign = 64;
+  }
 };
 
 } // namespace targets

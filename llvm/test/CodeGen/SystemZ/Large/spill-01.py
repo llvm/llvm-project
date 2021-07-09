@@ -1,5 +1,5 @@
 # Test cases where MVC is used for spill slots that end up being out of range.
-# RUN: python %s | llc -mtriple=s390x-linux-gnu | FileCheck %s
+# RUN: %python %s | llc -mtriple=s390x-linux-gnu | FileCheck %s
 
 # There are 8 usable call-saved GPRs, two of which are needed for the base
 # registers.  The first 160 bytes of the frame are needed for the ABI

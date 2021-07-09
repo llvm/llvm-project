@@ -1,4 +1,4 @@
-include(AddLLVM) # for configure_lit_site_cfg and add_lit_target
+include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
 macro(pythonize_bool var)
   if (${var})
     set(${var} True)
@@ -88,6 +88,10 @@ endif()
 
 if (TARGET_TRIPLE)
   serialize_lit_param(target_triple "\"${TARGET_TRIPLE}\"")
+endif()
+
+if (LIBCXXABI_BUILD_32_BITS)
+  serialize_lit_param(enable_32bit True)
 endif()
 
 configure_lit_site_cfg(

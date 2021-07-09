@@ -80,6 +80,7 @@ FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *createAMDGPUReplaceLDSUseWithPointerPass();
 ModulePass *createAMDGPULowerModuleLDSPass();
 FunctionPass *createSIModeRegisterPass();
+FunctionPass *createGCNPreRAOptimizationsPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass(TargetMachine &TM) : TM(TM) {}
@@ -388,6 +389,9 @@ extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
+
+void initializeGCNPreRAOptimizationsPass(PassRegistry &);
+extern char &GCNPreRAOptimizationsID;
 
 namespace AMDGPU {
 enum TargetIndex {

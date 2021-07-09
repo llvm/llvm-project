@@ -10,7 +10,7 @@
 ; - available_externally linkage
 ; - reference from @llvm.used
 ; CHECK:      @llvm.used = appending global [1 x i32*] [i32* @g2]
-; CHECK-NEXT: @g1 = external dso_local global i32, align 4
+; CHECK-NEXT: @g1 = external global i32, align 4
 ; CHECK-NEXT: @g2 = available_externally global i32 42, align 4
 ; CHECK-NEXT: @g3 = available_externally global i32 42, align 4
 

@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -Wincompatible-pointer-types
+// RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -verify %s -Wincompatible-pointer-types
 
 int var __attribute__((overloadable)); // expected-error{{'overloadable' attribute only applies to functions}}
+void bad_attr_target(int) [[clang::overloadable]]; // expected-error{{'overloadable' attribute cannot be applied to types}}
 void params(void) __attribute__((overloadable(12))); // expected-error {{'overloadable' attribute takes no arguments}}
 
 int *f(int) __attribute__((overloadable)); // expected-note{{previous overload of function is here}}

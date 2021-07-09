@@ -21,7 +21,7 @@ class Terminal {
 public:
   Terminal(int fd = -1) : m_fd(fd) {}
 
-  ~Terminal() {}
+  ~Terminal() = default;
 
   bool IsATerminal() const;
 

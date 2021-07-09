@@ -24,7 +24,7 @@
 //               ios_base::iostate& err, tm *t, char format, char modifier = 0) const;
 
 // TODO: investigation needed
-// XFAIL: linux-gnu
+// XFAIL: target={{.*}}-linux-gnu{{.*}}
 
 #include <locale>
 #include <cassert>

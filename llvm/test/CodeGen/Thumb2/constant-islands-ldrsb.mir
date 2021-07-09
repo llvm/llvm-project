@@ -23,13 +23,13 @@ body:             |
   bb.0:
     $sp = frame-setup tSUBspi $sp, 3, 14 /* CC::al */, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 12
-    renamable $r0 = t2LDRSBpci %const.0, 14 /* CC::al */, $noreg :: (dereferenceable load 1, align 4)
+    renamable $r0 = t2LDRSBpci %const.0, 14 /* CC::al */, $noreg :: (dereferenceable load (s8), align 4)
     renamable $r1 = tMOVr $sp, 14 /* CC::al */, $noreg
     tCMPr killed renamable $r1, killed renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
     $r1 = t2MOVi16 target-flags(arm-lo16) @t2LDRSBpci, 14 /* CC::al */, $noreg
     renamable $r0 = t2CSINC $zr, $zr, 3, implicit killed $cpsr
     $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @t2LDRSBpci, 14 /* CC::al */, $noreg
-    tSTRi killed renamable $r0, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store 4)
+    tSTRi killed renamable $r0, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32))
     $sp = frame-destroy tADDspi $sp, 3, 14 /* CC::al */, $noreg
     tBX_RET 14 /* CC::al */, $noreg
 
@@ -46,13 +46,13 @@ body:             |
   bb.0:
     $sp = frame-setup tSUBspi $sp, 3, 14 /* CC::al */, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 12
-    renamable $r0 = t2LDRSHpci %const.0, 14 /* CC::al */, $noreg :: (dereferenceable load 1, align 4)
+    renamable $r0 = t2LDRSHpci %const.0, 14 /* CC::al */, $noreg :: (dereferenceable load (s8), align 4)
     renamable $r1 = tMOVr $sp, 14 /* CC::al */, $noreg
     tCMPr killed renamable $r1, killed renamable $r0, 14 /* CC::al */, $noreg, implicit-def $cpsr
     $r1 = t2MOVi16 target-flags(arm-lo16) @t2LDRSHpci, 14 /* CC::al */, $noreg
     renamable $r0 = t2CSINC $zr, $zr, 3, implicit killed $cpsr
     $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @t2LDRSHpci, 14 /* CC::al */, $noreg
-    tSTRi killed renamable $r0, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store 4)
+    tSTRi killed renamable $r0, killed renamable $r1, 0, 14 /* CC::al */, $noreg :: (store (s32))
     $sp = frame-destroy tADDspi $sp, 3, 14 /* CC::al */, $noreg
     tBX_RET 14 /* CC::al */, $noreg
 

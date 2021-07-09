@@ -69,16 +69,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_float_align1
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @float_align1
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @float_align1, align 1)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @float_align1, align 1)
     ; MIPS32: $f0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $f0
     ; MIPS32R6-LABEL: name: load_float_align1
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @float_align1
-    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @float_align1, align 1)
+    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @float_align1, align 1)
     ; MIPS32R6: $f0 = COPY [[LOAD]](s32)
     ; MIPS32R6: RetRA implicit $f0
     %1:_(p0) = G_GLOBAL_VALUE @float_align1
-    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @float_align1, align 1)
+    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @float_align1, align 1)
     $f0 = COPY %0(s32)
     RetRA implicit $f0
 
@@ -91,16 +91,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_float_align2
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @float_align2
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @float_align2, align 2)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @float_align2, align 2)
     ; MIPS32: $f0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $f0
     ; MIPS32R6-LABEL: name: load_float_align2
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @float_align2
-    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @float_align2, align 2)
+    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @float_align2, align 2)
     ; MIPS32R6: $f0 = COPY [[LOAD]](s32)
     ; MIPS32R6: RetRA implicit $f0
     %1:_(p0) = G_GLOBAL_VALUE @float_align2
-    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @float_align2, align 2)
+    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @float_align2, align 2)
     $f0 = COPY %0(s32)
     RetRA implicit $f0
 
@@ -113,16 +113,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_float_align4
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @float_align4
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @float_align4)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @float_align4)
     ; MIPS32: $f0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $f0
     ; MIPS32R6-LABEL: name: load_float_align4
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @float_align4
-    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @float_align4)
+    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @float_align4)
     ; MIPS32R6: $f0 = COPY [[LOAD]](s32)
     ; MIPS32R6: RetRA implicit $f0
     %1:_(p0) = G_GLOBAL_VALUE @float_align4
-    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @float_align4)
+    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @float_align4)
     $f0 = COPY %0(s32)
     RetRA implicit $f0
 
@@ -135,16 +135,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_float_align8
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @float_align8
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @float_align8, align 8)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @float_align8, align 8)
     ; MIPS32: $f0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $f0
     ; MIPS32R6-LABEL: name: load_float_align8
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @float_align8
-    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @float_align8, align 8)
+    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @float_align8, align 8)
     ; MIPS32R6: $f0 = COPY [[LOAD]](s32)
     ; MIPS32R6: RetRA implicit $f0
     %1:_(p0) = G_GLOBAL_VALUE @float_align8
-    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @float_align8, align 8)
+    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @float_align8, align 8)
     $f0 = COPY %0(s32)
     RetRA implicit $f0
 
@@ -157,16 +157,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i32_align1
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_align1
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @i32_align1, align 1)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align1, align 1)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     ; MIPS32R6-LABEL: name: load_i32_align1
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_align1
-    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @i32_align1, align 1)
+    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align1, align 1)
     ; MIPS32R6: $v0 = COPY [[LOAD]](s32)
     ; MIPS32R6: RetRA implicit $v0
     %1:_(p0) = G_GLOBAL_VALUE @i32_align1
-    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @i32_align1, align 1)
+    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @i32_align1, align 1)
     $v0 = COPY %0(s32)
     RetRA implicit $v0
 
@@ -179,16 +179,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i32_align2
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_align2
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @i32_align2, align 2)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align2, align 2)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     ; MIPS32R6-LABEL: name: load_i32_align2
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_align2
-    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @i32_align2, align 2)
+    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align2, align 2)
     ; MIPS32R6: $v0 = COPY [[LOAD]](s32)
     ; MIPS32R6: RetRA implicit $v0
     %1:_(p0) = G_GLOBAL_VALUE @i32_align2
-    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @i32_align2, align 2)
+    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @i32_align2, align 2)
     $v0 = COPY %0(s32)
     RetRA implicit $v0
 
@@ -201,16 +201,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i32_align4
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_align4
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @i32_align4)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align4)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     ; MIPS32R6-LABEL: name: load_i32_align4
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_align4
-    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @i32_align4)
+    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align4)
     ; MIPS32R6: $v0 = COPY [[LOAD]](s32)
     ; MIPS32R6: RetRA implicit $v0
     %1:_(p0) = G_GLOBAL_VALUE @i32_align4
-    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @i32_align4)
+    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @i32_align4)
     $v0 = COPY %0(s32)
     RetRA implicit $v0
 
@@ -223,16 +223,16 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: load_i32_align8
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_align8
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @i32_align8, align 8)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align8, align 8)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     ; MIPS32R6-LABEL: name: load_i32_align8
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i32_align8
-    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @i32_align8, align 8)
+    ; MIPS32R6: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load (s32) from @i32_align8, align 8)
     ; MIPS32R6: $v0 = COPY [[LOAD]](s32)
     ; MIPS32R6: RetRA implicit $v0
     %1:_(p0) = G_GLOBAL_VALUE @i32_align8
-    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load 4 from @i32_align8, align 8)
+    %0:_(s32) = G_LOAD %1(p0) :: (dereferenceable load (s32) from @i32_align8, align 8)
     $v0 = COPY %0(s32)
     RetRA implicit $v0
 

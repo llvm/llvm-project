@@ -106,6 +106,27 @@ define <vscale x 2 x i64> @masked_sgather_nxv2i32(<vscale x 2 x i32*> %ptrs, <vs
   ret <vscale x 2 x i64> %vals.sext
 }
 
+define <vscale x 2 x i64> @masked_gather_passthru(<vscale x 2 x i32*> %ptrs, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthru) {
+; CHECK-LABEL: masked_gather_passthru:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [z0.d]
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %vals = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptrs, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthru)
+  %vals.sext = sext <vscale x 2 x i32> %vals to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %vals.sext
+}
+
+define <vscale x 2 x i64> @masked_gather_passthru_0(<vscale x 2 x i32*> %ptrs, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_gather_passthru_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [z0.d]
+; CHECK-NEXT:    ret
+  %vals = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptrs, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> zeroinitializer)
+  %vals.sext = sext <vscale x 2 x i32> %vals to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %vals.sext
+}
+
 declare <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x i8*>, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
 declare <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x i16*>, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
 declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)

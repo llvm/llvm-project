@@ -458,7 +458,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
 
     // Address of pointer on the host and device, respectively.
     void *Pointer_HstPtrBegin, *PointerTgtPtrBegin;
-    bool IsNew, Pointer_IsNew;
+    TargetPointerResultTy Pointer_TPR;
     bool IsHostPtr = false;
     bool IsImplicit = arg_types[i] & OMP_TGT_MAPTYPE_IMPLICIT;
     // Force the creation of a device side copy of the data when:
@@ -487,10 +487,11 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       // entry for a global that might not already be allocated by the time the
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
-      PointerTgtPtrBegin = Device.getOrAllocTgtPtr(
-          HstPtrBase, HstPtrBase, sizeof(void *), nullptr, Pointer_IsNew,
-          IsHostPtr, IsImplicit, UpdateRef, HasCloseModifier,
-          HasPresentModifier);
+      Pointer_TPR = Device.getOrAllocTgtPtr(
+          HstPtrBase, HstPtrBase, sizeof(void *), nullptr, IsImplicit,
+          UpdateRef, HasCloseModifier, HasPresentModifier);
+      PointerTgtPtrBegin = Pointer_TPR.TargetPointer;
+      IsHostPtr = Pointer_TPR.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
         REPORT("Call to getOrAllocTgtPtr returned null pointer (%s).\n",
                HasPresentModifier ? "'present' map type modifier"
@@ -500,7 +501,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       DP("There are %zu bytes allocated at target address " DPxMOD " - is%s new"
          "\n",
          sizeof(void *), DPxPTR(PointerTgtPtrBegin),
-         (Pointer_IsNew ? "" : " not"));
+         (Pointer_TPR.Flags.IsNewEntry ? "" : " not"));
       Pointer_HstPtrBegin = HstPtrBase;
       // modify current entry.
       HstPtrBase = *(void **)HstPtrBase;
@@ -510,9 +511,11 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
           (!FromMapper || i != 0); // subsequently update ref count of pointee
     }
 
-    void *TgtPtrBegin = Device.getOrAllocTgtPtr(
-        HstPtrBegin, HstPtrBase, data_size, HstPtrName, IsNew, IsHostPtr,
-        IsImplicit, UpdateRef, HasCloseModifier, HasPresentModifier);
+    auto TPR = Device.getOrAllocTgtPtr(HstPtrBegin, HstPtrBase, data_size,
+                                       HstPtrName, IsImplicit, UpdateRef,
+                                       HasCloseModifier, HasPresentModifier);
+    void *TgtPtrBegin = TPR.TargetPointer;
+    IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
     // NULL, so getOrAlloc() returning NULL is not an error.
     if (!TgtPtrBegin && (data_size || HasPresentModifier)) {
@@ -523,7 +526,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
     }
     DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
        " - is%s new\n",
-       data_size, DPxPTR(TgtPtrBegin), (IsNew ? "" : " not"));
+       data_size, DPxPTR(TgtPtrBegin), (TPR.Flags.IsNewEntry ? "" : " not"));
 
     if (arg_types[i] & OMP_TGT_MAPTYPE_RETURN_PARAM) {
       uintptr_t Delta = (uintptr_t)HstPtrBegin - (uintptr_t)HstPtrBase;
@@ -536,7 +539,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       bool copy = false;
       if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
           HasCloseModifier) {
-        if (IsNew || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS)) {
+        if (TPR.Flags.IsNewEntry || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS)) {
           copy = true;
         } else if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
                    !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {

@@ -216,7 +216,7 @@ class LLVMVectorOfAnyPointersToElt<int num> : LLVMMatchType<num>;
 class LLVMVectorElementType<int num> : LLVMMatchType<num>;
 
 // Match the type of another intrinsic parameter that is expected to be a
-// vector type, but change the element count to be half as many
+// vector type, but change the element count to be half as many.
 class LLVMHalfElementsVectorType<int num> : LLVMMatchType<num>;
 
 // Match the type of another intrinsic parameter that is expected to be a
@@ -1368,6 +1368,32 @@ def int_experimental_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                         [], [IntrNoMem]>;
 
 //===---------------- Vector Predication Intrinsics --------------===//
+// Memory Intrinsics
+def int_vp_store : DefaultAttrsIntrinsic<[],
+                             [ llvm_anyvector_ty,
+                               LLVMAnyPointerType<LLVMMatchType<0>>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<1>>, IntrNoSync, IntrWriteMem, IntrArgMemOnly, IntrWillReturn ]>;
+
+def int_vp_load  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
+                             [ LLVMAnyPointerType<LLVMMatchType<0>>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
+
+def int_vp_gather: DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
+                             [ LLVMVectorOfAnyPointersToElt<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ IntrReadMem, IntrNoSync, IntrWillReturn, IntrArgMemOnly ]>;
+
+def int_vp_scatter: DefaultAttrsIntrinsic<[],
+                              [ llvm_anyvector_ty,
+                                LLVMVectorOfAnyPointersToElt<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty],
+                              [ IntrArgMemOnly, IntrNoSync, IntrWillReturn ]>; // TODO allow IntrNoCapture for vectors of pointers
 
 // Speculatable Binary operators
 let IntrProperties = [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] in {

@@ -12,13 +12,13 @@ define i8* @test1(i8** %arg1, i8* %arg2) {
   ; CHECK:   liveins: $rdi, $rsi
   ; CHECK:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 0, $noreg :: (load 8 from %ir.arg1)
+  ; CHECK:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY1]], 1, $noreg, 0, $noreg :: (load (s64) from %ir.arg1)
   ; CHECK:   [[SUB64rr:%[0-9]+]]:gr64 = SUB64rr [[MOV64rm]], [[COPY]], implicit-def $eflags
   ; CHECK:   JCC_1 %bb.2, 4, implicit $eflags
   ; CHECK:   JMP_1 %bb.1
   ; CHECK: bb.1.bb100:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   MOV64mi32 [[COPY1]], 1, $noreg, 0, $noreg, 0 :: (store 8 into %ir.arg1)
+  ; CHECK:   MOV64mi32 [[COPY1]], 1, $noreg, 0, $noreg, 0 :: (store (s64) into %ir.arg1)
   ; CHECK:   JMP_1 %bb.3
   ; CHECK: bb.2.bb106:
   ; CHECK:   successors: %bb.3(0x80000000)

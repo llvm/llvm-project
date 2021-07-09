@@ -251,7 +251,7 @@ public:
     lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
     size_t address_byte_size = 0;
 
-    TargetInfo() {}
+    TargetInfo() = default;
 
     bool IsValid() {
       return (byte_order != lldb::eByteOrderInvalid && address_byte_size != 0);
@@ -308,7 +308,7 @@ private:
   /// The following values should not live beyond parsing
   class ParserVars {
   public:
-    ParserVars() {}
+    ParserVars() = default;
 
     Target *GetTarget() {
       if (m_exe_ctx.GetTargetPtr())

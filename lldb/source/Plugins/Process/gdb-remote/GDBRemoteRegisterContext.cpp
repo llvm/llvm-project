@@ -50,7 +50,7 @@ GDBRemoteRegisterContext::GDBRemoteRegisterContext(
 }
 
 // Destructor
-GDBRemoteRegisterContext::~GDBRemoteRegisterContext() {}
+GDBRemoteRegisterContext::~GDBRemoteRegisterContext() = default;
 
 void GDBRemoteRegisterContext::InvalidateAllRegisters() {
   SetAllRegisterValid(false);

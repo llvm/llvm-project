@@ -40,10 +40,10 @@ body:             |
     ; CHECK:    liveins: $x3, $x29, $cr2, $cr4
 
     ; CHECK:     $x12 = MFCR8 implicit killed $cr2, implicit killed $cr4
-    ; CHECK-DAG: STD killed $x29, -24, $x1 :: (store 8 into %fixed-stack.0)
+    ; CHECK-DAG: STD killed $x29, -24, $x1 :: (store (s64) into %fixed-stack.0)
     ; CHECK-DAG: STW8 killed $x12, 8, $x1
 
-    ; CHECK:     $x29 = LD -24, $x1 :: (load 8 from %fixed-stack.0)
+    ; CHECK:     $x29 = LD -24, $x1 :: (load (s64) from %fixed-stack.0)
     ; CHECK:     $x12 = LWZ8 8, $x1
     ; CHECK:     $cr2 = MTOCRF8 $x12
     ; CHECK:     $cr4 = MTOCRF8 killed $x12
@@ -83,10 +83,10 @@ body:             |
     ; SAVEONE:     $x12 = MFOCRF8 killed $cr2
     ; SAVEALL:     $x12 = MFCR8 implicit killed $cr2
 
-    ; CHECK-DAG: STD killed $x14, -144, $x1 :: (store 8 into %fixed-stack.0, align 16)
+    ; CHECK-DAG: STD killed $x14, -144, $x1 :: (store (s64) into %fixed-stack.0, align 16)
     ; CHECK-DAG: STW8 killed $x12, 8, $x1
 
-    ; CHECK:     $x14 = LD -144, $x1 :: (load 8 from %fixed-stack.0, align 16)
+    ; CHECK:     $x14 = LD -144, $x1 :: (load (s64) from %fixed-stack.0, align 16)
     ; CHECK:     $x12 = LWZ8 8, $x1
     ; CHECK:     $cr2 = MTOCRF8 killed $x12
 

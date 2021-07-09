@@ -11,11 +11,11 @@
 #define _LIBCPP___ITERATOR_BACK_INSERT_ITERATOR_H
 
 #include <__config>
-#include <__iterator/iterator_traits.h>
 #include <__iterator/iterator.h>
+#include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
+#include <__utility/move.h>
 #include <cstddef>
-#include <utility> // std::move
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

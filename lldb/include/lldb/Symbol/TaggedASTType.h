@@ -27,7 +27,7 @@ public:
 
   TaggedASTType() : CompilerType() {}
 
-  virtual ~TaggedASTType() {}
+  virtual ~TaggedASTType() = default;
 
   TaggedASTType<C> &operator=(const TaggedASTType<C> &tw) {
     CompilerType::operator=(tw);

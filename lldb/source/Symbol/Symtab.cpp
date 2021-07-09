@@ -40,7 +40,7 @@ Symtab::Symtab(ObjectFile *objfile)
       lldb::eFunctionNameTypeSelector, UniqueCStringMap<uint32_t>()));
 }
 
-Symtab::~Symtab() {}
+Symtab::~Symtab() = default;
 
 void Symtab::Reserve(size_t count) {
   // Clients should grab the mutex from this symbol table and lock it manually
@@ -301,7 +301,7 @@ void Symtab::InitNameIndexes() {
       // the trampoline symbols to be searchable by name we can remove this and
       // then possibly add a new bool to any of the Symtab functions that
       // lookup symbols by name to indicate if they want trampolines.
-      if (symbol->IsTrampoline() || symbol->IsSynthetic())
+      if (symbol->IsTrampoline())
         continue;
 
       // If the symbol's name string matched a Mangled::ManglingScheme, it is
@@ -628,36 +628,6 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
   }
 }
 
-uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
-                                std::vector<uint32_t> &indexes) {
-  auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
-  const uint32_t count = name_to_index.GetValues(symbol_name, indexes);
-  if (count)
-    return count;
-  // Synthetic symbol names are not added to the name indexes, but they start
-  // with a prefix and end with a the symbol UserID. This allows users to find
-  // these symbols without having to add them to the name indexes. These
-  // queries will not happen very often since the names don't mean anything, so
-  // performance is not paramount in this case.
-  llvm::StringRef name = symbol_name.GetStringRef();
-  // String the synthetic prefix if the name starts with it.
-  if (!name.consume_front(Symbol::GetSyntheticSymbolPrefix()))
-    return 0; // Not a synthetic symbol name
-
-  // Extract the user ID from the symbol name
-  unsigned long long uid = 0;
-  if (getAsUnsignedInteger(name, /*Radix=*/10, uid))
-    return 0; // Failed to extract the user ID as an integer
-  Symbol *symbol = FindSymbolByID(uid);
-  if (symbol == nullptr)
-    return 0;
-  const uint32_t symbol_idx = GetIndexForSymbol(symbol);
-  if (symbol_idx == UINT32_MAX)
-    return 0;
-  indexes.push_back(symbol_idx);
-  return 1;
-}
-
 uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -667,7 +637,8 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
     if (!m_name_indexes_computed)
       InitNameIndexes();
 
-    return GetNameIndexes(symbol_name, indexes);
+    auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
+    return name_to_index.GetValues(symbol_name, indexes);
   }
   return 0;
 }
@@ -684,9 +655,10 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
     if (!m_name_indexes_computed)
       InitNameIndexes();
 
+    auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
     std::vector<uint32_t> all_name_indexes;
     const size_t name_match_count =
-        GetNameIndexes(symbol_name, all_name_indexes);
+        name_to_index.GetValues(symbol_name, all_name_indexes);
     for (size_t i = 0; i < name_match_count; ++i) {
       if (CheckSymbolAtIndex(all_name_indexes[i], symbol_debug_type,
                              symbol_visibility))

@@ -871,7 +871,7 @@ public:
     m_option_group.Finalize();
   }
 
-  ~CommandObjectProcessMinidumpDump() override {}
+  ~CommandObjectProcessMinidumpDump() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
 
@@ -1000,7 +1000,7 @@ public:
         CommandObjectSP(new CommandObjectProcessMinidumpDump(interpreter)));
   }
 
-  ~CommandObjectMultiwordProcessMinidump() override {}
+  ~CommandObjectMultiwordProcessMinidump() override = default;
 };
 
 CommandObject *ProcessMinidump::GetPluginCommandObject() {

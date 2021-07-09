@@ -76,24 +76,24 @@ define dso_local void @fprs_gprs_vecregs() {
 ; MIR32-NOT:     STXVD2X killed $v20
 ; MIR32-NOT:     STXVD2X killed $v26
 ; MIR32-NOT:     STXVD2X killed $v31
-; MIR32-DAG:     STW killed $r14, -216, $r1 :: (store 4 into %fixed-stack.5, align 8)
-; MIR32-DAG:     STW killed $r25, -172, $r1 :: (store 4 into %fixed-stack.4)
-; MIR32-DAG:     STW killed $r31, -148, $r1 :: (store 4 into %fixed-stack.3)
-; MIR32-DAG:     STFD killed $f14, -144, $r1 :: (store 8 into %fixed-stack.2, align 16)
-; MIR32-DAG:     STFD killed $f21, -88, $r1 :: (store 8 into %fixed-stack.1)
-; MIR32-DAG:     STFD killed $f31, -8, $r1 :: (store 8 into %fixed-stack.0)
+; MIR32-DAG:     STW killed $r14, -216, $r1 :: (store (s32) into %fixed-stack.5, align 8)
+; MIR32-DAG:     STW killed $r25, -172, $r1 :: (store (s32) into %fixed-stack.4)
+; MIR32-DAG:     STW killed $r31, -148, $r1 :: (store (s32) into %fixed-stack.3)
+; MIR32-DAG:     STFD killed $f14, -144, $r1 :: (store (s64) into %fixed-stack.2, align 16)
+; MIR32-DAG:     STFD killed $f21, -88, $r1 :: (store (s64) into %fixed-stack.1)
+; MIR32-DAG:     STFD killed $f31, -8, $r1 :: (store (s64) into %fixed-stack.0)
 
 ; MIR32-LABEL:   INLINEASM
 
 ; MIR32-NOT:     $v20 = LXVD2X
 ; MIR32-NOT:     $v26 = LXVD2X
 ; MIR32-NOT:     $v31 = LXVD2X
-; MIR32-DAG:     $r14 = LWZ -216, $r1 :: (load 4 from %fixed-stack.5, align 8)
-; MIR32-DAG:     $r25 = LWZ -172, $r1 :: (load 4 from %fixed-stack.4)
-; MIR32-DAG:     $r31 = LWZ -148, $r1 :: (load 4 from %fixed-stack.3)
-; MIR32-DAG:     $f14 = LFD -144, $r1 :: (load 8 from %fixed-stack.2, align 16)
-; MIR32-DAG:     $f21 = LFD -88, $r1 :: (load 8 from %fixed-stack.1)
-; MIR32-DAG:     $f31 = LFD -8, $r1 :: (load 8 from %fixed-stack.0)
+; MIR32-DAG:     $r14 = LWZ -216, $r1 :: (load (s32) from %fixed-stack.5, align 8)
+; MIR32-DAG:     $r25 = LWZ -172, $r1 :: (load (s32) from %fixed-stack.4)
+; MIR32-DAG:     $r31 = LWZ -148, $r1 :: (load (s32) from %fixed-stack.3)
+; MIR32-DAG:     $f14 = LFD -144, $r1 :: (load (s64) from %fixed-stack.2, align 16)
+; MIR32-DAG:     $f21 = LFD -88, $r1 :: (load (s64) from %fixed-stack.1)
+; MIR32-DAG:     $f31 = LFD -8, $r1 :: (load (s64) from %fixed-stack.0)
 ; MIR32-DAG:     BLR implicit $lr, implicit $rm
 
 ; MIR64-LABEL:   name:            fprs_gprs_vecregs
@@ -105,24 +105,24 @@ define dso_local void @fprs_gprs_vecregs() {
 ; MIR64-NOT:     STXVD2X killed $v20
 ; MIR64-NOT:     STXVD2X killed $v26
 ; MIR64-NOT:     STXVD2X killed $v31
-; MIR64-DAG:     STD killed $x14, -288, $x1 :: (store 8 into %fixed-stack.5, align 16)
-; MIR64-DAG:     STD killed $x25, -200, $x1 :: (store 8 into %fixed-stack.4)
-; MIR64-DAG:     STD killed $x31, -152, $x1 :: (store 8 into %fixed-stack.3)
-; MIR64-DAG:     STFD killed $f14, -144, $x1 :: (store 8 into %fixed-stack.2, align 16)
-; MIR64-DAG:     STFD killed $f21, -88, $x1 :: (store 8 into %fixed-stack.1)
-; MIR64-DAG:     STFD killed $f31, -8, $x1 :: (store 8 into %fixed-stack.0)
+; MIR64-DAG:     STD killed $x14, -288, $x1 :: (store (s64) into %fixed-stack.5, align 16)
+; MIR64-DAG:     STD killed $x25, -200, $x1 :: (store (s64) into %fixed-stack.4)
+; MIR64-DAG:     STD killed $x31, -152, $x1 :: (store (s64) into %fixed-stack.3)
+; MIR64-DAG:     STFD killed $f14, -144, $x1 :: (store (s64) into %fixed-stack.2, align 16)
+; MIR64-DAG:     STFD killed $f21, -88, $x1 :: (store (s64) into %fixed-stack.1)
+; MIR64-DAG:     STFD killed $f31, -8, $x1 :: (store (s64) into %fixed-stack.0)
 
 ; MIR64-LABEL:   INLINEASM
 
 ; MIR64-NOT:     $v20 = LXVD2X
 ; MIR64-NOT:     $v26 = LXVD2X
 ; MIR64-NOT:     $v31 = LXVD2X
-; MIR64-DAG:     $x14 = LD -288, $x1 :: (load 8 from %fixed-stack.5, align 16)
-; MIR64-DAG:     $x25 = LD -200, $x1 :: (load 8 from %fixed-stack.4)
-; MIR64-DAG:     $x31 = LD -152, $x1 :: (load 8 from %fixed-stack.3)
-; MIR64-DAG:     $f14 = LFD -144, $x1 :: (load 8 from %fixed-stack.2, align 16)
-; MIR64-DAG:     $f21 = LFD -88, $x1 :: (load 8 from %fixed-stack.1)
-; MIR64-DAG:     $f31 = LFD -8, $x1 :: (load 8 from %fixed-stack.0)
+; MIR64-DAG:     $x14 = LD -288, $x1 :: (load (s64) from %fixed-stack.5, align 16)
+; MIR64-DAG:     $x25 = LD -200, $x1 :: (load (s64) from %fixed-stack.4)
+; MIR64-DAG:     $x31 = LD -152, $x1 :: (load (s64) from %fixed-stack.3)
+; MIR64-DAG:     $f14 = LFD -144, $x1 :: (load (s64) from %fixed-stack.2, align 16)
+; MIR64-DAG:     $f21 = LFD -88, $x1 :: (load (s64) from %fixed-stack.1)
+; MIR64-DAG:     $f31 = LFD -8, $x1 :: (load (s64) from %fixed-stack.0)
 ; MIR64:         BLR8 implicit $lr8, implicit $rm
 
 ;; We don't have -ppc-full-reg-names on AIX so can't reliably check-not for

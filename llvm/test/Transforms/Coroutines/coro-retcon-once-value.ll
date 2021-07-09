@@ -6,16 +6,16 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 define {i8*, i32} @f(i8* %buffer, i32* %array) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  entry:
+; CHECK-NEXT:  PostSpill:
 ; CHECK-NEXT:    [[ARRAY_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32**
 ; CHECK-NEXT:    store i32* [[ARRAY:%.*]], i32** [[ARRAY_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[ARRAY]], align 4
 ; CHECK-NEXT:    [[LOAD_POS:%.*]] = icmp sgt i32 [[LOAD]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[LOAD_POS]], i32 [[LOAD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[LOAD_POS]], i8* bitcast (void (i8*, i1)* @f.resume.0 to i8*), i8* bitcast (void (i8*, i1)* @f.resume.1 to i8*)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8*, i32 } undef, i8* [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { i8*, i32 } [[TMP2]], i32 [[TMP0]], 1
-; CHECK-NEXT:    ret { i8*, i32 } [[TMP3]]
+; CHECK-NEXT:    [[SPEC_SELECT4:%.*]] = select i1 [[LOAD_POS]], i32 [[LOAD]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[LOAD_POS]], i8* bitcast (void (i8*, i1)* @f.resume.0 to i8*), i8* bitcast (void (i8*, i1)* @f.resume.1 to i8*)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8*, i32 } undef, i8* [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { i8*, i32 } [[TMP1]], i32 [[SPEC_SELECT4]], 1
+; CHECK-NEXT:    ret { i8*, i32 } [[TMP2]]
 ;
 entry:
   %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, i8* %buffer, i8* bitcast (void (i8*, i1)* @prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
@@ -56,8 +56,8 @@ define void @test(i32* %array) {
 ; CHECK-NEXT:    store i32* [[ARRAY:%.*]], i32** [[TMP0]], align 8
 ; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, i32* [[ARRAY]], align 4
 ; CHECK-NEXT:    [[LOAD_POS_I:%.*]] = icmp sgt i32 [[LOAD_I]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[LOAD_POS_I]], i32 [[LOAD_I]], i32 0
-; CHECK-NEXT:    call void @print(i32 [[TMP1]])
+; CHECK-NEXT:    [[SPEC_SELECT4_I:%.*]] = select i1 [[LOAD_POS_I]], i32 [[LOAD_I]], i32 0
+; CHECK-NEXT:    call void @print(i32 [[SPEC_SELECT4_I]])
 ; CHECK-NEXT:    [[CONT_CAST:%.*]] = select i1 [[LOAD_POS_I]], void (i8*, i1)* @f.resume.0, void (i8*, i1)* @f.resume.1
 ; CHECK-NEXT:    call void [[CONT_CAST]](i8* nonnull [[DOTSUB]], i1 zeroext false)
 ; CHECK-NEXT:    ret void

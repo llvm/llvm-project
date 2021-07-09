@@ -19,7 +19,7 @@ define i32 addrspace(4)* @external_constant_got() {
   ; GCN:   liveins: $sgpr30_sgpr31
   ; GCN:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant + 4, target-flags(amdgpu-gotprel32-hi) @external_constant + 12, implicit-def $scc
-  ; GCN:   [[LOAD:%[0-9]+]]:_(p4) = G_LOAD [[SI_PC_ADD_REL_OFFSET]](p4) :: (dereferenceable invariant load 8 from got, addrspace 4)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(p4) = G_LOAD [[SI_PC_ADD_REL_OFFSET]](p4) :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; GCN:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p4)
   ; GCN:   $vgpr0 = COPY [[UV]](s32)
   ; GCN:   $vgpr1 = COPY [[UV1]](s32)
@@ -34,7 +34,7 @@ define i32 addrspace(1)* @external_global_got() {
   ; GCN:   liveins: $sgpr30_sgpr31
   ; GCN:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_global + 4, target-flags(amdgpu-gotprel32-hi) @external_global + 12, implicit-def $scc
-  ; GCN:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[SI_PC_ADD_REL_OFFSET]](p4) :: (dereferenceable invariant load 8 from got, addrspace 4)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[SI_PC_ADD_REL_OFFSET]](p4) :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; GCN:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p1)
   ; GCN:   $vgpr0 = COPY [[UV]](s32)
   ; GCN:   $vgpr1 = COPY [[UV1]](s32)
@@ -49,7 +49,7 @@ define i32 addrspace(999)* @external_other_got() {
   ; GCN:   liveins: $sgpr30_sgpr31
   ; GCN:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_other + 4, target-flags(amdgpu-gotprel32-hi) @external_other + 12, implicit-def $scc
-  ; GCN:   [[LOAD:%[0-9]+]]:_(p999) = G_LOAD [[SI_PC_ADD_REL_OFFSET]](p4) :: (dereferenceable invariant load 8 from got, addrspace 4)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(p999) = G_LOAD [[SI_PC_ADD_REL_OFFSET]](p4) :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; GCN:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](p999)
   ; GCN:   $vgpr0 = COPY [[UV]](s32)
   ; GCN:   $vgpr1 = COPY [[UV1]](s32)
@@ -106,7 +106,7 @@ define i32 addrspace(6)* @external_constant32_got() {
   ; GCN:   liveins: $sgpr30_sgpr31
   ; GCN:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; GCN:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64(p4) = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @external_constant32 + 4, target-flags(amdgpu-gotprel32-hi) @external_constant32 + 12, implicit-def $scc
-  ; GCN:   [[LOAD:%[0-9]+]]:_(p4) = G_LOAD [[SI_PC_ADD_REL_OFFSET]](p4) :: (dereferenceable invariant load 8 from got, addrspace 4)
+  ; GCN:   [[LOAD:%[0-9]+]]:_(p4) = G_LOAD [[SI_PC_ADD_REL_OFFSET]](p4) :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; GCN:   [[EXTRACT:%[0-9]+]]:_(p6) = G_EXTRACT [[LOAD]](p4), 0
   ; GCN:   $vgpr0 = COPY [[EXTRACT]](p6)
   ; GCN:   [[COPY1:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]

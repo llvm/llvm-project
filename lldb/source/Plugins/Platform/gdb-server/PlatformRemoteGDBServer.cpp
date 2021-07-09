@@ -212,7 +212,7 @@ PlatformRemoteGDBServer::PlatformRemoteGDBServer()
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-PlatformRemoteGDBServer::~PlatformRemoteGDBServer() {}
+PlatformRemoteGDBServer::~PlatformRemoteGDBServer() = default;
 
 bool PlatformRemoteGDBServer::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                               ArchSpec &arch) {

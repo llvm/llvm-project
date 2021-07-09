@@ -9,12 +9,12 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -976,13 +976,13 @@ Error LLJITBuilderState::prepareForConstruction() {
       JTMB->setRelocationModel(Reloc::PIC_);
       JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
-          [TPC = this->TPC](
+          [EPC = this->EPC](
               ExecutionSession &ES,
               const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
         std::unique_ptr<ObjectLinkingLayer> ObjLinkingLayer;
-        if (TPC)
+        if (EPC)
           ObjLinkingLayer =
-              std::make_unique<ObjectLinkingLayer>(ES, TPC->getMemMgr());
+              std::make_unique<ObjectLinkingLayer>(ES, EPC->getMemMgr());
         else
           ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
               ES, std::make_unique<jitlink::InProcessMemoryManager>());

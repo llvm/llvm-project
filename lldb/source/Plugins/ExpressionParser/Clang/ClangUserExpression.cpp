@@ -90,7 +90,7 @@ ClangUserExpression::ClangUserExpression(
   }
 }
 
-ClangUserExpression::~ClangUserExpression() {}
+ClangUserExpression::~ClangUserExpression() = default;
 
 void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));

@@ -44,7 +44,7 @@ class DYLDRendezvous {
     uint64_t state = 0;
     lldb::addr_t ldbase = 0;
 
-    Rendezvous() {}
+    Rendezvous() = default;
   };
 
 public:

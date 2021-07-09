@@ -1,7 +1,7 @@
 # Test that inline assembly get the right size value so that a branch across
 # a block containing them gets relaxed.
 
-# RUN: python %s | llc -mtriple=s390x-linux-gnu -mcpu=z196 -enable-post-misched=false \
+# RUN: %python %s | llc -mtriple=s390x-linux-gnu -mcpu=z196 -enable-post-misched=false \
 # RUN:    | FileCheck %s
 
 # Construct:

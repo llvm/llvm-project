@@ -209,7 +209,12 @@ if __name__ == '__main__':
     no_cycles_detected = True
     for fname, entry in graph.items():
         for h in entry.includes:
-            if transitively_includes(graph, h, fname):
+            if h == fname:
+                sys.stderr.write('Cycle detected: %s includes itself\n' % (
+                    get_friendly_id(fname)
+                ))
+                no_cycles_detected = False
+            elif transitively_includes(graph, h, fname):
                 sys.stderr.write('Cycle detected between %s and %s\n' % (
                     get_friendly_id(fname), get_friendly_id(h)
                 ))

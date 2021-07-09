@@ -55,7 +55,7 @@ body:             |
     ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY [[SUBREG_TO_REG1]]
     ; CHECK: [[BFMWri1:%[0-9]+]]:gpr32 = BFMWri [[BFMWri]], [[COPY3]], 16, 15
     ; CHECK: [[COPY4:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: STRWui [[BFMWri1]], [[COPY4]], 0 :: (store 4 into %ir.addr, align 2)
+    ; CHECK: STRWui [[BFMWri1]], [[COPY4]], 0 :: (store (s32) into %ir.addr, align 2)
     ; CHECK: RET_ReallyLR
     %1:fpr(s16) = COPY $h0
     %2:fpr(s16) = COPY $h1
@@ -66,7 +66,7 @@ body:             |
     %5:gpr(s32) = G_INSERT %4, %12(s16), 16
     %0:gpr(s32) = COPY %5(s32)
     %6:gpr(p0) = COPY $x0
-    G_STORE %0(s32), %6(p0) :: (store 4 into %ir.addr, align 2)
+    G_STORE %0(s32), %6(p0) :: (store (s32) into %ir.addr, align 2)
     RET_ReallyLR
 
 ...

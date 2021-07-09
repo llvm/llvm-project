@@ -1,6 +1,6 @@
 # lt~obsolete.m4 -- aclocal satisfying obsolete definitions.    -*-Autoconf-*-
 #
-#   Copyright (C) 2004-2005, 2007, 2009, 2011-2015 Free Software
+#   Copyright (C) 2004-2005, 2007, 2009, 2011-2018 Free Software
 #   Foundation, Inc.
 #   Written by Scott James Remnant, 2004.
 #

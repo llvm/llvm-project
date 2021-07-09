@@ -34,11 +34,6 @@ namespace clangd {
 namespace dex {
 
 /// In-memory Dex trigram-based index implementation.
-// FIXME(kbobyrev): Introduce serialization and deserialization of the symbol
-// index so that it can be loaded from the disk. Since static index is not
-// changed frequently, it's safe to assume that it has to be built only once
-// (when the clangd process starts). Therefore, it can be easier to store built
-// index on disk and then load it if available.
 class Dex : public SymbolIndex {
 public:
   // All data must outlive this index.

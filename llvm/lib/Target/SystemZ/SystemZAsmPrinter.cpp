@@ -541,6 +541,30 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerPATCHPOINT(*MI, Lower);
     return;
 
+  case SystemZ::EXRL_Pseudo: {
+    unsigned TargetInsOpc = MI->getOperand(0).getImm();
+    Register LenMinus1Reg = MI->getOperand(1).getReg();
+    Register DestReg = MI->getOperand(2).getReg();
+    int64_t DestDisp = MI->getOperand(3).getImm();
+    Register SrcReg = MI->getOperand(4).getReg();
+    int64_t SrcDisp = MI->getOperand(5).getImm();
+
+    MCSymbol *DotSym = nullptr;
+    MCInst ET = MCInstBuilder(TargetInsOpc).addReg(DestReg)
+      .addImm(DestDisp).addImm(1).addReg(SrcReg).addImm(SrcDisp);
+    MCInstSTIPair ET_STI(ET, &MF->getSubtarget());
+    EXRLT2SymMap::iterator I = EXRLTargets2Sym.find(ET_STI);
+    if (I != EXRLTargets2Sym.end())
+      DotSym = I->second;
+    else
+      EXRLTargets2Sym[ET_STI] = DotSym = OutContext.createTempSymbol();
+    const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::EXRL).addReg(LenMinus1Reg).addExpr(Dot));
+    return;
+  }
+
   default:
     Lower.lower(MI, LoweredMI);
     break;
@@ -698,6 +722,19 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
                             getSubtargetInfo());
 }
 
+void SystemZAsmPrinter::emitEXRLTargetInstructions() {
+  if (EXRLTargets2Sym.empty())
+    return;
+  // Switch to the .text section.
+  OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
+  for (auto &I : EXRLTargets2Sym) {
+    OutStreamer->emitLabel(I.second);
+    const MCInstSTIPair &MCI_STI = I.first;
+    OutStreamer->emitInstruction(MCI_STI.first, *MCI_STI.second);
+  }
+  EXRLTargets2Sym.clear();
+}
+
 // Convert a SystemZ-specific constant pool modifier into the associated
 // MCSymbolRefExpr variant kind.
 static MCSymbolRefExpr::VariantKind
@@ -727,11 +764,18 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
-  if (ExtraCode)
-    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
+  MachineOperand MO = MI->getOperand(OpNo);
+  if (ExtraCode) {
+    if (ExtraCode[0] == 'N' && !ExtraCode[1] && MO.isReg() &&
+        SystemZ::GR128BitRegClass.contains(MO.getReg()))
+      MO.setReg(MRI.getSubReg(MO.getReg(), SystemZ::subreg_l64));
+    else
+      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  }
   SystemZMCInstLower Lower(MF->getContext(), *this);
-  MCOperand MO(Lower.lowerOperand(MI->getOperand(OpNo)));
-  SystemZInstPrinter::printOperand(MO, MAI, OS);
+  MCOperand MCOp(Lower.lowerOperand(MO));
+  SystemZInstPrinter::printOperand(MCOp, MAI, OS);
   return false;
 }
 
@@ -746,6 +790,7 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
+  emitEXRLTargetInstructions();
   emitStackMaps(SM);
 }
 

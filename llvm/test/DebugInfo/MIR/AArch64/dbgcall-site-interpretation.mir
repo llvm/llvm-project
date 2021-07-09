@@ -143,8 +143,8 @@ body:             |
     DBG_VALUE $w1, $noreg, !18, !DIExpression(), debug-location !21
     DBG_VALUE $w2, $noreg, !19, !DIExpression(), debug-location !21
     DBG_VALUE $w2, $noreg, !19, !DIExpression(), debug-location !21
-    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -4 :: (store 8 into %stack.4), (store 8 into %stack.3)
-    frame-setup STRXui killed $x19, $sp, 2 :: (store 8 into %stack.2)
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -4 :: (store (s64) into %stack.4), (store (s64) into %stack.3)
+    frame-setup STRXui killed $x19, $sp, 2 :: (store (s64) into %stack.2)
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 32
     frame-setup CFI_INSTRUCTION offset $w19, -16
@@ -152,7 +152,7 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $w29, -32
     $w19 = ORRWrs $wzr, $w0, 0
     DBG_VALUE $w19, $noreg, !17, !DIExpression(), debug-location !21
-    STRWui killed renamable $w2, $fp, 7 :: (store 4 into %ir.arg3.addr)
+    STRWui killed renamable $w2, $fp, 7 :: (store (s32) into %ir.arg3.addr)
     renamable $w0 = nsw ADDWri $w0, 2, 0, debug-location !21
     renamable $w1 = nsw SUBWri renamable $w19, 4, 0, debug-location !21
     DBG_VALUE $w1, $noreg, !18, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !21
@@ -160,21 +160,21 @@ body:             |
     $x2 = ADDXri $fp, 28, 0, debug-location !21
     BL @func2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $x2, implicit-def $sp, implicit-def $w0, debug-location !21
     DBG_VALUE $w0, $noreg, !20, !DIExpression(), debug-location !21
-    renamable $w8 = LDRWui $fp, 7, debug-location !21 :: (dereferenceable load 4 from %ir.arg3.addr)
+    renamable $w8 = LDRWui $fp, 7, debug-location !21 :: (dereferenceable load (s32) from %ir.arg3.addr)
     DBG_VALUE $w8, $noreg, !19, !DIExpression(), debug-location !21
-    STRWui killed renamable $w0, $fp, 6, debug-location !21 :: (store 4 into %ir.a)
+    STRWui killed renamable $w0, $fp, 6, debug-location !21 :: (store (s32) into %ir.a)
     renamable $w1 = nsw MOVZWi 12, 4
     DBG_VALUE $fp, $noreg, !20, !DIExpression(DW_OP_plus_uconst, 24, DW_OP_deref), debug-location !21
     $x2 = LDRXui $fp, 24, debug-location !21
     renamable $w0 = nsw MOVZWi 13, 0
     BL @func2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit killed $x2, implicit-def $sp, implicit-def $w0, debug-location !21
-    renamable $w8 = LDRWui $fp, 6, debug-location !21 :: (dereferenceable load 4 from %ir.a)
+    renamable $w8 = LDRWui $fp, 6, debug-location !21 :: (dereferenceable load (s32) from %ir.a)
     DBG_VALUE $w8, $noreg, !20, !DIExpression(), debug-location !21
-    $x19 = frame-destroy LDRXui $sp, 2, debug-location !21 :: (load 8 from %stack.2)
+    $x19 = frame-destroy LDRXui $sp, 2, debug-location !21 :: (load (s64) from %stack.2)
     DBG_VALUE $w0, $noreg, !17, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !21
     $w0 = ADDWrs killed renamable $w8, killed renamable $w0, 0, debug-location !21
     DBG_VALUE $w0, $noreg, !20, !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !21
-    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 4, debug-location !21 :: (load 8 from %stack.4), (load 8 from %stack.3)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 4, debug-location !21 :: (load (s64) from %stack.4), (load (s64) from %stack.3)
     RET undef $lr, implicit killed $w0, debug-location !21
 
 ...

@@ -18,7 +18,7 @@ HostProcess::HostProcess() : m_native_process(new HostNativeProcess) {}
 HostProcess::HostProcess(lldb::process_t process)
     : m_native_process(new HostNativeProcess(process)) {}
 
-HostProcess::~HostProcess() {}
+HostProcess::~HostProcess() = default;
 
 Status HostProcess::Terminate() { return m_native_process->Terminate(); }
 

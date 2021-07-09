@@ -128,6 +128,23 @@ struct LookupResult {
   LookupResult() : Flags({0, 0, 0}), Entry() {}
 };
 
+/// This struct will be returned by \p DeviceTy::getOrAllocTgtPtr which provides
+/// more data than just a target pointer.
+struct TargetPointerResultTy {
+  struct {
+    /// If the map table entry is just created
+    unsigned IsNewEntry : 1;
+    /// If the pointer is actually a host pointer (when unified memory enabled)
+    unsigned IsHostPointer : 1;
+  } Flags = {0, 0};
+
+  /// The iterator to the corresponding map table entry
+  HostDataToTargetListTy::iterator MapTableEntry{};
+
+  /// The corresponding target pointer
+  void *TargetPointer = nullptr;
+};
+
 /// Map for shadow pointers
 struct ShadowPtrValTy {
   void *HstPtrVal;
@@ -179,10 +196,12 @@ struct DeviceTy {
 
   uint64_t getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
-  void *getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-                         map_var_info_t HstPtrName, bool &IsNew,
-                         bool &IsHostPtr, bool IsImplicit, bool UpdateRefCount,
-                         bool HasCloseModifier, bool HasPresentModifier);
+  TargetPointerResultTy getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
+                                         int64_t Size,
+                                         map_var_info_t HstPtrName,
+                                         bool IsImplicit, bool UpdateRefCount,
+                                         bool HasCloseModifier,
+                                         bool HasPresentModifier);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
                        bool UpdateRefCount, bool &IsHostPtr,

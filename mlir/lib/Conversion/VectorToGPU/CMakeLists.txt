@@ -8,7 +8,7 @@ add_mlir_conversion_library(MLIRVectorToGPU
   Core
 
   LINK_LIBS PUBLIC
-  MLIRGPU
+  MLIRGPUOps
   MLIRLLVMIR
   MLIRMemRef
   MLIRTransforms

@@ -479,6 +479,15 @@ error:
 	return NULL;
 }
 
+/* This function performs the same operation as isl_multi_*_from_*_list,
+ * but is considered as a function on an isl_space when exported.
+ */
+__isl_give MULTI(BASE) *FN(isl_space_multi,BASE)(__isl_take isl_space *space,
+	__isl_take LIST(EL) *list)
+{
+	return FN(FN(MULTI(BASE),from),LIST(BASE))(space, list);
+}
+
 __isl_give MULTI(BASE) *FN(MULTI(BASE),drop_dims)(
 	__isl_take MULTI(BASE) *multi,
 	enum isl_dim_type type, unsigned first, unsigned n)

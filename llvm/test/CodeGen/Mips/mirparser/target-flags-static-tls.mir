@@ -153,7 +153,7 @@ body:             |
     %11 = DSLL killed %10, 16
     %12 = DADDiu killed %11, target-flags(mips-abs-hi) @v
     %13 = DSLL killed %12, 16
-    %14 = LW killed %13, target-flags(mips-abs-lo) @v :: (dereferenceable load 4 from @v)
+    %14 = LW killed %13, target-flags(mips-abs-lo) @v :: (dereferenceable load (s32) from @v)
     %0 = ADDu killed %8, killed %14
     %15 = LUi64 target-flags(mips-tprel-hi) @__tls_guard
     %16 = DADDiu killed %15, target-flags(mips-tprel-lo) @__tls_guard
@@ -161,7 +161,7 @@ body:             |
     $v1_64 = COPY %17
     %18 = COPY $v1_64
     %19 = DADDu %18, killed %16
-    %20 = LBu killed %19, 0 :: (dereferenceable load 1 from @__tls_guard)
+    %20 = LBu killed %19, 0 :: (dereferenceable load (s8) from @__tls_guard)
     BEQ killed %20, $zero, %bb.2.init.i.i, implicit-def dead $at
     J %bb.1.entry._ZTW1k.exit_crit_edge, implicit-def dead $at
 
@@ -174,7 +174,7 @@ body:             |
     $v1_64 = COPY %34
     %35 = COPY $v1_64
     %36 = DADDu %35, killed %33
-    %1 = LW killed %36, 0 :: (dereferenceable load 4 from @k)
+    %1 = LW killed %36, 0 :: (dereferenceable load (s32) from @k)
     J %bb.3._ZTW1k.exit, implicit-def dead $at
 
   bb.2.init.i.i:
@@ -187,7 +187,7 @@ body:             |
     %24 = COPY $v1_64
     %25 = DADDu %24, killed %22
     %26 = ADDiu $zero, 1
-    SB killed %26, killed %25, 0 :: (store 1 into @__tls_guard)
+    SB killed %26, killed %25, 0 :: (store (s8) into @__tls_guard)
     %27 = LUi64 target-flags(mips-tprel-hi) @k
     %28 = DADDiu killed %27, target-flags(mips-tprel-lo) @k
     %29 = DADDu %24, killed %28
@@ -197,7 +197,7 @@ body:             |
     JAL @_Z1gi, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %31 = COPY $v0
-    SW %31, killed %29, 0 :: (store 4 into @k)
+    SW %31, killed %29, 0 :: (store (s32) into @k)
     %2 = COPY %31
 
   bb.3._ZTW1k.exit:
@@ -224,10 +224,10 @@ body:             |
   bb.5._ZTW1j.exit:
     %44 = RDHWR64 $hwr29, 0
     $v1_64 = COPY %44
-    %45 = LD %43, target-flags(mips-gottprel) @j :: (load 8)
+    %45 = LD %43, target-flags(mips-gottprel) @j :: (load (s64))
     %46 = COPY $v1_64
     %47 = DADDu %46, killed %45
-    %48 = LW killed %47, 0 :: (dereferenceable load 4 from @j)
+    %48 = LW killed %47, 0 :: (dereferenceable load (s32) from @j)
     %49 = ADDu %4, killed %48
     $v0 = COPY %49
     RetRA implicit $v0

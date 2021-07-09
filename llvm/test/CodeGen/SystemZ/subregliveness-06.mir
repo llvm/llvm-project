@@ -188,47 +188,47 @@ body:             |
     undef %15.subreg_l32:gr64bit = COPY %2
     %17:addr64bit = LGBR killed %15
     %5:addr64bit = LA %17, 1, %18
-    dead %19:grx32bit = LBMux killed %17, 1, %18 :: (volatile load 1 from %ir.tmp12, !tbaa !1)
+    dead %19:grx32bit = LBMux killed %17, 1, %18 :: (volatile load (s8) from %ir.tmp12, !tbaa !1)
     CHIMux %14, 0, implicit-def $cc
     BRC 14, 6, %bb.7, implicit killed $cc
     J %bb.2
   
   bb.2.bb14:
-    %21:addr64bit = LGRL @g_195 :: (dereferenceable load 8 from @g_195, !tbaa !4)
-    dead %22:grx32bit = LBMux %5, 0, $noreg :: (volatile load 1 from %ir.tmp12, !tbaa !1)
-    MVHI %stack.0.tmp, 0, 7 :: (store 4 into %ir.tmp, !tbaa !6)
-    STRL %23, @g_69 :: (store 4 into @g_69, !tbaa !6)
+    %21:addr64bit = LGRL @g_195 :: (dereferenceable load (s64) from @g_195, !tbaa !4)
+    dead %22:grx32bit = LBMux %5, 0, $noreg :: (volatile load (s8) from %ir.tmp12, !tbaa !1)
+    MVHI %stack.0.tmp, 0, 7 :: (store (s32) into %ir.tmp, !tbaa !6)
+    STRL %23, @g_69 :: (store (s32) into @g_69, !tbaa !6)
     undef %24.subreg_l32:gr64bit = COPY %4
-    %27:gr64bit = LLGC %26, 7, $noreg :: (dereferenceable load 1 from @g_352 + 7, !tbaa !8)
+    %27:gr64bit = LLGC %26, 7, $noreg :: (dereferenceable load (s8) from @g_352 + 7, !tbaa !8)
     %28:gr64bit = COPY killed %27
     %28:gr64bit = RNSBG %28, killed %24, 0, 63, 0, implicit-def dead $cc
     CGHI killed %28, 1, implicit-def $cc
     %30:gr64bit = COPY %29
     %30:gr64bit = LOCGHI %30, 1, 14, 6, implicit killed $cc
-    %31:addr64bit = LG killed %21, 0, $noreg :: (load 8 from %ir.tmp15)
-    STG killed %30, killed %31, 0, $noreg :: (store 8 into %ir.tmp22)
+    %31:addr64bit = LG killed %21, 0, $noreg :: (load (s64) from %ir.tmp15)
+    STG killed %30, killed %31, 0, $noreg :: (store (s64) into %ir.tmp22)
     %34:gr32bit = COPY %33
-    %34:gr32bit = X %34, %32, 0, $noreg, implicit-def dead $cc :: (dereferenceable load 4 from @g_334, !tbaa !6)
-    STRL killed %34, @g_334 :: (store 4 into @g_334, !tbaa !6)
+    %34:gr32bit = X %34, %32, 0, $noreg, implicit-def dead $cc :: (dereferenceable load (s32) from @g_334, !tbaa !6)
+    STRL killed %34, @g_334 :: (store (s32) into @g_334, !tbaa !6)
     %35:gr32bit = LLCRMux killed %4
     %36:gr32bit = COPY killed %35
     %36:gr32bit = MHI %36, 26036
-    %7:addr64bit = LG %1, 0, $noreg :: (dereferenceable load 8 from %ir.tmp5)
+    %7:addr64bit = LG %1, 0, $noreg :: (dereferenceable load (s64) from %ir.tmp5)
   
   bb.3.bb28:
     %37:gr32bit = COPY killed %36
     %37:gr32bit = MSR %37, killed %3
     %38:gr32bit = LLHRMux killed %37
-    STRL killed %38, @g_69 :: (store 4 into @g_69, !tbaa !6)
-    MVI %39, 0, 0 :: (store 1 into @g_226, align 2, !tbaa !1)
+    STRL killed %38, @g_69 :: (store (s32) into @g_69, !tbaa !6)
+    MVI %39, 0, 0 :: (store (s8) into @g_226, align 2, !tbaa !1)
     J %bb.4
   
   bb.4.bb32:
-    STHRL %33, @g_1055 :: (store 2 into @g_1055, !tbaa !10)
-    STGRL %29, @g_352 :: (store 8 into @g_352, !tbaa !8)
-    STG %32, undef %43:addr64bit, 0, $noreg :: (store 8 into `i32** undef`)
-    STGRL %44, @g_352 :: (store 8 into @g_352, !tbaa !8)
-    STG %32, $noreg, 0, $noreg :: (store 8 into `i32** null`)
+    STHRL %33, @g_1055 :: (store (s16) into @g_1055, !tbaa !10)
+    STGRL %29, @g_352 :: (store (s64) into @g_352, !tbaa !8)
+    STG %32, undef %43:addr64bit, 0, $noreg :: (store (s64) into `i32** undef`)
+    STGRL %44, @g_352 :: (store (s64) into @g_352, !tbaa !8)
+    STG %32, $noreg, 0, $noreg :: (store (s64) into `i32** null`)
   
   bb.5.bb34:
     successors: %bb.4(0x7c000000), %bb.6(0x04000000)
@@ -238,16 +238,16 @@ body:             |
     J %bb.6
   
   bb.6.bb35:
-    STG %46, undef %47:addr64bit, 0, $noreg :: (store 8 into `i32** undef`)
-    MVI %48, 0, 0 :: (store 1 into @0, align 2, !tbaa !1)
-    STHRL %49, @g_189 :: (store 2 into @g_189, !tbaa !10)
-    MVI %50, 0, 1 :: (store 1 into @g_54, align 2, !tbaa !1)
-    MVI %51, 0, 1 :: (store 1 into @g_747, align 2)
-    MVGHI undef %52:addr64bit, 0, 0 :: (store 8 into `i64* undef`)
-    %53:gr64bit = LG $noreg, 0, $noreg :: (load 8 from %ir.tmp36)
-    %54:addr64bit = LG killed %7, 0, $noreg :: (load 8 from %ir.tmp27)
-    STG killed %53, killed %54, 0, $noreg :: (store 8 into %ir.tmp38)
-    STHRL %14, @g_189 :: (store 2 into @g_189, !tbaa !10)
+    STG %46, undef %47:addr64bit, 0, $noreg :: (store (s64) into `i32** undef`)
+    MVI %48, 0, 0 :: (store (s8) into @0, align 2, !tbaa !1)
+    STHRL %49, @g_189 :: (store (s16) into @g_189, !tbaa !10)
+    MVI %50, 0, 1 :: (store (s8) into @g_54, align 2, !tbaa !1)
+    MVI %51, 0, 1 :: (store (s8) into @g_747, align 2)
+    MVGHI undef %52:addr64bit, 0, 0 :: (store (s64) into `i64* undef`)
+    %53:gr64bit = LG $noreg, 0, $noreg :: (load (s64) from %ir.tmp36)
+    %54:addr64bit = LG killed %7, 0, $noreg :: (load (s64) from %ir.tmp27)
+    STG killed %53, killed %54, 0, $noreg :: (store (s64) into %ir.tmp38)
+    STHRL %14, @g_189 :: (store (s16) into @g_189, !tbaa !10)
     %60:grx32bit = LHIMux 0
     %64:grx32bit = COPY killed %60
     J %bb.8
@@ -259,7 +259,7 @@ body:             |
     successors: %bb.1(0x7fffffff), %bb.9(0x00000001)
   
     %8:grx32bit = COPY killed %64
-    dead %59:grx32bit = LBMux killed %5, 0, $noreg :: (volatile load 1 from %ir.tmp12, !tbaa !1)
+    dead %59:grx32bit = LBMux killed %5, 0, $noreg :: (volatile load (s8) from %ir.tmp12, !tbaa !1)
     %9:grx32bit = COPY killed %2
     %9:grx32bit = AHIMux %9, 1, implicit-def dead $cc
     %58:grx32bit = LHIMux 0

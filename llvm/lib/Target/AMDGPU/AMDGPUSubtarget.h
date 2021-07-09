@@ -55,6 +55,7 @@ protected:
   bool HasVOP3PInsts;
   bool HasMulI24;
   bool HasMulU24;
+  bool HasSMulHi;
   bool HasInv2PiInlineImm;
   bool HasFminFmaxLegacy;
   bool EnablePromoteAlloca;
@@ -160,6 +161,10 @@ public:
 
   bool hasMulU24() const {
     return HasMulU24;
+  }
+
+  bool hasSMulHi() const {
+    return HasSMulHi;
   }
 
   bool hasInv2PiInlineImm() const {

@@ -166,7 +166,7 @@ isl_size polly::getNumScatterDims(const isl::union_map &Schedule) {
     if (Map.is_null())
       continue;
 
-    Dims = std::max(Dims, Map.dim(isl::dim::out));
+    Dims = std::max(Dims, Map.range_tuple_dim());
   }
   return Dims;
 }
@@ -214,7 +214,7 @@ isl::union_map polly::reverseDomain(const isl::union_map &UMap) {
 }
 
 isl::set polly::shiftDim(isl::set Set, int Pos, int Amount) {
-  int NumDims = Set.dim(isl::dim::set);
+  int NumDims = Set.tuple_dim();
   if (Pos < 0)
     Pos = NumDims + Pos;
   assert(Pos < NumDims && "Dimension index must be in range");
@@ -229,7 +229,7 @@ isl::union_set polly::shiftDim(isl::union_set USet, int Pos, int Amount) {
   isl::union_set Result = isl::union_set::empty(USet.get_space());
   for (isl::set Set : USet.get_set_list()) {
     isl::set Shifted = shiftDim(Set, Pos, Amount);
-    Result = Result.add_set(Shifted);
+    Result = Result.unite(Shifted);
   }
   return Result;
 }
@@ -827,7 +827,7 @@ static isl::union_set expand(const isl::union_set &USet) {
   isl::union_set Expanded = isl::union_set::empty(USet.get_space());
   for (isl::set Set : USet.get_set_list()) {
     isl::set SetExpanded = expand(Set);
-    Expanded = Expanded.add_set(SetExpanded);
+    Expanded = Expanded.unite(SetExpanded);
   }
   return Expanded;
 }

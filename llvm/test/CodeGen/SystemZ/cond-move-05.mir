@@ -63,7 +63,7 @@ registers:
   - { id: 10, class: gr64bit }
 body:             |
   bb.0.entry:
-    %0:gr64bit = LGFRL @g_74 :: (dereferenceable load 4 from @g_74)
+    %0:gr64bit = LGFRL @g_74 :: (dereferenceable load (s32) from @g_74)
     undef %3.subreg_l64:gr128bit = LGHI 1
     %3.subreg_h64:gr128bit = LLILL 0
     %3:gr128bit = DLGR %3, %0

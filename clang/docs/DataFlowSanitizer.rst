@@ -191,6 +191,44 @@ the correct labels are propagated.
     return 0;
   }
 
+Origin Tracking
+===============
+
+DataFlowSanitizer can track origins of labeled values. This feature is enabled by
+``-mllvm -dfsan-track-origins=1``. For example,
+
+.. code-block:: console
+
+    % cat test.cc
+    #include <sanitizer/dfsan_interface.h>
+    #include <stdio.h>
+
+    int main(int argc, char** argv) {
+      int i = 0;
+      dfsan_set_label(i_label, &i, sizeof(i));
+      int j = i + 1;
+      dfsan_print_origin_trace(&j, "A flow from i to j");
+      return 0;
+    }
+
+    % clang++ -fsanitize=dataflow -mllvm -dfsan-track-origins=1 -fno-omit-frame-pointer -g -O2 test.cc
+    % ./a.out
+    Taint value 0x1 (at 0x7ffd42bf415c) origin tracking (A flow from i to j)
+    Origin value: 0x13900001, Taint value was stored to memory at
+      #0 0x55676db85a62 in main test.cc:7:7
+      #1 0x7f0083611bbc in __libc_start_main libc-start.c:285
+
+    Origin value: 0x9e00001, Taint value was created at
+      #0 0x55676db85a08 in main test.cc:6:3
+      #1 0x7f0083611bbc in __libc_start_main libc-start.c:285
+
+By ``-mllvm -dfsan-track-origins=1`` DataFlowSanitizer collects only
+intermediate stores a labeled value went through. Origin tracking slows down
+program execution by a factor of 2x on top of the usual DataFlowSanitizer
+slowdown and increases memory overhead by 1x. By ``-mllvm -dfsan-track-origins=2``
+DataFlowSanitizer also collects intermediate loads a labeled value went through.
+This mode slows down program execution by a factor of 4x.
+
 Current status
 ==============
 

@@ -7318,7 +7318,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                         BaseSegmentAddress);
 
   // Sort the symbols by address, just in case they didn't come in that way.
-  llvm::sort(Symbols, SymbolSorter());
+  llvm::stable_sort(Symbols, SymbolSorter());
 
   // Build a data in code table that is sorted on by the address of each entry.
   uint64_t BaseAddress = 0;

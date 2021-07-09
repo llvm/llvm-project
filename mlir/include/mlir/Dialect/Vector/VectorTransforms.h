@@ -33,61 +33,6 @@ void populateVectorToVectorConversionPatterns(
 
 namespace vector {
 
-/// Entry point for unrolling declarative pattern rewrites.
-/// `op` is unrolled to the `targetShape` as follows, for each of its operands:
-///   1. the unrolled type `unrolledVectorType` and number of unrolled instances
-///   `numUnrolledInstances` are computed from the `targetShape`. For now it is
-///   assumed the unrolling factors divide the vector sizes.
-///   2. a fakeFork cast op is inserted that takes the operand and returns
-///   `numUnrolledInstances` results of type `unrolledVectorType`.
-///   3. the original op is cloned `numUnrolledInstances` times, once for each
-///   result of the fakeFork cast op.
-///   4. a fakeJoin cast op takes all these results and merges them into a
-///   single aggregate vector result whose size matches the original
-///   non-unrolled op operand types.
-///
-/// Example:
-///
-///    opA(operand0, operand1)  // numUnrolledInstances = 3
-///
-///            operand0                   operand1
-///               |                          |
-///             fork                       fork
-///        <----------gather all fork ops --------->
-///              /|\                        /|\
-///          f00 f01 f02                f10 f11 f12
-///        <---------- clone op 3 times --------->
-///          opA0(f00, f10), opA1(f01, f11), opA2(f02, f12)
-///                 \            |            /
-///      <-------------------- join ------------------------->
-///
-/// Other local patterns then kick in iteratively (including DCE) and compose
-/// until all the fakeFork and fakeJoin ops are removed.
-///
-/// This will be extended in the future to support more advanced use cases than
-/// simple pointwise ops.
-SmallVector<Value, 1> unrollSingleResultVectorOp(OpBuilder &builder,
-                                                 Operation *op,
-                                                 ArrayRef<int64_t> targetShape);
-
-/// Unroll a transfer_write op. Break up the vector source into a tuple of
-/// vectors matching the given shape. Then store each element with its own
-/// transfer_write. If the transfer_write takes a tensor source, return the
-/// unrolled Value in result.
-///
-/// Example:
-/// vector.transfer_write %A, %M[%c0, %c0] : vector<4x4xf32>, memref<4x4xf32>
-/// ->
-/// %0 = vector.extract_slices %A, [2, 4], [1, 1] :
-///                vector<4x4xf32> into tuple<vector<2x4xf32>, vector<2x4xf32>>
-/// %1 = vector.tuple_get %0, 0 : tuple<vector<2x4xf32>, vector<2x4xf32>>
-/// vector.transfer_write %1, %M[%c0, %c0] : vector<2x4xf32>, memref<4x4xf32>
-/// %2 = vector.tuple_get %0, 1 : tuple<vector<2x4xf32>, vector<2x4xf32>>
-/// vector.transfer_write %2, %M[%c2, %c0] : vector<2x4xf32>, memref<4x4xf32>
-LogicalResult unrollTransferWriteOp(OpBuilder &builder, Operation *op,
-                                    ArrayRef<int64_t> targetShape,
-                                    SmallVector<Value, 1> &result);
-
 /// Options that control the vector unrolling.
 struct UnrollVectorOptions {
   using FilterConstraintFnType = std::function<LogicalResult(Operation *op)>;
@@ -118,53 +63,39 @@ struct UnrollVectorOptions {
     return *this;
   }
 };
-/// Pattern to apply `unrollSingleResultVectorOp` to a `targetShape`
-/// declaratively.
-struct UnrollVectorPattern : public RewritePattern {
-  using FilterConstraintType = std::function<LogicalResult(Operation *op)>;
-  UnrollVectorPattern(MLIRContext *context, UnrollVectorOptions options)
-      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context),
-        options(options) {}
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override {
-    if (options.filterConstraint && failed(options.filterConstraint(op)))
-      return failure();
-    if (!options.nativeShape) {
-      return op->emitError("vector unrolling expects the native shape or native"
-                           "shape call back function to be set");
-    }
-    auto unrollableVectorOp = dyn_cast<VectorUnrollOpInterface>(op);
-    if (!unrollableVectorOp)
-      return failure();
-    auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
-    if (!maybeUnrollShape)
-      return failure();
-    Optional<SmallVector<int64_t, 4>> targetShape = options.nativeShape(op);
-    if (!targetShape)
-      return op->emitError("failed to get target shape for vector unroll");
-    auto maybeShapeRatio = shapeRatio(*maybeUnrollShape, *targetShape);
-    if (!maybeShapeRatio ||
-        llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
-      return failure();
-    if (isa<TransferWriteOp>(op)) {
-      SmallVector<Value, 1> result;
-      if (failed(unrollTransferWriteOp(rewriter, op, *targetShape, result)))
-        return failure();
-      rewriter.replaceOp(op, result);
-      return success();
-    }
-    if (op->getNumResults() != 1)
-      return failure();
-    auto resultVector = unrollSingleResultVectorOp(rewriter, op, *targetShape);
-    if (resultVector.size() != 1)
-      return failure();
-    rewriter.replaceOp(op, resultVector.front());
-    return success();
-  }
 
-private:
-  UnrollVectorOptions options;
-};
+/// Collect a set of pattern to unroll vector operations to a smaller shapes.
+/// `options` structure controls which operations are unrolled and the target
+/// shape.
+/// `op` is unrolled to the `targetShape` as follows, for each of its operands:
+///   1. the unrolled type `unrolledVectorType` and number of unrolled instances
+///   `numUnrolledInstances` are computed from the `targetShape`. For now it is
+///   assumed the unrolling factors divide the vector sizes.
+///   2. ExtractStridedSlice are created to break-up the vector operands.
+///   3. the original op is cloned `numUnrolledInstances` times, once for each
+///   result.
+///   4. InsertStridedSlice are inserted to re-assemble the slices into the
+///   original vectore shape.
+///
+/// Example:
+///
+///    opA(operand0, operand1)  // numUnrolledInstances = 3
+///
+///            operand0                   operand1
+///               |                          |
+///             fork                       fork
+///        <----------gather all fork ops --------->
+///              /|\                        /|\
+///          f00 f01 f02                f10 f11 f12
+///        <---------- clone op 3 times --------->
+///          opA0(f00, f10), opA1(f01, f11), opA2(f02, f12)
+///                 \            |            /
+///      <-------------------- join ------------------------->
+///
+/// Other local patterns then kick in iteratively (including DCE) and compose
+/// to combine the ExtractStridedSlice/InsertStridedSlice.
+void populateVectorUnrollPatterns(RewritePatternSet &patterns,
+                                  const UnrollVectorOptions &options);
 
 /// Split a vector.transfer operation into an in-bounds (i.e., no out-of-bounds
 /// masking) fastpath and a slowpath.
@@ -251,26 +182,6 @@ Optional<DistributeOps>
 distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
                            ArrayRef<Value> id, ArrayRef<int64_t> multiplicity,
                            const AffineMap &map);
-/// Canonicalize an extra element using the result of a pointwise operation.
-/// Transforms:
-/// %v = addf %a, %b : vector32xf32>
-/// %dv = vector.extract_map %v, %id, 32 : vector<32xf32> into vector<1xf32>
-/// to:
-/// %da = vector.extract_map %a, %id, 32 : vector<32xf32> into vector<1xf32>
-/// %db = vector.extract_map %a, %id, 32 : vector<32xf32> into vector<1xf32>
-/// %dv = addf %da, %db : vector<1xf32>
-struct PointwiseExtractPattern : public OpRewritePattern<ExtractMapOp> {
-  using FilterConstraintType = std::function<LogicalResult(ExtractMapOp op)>;
-  PointwiseExtractPattern(
-      MLIRContext *context, FilterConstraintType constraint =
-                                [](ExtractMapOp op) { return success(); })
-      : OpRewritePattern<ExtractMapOp>(context), filter(constraint) {}
-  LogicalResult matchAndRewrite(ExtractMapOp extract,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  FilterConstraintType filter;
-};
 
 /// Implements transfer op write to read forwarding and dead transfer write
 /// optimizations.

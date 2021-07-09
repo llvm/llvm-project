@@ -46,7 +46,7 @@ struct SVR4LibraryInfo {
 // NativeProcessProtocol
 class NativeProcessProtocol {
 public:
-  virtual ~NativeProcessProtocol() {}
+  virtual ~NativeProcessProtocol() = default;
 
   virtual Status Resume(const ResumeActionList &resume_actions) = 0;
 
@@ -217,7 +217,7 @@ public:
   // Callbacks for low-level process state changes
   class NativeDelegate {
   public:
-    virtual ~NativeDelegate() {}
+    virtual ~NativeDelegate() = default;
 
     virtual void InitializeDelegate(NativeProcessProtocol *process) = 0;
 

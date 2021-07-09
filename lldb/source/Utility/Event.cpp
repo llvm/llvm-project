@@ -198,7 +198,7 @@ EventDataStructuredData::EventDataStructuredData(
     : EventData(), m_process_sp(process_sp), m_object_sp(object_sp),
       m_plugin_sp(plugin_sp) {}
 
-EventDataStructuredData::~EventDataStructuredData() {}
+EventDataStructuredData::~EventDataStructuredData() = default;
 
 // EventDataStructuredData member functions
 

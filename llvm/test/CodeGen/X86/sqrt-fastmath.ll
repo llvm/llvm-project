@@ -712,8 +712,8 @@ define <4 x float> @div_sqrt_fabs_v4f32(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX512-NEXT:    retq
   %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
   %a = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
-  %m = fmul reassoc <4 x float> %a, %s
-  %d = fdiv reassoc arcp <4 x float> %x, %m
+  %m = fmul contract reassoc <4 x float> %a, %s
+  %d = fdiv contract reassoc arcp <4 x float> %x, %m
   ret <4 x float> %d
 }
 
@@ -895,8 +895,8 @@ define <4 x float> @div_sqrt_v4f32(<4 x float> %x, <4 x float> %y) {
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %y)
-  %m = fmul reassoc <4 x float> %y, %s
-  %d = fdiv reassoc arcp <4 x float> %x, %m
+  %m = fmul contract reassoc <4 x float> %y, %s
+  %d = fdiv contract reassoc arcp <4 x float> %x, %m
   ret <4 x float> %d
 }
 

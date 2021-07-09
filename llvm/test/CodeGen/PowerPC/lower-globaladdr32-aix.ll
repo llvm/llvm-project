@@ -18,19 +18,19 @@
 
 define void @foo() {
 entry:
-; SMALL: %0:gprc_and_gprc_nor0 = LWZtoc @msg, $r2 :: (load 4 from got)
-; SMALL: %1:gprc = LWZ 0, %0:gprc_and_gprc_nor0 :: (dereferenceable load 4 from @msg)
-; SMALL: %2:gprc_and_gprc_nor0 = LWZtoc @ptr, $r2 :: (load 4 from got)
-; SMALL: STW %1:gprc, 0, %2:gprc_and_gprc_nor0 :: (store 4 into @ptr)
+; SMALL: %0:gprc_and_gprc_nor0 = LWZtoc @msg, $r2 :: (load (s32) from got)
+; SMALL: %1:gprc = LWZ 0, %0:gprc_and_gprc_nor0 :: (dereferenceable load (s32) from @msg)
+; SMALL: %2:gprc_and_gprc_nor0 = LWZtoc @ptr, $r2 :: (load (s32) from got)
+; SMALL: STW %1:gprc, 0, %2:gprc_and_gprc_nor0 :: (store (s32) into @ptr)
 
 ; MEDIUM: Medium code model is not supported on AIX.
 
 ; LARGE: %0:gprc_and_gprc_nor0 = ADDIStocHA $r2, @msg
-; LARGE: %1:gprc_and_gprc_nor0 = LWZtocL @msg, %0:gprc_and_gprc_nor0, implicit $r2 :: (load 4 from got)
-; LARGE: %2:gprc = LWZ 0, %1:gprc_and_gprc_nor0 :: (dereferenceable load 4 from @msg)
+; LARGE: %1:gprc_and_gprc_nor0 = LWZtocL @msg, %0:gprc_and_gprc_nor0, implicit $r2 :: (load (s32) from got)
+; LARGE: %2:gprc = LWZ 0, %1:gprc_and_gprc_nor0 :: (dereferenceable load (s32) from @msg)
 ; LARGE: %3:gprc_and_gprc_nor0 = ADDIStocHA $r2, @ptr
-; LARGE: %4:gprc_and_gprc_nor0 = LWZtocL @ptr, %3:gprc_and_gprc_nor0, implicit $r2 :: (load 4 from got)
-; LARGE: STW %2:gprc, 0, %4:gprc_and_gprc_nor0 :: (store 4 into @ptr)
+; LARGE: %4:gprc_and_gprc_nor0 = LWZtocL @ptr, %3:gprc_and_gprc_nor0, implicit $r2 :: (load (s32) from got)
+; LARGE: STW %2:gprc, 0, %4:gprc_and_gprc_nor0 :: (store (s32) into @ptr)
 
   %0 = load i8*, i8** @msg, align 4
   store i8* %0, i8** @ptr, align 4

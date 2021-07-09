@@ -12,13 +12,13 @@ define void @caller() {
   ; RV32: bb.0 (%ir-block.0):
   ; RV32:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
   ; RV32:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 7
-  ; RV32:   SW killed [[ADDI]], %stack.0, 12 :: (store 4 into %stack.0)
+  ; RV32:   SW killed [[ADDI]], %stack.0, 12 :: (store (s32) into %stack.0)
   ; RV32:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 6
-  ; RV32:   SW killed [[ADDI1]], %stack.0, 8 :: (store 4 into %stack.0)
+  ; RV32:   SW killed [[ADDI1]], %stack.0, 8 :: (store (s32) into %stack.0)
   ; RV32:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 5
-  ; RV32:   SW killed [[ADDI2]], %stack.0, 4 :: (store 4 into %stack.0)
+  ; RV32:   SW killed [[ADDI2]], %stack.0, 4 :: (store (s32) into %stack.0)
   ; RV32:   [[ADDI3:%[0-9]+]]:gpr = ADDI $x0, 4
-  ; RV32:   SW killed [[ADDI3]], %stack.0, 0 :: (store 4 into %stack.0)
+  ; RV32:   SW killed [[ADDI3]], %stack.0, 0 :: (store (s32) into %stack.0)
   ; RV32:   [[ADDI4:%[0-9]+]]:gpr = ADDI %stack.0, 0
   ; RV32:   $x10 = COPY [[ADDI4]]
   ; RV32:   PseudoCALL target-flags(riscv-plt) @callee, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
@@ -32,13 +32,13 @@ define void @caller() {
   ; RV64: bb.0 (%ir-block.0):
   ; RV64:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
   ; RV64:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 7
-  ; RV64:   SD killed [[ADDI]], %stack.0, 24 :: (store 8 into %stack.0)
+  ; RV64:   SD killed [[ADDI]], %stack.0, 24 :: (store (s64) into %stack.0)
   ; RV64:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 6
-  ; RV64:   SD killed [[ADDI1]], %stack.0, 16 :: (store 8 into %stack.0)
+  ; RV64:   SD killed [[ADDI1]], %stack.0, 16 :: (store (s64) into %stack.0)
   ; RV64:   [[ADDI2:%[0-9]+]]:gpr = ADDI $x0, 5
-  ; RV64:   SD killed [[ADDI2]], %stack.0, 8 :: (store 8 into %stack.0)
+  ; RV64:   SD killed [[ADDI2]], %stack.0, 8 :: (store (s64) into %stack.0)
   ; RV64:   [[ADDI3:%[0-9]+]]:gpr = ADDI $x0, 4
-  ; RV64:   SD killed [[ADDI3]], %stack.0, 0 :: (store 8 into %stack.0)
+  ; RV64:   SD killed [[ADDI3]], %stack.0, 0 :: (store (s64) into %stack.0)
   ; RV64:   [[ADDI4:%[0-9]+]]:gpr = ADDI %stack.0, 0
   ; RV64:   $x10 = COPY [[ADDI4]]
   ; RV64:   PseudoCALL target-flags(riscv-plt) @callee, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2

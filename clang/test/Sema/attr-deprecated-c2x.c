@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only --std=c2x
+// RUN: %clang_cc1 %s -verify -fsyntax-only -std=c2x
 
-int f() [[deprecated]]; // expected-note 2 {{'f' has been explicitly marked deprecated here}}
-void g() [[deprecated]];// expected-note {{'g' has been explicitly marked deprecated here}}
+[[deprecated]] int f(); // expected-note 2 {{'f' has been explicitly marked deprecated here}}
+[[deprecated]] void g();// expected-note {{'g' has been explicitly marked deprecated here}}
 void g();
 
 extern int var [[deprecated]]; // expected-note 2 {{'var' has been explicitly marked deprecated here}}
@@ -22,7 +22,7 @@ int w() {
   return var; // expected-warning {{'var' is deprecated}}
 }
 
-int old_fn() [[deprecated]];// expected-note {{'old_fn' has been explicitly marked deprecated here}}
+[[deprecated]] int old_fn();// expected-note {{'old_fn' has been explicitly marked deprecated here}}
 int old_fn();
 int (*fn_ptr)() = old_fn; // expected-warning {{'old_fn' is deprecated}}
 
@@ -52,3 +52,7 @@ struct bar_dep *test3;   // expected-warning {{'bar_dep' is deprecated}}
 void test4(void) {
   i = 12; // expected-warning {{'i' is deprecated: this is the message}}
 }
+
+// Ensure that deprecated only accepts one argument, not the replacement
+// argument supported as a GNU extension.
+[[deprecated("message", "replacement not supported")]] void test5(void); // expected-error {{'deprecated' attribute takes no more than 1 argument}}

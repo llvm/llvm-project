@@ -27,7 +27,7 @@ using namespace llvm;
 namespace fs = llvm::sys::fs;
 namespace path = llvm::sys::path;
 
-TildeExpressionResolver::~TildeExpressionResolver() {}
+TildeExpressionResolver::~TildeExpressionResolver() = default;
 
 bool StandardTildeExpressionResolver::ResolveExact(
     StringRef Expr, SmallVectorImpl<char> &Output) {

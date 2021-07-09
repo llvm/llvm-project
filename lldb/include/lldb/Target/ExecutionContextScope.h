@@ -31,7 +31,7 @@ namespace lldb_private {
 /// context to allow functions that take a execution contexts to be called.
 class ExecutionContextScope {
 public:
-  virtual ~ExecutionContextScope() {}
+  virtual ~ExecutionContextScope() = default;
 
   virtual lldb::TargetSP CalculateTarget() = 0;
 

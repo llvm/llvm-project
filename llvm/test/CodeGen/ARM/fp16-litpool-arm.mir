@@ -73,16 +73,16 @@ body:             |
     $sp = frame-setup SUBri $sp, 4, 14, $noreg, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 4
     renamable $s0 = FCONSTH 112, 14, $noreg
-    renamable $r1 = LDRcp %const.0, 0, 14, $noreg :: (load 4 from constant-pool)
-    renamable $r2 = LDRcp %const.1, 0, 14, $noreg :: (load 4 from constant-pool)
-    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store 2 into %ir.S)
-    STRi12 killed renamable $r2, renamable $r0, 4, 14, $noreg :: (volatile store 4 into %ir.LL + 4)
-    renamable $s0 = VLDRH %const.2, 0, 14, $noreg :: (load 2 from constant-pool)
-    STRi12 killed renamable $r1, killed renamable $r0, 0, 14, $noreg :: (volatile store 4 into %ir.LL, align 8)
+    renamable $r1 = LDRcp %const.0, 0, 14, $noreg :: (load (s32) from constant-pool)
+    renamable $r2 = LDRcp %const.1, 0, 14, $noreg :: (load (s32) from constant-pool)
+    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
+    STRi12 killed renamable $r2, renamable $r0, 4, 14, $noreg :: (volatile store (s32) into %ir.LL + 4)
+    renamable $s0 = VLDRH %const.2, 0, 14, $noreg :: (load (s16) from constant-pool)
+    STRi12 killed renamable $r1, killed renamable $r0, 0, 14, $noreg :: (volatile store (s32) into %ir.LL, align 8)
     dead renamable $r0 = SPACE 8920, undef renamable $r0
-    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load 2 from %ir.S)
+    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load (s16) from %ir.S)
     renamable $s0 = VADDH killed renamable $s2, killed renamable $s0, 14, $noreg
-    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store 2 into %ir.S)
+    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
     renamable $r0 = VMOVRH killed renamable $s0, 14, $noreg
     dead renamable $r1 = SPACE 1350, undef renamable $r0
     $sp = ADDri $sp, 4, 14, $noreg, $noreg

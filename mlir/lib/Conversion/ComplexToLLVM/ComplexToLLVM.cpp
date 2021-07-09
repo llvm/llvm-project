@@ -9,11 +9,47 @@
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
 
 #include "../PassDetail.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
+
+//===----------------------------------------------------------------------===//
+// ComplexStructBuilder implementation.
+//===----------------------------------------------------------------------===//
+
+static constexpr unsigned kRealPosInComplexNumberStruct = 0;
+static constexpr unsigned kImaginaryPosInComplexNumberStruct = 1;
+
+ComplexStructBuilder ComplexStructBuilder::undef(OpBuilder &builder,
+                                                 Location loc, Type type) {
+  Value val = builder.create<LLVM::UndefOp>(loc, type);
+  return ComplexStructBuilder(val);
+}
+
+void ComplexStructBuilder::setReal(OpBuilder &builder, Location loc,
+                                   Value real) {
+  setPtr(builder, loc, kRealPosInComplexNumberStruct, real);
+}
+
+Value ComplexStructBuilder::real(OpBuilder &builder, Location loc) {
+  return extractPtr(builder, loc, kRealPosInComplexNumberStruct);
+}
+
+void ComplexStructBuilder::setImaginary(OpBuilder &builder, Location loc,
+                                        Value imaginary) {
+  setPtr(builder, loc, kImaginaryPosInComplexNumberStruct, imaginary);
+}
+
+Value ComplexStructBuilder::imaginary(OpBuilder &builder, Location loc) {
+  return extractPtr(builder, loc, kImaginaryPosInComplexNumberStruct);
+}
+
+//===----------------------------------------------------------------------===//
+// Conversion patterns.
+//===----------------------------------------------------------------------===//
 
 namespace {
 

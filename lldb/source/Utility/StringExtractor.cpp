@@ -40,7 +40,7 @@ StringExtractor::StringExtractor(const char *packet_cstr)
 }
 
 // Destructor
-StringExtractor::~StringExtractor() {}
+StringExtractor::~StringExtractor() = default;
 
 char StringExtractor::GetChar(char fail_value) {
   if (m_index < m_packet.size()) {

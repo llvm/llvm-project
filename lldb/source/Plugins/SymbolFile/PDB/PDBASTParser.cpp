@@ -355,7 +355,7 @@ static clang::CallingConv TranslateCallingConvention(PDB_CallingConv pdb_cc) {
 
 PDBASTParser::PDBASTParser(lldb_private::TypeSystemClang &ast) : m_ast(ast) {}
 
-PDBASTParser::~PDBASTParser() {}
+PDBASTParser::~PDBASTParser() = default;
 
 // DebugInfoASTParser interface
 

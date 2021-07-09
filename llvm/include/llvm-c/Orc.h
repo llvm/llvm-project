@@ -34,9 +34,14 @@
 LLVM_C_EXTERN_C_BEGIN
 
 /**
- * Represents an address in the target process.
+ * Represents an address in the executor process.
  */
 typedef uint64_t LLVMOrcJITTargetAddress;
+
+/**
+ * Represents an address in the executor process.
+ */
+typedef uint64_t LLVMOrcExecutorAddress;
 
 /**
  * Represents generic linkage flags for a symbol definition.
@@ -65,7 +70,7 @@ typedef struct {
  * Represents an evaluated symbol address and flags.
  */
 typedef struct {
-  LLVMOrcJITTargetAddress Address;
+  LLVMOrcExecutorAddress Address;
   LLVMJITSymbolFlags Flags;
 } LLVMJITEvaluatedSymbol;
 
@@ -117,6 +122,28 @@ typedef struct {
  * used to construct a SymbolMap.
  */
 typedef LLVMJITCSymbolMapPair *LLVMOrcCSymbolMapPairs;
+
+/**
+ * Represents a SymbolAliasMapEntry
+ */
+typedef struct {
+  LLVMOrcSymbolStringPoolEntryRef Name;
+  LLVMJITSymbolFlags Flags;
+} LLVMOrcCSymbolAliasMapEntry;
+
+/**
+ * Represents a pair of a symbol name and SymbolAliasMapEntry.
+ */
+typedef struct {
+  LLVMOrcSymbolStringPoolEntryRef Name;
+  LLVMOrcCSymbolAliasMapEntry Entry;
+} LLVMOrcCSymbolAliasMapPair;
+
+/**
+ * Represents a list of (SymbolStringPtr, (SymbolStringPtr, JITSymbolFlags))
+ * pairs that can be used to construct a SymbolFlagsMap.
+ */
+typedef LLVMOrcCSymbolAliasMapPair *LLVMOrcCSymbolAliasMapPairs;
 
 /**
  * Lookup kind. This can be used by definition generators when deciding whether
@@ -338,7 +365,7 @@ typedef struct LLVMOrcOpaqueIRTransformLayer *LLVMOrcIRTransformLayerRef;
  * management.
  *
  * Clients can call LLVMOrcLLJITGetIRTransformLayer to obtain the transform
- * layer of a LLJIT instance, and use LLVMOrcLLJITIRTransformLayerSetTransform
+ * layer of a LLJIT instance, and use LLVMOrcIRTransformLayerSetTransform
  * to set the function. This can be used to override the default transform
  * layer.
  */
@@ -367,6 +394,18 @@ typedef struct LLVMOrcOpaqueObjectTransformLayer
  */
 typedef LLVMErrorRef (*LLVMOrcObjectTransformLayerTransformFunction)(
     void *Ctx, LLVMMemoryBufferRef *ObjInOut);
+
+/**
+ * A reference to an orc::IndirectStubsManager instance.
+ */
+typedef struct LLVMOrcOpaqueIndirectStubsManager
+    *LLVMOrcIndirectStubsManagerRef;
+
+/**
+ * A reference to an orc::LazyCallThroughManager instance.
+ */
+typedef struct LLVMOrcOpaqueLazyCallThroughManager
+    *LLVMOrcLazyCallThroughManagerRef;
 
 /**
  * A reference to an orc::DumpObjects object.
@@ -530,6 +569,33 @@ LLVMOrcMaterializationUnitRef LLVMOrcCreateCustomMaterializationUnit(
  */
 LLVMOrcMaterializationUnitRef
 LLVMOrcAbsoluteSymbols(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs);
+
+/**
+ * Create a MaterializationUnit to define lazy re-expots. These are callable
+ * entry points that call through to the given symbols.
+ *
+ * This function takes ownership of the CallableAliases array. The Name
+ * fields of the array elements are taken to have been retained for this
+ * function. This allows the following pattern...
+ *
+ *   size_t NumPairs;
+ *   LLVMOrcCSymbolAliasMapPairs CallableAliases;
+ *   -- Build CallableAliases array --
+ *   LLVMOrcMaterializationUnitRef MU =
+ *      LLVMOrcLazyReexports(LCTM, ISM, JD, CallableAliases, NumPairs);
+ *
+ * ... without requiring cleanup of the elements of the CallableAliases array afterwards.
+ *
+ * The client is still responsible for deleting the CallableAliases array itself.
+ *
+ * If a client wishes to reuse elements of the CallableAliases array after this call they
+ * must explicitly retain each of the elements for themselves.
+ */
+LLVMOrcMaterializationUnitRef LLVMOrcLazyReexports(
+    LLVMOrcLazyCallThroughManagerRef LCTM, LLVMOrcIndirectStubsManagerRef ISM,
+    LLVMOrcJITDylibRef SourceRef, LLVMOrcCSymbolAliasMapPairs CallableAliases,
+    size_t NumPairs);
+// TODO: ImplSymbolMad SrcJDLoc
 
 /**
  * Create a "bare" JITDylib.
@@ -783,7 +849,7 @@ void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer);
  * Set the transform function of the provided transform layer, passing through a
  * pointer to user provided context.
  */
-void LLVMOrcLLJITIRTransformLayerSetTransform(
+void LLVMOrcIRTransformLayerSetTransform(
     LLVMOrcIRTransformLayerRef IRTransformLayer,
     LLVMOrcIRTransformLayerTransformFunction TransformFunction, void *Ctx);
 
@@ -793,6 +859,31 @@ void LLVMOrcLLJITIRTransformLayerSetTransform(
 void LLVMOrcObjectTransformLayerSetTransform(
     LLVMOrcObjectTransformLayerRef ObjTransformLayer,
     LLVMOrcObjectTransformLayerTransformFunction TransformFunction, void *Ctx);
+
+/**
+ * Create a LocalIndirectStubsManager from the given target triple.
+ *
+ * The resulting IndirectStubsManager is owned by the client
+ * and must be disposed of by calling LLVMOrcDisposeDisposeIndirectStubsManager.
+ */
+LLVMOrcIndirectStubsManagerRef
+LLVMOrcCreateLocalIndirectStubsManager(const char *TargetTriple);
+
+/**
+ * Dispose of an IndirectStubsManager.
+ */
+void LLVMOrcDisposeIndirectStubsManager(LLVMOrcIndirectStubsManagerRef ISM);
+
+LLVMErrorRef LLVMOrcCreateLocalLazyCallThroughManager(
+    const char *TargetTriple, LLVMOrcExecutionSessionRef ES,
+    LLVMOrcJITTargetAddress ErrorHandlerAddr,
+    LLVMOrcLazyCallThroughManagerRef *LCTM);
+
+/**
+ * Dispose of an LazyCallThroughManager.
+ */
+void LLVMOrcDisposeLazyCallThroughManager(
+    LLVMOrcLazyCallThroughManagerRef LCTM);
 
 /**
  * Create a DumpObjects instance.

@@ -115,7 +115,7 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
   }
 }
 
-OperatingSystemPython::~OperatingSystemPython() {}
+OperatingSystemPython::~OperatingSystemPython() = default;
 
 DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
   if (m_register_info_up == nullptr) {

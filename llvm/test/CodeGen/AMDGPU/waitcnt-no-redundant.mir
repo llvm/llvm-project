@@ -34,7 +34,7 @@ body: |
 name: waitcnt-no-war-wait
 body: |
   bb.0:
-    renamable $sgpr8 = S_BUFFER_LOAD_DWORD_IMM renamable $sgpr0_sgpr1_sgpr2_sgpr3, 276, 0 :: (dereferenceable invariant load 4)
-    TBUFFER_STORE_FORMAT_X_OFFEN_exact killed renamable $vgpr0, renamable $vgpr15, renamable $sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr9, 0, 116, 1, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
+    renamable $sgpr8 = S_BUFFER_LOAD_DWORD_IMM renamable $sgpr0_sgpr1_sgpr2_sgpr3, 276, 0 :: (dereferenceable invariant load (s32))
+    TBUFFER_STORE_FORMAT_X_OFFEN_exact killed renamable $vgpr0, renamable $vgpr15, renamable $sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr9, 0, 116, 1, 0, 0, implicit $exec :: (dereferenceable store (s32) into custom "BufferResource", align 1, addrspace 4)
 
 ...

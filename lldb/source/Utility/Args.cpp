@@ -194,7 +194,7 @@ Args &Args::operator=(const Args &rhs) {
 }
 
 // Destructor
-Args::~Args() {}
+Args::~Args() = default;
 
 void Args::Dump(Stream &s, const char *label_name) const {
   if (!label_name)

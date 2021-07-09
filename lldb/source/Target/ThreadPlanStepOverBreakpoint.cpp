@@ -36,7 +36,7 @@ ThreadPlanStepOverBreakpoint::ThreadPlanStepOverBreakpoint(Thread &thread)
           m_breakpoint_addr);
 }
 
-ThreadPlanStepOverBreakpoint::~ThreadPlanStepOverBreakpoint() {}
+ThreadPlanStepOverBreakpoint::~ThreadPlanStepOverBreakpoint() = default;
 
 void ThreadPlanStepOverBreakpoint::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {

@@ -507,7 +507,7 @@ FindArchDefinitionEntry(const ArchDefinition *def, ArchSpec::Core core) {
 //===----------------------------------------------------------------------===//
 // Constructors and destructors.
 
-ArchSpec::ArchSpec() {}
+ArchSpec::ArchSpec() = default;
 
 ArchSpec::ArchSpec(const char *triple_cstr) {
   if (triple_cstr)

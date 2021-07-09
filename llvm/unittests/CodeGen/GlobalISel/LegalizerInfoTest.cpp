@@ -391,22 +391,22 @@ TEST(LegalizerInfoTest, MMOAlignment) {
     LegalizerInfo LI;
     auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_LOAD)
-      .legalForTypesWithMemDesc({{s32, p0, 32, 32}});
+      .legalForTypesWithMemDesc({{s32, p0, s32, 32}});
 
     LegacyInfo.computeTables();
 
     EXPECT_ACTION(Legal, 0, LLT(),
                   LegalityQuery(G_LOAD, {s32, p0},
                                 LegalityQuery::MemDesc{
-                                  32, 32, AtomicOrdering::NotAtomic}));
+                                  s32, 32, AtomicOrdering::NotAtomic}));
     EXPECT_ACTION(Unsupported, 0, LLT(),
                   LegalityQuery(G_LOAD, {s32, p0},
                                 LegalityQuery::MemDesc{
-                                  32, 16, AtomicOrdering::NotAtomic }));
+                                  s32, 16, AtomicOrdering::NotAtomic }));
     EXPECT_ACTION(Unsupported, 0, LLT(),
                   LegalityQuery(G_LOAD, {s32, p0},
                                 LegalityQuery::MemDesc{
-                                  32, 8, AtomicOrdering::NotAtomic}));
+                                  s32, 8, AtomicOrdering::NotAtomic}));
   }
 
   // Test that the maximum supported alignment value isn't truncated
@@ -417,18 +417,18 @@ TEST(LegalizerInfoTest, MMOAlignment) {
     LegalizerInfo LI;
     auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_LOAD)
-      .legalForTypesWithMemDesc({{s32, p0, 32, MaxAlignInBits}});
+      .legalForTypesWithMemDesc({{s32, p0, s32, MaxAlignInBits}});
 
     LegacyInfo.computeTables();
 
     EXPECT_ACTION(Legal, 0, LLT(),
                   LegalityQuery(G_LOAD, {s32, p0},
-                                LegalityQuery::MemDesc{32,
+                                LegalityQuery::MemDesc{s32,
                                     MaxAlignInBits, AtomicOrdering::NotAtomic}));
     EXPECT_ACTION(Unsupported, 0, LLT(),
                   LegalityQuery(G_LOAD, {s32, p0},
                                 LegalityQuery::MemDesc{
-                                  32, 8, AtomicOrdering::NotAtomic }));
+                                  s32, 8, AtomicOrdering::NotAtomic }));
   }
 }
 

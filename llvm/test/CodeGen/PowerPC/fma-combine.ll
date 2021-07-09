@@ -184,16 +184,16 @@ define dso_local float @fma_combine_no_ice() {
 ; CHECK-NEXT:    blr
   %tmp = load float, float* undef, align 4
   %tmp2 = load float, float* undef, align 4
-  %tmp3 = fmul reassoc float %tmp, 0x3FE372D780000000
-  %tmp4 = fadd reassoc float %tmp3, 1.000000e+00
-  %tmp5 = fmul reassoc float %tmp2, %tmp4
+  %tmp3 = fmul contract reassoc float %tmp, 0x3FE372D780000000
+  %tmp4 = fadd contract reassoc float %tmp3, 1.000000e+00
+  %tmp5 = fmul contract reassoc float %tmp2, %tmp4
   %tmp6 = load float, float* undef, align 4
   %tmp7 = load float, float* undef, align 4
-  %tmp8 = fmul reassoc float %tmp7, 0x3FE372D780000000
-  %tmp9 = fsub reassoc nsz float -1.000000e+00, %tmp8
-  %tmp10 = fmul reassoc float %tmp9, %tmp6
-  %tmp11 = fadd reassoc float %tmp5, 5.000000e-01
-  %tmp12 = fadd reassoc float %tmp11, %tmp10
+  %tmp8 = fmul contract reassoc float %tmp7, 0x3FE372D780000000
+  %tmp9 = fsub contract reassoc nsz float -1.000000e+00, %tmp8
+  %tmp10 = fmul contract reassoc float %tmp9, %tmp6
+  %tmp11 = fadd contract reassoc float %tmp5, 5.000000e-01
+  %tmp12 = fadd contract reassoc float %tmp11, %tmp10
   ret float %tmp12
 }
 

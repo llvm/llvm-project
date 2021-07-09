@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #----------------------------------------------------------------------
 # Be sure to add the python path that points to the LLDB shared library.

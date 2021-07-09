@@ -30,7 +30,7 @@ add_mlir_conversion_library(MLIRGPUToGPURuntimeTransforms
 
   LINK_LIBS PUBLIC
   MLIRAsyncToLLVM
-  MLIRGPU
+  MLIRGPUTransforms
   MLIRIR
   MLIRLLVMIR
   MLIRPass

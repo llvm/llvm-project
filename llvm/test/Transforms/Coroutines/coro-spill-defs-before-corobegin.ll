@@ -1,5 +1,5 @@
 ; Verifies that phi and invoke definitions before CoroBegin are spilled properly.
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse,simplify-cfg' -S | FileCheck %s
 
 define i8* @f(i1 %n) "coroutine.presplit"="1" personality i32 0 {
 entry:
@@ -51,7 +51,7 @@ lpad:
 ; CHECK-LABEL: @f(
 ; CHECK:       %alloc = call i8* @malloc(i32 32)
 ; CHECK-NEXT:  %flag = call i1 @check(i8* %alloc)
-; CHECK-NEXT:  %value_phi = select i1 %flag, i32 0, i32 1
+; CHECK-NEXT:  %spec.select = select i1 %flag, i32 0, i32 1
 ; CHECK-NEXT:  %value_invoke = call i32 @calc()
 ; CHECK-NEXT:  %hdl = call noalias nonnull i8* @llvm.coro.begin(token %id, i8* %alloc)
 
@@ -59,7 +59,7 @@ lpad:
 ; CHECK-NEXT:  %value_invoke.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 3
 ; CHECK-NEXT:  store i32 %value_invoke, i32* %value_invoke.spill.addr
 ; CHECK-NEXT:  %value_phi.spill.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 2
-; CHECK-NEXT:  store i32 %value_phi, i32* %value_phi.spill.addr
+; CHECK-NEXT:  store i32 %spec.select, i32* %value_phi.spill.addr
 
 declare i8* @llvm.coro.free(token, i8*)
 declare i32 @llvm.coro.size.i32()

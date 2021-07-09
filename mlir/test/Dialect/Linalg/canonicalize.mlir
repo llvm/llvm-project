@@ -540,13 +540,10 @@ func @init_tensor_reshape_expansion(%arg0 : index) -> tensor<2x3x5x4x?x7xf32> {
 }
 //      CHECK: #[[MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 28)>
 //      CHECK: func @init_tensor_reshape_expansion
-// CHECK-SAME:   %[[ARG0:.+]]: index
-//      CHECK:   %[[C2:.+]] = constant 2
-//      CHECK:   %[[INIT1:.+]] = linalg.init_tensor [6, 5, %[[ARG0]]]
-//      CHECK:   %[[D0:.+]] = memref.dim %[[INIT1]], %[[C2]]
-//      CHECK:   %[[T0:.+]] = affine.apply #[[MAP]]()[%[[D0]]]
-//      CHECK:   %[[INIT2:.+]] = linalg.init_tensor [2, 3, 5, 4, %[[T0]], 7]
-//      CHECK:   return %[[INIT2]]
+// CHECK-SAME:     %[[ARG0:.+]]: index
+// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
+// CHECK-NEXT:   %[[INIT:.+]] = linalg.init_tensor [2, 3, 5, 4, %[[D]], 7]
+// CHECK-NEXT:   return %[[INIT]]
 
 // -----
 
@@ -558,13 +555,10 @@ func @init_tensor_reshape_collapse(%arg0 : index) -> tensor<6x5x?xf32> {
 }
 //      CHECK: #[[MAP:.+]] = affine_map<()[s0] -> (s0 * 28)>
 //      CHECK: func @init_tensor_reshape_collapse
-// CHECK-SAME:   %[[ARG0:.+]]: index
-//      CHECK:   %[[C4:.+]] = constant 4
-//      CHECK:   %[[INIT1:.+]] = linalg.init_tensor [2, 3, 5, 4, %[[ARG0]], 7]
-//      CHECK:   %[[D0:.+]] = memref.dim %[[INIT1]], %[[C4]]
-//      CHECK:   %[[T0:.+]] = affine.apply #[[MAP]]()[%[[D0]]]
-//      CHECK:   %[[INIT2:.+]] = linalg.init_tensor [6, 5, %[[T0]]]
-//      CHECK:   return %[[INIT2]]
+// CHECK-SAME:     %[[ARG0:.+]]: index
+// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
+// CHECK-NEXT:   %[[INIT:.+]] = linalg.init_tensor [6, 5, %[[D]]]
+// CHECK-NEXT:   return %[[INIT]]
 
 // -----
 
@@ -574,9 +568,9 @@ func @remove_no_op(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?x?x?xf32>)
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  %0 = memref.dim %arg0, %c0 : tensor<?x?x?xf32>
-  %1 = memref.dim %arg0, %c1 : tensor<?x?x?xf32>
-  %2 = memref.dim %arg0, %c2 : tensor<?x?x?xf32>
+  %0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
+  %1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
+  %2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
   %3 = linalg.init_tensor [%0, %1, %2] : tensor<?x?x?xf32>
   %4, %5 = linalg.generic {
     indexing_maps = [#map, #map, #map, #map],
@@ -600,8 +594,8 @@ func @keep_not_noop(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %cst = constant 1.000000e+00 : f32
-  %0 = memref.dim %arg0, %c0 : tensor<?x?xf32>
-  %1 = memref.dim %arg0, %c1 : tensor<?x?xf32>
+  %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
   br ^bb1(%cst : f32)
 
@@ -626,8 +620,8 @@ func @keep_not_noop(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>)
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %cst = constant 1.000000e+00 : f32
-  %0 = memref.dim %arg0, %c0 : tensor<?x?xf32>
-  %1 = memref.dim %arg0, %c1 : tensor<?x?xf32>
+  %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
   br ^bb1(%cst : f32)
 
@@ -721,8 +715,8 @@ func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
   %c42 = constant 42 : index
   %0 = linalg.init_tensor [%c21, %c42] : tensor<?x?xf32>
   %1 = linalg.fill(%arg1, %0) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
-  %2 = memref.dim %arg0, %c0 : tensor<?x?xf32>
-  %3 = memref.dim %arg0, %c1 : tensor<?x?xf32>
+  %2 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %3 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %4 = tensor.insert_slice %arg0 into %1[%arg2, %arg3] [%2, %3] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
   return %4 : tensor<?x?xf32>
 }
@@ -873,3 +867,26 @@ func @pad_static_zero_cast(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<
   return %0 : tensor<2x3x4xf32>
 }
 
+// -----
+
+func private @some_use(%i : index, %j : index)
+
+// CHECK-LABEL: func @init_canonicalize
+//  CHECK-SAME:   %[[I:.*]]: index
+func @init_canonicalize(%i : index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+
+  // CHECK-NOT: init_tensor
+  %0 = linalg.init_tensor [%i, 42] : tensor<?x42xf32>
+
+  // CHECK-NOT: tensor.dim
+  %1 = tensor.dim %0, %c0: tensor<?x42xf32>
+  %2 = tensor.dim %0, %c1: tensor<?x42xf32>
+
+  // CHECK: %[[c42:.*]] = constant 42 : index
+  // CHECK: call @some_use(%[[I]], %[[c42]])
+  call @some_use(%1, %2) : (index, index) -> ()
+
+  return
+}

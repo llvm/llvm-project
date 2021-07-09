@@ -206,6 +206,11 @@ namespace opts {
                             cl::aliasopt(StringDump), cl::Prefix,
                             cl::NotHidden);
 
+  // --string-table
+  cl::opt<bool>
+      StringTable("string-table",
+                  cl::desc("Display the string table (only for XCOFF now)"));
+
   // --hex-dump, -x
   cl::list<std::string>
       HexDump("hex-dump", cl::value_desc("number|name"),
@@ -541,6 +546,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     Dumper->printGnuHashTable();
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
+  if (opts::StringTable)
+    Dumper->printStringTable();
   if (Obj.isELF()) {
     if (opts::DependentLibraries)
       Dumper->printDependentLibs();

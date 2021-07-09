@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #----------------------------------------------------------------------
 # This module is designed to live inside the "lldb" python package

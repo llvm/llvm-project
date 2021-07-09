@@ -13,36 +13,51 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 #define MLIR_DIALECT_SPARSETENSOR_UTILS_MERGER_H_
 
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
 
 namespace mlir {
 namespace sparse_tensor {
 
-/// Tensor expression kind.
-enum class Kind { kTensor, kInvariant, kMulF, kMulI, kAddF, kAddI };
-
 /// Dimension level type for a tensor (undef means index does not appear).
 enum class Dim { kSparse, kDense, kSingle, kUndef };
 
+/// Tensor expression kind.
+enum class Kind {
+  // Leaf.
+  kTensor,
+  kInvariant,
+  kZero,
+  // Operation.
+  kMulF,
+  kMulI,
+  kAddF,
+  kAddI,
+  kSubF,
+  kSubI
+};
+
+/// Children subexpressions of tensor operations.
+struct Children {
+  unsigned e0;
+  unsigned e1;
+};
+
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
-/// For tensors, e0 denotes the tensor index. For invariants, the IR value is
-/// stored directly. For binary operations, e0 and e1 denote the index of the
-/// children tensor expressions.
 struct TensorExp {
-  TensorExp(Kind k, unsigned x, unsigned y, Value v)
-      : kind(k), e0(x), e1(y), val(v) {
-    assert((kind == Kind::kTensor && e0 != -1u && e1 == -1u && !val) ||
-           (kind == Kind::kInvariant && e0 == -1u && e1 == -1u && val) ||
-           (kind >= Kind::kMulF && e0 != -1u && e1 != -1u && !val));
-  }
+  TensorExp(Kind k, unsigned x, unsigned y, Value v);
 
   /// Tensor expression kind.
   Kind kind;
 
-  /// Indices of children expression(s).
-  unsigned e0;
-  unsigned e1;
+  union {
+    /// Expressions representing tensors simply have a tensor number.
+    unsigned tensor;
+
+    /// Tensor operations hold the indices of their children.
+    Children children;
+  };
 
   /// Direct link to IR for an invariant. During code generation,
   /// field is used to cache "hoisted" loop invariant tensor loads.
@@ -53,10 +68,8 @@ struct TensorExp {
 /// loop indices (encoded in a bitvector) and the index of the corresponding
 /// tensor expression.
 struct LatPoint {
-  LatPoint(unsigned n, unsigned e, unsigned b) : bits(n, false), exp(e) {
-    bits.set(b);
-  }
-  LatPoint(const llvm::BitVector &b, unsigned e) : bits(b), exp(e) {}
+  LatPoint(unsigned n, unsigned e, unsigned b);
+  LatPoint(const llvm::BitVector &b, unsigned e);
 
   /// Conjunction of tensor loop indices as bitvector. This represents
   /// all indices involved in the tensor expression
@@ -87,7 +100,8 @@ public:
         dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
 
   /// Adds a tensor expression. Returns its index.
-  unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value());
+  unsigned addExp(Kind k, unsigned e0 = -1u, unsigned e1 = -1u,
+                  Value v = Value());
   unsigned addExp(Kind k, Value v) { return addExp(k, -1u, -1u, v); }
 
   /// Adds an iteration lattice point. Returns its index.
@@ -110,6 +124,12 @@ public:
   /// Returns the index of the new set.
   unsigned takeDisj(Kind kind, unsigned s0, unsigned s1);
 
+  /// Maps a zero operand over a lattice set, i.e. each lattice point on an
+  /// expression E is simply copied over, but with 0 OP E as new expression.
+  /// This is useful to deal with disjunctive, but non-commutative operators.
+  /// Returns the index of the new set.
+  unsigned mapZero(Kind kind, unsigned s0);
+
   /// Optimizes the iteration lattice points in the given set. This
   /// method should be called right before code generation to avoid
   /// generating redundant loops and conditions.
@@ -119,7 +139,7 @@ public:
   /// within the given set using just two basic rules:
   /// (1) multiple dense conditions are reduced to single dense, and
   /// (2) a *singleton* sparse/dense is reduced to sparse/random access.
-  llvm::BitVector simplifyCond(unsigned s, unsigned p0);
+  llvm::BitVector simplifyCond(unsigned s0, unsigned p0);
 
   /// Returns true if Li > Lj.
   bool latGT(unsigned i, unsigned j) const;
@@ -148,11 +168,6 @@ public:
   /// Returns true if any set bit corresponds to queried dim.
   bool hasAnyDimOf(const llvm::BitVector &bits, Dim d) const;
 
-  /// Builds the iteration lattices in a bottom-up traversal given the remaining
-  /// tensor (sub)expression and the next loop index in the iteration graph.
-  /// Returns index of the root expression.
-  unsigned buildLattices(unsigned exp, unsigned idx);
-
   /// Setter
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
@@ -169,7 +184,19 @@ public:
   void dumpBits(const llvm::BitVector &bits) const;
 #endif
 
+  /// Builds the iteration lattices in a bottom-up traversal given the remaining
+  /// tensor (sub)expression and the next loop index in the iteration graph.
+  /// Returns index of the root expression.
+  unsigned buildLattices(unsigned exp, unsigned idx);
+
+  /// Builds a tensor expression from the given Linalg operation.
+  /// Returns index of the root expression on success.
+  Optional<unsigned> buildTensorExpFromLinalg(linalg::GenericOp op);
+
 private:
+  /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
+  Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value val);
+
   const unsigned outTensor;
   const unsigned syntheticTensor;
   const unsigned numTensors;

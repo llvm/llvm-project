@@ -324,12 +324,11 @@ static isl_bool can_select(__isl_keep isl_basic_set *bset, int level,
  * and map the resulting vertices back.
  */
 static __isl_give isl_vertices *lower_dim_vertices(
-	__isl_keep isl_basic_set *bset)
+	__isl_take isl_basic_set *bset)
 {
 	isl_morph *morph;
 	isl_vertices *vertices;
 
-	bset = isl_basic_set_copy(bset);
 	morph = isl_basic_set_full_compression(bset);
 	bset = isl_morph_basic_set(isl_morph_copy(morph), bset);
 
@@ -344,6 +343,37 @@ static __isl_give isl_vertices *lower_dim_vertices(
 }
 
 /* Compute the parametric vertices and the chamber decomposition
+ * of a parametric polytope "bset" that is not full-dimensional.
+ * Additionally, free both "copy" and "tab".
+ */
+static __isl_give isl_vertices *lower_dim_vertices_free(
+	__isl_take isl_basic_set *bset, __isl_take isl_basic_set *copy,
+	struct isl_tab *tab)
+{
+	isl_basic_set_free(copy);
+	isl_tab_free(tab);
+	return lower_dim_vertices(bset);
+}
+
+/* Detect implicit equality constraints in "bset" using the tableau
+ * representation "tab".
+ * Return a copy of "bset" with the implicit equality constraints
+ * made explicit, leaving the original "bset" unmodified.
+ */
+static __isl_give isl_basic_set *detect_implicit_equality_constraints(
+	__isl_keep isl_basic_set *bset, struct isl_tab *tab)
+{
+	if (isl_tab_detect_implicit_equalities(tab) < 0)
+		return NULL;
+
+	bset = isl_basic_set_copy(bset);
+	bset = isl_basic_set_cow(bset);
+	bset = isl_basic_set_update_from_tab(bset, tab);
+
+	return bset;
+}
+
+/* Compute the parametric vertices and the chamber decomposition
  * of the parametric polytope defined using the same constraints
  * as "bset".  "bset" is assumed to have no existentially quantified
  * variables.
@@ -352,9 +382,22 @@ static __isl_give isl_vertices *lower_dim_vertices(
  * We simply run through all combinations of d constraints,
  * with d the number of set variables, and check if those d constraints
  * define a vertex.  To avoid the generation of duplicate vertices,
- * which we may happen if a vertex is defined by more that d constraints,
+ * which may happen if a vertex is defined by more than d constraints,
  * we make sure we only generate the vertex for the d constraints with
  * smallest index.
+ *
+ * Only potential vertices with a full-dimensional activity domain
+ * are considered.  However, if the input has (implicit) equality
+ * constraints among the parameters, then activity domain
+ * should be considered full-dimensional if it does not satisfy
+ * any extra equality constraints beyond those of the input.
+ * The implicit equality constraints of the input are therefore first detected.
+ * If there are any, then the input is mapped to a lower dimensional space
+ * such that the check for full-dimensional activity domains
+ * can be performed with respect to a full-dimensional space.
+ * Note that it is important to leave "bset" unmodified while detecting
+ * equality constraints since the inequality constraints of "bset"
+ * are assumed to correspond to those of the tableau.
  *
  * We set up a tableau and keep track of which facets have been
  * selected.  The tableau is marked strict_redundant so that we can be
@@ -378,6 +421,7 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 	struct isl_tab *tab;
 	int level;
 	int init;
+	isl_size n_eq;
 	isl_size nvar;
 	int *selection = NULL;
 	int selected;
@@ -386,6 +430,8 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 	struct isl_vertex_list *list = NULL;
 	int n_vertices = 0;
 	isl_vertices *vertices;
+	isl_basic_set *copy;
+	isl_basic_set *test;
 
 	if (!bset)
 		return NULL;
@@ -394,7 +440,7 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 		return vertices_empty(bset);
 
 	if (bset->n_eq != 0)
-		return lower_dim_vertices(bset);
+		return lower_dim_vertices(isl_basic_set_copy(bset));
 
 	if (isl_basic_set_check_no_locals(bset) < 0)
 		return NULL;
@@ -405,27 +451,35 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 	if (nvar == 0)
 		return vertices_0D(bset);
 
-	bset = isl_basic_set_copy(bset);
-	bset = isl_basic_set_set_rational(bset);
-	if (!bset)
+	copy = isl_basic_set_copy(bset);
+	copy = isl_basic_set_set_rational(copy);
+	if (!copy)
 		return NULL;
 
-	tab = isl_tab_from_basic_set(bset, 0);
+	tab = isl_tab_from_basic_set(copy, 0);
 	if (!tab)
 		goto error;
 	tab->strict_redundant = 1;
 
 	if (tab->empty)	{
-		vertices = vertices_empty(bset);
-		isl_basic_set_free(bset);
+		vertices = vertices_empty(copy);
+		isl_basic_set_free(copy);
 		isl_tab_free(tab);
 		return vertices;
 	}
 
-	selection = isl_alloc_array(bset->ctx, int, bset->n_ineq);
-	snap = isl_alloc_array(bset->ctx, struct isl_tab_undo *, bset->n_ineq);
-	facets = isl_mat_alloc(bset->ctx, nvar, nvar);
-	if ((bset->n_ineq && (!selection || !snap)) || !facets)
+	test = detect_implicit_equality_constraints(bset, tab);
+	n_eq = isl_basic_set_n_equality(test);
+	if (n_eq < 0)
+		test = isl_basic_set_free(test);
+	if (n_eq < 0 || n_eq > 0)
+		return lower_dim_vertices_free(test, copy, tab);
+	isl_basic_set_free(test);
+
+	selection = isl_alloc_array(copy->ctx, int, copy->n_ineq);
+	snap = isl_alloc_array(copy->ctx, struct isl_tab_undo *, copy->n_ineq);
+	facets = isl_mat_alloc(copy->ctx, nvar, nvar);
+	if ((copy->n_ineq && (!selection || !snap)) || !facets)
 		goto error;
 
 	level = 0;
@@ -433,7 +487,7 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 	selected = 0;
 
 	while (level >= 0) {
-		if (level >= bset->n_ineq ||
+		if (level >= copy->n_ineq ||
 		    (!init && selection[level] != SELECTED)) {
 			--level;
 			init = 0;
@@ -442,7 +496,7 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 		if (init) {
 			isl_bool ok;
 			snap[level] = isl_tab_snap(tab);
-			ok = can_select(bset, level, tab, facets, selected,
+			ok = can_select(copy, level, tab, facets, selected,
 					selection);
 			if (ok < 0)
 				goto error;
@@ -459,7 +513,7 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 		}
 		if (selected == nvar) {
 			if (tab->n_dead == nvar) {
-				isl_bool added = add_vertex(&list, bset, tab);
+				isl_bool added = add_vertex(&list, copy, tab);
 				if (added < 0)
 					goto error;
 				if (added)
@@ -478,9 +532,9 @@ __isl_give isl_vertices *isl_basic_set_compute_vertices(
 
 	isl_tab_free(tab);
 
-	vertices = vertices_from_list(bset, n_vertices, list);
+	vertices = vertices_from_list(copy, n_vertices, list);
 
-	vertices = compute_chambers(bset, vertices);
+	vertices = compute_chambers(copy, vertices);
 
 	return vertices;
 error:
@@ -489,7 +543,7 @@ error:
 	free(selection);
 	free(snap);
 	isl_tab_free(tab);
-	isl_basic_set_free(bset);
+	isl_basic_set_free(copy);
 	return NULL;
 }
 
@@ -862,6 +916,7 @@ static __isl_give isl_vertices *compute_chambers(__isl_take isl_basic_set *bset,
 {
 	int i;
 	isl_ctx *ctx;
+	isl_size n_eq;
 	isl_vec *sample = NULL;
 	struct isl_tab *tab = NULL;
 	struct isl_tab_undo *snap;
@@ -879,6 +934,12 @@ static __isl_give isl_vertices *compute_chambers(__isl_take isl_basic_set *bset,
 		goto error;
 
 	bset = isl_basic_set_params(bset);
+	n_eq = isl_basic_set_n_equality(bset);
+	if (n_eq < 0)
+		goto error;
+	if (n_eq > 0)
+		isl_die(isl_basic_set_get_ctx(bset), isl_error_internal,
+			"expecting full-dimensional input", goto error);
 
 	tab = isl_tab_from_basic_set(bset, 1);
 	if (!tab)

@@ -52,9 +52,7 @@ public:
                                         libBacktraceRecording */
     uint64_t count = 0; /* the number of queues included in the queues buffer */
 
-    GetQueuesReturnInfo()
-
-    {}
+    GetQueuesReturnInfo() = default;
   };
 
   /// Get the list of queues that exist (with any active or pending items) via

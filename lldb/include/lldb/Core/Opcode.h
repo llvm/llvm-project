@@ -38,7 +38,7 @@ public:
     eTypeBytes
   };
 
-  Opcode() {}
+  Opcode() = default;
 
   Opcode(uint8_t inst, lldb::ByteOrder order)
       : m_byte_order(order), m_type(eType8) {

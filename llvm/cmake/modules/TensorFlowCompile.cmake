@@ -88,6 +88,11 @@ endfunction()
 
 function(tf_find_and_compile model default_url default_path generation_config tag_set signature_def_key fname cpp_class)
   if ("${model}" STREQUAL "download")
+    # Crash if the user wants to download a model but a URL is set to "TO_BE_UPDATED"
+    if ("${LLVM_INLINER_MODEL_CURRENT_URL}" STREQUAL "TO_BE_UPDATED")
+        message(FATAL_ERROR "LLVM_INLINER_MODEL_PATH was set to 'download' but there is no model url currently specified in cmake - likely, the model interface recently changed, and so there is not a released model available.")
+    endif()
+
     set(model ${default_url})
   endif()
 

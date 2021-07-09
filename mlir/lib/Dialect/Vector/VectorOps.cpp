@@ -1192,82 +1192,10 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ExtractToShapeCast>(context);
 }
 
-//===----------------------------------------------------------------------===//
-// ExtractSlicesOp
-//===----------------------------------------------------------------------===//
-
-void ExtractSlicesOp::build(OpBuilder &builder, OperationState &result,
-                            TupleType tupleType, Value vector,
-                            ArrayRef<int64_t> sizes,
-                            ArrayRef<int64_t> strides) {
-  result.addOperands(vector);
-  auto sizesAttr = getVectorSubscriptAttr(builder, sizes);
-  auto stridesAttr = getVectorSubscriptAttr(builder, strides);
-  result.addTypes(tupleType);
-  result.addAttribute(getSizesAttrName(), sizesAttr);
-  result.addAttribute(getStridesAttrName(), stridesAttr);
-}
-
-static LogicalResult
-isValidExtractOrInsertSlicesType(Operation *op, VectorType vectorType,
-                                 TupleType tupleType, ArrayRef<int64_t> sizes,
-                                 ArrayRef<int64_t> strides) {
-  // Check for non-unit strides.
-  // TODO: Support non-1 strides.
-  if (llvm::any_of(strides, [](int64_t s) { return s != 1; }))
-    return op->emitError("requires unit strides");
-  // Check that 'vectorType' rank matches rank of tuple element vectors.
-  unsigned rank = vectorType.getRank();
-  auto is_vector_type_of_rank = [&](Type t) {
-    return t.isa<VectorType>() && t.cast<VectorType>().getRank() == rank;
-  };
-  if (!llvm::all_of(tupleType.getTypes(), is_vector_type_of_rank))
-    return op->emitError("requires vector tuple elements of rank ") << rank;
-  // Check that 'sizes' and 'strides' are of size == 'rank'.
-  if (sizes.size() != rank || strides.size() != rank)
-    return op->emitError("requires sizes and strides of rank ") << rank;
-
-  // Generate each slice shape based on 'sizes', 'strides' and 'vectorType',
-  // and verify that the same matches the corresponding tuple element 'i'.
-  auto shape = vectorType.getShape();
-  auto sliceStrides = computeStrides(shape, sizes);
-  for (int64_t i = 0, e = tupleType.size(); i < e; ++i) {
-    auto vectorOffsets = delinearize(sliceStrides, i);
-    auto elementOffsets =
-        computeElementOffsetsFromVectorSliceOffsets(sizes, vectorOffsets);
-    auto sliceSizes = computeSliceSizes(shape, sizes, elementOffsets);
-    // Create slice VectorType type.
-    auto sliceVectorType =
-        VectorType::get(sliceSizes, vectorType.getElementType());
-    // Verify that 'sliceVectorType' matches tupleType.getTypes(i)
-    if (sliceVectorType != tupleType.getType(i))
-      return op->emitError("invalid tuple element type ") << sliceVectorType;
-  }
-  return success();
-}
-
-static LogicalResult verify(ExtractSlicesOp op) {
-  SmallVector<int64_t, 4> sizes;
-  op.getSizes(sizes);
-  SmallVector<int64_t, 4> strides;
-  op.getStrides(strides);
-  return isValidExtractOrInsertSlicesType(
-      op.getOperation(), op.getSourceVectorType(), op.getResultTupleType(),
-      sizes, strides);
-}
-
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
                                        SmallVectorImpl<int64_t> &results) {
   for (auto attr : arrayAttr)
     results.push_back(attr.cast<IntegerAttr>().getInt());
-}
-
-void ExtractSlicesOp::getSizes(SmallVectorImpl<int64_t> &results) {
-  populateFromInt64AttrArray(sizes(), results);
-}
-
-void ExtractSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
-  populateFromInt64AttrArray(strides(), results);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1618,28 +1546,6 @@ OpFoldResult vector::InsertOp::fold(ArrayRef<Attribute> operands) {
   if (position().empty())
     return source();
   return {};
-}
-
-//===----------------------------------------------------------------------===//
-// InsertSlicesOp
-//===----------------------------------------------------------------------===//
-
-static LogicalResult verify(InsertSlicesOp op) {
-  SmallVector<int64_t, 4> sizes;
-  op.getSizes(sizes);
-  SmallVector<int64_t, 4> strides;
-  op.getStrides(strides);
-  return isValidExtractOrInsertSlicesType(
-      op.getOperation(), op.getResultVectorType(), op.getSourceTupleType(),
-      sizes, strides);
-}
-
-void InsertSlicesOp::getSizes(SmallVectorImpl<int64_t> &results) {
-  populateFromInt64AttrArray(sizes(), results);
-}
-
-void InsertSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
-  populateFromInt64AttrArray(strides(), results);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3441,23 +3347,6 @@ static LogicalResult verify(ShapeCastOp op) {
   if (sourceVectorType && resultVectorType)
     return verifyVectorShapeCast(op, sourceVectorType, resultVectorType);
 
-  // Check if source/result are "tuple of vectors" type.
-  auto sourceTupleType = op.source().getType().dyn_cast_or_null<TupleType>();
-  auto resultTupleType = op.result().getType().dyn_cast_or_null<TupleType>();
-  if (!sourceTupleType || !resultTupleType)
-    return op.emitOpError("source/result must be of same type");
-
-  // Check that source/result tuple sizes are the same.
-  if (sourceTupleType.size() != resultTupleType.size())
-    return op.emitOpError("source/result tuples must be the same size");
-
-  // Check each source/result tuple element pair.
-  for (unsigned i = 0, e = sourceTupleType.size(); i < e; ++i)
-    if (failed(verifyVectorShapeCast(
-            op, sourceTupleType.getType(i).cast<VectorType>(),
-            resultTupleType.getType(i).cast<VectorType>())))
-      return failure();
-
   return success();
 }
 
@@ -3753,58 +3642,6 @@ void vector::TransposeOp::getCanonicalizationPatterns(
 
 void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
   populateFromInt64AttrArray(transp(), results);
-}
-
-//===----------------------------------------------------------------------===//
-// TupleGetOp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseTupleGetOp(OpAsmParser &parser,
-                                   OperationState &result) {
-  OpAsmParser::OperandType operandInfo;
-  IntegerAttr indexAttr;
-  StringRef indexAttrName = TupleGetOp::getIndexAttrName();
-  Type indexType = parser.getBuilder().getIndexType();
-  TupleType tupleType;
-  if (parser.parseOperand(operandInfo) || parser.parseComma() ||
-      parser.parseAttribute(indexAttr, indexType, indexAttrName,
-                            result.attributes) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(tupleType) ||
-      parser.resolveOperand(operandInfo, tupleType, result.operands))
-    return failure();
-  if (indexAttr.getInt() < 0 ||
-      indexAttr.getInt() >= static_cast<int64_t>(tupleType.size()))
-    return failure();
-  parser.addTypeToList(tupleType.getType(indexAttr.getInt()), result.types);
-  return success();
-}
-
-static void print(OpAsmPrinter &p, TupleGetOp op) {
-  p << op.getOperationName() << ' ' << op.getOperand() << ", " << op.index();
-  p.printOptionalAttrDict(op->getAttrs(),
-                          /*elidedAttrs=*/{TupleGetOp::getIndexAttrName()});
-  p << " : " << op.getOperand().getType();
-}
-
-static LogicalResult verify(TupleGetOp op) {
-  auto tupleType = op.getOperand().getType().cast<TupleType>();
-  if (op.getIndex() < 0 ||
-      op.getIndex() >= static_cast<int64_t>(tupleType.size()))
-    return op.emitOpError("tuple get index out of range");
-  return success();
-}
-
-OpFoldResult TupleGetOp::fold(ArrayRef<Attribute> operands) {
-  // Rewrite:
-  //    %t = vector.tuple .., %e_i, ..
-  //    %x = vector.tuple_get %t, i
-  // into:
-  //    %t = vector.tuple .., %e_i, ..  // one less use
-  //    %x = %e_i
-  if (auto tupleOp = getOperand().getDefiningOp<TupleOp>())
-    return tupleOp.getOperand(getIndex());
-  return {};
 }
 
 //===----------------------------------------------------------------------===//

@@ -65,6 +65,11 @@ inline uptr MemToShadowSize(uptr size) {
 
 bool MemIsApp(uptr p);
 
+inline bool MemIsShadow(uptr p) {
+  return (kLowShadowStart <= p && p <= kLowShadowEnd) ||
+         (kHighShadowStart <= p && p <= kHighShadowEnd);
+}
+
 }  // namespace __hwasan
 
 #endif  // HWASAN_MAPPING_H

@@ -543,6 +543,14 @@ __isl_give UNION *FN(FN(UNION,from),BASE)(__isl_take PART *part)
 	return u;
 }
 
+/* This function performs the same operation as isl_union_pw_*_from_pw_*,
+ * but is considered as a function on an isl_pw_* when exported.
+ */
+__isl_give UNION *FN(FN(PART,to_union),BASE)(__isl_take PART *part)
+{
+	return FN(FN(UNION,from),BASE)(part);
+}
+
 S(UNION,match_bin_data) {
 	UNION *u2;
 	UNION *res;

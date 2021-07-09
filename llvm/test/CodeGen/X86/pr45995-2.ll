@@ -5,8 +5,8 @@ define <4 x i1> @selecter(i64 %0) {
 ; CHECK-LABEL: selecter:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor eax, eax
-; CHECK-NEXT:    cmp rdi, 1
-; CHECK-NEXT:    setg al
+; CHECK-NEXT:    cmp rdi, 2
+; CHECK-NEXT:    setge al
 ; CHECK-NEXT:    lea eax, [rax + 2*rax]
 ; CHECK-NEXT:    kmovd k0, eax
 ; CHECK-NEXT:    vpmovm2d xmm0, k0

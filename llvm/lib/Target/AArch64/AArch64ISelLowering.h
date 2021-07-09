@@ -449,12 +449,12 @@ namespace {
 // be copying from a truncate. But any other 32-bit operation will zero-extend
 // up to 64 bits. AssertSext/AssertZext aren't saying anything about the upper
 // 32 bits, they're probably just qualifying a CopyFromReg.
-// FIXME: X86 also checks for CMOV here. Do we need something similar?
 static inline bool isDef32(const SDNode &N) {
   unsigned Opc = N.getOpcode();
   return Opc != ISD::TRUNCATE && Opc != TargetOpcode::EXTRACT_SUBREG &&
          Opc != ISD::CopyFromReg && Opc != ISD::AssertSext &&
-         Opc != ISD::AssertZext;
+         Opc != ISD::AssertZext && Opc != ISD::AssertAlign &&
+         Opc != ISD::FREEZE;
 }
 
 } // end anonymous namespace
@@ -646,7 +646,7 @@ public:
     return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
   }
 
-  Value *emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
+  Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
                               AtomicOrdering Ord) const override;
@@ -822,6 +822,7 @@ public:
   }
 
   bool isAllActivePredicate(SDValue N) const;
+  EVT getPromotedVTForPredicate(EVT VT) const;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
@@ -857,6 +858,8 @@ private:
 
   SDValue LowerMGATHER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
@@ -1006,6 +1009,8 @@ private:
   SDValue LowerFixedLengthFPRoundToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthIntToFPToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthFPToIntToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthVECTOR_SHUFFLEToSVE(SDValue Op,
+                                              SelectionDAG &DAG) const;
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;
@@ -1066,6 +1071,8 @@ private:
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
+  void ReplaceBITCASTResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                             SelectionDAG &DAG) const;
   void ReplaceExtractSubVectorResults(SDNode *N,
                                       SmallVectorImpl<SDValue> &Results,
                                       SelectionDAG &DAG) const;

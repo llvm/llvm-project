@@ -682,14 +682,13 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
 
         // TODO: The memory size may be larger than the value we need to
         // store. We may need to adjust the offset for big endian targets.
-        uint64_t MemSize = Handler.getStackValueStoreSize(DL, VA);
+        LLT MemTy = Handler.getStackValueStoreType(DL, VA);
 
         MachinePointerInfo MPO;
-        Register StackAddr =
-            Handler.getStackAddress(MemSize, VA.getLocMemOffset(), MPO, Flags);
+        Register StackAddr = Handler.getStackAddress(
+            MemTy.getSizeInBytes(), VA.getLocMemOffset(), MPO, Flags);
 
-        Handler.assignValueToAddress(Args[i], Part, StackAddr, MemSize, MPO,
-                                     VA);
+        Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO, VA);
         continue;
       }
 
@@ -1016,14 +1015,14 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
   return true;
 }
 
-uint64_t CallLowering::ValueHandler::getStackValueStoreSize(
+LLT CallLowering::ValueHandler::getStackValueStoreType(
     const DataLayout &DL, const CCValAssign &VA) const {
-  const EVT ValVT = VA.getValVT();
+  const MVT ValVT = VA.getValVT();
   if (ValVT != MVT::iPTR)
-    return ValVT.getStoreSize();
+    return LLT(ValVT);
 
   /// FIXME: We need to get the correct pointer address space.
-  return DL.getPointerSize();
+  return LLT::pointer(0, DL.getPointerSize(0));
 }
 
 void CallLowering::ValueHandler::copyArgumentMemory(

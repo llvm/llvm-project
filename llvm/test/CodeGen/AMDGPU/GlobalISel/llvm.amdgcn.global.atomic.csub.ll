@@ -28,8 +28,7 @@ define i32 @global_atomic_csub_offset(i32 addrspace(1)* %ptr, i32 %data) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_movk_i32 s4, 0x1000
-; GFX10-NEXT:    s_mov_b32 s5, 0
+; GFX10-NEXT:    s_mov_b64 s[4:5], 0x1000
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
@@ -42,12 +41,12 @@ define i32 @global_atomic_csub_offset(i32 addrspace(1)* %ptr, i32 %data) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_mov_b32 s1, 0
-; GFX11-NEXT:    s_movk_i32 s0, 0x1000
+; GFX11-NEXT:    s_mov_b64 s[0:1], 0x1000
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v3, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -82,8 +81,7 @@ define void @global_atomic_csub_offset_nortn(i32 addrspace(1)* %ptr, i32 %data) 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_movk_i32 s4, 0x1000
-; GFX10-NEXT:    s_mov_b32 s5, 0
+; GFX10-NEXT:    s_mov_b64 s[4:5], 0x1000
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
@@ -96,12 +94,12 @@ define void @global_atomic_csub_offset_nortn(i32 addrspace(1)* %ptr, i32 %data) 
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_mov_b32 s1, 0
-; GFX11-NEXT:    s_movk_i32 s0, 0x1000
+; GFX11-NEXT:    s_mov_b64 s[0:1], 0x1000
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX11-NEXT:    v_mov_b32_e32 v3, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

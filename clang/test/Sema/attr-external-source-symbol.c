@@ -18,14 +18,14 @@ void namedDeclsOnly() {
   };
 }
 
-void threeClauses2() [[clang::external_source_symbol(language="Swift", defined_in="module", generated_declaration)]];
+[[clang::external_source_symbol(language="Swift", defined_in="module", generated_declaration)]] void threeClauses2();
 
-void twoClauses2() [[clang::external_source_symbol(language="Swift", defined_in="module")]];
+[[clang::external_source_symbol(language="Swift", defined_in="module")]] void twoClauses2();
 
-void fourClauses2()
-[[clang::external_source_symbol(language="Swift", defined_in="module", generated_declaration, generated_declaration)]]; // expected-error {{duplicate 'generated_declaration' clause in an 'external_source_symbol' attribute}}
+[[clang::external_source_symbol(language="Swift", defined_in="module", generated_declaration, generated_declaration)]] // expected-error {{duplicate 'generated_declaration' clause in an 'external_source_symbol' attribute}}
+void fourClauses2();
 
-void oneClause2() [[clang::external_source_symbol(generated_declaration)]];
+[[clang::external_source_symbol(generated_declaration)]] void oneClause2();
 
-void noArguments2()
-[[clang::external_source_symbol]]; // expected-error {{'external_source_symbol' attribute takes at least 1 argument}}
+[[clang::external_source_symbol]] // expected-error {{'external_source_symbol' attribute takes at least 1 argument}}
+void noArguments2();

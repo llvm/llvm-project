@@ -670,10 +670,34 @@ func @redundant_store_elim_fail(%out : memref<512xf32>) {
   }
   return
 }
-
 // CHECK: affine.for
 // CHECK-NEXT:   affine.store
 // CHECK-NEXT:   "test.use"
 // CHECK-NEXT:   affine.store
 // CHECK-NEXT: }
 
+// CHECK-LABEL: @with_inner_ops
+func @with_inner_ops(%arg0: memref<?xf64>, %arg1: memref<?xf64>, %arg2: i1) {
+  %cst = constant 0.000000e+00 : f64
+  %cst_0 = constant 3.140000e+00 : f64
+  %cst_1 = constant 1.000000e+00 : f64
+  affine.for %arg3 = 0 to 28 {
+    affine.store %cst, %arg1[%arg3] : memref<?xf64>
+    affine.store %cst_0, %arg1[%arg3] : memref<?xf64>
+    %0 = scf.if %arg2 -> (f64) {
+      scf.yield %cst_1 : f64
+    } else {
+      %1 = affine.load %arg1[%arg3] : memref<?xf64>
+      scf.yield %1 : f64
+    }
+    affine.store %0, %arg0[%arg3] : memref<?xf64>
+  }
+  return
+}
+
+// CHECK:  %[[pi:.+]] = constant 3.140000e+00 : f64
+// CHECK:  %{{.*}} = scf.if %arg2 -> (f64) {
+// CHECK:        scf.yield %{{.*}} : f64
+// CHECK:      } else {
+// CHECK:        scf.yield %[[pi]] : f64
+// CHECK:      }

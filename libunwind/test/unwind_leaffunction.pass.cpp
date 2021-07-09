@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Ensure that leaf function can be unwund.
-// REQUIRES: linux && (target-aarch64 || target-x86_64)
+// REQUIRES: linux && (target={{aarch64-.+}} || target={{x86_64-.+}})
 
 #include <assert.h>
 #include <dlfcn.h>

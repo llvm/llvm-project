@@ -43,7 +43,7 @@ ValueObjectChild::ValueObjectChild(
   SetLanguageFlags(language_flags);
 }
 
-ValueObjectChild::~ValueObjectChild() {}
+ValueObjectChild::~ValueObjectChild() = default;
 
 lldb::ValueType ValueObjectChild::GetValueType() const {
   return m_parent->GetValueType();
