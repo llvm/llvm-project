@@ -7903,17 +7903,15 @@ private:
     case RecurKind::FAdd:
     case RecurKind::FMul: {
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
-      VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
-                                                   /*IsPairwiseForm=*/false);
+      VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy);
       ScalarCost = TTI->getArithmeticInstrCost(RdxOpcode, ScalarTy);
       break;
     }
     case RecurKind::FMax:
     case RecurKind::FMin: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
-      VectorCost =
-          TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
-                                      /*pairwise=*/false, /*unsigned=*/false);
+      VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
+                                               /*unsigned=*/false);
       ScalarCost =
           TTI->getCmpSelInstrCost(Instruction::FCmp, ScalarTy) +
           TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
@@ -7927,9 +7925,7 @@ private:
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
       bool IsUnsigned =
           RdxKind == RecurKind::UMax || RdxKind == RecurKind::UMin;
-      VectorCost =
-          TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
-                                      /*IsPairwiseForm=*/false, IsUnsigned);
+      VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy, IsUnsigned);
       ScalarCost =
           TTI->getCmpSelInstrCost(Instruction::ICmp, ScalarTy) +
           TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
