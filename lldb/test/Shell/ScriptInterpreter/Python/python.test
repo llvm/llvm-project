@@ -1,4 +1,3 @@
-# REQUIRES: python
 # RUN: %lldb --script-language python -o 'script print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
 # RUN: %lldb --script-language python -o 'script -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
 # RUN: %lldb --script-language python -o 'script --language default -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
