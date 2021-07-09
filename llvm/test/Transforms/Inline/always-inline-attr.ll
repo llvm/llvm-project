@@ -7,7 +7,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 ; After AlwaysInline the callee's attributes should be merged into caller's attibutes.
 
 ; CHECK:  define dso_local <2 x i64> @foo(<8 x i64>* byval(<8 x i64>) align 64 %0) #0
-; CHECK:  attributes #0 = { uwtable mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="512"
+; CHECK:  attributes #0 = { mustprogress uwtable "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="512"
 
 ; Function Attrs: uwtable mustprogress
 define dso_local <2 x i64> @foo(<8 x i64>* byval(<8 x i64>) align 64 %0) #0 {

@@ -266,7 +266,7 @@ def WriteOnly : EnumAttr<"writeonly">;
 def ZExt : EnumAttr<"zeroext">;
 
 /// Function is required to make Forward Progress.
-def MustProgress : TypeAttr<"mustprogress">;
+def MustProgress : EnumAttr<"mustprogress">;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
