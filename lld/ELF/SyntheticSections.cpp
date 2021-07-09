@@ -1589,6 +1589,7 @@ int64_t DynamicReloc::computeAddend() const {
     assert(sym == nullptr);
     return getMipsPageAddr(outputSec->addr) + addend;
   }
+  llvm_unreachable("Unknown DynamicReloc::Kind enum");
 }
 
 uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
