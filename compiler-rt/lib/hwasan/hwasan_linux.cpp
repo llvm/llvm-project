@@ -116,7 +116,7 @@ static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
       FindDynamicShadowStart(shadow_size_bytes);
 }
 
-void InitPrctl() {
+void InitializeOsSupport() {
 #define PR_SET_TAGGED_ADDR_CTRL 55
 #define PR_GET_TAGGED_ADDR_CTRL 56
 #define PR_TAGGED_ADDR_ENABLE (1UL << 0)

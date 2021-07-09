@@ -275,7 +275,7 @@ static void InitLoadedGlobals() {
 static void InitInstrumentation() {
   if (hwasan_instrumentation_inited) return;
 
-  InitPrctl();
+  InitializeOsSupport();
 
   if (!InitShadow()) {
     Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
