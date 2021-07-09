@@ -344,6 +344,7 @@ class schedule_node_mark;
 class schedule_node_sequence;
 class schedule_node_set;
 class set;
+class set_list;
 class space;
 class union_access_info;
 class union_flow;
@@ -1702,12 +1703,13 @@ public:
   inline isl::pw_multi_aff pw_multi_aff_on_domain(const isl::multi_val &mv) const;
   inline isl::basic_set sample() const;
   inline isl::point sample_point() const;
+  inline isl::set_list set_list() const;
   inline isl::fixed_box simple_fixed_box_hull() const;
   inline isl::space space() const;
   inline isl::val stride(int pos) const;
   inline isl::set subtract(const isl::set &set2) const;
   inline isl::union_set subtract(const isl::union_set &uset2) const;
-  inline isl::union_set_list to_list() const;
+  inline isl::set_list to_list() const;
   inline isl::set to_set() const;
   inline isl::union_set to_union_set() const;
   inline isl::map translation() const;
@@ -2620,12 +2622,13 @@ public:
   inline isl::pw_multi_aff pw_multi_aff_on_domain(const isl::multi_val &mv) const;
   inline isl::basic_set sample() const;
   inline isl::point sample_point() const;
+  inline isl::set_list set_list() const;
   inline isl::fixed_box simple_fixed_box_hull() const;
   inline isl::space space() const;
   inline isl::val stride(int pos) const;
   inline isl::set subtract(const isl::set &set2) const;
   inline isl::union_set subtract(const isl::union_set &uset2) const;
-  inline isl::union_set_list to_list() const;
+  inline isl::set_list to_list() const;
   inline isl::set to_set() const;
   inline isl::union_set to_union_set() const;
   inline isl::map translation() const;
@@ -3566,6 +3569,7 @@ public:
   inline isl::pw_multi_aff pw_multi_aff_on_domain(isl::multi_val mv) const;
   inline isl::basic_set sample() const;
   inline isl::point sample_point() const;
+  inline isl::set_list set_list() const;
   inline isl::fixed_box simple_fixed_box_hull() const;
   inline isl::fixed_box get_simple_fixed_box_hull() const;
   inline isl::space space() const;
@@ -3576,7 +3580,7 @@ public:
   inline isl::union_set subtract(const isl::union_set &uset2) const;
   inline isl::set subtract(const isl::basic_set &set2) const;
   inline isl::set subtract(const isl::point &set2) const;
-  inline isl::union_set_list to_list() const;
+  inline isl::set_list to_list() const;
   inline isl::union_set to_union_set() const;
   inline isl::map translation() const;
   inline unsigned tuple_dim() const;
@@ -3591,6 +3595,45 @@ public:
   inline isl::map unwrap() const;
   inline isl::set upper_bound(isl::multi_pw_aff upper) const;
   inline isl::set upper_bound(isl::multi_val upper) const;
+};
+
+// declarations for isl::set_list
+inline set_list manage(__isl_take isl_set_list *ptr);
+inline set_list manage_copy(__isl_keep isl_set_list *ptr);
+
+class set_list {
+  friend inline set_list manage(__isl_take isl_set_list *ptr);
+  friend inline set_list manage_copy(__isl_keep isl_set_list *ptr);
+
+protected:
+  isl_set_list *ptr = nullptr;
+
+  inline explicit set_list(__isl_take isl_set_list *ptr);
+
+public:
+  inline /* implicit */ set_list();
+  inline /* implicit */ set_list(const set_list &obj);
+  inline explicit set_list(isl::ctx ctx, int n);
+  inline explicit set_list(isl::set el);
+  inline explicit set_list(isl::ctx ctx, const std::string &str);
+  inline set_list &operator=(set_list obj);
+  inline ~set_list();
+  inline __isl_give isl_set_list *copy() const &;
+  inline __isl_give isl_set_list *copy() && = delete;
+  inline __isl_keep isl_set_list *get() const;
+  inline __isl_give isl_set_list *release();
+  inline bool is_null() const;
+  inline isl::ctx ctx() const;
+
+  inline isl::set_list add(isl::set el) const;
+  inline isl::set at(int index) const;
+  inline isl::set get_at(int index) const;
+  inline isl::set_list clear() const;
+  inline isl::set_list concat(isl::set_list list2) const;
+  inline isl::set_list drop(unsigned int first, unsigned int n) const;
+  inline void foreach(const std::function<void(isl::set)> &fn) const;
+  inline isl::set_list insert(unsigned int pos, isl::set el) const;
+  inline unsigned size() const;
 };
 
 // declarations for isl::space
@@ -4118,6 +4161,8 @@ public:
   inline isl::union_set preimage(isl::pw_multi_aff pma) const;
   inline isl::union_set preimage(isl::union_pw_multi_aff upma) const;
   inline isl::point sample_point() const;
+  inline isl::set_list set_list() const;
+  inline isl::set_list get_set_list() const;
   inline isl::space space() const;
   inline isl::space get_space() const;
   inline isl::union_set subtract(isl::union_set uset2) const;
@@ -9971,6 +10016,13 @@ isl::point basic_set::sample_point() const
   return manage(res);
 }
 
+isl::set_list basic_set::set_list() const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  return isl::set(*this).set_list();
+}
+
 isl::fixed_box basic_set::simple_fixed_box_hull() const
 {
   if (!ptr)
@@ -10006,7 +10058,7 @@ isl::union_set basic_set::subtract(const isl::union_set &uset2) const
   return isl::set(*this).subtract(uset2);
 }
 
-isl::union_set_list basic_set::to_list() const
+isl::set_list basic_set::to_list() const
 {
   if (!ptr)
     exception::throw_invalid("NULL input", __FILE__, __LINE__);
@@ -16645,6 +16697,13 @@ isl::point point::sample_point() const
   return isl::basic_set(*this).sample_point();
 }
 
+isl::set_list point::set_list() const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  return isl::basic_set(*this).set_list();
+}
+
 isl::fixed_box point::simple_fixed_box_hull() const
 {
   if (!ptr)
@@ -16680,7 +16739,7 @@ isl::union_set point::subtract(const isl::union_set &uset2) const
   return isl::basic_set(*this).subtract(uset2);
 }
 
-isl::union_set_list point::to_list() const
+isl::set_list point::to_list() const
 {
   if (!ptr)
     exception::throw_invalid("NULL input", __FILE__, __LINE__);
@@ -22618,6 +22677,13 @@ isl::point set::sample_point() const
   return manage(res);
 }
 
+isl::set_list set::set_list() const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  return isl::union_set(*this).set_list();
+}
+
 isl::fixed_box set::simple_fixed_box_hull() const
 {
   if (!ptr)
@@ -22702,11 +22768,16 @@ isl::set set::subtract(const isl::point &set2) const
   return this->subtract(isl::set(set2));
 }
 
-isl::union_set_list set::to_list() const
+isl::set_list set::to_list() const
 {
   if (!ptr)
     exception::throw_invalid("NULL input", __FILE__, __LINE__);
-  return isl::union_set(*this).to_list();
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_to_list(copy());
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  return manage(res);
 }
 
 isl::union_set set::to_union_set() const
@@ -22869,6 +22940,236 @@ inline std::ostream &operator<<(std::ostream &os, const set &obj)
   auto saved_ctx = isl_set_get_ctx(obj.get());
   options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
   char *str = isl_set_to_str(obj.get());
+  if (!str)
+    exception::throw_last_error(saved_ctx);
+  os << str;
+  free(str);
+  return os;
+}
+
+// implementations for isl::set_list
+set_list manage(__isl_take isl_set_list *ptr) {
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  return set_list(ptr);
+}
+set_list manage_copy(__isl_keep isl_set_list *ptr) {
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = isl_set_list_get_ctx(ptr);
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  ptr = isl_set_list_copy(ptr);
+  if (!ptr)
+    exception::throw_last_error(saved_ctx);
+  return set_list(ptr);
+}
+
+set_list::set_list()
+    : ptr(nullptr) {}
+
+set_list::set_list(const set_list &obj)
+    : ptr(nullptr)
+{
+  if (!obj.ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = isl_set_list_get_ctx(obj.ptr);
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  ptr = obj.copy();
+  if (!ptr)
+    exception::throw_last_error(saved_ctx);
+}
+
+set_list::set_list(__isl_take isl_set_list *ptr)
+    : ptr(ptr) {}
+
+set_list::set_list(isl::ctx ctx, int n)
+{
+  auto saved_ctx = ctx;
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_alloc(ctx.release(), n);
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  ptr = res;
+}
+
+set_list::set_list(isl::set el)
+{
+  if (el.is_null())
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = el.ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_from_set(el.release());
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  ptr = res;
+}
+
+set_list::set_list(isl::ctx ctx, const std::string &str)
+{
+  auto saved_ctx = ctx;
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_read_from_str(ctx.release(), str.c_str());
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  ptr = res;
+}
+
+set_list &set_list::operator=(set_list obj) {
+  std::swap(this->ptr, obj.ptr);
+  return *this;
+}
+
+set_list::~set_list() {
+  if (ptr)
+    isl_set_list_free(ptr);
+}
+
+__isl_give isl_set_list *set_list::copy() const & {
+  return isl_set_list_copy(ptr);
+}
+
+__isl_keep isl_set_list *set_list::get() const {
+  return ptr;
+}
+
+__isl_give isl_set_list *set_list::release() {
+  isl_set_list *tmp = ptr;
+  ptr = nullptr;
+  return tmp;
+}
+
+bool set_list::is_null() const {
+  return ptr == nullptr;
+}
+
+isl::ctx set_list::ctx() const {
+  return isl::ctx(isl_set_list_get_ctx(ptr));
+}
+
+isl::set_list set_list::add(isl::set el) const
+{
+  if (!ptr || el.is_null())
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_add(copy(), el.release());
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  return manage(res);
+}
+
+isl::set set_list::at(int index) const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_get_at(get(), index);
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  return manage(res);
+}
+
+isl::set set_list::get_at(int index) const
+{
+  return at(index);
+}
+
+isl::set_list set_list::clear() const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_clear(copy());
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  return manage(res);
+}
+
+isl::set_list set_list::concat(isl::set_list list2) const
+{
+  if (!ptr || list2.is_null())
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_concat(copy(), list2.release());
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  return manage(res);
+}
+
+isl::set_list set_list::drop(unsigned int first, unsigned int n) const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_drop(copy(), first, n);
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  return manage(res);
+}
+
+void set_list::foreach(const std::function<void(isl::set)> &fn) const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  struct fn_data {
+    std::function<void(isl::set)> func;
+    std::exception_ptr eptr;
+  } fn_data = { fn };
+  auto fn_lambda = [](isl_set *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    ISL_CPP_TRY {
+      (data->func)(manage(arg_0));
+      return isl_stat_ok;
+    } ISL_CPP_CATCH_ALL {
+      data->eptr = std::current_exception();
+      return isl_stat_error;
+    }
+  };
+  auto res = isl_set_list_foreach(get(), fn_lambda, &fn_data);
+  if (fn_data.eptr)
+    std::rethrow_exception(fn_data.eptr);
+  if (res < 0)
+    exception::throw_last_error(saved_ctx);
+  return;
+}
+
+isl::set_list set_list::insert(unsigned int pos, isl::set el) const
+{
+  if (!ptr || el.is_null())
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_insert(copy(), pos, el.release());
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  return manage(res);
+}
+
+unsigned set_list::size() const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_set_list_size(get());
+  if (res < 0)
+    exception::throw_last_error(saved_ctx);
+  return res;
+}
+
+inline std::ostream &operator<<(std::ostream &os, const set_list &obj)
+{
+  if (!obj.get())
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = isl_set_list_get_ctx(obj.get());
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  char *str = isl_set_list_to_str(obj.get());
   if (!str)
     exception::throw_last_error(saved_ctx);
   os << str;
@@ -26948,6 +27249,23 @@ isl::point union_set::sample_point() const
   if (!res)
     exception::throw_last_error(saved_ctx);
   return manage(res);
+}
+
+isl::set_list union_set::set_list() const
+{
+  if (!ptr)
+    exception::throw_invalid("NULL input", __FILE__, __LINE__);
+  auto saved_ctx = ctx();
+  options_scoped_set_on_error saved_on_error(saved_ctx, exception::on_error);
+  auto res = isl_union_set_get_set_list(get());
+  if (!res)
+    exception::throw_last_error(saved_ctx);
+  return manage(res);
+}
+
+isl::set_list union_set::get_set_list() const
+{
+  return set_list();
 }
 
 isl::space union_set::space() const
