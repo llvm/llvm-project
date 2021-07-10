@@ -2871,7 +2871,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           return ORA
                  << "State machine fallback caused by this call. If it is a "
                     "false positive, use "
-                    "`__attribute__((assume(\"omp_no_openmp\"))` "
+                    "`__attribute__((assume(\"omp_no_openmp\")))` "
                     "(or \"omp_no_parallelism\").";
         };
         A.emitRemark<OptimizationRemarkAnalysis>(
