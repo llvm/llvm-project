@@ -7134,11 +7134,42 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
                                  const_cast<Instruction *>(CtxI));
   }
 
+  /// Return true if \p CtxI is valid for querying outside analyses.
+  /// This basically makes sure we do not ask intra-procedural analysis
+  /// about a context in the wrong function or a context that violates
+  /// dominance assumptions they might have. The \p AllowAACtxI flag indicates
+  /// if the original context of this AA is OK or should be considered invalid.
+  bool isValidCtxInstructionForOutsideAnalysis(Attributor &A,
+                                               const Instruction *CtxI,
+                                               bool AllowAACtxI) const {
+    if (!CtxI || (!AllowAACtxI && CtxI == getCtxI()))
+      return false;
+
+    // Our context might be in a different function, neither intra-procedural
+    // analysis (ScalarEvolution nor LazyValueInfo) can handle that.
+    if (!AA::isValidInScope(getAssociatedValue(), CtxI->getFunction()))
+      return false;
+
+    // If the context is not dominated by the value there are paths to the
+    // context that do not define the value. This cannot be handled by
+    // LazyValueInfo so we need to bail.
+    if (auto *I = dyn_cast<Instruction>(&getAssociatedValue())) {
+      InformationCache &InfoCache = A.getInfoCache();
+      const DominatorTree *DT =
+          InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(
+              *I->getFunction());
+       return DT && DT->dominates(I, CtxI);
+    }
+
+    return true;
+  }
+
   /// See AAValueConstantRange::getKnownConstantRange(..).
   ConstantRange
   getKnownConstantRange(Attributor &A,
                         const Instruction *CtxI = nullptr) const override {
-    if (!CtxI || CtxI == getCtxI())
+    if (!isValidCtxInstructionForOutsideAnalysis(A, CtxI,
+                                                 /* AllowAACtxI */ false))
       return getKnown();
 
     ConstantRange LVIR = getConstantRangeFromLVI(A, CtxI);
@@ -7154,9 +7185,8 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     //       We may be able to bound a variable range via assumptions in
     //       Attributor. ex.) If x is assumed to be in [1, 3] and y is known to
     //       evolve to x^2 + x, then we can say that y is in [2, 12].
-
-    if (!CtxI || CtxI == getCtxI() ||
-        !AA::isValidInScope(getAssociatedValue(), CtxI->getFunction()))
+    if (!isValidCtxInstructionForOutsideAnalysis(A, CtxI,
+                                                 /* AllowAACtxI */ false))
       return getAssumed();
 
     ConstantRange LVIR = getConstantRangeFromLVI(A, CtxI);
