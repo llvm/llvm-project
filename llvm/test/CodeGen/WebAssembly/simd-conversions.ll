@@ -126,3 +126,25 @@ define <2 x double> @convert_low_u_v2f64_2(<4 x i32> %x) {
   %a = shufflevector <4 x double> %v, <4 x double> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x double> %a
 }
+
+; CHECK-LABEL: promote_low_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype promote_low_v2f64 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.promote_low_f32x4 $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <2 x double> @promote_low_v2f64(<4 x float> %x) {
+  %v = shufflevector <4 x float> %x, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  %a = fpext <2 x float> %v to <2 x double>
+  ret <2 x double> %a
+}
+
+; CHECK-LABEL: promote_low_v2f64_2:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .functype promote_low_v2f64_2 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f64x2.promote_low_f32x4 $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <2 x double> @promote_low_v2f64_2(<4 x float> %x) {
+  %v = fpext <4 x float> %x to <4 x double>
+  %a = shufflevector <4 x double> %v, <4 x double> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %a
+}
