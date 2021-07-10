@@ -32,21 +32,39 @@ entry:
 
 define i64 @fn2b(i32 %arg) {
 ;
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2b
-; IS__TUNIT____-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; IS__TUNIT____-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; IS__TUNIT____-NEXT:    ret i64 [[DIV]]
+; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@fn2b
+; IS__TUNIT_OPM-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; IS__TUNIT_OPM-NEXT:  entry:
+; IS__TUNIT_OPM-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; IS__TUNIT_OPM-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
+; IS__TUNIT_OPM-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #[[ATTR0]]
+; IS__TUNIT_OPM-NEXT:    ret i64 [[CALL2]]
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@fn2b
-; IS__CGSCC____-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
-; IS__CGSCC____-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; IS__CGSCC____-NEXT:    ret i64 [[DIV]]
+; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@fn2b
+; IS__TUNIT_NPM-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; IS__TUNIT_NPM-NEXT:  entry:
+; IS__TUNIT_NPM-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; IS__TUNIT_NPM-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
+; IS__TUNIT_NPM-NEXT:    ret i64 [[DIV]]
+;
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@fn2b
+; IS__CGSCC_OPM-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_OPM-NEXT:  entry:
+; IS__CGSCC_OPM-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; IS__CGSCC_OPM-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
+; IS__CGSCC_OPM-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #[[ATTR1:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    ret i64 [[CALL2]]
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fn2b
+; IS__CGSCC_NPM-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:  entry:
+; IS__CGSCC_NPM-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
+; IS__CGSCC_NPM-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
+; IS__CGSCC_NPM-NEXT:    ret i64 [[DIV]]
 ;
 entry:
   %conv = sext i32 %arg to i64
@@ -83,11 +101,23 @@ entry:
 }
 
 define internal i64 @fn1(i64 %p1) {
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@fn1
-; IS__CGSCC____-SAME: (i64 [[P1:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    ret i64 undef
+; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@fn1
+; IS__TUNIT_OPM-SAME: (i64 returned [[P1:%.*]]) #[[ATTR0]] {
+; IS__TUNIT_OPM-NEXT:  entry:
+; IS__TUNIT_OPM-NEXT:    ret i64 [[P1]]
+;
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@fn1
+; IS__CGSCC_OPM-SAME: (i64 returned [[P1:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_OPM-NEXT:  entry:
+; IS__CGSCC_OPM-NEXT:    ret i64 [[P1]]
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@fn1
+; IS__CGSCC_NPM-SAME: (i64 [[P1:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:  entry:
+; IS__CGSCC_NPM-NEXT:    ret i64 undef
 ;
 entry:
   %tobool = icmp ne i64 %p1, 0
@@ -97,5 +127,8 @@ entry:
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR1]] = { readnone willreturn }
+;.
+; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
