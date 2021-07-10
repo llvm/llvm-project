@@ -20,12 +20,5 @@ namespace mca {
 
 void View::anchor() {}
 
-void View::printViewJSON(llvm::raw_ostream &OS) {
-  json::Object JO;
-  JO.try_emplace(getNameAsString().str(), toJSON());
-  OS << formatv("{0:2}", json::Value(std::move(JO))) << "\n";
-}
-
-
 } // namespace mca
 } // namespace llvm

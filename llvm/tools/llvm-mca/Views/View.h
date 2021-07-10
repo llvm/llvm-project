@@ -30,9 +30,9 @@ public:
   virtual void printView(llvm::raw_ostream &OS) const = 0;
   virtual StringRef getNameAsString() const = 0;
 
-  virtual void printViewJSON(llvm::raw_ostream &OS);
   virtual json::Value toJSON() const { return "not implemented"; }
   virtual bool isSerializable() const { return true; }
+
   void anchor() override;
 };
 } // namespace mca

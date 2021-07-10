@@ -14,7 +14,7 @@ add %ecx, %ecx
 add %edx, %edx
 
 # CHECK:      {
-# CHECK-NEXT:   "Resources": {
+# CHECK-NEXT:   "TargetInfo": {
 # CHECK-NEXT:     "CPUName": "haswell",
 # CHECK-NEXT:     "Resources": [
 # CHECK-NEXT:       "HWDivider",
