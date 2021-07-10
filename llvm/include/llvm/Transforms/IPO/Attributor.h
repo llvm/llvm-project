@@ -1481,6 +1481,12 @@ struct Attributor {
                                          bool &UsedAssumedInformation) {
     return getAssumedSimplified(IRP, &AA, UsedAssumedInformation);
   }
+  Optional<Value *> getAssumedSimplified(const Value &V,
+                                         const AbstractAttribute &AA,
+                                         bool &UsedAssumedInformation) {
+    return getAssumedSimplified(IRPosition::value(V), AA,
+                                UsedAssumedInformation);
+  }
 
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
@@ -1507,6 +1513,12 @@ private:
                                          bool &UsedAssumedInformation);
 
 public:
+  /// Translate \p V from the callee context into the call site context.
+  Optional<Value *>
+  translateArgumentToCallSiteContent(Optional<Value *> V, CallBase &CB,
+                                     const AbstractAttribute &AA,
+                                     bool &UsedAssumedInformation);
+
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
@@ -2654,7 +2666,6 @@ struct AAReturnedValues
   virtual llvm::iterator_range<const_iterator> returned_values() const = 0;
 
   virtual size_t getNumReturnValues() const = 0;
-  virtual const SmallSetVector<CallBase *, 4> &getUnresolvedCalls() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAReturnedValues &createForPosition(const IRPosition &IRP,
