@@ -7,7 +7,7 @@ double dfoo(double)  __attribute__((__unavailable__("NO LONGER"))); // expected-
 
 void bar(void) __attribute__((__unavailable__)); // expected-note {{explicitly marked unavailable}}
 
-int quux(void) __attribute__((__unavailable__(12))); // expected-error {{'__unavailable__' attribute requires a string}}
+int quux(void) __attribute__((__unavailable__(12))); // expected-error {{expected string literal as argument of '__unavailable__' attribute}}
 
 #define ACCEPTABLE	"Use something else"
 int quux2(void) __attribute__((__unavailable__(ACCEPTABLE)));

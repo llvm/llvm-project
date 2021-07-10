@@ -4,7 +4,7 @@ __attribute__((objc_runtime_name)) // expected-error {{'objc_runtime_name' attri
 @interface BInterface
 @end
 
-__attribute__((objc_runtime_name(123))) // expected-error {{'objc_runtime_name' attribute requires a string}}
+__attribute__((objc_runtime_name(123))) // expected-error {{expected string literal as argument of 'objc_runtime_name' attribute}}
 @protocol BProtocol1
 @end
 
@@ -13,7 +13,7 @@ __attribute__((objc_runtime_name("MySecretNamespace.Protocol")))
 @end
 
 __attribute__((objc_runtime_name("MySecretNamespace.Message")))
-@interface Message <Protocol> { 
+@interface Message <Protocol> {
 __attribute__((objc_runtime_name("MySecretNamespace.Message"))) // expected-error {{'objc_runtime_name' attribute only applies to Objective-C interfaces and Objective-C protocols}}
   id MyIVAR;
 }
