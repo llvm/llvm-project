@@ -45,6 +45,7 @@ class PipelinePrinter {
 
   void printRegionHeader(llvm::raw_ostream &OS) const;
   json::Object getJSONReportRegion() const;
+  json::Object getJSONTargetInfo() const;
 
 public:
   PipelinePrinter(Pipeline &Pipe, const CodeRegion &R, unsigned Idx,

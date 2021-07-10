@@ -40,9 +40,34 @@ json::Object PipelinePrinter::getJSONReportRegion() const {
   return JO;
 }
 
+json::Object PipelinePrinter::getJSONTargetInfo() const {
+  json::Array Resources;
+  const MCSchedModel &SM = STI.getSchedModel();
+  StringRef MCPU = STI.getCPU();
+
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
+    unsigned NumUnits = ProcResource.NumUnits;
+    if (ProcResource.SubUnitsIdxBegin || !NumUnits)
+      continue;
+
+    for (unsigned J = 0; J < NumUnits; ++J) {
+      std::string ResourceName = ProcResource.Name;
+      if (NumUnits > 1) {
+        ResourceName +=  ".";
+        ResourceName += J;
+      }
+
+      Resources.push_back(ResourceName);
+    }
+  }
+
+  return json::Object({{"CPUName", MCPU}, {"Resources", std::move(Resources)}});
+}
+
 void PipelinePrinter::printReport(json::Object &JO) const {
   if (!RegionIdx)
-    JO.try_emplace("Resources", InstructionView::getJSONTargetInfo(STI));
+    JO.try_emplace("TargetInfo", getJSONTargetInfo());
 
   StringRef RegionName;
   if (Region.getDescription().empty())
