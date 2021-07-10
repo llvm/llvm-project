@@ -1039,8 +1039,7 @@ define i32 @test_select(i32 %c) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_select
 ; IS__TUNIT____-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32 @select() #[[ATTR1]]
-; IS__TUNIT____-NEXT:    ret i32 [[CALL]]
+; IS__TUNIT____-NEXT:    ret i32 42
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_select
@@ -1052,11 +1051,6 @@ define i32 @test_select(i32 %c) {
 }
 
 define internal i32 @select(i1 %a, i32 %b, i32 %c) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@select
-; IS__TUNIT____-SAME: () #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    ret i32 42
-;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@select
 ; IS__CGSCC____-SAME: () #[[ATTR1]] {
