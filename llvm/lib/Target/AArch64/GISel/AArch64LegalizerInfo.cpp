@@ -46,7 +46,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
   const LLT s256 = LLT::scalar(256);
-  const LLT s512 = LLT::scalar(512);
   const LLT v16s8 = LLT::fixed_vector(16, 8);
   const LLT v8s8 = LLT::fixed_vector(8, 8);
   const LLT v4s8 = LLT::fixed_vector(4, 8);
@@ -563,9 +562,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         .fewerElementsIf(
             [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
             scalarize(1))
-        // Clamp the big scalar to s8-s512 and make it either a power of 2, 192,
-        // or 384.
-        .clampScalar(BigTyIdx, s8, s512)
+        // Clamp the big scalar to s8-s128 and make it a power of 2.
+        .clampScalar(BigTyIdx, s8, s128)
         .widenScalarIf(
             [=](const LegalityQuery &Query) {
               const LLT &Ty = Query.Types[BigTyIdx];
