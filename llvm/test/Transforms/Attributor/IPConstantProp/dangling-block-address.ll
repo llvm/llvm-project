@@ -54,7 +54,7 @@ define internal void @bar(i32* nocapture %pc) nounwind readonly {
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_NPM-SAME: () #[[ATTR1:[0-9]+]] {
+; IS__CGSCC_NPM-SAME: (i32* noalias nocapture nofree nonnull readonly align 536870912 dereferenceable(4294967295) [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    br label [[INDIRECTGOTO:%.*]]
 ; IS__CGSCC_NPM:       lab0:

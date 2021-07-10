@@ -1086,12 +1086,12 @@ define i32 @violate_noundef_nonpointer() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@violate_noundef_nonpointer
 ; IS__TUNIT____-SAME: () #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    ret i32 undef
+; IS__TUNIT____-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@violate_noundef_nonpointer
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    ret i32 undef
+; IS__CGSCC____-NEXT:    unreachable
 ;
   %ret = call i32 @argument_noundef1(i32 undef)
   ret i32 %ret
@@ -1115,12 +1115,12 @@ define i32* @violate_noundef_pointer() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@violate_noundef_pointer
 ; IS__TUNIT____-SAME: () #[[ATTR0]] {
-; IS__TUNIT____-NEXT:    ret i32* undef
+; IS__TUNIT____-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@violate_noundef_pointer
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    ret i32* undef
+; IS__CGSCC____-NEXT:    unreachable
 ;
   %ret = call i32* @argument_noundef2(i32* undef)
   ret i32* %ret

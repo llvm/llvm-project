@@ -159,11 +159,11 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
     kmp_InterWarpCopyFctPtr cpyFct) {
   return nvptx_parallel_reduce_nowait(
       global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
-      __kmpc_is_spmd_exec_mode(), isRuntimeUninitialized());
+      checkSPMDMode(loc), checkRuntimeUninitialized(loc));
 }
 
 INLINE static bool isMaster(kmp_Ident *loc, uint32_t ThreadId) {
-  return !__kmpc_is_spmd_exec_mode() || IsTeamMaster(ThreadId);
+  return checkGenericMode(loc) || IsTeamMaster(ThreadId);
 }
 
 INLINE static uint32_t roundToWarpsize(uint32_t s) {
@@ -184,16 +184,16 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     kmp_ListGlobalFctPtr glredFct) {
 
   // Terminate all threads in non-SPMD mode except for the master thread.
-  if (!__kmpc_is_spmd_exec_mode() && GetThreadIdInBlock() != GetMasterThreadID())
+  if (checkGenericMode(loc) && GetThreadIdInBlock() != GetMasterThreadID())
     return 0;
 
-  uint32_t ThreadId = GetLogicalThreadIdInBlock(__kmpc_is_spmd_exec_mode());
+  uint32_t ThreadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
 
   // In non-generic mode all workers participate in the teams reduction.
   // In generic mode only the team master participates in the teams
   // reduction because the workers are waiting for parallel work.
   uint32_t NumThreads =
-      __kmpc_is_spmd_exec_mode() ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
+      checkSPMDMode(loc) ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
                          : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
   uint32_t NumTeams = GetNumberOfBlocksInKernel();
@@ -225,7 +225,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     ChunkTeamCount = __kmpc_atomic_inc((uint32_t *)&Cnt, num_of_records - 1u);
   }
   // Synchronize
-  if (__kmpc_is_spmd_exec_mode())
+  if (checkSPMDMode(loc))
     __kmpc_barrier(loc, global_tid);
 
   // reduce_data is global or shared so before being reduced within the

@@ -416,11 +416,11 @@ EXTERN int32_t __kmpc_cancel(kmp_Ident *loc, int32_t global_tid,
                              int32_t cancelVal);
 
 // non standard
-EXTERN int32_t __kmpc_target_init(ident_t *Ident, bool IsSPMD,
-                                 bool UseGenericStateMachine,
-                           bool RequiresFullRuntime);
-EXTERN void __kmpc_target_deinit(ident_t *Ident, bool IsSPMD,
-                           bool RequiresFullRuntime);
+EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime);
+EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized);
+EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit,
+                                    int16_t RequiresOMPRuntime);
+EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime);
 EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn);
 EXTERN bool __kmpc_kernel_parallel(void **WorkFn);
 EXTERN void __kmpc_kernel_end_parallel();

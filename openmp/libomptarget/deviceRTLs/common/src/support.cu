@@ -35,6 +35,57 @@ bool isRuntimeInitialized() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Execution Modes based on location parameter fields
+////////////////////////////////////////////////////////////////////////////////
+
+bool checkSPMDMode(kmp_Ident *loc) {
+  if (!loc)
+    return __kmpc_is_spmd_exec_mode();
+
+  // If SPMD is true then we are not in the UNDEFINED state so
+  // we can return immediately.
+  if (loc->reserved_2 & KMP_IDENT_SPMD_MODE)
+    return true;
+
+  // If not in SPMD mode and runtime required is a valid
+  // combination of flags so we can return immediately.
+  if (!(loc->reserved_2 & KMP_IDENT_SIMPLE_RT_MODE))
+    return false;
+
+  // We are in underfined state.
+  return __kmpc_is_spmd_exec_mode();
+}
+
+bool checkGenericMode(kmp_Ident *loc) { return !checkSPMDMode(loc); }
+
+bool checkRuntimeUninitialized(kmp_Ident *loc) {
+  if (!loc)
+    return isRuntimeUninitialized();
+
+  // If runtime is required then we know we can't be
+  // in the undefined mode. We can return immediately.
+  if (!(loc->reserved_2 & KMP_IDENT_SIMPLE_RT_MODE))
+    return false;
+
+  // If runtime is required then we need to check is in
+  // SPMD mode or not. If not in SPMD mode then we end
+  // up in the UNDEFINED state that marks the orphaned
+  // functions.
+  if (loc->reserved_2 & KMP_IDENT_SPMD_MODE)
+    return true;
+
+  // Check if we are in an UNDEFINED state. Undefined is denoted by
+  // non-SPMD + noRuntimeRequired which is a combination that
+  // cannot actually happen. Undefined states is used to mark orphaned
+  // functions.
+  return isRuntimeUninitialized();
+}
+
+bool checkRuntimeInitialized(kmp_Ident *loc) {
+  return !checkRuntimeUninitialized(loc);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // support: get info from machine
 ////////////////////////////////////////////////////////////////////////////////
 
