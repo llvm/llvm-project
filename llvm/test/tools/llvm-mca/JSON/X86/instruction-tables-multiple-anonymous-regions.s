@@ -5,14 +5,16 @@
 # RUN:  | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:  | FileCheck %s
 
-# LLVM-MCA-BEGIN foo
+# LLVM-MCA-BEGIN
 add %eax, %eax
-# LLVM-MCA-BEGIN bar
+# LLVM-MCA-END
+# LLVM-MCA-BEGIN
 add %ebx, %ebx
 add %ecx, %ecx
-# LLVM-MCA-END bar
+# LLVM-MCA-END
+# LLVM-MCA-BEGIN
 add %edx, %edx
-# LLVM-MCA-END foo
+# LLVM-MCA-END
 
 # CHECK:      {
 # CHECK-NEXT:   "CodeRegions": [
@@ -27,43 +29,13 @@ add %edx, %edx
 # CHECK-NEXT:             "hasUnmodeledSideEffects": false,
 # CHECK-NEXT:             "mayLoad": false,
 # CHECK-NEXT:             "mayStore": false
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "Instruction": 1,
-# CHECK-NEXT:             "Latency": 1,
-# CHECK-NEXT:             "NumMicroOpcodes": 1,
-# CHECK-NEXT:             "RThroughput": 0.25,
-# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:             "mayLoad": false,
-# CHECK-NEXT:             "mayStore": false
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "Instruction": 2,
-# CHECK-NEXT:             "Latency": 1,
-# CHECK-NEXT:             "NumMicroOpcodes": 1,
-# CHECK-NEXT:             "RThroughput": 0.25,
-# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:             "mayLoad": false,
-# CHECK-NEXT:             "mayStore": false
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "Instruction": 3,
-# CHECK-NEXT:             "Latency": 1,
-# CHECK-NEXT:             "NumMicroOpcodes": 1,
-# CHECK-NEXT:             "RThroughput": 0.25,
-# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:             "mayLoad": false,
-# CHECK-NEXT:             "mayStore": false
 # CHECK-NEXT:           }
 # CHECK-NEXT:         ]
 # CHECK-NEXT:       },
 # CHECK-NEXT:       "Instructions": [
-# CHECK-NEXT:         "addl\t%eax, %eax",
-# CHECK-NEXT:         "addl\t%ebx, %ebx",
-# CHECK-NEXT:         "addl\t%ecx, %ecx",
-# CHECK-NEXT:         "addl\t%edx, %edx"
+# CHECK-NEXT:         "addl\t%eax, %eax"
 # CHECK-NEXT:       ],
-# CHECK-NEXT:       "Name": "foo",
+# CHECK-NEXT:       "Name": "",
 # CHECK-NEXT:       "ResourcePressureView": {
 # CHECK-NEXT:         "ResourcePressureInfo": [
 # CHECK-NEXT:           {
@@ -105,66 +77,6 @@ add %edx, %edx
 # CHECK-NEXT:             "InstructionIndex": 1,
 # CHECK-NEXT:             "ResourceIndex": 8,
 # CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 2,
-# CHECK-NEXT:             "ResourceIndex": 2,
-# CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 2,
-# CHECK-NEXT:             "ResourceIndex": 3,
-# CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 2,
-# CHECK-NEXT:             "ResourceIndex": 7,
-# CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 2,
-# CHECK-NEXT:             "ResourceIndex": 8,
-# CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 3,
-# CHECK-NEXT:             "ResourceIndex": 2,
-# CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 3,
-# CHECK-NEXT:             "ResourceIndex": 3,
-# CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 3,
-# CHECK-NEXT:             "ResourceIndex": 7,
-# CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 3,
-# CHECK-NEXT:             "ResourceIndex": 8,
-# CHECK-NEXT:             "ResourceUsage": 0.25
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 4,
-# CHECK-NEXT:             "ResourceIndex": 2,
-# CHECK-NEXT:             "ResourceUsage": 1
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 4,
-# CHECK-NEXT:             "ResourceIndex": 3,
-# CHECK-NEXT:             "ResourceUsage": 1
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 4,
-# CHECK-NEXT:             "ResourceIndex": 7,
-# CHECK-NEXT:             "ResourceUsage": 1
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 4,
-# CHECK-NEXT:             "ResourceIndex": 8,
-# CHECK-NEXT:             "ResourceUsage": 1
 # CHECK-NEXT:           }
 # CHECK-NEXT:         ]
 # CHECK-NEXT:       }
@@ -196,7 +108,7 @@ add %edx, %edx
 # CHECK-NEXT:         "addl\t%ebx, %ebx",
 # CHECK-NEXT:         "addl\t%ecx, %ecx"
 # CHECK-NEXT:       ],
-# CHECK-NEXT:       "Name": "bar",
+# CHECK-NEXT:       "Name": "",
 # CHECK-NEXT:       "ResourcePressureView": {
 # CHECK-NEXT:         "ResourcePressureInfo": [
 # CHECK-NEXT:           {
@@ -258,6 +170,69 @@ add %edx, %edx
 # CHECK-NEXT:             "InstructionIndex": 2,
 # CHECK-NEXT:             "ResourceIndex": 8,
 # CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     },
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "InstructionInfoView": {
+# CHECK-NEXT:         "InstructionList": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "Instruction": 0,
+# CHECK-NEXT:             "Latency": 1,
+# CHECK-NEXT:             "NumMicroOpcodes": 1,
+# CHECK-NEXT:             "RThroughput": 0.25,
+# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
+# CHECK-NEXT:             "mayLoad": false,
+# CHECK-NEXT:             "mayStore": false
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "Instructions": [
+# CHECK-NEXT:         "addl\t%edx, %edx"
+# CHECK-NEXT:       ],
+# CHECK-NEXT:       "Name": "",
+# CHECK-NEXT:       "ResourcePressureView": {
+# CHECK-NEXT:         "ResourcePressureInfo": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 0,
+# CHECK-NEXT:             "ResourceIndex": 2,
+# CHECK-NEXT:             "ResourceUsage": 0.25
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 0,
+# CHECK-NEXT:             "ResourceIndex": 3,
+# CHECK-NEXT:             "ResourceUsage": 0.25
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 0,
+# CHECK-NEXT:             "ResourceIndex": 7,
+# CHECK-NEXT:             "ResourceUsage": 0.25
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 0,
+# CHECK-NEXT:             "ResourceIndex": 8,
+# CHECK-NEXT:             "ResourceUsage": 0.25
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 1,
+# CHECK-NEXT:             "ResourceIndex": 2,
+# CHECK-NEXT:             "ResourceUsage": 0.25
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 1,
+# CHECK-NEXT:             "ResourceIndex": 3,
+# CHECK-NEXT:             "ResourceUsage": 0.25
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 1,
+# CHECK-NEXT:             "ResourceIndex": 7,
+# CHECK-NEXT:             "ResourceUsage": 0.25
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 1,
+# CHECK-NEXT:             "ResourceIndex": 8,
+# CHECK-NEXT:             "ResourceUsage": 0.25
 # CHECK-NEXT:           }
 # CHECK-NEXT:         ]
 # CHECK-NEXT:       }
