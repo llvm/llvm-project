@@ -27,7 +27,7 @@
 
 //
 int v;
-int addit(float a, float b) {
+int addit(float & a, float & b) {
 
   v = __arithmetic_fence(a + b);
 
