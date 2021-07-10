@@ -995,7 +995,7 @@ void SSANameState::numberValuesInBlock(Block &block) {
   };
 
   bool isEntryBlock = block.isEntryBlock();
-  if (isEntryBlock) {
+  if (isEntryBlock && !printerFlags.shouldPrintGenericOpForm()) {
     if (auto *op = block.getParentOp()) {
       if (auto asmInterface = interfaces.getInterfaceFor(op->getDialect()))
         asmInterface->getAsmBlockArgumentNames(&block, setArgNameFn);
@@ -1038,10 +1038,12 @@ void SSANameState::numberValuesInOp(Operation &op) {
     if (int resultNo = result.cast<OpResult>().getResultNumber())
       resultGroups.push_back(resultNo);
   };
-  if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op))
-    asmInterface.getAsmResultNames(setResultNameFn);
-  else if (auto *asmInterface = interfaces.getInterfaceFor(op.getDialect()))
-    asmInterface->getAsmResultNames(&op, setResultNameFn);
+  if (!printerFlags.shouldPrintGenericOpForm()) {
+    if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op))
+      asmInterface.getAsmResultNames(setResultNameFn);
+    else if (auto *asmInterface = interfaces.getInterfaceFor(op.getDialect()))
+      asmInterface->getAsmResultNames(&op, setResultNameFn);
+  }
 
   // If the first result wasn't numbered, give it a default number.
   if (valueIDs.try_emplace(resultBegin, nextValueID).second)
