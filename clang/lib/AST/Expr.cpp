@@ -1136,6 +1136,8 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
   case UTF32:
     CharByteWidth = Target.getChar32Width();
     break;
+  case Unevaluated:
+    return sizeof(char); // Host;
   }
   assert((CharByteWidth & 7) == 0 && "Assumes character size is byte multiple");
   CharByteWidth /= 8;
@@ -1149,35 +1151,45 @@ StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
                              const SourceLocation *Loc,
                              unsigned NumConcatenated)
     : Expr(StringLiteralClass, Ty, VK_LValue, OK_Ordinary) {
-  assert(Ctx.getAsConstantArrayType(Ty) &&
-         "StringLiteral must be of constant array type!");
-  unsigned CharByteWidth = mapCharByteWidth(Ctx.getTargetInfo(), Kind);
-  unsigned ByteLength = Str.size();
-  assert((ByteLength % CharByteWidth == 0) &&
-         "The size of the data must be a multiple of CharByteWidth!");
 
-  // Avoid the expensive division. The compiler should be able to figure it
-  // out by itself. However as of clang 7, even with the appropriate
-  // llvm_unreachable added just here, it is not able to do so.
-  unsigned Length;
-  switch (CharByteWidth) {
-  case 1:
-    Length = ByteLength;
-    break;
-  case 2:
-    Length = ByteLength / 2;
-    break;
-  case 4:
-    Length = ByteLength / 4;
-    break;
-  default:
-    llvm_unreachable("Unsupported character width!");
-  }
+  unsigned Length = Str.size();
 
   StringLiteralBits.Kind = Kind;
-  StringLiteralBits.CharByteWidth = CharByteWidth;
-  StringLiteralBits.IsPascal = Pascal;
   StringLiteralBits.NumConcatenated = NumConcatenated;
+
+  if (Kind != StringKind::Unevaluated) {
+    assert(Ctx.getAsConstantArrayType(Ty) &&
+           "StringLiteral must be of constant array type!");
+    unsigned CharByteWidth = mapCharByteWidth(Ctx.getTargetInfo(), Kind);
+    unsigned ByteLength = Str.size();
+    assert((ByteLength % CharByteWidth == 0) &&
+           "The size of the data must be a multiple of CharByteWidth!");
+
+    // Avoid the expensive division. The compiler should be able to figure it
+    // out by itself. However as of clang 7, even with the appropriate
+    // llvm_unreachable added just here, it is not able to do so.
+    switch (CharByteWidth) {
+    case 1:
+      Length = ByteLength;
+      break;
+    case 2:
+      Length = ByteLength / 2;
+      break;
+    case 4:
+      Length = ByteLength / 4;
+      break;
+    default:
+      llvm_unreachable("Unsupported character width!");
+    }
+
+    StringLiteralBits.CharByteWidth = CharByteWidth;
+    StringLiteralBits.IsPascal = Pascal;
+  } else {
+    assert(!Pascal && "Can't make an unevaluated Pascal string");
+    StringLiteralBits.CharByteWidth = 1;
+    StringLiteralBits.IsPascal = false;
+  }
+
   *getTrailingObjects<unsigned>() = Length;
 
   // Initialize the trailing array of SourceLocation.
@@ -1186,7 +1198,7 @@ StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
               NumConcatenated * sizeof(SourceLocation));
 
   // Initialize the trailing array of char holding the string data.
-  std::memcpy(getTrailingObjects<char>(), Str.data(), ByteLength);
+  std::memcpy(getTrailingObjects<char>(), Str.data(), Str.size());
 
   setDependence(ExprDependence::None);
 }
@@ -1223,6 +1235,7 @@ StringLiteral *StringLiteral::CreateEmpty(const ASTContext &Ctx,
 
 void StringLiteral::outputString(raw_ostream &OS) const {
   switch (getKind()) {
+  case Unevaluated:
   case Ordinary:
     break; // no prefix.
   case Wide:  OS << 'L'; break;
@@ -1333,7 +1346,8 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                                  const TargetInfo &Target, unsigned *StartToken,
                                  unsigned *StartTokenByteOffset) const {
   assert((getKind() == StringLiteral::Ordinary ||
-          getKind() == StringLiteral::UTF8) &&
+          getKind() == StringLiteral::UTF8 ||
+          getKind() == StringLiteral::Unevaluated) &&
          "Only narrow string literals are currently supported");
 
   // Loop over all of the tokens in this string until we find the one that

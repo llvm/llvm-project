@@ -5703,6 +5703,8 @@ public:
   ExprResult ActOnStringLiteral(ArrayRef<Token> StringToks,
                                 Scope *UDLScope = nullptr);
 
+  ExprResult ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks);
+
   /// ControllingExprOrType is either an opaque pointer coming out of a
   /// ParsedType or an Expr *. FIXME: it'd be better to split this interface
   /// into two so we don't take a void *, but that's awkward because one of
