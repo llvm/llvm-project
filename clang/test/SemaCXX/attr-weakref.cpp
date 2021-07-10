@@ -33,6 +33,6 @@ int a9 __attribute__((weakref));  // expected-error {{weakref declaration of 'a9
 static int a10();
 int a10() __attribute__((weakref ("foo")));
 
-static int v __attribute__((weakref(a1), alias("foo"))); // expected-error {{'weakref' attribute requires a string}}
+static int v __attribute__((weakref(a1), alias("foo"))); // expected-error {{expected string literal as argument of 'weakref' attribute}}
 
 __attribute__((weakref ("foo"))) auto a11 = 1; // expected-error {{weakref declaration must have internal linkage}}

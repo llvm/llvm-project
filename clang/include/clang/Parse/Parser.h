@@ -2790,6 +2790,13 @@ private:
   /// clang accepts as an extension.
   void DiagnoseCXX11AttributeExtension(ParsedAttributes &Attrs);
 
+  ExprResult ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName);
+
+  bool
+  ParseAttributeArgumentList(const clang::IdentifierInfo &AttrName,
+                             SmallVectorImpl<Expr *> &Exprs,
+                             ParsedAttributeArgumentsProperties ArgsProperties);
+
   /// Parses syntax-generic attribute arguments for attributes which are
   /// known to the implementation, and adds them to the given ParsedAttributes
   /// list with the given attribute syntax. Returns the number of arguments
