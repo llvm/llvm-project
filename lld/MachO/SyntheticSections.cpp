@@ -277,6 +277,12 @@ struct Binding {
   uint64_t offset = 0;
   int64_t addend = 0;
 };
+struct BindIR {
+  // Default value of 0xF0 is not valid opcode and should make the program
+  // scream instead of accidentally writing "valid" values.
+  uint8_t opcode = 0xF0;
+  uint64_t data = 0;
+};
 } // namespace
 
 // Encode a sequence of opcodes that tell dyld to write the address of symbol +
@@ -287,30 +293,63 @@ struct Binding {
 // lastBinding.
 static void encodeBinding(const OutputSection *osec, uint64_t outSecOff,
                           int64_t addend, Binding &lastBinding,
-                          raw_svector_ostream &os) {
+                          std::vector<BindIR> &opcodes) {
   OutputSegment *seg = osec->parent;
   uint64_t offset = osec->getSegmentOffset() + outSecOff;
   if (lastBinding.segment != seg) {
-    os << static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
-                               seg->index);
-    encodeULEB128(offset, os);
+    BindIR op = {
+        static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
+                             seg->index), // opcode
+        offset                            // data
+    };
+    opcodes.push_back(op);
     lastBinding.segment = seg;
     lastBinding.offset = offset;
   } else if (lastBinding.offset != offset) {
-    os << static_cast<uint8_t>(BIND_OPCODE_ADD_ADDR_ULEB);
-    encodeULEB128(offset - lastBinding.offset, os);
+    BindIR op = {
+        static_cast<uint8_t>(BIND_OPCODE_ADD_ADDR_ULEB), // opcode
+        offset - lastBinding.offset                      // data
+    };
+    opcodes.push_back(op);
     lastBinding.offset = offset;
   }
 
   if (lastBinding.addend != addend) {
-    os << static_cast<uint8_t>(BIND_OPCODE_SET_ADDEND_SLEB);
-    encodeSLEB128(addend, os);
+    BindIR op = {
+        static_cast<uint8_t>(BIND_OPCODE_SET_ADDEND_SLEB), // opcode
+        static_cast<uint64_t>(addend)                      // data
+    };
+    opcodes.push_back(op);
     lastBinding.addend = addend;
   }
 
-  os << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
+  BindIR op = {
+      static_cast<uint8_t>(BIND_OPCODE_DO_BIND), // opcode
+      0                                          // data
+  };
+  opcodes.push_back(op);
   // DO_BIND causes dyld to both perform the binding and increment the offset
   lastBinding.offset += target->wordSize;
+}
+
+static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
+  uint8_t opcode = op.opcode & BIND_OPCODE_MASK;
+  switch (opcode) {
+  case BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB:
+  case BIND_OPCODE_ADD_ADDR_ULEB:
+    os << op.opcode;
+    encodeULEB128(op.data, os);
+    break;
+  case BIND_OPCODE_SET_ADDEND_SLEB:
+    os << op.opcode;
+    encodeSLEB128(static_cast<int64_t>(op.data), os);
+    break;
+  case BIND_OPCODE_DO_BIND:
+    os << op.opcode;
+    break;
+  default:
+    llvm_unreachable("cannot bind to an unrecognized symbol");
+  }
 }
 
 // Non-weak bindings need to have their dylib ordinal encoded as well.
@@ -392,9 +431,6 @@ void BindingSection::finalizeContents() {
   for (auto &p : sortBindings(bindingsMap)) {
     const DylibSymbol *sym = p.first;
     std::vector<BindingEntry> &bindings = p.second;
-    llvm::sort(bindings, [](const BindingEntry &a, const BindingEntry &b) {
-      return a.target.getVA() < b.target.getVA();
-    });
     uint8_t flags = BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM;
     if (sym->isWeakRef())
       flags |= BIND_SYMBOL_FLAGS_WEAK_IMPORT;
@@ -405,10 +441,13 @@ void BindingSection::finalizeContents() {
       encodeDylibOrdinal(ordinal, os);
       lastOrdinal = ordinal;
     }
+    std::vector<BindIR> opcodes;
     for (const BindingEntry &b : bindings)
       encodeBinding(b.target.isec->parent,
                     b.target.isec->getOffset(b.target.offset), b.addend,
-                    lastBinding, os);
+                    lastBinding, opcodes);
+    for (const auto &op : opcodes)
+      flushOpcodes(op, os);
   }
   if (!bindingsMap.empty())
     os << static_cast<uint8_t>(BIND_OPCODE_DONE);
@@ -434,10 +473,13 @@ void WeakBindingSection::finalizeContents() {
     os << static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
        << sym->getName() << '\0'
        << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER);
+    std::vector<BindIR> opcodes;
     for (const BindingEntry &b : bindings)
       encodeBinding(b.target.isec->parent,
                     b.target.isec->getOffset(b.target.offset), b.addend,
-                    lastBinding, os);
+                    lastBinding, opcodes);
+    for (const auto &op : opcodes)
+      flushOpcodes(op, os);
   }
   if (!bindingsMap.empty() || !definitions.empty())
     os << static_cast<uint8_t>(BIND_OPCODE_DONE);
