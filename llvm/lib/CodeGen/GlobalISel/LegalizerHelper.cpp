@@ -4871,9 +4871,54 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   }
   case TargetOpcode::G_PHI:
     return moreElementsVectorPhi(MI, TypeIdx, MoreTy);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return moreElementsVectorShuffle(MI, TypeIdx, MoreTy);
   default:
     return UnableToLegalize;
   }
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::moreElementsVectorShuffle(MachineInstr &MI,
+                                           unsigned int TypeIdx, LLT MoreTy) {
+  if (TypeIdx != 0)
+    return UnableToLegalize;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Src1Reg = MI.getOperand(1).getReg();
+  Register Src2Reg = MI.getOperand(2).getReg();
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT Src1Ty = MRI.getType(Src1Reg);
+  LLT Src2Ty = MRI.getType(Src2Reg);
+  unsigned NumElts = DstTy.getNumElements();
+  unsigned WidenNumElts = MoreTy.getNumElements();
+
+  // Expect a canonicalized shuffle.
+  if (DstTy != Src1Ty || DstTy != Src2Ty)
+    return UnableToLegalize;
+
+  moreElementsVectorSrc(MI, MoreTy, 1);
+  moreElementsVectorSrc(MI, MoreTy, 2);
+
+  // Adjust mask based on new input vector length.
+  SmallVector<int, 16> NewMask;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    int Idx = Mask[I];
+    if (Idx < static_cast<int>(NumElts))
+      NewMask.push_back(Idx);
+    else
+      NewMask.push_back(Idx - NumElts + WidenNumElts);
+  }
+  for (unsigned I = NumElts; I != WidenNumElts; ++I)
+    NewMask.push_back(-1);
+  moreElementsVectorDst(MI, MoreTy, 0);
+  MIRBuilder.setInstrAndDebugLoc(MI);
+  MIRBuilder.buildShuffleVector(MI.getOperand(0).getReg(),
+                                MI.getOperand(1).getReg(),
+                                MI.getOperand(2).getReg(), NewMask);
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
