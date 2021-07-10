@@ -90,7 +90,7 @@ body:             |
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[COPY4:%[0-9]+]]:gpr = COPY [[COPY]]
   ; CHECK:   [[COPY5:%[0-9]+]]:gpr = COPY [[COPY1]]
-  ; CHECK:   [[t2LDRi12_:%[0-9]+]]:rgpr = t2LDRi12 %fixed-stack.0, 0, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+  ; CHECK:   [[t2LDRi12_:%[0-9]+]]:rgpr = t2LDRi12 %fixed-stack.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0, align 8)
   ; CHECK:   [[t2ASRri:%[0-9]+]]:rgpr = t2ASRri [[t2LDRi12_]], 31, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
   ; CHECK:   $r0 = COPY [[COPY5]]
@@ -110,8 +110,8 @@ body:             |
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   [[PHI:%[0-9]+]]:gprnopc = PHI [[COPY10]], %bb.1, %6, %bb.2
   ; CHECK:   [[PHI1:%[0-9]+]]:gprlr = PHI [[t2DoLoopStart]], %bb.1, %21, %bb.2
-  ; CHECK:   t2STRi12 [[COPY9]], [[PHI]], 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.lsr.iv, align 8)
-  ; CHECK:   t2STRi12 [[COPY8]], [[PHI]], 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.lsr.iv + 4, basealign 8)
+  ; CHECK:   t2STRi12 [[COPY9]], [[PHI]], 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.lsr.iv, align 8)
+  ; CHECK:   t2STRi12 [[COPY8]], [[PHI]], 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.lsr.iv + 4, basealign 8)
   ; CHECK:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[PHI]], 8, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[COPY11:%[0-9]+]]:gpr = COPY [[t2ADDri]]
   ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI1]], %bb.2, implicit-def $cpsr
@@ -137,7 +137,7 @@ body:             |
 
     %13:gpr = COPY %11
     %12:gpr = COPY %10
-    %14:rgpr = t2LDRi12 %fixed-stack.0, 0, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.0, align 8)
+    %14:rgpr = t2LDRi12 %fixed-stack.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0, align 8)
     %0:gpr = COPY %15
     %16:rgpr = t2ASRri %14, 31, 14 /* CC::al */, $noreg, $noreg
     ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp
@@ -159,8 +159,8 @@ body:             |
 
     %4:gprnopc = PHI %3, %bb.1, %6, %bb.2
     %5:gprlr = PHI %0, %bb.1, %7, %bb.2
-    t2STRi12 %1, %4, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.lsr.iv, align 8)
-    t2STRi12 %2, %4, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.lsr.iv + 4, basealign 8)
+    t2STRi12 %1, %4, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.lsr.iv, align 8)
+    t2STRi12 %2, %4, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.lsr.iv + 4, basealign 8)
     %20:rgpr = t2ADDri %4, 8, 14 /* CC::al */, $noreg, $noreg
     %6:gpr = COPY %20
     %21:gprlr = t2LoopDec %5, 1

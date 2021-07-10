@@ -62,10 +62,13 @@ add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 
 install(TARGETS f18 DESTINATION bin)
 
+set(FLANG_DEFAULT_DRIVER "flang-new")
+if (NOT FLANG_BUILD_NEW_DRIVER)
+  set(FLANG_DEFAULT_DRIVER "f18")
+endif()
+
 # This flang shell script will only work in a POSIX shell.
 if (NOT WIN32)
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/flang
-    DESTINATION ${CMAKE_BINARY_DIR}/bin
-    FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.in ${CMAKE_BINARY_DIR}/bin/flang @ONLY)
   install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang DESTINATION bin)
 endif()

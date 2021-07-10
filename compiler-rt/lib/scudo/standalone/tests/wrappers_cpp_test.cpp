@@ -67,7 +67,7 @@ public:
   Color C = Color::Red;
 };
 
-TEST(ScudoWrappersCppTest, New) {
+TEST(ScudoWrappersCppDeathTest, New) {
   if (getenv("SKIP_TYPE_MISMATCH")) {
     printf("Skipped type mismatch tests.\n");
     return;

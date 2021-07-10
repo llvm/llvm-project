@@ -18,9 +18,9 @@ add_mlir_conversion_library(MLIRVectorToLLVM
   MLIRArmSVETransforms
   MLIRAMX
   MLIRAMXTransforms
+  MLIRLLVMCommonConversion
   MLIRLLVMIR
   MLIRMemRef
-  MLIRStandardToLLVM
   MLIRTargetLLVMIRExport
   MLIRTransforms
   MLIRVector

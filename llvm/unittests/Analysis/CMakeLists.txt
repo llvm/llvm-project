@@ -29,6 +29,7 @@ add_llvm_unittest_with_input_files(AnalysisTests
   DomTreeUpdaterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
+  InlineCostTest.cpp
   IRSimilarityIdentifierTest.cpp
   IVDescriptorsTest.cpp
   LazyCallGraphTest.cpp

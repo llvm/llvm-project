@@ -37,6 +37,62 @@ private:
   operator=(const ScriptInterpreterLocker &) = delete;
 };
 
+class ExecuteScriptOptions {
+public:
+  ExecuteScriptOptions() = default;
+
+  bool GetEnableIO() const { return m_enable_io; }
+
+  bool GetSetLLDBGlobals() const { return m_set_lldb_globals; }
+
+  // If this is true then any exceptions raised by the script will be
+  // cleared with PyErr_Clear().   If false then they will be left for
+  // the caller to clean up
+  bool GetMaskoutErrors() const { return m_maskout_errors; }
+
+  ExecuteScriptOptions &SetEnableIO(bool enable) {
+    m_enable_io = enable;
+    return *this;
+  }
+
+  ExecuteScriptOptions &SetSetLLDBGlobals(bool set) {
+    m_set_lldb_globals = set;
+    return *this;
+  }
+
+  ExecuteScriptOptions &SetMaskoutErrors(bool maskout) {
+    m_maskout_errors = maskout;
+    return *this;
+  }
+
+private:
+  bool m_enable_io = true;
+  bool m_set_lldb_globals = true;
+  bool m_maskout_errors = true;
+};
+
+class LoadScriptOptions {
+public:
+  LoadScriptOptions() = default;
+
+  bool GetInitSession() const { return m_init_session; }
+  bool GetSilent() const { return m_silent; }
+
+  LoadScriptOptions &SetInitSession(bool b) {
+    m_init_session = b;
+    return *this;
+  }
+
+  LoadScriptOptions &SetSilent(bool b) {
+    m_silent = b;
+    return *this;
+  }
+
+private:
+  bool m_init_session = false;
+  bool m_silent = false;
+};
+
 class ScriptInterpreterIORedirect {
 public:
   /// Create an IO redirect. If IO is enabled, this will redirects the output
@@ -91,40 +147,6 @@ public:
       lldb::ScriptedProcessInterfaceUP scripted_process_interface_up = {});
 
   ~ScriptInterpreter() override = default;
-
-  struct ExecuteScriptOptions {
-  public:
-    ExecuteScriptOptions() {}
-
-    bool GetEnableIO() const { return m_enable_io; }
-
-    bool GetSetLLDBGlobals() const { return m_set_lldb_globals; }
-
-    // If this is true then any exceptions raised by the script will be
-    // cleared with PyErr_Clear().   If false then they will be left for
-    // the caller to clean up
-    bool GetMaskoutErrors() const { return m_maskout_errors; }
-
-    ExecuteScriptOptions &SetEnableIO(bool enable) {
-      m_enable_io = enable;
-      return *this;
-    }
-
-    ExecuteScriptOptions &SetSetLLDBGlobals(bool set) {
-      m_set_lldb_globals = set;
-      return *this;
-    }
-
-    ExecuteScriptOptions &SetMaskoutErrors(bool maskout) {
-      m_maskout_errors = maskout;
-      return *this;
-    }
-
-  private:
-    bool m_enable_io = true;
-    bool m_set_lldb_globals = true;
-    bool m_maskout_errors = true;
-  };
 
   virtual bool Interrupt() { return false; }
 
@@ -509,7 +531,7 @@ public:
   virtual bool CheckObjectExists(const char *name) { return false; }
 
   virtual bool
-  LoadScriptingModule(const char *filename, bool init_session,
+  LoadScriptingModule(const char *filename, const LoadScriptOptions &options,
                       lldb_private::Status &error,
                       StructuredData::ObjectSP *module_sp = nullptr,
                       FileSpec extra_search_dir = {});

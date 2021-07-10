@@ -39,7 +39,7 @@ EXTERN int omp_ext_get_smid() {
 }
 
 EXTERN int omp_ext_is_spmd_mode() {
-  int rc = isSPMDMode();
+  int rc = __kmpc_is_spmd_exec_mode();
   PRINT(LD_IO, "call omp_ext_is_spmd_mode() returns %d\n", rc);
   return rc;
 }

@@ -85,6 +85,16 @@ inline namespace __cpo {
 
 } // namespace ranges
 
+template<class _I1, class _I2 = _I1>
+concept indirectly_swappable =
+  indirectly_readable<_I1> && indirectly_readable<_I2> &&
+  requires(const _I1 __i1, const _I2 __i2) {
+    ranges::iter_swap(__i1, __i1);
+    ranges::iter_swap(__i2, __i2);
+    ranges::iter_swap(__i1, __i2);
+    ranges::iter_swap(__i2, __i1);
+  };
+
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD

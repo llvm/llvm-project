@@ -114,7 +114,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (auto &Arg : CB.args()) {
-    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), getAttributesForArgIdx(CB, i),
+    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), i, getAttributesForArgIdx(CB, i),
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
 
@@ -135,7 +135,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
-  Info.OrigRet = ArgInfo{ResRegs, RetTy, ISD::ArgFlagsTy{}};
+  Info.OrigRet = ArgInfo{ResRegs, RetTy, 0, ISD::ArgFlagsTy{}};
   if (!Info.OrigRet.Ty->isVoidTy())
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
 
@@ -215,8 +215,8 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
     // No splitting to do, but we want to replace the original type (e.g. [1 x
     // double] -> double).
     SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
-                           OrigArg.Flags[0], OrigArg.IsFixed,
-                           OrigArg.OrigValue);
+                           OrigArg.OrigArgIndex, OrigArg.Flags[0],
+                           OrigArg.IsFixed, OrigArg.OrigValue);
     return;
   }
 
@@ -227,8 +227,8 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
       OrigArg.Ty, CallConv, false, DL);
   for (unsigned i = 0, e = SplitVTs.size(); i < e; ++i) {
     Type *SplitTy = SplitVTs[i].getTypeForEVT(Ctx);
-    SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.Flags[0],
-                           OrigArg.IsFixed);
+    SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.OrigArgIndex,
+                           OrigArg.Flags[0], OrigArg.IsFixed);
     if (NeedsRegBlock)
       SplitArgs.back().Flags[0].setInConsecutiveRegs();
   }
@@ -682,14 +682,13 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
 
         // TODO: The memory size may be larger than the value we need to
         // store. We may need to adjust the offset for big endian targets.
-        uint64_t MemSize = Handler.getStackValueStoreSize(DL, VA);
+        LLT MemTy = Handler.getStackValueStoreType(DL, VA);
 
         MachinePointerInfo MPO;
-        Register StackAddr =
-            Handler.getStackAddress(MemSize, VA.getLocMemOffset(), MPO, Flags);
+        Register StackAddr = Handler.getStackAddress(
+            MemTy.getSizeInBytes(), VA.getLocMemOffset(), MPO, Flags);
 
-        Handler.assignValueToAddress(Args[i], Part, StackAddr, MemSize, MPO,
-                                     VA);
+        Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO, VA);
         continue;
       }
 
@@ -838,7 +837,8 @@ void CallLowering::insertSRetIncomingArgument(
   // NOTE: Assume that a pointer won't get split into more than one VT.
   assert(ValueVTs.size() == 1);
 
-  ArgInfo DemoteArg(DemoteReg, ValueVTs[0].getTypeForEVT(PtrTy->getContext()));
+  ArgInfo DemoteArg(DemoteReg, ValueVTs[0].getTypeForEVT(PtrTy->getContext()),
+                    ArgInfo::NoArgIndex);
   setArgFlags(DemoteArg, AttributeList::ReturnIndex, DL, F);
   DemoteArg.Flags[0].setSRet();
   SplitArgs.insert(SplitArgs.begin(), DemoteArg);
@@ -856,7 +856,8 @@ void CallLowering::insertSRetOutgoingArgument(MachineIRBuilder &MIRBuilder,
       DL.getTypeAllocSize(RetTy), DL.getPrefTypeAlign(RetTy), false);
 
   Register DemoteReg = MIRBuilder.buildFrameIndex(FramePtrTy, FI).getReg(0);
-  ArgInfo DemoteArg(DemoteReg, PointerType::get(RetTy, AS));
+  ArgInfo DemoteArg(DemoteReg, PointerType::get(RetTy, AS),
+                    ArgInfo::NoArgIndex);
   setArgFlags(DemoteArg, AttributeList::ReturnIndex, DL, CB);
   DemoteArg.Flags[0].setSRet();
 
@@ -1016,14 +1017,14 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
   return true;
 }
 
-uint64_t CallLowering::ValueHandler::getStackValueStoreSize(
+LLT CallLowering::ValueHandler::getStackValueStoreType(
     const DataLayout &DL, const CCValAssign &VA) const {
-  const EVT ValVT = VA.getValVT();
+  const MVT ValVT = VA.getValVT();
   if (ValVT != MVT::iPTR)
-    return ValVT.getStoreSize();
+    return LLT(ValVT);
 
   /// FIXME: We need to get the correct pointer address space.
-  return DL.getPointerSize();
+  return LLT::pointer(0, DL.getPointerSize(0));
 }
 
 void CallLowering::ValueHandler::copyArgumentMemory(

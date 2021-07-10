@@ -4051,10 +4051,6 @@ CGOpenMPRuntimeGPU::translateParameter(const FieldDecl *FD,
     if (Attr->getCaptureKind() == OMPC_map) {
       PointeeTy = CGM.getContext().getAddrSpaceQualType(PointeeTy,
                                                         LangAS::opencl_global);
-    } else if (Attr->getCaptureKind() == OMPC_firstprivate &&
-               PointeeTy.isConstant(CGM.getContext())) {
-      PointeeTy = CGM.getContext().getAddrSpaceQualType(PointeeTy,
-                                                        LangAS::opencl_generic);
     }
   }
   ArgType = CGM.getContext().getPointerType(PointeeTy);
@@ -4508,10 +4504,6 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
       CGF.EmitStoreOfScalar(VDAddr.getPointer(), VarLVal);
     }
   }
-}
-
-unsigned CGOpenMPRuntimeGPU::getDefaultFirstprivateAddressSpace() const {
-  return CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant);
 }
 
 bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,

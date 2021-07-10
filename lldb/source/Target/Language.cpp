@@ -448,7 +448,7 @@ void Language::GetDefaultExceptionResolverDescription(bool catch_on,
            catch_on ? "on" : "off", throw_on ? "on" : "off");
 }
 // Constructor
-Language::Language() {}
+Language::Language() = default;
 
 // Destructor
-Language::~Language() {}
+Language::~Language() = default;

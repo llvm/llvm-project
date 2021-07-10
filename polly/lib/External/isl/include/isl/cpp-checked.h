@@ -8,21 +8,6 @@
 #ifndef ISL_CPP_CHECKED
 #define ISL_CPP_CHECKED
 
-#include <isl/id.h>
-#include <isl/space.h>
-#include <isl/val.h>
-#include <isl/aff.h>
-#include <isl/set.h>
-#include <isl/map.h>
-#include <isl/ilp.h>
-#include <isl/union_set.h>
-#include <isl/union_map.h>
-#include <isl/flow.h>
-#include <isl/schedule.h>
-#include <isl/schedule_node.h>
-#include <isl/ast_build.h>
-#include <isl/fixed_box.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -203,6 +188,21 @@ inline size manage(isl_size val)
 }
 } // namespace isl
 
+#include <isl/id.h>
+#include <isl/space.h>
+#include <isl/val.h>
+#include <isl/aff.h>
+#include <isl/set.h>
+#include <isl/map.h>
+#include <isl/ilp.h>
+#include <isl/union_set.h>
+#include <isl/union_map.h>
+#include <isl/flow.h>
+#include <isl/schedule.h>
+#include <isl/schedule_node.h>
+#include <isl/ast_build.h>
+#include <isl/fixed_box.h>
+
 namespace isl {
 
 namespace checked {
@@ -254,6 +254,7 @@ class fixed_box;
 class id;
 class id_list;
 class map;
+class map_list;
 class multi_aff;
 class multi_id;
 class multi_pw_aff;
@@ -279,6 +280,7 @@ class schedule_node_mark;
 class schedule_node_sequence;
 class schedule_node_set;
 class set;
+class set_list;
 class space;
 class union_access_info;
 class union_flow;
@@ -318,35 +320,158 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::aff add(isl::checked::aff aff2) const;
+  inline isl::checked::multi_aff add(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff add(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff add(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_aff add(const isl::checked::pw_aff &pwaff2) const;
+  inline isl::checked::pw_multi_aff add(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_aff add(const isl::checked::union_pw_aff &upa2) const;
+  inline isl::checked::union_pw_multi_aff add(const isl::checked::union_pw_multi_aff &upma2) const;
   inline isl::checked::aff add_constant(isl::checked::val v) const;
   inline isl::checked::aff add_constant(long v) const;
+  inline isl::checked::multi_aff add_constant(const isl::checked::multi_val &mv) const;
+  inline isl::checked::union_pw_multi_aff apply(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::aff as_aff() const;
+  inline isl::checked::map as_map() const;
+  inline isl::checked::multi_aff as_multi_aff() const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::set as_set() const;
+  inline isl::checked::union_map as_union_map() const;
+  inline isl::checked::aff at(int pos) const;
   inline isl::checked::basic_set bind(isl::checked::id id) const;
   inline isl::checked::basic_set bind(const std::string &id) const;
+  inline isl::checked::basic_set bind(const isl::checked::multi_id &tuple) const;
+  inline isl::checked::pw_aff bind_domain(const isl::checked::multi_id &tuple) const;
+  inline isl::checked::pw_aff bind_domain_wrapped_domain(const isl::checked::multi_id &tuple) const;
   inline isl::checked::aff ceil() const;
-  inline isl::checked::aff div(isl::checked::aff aff2) const;
-  inline isl::checked::set eq_set(isl::checked::aff aff2) const;
-  inline isl::checked::val eval(isl::checked::point pnt) const;
-  inline isl::checked::aff floor() const;
-  inline isl::checked::set ge_set(isl::checked::aff aff2) const;
+  inline isl::checked::pw_aff coalesce() const;
+  inline isl::checked::pw_aff cond(const isl::checked::pw_aff &pwaff_true, const isl::checked::pw_aff &pwaff_false) const;
+  inline isl::checked::multi_val constant_multi_val() const;
   inline isl::checked::val constant_val() const;
   inline isl::checked::val get_constant_val() const;
+  inline isl::checked::aff div(isl::checked::aff aff2) const;
+  inline isl::checked::pw_aff div(const isl::checked::pw_aff &pa2) const;
+  inline isl::checked::set domain() const;
+  inline isl::checked::set eq_set(isl::checked::aff aff2) const;
+  inline isl::checked::set eq_set(const isl::checked::pw_aff &pwaff2) const;
+  inline isl::checked::val eval(isl::checked::point pnt) const;
+  inline isl::checked::pw_multi_aff extract_pw_multi_aff(const isl::checked::space &space) const;
+  inline isl::checked::multi_aff flat_range_product(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff flat_range_product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff flat_range_product(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::aff floor() const;
+  inline stat foreach_piece(const std::function<stat(isl::checked::set, isl::checked::multi_aff)> &fn) const;
+  inline isl::checked::set ge_set(isl::checked::aff aff2) const;
+  inline isl::checked::set ge_set(const isl::checked::pw_aff &pwaff2) const;
   inline isl::checked::aff gist(isl::checked::set context) const;
+  inline isl::checked::union_pw_aff gist(const isl::checked::union_set &context) const;
+  inline isl::checked::aff gist(const isl::checked::basic_set &context) const;
+  inline isl::checked::aff gist(const isl::checked::point &context) const;
   inline isl::checked::set gt_set(isl::checked::aff aff2) const;
+  inline isl::checked::set gt_set(const isl::checked::pw_aff &pwaff2) const;
+  inline boolean has_range_tuple_id() const;
+  inline isl::checked::multi_aff identity() const;
+  inline isl::checked::pw_aff insert_domain(const isl::checked::space &domain) const;
+  inline isl::checked::pw_aff intersect_domain(const isl::checked::set &set) const;
+  inline isl::checked::union_pw_aff intersect_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_pw_aff intersect_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::union_pw_aff intersect_domain_wrapped_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::union_pw_aff intersect_domain_wrapped_range(const isl::checked::union_set &uset) const;
+  inline isl::checked::pw_aff intersect_params(const isl::checked::set &set) const;
+  inline boolean involves_locals() const;
+  inline boolean involves_nan() const;
+  inline boolean involves_param(const isl::checked::id &id) const;
+  inline boolean involves_param(const std::string &id) const;
+  inline boolean involves_param(const isl::checked::id_list &list) const;
   inline boolean is_cst() const;
+  inline boolean isa_aff() const;
+  inline boolean isa_multi_aff() const;
+  inline boolean isa_pw_multi_aff() const;
   inline isl::checked::set le_set(isl::checked::aff aff2) const;
+  inline isl::checked::set le_set(const isl::checked::pw_aff &pwaff2) const;
+  inline isl::checked::aff_list list() const;
   inline isl::checked::set lt_set(isl::checked::aff aff2) const;
+  inline isl::checked::set lt_set(const isl::checked::pw_aff &pwaff2) const;
+  inline isl::checked::multi_pw_aff max(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::pw_aff max(const isl::checked::pw_aff &pwaff2) const;
+  inline isl::checked::multi_val max_multi_val() const;
+  inline isl::checked::multi_pw_aff min(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::pw_aff min(const isl::checked::pw_aff &pwaff2) const;
+  inline isl::checked::multi_val min_multi_val() const;
   inline isl::checked::aff mod(isl::checked::val mod) const;
   inline isl::checked::aff mod(long mod) const;
   inline isl::checked::aff mul(isl::checked::aff aff2) const;
+  inline isl::checked::pw_aff mul(const isl::checked::pw_aff &pwaff2) const;
+  inline class size n_piece() const;
   inline isl::checked::set ne_set(isl::checked::aff aff2) const;
+  inline isl::checked::set ne_set(const isl::checked::pw_aff &pwaff2) const;
   inline isl::checked::aff neg() const;
+  inline boolean plain_is_empty() const;
+  inline boolean plain_is_equal(const isl::checked::multi_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::multi_pw_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::multi_aff product(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff product(const isl::checked::pw_multi_aff &pma2) const;
   inline isl::checked::aff pullback(isl::checked::multi_aff ma) const;
+  inline isl::checked::pw_aff pullback(const isl::checked::multi_pw_aff &mpa) const;
+  inline isl::checked::pw_aff pullback(const isl::checked::pw_multi_aff &pma) const;
+  inline isl::checked::union_pw_aff pullback(const isl::checked::union_pw_multi_aff &upma) const;
+  inline isl::checked::aff pullback(const isl::checked::aff &ma) const;
+  inline isl::checked::pw_multi_aff_list pw_multi_aff_list() const;
+  inline isl::checked::pw_multi_aff range_factor_domain() const;
+  inline isl::checked::pw_multi_aff range_factor_range() const;
+  inline isl::checked::multi_aff range_product(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff range_product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff range_product(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff range_product(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::multi_aff reset_range_tuple_id() const;
   inline isl::checked::aff scale(isl::checked::val v) const;
   inline isl::checked::aff scale(long v) const;
+  inline isl::checked::multi_aff scale(const isl::checked::multi_val &mv) const;
   inline isl::checked::aff scale_down(isl::checked::val v) const;
   inline isl::checked::aff scale_down(long v) const;
+  inline isl::checked::multi_aff scale_down(const isl::checked::multi_val &mv) const;
+  inline isl::checked::multi_aff set_at(int pos, const isl::checked::aff &el) const;
+  inline isl::checked::multi_pw_aff set_at(int pos, const isl::checked::pw_aff &el) const;
+  inline isl::checked::multi_union_pw_aff set_at(int pos, const isl::checked::union_pw_aff &el) const;
+  inline isl::checked::multi_aff set_range_tuple(const isl::checked::id &id) const;
+  inline isl::checked::multi_aff set_range_tuple(const std::string &id) const;
+  inline class size size() const;
+  inline isl::checked::space space() const;
   inline isl::checked::aff sub(isl::checked::aff aff2) const;
+  inline isl::checked::multi_aff sub(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff sub(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff sub(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_aff sub(const isl::checked::pw_aff &pwaff2) const;
+  inline isl::checked::pw_multi_aff sub(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_aff sub(const isl::checked::union_pw_aff &upa2) const;
+  inline isl::checked::union_pw_multi_aff sub(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_aff subtract_domain(const isl::checked::set &set) const;
+  inline isl::checked::union_pw_aff subtract_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_pw_aff subtract_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::pw_aff tdiv_q(const isl::checked::pw_aff &pa2) const;
+  inline isl::checked::pw_aff tdiv_r(const isl::checked::pw_aff &pa2) const;
+  inline isl::checked::aff_list to_list() const;
+  inline isl::checked::multi_pw_aff to_multi_pw_aff() const;
+  inline isl::checked::multi_union_pw_aff to_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff to_pw_multi_aff() const;
+  inline isl::checked::union_pw_aff to_union_pw_aff() const;
+  inline isl::checked::union_pw_multi_aff to_union_pw_multi_aff() const;
   inline isl::checked::aff unbind_params_insert_domain(isl::checked::multi_id domain) const;
+  inline isl::checked::multi_pw_aff union_add(const isl::checked::multi_pw_aff &mpa2) const;
+  inline isl::checked::multi_union_pw_aff union_add(const isl::checked::multi_union_pw_aff &mupa2) const;
+  inline isl::checked::pw_aff union_add(const isl::checked::pw_aff &pwaff2) const;
+  inline isl::checked::pw_multi_aff union_add(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_aff union_add(const isl::checked::union_pw_aff &upa2) const;
+  inline isl::checked::union_pw_multi_aff union_add(const isl::checked::union_pw_multi_aff &upma2) const;
   static inline isl::checked::aff zero_on_domain(isl::checked::space space);
 };
 
@@ -368,6 +493,7 @@ public:
   inline /* implicit */ aff_list(const aff_list &obj);
   inline explicit aff_list(isl::checked::ctx ctx, int n);
   inline explicit aff_list(isl::checked::aff el);
+  inline explicit aff_list(isl::checked::ctx ctx, const std::string &str);
   inline aff_list &operator=(aff_list obj);
   inline ~aff_list();
   inline __isl_give isl_aff_list *copy() const &;
@@ -378,12 +504,12 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::aff_list add(isl::checked::aff el) const;
+  inline isl::checked::aff at(int index) const;
+  inline isl::checked::aff get_at(int index) const;
   inline isl::checked::aff_list clear() const;
   inline isl::checked::aff_list concat(isl::checked::aff_list list2) const;
   inline isl::checked::aff_list drop(unsigned int first, unsigned int n) const;
   inline stat foreach(const std::function<stat(isl::checked::aff)> &fn) const;
-  inline isl::checked::aff at(int index) const;
-  inline isl::checked::aff get_at(int index) const;
   inline isl::checked::aff_list insert(unsigned int pos, isl::checked::aff el) const;
   inline class size size() const;
 };
@@ -431,10 +557,10 @@ public:
   inline isl::checked::ast_expr expr_from(isl::checked::pw_aff pa) const;
   inline isl::checked::ast_expr expr_from(isl::checked::set set) const;
   static inline isl::checked::ast_build from_context(isl::checked::set set);
-  inline isl::checked::union_map schedule() const;
-  inline isl::checked::union_map get_schedule() const;
   inline isl::checked::ast_node node_from(isl::checked::schedule schedule) const;
   inline isl::checked::ast_node node_from_schedule_map(isl::checked::union_map schedule) const;
+  inline isl::checked::union_map schedule() const;
+  inline isl::checked::union_map get_schedule() const;
 };
 
 // declarations for isl::ast_expr
@@ -1077,6 +1203,7 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline std::string to_C_str() const;
+  inline isl::checked::ast_node_list to_list() const;
 };
 
 // declarations for isl::ast_node_block
@@ -1125,9 +1252,9 @@ public:
   inline isl::checked::ast_expr get_inc() const;
   inline isl::checked::ast_expr init() const;
   inline isl::checked::ast_expr get_init() const;
+  inline boolean is_degenerate() const;
   inline isl::checked::ast_expr iterator() const;
   inline isl::checked::ast_expr get_iterator() const;
-  inline boolean is_degenerate() const;
 };
 
 // declarations for isl::ast_node_if
@@ -1151,9 +1278,9 @@ public:
   inline isl::checked::ast_expr get_cond() const;
   inline isl::checked::ast_node else_node() const;
   inline isl::checked::ast_node get_else_node() const;
+  inline boolean has_else_node() const;
   inline isl::checked::ast_node then_node() const;
   inline isl::checked::ast_node get_then_node() const;
-  inline boolean has_else_node() const;
 };
 
 // declarations for isl::ast_node_list
@@ -1184,12 +1311,12 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::ast_node_list add(isl::checked::ast_node el) const;
+  inline isl::checked::ast_node at(int index) const;
+  inline isl::checked::ast_node get_at(int index) const;
   inline isl::checked::ast_node_list clear() const;
   inline isl::checked::ast_node_list concat(isl::checked::ast_node_list list2) const;
   inline isl::checked::ast_node_list drop(unsigned int first, unsigned int n) const;
   inline stat foreach(const std::function<stat(isl::checked::ast_node)> &fn) const;
-  inline isl::checked::ast_node at(int index) const;
-  inline isl::checked::ast_node get_at(int index) const;
   inline isl::checked::ast_node_list insert(unsigned int pos, isl::checked::ast_node el) const;
   inline class size size() const;
 };
@@ -1266,24 +1393,146 @@ public:
 
   inline isl::checked::basic_map affine_hull() const;
   inline isl::checked::basic_map apply_domain(isl::checked::basic_map bmap2) const;
+  inline isl::checked::map apply_domain(const isl::checked::map &map2) const;
+  inline isl::checked::union_map apply_domain(const isl::checked::union_map &umap2) const;
   inline isl::checked::basic_map apply_range(isl::checked::basic_map bmap2) const;
+  inline isl::checked::map apply_range(const isl::checked::map &map2) const;
+  inline isl::checked::union_map apply_range(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map as_map() const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::union_pw_multi_aff as_union_pw_multi_aff() const;
+  inline isl::checked::set bind_domain(const isl::checked::multi_id &tuple) const;
+  inline isl::checked::set bind_range(const isl::checked::multi_id &tuple) const;
+  inline isl::checked::map coalesce() const;
+  inline isl::checked::map complement() const;
+  inline isl::checked::union_map compute_divs() const;
+  inline isl::checked::map curry() const;
   inline isl::checked::basic_set deltas() const;
   inline isl::checked::basic_map detect_equalities() const;
+  inline isl::checked::set domain() const;
+  inline isl::checked::map domain_factor_domain() const;
+  inline isl::checked::map domain_factor_range() const;
+  inline isl::checked::union_map domain_map() const;
+  inline isl::checked::union_pw_multi_aff domain_map_union_pw_multi_aff() const;
+  inline isl::checked::map domain_product(const isl::checked::map &map2) const;
+  inline isl::checked::union_map domain_product(const isl::checked::union_map &umap2) const;
+  inline class size domain_tuple_dim() const;
+  inline isl::checked::id domain_tuple_id() const;
+  inline isl::checked::map eq_at(const isl::checked::multi_pw_aff &mpa) const;
+  inline isl::checked::union_map eq_at(const isl::checked::multi_union_pw_aff &mupa) const;
+  inline boolean every_map(const std::function<boolean(isl::checked::map)> &test) const;
+  inline isl::checked::map extract_map(const isl::checked::space &space) const;
+  inline isl::checked::map factor_domain() const;
+  inline isl::checked::map factor_range() const;
+  inline isl::checked::union_map fixed_power(const isl::checked::val &exp) const;
+  inline isl::checked::union_map fixed_power(long exp) const;
   inline isl::checked::basic_map flatten() const;
   inline isl::checked::basic_map flatten_domain() const;
   inline isl::checked::basic_map flatten_range() const;
+  inline stat foreach_basic_map(const std::function<stat(isl::checked::basic_map)> &fn) const;
+  inline stat foreach_map(const std::function<stat(isl::checked::map)> &fn) const;
   inline isl::checked::basic_map gist(isl::checked::basic_map context) const;
+  inline isl::checked::map gist(const isl::checked::map &context) const;
+  inline isl::checked::union_map gist(const isl::checked::union_map &context) const;
+  inline isl::checked::map gist_domain(const isl::checked::set &context) const;
+  inline isl::checked::union_map gist_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::union_map gist_params(const isl::checked::set &set) const;
+  inline isl::checked::union_map gist_range(const isl::checked::union_set &uset) const;
+  inline boolean has_domain_tuple_id() const;
+  inline boolean has_range_tuple_id() const;
   inline isl::checked::basic_map intersect(isl::checked::basic_map bmap2) const;
+  inline isl::checked::map intersect(const isl::checked::map &map2) const;
+  inline isl::checked::union_map intersect(const isl::checked::union_map &umap2) const;
   inline isl::checked::basic_map intersect_domain(isl::checked::basic_set bset) const;
+  inline isl::checked::map intersect_domain(const isl::checked::set &set) const;
+  inline isl::checked::union_map intersect_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_map intersect_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::basic_map intersect_domain(const isl::checked::point &bset) const;
+  inline isl::checked::map intersect_domain_factor_domain(const isl::checked::map &factor) const;
+  inline isl::checked::union_map intersect_domain_factor_domain(const isl::checked::union_map &factor) const;
+  inline isl::checked::map intersect_domain_factor_range(const isl::checked::map &factor) const;
+  inline isl::checked::union_map intersect_domain_factor_range(const isl::checked::union_map &factor) const;
+  inline isl::checked::map intersect_params(const isl::checked::set &params) const;
   inline isl::checked::basic_map intersect_range(isl::checked::basic_set bset) const;
+  inline isl::checked::map intersect_range(const isl::checked::set &set) const;
+  inline isl::checked::union_map intersect_range(const isl::checked::space &space) const;
+  inline isl::checked::union_map intersect_range(const isl::checked::union_set &uset) const;
+  inline isl::checked::basic_map intersect_range(const isl::checked::point &bset) const;
+  inline isl::checked::map intersect_range_factor_domain(const isl::checked::map &factor) const;
+  inline isl::checked::union_map intersect_range_factor_domain(const isl::checked::union_map &factor) const;
+  inline isl::checked::map intersect_range_factor_range(const isl::checked::map &factor) const;
+  inline isl::checked::union_map intersect_range_factor_range(const isl::checked::union_map &factor) const;
+  inline boolean is_bijective() const;
+  inline boolean is_disjoint(const isl::checked::map &map2) const;
+  inline boolean is_disjoint(const isl::checked::union_map &umap2) const;
   inline boolean is_empty() const;
   inline boolean is_equal(const isl::checked::basic_map &bmap2) const;
+  inline boolean is_equal(const isl::checked::map &map2) const;
+  inline boolean is_equal(const isl::checked::union_map &umap2) const;
+  inline boolean is_injective() const;
+  inline boolean is_single_valued() const;
+  inline boolean is_strict_subset(const isl::checked::map &map2) const;
+  inline boolean is_strict_subset(const isl::checked::union_map &umap2) const;
   inline boolean is_subset(const isl::checked::basic_map &bmap2) const;
+  inline boolean is_subset(const isl::checked::map &map2) const;
+  inline boolean is_subset(const isl::checked::union_map &umap2) const;
+  inline boolean isa_map() const;
+  inline isl::checked::map lex_ge_at(const isl::checked::multi_pw_aff &mpa) const;
+  inline isl::checked::map lex_gt_at(const isl::checked::multi_pw_aff &mpa) const;
+  inline isl::checked::map lex_le_at(const isl::checked::multi_pw_aff &mpa) const;
+  inline isl::checked::map lex_lt_at(const isl::checked::multi_pw_aff &mpa) const;
   inline isl::checked::map lexmax() const;
+  inline isl::checked::pw_multi_aff lexmax_pw_multi_aff() const;
   inline isl::checked::map lexmin() const;
+  inline isl::checked::pw_multi_aff lexmin_pw_multi_aff() const;
+  inline isl::checked::map lower_bound(const isl::checked::multi_pw_aff &lower) const;
+  inline isl::checked::map_list map_list() const;
+  inline isl::checked::multi_pw_aff max_multi_pw_aff() const;
+  inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
+  inline isl::checked::basic_map polyhedral_hull() const;
+  inline isl::checked::map preimage_domain(const isl::checked::multi_aff &ma) const;
+  inline isl::checked::map preimage_domain(const isl::checked::multi_pw_aff &mpa) const;
+  inline isl::checked::map preimage_domain(const isl::checked::pw_multi_aff &pma) const;
+  inline isl::checked::union_map preimage_domain(const isl::checked::union_pw_multi_aff &upma) const;
+  inline isl::checked::map preimage_range(const isl::checked::multi_aff &ma) const;
+  inline isl::checked::map preimage_range(const isl::checked::pw_multi_aff &pma) const;
+  inline isl::checked::union_map preimage_range(const isl::checked::union_pw_multi_aff &upma) const;
+  inline isl::checked::map product(const isl::checked::map &map2) const;
+  inline isl::checked::union_map product(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map project_out_all_params() const;
+  inline isl::checked::set range() const;
+  inline isl::checked::map range_factor_domain() const;
+  inline isl::checked::map range_factor_range() const;
+  inline isl::checked::fixed_box range_lattice_tile() const;
+  inline isl::checked::union_map range_map() const;
+  inline isl::checked::map range_product(const isl::checked::map &map2) const;
+  inline isl::checked::union_map range_product(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map range_reverse() const;
+  inline isl::checked::fixed_box range_simple_fixed_box_hull() const;
+  inline class size range_tuple_dim() const;
+  inline isl::checked::id range_tuple_id() const;
   inline isl::checked::basic_map reverse() const;
   inline isl::checked::basic_map sample() const;
+  inline isl::checked::map set_domain_tuple(const isl::checked::id &id) const;
+  inline isl::checked::map set_domain_tuple(const std::string &id) const;
+  inline isl::checked::map set_range_tuple(const isl::checked::id &id) const;
+  inline isl::checked::map set_range_tuple(const std::string &id) const;
+  inline isl::checked::space space() const;
+  inline isl::checked::map subtract(const isl::checked::map &map2) const;
+  inline isl::checked::union_map subtract(const isl::checked::union_map &umap2) const;
+  inline isl::checked::union_map subtract_domain(const isl::checked::union_set &dom) const;
+  inline isl::checked::union_map subtract_range(const isl::checked::union_set &dom) const;
+  inline isl::checked::map_list to_list() const;
+  inline isl::checked::union_map to_union_map() const;
+  inline isl::checked::map uncurry() const;
   inline isl::checked::map unite(isl::checked::basic_map bmap2) const;
+  inline isl::checked::map unite(const isl::checked::map &map2) const;
+  inline isl::checked::union_map unite(const isl::checked::union_map &umap2) const;
+  inline isl::checked::basic_map unshifted_simple_hull() const;
+  inline isl::checked::map upper_bound(const isl::checked::multi_pw_aff &upper) const;
+  inline isl::checked::set wrap() const;
+  inline isl::checked::map zip() const;
 };
 
 // declarations for isl::basic_set
@@ -1315,22 +1564,101 @@ public:
 
   inline isl::checked::basic_set affine_hull() const;
   inline isl::checked::basic_set apply(isl::checked::basic_map bmap) const;
+  inline isl::checked::set apply(const isl::checked::map &map) const;
+  inline isl::checked::union_set apply(const isl::checked::union_map &umap) const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::set as_set() const;
+  inline isl::checked::set bind(const isl::checked::multi_id &tuple) const;
+  inline isl::checked::set coalesce() const;
+  inline isl::checked::set complement() const;
+  inline isl::checked::union_set compute_divs() const;
   inline isl::checked::basic_set detect_equalities() const;
   inline isl::checked::val dim_max_val(int pos) const;
+  inline isl::checked::val dim_min_val(int pos) const;
+  inline boolean every_set(const std::function<boolean(isl::checked::set)> &test) const;
+  inline isl::checked::set extract_set(const isl::checked::space &space) const;
   inline isl::checked::basic_set flatten() const;
+  inline stat foreach_basic_set(const std::function<stat(isl::checked::basic_set)> &fn) const;
+  inline stat foreach_point(const std::function<stat(isl::checked::point)> &fn) const;
+  inline stat foreach_set(const std::function<stat(isl::checked::set)> &fn) const;
   inline isl::checked::basic_set gist(isl::checked::basic_set context) const;
+  inline isl::checked::set gist(const isl::checked::set &context) const;
+  inline isl::checked::union_set gist(const isl::checked::union_set &context) const;
+  inline isl::checked::basic_set gist(const isl::checked::point &context) const;
+  inline isl::checked::union_set gist_params(const isl::checked::set &set) const;
+  inline isl::checked::map identity() const;
+  inline isl::checked::pw_aff indicator_function() const;
+  inline isl::checked::map insert_domain(const isl::checked::space &domain) const;
   inline isl::checked::basic_set intersect(isl::checked::basic_set bset2) const;
+  inline isl::checked::set intersect(const isl::checked::set &set2) const;
+  inline isl::checked::union_set intersect(const isl::checked::union_set &uset2) const;
+  inline isl::checked::basic_set intersect(const isl::checked::point &bset2) const;
   inline isl::checked::basic_set intersect_params(isl::checked::basic_set bset2) const;
+  inline isl::checked::set intersect_params(const isl::checked::set &params) const;
+  inline isl::checked::basic_set intersect_params(const isl::checked::point &bset2) const;
+  inline boolean involves_locals() const;
+  inline boolean is_disjoint(const isl::checked::set &set2) const;
+  inline boolean is_disjoint(const isl::checked::union_set &uset2) const;
   inline boolean is_empty() const;
   inline boolean is_equal(const isl::checked::basic_set &bset2) const;
+  inline boolean is_equal(const isl::checked::set &set2) const;
+  inline boolean is_equal(const isl::checked::union_set &uset2) const;
+  inline boolean is_equal(const isl::checked::point &bset2) const;
+  inline boolean is_singleton() const;
+  inline boolean is_strict_subset(const isl::checked::set &set2) const;
+  inline boolean is_strict_subset(const isl::checked::union_set &uset2) const;
   inline boolean is_subset(const isl::checked::basic_set &bset2) const;
+  inline boolean is_subset(const isl::checked::set &set2) const;
+  inline boolean is_subset(const isl::checked::union_set &uset2) const;
+  inline boolean is_subset(const isl::checked::point &bset2) const;
   inline boolean is_wrapping() const;
+  inline boolean isa_set() const;
   inline isl::checked::set lexmax() const;
+  inline isl::checked::pw_multi_aff lexmax_pw_multi_aff() const;
   inline isl::checked::set lexmin() const;
+  inline isl::checked::pw_multi_aff lexmin_pw_multi_aff() const;
+  inline isl::checked::set lower_bound(const isl::checked::multi_pw_aff &lower) const;
+  inline isl::checked::set lower_bound(const isl::checked::multi_val &lower) const;
+  inline isl::checked::multi_pw_aff max_multi_pw_aff() const;
+  inline isl::checked::val max_val(const isl::checked::aff &obj) const;
+  inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
+  inline isl::checked::val min_val(const isl::checked::aff &obj) const;
   inline isl::checked::basic_set params() const;
+  inline isl::checked::multi_val plain_multi_val_if_fixed() const;
+  inline isl::checked::basic_set polyhedral_hull() const;
+  inline isl::checked::set preimage(const isl::checked::multi_aff &ma) const;
+  inline isl::checked::set preimage(const isl::checked::multi_pw_aff &mpa) const;
+  inline isl::checked::set preimage(const isl::checked::pw_multi_aff &pma) const;
+  inline isl::checked::union_set preimage(const isl::checked::union_pw_multi_aff &upma) const;
+  inline isl::checked::set product(const isl::checked::set &set2) const;
+  inline isl::checked::set project_out_all_params() const;
+  inline isl::checked::set project_out_param(const isl::checked::id &id) const;
+  inline isl::checked::set project_out_param(const std::string &id) const;
+  inline isl::checked::set project_out_param(const isl::checked::id_list &list) const;
+  inline isl::checked::pw_multi_aff pw_multi_aff_on_domain(const isl::checked::multi_val &mv) const;
   inline isl::checked::basic_set sample() const;
   inline isl::checked::point sample_point() const;
+  inline isl::checked::set_list set_list() const;
+  inline isl::checked::fixed_box simple_fixed_box_hull() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::val stride(int pos) const;
+  inline isl::checked::set subtract(const isl::checked::set &set2) const;
+  inline isl::checked::union_set subtract(const isl::checked::union_set &uset2) const;
+  inline isl::checked::set_list to_list() const;
+  inline isl::checked::set to_set() const;
+  inline isl::checked::union_set to_union_set() const;
+  inline isl::checked::map translation() const;
+  inline class size tuple_dim() const;
+  inline isl::checked::set unbind_params(const isl::checked::multi_id &tuple) const;
+  inline isl::checked::map unbind_params_insert_domain(const isl::checked::multi_id &domain) const;
   inline isl::checked::set unite(isl::checked::basic_set bset2) const;
+  inline isl::checked::set unite(const isl::checked::set &set2) const;
+  inline isl::checked::union_set unite(const isl::checked::union_set &uset2) const;
+  inline isl::checked::set unite(const isl::checked::point &bset2) const;
+  inline isl::checked::basic_set unshifted_simple_hull() const;
+  inline isl::checked::map unwrap() const;
+  inline isl::checked::set upper_bound(const isl::checked::multi_pw_aff &upper) const;
+  inline isl::checked::set upper_bound(const isl::checked::multi_val &upper) const;
 };
 
 // declarations for isl::fixed_box
@@ -1358,13 +1686,13 @@ public:
   inline bool is_null() const;
   inline isl::checked::ctx ctx() const;
 
+  inline boolean is_valid() const;
   inline isl::checked::multi_aff offset() const;
   inline isl::checked::multi_aff get_offset() const;
   inline isl::checked::multi_val size() const;
   inline isl::checked::multi_val get_size() const;
   inline isl::checked::space space() const;
   inline isl::checked::space get_space() const;
-  inline boolean is_valid() const;
 };
 
 // declarations for isl::id
@@ -1395,6 +1723,7 @@ public:
 
   inline std::string name() const;
   inline std::string get_name() const;
+  inline isl::checked::id_list to_list() const;
 };
 
 // declarations for isl::id_list
@@ -1415,6 +1744,7 @@ public:
   inline /* implicit */ id_list(const id_list &obj);
   inline explicit id_list(isl::checked::ctx ctx, int n);
   inline explicit id_list(isl::checked::id el);
+  inline explicit id_list(isl::checked::ctx ctx, const std::string &str);
   inline id_list &operator=(id_list obj);
   inline ~id_list();
   inline __isl_give isl_id_list *copy() const &;
@@ -1426,12 +1756,12 @@ public:
 
   inline isl::checked::id_list add(isl::checked::id el) const;
   inline isl::checked::id_list add(const std::string &el) const;
+  inline isl::checked::id at(int index) const;
+  inline isl::checked::id get_at(int index) const;
   inline isl::checked::id_list clear() const;
   inline isl::checked::id_list concat(isl::checked::id_list list2) const;
   inline isl::checked::id_list drop(unsigned int first, unsigned int n) const;
   inline stat foreach(const std::function<stat(isl::checked::id)> &fn) const;
-  inline isl::checked::id at(int index) const;
-  inline isl::checked::id get_at(int index) const;
   inline isl::checked::id_list insert(unsigned int pos, isl::checked::id el) const;
   inline isl::checked::id_list insert(unsigned int pos, const std::string &el) const;
   inline class size size() const;
@@ -1466,48 +1796,106 @@ public:
 
   inline isl::checked::basic_map affine_hull() const;
   inline isl::checked::map apply_domain(isl::checked::map map2) const;
+  inline isl::checked::union_map apply_domain(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map apply_domain(const isl::checked::basic_map &map2) const;
   inline isl::checked::map apply_range(isl::checked::map map2) const;
+  inline isl::checked::union_map apply_range(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map apply_range(const isl::checked::basic_map &map2) const;
+  inline isl::checked::map as_map() const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::union_pw_multi_aff as_union_pw_multi_aff() const;
   inline isl::checked::set bind_domain(isl::checked::multi_id tuple) const;
   inline isl::checked::set bind_range(isl::checked::multi_id tuple) const;
   inline isl::checked::map coalesce() const;
   inline isl::checked::map complement() const;
+  inline isl::checked::union_map compute_divs() const;
   inline isl::checked::map curry() const;
   inline isl::checked::set deltas() const;
   inline isl::checked::map detect_equalities() const;
   inline isl::checked::set domain() const;
   inline isl::checked::map domain_factor_domain() const;
   inline isl::checked::map domain_factor_range() const;
+  inline isl::checked::union_map domain_map() const;
+  inline isl::checked::union_pw_multi_aff domain_map_union_pw_multi_aff() const;
   inline isl::checked::map domain_product(isl::checked::map map2) const;
+  inline isl::checked::union_map domain_product(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map domain_product(const isl::checked::basic_map &map2) const;
+  inline class size domain_tuple_dim() const;
+  inline isl::checked::id domain_tuple_id() const;
+  inline isl::checked::id get_domain_tuple_id() const;
   static inline isl::checked::map empty(isl::checked::space space);
   inline isl::checked::map eq_at(isl::checked::multi_pw_aff mpa) const;
+  inline isl::checked::union_map eq_at(const isl::checked::multi_union_pw_aff &mupa) const;
+  inline isl::checked::map eq_at(const isl::checked::aff &mpa) const;
+  inline isl::checked::map eq_at(const isl::checked::multi_aff &mpa) const;
+  inline isl::checked::map eq_at(const isl::checked::pw_aff &mpa) const;
+  inline isl::checked::map eq_at(const isl::checked::pw_multi_aff &mpa) const;
+  inline boolean every_map(const std::function<boolean(isl::checked::map)> &test) const;
+  inline isl::checked::map extract_map(const isl::checked::space &space) const;
   inline isl::checked::map factor_domain() const;
   inline isl::checked::map factor_range() const;
+  inline isl::checked::union_map fixed_power(const isl::checked::val &exp) const;
+  inline isl::checked::union_map fixed_power(long exp) const;
   inline isl::checked::map flatten() const;
   inline isl::checked::map flatten_domain() const;
   inline isl::checked::map flatten_range() const;
   inline stat foreach_basic_map(const std::function<stat(isl::checked::basic_map)> &fn) const;
-  inline isl::checked::fixed_box range_simple_fixed_box_hull() const;
-  inline isl::checked::fixed_box get_range_simple_fixed_box_hull() const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
+  inline stat foreach_map(const std::function<stat(isl::checked::map)> &fn) const;
   inline isl::checked::map gist(isl::checked::map context) const;
+  inline isl::checked::union_map gist(const isl::checked::union_map &context) const;
+  inline isl::checked::map gist(const isl::checked::basic_map &context) const;
   inline isl::checked::map gist_domain(isl::checked::set context) const;
+  inline isl::checked::union_map gist_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::map gist_domain(const isl::checked::basic_set &context) const;
+  inline isl::checked::map gist_domain(const isl::checked::point &context) const;
+  inline isl::checked::union_map gist_params(const isl::checked::set &set) const;
+  inline isl::checked::union_map gist_range(const isl::checked::union_set &uset) const;
+  inline boolean has_domain_tuple_id() const;
+  inline boolean has_range_tuple_id() const;
   inline isl::checked::map intersect(isl::checked::map map2) const;
+  inline isl::checked::union_map intersect(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map intersect(const isl::checked::basic_map &map2) const;
   inline isl::checked::map intersect_domain(isl::checked::set set) const;
+  inline isl::checked::union_map intersect_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_map intersect_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::map intersect_domain(const isl::checked::basic_set &set) const;
+  inline isl::checked::map intersect_domain(const isl::checked::point &set) const;
   inline isl::checked::map intersect_domain_factor_domain(isl::checked::map factor) const;
+  inline isl::checked::union_map intersect_domain_factor_domain(const isl::checked::union_map &factor) const;
+  inline isl::checked::map intersect_domain_factor_domain(const isl::checked::basic_map &factor) const;
   inline isl::checked::map intersect_domain_factor_range(isl::checked::map factor) const;
+  inline isl::checked::union_map intersect_domain_factor_range(const isl::checked::union_map &factor) const;
+  inline isl::checked::map intersect_domain_factor_range(const isl::checked::basic_map &factor) const;
   inline isl::checked::map intersect_params(isl::checked::set params) const;
   inline isl::checked::map intersect_range(isl::checked::set set) const;
+  inline isl::checked::union_map intersect_range(const isl::checked::space &space) const;
+  inline isl::checked::union_map intersect_range(const isl::checked::union_set &uset) const;
+  inline isl::checked::map intersect_range(const isl::checked::basic_set &set) const;
+  inline isl::checked::map intersect_range(const isl::checked::point &set) const;
   inline isl::checked::map intersect_range_factor_domain(isl::checked::map factor) const;
+  inline isl::checked::union_map intersect_range_factor_domain(const isl::checked::union_map &factor) const;
+  inline isl::checked::map intersect_range_factor_domain(const isl::checked::basic_map &factor) const;
   inline isl::checked::map intersect_range_factor_range(isl::checked::map factor) const;
+  inline isl::checked::union_map intersect_range_factor_range(const isl::checked::union_map &factor) const;
+  inline isl::checked::map intersect_range_factor_range(const isl::checked::basic_map &factor) const;
   inline boolean is_bijective() const;
   inline boolean is_disjoint(const isl::checked::map &map2) const;
+  inline boolean is_disjoint(const isl::checked::union_map &umap2) const;
+  inline boolean is_disjoint(const isl::checked::basic_map &map2) const;
   inline boolean is_empty() const;
   inline boolean is_equal(const isl::checked::map &map2) const;
+  inline boolean is_equal(const isl::checked::union_map &umap2) const;
+  inline boolean is_equal(const isl::checked::basic_map &map2) const;
   inline boolean is_injective() const;
   inline boolean is_single_valued() const;
   inline boolean is_strict_subset(const isl::checked::map &map2) const;
+  inline boolean is_strict_subset(const isl::checked::union_map &umap2) const;
+  inline boolean is_strict_subset(const isl::checked::basic_map &map2) const;
   inline boolean is_subset(const isl::checked::map &map2) const;
+  inline boolean is_subset(const isl::checked::union_map &umap2) const;
+  inline boolean is_subset(const isl::checked::basic_map &map2) const;
+  inline boolean isa_map() const;
   inline isl::checked::map lex_ge_at(isl::checked::multi_pw_aff mpa) const;
   inline isl::checked::map lex_gt_at(isl::checked::multi_pw_aff mpa) const;
   inline isl::checked::map lex_le_at(isl::checked::multi_pw_aff mpa) const;
@@ -1517,31 +1905,99 @@ public:
   inline isl::checked::map lexmin() const;
   inline isl::checked::pw_multi_aff lexmin_pw_multi_aff() const;
   inline isl::checked::map lower_bound(isl::checked::multi_pw_aff lower) const;
+  inline isl::checked::map_list map_list() const;
   inline isl::checked::multi_pw_aff max_multi_pw_aff() const;
   inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
   inline isl::checked::basic_map polyhedral_hull() const;
   inline isl::checked::map preimage_domain(isl::checked::multi_aff ma) const;
   inline isl::checked::map preimage_domain(isl::checked::multi_pw_aff mpa) const;
   inline isl::checked::map preimage_domain(isl::checked::pw_multi_aff pma) const;
+  inline isl::checked::union_map preimage_domain(const isl::checked::union_pw_multi_aff &upma) const;
   inline isl::checked::map preimage_range(isl::checked::multi_aff ma) const;
   inline isl::checked::map preimage_range(isl::checked::pw_multi_aff pma) const;
+  inline isl::checked::union_map preimage_range(const isl::checked::union_pw_multi_aff &upma) const;
   inline isl::checked::map product(isl::checked::map map2) const;
+  inline isl::checked::union_map product(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map product(const isl::checked::basic_map &map2) const;
   inline isl::checked::map project_out_all_params() const;
   inline isl::checked::set range() const;
   inline isl::checked::map range_factor_domain() const;
   inline isl::checked::map range_factor_range() const;
+  inline isl::checked::fixed_box range_lattice_tile() const;
+  inline isl::checked::fixed_box get_range_lattice_tile() const;
+  inline isl::checked::union_map range_map() const;
   inline isl::checked::map range_product(isl::checked::map map2) const;
+  inline isl::checked::union_map range_product(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map range_product(const isl::checked::basic_map &map2) const;
   inline isl::checked::map range_reverse() const;
+  inline isl::checked::fixed_box range_simple_fixed_box_hull() const;
+  inline isl::checked::fixed_box get_range_simple_fixed_box_hull() const;
+  inline class size range_tuple_dim() const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::id get_range_tuple_id() const;
   inline isl::checked::map reverse() const;
   inline isl::checked::basic_map sample() const;
+  inline isl::checked::map set_domain_tuple(isl::checked::id id) const;
+  inline isl::checked::map set_domain_tuple(const std::string &id) const;
+  inline isl::checked::map set_range_tuple(isl::checked::id id) const;
+  inline isl::checked::map set_range_tuple(const std::string &id) const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::map subtract(isl::checked::map map2) const;
+  inline isl::checked::union_map subtract(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map subtract(const isl::checked::basic_map &map2) const;
+  inline isl::checked::union_map subtract_domain(const isl::checked::union_set &dom) const;
+  inline isl::checked::union_map subtract_range(const isl::checked::union_set &dom) const;
+  inline isl::checked::map_list to_list() const;
+  inline isl::checked::union_map to_union_map() const;
   inline isl::checked::map uncurry() const;
   inline isl::checked::map unite(isl::checked::map map2) const;
+  inline isl::checked::union_map unite(const isl::checked::union_map &umap2) const;
+  inline isl::checked::map unite(const isl::checked::basic_map &map2) const;
   static inline isl::checked::map universe(isl::checked::space space);
   inline isl::checked::basic_map unshifted_simple_hull() const;
   inline isl::checked::map upper_bound(isl::checked::multi_pw_aff upper) const;
   inline isl::checked::set wrap() const;
   inline isl::checked::map zip() const;
+};
+
+// declarations for isl::map_list
+inline map_list manage(__isl_take isl_map_list *ptr);
+inline map_list manage_copy(__isl_keep isl_map_list *ptr);
+
+class map_list {
+  friend inline map_list manage(__isl_take isl_map_list *ptr);
+  friend inline map_list manage_copy(__isl_keep isl_map_list *ptr);
+
+protected:
+  isl_map_list *ptr = nullptr;
+
+  inline explicit map_list(__isl_take isl_map_list *ptr);
+
+public:
+  inline /* implicit */ map_list();
+  inline /* implicit */ map_list(const map_list &obj);
+  inline explicit map_list(isl::checked::ctx ctx, int n);
+  inline explicit map_list(isl::checked::map el);
+  inline explicit map_list(isl::checked::ctx ctx, const std::string &str);
+  inline map_list &operator=(map_list obj);
+  inline ~map_list();
+  inline __isl_give isl_map_list *copy() const &;
+  inline __isl_give isl_map_list *copy() && = delete;
+  inline __isl_keep isl_map_list *get() const;
+  inline __isl_give isl_map_list *release();
+  inline bool is_null() const;
+  inline isl::checked::ctx ctx() const;
+
+  inline isl::checked::map_list add(isl::checked::map el) const;
+  inline isl::checked::map at(int index) const;
+  inline isl::checked::map get_at(int index) const;
+  inline isl::checked::map_list clear() const;
+  inline isl::checked::map_list concat(isl::checked::map_list list2) const;
+  inline isl::checked::map_list drop(unsigned int first, unsigned int n) const;
+  inline stat foreach(const std::function<stat(isl::checked::map)> &fn) const;
+  inline isl::checked::map_list insert(unsigned int pos, isl::checked::map el) const;
+  inline class size size() const;
 };
 
 // declarations for isl::multi_aff
@@ -1573,35 +2029,99 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::multi_aff add(isl::checked::multi_aff multi2) const;
+  inline isl::checked::multi_pw_aff add(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff add(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff add(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff add(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::multi_aff add(const isl::checked::aff &multi2) const;
   inline isl::checked::multi_aff add_constant(isl::checked::multi_val mv) const;
   inline isl::checked::multi_aff add_constant(isl::checked::val v) const;
   inline isl::checked::multi_aff add_constant(long v) const;
+  inline isl::checked::union_pw_multi_aff apply(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::map as_map() const;
+  inline isl::checked::multi_aff as_multi_aff() const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::set as_set() const;
+  inline isl::checked::union_map as_union_map() const;
+  inline isl::checked::aff at(int pos) const;
+  inline isl::checked::aff get_at(int pos) const;
   inline isl::checked::basic_set bind(isl::checked::multi_id tuple) const;
   inline isl::checked::multi_aff bind_domain(isl::checked::multi_id tuple) const;
   inline isl::checked::multi_aff bind_domain_wrapped_domain(isl::checked::multi_id tuple) const;
-  static inline isl::checked::multi_aff domain_map(isl::checked::space space);
-  inline isl::checked::multi_aff flat_range_product(isl::checked::multi_aff multi2) const;
-  inline isl::checked::multi_aff floor() const;
-  inline isl::checked::aff at(int pos) const;
-  inline isl::checked::aff get_at(int pos) const;
+  inline isl::checked::pw_multi_aff coalesce() const;
   inline isl::checked::multi_val constant_multi_val() const;
   inline isl::checked::multi_val get_constant_multi_val() const;
-  inline isl::checked::aff_list list() const;
-  inline isl::checked::aff_list get_list() const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
+  inline isl::checked::set domain() const;
+  static inline isl::checked::multi_aff domain_map(isl::checked::space space);
+  inline isl::checked::pw_multi_aff extract_pw_multi_aff(const isl::checked::space &space) const;
+  inline isl::checked::multi_aff flat_range_product(isl::checked::multi_aff multi2) const;
+  inline isl::checked::multi_pw_aff flat_range_product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff flat_range_product(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::multi_aff flat_range_product(const isl::checked::aff &multi2) const;
+  inline isl::checked::multi_aff floor() const;
+  inline stat foreach_piece(const std::function<stat(isl::checked::set, isl::checked::multi_aff)> &fn) const;
   inline isl::checked::multi_aff gist(isl::checked::set context) const;
+  inline isl::checked::union_pw_multi_aff gist(const isl::checked::union_set &context) const;
+  inline isl::checked::multi_aff gist(const isl::checked::basic_set &context) const;
+  inline isl::checked::multi_aff gist(const isl::checked::point &context) const;
+  inline boolean has_range_tuple_id() const;
   inline isl::checked::multi_aff identity() const;
   static inline isl::checked::multi_aff identity_on_domain(isl::checked::space space);
   inline isl::checked::multi_aff insert_domain(isl::checked::space domain) const;
+  inline isl::checked::pw_multi_aff intersect_domain(const isl::checked::set &set) const;
+  inline isl::checked::union_pw_multi_aff intersect_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_pw_multi_aff intersect_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::union_pw_multi_aff intersect_domain_wrapped_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::union_pw_multi_aff intersect_domain_wrapped_range(const isl::checked::union_set &uset) const;
+  inline isl::checked::pw_multi_aff intersect_params(const isl::checked::set &set) const;
   inline boolean involves_locals() const;
   inline boolean involves_nan() const;
+  inline boolean involves_param(const isl::checked::id &id) const;
+  inline boolean involves_param(const std::string &id) const;
+  inline boolean involves_param(const isl::checked::id_list &list) const;
+  inline boolean isa_multi_aff() const;
+  inline boolean isa_pw_multi_aff() const;
+  inline isl::checked::aff_list list() const;
+  inline isl::checked::aff_list get_list() const;
+  inline isl::checked::multi_pw_aff max(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_val max_multi_val() const;
+  inline isl::checked::multi_pw_aff min(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_val min_multi_val() const;
+  static inline isl::checked::multi_aff multi_val_on_domain(isl::checked::space space, isl::checked::multi_val mv);
+  inline class size n_piece() const;
   inline isl::checked::multi_aff neg() const;
+  inline boolean plain_is_empty() const;
   inline boolean plain_is_equal(const isl::checked::multi_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::multi_pw_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::aff &multi2) const;
+  inline isl::checked::pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const;
   inline isl::checked::multi_aff product(isl::checked::multi_aff multi2) const;
+  inline isl::checked::multi_pw_aff product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff product(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::multi_aff product(const isl::checked::aff &multi2) const;
   inline isl::checked::multi_aff pullback(isl::checked::multi_aff ma2) const;
+  inline isl::checked::multi_pw_aff pullback(const isl::checked::multi_pw_aff &mpa2) const;
+  inline isl::checked::pw_multi_aff pullback(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff pullback(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::multi_aff pullback(const isl::checked::aff &ma2) const;
+  inline isl::checked::pw_multi_aff_list pw_multi_aff_list() const;
+  inline isl::checked::pw_multi_aff range_factor_domain() const;
+  inline isl::checked::pw_multi_aff range_factor_range() const;
   static inline isl::checked::multi_aff range_map(isl::checked::space space);
   inline isl::checked::multi_aff range_product(isl::checked::multi_aff multi2) const;
+  inline isl::checked::multi_pw_aff range_product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff range_product(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff range_product(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::multi_aff range_product(const isl::checked::aff &multi2) const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::id get_range_tuple_id() const;
+  inline isl::checked::multi_aff reset_range_tuple_id() const;
   inline isl::checked::multi_aff scale(isl::checked::multi_val mv) const;
   inline isl::checked::multi_aff scale(isl::checked::val v) const;
   inline isl::checked::multi_aff scale(long v) const;
@@ -1609,9 +2129,32 @@ public:
   inline isl::checked::multi_aff scale_down(isl::checked::val v) const;
   inline isl::checked::multi_aff scale_down(long v) const;
   inline isl::checked::multi_aff set_at(int pos, isl::checked::aff el) const;
+  inline isl::checked::multi_pw_aff set_at(int pos, const isl::checked::pw_aff &el) const;
+  inline isl::checked::multi_union_pw_aff set_at(int pos, const isl::checked::union_pw_aff &el) const;
+  inline isl::checked::multi_aff set_range_tuple(isl::checked::id id) const;
+  inline isl::checked::multi_aff set_range_tuple(const std::string &id) const;
   inline class size size() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::multi_aff sub(isl::checked::multi_aff multi2) const;
+  inline isl::checked::multi_pw_aff sub(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff sub(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff sub(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff sub(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::multi_aff sub(const isl::checked::aff &multi2) const;
+  inline isl::checked::pw_multi_aff subtract_domain(const isl::checked::set &set) const;
+  inline isl::checked::union_pw_multi_aff subtract_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_pw_multi_aff subtract_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::pw_multi_aff_list to_list() const;
+  inline isl::checked::multi_pw_aff to_multi_pw_aff() const;
+  inline isl::checked::multi_union_pw_aff to_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff to_pw_multi_aff() const;
+  inline isl::checked::union_pw_multi_aff to_union_pw_multi_aff() const;
   inline isl::checked::multi_aff unbind_params_insert_domain(isl::checked::multi_id domain) const;
+  inline isl::checked::multi_pw_aff union_add(const isl::checked::multi_pw_aff &mpa2) const;
+  inline isl::checked::multi_union_pw_aff union_add(const isl::checked::multi_union_pw_aff &mupa2) const;
+  inline isl::checked::pw_multi_aff union_add(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff union_add(const isl::checked::union_pw_multi_aff &upma2) const;
   static inline isl::checked::multi_aff zero(isl::checked::space space);
 };
 
@@ -1642,18 +2185,18 @@ public:
   inline bool is_null() const;
   inline isl::checked::ctx ctx() const;
 
-  inline isl::checked::multi_id flat_range_product(isl::checked::multi_id multi2) const;
   inline isl::checked::id at(int pos) const;
   inline isl::checked::id get_at(int pos) const;
+  inline isl::checked::multi_id flat_range_product(isl::checked::multi_id multi2) const;
   inline isl::checked::id_list list() const;
   inline isl::checked::id_list get_list() const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
   inline boolean plain_is_equal(const isl::checked::multi_id &multi2) const;
   inline isl::checked::multi_id range_product(isl::checked::multi_id multi2) const;
   inline isl::checked::multi_id set_at(int pos, isl::checked::id el) const;
   inline isl::checked::multi_id set_at(int pos, const std::string &el) const;
   inline class size size() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
 };
 
 // declarations for isl::multi_pw_aff
@@ -1688,42 +2231,75 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::multi_pw_aff add(isl::checked::multi_pw_aff multi2) const;
+  inline isl::checked::multi_union_pw_aff add(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::multi_pw_aff add(const isl::checked::aff &multi2) const;
+  inline isl::checked::multi_pw_aff add(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff add(const isl::checked::pw_aff &multi2) const;
+  inline isl::checked::multi_pw_aff add(const isl::checked::pw_multi_aff &multi2) const;
   inline isl::checked::multi_pw_aff add_constant(isl::checked::multi_val mv) const;
   inline isl::checked::multi_pw_aff add_constant(isl::checked::val v) const;
   inline isl::checked::multi_pw_aff add_constant(long v) const;
+  inline isl::checked::map as_map() const;
+  inline isl::checked::multi_aff as_multi_aff() const;
+  inline isl::checked::set as_set() const;
+  inline isl::checked::pw_aff at(int pos) const;
+  inline isl::checked::pw_aff get_at(int pos) const;
   inline isl::checked::set bind(isl::checked::multi_id tuple) const;
   inline isl::checked::multi_pw_aff bind_domain(isl::checked::multi_id tuple) const;
   inline isl::checked::multi_pw_aff bind_domain_wrapped_domain(isl::checked::multi_id tuple) const;
   inline isl::checked::multi_pw_aff coalesce() const;
   inline isl::checked::set domain() const;
   inline isl::checked::multi_pw_aff flat_range_product(isl::checked::multi_pw_aff multi2) const;
-  inline isl::checked::pw_aff at(int pos) const;
-  inline isl::checked::pw_aff get_at(int pos) const;
-  inline isl::checked::pw_aff_list list() const;
-  inline isl::checked::pw_aff_list get_list() const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
+  inline isl::checked::multi_union_pw_aff flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::multi_pw_aff flat_range_product(const isl::checked::aff &multi2) const;
+  inline isl::checked::multi_pw_aff flat_range_product(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff flat_range_product(const isl::checked::pw_aff &multi2) const;
+  inline isl::checked::multi_pw_aff flat_range_product(const isl::checked::pw_multi_aff &multi2) const;
   inline isl::checked::multi_pw_aff gist(isl::checked::set set) const;
+  inline isl::checked::multi_union_pw_aff gist(const isl::checked::union_set &context) const;
+  inline isl::checked::multi_pw_aff gist(const isl::checked::basic_set &set) const;
+  inline isl::checked::multi_pw_aff gist(const isl::checked::point &set) const;
+  inline boolean has_range_tuple_id() const;
   inline isl::checked::multi_pw_aff identity() const;
   static inline isl::checked::multi_pw_aff identity_on_domain(isl::checked::space space);
   inline isl::checked::multi_pw_aff insert_domain(isl::checked::space domain) const;
   inline isl::checked::multi_pw_aff intersect_domain(isl::checked::set domain) const;
+  inline isl::checked::multi_union_pw_aff intersect_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::multi_pw_aff intersect_domain(const isl::checked::basic_set &domain) const;
+  inline isl::checked::multi_pw_aff intersect_domain(const isl::checked::point &domain) const;
   inline isl::checked::multi_pw_aff intersect_params(isl::checked::set set) const;
   inline boolean involves_nan() const;
   inline boolean involves_param(const isl::checked::id &id) const;
   inline boolean involves_param(const std::string &id) const;
   inline boolean involves_param(const isl::checked::id_list &list) const;
+  inline boolean isa_multi_aff() const;
+  inline isl::checked::pw_aff_list list() const;
+  inline isl::checked::pw_aff_list get_list() const;
   inline isl::checked::multi_pw_aff max(isl::checked::multi_pw_aff multi2) const;
   inline isl::checked::multi_val max_multi_val() const;
   inline isl::checked::multi_pw_aff min(isl::checked::multi_pw_aff multi2) const;
   inline isl::checked::multi_val min_multi_val() const;
   inline isl::checked::multi_pw_aff neg() const;
   inline boolean plain_is_equal(const isl::checked::multi_pw_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::multi_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::pw_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::pw_multi_aff &multi2) const;
   inline isl::checked::multi_pw_aff product(isl::checked::multi_pw_aff multi2) const;
   inline isl::checked::multi_pw_aff pullback(isl::checked::multi_aff ma) const;
   inline isl::checked::multi_pw_aff pullback(isl::checked::multi_pw_aff mpa2) const;
   inline isl::checked::multi_pw_aff pullback(isl::checked::pw_multi_aff pma) const;
+  inline isl::checked::multi_union_pw_aff pullback(const isl::checked::union_pw_multi_aff &upma) const;
   inline isl::checked::multi_pw_aff range_product(isl::checked::multi_pw_aff multi2) const;
+  inline isl::checked::multi_union_pw_aff range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::multi_pw_aff range_product(const isl::checked::aff &multi2) const;
+  inline isl::checked::multi_pw_aff range_product(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff range_product(const isl::checked::pw_aff &multi2) const;
+  inline isl::checked::multi_pw_aff range_product(const isl::checked::pw_multi_aff &multi2) const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::id get_range_tuple_id() const;
+  inline isl::checked::multi_pw_aff reset_range_tuple_id() const;
   inline isl::checked::multi_pw_aff scale(isl::checked::multi_val mv) const;
   inline isl::checked::multi_pw_aff scale(isl::checked::val v) const;
   inline isl::checked::multi_pw_aff scale(long v) const;
@@ -1731,10 +2307,25 @@ public:
   inline isl::checked::multi_pw_aff scale_down(isl::checked::val v) const;
   inline isl::checked::multi_pw_aff scale_down(long v) const;
   inline isl::checked::multi_pw_aff set_at(int pos, isl::checked::pw_aff el) const;
+  inline isl::checked::multi_union_pw_aff set_at(int pos, const isl::checked::union_pw_aff &el) const;
+  inline isl::checked::multi_pw_aff set_range_tuple(isl::checked::id id) const;
+  inline isl::checked::multi_pw_aff set_range_tuple(const std::string &id) const;
   inline class size size() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::multi_pw_aff sub(isl::checked::multi_pw_aff multi2) const;
+  inline isl::checked::multi_union_pw_aff sub(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::multi_pw_aff sub(const isl::checked::aff &multi2) const;
+  inline isl::checked::multi_pw_aff sub(const isl::checked::multi_aff &multi2) const;
+  inline isl::checked::multi_pw_aff sub(const isl::checked::pw_aff &multi2) const;
+  inline isl::checked::multi_pw_aff sub(const isl::checked::pw_multi_aff &multi2) const;
   inline isl::checked::multi_pw_aff unbind_params_insert_domain(isl::checked::multi_id domain) const;
   inline isl::checked::multi_pw_aff union_add(isl::checked::multi_pw_aff mpa2) const;
+  inline isl::checked::multi_union_pw_aff union_add(const isl::checked::multi_union_pw_aff &mupa2) const;
+  inline isl::checked::multi_pw_aff union_add(const isl::checked::aff &mpa2) const;
+  inline isl::checked::multi_pw_aff union_add(const isl::checked::multi_aff &mpa2) const;
+  inline isl::checked::multi_pw_aff union_add(const isl::checked::pw_aff &mpa2) const;
+  inline isl::checked::multi_pw_aff union_add(const isl::checked::pw_multi_aff &mpa2) const;
   static inline isl::checked::multi_pw_aff zero(isl::checked::space space);
 };
 
@@ -1768,24 +2359,26 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::multi_union_pw_aff add(isl::checked::multi_union_pw_aff multi2) const;
+  inline isl::checked::union_pw_aff at(int pos) const;
+  inline isl::checked::union_pw_aff get_at(int pos) const;
   inline isl::checked::union_set bind(isl::checked::multi_id tuple) const;
   inline isl::checked::multi_union_pw_aff coalesce() const;
   inline isl::checked::union_set domain() const;
   inline isl::checked::multi_union_pw_aff flat_range_product(isl::checked::multi_union_pw_aff multi2) const;
-  inline isl::checked::union_pw_aff at(int pos) const;
-  inline isl::checked::union_pw_aff get_at(int pos) const;
-  inline isl::checked::union_pw_aff_list list() const;
-  inline isl::checked::union_pw_aff_list get_list() const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
   inline isl::checked::multi_union_pw_aff gist(isl::checked::union_set context) const;
+  inline boolean has_range_tuple_id() const;
   inline isl::checked::multi_union_pw_aff intersect_domain(isl::checked::union_set uset) const;
   inline isl::checked::multi_union_pw_aff intersect_params(isl::checked::set params) const;
   inline boolean involves_nan() const;
+  inline isl::checked::union_pw_aff_list list() const;
+  inline isl::checked::union_pw_aff_list get_list() const;
   inline isl::checked::multi_union_pw_aff neg() const;
   inline boolean plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::multi_union_pw_aff pullback(isl::checked::union_pw_multi_aff upma) const;
   inline isl::checked::multi_union_pw_aff range_product(isl::checked::multi_union_pw_aff multi2) const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::id get_range_tuple_id() const;
+  inline isl::checked::multi_union_pw_aff reset_range_tuple_id() const;
   inline isl::checked::multi_union_pw_aff scale(isl::checked::multi_val mv) const;
   inline isl::checked::multi_union_pw_aff scale(isl::checked::val v) const;
   inline isl::checked::multi_union_pw_aff scale(long v) const;
@@ -1793,7 +2386,11 @@ public:
   inline isl::checked::multi_union_pw_aff scale_down(isl::checked::val v) const;
   inline isl::checked::multi_union_pw_aff scale_down(long v) const;
   inline isl::checked::multi_union_pw_aff set_at(int pos, isl::checked::union_pw_aff el) const;
+  inline isl::checked::multi_union_pw_aff set_range_tuple(isl::checked::id id) const;
+  inline isl::checked::multi_union_pw_aff set_range_tuple(const std::string &id) const;
   inline class size size() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::multi_union_pw_aff sub(isl::checked::multi_union_pw_aff multi2) const;
   inline isl::checked::multi_union_pw_aff union_add(isl::checked::multi_union_pw_aff mupa2) const;
   static inline isl::checked::multi_union_pw_aff zero(isl::checked::space space);
@@ -1829,20 +2426,22 @@ public:
   inline isl::checked::multi_val add(isl::checked::multi_val multi2) const;
   inline isl::checked::multi_val add(isl::checked::val v) const;
   inline isl::checked::multi_val add(long v) const;
-  inline isl::checked::multi_val flat_range_product(isl::checked::multi_val multi2) const;
   inline isl::checked::val at(int pos) const;
   inline isl::checked::val get_at(int pos) const;
+  inline isl::checked::multi_val flat_range_product(isl::checked::multi_val multi2) const;
+  inline boolean has_range_tuple_id() const;
+  inline boolean involves_nan() const;
   inline isl::checked::val_list list() const;
   inline isl::checked::val_list get_list() const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
-  inline boolean involves_nan() const;
   inline isl::checked::multi_val max(isl::checked::multi_val multi2) const;
   inline isl::checked::multi_val min(isl::checked::multi_val multi2) const;
   inline isl::checked::multi_val neg() const;
   inline boolean plain_is_equal(const isl::checked::multi_val &multi2) const;
   inline isl::checked::multi_val product(isl::checked::multi_val multi2) const;
   inline isl::checked::multi_val range_product(isl::checked::multi_val multi2) const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::id get_range_tuple_id() const;
+  inline isl::checked::multi_val reset_range_tuple_id() const;
   inline isl::checked::multi_val scale(isl::checked::multi_val mv) const;
   inline isl::checked::multi_val scale(isl::checked::val v) const;
   inline isl::checked::multi_val scale(long v) const;
@@ -1851,7 +2450,11 @@ public:
   inline isl::checked::multi_val scale_down(long v) const;
   inline isl::checked::multi_val set_at(int pos, isl::checked::val el) const;
   inline isl::checked::multi_val set_at(int pos, long el) const;
+  inline isl::checked::multi_val set_range_tuple(isl::checked::id id) const;
+  inline isl::checked::multi_val set_range_tuple(const std::string &id) const;
   inline class size size() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::multi_val sub(isl::checked::multi_val multi2) const;
   static inline isl::checked::multi_val zero(isl::checked::space space);
 };
@@ -1881,8 +2484,99 @@ public:
   inline bool is_null() const;
   inline isl::checked::ctx ctx() const;
 
+  inline isl::checked::basic_set affine_hull() const;
+  inline isl::checked::basic_set apply(const isl::checked::basic_map &bmap) const;
+  inline isl::checked::set apply(const isl::checked::map &map) const;
+  inline isl::checked::union_set apply(const isl::checked::union_map &umap) const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::set as_set() const;
+  inline isl::checked::set bind(const isl::checked::multi_id &tuple) const;
+  inline isl::checked::set coalesce() const;
+  inline isl::checked::set complement() const;
+  inline isl::checked::union_set compute_divs() const;
+  inline isl::checked::basic_set detect_equalities() const;
+  inline isl::checked::val dim_max_val(int pos) const;
+  inline isl::checked::val dim_min_val(int pos) const;
+  inline boolean every_set(const std::function<boolean(isl::checked::set)> &test) const;
+  inline isl::checked::set extract_set(const isl::checked::space &space) const;
+  inline isl::checked::basic_set flatten() const;
+  inline stat foreach_basic_set(const std::function<stat(isl::checked::basic_set)> &fn) const;
+  inline stat foreach_point(const std::function<stat(isl::checked::point)> &fn) const;
+  inline stat foreach_set(const std::function<stat(isl::checked::set)> &fn) const;
+  inline isl::checked::basic_set gist(const isl::checked::basic_set &context) const;
+  inline isl::checked::set gist(const isl::checked::set &context) const;
+  inline isl::checked::union_set gist(const isl::checked::union_set &context) const;
+  inline isl::checked::union_set gist_params(const isl::checked::set &set) const;
+  inline isl::checked::map identity() const;
+  inline isl::checked::pw_aff indicator_function() const;
+  inline isl::checked::map insert_domain(const isl::checked::space &domain) const;
+  inline isl::checked::basic_set intersect(const isl::checked::basic_set &bset2) const;
+  inline isl::checked::set intersect(const isl::checked::set &set2) const;
+  inline isl::checked::union_set intersect(const isl::checked::union_set &uset2) const;
+  inline isl::checked::basic_set intersect_params(const isl::checked::basic_set &bset2) const;
+  inline isl::checked::set intersect_params(const isl::checked::set &params) const;
+  inline boolean involves_locals() const;
+  inline boolean is_disjoint(const isl::checked::set &set2) const;
+  inline boolean is_disjoint(const isl::checked::union_set &uset2) const;
+  inline boolean is_empty() const;
+  inline boolean is_equal(const isl::checked::basic_set &bset2) const;
+  inline boolean is_equal(const isl::checked::set &set2) const;
+  inline boolean is_equal(const isl::checked::union_set &uset2) const;
+  inline boolean is_singleton() const;
+  inline boolean is_strict_subset(const isl::checked::set &set2) const;
+  inline boolean is_strict_subset(const isl::checked::union_set &uset2) const;
+  inline boolean is_subset(const isl::checked::basic_set &bset2) const;
+  inline boolean is_subset(const isl::checked::set &set2) const;
+  inline boolean is_subset(const isl::checked::union_set &uset2) const;
+  inline boolean is_wrapping() const;
+  inline boolean isa_set() const;
+  inline isl::checked::set lexmax() const;
+  inline isl::checked::pw_multi_aff lexmax_pw_multi_aff() const;
+  inline isl::checked::set lexmin() const;
+  inline isl::checked::pw_multi_aff lexmin_pw_multi_aff() const;
+  inline isl::checked::set lower_bound(const isl::checked::multi_pw_aff &lower) const;
+  inline isl::checked::set lower_bound(const isl::checked::multi_val &lower) const;
+  inline isl::checked::multi_pw_aff max_multi_pw_aff() const;
+  inline isl::checked::val max_val(const isl::checked::aff &obj) const;
+  inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
+  inline isl::checked::val min_val(const isl::checked::aff &obj) const;
   inline isl::checked::multi_val multi_val() const;
   inline isl::checked::multi_val get_multi_val() const;
+  inline isl::checked::basic_set params() const;
+  inline isl::checked::multi_val plain_multi_val_if_fixed() const;
+  inline isl::checked::basic_set polyhedral_hull() const;
+  inline isl::checked::set preimage(const isl::checked::multi_aff &ma) const;
+  inline isl::checked::set preimage(const isl::checked::multi_pw_aff &mpa) const;
+  inline isl::checked::set preimage(const isl::checked::pw_multi_aff &pma) const;
+  inline isl::checked::union_set preimage(const isl::checked::union_pw_multi_aff &upma) const;
+  inline isl::checked::set product(const isl::checked::set &set2) const;
+  inline isl::checked::set project_out_all_params() const;
+  inline isl::checked::set project_out_param(const isl::checked::id &id) const;
+  inline isl::checked::set project_out_param(const std::string &id) const;
+  inline isl::checked::set project_out_param(const isl::checked::id_list &list) const;
+  inline isl::checked::pw_multi_aff pw_multi_aff_on_domain(const isl::checked::multi_val &mv) const;
+  inline isl::checked::basic_set sample() const;
+  inline isl::checked::point sample_point() const;
+  inline isl::checked::set_list set_list() const;
+  inline isl::checked::fixed_box simple_fixed_box_hull() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::val stride(int pos) const;
+  inline isl::checked::set subtract(const isl::checked::set &set2) const;
+  inline isl::checked::union_set subtract(const isl::checked::union_set &uset2) const;
+  inline isl::checked::set_list to_list() const;
+  inline isl::checked::set to_set() const;
+  inline isl::checked::union_set to_union_set() const;
+  inline isl::checked::map translation() const;
+  inline class size tuple_dim() const;
+  inline isl::checked::set unbind_params(const isl::checked::multi_id &tuple) const;
+  inline isl::checked::map unbind_params_insert_domain(const isl::checked::multi_id &domain) const;
+  inline isl::checked::set unite(const isl::checked::basic_set &bset2) const;
+  inline isl::checked::set unite(const isl::checked::set &set2) const;
+  inline isl::checked::union_set unite(const isl::checked::union_set &uset2) const;
+  inline isl::checked::basic_set unshifted_simple_hull() const;
+  inline isl::checked::map unwrap() const;
+  inline isl::checked::set upper_bound(const isl::checked::multi_pw_aff &upper) const;
+  inline isl::checked::set upper_bound(const isl::checked::multi_val &upper) const;
 };
 
 // declarations for isl::pw_aff
@@ -1912,10 +2606,26 @@ public:
   inline bool is_null() const;
   inline isl::checked::ctx ctx() const;
 
+  inline isl::checked::multi_pw_aff add(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff add(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::pw_aff add(isl::checked::pw_aff pwaff2) const;
+  inline isl::checked::pw_multi_aff add(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_aff add(const isl::checked::union_pw_aff &upa2) const;
+  inline isl::checked::union_pw_multi_aff add(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_aff add(const isl::checked::aff &pwaff2) const;
   inline isl::checked::pw_aff add_constant(isl::checked::val v) const;
   inline isl::checked::pw_aff add_constant(long v) const;
+  inline isl::checked::pw_multi_aff add_constant(const isl::checked::multi_val &mv) const;
+  inline isl::checked::union_pw_multi_aff apply(const isl::checked::union_pw_multi_aff &upma2) const;
   inline isl::checked::aff as_aff() const;
+  inline isl::checked::map as_map() const;
+  inline isl::checked::multi_aff as_multi_aff() const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::set as_set() const;
+  inline isl::checked::union_map as_union_map() const;
+  inline isl::checked::pw_aff at(int pos) const;
+  inline isl::checked::set bind(const isl::checked::multi_id &tuple) const;
   inline isl::checked::set bind(isl::checked::id id) const;
   inline isl::checked::set bind(const std::string &id) const;
   inline isl::checked::pw_aff bind_domain(isl::checked::multi_id tuple) const;
@@ -1927,36 +2637,114 @@ public:
   inline isl::checked::set domain() const;
   inline isl::checked::set eq_set(isl::checked::pw_aff pwaff2) const;
   inline isl::checked::val eval(isl::checked::point pnt) const;
+  inline isl::checked::pw_multi_aff extract_pw_multi_aff(const isl::checked::space &space) const;
+  inline isl::checked::multi_pw_aff flat_range_product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff flat_range_product(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const;
   inline isl::checked::pw_aff floor() const;
+  inline stat foreach_piece(const std::function<stat(isl::checked::set, isl::checked::multi_aff)> &fn) const;
   inline isl::checked::set ge_set(isl::checked::pw_aff pwaff2) const;
   inline isl::checked::pw_aff gist(isl::checked::set context) const;
+  inline isl::checked::union_pw_aff gist(const isl::checked::union_set &context) const;
+  inline isl::checked::pw_aff gist(const isl::checked::basic_set &context) const;
+  inline isl::checked::pw_aff gist(const isl::checked::point &context) const;
   inline isl::checked::set gt_set(isl::checked::pw_aff pwaff2) const;
+  inline boolean has_range_tuple_id() const;
+  inline isl::checked::multi_pw_aff identity() const;
   inline isl::checked::pw_aff insert_domain(isl::checked::space domain) const;
   inline isl::checked::pw_aff intersect_domain(isl::checked::set set) const;
+  inline isl::checked::union_pw_aff intersect_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_pw_aff intersect_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::pw_aff intersect_domain(const isl::checked::basic_set &set) const;
+  inline isl::checked::pw_aff intersect_domain(const isl::checked::point &set) const;
+  inline isl::checked::union_pw_aff intersect_domain_wrapped_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::union_pw_aff intersect_domain_wrapped_range(const isl::checked::union_set &uset) const;
   inline isl::checked::pw_aff intersect_params(isl::checked::set set) const;
+  inline boolean involves_locals() const;
+  inline boolean involves_nan() const;
+  inline boolean involves_param(const isl::checked::id &id) const;
+  inline boolean involves_param(const std::string &id) const;
+  inline boolean involves_param(const isl::checked::id_list &list) const;
   inline boolean isa_aff() const;
+  inline boolean isa_multi_aff() const;
+  inline boolean isa_pw_multi_aff() const;
   inline isl::checked::set le_set(isl::checked::pw_aff pwaff2) const;
+  inline isl::checked::pw_aff_list list() const;
   inline isl::checked::set lt_set(isl::checked::pw_aff pwaff2) const;
+  inline isl::checked::multi_pw_aff max(const isl::checked::multi_pw_aff &multi2) const;
   inline isl::checked::pw_aff max(isl::checked::pw_aff pwaff2) const;
+  inline isl::checked::pw_aff max(const isl::checked::aff &pwaff2) const;
+  inline isl::checked::multi_val max_multi_val() const;
+  inline isl::checked::multi_pw_aff min(const isl::checked::multi_pw_aff &multi2) const;
   inline isl::checked::pw_aff min(isl::checked::pw_aff pwaff2) const;
+  inline isl::checked::pw_aff min(const isl::checked::aff &pwaff2) const;
+  inline isl::checked::multi_val min_multi_val() const;
   inline isl::checked::pw_aff mod(isl::checked::val mod) const;
   inline isl::checked::pw_aff mod(long mod) const;
   inline isl::checked::pw_aff mul(isl::checked::pw_aff pwaff2) const;
+  inline class size n_piece() const;
   inline isl::checked::set ne_set(isl::checked::pw_aff pwaff2) const;
   inline isl::checked::pw_aff neg() const;
   static inline isl::checked::pw_aff param_on_domain(isl::checked::set domain, isl::checked::id id);
+  inline boolean plain_is_empty() const;
+  inline boolean plain_is_equal(const isl::checked::multi_pw_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::multi_pw_aff product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff product(const isl::checked::pw_multi_aff &pma2) const;
   inline isl::checked::pw_aff pullback(isl::checked::multi_aff ma) const;
   inline isl::checked::pw_aff pullback(isl::checked::multi_pw_aff mpa) const;
   inline isl::checked::pw_aff pullback(isl::checked::pw_multi_aff pma) const;
+  inline isl::checked::union_pw_aff pullback(const isl::checked::union_pw_multi_aff &upma) const;
+  inline isl::checked::pw_multi_aff_list pw_multi_aff_list() const;
+  inline isl::checked::pw_multi_aff range_factor_domain() const;
+  inline isl::checked::pw_multi_aff range_factor_range() const;
+  inline isl::checked::multi_pw_aff range_product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::pw_multi_aff range_product(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_multi_aff range_product(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::multi_pw_aff reset_range_tuple_id() const;
+  inline isl::checked::multi_pw_aff scale(const isl::checked::multi_val &mv) const;
   inline isl::checked::pw_aff scale(isl::checked::val v) const;
   inline isl::checked::pw_aff scale(long v) const;
+  inline isl::checked::multi_pw_aff scale_down(const isl::checked::multi_val &mv) const;
   inline isl::checked::pw_aff scale_down(isl::checked::val f) const;
   inline isl::checked::pw_aff scale_down(long f) const;
+  inline isl::checked::multi_pw_aff set_at(int pos, const isl::checked::pw_aff &el) const;
+  inline isl::checked::multi_union_pw_aff set_at(int pos, const isl::checked::union_pw_aff &el) const;
+  inline isl::checked::pw_multi_aff set_range_tuple(const isl::checked::id &id) const;
+  inline isl::checked::pw_multi_aff set_range_tuple(const std::string &id) const;
+  inline class size size() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::multi_pw_aff sub(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff sub(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::pw_aff sub(isl::checked::pw_aff pwaff2) const;
+  inline isl::checked::pw_multi_aff sub(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_aff sub(const isl::checked::union_pw_aff &upa2) const;
+  inline isl::checked::union_pw_multi_aff sub(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_aff sub(const isl::checked::aff &pwaff2) const;
   inline isl::checked::pw_aff subtract_domain(isl::checked::set set) const;
+  inline isl::checked::union_pw_aff subtract_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_pw_aff subtract_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::pw_aff subtract_domain(const isl::checked::basic_set &set) const;
+  inline isl::checked::pw_aff subtract_domain(const isl::checked::point &set) const;
   inline isl::checked::pw_aff tdiv_q(isl::checked::pw_aff pa2) const;
   inline isl::checked::pw_aff tdiv_r(isl::checked::pw_aff pa2) const;
+  inline isl::checked::pw_aff_list to_list() const;
+  inline isl::checked::multi_pw_aff to_multi_pw_aff() const;
+  inline isl::checked::union_pw_aff to_union_pw_aff() const;
+  inline isl::checked::union_pw_multi_aff to_union_pw_multi_aff() const;
+  inline isl::checked::multi_pw_aff unbind_params_insert_domain(const isl::checked::multi_id &domain) const;
+  inline isl::checked::multi_pw_aff union_add(const isl::checked::multi_pw_aff &mpa2) const;
+  inline isl::checked::multi_union_pw_aff union_add(const isl::checked::multi_union_pw_aff &mupa2) const;
   inline isl::checked::pw_aff union_add(isl::checked::pw_aff pwaff2) const;
+  inline isl::checked::pw_multi_aff union_add(const isl::checked::pw_multi_aff &pma2) const;
+  inline isl::checked::union_pw_aff union_add(const isl::checked::union_pw_aff &upa2) const;
+  inline isl::checked::union_pw_multi_aff union_add(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_aff union_add(const isl::checked::aff &pwaff2) const;
 };
 
 // declarations for isl::pw_aff_list
@@ -1977,6 +2765,7 @@ public:
   inline /* implicit */ pw_aff_list(const pw_aff_list &obj);
   inline explicit pw_aff_list(isl::checked::ctx ctx, int n);
   inline explicit pw_aff_list(isl::checked::pw_aff el);
+  inline explicit pw_aff_list(isl::checked::ctx ctx, const std::string &str);
   inline pw_aff_list &operator=(pw_aff_list obj);
   inline ~pw_aff_list();
   inline __isl_give isl_pw_aff_list *copy() const &;
@@ -1987,12 +2776,12 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::pw_aff_list add(isl::checked::pw_aff el) const;
+  inline isl::checked::pw_aff at(int index) const;
+  inline isl::checked::pw_aff get_at(int index) const;
   inline isl::checked::pw_aff_list clear() const;
   inline isl::checked::pw_aff_list concat(isl::checked::pw_aff_list list2) const;
   inline isl::checked::pw_aff_list drop(unsigned int first, unsigned int n) const;
   inline stat foreach(const std::function<stat(isl::checked::pw_aff)> &fn) const;
-  inline isl::checked::pw_aff at(int index) const;
-  inline isl::checked::pw_aff get_at(int index) const;
   inline isl::checked::pw_aff_list insert(unsigned int pos, isl::checked::pw_aff el) const;
   inline class size size() const;
 };
@@ -2025,45 +2814,131 @@ public:
   inline bool is_null() const;
   inline isl::checked::ctx ctx() const;
 
+  inline isl::checked::multi_pw_aff add(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff add(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::pw_multi_aff add(isl::checked::pw_multi_aff pma2) const;
+  inline isl::checked::union_pw_multi_aff add(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_multi_aff add(const isl::checked::multi_aff &pma2) const;
+  inline isl::checked::pw_multi_aff add(const isl::checked::pw_aff &pma2) const;
   inline isl::checked::pw_multi_aff add_constant(isl::checked::multi_val mv) const;
   inline isl::checked::pw_multi_aff add_constant(isl::checked::val v) const;
   inline isl::checked::pw_multi_aff add_constant(long v) const;
+  inline isl::checked::union_pw_multi_aff apply(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::map as_map() const;
   inline isl::checked::multi_aff as_multi_aff() const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::set as_set() const;
+  inline isl::checked::union_map as_union_map() const;
+  inline isl::checked::pw_aff at(int pos) const;
+  inline isl::checked::pw_aff get_at(int pos) const;
+  inline isl::checked::set bind(const isl::checked::multi_id &tuple) const;
   inline isl::checked::pw_multi_aff bind_domain(isl::checked::multi_id tuple) const;
   inline isl::checked::pw_multi_aff bind_domain_wrapped_domain(isl::checked::multi_id tuple) const;
   inline isl::checked::pw_multi_aff coalesce() const;
   inline isl::checked::set domain() const;
   static inline isl::checked::pw_multi_aff domain_map(isl::checked::space space);
+  inline isl::checked::pw_multi_aff extract_pw_multi_aff(const isl::checked::space &space) const;
+  inline isl::checked::multi_pw_aff flat_range_product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::pw_multi_aff flat_range_product(isl::checked::pw_multi_aff pma2) const;
+  inline isl::checked::union_pw_multi_aff flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_multi_aff flat_range_product(const isl::checked::multi_aff &pma2) const;
+  inline isl::checked::pw_multi_aff flat_range_product(const isl::checked::pw_aff &pma2) const;
   inline stat foreach_piece(const std::function<stat(isl::checked::set, isl::checked::multi_aff)> &fn) const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
   inline isl::checked::pw_multi_aff gist(isl::checked::set set) const;
+  inline isl::checked::union_pw_multi_aff gist(const isl::checked::union_set &context) const;
+  inline isl::checked::pw_multi_aff gist(const isl::checked::basic_set &set) const;
+  inline isl::checked::pw_multi_aff gist(const isl::checked::point &set) const;
+  inline boolean has_range_tuple_id() const;
+  inline isl::checked::multi_pw_aff identity() const;
   static inline isl::checked::pw_multi_aff identity_on_domain(isl::checked::space space);
   inline isl::checked::pw_multi_aff insert_domain(isl::checked::space domain) const;
   inline isl::checked::pw_multi_aff intersect_domain(isl::checked::set set) const;
+  inline isl::checked::union_pw_multi_aff intersect_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_pw_multi_aff intersect_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::pw_multi_aff intersect_domain(const isl::checked::basic_set &set) const;
+  inline isl::checked::pw_multi_aff intersect_domain(const isl::checked::point &set) const;
+  inline isl::checked::union_pw_multi_aff intersect_domain_wrapped_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::union_pw_multi_aff intersect_domain_wrapped_range(const isl::checked::union_set &uset) const;
   inline isl::checked::pw_multi_aff intersect_params(isl::checked::set set) const;
   inline boolean involves_locals() const;
+  inline boolean involves_nan() const;
+  inline boolean involves_param(const isl::checked::id &id) const;
+  inline boolean involves_param(const std::string &id) const;
+  inline boolean involves_param(const isl::checked::id_list &list) const;
   inline boolean isa_multi_aff() const;
+  inline boolean isa_pw_multi_aff() const;
+  inline isl::checked::pw_aff_list list() const;
+  inline isl::checked::multi_pw_aff max(const isl::checked::multi_pw_aff &multi2) const;
   inline isl::checked::multi_val max_multi_val() const;
+  inline isl::checked::multi_pw_aff min(const isl::checked::multi_pw_aff &multi2) const;
   inline isl::checked::multi_val min_multi_val() const;
+  static inline isl::checked::pw_multi_aff multi_val_on_domain(isl::checked::set domain, isl::checked::multi_val mv);
   inline class size n_piece() const;
+  inline isl::checked::multi_pw_aff neg() const;
+  inline boolean plain_is_empty() const;
+  inline boolean plain_is_equal(const isl::checked::multi_pw_aff &multi2) const;
+  inline boolean plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::pw_multi_aff preimage_domain_wrapped_domain(isl::checked::pw_multi_aff pma2) const;
+  inline isl::checked::union_pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::multi_aff &pma2) const;
+  inline isl::checked::pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::pw_aff &pma2) const;
+  inline isl::checked::multi_pw_aff product(const isl::checked::multi_pw_aff &multi2) const;
   inline isl::checked::pw_multi_aff product(isl::checked::pw_multi_aff pma2) const;
+  inline isl::checked::pw_multi_aff product(const isl::checked::multi_aff &pma2) const;
+  inline isl::checked::pw_multi_aff product(const isl::checked::pw_aff &pma2) const;
+  inline isl::checked::multi_pw_aff pullback(const isl::checked::multi_pw_aff &mpa2) const;
   inline isl::checked::pw_multi_aff pullback(isl::checked::multi_aff ma) const;
   inline isl::checked::pw_multi_aff pullback(isl::checked::pw_multi_aff pma2) const;
+  inline isl::checked::union_pw_multi_aff pullback(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_multi_aff_list pw_multi_aff_list() const;
   inline isl::checked::pw_multi_aff range_factor_domain() const;
   inline isl::checked::pw_multi_aff range_factor_range() const;
   static inline isl::checked::pw_multi_aff range_map(isl::checked::space space);
+  inline isl::checked::multi_pw_aff range_product(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff range_product(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::pw_multi_aff range_product(isl::checked::pw_multi_aff pma2) const;
+  inline isl::checked::union_pw_multi_aff range_product(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_multi_aff range_product(const isl::checked::multi_aff &pma2) const;
+  inline isl::checked::pw_multi_aff range_product(const isl::checked::pw_aff &pma2) const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::id get_range_tuple_id() const;
+  inline isl::checked::multi_pw_aff reset_range_tuple_id() const;
+  inline isl::checked::multi_pw_aff scale(const isl::checked::multi_val &mv) const;
   inline isl::checked::pw_multi_aff scale(isl::checked::val v) const;
   inline isl::checked::pw_multi_aff scale(long v) const;
+  inline isl::checked::multi_pw_aff scale_down(const isl::checked::multi_val &mv) const;
   inline isl::checked::pw_multi_aff scale_down(isl::checked::val v) const;
   inline isl::checked::pw_multi_aff scale_down(long v) const;
+  inline isl::checked::multi_pw_aff set_at(int pos, const isl::checked::pw_aff &el) const;
+  inline isl::checked::multi_union_pw_aff set_at(int pos, const isl::checked::union_pw_aff &el) const;
+  inline isl::checked::pw_multi_aff set_range_tuple(isl::checked::id id) const;
+  inline isl::checked::pw_multi_aff set_range_tuple(const std::string &id) const;
+  inline class size size() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
+  inline isl::checked::multi_pw_aff sub(const isl::checked::multi_pw_aff &multi2) const;
+  inline isl::checked::multi_union_pw_aff sub(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::pw_multi_aff sub(isl::checked::pw_multi_aff pma2) const;
+  inline isl::checked::union_pw_multi_aff sub(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_multi_aff sub(const isl::checked::multi_aff &pma2) const;
+  inline isl::checked::pw_multi_aff sub(const isl::checked::pw_aff &pma2) const;
   inline isl::checked::pw_multi_aff subtract_domain(isl::checked::set set) const;
+  inline isl::checked::union_pw_multi_aff subtract_domain(const isl::checked::space &space) const;
+  inline isl::checked::union_pw_multi_aff subtract_domain(const isl::checked::union_set &uset) const;
+  inline isl::checked::pw_multi_aff subtract_domain(const isl::checked::basic_set &set) const;
+  inline isl::checked::pw_multi_aff subtract_domain(const isl::checked::point &set) const;
+  inline isl::checked::pw_multi_aff_list to_list() const;
+  inline isl::checked::multi_pw_aff to_multi_pw_aff() const;
+  inline isl::checked::union_pw_multi_aff to_union_pw_multi_aff() const;
+  inline isl::checked::multi_pw_aff unbind_params_insert_domain(const isl::checked::multi_id &domain) const;
+  inline isl::checked::multi_pw_aff union_add(const isl::checked::multi_pw_aff &mpa2) const;
+  inline isl::checked::multi_union_pw_aff union_add(const isl::checked::multi_union_pw_aff &mupa2) const;
   inline isl::checked::pw_multi_aff union_add(isl::checked::pw_multi_aff pma2) const;
+  inline isl::checked::union_pw_multi_aff union_add(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::pw_multi_aff union_add(const isl::checked::multi_aff &pma2) const;
+  inline isl::checked::pw_multi_aff union_add(const isl::checked::pw_aff &pma2) const;
   static inline isl::checked::pw_multi_aff zero(isl::checked::space space);
 };
 
@@ -2085,6 +2960,7 @@ public:
   inline /* implicit */ pw_multi_aff_list(const pw_multi_aff_list &obj);
   inline explicit pw_multi_aff_list(isl::checked::ctx ctx, int n);
   inline explicit pw_multi_aff_list(isl::checked::pw_multi_aff el);
+  inline explicit pw_multi_aff_list(isl::checked::ctx ctx, const std::string &str);
   inline pw_multi_aff_list &operator=(pw_multi_aff_list obj);
   inline ~pw_multi_aff_list();
   inline __isl_give isl_pw_multi_aff_list *copy() const &;
@@ -2095,12 +2971,12 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::pw_multi_aff_list add(isl::checked::pw_multi_aff el) const;
+  inline isl::checked::pw_multi_aff at(int index) const;
+  inline isl::checked::pw_multi_aff get_at(int index) const;
   inline isl::checked::pw_multi_aff_list clear() const;
   inline isl::checked::pw_multi_aff_list concat(isl::checked::pw_multi_aff_list list2) const;
   inline isl::checked::pw_multi_aff_list drop(unsigned int first, unsigned int n) const;
   inline stat foreach(const std::function<stat(isl::checked::pw_multi_aff)> &fn) const;
-  inline isl::checked::pw_multi_aff at(int index) const;
-  inline isl::checked::pw_multi_aff get_at(int index) const;
   inline isl::checked::pw_multi_aff_list insert(unsigned int pos, isl::checked::pw_multi_aff el) const;
   inline class size size() const;
 };
@@ -2131,14 +3007,14 @@ public:
   inline bool is_null() const;
   inline isl::checked::ctx ctx() const;
 
-  static inline isl::checked::schedule from_domain(isl::checked::union_set domain);
   inline isl::checked::union_set domain() const;
   inline isl::checked::union_set get_domain() const;
+  static inline isl::checked::schedule from_domain(isl::checked::union_set domain);
   inline isl::checked::union_map map() const;
   inline isl::checked::union_map get_map() const;
+  inline isl::checked::schedule pullback(isl::checked::union_pw_multi_aff upma) const;
   inline isl::checked::schedule_node root() const;
   inline isl::checked::schedule_node get_root() const;
-  inline isl::checked::schedule pullback(isl::checked::union_pw_multi_aff upma) const;
 };
 
 // declarations for isl::schedule_constraints
@@ -2167,9 +3043,9 @@ public:
   inline bool is_null() const;
   inline isl::checked::ctx ctx() const;
 
-  inline isl::checked::schedule compute_schedule() const;
   inline isl::checked::union_map coincidence() const;
   inline isl::checked::union_map get_coincidence() const;
+  inline isl::checked::schedule compute_schedule() const;
   inline isl::checked::union_map conditional_validity() const;
   inline isl::checked::union_map get_conditional_validity() const;
   inline isl::checked::union_map conditional_validity_condition() const;
@@ -2178,16 +3054,16 @@ public:
   inline isl::checked::set get_context() const;
   inline isl::checked::union_set domain() const;
   inline isl::checked::union_set get_domain() const;
+  static inline isl::checked::schedule_constraints on_domain(isl::checked::union_set domain);
   inline isl::checked::union_map proximity() const;
   inline isl::checked::union_map get_proximity() const;
-  inline isl::checked::union_map validity() const;
-  inline isl::checked::union_map get_validity() const;
-  static inline isl::checked::schedule_constraints on_domain(isl::checked::union_set domain);
   inline isl::checked::schedule_constraints set_coincidence(isl::checked::union_map coincidence) const;
   inline isl::checked::schedule_constraints set_conditional_validity(isl::checked::union_map condition, isl::checked::union_map validity) const;
   inline isl::checked::schedule_constraints set_context(isl::checked::set context) const;
   inline isl::checked::schedule_constraints set_proximity(isl::checked::union_map proximity) const;
   inline isl::checked::schedule_constraints set_validity(isl::checked::union_map validity) const;
+  inline isl::checked::union_map validity() const;
+  inline isl::checked::union_map get_validity() const;
 };
 
 // declarations for isl::schedule_node
@@ -2225,29 +3101,17 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::schedule_node ancestor(int generation) const;
+  inline class size ancestor_child_position(const isl::checked::schedule_node &ancestor) const;
+  inline class size get_ancestor_child_position(const isl::checked::schedule_node &ancestor) const;
   inline isl::checked::schedule_node child(int pos) const;
+  inline class size child_position() const;
+  inline class size get_child_position() const;
   inline boolean every_descendant(const std::function<boolean(isl::checked::schedule_node)> &test) const;
   inline isl::checked::schedule_node first_child() const;
   inline stat foreach_ancestor_top_down(const std::function<stat(isl::checked::schedule_node)> &fn) const;
   inline stat foreach_descendant_top_down(const std::function<boolean(isl::checked::schedule_node)> &fn) const;
   static inline isl::checked::schedule_node from_domain(isl::checked::union_set domain);
   static inline isl::checked::schedule_node from_extension(isl::checked::union_map extension);
-  inline class size ancestor_child_position(const isl::checked::schedule_node &ancestor) const;
-  inline class size get_ancestor_child_position(const isl::checked::schedule_node &ancestor) const;
-  inline class size child_position() const;
-  inline class size get_child_position() const;
-  inline isl::checked::multi_union_pw_aff prefix_schedule_multi_union_pw_aff() const;
-  inline isl::checked::multi_union_pw_aff get_prefix_schedule_multi_union_pw_aff() const;
-  inline isl::checked::union_map prefix_schedule_union_map() const;
-  inline isl::checked::union_map get_prefix_schedule_union_map() const;
-  inline isl::checked::union_pw_multi_aff prefix_schedule_union_pw_multi_aff() const;
-  inline isl::checked::union_pw_multi_aff get_prefix_schedule_union_pw_multi_aff() const;
-  inline isl::checked::schedule schedule() const;
-  inline isl::checked::schedule get_schedule() const;
-  inline isl::checked::schedule_node shared_ancestor(const isl::checked::schedule_node &node2) const;
-  inline isl::checked::schedule_node get_shared_ancestor(const isl::checked::schedule_node &node2) const;
-  inline class size tree_depth() const;
-  inline class size get_tree_depth() const;
   inline isl::checked::schedule_node graft_after(isl::checked::schedule_node graft) const;
   inline isl::checked::schedule_node graft_before(isl::checked::schedule_node graft) const;
   inline boolean has_children() const;
@@ -2270,8 +3134,20 @@ public:
   inline isl::checked::schedule_node order_after(isl::checked::union_set filter) const;
   inline isl::checked::schedule_node order_before(isl::checked::union_set filter) const;
   inline isl::checked::schedule_node parent() const;
+  inline isl::checked::multi_union_pw_aff prefix_schedule_multi_union_pw_aff() const;
+  inline isl::checked::multi_union_pw_aff get_prefix_schedule_multi_union_pw_aff() const;
+  inline isl::checked::union_map prefix_schedule_union_map() const;
+  inline isl::checked::union_map get_prefix_schedule_union_map() const;
+  inline isl::checked::union_pw_multi_aff prefix_schedule_union_pw_multi_aff() const;
+  inline isl::checked::union_pw_multi_aff get_prefix_schedule_union_pw_multi_aff() const;
   inline isl::checked::schedule_node previous_sibling() const;
   inline isl::checked::schedule_node root() const;
+  inline isl::checked::schedule schedule() const;
+  inline isl::checked::schedule get_schedule() const;
+  inline isl::checked::schedule_node shared_ancestor(const isl::checked::schedule_node &node2) const;
+  inline isl::checked::schedule_node get_shared_ancestor(const isl::checked::schedule_node &node2) const;
+  inline class size tree_depth() const;
+  inline class size get_tree_depth() const;
 };
 
 // declarations for isl::schedule_node_band
@@ -2295,14 +3171,14 @@ public:
   inline isl::checked::union_set get_ast_build_options() const;
   inline isl::checked::set ast_isolate_option() const;
   inline isl::checked::set get_ast_isolate_option() const;
-  inline isl::checked::multi_union_pw_aff partial_schedule() const;
-  inline isl::checked::multi_union_pw_aff get_partial_schedule() const;
-  inline boolean permutable() const;
-  inline boolean get_permutable() const;
   inline boolean member_get_coincident(int pos) const;
   inline schedule_node_band member_set_coincident(int pos, int coincident) const;
   inline schedule_node_band mod(isl::checked::multi_val mv) const;
   inline class size n_member() const;
+  inline isl::checked::multi_union_pw_aff partial_schedule() const;
+  inline isl::checked::multi_union_pw_aff get_partial_schedule() const;
+  inline boolean permutable() const;
+  inline boolean get_permutable() const;
   inline schedule_node_band scale(isl::checked::multi_val mv) const;
   inline schedule_node_band scale_down(isl::checked::multi_val mv) const;
   inline schedule_node_band set_ast_build_options(isl::checked::union_set options) const;
@@ -2550,38 +3426,58 @@ public:
 
   inline isl::checked::basic_set affine_hull() const;
   inline isl::checked::set apply(isl::checked::map map) const;
+  inline isl::checked::union_set apply(const isl::checked::union_map &umap) const;
+  inline isl::checked::set apply(const isl::checked::basic_map &map) const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::set as_set() const;
   inline isl::checked::set bind(isl::checked::multi_id tuple) const;
   inline isl::checked::set coalesce() const;
   inline isl::checked::set complement() const;
+  inline isl::checked::union_set compute_divs() const;
   inline isl::checked::set detect_equalities() const;
   inline isl::checked::val dim_max_val(int pos) const;
   inline isl::checked::val dim_min_val(int pos) const;
   static inline isl::checked::set empty(isl::checked::space space);
+  inline boolean every_set(const std::function<boolean(isl::checked::set)> &test) const;
+  inline isl::checked::set extract_set(const isl::checked::space &space) const;
   inline isl::checked::set flatten() const;
   inline stat foreach_basic_set(const std::function<stat(isl::checked::basic_set)> &fn) const;
   inline stat foreach_point(const std::function<stat(isl::checked::point)> &fn) const;
-  inline isl::checked::multi_val plain_multi_val_if_fixed() const;
-  inline isl::checked::multi_val get_plain_multi_val_if_fixed() const;
-  inline isl::checked::fixed_box simple_fixed_box_hull() const;
-  inline isl::checked::fixed_box get_simple_fixed_box_hull() const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
-  inline isl::checked::val stride(int pos) const;
-  inline isl::checked::val get_stride(int pos) const;
+  inline stat foreach_set(const std::function<stat(isl::checked::set)> &fn) const;
   inline isl::checked::set gist(isl::checked::set context) const;
+  inline isl::checked::union_set gist(const isl::checked::union_set &context) const;
+  inline isl::checked::set gist(const isl::checked::basic_set &context) const;
+  inline isl::checked::set gist(const isl::checked::point &context) const;
+  inline isl::checked::union_set gist_params(const isl::checked::set &set) const;
   inline isl::checked::map identity() const;
   inline isl::checked::pw_aff indicator_function() const;
   inline isl::checked::map insert_domain(isl::checked::space domain) const;
   inline isl::checked::set intersect(isl::checked::set set2) const;
+  inline isl::checked::union_set intersect(const isl::checked::union_set &uset2) const;
+  inline isl::checked::set intersect(const isl::checked::basic_set &set2) const;
+  inline isl::checked::set intersect(const isl::checked::point &set2) const;
   inline isl::checked::set intersect_params(isl::checked::set params) const;
   inline boolean involves_locals() const;
   inline boolean is_disjoint(const isl::checked::set &set2) const;
+  inline boolean is_disjoint(const isl::checked::union_set &uset2) const;
+  inline boolean is_disjoint(const isl::checked::basic_set &set2) const;
+  inline boolean is_disjoint(const isl::checked::point &set2) const;
   inline boolean is_empty() const;
   inline boolean is_equal(const isl::checked::set &set2) const;
+  inline boolean is_equal(const isl::checked::union_set &uset2) const;
+  inline boolean is_equal(const isl::checked::basic_set &set2) const;
+  inline boolean is_equal(const isl::checked::point &set2) const;
   inline boolean is_singleton() const;
   inline boolean is_strict_subset(const isl::checked::set &set2) const;
+  inline boolean is_strict_subset(const isl::checked::union_set &uset2) const;
+  inline boolean is_strict_subset(const isl::checked::basic_set &set2) const;
+  inline boolean is_strict_subset(const isl::checked::point &set2) const;
   inline boolean is_subset(const isl::checked::set &set2) const;
+  inline boolean is_subset(const isl::checked::union_set &uset2) const;
+  inline boolean is_subset(const isl::checked::basic_set &set2) const;
+  inline boolean is_subset(const isl::checked::point &set2) const;
   inline boolean is_wrapping() const;
+  inline boolean isa_set() const;
   inline isl::checked::set lexmax() const;
   inline isl::checked::pw_multi_aff lexmax_pw_multi_aff() const;
   inline isl::checked::set lexmin() const;
@@ -2593,27 +3489,86 @@ public:
   inline isl::checked::multi_pw_aff min_multi_pw_aff() const;
   inline isl::checked::val min_val(const isl::checked::aff &obj) const;
   inline isl::checked::set params() const;
+  inline isl::checked::multi_val plain_multi_val_if_fixed() const;
+  inline isl::checked::multi_val get_plain_multi_val_if_fixed() const;
   inline isl::checked::basic_set polyhedral_hull() const;
   inline isl::checked::set preimage(isl::checked::multi_aff ma) const;
   inline isl::checked::set preimage(isl::checked::multi_pw_aff mpa) const;
   inline isl::checked::set preimage(isl::checked::pw_multi_aff pma) const;
+  inline isl::checked::union_set preimage(const isl::checked::union_pw_multi_aff &upma) const;
   inline isl::checked::set product(isl::checked::set set2) const;
   inline isl::checked::set project_out_all_params() const;
   inline isl::checked::set project_out_param(isl::checked::id id) const;
   inline isl::checked::set project_out_param(const std::string &id) const;
   inline isl::checked::set project_out_param(isl::checked::id_list list) const;
+  inline isl::checked::pw_multi_aff pw_multi_aff_on_domain(isl::checked::multi_val mv) const;
   inline isl::checked::basic_set sample() const;
   inline isl::checked::point sample_point() const;
+  inline isl::checked::set_list set_list() const;
+  inline isl::checked::fixed_box simple_fixed_box_hull() const;
+  inline isl::checked::fixed_box get_simple_fixed_box_hull() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
+  inline isl::checked::val stride(int pos) const;
+  inline isl::checked::val get_stride(int pos) const;
   inline isl::checked::set subtract(isl::checked::set set2) const;
+  inline isl::checked::union_set subtract(const isl::checked::union_set &uset2) const;
+  inline isl::checked::set subtract(const isl::checked::basic_set &set2) const;
+  inline isl::checked::set subtract(const isl::checked::point &set2) const;
+  inline isl::checked::set_list to_list() const;
+  inline isl::checked::union_set to_union_set() const;
   inline isl::checked::map translation() const;
+  inline class size tuple_dim() const;
   inline isl::checked::set unbind_params(isl::checked::multi_id tuple) const;
   inline isl::checked::map unbind_params_insert_domain(isl::checked::multi_id domain) const;
   inline isl::checked::set unite(isl::checked::set set2) const;
+  inline isl::checked::union_set unite(const isl::checked::union_set &uset2) const;
+  inline isl::checked::set unite(const isl::checked::basic_set &set2) const;
+  inline isl::checked::set unite(const isl::checked::point &set2) const;
   static inline isl::checked::set universe(isl::checked::space space);
   inline isl::checked::basic_set unshifted_simple_hull() const;
   inline isl::checked::map unwrap() const;
   inline isl::checked::set upper_bound(isl::checked::multi_pw_aff upper) const;
   inline isl::checked::set upper_bound(isl::checked::multi_val upper) const;
+};
+
+// declarations for isl::set_list
+inline set_list manage(__isl_take isl_set_list *ptr);
+inline set_list manage_copy(__isl_keep isl_set_list *ptr);
+
+class set_list {
+  friend inline set_list manage(__isl_take isl_set_list *ptr);
+  friend inline set_list manage_copy(__isl_keep isl_set_list *ptr);
+
+protected:
+  isl_set_list *ptr = nullptr;
+
+  inline explicit set_list(__isl_take isl_set_list *ptr);
+
+public:
+  inline /* implicit */ set_list();
+  inline /* implicit */ set_list(const set_list &obj);
+  inline explicit set_list(isl::checked::ctx ctx, int n);
+  inline explicit set_list(isl::checked::set el);
+  inline explicit set_list(isl::checked::ctx ctx, const std::string &str);
+  inline set_list &operator=(set_list obj);
+  inline ~set_list();
+  inline __isl_give isl_set_list *copy() const &;
+  inline __isl_give isl_set_list *copy() && = delete;
+  inline __isl_keep isl_set_list *get() const;
+  inline __isl_give isl_set_list *release();
+  inline bool is_null() const;
+  inline isl::checked::ctx ctx() const;
+
+  inline isl::checked::set_list add(isl::checked::set el) const;
+  inline isl::checked::set at(int index) const;
+  inline isl::checked::set get_at(int index) const;
+  inline isl::checked::set_list clear() const;
+  inline isl::checked::set_list concat(isl::checked::set_list list2) const;
+  inline isl::checked::set_list drop(unsigned int first, unsigned int n) const;
+  inline stat foreach(const std::function<stat(isl::checked::set)> &fn) const;
+  inline isl::checked::set_list insert(unsigned int pos, isl::checked::set el) const;
+  inline class size size() const;
 };
 
 // declarations for isl::space
@@ -2643,23 +3598,57 @@ public:
 
   inline isl::checked::space add_named_tuple(isl::checked::id tuple_id, unsigned int dim) const;
   inline isl::checked::space add_named_tuple(const std::string &tuple_id, unsigned int dim) const;
+  inline isl::checked::space add_param(isl::checked::id id) const;
+  inline isl::checked::space add_param(const std::string &id) const;
   inline isl::checked::space add_unnamed_tuple(unsigned int dim) const;
   inline isl::checked::space curry() const;
   inline isl::checked::space domain() const;
+  inline isl::checked::multi_aff domain_map_multi_aff() const;
+  inline isl::checked::pw_multi_aff domain_map_pw_multi_aff() const;
+  inline isl::checked::id domain_tuple_id() const;
+  inline isl::checked::id get_domain_tuple_id() const;
   inline isl::checked::space flatten_domain() const;
   inline isl::checked::space flatten_range() const;
+  inline boolean has_domain_tuple_id() const;
+  inline boolean has_range_tuple_id() const;
+  inline isl::checked::multi_aff identity_multi_aff_on_domain() const;
+  inline isl::checked::multi_pw_aff identity_multi_pw_aff_on_domain() const;
+  inline isl::checked::pw_multi_aff identity_pw_multi_aff_on_domain() const;
   inline boolean is_equal(const isl::checked::space &space2) const;
   inline boolean is_wrapping() const;
   inline isl::checked::space map_from_set() const;
+  inline isl::checked::multi_aff multi_aff(isl::checked::aff_list list) const;
+  inline isl::checked::multi_aff multi_aff_on_domain(isl::checked::multi_val mv) const;
+  inline isl::checked::multi_id multi_id(isl::checked::id_list list) const;
+  inline isl::checked::multi_pw_aff multi_pw_aff(isl::checked::pw_aff_list list) const;
+  inline isl::checked::multi_union_pw_aff multi_union_pw_aff(isl::checked::union_pw_aff_list list) const;
+  inline isl::checked::multi_val multi_val(isl::checked::val_list list) const;
+  inline isl::checked::aff param_aff_on_domain(isl::checked::id id) const;
+  inline isl::checked::aff param_aff_on_domain(const std::string &id) const;
   inline isl::checked::space params() const;
   inline isl::checked::space product(isl::checked::space right) const;
   inline isl::checked::space range() const;
+  inline isl::checked::multi_aff range_map_multi_aff() const;
+  inline isl::checked::pw_multi_aff range_map_pw_multi_aff() const;
   inline isl::checked::space range_reverse() const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::id get_range_tuple_id() const;
   inline isl::checked::space reverse() const;
+  inline isl::checked::space set_domain_tuple(isl::checked::id id) const;
+  inline isl::checked::space set_domain_tuple(const std::string &id) const;
+  inline isl::checked::space set_range_tuple(isl::checked::id id) const;
+  inline isl::checked::space set_range_tuple(const std::string &id) const;
   inline isl::checked::space uncurry() const;
   static inline isl::checked::space unit(isl::checked::ctx ctx);
+  inline isl::checked::map universe_map() const;
+  inline isl::checked::set universe_set() const;
   inline isl::checked::space unwrap() const;
   inline isl::checked::space wrap() const;
+  inline isl::checked::aff zero_aff_on_domain() const;
+  inline isl::checked::multi_aff zero_multi_aff() const;
+  inline isl::checked::multi_pw_aff zero_multi_pw_aff() const;
+  inline isl::checked::multi_union_pw_aff zero_multi_union_pw_aff() const;
+  inline isl::checked::multi_val zero_multi_val() const;
 };
 
 // declarations for isl::union_access_info
@@ -2766,6 +3755,9 @@ public:
   inline isl::checked::union_map affine_hull() const;
   inline isl::checked::union_map apply_domain(isl::checked::union_map umap2) const;
   inline isl::checked::union_map apply_range(isl::checked::union_map umap2) const;
+  inline isl::checked::map as_map() const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
+  inline isl::checked::union_pw_multi_aff as_union_pw_multi_aff() const;
   inline isl::checked::union_set bind_range(isl::checked::multi_id tuple) const;
   inline isl::checked::union_map coalesce() const;
   inline isl::checked::union_map compute_divs() const;
@@ -2792,8 +3784,6 @@ public:
   static inline isl::checked::union_map from_domain(isl::checked::union_set uset);
   static inline isl::checked::union_map from_domain_and_range(isl::checked::union_set domain, isl::checked::union_set range);
   static inline isl::checked::union_map from_range(isl::checked::union_set uset);
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
   inline isl::checked::union_map gist(isl::checked::union_map context) const;
   inline isl::checked::union_map gist_domain(isl::checked::union_set uset) const;
   inline isl::checked::union_map gist_params(isl::checked::set set) const;
@@ -2819,6 +3809,8 @@ public:
   inline boolean isa_map() const;
   inline isl::checked::union_map lexmax() const;
   inline isl::checked::union_map lexmin() const;
+  inline isl::checked::map_list map_list() const;
+  inline isl::checked::map_list get_map_list() const;
   inline isl::checked::union_map polyhedral_hull() const;
   inline isl::checked::union_map preimage_domain(isl::checked::multi_aff ma) const;
   inline isl::checked::union_map preimage_domain(isl::checked::multi_pw_aff mpa) const;
@@ -2836,6 +3828,8 @@ public:
   inline isl::checked::union_map range_product(isl::checked::union_map umap2) const;
   inline isl::checked::union_map range_reverse() const;
   inline isl::checked::union_map reverse() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::union_map subtract(isl::checked::union_map umap2) const;
   inline isl::checked::union_map subtract_domain(isl::checked::union_set dom) const;
   inline isl::checked::union_map subtract_range(isl::checked::union_set dom) const;
@@ -2874,24 +3868,72 @@ public:
   inline bool is_null() const;
   inline isl::checked::ctx ctx() const;
 
+  inline isl::checked::multi_union_pw_aff add(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::union_pw_aff add(isl::checked::union_pw_aff upa2) const;
+  inline isl::checked::union_pw_multi_aff add(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::union_pw_aff add(const isl::checked::aff &upa2) const;
+  inline isl::checked::union_pw_aff add(const isl::checked::pw_aff &upa2) const;
+  inline isl::checked::union_pw_multi_aff apply(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
+  inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::union_map as_union_map() const;
+  inline isl::checked::union_pw_aff at(int pos) const;
+  inline isl::checked::union_set bind(const isl::checked::multi_id &tuple) const;
   inline isl::checked::union_set bind(isl::checked::id id) const;
   inline isl::checked::union_set bind(const std::string &id) const;
   inline isl::checked::union_pw_aff coalesce() const;
   inline isl::checked::union_set domain() const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
+  inline isl::checked::pw_multi_aff extract_pw_multi_aff(const isl::checked::space &space) const;
+  inline isl::checked::multi_union_pw_aff flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::union_pw_multi_aff flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const;
   inline isl::checked::union_pw_aff gist(isl::checked::union_set context) const;
+  inline boolean has_range_tuple_id() const;
   inline isl::checked::union_pw_aff intersect_domain(isl::checked::space space) const;
   inline isl::checked::union_pw_aff intersect_domain(isl::checked::union_set uset) const;
   inline isl::checked::union_pw_aff intersect_domain_wrapped_domain(isl::checked::union_set uset) const;
   inline isl::checked::union_pw_aff intersect_domain_wrapped_range(isl::checked::union_set uset) const;
   inline isl::checked::union_pw_aff intersect_params(isl::checked::set set) const;
+  inline boolean involves_locals() const;
+  inline boolean involves_nan() const;
+  inline boolean isa_pw_multi_aff() const;
+  inline isl::checked::union_pw_aff_list list() const;
+  inline isl::checked::multi_union_pw_aff neg() const;
+  inline boolean plain_is_empty() const;
+  inline boolean plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::union_pw_multi_aff preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const;
   inline isl::checked::union_pw_aff pullback(isl::checked::union_pw_multi_aff upma) const;
+  inline isl::checked::pw_multi_aff_list pw_multi_aff_list() const;
+  inline isl::checked::union_pw_multi_aff range_factor_domain() const;
+  inline isl::checked::union_pw_multi_aff range_factor_range() const;
+  inline isl::checked::multi_union_pw_aff range_product(const isl::checked::multi_union_pw_aff &multi2) const;
+  inline isl::checked::union_pw_multi_aff range_product(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::id range_tuple_id() const;
+  inline isl::checked::multi_union_pw_aff reset_range_tuple_id() const;
+  inline isl::checked::multi_union_pw_aff scale(const isl::checked::multi_val &mv) const;
+  inline isl::checked::multi_union_pw_aff scale(const isl::checked::val &v) const;
+  inline isl::checked::multi_union_pw_aff scale(long v) const;
+  inline isl::checked::multi_union_pw_aff scale_down(const isl::checked::multi_val &mv) const;
+  inline isl::checked::multi_union_pw_aff scale_down(const isl::checked::val &v) const;
+  inline isl::checked::multi_union_pw_aff scale_down(long v) const;
+  inline isl::checked::multi_union_pw_aff set_at(int pos, const isl::checked::union_pw_aff &el) const;
+  inline isl::checked::multi_union_pw_aff set_range_tuple(const isl::checked::id &id) const;
+  inline isl::checked::multi_union_pw_aff set_range_tuple(const std::string &id) const;
+  inline class size size() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
+  inline isl::checked::multi_union_pw_aff sub(const isl::checked::multi_union_pw_aff &multi2) const;
   inline isl::checked::union_pw_aff sub(isl::checked::union_pw_aff upa2) const;
+  inline isl::checked::union_pw_multi_aff sub(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::union_pw_aff sub(const isl::checked::aff &upa2) const;
+  inline isl::checked::union_pw_aff sub(const isl::checked::pw_aff &upa2) const;
   inline isl::checked::union_pw_aff subtract_domain(isl::checked::space space) const;
   inline isl::checked::union_pw_aff subtract_domain(isl::checked::union_set uset) const;
+  inline isl::checked::union_pw_aff_list to_list() const;
+  inline isl::checked::multi_union_pw_aff union_add(const isl::checked::multi_union_pw_aff &mupa2) const;
   inline isl::checked::union_pw_aff union_add(isl::checked::union_pw_aff upa2) const;
+  inline isl::checked::union_pw_multi_aff union_add(const isl::checked::union_pw_multi_aff &upma2) const;
+  inline isl::checked::union_pw_aff union_add(const isl::checked::aff &upa2) const;
+  inline isl::checked::union_pw_aff union_add(const isl::checked::pw_aff &upa2) const;
 };
 
 // declarations for isl::union_pw_aff_list
@@ -2912,6 +3954,7 @@ public:
   inline /* implicit */ union_pw_aff_list(const union_pw_aff_list &obj);
   inline explicit union_pw_aff_list(isl::checked::ctx ctx, int n);
   inline explicit union_pw_aff_list(isl::checked::union_pw_aff el);
+  inline explicit union_pw_aff_list(isl::checked::ctx ctx, const std::string &str);
   inline union_pw_aff_list &operator=(union_pw_aff_list obj);
   inline ~union_pw_aff_list();
   inline __isl_give isl_union_pw_aff_list *copy() const &;
@@ -2922,12 +3965,12 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::union_pw_aff_list add(isl::checked::union_pw_aff el) const;
+  inline isl::checked::union_pw_aff at(int index) const;
+  inline isl::checked::union_pw_aff get_at(int index) const;
   inline isl::checked::union_pw_aff_list clear() const;
   inline isl::checked::union_pw_aff_list concat(isl::checked::union_pw_aff_list list2) const;
   inline isl::checked::union_pw_aff_list drop(unsigned int first, unsigned int n) const;
   inline stat foreach(const std::function<stat(isl::checked::union_pw_aff)> &fn) const;
-  inline isl::checked::union_pw_aff at(int index) const;
-  inline isl::checked::union_pw_aff get_at(int index) const;
   inline isl::checked::union_pw_aff_list insert(unsigned int pos, isl::checked::union_pw_aff el) const;
   inline class size size() const;
 };
@@ -2963,14 +4006,14 @@ public:
 
   inline isl::checked::union_pw_multi_aff add(isl::checked::union_pw_multi_aff upma2) const;
   inline isl::checked::union_pw_multi_aff apply(isl::checked::union_pw_multi_aff upma2) const;
+  inline isl::checked::multi_union_pw_aff as_multi_union_pw_aff() const;
   inline isl::checked::pw_multi_aff as_pw_multi_aff() const;
+  inline isl::checked::union_map as_union_map() const;
   inline isl::checked::union_pw_multi_aff coalesce() const;
   inline isl::checked::union_set domain() const;
   static inline isl::checked::union_pw_multi_aff empty(isl::checked::ctx ctx);
   inline isl::checked::pw_multi_aff extract_pw_multi_aff(isl::checked::space space) const;
   inline isl::checked::union_pw_multi_aff flat_range_product(isl::checked::union_pw_multi_aff upma2) const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
   inline isl::checked::union_pw_multi_aff gist(isl::checked::union_set context) const;
   inline isl::checked::union_pw_multi_aff intersect_domain(isl::checked::space space) const;
   inline isl::checked::union_pw_multi_aff intersect_domain(isl::checked::union_set uset) const;
@@ -2982,9 +4025,13 @@ public:
   inline boolean plain_is_empty() const;
   inline isl::checked::union_pw_multi_aff preimage_domain_wrapped_domain(isl::checked::union_pw_multi_aff upma2) const;
   inline isl::checked::union_pw_multi_aff pullback(isl::checked::union_pw_multi_aff upma2) const;
+  inline isl::checked::pw_multi_aff_list pw_multi_aff_list() const;
+  inline isl::checked::pw_multi_aff_list get_pw_multi_aff_list() const;
   inline isl::checked::union_pw_multi_aff range_factor_domain() const;
   inline isl::checked::union_pw_multi_aff range_factor_range() const;
   inline isl::checked::union_pw_multi_aff range_product(isl::checked::union_pw_multi_aff upma2) const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::union_pw_multi_aff sub(isl::checked::union_pw_multi_aff upma2) const;
   inline isl::checked::union_pw_multi_aff subtract_domain(isl::checked::space space) const;
   inline isl::checked::union_pw_multi_aff subtract_domain(isl::checked::union_set uset) const;
@@ -3022,6 +4069,7 @@ public:
 
   inline isl::checked::union_set affine_hull() const;
   inline isl::checked::union_set apply(isl::checked::union_map umap) const;
+  inline isl::checked::set as_set() const;
   inline isl::checked::union_set coalesce() const;
   inline isl::checked::union_set compute_divs() const;
   inline isl::checked::union_set detect_equalities() const;
@@ -3030,8 +4078,6 @@ public:
   inline isl::checked::set extract_set(isl::checked::space space) const;
   inline stat foreach_point(const std::function<stat(isl::checked::point)> &fn) const;
   inline stat foreach_set(const std::function<stat(isl::checked::set)> &fn) const;
-  inline isl::checked::space space() const;
-  inline isl::checked::space get_space() const;
   inline isl::checked::union_set gist(isl::checked::union_set context) const;
   inline isl::checked::union_set gist_params(isl::checked::set set) const;
   inline isl::checked::union_map identity() const;
@@ -3050,7 +4096,12 @@ public:
   inline isl::checked::union_set preimage(isl::checked::pw_multi_aff pma) const;
   inline isl::checked::union_set preimage(isl::checked::union_pw_multi_aff upma) const;
   inline isl::checked::point sample_point() const;
+  inline isl::checked::set_list set_list() const;
+  inline isl::checked::set_list get_set_list() const;
+  inline isl::checked::space space() const;
+  inline isl::checked::space get_space() const;
   inline isl::checked::union_set subtract(isl::checked::union_set uset2) const;
+  inline isl::checked::union_set_list to_list() const;
   inline isl::checked::union_set unite(isl::checked::union_set uset2) const;
   inline isl::checked::union_set universe() const;
   inline isl::checked::union_map unwrap() const;
@@ -3074,6 +4125,7 @@ public:
   inline /* implicit */ union_set_list(const union_set_list &obj);
   inline explicit union_set_list(isl::checked::ctx ctx, int n);
   inline explicit union_set_list(isl::checked::union_set el);
+  inline explicit union_set_list(isl::checked::ctx ctx, const std::string &str);
   inline union_set_list &operator=(union_set_list obj);
   inline ~union_set_list();
   inline __isl_give isl_union_set_list *copy() const &;
@@ -3084,12 +4136,12 @@ public:
   inline isl::checked::ctx ctx() const;
 
   inline isl::checked::union_set_list add(isl::checked::union_set el) const;
+  inline isl::checked::union_set at(int index) const;
+  inline isl::checked::union_set get_at(int index) const;
   inline isl::checked::union_set_list clear() const;
   inline isl::checked::union_set_list concat(isl::checked::union_set_list list2) const;
   inline isl::checked::union_set_list drop(unsigned int first, unsigned int n) const;
   inline stat foreach(const std::function<stat(isl::checked::union_set)> &fn) const;
-  inline isl::checked::union_set at(int index) const;
-  inline isl::checked::union_set get_at(int index) const;
   inline isl::checked::union_set_list insert(unsigned int pos, isl::checked::union_set el) const;
   inline class size size() const;
 };
@@ -3128,6 +4180,8 @@ public:
   inline isl::checked::val add(long v2) const;
   inline isl::checked::val ceil() const;
   inline int cmp_si(long i) const;
+  inline long den_si() const;
+  inline long get_den_si() const;
   inline isl::checked::val div(isl::checked::val v2) const;
   inline isl::checked::val div(long v2) const;
   inline boolean eq(const isl::checked::val &v2) const;
@@ -3137,10 +4191,6 @@ public:
   inline isl::checked::val gcd(long v2) const;
   inline boolean ge(const isl::checked::val &v2) const;
   inline boolean ge(long v2) const;
-  inline long den_si() const;
-  inline long get_den_si() const;
-  inline long num_si() const;
-  inline long get_num_si() const;
   inline boolean gt(const isl::checked::val &v2) const;
   inline boolean gt(long v2) const;
   static inline isl::checked::val infty(isl::checked::ctx ctx);
@@ -3177,11 +4227,14 @@ public:
   inline isl::checked::val neg() const;
   static inline isl::checked::val neginfty(isl::checked::ctx ctx);
   static inline isl::checked::val negone(isl::checked::ctx ctx);
+  inline long num_si() const;
+  inline long get_num_si() const;
   static inline isl::checked::val one(isl::checked::ctx ctx);
   inline isl::checked::val pow2() const;
   inline int sgn() const;
   inline isl::checked::val sub(isl::checked::val v2) const;
   inline isl::checked::val sub(long v2) const;
+  inline isl::checked::val_list to_list() const;
   inline isl::checked::val trunc() const;
   static inline isl::checked::val zero(isl::checked::ctx ctx);
 };
@@ -3204,6 +4257,7 @@ public:
   inline /* implicit */ val_list(const val_list &obj);
   inline explicit val_list(isl::checked::ctx ctx, int n);
   inline explicit val_list(isl::checked::val el);
+  inline explicit val_list(isl::checked::ctx ctx, const std::string &str);
   inline val_list &operator=(val_list obj);
   inline ~val_list();
   inline __isl_give isl_val_list *copy() const &;
@@ -3215,12 +4269,12 @@ public:
 
   inline isl::checked::val_list add(isl::checked::val el) const;
   inline isl::checked::val_list add(long el) const;
+  inline isl::checked::val at(int index) const;
+  inline isl::checked::val get_at(int index) const;
   inline isl::checked::val_list clear() const;
   inline isl::checked::val_list concat(isl::checked::val_list list2) const;
   inline isl::checked::val_list drop(unsigned int first, unsigned int n) const;
   inline stat foreach(const std::function<stat(isl::checked::val)> &fn) const;
-  inline isl::checked::val at(int index) const;
-  inline isl::checked::val get_at(int index) const;
   inline isl::checked::val_list insert(unsigned int pos, isl::checked::val el) const;
   inline isl::checked::val_list insert(unsigned int pos, long el) const;
   inline class size size() const;
@@ -3291,6 +4345,41 @@ isl::checked::aff aff::add(isl::checked::aff aff2) const
   return manage(res);
 }
 
+isl::checked::multi_aff aff::add(const isl::checked::multi_aff &multi2) const
+{
+  return isl::checked::multi_aff(*this).add(multi2);
+}
+
+isl::checked::multi_pw_aff aff::add(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).add(multi2);
+}
+
+isl::checked::multi_union_pw_aff aff::add(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).add(multi2);
+}
+
+isl::checked::pw_aff aff::add(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).add(pwaff2);
+}
+
+isl::checked::pw_multi_aff aff::add(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_aff(*this).add(pma2);
+}
+
+isl::checked::union_pw_aff aff::add(const isl::checked::union_pw_aff &upa2) const
+{
+  return isl::checked::pw_aff(*this).add(upa2);
+}
+
+isl::checked::union_pw_multi_aff aff::add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_aff(*this).add(upma2);
+}
+
 isl::checked::aff aff::add_constant(isl::checked::val v) const
 {
   auto res = isl_aff_add_constant_val(copy(), v.release());
@@ -3300,6 +4389,56 @@ isl::checked::aff aff::add_constant(isl::checked::val v) const
 isl::checked::aff aff::add_constant(long v) const
 {
   return this->add_constant(isl::checked::val(ctx(), v));
+}
+
+isl::checked::multi_aff aff::add_constant(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_aff(*this).add_constant(mv);
+}
+
+isl::checked::union_pw_multi_aff aff::apply(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_aff(*this).apply(upma2);
+}
+
+isl::checked::aff aff::as_aff() const
+{
+  return isl::checked::pw_aff(*this).as_aff();
+}
+
+isl::checked::map aff::as_map() const
+{
+  return isl::checked::pw_aff(*this).as_map();
+}
+
+isl::checked::multi_aff aff::as_multi_aff() const
+{
+  return isl::checked::pw_aff(*this).as_multi_aff();
+}
+
+isl::checked::multi_union_pw_aff aff::as_multi_union_pw_aff() const
+{
+  return isl::checked::pw_aff(*this).as_multi_union_pw_aff();
+}
+
+isl::checked::pw_multi_aff aff::as_pw_multi_aff() const
+{
+  return isl::checked::pw_aff(*this).as_pw_multi_aff();
+}
+
+isl::checked::set aff::as_set() const
+{
+  return isl::checked::multi_aff(*this).as_set();
+}
+
+isl::checked::union_map aff::as_union_map() const
+{
+  return isl::checked::pw_aff(*this).as_union_map();
+}
+
+isl::checked::aff aff::at(int pos) const
+{
+  return isl::checked::multi_aff(*this).at(pos);
 }
 
 isl::checked::basic_set aff::bind(isl::checked::id id) const
@@ -3313,40 +4452,40 @@ isl::checked::basic_set aff::bind(const std::string &id) const
   return this->bind(isl::checked::id(ctx(), id));
 }
 
+isl::checked::basic_set aff::bind(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::multi_aff(*this).bind(tuple);
+}
+
+isl::checked::pw_aff aff::bind_domain(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::pw_aff(*this).bind_domain(tuple);
+}
+
+isl::checked::pw_aff aff::bind_domain_wrapped_domain(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::pw_aff(*this).bind_domain_wrapped_domain(tuple);
+}
+
 isl::checked::aff aff::ceil() const
 {
   auto res = isl_aff_ceil(copy());
   return manage(res);
 }
 
-isl::checked::aff aff::div(isl::checked::aff aff2) const
+isl::checked::pw_aff aff::coalesce() const
 {
-  auto res = isl_aff_div(copy(), aff2.release());
-  return manage(res);
+  return isl::checked::pw_aff(*this).coalesce();
 }
 
-isl::checked::set aff::eq_set(isl::checked::aff aff2) const
+isl::checked::pw_aff aff::cond(const isl::checked::pw_aff &pwaff_true, const isl::checked::pw_aff &pwaff_false) const
 {
-  auto res = isl_aff_eq_set(copy(), aff2.release());
-  return manage(res);
+  return isl::checked::pw_aff(*this).cond(pwaff_true, pwaff_false);
 }
 
-isl::checked::val aff::eval(isl::checked::point pnt) const
+isl::checked::multi_val aff::constant_multi_val() const
 {
-  auto res = isl_aff_eval(copy(), pnt.release());
-  return manage(res);
-}
-
-isl::checked::aff aff::floor() const
-{
-  auto res = isl_aff_floor(copy());
-  return manage(res);
-}
-
-isl::checked::set aff::ge_set(isl::checked::aff aff2) const
-{
-  auto res = isl_aff_ge_set(copy(), aff2.release());
-  return manage(res);
+  return isl::checked::multi_aff(*this).constant_multi_val();
 }
 
 isl::checked::val aff::constant_val() const
@@ -3360,10 +4499,110 @@ isl::checked::val aff::get_constant_val() const
   return constant_val();
 }
 
+isl::checked::aff aff::div(isl::checked::aff aff2) const
+{
+  auto res = isl_aff_div(copy(), aff2.release());
+  return manage(res);
+}
+
+isl::checked::pw_aff aff::div(const isl::checked::pw_aff &pa2) const
+{
+  return isl::checked::pw_aff(*this).div(pa2);
+}
+
+isl::checked::set aff::domain() const
+{
+  return isl::checked::pw_aff(*this).domain();
+}
+
+isl::checked::set aff::eq_set(isl::checked::aff aff2) const
+{
+  auto res = isl_aff_eq_set(copy(), aff2.release());
+  return manage(res);
+}
+
+isl::checked::set aff::eq_set(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).eq_set(pwaff2);
+}
+
+isl::checked::val aff::eval(isl::checked::point pnt) const
+{
+  auto res = isl_aff_eval(copy(), pnt.release());
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff aff::extract_pw_multi_aff(const isl::checked::space &space) const
+{
+  return isl::checked::pw_aff(*this).extract_pw_multi_aff(space);
+}
+
+isl::checked::multi_aff aff::flat_range_product(const isl::checked::multi_aff &multi2) const
+{
+  return isl::checked::multi_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::multi_pw_aff aff::flat_range_product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::multi_union_pw_aff aff::flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::pw_multi_aff aff::flat_range_product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_aff(*this).flat_range_product(pma2);
+}
+
+isl::checked::union_pw_multi_aff aff::flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_aff(*this).flat_range_product(upma2);
+}
+
+isl::checked::aff aff::floor() const
+{
+  auto res = isl_aff_floor(copy());
+  return manage(res);
+}
+
+stat aff::foreach_piece(const std::function<stat(isl::checked::set, isl::checked::multi_aff)> &fn) const
+{
+  return isl::checked::pw_aff(*this).foreach_piece(fn);
+}
+
+isl::checked::set aff::ge_set(isl::checked::aff aff2) const
+{
+  auto res = isl_aff_ge_set(copy(), aff2.release());
+  return manage(res);
+}
+
+isl::checked::set aff::ge_set(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).ge_set(pwaff2);
+}
+
 isl::checked::aff aff::gist(isl::checked::set context) const
 {
   auto res = isl_aff_gist(copy(), context.release());
   return manage(res);
+}
+
+isl::checked::union_pw_aff aff::gist(const isl::checked::union_set &context) const
+{
+  return isl::checked::pw_aff(*this).gist(context);
+}
+
+isl::checked::aff aff::gist(const isl::checked::basic_set &context) const
+{
+  return this->gist(isl::checked::set(context));
+}
+
+isl::checked::aff aff::gist(const isl::checked::point &context) const
+{
+  return this->gist(isl::checked::set(context));
 }
 
 isl::checked::set aff::gt_set(isl::checked::aff aff2) const
@@ -3372,10 +4611,100 @@ isl::checked::set aff::gt_set(isl::checked::aff aff2) const
   return manage(res);
 }
 
+isl::checked::set aff::gt_set(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).gt_set(pwaff2);
+}
+
+boolean aff::has_range_tuple_id() const
+{
+  return isl::checked::multi_aff(*this).has_range_tuple_id();
+}
+
+isl::checked::multi_aff aff::identity() const
+{
+  return isl::checked::multi_aff(*this).identity();
+}
+
+isl::checked::pw_aff aff::insert_domain(const isl::checked::space &domain) const
+{
+  return isl::checked::pw_aff(*this).insert_domain(domain);
+}
+
+isl::checked::pw_aff aff::intersect_domain(const isl::checked::set &set) const
+{
+  return isl::checked::pw_aff(*this).intersect_domain(set);
+}
+
+isl::checked::union_pw_aff aff::intersect_domain(const isl::checked::space &space) const
+{
+  return isl::checked::pw_aff(*this).intersect_domain(space);
+}
+
+isl::checked::union_pw_aff aff::intersect_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::pw_aff(*this).intersect_domain(uset);
+}
+
+isl::checked::union_pw_aff aff::intersect_domain_wrapped_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::pw_aff(*this).intersect_domain_wrapped_domain(uset);
+}
+
+isl::checked::union_pw_aff aff::intersect_domain_wrapped_range(const isl::checked::union_set &uset) const
+{
+  return isl::checked::pw_aff(*this).intersect_domain_wrapped_range(uset);
+}
+
+isl::checked::pw_aff aff::intersect_params(const isl::checked::set &set) const
+{
+  return isl::checked::pw_aff(*this).intersect_params(set);
+}
+
+boolean aff::involves_locals() const
+{
+  return isl::checked::multi_aff(*this).involves_locals();
+}
+
+boolean aff::involves_nan() const
+{
+  return isl::checked::multi_aff(*this).involves_nan();
+}
+
+boolean aff::involves_param(const isl::checked::id &id) const
+{
+  return isl::checked::pw_aff(*this).involves_param(id);
+}
+
+boolean aff::involves_param(const std::string &id) const
+{
+  return this->involves_param(isl::checked::id(ctx(), id));
+}
+
+boolean aff::involves_param(const isl::checked::id_list &list) const
+{
+  return isl::checked::pw_aff(*this).involves_param(list);
+}
+
 boolean aff::is_cst() const
 {
   auto res = isl_aff_is_cst(get());
   return manage(res);
+}
+
+boolean aff::isa_aff() const
+{
+  return isl::checked::pw_aff(*this).isa_aff();
+}
+
+boolean aff::isa_multi_aff() const
+{
+  return isl::checked::pw_aff(*this).isa_multi_aff();
+}
+
+boolean aff::isa_pw_multi_aff() const
+{
+  return isl::checked::pw_aff(*this).isa_pw_multi_aff();
 }
 
 isl::checked::set aff::le_set(isl::checked::aff aff2) const
@@ -3384,10 +4713,55 @@ isl::checked::set aff::le_set(isl::checked::aff aff2) const
   return manage(res);
 }
 
+isl::checked::set aff::le_set(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).le_set(pwaff2);
+}
+
+isl::checked::aff_list aff::list() const
+{
+  return isl::checked::multi_aff(*this).list();
+}
+
 isl::checked::set aff::lt_set(isl::checked::aff aff2) const
 {
   auto res = isl_aff_lt_set(copy(), aff2.release());
   return manage(res);
+}
+
+isl::checked::set aff::lt_set(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).lt_set(pwaff2);
+}
+
+isl::checked::multi_pw_aff aff::max(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).max(multi2);
+}
+
+isl::checked::pw_aff aff::max(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).max(pwaff2);
+}
+
+isl::checked::multi_val aff::max_multi_val() const
+{
+  return isl::checked::pw_aff(*this).max_multi_val();
+}
+
+isl::checked::multi_pw_aff aff::min(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).min(multi2);
+}
+
+isl::checked::pw_aff aff::min(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).min(pwaff2);
+}
+
+isl::checked::multi_val aff::min_multi_val() const
+{
+  return isl::checked::pw_aff(*this).min_multi_val();
 }
 
 isl::checked::aff aff::mod(isl::checked::val mod) const
@@ -3407,10 +4781,25 @@ isl::checked::aff aff::mul(isl::checked::aff aff2) const
   return manage(res);
 }
 
+isl::checked::pw_aff aff::mul(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).mul(pwaff2);
+}
+
+class size aff::n_piece() const
+{
+  return isl::checked::pw_aff(*this).n_piece();
+}
+
 isl::checked::set aff::ne_set(isl::checked::aff aff2) const
 {
   auto res = isl_aff_ne_set(copy(), aff2.release());
   return manage(res);
+}
+
+isl::checked::set aff::ne_set(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).ne_set(pwaff2);
 }
 
 isl::checked::aff aff::neg() const
@@ -3419,10 +4808,125 @@ isl::checked::aff aff::neg() const
   return manage(res);
 }
 
+boolean aff::plain_is_empty() const
+{
+  return isl::checked::pw_aff(*this).plain_is_empty();
+}
+
+boolean aff::plain_is_equal(const isl::checked::multi_aff &multi2) const
+{
+  return isl::checked::multi_aff(*this).plain_is_equal(multi2);
+}
+
+boolean aff::plain_is_equal(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).plain_is_equal(multi2);
+}
+
+boolean aff::plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).plain_is_equal(multi2);
+}
+
+isl::checked::pw_multi_aff aff::preimage_domain_wrapped_domain(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_aff(*this).preimage_domain_wrapped_domain(pma2);
+}
+
+isl::checked::union_pw_multi_aff aff::preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_aff(*this).preimage_domain_wrapped_domain(upma2);
+}
+
+isl::checked::multi_aff aff::product(const isl::checked::multi_aff &multi2) const
+{
+  return isl::checked::multi_aff(*this).product(multi2);
+}
+
+isl::checked::multi_pw_aff aff::product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).product(multi2);
+}
+
+isl::checked::pw_multi_aff aff::product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_aff(*this).product(pma2);
+}
+
 isl::checked::aff aff::pullback(isl::checked::multi_aff ma) const
 {
   auto res = isl_aff_pullback_multi_aff(copy(), ma.release());
   return manage(res);
+}
+
+isl::checked::pw_aff aff::pullback(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::pw_aff(*this).pullback(mpa);
+}
+
+isl::checked::pw_aff aff::pullback(const isl::checked::pw_multi_aff &pma) const
+{
+  return isl::checked::pw_aff(*this).pullback(pma);
+}
+
+isl::checked::union_pw_aff aff::pullback(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::pw_aff(*this).pullback(upma);
+}
+
+isl::checked::aff aff::pullback(const isl::checked::aff &ma) const
+{
+  return this->pullback(isl::checked::multi_aff(ma));
+}
+
+isl::checked::pw_multi_aff_list aff::pw_multi_aff_list() const
+{
+  return isl::checked::pw_aff(*this).pw_multi_aff_list();
+}
+
+isl::checked::pw_multi_aff aff::range_factor_domain() const
+{
+  return isl::checked::pw_aff(*this).range_factor_domain();
+}
+
+isl::checked::pw_multi_aff aff::range_factor_range() const
+{
+  return isl::checked::pw_aff(*this).range_factor_range();
+}
+
+isl::checked::multi_aff aff::range_product(const isl::checked::multi_aff &multi2) const
+{
+  return isl::checked::multi_aff(*this).range_product(multi2);
+}
+
+isl::checked::multi_pw_aff aff::range_product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).range_product(multi2);
+}
+
+isl::checked::multi_union_pw_aff aff::range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).range_product(multi2);
+}
+
+isl::checked::pw_multi_aff aff::range_product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_aff(*this).range_product(pma2);
+}
+
+isl::checked::union_pw_multi_aff aff::range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_aff(*this).range_product(upma2);
+}
+
+isl::checked::id aff::range_tuple_id() const
+{
+  return isl::checked::multi_aff(*this).range_tuple_id();
+}
+
+isl::checked::multi_aff aff::reset_range_tuple_id() const
+{
+  return isl::checked::multi_aff(*this).reset_range_tuple_id();
 }
 
 isl::checked::aff aff::scale(isl::checked::val v) const
@@ -3436,6 +4940,11 @@ isl::checked::aff aff::scale(long v) const
   return this->scale(isl::checked::val(ctx(), v));
 }
 
+isl::checked::multi_aff aff::scale(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_aff(*this).scale(mv);
+}
+
 isl::checked::aff aff::scale_down(isl::checked::val v) const
 {
   auto res = isl_aff_scale_down_val(copy(), v.release());
@@ -3447,16 +4956,177 @@ isl::checked::aff aff::scale_down(long v) const
   return this->scale_down(isl::checked::val(ctx(), v));
 }
 
+isl::checked::multi_aff aff::scale_down(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_aff(*this).scale_down(mv);
+}
+
+isl::checked::multi_aff aff::set_at(int pos, const isl::checked::aff &el) const
+{
+  return isl::checked::multi_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_pw_aff aff::set_at(int pos, const isl::checked::pw_aff &el) const
+{
+  return isl::checked::pw_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_union_pw_aff aff::set_at(int pos, const isl::checked::union_pw_aff &el) const
+{
+  return isl::checked::pw_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_aff aff::set_range_tuple(const isl::checked::id &id) const
+{
+  return isl::checked::multi_aff(*this).set_range_tuple(id);
+}
+
+isl::checked::multi_aff aff::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
+class size aff::size() const
+{
+  return isl::checked::multi_aff(*this).size();
+}
+
+isl::checked::space aff::space() const
+{
+  return isl::checked::multi_aff(*this).space();
+}
+
 isl::checked::aff aff::sub(isl::checked::aff aff2) const
 {
   auto res = isl_aff_sub(copy(), aff2.release());
   return manage(res);
 }
 
+isl::checked::multi_aff aff::sub(const isl::checked::multi_aff &multi2) const
+{
+  return isl::checked::multi_aff(*this).sub(multi2);
+}
+
+isl::checked::multi_pw_aff aff::sub(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).sub(multi2);
+}
+
+isl::checked::multi_union_pw_aff aff::sub(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_aff(*this).sub(multi2);
+}
+
+isl::checked::pw_aff aff::sub(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).sub(pwaff2);
+}
+
+isl::checked::pw_multi_aff aff::sub(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_aff(*this).sub(pma2);
+}
+
+isl::checked::union_pw_aff aff::sub(const isl::checked::union_pw_aff &upa2) const
+{
+  return isl::checked::pw_aff(*this).sub(upa2);
+}
+
+isl::checked::union_pw_multi_aff aff::sub(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_aff(*this).sub(upma2);
+}
+
+isl::checked::pw_aff aff::subtract_domain(const isl::checked::set &set) const
+{
+  return isl::checked::pw_aff(*this).subtract_domain(set);
+}
+
+isl::checked::union_pw_aff aff::subtract_domain(const isl::checked::space &space) const
+{
+  return isl::checked::pw_aff(*this).subtract_domain(space);
+}
+
+isl::checked::union_pw_aff aff::subtract_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::pw_aff(*this).subtract_domain(uset);
+}
+
+isl::checked::pw_aff aff::tdiv_q(const isl::checked::pw_aff &pa2) const
+{
+  return isl::checked::pw_aff(*this).tdiv_q(pa2);
+}
+
+isl::checked::pw_aff aff::tdiv_r(const isl::checked::pw_aff &pa2) const
+{
+  return isl::checked::pw_aff(*this).tdiv_r(pa2);
+}
+
+isl::checked::aff_list aff::to_list() const
+{
+  auto res = isl_aff_to_list(copy());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff aff::to_multi_pw_aff() const
+{
+  return isl::checked::multi_aff(*this).to_multi_pw_aff();
+}
+
+isl::checked::multi_union_pw_aff aff::to_multi_union_pw_aff() const
+{
+  return isl::checked::multi_aff(*this).to_multi_union_pw_aff();
+}
+
+isl::checked::pw_multi_aff aff::to_pw_multi_aff() const
+{
+  return isl::checked::multi_aff(*this).to_pw_multi_aff();
+}
+
+isl::checked::union_pw_aff aff::to_union_pw_aff() const
+{
+  return isl::checked::pw_aff(*this).to_union_pw_aff();
+}
+
+isl::checked::union_pw_multi_aff aff::to_union_pw_multi_aff() const
+{
+  return isl::checked::pw_aff(*this).to_union_pw_multi_aff();
+}
+
 isl::checked::aff aff::unbind_params_insert_domain(isl::checked::multi_id domain) const
 {
   auto res = isl_aff_unbind_params_insert_domain(copy(), domain.release());
   return manage(res);
+}
+
+isl::checked::multi_pw_aff aff::union_add(const isl::checked::multi_pw_aff &mpa2) const
+{
+  return isl::checked::pw_aff(*this).union_add(mpa2);
+}
+
+isl::checked::multi_union_pw_aff aff::union_add(const isl::checked::multi_union_pw_aff &mupa2) const
+{
+  return isl::checked::pw_aff(*this).union_add(mupa2);
+}
+
+isl::checked::pw_aff aff::union_add(const isl::checked::pw_aff &pwaff2) const
+{
+  return isl::checked::pw_aff(*this).union_add(pwaff2);
+}
+
+isl::checked::pw_multi_aff aff::union_add(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_aff(*this).union_add(pma2);
+}
+
+isl::checked::union_pw_aff aff::union_add(const isl::checked::union_pw_aff &upa2) const
+{
+  return isl::checked::pw_aff(*this).union_add(upa2);
+}
+
+isl::checked::union_pw_multi_aff aff::union_add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_aff(*this).union_add(upma2);
 }
 
 isl::checked::aff aff::zero_on_domain(isl::checked::space space)
@@ -3510,6 +5180,12 @@ aff_list::aff_list(isl::checked::aff el)
   ptr = res;
 }
 
+aff_list::aff_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_aff_list_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
 aff_list &aff_list::operator=(aff_list obj) {
   std::swap(this->ptr, obj.ptr);
   return *this;
@@ -3548,6 +5224,17 @@ isl::checked::aff_list aff_list::add(isl::checked::aff el) const
   return manage(res);
 }
 
+isl::checked::aff aff_list::at(int index) const
+{
+  auto res = isl_aff_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::aff aff_list::get_at(int index) const
+{
+  return at(index);
+}
+
 isl::checked::aff_list aff_list::clear() const
 {
   auto res = isl_aff_list_clear(copy());
@@ -3578,17 +5265,6 @@ stat aff_list::foreach(const std::function<stat(isl::checked::aff)> &fn) const
   };
   auto res = isl_aff_list_foreach(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::aff aff_list::at(int index) const
-{
-  auto res = isl_aff_list_get_at(get(), index);
-  return manage(res);
-}
-
-isl::checked::aff aff_list::get_at(int index) const
-{
-  return at(index);
 }
 
 isl::checked::aff_list aff_list::insert(unsigned int pos, isl::checked::aff el) const
@@ -3747,17 +5423,6 @@ isl::checked::ast_build ast_build::from_context(isl::checked::set set)
   return manage(res);
 }
 
-isl::checked::union_map ast_build::schedule() const
-{
-  auto res = isl_ast_build_get_schedule(get());
-  return manage(res);
-}
-
-isl::checked::union_map ast_build::get_schedule() const
-{
-  return schedule();
-}
-
 isl::checked::ast_node ast_build::node_from(isl::checked::schedule schedule) const
 {
   auto res = isl_ast_build_node_from_schedule(get(), schedule.release());
@@ -3768,6 +5433,17 @@ isl::checked::ast_node ast_build::node_from_schedule_map(isl::checked::union_map
 {
   auto res = isl_ast_build_node_from_schedule_map(get(), schedule.release());
   return manage(res);
+}
+
+isl::checked::union_map ast_build::schedule() const
+{
+  auto res = isl_ast_build_get_schedule(get());
+  return manage(res);
+}
+
+isl::checked::union_map ast_build::get_schedule() const
+{
+  return schedule();
 }
 
 // implementations for isl::ast_expr
@@ -4965,6 +6641,12 @@ std::string ast_node::to_C_str() const
   return tmp;
 }
 
+isl::checked::ast_node_list ast_node::to_list() const
+{
+  auto res = isl_ast_node_to_list(copy());
+  return manage(res);
+}
+
 inline std::ostream &operator<<(std::ostream &os, const ast_node &obj)
 {
   char *str = isl_ast_node_to_str(obj.get());
@@ -5086,6 +6768,12 @@ isl::checked::ast_expr ast_node_for::get_init() const
   return init();
 }
 
+boolean ast_node_for::is_degenerate() const
+{
+  auto res = isl_ast_node_for_is_degenerate(get());
+  return manage(res);
+}
+
 isl::checked::ast_expr ast_node_for::iterator() const
 {
   auto res = isl_ast_node_for_get_iterator(get());
@@ -5095,12 +6783,6 @@ isl::checked::ast_expr ast_node_for::iterator() const
 isl::checked::ast_expr ast_node_for::get_iterator() const
 {
   return iterator();
-}
-
-boolean ast_node_for::is_degenerate() const
-{
-  auto res = isl_ast_node_for_is_degenerate(get());
-  return manage(res);
 }
 
 inline std::ostream &operator<<(std::ostream &os, const ast_node_for &obj)
@@ -5158,6 +6840,12 @@ isl::checked::ast_node ast_node_if::get_else_node() const
   return else_node();
 }
 
+boolean ast_node_if::has_else_node() const
+{
+  auto res = isl_ast_node_if_has_else_node(get());
+  return manage(res);
+}
+
 isl::checked::ast_node ast_node_if::then_node() const
 {
   auto res = isl_ast_node_if_get_then_node(get());
@@ -5167,12 +6855,6 @@ isl::checked::ast_node ast_node_if::then_node() const
 isl::checked::ast_node ast_node_if::get_then_node() const
 {
   return then_node();
-}
-
-boolean ast_node_if::has_else_node() const
-{
-  auto res = isl_ast_node_if_has_else_node(get());
-  return manage(res);
 }
 
 inline std::ostream &operator<<(std::ostream &os, const ast_node_if &obj)
@@ -5258,6 +6940,17 @@ isl::checked::ast_node_list ast_node_list::add(isl::checked::ast_node el) const
   return manage(res);
 }
 
+isl::checked::ast_node ast_node_list::at(int index) const
+{
+  auto res = isl_ast_node_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::ast_node ast_node_list::get_at(int index) const
+{
+  return at(index);
+}
+
 isl::checked::ast_node_list ast_node_list::clear() const
 {
   auto res = isl_ast_node_list_clear(copy());
@@ -5288,17 +6981,6 @@ stat ast_node_list::foreach(const std::function<stat(isl::checked::ast_node)> &f
   };
   auto res = isl_ast_node_list_foreach(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::ast_node ast_node_list::at(int index) const
-{
-  auto res = isl_ast_node_list_get_at(get(), index);
-  return manage(res);
-}
-
-isl::checked::ast_node ast_node_list::get_at(int index) const
-{
-  return at(index);
 }
 
 isl::checked::ast_node_list ast_node_list::insert(unsigned int pos, isl::checked::ast_node el) const
@@ -5495,10 +7177,80 @@ isl::checked::basic_map basic_map::apply_domain(isl::checked::basic_map bmap2) c
   return manage(res);
 }
 
+isl::checked::map basic_map::apply_domain(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).apply_domain(map2);
+}
+
+isl::checked::union_map basic_map::apply_domain(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).apply_domain(umap2);
+}
+
 isl::checked::basic_map basic_map::apply_range(isl::checked::basic_map bmap2) const
 {
   auto res = isl_basic_map_apply_range(copy(), bmap2.release());
   return manage(res);
+}
+
+isl::checked::map basic_map::apply_range(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).apply_range(map2);
+}
+
+isl::checked::union_map basic_map::apply_range(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).apply_range(umap2);
+}
+
+isl::checked::map basic_map::as_map() const
+{
+  return isl::checked::map(*this).as_map();
+}
+
+isl::checked::multi_union_pw_aff basic_map::as_multi_union_pw_aff() const
+{
+  return isl::checked::map(*this).as_multi_union_pw_aff();
+}
+
+isl::checked::pw_multi_aff basic_map::as_pw_multi_aff() const
+{
+  return isl::checked::map(*this).as_pw_multi_aff();
+}
+
+isl::checked::union_pw_multi_aff basic_map::as_union_pw_multi_aff() const
+{
+  return isl::checked::map(*this).as_union_pw_multi_aff();
+}
+
+isl::checked::set basic_map::bind_domain(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::map(*this).bind_domain(tuple);
+}
+
+isl::checked::set basic_map::bind_range(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::map(*this).bind_range(tuple);
+}
+
+isl::checked::map basic_map::coalesce() const
+{
+  return isl::checked::map(*this).coalesce();
+}
+
+isl::checked::map basic_map::complement() const
+{
+  return isl::checked::map(*this).complement();
+}
+
+isl::checked::union_map basic_map::compute_divs() const
+{
+  return isl::checked::map(*this).compute_divs();
+}
+
+isl::checked::map basic_map::curry() const
+{
+  return isl::checked::map(*this).curry();
 }
 
 isl::checked::basic_set basic_map::deltas() const
@@ -5511,6 +7263,91 @@ isl::checked::basic_map basic_map::detect_equalities() const
 {
   auto res = isl_basic_map_detect_equalities(copy());
   return manage(res);
+}
+
+isl::checked::set basic_map::domain() const
+{
+  return isl::checked::map(*this).domain();
+}
+
+isl::checked::map basic_map::domain_factor_domain() const
+{
+  return isl::checked::map(*this).domain_factor_domain();
+}
+
+isl::checked::map basic_map::domain_factor_range() const
+{
+  return isl::checked::map(*this).domain_factor_range();
+}
+
+isl::checked::union_map basic_map::domain_map() const
+{
+  return isl::checked::map(*this).domain_map();
+}
+
+isl::checked::union_pw_multi_aff basic_map::domain_map_union_pw_multi_aff() const
+{
+  return isl::checked::map(*this).domain_map_union_pw_multi_aff();
+}
+
+isl::checked::map basic_map::domain_product(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).domain_product(map2);
+}
+
+isl::checked::union_map basic_map::domain_product(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).domain_product(umap2);
+}
+
+class size basic_map::domain_tuple_dim() const
+{
+  return isl::checked::map(*this).domain_tuple_dim();
+}
+
+isl::checked::id basic_map::domain_tuple_id() const
+{
+  return isl::checked::map(*this).domain_tuple_id();
+}
+
+isl::checked::map basic_map::eq_at(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::map(*this).eq_at(mpa);
+}
+
+isl::checked::union_map basic_map::eq_at(const isl::checked::multi_union_pw_aff &mupa) const
+{
+  return isl::checked::map(*this).eq_at(mupa);
+}
+
+boolean basic_map::every_map(const std::function<boolean(isl::checked::map)> &test) const
+{
+  return isl::checked::map(*this).every_map(test);
+}
+
+isl::checked::map basic_map::extract_map(const isl::checked::space &space) const
+{
+  return isl::checked::map(*this).extract_map(space);
+}
+
+isl::checked::map basic_map::factor_domain() const
+{
+  return isl::checked::map(*this).factor_domain();
+}
+
+isl::checked::map basic_map::factor_range() const
+{
+  return isl::checked::map(*this).factor_range();
+}
+
+isl::checked::union_map basic_map::fixed_power(const isl::checked::val &exp) const
+{
+  return isl::checked::map(*this).fixed_power(exp);
+}
+
+isl::checked::union_map basic_map::fixed_power(long exp) const
+{
+  return this->fixed_power(isl::checked::val(ctx(), exp));
 }
 
 isl::checked::basic_map basic_map::flatten() const
@@ -5531,10 +7368,60 @@ isl::checked::basic_map basic_map::flatten_range() const
   return manage(res);
 }
 
+stat basic_map::foreach_basic_map(const std::function<stat(isl::checked::basic_map)> &fn) const
+{
+  return isl::checked::map(*this).foreach_basic_map(fn);
+}
+
+stat basic_map::foreach_map(const std::function<stat(isl::checked::map)> &fn) const
+{
+  return isl::checked::map(*this).foreach_map(fn);
+}
+
 isl::checked::basic_map basic_map::gist(isl::checked::basic_map context) const
 {
   auto res = isl_basic_map_gist(copy(), context.release());
   return manage(res);
+}
+
+isl::checked::map basic_map::gist(const isl::checked::map &context) const
+{
+  return isl::checked::map(*this).gist(context);
+}
+
+isl::checked::union_map basic_map::gist(const isl::checked::union_map &context) const
+{
+  return isl::checked::map(*this).gist(context);
+}
+
+isl::checked::map basic_map::gist_domain(const isl::checked::set &context) const
+{
+  return isl::checked::map(*this).gist_domain(context);
+}
+
+isl::checked::union_map basic_map::gist_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::map(*this).gist_domain(uset);
+}
+
+isl::checked::union_map basic_map::gist_params(const isl::checked::set &set) const
+{
+  return isl::checked::map(*this).gist_params(set);
+}
+
+isl::checked::union_map basic_map::gist_range(const isl::checked::union_set &uset) const
+{
+  return isl::checked::map(*this).gist_range(uset);
+}
+
+boolean basic_map::has_domain_tuple_id() const
+{
+  return isl::checked::map(*this).has_domain_tuple_id();
+}
+
+boolean basic_map::has_range_tuple_id() const
+{
+  return isl::checked::map(*this).has_range_tuple_id();
 }
 
 isl::checked::basic_map basic_map::intersect(isl::checked::basic_map bmap2) const
@@ -5543,16 +7430,126 @@ isl::checked::basic_map basic_map::intersect(isl::checked::basic_map bmap2) cons
   return manage(res);
 }
 
+isl::checked::map basic_map::intersect(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).intersect(map2);
+}
+
+isl::checked::union_map basic_map::intersect(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).intersect(umap2);
+}
+
 isl::checked::basic_map basic_map::intersect_domain(isl::checked::basic_set bset) const
 {
   auto res = isl_basic_map_intersect_domain(copy(), bset.release());
   return manage(res);
 }
 
+isl::checked::map basic_map::intersect_domain(const isl::checked::set &set) const
+{
+  return isl::checked::map(*this).intersect_domain(set);
+}
+
+isl::checked::union_map basic_map::intersect_domain(const isl::checked::space &space) const
+{
+  return isl::checked::map(*this).intersect_domain(space);
+}
+
+isl::checked::union_map basic_map::intersect_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::map(*this).intersect_domain(uset);
+}
+
+isl::checked::basic_map basic_map::intersect_domain(const isl::checked::point &bset) const
+{
+  return this->intersect_domain(isl::checked::basic_set(bset));
+}
+
+isl::checked::map basic_map::intersect_domain_factor_domain(const isl::checked::map &factor) const
+{
+  return isl::checked::map(*this).intersect_domain_factor_domain(factor);
+}
+
+isl::checked::union_map basic_map::intersect_domain_factor_domain(const isl::checked::union_map &factor) const
+{
+  return isl::checked::map(*this).intersect_domain_factor_domain(factor);
+}
+
+isl::checked::map basic_map::intersect_domain_factor_range(const isl::checked::map &factor) const
+{
+  return isl::checked::map(*this).intersect_domain_factor_range(factor);
+}
+
+isl::checked::union_map basic_map::intersect_domain_factor_range(const isl::checked::union_map &factor) const
+{
+  return isl::checked::map(*this).intersect_domain_factor_range(factor);
+}
+
+isl::checked::map basic_map::intersect_params(const isl::checked::set &params) const
+{
+  return isl::checked::map(*this).intersect_params(params);
+}
+
 isl::checked::basic_map basic_map::intersect_range(isl::checked::basic_set bset) const
 {
   auto res = isl_basic_map_intersect_range(copy(), bset.release());
   return manage(res);
+}
+
+isl::checked::map basic_map::intersect_range(const isl::checked::set &set) const
+{
+  return isl::checked::map(*this).intersect_range(set);
+}
+
+isl::checked::union_map basic_map::intersect_range(const isl::checked::space &space) const
+{
+  return isl::checked::map(*this).intersect_range(space);
+}
+
+isl::checked::union_map basic_map::intersect_range(const isl::checked::union_set &uset) const
+{
+  return isl::checked::map(*this).intersect_range(uset);
+}
+
+isl::checked::basic_map basic_map::intersect_range(const isl::checked::point &bset) const
+{
+  return this->intersect_range(isl::checked::basic_set(bset));
+}
+
+isl::checked::map basic_map::intersect_range_factor_domain(const isl::checked::map &factor) const
+{
+  return isl::checked::map(*this).intersect_range_factor_domain(factor);
+}
+
+isl::checked::union_map basic_map::intersect_range_factor_domain(const isl::checked::union_map &factor) const
+{
+  return isl::checked::map(*this).intersect_range_factor_domain(factor);
+}
+
+isl::checked::map basic_map::intersect_range_factor_range(const isl::checked::map &factor) const
+{
+  return isl::checked::map(*this).intersect_range_factor_range(factor);
+}
+
+isl::checked::union_map basic_map::intersect_range_factor_range(const isl::checked::union_map &factor) const
+{
+  return isl::checked::map(*this).intersect_range_factor_range(factor);
+}
+
+boolean basic_map::is_bijective() const
+{
+  return isl::checked::map(*this).is_bijective();
+}
+
+boolean basic_map::is_disjoint(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).is_disjoint(map2);
+}
+
+boolean basic_map::is_disjoint(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).is_disjoint(umap2);
 }
 
 boolean basic_map::is_empty() const
@@ -5567,10 +7564,75 @@ boolean basic_map::is_equal(const isl::checked::basic_map &bmap2) const
   return manage(res);
 }
 
+boolean basic_map::is_equal(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).is_equal(map2);
+}
+
+boolean basic_map::is_equal(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).is_equal(umap2);
+}
+
+boolean basic_map::is_injective() const
+{
+  return isl::checked::map(*this).is_injective();
+}
+
+boolean basic_map::is_single_valued() const
+{
+  return isl::checked::map(*this).is_single_valued();
+}
+
+boolean basic_map::is_strict_subset(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).is_strict_subset(map2);
+}
+
+boolean basic_map::is_strict_subset(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).is_strict_subset(umap2);
+}
+
 boolean basic_map::is_subset(const isl::checked::basic_map &bmap2) const
 {
   auto res = isl_basic_map_is_subset(get(), bmap2.get());
   return manage(res);
+}
+
+boolean basic_map::is_subset(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).is_subset(map2);
+}
+
+boolean basic_map::is_subset(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).is_subset(umap2);
+}
+
+boolean basic_map::isa_map() const
+{
+  return isl::checked::map(*this).isa_map();
+}
+
+isl::checked::map basic_map::lex_ge_at(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::map(*this).lex_ge_at(mpa);
+}
+
+isl::checked::map basic_map::lex_gt_at(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::map(*this).lex_gt_at(mpa);
+}
+
+isl::checked::map basic_map::lex_le_at(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::map(*this).lex_le_at(mpa);
+}
+
+isl::checked::map basic_map::lex_lt_at(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::map(*this).lex_lt_at(mpa);
 }
 
 isl::checked::map basic_map::lexmax() const
@@ -5579,10 +7641,150 @@ isl::checked::map basic_map::lexmax() const
   return manage(res);
 }
 
+isl::checked::pw_multi_aff basic_map::lexmax_pw_multi_aff() const
+{
+  return isl::checked::map(*this).lexmax_pw_multi_aff();
+}
+
 isl::checked::map basic_map::lexmin() const
 {
   auto res = isl_basic_map_lexmin(copy());
   return manage(res);
+}
+
+isl::checked::pw_multi_aff basic_map::lexmin_pw_multi_aff() const
+{
+  return isl::checked::map(*this).lexmin_pw_multi_aff();
+}
+
+isl::checked::map basic_map::lower_bound(const isl::checked::multi_pw_aff &lower) const
+{
+  return isl::checked::map(*this).lower_bound(lower);
+}
+
+isl::checked::map_list basic_map::map_list() const
+{
+  return isl::checked::map(*this).map_list();
+}
+
+isl::checked::multi_pw_aff basic_map::max_multi_pw_aff() const
+{
+  return isl::checked::map(*this).max_multi_pw_aff();
+}
+
+isl::checked::multi_pw_aff basic_map::min_multi_pw_aff() const
+{
+  return isl::checked::map(*this).min_multi_pw_aff();
+}
+
+isl::checked::basic_map basic_map::polyhedral_hull() const
+{
+  return isl::checked::map(*this).polyhedral_hull();
+}
+
+isl::checked::map basic_map::preimage_domain(const isl::checked::multi_aff &ma) const
+{
+  return isl::checked::map(*this).preimage_domain(ma);
+}
+
+isl::checked::map basic_map::preimage_domain(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::map(*this).preimage_domain(mpa);
+}
+
+isl::checked::map basic_map::preimage_domain(const isl::checked::pw_multi_aff &pma) const
+{
+  return isl::checked::map(*this).preimage_domain(pma);
+}
+
+isl::checked::union_map basic_map::preimage_domain(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::map(*this).preimage_domain(upma);
+}
+
+isl::checked::map basic_map::preimage_range(const isl::checked::multi_aff &ma) const
+{
+  return isl::checked::map(*this).preimage_range(ma);
+}
+
+isl::checked::map basic_map::preimage_range(const isl::checked::pw_multi_aff &pma) const
+{
+  return isl::checked::map(*this).preimage_range(pma);
+}
+
+isl::checked::union_map basic_map::preimage_range(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::map(*this).preimage_range(upma);
+}
+
+isl::checked::map basic_map::product(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).product(map2);
+}
+
+isl::checked::union_map basic_map::product(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).product(umap2);
+}
+
+isl::checked::map basic_map::project_out_all_params() const
+{
+  return isl::checked::map(*this).project_out_all_params();
+}
+
+isl::checked::set basic_map::range() const
+{
+  return isl::checked::map(*this).range();
+}
+
+isl::checked::map basic_map::range_factor_domain() const
+{
+  return isl::checked::map(*this).range_factor_domain();
+}
+
+isl::checked::map basic_map::range_factor_range() const
+{
+  return isl::checked::map(*this).range_factor_range();
+}
+
+isl::checked::fixed_box basic_map::range_lattice_tile() const
+{
+  return isl::checked::map(*this).range_lattice_tile();
+}
+
+isl::checked::union_map basic_map::range_map() const
+{
+  return isl::checked::map(*this).range_map();
+}
+
+isl::checked::map basic_map::range_product(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).range_product(map2);
+}
+
+isl::checked::union_map basic_map::range_product(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).range_product(umap2);
+}
+
+isl::checked::map basic_map::range_reverse() const
+{
+  return isl::checked::map(*this).range_reverse();
+}
+
+isl::checked::fixed_box basic_map::range_simple_fixed_box_hull() const
+{
+  return isl::checked::map(*this).range_simple_fixed_box_hull();
+}
+
+class size basic_map::range_tuple_dim() const
+{
+  return isl::checked::map(*this).range_tuple_dim();
+}
+
+isl::checked::id basic_map::range_tuple_id() const
+{
+  return isl::checked::map(*this).range_tuple_id();
 }
 
 isl::checked::basic_map basic_map::reverse() const
@@ -5597,10 +7799,100 @@ isl::checked::basic_map basic_map::sample() const
   return manage(res);
 }
 
+isl::checked::map basic_map::set_domain_tuple(const isl::checked::id &id) const
+{
+  return isl::checked::map(*this).set_domain_tuple(id);
+}
+
+isl::checked::map basic_map::set_domain_tuple(const std::string &id) const
+{
+  return this->set_domain_tuple(isl::checked::id(ctx(), id));
+}
+
+isl::checked::map basic_map::set_range_tuple(const isl::checked::id &id) const
+{
+  return isl::checked::map(*this).set_range_tuple(id);
+}
+
+isl::checked::map basic_map::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
+isl::checked::space basic_map::space() const
+{
+  return isl::checked::map(*this).space();
+}
+
+isl::checked::map basic_map::subtract(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).subtract(map2);
+}
+
+isl::checked::union_map basic_map::subtract(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).subtract(umap2);
+}
+
+isl::checked::union_map basic_map::subtract_domain(const isl::checked::union_set &dom) const
+{
+  return isl::checked::map(*this).subtract_domain(dom);
+}
+
+isl::checked::union_map basic_map::subtract_range(const isl::checked::union_set &dom) const
+{
+  return isl::checked::map(*this).subtract_range(dom);
+}
+
+isl::checked::map_list basic_map::to_list() const
+{
+  return isl::checked::map(*this).to_list();
+}
+
+isl::checked::union_map basic_map::to_union_map() const
+{
+  return isl::checked::map(*this).to_union_map();
+}
+
+isl::checked::map basic_map::uncurry() const
+{
+  return isl::checked::map(*this).uncurry();
+}
+
 isl::checked::map basic_map::unite(isl::checked::basic_map bmap2) const
 {
   auto res = isl_basic_map_union(copy(), bmap2.release());
   return manage(res);
+}
+
+isl::checked::map basic_map::unite(const isl::checked::map &map2) const
+{
+  return isl::checked::map(*this).unite(map2);
+}
+
+isl::checked::union_map basic_map::unite(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::map(*this).unite(umap2);
+}
+
+isl::checked::basic_map basic_map::unshifted_simple_hull() const
+{
+  return isl::checked::map(*this).unshifted_simple_hull();
+}
+
+isl::checked::map basic_map::upper_bound(const isl::checked::multi_pw_aff &upper) const
+{
+  return isl::checked::map(*this).upper_bound(upper);
+}
+
+isl::checked::set basic_map::wrap() const
+{
+  return isl::checked::map(*this).wrap();
+}
+
+isl::checked::map basic_map::zip() const
+{
+  return isl::checked::map(*this).zip();
 }
 
 inline std::ostream &operator<<(std::ostream &os, const basic_map &obj)
@@ -5692,6 +7984,46 @@ isl::checked::basic_set basic_set::apply(isl::checked::basic_map bmap) const
   return manage(res);
 }
 
+isl::checked::set basic_set::apply(const isl::checked::map &map) const
+{
+  return isl::checked::set(*this).apply(map);
+}
+
+isl::checked::union_set basic_set::apply(const isl::checked::union_map &umap) const
+{
+  return isl::checked::set(*this).apply(umap);
+}
+
+isl::checked::pw_multi_aff basic_set::as_pw_multi_aff() const
+{
+  return isl::checked::set(*this).as_pw_multi_aff();
+}
+
+isl::checked::set basic_set::as_set() const
+{
+  return isl::checked::set(*this).as_set();
+}
+
+isl::checked::set basic_set::bind(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::set(*this).bind(tuple);
+}
+
+isl::checked::set basic_set::coalesce() const
+{
+  return isl::checked::set(*this).coalesce();
+}
+
+isl::checked::set basic_set::complement() const
+{
+  return isl::checked::set(*this).complement();
+}
+
+isl::checked::union_set basic_set::compute_divs() const
+{
+  return isl::checked::set(*this).compute_divs();
+}
+
 isl::checked::basic_set basic_set::detect_equalities() const
 {
   auto res = isl_basic_set_detect_equalities(copy());
@@ -5704,10 +8036,40 @@ isl::checked::val basic_set::dim_max_val(int pos) const
   return manage(res);
 }
 
+isl::checked::val basic_set::dim_min_val(int pos) const
+{
+  return isl::checked::set(*this).dim_min_val(pos);
+}
+
+boolean basic_set::every_set(const std::function<boolean(isl::checked::set)> &test) const
+{
+  return isl::checked::set(*this).every_set(test);
+}
+
+isl::checked::set basic_set::extract_set(const isl::checked::space &space) const
+{
+  return isl::checked::set(*this).extract_set(space);
+}
+
 isl::checked::basic_set basic_set::flatten() const
 {
   auto res = isl_basic_set_flatten(copy());
   return manage(res);
+}
+
+stat basic_set::foreach_basic_set(const std::function<stat(isl::checked::basic_set)> &fn) const
+{
+  return isl::checked::set(*this).foreach_basic_set(fn);
+}
+
+stat basic_set::foreach_point(const std::function<stat(isl::checked::point)> &fn) const
+{
+  return isl::checked::set(*this).foreach_point(fn);
+}
+
+stat basic_set::foreach_set(const std::function<stat(isl::checked::set)> &fn) const
+{
+  return isl::checked::set(*this).foreach_set(fn);
 }
 
 isl::checked::basic_set basic_set::gist(isl::checked::basic_set context) const
@@ -5716,16 +8078,91 @@ isl::checked::basic_set basic_set::gist(isl::checked::basic_set context) const
   return manage(res);
 }
 
+isl::checked::set basic_set::gist(const isl::checked::set &context) const
+{
+  return isl::checked::set(*this).gist(context);
+}
+
+isl::checked::union_set basic_set::gist(const isl::checked::union_set &context) const
+{
+  return isl::checked::set(*this).gist(context);
+}
+
+isl::checked::basic_set basic_set::gist(const isl::checked::point &context) const
+{
+  return this->gist(isl::checked::basic_set(context));
+}
+
+isl::checked::union_set basic_set::gist_params(const isl::checked::set &set) const
+{
+  return isl::checked::set(*this).gist_params(set);
+}
+
+isl::checked::map basic_set::identity() const
+{
+  return isl::checked::set(*this).identity();
+}
+
+isl::checked::pw_aff basic_set::indicator_function() const
+{
+  return isl::checked::set(*this).indicator_function();
+}
+
+isl::checked::map basic_set::insert_domain(const isl::checked::space &domain) const
+{
+  return isl::checked::set(*this).insert_domain(domain);
+}
+
 isl::checked::basic_set basic_set::intersect(isl::checked::basic_set bset2) const
 {
   auto res = isl_basic_set_intersect(copy(), bset2.release());
   return manage(res);
 }
 
+isl::checked::set basic_set::intersect(const isl::checked::set &set2) const
+{
+  return isl::checked::set(*this).intersect(set2);
+}
+
+isl::checked::union_set basic_set::intersect(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::set(*this).intersect(uset2);
+}
+
+isl::checked::basic_set basic_set::intersect(const isl::checked::point &bset2) const
+{
+  return this->intersect(isl::checked::basic_set(bset2));
+}
+
 isl::checked::basic_set basic_set::intersect_params(isl::checked::basic_set bset2) const
 {
   auto res = isl_basic_set_intersect_params(copy(), bset2.release());
   return manage(res);
+}
+
+isl::checked::set basic_set::intersect_params(const isl::checked::set &params) const
+{
+  return isl::checked::set(*this).intersect_params(params);
+}
+
+isl::checked::basic_set basic_set::intersect_params(const isl::checked::point &bset2) const
+{
+  return this->intersect_params(isl::checked::basic_set(bset2));
+}
+
+boolean basic_set::involves_locals() const
+{
+  return isl::checked::set(*this).involves_locals();
+}
+
+boolean basic_set::is_disjoint(const isl::checked::set &set2) const
+{
+  return isl::checked::set(*this).is_disjoint(set2);
+}
+
+boolean basic_set::is_disjoint(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::set(*this).is_disjoint(uset2);
 }
 
 boolean basic_set::is_empty() const
@@ -5740,10 +8177,55 @@ boolean basic_set::is_equal(const isl::checked::basic_set &bset2) const
   return manage(res);
 }
 
+boolean basic_set::is_equal(const isl::checked::set &set2) const
+{
+  return isl::checked::set(*this).is_equal(set2);
+}
+
+boolean basic_set::is_equal(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::set(*this).is_equal(uset2);
+}
+
+boolean basic_set::is_equal(const isl::checked::point &bset2) const
+{
+  return this->is_equal(isl::checked::basic_set(bset2));
+}
+
+boolean basic_set::is_singleton() const
+{
+  return isl::checked::set(*this).is_singleton();
+}
+
+boolean basic_set::is_strict_subset(const isl::checked::set &set2) const
+{
+  return isl::checked::set(*this).is_strict_subset(set2);
+}
+
+boolean basic_set::is_strict_subset(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::set(*this).is_strict_subset(uset2);
+}
+
 boolean basic_set::is_subset(const isl::checked::basic_set &bset2) const
 {
   auto res = isl_basic_set_is_subset(get(), bset2.get());
   return manage(res);
+}
+
+boolean basic_set::is_subset(const isl::checked::set &set2) const
+{
+  return isl::checked::set(*this).is_subset(set2);
+}
+
+boolean basic_set::is_subset(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::set(*this).is_subset(uset2);
+}
+
+boolean basic_set::is_subset(const isl::checked::point &bset2) const
+{
+  return this->is_subset(isl::checked::basic_set(bset2));
 }
 
 boolean basic_set::is_wrapping() const
@@ -5752,10 +8234,20 @@ boolean basic_set::is_wrapping() const
   return manage(res);
 }
 
+boolean basic_set::isa_set() const
+{
+  return isl::checked::set(*this).isa_set();
+}
+
 isl::checked::set basic_set::lexmax() const
 {
   auto res = isl_basic_set_lexmax(copy());
   return manage(res);
+}
+
+isl::checked::pw_multi_aff basic_set::lexmax_pw_multi_aff() const
+{
+  return isl::checked::set(*this).lexmax_pw_multi_aff();
 }
 
 isl::checked::set basic_set::lexmin() const
@@ -5764,10 +8256,105 @@ isl::checked::set basic_set::lexmin() const
   return manage(res);
 }
 
+isl::checked::pw_multi_aff basic_set::lexmin_pw_multi_aff() const
+{
+  return isl::checked::set(*this).lexmin_pw_multi_aff();
+}
+
+isl::checked::set basic_set::lower_bound(const isl::checked::multi_pw_aff &lower) const
+{
+  return isl::checked::set(*this).lower_bound(lower);
+}
+
+isl::checked::set basic_set::lower_bound(const isl::checked::multi_val &lower) const
+{
+  return isl::checked::set(*this).lower_bound(lower);
+}
+
+isl::checked::multi_pw_aff basic_set::max_multi_pw_aff() const
+{
+  return isl::checked::set(*this).max_multi_pw_aff();
+}
+
+isl::checked::val basic_set::max_val(const isl::checked::aff &obj) const
+{
+  return isl::checked::set(*this).max_val(obj);
+}
+
+isl::checked::multi_pw_aff basic_set::min_multi_pw_aff() const
+{
+  return isl::checked::set(*this).min_multi_pw_aff();
+}
+
+isl::checked::val basic_set::min_val(const isl::checked::aff &obj) const
+{
+  return isl::checked::set(*this).min_val(obj);
+}
+
 isl::checked::basic_set basic_set::params() const
 {
   auto res = isl_basic_set_params(copy());
   return manage(res);
+}
+
+isl::checked::multi_val basic_set::plain_multi_val_if_fixed() const
+{
+  return isl::checked::set(*this).plain_multi_val_if_fixed();
+}
+
+isl::checked::basic_set basic_set::polyhedral_hull() const
+{
+  return isl::checked::set(*this).polyhedral_hull();
+}
+
+isl::checked::set basic_set::preimage(const isl::checked::multi_aff &ma) const
+{
+  return isl::checked::set(*this).preimage(ma);
+}
+
+isl::checked::set basic_set::preimage(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::set(*this).preimage(mpa);
+}
+
+isl::checked::set basic_set::preimage(const isl::checked::pw_multi_aff &pma) const
+{
+  return isl::checked::set(*this).preimage(pma);
+}
+
+isl::checked::union_set basic_set::preimage(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::set(*this).preimage(upma);
+}
+
+isl::checked::set basic_set::product(const isl::checked::set &set2) const
+{
+  return isl::checked::set(*this).product(set2);
+}
+
+isl::checked::set basic_set::project_out_all_params() const
+{
+  return isl::checked::set(*this).project_out_all_params();
+}
+
+isl::checked::set basic_set::project_out_param(const isl::checked::id &id) const
+{
+  return isl::checked::set(*this).project_out_param(id);
+}
+
+isl::checked::set basic_set::project_out_param(const std::string &id) const
+{
+  return this->project_out_param(isl::checked::id(ctx(), id));
+}
+
+isl::checked::set basic_set::project_out_param(const isl::checked::id_list &list) const
+{
+  return isl::checked::set(*this).project_out_param(list);
+}
+
+isl::checked::pw_multi_aff basic_set::pw_multi_aff_on_domain(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::set(*this).pw_multi_aff_on_domain(mv);
 }
 
 isl::checked::basic_set basic_set::sample() const
@@ -5782,10 +8369,111 @@ isl::checked::point basic_set::sample_point() const
   return manage(res);
 }
 
+isl::checked::set_list basic_set::set_list() const
+{
+  return isl::checked::set(*this).set_list();
+}
+
+isl::checked::fixed_box basic_set::simple_fixed_box_hull() const
+{
+  return isl::checked::set(*this).simple_fixed_box_hull();
+}
+
+isl::checked::space basic_set::space() const
+{
+  return isl::checked::set(*this).space();
+}
+
+isl::checked::val basic_set::stride(int pos) const
+{
+  return isl::checked::set(*this).stride(pos);
+}
+
+isl::checked::set basic_set::subtract(const isl::checked::set &set2) const
+{
+  return isl::checked::set(*this).subtract(set2);
+}
+
+isl::checked::union_set basic_set::subtract(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::set(*this).subtract(uset2);
+}
+
+isl::checked::set_list basic_set::to_list() const
+{
+  return isl::checked::set(*this).to_list();
+}
+
+isl::checked::set basic_set::to_set() const
+{
+  auto res = isl_basic_set_to_set(copy());
+  return manage(res);
+}
+
+isl::checked::union_set basic_set::to_union_set() const
+{
+  return isl::checked::set(*this).to_union_set();
+}
+
+isl::checked::map basic_set::translation() const
+{
+  return isl::checked::set(*this).translation();
+}
+
+class size basic_set::tuple_dim() const
+{
+  return isl::checked::set(*this).tuple_dim();
+}
+
+isl::checked::set basic_set::unbind_params(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::set(*this).unbind_params(tuple);
+}
+
+isl::checked::map basic_set::unbind_params_insert_domain(const isl::checked::multi_id &domain) const
+{
+  return isl::checked::set(*this).unbind_params_insert_domain(domain);
+}
+
 isl::checked::set basic_set::unite(isl::checked::basic_set bset2) const
 {
   auto res = isl_basic_set_union(copy(), bset2.release());
   return manage(res);
+}
+
+isl::checked::set basic_set::unite(const isl::checked::set &set2) const
+{
+  return isl::checked::set(*this).unite(set2);
+}
+
+isl::checked::union_set basic_set::unite(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::set(*this).unite(uset2);
+}
+
+isl::checked::set basic_set::unite(const isl::checked::point &bset2) const
+{
+  return this->unite(isl::checked::basic_set(bset2));
+}
+
+isl::checked::basic_set basic_set::unshifted_simple_hull() const
+{
+  return isl::checked::set(*this).unshifted_simple_hull();
+}
+
+isl::checked::map basic_set::unwrap() const
+{
+  return isl::checked::set(*this).unwrap();
+}
+
+isl::checked::set basic_set::upper_bound(const isl::checked::multi_pw_aff &upper) const
+{
+  return isl::checked::set(*this).upper_bound(upper);
+}
+
+isl::checked::set basic_set::upper_bound(const isl::checked::multi_val &upper) const
+{
+  return isl::checked::set(*this).upper_bound(upper);
 }
 
 inline std::ostream &operator<<(std::ostream &os, const basic_set &obj)
@@ -5853,6 +8541,12 @@ isl::checked::ctx fixed_box::ctx() const {
   return isl::checked::ctx(isl_fixed_box_get_ctx(ptr));
 }
 
+boolean fixed_box::is_valid() const
+{
+  auto res = isl_fixed_box_is_valid(get());
+  return manage(res);
+}
+
 isl::checked::multi_aff fixed_box::offset() const
 {
   auto res = isl_fixed_box_get_offset(get());
@@ -5884,12 +8578,6 @@ isl::checked::space fixed_box::space() const
 isl::checked::space fixed_box::get_space() const
 {
   return space();
-}
-
-boolean fixed_box::is_valid() const
-{
-  auto res = isl_fixed_box_is_valid(get());
-  return manage(res);
 }
 
 inline std::ostream &operator<<(std::ostream &os, const fixed_box &obj)
@@ -5975,6 +8663,12 @@ std::string id::get_name() const
   return name();
 }
 
+isl::checked::id_list id::to_list() const
+{
+  auto res = isl_id_to_list(copy());
+  return manage(res);
+}
+
 inline std::ostream &operator<<(std::ostream &os, const id &obj)
 {
   char *str = isl_id_to_str(obj.get());
@@ -6017,6 +8711,12 @@ id_list::id_list(isl::checked::ctx ctx, int n)
 id_list::id_list(isl::checked::id el)
 {
   auto res = isl_id_list_from_id(el.release());
+  ptr = res;
+}
+
+id_list::id_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_id_list_read_from_str(ctx.release(), str.c_str());
   ptr = res;
 }
 
@@ -6063,6 +8763,17 @@ isl::checked::id_list id_list::add(const std::string &el) const
   return this->add(isl::checked::id(ctx(), el));
 }
 
+isl::checked::id id_list::at(int index) const
+{
+  auto res = isl_id_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::id id_list::get_at(int index) const
+{
+  return at(index);
+}
+
 isl::checked::id_list id_list::clear() const
 {
   auto res = isl_id_list_clear(copy());
@@ -6093,17 +8804,6 @@ stat id_list::foreach(const std::function<stat(isl::checked::id)> &fn) const
   };
   auto res = isl_id_list_foreach(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::id id_list::at(int index) const
-{
-  auto res = isl_id_list_get_at(get(), index);
-  return manage(res);
-}
-
-isl::checked::id id_list::get_at(int index) const
-{
-  return at(index);
 }
 
 isl::checked::id_list id_list::insert(unsigned int pos, isl::checked::id el) const
@@ -6212,10 +8912,51 @@ isl::checked::map map::apply_domain(isl::checked::map map2) const
   return manage(res);
 }
 
+isl::checked::union_map map::apply_domain(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).apply_domain(umap2);
+}
+
+isl::checked::map map::apply_domain(const isl::checked::basic_map &map2) const
+{
+  return this->apply_domain(isl::checked::map(map2));
+}
+
 isl::checked::map map::apply_range(isl::checked::map map2) const
 {
   auto res = isl_map_apply_range(copy(), map2.release());
   return manage(res);
+}
+
+isl::checked::union_map map::apply_range(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).apply_range(umap2);
+}
+
+isl::checked::map map::apply_range(const isl::checked::basic_map &map2) const
+{
+  return this->apply_range(isl::checked::map(map2));
+}
+
+isl::checked::map map::as_map() const
+{
+  return isl::checked::union_map(*this).as_map();
+}
+
+isl::checked::multi_union_pw_aff map::as_multi_union_pw_aff() const
+{
+  return isl::checked::union_map(*this).as_multi_union_pw_aff();
+}
+
+isl::checked::pw_multi_aff map::as_pw_multi_aff() const
+{
+  auto res = isl_map_as_pw_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::union_pw_multi_aff map::as_union_pw_multi_aff() const
+{
+  return isl::checked::union_map(*this).as_union_pw_multi_aff();
 }
 
 isl::checked::set map::bind_domain(isl::checked::multi_id tuple) const
@@ -6240,6 +8981,11 @@ isl::checked::map map::complement() const
 {
   auto res = isl_map_complement(copy());
   return manage(res);
+}
+
+isl::checked::union_map map::compute_divs() const
+{
+  return isl::checked::union_map(*this).compute_divs();
 }
 
 isl::checked::map map::curry() const
@@ -6278,10 +9024,47 @@ isl::checked::map map::domain_factor_range() const
   return manage(res);
 }
 
+isl::checked::union_map map::domain_map() const
+{
+  return isl::checked::union_map(*this).domain_map();
+}
+
+isl::checked::union_pw_multi_aff map::domain_map_union_pw_multi_aff() const
+{
+  return isl::checked::union_map(*this).domain_map_union_pw_multi_aff();
+}
+
 isl::checked::map map::domain_product(isl::checked::map map2) const
 {
   auto res = isl_map_domain_product(copy(), map2.release());
   return manage(res);
+}
+
+isl::checked::union_map map::domain_product(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).domain_product(umap2);
+}
+
+isl::checked::map map::domain_product(const isl::checked::basic_map &map2) const
+{
+  return this->domain_product(isl::checked::map(map2));
+}
+
+class size map::domain_tuple_dim() const
+{
+  auto res = isl_map_domain_tuple_dim(get());
+  return manage(res);
+}
+
+isl::checked::id map::domain_tuple_id() const
+{
+  auto res = isl_map_get_domain_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id map::get_domain_tuple_id() const
+{
+  return domain_tuple_id();
 }
 
 isl::checked::map map::empty(isl::checked::space space)
@@ -6296,6 +9079,41 @@ isl::checked::map map::eq_at(isl::checked::multi_pw_aff mpa) const
   return manage(res);
 }
 
+isl::checked::union_map map::eq_at(const isl::checked::multi_union_pw_aff &mupa) const
+{
+  return isl::checked::union_map(*this).eq_at(mupa);
+}
+
+isl::checked::map map::eq_at(const isl::checked::aff &mpa) const
+{
+  return this->eq_at(isl::checked::multi_pw_aff(mpa));
+}
+
+isl::checked::map map::eq_at(const isl::checked::multi_aff &mpa) const
+{
+  return this->eq_at(isl::checked::multi_pw_aff(mpa));
+}
+
+isl::checked::map map::eq_at(const isl::checked::pw_aff &mpa) const
+{
+  return this->eq_at(isl::checked::multi_pw_aff(mpa));
+}
+
+isl::checked::map map::eq_at(const isl::checked::pw_multi_aff &mpa) const
+{
+  return this->eq_at(isl::checked::multi_pw_aff(mpa));
+}
+
+boolean map::every_map(const std::function<boolean(isl::checked::map)> &test) const
+{
+  return isl::checked::union_map(*this).every_map(test);
+}
+
+isl::checked::map map::extract_map(const isl::checked::space &space) const
+{
+  return isl::checked::union_map(*this).extract_map(space);
+}
+
 isl::checked::map map::factor_domain() const
 {
   auto res = isl_map_factor_domain(copy());
@@ -6306,6 +9124,16 @@ isl::checked::map map::factor_range() const
 {
   auto res = isl_map_factor_range(copy());
   return manage(res);
+}
+
+isl::checked::union_map map::fixed_power(const isl::checked::val &exp) const
+{
+  return isl::checked::union_map(*this).fixed_power(exp);
+}
+
+isl::checked::union_map map::fixed_power(long exp) const
+{
+  return this->fixed_power(isl::checked::val(ctx(), exp));
 }
 
 isl::checked::map map::flatten() const
@@ -6340,26 +9168,9 @@ stat map::foreach_basic_map(const std::function<stat(isl::checked::basic_map)> &
   return manage(res);
 }
 
-isl::checked::fixed_box map::range_simple_fixed_box_hull() const
+stat map::foreach_map(const std::function<stat(isl::checked::map)> &fn) const
 {
-  auto res = isl_map_get_range_simple_fixed_box_hull(get());
-  return manage(res);
-}
-
-isl::checked::fixed_box map::get_range_simple_fixed_box_hull() const
-{
-  return range_simple_fixed_box_hull();
-}
-
-isl::checked::space map::space() const
-{
-  auto res = isl_map_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space map::get_space() const
-{
-  return space();
+  return isl::checked::union_map(*this).foreach_map(fn);
 }
 
 isl::checked::map map::gist(isl::checked::map context) const
@@ -6368,9 +9179,56 @@ isl::checked::map map::gist(isl::checked::map context) const
   return manage(res);
 }
 
+isl::checked::union_map map::gist(const isl::checked::union_map &context) const
+{
+  return isl::checked::union_map(*this).gist(context);
+}
+
+isl::checked::map map::gist(const isl::checked::basic_map &context) const
+{
+  return this->gist(isl::checked::map(context));
+}
+
 isl::checked::map map::gist_domain(isl::checked::set context) const
 {
   auto res = isl_map_gist_domain(copy(), context.release());
+  return manage(res);
+}
+
+isl::checked::union_map map::gist_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_map(*this).gist_domain(uset);
+}
+
+isl::checked::map map::gist_domain(const isl::checked::basic_set &context) const
+{
+  return this->gist_domain(isl::checked::set(context));
+}
+
+isl::checked::map map::gist_domain(const isl::checked::point &context) const
+{
+  return this->gist_domain(isl::checked::set(context));
+}
+
+isl::checked::union_map map::gist_params(const isl::checked::set &set) const
+{
+  return isl::checked::union_map(*this).gist_params(set);
+}
+
+isl::checked::union_map map::gist_range(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_map(*this).gist_range(uset);
+}
+
+boolean map::has_domain_tuple_id() const
+{
+  auto res = isl_map_has_domain_tuple_id(get());
+  return manage(res);
+}
+
+boolean map::has_range_tuple_id() const
+{
+  auto res = isl_map_has_range_tuple_id(get());
   return manage(res);
 }
 
@@ -6380,10 +9238,40 @@ isl::checked::map map::intersect(isl::checked::map map2) const
   return manage(res);
 }
 
+isl::checked::union_map map::intersect(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).intersect(umap2);
+}
+
+isl::checked::map map::intersect(const isl::checked::basic_map &map2) const
+{
+  return this->intersect(isl::checked::map(map2));
+}
+
 isl::checked::map map::intersect_domain(isl::checked::set set) const
 {
   auto res = isl_map_intersect_domain(copy(), set.release());
   return manage(res);
+}
+
+isl::checked::union_map map::intersect_domain(const isl::checked::space &space) const
+{
+  return isl::checked::union_map(*this).intersect_domain(space);
+}
+
+isl::checked::union_map map::intersect_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_map(*this).intersect_domain(uset);
+}
+
+isl::checked::map map::intersect_domain(const isl::checked::basic_set &set) const
+{
+  return this->intersect_domain(isl::checked::set(set));
+}
+
+isl::checked::map map::intersect_domain(const isl::checked::point &set) const
+{
+  return this->intersect_domain(isl::checked::set(set));
 }
 
 isl::checked::map map::intersect_domain_factor_domain(isl::checked::map factor) const
@@ -6392,10 +9280,30 @@ isl::checked::map map::intersect_domain_factor_domain(isl::checked::map factor) 
   return manage(res);
 }
 
+isl::checked::union_map map::intersect_domain_factor_domain(const isl::checked::union_map &factor) const
+{
+  return isl::checked::union_map(*this).intersect_domain_factor_domain(factor);
+}
+
+isl::checked::map map::intersect_domain_factor_domain(const isl::checked::basic_map &factor) const
+{
+  return this->intersect_domain_factor_domain(isl::checked::map(factor));
+}
+
 isl::checked::map map::intersect_domain_factor_range(isl::checked::map factor) const
 {
   auto res = isl_map_intersect_domain_factor_range(copy(), factor.release());
   return manage(res);
+}
+
+isl::checked::union_map map::intersect_domain_factor_range(const isl::checked::union_map &factor) const
+{
+  return isl::checked::union_map(*this).intersect_domain_factor_range(factor);
+}
+
+isl::checked::map map::intersect_domain_factor_range(const isl::checked::basic_map &factor) const
+{
+  return this->intersect_domain_factor_range(isl::checked::map(factor));
 }
 
 isl::checked::map map::intersect_params(isl::checked::set params) const
@@ -6410,16 +9318,56 @@ isl::checked::map map::intersect_range(isl::checked::set set) const
   return manage(res);
 }
 
+isl::checked::union_map map::intersect_range(const isl::checked::space &space) const
+{
+  return isl::checked::union_map(*this).intersect_range(space);
+}
+
+isl::checked::union_map map::intersect_range(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_map(*this).intersect_range(uset);
+}
+
+isl::checked::map map::intersect_range(const isl::checked::basic_set &set) const
+{
+  return this->intersect_range(isl::checked::set(set));
+}
+
+isl::checked::map map::intersect_range(const isl::checked::point &set) const
+{
+  return this->intersect_range(isl::checked::set(set));
+}
+
 isl::checked::map map::intersect_range_factor_domain(isl::checked::map factor) const
 {
   auto res = isl_map_intersect_range_factor_domain(copy(), factor.release());
   return manage(res);
 }
 
+isl::checked::union_map map::intersect_range_factor_domain(const isl::checked::union_map &factor) const
+{
+  return isl::checked::union_map(*this).intersect_range_factor_domain(factor);
+}
+
+isl::checked::map map::intersect_range_factor_domain(const isl::checked::basic_map &factor) const
+{
+  return this->intersect_range_factor_domain(isl::checked::map(factor));
+}
+
 isl::checked::map map::intersect_range_factor_range(isl::checked::map factor) const
 {
   auto res = isl_map_intersect_range_factor_range(copy(), factor.release());
   return manage(res);
+}
+
+isl::checked::union_map map::intersect_range_factor_range(const isl::checked::union_map &factor) const
+{
+  return isl::checked::union_map(*this).intersect_range_factor_range(factor);
+}
+
+isl::checked::map map::intersect_range_factor_range(const isl::checked::basic_map &factor) const
+{
+  return this->intersect_range_factor_range(isl::checked::map(factor));
 }
 
 boolean map::is_bijective() const
@@ -6434,6 +9382,16 @@ boolean map::is_disjoint(const isl::checked::map &map2) const
   return manage(res);
 }
 
+boolean map::is_disjoint(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).is_disjoint(umap2);
+}
+
+boolean map::is_disjoint(const isl::checked::basic_map &map2) const
+{
+  return this->is_disjoint(isl::checked::map(map2));
+}
+
 boolean map::is_empty() const
 {
   auto res = isl_map_is_empty(get());
@@ -6444,6 +9402,16 @@ boolean map::is_equal(const isl::checked::map &map2) const
 {
   auto res = isl_map_is_equal(get(), map2.get());
   return manage(res);
+}
+
+boolean map::is_equal(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).is_equal(umap2);
+}
+
+boolean map::is_equal(const isl::checked::basic_map &map2) const
+{
+  return this->is_equal(isl::checked::map(map2));
 }
 
 boolean map::is_injective() const
@@ -6464,10 +9432,35 @@ boolean map::is_strict_subset(const isl::checked::map &map2) const
   return manage(res);
 }
 
+boolean map::is_strict_subset(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).is_strict_subset(umap2);
+}
+
+boolean map::is_strict_subset(const isl::checked::basic_map &map2) const
+{
+  return this->is_strict_subset(isl::checked::map(map2));
+}
+
 boolean map::is_subset(const isl::checked::map &map2) const
 {
   auto res = isl_map_is_subset(get(), map2.get());
   return manage(res);
+}
+
+boolean map::is_subset(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).is_subset(umap2);
+}
+
+boolean map::is_subset(const isl::checked::basic_map &map2) const
+{
+  return this->is_subset(isl::checked::map(map2));
+}
+
+boolean map::isa_map() const
+{
+  return isl::checked::union_map(*this).isa_map();
 }
 
 isl::checked::map map::lex_ge_at(isl::checked::multi_pw_aff mpa) const
@@ -6524,6 +9517,11 @@ isl::checked::map map::lower_bound(isl::checked::multi_pw_aff lower) const
   return manage(res);
 }
 
+isl::checked::map_list map::map_list() const
+{
+  return isl::checked::union_map(*this).map_list();
+}
+
 isl::checked::multi_pw_aff map::max_multi_pw_aff() const
 {
   auto res = isl_map_max_multi_pw_aff(copy());
@@ -6560,6 +9558,11 @@ isl::checked::map map::preimage_domain(isl::checked::pw_multi_aff pma) const
   return manage(res);
 }
 
+isl::checked::union_map map::preimage_domain(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::union_map(*this).preimage_domain(upma);
+}
+
 isl::checked::map map::preimage_range(isl::checked::multi_aff ma) const
 {
   auto res = isl_map_preimage_range_multi_aff(copy(), ma.release());
@@ -6572,10 +9575,25 @@ isl::checked::map map::preimage_range(isl::checked::pw_multi_aff pma) const
   return manage(res);
 }
 
+isl::checked::union_map map::preimage_range(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::union_map(*this).preimage_range(upma);
+}
+
 isl::checked::map map::product(isl::checked::map map2) const
 {
   auto res = isl_map_product(copy(), map2.release());
   return manage(res);
+}
+
+isl::checked::union_map map::product(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).product(umap2);
+}
+
+isl::checked::map map::product(const isl::checked::basic_map &map2) const
+{
+  return this->product(isl::checked::map(map2));
 }
 
 isl::checked::map map::project_out_all_params() const
@@ -6602,16 +9620,70 @@ isl::checked::map map::range_factor_range() const
   return manage(res);
 }
 
+isl::checked::fixed_box map::range_lattice_tile() const
+{
+  auto res = isl_map_get_range_lattice_tile(get());
+  return manage(res);
+}
+
+isl::checked::fixed_box map::get_range_lattice_tile() const
+{
+  return range_lattice_tile();
+}
+
+isl::checked::union_map map::range_map() const
+{
+  return isl::checked::union_map(*this).range_map();
+}
+
 isl::checked::map map::range_product(isl::checked::map map2) const
 {
   auto res = isl_map_range_product(copy(), map2.release());
   return manage(res);
 }
 
+isl::checked::union_map map::range_product(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).range_product(umap2);
+}
+
+isl::checked::map map::range_product(const isl::checked::basic_map &map2) const
+{
+  return this->range_product(isl::checked::map(map2));
+}
+
 isl::checked::map map::range_reverse() const
 {
   auto res = isl_map_range_reverse(copy());
   return manage(res);
+}
+
+isl::checked::fixed_box map::range_simple_fixed_box_hull() const
+{
+  auto res = isl_map_get_range_simple_fixed_box_hull(get());
+  return manage(res);
+}
+
+isl::checked::fixed_box map::get_range_simple_fixed_box_hull() const
+{
+  return range_simple_fixed_box_hull();
+}
+
+class size map::range_tuple_dim() const
+{
+  auto res = isl_map_range_tuple_dim(get());
+  return manage(res);
+}
+
+isl::checked::id map::range_tuple_id() const
+{
+  auto res = isl_map_get_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id map::get_range_tuple_id() const
+{
+  return range_tuple_id();
 }
 
 isl::checked::map map::reverse() const
@@ -6626,9 +9698,74 @@ isl::checked::basic_map map::sample() const
   return manage(res);
 }
 
+isl::checked::map map::set_domain_tuple(isl::checked::id id) const
+{
+  auto res = isl_map_set_domain_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::map map::set_domain_tuple(const std::string &id) const
+{
+  return this->set_domain_tuple(isl::checked::id(ctx(), id));
+}
+
+isl::checked::map map::set_range_tuple(isl::checked::id id) const
+{
+  auto res = isl_map_set_range_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::map map::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
+isl::checked::space map::space() const
+{
+  auto res = isl_map_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space map::get_space() const
+{
+  return space();
+}
+
 isl::checked::map map::subtract(isl::checked::map map2) const
 {
   auto res = isl_map_subtract(copy(), map2.release());
+  return manage(res);
+}
+
+isl::checked::union_map map::subtract(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).subtract(umap2);
+}
+
+isl::checked::map map::subtract(const isl::checked::basic_map &map2) const
+{
+  return this->subtract(isl::checked::map(map2));
+}
+
+isl::checked::union_map map::subtract_domain(const isl::checked::union_set &dom) const
+{
+  return isl::checked::union_map(*this).subtract_domain(dom);
+}
+
+isl::checked::union_map map::subtract_range(const isl::checked::union_set &dom) const
+{
+  return isl::checked::union_map(*this).subtract_range(dom);
+}
+
+isl::checked::map_list map::to_list() const
+{
+  auto res = isl_map_to_list(copy());
+  return manage(res);
+}
+
+isl::checked::union_map map::to_union_map() const
+{
+  auto res = isl_map_to_union_map(copy());
   return manage(res);
 }
 
@@ -6642,6 +9779,16 @@ isl::checked::map map::unite(isl::checked::map map2) const
 {
   auto res = isl_map_union(copy(), map2.release());
   return manage(res);
+}
+
+isl::checked::union_map map::unite(const isl::checked::union_map &umap2) const
+{
+  return isl::checked::union_map(*this).unite(umap2);
+}
+
+isl::checked::map map::unite(const isl::checked::basic_map &map2) const
+{
+  return this->unite(isl::checked::map(map2));
 }
 
 isl::checked::map map::universe(isl::checked::space space)
@@ -6677,6 +9824,150 @@ isl::checked::map map::zip() const
 inline std::ostream &operator<<(std::ostream &os, const map &obj)
 {
   char *str = isl_map_to_str(obj.get());
+  if (!str) {
+    os.setstate(std::ios_base::badbit);
+    return os;
+  }
+  os << str;
+  free(str);
+  return os;
+}
+
+// implementations for isl::map_list
+map_list manage(__isl_take isl_map_list *ptr) {
+  return map_list(ptr);
+}
+map_list manage_copy(__isl_keep isl_map_list *ptr) {
+  ptr = isl_map_list_copy(ptr);
+  return map_list(ptr);
+}
+
+map_list::map_list()
+    : ptr(nullptr) {}
+
+map_list::map_list(const map_list &obj)
+    : ptr(nullptr)
+{
+  ptr = obj.copy();
+}
+
+map_list::map_list(__isl_take isl_map_list *ptr)
+    : ptr(ptr) {}
+
+map_list::map_list(isl::checked::ctx ctx, int n)
+{
+  auto res = isl_map_list_alloc(ctx.release(), n);
+  ptr = res;
+}
+
+map_list::map_list(isl::checked::map el)
+{
+  auto res = isl_map_list_from_map(el.release());
+  ptr = res;
+}
+
+map_list::map_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_map_list_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
+map_list &map_list::operator=(map_list obj) {
+  std::swap(this->ptr, obj.ptr);
+  return *this;
+}
+
+map_list::~map_list() {
+  if (ptr)
+    isl_map_list_free(ptr);
+}
+
+__isl_give isl_map_list *map_list::copy() const & {
+  return isl_map_list_copy(ptr);
+}
+
+__isl_keep isl_map_list *map_list::get() const {
+  return ptr;
+}
+
+__isl_give isl_map_list *map_list::release() {
+  isl_map_list *tmp = ptr;
+  ptr = nullptr;
+  return tmp;
+}
+
+bool map_list::is_null() const {
+  return ptr == nullptr;
+}
+
+isl::checked::ctx map_list::ctx() const {
+  return isl::checked::ctx(isl_map_list_get_ctx(ptr));
+}
+
+isl::checked::map_list map_list::add(isl::checked::map el) const
+{
+  auto res = isl_map_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::checked::map map_list::at(int index) const
+{
+  auto res = isl_map_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::map map_list::get_at(int index) const
+{
+  return at(index);
+}
+
+isl::checked::map_list map_list::clear() const
+{
+  auto res = isl_map_list_clear(copy());
+  return manage(res);
+}
+
+isl::checked::map_list map_list::concat(isl::checked::map_list list2) const
+{
+  auto res = isl_map_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::checked::map_list map_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_map_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+stat map_list::foreach(const std::function<stat(isl::checked::map)> &fn) const
+{
+  struct fn_data {
+    std::function<stat(isl::checked::map)> func;
+  } fn_data = { fn };
+  auto fn_lambda = [](isl_map *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    auto ret = (data->func)(manage(arg_0));
+    return ret.release();
+  };
+  auto res = isl_map_list_foreach(get(), fn_lambda, &fn_data);
+  return manage(res);
+}
+
+isl::checked::map_list map_list::insert(unsigned int pos, isl::checked::map el) const
+{
+  auto res = isl_map_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+class size map_list::size() const
+{
+  auto res = isl_map_list_size(get());
+  return manage(res);
+}
+
+inline std::ostream &operator<<(std::ostream &os, const map_list &obj)
+{
+  char *str = isl_map_list_to_str(obj.get());
   if (!str) {
     os.setstate(std::ios_base::badbit);
     return os;
@@ -6763,6 +10054,31 @@ isl::checked::multi_aff multi_aff::add(isl::checked::multi_aff multi2) const
   return manage(res);
 }
 
+isl::checked::multi_pw_aff multi_aff::add(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).add(multi2);
+}
+
+isl::checked::multi_union_pw_aff multi_aff::add(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).add(multi2);
+}
+
+isl::checked::pw_multi_aff multi_aff::add(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).add(pma2);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_multi_aff(*this).add(upma2);
+}
+
+isl::checked::multi_aff multi_aff::add(const isl::checked::aff &multi2) const
+{
+  return this->add(isl::checked::multi_aff(multi2));
+}
+
 isl::checked::multi_aff multi_aff::add_constant(isl::checked::multi_val mv) const
 {
   auto res = isl_multi_aff_add_constant_multi_val(copy(), mv.release());
@@ -6778,6 +10094,54 @@ isl::checked::multi_aff multi_aff::add_constant(isl::checked::val v) const
 isl::checked::multi_aff multi_aff::add_constant(long v) const
 {
   return this->add_constant(isl::checked::val(ctx(), v));
+}
+
+isl::checked::union_pw_multi_aff multi_aff::apply(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_multi_aff(*this).apply(upma2);
+}
+
+isl::checked::map multi_aff::as_map() const
+{
+  auto res = isl_multi_aff_as_map(copy());
+  return manage(res);
+}
+
+isl::checked::multi_aff multi_aff::as_multi_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).as_multi_aff();
+}
+
+isl::checked::multi_union_pw_aff multi_aff::as_multi_union_pw_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).as_multi_union_pw_aff();
+}
+
+isl::checked::pw_multi_aff multi_aff::as_pw_multi_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).as_pw_multi_aff();
+}
+
+isl::checked::set multi_aff::as_set() const
+{
+  auto res = isl_multi_aff_as_set(copy());
+  return manage(res);
+}
+
+isl::checked::union_map multi_aff::as_union_map() const
+{
+  return isl::checked::pw_multi_aff(*this).as_union_map();
+}
+
+isl::checked::aff multi_aff::at(int pos) const
+{
+  auto res = isl_multi_aff_get_at(get(), pos);
+  return manage(res);
+}
+
+isl::checked::aff multi_aff::get_at(int pos) const
+{
+  return at(pos);
 }
 
 isl::checked::basic_set multi_aff::bind(isl::checked::multi_id tuple) const
@@ -6798,33 +10162,9 @@ isl::checked::multi_aff multi_aff::bind_domain_wrapped_domain(isl::checked::mult
   return manage(res);
 }
 
-isl::checked::multi_aff multi_aff::domain_map(isl::checked::space space)
+isl::checked::pw_multi_aff multi_aff::coalesce() const
 {
-  auto res = isl_multi_aff_domain_map(space.release());
-  return manage(res);
-}
-
-isl::checked::multi_aff multi_aff::flat_range_product(isl::checked::multi_aff multi2) const
-{
-  auto res = isl_multi_aff_flat_range_product(copy(), multi2.release());
-  return manage(res);
-}
-
-isl::checked::multi_aff multi_aff::floor() const
-{
-  auto res = isl_multi_aff_floor(copy());
-  return manage(res);
-}
-
-isl::checked::aff multi_aff::at(int pos) const
-{
-  auto res = isl_multi_aff_get_at(get(), pos);
-  return manage(res);
-}
-
-isl::checked::aff multi_aff::get_at(int pos) const
-{
-  return at(pos);
+  return isl::checked::pw_multi_aff(*this).coalesce();
 }
 
 isl::checked::multi_val multi_aff::constant_multi_val() const
@@ -6838,31 +10178,88 @@ isl::checked::multi_val multi_aff::get_constant_multi_val() const
   return constant_multi_val();
 }
 
-isl::checked::aff_list multi_aff::list() const
+isl::checked::set multi_aff::domain() const
 {
-  auto res = isl_multi_aff_get_list(get());
+  return isl::checked::pw_multi_aff(*this).domain();
+}
+
+isl::checked::multi_aff multi_aff::domain_map(isl::checked::space space)
+{
+  auto res = isl_multi_aff_domain_map(space.release());
   return manage(res);
 }
 
-isl::checked::aff_list multi_aff::get_list() const
+isl::checked::pw_multi_aff multi_aff::extract_pw_multi_aff(const isl::checked::space &space) const
 {
-  return list();
+  return isl::checked::pw_multi_aff(*this).extract_pw_multi_aff(space);
 }
 
-isl::checked::space multi_aff::space() const
+isl::checked::multi_aff multi_aff::flat_range_product(isl::checked::multi_aff multi2) const
 {
-  auto res = isl_multi_aff_get_space(get());
+  auto res = isl_multi_aff_flat_range_product(copy(), multi2.release());
   return manage(res);
 }
 
-isl::checked::space multi_aff::get_space() const
+isl::checked::multi_pw_aff multi_aff::flat_range_product(const isl::checked::multi_pw_aff &multi2) const
 {
-  return space();
+  return isl::checked::pw_multi_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::multi_union_pw_aff multi_aff::flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::pw_multi_aff multi_aff::flat_range_product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).flat_range_product(pma2);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_multi_aff(*this).flat_range_product(upma2);
+}
+
+isl::checked::multi_aff multi_aff::flat_range_product(const isl::checked::aff &multi2) const
+{
+  return this->flat_range_product(isl::checked::multi_aff(multi2));
+}
+
+isl::checked::multi_aff multi_aff::floor() const
+{
+  auto res = isl_multi_aff_floor(copy());
+  return manage(res);
+}
+
+stat multi_aff::foreach_piece(const std::function<stat(isl::checked::set, isl::checked::multi_aff)> &fn) const
+{
+  return isl::checked::pw_multi_aff(*this).foreach_piece(fn);
 }
 
 isl::checked::multi_aff multi_aff::gist(isl::checked::set context) const
 {
   auto res = isl_multi_aff_gist(copy(), context.release());
+  return manage(res);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::gist(const isl::checked::union_set &context) const
+{
+  return isl::checked::pw_multi_aff(*this).gist(context);
+}
+
+isl::checked::multi_aff multi_aff::gist(const isl::checked::basic_set &context) const
+{
+  return this->gist(isl::checked::set(context));
+}
+
+isl::checked::multi_aff multi_aff::gist(const isl::checked::point &context) const
+{
+  return this->gist(isl::checked::set(context));
+}
+
+boolean multi_aff::has_range_tuple_id() const
+{
+  auto res = isl_multi_aff_has_range_tuple_id(get());
   return manage(res);
 }
 
@@ -6884,6 +10281,36 @@ isl::checked::multi_aff multi_aff::insert_domain(isl::checked::space domain) con
   return manage(res);
 }
 
+isl::checked::pw_multi_aff multi_aff::intersect_domain(const isl::checked::set &set) const
+{
+  return isl::checked::pw_multi_aff(*this).intersect_domain(set);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::intersect_domain(const isl::checked::space &space) const
+{
+  return isl::checked::pw_multi_aff(*this).intersect_domain(space);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::intersect_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::pw_multi_aff(*this).intersect_domain(uset);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::intersect_domain_wrapped_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::pw_multi_aff(*this).intersect_domain_wrapped_domain(uset);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::intersect_domain_wrapped_range(const isl::checked::union_set &uset) const
+{
+  return isl::checked::pw_multi_aff(*this).intersect_domain_wrapped_range(uset);
+}
+
+isl::checked::pw_multi_aff multi_aff::intersect_params(const isl::checked::set &set) const
+{
+  return isl::checked::pw_multi_aff(*this).intersect_params(set);
+}
+
 boolean multi_aff::involves_locals() const
 {
   auto res = isl_multi_aff_involves_locals(get());
@@ -6896,10 +10323,82 @@ boolean multi_aff::involves_nan() const
   return manage(res);
 }
 
+boolean multi_aff::involves_param(const isl::checked::id &id) const
+{
+  return isl::checked::pw_multi_aff(*this).involves_param(id);
+}
+
+boolean multi_aff::involves_param(const std::string &id) const
+{
+  return this->involves_param(isl::checked::id(ctx(), id));
+}
+
+boolean multi_aff::involves_param(const isl::checked::id_list &list) const
+{
+  return isl::checked::pw_multi_aff(*this).involves_param(list);
+}
+
+boolean multi_aff::isa_multi_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).isa_multi_aff();
+}
+
+boolean multi_aff::isa_pw_multi_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).isa_pw_multi_aff();
+}
+
+isl::checked::aff_list multi_aff::list() const
+{
+  auto res = isl_multi_aff_get_list(get());
+  return manage(res);
+}
+
+isl::checked::aff_list multi_aff::get_list() const
+{
+  return list();
+}
+
+isl::checked::multi_pw_aff multi_aff::max(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).max(multi2);
+}
+
+isl::checked::multi_val multi_aff::max_multi_val() const
+{
+  return isl::checked::pw_multi_aff(*this).max_multi_val();
+}
+
+isl::checked::multi_pw_aff multi_aff::min(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).min(multi2);
+}
+
+isl::checked::multi_val multi_aff::min_multi_val() const
+{
+  return isl::checked::pw_multi_aff(*this).min_multi_val();
+}
+
+isl::checked::multi_aff multi_aff::multi_val_on_domain(isl::checked::space space, isl::checked::multi_val mv)
+{
+  auto res = isl_multi_aff_multi_val_on_domain_space(space.release(), mv.release());
+  return manage(res);
+}
+
+class size multi_aff::n_piece() const
+{
+  return isl::checked::pw_multi_aff(*this).n_piece();
+}
+
 isl::checked::multi_aff multi_aff::neg() const
 {
   auto res = isl_multi_aff_neg(copy());
   return manage(res);
+}
+
+boolean multi_aff::plain_is_empty() const
+{
+  return isl::checked::pw_multi_aff(*this).plain_is_empty();
 }
 
 boolean multi_aff::plain_is_equal(const isl::checked::multi_aff &multi2) const
@@ -6908,16 +10407,91 @@ boolean multi_aff::plain_is_equal(const isl::checked::multi_aff &multi2) const
   return manage(res);
 }
 
+boolean multi_aff::plain_is_equal(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).plain_is_equal(multi2);
+}
+
+boolean multi_aff::plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).plain_is_equal(multi2);
+}
+
+boolean multi_aff::plain_is_equal(const isl::checked::aff &multi2) const
+{
+  return this->plain_is_equal(isl::checked::multi_aff(multi2));
+}
+
+isl::checked::pw_multi_aff multi_aff::preimage_domain_wrapped_domain(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).preimage_domain_wrapped_domain(pma2);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_multi_aff(*this).preimage_domain_wrapped_domain(upma2);
+}
+
 isl::checked::multi_aff multi_aff::product(isl::checked::multi_aff multi2) const
 {
   auto res = isl_multi_aff_product(copy(), multi2.release());
   return manage(res);
 }
 
+isl::checked::multi_pw_aff multi_aff::product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).product(multi2);
+}
+
+isl::checked::pw_multi_aff multi_aff::product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).product(pma2);
+}
+
+isl::checked::multi_aff multi_aff::product(const isl::checked::aff &multi2) const
+{
+  return this->product(isl::checked::multi_aff(multi2));
+}
+
 isl::checked::multi_aff multi_aff::pullback(isl::checked::multi_aff ma2) const
 {
   auto res = isl_multi_aff_pullback_multi_aff(copy(), ma2.release());
   return manage(res);
+}
+
+isl::checked::multi_pw_aff multi_aff::pullback(const isl::checked::multi_pw_aff &mpa2) const
+{
+  return isl::checked::pw_multi_aff(*this).pullback(mpa2);
+}
+
+isl::checked::pw_multi_aff multi_aff::pullback(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).pullback(pma2);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::pullback(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_multi_aff(*this).pullback(upma2);
+}
+
+isl::checked::multi_aff multi_aff::pullback(const isl::checked::aff &ma2) const
+{
+  return this->pullback(isl::checked::multi_aff(ma2));
+}
+
+isl::checked::pw_multi_aff_list multi_aff::pw_multi_aff_list() const
+{
+  return isl::checked::pw_multi_aff(*this).pw_multi_aff_list();
+}
+
+isl::checked::pw_multi_aff multi_aff::range_factor_domain() const
+{
+  return isl::checked::pw_multi_aff(*this).range_factor_domain();
+}
+
+isl::checked::pw_multi_aff multi_aff::range_factor_range() const
+{
+  return isl::checked::pw_multi_aff(*this).range_factor_range();
 }
 
 isl::checked::multi_aff multi_aff::range_map(isl::checked::space space)
@@ -6929,6 +10503,48 @@ isl::checked::multi_aff multi_aff::range_map(isl::checked::space space)
 isl::checked::multi_aff multi_aff::range_product(isl::checked::multi_aff multi2) const
 {
   auto res = isl_multi_aff_range_product(copy(), multi2.release());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff multi_aff::range_product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).range_product(multi2);
+}
+
+isl::checked::multi_union_pw_aff multi_aff::range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).range_product(multi2);
+}
+
+isl::checked::pw_multi_aff multi_aff::range_product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).range_product(pma2);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_multi_aff(*this).range_product(upma2);
+}
+
+isl::checked::multi_aff multi_aff::range_product(const isl::checked::aff &multi2) const
+{
+  return this->range_product(isl::checked::multi_aff(multi2));
+}
+
+isl::checked::id multi_aff::range_tuple_id() const
+{
+  auto res = isl_multi_aff_get_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id multi_aff::get_range_tuple_id() const
+{
+  return range_tuple_id();
+}
+
+isl::checked::multi_aff multi_aff::reset_range_tuple_id() const
+{
+  auto res = isl_multi_aff_reset_range_tuple_id(copy());
   return manage(res);
 }
 
@@ -6972,10 +10588,42 @@ isl::checked::multi_aff multi_aff::set_at(int pos, isl::checked::aff el) const
   return manage(res);
 }
 
+isl::checked::multi_pw_aff multi_aff::set_at(int pos, const isl::checked::pw_aff &el) const
+{
+  return isl::checked::pw_multi_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_union_pw_aff multi_aff::set_at(int pos, const isl::checked::union_pw_aff &el) const
+{
+  return isl::checked::pw_multi_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_aff multi_aff::set_range_tuple(isl::checked::id id) const
+{
+  auto res = isl_multi_aff_set_range_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::multi_aff multi_aff::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
 class size multi_aff::size() const
 {
   auto res = isl_multi_aff_size(get());
   return manage(res);
+}
+
+isl::checked::space multi_aff::space() const
+{
+  auto res = isl_multi_aff_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space multi_aff::get_space() const
+{
+  return space();
 }
 
 isl::checked::multi_aff multi_aff::sub(isl::checked::multi_aff multi2) const
@@ -6984,10 +10632,98 @@ isl::checked::multi_aff multi_aff::sub(isl::checked::multi_aff multi2) const
   return manage(res);
 }
 
+isl::checked::multi_pw_aff multi_aff::sub(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).sub(multi2);
+}
+
+isl::checked::multi_union_pw_aff multi_aff::sub(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).sub(multi2);
+}
+
+isl::checked::pw_multi_aff multi_aff::sub(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).sub(pma2);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::sub(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_multi_aff(*this).sub(upma2);
+}
+
+isl::checked::multi_aff multi_aff::sub(const isl::checked::aff &multi2) const
+{
+  return this->sub(isl::checked::multi_aff(multi2));
+}
+
+isl::checked::pw_multi_aff multi_aff::subtract_domain(const isl::checked::set &set) const
+{
+  return isl::checked::pw_multi_aff(*this).subtract_domain(set);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::subtract_domain(const isl::checked::space &space) const
+{
+  return isl::checked::pw_multi_aff(*this).subtract_domain(space);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::subtract_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::pw_multi_aff(*this).subtract_domain(uset);
+}
+
+isl::checked::pw_multi_aff_list multi_aff::to_list() const
+{
+  return isl::checked::pw_multi_aff(*this).to_list();
+}
+
+isl::checked::multi_pw_aff multi_aff::to_multi_pw_aff() const
+{
+  auto res = isl_multi_aff_to_multi_pw_aff(copy());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff multi_aff::to_multi_union_pw_aff() const
+{
+  auto res = isl_multi_aff_to_multi_union_pw_aff(copy());
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff multi_aff::to_pw_multi_aff() const
+{
+  auto res = isl_multi_aff_to_pw_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::to_union_pw_multi_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).to_union_pw_multi_aff();
+}
+
 isl::checked::multi_aff multi_aff::unbind_params_insert_domain(isl::checked::multi_id domain) const
 {
   auto res = isl_multi_aff_unbind_params_insert_domain(copy(), domain.release());
   return manage(res);
+}
+
+isl::checked::multi_pw_aff multi_aff::union_add(const isl::checked::multi_pw_aff &mpa2) const
+{
+  return isl::checked::pw_multi_aff(*this).union_add(mpa2);
+}
+
+isl::checked::multi_union_pw_aff multi_aff::union_add(const isl::checked::multi_union_pw_aff &mupa2) const
+{
+  return isl::checked::pw_multi_aff(*this).union_add(mupa2);
+}
+
+isl::checked::pw_multi_aff multi_aff::union_add(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).union_add(pma2);
+}
+
+isl::checked::union_pw_multi_aff multi_aff::union_add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::pw_multi_aff(*this).union_add(upma2);
 }
 
 isl::checked::multi_aff multi_aff::zero(isl::checked::space space)
@@ -7073,12 +10809,6 @@ isl::checked::ctx multi_id::ctx() const {
   return isl::checked::ctx(isl_multi_id_get_ctx(ptr));
 }
 
-isl::checked::multi_id multi_id::flat_range_product(isl::checked::multi_id multi2) const
-{
-  auto res = isl_multi_id_flat_range_product(copy(), multi2.release());
-  return manage(res);
-}
-
 isl::checked::id multi_id::at(int pos) const
 {
   auto res = isl_multi_id_get_at(get(), pos);
@@ -7090,6 +10820,12 @@ isl::checked::id multi_id::get_at(int pos) const
   return at(pos);
 }
 
+isl::checked::multi_id multi_id::flat_range_product(isl::checked::multi_id multi2) const
+{
+  auto res = isl_multi_id_flat_range_product(copy(), multi2.release());
+  return manage(res);
+}
+
 isl::checked::id_list multi_id::list() const
 {
   auto res = isl_multi_id_get_list(get());
@@ -7099,17 +10835,6 @@ isl::checked::id_list multi_id::list() const
 isl::checked::id_list multi_id::get_list() const
 {
   return list();
-}
-
-isl::checked::space multi_id::space() const
-{
-  auto res = isl_multi_id_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space multi_id::get_space() const
-{
-  return space();
 }
 
 boolean multi_id::plain_is_equal(const isl::checked::multi_id &multi2) const
@@ -7139,6 +10864,17 @@ class size multi_id::size() const
 {
   auto res = isl_multi_id_size(get());
   return manage(res);
+}
+
+isl::checked::space multi_id::space() const
+{
+  auto res = isl_multi_id_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space multi_id::get_space() const
+{
+  return space();
 }
 
 inline std::ostream &operator<<(std::ostream &os, const multi_id &obj)
@@ -7248,6 +10984,31 @@ isl::checked::multi_pw_aff multi_pw_aff::add(isl::checked::multi_pw_aff multi2) 
   return manage(res);
 }
 
+isl::checked::multi_union_pw_aff multi_pw_aff::add(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).add(multi2);
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::add(const isl::checked::aff &multi2) const
+{
+  return this->add(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::add(const isl::checked::multi_aff &multi2) const
+{
+  return this->add(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::add(const isl::checked::pw_aff &multi2) const
+{
+  return this->add(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::add(const isl::checked::pw_multi_aff &multi2) const
+{
+  return this->add(isl::checked::multi_pw_aff(multi2));
+}
+
 isl::checked::multi_pw_aff multi_pw_aff::add_constant(isl::checked::multi_val mv) const
 {
   auto res = isl_multi_pw_aff_add_constant_multi_val(copy(), mv.release());
@@ -7263,6 +11024,35 @@ isl::checked::multi_pw_aff multi_pw_aff::add_constant(isl::checked::val v) const
 isl::checked::multi_pw_aff multi_pw_aff::add_constant(long v) const
 {
   return this->add_constant(isl::checked::val(ctx(), v));
+}
+
+isl::checked::map multi_pw_aff::as_map() const
+{
+  auto res = isl_multi_pw_aff_as_map(copy());
+  return manage(res);
+}
+
+isl::checked::multi_aff multi_pw_aff::as_multi_aff() const
+{
+  auto res = isl_multi_pw_aff_as_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::set multi_pw_aff::as_set() const
+{
+  auto res = isl_multi_pw_aff_as_set(copy());
+  return manage(res);
+}
+
+isl::checked::pw_aff multi_pw_aff::at(int pos) const
+{
+  auto res = isl_multi_pw_aff_get_at(get(), pos);
+  return manage(res);
+}
+
+isl::checked::pw_aff multi_pw_aff::get_at(int pos) const
+{
+  return at(pos);
 }
 
 isl::checked::set multi_pw_aff::bind(isl::checked::multi_id tuple) const
@@ -7301,42 +11091,55 @@ isl::checked::multi_pw_aff multi_pw_aff::flat_range_product(isl::checked::multi_
   return manage(res);
 }
 
-isl::checked::pw_aff multi_pw_aff::at(int pos) const
+isl::checked::multi_union_pw_aff multi_pw_aff::flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const
 {
-  auto res = isl_multi_pw_aff_get_at(get(), pos);
-  return manage(res);
+  return isl::checked::multi_union_pw_aff(*this).flat_range_product(multi2);
 }
 
-isl::checked::pw_aff multi_pw_aff::get_at(int pos) const
+isl::checked::multi_pw_aff multi_pw_aff::flat_range_product(const isl::checked::aff &multi2) const
 {
-  return at(pos);
+  return this->flat_range_product(isl::checked::multi_pw_aff(multi2));
 }
 
-isl::checked::pw_aff_list multi_pw_aff::list() const
+isl::checked::multi_pw_aff multi_pw_aff::flat_range_product(const isl::checked::multi_aff &multi2) const
 {
-  auto res = isl_multi_pw_aff_get_list(get());
-  return manage(res);
+  return this->flat_range_product(isl::checked::multi_pw_aff(multi2));
 }
 
-isl::checked::pw_aff_list multi_pw_aff::get_list() const
+isl::checked::multi_pw_aff multi_pw_aff::flat_range_product(const isl::checked::pw_aff &multi2) const
 {
-  return list();
+  return this->flat_range_product(isl::checked::multi_pw_aff(multi2));
 }
 
-isl::checked::space multi_pw_aff::space() const
+isl::checked::multi_pw_aff multi_pw_aff::flat_range_product(const isl::checked::pw_multi_aff &multi2) const
 {
-  auto res = isl_multi_pw_aff_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space multi_pw_aff::get_space() const
-{
-  return space();
+  return this->flat_range_product(isl::checked::multi_pw_aff(multi2));
 }
 
 isl::checked::multi_pw_aff multi_pw_aff::gist(isl::checked::set set) const
 {
   auto res = isl_multi_pw_aff_gist(copy(), set.release());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff multi_pw_aff::gist(const isl::checked::union_set &context) const
+{
+  return isl::checked::multi_union_pw_aff(*this).gist(context);
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::gist(const isl::checked::basic_set &set) const
+{
+  return this->gist(isl::checked::set(set));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::gist(const isl::checked::point &set) const
+{
+  return this->gist(isl::checked::set(set));
+}
+
+boolean multi_pw_aff::has_range_tuple_id() const
+{
+  auto res = isl_multi_pw_aff_has_range_tuple_id(get());
   return manage(res);
 }
 
@@ -7362,6 +11165,21 @@ isl::checked::multi_pw_aff multi_pw_aff::intersect_domain(isl::checked::set doma
 {
   auto res = isl_multi_pw_aff_intersect_domain(copy(), domain.release());
   return manage(res);
+}
+
+isl::checked::multi_union_pw_aff multi_pw_aff::intersect_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::multi_union_pw_aff(*this).intersect_domain(uset);
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::intersect_domain(const isl::checked::basic_set &domain) const
+{
+  return this->intersect_domain(isl::checked::set(domain));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::intersect_domain(const isl::checked::point &domain) const
+{
+  return this->intersect_domain(isl::checked::set(domain));
 }
 
 isl::checked::multi_pw_aff multi_pw_aff::intersect_params(isl::checked::set set) const
@@ -7391,6 +11209,23 @@ boolean multi_pw_aff::involves_param(const isl::checked::id_list &list) const
 {
   auto res = isl_multi_pw_aff_involves_param_id_list(get(), list.get());
   return manage(res);
+}
+
+boolean multi_pw_aff::isa_multi_aff() const
+{
+  auto res = isl_multi_pw_aff_isa_multi_aff(get());
+  return manage(res);
+}
+
+isl::checked::pw_aff_list multi_pw_aff::list() const
+{
+  auto res = isl_multi_pw_aff_get_list(get());
+  return manage(res);
+}
+
+isl::checked::pw_aff_list multi_pw_aff::get_list() const
+{
+  return list();
 }
 
 isl::checked::multi_pw_aff multi_pw_aff::max(isl::checked::multi_pw_aff multi2) const
@@ -7429,6 +11264,31 @@ boolean multi_pw_aff::plain_is_equal(const isl::checked::multi_pw_aff &multi2) c
   return manage(res);
 }
 
+boolean multi_pw_aff::plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).plain_is_equal(multi2);
+}
+
+boolean multi_pw_aff::plain_is_equal(const isl::checked::aff &multi2) const
+{
+  return this->plain_is_equal(isl::checked::multi_pw_aff(multi2));
+}
+
+boolean multi_pw_aff::plain_is_equal(const isl::checked::multi_aff &multi2) const
+{
+  return this->plain_is_equal(isl::checked::multi_pw_aff(multi2));
+}
+
+boolean multi_pw_aff::plain_is_equal(const isl::checked::pw_aff &multi2) const
+{
+  return this->plain_is_equal(isl::checked::multi_pw_aff(multi2));
+}
+
+boolean multi_pw_aff::plain_is_equal(const isl::checked::pw_multi_aff &multi2) const
+{
+  return this->plain_is_equal(isl::checked::multi_pw_aff(multi2));
+}
+
 isl::checked::multi_pw_aff multi_pw_aff::product(isl::checked::multi_pw_aff multi2) const
 {
   auto res = isl_multi_pw_aff_product(copy(), multi2.release());
@@ -7453,9 +11313,56 @@ isl::checked::multi_pw_aff multi_pw_aff::pullback(isl::checked::pw_multi_aff pma
   return manage(res);
 }
 
+isl::checked::multi_union_pw_aff multi_pw_aff::pullback(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::multi_union_pw_aff(*this).pullback(upma);
+}
+
 isl::checked::multi_pw_aff multi_pw_aff::range_product(isl::checked::multi_pw_aff multi2) const
 {
   auto res = isl_multi_pw_aff_range_product(copy(), multi2.release());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff multi_pw_aff::range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).range_product(multi2);
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::range_product(const isl::checked::aff &multi2) const
+{
+  return this->range_product(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::range_product(const isl::checked::multi_aff &multi2) const
+{
+  return this->range_product(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::range_product(const isl::checked::pw_aff &multi2) const
+{
+  return this->range_product(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::range_product(const isl::checked::pw_multi_aff &multi2) const
+{
+  return this->range_product(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::id multi_pw_aff::range_tuple_id() const
+{
+  auto res = isl_multi_pw_aff_get_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id multi_pw_aff::get_range_tuple_id() const
+{
+  return range_tuple_id();
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::reset_range_tuple_id() const
+{
+  auto res = isl_multi_pw_aff_reset_range_tuple_id(copy());
   return manage(res);
 }
 
@@ -7499,16 +11406,68 @@ isl::checked::multi_pw_aff multi_pw_aff::set_at(int pos, isl::checked::pw_aff el
   return manage(res);
 }
 
+isl::checked::multi_union_pw_aff multi_pw_aff::set_at(int pos, const isl::checked::union_pw_aff &el) const
+{
+  return isl::checked::multi_union_pw_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::set_range_tuple(isl::checked::id id) const
+{
+  auto res = isl_multi_pw_aff_set_range_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
 class size multi_pw_aff::size() const
 {
   auto res = isl_multi_pw_aff_size(get());
   return manage(res);
 }
 
+isl::checked::space multi_pw_aff::space() const
+{
+  auto res = isl_multi_pw_aff_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space multi_pw_aff::get_space() const
+{
+  return space();
+}
+
 isl::checked::multi_pw_aff multi_pw_aff::sub(isl::checked::multi_pw_aff multi2) const
 {
   auto res = isl_multi_pw_aff_sub(copy(), multi2.release());
   return manage(res);
+}
+
+isl::checked::multi_union_pw_aff multi_pw_aff::sub(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).sub(multi2);
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::sub(const isl::checked::aff &multi2) const
+{
+  return this->sub(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::sub(const isl::checked::multi_aff &multi2) const
+{
+  return this->sub(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::sub(const isl::checked::pw_aff &multi2) const
+{
+  return this->sub(isl::checked::multi_pw_aff(multi2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::sub(const isl::checked::pw_multi_aff &multi2) const
+{
+  return this->sub(isl::checked::multi_pw_aff(multi2));
 }
 
 isl::checked::multi_pw_aff multi_pw_aff::unbind_params_insert_domain(isl::checked::multi_id domain) const
@@ -7521,6 +11480,31 @@ isl::checked::multi_pw_aff multi_pw_aff::union_add(isl::checked::multi_pw_aff mp
 {
   auto res = isl_multi_pw_aff_union_add(copy(), mpa2.release());
   return manage(res);
+}
+
+isl::checked::multi_union_pw_aff multi_pw_aff::union_add(const isl::checked::multi_union_pw_aff &mupa2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).union_add(mupa2);
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::union_add(const isl::checked::aff &mpa2) const
+{
+  return this->union_add(isl::checked::multi_pw_aff(mpa2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::union_add(const isl::checked::multi_aff &mpa2) const
+{
+  return this->union_add(isl::checked::multi_pw_aff(mpa2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::union_add(const isl::checked::pw_aff &mpa2) const
+{
+  return this->union_add(isl::checked::multi_pw_aff(mpa2));
+}
+
+isl::checked::multi_pw_aff multi_pw_aff::union_add(const isl::checked::pw_multi_aff &mpa2) const
+{
+  return this->union_add(isl::checked::multi_pw_aff(mpa2));
 }
 
 isl::checked::multi_pw_aff multi_pw_aff::zero(isl::checked::space space)
@@ -7624,6 +11608,17 @@ isl::checked::multi_union_pw_aff multi_union_pw_aff::add(isl::checked::multi_uni
   return manage(res);
 }
 
+isl::checked::union_pw_aff multi_union_pw_aff::at(int pos) const
+{
+  auto res = isl_multi_union_pw_aff_get_at(get(), pos);
+  return manage(res);
+}
+
+isl::checked::union_pw_aff multi_union_pw_aff::get_at(int pos) const
+{
+  return at(pos);
+}
+
 isl::checked::union_set multi_union_pw_aff::bind(isl::checked::multi_id tuple) const
 {
   auto res = isl_multi_union_pw_aff_bind(copy(), tuple.release());
@@ -7648,42 +11643,15 @@ isl::checked::multi_union_pw_aff multi_union_pw_aff::flat_range_product(isl::che
   return manage(res);
 }
 
-isl::checked::union_pw_aff multi_union_pw_aff::at(int pos) const
-{
-  auto res = isl_multi_union_pw_aff_get_at(get(), pos);
-  return manage(res);
-}
-
-isl::checked::union_pw_aff multi_union_pw_aff::get_at(int pos) const
-{
-  return at(pos);
-}
-
-isl::checked::union_pw_aff_list multi_union_pw_aff::list() const
-{
-  auto res = isl_multi_union_pw_aff_get_list(get());
-  return manage(res);
-}
-
-isl::checked::union_pw_aff_list multi_union_pw_aff::get_list() const
-{
-  return list();
-}
-
-isl::checked::space multi_union_pw_aff::space() const
-{
-  auto res = isl_multi_union_pw_aff_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space multi_union_pw_aff::get_space() const
-{
-  return space();
-}
-
 isl::checked::multi_union_pw_aff multi_union_pw_aff::gist(isl::checked::union_set context) const
 {
   auto res = isl_multi_union_pw_aff_gist(copy(), context.release());
+  return manage(res);
+}
+
+boolean multi_union_pw_aff::has_range_tuple_id() const
+{
+  auto res = isl_multi_union_pw_aff_has_range_tuple_id(get());
   return manage(res);
 }
 
@@ -7703,6 +11671,17 @@ boolean multi_union_pw_aff::involves_nan() const
 {
   auto res = isl_multi_union_pw_aff_involves_nan(get());
   return manage(res);
+}
+
+isl::checked::union_pw_aff_list multi_union_pw_aff::list() const
+{
+  auto res = isl_multi_union_pw_aff_get_list(get());
+  return manage(res);
+}
+
+isl::checked::union_pw_aff_list multi_union_pw_aff::get_list() const
+{
+  return list();
 }
 
 isl::checked::multi_union_pw_aff multi_union_pw_aff::neg() const
@@ -7726,6 +11705,23 @@ isl::checked::multi_union_pw_aff multi_union_pw_aff::pullback(isl::checked::unio
 isl::checked::multi_union_pw_aff multi_union_pw_aff::range_product(isl::checked::multi_union_pw_aff multi2) const
 {
   auto res = isl_multi_union_pw_aff_range_product(copy(), multi2.release());
+  return manage(res);
+}
+
+isl::checked::id multi_union_pw_aff::range_tuple_id() const
+{
+  auto res = isl_multi_union_pw_aff_get_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id multi_union_pw_aff::get_range_tuple_id() const
+{
+  return range_tuple_id();
+}
+
+isl::checked::multi_union_pw_aff multi_union_pw_aff::reset_range_tuple_id() const
+{
+  auto res = isl_multi_union_pw_aff_reset_range_tuple_id(copy());
   return manage(res);
 }
 
@@ -7769,10 +11765,32 @@ isl::checked::multi_union_pw_aff multi_union_pw_aff::set_at(int pos, isl::checke
   return manage(res);
 }
 
+isl::checked::multi_union_pw_aff multi_union_pw_aff::set_range_tuple(isl::checked::id id) const
+{
+  auto res = isl_multi_union_pw_aff_set_range_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff multi_union_pw_aff::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
 class size multi_union_pw_aff::size() const
 {
   auto res = isl_multi_union_pw_aff_size(get());
   return manage(res);
+}
+
+isl::checked::space multi_union_pw_aff::space() const
+{
+  auto res = isl_multi_union_pw_aff_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space multi_union_pw_aff::get_space() const
+{
+  return space();
 }
 
 isl::checked::multi_union_pw_aff multi_union_pw_aff::sub(isl::checked::multi_union_pw_aff multi2) const
@@ -7887,12 +11905,6 @@ isl::checked::multi_val multi_val::add(long v) const
   return this->add(isl::checked::val(ctx(), v));
 }
 
-isl::checked::multi_val multi_val::flat_range_product(isl::checked::multi_val multi2) const
-{
-  auto res = isl_multi_val_flat_range_product(copy(), multi2.release());
-  return manage(res);
-}
-
 isl::checked::val multi_val::at(int pos) const
 {
   auto res = isl_multi_val_get_at(get(), pos);
@@ -7904,6 +11916,24 @@ isl::checked::val multi_val::get_at(int pos) const
   return at(pos);
 }
 
+isl::checked::multi_val multi_val::flat_range_product(isl::checked::multi_val multi2) const
+{
+  auto res = isl_multi_val_flat_range_product(copy(), multi2.release());
+  return manage(res);
+}
+
+boolean multi_val::has_range_tuple_id() const
+{
+  auto res = isl_multi_val_has_range_tuple_id(get());
+  return manage(res);
+}
+
+boolean multi_val::involves_nan() const
+{
+  auto res = isl_multi_val_involves_nan(get());
+  return manage(res);
+}
+
 isl::checked::val_list multi_val::list() const
 {
   auto res = isl_multi_val_get_list(get());
@@ -7913,23 +11943,6 @@ isl::checked::val_list multi_val::list() const
 isl::checked::val_list multi_val::get_list() const
 {
   return list();
-}
-
-isl::checked::space multi_val::space() const
-{
-  auto res = isl_multi_val_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space multi_val::get_space() const
-{
-  return space();
-}
-
-boolean multi_val::involves_nan() const
-{
-  auto res = isl_multi_val_involves_nan(get());
-  return manage(res);
 }
 
 isl::checked::multi_val multi_val::max(isl::checked::multi_val multi2) const
@@ -7965,6 +11978,23 @@ isl::checked::multi_val multi_val::product(isl::checked::multi_val multi2) const
 isl::checked::multi_val multi_val::range_product(isl::checked::multi_val multi2) const
 {
   auto res = isl_multi_val_range_product(copy(), multi2.release());
+  return manage(res);
+}
+
+isl::checked::id multi_val::range_tuple_id() const
+{
+  auto res = isl_multi_val_get_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id multi_val::get_range_tuple_id() const
+{
+  return range_tuple_id();
+}
+
+isl::checked::multi_val multi_val::reset_range_tuple_id() const
+{
+  auto res = isl_multi_val_reset_range_tuple_id(copy());
   return manage(res);
 }
 
@@ -8013,10 +12043,32 @@ isl::checked::multi_val multi_val::set_at(int pos, long el) const
   return this->set_at(pos, isl::checked::val(ctx(), el));
 }
 
+isl::checked::multi_val multi_val::set_range_tuple(isl::checked::id id) const
+{
+  auto res = isl_multi_val_set_range_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::multi_val multi_val::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
 class size multi_val::size() const
 {
   auto res = isl_multi_val_size(get());
   return manage(res);
+}
+
+isl::checked::space multi_val::space() const
+{
+  auto res = isl_multi_val_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space multi_val::get_space() const
+{
+  return space();
 }
 
 isl::checked::multi_val multi_val::sub(isl::checked::multi_val multi2) const
@@ -8096,6 +12148,286 @@ isl::checked::ctx point::ctx() const {
   return isl::checked::ctx(isl_point_get_ctx(ptr));
 }
 
+isl::checked::basic_set point::affine_hull() const
+{
+  return isl::checked::basic_set(*this).affine_hull();
+}
+
+isl::checked::basic_set point::apply(const isl::checked::basic_map &bmap) const
+{
+  return isl::checked::basic_set(*this).apply(bmap);
+}
+
+isl::checked::set point::apply(const isl::checked::map &map) const
+{
+  return isl::checked::basic_set(*this).apply(map);
+}
+
+isl::checked::union_set point::apply(const isl::checked::union_map &umap) const
+{
+  return isl::checked::basic_set(*this).apply(umap);
+}
+
+isl::checked::pw_multi_aff point::as_pw_multi_aff() const
+{
+  return isl::checked::basic_set(*this).as_pw_multi_aff();
+}
+
+isl::checked::set point::as_set() const
+{
+  return isl::checked::basic_set(*this).as_set();
+}
+
+isl::checked::set point::bind(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::basic_set(*this).bind(tuple);
+}
+
+isl::checked::set point::coalesce() const
+{
+  return isl::checked::basic_set(*this).coalesce();
+}
+
+isl::checked::set point::complement() const
+{
+  return isl::checked::basic_set(*this).complement();
+}
+
+isl::checked::union_set point::compute_divs() const
+{
+  return isl::checked::basic_set(*this).compute_divs();
+}
+
+isl::checked::basic_set point::detect_equalities() const
+{
+  return isl::checked::basic_set(*this).detect_equalities();
+}
+
+isl::checked::val point::dim_max_val(int pos) const
+{
+  return isl::checked::basic_set(*this).dim_max_val(pos);
+}
+
+isl::checked::val point::dim_min_val(int pos) const
+{
+  return isl::checked::basic_set(*this).dim_min_val(pos);
+}
+
+boolean point::every_set(const std::function<boolean(isl::checked::set)> &test) const
+{
+  return isl::checked::basic_set(*this).every_set(test);
+}
+
+isl::checked::set point::extract_set(const isl::checked::space &space) const
+{
+  return isl::checked::basic_set(*this).extract_set(space);
+}
+
+isl::checked::basic_set point::flatten() const
+{
+  return isl::checked::basic_set(*this).flatten();
+}
+
+stat point::foreach_basic_set(const std::function<stat(isl::checked::basic_set)> &fn) const
+{
+  return isl::checked::basic_set(*this).foreach_basic_set(fn);
+}
+
+stat point::foreach_point(const std::function<stat(isl::checked::point)> &fn) const
+{
+  return isl::checked::basic_set(*this).foreach_point(fn);
+}
+
+stat point::foreach_set(const std::function<stat(isl::checked::set)> &fn) const
+{
+  return isl::checked::basic_set(*this).foreach_set(fn);
+}
+
+isl::checked::basic_set point::gist(const isl::checked::basic_set &context) const
+{
+  return isl::checked::basic_set(*this).gist(context);
+}
+
+isl::checked::set point::gist(const isl::checked::set &context) const
+{
+  return isl::checked::basic_set(*this).gist(context);
+}
+
+isl::checked::union_set point::gist(const isl::checked::union_set &context) const
+{
+  return isl::checked::basic_set(*this).gist(context);
+}
+
+isl::checked::union_set point::gist_params(const isl::checked::set &set) const
+{
+  return isl::checked::basic_set(*this).gist_params(set);
+}
+
+isl::checked::map point::identity() const
+{
+  return isl::checked::basic_set(*this).identity();
+}
+
+isl::checked::pw_aff point::indicator_function() const
+{
+  return isl::checked::basic_set(*this).indicator_function();
+}
+
+isl::checked::map point::insert_domain(const isl::checked::space &domain) const
+{
+  return isl::checked::basic_set(*this).insert_domain(domain);
+}
+
+isl::checked::basic_set point::intersect(const isl::checked::basic_set &bset2) const
+{
+  return isl::checked::basic_set(*this).intersect(bset2);
+}
+
+isl::checked::set point::intersect(const isl::checked::set &set2) const
+{
+  return isl::checked::basic_set(*this).intersect(set2);
+}
+
+isl::checked::union_set point::intersect(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::basic_set(*this).intersect(uset2);
+}
+
+isl::checked::basic_set point::intersect_params(const isl::checked::basic_set &bset2) const
+{
+  return isl::checked::basic_set(*this).intersect_params(bset2);
+}
+
+isl::checked::set point::intersect_params(const isl::checked::set &params) const
+{
+  return isl::checked::basic_set(*this).intersect_params(params);
+}
+
+boolean point::involves_locals() const
+{
+  return isl::checked::basic_set(*this).involves_locals();
+}
+
+boolean point::is_disjoint(const isl::checked::set &set2) const
+{
+  return isl::checked::basic_set(*this).is_disjoint(set2);
+}
+
+boolean point::is_disjoint(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::basic_set(*this).is_disjoint(uset2);
+}
+
+boolean point::is_empty() const
+{
+  return isl::checked::basic_set(*this).is_empty();
+}
+
+boolean point::is_equal(const isl::checked::basic_set &bset2) const
+{
+  return isl::checked::basic_set(*this).is_equal(bset2);
+}
+
+boolean point::is_equal(const isl::checked::set &set2) const
+{
+  return isl::checked::basic_set(*this).is_equal(set2);
+}
+
+boolean point::is_equal(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::basic_set(*this).is_equal(uset2);
+}
+
+boolean point::is_singleton() const
+{
+  return isl::checked::basic_set(*this).is_singleton();
+}
+
+boolean point::is_strict_subset(const isl::checked::set &set2) const
+{
+  return isl::checked::basic_set(*this).is_strict_subset(set2);
+}
+
+boolean point::is_strict_subset(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::basic_set(*this).is_strict_subset(uset2);
+}
+
+boolean point::is_subset(const isl::checked::basic_set &bset2) const
+{
+  return isl::checked::basic_set(*this).is_subset(bset2);
+}
+
+boolean point::is_subset(const isl::checked::set &set2) const
+{
+  return isl::checked::basic_set(*this).is_subset(set2);
+}
+
+boolean point::is_subset(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::basic_set(*this).is_subset(uset2);
+}
+
+boolean point::is_wrapping() const
+{
+  return isl::checked::basic_set(*this).is_wrapping();
+}
+
+boolean point::isa_set() const
+{
+  return isl::checked::basic_set(*this).isa_set();
+}
+
+isl::checked::set point::lexmax() const
+{
+  return isl::checked::basic_set(*this).lexmax();
+}
+
+isl::checked::pw_multi_aff point::lexmax_pw_multi_aff() const
+{
+  return isl::checked::basic_set(*this).lexmax_pw_multi_aff();
+}
+
+isl::checked::set point::lexmin() const
+{
+  return isl::checked::basic_set(*this).lexmin();
+}
+
+isl::checked::pw_multi_aff point::lexmin_pw_multi_aff() const
+{
+  return isl::checked::basic_set(*this).lexmin_pw_multi_aff();
+}
+
+isl::checked::set point::lower_bound(const isl::checked::multi_pw_aff &lower) const
+{
+  return isl::checked::basic_set(*this).lower_bound(lower);
+}
+
+isl::checked::set point::lower_bound(const isl::checked::multi_val &lower) const
+{
+  return isl::checked::basic_set(*this).lower_bound(lower);
+}
+
+isl::checked::multi_pw_aff point::max_multi_pw_aff() const
+{
+  return isl::checked::basic_set(*this).max_multi_pw_aff();
+}
+
+isl::checked::val point::max_val(const isl::checked::aff &obj) const
+{
+  return isl::checked::basic_set(*this).max_val(obj);
+}
+
+isl::checked::multi_pw_aff point::min_multi_pw_aff() const
+{
+  return isl::checked::basic_set(*this).min_multi_pw_aff();
+}
+
+isl::checked::val point::min_val(const isl::checked::aff &obj) const
+{
+  return isl::checked::basic_set(*this).min_val(obj);
+}
+
 isl::checked::multi_val point::multi_val() const
 {
   auto res = isl_point_get_multi_val(get());
@@ -8105,6 +12437,182 @@ isl::checked::multi_val point::multi_val() const
 isl::checked::multi_val point::get_multi_val() const
 {
   return multi_val();
+}
+
+isl::checked::basic_set point::params() const
+{
+  return isl::checked::basic_set(*this).params();
+}
+
+isl::checked::multi_val point::plain_multi_val_if_fixed() const
+{
+  return isl::checked::basic_set(*this).plain_multi_val_if_fixed();
+}
+
+isl::checked::basic_set point::polyhedral_hull() const
+{
+  return isl::checked::basic_set(*this).polyhedral_hull();
+}
+
+isl::checked::set point::preimage(const isl::checked::multi_aff &ma) const
+{
+  return isl::checked::basic_set(*this).preimage(ma);
+}
+
+isl::checked::set point::preimage(const isl::checked::multi_pw_aff &mpa) const
+{
+  return isl::checked::basic_set(*this).preimage(mpa);
+}
+
+isl::checked::set point::preimage(const isl::checked::pw_multi_aff &pma) const
+{
+  return isl::checked::basic_set(*this).preimage(pma);
+}
+
+isl::checked::union_set point::preimage(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::basic_set(*this).preimage(upma);
+}
+
+isl::checked::set point::product(const isl::checked::set &set2) const
+{
+  return isl::checked::basic_set(*this).product(set2);
+}
+
+isl::checked::set point::project_out_all_params() const
+{
+  return isl::checked::basic_set(*this).project_out_all_params();
+}
+
+isl::checked::set point::project_out_param(const isl::checked::id &id) const
+{
+  return isl::checked::basic_set(*this).project_out_param(id);
+}
+
+isl::checked::set point::project_out_param(const std::string &id) const
+{
+  return this->project_out_param(isl::checked::id(ctx(), id));
+}
+
+isl::checked::set point::project_out_param(const isl::checked::id_list &list) const
+{
+  return isl::checked::basic_set(*this).project_out_param(list);
+}
+
+isl::checked::pw_multi_aff point::pw_multi_aff_on_domain(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::basic_set(*this).pw_multi_aff_on_domain(mv);
+}
+
+isl::checked::basic_set point::sample() const
+{
+  return isl::checked::basic_set(*this).sample();
+}
+
+isl::checked::point point::sample_point() const
+{
+  return isl::checked::basic_set(*this).sample_point();
+}
+
+isl::checked::set_list point::set_list() const
+{
+  return isl::checked::basic_set(*this).set_list();
+}
+
+isl::checked::fixed_box point::simple_fixed_box_hull() const
+{
+  return isl::checked::basic_set(*this).simple_fixed_box_hull();
+}
+
+isl::checked::space point::space() const
+{
+  return isl::checked::basic_set(*this).space();
+}
+
+isl::checked::val point::stride(int pos) const
+{
+  return isl::checked::basic_set(*this).stride(pos);
+}
+
+isl::checked::set point::subtract(const isl::checked::set &set2) const
+{
+  return isl::checked::basic_set(*this).subtract(set2);
+}
+
+isl::checked::union_set point::subtract(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::basic_set(*this).subtract(uset2);
+}
+
+isl::checked::set_list point::to_list() const
+{
+  return isl::checked::basic_set(*this).to_list();
+}
+
+isl::checked::set point::to_set() const
+{
+  auto res = isl_point_to_set(copy());
+  return manage(res);
+}
+
+isl::checked::union_set point::to_union_set() const
+{
+  return isl::checked::basic_set(*this).to_union_set();
+}
+
+isl::checked::map point::translation() const
+{
+  return isl::checked::basic_set(*this).translation();
+}
+
+class size point::tuple_dim() const
+{
+  return isl::checked::basic_set(*this).tuple_dim();
+}
+
+isl::checked::set point::unbind_params(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::basic_set(*this).unbind_params(tuple);
+}
+
+isl::checked::map point::unbind_params_insert_domain(const isl::checked::multi_id &domain) const
+{
+  return isl::checked::basic_set(*this).unbind_params_insert_domain(domain);
+}
+
+isl::checked::set point::unite(const isl::checked::basic_set &bset2) const
+{
+  return isl::checked::basic_set(*this).unite(bset2);
+}
+
+isl::checked::set point::unite(const isl::checked::set &set2) const
+{
+  return isl::checked::basic_set(*this).unite(set2);
+}
+
+isl::checked::union_set point::unite(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::basic_set(*this).unite(uset2);
+}
+
+isl::checked::basic_set point::unshifted_simple_hull() const
+{
+  return isl::checked::basic_set(*this).unshifted_simple_hull();
+}
+
+isl::checked::map point::unwrap() const
+{
+  return isl::checked::basic_set(*this).unwrap();
+}
+
+isl::checked::set point::upper_bound(const isl::checked::multi_pw_aff &upper) const
+{
+  return isl::checked::basic_set(*this).upper_bound(upper);
+}
+
+isl::checked::set point::upper_bound(const isl::checked::multi_val &upper) const
+{
+  return isl::checked::basic_set(*this).upper_bound(upper);
 }
 
 inline std::ostream &operator<<(std::ostream &os, const point &obj)
@@ -8184,10 +12692,40 @@ isl::checked::ctx pw_aff::ctx() const {
   return isl::checked::ctx(isl_pw_aff_get_ctx(ptr));
 }
 
+isl::checked::multi_pw_aff pw_aff::add(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).add(multi2);
+}
+
+isl::checked::multi_union_pw_aff pw_aff::add(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::union_pw_aff(*this).add(multi2);
+}
+
 isl::checked::pw_aff pw_aff::add(isl::checked::pw_aff pwaff2) const
 {
   auto res = isl_pw_aff_add(copy(), pwaff2.release());
   return manage(res);
+}
+
+isl::checked::pw_multi_aff pw_aff::add(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).add(pma2);
+}
+
+isl::checked::union_pw_aff pw_aff::add(const isl::checked::union_pw_aff &upa2) const
+{
+  return isl::checked::union_pw_aff(*this).add(upa2);
+}
+
+isl::checked::union_pw_multi_aff pw_aff::add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_aff(*this).add(upma2);
+}
+
+isl::checked::pw_aff pw_aff::add(const isl::checked::aff &pwaff2) const
+{
+  return this->add(isl::checked::pw_aff(pwaff2));
 }
 
 isl::checked::pw_aff pw_aff::add_constant(isl::checked::val v) const
@@ -8201,10 +12739,61 @@ isl::checked::pw_aff pw_aff::add_constant(long v) const
   return this->add_constant(isl::checked::val(ctx(), v));
 }
 
+isl::checked::pw_multi_aff pw_aff::add_constant(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::pw_multi_aff(*this).add_constant(mv);
+}
+
+isl::checked::union_pw_multi_aff pw_aff::apply(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_aff(*this).apply(upma2);
+}
+
 isl::checked::aff pw_aff::as_aff() const
 {
   auto res = isl_pw_aff_as_aff(copy());
   return manage(res);
+}
+
+isl::checked::map pw_aff::as_map() const
+{
+  auto res = isl_pw_aff_as_map(copy());
+  return manage(res);
+}
+
+isl::checked::multi_aff pw_aff::as_multi_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).as_multi_aff();
+}
+
+isl::checked::multi_union_pw_aff pw_aff::as_multi_union_pw_aff() const
+{
+  return isl::checked::union_pw_aff(*this).as_multi_union_pw_aff();
+}
+
+isl::checked::pw_multi_aff pw_aff::as_pw_multi_aff() const
+{
+  return isl::checked::union_pw_aff(*this).as_pw_multi_aff();
+}
+
+isl::checked::set pw_aff::as_set() const
+{
+  return isl::checked::pw_multi_aff(*this).as_set();
+}
+
+isl::checked::union_map pw_aff::as_union_map() const
+{
+  return isl::checked::union_pw_aff(*this).as_union_map();
+}
+
+isl::checked::pw_aff pw_aff::at(int pos) const
+{
+  return isl::checked::pw_multi_aff(*this).at(pos);
+}
+
+isl::checked::set pw_aff::bind(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::multi_pw_aff(*this).bind(tuple);
 }
 
 isl::checked::set pw_aff::bind(isl::checked::id id) const
@@ -8272,10 +12861,40 @@ isl::checked::val pw_aff::eval(isl::checked::point pnt) const
   return manage(res);
 }
 
+isl::checked::pw_multi_aff pw_aff::extract_pw_multi_aff(const isl::checked::space &space) const
+{
+  return isl::checked::union_pw_aff(*this).extract_pw_multi_aff(space);
+}
+
+isl::checked::multi_pw_aff pw_aff::flat_range_product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::multi_union_pw_aff pw_aff::flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::union_pw_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::pw_multi_aff pw_aff::flat_range_product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).flat_range_product(pma2);
+}
+
+isl::checked::union_pw_multi_aff pw_aff::flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_aff(*this).flat_range_product(upma2);
+}
+
 isl::checked::pw_aff pw_aff::floor() const
 {
   auto res = isl_pw_aff_floor(copy());
   return manage(res);
+}
+
+stat pw_aff::foreach_piece(const std::function<stat(isl::checked::set, isl::checked::multi_aff)> &fn) const
+{
+  return isl::checked::pw_multi_aff(*this).foreach_piece(fn);
 }
 
 isl::checked::set pw_aff::ge_set(isl::checked::pw_aff pwaff2) const
@@ -8290,10 +12909,35 @@ isl::checked::pw_aff pw_aff::gist(isl::checked::set context) const
   return manage(res);
 }
 
+isl::checked::union_pw_aff pw_aff::gist(const isl::checked::union_set &context) const
+{
+  return isl::checked::union_pw_aff(*this).gist(context);
+}
+
+isl::checked::pw_aff pw_aff::gist(const isl::checked::basic_set &context) const
+{
+  return this->gist(isl::checked::set(context));
+}
+
+isl::checked::pw_aff pw_aff::gist(const isl::checked::point &context) const
+{
+  return this->gist(isl::checked::set(context));
+}
+
 isl::checked::set pw_aff::gt_set(isl::checked::pw_aff pwaff2) const
 {
   auto res = isl_pw_aff_gt_set(copy(), pwaff2.release());
   return manage(res);
+}
+
+boolean pw_aff::has_range_tuple_id() const
+{
+  return isl::checked::pw_multi_aff(*this).has_range_tuple_id();
+}
+
+isl::checked::multi_pw_aff pw_aff::identity() const
+{
+  return isl::checked::pw_multi_aff(*this).identity();
 }
 
 isl::checked::pw_aff pw_aff::insert_domain(isl::checked::space domain) const
@@ -8308,10 +12952,65 @@ isl::checked::pw_aff pw_aff::intersect_domain(isl::checked::set set) const
   return manage(res);
 }
 
+isl::checked::union_pw_aff pw_aff::intersect_domain(const isl::checked::space &space) const
+{
+  return isl::checked::union_pw_aff(*this).intersect_domain(space);
+}
+
+isl::checked::union_pw_aff pw_aff::intersect_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_pw_aff(*this).intersect_domain(uset);
+}
+
+isl::checked::pw_aff pw_aff::intersect_domain(const isl::checked::basic_set &set) const
+{
+  return this->intersect_domain(isl::checked::set(set));
+}
+
+isl::checked::pw_aff pw_aff::intersect_domain(const isl::checked::point &set) const
+{
+  return this->intersect_domain(isl::checked::set(set));
+}
+
+isl::checked::union_pw_aff pw_aff::intersect_domain_wrapped_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_pw_aff(*this).intersect_domain_wrapped_domain(uset);
+}
+
+isl::checked::union_pw_aff pw_aff::intersect_domain_wrapped_range(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_pw_aff(*this).intersect_domain_wrapped_range(uset);
+}
+
 isl::checked::pw_aff pw_aff::intersect_params(isl::checked::set set) const
 {
   auto res = isl_pw_aff_intersect_params(copy(), set.release());
   return manage(res);
+}
+
+boolean pw_aff::involves_locals() const
+{
+  return isl::checked::pw_multi_aff(*this).involves_locals();
+}
+
+boolean pw_aff::involves_nan() const
+{
+  return isl::checked::multi_pw_aff(*this).involves_nan();
+}
+
+boolean pw_aff::involves_param(const isl::checked::id &id) const
+{
+  return isl::checked::pw_multi_aff(*this).involves_param(id);
+}
+
+boolean pw_aff::involves_param(const std::string &id) const
+{
+  return this->involves_param(isl::checked::id(ctx(), id));
+}
+
+boolean pw_aff::involves_param(const isl::checked::id_list &list) const
+{
+  return isl::checked::pw_multi_aff(*this).involves_param(list);
 }
 
 boolean pw_aff::isa_aff() const
@@ -8320,10 +13019,25 @@ boolean pw_aff::isa_aff() const
   return manage(res);
 }
 
+boolean pw_aff::isa_multi_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).isa_multi_aff();
+}
+
+boolean pw_aff::isa_pw_multi_aff() const
+{
+  return isl::checked::union_pw_aff(*this).isa_pw_multi_aff();
+}
+
 isl::checked::set pw_aff::le_set(isl::checked::pw_aff pwaff2) const
 {
   auto res = isl_pw_aff_le_set(copy(), pwaff2.release());
   return manage(res);
+}
+
+isl::checked::pw_aff_list pw_aff::list() const
+{
+  return isl::checked::multi_pw_aff(*this).list();
 }
 
 isl::checked::set pw_aff::lt_set(isl::checked::pw_aff pwaff2) const
@@ -8332,16 +13046,46 @@ isl::checked::set pw_aff::lt_set(isl::checked::pw_aff pwaff2) const
   return manage(res);
 }
 
+isl::checked::multi_pw_aff pw_aff::max(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).max(multi2);
+}
+
 isl::checked::pw_aff pw_aff::max(isl::checked::pw_aff pwaff2) const
 {
   auto res = isl_pw_aff_max(copy(), pwaff2.release());
   return manage(res);
 }
 
+isl::checked::pw_aff pw_aff::max(const isl::checked::aff &pwaff2) const
+{
+  return this->max(isl::checked::pw_aff(pwaff2));
+}
+
+isl::checked::multi_val pw_aff::max_multi_val() const
+{
+  return isl::checked::pw_multi_aff(*this).max_multi_val();
+}
+
+isl::checked::multi_pw_aff pw_aff::min(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).min(multi2);
+}
+
 isl::checked::pw_aff pw_aff::min(isl::checked::pw_aff pwaff2) const
 {
   auto res = isl_pw_aff_min(copy(), pwaff2.release());
   return manage(res);
+}
+
+isl::checked::pw_aff pw_aff::min(const isl::checked::aff &pwaff2) const
+{
+  return this->min(isl::checked::pw_aff(pwaff2));
+}
+
+isl::checked::multi_val pw_aff::min_multi_val() const
+{
+  return isl::checked::pw_multi_aff(*this).min_multi_val();
 }
 
 isl::checked::pw_aff pw_aff::mod(isl::checked::val mod) const
@@ -8359,6 +13103,11 @@ isl::checked::pw_aff pw_aff::mul(isl::checked::pw_aff pwaff2) const
 {
   auto res = isl_pw_aff_mul(copy(), pwaff2.release());
   return manage(res);
+}
+
+class size pw_aff::n_piece() const
+{
+  return isl::checked::pw_multi_aff(*this).n_piece();
 }
 
 isl::checked::set pw_aff::ne_set(isl::checked::pw_aff pwaff2) const
@@ -8379,6 +13128,41 @@ isl::checked::pw_aff pw_aff::param_on_domain(isl::checked::set domain, isl::chec
   return manage(res);
 }
 
+boolean pw_aff::plain_is_empty() const
+{
+  return isl::checked::union_pw_aff(*this).plain_is_empty();
+}
+
+boolean pw_aff::plain_is_equal(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).plain_is_equal(multi2);
+}
+
+boolean pw_aff::plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::union_pw_aff(*this).plain_is_equal(multi2);
+}
+
+isl::checked::pw_multi_aff pw_aff::preimage_domain_wrapped_domain(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).preimage_domain_wrapped_domain(pma2);
+}
+
+isl::checked::union_pw_multi_aff pw_aff::preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_aff(*this).preimage_domain_wrapped_domain(upma2);
+}
+
+isl::checked::multi_pw_aff pw_aff::product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).product(multi2);
+}
+
+isl::checked::pw_multi_aff pw_aff::product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).product(pma2);
+}
+
 isl::checked::pw_aff pw_aff::pullback(isl::checked::multi_aff ma) const
 {
   auto res = isl_pw_aff_pullback_multi_aff(copy(), ma.release());
@@ -8397,6 +13181,61 @@ isl::checked::pw_aff pw_aff::pullback(isl::checked::pw_multi_aff pma) const
   return manage(res);
 }
 
+isl::checked::union_pw_aff pw_aff::pullback(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::union_pw_aff(*this).pullback(upma);
+}
+
+isl::checked::pw_multi_aff_list pw_aff::pw_multi_aff_list() const
+{
+  return isl::checked::union_pw_aff(*this).pw_multi_aff_list();
+}
+
+isl::checked::pw_multi_aff pw_aff::range_factor_domain() const
+{
+  return isl::checked::pw_multi_aff(*this).range_factor_domain();
+}
+
+isl::checked::pw_multi_aff pw_aff::range_factor_range() const
+{
+  return isl::checked::pw_multi_aff(*this).range_factor_range();
+}
+
+isl::checked::multi_pw_aff pw_aff::range_product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).range_product(multi2);
+}
+
+isl::checked::multi_union_pw_aff pw_aff::range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::union_pw_aff(*this).range_product(multi2);
+}
+
+isl::checked::pw_multi_aff pw_aff::range_product(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).range_product(pma2);
+}
+
+isl::checked::union_pw_multi_aff pw_aff::range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_aff(*this).range_product(upma2);
+}
+
+isl::checked::id pw_aff::range_tuple_id() const
+{
+  return isl::checked::pw_multi_aff(*this).range_tuple_id();
+}
+
+isl::checked::multi_pw_aff pw_aff::reset_range_tuple_id() const
+{
+  return isl::checked::multi_pw_aff(*this).reset_range_tuple_id();
+}
+
+isl::checked::multi_pw_aff pw_aff::scale(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_pw_aff(*this).scale(mv);
+}
+
 isl::checked::pw_aff pw_aff::scale(isl::checked::val v) const
 {
   auto res = isl_pw_aff_scale_val(copy(), v.release());
@@ -8406,6 +13245,11 @@ isl::checked::pw_aff pw_aff::scale(isl::checked::val v) const
 isl::checked::pw_aff pw_aff::scale(long v) const
 {
   return this->scale(isl::checked::val(ctx(), v));
+}
+
+isl::checked::multi_pw_aff pw_aff::scale_down(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_pw_aff(*this).scale_down(mv);
 }
 
 isl::checked::pw_aff pw_aff::scale_down(isl::checked::val f) const
@@ -8419,16 +13263,96 @@ isl::checked::pw_aff pw_aff::scale_down(long f) const
   return this->scale_down(isl::checked::val(ctx(), f));
 }
 
+isl::checked::multi_pw_aff pw_aff::set_at(int pos, const isl::checked::pw_aff &el) const
+{
+  return isl::checked::pw_multi_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_union_pw_aff pw_aff::set_at(int pos, const isl::checked::union_pw_aff &el) const
+{
+  return isl::checked::union_pw_aff(*this).set_at(pos, el);
+}
+
+isl::checked::pw_multi_aff pw_aff::set_range_tuple(const isl::checked::id &id) const
+{
+  return isl::checked::pw_multi_aff(*this).set_range_tuple(id);
+}
+
+isl::checked::pw_multi_aff pw_aff::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
+class size pw_aff::size() const
+{
+  return isl::checked::multi_pw_aff(*this).size();
+}
+
+isl::checked::space pw_aff::space() const
+{
+  return isl::checked::union_pw_aff(*this).space();
+}
+
+isl::checked::multi_pw_aff pw_aff::sub(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::pw_multi_aff(*this).sub(multi2);
+}
+
+isl::checked::multi_union_pw_aff pw_aff::sub(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::union_pw_aff(*this).sub(multi2);
+}
+
 isl::checked::pw_aff pw_aff::sub(isl::checked::pw_aff pwaff2) const
 {
   auto res = isl_pw_aff_sub(copy(), pwaff2.release());
   return manage(res);
 }
 
+isl::checked::pw_multi_aff pw_aff::sub(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).sub(pma2);
+}
+
+isl::checked::union_pw_aff pw_aff::sub(const isl::checked::union_pw_aff &upa2) const
+{
+  return isl::checked::union_pw_aff(*this).sub(upa2);
+}
+
+isl::checked::union_pw_multi_aff pw_aff::sub(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_aff(*this).sub(upma2);
+}
+
+isl::checked::pw_aff pw_aff::sub(const isl::checked::aff &pwaff2) const
+{
+  return this->sub(isl::checked::pw_aff(pwaff2));
+}
+
 isl::checked::pw_aff pw_aff::subtract_domain(isl::checked::set set) const
 {
   auto res = isl_pw_aff_subtract_domain(copy(), set.release());
   return manage(res);
+}
+
+isl::checked::union_pw_aff pw_aff::subtract_domain(const isl::checked::space &space) const
+{
+  return isl::checked::union_pw_aff(*this).subtract_domain(space);
+}
+
+isl::checked::union_pw_aff pw_aff::subtract_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_pw_aff(*this).subtract_domain(uset);
+}
+
+isl::checked::pw_aff pw_aff::subtract_domain(const isl::checked::basic_set &set) const
+{
+  return this->subtract_domain(isl::checked::set(set));
+}
+
+isl::checked::pw_aff pw_aff::subtract_domain(const isl::checked::point &set) const
+{
+  return this->subtract_domain(isl::checked::set(set));
 }
 
 isl::checked::pw_aff pw_aff::tdiv_q(isl::checked::pw_aff pa2) const
@@ -8443,10 +13367,67 @@ isl::checked::pw_aff pw_aff::tdiv_r(isl::checked::pw_aff pa2) const
   return manage(res);
 }
 
+isl::checked::pw_aff_list pw_aff::to_list() const
+{
+  auto res = isl_pw_aff_to_list(copy());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff pw_aff::to_multi_pw_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).to_multi_pw_aff();
+}
+
+isl::checked::union_pw_aff pw_aff::to_union_pw_aff() const
+{
+  auto res = isl_pw_aff_to_union_pw_aff(copy());
+  return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_aff::to_union_pw_multi_aff() const
+{
+  return isl::checked::pw_multi_aff(*this).to_union_pw_multi_aff();
+}
+
+isl::checked::multi_pw_aff pw_aff::unbind_params_insert_domain(const isl::checked::multi_id &domain) const
+{
+  return isl::checked::pw_multi_aff(*this).unbind_params_insert_domain(domain);
+}
+
+isl::checked::multi_pw_aff pw_aff::union_add(const isl::checked::multi_pw_aff &mpa2) const
+{
+  return isl::checked::pw_multi_aff(*this).union_add(mpa2);
+}
+
+isl::checked::multi_union_pw_aff pw_aff::union_add(const isl::checked::multi_union_pw_aff &mupa2) const
+{
+  return isl::checked::union_pw_aff(*this).union_add(mupa2);
+}
+
 isl::checked::pw_aff pw_aff::union_add(isl::checked::pw_aff pwaff2) const
 {
   auto res = isl_pw_aff_union_add(copy(), pwaff2.release());
   return manage(res);
+}
+
+isl::checked::pw_multi_aff pw_aff::union_add(const isl::checked::pw_multi_aff &pma2) const
+{
+  return isl::checked::pw_multi_aff(*this).union_add(pma2);
+}
+
+isl::checked::union_pw_aff pw_aff::union_add(const isl::checked::union_pw_aff &upa2) const
+{
+  return isl::checked::union_pw_aff(*this).union_add(upa2);
+}
+
+isl::checked::union_pw_multi_aff pw_aff::union_add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_aff(*this).union_add(upma2);
+}
+
+isl::checked::pw_aff pw_aff::union_add(const isl::checked::aff &pwaff2) const
+{
+  return this->union_add(isl::checked::pw_aff(pwaff2));
 }
 
 inline std::ostream &operator<<(std::ostream &os, const pw_aff &obj)
@@ -8494,6 +13475,12 @@ pw_aff_list::pw_aff_list(isl::checked::pw_aff el)
   ptr = res;
 }
 
+pw_aff_list::pw_aff_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_pw_aff_list_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
 pw_aff_list &pw_aff_list::operator=(pw_aff_list obj) {
   std::swap(this->ptr, obj.ptr);
   return *this;
@@ -8532,6 +13519,17 @@ isl::checked::pw_aff_list pw_aff_list::add(isl::checked::pw_aff el) const
   return manage(res);
 }
 
+isl::checked::pw_aff pw_aff_list::at(int index) const
+{
+  auto res = isl_pw_aff_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::pw_aff pw_aff_list::get_at(int index) const
+{
+  return at(index);
+}
+
 isl::checked::pw_aff_list pw_aff_list::clear() const
 {
   auto res = isl_pw_aff_list_clear(copy());
@@ -8562,17 +13560,6 @@ stat pw_aff_list::foreach(const std::function<stat(isl::checked::pw_aff)> &fn) c
   };
   auto res = isl_pw_aff_list_foreach(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::pw_aff pw_aff_list::at(int index) const
-{
-  auto res = isl_pw_aff_list_get_at(get(), index);
-  return manage(res);
-}
-
-isl::checked::pw_aff pw_aff_list::get_at(int index) const
-{
-  return at(index);
 }
 
 isl::checked::pw_aff_list pw_aff_list::insert(unsigned int pos, isl::checked::pw_aff el) const
@@ -8670,10 +13657,35 @@ isl::checked::ctx pw_multi_aff::ctx() const {
   return isl::checked::ctx(isl_pw_multi_aff_get_ctx(ptr));
 }
 
+isl::checked::multi_pw_aff pw_multi_aff::add(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).add(multi2);
+}
+
+isl::checked::multi_union_pw_aff pw_multi_aff::add(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).add(multi2);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::add(isl::checked::pw_multi_aff pma2) const
 {
   auto res = isl_pw_multi_aff_add(copy(), pma2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).add(upma2);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::add(const isl::checked::multi_aff &pma2) const
+{
+  return this->add(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::add(const isl::checked::pw_aff &pma2) const
+{
+  return this->add(isl::checked::pw_multi_aff(pma2));
 }
 
 isl::checked::pw_multi_aff pw_multi_aff::add_constant(isl::checked::multi_val mv) const
@@ -8693,10 +13705,58 @@ isl::checked::pw_multi_aff pw_multi_aff::add_constant(long v) const
   return this->add_constant(isl::checked::val(ctx(), v));
 }
 
+isl::checked::union_pw_multi_aff pw_multi_aff::apply(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).apply(upma2);
+}
+
+isl::checked::map pw_multi_aff::as_map() const
+{
+  auto res = isl_pw_multi_aff_as_map(copy());
+  return manage(res);
+}
+
 isl::checked::multi_aff pw_multi_aff::as_multi_aff() const
 {
   auto res = isl_pw_multi_aff_as_multi_aff(copy());
   return manage(res);
+}
+
+isl::checked::multi_union_pw_aff pw_multi_aff::as_multi_union_pw_aff() const
+{
+  return isl::checked::union_pw_multi_aff(*this).as_multi_union_pw_aff();
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::as_pw_multi_aff() const
+{
+  return isl::checked::union_pw_multi_aff(*this).as_pw_multi_aff();
+}
+
+isl::checked::set pw_multi_aff::as_set() const
+{
+  auto res = isl_pw_multi_aff_as_set(copy());
+  return manage(res);
+}
+
+isl::checked::union_map pw_multi_aff::as_union_map() const
+{
+  return isl::checked::union_pw_multi_aff(*this).as_union_map();
+}
+
+isl::checked::pw_aff pw_multi_aff::at(int pos) const
+{
+  auto res = isl_pw_multi_aff_get_at(get(), pos);
+  return manage(res);
+}
+
+isl::checked::pw_aff pw_multi_aff::get_at(int pos) const
+{
+  return at(pos);
+}
+
+isl::checked::set pw_multi_aff::bind(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::multi_pw_aff(*this).bind(tuple);
 }
 
 isl::checked::pw_multi_aff pw_multi_aff::bind_domain(isl::checked::multi_id tuple) const
@@ -8729,10 +13789,40 @@ isl::checked::pw_multi_aff pw_multi_aff::domain_map(isl::checked::space space)
   return manage(res);
 }
 
+isl::checked::pw_multi_aff pw_multi_aff::extract_pw_multi_aff(const isl::checked::space &space) const
+{
+  return isl::checked::union_pw_multi_aff(*this).extract_pw_multi_aff(space);
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::flat_range_product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::multi_union_pw_aff pw_multi_aff::flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).flat_range_product(multi2);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::flat_range_product(isl::checked::pw_multi_aff pma2) const
 {
   auto res = isl_pw_multi_aff_flat_range_product(copy(), pma2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).flat_range_product(upma2);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::flat_range_product(const isl::checked::multi_aff &pma2) const
+{
+  return this->flat_range_product(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::flat_range_product(const isl::checked::pw_aff &pma2) const
+{
+  return this->flat_range_product(isl::checked::pw_multi_aff(pma2));
 }
 
 stat pw_multi_aff::foreach_piece(const std::function<stat(isl::checked::set, isl::checked::multi_aff)> &fn) const
@@ -8749,21 +13839,36 @@ stat pw_multi_aff::foreach_piece(const std::function<stat(isl::checked::set, isl
   return manage(res);
 }
 
-isl::checked::space pw_multi_aff::space() const
-{
-  auto res = isl_pw_multi_aff_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space pw_multi_aff::get_space() const
-{
-  return space();
-}
-
 isl::checked::pw_multi_aff pw_multi_aff::gist(isl::checked::set set) const
 {
   auto res = isl_pw_multi_aff_gist(copy(), set.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::gist(const isl::checked::union_set &context) const
+{
+  return isl::checked::union_pw_multi_aff(*this).gist(context);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::gist(const isl::checked::basic_set &set) const
+{
+  return this->gist(isl::checked::set(set));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::gist(const isl::checked::point &set) const
+{
+  return this->gist(isl::checked::set(set));
+}
+
+boolean pw_multi_aff::has_range_tuple_id() const
+{
+  auto res = isl_pw_multi_aff_has_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::identity() const
+{
+  return isl::checked::multi_pw_aff(*this).identity();
 }
 
 isl::checked::pw_multi_aff pw_multi_aff::identity_on_domain(isl::checked::space space)
@@ -8784,6 +13889,36 @@ isl::checked::pw_multi_aff pw_multi_aff::intersect_domain(isl::checked::set set)
   return manage(res);
 }
 
+isl::checked::union_pw_multi_aff pw_multi_aff::intersect_domain(const isl::checked::space &space) const
+{
+  return isl::checked::union_pw_multi_aff(*this).intersect_domain(space);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::intersect_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_pw_multi_aff(*this).intersect_domain(uset);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::intersect_domain(const isl::checked::basic_set &set) const
+{
+  return this->intersect_domain(isl::checked::set(set));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::intersect_domain(const isl::checked::point &set) const
+{
+  return this->intersect_domain(isl::checked::set(set));
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::intersect_domain_wrapped_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_pw_multi_aff(*this).intersect_domain_wrapped_domain(uset);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::intersect_domain_wrapped_range(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_pw_multi_aff(*this).intersect_domain_wrapped_range(uset);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::intersect_params(isl::checked::set set) const
 {
   auto res = isl_pw_multi_aff_intersect_params(copy(), set.release());
@@ -8796,10 +13931,45 @@ boolean pw_multi_aff::involves_locals() const
   return manage(res);
 }
 
+boolean pw_multi_aff::involves_nan() const
+{
+  return isl::checked::multi_pw_aff(*this).involves_nan();
+}
+
+boolean pw_multi_aff::involves_param(const isl::checked::id &id) const
+{
+  return isl::checked::multi_pw_aff(*this).involves_param(id);
+}
+
+boolean pw_multi_aff::involves_param(const std::string &id) const
+{
+  return this->involves_param(isl::checked::id(ctx(), id));
+}
+
+boolean pw_multi_aff::involves_param(const isl::checked::id_list &list) const
+{
+  return isl::checked::multi_pw_aff(*this).involves_param(list);
+}
+
 boolean pw_multi_aff::isa_multi_aff() const
 {
   auto res = isl_pw_multi_aff_isa_multi_aff(get());
   return manage(res);
+}
+
+boolean pw_multi_aff::isa_pw_multi_aff() const
+{
+  return isl::checked::union_pw_multi_aff(*this).isa_pw_multi_aff();
+}
+
+isl::checked::pw_aff_list pw_multi_aff::list() const
+{
+  return isl::checked::multi_pw_aff(*this).list();
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::max(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).max(multi2);
 }
 
 isl::checked::multi_val pw_multi_aff::max_multi_val() const
@@ -8808,9 +13978,20 @@ isl::checked::multi_val pw_multi_aff::max_multi_val() const
   return manage(res);
 }
 
+isl::checked::multi_pw_aff pw_multi_aff::min(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).min(multi2);
+}
+
 isl::checked::multi_val pw_multi_aff::min_multi_val() const
 {
   auto res = isl_pw_multi_aff_min_multi_val(copy());
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::multi_val_on_domain(isl::checked::set domain, isl::checked::multi_val mv)
+{
+  auto res = isl_pw_multi_aff_multi_val_on_domain(domain.release(), mv.release());
   return manage(res);
 }
 
@@ -8820,16 +14001,71 @@ class size pw_multi_aff::n_piece() const
   return manage(res);
 }
 
+isl::checked::multi_pw_aff pw_multi_aff::neg() const
+{
+  return isl::checked::multi_pw_aff(*this).neg();
+}
+
+boolean pw_multi_aff::plain_is_empty() const
+{
+  return isl::checked::union_pw_multi_aff(*this).plain_is_empty();
+}
+
+boolean pw_multi_aff::plain_is_equal(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).plain_is_equal(multi2);
+}
+
+boolean pw_multi_aff::plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).plain_is_equal(multi2);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::preimage_domain_wrapped_domain(isl::checked::pw_multi_aff pma2) const
 {
   auto res = isl_pw_multi_aff_preimage_domain_wrapped_domain_pw_multi_aff(copy(), pma2.release());
   return manage(res);
 }
 
+isl::checked::union_pw_multi_aff pw_multi_aff::preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).preimage_domain_wrapped_domain(upma2);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::preimage_domain_wrapped_domain(const isl::checked::multi_aff &pma2) const
+{
+  return this->preimage_domain_wrapped_domain(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::preimage_domain_wrapped_domain(const isl::checked::pw_aff &pma2) const
+{
+  return this->preimage_domain_wrapped_domain(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).product(multi2);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::product(isl::checked::pw_multi_aff pma2) const
 {
   auto res = isl_pw_multi_aff_product(copy(), pma2.release());
   return manage(res);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::product(const isl::checked::multi_aff &pma2) const
+{
+  return this->product(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::product(const isl::checked::pw_aff &pma2) const
+{
+  return this->product(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::pullback(const isl::checked::multi_pw_aff &mpa2) const
+{
+  return isl::checked::multi_pw_aff(*this).pullback(mpa2);
 }
 
 isl::checked::pw_multi_aff pw_multi_aff::pullback(isl::checked::multi_aff ma) const
@@ -8842,6 +14078,16 @@ isl::checked::pw_multi_aff pw_multi_aff::pullback(isl::checked::pw_multi_aff pma
 {
   auto res = isl_pw_multi_aff_pullback_pw_multi_aff(copy(), pma2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::pullback(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).pullback(upma2);
+}
+
+isl::checked::pw_multi_aff_list pw_multi_aff::pw_multi_aff_list() const
+{
+  return isl::checked::union_pw_multi_aff(*this).pw_multi_aff_list();
 }
 
 isl::checked::pw_multi_aff pw_multi_aff::range_factor_domain() const
@@ -8862,10 +14108,56 @@ isl::checked::pw_multi_aff pw_multi_aff::range_map(isl::checked::space space)
   return manage(res);
 }
 
+isl::checked::multi_pw_aff pw_multi_aff::range_product(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).range_product(multi2);
+}
+
+isl::checked::multi_union_pw_aff pw_multi_aff::range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).range_product(multi2);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::range_product(isl::checked::pw_multi_aff pma2) const
 {
   auto res = isl_pw_multi_aff_range_product(copy(), pma2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).range_product(upma2);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::range_product(const isl::checked::multi_aff &pma2) const
+{
+  return this->range_product(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::range_product(const isl::checked::pw_aff &pma2) const
+{
+  return this->range_product(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::id pw_multi_aff::range_tuple_id() const
+{
+  auto res = isl_pw_multi_aff_get_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id pw_multi_aff::get_range_tuple_id() const
+{
+  return range_tuple_id();
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::reset_range_tuple_id() const
+{
+  return isl::checked::multi_pw_aff(*this).reset_range_tuple_id();
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::scale(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_pw_aff(*this).scale(mv);
 }
 
 isl::checked::pw_multi_aff pw_multi_aff::scale(isl::checked::val v) const
@@ -8879,6 +14171,11 @@ isl::checked::pw_multi_aff pw_multi_aff::scale(long v) const
   return this->scale(isl::checked::val(ctx(), v));
 }
 
+isl::checked::multi_pw_aff pw_multi_aff::scale_down(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_pw_aff(*this).scale_down(mv);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::scale_down(isl::checked::val v) const
 {
   auto res = isl_pw_multi_aff_scale_down_val(copy(), v.release());
@@ -8890,10 +14187,72 @@ isl::checked::pw_multi_aff pw_multi_aff::scale_down(long v) const
   return this->scale_down(isl::checked::val(ctx(), v));
 }
 
+isl::checked::multi_pw_aff pw_multi_aff::set_at(int pos, const isl::checked::pw_aff &el) const
+{
+  return isl::checked::multi_pw_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_union_pw_aff pw_multi_aff::set_at(int pos, const isl::checked::union_pw_aff &el) const
+{
+  return isl::checked::multi_pw_aff(*this).set_at(pos, el);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::set_range_tuple(isl::checked::id id) const
+{
+  auto res = isl_pw_multi_aff_set_range_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
+class size pw_multi_aff::size() const
+{
+  return isl::checked::multi_pw_aff(*this).size();
+}
+
+isl::checked::space pw_multi_aff::space() const
+{
+  auto res = isl_pw_multi_aff_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space pw_multi_aff::get_space() const
+{
+  return space();
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::sub(const isl::checked::multi_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).sub(multi2);
+}
+
+isl::checked::multi_union_pw_aff pw_multi_aff::sub(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_pw_aff(*this).sub(multi2);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::sub(isl::checked::pw_multi_aff pma2) const
 {
   auto res = isl_pw_multi_aff_sub(copy(), pma2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::sub(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).sub(upma2);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::sub(const isl::checked::multi_aff &pma2) const
+{
+  return this->sub(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::sub(const isl::checked::pw_aff &pma2) const
+{
+  return this->sub(isl::checked::pw_multi_aff(pma2));
 }
 
 isl::checked::pw_multi_aff pw_multi_aff::subtract_domain(isl::checked::set set) const
@@ -8902,10 +14261,78 @@ isl::checked::pw_multi_aff pw_multi_aff::subtract_domain(isl::checked::set set) 
   return manage(res);
 }
 
+isl::checked::union_pw_multi_aff pw_multi_aff::subtract_domain(const isl::checked::space &space) const
+{
+  return isl::checked::union_pw_multi_aff(*this).subtract_domain(space);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::subtract_domain(const isl::checked::union_set &uset) const
+{
+  return isl::checked::union_pw_multi_aff(*this).subtract_domain(uset);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::subtract_domain(const isl::checked::basic_set &set) const
+{
+  return this->subtract_domain(isl::checked::set(set));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::subtract_domain(const isl::checked::point &set) const
+{
+  return this->subtract_domain(isl::checked::set(set));
+}
+
+isl::checked::pw_multi_aff_list pw_multi_aff::to_list() const
+{
+  auto res = isl_pw_multi_aff_to_list(copy());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::to_multi_pw_aff() const
+{
+  auto res = isl_pw_multi_aff_to_multi_pw_aff(copy());
+  return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::to_union_pw_multi_aff() const
+{
+  auto res = isl_pw_multi_aff_to_union_pw_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::unbind_params_insert_domain(const isl::checked::multi_id &domain) const
+{
+  return isl::checked::multi_pw_aff(*this).unbind_params_insert_domain(domain);
+}
+
+isl::checked::multi_pw_aff pw_multi_aff::union_add(const isl::checked::multi_pw_aff &mpa2) const
+{
+  return isl::checked::multi_pw_aff(*this).union_add(mpa2);
+}
+
+isl::checked::multi_union_pw_aff pw_multi_aff::union_add(const isl::checked::multi_union_pw_aff &mupa2) const
+{
+  return isl::checked::multi_pw_aff(*this).union_add(mupa2);
+}
+
 isl::checked::pw_multi_aff pw_multi_aff::union_add(isl::checked::pw_multi_aff pma2) const
 {
   auto res = isl_pw_multi_aff_union_add(copy(), pma2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff pw_multi_aff::union_add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).union_add(upma2);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::union_add(const isl::checked::multi_aff &pma2) const
+{
+  return this->union_add(isl::checked::pw_multi_aff(pma2));
+}
+
+isl::checked::pw_multi_aff pw_multi_aff::union_add(const isl::checked::pw_aff &pma2) const
+{
+  return this->union_add(isl::checked::pw_multi_aff(pma2));
 }
 
 isl::checked::pw_multi_aff pw_multi_aff::zero(isl::checked::space space)
@@ -8959,6 +14386,12 @@ pw_multi_aff_list::pw_multi_aff_list(isl::checked::pw_multi_aff el)
   ptr = res;
 }
 
+pw_multi_aff_list::pw_multi_aff_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_pw_multi_aff_list_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
 pw_multi_aff_list &pw_multi_aff_list::operator=(pw_multi_aff_list obj) {
   std::swap(this->ptr, obj.ptr);
   return *this;
@@ -8997,6 +14430,17 @@ isl::checked::pw_multi_aff_list pw_multi_aff_list::add(isl::checked::pw_multi_af
   return manage(res);
 }
 
+isl::checked::pw_multi_aff pw_multi_aff_list::at(int index) const
+{
+  auto res = isl_pw_multi_aff_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff pw_multi_aff_list::get_at(int index) const
+{
+  return at(index);
+}
+
 isl::checked::pw_multi_aff_list pw_multi_aff_list::clear() const
 {
   auto res = isl_pw_multi_aff_list_clear(copy());
@@ -9027,17 +14471,6 @@ stat pw_multi_aff_list::foreach(const std::function<stat(isl::checked::pw_multi_
   };
   auto res = isl_pw_multi_aff_list_foreach(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::pw_multi_aff pw_multi_aff_list::at(int index) const
-{
-  auto res = isl_pw_multi_aff_list_get_at(get(), index);
-  return manage(res);
-}
-
-isl::checked::pw_multi_aff pw_multi_aff_list::get_at(int index) const
-{
-  return at(index);
 }
 
 isl::checked::pw_multi_aff_list pw_multi_aff_list::insert(unsigned int pos, isl::checked::pw_multi_aff el) const
@@ -9123,12 +14556,6 @@ isl::checked::ctx schedule::ctx() const {
   return isl::checked::ctx(isl_schedule_get_ctx(ptr));
 }
 
-isl::checked::schedule schedule::from_domain(isl::checked::union_set domain)
-{
-  auto res = isl_schedule_from_domain(domain.release());
-  return manage(res);
-}
-
 isl::checked::union_set schedule::domain() const
 {
   auto res = isl_schedule_get_domain(get());
@@ -9138,6 +14565,12 @@ isl::checked::union_set schedule::domain() const
 isl::checked::union_set schedule::get_domain() const
 {
   return domain();
+}
+
+isl::checked::schedule schedule::from_domain(isl::checked::union_set domain)
+{
+  auto res = isl_schedule_from_domain(domain.release());
+  return manage(res);
 }
 
 isl::checked::union_map schedule::map() const
@@ -9151,6 +14584,12 @@ isl::checked::union_map schedule::get_map() const
   return map();
 }
 
+isl::checked::schedule schedule::pullback(isl::checked::union_pw_multi_aff upma) const
+{
+  auto res = isl_schedule_pullback_union_pw_multi_aff(copy(), upma.release());
+  return manage(res);
+}
+
 isl::checked::schedule_node schedule::root() const
 {
   auto res = isl_schedule_get_root(get());
@@ -9160,12 +14599,6 @@ isl::checked::schedule_node schedule::root() const
 isl::checked::schedule_node schedule::get_root() const
 {
   return root();
-}
-
-isl::checked::schedule schedule::pullback(isl::checked::union_pw_multi_aff upma) const
-{
-  auto res = isl_schedule_pullback_union_pw_multi_aff(copy(), upma.release());
-  return manage(res);
 }
 
 inline std::ostream &operator<<(std::ostream &os, const schedule &obj)
@@ -9239,12 +14672,6 @@ isl::checked::ctx schedule_constraints::ctx() const {
   return isl::checked::ctx(isl_schedule_constraints_get_ctx(ptr));
 }
 
-isl::checked::schedule schedule_constraints::compute_schedule() const
-{
-  auto res = isl_schedule_constraints_compute_schedule(copy());
-  return manage(res);
-}
-
 isl::checked::union_map schedule_constraints::coincidence() const
 {
   auto res = isl_schedule_constraints_get_coincidence(get());
@@ -9254,6 +14681,12 @@ isl::checked::union_map schedule_constraints::coincidence() const
 isl::checked::union_map schedule_constraints::get_coincidence() const
 {
   return coincidence();
+}
+
+isl::checked::schedule schedule_constraints::compute_schedule() const
+{
+  auto res = isl_schedule_constraints_compute_schedule(copy());
+  return manage(res);
 }
 
 isl::checked::union_map schedule_constraints::conditional_validity() const
@@ -9300,6 +14733,12 @@ isl::checked::union_set schedule_constraints::get_domain() const
   return domain();
 }
 
+isl::checked::schedule_constraints schedule_constraints::on_domain(isl::checked::union_set domain)
+{
+  auto res = isl_schedule_constraints_on_domain(domain.release());
+  return manage(res);
+}
+
 isl::checked::union_map schedule_constraints::proximity() const
 {
   auto res = isl_schedule_constraints_get_proximity(get());
@@ -9309,23 +14748,6 @@ isl::checked::union_map schedule_constraints::proximity() const
 isl::checked::union_map schedule_constraints::get_proximity() const
 {
   return proximity();
-}
-
-isl::checked::union_map schedule_constraints::validity() const
-{
-  auto res = isl_schedule_constraints_get_validity(get());
-  return manage(res);
-}
-
-isl::checked::union_map schedule_constraints::get_validity() const
-{
-  return validity();
-}
-
-isl::checked::schedule_constraints schedule_constraints::on_domain(isl::checked::union_set domain)
-{
-  auto res = isl_schedule_constraints_on_domain(domain.release());
-  return manage(res);
 }
 
 isl::checked::schedule_constraints schedule_constraints::set_coincidence(isl::checked::union_map coincidence) const
@@ -9356,6 +14778,17 @@ isl::checked::schedule_constraints schedule_constraints::set_validity(isl::check
 {
   auto res = isl_schedule_constraints_set_validity(copy(), validity.release());
   return manage(res);
+}
+
+isl::checked::union_map schedule_constraints::validity() const
+{
+  auto res = isl_schedule_constraints_get_validity(get());
+  return manage(res);
+}
+
+isl::checked::union_map schedule_constraints::get_validity() const
+{
+  return validity();
 }
 
 inline std::ostream &operator<<(std::ostream &os, const schedule_constraints &obj)
@@ -9449,10 +14882,32 @@ isl::checked::schedule_node schedule_node::ancestor(int generation) const
   return manage(res);
 }
 
+class size schedule_node::ancestor_child_position(const isl::checked::schedule_node &ancestor) const
+{
+  auto res = isl_schedule_node_get_ancestor_child_position(get(), ancestor.get());
+  return manage(res);
+}
+
+class size schedule_node::get_ancestor_child_position(const isl::checked::schedule_node &ancestor) const
+{
+  return ancestor_child_position(ancestor);
+}
+
 isl::checked::schedule_node schedule_node::child(int pos) const
 {
   auto res = isl_schedule_node_child(copy(), pos);
   return manage(res);
+}
+
+class size schedule_node::child_position() const
+{
+  auto res = isl_schedule_node_get_child_position(get());
+  return manage(res);
+}
+
+class size schedule_node::get_child_position() const
+{
+  return child_position();
 }
 
 boolean schedule_node::every_descendant(const std::function<boolean(isl::checked::schedule_node)> &test) const
@@ -9513,94 +14968,6 @@ isl::checked::schedule_node schedule_node::from_extension(isl::checked::union_ma
 {
   auto res = isl_schedule_node_from_extension(extension.release());
   return manage(res);
-}
-
-class size schedule_node::ancestor_child_position(const isl::checked::schedule_node &ancestor) const
-{
-  auto res = isl_schedule_node_get_ancestor_child_position(get(), ancestor.get());
-  return manage(res);
-}
-
-class size schedule_node::get_ancestor_child_position(const isl::checked::schedule_node &ancestor) const
-{
-  return ancestor_child_position(ancestor);
-}
-
-class size schedule_node::child_position() const
-{
-  auto res = isl_schedule_node_get_child_position(get());
-  return manage(res);
-}
-
-class size schedule_node::get_child_position() const
-{
-  return child_position();
-}
-
-isl::checked::multi_union_pw_aff schedule_node::prefix_schedule_multi_union_pw_aff() const
-{
-  auto res = isl_schedule_node_get_prefix_schedule_multi_union_pw_aff(get());
-  return manage(res);
-}
-
-isl::checked::multi_union_pw_aff schedule_node::get_prefix_schedule_multi_union_pw_aff() const
-{
-  return prefix_schedule_multi_union_pw_aff();
-}
-
-isl::checked::union_map schedule_node::prefix_schedule_union_map() const
-{
-  auto res = isl_schedule_node_get_prefix_schedule_union_map(get());
-  return manage(res);
-}
-
-isl::checked::union_map schedule_node::get_prefix_schedule_union_map() const
-{
-  return prefix_schedule_union_map();
-}
-
-isl::checked::union_pw_multi_aff schedule_node::prefix_schedule_union_pw_multi_aff() const
-{
-  auto res = isl_schedule_node_get_prefix_schedule_union_pw_multi_aff(get());
-  return manage(res);
-}
-
-isl::checked::union_pw_multi_aff schedule_node::get_prefix_schedule_union_pw_multi_aff() const
-{
-  return prefix_schedule_union_pw_multi_aff();
-}
-
-isl::checked::schedule schedule_node::schedule() const
-{
-  auto res = isl_schedule_node_get_schedule(get());
-  return manage(res);
-}
-
-isl::checked::schedule schedule_node::get_schedule() const
-{
-  return schedule();
-}
-
-isl::checked::schedule_node schedule_node::shared_ancestor(const isl::checked::schedule_node &node2) const
-{
-  auto res = isl_schedule_node_get_shared_ancestor(get(), node2.get());
-  return manage(res);
-}
-
-isl::checked::schedule_node schedule_node::get_shared_ancestor(const isl::checked::schedule_node &node2) const
-{
-  return shared_ancestor(node2);
-}
-
-class size schedule_node::tree_depth() const
-{
-  auto res = isl_schedule_node_get_tree_depth(get());
-  return manage(res);
-}
-
-class size schedule_node::get_tree_depth() const
-{
-  return tree_depth();
 }
 
 isl::checked::schedule_node schedule_node::graft_after(isl::checked::schedule_node graft) const
@@ -9742,6 +15109,39 @@ isl::checked::schedule_node schedule_node::parent() const
   return manage(res);
 }
 
+isl::checked::multi_union_pw_aff schedule_node::prefix_schedule_multi_union_pw_aff() const
+{
+  auto res = isl_schedule_node_get_prefix_schedule_multi_union_pw_aff(get());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff schedule_node::get_prefix_schedule_multi_union_pw_aff() const
+{
+  return prefix_schedule_multi_union_pw_aff();
+}
+
+isl::checked::union_map schedule_node::prefix_schedule_union_map() const
+{
+  auto res = isl_schedule_node_get_prefix_schedule_union_map(get());
+  return manage(res);
+}
+
+isl::checked::union_map schedule_node::get_prefix_schedule_union_map() const
+{
+  return prefix_schedule_union_map();
+}
+
+isl::checked::union_pw_multi_aff schedule_node::prefix_schedule_union_pw_multi_aff() const
+{
+  auto res = isl_schedule_node_get_prefix_schedule_union_pw_multi_aff(get());
+  return manage(res);
+}
+
+isl::checked::union_pw_multi_aff schedule_node::get_prefix_schedule_union_pw_multi_aff() const
+{
+  return prefix_schedule_union_pw_multi_aff();
+}
+
 isl::checked::schedule_node schedule_node::previous_sibling() const
 {
   auto res = isl_schedule_node_previous_sibling(copy());
@@ -9752,6 +15152,39 @@ isl::checked::schedule_node schedule_node::root() const
 {
   auto res = isl_schedule_node_root(copy());
   return manage(res);
+}
+
+isl::checked::schedule schedule_node::schedule() const
+{
+  auto res = isl_schedule_node_get_schedule(get());
+  return manage(res);
+}
+
+isl::checked::schedule schedule_node::get_schedule() const
+{
+  return schedule();
+}
+
+isl::checked::schedule_node schedule_node::shared_ancestor(const isl::checked::schedule_node &node2) const
+{
+  auto res = isl_schedule_node_get_shared_ancestor(get(), node2.get());
+  return manage(res);
+}
+
+isl::checked::schedule_node schedule_node::get_shared_ancestor(const isl::checked::schedule_node &node2) const
+{
+  return shared_ancestor(node2);
+}
+
+class size schedule_node::tree_depth() const
+{
+  auto res = isl_schedule_node_get_tree_depth(get());
+  return manage(res);
+}
+
+class size schedule_node::get_tree_depth() const
+{
+  return tree_depth();
 }
 
 inline std::ostream &operator<<(std::ostream &os, const schedule_node &obj)
@@ -9809,28 +15242,6 @@ isl::checked::set schedule_node_band::get_ast_isolate_option() const
   return ast_isolate_option();
 }
 
-isl::checked::multi_union_pw_aff schedule_node_band::partial_schedule() const
-{
-  auto res = isl_schedule_node_band_get_partial_schedule(get());
-  return manage(res);
-}
-
-isl::checked::multi_union_pw_aff schedule_node_band::get_partial_schedule() const
-{
-  return partial_schedule();
-}
-
-boolean schedule_node_band::permutable() const
-{
-  auto res = isl_schedule_node_band_get_permutable(get());
-  return manage(res);
-}
-
-boolean schedule_node_band::get_permutable() const
-{
-  return permutable();
-}
-
 boolean schedule_node_band::member_get_coincident(int pos) const
 {
   auto res = isl_schedule_node_band_member_get_coincident(get(), pos);
@@ -9853,6 +15264,28 @@ class size schedule_node_band::n_member() const
 {
   auto res = isl_schedule_node_band_n_member(get());
   return manage(res);
+}
+
+isl::checked::multi_union_pw_aff schedule_node_band::partial_schedule() const
+{
+  auto res = isl_schedule_node_band_get_partial_schedule(get());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff schedule_node_band::get_partial_schedule() const
+{
+  return partial_schedule();
+}
+
+boolean schedule_node_band::permutable() const
+{
+  auto res = isl_schedule_node_band_get_permutable(get());
+  return manage(res);
+}
+
+boolean schedule_node_band::get_permutable() const
+{
+  return permutable();
 }
 
 schedule_node_band schedule_node_band::scale(isl::checked::multi_val mv) const
@@ -10423,6 +15856,27 @@ isl::checked::set set::apply(isl::checked::map map) const
   return manage(res);
 }
 
+isl::checked::union_set set::apply(const isl::checked::union_map &umap) const
+{
+  return isl::checked::union_set(*this).apply(umap);
+}
+
+isl::checked::set set::apply(const isl::checked::basic_map &map) const
+{
+  return this->apply(isl::checked::map(map));
+}
+
+isl::checked::pw_multi_aff set::as_pw_multi_aff() const
+{
+  auto res = isl_set_as_pw_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::set set::as_set() const
+{
+  return isl::checked::union_set(*this).as_set();
+}
+
 isl::checked::set set::bind(isl::checked::multi_id tuple) const
 {
   auto res = isl_set_bind(copy(), tuple.release());
@@ -10439,6 +15893,11 @@ isl::checked::set set::complement() const
 {
   auto res = isl_set_complement(copy());
   return manage(res);
+}
+
+isl::checked::union_set set::compute_divs() const
+{
+  return isl::checked::union_set(*this).compute_divs();
 }
 
 isl::checked::set set::detect_equalities() const
@@ -10463,6 +15922,16 @@ isl::checked::set set::empty(isl::checked::space space)
 {
   auto res = isl_set_empty(space.release());
   return manage(res);
+}
+
+boolean set::every_set(const std::function<boolean(isl::checked::set)> &test) const
+{
+  return isl::checked::union_set(*this).every_set(test);
+}
+
+isl::checked::set set::extract_set(const isl::checked::space &space) const
+{
+  return isl::checked::union_set(*this).extract_set(space);
 }
 
 isl::checked::set set::flatten() const
@@ -10499,54 +15968,35 @@ stat set::foreach_point(const std::function<stat(isl::checked::point)> &fn) cons
   return manage(res);
 }
 
-isl::checked::multi_val set::plain_multi_val_if_fixed() const
+stat set::foreach_set(const std::function<stat(isl::checked::set)> &fn) const
 {
-  auto res = isl_set_get_plain_multi_val_if_fixed(get());
-  return manage(res);
-}
-
-isl::checked::multi_val set::get_plain_multi_val_if_fixed() const
-{
-  return plain_multi_val_if_fixed();
-}
-
-isl::checked::fixed_box set::simple_fixed_box_hull() const
-{
-  auto res = isl_set_get_simple_fixed_box_hull(get());
-  return manage(res);
-}
-
-isl::checked::fixed_box set::get_simple_fixed_box_hull() const
-{
-  return simple_fixed_box_hull();
-}
-
-isl::checked::space set::space() const
-{
-  auto res = isl_set_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space set::get_space() const
-{
-  return space();
-}
-
-isl::checked::val set::stride(int pos) const
-{
-  auto res = isl_set_get_stride(get(), pos);
-  return manage(res);
-}
-
-isl::checked::val set::get_stride(int pos) const
-{
-  return stride(pos);
+  return isl::checked::union_set(*this).foreach_set(fn);
 }
 
 isl::checked::set set::gist(isl::checked::set context) const
 {
   auto res = isl_set_gist(copy(), context.release());
   return manage(res);
+}
+
+isl::checked::union_set set::gist(const isl::checked::union_set &context) const
+{
+  return isl::checked::union_set(*this).gist(context);
+}
+
+isl::checked::set set::gist(const isl::checked::basic_set &context) const
+{
+  return this->gist(isl::checked::set(context));
+}
+
+isl::checked::set set::gist(const isl::checked::point &context) const
+{
+  return this->gist(isl::checked::set(context));
+}
+
+isl::checked::union_set set::gist_params(const isl::checked::set &set) const
+{
+  return isl::checked::union_set(*this).gist_params(set);
 }
 
 isl::checked::map set::identity() const
@@ -10573,6 +16023,21 @@ isl::checked::set set::intersect(isl::checked::set set2) const
   return manage(res);
 }
 
+isl::checked::union_set set::intersect(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::union_set(*this).intersect(uset2);
+}
+
+isl::checked::set set::intersect(const isl::checked::basic_set &set2) const
+{
+  return this->intersect(isl::checked::set(set2));
+}
+
+isl::checked::set set::intersect(const isl::checked::point &set2) const
+{
+  return this->intersect(isl::checked::set(set2));
+}
+
 isl::checked::set set::intersect_params(isl::checked::set params) const
 {
   auto res = isl_set_intersect_params(copy(), params.release());
@@ -10591,6 +16056,21 @@ boolean set::is_disjoint(const isl::checked::set &set2) const
   return manage(res);
 }
 
+boolean set::is_disjoint(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::union_set(*this).is_disjoint(uset2);
+}
+
+boolean set::is_disjoint(const isl::checked::basic_set &set2) const
+{
+  return this->is_disjoint(isl::checked::set(set2));
+}
+
+boolean set::is_disjoint(const isl::checked::point &set2) const
+{
+  return this->is_disjoint(isl::checked::set(set2));
+}
+
 boolean set::is_empty() const
 {
   auto res = isl_set_is_empty(get());
@@ -10601,6 +16081,21 @@ boolean set::is_equal(const isl::checked::set &set2) const
 {
   auto res = isl_set_is_equal(get(), set2.get());
   return manage(res);
+}
+
+boolean set::is_equal(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::union_set(*this).is_equal(uset2);
+}
+
+boolean set::is_equal(const isl::checked::basic_set &set2) const
+{
+  return this->is_equal(isl::checked::set(set2));
+}
+
+boolean set::is_equal(const isl::checked::point &set2) const
+{
+  return this->is_equal(isl::checked::set(set2));
 }
 
 boolean set::is_singleton() const
@@ -10615,16 +16110,51 @@ boolean set::is_strict_subset(const isl::checked::set &set2) const
   return manage(res);
 }
 
+boolean set::is_strict_subset(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::union_set(*this).is_strict_subset(uset2);
+}
+
+boolean set::is_strict_subset(const isl::checked::basic_set &set2) const
+{
+  return this->is_strict_subset(isl::checked::set(set2));
+}
+
+boolean set::is_strict_subset(const isl::checked::point &set2) const
+{
+  return this->is_strict_subset(isl::checked::set(set2));
+}
+
 boolean set::is_subset(const isl::checked::set &set2) const
 {
   auto res = isl_set_is_subset(get(), set2.get());
   return manage(res);
 }
 
+boolean set::is_subset(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::union_set(*this).is_subset(uset2);
+}
+
+boolean set::is_subset(const isl::checked::basic_set &set2) const
+{
+  return this->is_subset(isl::checked::set(set2));
+}
+
+boolean set::is_subset(const isl::checked::point &set2) const
+{
+  return this->is_subset(isl::checked::set(set2));
+}
+
 boolean set::is_wrapping() const
 {
   auto res = isl_set_is_wrapping(get());
   return manage(res);
+}
+
+boolean set::isa_set() const
+{
+  return isl::checked::union_set(*this).isa_set();
 }
 
 isl::checked::set set::lexmax() const
@@ -10693,6 +16223,17 @@ isl::checked::set set::params() const
   return manage(res);
 }
 
+isl::checked::multi_val set::plain_multi_val_if_fixed() const
+{
+  auto res = isl_set_get_plain_multi_val_if_fixed(get());
+  return manage(res);
+}
+
+isl::checked::multi_val set::get_plain_multi_val_if_fixed() const
+{
+  return plain_multi_val_if_fixed();
+}
+
 isl::checked::basic_set set::polyhedral_hull() const
 {
   auto res = isl_set_polyhedral_hull(copy());
@@ -10715,6 +16256,11 @@ isl::checked::set set::preimage(isl::checked::pw_multi_aff pma) const
 {
   auto res = isl_set_preimage_pw_multi_aff(copy(), pma.release());
   return manage(res);
+}
+
+isl::checked::union_set set::preimage(const isl::checked::union_pw_multi_aff &upma) const
+{
+  return isl::checked::union_set(*this).preimage(upma);
 }
 
 isl::checked::set set::product(isl::checked::set set2) const
@@ -10746,6 +16292,12 @@ isl::checked::set set::project_out_param(isl::checked::id_list list) const
   return manage(res);
 }
 
+isl::checked::pw_multi_aff set::pw_multi_aff_on_domain(isl::checked::multi_val mv) const
+{
+  auto res = isl_set_pw_multi_aff_on_domain_multi_val(copy(), mv.release());
+  return manage(res);
+}
+
 isl::checked::basic_set set::sample() const
 {
   auto res = isl_set_sample(copy());
@@ -10758,15 +16310,86 @@ isl::checked::point set::sample_point() const
   return manage(res);
 }
 
+isl::checked::set_list set::set_list() const
+{
+  return isl::checked::union_set(*this).set_list();
+}
+
+isl::checked::fixed_box set::simple_fixed_box_hull() const
+{
+  auto res = isl_set_get_simple_fixed_box_hull(get());
+  return manage(res);
+}
+
+isl::checked::fixed_box set::get_simple_fixed_box_hull() const
+{
+  return simple_fixed_box_hull();
+}
+
+isl::checked::space set::space() const
+{
+  auto res = isl_set_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space set::get_space() const
+{
+  return space();
+}
+
+isl::checked::val set::stride(int pos) const
+{
+  auto res = isl_set_get_stride(get(), pos);
+  return manage(res);
+}
+
+isl::checked::val set::get_stride(int pos) const
+{
+  return stride(pos);
+}
+
 isl::checked::set set::subtract(isl::checked::set set2) const
 {
   auto res = isl_set_subtract(copy(), set2.release());
   return manage(res);
 }
 
+isl::checked::union_set set::subtract(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::union_set(*this).subtract(uset2);
+}
+
+isl::checked::set set::subtract(const isl::checked::basic_set &set2) const
+{
+  return this->subtract(isl::checked::set(set2));
+}
+
+isl::checked::set set::subtract(const isl::checked::point &set2) const
+{
+  return this->subtract(isl::checked::set(set2));
+}
+
+isl::checked::set_list set::to_list() const
+{
+  auto res = isl_set_to_list(copy());
+  return manage(res);
+}
+
+isl::checked::union_set set::to_union_set() const
+{
+  auto res = isl_set_to_union_set(copy());
+  return manage(res);
+}
+
 isl::checked::map set::translation() const
 {
   auto res = isl_set_translation(copy());
+  return manage(res);
+}
+
+class size set::tuple_dim() const
+{
+  auto res = isl_set_tuple_dim(get());
   return manage(res);
 }
 
@@ -10786,6 +16409,21 @@ isl::checked::set set::unite(isl::checked::set set2) const
 {
   auto res = isl_set_union(copy(), set2.release());
   return manage(res);
+}
+
+isl::checked::union_set set::unite(const isl::checked::union_set &uset2) const
+{
+  return isl::checked::union_set(*this).unite(uset2);
+}
+
+isl::checked::set set::unite(const isl::checked::basic_set &set2) const
+{
+  return this->unite(isl::checked::set(set2));
+}
+
+isl::checked::set set::unite(const isl::checked::point &set2) const
+{
+  return this->unite(isl::checked::set(set2));
 }
 
 isl::checked::set set::universe(isl::checked::space space)
@@ -10821,6 +16459,150 @@ isl::checked::set set::upper_bound(isl::checked::multi_val upper) const
 inline std::ostream &operator<<(std::ostream &os, const set &obj)
 {
   char *str = isl_set_to_str(obj.get());
+  if (!str) {
+    os.setstate(std::ios_base::badbit);
+    return os;
+  }
+  os << str;
+  free(str);
+  return os;
+}
+
+// implementations for isl::set_list
+set_list manage(__isl_take isl_set_list *ptr) {
+  return set_list(ptr);
+}
+set_list manage_copy(__isl_keep isl_set_list *ptr) {
+  ptr = isl_set_list_copy(ptr);
+  return set_list(ptr);
+}
+
+set_list::set_list()
+    : ptr(nullptr) {}
+
+set_list::set_list(const set_list &obj)
+    : ptr(nullptr)
+{
+  ptr = obj.copy();
+}
+
+set_list::set_list(__isl_take isl_set_list *ptr)
+    : ptr(ptr) {}
+
+set_list::set_list(isl::checked::ctx ctx, int n)
+{
+  auto res = isl_set_list_alloc(ctx.release(), n);
+  ptr = res;
+}
+
+set_list::set_list(isl::checked::set el)
+{
+  auto res = isl_set_list_from_set(el.release());
+  ptr = res;
+}
+
+set_list::set_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_set_list_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
+set_list &set_list::operator=(set_list obj) {
+  std::swap(this->ptr, obj.ptr);
+  return *this;
+}
+
+set_list::~set_list() {
+  if (ptr)
+    isl_set_list_free(ptr);
+}
+
+__isl_give isl_set_list *set_list::copy() const & {
+  return isl_set_list_copy(ptr);
+}
+
+__isl_keep isl_set_list *set_list::get() const {
+  return ptr;
+}
+
+__isl_give isl_set_list *set_list::release() {
+  isl_set_list *tmp = ptr;
+  ptr = nullptr;
+  return tmp;
+}
+
+bool set_list::is_null() const {
+  return ptr == nullptr;
+}
+
+isl::checked::ctx set_list::ctx() const {
+  return isl::checked::ctx(isl_set_list_get_ctx(ptr));
+}
+
+isl::checked::set_list set_list::add(isl::checked::set el) const
+{
+  auto res = isl_set_list_add(copy(), el.release());
+  return manage(res);
+}
+
+isl::checked::set set_list::at(int index) const
+{
+  auto res = isl_set_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::set set_list::get_at(int index) const
+{
+  return at(index);
+}
+
+isl::checked::set_list set_list::clear() const
+{
+  auto res = isl_set_list_clear(copy());
+  return manage(res);
+}
+
+isl::checked::set_list set_list::concat(isl::checked::set_list list2) const
+{
+  auto res = isl_set_list_concat(copy(), list2.release());
+  return manage(res);
+}
+
+isl::checked::set_list set_list::drop(unsigned int first, unsigned int n) const
+{
+  auto res = isl_set_list_drop(copy(), first, n);
+  return manage(res);
+}
+
+stat set_list::foreach(const std::function<stat(isl::checked::set)> &fn) const
+{
+  struct fn_data {
+    std::function<stat(isl::checked::set)> func;
+  } fn_data = { fn };
+  auto fn_lambda = [](isl_set *arg_0, void *arg_1) -> isl_stat {
+    auto *data = static_cast<struct fn_data *>(arg_1);
+    auto ret = (data->func)(manage(arg_0));
+    return ret.release();
+  };
+  auto res = isl_set_list_foreach(get(), fn_lambda, &fn_data);
+  return manage(res);
+}
+
+isl::checked::set_list set_list::insert(unsigned int pos, isl::checked::set el) const
+{
+  auto res = isl_set_list_insert(copy(), pos, el.release());
+  return manage(res);
+}
+
+class size set_list::size() const
+{
+  auto res = isl_set_list_size(get());
+  return manage(res);
+}
+
+inline std::ostream &operator<<(std::ostream &os, const set_list &obj)
+{
+  char *str = isl_set_list_to_str(obj.get());
   if (!str) {
     os.setstate(std::ios_base::badbit);
     return os;
@@ -10894,6 +16676,17 @@ isl::checked::space space::add_named_tuple(const std::string &tuple_id, unsigned
   return this->add_named_tuple(isl::checked::id(ctx(), tuple_id), dim);
 }
 
+isl::checked::space space::add_param(isl::checked::id id) const
+{
+  auto res = isl_space_add_param_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::space space::add_param(const std::string &id) const
+{
+  return this->add_param(isl::checked::id(ctx(), id));
+}
+
 isl::checked::space space::add_unnamed_tuple(unsigned int dim) const
 {
   auto res = isl_space_add_unnamed_tuple_ui(copy(), dim);
@@ -10912,6 +16705,29 @@ isl::checked::space space::domain() const
   return manage(res);
 }
 
+isl::checked::multi_aff space::domain_map_multi_aff() const
+{
+  auto res = isl_space_domain_map_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff space::domain_map_pw_multi_aff() const
+{
+  auto res = isl_space_domain_map_pw_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::id space::domain_tuple_id() const
+{
+  auto res = isl_space_get_domain_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id space::get_domain_tuple_id() const
+{
+  return domain_tuple_id();
+}
+
 isl::checked::space space::flatten_domain() const
 {
   auto res = isl_space_flatten_domain(copy());
@@ -10921,6 +16737,36 @@ isl::checked::space space::flatten_domain() const
 isl::checked::space space::flatten_range() const
 {
   auto res = isl_space_flatten_range(copy());
+  return manage(res);
+}
+
+boolean space::has_domain_tuple_id() const
+{
+  auto res = isl_space_has_domain_tuple_id(get());
+  return manage(res);
+}
+
+boolean space::has_range_tuple_id() const
+{
+  auto res = isl_space_has_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::multi_aff space::identity_multi_aff_on_domain() const
+{
+  auto res = isl_space_identity_multi_aff_on_domain(copy());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff space::identity_multi_pw_aff_on_domain() const
+{
+  auto res = isl_space_identity_multi_pw_aff_on_domain(copy());
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff space::identity_pw_multi_aff_on_domain() const
+{
+  auto res = isl_space_identity_pw_multi_aff_on_domain(copy());
   return manage(res);
 }
 
@@ -10942,6 +16788,53 @@ isl::checked::space space::map_from_set() const
   return manage(res);
 }
 
+isl::checked::multi_aff space::multi_aff(isl::checked::aff_list list) const
+{
+  auto res = isl_space_multi_aff(copy(), list.release());
+  return manage(res);
+}
+
+isl::checked::multi_aff space::multi_aff_on_domain(isl::checked::multi_val mv) const
+{
+  auto res = isl_space_multi_aff_on_domain_multi_val(copy(), mv.release());
+  return manage(res);
+}
+
+isl::checked::multi_id space::multi_id(isl::checked::id_list list) const
+{
+  auto res = isl_space_multi_id(copy(), list.release());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff space::multi_pw_aff(isl::checked::pw_aff_list list) const
+{
+  auto res = isl_space_multi_pw_aff(copy(), list.release());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff space::multi_union_pw_aff(isl::checked::union_pw_aff_list list) const
+{
+  auto res = isl_space_multi_union_pw_aff(copy(), list.release());
+  return manage(res);
+}
+
+isl::checked::multi_val space::multi_val(isl::checked::val_list list) const
+{
+  auto res = isl_space_multi_val(copy(), list.release());
+  return manage(res);
+}
+
+isl::checked::aff space::param_aff_on_domain(isl::checked::id id) const
+{
+  auto res = isl_space_param_aff_on_domain_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::aff space::param_aff_on_domain(const std::string &id) const
+{
+  return this->param_aff_on_domain(isl::checked::id(ctx(), id));
+}
+
 isl::checked::space space::params() const
 {
   auto res = isl_space_params(copy());
@@ -10960,16 +16853,61 @@ isl::checked::space space::range() const
   return manage(res);
 }
 
+isl::checked::multi_aff space::range_map_multi_aff() const
+{
+  auto res = isl_space_range_map_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff space::range_map_pw_multi_aff() const
+{
+  auto res = isl_space_range_map_pw_multi_aff(copy());
+  return manage(res);
+}
+
 isl::checked::space space::range_reverse() const
 {
   auto res = isl_space_range_reverse(copy());
   return manage(res);
 }
 
+isl::checked::id space::range_tuple_id() const
+{
+  auto res = isl_space_get_range_tuple_id(get());
+  return manage(res);
+}
+
+isl::checked::id space::get_range_tuple_id() const
+{
+  return range_tuple_id();
+}
+
 isl::checked::space space::reverse() const
 {
   auto res = isl_space_reverse(copy());
   return manage(res);
+}
+
+isl::checked::space space::set_domain_tuple(isl::checked::id id) const
+{
+  auto res = isl_space_set_domain_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::space space::set_domain_tuple(const std::string &id) const
+{
+  return this->set_domain_tuple(isl::checked::id(ctx(), id));
+}
+
+isl::checked::space space::set_range_tuple(isl::checked::id id) const
+{
+  auto res = isl_space_set_range_tuple_id(copy(), id.release());
+  return manage(res);
+}
+
+isl::checked::space space::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
 }
 
 isl::checked::space space::uncurry() const
@@ -10984,6 +16922,18 @@ isl::checked::space space::unit(isl::checked::ctx ctx)
   return manage(res);
 }
 
+isl::checked::map space::universe_map() const
+{
+  auto res = isl_space_universe_map(copy());
+  return manage(res);
+}
+
+isl::checked::set space::universe_set() const
+{
+  auto res = isl_space_universe_set(copy());
+  return manage(res);
+}
+
 isl::checked::space space::unwrap() const
 {
   auto res = isl_space_unwrap(copy());
@@ -10993,6 +16943,36 @@ isl::checked::space space::unwrap() const
 isl::checked::space space::wrap() const
 {
   auto res = isl_space_wrap(copy());
+  return manage(res);
+}
+
+isl::checked::aff space::zero_aff_on_domain() const
+{
+  auto res = isl_space_zero_aff_on_domain(copy());
+  return manage(res);
+}
+
+isl::checked::multi_aff space::zero_multi_aff() const
+{
+  auto res = isl_space_zero_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::multi_pw_aff space::zero_multi_pw_aff() const
+{
+  auto res = isl_space_zero_multi_pw_aff(copy());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff space::zero_multi_union_pw_aff() const
+{
+  auto res = isl_space_zero_multi_union_pw_aff(copy());
+  return manage(res);
+}
+
+isl::checked::multi_val space::zero_multi_val() const
+{
+  auto res = isl_space_zero_multi_val(copy());
   return manage(res);
 }
 
@@ -11335,6 +17315,24 @@ isl::checked::union_map union_map::apply_range(isl::checked::union_map umap2) co
   return manage(res);
 }
 
+isl::checked::map union_map::as_map() const
+{
+  auto res = isl_union_map_as_map(copy());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff union_map::as_multi_union_pw_aff() const
+{
+  auto res = isl_union_map_as_multi_union_pw_aff(copy());
+  return manage(res);
+}
+
+isl::checked::union_pw_multi_aff union_map::as_union_pw_multi_aff() const
+{
+  auto res = isl_union_map_as_union_pw_multi_aff(copy());
+  return manage(res);
+}
+
 isl::checked::union_set union_map::bind_range(isl::checked::multi_id tuple) const
 {
   auto res = isl_union_map_bind_range(copy(), tuple.release());
@@ -11506,17 +17504,6 @@ isl::checked::union_map union_map::from_range(isl::checked::union_set uset)
   return manage(res);
 }
 
-isl::checked::space union_map::space() const
-{
-  auto res = isl_union_map_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space union_map::get_space() const
-{
-  return space();
-}
-
 isl::checked::union_map union_map::gist(isl::checked::union_map context) const
 {
   auto res = isl_union_map_gist(copy(), context.release());
@@ -11667,6 +17654,17 @@ isl::checked::union_map union_map::lexmin() const
   return manage(res);
 }
 
+isl::checked::map_list union_map::map_list() const
+{
+  auto res = isl_union_map_get_map_list(get());
+  return manage(res);
+}
+
+isl::checked::map_list union_map::get_map_list() const
+{
+  return map_list();
+}
+
 isl::checked::union_map union_map::polyhedral_hull() const
 {
   auto res = isl_union_map_polyhedral_hull(copy());
@@ -11767,6 +17765,17 @@ isl::checked::union_map union_map::reverse() const
 {
   auto res = isl_union_map_reverse(copy());
   return manage(res);
+}
+
+isl::checked::space union_map::space() const
+{
+  auto res = isl_union_map_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space union_map::get_space() const
+{
+  return space();
 }
 
 isl::checked::union_map union_map::subtract(isl::checked::union_map umap2) const
@@ -11900,10 +17909,60 @@ isl::checked::ctx union_pw_aff::ctx() const {
   return isl::checked::ctx(isl_union_pw_aff_get_ctx(ptr));
 }
 
+isl::checked::multi_union_pw_aff union_pw_aff::add(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).add(multi2);
+}
+
 isl::checked::union_pw_aff union_pw_aff::add(isl::checked::union_pw_aff upa2) const
 {
   auto res = isl_union_pw_aff_add(copy(), upa2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).add(upma2);
+}
+
+isl::checked::union_pw_aff union_pw_aff::add(const isl::checked::aff &upa2) const
+{
+  return this->add(isl::checked::union_pw_aff(upa2));
+}
+
+isl::checked::union_pw_aff union_pw_aff::add(const isl::checked::pw_aff &upa2) const
+{
+  return this->add(isl::checked::union_pw_aff(upa2));
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::apply(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).apply(upma2);
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::as_multi_union_pw_aff() const
+{
+  return isl::checked::union_pw_multi_aff(*this).as_multi_union_pw_aff();
+}
+
+isl::checked::pw_multi_aff union_pw_aff::as_pw_multi_aff() const
+{
+  return isl::checked::union_pw_multi_aff(*this).as_pw_multi_aff();
+}
+
+isl::checked::union_map union_pw_aff::as_union_map() const
+{
+  return isl::checked::union_pw_multi_aff(*this).as_union_map();
+}
+
+isl::checked::union_pw_aff union_pw_aff::at(int pos) const
+{
+  return isl::checked::multi_union_pw_aff(*this).at(pos);
+}
+
+isl::checked::union_set union_pw_aff::bind(const isl::checked::multi_id &tuple) const
+{
+  return isl::checked::multi_union_pw_aff(*this).bind(tuple);
 }
 
 isl::checked::union_set union_pw_aff::bind(isl::checked::id id) const
@@ -11929,21 +17988,30 @@ isl::checked::union_set union_pw_aff::domain() const
   return manage(res);
 }
 
-isl::checked::space union_pw_aff::space() const
+isl::checked::pw_multi_aff union_pw_aff::extract_pw_multi_aff(const isl::checked::space &space) const
 {
-  auto res = isl_union_pw_aff_get_space(get());
-  return manage(res);
+  return isl::checked::union_pw_multi_aff(*this).extract_pw_multi_aff(space);
 }
 
-isl::checked::space union_pw_aff::get_space() const
+isl::checked::multi_union_pw_aff union_pw_aff::flat_range_product(const isl::checked::multi_union_pw_aff &multi2) const
 {
-  return space();
+  return isl::checked::multi_union_pw_aff(*this).flat_range_product(multi2);
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::flat_range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).flat_range_product(upma2);
 }
 
 isl::checked::union_pw_aff union_pw_aff::gist(isl::checked::union_set context) const
 {
   auto res = isl_union_pw_aff_gist(copy(), context.release());
   return manage(res);
+}
+
+boolean union_pw_aff::has_range_tuple_id() const
+{
+  return isl::checked::multi_union_pw_aff(*this).has_range_tuple_id();
 }
 
 isl::checked::union_pw_aff union_pw_aff::intersect_domain(isl::checked::space space) const
@@ -11976,16 +18044,172 @@ isl::checked::union_pw_aff union_pw_aff::intersect_params(isl::checked::set set)
   return manage(res);
 }
 
+boolean union_pw_aff::involves_locals() const
+{
+  return isl::checked::union_pw_multi_aff(*this).involves_locals();
+}
+
+boolean union_pw_aff::involves_nan() const
+{
+  return isl::checked::multi_union_pw_aff(*this).involves_nan();
+}
+
+boolean union_pw_aff::isa_pw_multi_aff() const
+{
+  return isl::checked::union_pw_multi_aff(*this).isa_pw_multi_aff();
+}
+
+isl::checked::union_pw_aff_list union_pw_aff::list() const
+{
+  return isl::checked::multi_union_pw_aff(*this).list();
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::neg() const
+{
+  return isl::checked::multi_union_pw_aff(*this).neg();
+}
+
+boolean union_pw_aff::plain_is_empty() const
+{
+  return isl::checked::union_pw_multi_aff(*this).plain_is_empty();
+}
+
+boolean union_pw_aff::plain_is_equal(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).plain_is_equal(multi2);
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::preimage_domain_wrapped_domain(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).preimage_domain_wrapped_domain(upma2);
+}
+
 isl::checked::union_pw_aff union_pw_aff::pullback(isl::checked::union_pw_multi_aff upma) const
 {
   auto res = isl_union_pw_aff_pullback_union_pw_multi_aff(copy(), upma.release());
   return manage(res);
 }
 
+isl::checked::pw_multi_aff_list union_pw_aff::pw_multi_aff_list() const
+{
+  return isl::checked::union_pw_multi_aff(*this).pw_multi_aff_list();
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::range_factor_domain() const
+{
+  return isl::checked::union_pw_multi_aff(*this).range_factor_domain();
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::range_factor_range() const
+{
+  return isl::checked::union_pw_multi_aff(*this).range_factor_range();
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::range_product(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).range_product(multi2);
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::range_product(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).range_product(upma2);
+}
+
+isl::checked::id union_pw_aff::range_tuple_id() const
+{
+  return isl::checked::multi_union_pw_aff(*this).range_tuple_id();
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::reset_range_tuple_id() const
+{
+  return isl::checked::multi_union_pw_aff(*this).reset_range_tuple_id();
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::scale(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_union_pw_aff(*this).scale(mv);
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::scale(const isl::checked::val &v) const
+{
+  return isl::checked::multi_union_pw_aff(*this).scale(v);
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::scale(long v) const
+{
+  return this->scale(isl::checked::val(ctx(), v));
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::scale_down(const isl::checked::multi_val &mv) const
+{
+  return isl::checked::multi_union_pw_aff(*this).scale_down(mv);
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::scale_down(const isl::checked::val &v) const
+{
+  return isl::checked::multi_union_pw_aff(*this).scale_down(v);
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::scale_down(long v) const
+{
+  return this->scale_down(isl::checked::val(ctx(), v));
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::set_at(int pos, const isl::checked::union_pw_aff &el) const
+{
+  return isl::checked::multi_union_pw_aff(*this).set_at(pos, el);
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::set_range_tuple(const isl::checked::id &id) const
+{
+  return isl::checked::multi_union_pw_aff(*this).set_range_tuple(id);
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::set_range_tuple(const std::string &id) const
+{
+  return this->set_range_tuple(isl::checked::id(ctx(), id));
+}
+
+class size union_pw_aff::size() const
+{
+  return isl::checked::multi_union_pw_aff(*this).size();
+}
+
+isl::checked::space union_pw_aff::space() const
+{
+  auto res = isl_union_pw_aff_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space union_pw_aff::get_space() const
+{
+  return space();
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::sub(const isl::checked::multi_union_pw_aff &multi2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).sub(multi2);
+}
+
 isl::checked::union_pw_aff union_pw_aff::sub(isl::checked::union_pw_aff upa2) const
 {
   auto res = isl_union_pw_aff_sub(copy(), upa2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::sub(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).sub(upma2);
+}
+
+isl::checked::union_pw_aff union_pw_aff::sub(const isl::checked::aff &upa2) const
+{
+  return this->sub(isl::checked::union_pw_aff(upa2));
+}
+
+isl::checked::union_pw_aff union_pw_aff::sub(const isl::checked::pw_aff &upa2) const
+{
+  return this->sub(isl::checked::union_pw_aff(upa2));
 }
 
 isl::checked::union_pw_aff union_pw_aff::subtract_domain(isl::checked::space space) const
@@ -12000,10 +18224,36 @@ isl::checked::union_pw_aff union_pw_aff::subtract_domain(isl::checked::union_set
   return manage(res);
 }
 
+isl::checked::union_pw_aff_list union_pw_aff::to_list() const
+{
+  auto res = isl_union_pw_aff_to_list(copy());
+  return manage(res);
+}
+
+isl::checked::multi_union_pw_aff union_pw_aff::union_add(const isl::checked::multi_union_pw_aff &mupa2) const
+{
+  return isl::checked::multi_union_pw_aff(*this).union_add(mupa2);
+}
+
 isl::checked::union_pw_aff union_pw_aff::union_add(isl::checked::union_pw_aff upa2) const
 {
   auto res = isl_union_pw_aff_union_add(copy(), upa2.release());
   return manage(res);
+}
+
+isl::checked::union_pw_multi_aff union_pw_aff::union_add(const isl::checked::union_pw_multi_aff &upma2) const
+{
+  return isl::checked::union_pw_multi_aff(*this).union_add(upma2);
+}
+
+isl::checked::union_pw_aff union_pw_aff::union_add(const isl::checked::aff &upa2) const
+{
+  return this->union_add(isl::checked::union_pw_aff(upa2));
+}
+
+isl::checked::union_pw_aff union_pw_aff::union_add(const isl::checked::pw_aff &upa2) const
+{
+  return this->union_add(isl::checked::union_pw_aff(upa2));
 }
 
 inline std::ostream &operator<<(std::ostream &os, const union_pw_aff &obj)
@@ -12051,6 +18301,12 @@ union_pw_aff_list::union_pw_aff_list(isl::checked::union_pw_aff el)
   ptr = res;
 }
 
+union_pw_aff_list::union_pw_aff_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_union_pw_aff_list_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
 union_pw_aff_list &union_pw_aff_list::operator=(union_pw_aff_list obj) {
   std::swap(this->ptr, obj.ptr);
   return *this;
@@ -12089,6 +18345,17 @@ isl::checked::union_pw_aff_list union_pw_aff_list::add(isl::checked::union_pw_af
   return manage(res);
 }
 
+isl::checked::union_pw_aff union_pw_aff_list::at(int index) const
+{
+  auto res = isl_union_pw_aff_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::union_pw_aff union_pw_aff_list::get_at(int index) const
+{
+  return at(index);
+}
+
 isl::checked::union_pw_aff_list union_pw_aff_list::clear() const
 {
   auto res = isl_union_pw_aff_list_clear(copy());
@@ -12119,17 +18386,6 @@ stat union_pw_aff_list::foreach(const std::function<stat(isl::checked::union_pw_
   };
   auto res = isl_union_pw_aff_list_foreach(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::union_pw_aff union_pw_aff_list::at(int index) const
-{
-  auto res = isl_union_pw_aff_list_get_at(get(), index);
-  return manage(res);
-}
-
-isl::checked::union_pw_aff union_pw_aff_list::get_at(int index) const
-{
-  return at(index);
 }
 
 isl::checked::union_pw_aff_list union_pw_aff_list::insert(unsigned int pos, isl::checked::union_pw_aff el) const
@@ -12245,9 +18501,21 @@ isl::checked::union_pw_multi_aff union_pw_multi_aff::apply(isl::checked::union_p
   return manage(res);
 }
 
+isl::checked::multi_union_pw_aff union_pw_multi_aff::as_multi_union_pw_aff() const
+{
+  auto res = isl_union_pw_multi_aff_as_multi_union_pw_aff(copy());
+  return manage(res);
+}
+
 isl::checked::pw_multi_aff union_pw_multi_aff::as_pw_multi_aff() const
 {
   auto res = isl_union_pw_multi_aff_as_pw_multi_aff(copy());
+  return manage(res);
+}
+
+isl::checked::union_map union_pw_multi_aff::as_union_map() const
+{
+  auto res = isl_union_pw_multi_aff_as_union_map(copy());
   return manage(res);
 }
 
@@ -12279,17 +18547,6 @@ isl::checked::union_pw_multi_aff union_pw_multi_aff::flat_range_product(isl::che
 {
   auto res = isl_union_pw_multi_aff_flat_range_product(copy(), upma2.release());
   return manage(res);
-}
-
-isl::checked::space union_pw_multi_aff::space() const
-{
-  auto res = isl_union_pw_multi_aff_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space union_pw_multi_aff::get_space() const
-{
-  return space();
 }
 
 isl::checked::union_pw_multi_aff union_pw_multi_aff::gist(isl::checked::union_set context) const
@@ -12358,6 +18615,17 @@ isl::checked::union_pw_multi_aff union_pw_multi_aff::pullback(isl::checked::unio
   return manage(res);
 }
 
+isl::checked::pw_multi_aff_list union_pw_multi_aff::pw_multi_aff_list() const
+{
+  auto res = isl_union_pw_multi_aff_get_pw_multi_aff_list(get());
+  return manage(res);
+}
+
+isl::checked::pw_multi_aff_list union_pw_multi_aff::get_pw_multi_aff_list() const
+{
+  return pw_multi_aff_list();
+}
+
 isl::checked::union_pw_multi_aff union_pw_multi_aff::range_factor_domain() const
 {
   auto res = isl_union_pw_multi_aff_range_factor_domain(copy());
@@ -12374,6 +18642,17 @@ isl::checked::union_pw_multi_aff union_pw_multi_aff::range_product(isl::checked:
 {
   auto res = isl_union_pw_multi_aff_range_product(copy(), upma2.release());
   return manage(res);
+}
+
+isl::checked::space union_pw_multi_aff::space() const
+{
+  auto res = isl_union_pw_multi_aff_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space union_pw_multi_aff::get_space() const
+{
+  return space();
 }
 
 isl::checked::union_pw_multi_aff union_pw_multi_aff::sub(isl::checked::union_pw_multi_aff upma2) const
@@ -12501,6 +18780,12 @@ isl::checked::union_set union_set::apply(isl::checked::union_map umap) const
   return manage(res);
 }
 
+isl::checked::set union_set::as_set() const
+{
+  auto res = isl_union_set_as_set(copy());
+  return manage(res);
+}
+
 isl::checked::union_set union_set::coalesce() const
 {
   auto res = isl_union_set_coalesce(copy());
@@ -12571,17 +18856,6 @@ stat union_set::foreach_set(const std::function<stat(isl::checked::set)> &fn) co
   };
   auto res = isl_union_set_foreach_set(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::space union_set::space() const
-{
-  auto res = isl_union_set_get_space(get());
-  return manage(res);
-}
-
-isl::checked::space union_set::get_space() const
-{
-  return space();
 }
 
 isl::checked::union_set union_set::gist(isl::checked::union_set context) const
@@ -12692,9 +18966,37 @@ isl::checked::point union_set::sample_point() const
   return manage(res);
 }
 
+isl::checked::set_list union_set::set_list() const
+{
+  auto res = isl_union_set_get_set_list(get());
+  return manage(res);
+}
+
+isl::checked::set_list union_set::get_set_list() const
+{
+  return set_list();
+}
+
+isl::checked::space union_set::space() const
+{
+  auto res = isl_union_set_get_space(get());
+  return manage(res);
+}
+
+isl::checked::space union_set::get_space() const
+{
+  return space();
+}
+
 isl::checked::union_set union_set::subtract(isl::checked::union_set uset2) const
 {
   auto res = isl_union_set_subtract(copy(), uset2.release());
+  return manage(res);
+}
+
+isl::checked::union_set_list union_set::to_list() const
+{
+  auto res = isl_union_set_to_list(copy());
   return manage(res);
 }
 
@@ -12761,6 +19063,12 @@ union_set_list::union_set_list(isl::checked::union_set el)
   ptr = res;
 }
 
+union_set_list::union_set_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_union_set_list_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
 union_set_list &union_set_list::operator=(union_set_list obj) {
   std::swap(this->ptr, obj.ptr);
   return *this;
@@ -12799,6 +19107,17 @@ isl::checked::union_set_list union_set_list::add(isl::checked::union_set el) con
   return manage(res);
 }
 
+isl::checked::union_set union_set_list::at(int index) const
+{
+  auto res = isl_union_set_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::union_set union_set_list::get_at(int index) const
+{
+  return at(index);
+}
+
 isl::checked::union_set_list union_set_list::clear() const
 {
   auto res = isl_union_set_list_clear(copy());
@@ -12829,17 +19148,6 @@ stat union_set_list::foreach(const std::function<stat(isl::checked::union_set)> 
   };
   auto res = isl_union_set_list_foreach(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::union_set union_set_list::at(int index) const
-{
-  auto res = isl_union_set_list_get_at(get(), index);
-  return manage(res);
-}
-
-isl::checked::union_set union_set_list::get_at(int index) const
-{
-  return at(index);
 }
 
 isl::checked::union_set_list union_set_list::insert(unsigned int pos, isl::checked::union_set el) const
@@ -12971,6 +19279,17 @@ int val::cmp_si(long i) const
   return res;
 }
 
+long val::den_si() const
+{
+  auto res = isl_val_get_den_si(get());
+  return res;
+}
+
+long val::get_den_si() const
+{
+  return den_si();
+}
+
 isl::checked::val val::div(isl::checked::val v2) const
 {
   auto res = isl_val_div(copy(), v2.release());
@@ -13019,28 +19338,6 @@ boolean val::ge(const isl::checked::val &v2) const
 boolean val::ge(long v2) const
 {
   return this->ge(isl::checked::val(ctx(), v2));
-}
-
-long val::den_si() const
-{
-  auto res = isl_val_get_den_si(get());
-  return res;
-}
-
-long val::get_den_si() const
-{
-  return den_si();
-}
-
-long val::num_si() const
-{
-  auto res = isl_val_get_num_si(get());
-  return res;
-}
-
-long val::get_num_si() const
-{
-  return num_si();
 }
 
 boolean val::gt(const isl::checked::val &v2) const
@@ -13250,6 +19547,17 @@ isl::checked::val val::negone(isl::checked::ctx ctx)
   return manage(res);
 }
 
+long val::num_si() const
+{
+  auto res = isl_val_get_num_si(get());
+  return res;
+}
+
+long val::get_num_si() const
+{
+  return num_si();
+}
+
 isl::checked::val val::one(isl::checked::ctx ctx)
 {
   auto res = isl_val_one(ctx.release());
@@ -13277,6 +19585,12 @@ isl::checked::val val::sub(isl::checked::val v2) const
 isl::checked::val val::sub(long v2) const
 {
   return this->sub(isl::checked::val(ctx(), v2));
+}
+
+isl::checked::val_list val::to_list() const
+{
+  auto res = isl_val_to_list(copy());
+  return manage(res);
 }
 
 isl::checked::val val::trunc() const
@@ -13336,6 +19650,12 @@ val_list::val_list(isl::checked::val el)
   ptr = res;
 }
 
+val_list::val_list(isl::checked::ctx ctx, const std::string &str)
+{
+  auto res = isl_val_list_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+
 val_list &val_list::operator=(val_list obj) {
   std::swap(this->ptr, obj.ptr);
   return *this;
@@ -13379,6 +19699,17 @@ isl::checked::val_list val_list::add(long el) const
   return this->add(isl::checked::val(ctx(), el));
 }
 
+isl::checked::val val_list::at(int index) const
+{
+  auto res = isl_val_list_get_at(get(), index);
+  return manage(res);
+}
+
+isl::checked::val val_list::get_at(int index) const
+{
+  return at(index);
+}
+
 isl::checked::val_list val_list::clear() const
 {
   auto res = isl_val_list_clear(copy());
@@ -13409,17 +19740,6 @@ stat val_list::foreach(const std::function<stat(isl::checked::val)> &fn) const
   };
   auto res = isl_val_list_foreach(get(), fn_lambda, &fn_data);
   return manage(res);
-}
-
-isl::checked::val val_list::at(int index) const
-{
-  auto res = isl_val_list_get_at(get(), index);
-  return manage(res);
-}
-
-isl::checked::val val_list::get_at(int index) const
-{
-  return at(index);
 }
 
 isl::checked::val_list val_list::insert(unsigned int pos, isl::checked::val el) const

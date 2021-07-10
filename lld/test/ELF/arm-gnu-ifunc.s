@@ -118,8 +118,8 @@ _start:
 // DISASM: <bar>:
 // DISASM-NEXT:    20108:      bx      lr
 // DISASM: <_start>:
-// DISASM-NEXT:    2010c:      bl      #28
-// DISASM-NEXT:    20110:      bl      #40
+// DISASM-NEXT:    2010c:      bl      0x20130
+// DISASM-NEXT:    20110:      bl      0x20140
 // 1 * 65536 + 244 = 0x100f4 __rel_iplt_start
 // DISASM-NEXT:    20114:      movw    r0, #244
 // DISASM-NEXT:    20118:      movt    r0, #1
@@ -141,4 +141,3 @@ _start:
 // DISASM-NEXT:    20148:       ldr     pc, [r12, #12]!
 // DISASM: <$d>:
 // DISASM-NEXT:    2014c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-

@@ -17,9 +17,21 @@
 namespace llvm {
 namespace mca {
 
+json::Object PipelinePrinter::getJSONReportRegion() const {
+  json::Object JO;
+  for (const auto &V : Views) {
+    if (V->isSerializable()) {
+      JO.try_emplace(V->getNameAsString().str(), V->toJSON());
+    }
+  }
+  return JO;
+}
+
 void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
-  for (const auto &V : Views)
-    V->printView(OutputKind, OS);
+  json::Object JO;
+  for (const auto &V : Views) {
+    V->printView(OS);
+  }
 }
 } // namespace mca.
 } // namespace llvm

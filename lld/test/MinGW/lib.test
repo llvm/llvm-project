@@ -40,7 +40,7 @@ OTHERSTYLES-SAME: msvcstyle.lib
 
 RUN: echo > %t/lib/libnoimplib.dll
 RUN: echo > %t/lib/noprefix_noimplib.dll
-RUN: not ld.lld -### -m i386pep -L%t/lib -lnoimplib 2>&1 | FileCheck -check-prefix=UNSUPPORTED-DLL1 %s
-RUN: not ld.lld -### -m i386pep -L%t/lib -lnoprefix_noimplib 2>&1 | FileCheck -check-prefix=UNSUPPORTED-DLL2 %s
-UNSUPPORTED-DLL1: lld doesn't support linking directly against {{.*}}libnoimplib.dll, use an import library
-UNSUPPORTED-DLL2: lld doesn't support linking directly against {{.*}}noprefix_noimplib.dll, use an import library
+RUN: ld.lld -### -m i386pep -L%t/lib -lnoimplib 2>&1 | FileCheck -check-prefix=DLL1 %s
+RUN: ld.lld -### -m i386pep -L%t/lib -lnoprefix_noimplib 2>&1 | FileCheck -check-prefix=DLL2 %s
+DLL1: libnoimplib.dll
+DLL2: noprefix_noimplib.dll

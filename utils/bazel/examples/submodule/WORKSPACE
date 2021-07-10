@@ -1,0 +1,28 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+"""An example WORKSPACE for configuring LLVM using a git submodule."""
+
+workspace(name = "submodule_example")
+
+# Or wherever your submodule is located.
+SUBMODULE_PATH = "third_party/llvm-project"
+
+local_repository(
+    name = "llvm-bazel",
+    path = SUBMODULE_PATH + "/utils/bazel",
+)
+
+load("@llvm-bazel//:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
+
+llvm_configure(
+    name = "llvm-project",
+    src_path = SUBMODULE_PATH,
+    src_workspace = "@submodule_example//:WORKSPACE",
+)
+
+# Disables optional dependencies for Support like zlib and terminfo. You may
+# instead want to configure them using the macros in the corresponding bzl
+# files.
+llvm_disable_optional_support_deps()

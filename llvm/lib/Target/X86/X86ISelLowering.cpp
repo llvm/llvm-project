@@ -23469,6 +23469,33 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (Op0.getSimpleValueType().isInteger()) {
+    // Attempt to canonicalize SGT/UGT -> SGE/UGE compares with constant which
+    // reduces the number of EFLAGs bit reads (the GE conditions don't read ZF),
+    // this may translate to less uops depending on uarch implementation. The
+    // equivalent for SLE/ULE -> SLT/ULT isn't likely to happen as we already
+    // canonicalize to that CondCode.
+    // NOTE: Only do this if incrementing the constant doesn't increase the bit
+    // encoding size - so it must either already be a i8 or i32 immediate, or it
+    // shrinks down to that. We don't do this for any i64's to avoid additional
+    // constant materializations.
+    // TODO: Can we move this to TranslateX86CC to handle jumps/branches too?
+    if (auto *Op1C = dyn_cast<ConstantSDNode>(Op1)) {
+      const APInt &Op1Val = Op1C->getAPIntValue();
+      if (!Op1Val.isNullValue()) {
+        // Ensure the constant+1 doesn't overflow.
+        if ((CC == ISD::CondCode::SETGT && !Op1Val.isMaxSignedValue()) ||
+            (CC == ISD::CondCode::SETUGT && !Op1Val.isMaxValue())) {
+          APInt Op1ValPlusOne = Op1Val + 1;
+          if (Op1ValPlusOne.isSignedIntN(32) &&
+              (!Op1Val.isSignedIntN(8) || Op1ValPlusOne.isSignedIntN(8))) {
+            Op1 = DAG.getConstant(Op1ValPlusOne, dl, Op0.getValueType());
+            CC = CC == ISD::CondCode::SETGT ? ISD::CondCode::SETGE
+                                            : ISD::CondCode::SETUGE;
+          }
+        }
+      }
+    }
+
     SDValue X86CC;
     SDValue EFLAGS = emitFlagsForSetcc(Op0, Op1, CC, dl, DAG, X86CC);
     SDValue Res = DAG.getNode(X86ISD::SETCC, dl, MVT::i8, X86CC, EFLAGS);
@@ -30722,12 +30749,19 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       } else
         Res = DAG.getNode(ISD::FP_TO_SINT, dl, PromoteVT, Src);
 
-      // Preserve what we know about the size of the original result. Except
-      // when the result is v2i32 since we can't widen the assert.
-      if (PromoteVT != MVT::v2i32)
-        Res = DAG.getNode(!IsSigned ? ISD::AssertZext : ISD::AssertSext,
-                          dl, PromoteVT, Res,
-                          DAG.getValueType(VT.getVectorElementType()));
+      // Preserve what we know about the size of the original result. If the
+      // result is v2i32, we have to manually widen the assert.
+      if (PromoteVT == MVT::v2i32)
+        Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Res,
+                          DAG.getUNDEF(MVT::v2i32));
+
+      Res = DAG.getNode(!IsSigned ? ISD::AssertZext : ISD::AssertSext, dl,
+                        Res.getValueType(), Res,
+                        DAG.getValueType(VT.getVectorElementType()));
+
+      if (PromoteVT == MVT::v2i32)
+        Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res,
+                          DAG.getIntPtrConstant(0, dl));
 
       // Truncate back to the original width.
       Res = DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
@@ -42054,6 +42088,31 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
   APInt Comparison = CmpRHSC->getAPIntValue();
   APInt NegAddend = -Addend;
 
+  // See if we can adjust the CC to make the comparison match the negated
+  // addend.
+  if (Comparison != NegAddend) {
+    APInt IncComparison = Comparison + 1;
+    if (IncComparison == NegAddend) {
+      if (CC == X86::COND_A && !Comparison.isMaxValue()) {
+        Comparison = IncComparison;
+        CC = X86::COND_AE;
+      } else if (CC == X86::COND_LE && !Comparison.isMaxSignedValue()) {
+        Comparison = IncComparison;
+        CC = X86::COND_L;
+      }
+    }
+    APInt DecComparison = Comparison - 1;
+    if (DecComparison == NegAddend) {
+      if (CC == X86::COND_AE && !Comparison.isMinValue()) {
+        Comparison = DecComparison;
+        CC = X86::COND_A;
+      } else if (CC == X86::COND_L && !Comparison.isMinSignedValue()) {
+        Comparison = DecComparison;
+        CC = X86::COND_LE;
+      }
+    }
+  }
+
   // If the addend is the negation of the comparison value, then we can do
   // a full comparison by emitting the atomic arithmetic as a locked sub.
   if (Comparison == NegAddend) {
@@ -43657,9 +43716,10 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
         ShuffleVectorSDNode::commuteMask(ScaledMask1);
       }
       if ((Op00 == Op10) && (Op01 == Op11)) {
-        SmallVector<int, 4> ShuffleMask;
-        ShuffleMask.append(ScaledMask0.begin(), ScaledMask0.end());
-        ShuffleMask.append(ScaledMask1.begin(), ScaledMask1.end());
+        const int Map[4] = {0, 2, 1, 3};
+        SmallVector<int, 4> ShuffleMask(
+            {Map[ScaledMask0[0]], Map[ScaledMask1[0]], Map[ScaledMask0[1]],
+             Map[ScaledMask1[1]]});
         MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
         SDValue Res = DAG.getNode(Opcode, DL, VT, DAG.getBitcast(SrcVT, Op00),
                                   DAG.getBitcast(SrcVT, Op01));

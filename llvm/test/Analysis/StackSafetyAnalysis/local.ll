@@ -71,7 +71,7 @@ define void @StoreInBounds4() {
 ; CHECK-LABEL: @StoreInBounds4 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; CHECK-NEXT: x[4]: [-9223372036854775808,9223372036854775807){{$}}
+; CHECK-NEXT: x[4]: full-set{{$}}
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4

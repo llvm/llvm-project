@@ -604,7 +604,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   // C++2b features.
   if (LangOpts.CPlusPlus2b) {
-    Builder.defineMacro("__cpp_implicit_move", "202011L");
+    if (!LangOpts.MSVCCompat)
+      Builder.defineMacro("__cpp_implicit_move", "202011L");
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
   }
   if (LangOpts.Char8)

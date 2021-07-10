@@ -36,6 +36,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OpenCLOptions.h"
@@ -4781,8 +4782,7 @@ public:
     bool isCopyElidable() const { return S == MoveEligibleAndCopyElidable; }
   };
   NamedReturnInfo getNamedReturnInfo(Expr *&E, bool ForceCXX2b = false);
-  NamedReturnInfo getNamedReturnInfo(const VarDecl *VD,
-                                     bool ForceCXX20 = false);
+  NamedReturnInfo getNamedReturnInfo(const VarDecl *VD);
   const VarDecl *getCopyElisionCandidate(NamedReturnInfo &Info,
                                          QualType ReturnType);
 
@@ -5424,6 +5424,8 @@ public:
                            Expr *ExecConfig = nullptr,
                            bool IsExecConfig = false,
                            bool AllowRecovery = false);
+  Expr *BuildBuiltinCallExpr(SourceLocation Loc, Builtin::ID Id,
+                             MultiExprArg CallArgs);
   enum class AtomicArgumentOrder { API, AST };
   ExprResult
   BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
@@ -12583,6 +12585,7 @@ public:
 private:
   bool SemaBuiltinPrefetch(CallExpr *TheCall);
   bool SemaBuiltinAllocaWithAlign(CallExpr *TheCall);
+  bool SemaBuiltinArithmeticFence(CallExpr *TheCall);
   bool SemaBuiltinAssume(CallExpr *TheCall);
   bool SemaBuiltinAssumeAligned(CallExpr *TheCall);
   bool SemaBuiltinLongjmp(CallExpr *TheCall);

@@ -112,9 +112,6 @@ public:
                                 PatternRewriter &rewriter) const override;
 
 private:
-  // The maximum number of tasks per worker thread when sharding parallel op.
-  static constexpr int32_t kMaxOversharding = 4;
-
   bool asyncDispatch;
   int32_t numWorkerThreads;
   int32_t targetBlockSize;

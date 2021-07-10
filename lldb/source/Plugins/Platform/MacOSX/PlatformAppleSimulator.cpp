@@ -50,7 +50,7 @@ PlatformAppleSimulator::PlatformAppleSimulator(
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-PlatformAppleSimulator::~PlatformAppleSimulator() {}
+PlatformAppleSimulator::~PlatformAppleSimulator() = default;
 
 lldb_private::Status PlatformAppleSimulator::LaunchProcess(
     lldb_private::ProcessLaunchInfo &launch_info) {

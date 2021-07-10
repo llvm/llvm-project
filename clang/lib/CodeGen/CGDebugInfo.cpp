@@ -1314,6 +1314,9 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_OpenCLKernel;
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
+  case CC_SwiftAsync:
+    // [FIXME: swiftasynccc] Update to SwiftAsync once LLVM support lands.
+    return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_PreserveMost:
     return llvm::dwarf::DW_CC_LLVM_PreserveMost;
   case CC_PreserveAll:
@@ -3542,7 +3545,7 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
   const auto *FD = cast<FunctionDecl>(GD.getCanonicalDecl().getDecl());
   Name = getFunctionName(FD);
   // Use mangled name as linkage name for C/C++ functions.
-  if (FD->hasPrototype()) {
+  if (FD->getType()->getAs<FunctionProtoType>()) {
     LinkageName = CGM.getMangledName(GD);
     Flags |= llvm::DINode::FlagPrototyped;
   }

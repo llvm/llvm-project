@@ -11,17 +11,17 @@ entry:
 declare <4 x i32> @split_spill(double, double, double, ...)
 
 ; CHECK:     ADJCALLSTACKDOWN 64, 0, implicit-def dead $r1, implicit $r1
-; CHECK:     [[VECCONSTADDR:%[0-9]+]]:gprc = LWZtoc %const.0, $r2 :: (load 4 from got)
-; CHECK:     [[VECCONST:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[VECCONSTADDR]] :: (load 16 from constant-pool)
+; CHECK:     [[VECCONSTADDR:%[0-9]+]]:gprc = LWZtoc %const.0, $r2 :: (load (s32) from got)
+; CHECK:     [[VECCONST:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[VECCONSTADDR]] :: (load (s128) from constant-pool)
 ; CHECK:     [[STACKOFFSET:%[0-9]+]]:gprc = LI 48
-; CHECK:     STXVW4X killed [[VECCONST]], $r1, killed [[STACKOFFSET]] :: (store 16)
-; CHECK-DAG: [[ELEMENT1:%[0-9]+]]:gprc = LWZ 48, $r1 :: (load 4)
-; CHECK-DAG: [[ELEMENT2:%[0-9]+]]:gprc = LWZ 52, $r1 :: (load 4)
-; CHECK:     [[FLOAT1ADDR:%[0-9]+]]:gprc_and_gprc_nor0 = LWZtoc %const.1, $r2 :: (load 4 from got)
-; CHECK:     [[FLOAT1:%[0-9]+]]:f4rc = LFS 0, killed [[FLOAT1ADDR]] :: (load 4 from constant-pool)
+; CHECK:     STXVW4X killed [[VECCONST]], $r1, killed [[STACKOFFSET]] :: (store (s128))
+; CHECK-DAG: [[ELEMENT1:%[0-9]+]]:gprc = LWZ 48, $r1 :: (load (s32))
+; CHECK-DAG: [[ELEMENT2:%[0-9]+]]:gprc = LWZ 52, $r1 :: (load (s32))
+; CHECK:     [[FLOAT1ADDR:%[0-9]+]]:gprc_and_gprc_nor0 = LWZtoc %const.1, $r2 :: (load (s32) from got)
+; CHECK:     [[FLOAT1:%[0-9]+]]:f4rc = LFS 0, killed [[FLOAT1ADDR]] :: (load (s32) from constant-pool)
 ; CHECK:     [[DOUBLE1:%[0-9]+]]:f8rc = COPY [[FLOAT1]]
-; CHECK:     [[FLOAT2ADDR:%[0-9]+]]:gprc_and_gprc_nor0 = LWZtoc %const.2, $r2 :: (load 4 from got)
-; CHECK:     [[FLOAT2:%[0-9]+]]:f4rc = LFS 0, killed [[FLOAT2ADDR]] :: (load 4 from constant-pool)
+; CHECK:     [[FLOAT2ADDR:%[0-9]+]]:gprc_and_gprc_nor0 = LWZtoc %const.2, $r2 :: (load (s32) from got)
+; CHECK:     [[FLOAT2:%[0-9]+]]:f4rc = LFS 0, killed [[FLOAT2ADDR]] :: (load (s32) from constant-pool)
 ; CHECK:     [[DOUBLE2:%[0-9]+]]:f8rc = COPY [[FLOAT2]]
 
 ; CHECK:     [[DZERO:%[0-9]+]]:vsfrc = XXLXORdpz

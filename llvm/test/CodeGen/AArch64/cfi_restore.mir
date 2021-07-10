@@ -17,18 +17,18 @@ body:             |
     liveins: $fp, $lr
 
     $sp = frame-setup SUBXri $sp, 16, 0
-    frame-setup STRXui killed $fp, $sp, 0 :: (store 8 into %stack.1)
+    frame-setup STRXui killed $fp, $sp, 0 :: (store (s64) into %stack.1)
     frame-setup CFI_INSTRUCTION offset $w29, -16
     ; CHECK: .cfi_offset w29, -16
-    frame-setup STRXui killed $lr, $sp, 1 :: (store 8 into %stack.0)
+    frame-setup STRXui killed $lr, $sp, 1 :: (store (s64) into %stack.0)
     frame-setup CFI_INSTRUCTION offset $w30, -8
     ; CHECK: .cfi_offset w30, -8
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
-    $lr = LDRXui $sp, 1 :: (load 8 from %stack.0)
+    $lr = LDRXui $sp, 1 :: (load (s64) from %stack.0)
     CFI_INSTRUCTION restore $w30
     ; CHECK: .cfi_restore w30
-    $fp = LDRXui $sp, 0 :: (load 8 from %stack.1)
+    $fp = LDRXui $sp, 0 :: (load (s64) from %stack.1)
     CFI_INSTRUCTION restore $w29
     ; CHECK: .cfi_restore w29
     $sp = ADDXri $sp, 16, 0

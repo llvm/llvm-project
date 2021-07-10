@@ -12,11 +12,14 @@
 
 #include <__availability>
 #include <__config>
-#include <__functional_base> // std::less, std::binary_function
+#include <__functional_base>
+#include <__functional/binary_function.h>
+#include <__functional/operations.h>
+#include <__functional/reference_wrapper.h>
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
-#include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/allocator.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/unique_ptr.h>
@@ -25,6 +28,7 @@
 #include <cstdlib> // abort
 #include <iosfwd>
 #include <stdexcept>
+#include <typeinfo>
 #include <type_traits>
 #include <utility>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)

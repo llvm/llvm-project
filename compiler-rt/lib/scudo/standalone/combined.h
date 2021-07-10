@@ -569,9 +569,6 @@ public:
       reportAllocationSizeTooBig(NewSize, 0, MaxAllowedMallocSize);
     }
 
-    void *OldTaggedPtr = OldPtr;
-    OldPtr = getHeaderTaggedPointer(OldPtr);
-
     // The following cases are handled by the C wrappers.
     DCHECK_NE(OldPtr, nullptr);
     DCHECK_NE(NewSize, 0);
@@ -590,6 +587,9 @@ public:
       return NewPtr;
     }
 #endif // GWP_ASAN_HOOKS
+
+    void *OldTaggedPtr = OldPtr;
+    OldPtr = getHeaderTaggedPointer(OldPtr);
 
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(OldPtr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Reallocating, OldPtr);
@@ -639,7 +639,7 @@ public:
           if (ClassId) {
             resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
                               reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
-                              NewSize, BlockEnd);
+                              NewSize, untagPointer(BlockEnd));
             storePrimaryAllocationStackMaybe(Options, OldPtr);
           } else {
             storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
@@ -1154,6 +1154,7 @@ private:
   // address tags against chunks. To allow matching in this case we store the
   // address tag in the first byte of the chunk.
   void storeEndMarker(uptr End, uptr Size, uptr BlockEnd) {
+    DCHECK_EQ(BlockEnd, untagPointer(BlockEnd));
     uptr UntaggedEnd = untagPointer(End);
     if (UntaggedEnd != BlockEnd) {
       storeTag(UntaggedEnd);

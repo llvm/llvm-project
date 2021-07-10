@@ -32,7 +32,7 @@ Stream::Stream(bool colors)
       m_forwarder(*this, colors) {}
 
 // Destructor
-Stream::~Stream() {}
+Stream::~Stream() = default;
 
 ByteOrder Stream::SetByteOrder(ByteOrder byte_order) {
   ByteOrder old_byte_order = m_byte_order;

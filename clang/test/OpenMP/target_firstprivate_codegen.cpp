@@ -55,12 +55,11 @@ int ga = 5;
 // TCHECK-DAG:  [[TTII:%.+]] = type { i32, i32 }
 // TCHECK-DAG:  [[S1:%.+]] = type { double }
 
-// CHECK-DAG:  [[FP_E:@__omp_offloading_firstprivate_.+_e_l79]] = internal global [[TTII]] zeroinitializer
 // CHECK-DAG:  [[SIZET:@.+]] = private unnamed_addr constant [3 x i{{32|64}}] [i[[SZ:32|64]] 4, i{{64|32}} {{8|4}}, i[[SZ:32|64]] 4]
 // CHECK-DAG:  [[MAPT:@.+]] = private unnamed_addr constant [3 x i64] [i64 288, i64 49, i64 288]
 // CHECK-DAG:  [[MAPT2:@.+]] = private unnamed_addr constant [9 x i64] [i64 288, i64 161, i64 800, i64 161, i64 161, i64 800, i64 800, i64 161, i64 161]
 // CHECK-DAG:  [[SIZET3:@.+]] = private unnamed_addr constant [2 x i{{32|64}}] [i{{32|64}} 0, i{{32|64}} 8]
-// CHECK-DAG:  [[MAPT3:@.+]] = private unnamed_addr constant [2 x i64] [i64 32, i64 37]
+// CHECK-DAG:  [[MAPT3:@.+]] = private unnamed_addr constant [2 x i64] [i64 32, i64 161]
 // CHECK-DAG:  [[MAPT4:@.+]] = private unnamed_addr constant [5 x i64] [i64 547, i64 288, i64 800, i64 800, i64 161]
 // CHECK-DAG:  [[SIZET5:@.+]] = private unnamed_addr constant [3 x i{{32|64}}] [i[[SZ]] 4, i[[SZ]] 1, i[[SZ]] 40]
 // CHECK-DAG:  [[MAPT5:@.+]] = private unnamed_addr constant [3 x i64] [i64 288, i64 288, i64 161]
@@ -92,6 +91,7 @@ int foo(int n, double *ptr) {
   // CHECK:  [[SSTACK:%.+]] = alloca i8*,
   // CHECK:  [[C:%.+]] = alloca [5 x [10 x double]],
   // CHECK:  [[D:%.+]] = alloca [[TT]],
+  // CHECK:  [[FP_E:%.+]] = alloca [[TTII]],
   // CHECK:  [[P:%.+]] = alloca i32*, align 64
   // CHECK:  [[ACAST:%.+]] = alloca i{{[0-9]+}},
   // CHECK:  [[BASE_PTR_ARR:%.+]] = alloca [3 x i8*],
@@ -347,8 +347,6 @@ int foo(int n, double *ptr) {
   }
   // CHECK:  [[PTR_ADDR_REF:%.+]] = load double*, double** [[PTR_ADDR]],
 
-  // CHECK:  [[E_BC:%.+]] = bitcast [[TTII]]* [[E:%.+]] to i8*
-  // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i{{64|32}}(i8* {{.*}} bitcast ([[TTII]]* [[FP_E]] to i8*), i8* {{.*}} [[E_BC]], i{{64|32}} 8, i1 false)
   // CHECK:  [[BASE_PTR_GEP3_0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP3_0]] to double**
   // CHECK:  store double* [[PTR_ADDR_REF]], double** [[BCAST_TOPTR]],
@@ -367,7 +365,6 @@ int foo(int n, double *ptr) {
   // CHECK: {{.+}} = call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 -1, {{.+}}, i32 2, i8** [[BASE_PTR_GEP_ARG3]], i8** [[PTR_GEP_ARG3]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET3]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT3]], i32 0, i32 0), i8** null, i8** null)
 
   // TCHECK:  define weak void @__omp_offloading_{{.+}}(double* [[PTR_IN:%.+]], [[TTII]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[E:%.+]])
-  // TCHECK-NOT: alloca [[TTII]],
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca double*,
   // TCHECK-NOT: alloca [[TTII]],
   // TCHECK-NOT: alloca double*,

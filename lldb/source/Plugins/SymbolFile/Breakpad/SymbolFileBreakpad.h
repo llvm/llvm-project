@@ -51,7 +51,7 @@ public:
   SymbolFileBreakpad(lldb::ObjectFileSP objfile_sp)
       : SymbolFile(std::move(objfile_sp)) {}
 
-  ~SymbolFileBreakpad() override {}
+  ~SymbolFileBreakpad() override = default;
 
   uint32_t CalculateAbilities() override;
 

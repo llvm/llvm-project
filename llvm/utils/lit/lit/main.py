@@ -193,7 +193,9 @@ def filter_by_shard(tests, run, shards, lit_config):
 
 def mark_xfail(selected_tests, opts):
     for t in selected_tests:
-        if os.sep.join(t.path_in_suite) in opts.xfail:
+        test_file = os.sep.join(t.path_in_suite)
+        test_full_name = t.getFullName()
+        if test_file in opts.xfail or test_full_name in opts.xfail:
             t.xfails += '*'
 
 def mark_excluded(discovered_tests, selected_tests):

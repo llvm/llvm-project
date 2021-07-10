@@ -10,7 +10,7 @@ add_mlir_library(MLIRGPUTestPasses
 
   LINK_LIBS PUBLIC
   MLIRAffine
-  MLIRGPU
+  MLIRGPUOps
   MLIRGPUToGPURuntimeTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRNVVMIR

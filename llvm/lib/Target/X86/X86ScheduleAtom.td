@@ -313,30 +313,30 @@ defm : X86WriteResPairUnsupported<WriteFVarShuffle256>;
 // Conversions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : AtomWriteResPair<WriteCvtSS2I,   [AtomPort01], [AtomPort01], 8, 9, [8], [9]>;
-defm : AtomWriteResPair<WriteCvtPS2I,   [AtomPort01], [AtomPort01], 6, 7, [6], [7]>;
+defm : AtomWriteResPair<WriteCvtSS2I,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  8,  9,  [7,7],  [6,6]>;
+defm : AtomWriteResPair<WriteCvtPS2I,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2IY>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2IZ>;
-defm : AtomWriteResPair<WriteCvtSD2I,   [AtomPort01], [AtomPort01], 8, 9, [8], [9]>;
-defm : AtomWriteResPair<WriteCvtPD2I,   [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
+defm : AtomWriteResPair<WriteCvtSD2I,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  8,  9,  [7,7],  [6,6]>;
+defm : AtomWriteResPair<WriteCvtPD2I,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  7,  8,  [6,6],  [7,7]>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2IY>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2IZ>;
 
-defm : AtomWriteResPair<WriteCvtI2SS,   [AtomPort01], [AtomPort01], 6, 7, [6], [7]>;
-defm : AtomWriteResPair<WriteCvtI2PS,   [AtomPort01], [AtomPort01], 6, 7, [6], [7]>;
+defm : AtomWriteResPair<WriteCvtI2SS,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
+defm : AtomWriteResPair<WriteCvtI2PS,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PSY>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PSZ>;
-defm : AtomWriteResPair<WriteCvtI2SD,   [AtomPort01], [AtomPort01], 6, 7, [6], [7]>;
-defm : AtomWriteResPair<WriteCvtI2PD,   [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
+defm : AtomWriteResPair<WriteCvtI2SD,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
+defm : AtomWriteResPair<WriteCvtI2PD,   [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  7,  8,  [6,6],  [7,7]>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PDY>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PDZ>;
 
-defm : AtomWriteResPair<WriteCvtSS2SD,  [AtomPort01], [AtomPort01], 6, 7, [6], [7]>;
-defm : AtomWriteResPair<WriteCvtPS2PD,  [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
+defm : AtomWriteResPair<WriteCvtSS2SD,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
+defm : AtomWriteResPair<WriteCvtPS2PD,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  7,  8,  [6,6],  [7,7]>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2PDY>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2PDZ>;
-defm : AtomWriteResPair<WriteCvtSD2SS,  [AtomPort01], [AtomPort01], 6, 7, [6], [7]>;
-defm : AtomWriteResPair<WriteCvtPD2PS,  [AtomPort01], [AtomPort01], 7, 8, [7], [8]>;
+defm : AtomWriteResPair<WriteCvtSD2SS,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  6,  7,  [5,5],  [6,6]>;
+defm : AtomWriteResPair<WriteCvtPD2PS,  [AtomPort0,AtomPort1], [AtomPort0,AtomPort1],  7,  8,  [6,6],  [7,7]>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2PSY>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2PSZ>;
 

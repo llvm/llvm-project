@@ -23,7 +23,7 @@
 class DWARFDeclContext {
 public:
   struct Entry {
-    Entry() {}
+    Entry() = default;
     Entry(dw_tag_t t, const char *n) : tag(t), name(n) {}
 
     bool NameMatches(const Entry &rhs) const {

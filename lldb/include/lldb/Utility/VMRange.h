@@ -26,13 +26,13 @@ public:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
-  VMRange() {}
+  VMRange() = default;
 
   VMRange(lldb::addr_t start_addr, lldb::addr_t end_addr)
       : m_base_addr(start_addr),
         m_byte_size(end_addr > start_addr ? end_addr - start_addr : 0) {}
 
-  ~VMRange() {}
+  ~VMRange() = default;
 
   void Clear() {
     m_base_addr = 0;

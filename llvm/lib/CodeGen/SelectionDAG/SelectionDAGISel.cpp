@@ -575,6 +575,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         LiveInMap.insert(LI);
 
   // Insert DBG_VALUE instructions for function arguments to the entry block.
+  bool InstrRef = TM.Options.ValueTrackingVariableLocations;
   for (unsigned i = 0, e = FuncInfo->ArgDbgValues.size(); i != e; ++i) {
     MachineInstr *MI = FuncInfo->ArgDbgValues[e - i - 1];
     assert(MI->getOpcode() != TargetOpcode::DBG_VALUE_LIST &&
@@ -594,6 +595,10 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         LLVM_DEBUG(dbgs() << "Dropping debug info for dead vreg"
                           << Register::virtReg2Index(Reg) << "\n");
     }
+
+    // Don't try and extend through copies in instruction referencing mode.
+    if (InstrRef)
+      continue;
 
     // If Reg is live-in then update debug info to track its copy in a vreg.
     DenseMap<unsigned, unsigned>::iterator LDI = LiveInMap.find(Reg);
@@ -645,6 +650,10 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       }
     }
   }
+
+  // For debug-info, in instruction referencing mode, we need to perform some
+  // post-isel maintenence.
+  MF->finalizeDebugInstrRefs();
 
   // Determine if there are any calls in this machine function.
   MachineFrameInfo &MFI = MF->getFrameInfo();

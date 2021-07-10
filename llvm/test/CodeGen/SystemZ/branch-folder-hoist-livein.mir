@@ -19,10 +19,10 @@ body:             |
     successors: %bb.2(0x7fffffff), %bb.1(0x00000001)
     liveins:
 
-    renamable $r1d = LGRL @b :: (load 4 from got, align 8)
-    renamable $r1l = LH killed renamable $r1d, 0, $noreg, implicit-def $r1d :: (dereferenceable load 1 from @b)
+    renamable $r1d = LGRL @b :: (load (s32) from got, align 8)
+    renamable $r1l = LH killed renamable $r1d, 0, $noreg, implicit-def $r1d :: (dereferenceable load (s8) from @b)
     renamable $r2l = LHI 0
-    renamable $r3d = LGRL @d :: (load 4 from got, align 8)
+    renamable $r3d = LGRL @d :: (load (s32) from got, align 8)
     renamable $r4d = LLILL 0, implicit-def $r4q
 
     CHI killed renamable $r2l, 0, implicit-def $cc
@@ -34,13 +34,13 @@ body:             |
     liveins: $r1l, $r3d, $r4q
 
     renamable $r4d = COPY killed renamable $r4d, implicit killed $r4q
-    STH renamable $r1l, killed renamable $r3d, 0, $noreg, implicit killed $r4d :: (store 1 into @d)
+    STH renamable $r1l, killed renamable $r3d, 0, $noreg, implicit killed $r4d :: (store (s8) into @d)
 
   bb.2:
     liveins: $r1l, $r3d, $r4q
 
     renamable $r4d = COPY killed renamable $r4d, implicit killed $r4q
-    STH renamable $r1l, killed renamable $r3d, 0, $noreg, implicit killed $r4d :: (store 1 into @d)
+    STH renamable $r1l, killed renamable $r3d, 0, $noreg, implicit killed $r4d :: (store (s8) into @d)
     Return
 
 ...

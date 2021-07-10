@@ -3576,7 +3576,7 @@ TEST_F(AArch64GISelMITest, CreateLibcall) {
   auto *RetTy = Type::getVoidTy(Ctx);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
-            createLibcall(B, "abort", {{}, RetTy}, {}, CallingConv::C));
+            createLibcall(B, "abort", {{}, RetTy, 0}, {}, CallingConv::C));
 
   auto CheckStr = R"(
   CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
@@ -3931,7 +3931,7 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
   CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY
   CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY
   CHECK: [[PTR0:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY0]]
-  CHECK: [[VEC8:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[PTR0]]:_(p0) :: (load 16, align 8)
+  CHECK: [[VEC8:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[PTR0]]:_(p0) :: (load (<8 x s16>), align 8)
   CHECK: [[INSERT_VAL:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]]
 
 

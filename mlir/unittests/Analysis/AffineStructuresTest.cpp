@@ -547,4 +547,44 @@ TEST(FlatAffineConstraintsTest, removeRedundantConstraintsTest) {
   }
 }
 
+TEST(FlatAffineConstraintsTest, addConstantUpperBound) {
+  FlatAffineConstraints fac = makeFACFromConstraints(2, {}, {});
+  fac.addConstantUpperBound(0, 1);
+  EXPECT_EQ(fac.atIneq(0, 0), -1);
+  EXPECT_EQ(fac.atIneq(0, 1), 0);
+  EXPECT_EQ(fac.atIneq(0, 2), 1);
+
+  fac.addConstantUpperBound({1, 2, 3}, 1);
+  EXPECT_EQ(fac.atIneq(1, 0), -1);
+  EXPECT_EQ(fac.atIneq(1, 1), -2);
+  EXPECT_EQ(fac.atIneq(1, 2), -2);
+}
+
+TEST(FlatAffineConstraintsTest, addConstantLowerBound) {
+  FlatAffineConstraints fac = makeFACFromConstraints(2, {}, {});
+  fac.addConstantLowerBound(0, 1);
+  EXPECT_EQ(fac.atIneq(0, 0), 1);
+  EXPECT_EQ(fac.atIneq(0, 1), 0);
+  EXPECT_EQ(fac.atIneq(0, 2), -1);
+
+  fac.addConstantLowerBound({1, 2, 3}, 1);
+  EXPECT_EQ(fac.atIneq(1, 0), 1);
+  EXPECT_EQ(fac.atIneq(1, 1), 2);
+  EXPECT_EQ(fac.atIneq(1, 2), 2);
+}
+
+TEST(FlatAffineConstraintsTest, clearConstraints) {
+  FlatAffineConstraints fac = makeFACFromConstraints(1, {}, {});
+
+  fac.addInequality({1, 0});
+  EXPECT_EQ(fac.atIneq(0, 0), 1);
+  EXPECT_EQ(fac.atIneq(0, 1), 0);
+
+  fac.clearConstraints();
+
+  fac.addInequality({1, 0});
+  EXPECT_EQ(fac.atIneq(0, 0), 1);
+  EXPECT_EQ(fac.atIneq(0, 1), 0);
+}
+
 } // namespace mlir

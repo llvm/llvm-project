@@ -723,7 +723,7 @@ body:             |
 
     %2:vgpr_32 = COPY $vgpr0
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
+    %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %15, %subreg.sub1
     %17:vreg_64 = V_LSHLREV_B64_e64 2, killed %16, implicit $exec

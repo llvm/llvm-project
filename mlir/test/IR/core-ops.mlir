@@ -35,9 +35,9 @@ func @func_with_ops(f32) {
   %t = "getTensor"() : () -> tensor<4x4x?xf32>
 
   // CHECK: %[[C2:.*]] = constant 2 : index
-  // CHECK-NEXT: %{{.*}} = memref.dim %[[T]], %[[C2]] : tensor<4x4x?xf32>
+  // CHECK-NEXT: %{{.*}} = tensor.dim %[[T]], %[[C2]] : tensor<4x4x?xf32>
   %c2 = constant 2 : index
-  %t2 = "memref.dim"(%t, %c2) : (tensor<4x4x?xf32>, index) -> index
+  %t2 = "tensor.dim"(%t, %c2) : (tensor<4x4x?xf32>, index) -> index
 
   // CHECK: %{{.*}} = addf %[[ARG]], %[[ARG]] : f32
   %x = "std.addf"(%a, %a) : (f32,f32) -> (f32)
@@ -50,9 +50,9 @@ func @func_with_ops(f32) {
 func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
 ^bb42(%t: tensor<4x4x?xf32>, %f: f32, %i: i32, %idx : index, %j: i64, %half: f16):
   // CHECK: %[[C2:.*]] = constant 2 : index
-  // CHECK: %[[A2:.*]] = memref.dim %arg0, %[[C2]] : tensor<4x4x?xf32>
+  // CHECK: %[[A2:.*]] = tensor.dim %arg0, %[[C2]] : tensor<4x4x?xf32>
   %c2 = constant 2 : index
-  %a2 = memref.dim %t, %c2 : tensor<4x4x?xf32>
+  %a2 = tensor.dim %t, %c2 : tensor<4x4x?xf32>
 
   // CHECK: %[[F2:.*]] = addf %arg1, %arg1 : f32
   %f2 = "std.addf"(%f, %f) : (f32,f32) -> f32
@@ -757,9 +757,9 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-SAME: %[[ARG:.*]]: tensor<4x4x?xf32>
 func @test_dimop(%arg0: tensor<4x4x?xf32>) {
   // CHECK: %[[C2:.*]] = constant 2 : index
-  // CHECK: %{{.*}} = memref.dim %[[ARG]], %[[C2]] : tensor<4x4x?xf32>
+  // CHECK: %{{.*}} = tensor.dim %[[ARG]], %[[C2]] : tensor<4x4x?xf32>
   %c2 = constant 2 : index
-  %0 = memref.dim %arg0, %c2 : tensor<4x4x?xf32>
+  %0 = tensor.dim %arg0, %c2 : tensor<4x4x?xf32>
   // use dim as an index to ensure type correctness
   %1 = affine.apply affine_map<(d0) -> (d0)>(%0)
   return

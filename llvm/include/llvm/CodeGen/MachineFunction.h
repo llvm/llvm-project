@@ -451,11 +451,37 @@ public:
   /// Pair of instruction number and operand number.
   using DebugInstrOperandPair = std::pair<unsigned, unsigned>;
 
-  /// Substitution map: from one <inst,operand> pair to another. Used to
-  /// record changes in where a value is defined, so that debug variable
-  /// locations can find it later.
-  std::map<DebugInstrOperandPair, DebugInstrOperandPair>
-      DebugValueSubstitutions;
+  /// Replacement definition for a debug instruction reference. Made up of a
+  /// source instruction / operand pair, destination pair, and a qualifying
+  /// subregister indicating what bits in the operand make up the substitution.
+  // For example, a debug user
+  /// of %1:
+  ///    %0:gr32 = someinst, debug-instr-number 1
+  ///    %1:gr16 = %0.some_16_bit_subreg, debug-instr-number 2
+  /// Would receive the substitution {{2, 0}, {1, 0}, $subreg}, where $subreg is
+  /// the subregister number for some_16_bit_subreg.
+  class DebugSubstitution {
+  public:
+    DebugInstrOperandPair Src;  ///< Source instruction / operand pair.
+    DebugInstrOperandPair Dest; ///< Replacement instruction / operand pair.
+    unsigned Subreg;            ///< Qualifier for which part of Dest is read.
+
+    DebugSubstitution(const DebugInstrOperandPair &Src,
+                      const DebugInstrOperandPair &Dest, unsigned Subreg)
+        : Src(Src), Dest(Dest), Subreg(Subreg) {}
+
+    /// Order only by source instruction / operand pair: there should never
+    /// be duplicate entries for the same source in any collection.
+    bool operator<(const DebugSubstitution &Other) const {
+      return Src < Other.Src;
+    }
+  };
+
+  /// Debug value substitutions: a collection of DebugSubstitution objects,
+  /// recording changes in where a value is defined. For example, when one
+  /// instruction is substituted for another. Keeping a record allows recovery
+  /// of variable locations after compilation finishes.
+  SmallVector<DebugSubstitution, 8> DebugValueSubstitutions;
 
   /// Location of a PHI instruction that is also a debug-info variable value,
   /// for the duration of register allocation. Loaded by the PHI-elimination
@@ -477,7 +503,8 @@ public:
 
   /// Create a substitution between one <instr,operand> value to a different,
   /// new value.
-  void makeDebugValueSubstitution(DebugInstrOperandPair, DebugInstrOperandPair);
+  void makeDebugValueSubstitution(DebugInstrOperandPair, DebugInstrOperandPair,
+                                  unsigned SubReg = 0);
 
   /// Create substitutions for any tracked values in \p Old, to point at
   /// \p New. Needed when we re-create an instruction during optimization,
@@ -489,6 +516,25 @@ public:
   /// \p MaxOperand.
   void substituteDebugValuesForInst(const MachineInstr &Old, MachineInstr &New,
                                     unsigned MaxOperand = UINT_MAX);
+
+  /// Find the underlying  defining instruction / operand for a COPY instruction
+  /// while in SSA form. Copies do not actually define values -- they move them
+  /// between registers. Labelling a COPY-like instruction with an instruction
+  /// number is to be avoided as it makes value numbers non-unique later in
+  /// compilation. This method follows the definition chain for any sequence of
+  /// COPY-like instructions to find whatever non-COPY-like instruction defines
+  /// the copied value; or for parameters, creates a DBG_PHI on entry.
+  /// May insert instructions into the entry block!
+  /// \p MI The copy-like instruction to salvage.
+  /// \returns An instruction/operand pair identifying the defining value.
+  DebugInstrOperandPair salvageCopySSA(MachineInstr &MI);
+
+  /// Finalise any partially emitted debug instructions. These are DBG_INSTR_REF
+  /// instructions where we only knew the vreg of the value they use, not the
+  /// instruction that defines that vreg. Once isel finishes, we should have
+  /// enough information for every DBG_INSTR_REF to point at an instruction
+  /// (or DBG_PHI).
+  void finalizeDebugInstrRefs();
 
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,

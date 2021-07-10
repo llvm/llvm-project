@@ -45,7 +45,7 @@ public:
     m_streams = rhs.m_streams;
   }
 
-  ~StreamTee() override {}
+  ~StreamTee() override = default;
 
   StreamTee &operator=(const StreamTee &rhs) {
     if (this != &rhs) {

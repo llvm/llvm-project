@@ -1,4 +1,4 @@
-; RUN: llvm-ml -filetype=s %s /Fo - /DT1=test1 /D T2=test2 /Dtest5=def | FileCheck %s
+; RUN: llvm-ml -filetype=s %s /Fo - /DT1=test1 /D T2=test2 /Dtest5=def /Dtest6 | FileCheck %s
 
 .code
 
@@ -50,5 +50,14 @@ test5 textequ <redef>
 ; CHECK-NEXT: .byte 100
 ; CHECK-NEXT: .byte 101
 ; CHECK-NEXT: .byte 102
+
+t6:
+ifdef test6
+  xor eax, eax
+endif
+  ret
+; CHECK-LABEL: t6:
+; CHECK: xor eax, eax
+; CHECK: ret
 
 end

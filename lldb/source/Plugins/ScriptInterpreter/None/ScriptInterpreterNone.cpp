@@ -25,7 +25,7 @@ LLDB_PLUGIN_DEFINE(ScriptInterpreterNone)
 ScriptInterpreterNone::ScriptInterpreterNone(Debugger &debugger)
     : ScriptInterpreter(debugger, eScriptLanguageNone) {}
 
-ScriptInterpreterNone::~ScriptInterpreterNone() {}
+ScriptInterpreterNone::~ScriptInterpreterNone() = default;
 
 bool ScriptInterpreterNone::ExecuteOneLine(llvm::StringRef command,
                                            CommandReturnObject *,

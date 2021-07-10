@@ -290,8 +290,7 @@ public:
     bool IsSwiftError : 1;
     bool IsCFGuardTarget : 1;
     MaybeAlign Alignment = None;
-    Type *ByValType = nullptr;
-    Type *PreallocatedType = nullptr;
+    Type *IndirectType = nullptr;
 
     ArgListEntry()
         : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
@@ -1879,8 +1878,8 @@ public:
   /// corresponding pointee type. This may entail some non-trivial operations to
   /// truncate or reconstruct types that will be illegal in the backend. See
   /// ARMISelLowering for an example implementation.
-  virtual Value *emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
-                                AtomicOrdering Ord) const {
+  virtual Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
+                                Value *Addr, AtomicOrdering Ord) const {
     llvm_unreachable("Load linked unimplemented on this target");
   }
 
@@ -4487,6 +4486,14 @@ public:
   /// bounds.
   SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
                                   SDValue Index) const;
+
+  /// Get a pointer to a sub-vector of type \p SubVecVT at index \p Idx located
+  /// in memory for a vector of type \p VecVT starting at a base address of
+  /// \p VecPtr. If \p Idx plus the size of \p SubVecVT is out of bounds the
+  /// returned pointer is unspecified, but the value returned will be such that
+  /// the entire subvector would be within the vector bounds.
+  SDValue getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
+                                 EVT SubVecVT, SDValue Index) const;
 
   /// Method for building the DAG expansion of ISD::[US][MIN|MAX]. This
   /// method accepts integers as its arguments.

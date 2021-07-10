@@ -756,7 +756,7 @@ AMDGPUToolChain::detectSystemGPUs(const ArgList &Args,
   llvm::FileRemover OutputRemover(OutputFile.c_str());
   llvm::Optional<llvm::StringRef> Redirects[] = {
       {""},
-      StringRef(OutputFile),
+      OutputFile.str(),
       {""},
   };
 

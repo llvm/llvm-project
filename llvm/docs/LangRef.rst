@@ -4078,7 +4078,11 @@ Addresses of Basic Blocks
 ``blockaddress(@function, %block)``
 
 The '``blockaddress``' constant computes the address of the specified
-basic block in the specified function, and always has an ``i8*`` type.
+basic block in the specified function.
+
+It always has an ``i8 addrspace(P)*`` type, where ``P`` is the address space
+of the function containing ``%block`` (usually ``addrspace(0)``).
+
 Taking the address of the entry block is illegal.
 
 This value only has defined behavior when used as an operand to the
@@ -5098,22 +5102,21 @@ metadata nodes are related to debug info.
 DICompileUnit
 """""""""""""
 
-``DICompileUnit`` nodes represent a compile unit. ``DICompileUnit`` nodes must
-be ``distinct``. The ``enums:``, ``retainedTypes:``, ``globals:``, ``imports:``
-and ``macros:`` fields are tuples containing the debug info to be emitted along
-with the compile unit, regardless of code optimizations (some nodes are only
-emitted if there are references to them from instructions). The
-``debugInfoForProfiling:`` field is a boolean indicating whether or not
-line-table discriminators are updated to provide more-accurate debug info for
-profiling results.
+``DICompileUnit`` nodes represent a compile unit. The ``enums:``,
+``retainedTypes:``, ``globals:``, ``imports:`` and ``macros:`` fields are tuples
+containing the debug info to be emitted along with the compile unit, regardless
+of code optimizations (some nodes are only emitted if there are references to
+them from instructions). The ``debugInfoForProfiling:`` field is a boolean
+indicating whether or not line-table discriminators are updated to provide
+more-accurate debug info for profiling results.
 
 .. code-block:: text
 
-    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
-                                 isOptimized: true, flags: "-O2", runtimeVersion: 2,
-                                 splitDebugFilename: "abc.debug", emissionKind: FullDebug,
-                                 enums: !2, retainedTypes: !3, globals: !4, imports: !5,
-                                 macros: !6, dwoId: 0x0abcd)
+    !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
+                        isOptimized: true, flags: "-O2", runtimeVersion: 2,
+                        splitDebugFilename: "abc.debug", emissionKind: FullDebug,
+                        enums: !2, retainedTypes: !3, globals: !4, imports: !5,
+                        macros: !6, dwoId: 0x0abcd)
 
 Compile unit descriptors provide the root scope for objects declared in a
 specific compilation unit. File descriptors are defined using this scope.  These
@@ -5524,14 +5527,12 @@ DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. ``DIExpression`` nodes must not be ``distinct``, and are
-canonically printed inline at each use. They are used in :ref:`debug
-intrinsics<dbg_intrinsics>` (such as ``llvm.dbg.declare`` and
-``llvm.dbg.value``) to describe how the referenced LLVM variable relates to the
-source language variable. Debug intrinsics are interpreted left-to-right: start
-by pushing the value/address operand of the intrinsic onto a stack, then
-repeatedly push and evaluate opcodes from the DIExpression until the final
-variable description is produced.
+expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
+(such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
+referenced LLVM variable relates to the source language variable. Debug
+intrinsics are interpreted left-to-right: start by pushing the value/address
+operand of the intrinsic onto a stack, then repeatedly push and evaluate
+opcodes from the DIExpression until the final variable description is produced.
 
 The current supported opcode vocabulary is limited:
 
@@ -5609,23 +5610,23 @@ The current supported opcode vocabulary is limited:
 
     IR for "*ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17,
-                              metadata !DIExpression(DW_OP_LLVM_implicit_pointer)))
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
 
     IR for "**ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17,
-                              metadata !DIExpression(DW_OP_LLVM_implicit_pointer,
-                                                     DW_OP_LLVM_implicit_pointer)))
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
     !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
+                        DW_OP_LLVM_implicit_pointer))
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -5666,13 +5667,12 @@ valid debug intrinsic.
 DIArgList
 """"""""""""
 
-``DIArgList`` nodes hold a list of constant or SSA value references.
-``DIArgList`` must not be ``distinct``, must only be used as an argument to a
-function call, and must appear inline at each use. ``DIArgList`` may refer to
-function-local values of the containing function. ``DIArgList`` nodes are used
-in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
+``DIArgList`` nodes hold a list of constant or SSA value references. These are
+used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
 ``llvm.dbg.value``) in combination with a ``DIExpression`` that uses the
-``DW_OP_LLVM_arg`` operator.
+``DW_OP_LLVM_arg`` operator. Because a DIArgList may refer to local values
+within a function, it must only be used as a function argument, must always be
+inlined, and cannot appear in named metadata.
 
 .. code-block:: text
 
@@ -6838,17 +6838,29 @@ See :doc:`TypeMetadata`.
 '``associated``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``associated`` metadata may be attached to a global object
-declaration with a single argument that references another global object.
+The ``associated`` metadata may be attached to a global variable definition with
+a single argument that references a global object (optionally through an alias).
 
-This metadata prevents discarding of the global object in linker GC
-unless the referenced object is also discarded. The linker support for
-this feature is spotty. For best compatibility, globals carrying this
-metadata may also:
+This metadata lowers to the ELF section flag ``SHF_LINK_ORDER`` which prevents
+discarding of the global variable in linker GC unless the referenced object is
+also discarded. The linker support for this feature is spotty. For best
+compatibility, globals carrying this metadata should:
 
-- Be in a comdat with the referenced global.
-- Be in @llvm.compiler.used.
-- Have an explicit section with a name which is a valid C identifier.
+- Be in ``@llvm.compiler.used``.
+- If the referenced global variable is in a comdat, be in the same comdat.
+
+``!associated`` can not express many-to-one relationship. A global variable with
+the metadata should generally not be referenced by a function: the function may
+be inlined into other functions, leading to more references to the metadata.
+Ideally we would want to keep metadata alive as long as any inline location is
+alive, but this many-to-one relationship is not representable. Moreover, if the
+metadata is retained while the function is discarded, the linker will report an
+error of a relocation referencing a discarded section.
+
+The metadata is often used with an explicit section consisting of valid C
+identifiers so that the runtime can find the metadata section with
+linker-defined encapsulation symbols ``__start_<section_name>`` and
+``__stop_<section_name>``.
 
 It does not have any effect on non-ELF targets.
 

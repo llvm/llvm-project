@@ -22,9 +22,9 @@ body:             |
   bb.0.entry:
     liveins: $x0, $x1
 
-    $w8 = LDRWui $x1, 0 :: (load 4 from %ir.y)
-    STRWui killed $w8, $x0, 0 :: (store 4 into %ir.x)
-    $w9 = LDRWui killed $x1, 1 :: (load 4 from %ir.arrayidx2)
-    STRWui killed $w9, killed $x0, 1 :: (store 4 into %ir.arrayidx3)
+    $w8 = LDRWui $x1, 0 :: (load (s32) from %ir.y)
+    STRWui killed $w8, $x0, 0 :: (store (s32) into %ir.x)
+    $w9 = LDRWui killed $x1, 1 :: (load (s32) from %ir.arrayidx2)
+    STRWui killed $w9, killed $x0, 1 :: (store (s32) into %ir.arrayidx3)
     RET undef $lr
 

@@ -19,7 +19,7 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// 0x110b8 = next instruction
-// CHECK:         200b4: {{.*}} bl      #0
-// CHECK-NEXT:    200b8: {{.*}} b.w     #0 <_start+0x8>
-// CHECK-NEXT:    200bc: {{.*}} b.w     #0 <_start+0xc>
+// 0x200b8 = next instruction
+// CHECK:         200b4: {{.*}} bl      0x200b8 <_start+0x4> @ imm = #0
+// CHECK-NEXT:    200b8: {{.*}} b.w     0x200bc <_start+0x8> @ imm = #0
+// CHECK-NEXT:    200bc: {{.*}} b.w     0x200c0 <_start+0xc> @ imm = #0

@@ -1398,7 +1398,7 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   for (unsigned I = Args.size(); I != NumArgs; ++I)
     setArg(I, nullptr);
 
-  setDependence(computeDependence(this, PreArgs));
+  this->computeDependence();
 
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
@@ -1913,6 +1913,7 @@ Expr *CastExpr::getSubExprAsWritten() {
       SubExpr =
         skipImplicitTemporary(cast<CXXConstructExpr>(SubExpr->IgnoreImplicit())->getArg(0));
     else if (E->getCastKind() == CK_UserDefinedConversion) {
+      SubExpr = SubExpr->IgnoreImplicit();
       assert((isa<CXXMemberCallExpr>(SubExpr) ||
               isa<BlockExpr>(SubExpr)) &&
              "Unexpected SubExpr for CK_UserDefinedConversion.");

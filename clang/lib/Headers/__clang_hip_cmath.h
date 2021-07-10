@@ -10,7 +10,7 @@
 #ifndef __CLANG_HIP_CMATH_H__
 #define __CLANG_HIP_CMATH_H__
 
-#if !defined(__HIP__) && !defined(__OPENMP_AMDGCN__) 
+#if !defined(__HIP__) && !defined(__OPENMP_AMDGCN__)
 #error "This file is for HIP and OpenMP AMDGCN device compilation only."
 #endif
 

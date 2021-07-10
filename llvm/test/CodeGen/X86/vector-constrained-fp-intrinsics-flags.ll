@@ -2,8 +2,8 @@
 
 define <1 x float> @constrained_vector_fadd_v1f32() #0 {
 ; CHECK-LABEL: name: constrained_vector_fadd_v1f32
-; CHECK: [[MOVSSrm_alt:%[0-9]+]]:fr32 = MOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load 4 from constant-pool)
-; CHECK: [[ADDSSrm:%[0-9]+]]:fr32 = ADDSSrm [[MOVSSrm_alt]], $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr :: (load 4 from constant-pool)
+; CHECK: [[MOVSSrm_alt:%[0-9]+]]:fr32 = MOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+; CHECK: [[ADDSSrm:%[0-9]+]]:fr32 = ADDSSrm [[MOVSSrm_alt]], $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr :: (load (s32) from constant-pool)
 ; CHECK: $xmm0 = COPY [[ADDSSrm]]
 ; CHECK: RET 0, $xmm0
 entry:
@@ -14,10 +14,10 @@ entry:
 define <3 x float> @constrained_vector_fadd_v3f32() #0 {
 ; CHECK-LABEL: name: constrained_vector_fadd_v3f32
 ; CHECK: [[FsFLD0SS:%[0-9]+]]:fr32 = FsFLD0SS
-; CHECK: [[MOVSSrm_alt:%[0-9]+]]:fr32 = MOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load 4 from constant-pool)
+; CHECK: [[MOVSSrm_alt:%[0-9]+]]:fr32 = MOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
 ; CHECK: [[ADDSSrr:%[0-9]+]]:fr32 = ADDSSrr [[MOVSSrm_alt]], killed [[FsFLD0SS]], implicit $mxcsr
-; CHECK: [[ADDSSrm:%[0-9]+]]:fr32 = ADDSSrm [[MOVSSrm_alt]], $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr :: (load 4 from constant-pool)
-; CHECK: [[ADDSSrm1:%[0-9]+]]:fr32 = ADDSSrm [[MOVSSrm_alt]], $rip, 1, $noreg, %const.2, $noreg, implicit $mxcsr :: (load 4 from constant-pool)
+; CHECK: [[ADDSSrm:%[0-9]+]]:fr32 = ADDSSrm [[MOVSSrm_alt]], $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr :: (load (s32) from constant-pool)
+; CHECK: [[ADDSSrm1:%[0-9]+]]:fr32 = ADDSSrm [[MOVSSrm_alt]], $rip, 1, $noreg, %const.2, $noreg, implicit $mxcsr :: (load (s32) from constant-pool)
 ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY [[ADDSSrm1]]
 ; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY [[ADDSSrm]]
 ; CHECK: [[UNPCKLPSrr:%[0-9]+]]:vr128 = UNPCKLPSrr [[COPY1]], killed [[COPY]]
@@ -37,9 +37,9 @@ entry:
 
 define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; CHECK-LABEL: name: constrained_vector_fadd_v4f64
-; CHECK: [[MOVAPDrm:%[0-9]+]]:vr128 = MOVAPDrm $rip, 1, $noreg, %const.0, $noreg :: (load 16 from constant-pool)
-; CHECK: [[ADDPDrm:%[0-9]+]]:vr128 = ADDPDrm [[MOVAPDrm]], $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr :: (load 16 from constant-pool)
-; CHECK: [[ADDPDrm1:%[0-9]+]]:vr128 = ADDPDrm [[MOVAPDrm]], $rip, 1, $noreg, %const.2, $noreg, implicit $mxcsr :: (load 16 from constant-pool)
+; CHECK: [[MOVAPDrm:%[0-9]+]]:vr128 = MOVAPDrm $rip, 1, $noreg, %const.0, $noreg :: (load (s128) from constant-pool)
+; CHECK: [[ADDPDrm:%[0-9]+]]:vr128 = ADDPDrm [[MOVAPDrm]], $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr :: (load (s128) from constant-pool)
+; CHECK: [[ADDPDrm1:%[0-9]+]]:vr128 = ADDPDrm [[MOVAPDrm]], $rip, 1, $noreg, %const.2, $noreg, implicit $mxcsr :: (load (s128) from constant-pool)
 ; CHECK: $xmm0 = COPY [[ADDPDrm1]]
 ; CHECK: $xmm1 = COPY [[ADDPDrm]]
 ; CHECK: RET 0, $xmm0, $xmm1

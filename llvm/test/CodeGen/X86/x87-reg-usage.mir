@@ -77,13 +77,13 @@ body:             |
 
     ; CHECK-LABEL: name: f1
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.a)
-    ; CHECK: renamable $fp0 = SUB_Fp32m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.b)
-    ; CHECK: ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %ir.a)
+    ; CHECK: renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.a)
+    ; CHECK: renamable $fp0 = SUB_Fp32m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.b)
+    ; CHECK: ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.a)
     ; CHECK: RET 0
-    renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.a)
-    renamable $fp0 = SUB_Fp32m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.b)
-    ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %ir.a)
+    renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.a)
+    renamable $fp0 = SUB_Fp32m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.b)
+    ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.a)
     RET 0
 
 ...
@@ -103,13 +103,13 @@ body:             |
 
     ; CHECK-LABEL: name: f2
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: renamable $fp0 = LD_Fp64m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 8 from %ir.a)
-    ; CHECK: renamable $fp0 = ADD_Fp64m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 8 from %ir.b)
-    ; CHECK: ST_Fp64m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 8 into %ir.a)
+    ; CHECK: renamable $fp0 = LD_Fp64m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.a)
+    ; CHECK: renamable $fp0 = ADD_Fp64m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.b)
+    ; CHECK: ST_Fp64m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s64) into %ir.a)
     ; CHECK: RET 0
-    renamable $fp0 = LD_Fp64m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 8 from %ir.a)
-    renamable $fp0 = ADD_Fp64m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 8 from %ir.b)
-    ST_Fp64m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 8 into %ir.a)
+    renamable $fp0 = LD_Fp64m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.a)
+    renamable $fp0 = ADD_Fp64m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.b)
+    ST_Fp64m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s64) into %ir.a)
     RET 0
 
 ...
@@ -129,15 +129,15 @@ body:             |
 
     ; CHECK-LABEL: name: f3
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: renamable $fp0 = LD_Fp80m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 10 from %ir.a, align 16)
-    ; CHECK: renamable $fp1 = LD_Fp80m killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 10 from %ir.b, align 16)
+    ; CHECK: renamable $fp0 = LD_Fp80m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s80) from %ir.a, align 16)
+    ; CHECK: renamable $fp1 = LD_Fp80m killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s80) from %ir.b, align 16)
     ; CHECK: renamable $fp0 = MUL_Fp80 killed renamable $fp0, killed renamable $fp1, implicit-def dead $fpsw, implicit $fpcw
-    ; CHECK: ST_FpP80m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 10 into %ir.a, align 16)
+    ; CHECK: ST_FpP80m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s80) into %ir.a, align 16)
     ; CHECK: RET 0
-    renamable $fp0 = LD_Fp80m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 10 from %ir.a, align 16)
-    renamable $fp1 = LD_Fp80m killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 10 from %ir.b, align 16)
+    renamable $fp0 = LD_Fp80m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s80) from %ir.a, align 16)
+    renamable $fp1 = LD_Fp80m killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s80) from %ir.b, align 16)
     renamable $fp0 = MUL_Fp80 killed renamable $fp0, killed renamable $fp1, implicit-def dead $fpsw, implicit $fpcw
-    ST_FpP80m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 10 into %ir.a, align 16)
+    ST_FpP80m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s80) into %ir.a, align 16)
     RET 0
 
 ...
@@ -157,13 +157,13 @@ body:             |
 
     ; CHECK-LABEL: name: f4
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.a)
-    ; CHECK: renamable $fp0 = DIV_Fp32m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.b)
-    ; CHECK: ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %ir.a)
+    ; CHECK: renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.a)
+    ; CHECK: renamable $fp0 = DIV_Fp32m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.b)
+    ; CHECK: ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.a)
     ; CHECK: RET 0
-    renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.a)
-    renamable $fp0 = DIV_Fp32m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.b)
-    ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %ir.a)
+    renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.a)
+    renamable $fp0 = DIV_Fp32m killed renamable $fp0, killed renamable $rsi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.b)
+    ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.a)
     RET 0
 
 ...
@@ -183,11 +183,11 @@ body:             |
 
     ; CHECK-LABEL: name: f5
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: renamable $fp0 = LD_Fp32m64 killed renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.val)
-    ; CHECK: ST_Fp64m killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 8 into %ir.ret)
+    ; CHECK: renamable $fp0 = LD_Fp32m64 killed renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.val)
+    ; CHECK: ST_Fp64m killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s64) into %ir.ret)
     ; CHECK: RET 0
-    renamable $fp0 = LD_Fp32m64 killed renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.val)
-    ST_Fp64m killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 8 into %ir.ret)
+    renamable $fp0 = LD_Fp32m64 killed renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.val)
+    ST_Fp64m killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s64) into %ir.ret)
     RET 0
 
 ...
@@ -209,15 +209,15 @@ body:             |
 
     ; CHECK-LABEL: name: f6
     ; CHECK: liveins: $rdi, $rsi
-    ; CHECK: renamable $fp0 = LD_Fp64m killed renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 8 from %ir.val)
-    ; CHECK: ST_Fp64m32 %stack.0, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %stack.0)
-    ; CHECK: renamable $fp0 = LD_Fp32m %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %stack.0)
-    ; CHECK: ST_Fp32m killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %ir.ret)
+    ; CHECK: renamable $fp0 = LD_Fp64m killed renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.val)
+    ; CHECK: ST_Fp64m32 %stack.0, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %stack.0)
+    ; CHECK: renamable $fp0 = LD_Fp32m %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %stack.0)
+    ; CHECK: ST_Fp32m killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.ret)
     ; CHECK: RET 0
-    renamable $fp0 = LD_Fp64m killed renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 8 from %ir.val)
-    ST_Fp64m32 %stack.0, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %stack.0)
-    renamable $fp0 = LD_Fp32m %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %stack.0)
-    ST_Fp32m killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %ir.ret)
+    renamable $fp0 = LD_Fp64m killed renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.val)
+    ST_Fp64m32 %stack.0, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %stack.0)
+    renamable $fp0 = LD_Fp32m %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %stack.0)
+    ST_Fp32m killed renamable $rsi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.ret)
     RET 0
 
 ...
@@ -236,13 +236,13 @@ body:             |
 
     ; CHECK-LABEL: name: f7
     ; CHECK: liveins: $rdi
-    ; CHECK: renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.a)
+    ; CHECK: renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.a)
     ; CHECK: renamable $fp0 = SQRT_Fp32 killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw
-    ; CHECK: ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %ir.a)
+    ; CHECK: ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.a)
     ; CHECK: RET 0
-    renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load 4 from %ir.a)
+    renamable $fp0 = LD_Fp32m renamable $rdi, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s32) from %ir.a)
     renamable $fp0 = SQRT_Fp32 killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw
-    ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store 4 into %ir.a)
+    ST_Fp32m killed renamable $rdi, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw :: (store (s32) into %ir.a)
     RET 0
 
 ...

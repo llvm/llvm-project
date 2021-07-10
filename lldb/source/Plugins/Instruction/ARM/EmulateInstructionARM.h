@@ -19,8 +19,8 @@ namespace lldb_private {
 // ITSession - Keep track of the IT Block progression.
 class ITSession {
 public:
-  ITSession() {}
-  ~ITSession() {}
+  ITSession() = default;
+  ~ITSession() = default;
 
   // InitIT - Initializes ITCounter/ITState.
   bool InitIT(uint32_t bits7_0);

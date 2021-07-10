@@ -4527,7 +4527,8 @@ def SwiftContextDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
 The ``swift_context`` attribute marks a parameter of a ``swiftcall``
-function as having the special context-parameter ABI treatment.
+or ``swiftasynccall`` function as having the special context-parameter
+ABI treatment.
 
 This treatment generally passes the context value in a special register
 which is normally callee-preserved.
@@ -4540,14 +4541,39 @@ A context parameter must have pointer or reference type.
   }];
 }
 
+def SwiftAsyncCallDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``swiftasynccall`` attribute indicates that a function is
+compatible with the low-level conventions of Swift async functions,
+provided it declares the right formal arguments.
+
+In most respects, this is similar to the ``swiftcall`` attribute, except for
+the following:
+- A parameter may be marked ``swift_async_context``, ``swift_context``
+  or ``swift_indirect_result`` (with the same restrictions on parameter
+  ordering as ``swiftcall``) but the parameter attribute
+  ``swift_error_result`` is not permitted.
+- A ``swiftasynccall`` function must have return type ``void``.
+- Within a ``swiftasynccall`` function, a call to a ``swiftasynccall``
+  function that is the immediate operand of a ``return`` statement is
+  guaranteed to be performed as a tail call. This syntax is allowed even
+  in C as an extension (a call to a void-returning function cannot be a
+  return operand in standard C). If something in the calling function would
+  semantically be performed after a guaranteed tail call, such as the
+  non-trivial destruction of a local variable or temporary,
+  then the program is ill-formed.
+  }];
+}
+
 def SwiftAsyncContextDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
-The ``swift_async_context`` attribute marks a parameter as having the
-special asynchronous context-parameter ABI treatment.
+The ``swift_async_context`` attribute marks a parameter of a ``swiftasynccall``
+function as having the special asynchronous context-parameter ABI treatment.
 
-This treatment generally passes the context value in a special register
-which is normally callee-preserved.
+If the function is not ``swiftasynccall``, this attribute only generates
+extended frame information.
 
 A context parameter must have pointer or reference type.
   }];
@@ -4592,7 +4618,8 @@ def SwiftIndirectResultDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
 The ``swift_indirect_result`` attribute marks a parameter of a ``swiftcall``
-function as having the special indirect-result ABI treatment.
+or ``swiftasynccall`` function as having the special indirect-result ABI
+treatment.
 
 This treatment gives the parameter the target's normal indirect-result
 ABI treatment, which may involve passing it differently from an ordinary

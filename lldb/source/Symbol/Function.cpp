@@ -32,7 +32,7 @@ FunctionInfo::FunctionInfo(const char *name, const Declaration *decl_ptr)
 FunctionInfo::FunctionInfo(ConstString name, const Declaration *decl_ptr)
     : m_name(name), m_declaration(decl_ptr) {}
 
-FunctionInfo::~FunctionInfo() {}
+FunctionInfo::~FunctionInfo() = default;
 
 void FunctionInfo::Dump(Stream *s, bool show_fullpaths) const {
   if (m_name)
@@ -74,7 +74,7 @@ InlineFunctionInfo::InlineFunctionInfo(ConstString name,
     : FunctionInfo(name, decl_ptr), m_mangled(mangled),
       m_call_decl(call_decl_ptr) {}
 
-InlineFunctionInfo::~InlineFunctionInfo() {}
+InlineFunctionInfo::~InlineFunctionInfo() = default;
 
 void InlineFunctionInfo::Dump(Stream *s, bool show_fullpaths) const {
   FunctionInfo::Dump(s, show_fullpaths);
@@ -238,7 +238,7 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
   assert(comp_unit != nullptr);
 }
 
-Function::~Function() {}
+Function::~Function() = default;
 
 void Function::GetStartLineSourceInfo(FileSpec &source_file,
                                       uint32_t &line_no) {

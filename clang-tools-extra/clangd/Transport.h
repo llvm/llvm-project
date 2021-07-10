@@ -18,6 +18,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_TRANSPORT_H_
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TRANSPORT_H_
 
+#include "Features.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"

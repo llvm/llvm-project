@@ -31,16 +31,14 @@ class VectorTransferOpInterface;
 namespace vector {
 class TransferWriteOp;
 class TransferReadOp;
+
+/// Helper function that creates a memref::DimOp or tensor::DimOp depending on
+/// the type of `source`.
+Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 } // namespace vector
 
 /// Return the number of elements of basis, `0` if empty.
 int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis);
-
-/// Given a shape with sizes greater than 0 along all dimensions,
-/// return the distance, in number of elements, between a slice in a dimension
-/// and the next slice in the same dimension.
-///   e.g. shape[3, 4, 5] -> linearization_basis[20, 5, 1]
-SmallVector<int64_t, 8> computeStrides(ArrayRef<int64_t> shape);
 
 /// Given the shape and sizes of a vector, returns the corresponding
 /// strides for each dimension.
@@ -62,12 +60,6 @@ SmallVector<int64_t, 4> delinearize(ArrayRef<int64_t> strides,
 SmallVector<int64_t, 4>
 computeElementOffsetsFromVectorSliceOffsets(ArrayRef<int64_t> sizes,
                                             ArrayRef<int64_t> vectorOffsets);
-
-/// Given the shape, sizes, and element-space offsets of a vector, returns
-/// the slize sizes for each dimension.
-SmallVector<int64_t, 4> computeSliceSizes(ArrayRef<int64_t> shape,
-                                          ArrayRef<int64_t> sizes,
-                                          ArrayRef<int64_t> elementOffsets);
 
 /// Computes and returns the multi-dimensional ratio of `superShape` to
 /// `subShape`. This is calculated by performing a traversal from minor to major

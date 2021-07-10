@@ -383,10 +383,10 @@ public:
     assert(!dest.isPreemptible);
     if (Optional<uint32_t> index =
             in.ppc64LongBranchTarget->addEntry(&dest, addend)) {
-      mainPart->relaDyn->addReloc(
-          {target->relativeRel, in.ppc64LongBranchTarget, *index * UINT64_C(8),
-           true, &dest,
-           addend + getPPC64GlobalEntryToLocalEntryOffset(dest.stOther)});
+      mainPart->relaDyn->addRelativeReloc(
+          target->relativeRel, in.ppc64LongBranchTarget, *index * UINT64_C(8),
+          dest, addend + getPPC64GlobalEntryToLocalEntryOffset(dest.stOther),
+          target->symbolicRel, R_ABS);
     }
   }
 };

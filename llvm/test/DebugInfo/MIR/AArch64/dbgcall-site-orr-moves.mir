@@ -145,7 +145,7 @@ body:             |
     DBG_VALUE $w0, $noreg, !23, !DIExpression(), debug-location !24
     DBG_VALUE $w0, $noreg, !23, !DIExpression(), debug-location !24
     DBG_VALUE $w0, $noreg, !23, !DIExpression(), debug-location !24
-    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
     frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !25
@@ -153,7 +153,7 @@ body:             |
     BL @call_int, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit-def $sp, debug-location !25
     DBG_VALUE $w0, $noreg, !23, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !24
     $w0 = ORRWrs $wzr, $wzr, 0, debug-location !26
-    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !26 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !26 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
     RET undef $lr, implicit killed $w0, debug-location !26
 
 ...
@@ -190,7 +190,7 @@ body:             |
 
     DBG_VALUE $w0, $noreg, !32, !DIExpression(), debug-location !33
     DBG_VALUE $w0, $noreg, !32, !DIExpression(), debug-location !33
-    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
     frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !34
@@ -199,7 +199,7 @@ body:             |
     DBG_VALUE $w0, $noreg, !32, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !33
     BL @call_long, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !34
     $w0 = ORRWrs $wzr, $wzr, 0, debug-location !35
-    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !35 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !35 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
     RET undef $lr, implicit killed $w0, debug-location !35
 
 ...
@@ -239,8 +239,8 @@ body:             |
 
     DBG_VALUE $w0, $noreg, !40, !DIExpression(), debug-location !42
     DBG_VALUE $x1, $noreg, !41, !DIExpression(), debug-location !42
-    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -4 :: (store 8 into %stack.2), (store 8 into %stack.1)
-    frame-setup STRXui killed $x19, $sp, 2 :: (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -4 :: (store (s64) into %stack.2), (store (s64) into %stack.1)
+    frame-setup STRXui killed $x19, $sp, 2 :: (store (s64) into %stack.0)
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 32
     frame-setup CFI_INSTRUCTION offset $w19, -16
@@ -249,7 +249,7 @@ body:             |
     renamable $x9 = ADRP target-flags(aarch64-page) @global, debug-location !43
     $x8 = ORRXrs $xzr, killed $x1, 0
     DBG_VALUE $x8, $noreg, !41, !DIExpression(), debug-location !42
-    renamable $w1 = LDRWui killed renamable $x9, target-flags(aarch64-pageoff, aarch64-nc) @global, debug-location !43 :: (dereferenceable load 4 from @global)
+    renamable $w1 = LDRWui killed renamable $x9, target-flags(aarch64-pageoff, aarch64-nc) @global, debug-location !43 :: (dereferenceable load (s32) from @global)
     $w19 = ORRWrs $wzr, killed $w0, 0
     DBG_VALUE $w19, $noreg, !40, !DIExpression(), debug-location !42
     DBG_VALUE $w19, $noreg, !40, !DIExpression(), debug-location !42
@@ -258,8 +258,8 @@ body:             |
     DBG_VALUE $x1, $noreg, !41, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !42
     $w0 = ORRWrs $wzr, killed $w19, 0, debug-location !44
     DBG_VALUE $w0, $noreg, !40, !DIExpression(), debug-location !42
-    $x19 = frame-destroy LDRXui $sp, 2, debug-location !44 :: (load 8 from %stack.0)
-    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 4, debug-location !44 :: (load 8 from %stack.2), (load 8 from %stack.1)
+    $x19 = frame-destroy LDRXui $sp, 2, debug-location !44 :: (load (s64) from %stack.0)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 4, debug-location !44 :: (load (s64) from %stack.2), (load (s64) from %stack.1)
     RET undef $lr, implicit killed $w0, debug-location !44
 
 ...

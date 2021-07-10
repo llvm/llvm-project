@@ -33,9 +33,12 @@ next:
 ; CHECK-NEXT:  %loaded = load i8, i8* %[[GEPVAR]]
 ; CHECK-NEXT:  call void @llvm.dbg.value(metadata i8* %[[GEPVAR]],
 ; CHECK-SAME:                            metadata ![[DIVAR]],
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata !DIArgList(i8* %[[GEPVAR]],
+; CHECK-SAME:                            i8* %[[GEPVAR]]), metadata ![[DIVAR]],
   call void @llvm.dbg.value(metadata i8 *%arith, metadata !12, metadata !DIExpression()), !dbg !14
   %loaded = load i8, i8 *%arith
   call void @llvm.dbg.value(metadata i8 *%arith, metadata !12, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata !DIArgList(i8 *%arith, i8 *%arith), metadata !12, metadata !DIExpression()), !dbg !14
   ret i8 %loaded
 
 ret:

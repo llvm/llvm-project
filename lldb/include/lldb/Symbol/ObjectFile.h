@@ -25,9 +25,9 @@ namespace lldb_private {
 
 class ObjectFileJITDelegate {
 public:
-  ObjectFileJITDelegate() {}
+  ObjectFileJITDelegate() = default;
 
-  virtual ~ObjectFileJITDelegate() {}
+  virtual ~ObjectFileJITDelegate() = default;
 
   virtual lldb::ByteOrder GetByteOrder() const = 0;
 

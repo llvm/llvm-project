@@ -1472,12 +1472,19 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
   unsigned VectorWidth = 0;
-  if (auto *VT = dyn_cast<VectorType>(U.getType()))
+
+  // True if we should use a splat vector; using VectorWidth alone is not
+  // sufficient.
+  bool WantSplatVector = false;
+  if (auto *VT = dyn_cast<VectorType>(U.getType())) {
     VectorWidth = cast<FixedVectorType>(VT)->getNumElements();
+    // We don't produce 1 x N vectors; those are treated as scalars.
+    WantSplatVector = VectorWidth > 1;
+  }
 
   // We might need to splat the base pointer into a vector if the offsets
   // are vectors.
-  if (VectorWidth && !PtrTy.isVector()) {
+  if (WantSplatVector && !PtrTy.isVector()) {
     BaseReg =
         MIRBuilder
             .buildSplatVector(LLT::fixed_vector(VectorWidth, PtrTy), BaseReg)
@@ -1516,7 +1523,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       Register IdxReg = getOrCreateVReg(*Idx);
       LLT IdxTy = MRI->getType(IdxReg);
       if (IdxTy != OffsetTy) {
-        if (!IdxTy.isVector() && VectorWidth) {
+        if (!IdxTy.isVector() && WantSplatVector) {
           IdxReg = MIRBuilder.buildSplatVector(
             OffsetTy.changeElementType(IdxTy), IdxReg).getReg(0);
         }
@@ -1589,6 +1596,9 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   if (auto *MCI = dyn_cast<MemCpyInst>(&CI)) {
     DstAlign = MCI->getDestAlign().valueOrOne();
     SrcAlign = MCI->getSourceAlign().valueOrOne();
+  } else if (auto *MCI = dyn_cast<MemCpyInlineInst>(&CI)) {
+    DstAlign = MCI->getDestAlign().valueOrOne();
+    SrcAlign = MCI->getSourceAlign().valueOrOne();
   } else if (auto *MMI = dyn_cast<MemMoveInst>(&CI)) {
     DstAlign = MMI->getDestAlign().valueOrOne();
     SrcAlign = MMI->getSourceAlign().valueOrOne();
@@ -1597,10 +1607,12 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     DstAlign = MSI->getDestAlign().valueOrOne();
   }
 
-  // We need to propagate the tail call flag from the IR inst as an argument.
-  // Otherwise, we have to pessimize and assume later that we cannot tail call
-  // any memory intrinsics.
-  ICall.addImm(CI.isTailCall() ? 1 : 0);
+  if (Opcode != TargetOpcode::G_MEMCPY_INLINE) {
+    // We need to propagate the tail call flag from the IR inst as an argument.
+    // Otherwise, we have to pessimize and assume later that we cannot tail call
+    // any memory intrinsics.
+    ICall.addImm(CI.isTailCall() ? 1 : 0);
+  }
 
   // Create mem operands to store the alignment and volatile info.
   auto VolFlag = IsVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
@@ -2033,6 +2045,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                             getOrCreateVReg(*CI.getArgOperand(0)),
                             MachineInstr::copyFlagsFromInstruction(CI));
     return true;
+  case Intrinsic::memcpy_inline:
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMCPY_INLINE);
   case Intrinsic::memcpy:
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMCPY);
   case Intrinsic::memmove:

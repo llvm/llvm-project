@@ -29,7 +29,7 @@ int posix_openpt(int flags);
 using namespace lldb_private;
 
 // PseudoTerminal constructor
-PseudoTerminal::PseudoTerminal() {}
+PseudoTerminal::PseudoTerminal() = default;
 
 // Destructor
 //

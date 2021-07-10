@@ -1077,11 +1077,24 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLineWithReturn(
     llvm::StringRef in_string, ScriptInterpreter::ScriptReturnType return_type,
     void *ret_value, const ExecuteScriptOptions &options) {
 
+  llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
+      io_redirect_or_error = ScriptInterpreterIORedirect::Create(
+          options.GetEnableIO(), m_debugger, /*result=*/nullptr);
+
+  if (!io_redirect_or_error) {
+    llvm::consumeError(io_redirect_or_error.takeError());
+    return false;
+  }
+
+  ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
+
   Locker locker(this,
                 Locker::AcquireLock | Locker::InitSession |
                     (options.GetSetLLDBGlobals() ? Locker::InitGlobals : 0) |
                     Locker::NoSTDIN,
-                Locker::FreeAcquiredLock | Locker::TearDownSession);
+                Locker::FreeAcquiredLock | Locker::TearDownSession,
+                io_redirect.GetInputFile(), io_redirect.GetOutputFile(),
+                io_redirect.GetErrorFile());
 
   PythonModule &main_module = GetMainModule();
   PythonDictionary globals = main_module.GetDictionary();
@@ -1190,11 +1203,22 @@ Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
   if (in_string == nullptr)
     return Status();
 
+  llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
+      io_redirect_or_error = ScriptInterpreterIORedirect::Create(
+          options.GetEnableIO(), m_debugger, /*result=*/nullptr);
+
+  if (!io_redirect_or_error)
+    return Status(io_redirect_or_error.takeError());
+
+  ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
+
   Locker locker(this,
                 Locker::AcquireLock | Locker::InitSession |
                     (options.GetSetLLDBGlobals() ? Locker::InitGlobals : 0) |
                     Locker::NoSTDIN,
-                Locker::FreeAcquiredLock | Locker::TearDownSession);
+                Locker::FreeAcquiredLock | Locker::TearDownSession,
+                io_redirect.GetInputFile(), io_redirect.GetOutputFile(),
+                io_redirect.GetErrorFile());
 
   PythonModule &main_module = GetMainModule();
   PythonDictionary globals = main_module.GetDictionary();
@@ -1358,7 +1382,7 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
 
   Status error = ExecuteMultipleLines(
       function_def_string.c_str(),
-      ScriptInterpreter::ExecuteScriptOptions().SetEnableIO(false));
+      ExecuteScriptOptions().SetEnableIO(false));
   return error;
 }
 
@@ -2057,7 +2081,10 @@ ScriptInterpreterPythonImpl::LoadPluginModule(const FileSpec &file_spec,
 
   StructuredData::ObjectSP module_sp;
 
-  if (LoadScriptingModule(file_spec.GetPath().c_str(), true, error, &module_sp))
+  LoadScriptOptions load_script_options =
+      LoadScriptOptions().SetInitSession(true).SetSilent(false);
+  if (LoadScriptingModule(file_spec.GetPath().c_str(), load_script_options,
+                          error, &module_sp))
     return module_sp;
 
   return StructuredData::ObjectSP();
@@ -2732,26 +2759,44 @@ uint64_t replace_all(std::string &str, const std::string &oldStr,
 }
 
 bool ScriptInterpreterPythonImpl::LoadScriptingModule(
-    const char *pathname, bool init_session, lldb_private::Status &error,
-    StructuredData::ObjectSP *module_sp, FileSpec extra_search_dir) {
+    const char *pathname, const LoadScriptOptions &options,
+    lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
+    FileSpec extra_search_dir) {
   namespace fs = llvm::sys::fs;
   namespace path = llvm::sys::path;
+
+  ExecuteScriptOptions exc_options = ExecuteScriptOptions()
+                                         .SetEnableIO(!options.GetSilent())
+                                         .SetSetLLDBGlobals(false);
 
   if (!pathname || !pathname[0]) {
     error.SetErrorString("invalid pathname");
     return false;
   }
 
+  llvm::Expected<std::unique_ptr<ScriptInterpreterIORedirect>>
+      io_redirect_or_error = ScriptInterpreterIORedirect::Create(
+          exc_options.GetEnableIO(), m_debugger, /*result=*/nullptr);
+
+  if (!io_redirect_or_error) {
+    error = io_redirect_or_error.takeError();
+    return false;
+  }
+
+  ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
   lldb::DebuggerSP debugger_sp = m_debugger.shared_from_this();
 
   // Before executing Python code, lock the GIL.
   Locker py_lock(this,
                  Locker::AcquireLock |
-                     (init_session ? Locker::InitSession : 0) | Locker::NoSTDIN,
+                     (options.GetInitSession() ? Locker::InitSession : 0) |
+                     Locker::NoSTDIN,
                  Locker::FreeAcquiredLock |
-                     (init_session ? Locker::TearDownSession : 0));
+                     (options.GetInitSession() ? Locker::TearDownSession : 0),
+                 io_redirect.GetInputFile(), io_redirect.GetOutputFile(),
+                 io_redirect.GetErrorFile());
 
-  auto ExtendSysPath = [this](std::string directory) -> llvm::Error {
+  auto ExtendSysPath = [&](std::string directory) -> llvm::Error {
     if (directory.empty()) {
       return llvm::make_error<llvm::StringError>(
           "invalid directory name", llvm::inconvertibleErrorCode());
@@ -2766,11 +2811,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
                           "sys.path.insert(1,'%s');\n\n",
                           directory.c_str(), directory.c_str());
     bool syspath_retval =
-        ExecuteMultipleLines(command_stream.GetData(),
-                             ScriptInterpreter::ExecuteScriptOptions()
-                                 .SetEnableIO(false)
-                                 .SetSetLLDBGlobals(false))
-            .Success();
+        ExecuteMultipleLines(command_stream.GetData(), exc_options).Success();
     if (!syspath_retval) {
       return llvm::make_error<llvm::StringError>(
           "Python sys.path handling failed", llvm::inconvertibleErrorCode());
@@ -2844,21 +2885,18 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
     return false;
   }
 
-  // check if the module is already import-ed
+  // Check if the module is already imported.
   StreamString command_stream;
   command_stream.Clear();
   command_stream.Printf("sys.modules.__contains__('%s')", module_name.c_str());
   bool does_contain = false;
-  // this call will succeed if the module was ever imported in any Debugger
-  // in the lifetime of the process in which this LLDB framework is living
-  const bool was_imported_globally =
-      (ExecuteOneLineWithReturn(
-           command_stream.GetData(),
-           ScriptInterpreterPythonImpl::eScriptReturnTypeBool, &does_contain,
-           ScriptInterpreter::ExecuteScriptOptions()
-               .SetEnableIO(false)
-               .SetSetLLDBGlobals(false)) &&
-       does_contain);
+  // This call will succeed if the module was ever imported in any Debugger in
+  // the lifetime of the process in which this LLDB framework is living.
+  const bool does_contain_executed = ExecuteOneLineWithReturn(
+      command_stream.GetData(),
+      ScriptInterpreterPythonImpl::eScriptReturnTypeBool, &does_contain, exc_options);
+
+  const bool was_imported_globally = does_contain_executed && does_contain;
   const bool was_imported_locally =
       GetSessionDictionary()
           .GetItemForKey(PythonString(module_name))
@@ -2876,10 +2914,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   } else
     command_stream.Printf("import %s", module_name.c_str());
 
-  error = ExecuteMultipleLines(command_stream.GetData(),
-                               ScriptInterpreter::ExecuteScriptOptions()
-                                   .SetEnableIO(false)
-                                   .SetSetLLDBGlobals(false));
+  error = ExecuteMultipleLines(command_stream.GetData(), exc_options);
   if (error.Fail())
     return false;
 
@@ -2898,7 +2933,8 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
     void *module_pyobj = nullptr;
     if (ExecuteOneLineWithReturn(
             command_stream.GetData(),
-            ScriptInterpreter::eScriptReturnTypeOpaqueObject, &module_pyobj) &&
+            ScriptInterpreter::eScriptReturnTypeOpaqueObject, &module_pyobj,
+            exc_options) &&
         module_pyobj)
       *module_sp = std::make_shared<StructuredPythonObject>(module_pyobj);
   }
@@ -3055,7 +3091,7 @@ bool ScriptInterpreterPythonImpl::GetDocumentationForItem(const char *item,
   if (ExecuteOneLineWithReturn(
           command, ScriptInterpreter::eScriptReturnTypeCharStrOrNone,
           &result_ptr,
-          ScriptInterpreter::ExecuteScriptOptions().SetEnableIO(false))) {
+          ExecuteScriptOptions().SetEnableIO(false))) {
     if (result_ptr)
       dest.assign(result_ptr);
     return true;

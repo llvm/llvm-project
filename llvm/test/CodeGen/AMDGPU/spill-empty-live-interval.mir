@@ -8,12 +8,12 @@
 # CHECK-LABEL: name: expecting_non_empty_interval
 
 # CHECK: undef %7.sub1:vreg_64 = V_MAC_F32_e32 0, undef %1:vgpr_32, undef %7.sub1, implicit $mode, implicit $exec
-# CHECK-NEXT: SI_SPILL_V64_SAVE %7, %stack.0, $sgpr32, 0, implicit $exec :: (store 8 into %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: SI_SPILL_V64_SAVE %7, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
 # CHECK-NEXT: undef %5.sub1:vreg_64 = V_MOV_B32_e32 1786773504, implicit $exec
 # CHECK-NEXT: dead %3:vgpr_32 = V_MUL_F32_e32 0, %5.sub1, implicit $mode, implicit $exec
 
 # CHECK: S_NOP 0, implicit %6.sub1
-# CHECK-NEXT: %8:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load 8 from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: %8:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
 # CHECK-NEXT: S_NOP 0, implicit %8.sub1
 # CHECK-NEXT: S_NOP 0, implicit undef %9.sub0
 

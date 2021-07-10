@@ -94,9 +94,9 @@ body:             |
 
     $sp = frame-setup SUBri $sp, 4, 14, $noreg, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 4
-    renamable $s0 = VLDRH %const.0, 0, 14, $noreg :: (load 2 from constant-pool)
+    renamable $s0 = VLDRH %const.0, 0, 14, $noreg :: (load (s16) from constant-pool)
     VCMPZH renamable $s0, 14, $noreg, implicit-def $fpscr_nzcv
-    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (store 2 into %ir.res)
+    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (store (s16) into %ir.res)
     FMSTAT 14, $noreg, implicit-def $cpsr, implicit killed $fpscr_nzcv
     Bcc %bb.2, 0, killed $cpsr
 

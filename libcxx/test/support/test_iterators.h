@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <cstddef>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -872,6 +873,62 @@ public:
 
 private:
   I base_ = I();
+};
+
+template <class It>
+class three_way_contiguous_iterator
+{
+    static_assert(std::is_pointer_v<It>, "Things probably break in this case");
+
+    It it_;
+
+    template <class U> friend class three_way_contiguous_iterator;
+public:
+    typedef          std::contiguous_iterator_tag              iterator_category;
+    typedef typename std::iterator_traits<It>::value_type      value_type;
+    typedef typename std::iterator_traits<It>::difference_type difference_type;
+    typedef It                                                 pointer;
+    typedef typename std::iterator_traits<It>::reference       reference;
+    typedef typename std::remove_pointer<It>::type             element_type;
+
+    TEST_CONSTEXPR_CXX14 It base() const {return it_;}
+
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator() : it_() {}
+    explicit TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator(It it) : it_(it) {}
+    template <class U>
+        TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator(const three_way_contiguous_iterator<U>& u) : it_(u.it_) {}
+
+    TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
+    TEST_CONSTEXPR_CXX14 pointer operator->() const {return it_;}
+
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator& operator++() {++it_; return *this;}
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator operator++(int)
+        {three_way_contiguous_iterator tmp(*this); ++(*this); return tmp;}
+
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator& operator--() {--it_; return *this;}
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator operator--(int)
+        {three_way_contiguous_iterator tmp(*this); --(*this); return tmp;}
+
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator& operator+=(difference_type n) {it_ += n; return *this;}
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator operator+(difference_type n) const
+        {three_way_contiguous_iterator tmp(*this); tmp += n; return tmp;}
+    friend TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator operator+(difference_type n, three_way_contiguous_iterator x)
+        {x += n; return x;}
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator& operator-=(difference_type n) {return *this += -n;}
+    TEST_CONSTEXPR_CXX14 three_way_contiguous_iterator operator-(difference_type n) const
+        {three_way_contiguous_iterator tmp(*this); tmp -= n; return tmp;}
+
+    TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const {return it_[n];}
+
+    template <class T>
+    void operator,(T const &) DELETE_FUNCTION;
+
+    friend TEST_CONSTEXPR_CXX14
+    difference_type operator-(const three_way_contiguous_iterator& x, const three_way_contiguous_iterator& y) {
+        return x.base() - y.base();
+    }
+
+    friend auto operator<=>(const three_way_contiguous_iterator&, const three_way_contiguous_iterator&) = default;
 };
 
 // clang-format on

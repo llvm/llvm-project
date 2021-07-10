@@ -1,4 +1,4 @@
-//===--- LLJITWithLazyReexports.cpp - LLJIT example with custom laziness --===//
+//===- LLJITWithExecutorProcessControl.cpp - LLJIT example with EPC utils -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,12 +22,12 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
+#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
-#include "llvm/ExecutionEngine/Orc/TPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/TPCIndirectionUtils.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -105,8 +105,8 @@ static void *reenter(void *Ctx, void *TrampolineAddr) {
   std::promise<void *> LandingAddressP;
   auto LandingAddressF = LandingAddressP.get_future();
 
-  auto *TPCIU = static_cast<TPCIndirectionUtils *>(Ctx);
-  TPCIU->getLazyCallThroughManager().resolveTrampolineLandingAddress(
+  auto *EPCIU = static_cast<EPCIndirectionUtils *>(Ctx);
+  EPCIU->getLazyCallThroughManager().resolveTrampolineLandingAddress(
       pointerToJITTargetAddress(TrampolineAddr),
       [&](JITTargetAddress LandingAddress) {
         LandingAddressP.set_value(
@@ -135,8 +135,8 @@ int main(int argc, char *argv[]) {
 
   // (1) Create LLJIT instance.
   auto SSP = std::make_shared<SymbolStringPool>();
-  auto TPC = ExitOnErr(SelfTargetProcessControl::Create(std::move(SSP)));
-  auto J = ExitOnErr(LLJITBuilder().setTargetProcessControl(*TPC).create());
+  auto EPC = ExitOnErr(SelfExecutorProcessControl::Create(std::move(SSP)));
+  auto J = ExitOnErr(LLJITBuilder().setExecutorProcessControl(*EPC).create());
 
   // (2) Install transform to print modules as they are compiled:
   J->getIRTransformLayer().setTransform(
@@ -147,14 +147,14 @@ int main(int argc, char *argv[]) {
       });
 
   // (3) Create stubs and call-through managers:
-  auto TPCIU = ExitOnErr(TPCIndirectionUtils::Create(*TPC));
-  ExitOnErr(TPCIU->writeResolverBlock(pointerToJITTargetAddress(&reenter),
-                                      pointerToJITTargetAddress(TPCIU.get())));
-  TPCIU->createLazyCallThroughManager(
+  auto EPCIU = ExitOnErr(EPCIndirectionUtils::Create(*EPC));
+  ExitOnErr(EPCIU->writeResolverBlock(pointerToJITTargetAddress(&reenter),
+                                      pointerToJITTargetAddress(EPCIU.get())));
+  EPCIU->createLazyCallThroughManager(
       J->getExecutionSession(), pointerToJITTargetAddress(&reportErrorAndExit));
-  auto ISM = TPCIU->createIndirectStubsManager();
+  auto ISM = EPCIU->createIndirectStubsManager();
   J->getMainJITDylib().addGenerator(
-      ExitOnErr(TPCDynamicLibrarySearchGenerator::GetForTargetProcess(*TPC)));
+      ExitOnErr(EPCDynamicLibrarySearchGenerator::GetForTargetProcess(*EPC)));
 
   // (4) Add modules.
   ExitOnErr(J->addIRModule(ExitOnErr(parseExampleModule(FooMod, "foo-mod"))));
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
         {Mangle("bar_body"),
          JITSymbolFlags::Exported | JITSymbolFlags::Callable}}});
   ExitOnErr(J->getMainJITDylib().define(
-      lazyReexports(TPCIU->getLazyCallThroughManager(), *ISM,
+      lazyReexports(EPCIU->getLazyCallThroughManager(), *ISM,
                     J->getMainJITDylib(), std::move(ReExports))));
 
   // (6) Dump the ExecutionSession state.

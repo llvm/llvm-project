@@ -180,8 +180,9 @@ check-generated-output)
     python3 libcxx/utils/graph_header_deps.py >/dev/null
 ;;
 generic-cxx03)
-    export CC=clang
-    export CXX=clang++
+    # TODO: Switch to compiling with Clang ToT once issues with https://reviews.llvm.org/D104500 are resolved.
+    export CC=clang-12
+    export CXX=clang++-12
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake" \
                    -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
@@ -189,8 +190,6 @@ generic-cxx03)
     check-abi-list
 ;;
 generic-cxx11)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
                    -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
@@ -198,8 +197,6 @@ generic-cxx11)
     check-abi-list
 ;;
 generic-cxx14)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake" \
                    -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
@@ -207,8 +204,6 @@ generic-cxx14)
     check-abi-list
 ;;
 generic-cxx17)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake" \
                    -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
@@ -216,8 +211,6 @@ generic-cxx17)
     check-abi-list
 ;;
 generic-cxx20)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx20.cmake" \
                    -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
@@ -225,8 +218,6 @@ generic-cxx20)
     check-abi-list
 ;;
 generic-cxx2b)
-    export CC=clang-tot
-    export CXX=clang++-tot
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake" \
                    -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
@@ -234,48 +225,50 @@ generic-cxx2b)
     check-abi-list
 ;;
 generic-assertions)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-assertions.cmake"
     check-cxx-cxxabi
     check-abi-list
 ;;
 generic-debug-iterators)
-    export CC=clang-tot
-    export CXX=clang++-tot
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-iterators.cmake"
     check-cxx-cxxabi
     check-abi-list
 ;;
 generic-noexceptions)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
 generic-modules)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake"
     check-cxx-cxxabi
 ;;
 generic-static)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-static.cmake" \
                    -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-static.cfg.in"
     check-cxx-cxxabi
 ;;
 generic-32bit)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake"
+    check-cxx-cxxabi
+;;
+generic-clang-11)
+    export CC=clang-11
+    export CXX=clang++-11
+    clean
+    generate-cmake
+    check-cxx-cxxabi
+;;
+generic-clang-12)
+    export CC=clang-12
+    export CXX=clang++-12
+    clean
+    generate-cmake
     check-cxx-cxxabi
 ;;
 generic-gcc)
@@ -285,93 +278,62 @@ generic-gcc)
     generate-cmake
     check-cxx-cxxabi
 ;;
-generic-gcc-prev)
-    export CC=gcc-10
-    export CXX=g++-10
-    clean
-    generate-cmake
-    check-cxx-cxxabi
-;;
 generic-asan)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake"
     check-cxx-cxxabi
 ;;
 generic-msan)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake"
     check-cxx-cxxabi
 ;;
 generic-tsan)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-tsan.cmake"
     check-cxx-cxxabi
 ;;
 generic-ubsan)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake"
     check-cxx-cxxabi
 ;;
 generic-with_llvm_unwinder)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
     check-cxx-cxxabi
 ;;
 generic-singlethreaded)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake"
     check-cxx-cxxabi
 ;;
 generic-no-debug)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-debug.cmake"
     check-cxx-cxxabi
 ;;
 generic-no-filesystem)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-filesystem.cmake"
     check-cxx-cxxabi
 ;;
 generic-no-random_device)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake"
     check-cxx-cxxabi
 ;;
 generic-no-localization)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake"
     check-cxx-cxxabi
 ;;
 x86_64-apple-system)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake"
     check-cxx-cxxabi
 ;;
 x86_64-apple-system-noexceptions)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
@@ -401,8 +363,6 @@ x86_64-apple-system-backdeployment-*)
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";use_system_cxx_lib=True"
 
-    export CC=clang
-    export CXX=clang++
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                    -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
@@ -410,15 +370,11 @@ x86_64-apple-system-backdeployment-*)
     check-cxx-cxxabi
 ;;
 benchmarks)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake
     check-cxx-benchmarks
 ;;
 documentation)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -DLLVM_ENABLE_SPHINX=ON
 
@@ -426,8 +382,6 @@ documentation)
     ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
 ;;
 unified-standalone)
-    export CC=clang
-    export CXX=clang++
 
     clean
 
@@ -443,9 +397,6 @@ unified-standalone)
     check-cxx-cxxabi
 ;;
 runtimes-build)
-    export CC=clang
-    export CXX=clang++
-
     clean
 
     echo "--- Generating CMake"
@@ -469,19 +420,14 @@ runtimes-build)
     ${NINJA} -C "${BUILD_DIR}" check-runtimes
 
     echo "--- Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -C "${BUILD_DIR}" install-cxx install-cxxabi
+    ${NINJA} -C "${BUILD_DIR}" install-runtimes
 ;;
 legacy-test-config)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/legacy.cfg.in"
     check-cxx-cxxabi
 ;;
 legacy-standalone)
-    export CC=clang
-    export CXX=clang++
-
     clean
 
     echo "--- Generating CMake"

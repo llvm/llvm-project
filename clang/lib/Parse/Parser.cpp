@@ -1214,7 +1214,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // a definition.  Late parsed attributes are checked at the end.
   if (Tok.isNot(tok::equal)) {
     for (const ParsedAttr &AL : D.getAttributes())
-      if (AL.isKnownToGCC() && !AL.isCXX11Attribute())
+      if (AL.isKnownToGCC() && !AL.isStandardAttributeSyntax())
         Diag(AL.getLoc(), diag::warn_attribute_on_function_definition) << AL;
   }
 

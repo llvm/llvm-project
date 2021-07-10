@@ -10,3 +10,6 @@ struct [[maybe_unused("Wrong")]] S3 { // expected-error {{'maybe_unused' cannot 
   int a;
 };
 
+void func(void) {
+  int a[10] [[maybe_unused]]; // expected-error {{'maybe_unused' attribute cannot be applied to types}}
+}

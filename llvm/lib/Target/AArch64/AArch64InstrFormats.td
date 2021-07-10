@@ -3127,6 +3127,13 @@ def am_indexed32 : ComplexPattern<i64, 2, "SelectAddrModeIndexed32", []>;
 def am_indexed64 : ComplexPattern<i64, 2, "SelectAddrModeIndexed64", []>;
 def am_indexed128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed128", []>;
 
+// (unsigned immediate)
+// Indexed for 8-bit registers. offset is in range [0,63].
+def am_indexed8_6b : ComplexPattern<i64, 2, "SelectAddrModeIndexedUImm<1,63>", []>;
+def am_indexed16_6b : ComplexPattern<i64, 2, "SelectAddrModeIndexedUImm<2,63>", []>;
+def am_indexed32_6b : ComplexPattern<i64, 2, "SelectAddrModeIndexedUImm<4,63>", []>;
+def am_indexed64_6b : ComplexPattern<i64, 2, "SelectAddrModeIndexedUImm<8,63>", []>;
+
 def gi_am_indexed8 :
     GIComplexOperandMatcher<s64, "selectAddrModeIndexed<8>">,
     GIComplexPatternEquiv<am_indexed8>;

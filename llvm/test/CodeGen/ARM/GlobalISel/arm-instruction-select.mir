@@ -255,7 +255,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: STRH [[ANDri]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: STRH [[ANDri]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -265,7 +265,7 @@ body:             |
 
     %3(s16) = G_ZEXT %2(s1)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -290,7 +290,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: [[RSBri:%[0-9]+]]:gpr = RSBri [[ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: STRH [[RSBri]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: STRH [[RSBri]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -300,7 +300,7 @@ body:             |
 
     %3(s16) = G_SEXT %2(s1)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -323,7 +323,7 @@ body:             |
     ; CHECK: liveins: $r0, $r1
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: STRH [[COPY1]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: STRH [[COPY1]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -333,7 +333,7 @@ body:             |
 
     %3(s16) = G_ANYEXT %2(s1)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -358,7 +358,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:gprnopc = COPY [[COPY1]]
     ; CHECK: [[UXTB:%[0-9]+]]:gprnopc = UXTB [[COPY2]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: STRH [[UXTB]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: STRH [[UXTB]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -368,7 +368,7 @@ body:             |
 
     %3(s16) = G_ZEXT %2(s8)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -393,7 +393,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:gprnopc = COPY [[COPY1]]
     ; CHECK: [[SXTB:%[0-9]+]]:gprnopc = SXTB [[COPY2]], 0, 14 /* CC::al */, $noreg
-    ; CHECK: STRH [[SXTB]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: STRH [[SXTB]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -403,7 +403,7 @@ body:             |
 
     %3(s16) = G_SEXT %2(s8)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -426,7 +426,7 @@ body:             |
     ; CHECK: liveins: $r0, $r1
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
-    ; CHECK: STRH [[COPY1]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store 2)
+    ; CHECK: STRH [[COPY1]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store (s16))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -436,7 +436,7 @@ body:             |
 
     %3(s16) = G_ANYEXT %2(s8)
 
-    G_STORE %3(s16), %0(p0) :: (store 2)
+    G_STORE %3(s16), %0(p0) :: (store (s16))
 
     BX_RET 14, $noreg
 ...
@@ -460,7 +460,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[ANDri:%[0-9]+]]:gprnopc = ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: STRBi12 [[ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 1)
+    ; CHECK: STRBi12 [[ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -470,7 +470,7 @@ body:             |
 
     %3(s8) = G_ZEXT %2(s1)
 
-    G_STORE %3(s8), %0(p0) :: (store 1)
+    G_STORE %3(s8), %0(p0) :: (store (s8))
 
     BX_RET 14, $noreg
 ...
@@ -495,7 +495,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: [[RSBri:%[0-9]+]]:gprnopc = RSBri [[ANDri]], 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: STRBi12 [[RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 1)
+    ; CHECK: STRBi12 [[RSBri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -505,7 +505,7 @@ body:             |
 
     %3(s8) = G_SEXT %2(s1)
 
-    G_STORE %3(s8), %0(p0) :: (store 1)
+    G_STORE %3(s8), %0(p0) :: (store (s8))
 
     BX_RET 14, $noreg
 ...
@@ -529,7 +529,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:gprnopc = COPY [[COPY1]]
-    ; CHECK: STRBi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 1)
+    ; CHECK: STRBi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
@@ -539,7 +539,7 @@ body:             |
 
     %3(s8) = G_ANYEXT %2(s1)
 
-    G_STORE %3(s8), %0(p0) :: (store 1)
+    G_STORE %3(s8), %0(p0) :: (store (s8))
 
     BX_RET 14, $noreg
 ...
@@ -935,24 +935,24 @@ body:             |
 
     ; CHECK-LABEL: name: test_load_from_stack
     ; CHECK: [[ADDri:%[0-9]+]]:gpr = ADDri %fixed-stack.0, 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[LDRi12_:%[0-9]+]]:gpr = LDRi12 [[ADDri]], 0, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: [[LDRi12_:%[0-9]+]]:gpr = LDRi12 [[ADDri]], 0, 14 /* CC::al */, $noreg :: (load (s32))
     ; CHECK: $r0 = COPY [[LDRi12_]]
     ; CHECK: [[ADDri1:%[0-9]+]]:gpr = ADDri %fixed-stack.2, 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: [[LDRBi12_:%[0-9]+]]:gprnopc = LDRBi12 [[ADDri1]], 0, 14 /* CC::al */, $noreg :: (load 1)
+    ; CHECK: [[LDRBi12_:%[0-9]+]]:gprnopc = LDRBi12 [[ADDri1]], 0, 14 /* CC::al */, $noreg :: (load (s8))
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY [[LDRBi12_]]
     ; CHECK: $r0 = COPY [[COPY]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
 
-    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    %1(s32) = G_LOAD %0(p0) :: (load (s32))
 
     $r0 = COPY %1
 
     %2(p0) = G_FRAME_INDEX %fixed-stack.0
 
-    %3(s1) = G_LOAD %2(p0) :: (load 1)
+    %3(s8) = G_LOAD %2(p0) :: (load (s8))
 
-    %4(s32) = G_ANYEXT %3(s1)
+    %4(s32) = G_ANYEXT %3(s8)
 
     $r0 = COPY %4
 
@@ -977,29 +977,23 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $r1
     ; CHECK: [[COPY2:%[0-9]+]]:gprnopc = COPY [[COPY1]]
-    ; CHECK: [[ANDri:%[0-9]+]]:gprnopc = ANDri [[COPY1]], 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: STRBi12 [[ANDri]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 1)
-    ; CHECK: STRBi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 1)
-    ; CHECK: STRH [[COPY1]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store 2)
-    ; CHECK: STRi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 4)
+    ; CHECK: STRBi12 [[COPY2]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s8))
+    ; CHECK: STRH [[COPY1]], [[COPY]], $noreg, 0, 14 /* CC::al */, $noreg :: (store (s16))
+    ; CHECK: STRi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store (s32))
     ; CHECK: BX_RET 14 /* CC::al */, $noreg
     %0(p0) = COPY $r0
 
     %3(s32) = COPY $r1
 
-    %4(s1) = G_TRUNC %3(s32)
-
     %1(s8) = G_TRUNC %3(s32)
 
     %2(s16) = G_TRUNC %3(s32)
 
-    G_STORE %4(s1), %0(p0) :: (store 1)
+    G_STORE %1(s8), %0(p0) :: (store (s8))
 
-    G_STORE %1(s8), %0(p0) :: (store 1)
+    G_STORE %2(s16), %0(p0) :: (store (s16))
 
-    G_STORE %2(s16), %0(p0) :: (store 2)
-
-    G_STORE %3(s32), %0(p0) :: (store 4)
+    G_STORE %3(s32), %0(p0) :: (store (s32))
 
     BX_RET 14, $noreg
 ...
@@ -1117,11 +1111,11 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test_pointer_constant_constrained
     ; CHECK: [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: STRi12 [[MOVi]], [[MOVi]], 0, 14 /* CC::al */, $noreg :: (store 4)
+    ; CHECK: STRi12 [[MOVi]], [[MOVi]], 0, 14 /* CC::al */, $noreg :: (store (p0))
     %0(p0) = G_CONSTANT i32 0
 
     ; This constrains %0 before the G_CONSTANT is selected.
-    G_STORE %0(p0), %0(p0) :: (store 4)
+    G_STORE %0(p0), %0(p0) :: (store (p0))
 ...
 ---
 name:            test_inttoptr_s32

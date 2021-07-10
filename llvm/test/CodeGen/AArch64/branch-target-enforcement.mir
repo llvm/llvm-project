@@ -147,10 +147,10 @@ body:             |
     ; CHECK-NOT: HINT
     ; CHECK: RETAA
     frame-setup PACIASP implicit-def $lr, implicit killed $lr, implicit $sp
-    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $lr
     $w0 = ORRWrs $wzr, $wzr, 0
-    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load 8 from %stack.0)
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
     RETAA implicit $sp, implicit $lr, implicit killed $w0
 
 ---
@@ -171,10 +171,10 @@ body:             |
     ; CHECK-NOT: HINT
     ; CHECK: RETAB
     frame-setup PACIBSP implicit-def $lr, implicit killed $lr, implicit $sp
-    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $lr
     $w0 = ORRWrs $wzr, $wzr, 0
-    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load 8 from %stack.0)
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
     RETAB implicit $sp, implicit $lr, implicit killed $w0
 
 ---
@@ -206,7 +206,7 @@ body:             |
 
     $x9 = ADRP target-flags(aarch64-page) %jump-table.0
     renamable $x9 = ADDXri killed $x9, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0, 0
-    renamable $x8 = LDRXroX killed renamable $x9, killed renamable $x8, 0, 1 :: (load 8 from jump-table)
+    renamable $x8 = LDRXroX killed renamable $x9, killed renamable $x8, 0, 1 :: (load (s64) from jump-table)
     BR killed renamable $x8
 
   bb.2.sw.bb:
@@ -267,7 +267,7 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
 
     renamable $x8 = ADRP target-flags(aarch64-page) @label_address.addr
-    renamable $x9 = LDRXui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (dereferenceable load 8 from @label_address.addr)
+    renamable $x9 = LDRXui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (dereferenceable load (s64) from @label_address.addr)
     BR killed renamable $x9
 
   bb.1.return (address-taken):
@@ -278,7 +278,7 @@ body:             |
     $x9 = ADRP target-flags(aarch64-page) blockaddress(@label_address, %ir-block.lab2)
     renamable $w0 = ORRWri $wzr, 0
     renamable $x9 = ADDXri killed $x9, target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@label_address, %ir-block.lab2), 0
-    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store 8 into @label_address.addr)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store (s64) into @label_address.addr)
     RET undef $lr, implicit killed $w0
 
   bb.2.lab2 (address-taken):
@@ -289,7 +289,7 @@ body:             |
     $x9 = ADRP target-flags(aarch64-page) blockaddress(@label_address, %ir-block.return)
     renamable $w0 = ORRWri $wzr, 1984
     renamable $x9 = ADDXri killed $x9, target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@label_address, %ir-block.return), 0
-    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store 8 into @label_address.addr)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store (s64) into @label_address.addr)
     RET undef $lr, implicit killed $w0
 
 ---
@@ -310,7 +310,7 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
 
     renamable $x8 = ADRP target-flags(aarch64-page) @label_address.addr
-    renamable $x9 = LDRXui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (dereferenceable load 8 from @label_address.addr)
+    renamable $x9 = LDRXui renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (dereferenceable load (s64) from @label_address.addr)
     BR killed renamable $x9
 
   bb.1.return (address-taken):
@@ -319,13 +319,13 @@ body:             |
     liveins: $x8
     frame-setup PACIASP implicit-def $lr, implicit killed $lr, implicit $sp
     frame-setup CFI_INSTRUCTION negate_ra_sign_state
-    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $lr
     $x9 = ADRP target-flags(aarch64-page) blockaddress(@label_address, %ir-block.entry)
     renamable $w0 = ORRWri $wzr, 0
     renamable $x9 = ADDXri killed $x9, target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@label_address, %ir-block.entry), 0
-    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store 8 into @label_address.addr)
-    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load 8 from %stack.0)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store (s64) into @label_address.addr)
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
     RETAA implicit $sp, implicit $lr, implicit killed $w0
 
   bb.2.lab2:
@@ -336,7 +336,7 @@ body:             |
     $x9 = ADRP target-flags(aarch64-page) blockaddress(@label_address, %ir-block.return)
     renamable $w0 = ORRWri $wzr, 1984
     renamable $x9 = ADDXri killed $x9, target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@label_address, %ir-block.return), 0
-    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store 8 into @label_address.addr)
+    STRXui killed renamable $x9, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @label_address.addr :: (store (s64) into @label_address.addr)
     RET undef $lr, implicit killed $w0
 ---
 # When PACIASP is the first real instruction in the functions then BTI should not be inserted.
@@ -356,10 +356,10 @@ body:             |
     ; CHECK: RETAA
     frame-setup PACIASP implicit-def $lr, implicit killed $lr, implicit $sp
     frame-setup CFI_INSTRUCTION negate_ra_sign_state
-    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $lr
     $w0 = ORRWrs $wzr, $wzr, 0
-    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load 8 from %stack.0)
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
     RETAA implicit $sp, implicit $lr, implicit killed $w0
 
 ...

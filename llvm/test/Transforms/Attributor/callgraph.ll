@@ -80,6 +80,8 @@ define void @func7(void ()* %unknown) {
 !1 = !{i64 0, i1 false}
 !2 = !{void ()* @func3, void ()* @func4}
 
+; UTC_ARGS: --disable
+
 ; DOT-DAG: Node[[FUNC1:0x[a-z0-9]+]] [shape=record,label="{func1}"];
 ; DOT-DAG: Node[[FUNC2:0x[a-z0-9]+]] [shape=record,label="{func2}"];
 ; DOT-DAG: Node[[FUNC3:0x[a-z0-9]+]] [shape=record,label="{func3}"];

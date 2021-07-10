@@ -103,6 +103,8 @@ template <class TypeParam> struct ScudoCombinedTest : public Test {
   std::unique_ptr<AllocatorT> Allocator;
 };
 
+template <typename T> using ScudoCombinedDeathTest = ScudoCombinedTest<T>;
+
 #if SCUDO_FUCHSIA
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidSvelteConfig)                    \
@@ -166,7 +168,7 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
 }
 
 #define SCUDO_MAKE_BASIC_TEST(SizeLog)                                         \
-  SCUDO_TYPED_TEST(ScudoCombinedTest, BasicCombined##SizeLog) {                \
+  SCUDO_TYPED_TEST(ScudoCombinedDeathTest, BasicCombined##SizeLog) {           \
     this->BasicTest(SizeLog);                                                  \
   }
 
@@ -314,7 +316,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLargeDecreasing) {
   Allocator->deallocate(P, Origin);
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateSame) {
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
   auto *Allocator = this->Allocator.get();
 
   // Check that reallocating a chunk to a slightly smaller or larger size
@@ -365,7 +367,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
   }
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, UseAfterFree) {
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
   auto *Allocator = this->Allocator.get();
 
   // Check that use-after-free is detected.
@@ -392,7 +394,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, UseAfterFree) {
   }
 }
 
-SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
   auto *Allocator = this->Allocator.get();
 
   if (Allocator->useMemoryTaggingTestOnly()) {
@@ -490,7 +492,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
 
 // Test that multiple instantiations of the allocator have not messed up the
 // process's signal handlers (GWP-ASan used to do this).
-TEST(ScudoCombinedTest, SKIP_ON_FUCHSIA(testSEGV)) {
+TEST(ScudoCombinedDeathTest, SKIP_ON_FUCHSIA(testSEGV)) {
   const scudo::uptr Size = 4 * scudo::getPageSizeCached();
   scudo::MapPlatformData Data = {};
   void *P = scudo::map(nullptr, Size, "testSEGV", MAP_NOACCESS, &Data);
@@ -528,7 +530,7 @@ struct DeathConfig {
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
 };
 
-TEST(ScudoCombinedTest, DeathCombined) {
+TEST(ScudoCombinedDeathTest, DeathCombined) {
   using AllocatorT = TestAllocator<DeathConfig>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 

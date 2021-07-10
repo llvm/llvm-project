@@ -165,6 +165,27 @@ private:
 #define ASSERT_THAT_ERROR(Err, Matcher)                                        \
   ASSERT_THAT(llvm::detail::TakeError(Err), Matcher)
 
+/// Helper macro for checking the result of an 'Expected<T>'
+///
+///   @code{.cpp}
+///     // function to be tested
+///     Expected<int> myDivide(int A, int B);
+///
+///     TEST(myDivideTests, GoodAndBad) {
+///       // test good case
+///       // if you only care about success or failure:
+///       EXPECT_THAT_EXPECTED(myDivide(10, 5), Succeeded());
+///       // if you also care about the value:
+///       EXPECT_THAT_EXPECTED(myDivide(10, 5), HasValue(2));
+///
+///       // test the error case
+///       EXPECT_THAT_EXPECTED(myDivide(10, 0), Failed());
+///       // also check the error message
+///       EXPECT_THAT_EXPECTED(myDivide(10, 0),
+///           FailedWithMessage("B must not be zero!"));
+///     }
+///   @endcode
+
 #define EXPECT_THAT_EXPECTED(Err, Matcher)                                     \
   EXPECT_THAT(llvm::detail::TakeExpected(Err), Matcher)
 #define ASSERT_THAT_EXPECTED(Err, Matcher)                                     \

@@ -39,7 +39,8 @@ let mayLoad = 1, mayStore = 0, hasSideEffects = 1, isTrap = 1 in {
                    "ud1{q} {$src2, $src1|$src1, $src2}", []>, TB;
 }
 
-def HLT : I<0xF4, RawFrm, (outs), (ins), "hlt", []>;
+let isTerminator = 1 in
+  def HLT : I<0xF4, RawFrm, (outs), (ins), "hlt", []>;
 def RSM : I<0xAA, RawFrm, (outs), (ins), "rsm", []>, TB;
 
 // Interrupt and SysCall Instructions.

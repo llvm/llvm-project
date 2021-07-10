@@ -132,9 +132,9 @@ body:             |
   bb.0.entry:
     DBG_VALUE $edi, _, !21, !DIExpression(), debug-location !25
     DBG_VALUE $rsi, _, !22, !DIExpression(), debug-location !26
-    %2 = MOV32rm $rip, 1, _, @bar, _, debug-location !27 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 0)`, !tbaa !28)
+    %2 = MOV32rm $rip, 1, _, @bar, _, debug-location !27 :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 0)`, !tbaa !28)
     DBG_VALUE %2, _, !23, !DIExpression(), debug-location !32
-    %3 = MOV32rm $rip, 1, _, @bar + 4, _, debug-location !33 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 1)`, !tbaa !28)
+    %3 = MOV32rm $rip, 1, _, @bar + 4, _, debug-location !33 :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 1)`, !tbaa !28)
     DBG_VALUE %3, _, !24, !DIExpression(), debug-location !34
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !35
     $edi = COPY %2, debug-location !35

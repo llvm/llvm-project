@@ -30,6 +30,11 @@ extern "C" llvm::Expected<bool> LLDBSwigLuaBreakpointCallbackFunction(
   return false;
 }
 
+extern "C" llvm::Expected<bool> LLDBSwigLuaWatchpointCallbackFunction(
+    lua_State *L, lldb::StackFrameSP stop_frame_sp, lldb::WatchpointSP wp_sp) {
+  return false;
+}
+
 #if _MSC_VER
 #pragma warning (pop)
 #endif

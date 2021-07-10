@@ -60,13 +60,14 @@ remainsLegalAfterInline(Value value, Region *src, Region *dest,
   if (value.isa<BlockArgument>())
     return legalityCheck(mapping.lookup(value), dest);
 
-  // If it's a top-level value beacuse it's defined in the region,
+  // If it's a top-level value because it's defined in the region,
   // it can only be inlined if the defining op is a constant or a
   // `dim`, which can appear anywhere and be valid, since the defining
   // op won't be top-level anymore after inlining.
   Attribute operandCst;
   return matchPattern(value.getDefiningOp(), m_Constant(&operandCst)) ||
-         value.getDefiningOp<memref::DimOp>();
+         value.getDefiningOp<memref::DimOp>() ||
+         value.getDefiningOp<tensor::DimOp>();
 }
 
 /// Checks if all values known to be legal affine dimensions or symbols in `src`
@@ -298,7 +299,9 @@ bool mlir::isValidDim(Value value, Region *region) {
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
   if (auto dimOp = dyn_cast<memref::DimOp>(op))
-    return isTopLevelValue(dimOp.memrefOrTensor());
+    return isTopLevelValue(dimOp.source());
+  if (auto dimOp = dyn_cast<tensor::DimOp>(op))
+    return isTopLevelValue(dimOp.source());
   return false;
 }
 
@@ -319,14 +322,15 @@ static bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index,
 }
 
 /// Returns true if the result of the dim op is a valid symbol for `region`.
-static bool isDimOpValidSymbol(memref::DimOp dimOp, Region *region) {
-  // The dim op is okay if its operand memref is defined at the top level.
-  if (isTopLevelValue(dimOp.memrefOrTensor()))
+template <typename OpTy>
+static bool isDimOpValidSymbol(OpTy dimOp, Region *region) {
+  // The dim op is okay if its source is defined at the top level.
+  if (isTopLevelValue(dimOp.source()))
     return true;
 
   // Conservatively handle remaining BlockArguments as non-valid symbols.
   // E.g. scf.for iterArgs.
-  if (dimOp.memrefOrTensor().isa<BlockArgument>())
+  if (dimOp.source().template isa<BlockArgument>())
     return false;
 
   // The dim op is also okay if its operand memref is a view/subview whose
@@ -335,7 +339,7 @@ static bool isDimOpValidSymbol(memref::DimOp dimOp, Region *region) {
   assert(index.hasValue() &&
          "expect only `dim` operations with a constant index");
   int64_t i = index.getValue();
-  return TypeSwitch<Operation *, bool>(dimOp.memrefOrTensor().getDefiningOp())
+  return TypeSwitch<Operation *, bool>(dimOp.source().getDefiningOp())
       .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
       .Default([](Operation *) { return false; });
@@ -364,7 +368,7 @@ bool mlir::isValidSymbol(Value value) {
   return false;
 }
 
-/// A value can be used as a symbol for `region` iff it meets onf of the the
+/// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
 /// *) It is the result of an affine apply operation with symbol arguments.
@@ -406,6 +410,8 @@ bool mlir::isValidSymbol(Value value, Region *region) {
 
   // Dim op results could be valid symbols at any level.
   if (auto dimOp = dyn_cast<memref::DimOp>(defOp))
+    return isDimOpValidSymbol(dimOp, region);
+  if (auto dimOp = dyn_cast<tensor::DimOp>(defOp))
     return isDimOpValidSymbol(dimOp, region);
 
   // Check for values dominating `region`'s parent op.
@@ -1899,7 +1905,7 @@ struct SimplifyDeadElse : public OpRewritePattern<AffineIfOp> {
   }
 };
 
-/// Removes Affine.If cond if the condition is always true or false in certain
+/// Removes affine.if cond if the condition is always true or false in certain
 /// trivial cases. Promotes the then/else block in the parent operation block.
 struct AlwaysTrueOrFalseIf : public OpRewritePattern<AffineIfOp> {
   using OpRewritePattern<AffineIfOp>::OpRewritePattern;
@@ -1907,35 +1913,48 @@ struct AlwaysTrueOrFalseIf : public OpRewritePattern<AffineIfOp> {
   LogicalResult matchAndRewrite(AffineIfOp op,
                                 PatternRewriter &rewriter) const override {
 
-    // If affine.if is returning results then don't remove it.
-    // TODO: Similar simplication can be done when affine.if return results.
-    if (op.getNumResults() > 0)
-      return failure();
+    auto isTriviallyFalse = [](IntegerSet iSet) {
+      return iSet.isEmptyIntegerSet();
+    };
 
-    IntegerSet conditionSet = op.getIntegerSet();
+    auto isTriviallyTrue = [](IntegerSet iSet) {
+      return (iSet.getNumEqualities() == 1 && iSet.getNumInequalities() == 0 &&
+              iSet.getConstraint(0) == 0);
+    };
+
+    IntegerSet affineIfConditions = op.getIntegerSet();
     Block *blockToMove;
-    if (conditionSet.isEmptyIntegerSet()) {
-      // If the else region is not there, simply remove the Affine.if
-      // operation.
-      if (!op.hasElse()) {
+    if (isTriviallyFalse(affineIfConditions)) {
+      // The absence, or equivalently, the emptiness of the else region need not
+      // be checked when affine.if is returning results because if an affine.if
+      // operation is returning results, it always has a non-empty else region.
+      if (op.getNumResults() == 0 && !op.hasElse()) {
+        // If the else region is absent, or equivalently, empty, remove the
+        // affine.if operation (which is not returning any results).
         rewriter.eraseOp(op);
         return success();
       }
       blockToMove = op.getElseBlock();
-    } else if (conditionSet.getNumEqualities() == 1 &&
-               conditionSet.getNumInequalities() == 0 &&
-               conditionSet.getConstraint(0) == 0) {
-      // Condition to check for trivially true condition (0==0).
+    } else if (isTriviallyTrue(affineIfConditions)) {
       blockToMove = op.getThenBlock();
     } else {
       return failure();
     }
-    // Remove the terminator from the block as it already exists in parent
-    // block.
-    Operation *blockTerminator = blockToMove->getTerminator();
-    rewriter.eraseOp(blockTerminator);
+    Operation *blockToMoveTerminator = blockToMove->getTerminator();
+    // Promote the "blockToMove" block to the parent operation block between the
+    // prologue and epilogue of "op".
     rewriter.mergeBlockBefore(blockToMove, op);
-    rewriter.eraseOp(op);
+    // Replace the "op" operation with the operands of the
+    // "blockToMoveTerminator" operation. Note that "blockToMoveTerminator" is
+    // the affine.yield operation present in the "blockToMove" block. It has no
+    // operands when affine.if is not returning results and therefore, in that
+    // case, replaceOp just erases "op". When affine.if is not returning
+    // results, the affine.yield operation can be omitted. It gets inserted
+    // implicitly.
+    rewriter.replaceOp(op, blockToMoveTerminator->getOperands());
+    // Erase the "blockToMoveTerminator" operation since it is now in the parent
+    // operation block, which already has its own terminator.
+    rewriter.eraseOp(blockToMoveTerminator);
     return success();
   }
 };
@@ -2045,6 +2064,7 @@ IntegerSet AffineIfOp::getIntegerSet() {
       ->getAttrOfType<IntegerSetAttr>(getConditionAttrName())
       .getValue();
 }
+
 void AffineIfOp::setIntegerSet(IntegerSet newSet) {
   (*this)->setAttr(getConditionAttrName(), IntegerSetAttr::get(newSet));
 }

@@ -319,7 +319,22 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
     Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
   }
   if (driver.dumpUnparse) {
-    Unparse(llvm::outs(), parseTree, driver.encoding, true /*capitalize*/,
+    // Prepare the output stream
+    std::unique_ptr<llvm::raw_fd_ostream> os;
+    std::string outputFile = "-";
+    if (!driver.outputPath.empty()) {
+      outputFile = driver.outputPath;
+    }
+
+    std::error_code EC;
+    os.reset(new llvm::raw_fd_ostream(
+        outputFile, EC, llvm::sys::fs::OF_TextWithCRLF));
+    if (EC) {
+      llvm::errs() << EC.message() << "\n";
+      std::exit(EXIT_FAILURE);
+    }
+
+    Unparse(*os, parseTree, driver.encoding, true /*capitalize*/,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes),
         nullptr /* action before each statement */,

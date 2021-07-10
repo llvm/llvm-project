@@ -26,6 +26,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
@@ -5272,6 +5273,18 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
     return false;
   if (isa<UnreachableInst>(I))
     return false;
+
+  if (isa<CatchPadInst>(I)) {
+    switch (classifyEHPersonality(I->getFunction()->getPersonalityFn())) {
+    default:
+      // A catchpad may invoke exception object constructors and such, which
+      // in some languages can be arbitrary code, so be conservative by default.
+      return false;
+    case EHPersonality::CoreCLR:
+      // For CoreCLR, it just involves a type test.
+      return true;
+    }
+  }
 
   // An instruction that returns without throwing must transfer control flow
   // to a successor.

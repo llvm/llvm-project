@@ -16,10 +16,10 @@
 
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
+#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/TPCDebugObjectRegistrar.h"
-#include "llvm/ExecutionEngine/Orc/TPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/TPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -588,8 +588,8 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
   return JD.define(std::move(MU), std::move(RT));
 }
 
-Expected<std::unique_ptr<TargetProcessControl>>
-LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor() {
+Expected<std::unique_ptr<ExecutorProcessControl>>
+LLVMJITLinkRemoteExecutorProcessControl::LaunchExecutor() {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return make_error<StringError>("-" + OutOfProcessExecutor.ArgStr +
@@ -661,13 +661,13 @@ LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor() {
   };
 
   Error Err = Error::success();
-  std::unique_ptr<LLVMJITLinkRemoteTargetProcessControl> RTPC(
-      new LLVMJITLinkRemoteTargetProcessControl(
+  std::unique_ptr<LLVMJITLinkRemoteExecutorProcessControl> REPC(
+      new LLVMJITLinkRemoteExecutorProcessControl(
           std::move(SSP), std::move(Channel), std::move(Endpoint),
           std::move(ReportError), Err));
   if (Err)
     return std::move(Err);
-  return std::move(RTPC);
+  return std::move(REPC);
 #endif
 }
 
@@ -717,8 +717,8 @@ static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
 }
 #endif
 
-Expected<std::unique_ptr<TargetProcessControl>>
-LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
+Expected<std::unique_ptr<ExecutorProcessControl>>
+LLVMJITLinkRemoteExecutorProcessControl::ConnectToExecutor() {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
   return make_error<StringError>("-" + OutOfProcessExecutorConnect.ArgStr +
@@ -756,17 +756,17 @@ LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
   };
 
   Error Err = Error::success();
-  std::unique_ptr<LLVMJITLinkRemoteTargetProcessControl> RTPC(
-      new LLVMJITLinkRemoteTargetProcessControl(
+  std::unique_ptr<LLVMJITLinkRemoteExecutorProcessControl> REPC(
+      new LLVMJITLinkRemoteExecutorProcessControl(
           std::move(SSP), std::move(Channel), std::move(Endpoint),
           std::move(ReportError), Err));
   if (Err)
     return std::move(Err);
-  return std::move(RTPC);
+  return std::move(REPC);
 #endif
 }
 
-Error LLVMJITLinkRemoteTargetProcessControl::disconnect() {
+Error LLVMJITLinkRemoteExecutorProcessControl::disconnect() {
   std::promise<MSVCPError> P;
   auto F = P.get_future();
   auto Err = closeConnection([&](Error Err) -> Error {
@@ -797,24 +797,25 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
     return PageSize.takeError();
 
   /// If -oop-executor is passed then launch the executor.
-  std::unique_ptr<TargetProcessControl> TPC;
+  std::unique_ptr<ExecutorProcessControl> EPC;
   if (OutOfProcessExecutor.getNumOccurrences()) {
-    if (auto RTPC = LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor())
-      TPC = std::move(*RTPC);
+    if (auto REPC = LLVMJITLinkRemoteExecutorProcessControl::LaunchExecutor())
+      EPC = std::move(*REPC);
     else
-      return RTPC.takeError();
+      return REPC.takeError();
   } else if (OutOfProcessExecutorConnect.getNumOccurrences()) {
-    if (auto RTPC = LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor())
-      TPC = std::move(*RTPC);
+    if (auto REPC =
+            LLVMJITLinkRemoteExecutorProcessControl::ConnectToExecutor())
+      EPC = std::move(*REPC);
     else
-      return RTPC.takeError();
+      return REPC.takeError();
   } else
-    TPC = std::make_unique<SelfTargetProcessControl>(
+    EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(), std::move(TT), *PageSize,
         createMemoryManager());
 
   Error Err = Error::success();
-  std::unique_ptr<Session> S(new Session(std::move(TPC), Err));
+  std::unique_ptr<Session> S(new Session(std::move(EPC), Err));
   if (Err)
     return std::move(Err);
   return std::move(S);
@@ -827,8 +828,8 @@ Session::~Session() {
 
 // FIXME: Move to createJITDylib if/when we start using Platform support in
 // llvm-jitlink.
-Session::Session(std::unique_ptr<TargetProcessControl> TPC, Error &Err)
-    : TPC(std::move(TPC)), ObjLayer(*this, this->TPC->getMemMgr()) {
+Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
+    : EPC(std::move(EPC)), ObjLayer(*this, this->EPC->getMemMgr()) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -862,11 +863,11 @@ Session::Session(std::unique_ptr<TargetProcessControl> TPC, Error &Err)
     return;
   }
 
-  if (!NoExec && !this->TPC->getTargetTriple().isOSWindows()) {
+  if (!NoExec && !this->EPC->getTargetTriple().isOSWindows()) {
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-        ES, ExitOnErr(TPCEHFrameRegistrar::Create(*this->TPC))));
+        ES, ExitOnErr(EPCEHFrameRegistrar::Create(*this->EPC))));
     ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-        ES, ExitOnErr(createJITLoaderGDBRegistrar(*this->TPC))));
+        ES, ExitOnErr(createJITLoaderGDBRegistrar(*this->EPC))));
   }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
@@ -913,10 +914,10 @@ void Session::modifyPassConfig(const Triple &TT,
                                PassConfiguration &PassConfig) {
   if (!CheckFiles.empty())
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
-      if (TPC->getTargetTriple().getObjectFormat() == Triple::ELF)
+      if (EPC->getTargetTriple().getObjectFormat() == Triple::ELF)
         return registerELFGraphInfo(*this, G);
 
-      if (TPC->getTargetTriple().getObjectFormat() == Triple::MachO)
+      if (EPC->getTargetTriple().getObjectFormat() == Triple::MachO)
         return registerMachOGraphInfo(*this, G);
 
       return make_error<StringError>("Unsupported object format for GOT/stub "
@@ -1094,15 +1095,15 @@ static Error loadProcessSymbols(Session &S) {
         return Name != EPName;
       };
   S.MainJD->addGenerator(
-      ExitOnErr(orc::TPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          *S.TPC, std::move(FilterMainEntryPoint))));
+      ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
+          *S.EPC, std::move(FilterMainEntryPoint))));
 
   return Error::success();
 }
 
 static Error loadDylibs(Session &S) {
   for (const auto &Dylib : Dylibs) {
-    auto G = orc::TPCDynamicLibrarySearchGenerator::Load(*S.TPC, Dylib.c_str());
+    auto G = orc::EPCDynamicLibrarySearchGenerator::Load(*S.EPC, Dylib.c_str());
     if (!G)
       return G.takeError();
     S.MainJD->addGenerator(std::move(*G));
@@ -1178,7 +1179,7 @@ static Error loadObjects(Session &S) {
     if (Magic == file_magic::archive ||
         Magic == file_magic::macho_universal_binary)
       JD.addGenerator(ExitOnErr(StaticLibraryDefinitionGenerator::Load(
-          S.ObjLayer, InputFile.c_str(), S.TPC->getTargetTriple())));
+          S.ObjLayer, InputFile.c_str(), S.EPC->getTargetTriple())));
     else
       ExitOnErr(S.ObjLayer.add(JD, std::move(ObjBuffer)));
   }
@@ -1226,7 +1227,7 @@ static Error loadObjects(Session &S) {
 
 static Error runChecks(Session &S) {
 
-  auto TripleName = S.TPC->getTargetTriple().str();
+  auto TripleName = S.EPC->getTargetTriple().str();
   std::string ErrorStr;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
   if (!TheTarget)
@@ -1292,7 +1293,7 @@ static Error runChecks(Session &S) {
 
   RuntimeDyldChecker Checker(
       IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo, GetGOTInfo,
-      S.TPC->getTargetTriple().isLittleEndian() ? support::little
+      S.EPC->getTargetTriple().isLittleEndian() ? support::little
                                                 : support::big,
       Disassembler.get(), InstPrinter.get(), dbgs());
 
@@ -1381,11 +1382,11 @@ int main(int argc, char *argv[]) {
   int Result = 0;
   {
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
-    Result = ExitOnErr(S->TPC->runAsMain(EntryPoint.getAddress(), InputArgv));
+    Result = ExitOnErr(S->EPC->runAsMain(EntryPoint.getAddress(), InputArgv));
   }
 
   ExitOnErr(S->ES.endSession());
-  ExitOnErr(S->TPC->disconnect());
+  ExitOnErr(S->EPC->disconnect());
 
   return Result;
 }

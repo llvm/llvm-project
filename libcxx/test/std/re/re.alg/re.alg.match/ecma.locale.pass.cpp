@@ -21,7 +21,7 @@
 //                  regex_constants::match_flag_type flags = regex_constants::match_default);
 
 // TODO: investigation needed
-// XFAIL: linux-gnu, freebsd
+// XFAIL: target={{.*}}-linux-gnu{{.*}}, freebsd
 
 #include <regex>
 #include <cassert>

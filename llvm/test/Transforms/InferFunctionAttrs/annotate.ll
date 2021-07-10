@@ -1016,18 +1016,18 @@ declare i64 @write(i32, i8*, i64)
 declare void @memset_pattern16(i8*, i8*, i64)
 
 
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { nofree nounwind willreturn mustprogress }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND]] = { nofree nounwind }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { inaccessiblememonly nofree nounwind willreturn mustprogress }
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { nofree nounwind readonly willreturn mustprogress }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { argmemonly nofree nounwind willreturn mustprogress }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { inaccessiblememonly mustprogress nofree nounwind willreturn }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nofree nounwind readonly willreturn }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { argmemonly mustprogress nofree nounwind willreturn }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nofree nounwind readonly }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN]] = { inaccessiblemem_or_argmemonly nounwind willreturn mustprogress }
-; CHECK-DAG: attributes [[NOFREE_WILLRETURN]] = { nofree willreturn mustprogress }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { argmemonly nofree nounwind readonly willreturn mustprogress }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN]] = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn }
+; CHECK-DAG: attributes [[NOFREE_WILLRETURN]] = { mustprogress nofree willreturn }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { argmemonly mustprogress nofree nounwind readonly willreturn }
 ; CHECK-DAG: attributes [[NOFREE]] = { nofree }
-; CHECK-DAG: attributes [[WILLRETURN]] = { willreturn mustprogress }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]  = { inaccessiblemem_or_argmemonly nofree nounwind willreturn mustprogress }
+; CHECK-DAG: attributes [[WILLRETURN]] = { mustprogress willreturn }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]  = { inaccessiblemem_or_argmemonly mustprogress nofree nounwind willreturn }
 
 ; CHECK-DARWIN-DAG: attributes [[ARGMEMONLY_NOFREE]] = { argmemonly nofree }
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind readnone }

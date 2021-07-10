@@ -2365,7 +2365,7 @@ private:
 
 public:
   void HandlePragmaOnce(Token &OnceTok);
-  void HandlePragmaMark();
+  void HandlePragmaMark(Token &MarkTok);
   void HandlePragmaPoison();
   void HandlePragmaSystemHeader(Token &SysHeaderTok);
   void HandlePragmaDependency(Token &DependencyTok);

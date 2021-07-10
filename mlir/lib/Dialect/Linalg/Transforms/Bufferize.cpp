@@ -322,9 +322,10 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
 
     // Mark all Standard operations legal.
     target.addLegalDialect<AffineDialect, math::MathDialect,
-                           memref::MemRefDialect, StandardOpsDialect>();
+                           memref::MemRefDialect, StandardOpsDialect,
+                           tensor::TensorDialect>();
     target.addIllegalOp<InitTensorOp, tensor::ExtractSliceOp,
-                        tensor::InsertSliceOp>();
+                        tensor::InsertSliceOp, PadTensorOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
     auto isLegalOperation = [&](Operation *op) {
@@ -334,6 +335,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     target.addDynamicallyLegalOp<ConstantOp>(isLegalOperation);
 
     RewritePatternSet patterns(&context);
+    patterns.add<GeneralizePadTensorOpPattern>(patterns.getContext());
     populateLinalgBufferizePatterns(typeConverter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

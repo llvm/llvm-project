@@ -1064,7 +1064,7 @@ TEST(CommandLineTest, ReadConfigFile) {
   llvm::SmallString<128> CurrDir;
   std::error_code EC = llvm::sys::fs::current_path(CurrDir);
   EXPECT_TRUE(!EC);
-  EXPECT_TRUE(StringRef(CurrDir) != TestDir.path());
+  EXPECT_NE(CurrDir.str(), TestDir.path());
 
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);

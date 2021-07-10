@@ -100,10 +100,10 @@ body:             |
   ; CHECK:   $r3 = tMOVr $r12, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg
   ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr :: (load 16 from %ir.lsr.iv17, align 2)
+  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr :: (load (s128) from %ir.lsr.iv17, align 2)
   ; CHECK:   renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg
   ; CHECK:   $lr = tMOVr $r5, 14 /* CC::al */, $noreg
-  ; CHECK:   early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store 2 into %ir.lsr.iv.2)
+  ; CHECK:   early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store (s16) into %ir.lsr.iv.2)
   ; CHECK:   renamable $r5, dead $cpsr = nsw tSUBi8 killed $r5, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 8, 14 /* CC::al */, $noreg
   ; CHECK:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
@@ -142,10 +142,10 @@ body:             |
     $r3 = tMOVr $r12, 14 /* CC::al */, $noreg
     renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg
     MVE_VPST 8, implicit $vpr
-    renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr :: (load 16 from %ir.lsr.iv17, align 2)
+    renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr :: (load (s128) from %ir.lsr.iv17, align 2)
     renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg
     $lr = tMOVr $r5, 14 /* CC::al */, $noreg
-    early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store 2 into %ir.lsr.iv.2)
+    early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store (s16) into %ir.lsr.iv.2)
     renamable $r5, dead $cpsr = nsw tSUBi8 killed $r5, 1, 14 /* CC::al */, $noreg
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 8, 14 /* CC::al */, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1

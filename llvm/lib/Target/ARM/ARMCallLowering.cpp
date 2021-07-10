@@ -121,14 +121,11 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     MIB.addUse(PhysReg, RegState::Implicit);
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
-           "Unsupported size");
-
     Register ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
-        MPO, MachineMemOperand::MOStore, LLT(VA.getLocVT()), Align(1));
+        MPO, MachineMemOperand::MOStore, MemTy, Align(1));
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 
@@ -189,7 +186,7 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   if (!isSupportedType(DL, TLI, Val->getType()))
     return false;
 
-  ArgInfo OrigRetInfo(VRegs, Val->getType());
+  ArgInfo OrigRetInfo(VRegs, Val->getType(), 0);
   setArgFlags(OrigRetInfo, AttributeList::ReturnIndex, DL, F);
 
   SmallVector<ArgInfo, 4> SplitRetInfos;
@@ -249,31 +246,28 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
         .getReg(0);
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
-           "Unsupported size");
-
     if (VA.getLocInfo() == CCValAssign::SExt ||
         VA.getLocInfo() == CCValAssign::ZExt) {
       // If the value is zero- or sign-extended, its size becomes 4 bytes, so
       // that's what we should load.
-      Size = 4;
+      MemTy = LLT::scalar(32);
       assert(MRI.getType(ValVReg).isScalar() && "Only scalars supported atm");
 
-      auto LoadVReg = buildLoad(LLT::scalar(32), Addr, Size, MPO);
+      auto LoadVReg = buildLoad(LLT::scalar(32), Addr, MemTy, MPO);
       MIRBuilder.buildTrunc(ValVReg, LoadVReg);
     } else {
       // If the value is not extended, a simple load will suffice.
-      buildLoad(ValVReg, Addr, Size, MPO);
+      buildLoad(ValVReg, Addr, MemTy, MPO);
     }
   }
 
-  MachineInstrBuilder buildLoad(const DstOp &Res, Register Addr, uint64_t Size,
+  MachineInstrBuilder buildLoad(const DstOp &Res, Register Addr, LLT MemTy,
                                 MachinePointerInfo &MPO) {
     MachineFunction &MF = MIRBuilder.getMF();
 
-    auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size,
+    auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,
                                        inferAlignFromPtrInfo(MF, MPO));
     return MIRBuilder.buildLoad(Res, Addr, *MMO);
   }
@@ -394,7 +388,7 @@ bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 8> SplitArgInfos;
   unsigned Idx = 0;
   for (auto &Arg : F.args()) {
-    ArgInfo OrigArgInfo(VRegs[Idx], Arg.getType());
+    ArgInfo OrigArgInfo(VRegs[Idx], Arg.getType(), Idx);
 
     setArgFlags(OrigArgInfo, Idx + AttributeList::FirstArgIndex, DL, F);
     splitToValueTypes(OrigArgInfo, SplitArgInfos, DL, F.getCallingConv());

@@ -141,7 +141,7 @@ define  void @test_i1(i1 %b)  {
 ; 32BIT-NEXT:    bb.0.entry:
 ; 32BIT-NEXT:      liveins: $r3
 ; 32BIT:           renamable $r3 = RLWINM killed renamable $r3, 0, 31, 31
-; 32BIT-NEXT:      STB killed renamable $r3, 0, killed renamable $r4 :: (store 1 into @global_i1)
+; 32BIT-NEXT:      STB killed renamable $r3, 0, killed renamable $r4 :: (store (s8) into @global_i1)
 
 ; 64BIT:       liveins:
 ; 64BIT-NEXT:  - { reg: '$x3', virtual-reg: '' }
@@ -149,7 +149,7 @@ define  void @test_i1(i1 %b)  {
 ; 64BIT-NEXT:    bb.0.entry:
 ; 64BIT-NEXT:      liveins: $x3
 ; 64BIT:           renamable $r[[REG1:[0-9]+]] = RLWINM renamable $r[[REG1]], 0, 31, 31, implicit killed $x3
-; 64BIT-NEXT:      STB killed renamable $r[[REG1]], 0, killed renamable $x4 :: (store 1 into @global_i1)
+; 64BIT-NEXT:      STB killed renamable $r[[REG1]], 0, killed renamable $x4 :: (store (s8) into @global_i1)
 
 define void @call_test_i1() {
 entry:
@@ -181,7 +181,7 @@ define void @test_i1zext(i1 zeroext %b) {
 ; 32BIT-NEXT:    bb.0.entry:
 ; 32BIT-NEXT:      liveins: $r3
 ; CHECK-NOT:       RLWINM
-; 32BIT:           STB killed renamable $r3, 0, killed renamable $r4 :: (store 1 into @global_i1)
+; 32BIT:           STB killed renamable $r3, 0, killed renamable $r4 :: (store (s8) into @global_i1)
 
 ; 64BIT:       liveins:
 ; 64BIT-NEXT:  - { reg: '$x3', virtual-reg: '' }
@@ -189,7 +189,7 @@ define void @test_i1zext(i1 zeroext %b) {
 ; 64BIT-NEXT:    bb.0.entry:
 ; 64BIT-NEXT:      liveins: $x3
 ; CHECK-NOT:       RLWINM
-; 64BIT:           STB8 killed renamable $x3, 0, killed renamable $x4 :: (store 1 into @global_i1)
+; 64BIT:           STB8 killed renamable $x3, 0, killed renamable $x4 :: (store (s8) into @global_i1)
 
 define i32 @test_ints(i32 signext %a, i32 zeroext %b, i32 zeroext %c, i32 signext %d, i32 signext %e, i32 signext %f, i32 signext %g, i32 signext %h) {
 entry:
@@ -346,14 +346,14 @@ entry:
 ; 32BIT:       body:             |
 ; 32BIT-NEXT:    bb.0.entry:
 ; 32BIT-NEXT:      liveins: $r3
-; 32BIT:           STW killed renamable $r3, 0, %stack.0.a.addr :: (store 4 into %ir.a.addr, align 8)
+; 32BIT:           STW killed renamable $r3, 0, %stack.0.a.addr :: (store (s32) into %ir.a.addr, align 8)
 
 ; 64BIT:       liveins:
 ; 64BIT-NEXT:  - { reg: '$x3', virtual-reg: '' }
 ; 64BIT:       body:             |
 ; 64BIT-NEXT:    bb.0.entry:
 ; 64BIT-NEXT:      liveins: $x3
-; 64BIT:           STD killed renamable $x3, 0, %stack.0.a.addr :: (store 8 into %ir.a.addr)
+; 64BIT:           STD killed renamable $x3, 0, %stack.0.a.addr :: (store (s64) into %ir.a.addr)
 
 
 define i32 @caller(i32 %i)  {
@@ -405,16 +405,16 @@ entry:
 
 ; CHECK-LABEL: name: call_test_floats{{.*}}
 
-; 32BIT:      renamable $r3 = LWZtoc @f1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r3 :: (dereferenceable load 4 from @f1)
+; 32BIT:      renamable $r3 = LWZtoc @f1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r3 :: (dereferenceable load (s32) from @f1)
 ; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT: $f2 = COPY renamable $f1
 ; 32BIT-NEXT: $f3 = COPY renamable $f1
 ; 32BIT-NEXT: BL_NOP <mcsymbol .test_floats>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit killed $f2, implicit killed $f3, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT: ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
-; 64BIT:      renamable $x3 = LDtoc @f1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x3 :: (dereferenceable load 4 from @f1)
+; 64BIT:      renamable $x3 = LDtoc @f1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x3 :: (dereferenceable load (s32) from @f1)
 ; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT: $f2 = COPY renamable $f1
 ; 64BIT-NEXT: $f3 = COPY renamable $f1
@@ -447,18 +447,18 @@ entry:
 
 ; CHECK-LABEL: name: call_test_fpr_max{{.*}}
 
-; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: renamable $f1 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d1)
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: renamable $f1 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load (s64) from @d1)
 ; 32BIT-NEXT: ADJCALLSTACKDOWN 128, 0, implicit-def dead $r1, implicit $r1
-; 32BIT-DAG:  STFD renamable $f1, 56, $r1 :: (store 8)
-; 32BIT-DAG:  STFD renamable $f1, 64, $r1 :: (store 8)
-; 32BIT-DAG:  STFD renamable $f1, 72, $r1 :: (store 8)
-; 32BIT-DAG:  STFD renamable $f1, 80, $r1 :: (store 8)
-; 32BIT-DAG:  STFD renamable $f1, 88, $r1 :: (store 8)
-; 32BIT-DAG:  STFD renamable $f1, 96, $r1 :: (store 8)
-; 32BIT-DAG:  STFD renamable $f1, 104, $r1 :: (store 8)
-; 32BIT-DAG:  STFD renamable $f1, 112, $r1 :: (store 8)
-; 32BIT-DAG:  STFD renamable $f1, 120, $r1 :: (store 8)
+; 32BIT-DAG:  STFD renamable $f1, 56, $r1 :: (store (s64))
+; 32BIT-DAG:  STFD renamable $f1, 64, $r1 :: (store (s64))
+; 32BIT-DAG:  STFD renamable $f1, 72, $r1 :: (store (s64))
+; 32BIT-DAG:  STFD renamable $f1, 80, $r1 :: (store (s64))
+; 32BIT-DAG:  STFD renamable $f1, 88, $r1 :: (store (s64))
+; 32BIT-DAG:  STFD renamable $f1, 96, $r1 :: (store (s64))
+; 32BIT-DAG:  STFD renamable $f1, 104, $r1 :: (store (s64))
+; 32BIT-DAG:  STFD renamable $f1, 112, $r1 :: (store (s64))
+; 32BIT-DAG:  STFD renamable $f1, 120, $r1 :: (store (s64))
 ; 32BIT-DAG:  $f2 = COPY renamable $f1
 ; 32BIT-DAG:  $f3 = COPY renamable $f1
 ; 32BIT-DAG:  $f4 = COPY renamable $f1
@@ -504,14 +504,14 @@ entry:
 ; ASM32PWR4-NEXT:  nop
 ; ASM32PWR4-NEXT:  addi 1, 1, 128
 
-; 64BIT:      renamable $x[[REGD1ADDR:[0-9]+]] = LDtoc @d1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: renamable $f1 = LFD 0, killed renamable $x[[REGD1ADDR:[0-9]+]] :: (dereferenceable load 8 from @d1)
+; 64BIT:      renamable $x[[REGD1ADDR:[0-9]+]] = LDtoc @d1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: renamable $f1 = LFD 0, killed renamable $x[[REGD1ADDR:[0-9]+]] :: (dereferenceable load (s64) from @d1)
 ; 64BIT-NEXT: ADJCALLSTACKDOWN 152, 0, implicit-def dead $r1, implicit $r1
-; 64BIT-DAG:  STFD renamable $f1, 112, $x1 :: (store 8)
-; 64BIT-DAG:  STFD renamable $f1, 120, $x1 :: (store 8)
-; 64BIT-DAG:  STFD renamable $f1, 128, $x1 :: (store 8)
-; 64BIT-DAG:  STFD renamable $f1, 136, $x1 :: (store 8)
-; 64BIT-DAG:  STFD renamable $f1, 144, $x1 :: (store 8)
+; 64BIT-DAG:  STFD renamable $f1, 112, $x1 :: (store (s64))
+; 64BIT-DAG:  STFD renamable $f1, 120, $x1 :: (store (s64))
+; 64BIT-DAG:  STFD renamable $f1, 128, $x1 :: (store (s64))
+; 64BIT-DAG:  STFD renamable $f1, 136, $x1 :: (store (s64))
+; 64BIT-DAG:  STFD renamable $f1, 144, $x1 :: (store (s64))
 ; 64BIT-DAG:  $f2 = COPY renamable $f1
 ; 64BIT-DAG:  $f3 = COPY renamable $f1
 ; 64BIT-DAG:  $f4 = COPY renamable $f1
@@ -598,20 +598,20 @@ entry:
 
 ; CHECK-LABEL: name: call_test_mix{{.*}}
 
-; 32BIT:      renamable $r[[REG1:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: renamable $r[[REG2:[0-9]+]] = LWZtoc @d1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG1]] :: (dereferenceable load 4 from @f1)
-; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG2]] :: (dereferenceable load 8 from @d1)
+; 32BIT:      renamable $r[[REG1:[0-9]+]] = LWZtoc @f1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: renamable $r[[REG2:[0-9]+]] = LWZtoc @d1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG1]] :: (dereferenceable load (s32) from @f1)
+; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG2]] :: (dereferenceable load (s64) from @d1)
 ; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT: $r4 = LI 1
 ; 32BIT-NEXT: $r7 = LI 97
 ; 32BIT-NEXT: BL_NOP <mcsymbol .test_mix>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $r4, implicit $f2, implicit killed $r7, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT: ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
-; 64BIT:      renamable $x[[REG1:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: renamable $x[[REG2:[0-9]+]] = LDtoc @d1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG1]] :: (dereferenceable load 4 from @f1)
-; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG2]] :: (dereferenceable load 8 from @d1)
+; 64BIT:      renamable $x[[REG1:[0-9]+]] = LDtoc @f1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: renamable $x[[REG2:[0-9]+]] = LDtoc @d1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG1]] :: (dereferenceable load (s32) from @f1)
+; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG2]] :: (dereferenceable load (s64) from @d1)
 ; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT: $x4 = LI8 1
 ; 64BIT-NEXT: $x6 = LI8 97
@@ -700,16 +700,16 @@ declare void @test_vararg(i32, ...)
 
 ; CHECK-LABEL:     name: call_test_vararg
 
-; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load 4 from @f1)
-; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
-; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]], align 8)
-; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d1)
-; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]] + 4)
-; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
-; 32BIT-NEXT: renamable $r6 = LWZ 0, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]], align 8)
-; 32BIT-NEXT: renamable $r7 = LWZ 4, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]] + 4)
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load (s32) from @f1)
+; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store (s64) into %stack.[[SLOT1]])
+; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load (s32) from %stack.[[SLOT1]], align 8)
+; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load (s64) from @d1)
+; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load (s32) from %stack.[[SLOT1]] + 4)
+; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store (s64) into %stack.[[SLOT2]])
+; 32BIT-NEXT: renamable $r6 = LWZ 0, %stack.[[SLOT2]] :: (load (s32) from %stack.[[SLOT2]], align 8)
+; 32BIT-NEXT: renamable $r7 = LWZ 4, %stack.[[SLOT2]] :: (load (s32) from %stack.[[SLOT2]] + 4)
 ; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT: $r3 = LI 42
 ; 32BIT-NEXT: BL_NOP <mcsymbol .test_vararg[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r5, implicit $f2, implicit $r6, implicit $r7, implicit $r2, implicit-def $r1
@@ -732,14 +732,14 @@ declare void @test_vararg(i32, ...)
 ; ASM32PWR4-NEXT: bl .test_vararg[PR]
 ; ASM32PWR4-NEXT: nop
 
-; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load 4 from @f1)
-; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
-; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d1)
-; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load 8 from %stack.[[SLOT1]])
-; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
-; 64BIT-NEXT: renamable $x5 = LD 0, %stack.[[SLOT2]] :: (load 8 from %stack.[[SLOT2]])
+; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load (s32) from @f1)
+; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store (s64) into %stack.[[SLOT1]])
+; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load (s64) from @d1)
+; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load (s64) from %stack.[[SLOT1]])
+; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store (s64) into %stack.[[SLOT2]])
+; 64BIT-NEXT: renamable $x5 = LD 0, %stack.[[SLOT2]] :: (load (s64) from %stack.[[SLOT2]])
 ; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT: $x3 = LI8 42
 ; 64BIT-NEXT: BL8_NOP <mcsymbol .test_vararg[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit $f2, implicit $x5, implicit $x2, implicit-def $r1
@@ -769,16 +769,16 @@ entry:
 
 ; CHECK-LABEL:     name: call_test_vararg2
 
-; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load 4 from @f1)
-; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
-; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]], align 8)
-; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d1)
-; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]] + 4)
-; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
-; 32BIT-NEXT: renamable $r7 = LWZ 0, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]], align 8)
-; 32BIT-NEXT: renamable $r8 = LWZ 4, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]] + 4)
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load (s32) from @f1)
+; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store (s64) into %stack.[[SLOT1]])
+; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load (s32) from %stack.[[SLOT1]], align 8)
+; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load (s64) from @d1)
+; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load (s32) from %stack.[[SLOT1]] + 4)
+; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store (s64) into %stack.[[SLOT2]])
+; 32BIT-NEXT: renamable $r7 = LWZ 0, %stack.[[SLOT2]] :: (load (s32) from %stack.[[SLOT2]], align 8)
+; 32BIT-NEXT: renamable $r8 = LWZ 4, %stack.[[SLOT2]] :: (load (s32) from %stack.[[SLOT2]] + 4)
 ; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT: $r3 = LI 42
 ; 32BIT-NEXT: $r6 = LI 42
@@ -801,14 +801,14 @@ entry:
 ; ASM32PWR4-NEXT: bl .test_vararg[PR]
 ; ASM32PWR4-NEXT: nop
 
-; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load 4 from @f1)
-; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
-; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d1)
-; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load 8 from %stack.[[SLOT1]])
-; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
-; 64BIT-NEXT: renamable $x6 = LD 0, %stack.[[SLOT2]] :: (load 8 from %stack.[[SLOT2]])
+; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load (s32) from @f1)
+; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store (s64) into %stack.[[SLOT1]])
+; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load (s64) from @d1)
+; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load (s64) from %stack.[[SLOT1]])
+; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store (s64) into %stack.[[SLOT2]])
+; 64BIT-NEXT: renamable $x6 = LD 0, %stack.[[SLOT2]] :: (load (s64) from %stack.[[SLOT2]])
 ; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT: $x3 = LI8 42
 ; 64BIT-NEXT: $x5 = LI8 42
@@ -840,16 +840,16 @@ entry:
 
 ; CHECK-LABEL:     name: call_test_vararg3
 
-; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load 4 from @f1)
-; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
-; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]], align 8)
-; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d1)
-; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]] + 4)
-; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
-; 32BIT-NEXT: renamable $r8 = LWZ 0, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]], align 8)
-; 32BIT-NEXT: renamable $r9 = LWZ 4, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]] + 4)
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load (s32) from @f1)
+; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store (s64) into %stack.[[SLOT1]])
+; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load (s32) from %stack.[[SLOT1]], align 8)
+; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load (s64) from @d1)
+; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load (s32) from %stack.[[SLOT1]] + 4)
+; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store (s64) into %stack.[[SLOT2]])
+; 32BIT-NEXT: renamable $r8 = LWZ 0, %stack.[[SLOT2]] :: (load (s32) from %stack.[[SLOT2]], align 8)
+; 32BIT-NEXT: renamable $r9 = LWZ 4, %stack.[[SLOT2]] :: (load (s32) from %stack.[[SLOT2]] + 4)
 ; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT: $r3 = LI 42
 ; 32BIT-NEXT: $r6 = LI 0
@@ -874,14 +874,14 @@ entry:
 ; ASM32PWR4-NEXT: bl .test_vararg[PR]
 ; ASM32PWR4-NEXT: nop
 
-; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load 4 from @f1)
-; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
-; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d1)
-; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load 8 from %stack.[[SLOT1]])
-; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
-; 64BIT-NEXT: renamable $x6 = LD 0, %stack.[[SLOT2]] :: (load 8 from %stack.[[SLOT2]])
+; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load (s32) from @f1)
+; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store (s64) into %stack.[[SLOT1]])
+; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load (s64) from @d1)
+; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load (s64) from %stack.[[SLOT1]])
+; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store (s64) into %stack.[[SLOT2]])
+; 64BIT-NEXT: renamable $x6 = LD 0, %stack.[[SLOT2]] :: (load (s64) from %stack.[[SLOT2]])
 ; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT: $x3 = LI8 42
 ; 64BIT-NEXT: $x5 = LI8 42
@@ -911,10 +911,10 @@ entry:
 
 ; CHECK-LABEL:     name: call_test_vararg4
 
-; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
-; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load 4 from @f1)
-; 32BIT-NEXT: STFS renamable $f1, 0, %stack.[[SLOT:[0-9]+]] :: (store 4 into %stack.[[SLOT]])
-; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT]] :: (load 4 from %stack.[[SLOT]])
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load (s32) from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load (s32) from @f1)
+; 32BIT-NEXT: STFS renamable $f1, 0, %stack.[[SLOT:[0-9]+]] :: (store (s32) into %stack.[[SLOT]])
+; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT]] :: (load (s32) from %stack.[[SLOT]])
 ; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT: $r3 = LI 42
 ; 32BIT-NEXT: BL_NOP <mcsymbol .test_vararg[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r2, implicit-def $r1
@@ -929,10 +929,10 @@ entry:
 ; ASM32PWR4-NEXT: bl .test_vararg[PR]
 ; ASM32PWR4-NEXT: nop
 
-; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
-; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load 4 from @f1)
-; 64BIT-NEXT: STFS renamable $f1, 0, %stack.[[SLOT:[0-9]+]] :: (store 4 into %stack.[[SLOT]])
-; 64BIT-NEXT: renamable $x4 = LWZ8 0, %stack.[[SLOT]] :: (load 4 from %stack.[[SLOT]])
+; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load (s64) from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load (s32) from @f1)
+; 64BIT-NEXT: STFS renamable $f1, 0, %stack.[[SLOT:[0-9]+]] :: (store (s32) into %stack.[[SLOT]])
+; 64BIT-NEXT: renamable $x4 = LWZ8 0, %stack.[[SLOT]] :: (load (s32) from %stack.[[SLOT]])
 ; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT: $x3 = LI8 42
 ; 64BIT-NEXT: BL8_NOP <mcsymbol .test_vararg[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit $x2, implicit-def $r1
@@ -980,21 +980,21 @@ declare void @test_stackarg_int(i32, i32, i32, i32, i32, i32, i32, i32, i8 zeroe
 ; 32BIT-DAG:  $r8 = LI 6
 ; 32BIT-DAG:  $r9 = LI 7
 ; 32BIT-DAG:  $r10 = LI 8
-; 32BIT-DAG:  renamable $r[[REGCADDR:[0-9]+]] = LWZtoc @c, $r2 :: (load 4 from got)
-; 32BIT-DAG:  renamable $r[[REGC:[0-9]+]] = LBZ 0, killed renamable $r[[REGCADDR]] :: (dereferenceable load 1 from @c)
-; 32BIT-DAG:  STW killed renamable $r[[REGC]], 56, $r1 :: (store 4)
-; 32BIT-DAG:  renamable $r[[REGSIADDR:[0-9]+]] = LWZtoc @si, $r2 :: (load 4 from got)
-; 32BIT-DAG:  renamable $r[[REGSI:[0-9]+]] = LHA 0, killed renamable $r[[REGSIADDR]] :: (dereferenceable load 2 from @si)
-; 32BIT-DAG:  STW killed renamable $r[[REGSI]], 60, $r1 :: (store 4)
-; 32BIT-DAG:  renamable $r[[REGIADDR:[0-9]+]] = LWZtoc @i, $r2 :: (load 4 from got)
-; 32BIT-DAG:  renamable $r[[REGI:[0-9]+]] = LWZ 0, killed renamable $r[[REGIADDR]] :: (dereferenceable load 4 from @i)
-; 32BIT-DAG:  STW killed renamable $r[[REGI]], 64, $r1 :: (store 4)
-; 32BIT-DAG:  renamable $r[[REGLLIADDR:[0-9]+]] = LWZtoc @lli, $r2 :: (load 4 from got)
-; 32BIT-DAG:  renamable $r[[REGLLI1:[0-9]+]] = LWZ 0, renamable $r[[REGLLIADDR]] :: (dereferenceable load 4 from @lli, align 8)
-; 32BIT-DAG:  STW killed renamable $r[[REGLLI1]], 68, $r1 :: (store 4)
-; 32BIT-DAG:  renamable $r[[REGLLI2:[0-9]+]] = LWZ 4, killed renamable $r[[REGLLIADDR]] :: (dereferenceable load 4 from @lli + 4, basealign 8)
-; 32BIT-DAG:  STW killed renamable $r[[REGLLI2]], 72, $r1 :: (store 4)
-; 32BIT-DAG:  STW renamable $r[[REGI]], 76, $r1 :: (store 4)
+; 32BIT-DAG:  renamable $r[[REGCADDR:[0-9]+]] = LWZtoc @c, $r2 :: (load (s32) from got)
+; 32BIT-DAG:  renamable $r[[REGC:[0-9]+]] = LBZ 0, killed renamable $r[[REGCADDR]] :: (dereferenceable load (s8) from @c)
+; 32BIT-DAG:  STW killed renamable $r[[REGC]], 56, $r1 :: (store (s32))
+; 32BIT-DAG:  renamable $r[[REGSIADDR:[0-9]+]] = LWZtoc @si, $r2 :: (load (s32) from got)
+; 32BIT-DAG:  renamable $r[[REGSI:[0-9]+]] = LHA 0, killed renamable $r[[REGSIADDR]] :: (dereferenceable load (s16) from @si)
+; 32BIT-DAG:  STW killed renamable $r[[REGSI]], 60, $r1 :: (store (s32))
+; 32BIT-DAG:  renamable $r[[REGIADDR:[0-9]+]] = LWZtoc @i, $r2 :: (load (s32) from got)
+; 32BIT-DAG:  renamable $r[[REGI:[0-9]+]] = LWZ 0, killed renamable $r[[REGIADDR]] :: (dereferenceable load (s32) from @i)
+; 32BIT-DAG:  STW killed renamable $r[[REGI]], 64, $r1 :: (store (s32))
+; 32BIT-DAG:  renamable $r[[REGLLIADDR:[0-9]+]] = LWZtoc @lli, $r2 :: (load (s32) from got)
+; 32BIT-DAG:  renamable $r[[REGLLI1:[0-9]+]] = LWZ 0, renamable $r[[REGLLIADDR]] :: (dereferenceable load (s32) from @lli, align 8)
+; 32BIT-DAG:  STW killed renamable $r[[REGLLI1]], 68, $r1 :: (store (s32))
+; 32BIT-DAG:  renamable $r[[REGLLI2:[0-9]+]] = LWZ 4, killed renamable $r[[REGLLIADDR]] :: (dereferenceable load (s32) from @lli + 4, basealign 8)
+; 32BIT-DAG:  STW killed renamable $r[[REGLLI2]], 72, $r1 :: (store (s32))
+; 32BIT-DAG:  STW renamable $r[[REGI]], 76, $r1 :: (store (s32))
 ; 32BIT-NEXT: BL_NOP <mcsymbol .test_stackarg_int[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT: ADJCALLSTACKUP 80, 0, implicit-def dead $r1, implicit $r1
 
@@ -1038,19 +1038,19 @@ declare void @test_stackarg_int(i32, i32, i32, i32, i32, i32, i32, i32, i8 zeroe
 ; 64BIT-DAG:   $x8 = LI8 6
 ; 64BIT-DAG:   $x9 = LI8 7
 ; 64BIT-DAG:   $x10 = LI8 8
-; 64BIT-DAG:   renamable $x[[REGCADDR:[0-9]+]] = LDtoc @c, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGC:[0-9]+]] = LBZ8 0, killed renamable $x[[REGCADDR]] :: (dereferenceable load 1 from @c)
-; 64BIT-DAG:   STD killed renamable $x[[REGC]], 112, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGSIADDR:[0-9]+]] = LDtoc @si, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGSI:[0-9]+]] = LHA8 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load 2 from @si)
-; 64BIT-DAG:   STD killed renamable $x[[REGSI]], 120, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGIADDR:[0-9]+]] = LDtoc @i, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGIADDR]] :: (dereferenceable load 4 from @i)
-; 64BIT-DAG:   STD killed renamable $x[[REGI]], 128, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGLLIADDR:[0-9]+]] = LDtoc @lli, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGLLI:[0-9]+]] = LD 0, killed renamable $x[[REGLLIADDR]] :: (dereferenceable load 8 from @lli)
-; 64BIT-DAG:   STD killed renamable $x[[REGLLI]], 136, $x1 :: (store 8)
-; 64BIT-DAG:   STD renamable $x[[REGI]], 144, $x1 :: (store 8)
+; 64BIT-DAG:   renamable $x[[REGCADDR:[0-9]+]] = LDtoc @c, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGC:[0-9]+]] = LBZ8 0, killed renamable $x[[REGCADDR]] :: (dereferenceable load (s8) from @c)
+; 64BIT-DAG:   STD killed renamable $x[[REGC]], 112, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGSIADDR:[0-9]+]] = LDtoc @si, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGSI:[0-9]+]] = LHA8 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load (s16) from @si)
+; 64BIT-DAG:   STD killed renamable $x[[REGSI]], 120, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGIADDR:[0-9]+]] = LDtoc @i, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGIADDR]] :: (dereferenceable load (s32) from @i)
+; 64BIT-DAG:   STD killed renamable $x[[REGI]], 128, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGLLIADDR:[0-9]+]] = LDtoc @lli, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGLLI:[0-9]+]] = LD 0, killed renamable $x[[REGLLIADDR]] :: (dereferenceable load (s64) from @lli)
+; 64BIT-DAG:   STD killed renamable $x[[REGLLI]], 136, $x1 :: (store (s64))
+; 64BIT-DAG:   STD renamable $x[[REGI]], 144, $x1 :: (store (s64))
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_int[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 152, 0, implicit-def dead $r1, implicit $r1
 
@@ -1104,12 +1104,12 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 ; 32BIT-DAG:   $r8 = LI 6
 ; 32BIT-DAG:   $r9 = LI 7
 ; 32BIT-DAG:   $r10 = LI 8
-; 32BIT-DAG:   renamable $r[[REGF:[0-9]+]] = LWZtoc @f, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f1 = LFS 0, killed renamable $r[[REGF]] :: (dereferenceable load 4 from @f)
-; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f2 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load 8 from @d)
-; 32BIT-DAG:   STFS renamable $f1, 56, $r1 :: (store 4)
-; 32BIT-DAG:   STFD renamable $f2, 60, $r1 :: (store 8)
+; 32BIT-DAG:   renamable $r[[REGF:[0-9]+]] = LWZtoc @f, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f1 = LFS 0, killed renamable $r[[REGF]] :: (dereferenceable load (s32) from @f)
+; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f2 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load (s64) from @d)
+; 32BIT-DAG:   STFS renamable $f1, 56, $r1 :: (store (s32))
+; 32BIT-DAG:   STFD renamable $f2, 60, $r1 :: (store (s64))
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .test_stackarg_float[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit killed $r10, implicit $f1, implicit $f2, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT:  ADJCALLSTACKUP 68, 0, implicit-def dead $r1, implicit $r1
 
@@ -1145,12 +1145,12 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 ; 64BIT-DAG:   $x8 = LI8 6
 ; 64BIT-DAG:   $x9 = LI8 7
 ; 64BIT-DAG:   $x10 = LI8 8
-; 64BIT-DAG:   renamable $x[[REGF:[0-9]+]] = LDtoc @f, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f1 = LFS 0, killed renamable $x[[REGF]] :: (dereferenceable load 4 from @f)
-; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f2 = LFD 0, killed renamable $x[[REGD]] :: (dereferenceable load 8 from @d)
-; 64BIT-DAG:   STFS renamable $f1, 112, $x1 :: (store 4)
-; 64BIT-DAG:   STFD renamable $f2, 120, $x1 :: (store 8)
+; 64BIT-DAG:   renamable $x[[REGF:[0-9]+]] = LDtoc @f, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $f1 = LFS 0, killed renamable $x[[REGF]] :: (dereferenceable load (s32) from @f)
+; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $f2 = LFD 0, killed renamable $x[[REGD]] :: (dereferenceable load (s64) from @d)
+; 64BIT-DAG:   STFS renamable $f1, 112, $x1 :: (store (s32))
+; 64BIT-DAG:   STFD renamable $f2, 120, $x1 :: (store (s64))
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_float[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit killed $x9, implicit killed $x10, implicit $f1, implicit $f2, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 128, 0, implicit-def dead $r1, implicit $r1
 
@@ -1193,11 +1193,11 @@ declare void @test_stackarg_float2(i32, i32, i32, i32, i32, i32, ...)
 ; 32BIT-DAG:   $r6 = LI 4
 ; 32BIT-DAG:   $r7 = LI 5
 ; 32BIT-DAG:   $r8 = LI 6
-; 32BIT-DAG:   renamable $r[[REG:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d)
-; 32BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store 8 into %stack.0)
-; 32BIT-DAG:   renamable $r9 = LWZ 0, %stack.0 :: (load 4 from %stack.0, align 8)
-; 32BIT-DAG:   renamable $r10 = LWZ 4, %stack.0 :: (load 4 from %stack.0 + 4)
+; 32BIT-DAG:   renamable $r[[REG:[0-9]+]] = LWZtoc @d, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load (s64) from @d)
+; 32BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store (s64) into %stack.0)
+; 32BIT-DAG:   renamable $r9 = LWZ 0, %stack.0 :: (load (s32) from %stack.0, align 8)
+; 32BIT-DAG:   renamable $r10 = LWZ 4, %stack.0 :: (load (s32) from %stack.0 + 4)
 ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_stackarg_float2[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit $f1, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
@@ -1228,10 +1228,10 @@ declare void @test_stackarg_float2(i32, i32, i32, i32, i32, i32, ...)
 ; 64BIT-DAG:   $x6 = LI8 4
 ; 64BIT-DAG:   $x7 = LI8 5
 ; 64BIT-DAG:   $x8 = LI8 6
-; 64BIT-DAG:   renamable $x[[REG:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d)
-; 64BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store 8 into %stack.0)
-; 64BIT-DAG:   renamable $x9 = LD 0, %stack.0 :: (load 8 from %stack.0)
+; 64BIT-DAG:   renamable $x[[REG:[0-9]+]] = LDtoc @d, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load (s64) from @d)
+; 64BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store (s64) into %stack.0)
+; 64BIT-DAG:   renamable $x9 = LD 0, %stack.0 :: (load (s64) from %stack.0)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_float2[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit $f1, implicit $x9, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
@@ -1274,14 +1274,14 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 ; 32BIT-DAG:   $r7 = LI 5
 ; 32BIT-DAG:   $r8 = LI 6
 ; 32BIT-DAG:   $r9 = LI 7
-; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load 8 from @d)
-; 32BIT-DAG:   renamable $r[[REGF:[0-9]+]] = LWZtoc @f, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f2 = LFS 0, killed renamable $r[[REGF]] :: (dereferenceable load 4 from @f)
-; 32BIT-DAG:   STFD renamable $f1, 52, $r1 :: (store 8)
-; 32BIT-DAG:   STFS renamable $f2, 60, $r1 :: (store 4)
-; 32BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store 8 into %stack.0)
-; 32BIT-DAG:   renamable $r10 = LWZ 0, %stack.0 :: (load 4 from %stack.0, align 8)
+; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load (s64) from @d)
+; 32BIT-DAG:   renamable $r[[REGF:[0-9]+]] = LWZtoc @f, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f2 = LFS 0, killed renamable $r[[REGF]] :: (dereferenceable load (s32) from @f)
+; 32BIT-DAG:   STFD renamable $f1, 52, $r1 :: (store (s64))
+; 32BIT-DAG:   STFS renamable $f2, 60, $r1 :: (store (s32))
+; 32BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store (s64) into %stack.0)
+; 32BIT-DAG:   renamable $r10 = LWZ 0, %stack.0 :: (load (s32) from %stack.0, align 8)
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .test_stackarg_float3[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit $f1, implicit $r10, implicit $f2, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT:  ADJCALLSTACKUP 64, 0, implicit-def dead $r1, implicit $r1
 
@@ -1318,13 +1318,13 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 ; 64BIT-DAG:   $x7 = LI8 5
 ; 64BIT-DAG:   $x8 = LI8 6
 ; 64BIT-DAG:   $x9 = LI8 7
-; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[REGD]] :: (dereferenceable load 8 from @d)
-; 64BIT-DAG:   renamable $x[[REGF:[0-9]+]] = LDtoc @f, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f2 = LFS 0, killed renamable $x[[REGF]] :: (dereferenceable load 4 from @f)
-; 64BIT-DAG:   STFS renamable $f2, 112, $x1 :: (store 4)
-; 64BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store 8 into %stack.0)
-; 64BIT-DAG:   renamable $x10 = LD 0, %stack.0 :: (load 8 from %stack.0)
+; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[REGD]] :: (dereferenceable load (s64) from @d)
+; 64BIT-DAG:   renamable $x[[REGF:[0-9]+]] = LDtoc @f, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $f2 = LFS 0, killed renamable $x[[REGF]] :: (dereferenceable load (s32) from @f)
+; 64BIT-DAG:   STFS renamable $f2, 112, $x1 :: (store (s32))
+; 64BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store (s64) into %stack.0)
+; 64BIT-DAG:   renamable $x10 = LD 0, %stack.0 :: (load (s64) from %stack.0)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_float3[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit killed $x9, implicit $f1, implicit $x10, implicit $f2, implicit $x2, implicit-def $r1
 
 ; 64BIT-NEXT: ADJCALLSTACKUP 120, 0, implicit-def dead $r1, implicit $r1
@@ -1482,34 +1482,34 @@ entry:
 ; 32BIT-DAG:   $r8 = LI 6
 ; 32BIT-DAG:   $r9 = LI 7
 ; 32BIT-DAG:   $r10 = LI 8
-; 32BIT-DAG:   renamable $r[[REGLL1ADDR:[0-9]+]] = LWZtoc @ll1, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[REGLL1A:[0-9]+]] = LWZ 0, renamable $r[[REGLL1ADDR]] :: (dereferenceable load 4 from @ll1, align 8)
-; 32BIT-DAG:   renamable $r[[REGLL1B:[0-9]+]] = LWZ 4, killed renamable $r[[REGLL1ADDR]] :: (dereferenceable load 4 from @ll1 + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REGLL1A]], 56, $r1 :: (store 4)
-; 32BIT-DAG:   STW killed renamable $r[[REGLL1B]], 60, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGSIADDR:[0-9]+]] = LWZtoc @si1, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[REGSI:[0-9]+]] = LHA 0, killed renamable $r[[REGSIADDR]] :: (dereferenceable load 2 from @si1)
-; 32BIT-DAG:   STW killed renamable $r[[REGSI]], 64, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGCHADDR:[0-9]+]] = LWZtoc @ch, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[REGCH:[0-9]+]] = LBZ 0, killed renamable $r[[REGCHADDR]] :: (dereferenceable load 1 from @ch)
-; 32BIT-DAG:   STW killed renamable $r[[REGCH]], 68, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGUIADDR:[0-9]+]] = LWZtoc @ui, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[REGUI:[0-9]+]] = LWZ 0, killed renamable $r[[REGUIADDR]] :: (dereferenceable load 4 from @ui)
-; 32BIT-DAG:   STW killed renamable $r[[REGUI]], 72, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGSIADDR:[0-9]+]] = LWZtoc @sint, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[REGSI:[0-9]+]] = LWZ 0, killed renamable $r[[REGSIADDR]] :: (dereferenceable load 4 from @sint)
-; 32BIT-DAG:   STW killed renamable $r[[REGSI]], 76, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGLL2ADDR:[0-9]+]] = LWZtoc @ll2, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[REGLL2A:[0-9]+]] = LWZ 0, renamable $r[[REGLL2ADDR]] :: (dereferenceable load 4 from @ll2, align 8)
-; 32BIT-DAG:   renamable $r[[REGLL2B:[0-9]+]] = LWZ 4, killed renamable $r[[REGLL2ADDR]] :: (dereferenceable load 4 from @ll2 + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REGLL2A]], 80, $r1 :: (store 4)
-; 32BIT-DAG:   STW killed renamable $r[[REGLL2B]], 84, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGUCADDR:[0-9]+]] = LWZtoc @uc1, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[REGUC:[0-9]+]] = LBZ 0, killed renamable $r[[REGUCADDR]] :: (dereferenceable load 1 from @uc1)
-; 32BIT-DAG:   STW killed renamable $r[[REGUC]], 88, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGIADDR:[0-9]+]] = LWZtoc @i1, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[REGI:[0-9]+]] = LWZ 0, killed renamable $r[[REGIADDR]] :: (dereferenceable load 4 from @i1)
-; 32BIT-DAG:   STW killed renamable $r[[REGI]], 92, $r1 :: (store 4)
+; 32BIT-DAG:   renamable $r[[REGLL1ADDR:[0-9]+]] = LWZtoc @ll1, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[REGLL1A:[0-9]+]] = LWZ 0, renamable $r[[REGLL1ADDR]] :: (dereferenceable load (s32) from @ll1, align 8)
+; 32BIT-DAG:   renamable $r[[REGLL1B:[0-9]+]] = LWZ 4, killed renamable $r[[REGLL1ADDR]] :: (dereferenceable load (s32) from @ll1 + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REGLL1A]], 56, $r1 :: (store (s32))
+; 32BIT-DAG:   STW killed renamable $r[[REGLL1B]], 60, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGSIADDR:[0-9]+]] = LWZtoc @si1, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[REGSI:[0-9]+]] = LHA 0, killed renamable $r[[REGSIADDR]] :: (dereferenceable load (s16) from @si1)
+; 32BIT-DAG:   STW killed renamable $r[[REGSI]], 64, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGCHADDR:[0-9]+]] = LWZtoc @ch, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[REGCH:[0-9]+]] = LBZ 0, killed renamable $r[[REGCHADDR]] :: (dereferenceable load (s8) from @ch)
+; 32BIT-DAG:   STW killed renamable $r[[REGCH]], 68, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGUIADDR:[0-9]+]] = LWZtoc @ui, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[REGUI:[0-9]+]] = LWZ 0, killed renamable $r[[REGUIADDR]] :: (dereferenceable load (s32) from @ui)
+; 32BIT-DAG:   STW killed renamable $r[[REGUI]], 72, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGSIADDR:[0-9]+]] = LWZtoc @sint, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[REGSI:[0-9]+]] = LWZ 0, killed renamable $r[[REGSIADDR]] :: (dereferenceable load (s32) from @sint)
+; 32BIT-DAG:   STW killed renamable $r[[REGSI]], 76, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGLL2ADDR:[0-9]+]] = LWZtoc @ll2, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[REGLL2A:[0-9]+]] = LWZ 0, renamable $r[[REGLL2ADDR]] :: (dereferenceable load (s32) from @ll2, align 8)
+; 32BIT-DAG:   renamable $r[[REGLL2B:[0-9]+]] = LWZ 4, killed renamable $r[[REGLL2ADDR]] :: (dereferenceable load (s32) from @ll2 + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REGLL2A]], 80, $r1 :: (store (s32))
+; 32BIT-DAG:   STW killed renamable $r[[REGLL2B]], 84, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGUCADDR:[0-9]+]] = LWZtoc @uc1, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[REGUC:[0-9]+]] = LBZ 0, killed renamable $r[[REGUCADDR]] :: (dereferenceable load (s8) from @uc1)
+; 32BIT-DAG:   STW killed renamable $r[[REGUC]], 88, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGIADDR:[0-9]+]] = LWZtoc @i1, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[REGI:[0-9]+]] = LWZ 0, killed renamable $r[[REGIADDR]] :: (dereferenceable load (s32) from @i1)
+; 32BIT-DAG:   STW killed renamable $r[[REGI]], 92, $r1 :: (store (s32))
 ; 32BIT-DAG:   ADJCALLSTACKDOWN 96, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .test_ints_stack>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1, implicit-def dead $r3
 ; 32BIT-NEXT:  ADJCALLSTACKUP 96, 0, implicit-def dead $r1, implicit $r1
@@ -1522,30 +1522,30 @@ entry:
 ; 64BIT-DAG:   $x8 = LI8 6
 ; 64BIT-DAG:   $x9 = LI8 7
 ; 64BIT-DAG:   $x10 = LI8 8
-; 64BIT-DAG:   renamable $x[[REGLL1ADDR:[0-9]+]] = LDtoc @ll1, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGLL1:[0-9]+]] = LD 0, killed renamable $x[[REGLL1ADDR]] :: (dereferenceable load 8 from @ll1)
-; 64BIT-DAG:   STD killed renamable $x[[REGLL1]], 112, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGSIADDR:[0-9]+]] = LDtoc @si1, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGSI:[0-9]+]] = LHA8 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load 2 from @si1)
-; 64BIT-DAG:   STD killed renamable $x[[REGSI]], 120, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGCHADDR:[0-9]+]] = LDtoc @ch, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGCH:[0-9]+]] = LBZ8 0, killed renamable $x[[REGCHADDR]] :: (dereferenceable load 1 from @ch)
-; 64BIT-DAG:   STD killed renamable $x[[REGCH]], 128, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGUIADDR:[0-9]+]] = LDtoc @ui, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGUI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGUIADDR]] :: (dereferenceable load 4 from @ui)
-; 64BIT-DAG:   STD killed renamable $x[[REGUI]], 136, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGSIADDR:[0-9]+]] = LDtoc @sint, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGSI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load 4 from @sint)
-; 64BIT-DAG:   STD killed renamable $x[[REGSI]], 144, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGLL2ADDR:[0-9]+]] = LDtoc @ll2, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGLL2:[0-9]+]] = LD 0, killed renamable $x[[REGLL2ADDR]] :: (dereferenceable load 8 from @ll2)
-; 64BIT-DAG:   STD killed renamable $x[[REGLL2]], 152, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGUCADDR:[0-9]+]] = LDtoc @uc1, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGUC:[0-9]+]] = LBZ8 0, killed renamable $x[[REGUCADDR]] :: (dereferenceable load 1 from @uc1)
-; 64BIT-DAG:   STD killed renamable $x[[REGUC]], 160, $x1 :: (store 8)
-; 64BIT-DAG:   renamable $x[[REGIADDR:[0-9]+]] = LDtoc @i1, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGIADDR]] :: (dereferenceable load 4 from @i1)
-; 64BIT-DAG:   STD killed renamable $x[[REGI]], 168, $x1 :: (store 8)
+; 64BIT-DAG:   renamable $x[[REGLL1ADDR:[0-9]+]] = LDtoc @ll1, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGLL1:[0-9]+]] = LD 0, killed renamable $x[[REGLL1ADDR]] :: (dereferenceable load (s64) from @ll1)
+; 64BIT-DAG:   STD killed renamable $x[[REGLL1]], 112, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGSIADDR:[0-9]+]] = LDtoc @si1, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGSI:[0-9]+]] = LHA8 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load (s16) from @si1)
+; 64BIT-DAG:   STD killed renamable $x[[REGSI]], 120, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGCHADDR:[0-9]+]] = LDtoc @ch, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGCH:[0-9]+]] = LBZ8 0, killed renamable $x[[REGCHADDR]] :: (dereferenceable load (s8) from @ch)
+; 64BIT-DAG:   STD killed renamable $x[[REGCH]], 128, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGUIADDR:[0-9]+]] = LDtoc @ui, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGUI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGUIADDR]] :: (dereferenceable load (s32) from @ui)
+; 64BIT-DAG:   STD killed renamable $x[[REGUI]], 136, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGSIADDR:[0-9]+]] = LDtoc @sint, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGSI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load (s32) from @sint)
+; 64BIT-DAG:   STD killed renamable $x[[REGSI]], 144, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGLL2ADDR:[0-9]+]] = LDtoc @ll2, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGLL2:[0-9]+]] = LD 0, killed renamable $x[[REGLL2ADDR]] :: (dereferenceable load (s64) from @ll2)
+; 64BIT-DAG:   STD killed renamable $x[[REGLL2]], 152, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGUCADDR:[0-9]+]] = LDtoc @uc1, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGUC:[0-9]+]] = LBZ8 0, killed renamable $x[[REGUCADDR]] :: (dereferenceable load (s8) from @uc1)
+; 64BIT-DAG:   STD killed renamable $x[[REGUC]], 160, $x1 :: (store (s64))
+; 64BIT-DAG:   renamable $x[[REGIADDR:[0-9]+]] = LDtoc @i1, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGIADDR]] :: (dereferenceable load (s32) from @i1)
+; 64BIT-DAG:   STD killed renamable $x[[REGI]], 168, $x1 :: (store (s64))
 ; 64BIT-DAG:   ADJCALLSTACKDOWN 176, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_ints_stack>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1, implicit-def dead $x3
 ; 64BIT-NEXT:  ADJCALLSTACKUP 176, 0, implicit-def dead $r1, implicit $r1
@@ -1656,17 +1656,17 @@ define void @test_i1_stack(i32 %a, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; 32BIT-DAG:   - { id: 0, type: default, offset: 59, size: 1
 ; 32BIT-DAG:   body:             |
 ; 32BIT-DAG:    bb.0.entry:
-; 32BIT-DAG:     renamable $r[[REGB:[0-9]+]] = LBZ 0, %fixed-stack.0 :: (load 1 from %fixed-stack.0)
-; 32BIT-DAG:     renamable $r[[REGBTOC:[0-9]+]] = LWZtoc @globali1, $r2 :: (load 4 from got)
-; 32BIT-DAG:     STB killed renamable $r[[REGB]], 0, killed renamable $r[[REGBTOC]] :: (store 1 into @globali1)
+; 32BIT-DAG:     renamable $r[[REGB:[0-9]+]] = LBZ 0, %fixed-stack.0 :: (load (s8) from %fixed-stack.0)
+; 32BIT-DAG:     renamable $r[[REGBTOC:[0-9]+]] = LWZtoc @globali1, $r2 :: (load (s32) from got)
+; 32BIT-DAG:     STB killed renamable $r[[REGB]], 0, killed renamable $r[[REGBTOC]] :: (store (s8) into @globali1)
 
 ; 64BIT-LABEL: fixedStack:
 ; 64BIT-DAG:   - { id: 0, type: default, offset: 119, size: 1
 ; 64BIT-DAG:   body:             |
 ; 64BIT-DAG:     bb.0.entry:
-; 64BIT-DAG:       renamable $r[[REGB:[0-9]+]] = LBZ 0, %fixed-stack.0 :: (load 1 from %fixed-stack.0)
-; 64BIT-DAG:       renamable $x[[REGBTOC:[0-9]+]] = LDtoc @globali1, $x2 :: (load 8 from got)
-; 64BIT-DAG:       STB killed renamable $r[[SCRATCHREG:[0-9]+]], 0, killed renamable $x[[REGBTOC]] :: (store 1 into @globali1)
+; 64BIT-DAG:       renamable $r[[REGB:[0-9]+]] = LBZ 0, %fixed-stack.0 :: (load (s8) from %fixed-stack.0)
+; 64BIT-DAG:       renamable $x[[REGBTOC:[0-9]+]] = LDtoc @globali1, $x2 :: (load (s64) from got)
+; 64BIT-DAG:       STB killed renamable $r[[SCRATCHREG:[0-9]+]], 0, killed renamable $x[[REGBTOC]] :: (store (s8) into @globali1)
 ; 64BIT-DAG:       BLR8 implicit $lr8, implicit $rm
 
 ; CHECKASM-LABEL:  test_i1_stack:
@@ -1699,7 +1699,7 @@ define void @call_test_i1_stack() {
 ; 32BIT-DAG:   $r9 = LI 7
 ; 32BIT-DAG:   $r10 = LI 8
 ; 32BIT-DAG:   renamable $r[[REGBOOLADDR:[0-9]+]] = LI 1
-; 32BIT-DAG:   STW killed renamable $r[[REGBOOLADDR]], 56, $r1 :: (store 4)
+; 32BIT-DAG:   STW killed renamable $r[[REGBOOLADDR]], 56, $r1 :: (store (s32))
 ; 32BIT-DAG:   BL_NOP <mcsymbol .test_i1_stack>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1
 ; 32BIT-DAG:   ADJCALLSTACKUP 60, 0, implicit-def dead $r1, implicit $r1
 
@@ -1713,7 +1713,7 @@ define void @call_test_i1_stack() {
 ; 64BIT-DAG:  $x9 = LI8 7
 ; 64BIT-DAG:  $x10 = LI8 8
 ; 64BIT-DAG:  renamable $x[[REGBOOLADDR:[0-9]+]] = LI8 1
-; 64BIT-DAG:  STD killed renamable $x[[REGBOOLADDR]], 112, $x1 :: (store 8)
+; 64BIT-DAG:  STD killed renamable $x[[REGBOOLADDR]], 112, $x1 :: (store (s64))
 ; 64BIT-DAG:  BL8_NOP <mcsymbol .test_i1_stack>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1
 ; 64BIT-DAG:  ADJCALLSTACKUP 120, 0, implicit-def dead $r1, implicit $r1
 
@@ -1829,92 +1829,92 @@ entry:
 
 ; CHECK-LABEL: caller_fpr_stack
 
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.0, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.1, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.2, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.3, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.4, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.5, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.6, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.7, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.8, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.9, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.10, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.11, $r2 :: (load 4 from got)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 56, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 60, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 64, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 68, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 72, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 76, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 80, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[SCRATCHREG:[0-9]+]], 84, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 88, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 92, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 96, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 100, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 104, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 108, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 112, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 116, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 120, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 124, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 128, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGF1:[0-9]+]] = LWZtoc @f14, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r3 = LWZ 0, killed renamable $r[[REGF1]] :: (load 4 from @f14)
-; 32BIT-DAG:   STFD killed renamable $f0, 132, $r1 :: (store 8)
-; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d15, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f0 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load 8 from @d15)
-; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 140, $r1 :: (store 4)
-; 32BIT-DAG:   renamable $r[[REGF2:[0-9]+]] = LWZtoc @f16, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZ 0, killed renamable $r[[REGF2]] :: (load 4 from @f16)
-; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f2 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f3 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f4 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f5 = LFS 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 4 from constant-pool)
-; 32BIT-DAG:   renamable $f6 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f7 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f8 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f9 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.0, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.1, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.2, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.3, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.4, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.5, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.6, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.7, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.8, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.9, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.10, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.11, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 56, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 60, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 64, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 68, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 72, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 76, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 80, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[SCRATCHREG:[0-9]+]], 84, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 88, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 92, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 96, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 100, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 104, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 108, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 112, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 116, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 120, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 124, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 128, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGF1:[0-9]+]] = LWZtoc @f14, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r3 = LWZ 0, killed renamable $r[[REGF1]] :: (load (s32) from @f14)
+; 32BIT-DAG:   STFD killed renamable $f0, 132, $r1 :: (store (s64))
+; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d15, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f0 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load (s64) from @d15)
+; 32BIT-DAG:   STW killed renamable $r[[SCRATCHREG:[0-9]+]], 140, $r1 :: (store (s32))
+; 32BIT-DAG:   renamable $r[[REGF2:[0-9]+]] = LWZtoc @f16, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZ 0, killed renamable $r[[REGF2]] :: (load (s32) from @f16)
+; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f2 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f3 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f4 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f5 = LFS 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s32) from constant-pool)
+; 32BIT-DAG:   renamable $f6 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f7 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f8 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f9 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
 ; 32BIT-DAG:   $f10 = COPY renamable $f1
-; 32BIT-DAG:   renamable $f11 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f12 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $f13 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
+; 32BIT-DAG:   renamable $f11 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f12 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $f13 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .test_fpr_stack>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit killed $f10, implicit $f11, implicit $f12, implicit $f13, implicit $r2, implicit-def $r1, implicit-def dead $f1
 ; 32BIT-NEXT:  ADJCALLSTACKUP 144, 0, implicit-def dead $r1, implicit $r1
 
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.0, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.1, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.2, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.[[SCRATCHREG:[0-9]+]], $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.4, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.5, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.6, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.7, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.8, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.9, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.10, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[REGF1:[0-9]+]] = LDtoc @f14, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $r3 = LWZ 0, killed renamable $x[[REGF1]] :: (load 4 from @f14)
-; 64BIT-DAG:   renamable $x[[REGF2:[0-9]+]] = LDtoc @f16, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $r5 = LWZ 0, killed renamable $x[[REGF2]] :: (load 4 from @f16)
-; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d15, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x4 = LD 0, killed renamable $x[[REGD]] :: (load 8 from @d15)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.0, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.1, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.2, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.[[SCRATCHREG:[0-9]+]], $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.4, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.5, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.6, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.7, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.8, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.9, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.10, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[REGF1:[0-9]+]] = LDtoc @f14, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $r3 = LWZ 0, killed renamable $x[[REGF1]] :: (load (s32) from @f14)
+; 64BIT-DAG:   renamable $x[[REGF2:[0-9]+]] = LDtoc @f16, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $r5 = LWZ 0, killed renamable $x[[REGF2]] :: (load (s32) from @f16)
+; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d15, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x4 = LD 0, killed renamable $x[[REGD]] :: (load (s64) from @d15)
 ; 64BIT-DAG:   ADJCALLSTACKDOWN 176, 0, implicit-def dead $r1, implicit $r1
-; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f2 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f[[SCRATCHREG:[0-9]+]] = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f4 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f5 = LFS 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 4 from constant-pool)
-; 64BIT-DAG:   renamable $f6 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f7 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f8 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f9 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
+; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f2 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f[[SCRATCHREG:[0-9]+]] = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f4 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f5 = LFS 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s32) from constant-pool)
+; 64BIT-DAG:   renamable $f6 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f7 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f8 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f9 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
 ; 64BIT-DAG:   $f10 = COPY renamable $f1
-; 64BIT-DAG:   renamable $f11 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f12 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f13 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
+; 64BIT-DAG:   renamable $f11 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f12 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f13 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
 ; 64BIT-DAG:   BL8_NOP <mcsymbol .test_fpr_stack>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit killed $f10, implicit $f11, implicit $f12, implicit $f13, implicit $x2, implicit-def $r1, implicit-def dead $f1
 ; 64BIT-NEXT:   ADJCALLSTACKUP 176, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
@@ -2059,14 +2059,14 @@ define void @caller_mix() {
 ; CHECK-LABEL: name: caller_mix
 
 ; 32BIT-DAG:   ADJCALLSTACKDOWN 84, 0, implicit-def dead $r1, implicit $r1
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.0, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.1, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f2 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.2, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f3 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.3, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f4 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.0, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.1, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f2 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.2, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f3 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LWZtoc %const.3, $r2 :: (load (s32) from got)
+; 32BIT-DAG:   renamable $f4 = LFD 0, killed renamable $r[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
 ; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LI 1
 ; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LI 2
 ; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LIS 457
@@ -2074,34 +2074,34 @@ define void @caller_mix() {
 ; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LI 40
 ; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LI 50
 ; 32BIT-DAG:   renamable $r[[SCRATCHREG:[0-9]+]] = LI 60
-; 32BIT-DAG:   STW killed renamable $r[[REG1:[0-9]+]], 56, $r1 :: (store 4)
-; 32BIT-DAG:   STW killed renamable $r[[REG2:[0-9]+]], 60, $r1 :: (store 4)
-; 32BIT-DAG:   STW killed renamable $r[[REG3:[0-9]+]], 64, $r1 :: (store 4)
-; 32BIT-DAG:   STW killed renamable $r[[REG4:[0-9]+]], 68, $r1 :: (store 4)
-; 32BIT-DAG:   STW killed renamable $r[[REG5:[0-9]+]], 72, $r1 :: (store 4)
-; 32BIT-DAG:   STW killed renamable $r[[REG6:[0-9]+]], 76, $r1 :: (store 4)
-; 32BIT-DAG:   STW killed renamable $r[[REG7:[0-9]+]], 80, $r1 :: (store 4)
+; 32BIT-DAG:   STW killed renamable $r[[REG1:[0-9]+]], 56, $r1 :: (store (s32))
+; 32BIT-DAG:   STW killed renamable $r[[REG2:[0-9]+]], 60, $r1 :: (store (s32))
+; 32BIT-DAG:   STW killed renamable $r[[REG3:[0-9]+]], 64, $r1 :: (store (s32))
+; 32BIT-DAG:   STW killed renamable $r[[REG4:[0-9]+]], 68, $r1 :: (store (s32))
+; 32BIT-DAG:   STW killed renamable $r[[REG5:[0-9]+]], 72, $r1 :: (store (s32))
+; 32BIT-DAG:   STW killed renamable $r[[REG6:[0-9]+]], 76, $r1 :: (store (s32))
+; 32BIT-DAG:   STW killed renamable $r[[REG7:[0-9]+]], 80, $r1 :: (store (s32))
 ; 32BIT-DAG:   BL_NOP <mcsymbol .mix_callee>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $r2, implicit-def $r1, implicit-def dead $r3
 ; 32BIT-DAG:   ADJCALLSTACKUP 84, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-NEXT:  BLR implicit $lr, implicit $rm
 
 ; 64BIT-DAG:   ADJCALLSTACKDOWN 128, 0, implicit-def dead $r1, implicit $r1
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.0, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.1, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.2, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.3, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f2 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f3 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
-; 64BIT-DAG:   renamable $f4 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load 8 from constant-pool)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.0, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.1, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.2, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LDtocCPT %const.3, $x2 :: (load (s64) from got)
+; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f2 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f3 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
+; 64BIT-DAG:   renamable $f4 = LFD 0, killed renamable $x[[SCRATCHREG:[0-9]+]] :: (load (s64) from constant-pool)
 ; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LI8 50
 ; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LI8 60
 ; 64BIT-DAG:   renamable $x[[SCRATCHREG:[0-9]+]] = LIS8 457
 ; 64BIT-DAG:   $x7 = LI8 1
 ; 64BIT-DAG:   $x8 = LI8 2
 ; 64BIT-DAG:   $x10 = LI8 40
-; 64BIT-DAG:   STD killed renamable $x[[REG1:[0-9]+]], 112, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG2:[0-9]+]], 120, $x1 :: (store 8)
+; 64BIT-DAG:   STD killed renamable $x[[REG1:[0-9]+]], 112, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG2:[0-9]+]], 120, $x1 :: (store (s64))
 ; 64BIT:       ADJCALLSTACKUP 128, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT:  BLR8 implicit $lr8, implicit $rm
 
@@ -2242,34 +2242,34 @@ define void @caller_mix() {
 ; 32BIT-DAG:   $r8 = LI 6
 ; 32BIT-DAG:   $r9 = LI 7
 ; 32BIT-DAG:   $r10 = LI 8
-; 32BIT-DAG:   STW killed renamable $r[[REG1:[0-9]+]], 56, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG2:[0-9]+]], 60, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG3:[0-9]+]], 64, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG4:[0-9]+]], 68, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG5:[0-9]+]], 72, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG6:[0-9]+]], 76, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG7:[0-9]+]], 80, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG8:[0-9]+]], 84, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG9:[0-9]+]], 88, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG10:[0-9]+]], 92, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG11:[0-9]+]], 96, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG12:[0-9]+]], 100, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG13:[0-9]+]], 104, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG14:[0-9]+]], 108, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG15:[0-9]+]], 112, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG16:[0-9]+]], 116, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG17:[0-9]+]], 120, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG18:[0-9]+]], 128, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW renamable $r[[REG19:[0-9]+]], 124, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG20:[0-9]+]], 132, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG21:[0-9]+]], 136, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG22:[0-9]+]], 140, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG23:[0-9]+]], 144, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG24:[0-9]+]], 148, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG25:[0-9]+]], 152, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG26:[0-9]+]], 156, $r1 :: (store 4 into unknown-address + 4, basealign 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG27:[0-9]+]], 160, $r1 :: (store 4, align 8)
-; 32BIT-DAG:   STW killed renamable $r[[REG28:[0-9]+]], 164, $r1 :: (store 4 into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG1:[0-9]+]], 56, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG2:[0-9]+]], 60, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG3:[0-9]+]], 64, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG4:[0-9]+]], 68, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG5:[0-9]+]], 72, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG6:[0-9]+]], 76, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG7:[0-9]+]], 80, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG8:[0-9]+]], 84, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG9:[0-9]+]], 88, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG10:[0-9]+]], 92, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG11:[0-9]+]], 96, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG12:[0-9]+]], 100, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG13:[0-9]+]], 104, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG14:[0-9]+]], 108, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG15:[0-9]+]], 112, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG16:[0-9]+]], 116, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG17:[0-9]+]], 120, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG18:[0-9]+]], 128, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW renamable $r[[REG19:[0-9]+]], 124, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG20:[0-9]+]], 132, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG21:[0-9]+]], 136, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG22:[0-9]+]], 140, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG23:[0-9]+]], 144, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG24:[0-9]+]], 148, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG25:[0-9]+]], 152, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG26:[0-9]+]], 156, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG27:[0-9]+]], 160, $r1 :: (store (s32), align 8)
+; 32BIT-DAG:   STW killed renamable $r[[REG28:[0-9]+]], 164, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .mix_floats>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit $f10, implicit $f11, implicit $f12, implicit $f13, implicit $r2, implicit-def $r1, implicit-def dead $r3
 ; 32BIT-NEXT:   ADJCALLSTACKUP 168, 0, implicit-def dead $r1, implicit $r1
 
@@ -2283,20 +2283,20 @@ define void @caller_mix() {
 ; 64BIT-DAG:   $x8 = LI8 6
 ; 64BIT-DAG:   $x9 = LI8 7
 ; 64BIT-DAG:   $x10 = LI8 8
-; 64BIT-DAG:   STD killed renamable $x[[REG1:[0-9]+]], 112, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG2:[0-9]+]], 120, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG3:[0-9]+]], 128, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG4:[0-9]+]], 136, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG5:[0-9]+]], 144, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG6:[0-9]+]], 152, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG7:[0-9]+]], 160, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG8:[0-9]+]], 168, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG9:[0-9]+]], 176, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG10:[0-9]+]], 184, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG12:[0-9]+]], 192, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG13:[0-9]+]], 200, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG14:[0-9]+]], 208, $x1 :: (store 8)
-; 64BIT-DAG:   STD killed renamable $x[[REG15:[0-9]+]], 216, $x1 :: (store 8)
+; 64BIT-DAG:   STD killed renamable $x[[REG1:[0-9]+]], 112, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG2:[0-9]+]], 120, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG3:[0-9]+]], 128, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG4:[0-9]+]], 136, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG5:[0-9]+]], 144, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG6:[0-9]+]], 152, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG7:[0-9]+]], 160, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG8:[0-9]+]], 168, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG9:[0-9]+]], 176, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG10:[0-9]+]], 184, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG12:[0-9]+]], 192, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG13:[0-9]+]], 200, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG14:[0-9]+]], 208, $x1 :: (store (s64))
+; 64BIT-DAG:   STD killed renamable $x[[REG15:[0-9]+]], 216, $x1 :: (store (s64))
 ; 64BIT-DAG:   BL8_NOP <mcsymbol .mix_floats>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $f1, implicit $f2, implicit $f3, implicit $f4, implicit $f5, implicit $f6, implicit $f7, implicit $f8, implicit $f9, implicit $f10, implicit $f11, implicit $f12, implicit $f13, implicit $x2, implicit-def $r1, implicit-def dead $x3
 ; 64BIT-NEXT:  ADJCALLSTACKUP 224, 0, implicit-def dead $r1, implicit $r1
 
@@ -2337,7 +2337,7 @@ define void @caller_mix() {
 
 ; ASM64PWR4:      mflr 0
 ; ASM64PWR4-DAG:  std 0, 16(1)
-; ASM64PWR4-DAG:  stdu 1, -256(1)
+; ASM64PWR4-DAG:  stdu 1, -240(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 112(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 120(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 128(1)

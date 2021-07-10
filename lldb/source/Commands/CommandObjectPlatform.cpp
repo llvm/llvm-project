@@ -60,7 +60,7 @@ static mode_t ParsePermissionString(llvm::StringRef permissions) {
 
 class OptionPermissions : public OptionGroup {
 public:
-  OptionPermissions() {}
+  OptionPermissions() = default;
 
   ~OptionPermissions() override = default;
 

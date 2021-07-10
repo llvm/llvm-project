@@ -133,7 +133,7 @@ class SyntheticChildren {
 public:
   class Flags {
   public:
-    Flags() {}
+    Flags() = default;
 
     Flags(const Flags &other) : m_flags(other.m_flags) {}
 

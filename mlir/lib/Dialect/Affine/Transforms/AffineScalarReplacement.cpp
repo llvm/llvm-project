@@ -68,6 +68,11 @@ struct AffineScalarReplacement
   void loadCSE(AffineReadOpInterface loadOp,
                SmallVectorImpl<Operation *> &loadOpsToErase,
                DominanceInfo &domInfo);
+
+  void findUnusedStore(AffineWriteOpInterface storeOp,
+                       SmallVectorImpl<Operation *> &storeOpsToErase,
+                       SmallPtrSetImpl<Value> &memrefsToErase,
+                       PostDominanceInfo &postDominanceInfo);
 };
 
 } // end anonymous namespace
@@ -256,6 +261,51 @@ bool hasNoInterveningEffect(Operation *start, T memOp) {
   return !hasSideEffect;
 }
 
+// This attempts to find stores which have no impact on the final result.
+// A writing op writeA will be eliminated if there exists an op writeB if
+// 1) writeA and writeB have mathematically equivalent affine access functions.
+// 2) writeB postdominates writeA.
+// 3) There is no potential read between writeA and writeB.
+void AffineScalarReplacement::findUnusedStore(
+    AffineWriteOpInterface writeA, SmallVectorImpl<Operation *> &opsToErase,
+    SmallPtrSetImpl<Value> &memrefsToErase,
+    PostDominanceInfo &postDominanceInfo) {
+
+  for (Operation *user : writeA.getMemRef().getUsers()) {
+    // Only consider writing operations.
+    auto writeB = dyn_cast<AffineWriteOpInterface>(user);
+    if (!writeB)
+      continue;
+
+    // The operations must be distinct.
+    if (writeB == writeA)
+      continue;
+
+    // Both operations must lie in the same region.
+    if (writeB->getParentRegion() != writeA->getParentRegion())
+      continue;
+
+    // Both operations must write to the same memory.
+    MemRefAccess srcAccess(writeB);
+    MemRefAccess destAccess(writeA);
+
+    if (srcAccess != destAccess)
+      continue;
+
+    // writeB must postdominate writeA.
+    if (!postDominanceInfo.postDominates(writeB, writeA))
+      continue;
+
+    // There cannot be an operation which reads from memory between
+    // the two writes.
+    if (!hasNoInterveningEffect<MemoryEffects::Read>(writeA, writeB))
+      continue;
+
+    opsToErase.push_back(writeA);
+    break;
+  }
+}
+
 /// Attempt to eliminate loadOp by replacing it with a value stored into memory
 /// which the load is guaranteed to retrieve. This check involves three
 /// components: 1) The store and load must be on the same location 2) The store
@@ -394,6 +444,7 @@ void AffineScalarReplacement::runOnFunction() {
   SmallPtrSet<Value, 4> memrefsToErase;
 
   auto &domInfo = getAnalysis<DominanceInfo>();
+  auto &postDomInfo = getAnalysis<PostDominanceInfo>();
 
   // Walk all load's and perform store to load forwarding.
   f.walk([&](AffineReadOpInterface loadOp) {
@@ -404,6 +455,15 @@ void AffineScalarReplacement::runOnFunction() {
   });
 
   // Erase all load op's whose results were replaced with store fwd'ed ones.
+  for (auto *op : opsToErase)
+    op->erase();
+  opsToErase.clear();
+
+  // Walk all store's and perform unused store elimination
+  f.walk([&](AffineWriteOpInterface storeOp) {
+    findUnusedStore(storeOp, opsToErase, memrefsToErase, postDomInfo);
+  });
+  // Erase all store op's which don't impact the program
   for (auto *op : opsToErase)
     op->erase();
 

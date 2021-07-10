@@ -461,19 +461,70 @@ TEST(TypeHints, Lambda) {
                   ExpectedHint{": int", "init"});
 }
 
-TEST(TypeHints, StructuredBindings) {
-  // FIXME: Not handled yet.
-  // To handle it, we could print:
-  //  - the aggregate type next to the 'auto', or
-  //  - the individual types inside the brackets
-  // The latter is probably more useful.
+// Structured bindings tests.
+// Note, we hint the individual bindings, not the aggregate.
+
+TEST(TypeHints, StructuredBindings_PublicStruct) {
   assertTypeHints(R"cpp(
+    // Struct with public fields.
     struct Point {
       int x;
       int y;
     };
     Point foo();
-    auto [x, y] = foo();
+    auto [$x[[x]], $y[[y]]] = foo();
+  )cpp",
+                  ExpectedHint{": int", "x"}, ExpectedHint{": int", "y"});
+}
+
+TEST(TypeHints, StructuredBindings_Array) {
+  assertTypeHints(R"cpp(
+    int arr[2];
+    auto [$x[[x]], $y[[y]]] = arr;
+  )cpp",
+                  ExpectedHint{": int", "x"}, ExpectedHint{": int", "y"});
+}
+
+TEST(TypeHints, StructuredBindings_TupleLike) {
+  assertTypeHints(R"cpp(
+    // Tuple-like type.
+    struct IntPair {
+      int a;
+      int b;
+    };
+    namespace std {
+      template <typename T>
+      struct tuple_size {};
+      template <>
+      struct tuple_size<IntPair> {
+        constexpr static unsigned value = 2;
+      };
+      template <unsigned I, typename T>
+      struct tuple_element {};
+      template <unsigned I>
+      struct tuple_element<I, IntPair> {
+        using type = int;
+      };
+    }
+    template <unsigned I>
+    int get(const IntPair& p) {
+      if constexpr (I == 0) {
+        return p.a;
+      } else if constexpr (I == 1) {
+        return p.b;
+      }
+    }
+    IntPair bar();
+    auto [$x[[x]], $y[[y]]] = bar();
+  )cpp",
+                  ExpectedHint{": int", "x"}, ExpectedHint{": int", "y"});
+}
+
+TEST(TypeHints, StructuredBindings_NoInitializer) {
+  assertTypeHints(R"cpp(
+    // No initializer (ill-formed).
+    // Do not show useless "NULL TYPE" hint.    
+    auto [x, y];  /*error-ok*/
   )cpp");
 }
 

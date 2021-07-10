@@ -12,6 +12,7 @@
 #include "Diagnostics.h"
 #include "DraftStore.h"
 #include "DumpAST.h"
+#include "Features.h"
 #include "GlobalCompilationDatabase.h"
 #include "LSPBinder.h"
 #include "Protocol.h"
@@ -24,7 +25,6 @@
 #include "support/MemoryTree.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/Version.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -620,7 +620,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   llvm::json::Object Result{
       {{"serverInfo",
         llvm::json::Object{{"name", "clangd"},
-                           {"version", getClangToolFullVersion("clangd")}}},
+                           {"version", llvm::formatv("{0} {1}", versionString(),
+                                                     featureString())}}},
        {"capabilities", std::move(ServerCaps)}}};
   if (Opts.Encoding)
     Result["offsetEncoding"] = *Opts.Encoding;

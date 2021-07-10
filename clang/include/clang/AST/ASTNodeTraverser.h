@@ -53,6 +53,7 @@ struct {
   void Visit(const OMPClause *C);
   void Visit(const BlockDecl::Capture &C);
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
+  void Visit(const concepts::Requirement *R);
   void Visit(const APValue &Value, QualType Ty);
 };
 */
@@ -141,7 +142,8 @@ public:
       ConstStmtVisitor<Derived>::Visit(S);
 
       // Some statements have custom mechanisms for dumping their children.
-      if (isa<DeclStmt>(S) || isa<GenericSelectionExpr>(S))
+      if (isa<DeclStmt>(S) || isa<GenericSelectionExpr>(S) ||
+          isa<RequiresExpr>(S))
         return;
 
       if (Traversal == TK_IgnoreUnlessSpelledInSource &&
@@ -225,6 +227,28 @@ public:
       if (const TypeSourceInfo *TSI = A.getTypeSourceInfo())
         Visit(TSI->getType());
       Visit(A.getAssociationExpr());
+    });
+  }
+
+  void Visit(const concepts::Requirement *R) {
+    getNodeDelegate().AddChild([=] {
+      getNodeDelegate().Visit(R);
+      if (!R)
+        return;
+      if (auto *TR = dyn_cast<concepts::TypeRequirement>(R)) {
+        if (!TR->isSubstitutionFailure())
+          Visit(TR->getType()->getType().getTypePtr());
+      } else if (auto *ER = dyn_cast<concepts::ExprRequirement>(R)) {
+        if (!ER->isExprSubstitutionFailure())
+          Visit(ER->getExpr());
+        if (!ER->getReturnTypeRequirement().isEmpty())
+          Visit(ER->getReturnTypeRequirement()
+                    .getTypeConstraint()
+                    ->getImmediatelyDeclaredConstraint());
+      } else if (auto *NR = dyn_cast<concepts::NestedRequirement>(R)) {
+        if (!NR->isSubstitutionFailure())
+          Visit(NR->getConstraintExpr());
+      }
     });
   }
 
@@ -687,6 +711,13 @@ public:
     for (const auto Assoc : E->associations()) {
       Visit(Assoc);
     }
+  }
+
+  void VisitRequiresExpr(const RequiresExpr *E) {
+    for (auto *D : E->getLocalParameters())
+      Visit(D);
+    for (auto *R : E->getRequirements())
+      Visit(R);
   }
 
   void VisitLambdaExpr(const LambdaExpr *Node) {

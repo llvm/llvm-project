@@ -40,7 +40,6 @@ public:
   void finalize() override;
   bool needsThunks() const;
   uint64_t estimateStubsInRangeVA(size_t callIdx) const;
-  void eraseOmittedInputSections();
 
   void writeTo(uint8_t *buf) const override;
 

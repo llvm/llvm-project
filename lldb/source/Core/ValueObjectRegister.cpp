@@ -60,7 +60,7 @@ ValueObjectRegisterSet::ValueObjectRegisterSet(ExecutionContextScope *exe_scope,
   }
 }
 
-ValueObjectRegisterSet::~ValueObjectRegisterSet() {}
+ValueObjectRegisterSet::~ValueObjectRegisterSet() = default;
 
 CompilerType ValueObjectRegisterSet::GetCompilerTypeImpl() {
   return CompilerType();
@@ -193,7 +193,7 @@ ValueObjectRegister::ValueObjectRegister(ExecutionContextScope *exe_scope,
   ConstructObject(reg_num);
 }
 
-ValueObjectRegister::~ValueObjectRegister() {}
+ValueObjectRegister::~ValueObjectRegister() = default;
 
 CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
   if (!m_compiler_type.IsValid()) {

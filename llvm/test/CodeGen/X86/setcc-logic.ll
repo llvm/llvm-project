@@ -456,8 +456,8 @@ define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) nounwind {
 ; CHECK-LABEL: ne_neg1_and_ne_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    cmpq $1, %rdi
-; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    cmpq $2, %rdi
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne i64 %x, -1
   %cmp2 = icmp ne i64 %x, 0

@@ -320,27 +320,27 @@ fuseElementwiseOpsImpl(GenericOp producer, OpOperand *consumerOpOperand,
 /// %0 = op ... : tensor<?x?x4x5xf32>
 /// with output index_map
 ///   `affine_map<(d0, d1, d2, d3) -> (d0, d1 * 20 + d2 * 5 + d3)>`
+template <typename TensorReshapeOp>
 static AffineMap linearizeCollapsedDims(AffineMap sourceMap,
-                                        ArrayRef<int64_t> sourceShape,
-                                        ArrayRef<AffineMap> reassociationMaps) {
+                                        TensorReshapeOp reshapeOp) {
+  constexpr bool isExpanding =
+      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value;
+  ArrayRef<int64_t> sourceShape =
+      (isExpanding ? reshapeOp.getResultType().getShape()
+                   : reshapeOp.getSrcType().getShape());
   SmallVector<AffineExpr> resultExprs;
-  resultExprs.reserve(reassociationMaps.size());
   ArrayRef<AffineExpr> sourceExprs = sourceMap.getResults();
   MLIRContext *context = sourceMap.getContext();
 
   // Compute the result exprs based on the reassociation maps.
-  for (AffineMap map : reassociationMaps) {
-    ArrayRef<AffineExpr> collapsedDims = map.getResults();
+  for (auto &indices : reshapeOp.getReassociationIndices()) {
     // Assume that they are in-order and contiguous (already checked in
     // verifier).
-    assert(!collapsedDims.empty());
-    unsigned startDim =
-        collapsedDims.front().cast<AffineDimExpr>().getPosition();
+    assert(!indices.empty());
     SmallVector<int64_t> sizes;
     SmallVector<AffineExpr> dimExprs;
-    for (auto en :
-         llvm::zip(sourceShape.slice(startDim, collapsedDims.size()),
-                   sourceExprs.slice(startDim, collapsedDims.size()))) {
+    for (auto en : llvm::zip(sourceShape.slice(indices[0], indices.size()),
+                             sourceExprs.slice(indices[0], indices.size()))) {
       if (std::get<0>(en) == 1)
         continue;
       sizes.push_back(std::get<0>(en));
@@ -359,7 +359,7 @@ static AffineMap linearizeCollapsedDims(AffineMap sourceMap,
 // divs in the indexing maps of the fused op which would make it non-invertible.
 static bool isTensorReshapeOpFoldableByLinearization(
     TensorExpandShapeOp expandOp, AffineMap useIndexMap, bool asProducer) {
-  if (!asProducer && expandOp.getResultType().hasStaticShape())
+  if (!asProducer)
     return false;
   return useIndexMap.isPermutation();
 }
@@ -368,23 +368,26 @@ static bool isTensorReshapeOpFoldableByLinearization(
 // consumer).
 static bool isTensorReshapeOpFoldableByLinearization(
     TensorCollapseShapeOp collapseOp, AffineMap useIndexMap, bool asProducer) {
-  if (asProducer && collapseOp.getSrcType().hasStaticShape())
+  if (asProducer)
     return false;
   return useIndexMap.isPermutation();
 }
 
 /// Check if the reshape operation is only expansion into/collapsing of
 /// unit-dimension.
-static bool isUnitDimExpansionOnly(ArrayRef<int64_t> expandedShape,
-                                   ArrayRef<AffineMap> reassociation) {
-  for (auto &map : reassociation) {
+template <typename TensorReshapeOp>
+static bool isUnitDimExpansionOnly(TensorReshapeOp reshapeOp) {
+  constexpr bool isExpanding =
+      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value;
+  ArrayRef<int64_t> expandedShape =
+      (isExpanding ? reshapeOp.getResultType().getShape()
+                   : reshapeOp.getSrcType().getShape());
+  for (auto &indices : reshapeOp.getReassociationIndices()) {
     unsigned numUnitDims = 0;
-    for (AffineExpr expr : map.getResults()) {
-      unsigned position = expr.cast<AffineDimExpr>().getPosition();
+    for (int64_t position : indices)
       if (expandedShape[position] == 1)
         numUnitDims++;
-    }
-    if (numUnitDims != map.getNumResults() - 1)
+    if (numUnitDims != indices.size() - 1)
       return false;
   }
   return true;
@@ -818,14 +821,10 @@ struct FoldProducerReshapeOpByLinearization
       if (!reshapeOp)
         continue;
 
-      RankedTensorType returnType = reshapeOp.getResultType();
-
       if (!isTensorReshapeOpFoldableByLinearization(
               reshapeOp, genericOp.getTiedIndexingMap(en.value()),
               /*asProducer =*/true) ||
-          (foldUnitDimReshapesOnly &&
-           !isUnitDimExpansionOnly(returnType.getShape(),
-                                   reshapeOp.getReassociationMaps())))
+          (foldUnitDimReshapesOnly && !isUnitDimExpansionOnly(reshapeOp)))
         continue;
 
       // Compute the fused operands list,
@@ -842,8 +841,10 @@ struct FoldProducerReshapeOpByLinearization
       auto invMap = inversePermutation(fusedIndexMaps[en.index()]);
 
       // Compute the indexing map to use for the result of the producer.
-      AffineMap modifiedMap = linearizeCollapsedDims(
-          invMap, returnType.getShape(), reshapeOp.getReassociationMaps());
+      AffineMap modifiedMap = linearizeCollapsedDims(invMap, reshapeOp);
+      // The modified map cannot have symbols.
+      if (modifiedMap.getNumSymbols())
+        return failure();
       for (AffineExpr expr : modifiedMap.getResults()) {
         if (!expr.isPureAffine())
           return failure();
@@ -1081,9 +1082,7 @@ struct FoldConsumerReshapeOpByLinearization
             reshapeOp,
             producer.getTiedIndexingMap(producer.getOutputOperand(0)),
             /*asProducer =*/false) ||
-        (foldUnitDimReshapesOnly &&
-         !isUnitDimExpansionOnly(reshapeOp.getSrcType().getShape(),
-                                 reshapeOp.getReassociationMaps())))
+        (foldUnitDimReshapesOnly && !isUnitDimExpansionOnly(reshapeOp)))
       return failure();
     // The indexing_maps for the operands of the fused operation are same as
     // those for the operands of the producer.
@@ -1093,9 +1092,7 @@ struct FoldConsumerReshapeOpByLinearization
         producer.getTiedIndexingMap(producer.getOutputOperand(0)));
 
     // Compute the indexing map to use for the operand of the producer.
-    AffineMap modifiedMap =
-        linearizeCollapsedDims(invMap, reshapeOp.getSrcType().getShape(),
-                               reshapeOp.getReassociationMaps());
+    AffineMap modifiedMap = linearizeCollapsedDims(invMap, reshapeOp);
     for (AffineExpr expr : modifiedMap.getResults()) {
       if (!expr.isPureAffine()) {
         return rewriter.notifyMatchFailure(
@@ -1144,8 +1141,7 @@ struct FoldReshapeWithGenericOpByExpansion
     if (!producer || producer.getNumOutputs() != 1 ||
         !isFusableWithReshapeByDimExpansion(producer,
                                             producer.getOutputOperand(0)) ||
-        isUnitDimExpansionOnly(reshapeOp.getResultType().getShape(),
-                               reshapeOp.getReassociationMaps()))
+        isUnitDimExpansionOnly(reshapeOp))
       return failure();
     Optional<SmallVector<Value>> replacementValues = fuseWithReshapeByExpansion(
         producer, reshapeOp, producer.getOutputOperand(0), rewriter);
@@ -1248,12 +1244,10 @@ bool mlir::linalg::skipUnitDimReshape(const OpResult &producer,
                                       const OpOperand &consumer) {
   auto expandShapeOp = producer.getDefiningOp<linalg::TensorExpandShapeOp>();
   if (expandShapeOp)
-    return !isUnitDimExpansionOnly(expandShapeOp.getSrcType().getShape(),
-                                   expandShapeOp.getReassociationMaps());
+    return !isUnitDimExpansionOnly(expandShapeOp);
   auto collapseShapeOp =
       producer.getDefiningOp<linalg::TensorCollapseShapeOp>();
-  return !isUnitDimExpansionOnly(collapseShapeOp.getSrcType().getShape(),
-                                 collapseShapeOp.getReassociationMaps());
+  return !isUnitDimExpansionOnly(collapseShapeOp);
 }
 
 namespace {
@@ -1312,6 +1306,9 @@ struct FoldReshapeOpsByLinearizationPass
     Operation *op = getOperation();
     RewritePatternSet patterns(op->getContext());
     populateFoldReshapeOpsByLinearizationPatterns(patterns);
+    if (allowFoldingUnitDimReshapes) {
+      populateFoldUnitDimsReshapeOpsByLinearizationPatterns(patterns);
+    }
     (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
   }
 };
@@ -1344,7 +1341,7 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
         for (auto dim : llvm::enumerate(operandType.getShape())) {
           if (dim.value() != ShapedType::kDynamicSize)
             continue;
-          dynamicDims.push_back(rewriter.createOrFold<memref::DimOp>(
+          dynamicDims.push_back(rewriter.createOrFold<tensor::DimOp>(
               loc, operandVal, dim.index()));
         }
         Value initTensor = rewriter.create<InitTensorOp>(

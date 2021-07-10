@@ -12,6 +12,72 @@
 using namespace mlir;
 
 namespace {
+/// This is a test pass for verifying FuncOp's insertArgument method.
+struct TestFuncInsertArg
+    : public PassWrapper<TestFuncInsertArg, OperationPass<ModuleOp>> {
+  StringRef getArgument() const final { return "test-func-insert-arg"; }
+  StringRef getDescription() const final { return "Test inserting func args."; }
+  void runOnOperation() override {
+    auto module = getOperation();
+
+    for (FuncOp func : module.getOps<FuncOp>()) {
+      auto inserts = func->getAttrOfType<ArrayAttr>("test.insert_args");
+      if (!inserts || inserts.empty())
+        continue;
+      SmallVector<unsigned, 4> indicesToInsert;
+      SmallVector<Type, 4> typesToInsert;
+      SmallVector<DictionaryAttr, 4> attrsToInsert;
+      SmallVector<Optional<Location>, 4> locsToInsert;
+      for (auto insert : inserts.getAsRange<ArrayAttr>()) {
+        indicesToInsert.push_back(
+            insert[0].cast<IntegerAttr>().getValue().getZExtValue());
+        typesToInsert.push_back(insert[1].cast<TypeAttr>().getValue());
+        attrsToInsert.push_back(insert.size() > 2
+                                    ? insert[2].cast<DictionaryAttr>()
+                                    : DictionaryAttr::get(&getContext()));
+        locsToInsert.push_back(
+            insert.size() > 3
+                ? Optional<Location>(insert[3].cast<LocationAttr>())
+                : Optional<Location>{});
+      }
+      func->removeAttr("test.insert_args");
+      func.insertArguments(indicesToInsert, typesToInsert, attrsToInsert,
+                           locsToInsert);
+    }
+  }
+};
+
+/// This is a test pass for verifying FuncOp's insertResult method.
+struct TestFuncInsertResult
+    : public PassWrapper<TestFuncInsertResult, OperationPass<ModuleOp>> {
+  StringRef getArgument() const final { return "test-func-insert-result"; }
+  StringRef getDescription() const final {
+    return "Test inserting func results.";
+  }
+  void runOnOperation() override {
+    auto module = getOperation();
+
+    for (FuncOp func : module.getOps<FuncOp>()) {
+      auto inserts = func->getAttrOfType<ArrayAttr>("test.insert_results");
+      if (!inserts || inserts.empty())
+        continue;
+      SmallVector<unsigned, 4> indicesToInsert;
+      SmallVector<Type, 4> typesToInsert;
+      SmallVector<DictionaryAttr, 4> attrsToInsert;
+      for (auto insert : inserts.getAsRange<ArrayAttr>()) {
+        indicesToInsert.push_back(
+            insert[0].cast<IntegerAttr>().getValue().getZExtValue());
+        typesToInsert.push_back(insert[1].cast<TypeAttr>().getValue());
+        attrsToInsert.push_back(insert.size() > 2
+                                    ? insert[2].cast<DictionaryAttr>()
+                                    : DictionaryAttr::get(&getContext()));
+      }
+      func->removeAttr("test.insert_results");
+      func.insertResults(indicesToInsert, typesToInsert, attrsToInsert);
+    }
+  }
+};
+
 /// This is a test pass for verifying FuncOp's eraseArgument method.
 struct TestFuncEraseArg
     : public PassWrapper<TestFuncEraseArg, OperationPass<ModuleOp>> {
@@ -51,18 +117,15 @@ struct TestFuncEraseResult
     for (FuncOp func : module.getOps<FuncOp>()) {
       SmallVector<unsigned, 4> indicesToErase;
       for (auto resultIndex : llvm::seq<int>(0, func.getNumResults())) {
-        if (func.getResultAttr(resultIndex, "test.erase_this_"
-                                            "result")) {
-          // Push back twice to test
-          // that duplicate indices
-          // are handled correctly.
+        if (func.getResultAttr(resultIndex, "test.erase_this_result")) {
+          // Push back twice to test that duplicate indices are handled
+          // correctly.
           indicesToErase.push_back(resultIndex);
           indicesToErase.push_back(resultIndex);
         }
       }
-      // Reverse the order to test
-      // that unsorted index lists are
-      // handled correctly.
+      // Reverse the order to test that unsorted index lists are handled
+      // correctly.
       std::reverse(indicesToErase.begin(), indicesToErase.end());
       func.eraseResults(indicesToErase);
     }
@@ -90,6 +153,10 @@ struct TestFuncSetType
 
 namespace mlir {
 void registerTestFunc() {
+  PassRegistration<TestFuncInsertArg>();
+
+  PassRegistration<TestFuncInsertResult>();
+
   PassRegistration<TestFuncEraseArg>();
 
   PassRegistration<TestFuncEraseResult>();

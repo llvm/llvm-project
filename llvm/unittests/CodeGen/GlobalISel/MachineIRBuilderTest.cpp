@@ -317,8 +317,8 @@ TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
   ; CHECK: [[PTR:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_ATOMICRMW_FADD [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered 8)
-  ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_ATOMICRMW_FSUB [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered 8)
+  ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_ATOMICRMW_FADD [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered (s64))
+  ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_ATOMICRMW_FSUB [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered (s64))
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

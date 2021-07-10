@@ -21,7 +21,7 @@ RegisterContextMach_arm::RegisterContextMach_arm(Thread &thread,
                                                  uint32_t concrete_frame_idx)
     : RegisterContextDarwin_arm(thread, concrete_frame_idx) {}
 
-RegisterContextMach_arm::~RegisterContextMach_arm() {}
+RegisterContextMach_arm::~RegisterContextMach_arm() = default;
 
 int RegisterContextMach_arm::DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) {
   mach_msg_type_number_t count = GPRWordCount;

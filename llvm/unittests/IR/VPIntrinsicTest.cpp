@@ -46,6 +46,11 @@ protected:
       Str << " declare <8 x float> @llvm.vp." << BinaryFPOpcode
           << ".v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) ";
 
+    Str << " declare void @llvm.vp.store.v8i32.p0v8i32(<8 x i32>, <8 x i32>*, <8 x i1>, i32) ";
+        Str << " declare void @llvm.vp.scatter.v8i32.v8p0i32(<8 x i32>, <8 x i32*>, <8 x i1>, i32) ";
+        Str << " declare <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>*, <8 x i1>, i32) ";
+        Str << " declare <8 x i32> @llvm.vp.gather.v8i32.v8p0i32(<8 x i32*>, <8 x i1>, i32) ";
+
     return parseAssemblyString(Str.str(), Err, C);
   }
 };

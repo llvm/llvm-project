@@ -65,6 +65,32 @@
 # DYLIB-NEXT:   g {{.*}} _unref_extern
 # DYLIB-NEXT:   g {{.*}} _no_dead_strip_globl
 
+## Extern symbols aren't stripped from executables with -export_dynamic
+# RUN: %lld -lSystem -dead_strip -export_dynamic -u _ref_private_extern_u \
+# RUN:     %t/basics.o -o %t/basics
+# RUN: llvm-objdump --syms --section-headers %t/basics | \
+# RUN:     FileCheck --check-prefix=EXECDYN %s
+# EXECDYN-LABEL: Sections:
+# EXECDYN-LABEL: Name
+# EXECDYN-NEXT:  __text
+# EXECDYN-NEXT:  __got
+# EXECDYN-NEXT:  __ref_section
+# EXECDYN-NEXT:  __common
+# EXECDYN-LABEL: SYMBOL TABLE:
+# EXECDYN-NEXT:   l {{.*}} _ref_data
+# EXECDYN-NEXT:   l {{.*}} _ref_local
+# EXECDYN-NEXT:   l {{.*}} _ref_from_no_dead_strip_globl
+# EXECDYN-NEXT:   l {{.*}} _no_dead_strip_local
+# EXECDYN-NEXT:   l {{.*}} _ref_from_no_dead_strip_local
+# EXECDYN-NEXT:   l {{.*}} _ref_private_extern_u
+# EXECDYN-NEXT:   l {{.*}} _main
+# EXECDYN-NEXT:   l {{.*}} _ref_private_extern
+# EXECDYN-NEXT:   g {{.*}} _ref_com
+# EXECDYN-NEXT:   g {{.*}} _unref_com
+# EXECDYN-NEXT:   g {{.*}} _unref_extern
+# EXECDYN-NEXT:   g {{.*}} _no_dead_strip_globl
+# EXECDYN-NEXT:   g {{.*}} __mh_execute_header
+
 ## Absolute symbol handling.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/abs.s -o %t/abs.o

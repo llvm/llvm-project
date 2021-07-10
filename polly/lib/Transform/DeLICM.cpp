@@ -624,7 +624,7 @@ private:
 
     // Find all uses.
     for (auto *MA : S->getValueUses(SAI))
-      Reads = Reads.add_set(getDomainFor(MA));
+      Reads = Reads.unite(getDomainFor(MA));
 
     // { DomainRead[] -> Scatter[] }
     auto ReadSchedule = getScatterFor(Reads);
@@ -885,7 +885,7 @@ private:
     auto UniverseWritesDom = isl::union_set::empty(ParamSpace);
 
     for (auto *MA : S->getPHIIncomings(SAI))
-      UniverseWritesDom = UniverseWritesDom.add_set(getDomainFor(MA));
+      UniverseWritesDom = UniverseWritesDom.unite(getDomainFor(MA));
 
     auto RelevantWritesTarget = WritesTarget;
     if (DelicmOverapproximateWrites)

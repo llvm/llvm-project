@@ -40,11 +40,11 @@ body:             |
     ; MIPS32R6: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; MIPS32R6: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @float_align1
     ; MIPS32R6: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @float_align1
-    ; MIPS32R6: SWC1 [[COPY]], [[ADDiu]], 0 :: (store 4 into @float_align1, align 1)
+    ; MIPS32R6: SWC1 [[COPY]], [[ADDiu]], 0 :: (store (s32) into @float_align1, align 1)
     ; MIPS32R6: RetRA
     %0:fprb(s32) = COPY $f12
     %1:gprb(p0) = G_GLOBAL_VALUE @float_align1
-    G_STORE %0(s32), %1(p0) :: (store 4 into @float_align1, align 1)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into @float_align1, align 1)
     RetRA
 
 ...
@@ -63,11 +63,11 @@ body:             |
     ; MIPS32R6: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; MIPS32R6: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @float_align8
     ; MIPS32R6: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @float_align8
-    ; MIPS32R6: SWC1 [[COPY]], [[ADDiu]], 0 :: (store 4 into @float_align8, align 8)
+    ; MIPS32R6: SWC1 [[COPY]], [[ADDiu]], 0 :: (store (s32) into @float_align8, align 8)
     ; MIPS32R6: RetRA
     %0:fprb(s32) = COPY $f12
     %1:gprb(p0) = G_GLOBAL_VALUE @float_align8
-    G_STORE %0(s32), %1(p0) :: (store 4 into @float_align8, align 8)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into @float_align8, align 8)
     RetRA
 
 ...
@@ -86,11 +86,11 @@ body:             |
     ; MIPS32R6: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32R6: [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-abs-hi) @i32_align2
     ; MIPS32R6: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LUi]], target-flags(mips-abs-lo) @i32_align2
-    ; MIPS32R6: SW [[COPY]], [[ADDiu]], 0 :: (store 4 into @i32_align2, align 2)
+    ; MIPS32R6: SW [[COPY]], [[ADDiu]], 0 :: (store (s32) into @i32_align2, align 2)
     ; MIPS32R6: RetRA
     %0:gprb(s32) = COPY $a0
     %1:gprb(p0) = G_GLOBAL_VALUE @i32_align2
-    G_STORE %0(s32), %1(p0) :: (store 4 into @i32_align2, align 2)
+    G_STORE %0(s32), %1(p0) :: (store (s32) into @i32_align2, align 2)
     RetRA
 
 ...

@@ -12,7 +12,7 @@
 //
 // Current limitations:
 // - It does not handle specialization of recursive functions,
-// - It does not yet handle integer constants, and integer ranges,
+// - It does not yet handle integer ranges.
 // - Only 1 argument per function is specialised,
 // - The cost-model could be further looked into,
 // - We are not yet caching analysis results.
@@ -63,6 +63,10 @@ static cl::opt<unsigned>
     AvgLoopIterationCount("func-specialization-avg-iters-cost", cl::Hidden,
                           cl::desc("Average loop iteration count cost"),
                           cl::init(10));
+
+static cl::opt<bool> EnableSpecializationForLiteralConstant(
+    "function-specialization-for-literal-constant", cl::init(false), cl::Hidden,
+    cl::desc("Make function specialization available for literal constant."));
 
 // Helper to check if \p LV is either overdefined or a constant int.
 static bool isOverdefined(const ValueLatticeElement &LV) {
@@ -485,17 +489,11 @@ private:
         }
       }
 
-      // Get the lattice value for the value the call site passes to the
-      // argument. If this value is not constant, move on to the next call
-      // site. Additionally, set the AllConstant flag to false.
-      if (V != A && !Solver.getLatticeValueFor(V).isConstant()) {
+      if (isa<Constant>(V) && (Solver.getLatticeValueFor(V).isConstant() ||
+                               EnableSpecializationForLiteralConstant))
+        Constants.push_back(cast<Constant>(V));
+      else
         AllConstant = false;
-        continue;
-      }
-
-      // Add the constant to the set.
-      if (auto *C = dyn_cast<Constant>(CS.getArgOperand(A->getArgNo())))
-        Constants.push_back(C);
     }
 
     // If the argument can only take on constant values, AllConstant will be

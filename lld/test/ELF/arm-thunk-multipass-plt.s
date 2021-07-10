@@ -41,9 +41,9 @@ needsplt:
 
         .section .text.07, "ax", %progbits
         .space (1024 * 1024)
-/// 0x70000c + 8 + 0x60002c = 0xd00040 = preemptible@plt
+/// 0xd00040 = preemptible@plt
 // CHECK:      0070000c <__ARMV5PILongThunk_preemptible>:
-// CHECK-NEXT:   70000c: b       #6291500
+// CHECK-NEXT:   70000c: b       0xd00040
 
         .section .text.08, "ax", %progbits
         .space (1024 * 1024) - 4
@@ -52,8 +52,7 @@ needsplt:
         .balign 2
         bl preemptible
         bl preemptible2
-/// 0x80000c + 4 - 100004 = 0x70000c = __ARMv5PILongThunk_preemptible
-// CHECK-CALL: 80000c: blx     #-1048580
+// CHECK-CALL: 80000c: blx     0x70000c <__ARMV5PILongThunk_preemptible>
         .balign 2
         .globl preemptible
         .type preemptible, %function

@@ -39,6 +39,7 @@ class MachOReader : public Reader {
   void readLinkData(Object &O, Optional<size_t> LCIndex, LinkData &LD) const;
   void readCodeSignature(Object &O) const;
   void readDataInCodeData(Object &O) const;
+  void readLinkerOptimizationHint(Object &O) const;
   void readFunctionStartsData(Object &O) const;
   void readIndirectSymbolTable(Object &O) const;
   void readSwiftVersion(Object &O) const;

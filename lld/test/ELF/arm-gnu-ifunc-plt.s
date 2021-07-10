@@ -35,13 +35,13 @@
 // DISASM: <bar>:
 // DISASM-NEXT:    201e0:       bx      lr
 // DISASM: <_start>:
-// DISASM-NEXT:    201e4:       bl      #84
-// DISASM-NEXT:    201e8:       bl      #96
+// DISASM-NEXT:    201e4:       bl      0x20240
+// DISASM-NEXT:    201e8:       bl      0x20250
 // DISASM: <$d.1>:
 // DISASM-NEXT:    201ec:       00 00 00 00     .word   0x00000000
 // DISASM-NEXT:    201f0:       04 00 00 00     .word   0x00000004
-// DISASM:         201f4:       bl      #36
-// DISASM-NEXT:    201f8:       bl      #48
+// DISASM:         201f4:       bl      0x20220
+// DISASM-NEXT:    201f8:       bl      0x20230
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:

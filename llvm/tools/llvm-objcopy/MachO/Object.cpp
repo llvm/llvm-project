@@ -46,6 +46,9 @@ void Object::updateLoadCommandIndexes() {
     case MachO::LC_DATA_IN_CODE:
       DataInCodeCommandIndex = Index;
       break;
+    case MachO::LC_LINKER_OPTIMIZATION_HINT:
+      LinkerOptimizationHintCommandIndex = Index;
+      break;
     case MachO::LC_FUNCTION_STARTS:
       FunctionStartsCommandIndex = Index;
       break;

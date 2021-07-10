@@ -151,6 +151,9 @@ Error MachOReader::readLoadCommands(Object &O) const {
     case MachO::LC_DATA_IN_CODE:
       O.DataInCodeCommandIndex = O.LoadCommands.size();
       break;
+    case MachO::LC_LINKER_OPTIMIZATION_HINT:
+      O.LinkerOptimizationHintCommandIndex = O.LoadCommands.size();
+      break;
     case MachO::LC_FUNCTION_STARTS:
       O.FunctionStartsCommandIndex = O.LoadCommands.size();
       break;
@@ -276,6 +279,11 @@ void MachOReader::readDataInCodeData(Object &O) const {
   return readLinkData(O, O.DataInCodeCommandIndex, O.DataInCode);
 }
 
+void MachOReader::readLinkerOptimizationHint(Object &O) const {
+  return readLinkData(O, O.LinkerOptimizationHintCommandIndex,
+                      O.LinkerOptimizationHint);
+}
+
 void MachOReader::readFunctionStartsData(Object &O) const {
   return readLinkData(O, O.FunctionStartsCommandIndex, O.FunctionStarts);
 }
@@ -330,6 +338,7 @@ Expected<std::unique_ptr<Object>> MachOReader::create() const {
   readExportInfo(*Obj);
   readCodeSignature(*Obj);
   readDataInCodeData(*Obj);
+  readLinkerOptimizationHint(*Obj);
   readFunctionStartsData(*Obj);
   readIndirectSymbolTable(*Obj);
   readSwiftVersion(*Obj);

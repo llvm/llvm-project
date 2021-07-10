@@ -1151,7 +1151,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::set ZeroSet = isl::set::universe(Min.get_space());
 
-  for (long i = 0, n = Min.dim(isl::dim::set); i < n; i++)
+  for (long i = 0, n = Min.tuple_dim(); i < n; i++)
     ZeroSet = ZeroSet.fix_si(isl::dim::set, i, 0);
 
   if (Min.is_subset(ZeroSet)) {
@@ -1160,7 +1160,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::ast_expr Result = isl::ast_expr::from_val(isl::val(Min.get_ctx(), 0));
 
-  for (long i = 0, n = Min.dim(isl::dim::set); i < n; i++) {
+  for (long i = 0, n = Min.tuple_dim(); i < n; i++) {
     if (i > 0) {
       isl::pw_aff Bound_I =
           isl::manage(isl_multi_pw_aff_get_pw_aff(Array->bound, i - 1));

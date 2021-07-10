@@ -25,22 +25,22 @@ define void @test_varargs() {
   ; CHECK:   [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C8]](s64)
   ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ANYEXT]](s32)
-  ; CHECK:   G_STORE [[ANYEXT1]](s64), [[PTR_ADD]](p0) :: (store 8 into stack, align 1)
+  ; CHECK:   G_STORE [[ANYEXT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 1)
   ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[C4]](s16)
   ; CHECK:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
   ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s64) = G_ANYEXT [[ANYEXT2]](s32)
-  ; CHECK:   G_STORE [[ANYEXT3]](s64), [[PTR_ADD1]](p0) :: (store 8 into stack + 8, align 1)
+  ; CHECK:   G_STORE [[ANYEXT3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into stack + 8, align 1)
   ; CHECK:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
   ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s64) = G_ANYEXT [[C5]](s32)
-  ; CHECK:   G_STORE [[ANYEXT4]](s64), [[PTR_ADD2]](p0) :: (store 8 into stack + 16, align 1)
+  ; CHECK:   G_STORE [[ANYEXT4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into stack + 16, align 1)
   ; CHECK:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
-  ; CHECK:   G_STORE [[C6]](s32), [[PTR_ADD3]](p0) :: (store 4 into stack + 24, align 1)
+  ; CHECK:   G_STORE [[C6]](s32), [[PTR_ADD3]](p0) :: (store (s32) into stack + 24, align 1)
   ; CHECK:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C12]](s64)
-  ; CHECK:   G_STORE [[C7]](s64), [[PTR_ADD4]](p0) :: (store 8 into stack + 32, align 1)
+  ; CHECK:   G_STORE [[C7]](s64), [[PTR_ADD4]](p0) :: (store (s64) into stack + 32, align 1)
   ; CHECK:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; CHECK:   ADJCALLSTACKUP 40, 0, implicit-def $sp, implicit $sp
   ; CHECK:   RET_ReallyLR
@@ -79,16 +79,16 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
   ; CHECK:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C12]](s64)
-  ; CHECK:   G_STORE [[C8]](s8), [[PTR_ADD]](p0) :: (store 1 into stack)
+  ; CHECK:   G_STORE [[C8]](s8), [[PTR_ADD]](p0) :: (store (s8) into stack)
   ; CHECK:   [[C13:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s64)
-  ; CHECK:   G_STORE [[C9]](s16), [[PTR_ADD1]](p0) :: (store 2 into stack + 2, align 1)
+  ; CHECK:   G_STORE [[C9]](s16), [[PTR_ADD1]](p0) :: (store (s16) into stack + 2, align 1)
   ; CHECK:   [[C14:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C14]](s64)
-  ; CHECK:   G_STORE [[C10]](s8), [[PTR_ADD2]](p0) :: (store 1 into stack + 4)
+  ; CHECK:   G_STORE [[C10]](s8), [[PTR_ADD2]](p0) :: (store (s8) into stack + 4)
   ; CHECK:   [[C15:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C15]](s64)
-  ; CHECK:   G_STORE [[C11]](s8), [[PTR_ADD3]](p0) :: (store 1 into stack + 5)
+  ; CHECK:   G_STORE [[C11]](s8), [[PTR_ADD3]](p0) :: (store (s8) into stack + 5)
   ; CHECK:   BL @i8i16callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK:   ADJCALLSTACKUP 6, 0, implicit-def $sp, implicit $sp

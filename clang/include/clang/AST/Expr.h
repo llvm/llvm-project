@@ -2987,9 +2987,20 @@ public:
   }
 
   /// setArg - Set the specified argument.
+  /// ! the dependence bits might be stale after calling this setter, it is
+  /// *caller*'s responsibility to recompute them by calling
+  /// computeDependence().
   void setArg(unsigned Arg, Expr *ArgExpr) {
     assert(Arg < getNumArgs() && "Arg access out of range!");
     getArgs()[Arg] = ArgExpr;
+  }
+
+  /// Compute and set dependence bits.
+  void computeDependence() {
+    setDependence(clang::computeDependence(
+        this, llvm::makeArrayRef(
+                  reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
+                  getNumPreArgs())));
   }
 
   /// Reduce the number of arguments in this call expression. This is used for

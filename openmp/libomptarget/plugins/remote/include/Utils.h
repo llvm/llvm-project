@@ -47,19 +47,38 @@ using openmp::libomptarget::remote::TargetBinaryDescription;
 using openmp::libomptarget::remote::TargetOffloadEntry;
 using openmp::libomptarget::remote::TargetTable;
 
-struct RPCConfig {
+struct ClientManagerConfigTy {
   std::vector<std::string> ServerAddresses;
   uint64_t MaxSize;
   uint64_t BlockSize;
-  RPCConfig() {
-    ServerAddresses = {"0.0.0.0:50051"};
-    MaxSize = 1 << 30;
-    BlockSize = 1 << 20;
+  int Timeout;
+
+  ClientManagerConfigTy()
+      : ServerAddresses({"0.0.0.0:50051"}), MaxSize(1 << 30),
+        BlockSize(1 << 20), Timeout(5) {
+    // TODO: Error handle for incorrect inputs
+    if (const char *Env = std::getenv("LIBOMPTARGET_RPC_ADDRESS")) {
+      ServerAddresses.clear();
+      std::string AddressString = Env;
+      const std::string Delimiter = ",";
+
+      size_t Pos;
+      std::string Token;
+      while ((Pos = AddressString.find(Delimiter)) != std::string::npos) {
+        Token = AddressString.substr(0, Pos);
+        ServerAddresses.push_back(Token);
+        AddressString.erase(0, Pos + Delimiter.length());
+      }
+      ServerAddresses.push_back(AddressString);
+    }
+    if (const char *Env = std::getenv("LIBOMPTARGET_RPC_ALLOCATOR_MAX"))
+      MaxSize = std::stoi(Env);
+    if (const char *Env = std::getenv("LIBOMPTARGET_RPC_BLOCK_SIZE"))
+      BlockSize = std::stoi(Env);
+    if (const char *Env1 = std::getenv("LIBOMPTARGET_RPC_LATENCY"))
+      Timeout = std::stoi(Env1);
   }
 };
-
-/// Helper function to parse common environment variables between client/server
-void parseEnvironment(RPCConfig &Config);
 
 /// Loads a target binary description into protobuf.
 void loadTargetBinaryDescription(const __tgt_bin_desc *Desc,

@@ -52,7 +52,7 @@ public:
     lldb::addr_t item_buffer_size = 0; /* the size of the item buffer from
                                       libBacktraceRecording */
 
-    GetThreadItemInfoReturnInfo() {}
+    GetThreadItemInfoReturnInfo() = default;
   };
 
   /// Get the information about a work item by calling

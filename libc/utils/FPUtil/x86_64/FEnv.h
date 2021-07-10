@@ -43,7 +43,10 @@ static constexpr uint16_t MXCSRRoundingControlBitPosition = 13;
 // encoding as well as the same bit positions.
 struct ExceptionFlags {
   static constexpr uint16_t Invalid = 0x1;
-  static constexpr uint16_t Denormal = 0x2; // This flag is not used
+  // Some libcs define __FE_DENORM corresponding to the denormal input
+  // exception and include it in FE_ALL_EXCEPTS. We define and use it to
+  // support compiling against headers provided by such libcs.
+  static constexpr uint16_t Denormal = 0x2;
   static constexpr uint16_t DivByZero = 0x4;
   static constexpr uint16_t Overflow = 0x8;
   static constexpr uint16_t Underflow = 0x10;
@@ -62,6 +65,9 @@ static inline uint16_t getStatusValueForExcept(int excepts) {
   // We will make use of the fact that exception control bits are single
   // bit flags in the control registers.
   return (excepts & FE_INVALID ? ExceptionFlags::Invalid : 0) |
+#ifdef __FE_DENORM
+         (excepts & __FE_DENORM ? ExceptionFalgs::Denormal : 0) |
+#endif // __FE_DENORM
          (excepts & FE_DIVBYZERO ? ExceptionFlags::DivByZero : 0) |
          (excepts & FE_OVERFLOW ? ExceptionFlags::Overflow : 0) |
          (excepts & FE_UNDERFLOW ? ExceptionFlags::Underflow : 0) |
@@ -70,6 +76,9 @@ static inline uint16_t getStatusValueForExcept(int excepts) {
 
 static inline int exceptionStatusToMacro(uint16_t status) {
   return (status & ExceptionFlags::Invalid ? FE_INVALID : 0) |
+#ifdef __FE_DENORM
+         (status & ExceptionFalgs::Denormal ? __FE_DENORM : 0) |
+#endif // __FE_DENORM
          (status & ExceptionFlags::DivByZero ? FE_DIVBYZERO : 0) |
          (status & ExceptionFlags::Overflow ? FE_OVERFLOW : 0) |
          (status & ExceptionFlags::Underflow ? FE_UNDERFLOW : 0) |
@@ -188,12 +197,10 @@ static inline int disableExcept(int excepts) {
 }
 
 static inline int clearExcept(int excepts) {
-  // An instruction to write to x87 status word ins't available. So, we
-  // just clear all of the x87 exceptions.
-  // TODO: One can potentially use fegetenv/fesetenv to clear only the
-  // listed exceptions in the x87 status word. We can do this if it is
-  // really required.
-  internal::clearX87Exceptions();
+  internal::X87StateDescriptor state;
+  internal::getX87StateDescriptor(state);
+  state.StatusWord &= ~internal::getStatusValueForExcept(excepts);
+  internal::writeX87StateDescriptor(state);
 
   uint32_t mxcsr = internal::getMXCSR();
   mxcsr &= ~internal::getStatusValueForExcept(excepts);

@@ -99,11 +99,11 @@ public:
 
 /// Sparse conversion rule for dimension accesses.
 class SparseTensorToDimSizeConverter
-    : public OpConversionPattern<memref::DimOp> {
+    : public OpConversionPattern<tensor::DimOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(memref::DimOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::DimOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     if (!operands[0].getType().isa<LLVM::LLVMPointerType>())
       return failure();

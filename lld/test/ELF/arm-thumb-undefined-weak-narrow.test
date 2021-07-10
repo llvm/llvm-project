@@ -6,7 +6,7 @@
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: <_start>:
-# CHECK-NEXT:    ff e7   b       #-2
+# CHECK-NEXT:    ff e7   b       0x200b6 <_start+0x2> @ imm = #-2
 
 # Test the R_ARM_THM_JUMP11 relocation (102) to an undefined weak reference
 # It should resolve to the next instruction, which is an offset of -2 which

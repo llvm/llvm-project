@@ -1928,6 +1928,7 @@ void PPCAIXAsmPrinter::emitFunctionBodyEnd() {
 
     OutStreamer->emitIntValue(0, PointerSize);
     OutStreamer->emitIntValue(0, PointerSize);
+    OutStreamer->SwitchSection(MF->getSection());
   }
 }
 
@@ -2106,8 +2107,8 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   SecondHalfOfMandatoryField |= (GPRSaved << TracebackTable::GPRSavedShift) &
                                 TracebackTable::GPRSavedMask;
 
-  GENBOOLCOMMENT("", SecondHalfOfMandatoryField, HasVectorInfo);
-  GENBOOLCOMMENT(", ", SecondHalfOfMandatoryField, HasExtensionTable);
+  GENBOOLCOMMENT("", SecondHalfOfMandatoryField, HasExtensionTable);
+  GENBOOLCOMMENT(", ", SecondHalfOfMandatoryField, HasVectorInfo);
   GENVALUECOMMENT(", NumOfGPRsSaved", SecondHalfOfMandatoryField, GPRSaved);
   EmitComment();
   OutStreamer->emitIntValueInHexWithPadding(

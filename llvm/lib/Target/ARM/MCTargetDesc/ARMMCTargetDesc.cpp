@@ -195,6 +195,24 @@ bool ARM_MC::isCPSRDefined(const MCInst &MI, const MCInstrInfo *MCII) {
   return false;
 }
 
+uint64_t ARM_MC::evaluateBranchTarget(const MCInstrDesc &InstDesc,
+                                      uint64_t Addr, int64_t Imm) {
+  // For ARM instructions the PC offset is 8 bytes, for Thumb instructions it
+  // is 4 bytes.
+  uint64_t Offset =
+      ((InstDesc.TSFlags & ARMII::FormMask) == ARMII::ThumbFrm) ? 4 : 8;
+
+  // A Thumb instruction BLX(i) can be 16-bit aligned while targets Arm code
+  // which is 32-bit aligned. The target address for the case is calculated as
+  //   targetAddress = Align(PC,4) + imm32;
+  // where
+  //   Align(x, y) = y * (x DIV y);
+  if (InstDesc.getOpcode() == ARM::tBLXi)
+    Addr &= ~0x3;
+
+  return Addr + Imm + Offset;
+}
+
 MCSubtargetInfo *ARM_MC::createARMMCSubtargetInfo(const Triple &TT,
                                                   StringRef CPU, StringRef FS) {
   std::string ArchFS = ARM_MC::ParseARMTriple(TT, CPU);
@@ -413,32 +431,15 @@ public:
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
 
     // Find the PC-relative immediate operand in the instruction.
-    bool FoundImm = false;
-    int64_t Imm;
     for (unsigned OpNum = 0; OpNum < Desc.getNumOperands(); ++OpNum) {
       if (Inst.getOperand(OpNum).isImm() &&
           Desc.OpInfo[OpNum].OperandType == MCOI::OPERAND_PCREL) {
-        Imm = Inst.getOperand(OpNum).getImm();
-        FoundImm = true;
+        int64_t Imm = Inst.getOperand(OpNum).getImm();
+        Target = ARM_MC::evaluateBranchTarget(Desc, Addr, Imm);
+        return true;
       }
     }
-    if (!FoundImm)
-      return false;
-
-    // For ARM instructions the PC offset is 8 bytes, for Thumb instructions it
-    // is 4 bytes.
-    uint64_t Offset = ((Desc.TSFlags & ARMII::FormMask) == ARMII::ThumbFrm) ? 4 : 8;
-
-    // A Thumb instruction BLX(i) can be 16-bit aligned while targets Arm code
-    // which is 32-bit aligned. The target address for the case is calculated as
-    //   targetAddress = Align(PC,4) + imm32;
-    // where
-    //   Align(x, y) = y * (x DIV y);
-    if (Inst.getOpcode() == ARM::tBLXi)
-      Addr &= ~0x3;
-
-    Target = Addr + Imm + Offset;
-    return true;
+    return false;
   }
 };
 

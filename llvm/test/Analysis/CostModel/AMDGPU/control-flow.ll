@@ -8,7 +8,7 @@
 ; SPEED: estimated cost of 10 for instruction: ret void
 ; SIZE: estimated cost of 5 for instruction: br i1
 ; SIZE: estimated cost of 1 for instruction: br label
-; SIZE: estimated cost of 1 for instruction: %phi = phi i32 [
+; SIZE: estimated cost of 0 for instruction: %phi = phi i32 [
 ; SIZE: estimated cost of 1 for instruction: ret void
 define amdgpu_kernel void @test_br_cost(i32 addrspace(1)* %out, i32 addrspace(1)* %vaddr, i32 %b) #0 {
 bb0:

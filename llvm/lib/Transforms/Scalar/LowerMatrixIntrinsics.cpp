@@ -1483,7 +1483,7 @@ public:
       FusedInsts.insert(LoadOp0);
       LoadOp0->eraseFromParent();
     }
-    if (LoadOp1->hasNUses(0)) {
+    if (LoadOp1 != LoadOp0 && LoadOp1->hasNUses(0)) {
       FusedInsts.insert(LoadOp1);
       LoadOp1->eraseFromParent();
     }
@@ -1559,10 +1559,29 @@ public:
     if (LoadOp0 && LoadOp1 && Store) {
       // The store address must dominate the MatMul instruction, otherwise
       // we create invalid IR.
-      // FIXME: See if we can hoist the store address computation.
-      auto *AddrI = dyn_cast<Instruction>(Store->getOperand(1));
-      if (AddrI && (!DT->dominates(AddrI, MatMul)))
-        return;
+      SetVector<Value *> WorkList;
+      WorkList.insert(Store->getOperand(1));
+      SmallVector<Instruction *> ToHoist;
+      for (unsigned I = 0; I != WorkList.size(); ++I) {
+        Value *Current = WorkList[I];
+        auto *CurrI = dyn_cast<Instruction>(Current);
+        if (!CurrI)
+          continue;
+        if (isa<PHINode>(CurrI))
+          return;
+        if (DT->dominates(CurrI, MatMul))
+          continue;
+        if (CurrI->mayHaveSideEffects() || CurrI->mayReadFromMemory())
+          return;
+        ToHoist.push_back(CurrI);
+        WorkList.insert(CurrI->op_begin(), CurrI->op_end());
+      }
+
+      sort(ToHoist, [this](Instruction *A, Instruction *B) {
+        return DT->dominates(A, B);
+      });
+      for (Instruction *I : ToHoist)
+        I->moveBefore(MatMul);
 
       emitSIMDTiling(MatMul, LoadOp0, LoadOp1, Store, FusedInsts);
       return;

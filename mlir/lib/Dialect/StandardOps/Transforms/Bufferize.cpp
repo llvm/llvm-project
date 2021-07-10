@@ -16,25 +16,13 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
 namespace {
-class BufferizeDimOp : public OpConversionPattern<memref::DimOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(memref::DimOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    memref::DimOp::Adaptor adaptor(operands);
-    rewriter.replaceOpWithNewOp<memref::DimOp>(op, adaptor.memrefOrTensor(),
-                                               adaptor.index());
-    return success();
-  }
-};
-
 class BufferizeIndexCastOp : public OpConversionPattern<IndexCastOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -69,8 +57,8 @@ public:
 
 void mlir::populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
                                         RewritePatternSet &patterns) {
-  patterns.add<BufferizeDimOp, BufferizeSelectOp, BufferizeIndexCastOp>(
-      typeConverter, patterns.getContext());
+  patterns.add<BufferizeSelectOp, BufferizeIndexCastOp>(typeConverter,
+                                                        patterns.getContext());
 }
 
 namespace {
@@ -94,8 +82,6 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
       return typeConverter.isLegal(op.getType()) ||
              !op.condition().getType().isa<IntegerType>();
     });
-    target.addDynamicallyLegalOp<memref::DimOp>(
-        [&](memref::DimOp op) { return typeConverter.isLegal(op); });
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();

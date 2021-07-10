@@ -382,6 +382,14 @@ map uncheck(checked::map obj) {
 	return manage(obj.copy());
 }
 
+checked::map_list check(map_list obj) {
+	return checked::manage(obj.copy());
+}
+
+map_list uncheck(checked::map_list obj) {
+	return manage(obj.copy());
+}
+
 checked::multi_aff check(multi_aff obj) {
 	return checked::manage(obj.copy());
 }
@@ -579,6 +587,14 @@ checked::set check(set obj) {
 }
 
 set uncheck(checked::set obj) {
+	return manage(obj.copy());
+}
+
+checked::set_list check(set_list obj) {
+	return checked::manage(obj.copy());
+}
+
+set_list uncheck(checked::set_list obj) {
 	return manage(obj.copy());
 }
 

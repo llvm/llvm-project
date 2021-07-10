@@ -475,7 +475,7 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
   // Visit all instructions reading li->reg().
   Register Reg = li->reg();
   for (MachineInstr &UseMI : MRI->reg_instructions(Reg)) {
-    if (UseMI.isDebugValue() || !UseMI.readsVirtualRegister(Reg))
+    if (UseMI.isDebugInstr() || !UseMI.readsVirtualRegister(Reg))
       continue;
     SlotIndex Idx = getInstructionIndex(UseMI).getRegSlot();
     LiveQueryResult LRQ = li->Query(Idx);

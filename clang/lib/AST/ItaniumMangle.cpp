@@ -649,7 +649,7 @@ bool ItaniumMangleContextImpl::isUniqueInternalLinkageDecl(
 
   // For C functions without prototypes, return false as their
   // names should not be mangled.
-  if (!FD->hasPrototype())
+  if (!FD->getType()->getAs<FunctionProtoType>())
     return false;
 
   if (isInternalLinkageDecl(ND))
@@ -3106,6 +3106,8 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
     return "ms_abi";
   case CC_Swift:
     return "swiftcall";
+  case CC_SwiftAsync:
+    return "swiftasynccall";
   }
   llvm_unreachable("bad calling convention");
 }

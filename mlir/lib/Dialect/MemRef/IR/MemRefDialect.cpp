@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -31,17 +32,6 @@ struct MemRefInlinerInterface : public DialectInlinerInterface {
   }
 };
 } // end anonymous namespace
-
-SmallVector<Value, 4> mlir::getDynOperands(Location loc, Value val,
-                                           OpBuilder &b) {
-  SmallVector<Value, 4> dynOperands;
-  auto shapedType = val.getType().cast<ShapedType>();
-  for (auto dim : llvm::enumerate(shapedType.getShape())) {
-    if (dim.value() == MemRefType::kDynamicSize)
-      dynOperands.push_back(b.create<memref::DimOp>(loc, val, dim.index()));
-  }
-  return dynOperands;
-}
 
 void mlir::memref::MemRefDialect::initialize() {
   addOperations<DmaStartOp, DmaWaitOp,

@@ -1124,7 +1124,7 @@ StringRef SSANameState::uniqueValueName(StringRef name) {
     while (true) {
       probeName += llvm::utostr(nextConflictID++);
       if (!usedNames.count(probeName)) {
-        name = StringRef(probeName).copy(usedNameAllocator);
+        name = probeName.str().copy(usedNameAllocator);
         break;
       }
       probeName.resize(name.size() + 1);
@@ -1405,7 +1405,7 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
     apValue.toString(strValue);
 
     // Make sure that we can parse the default form as a float.
-    if (StringRef(strValue).contains('.')) {
+    if (strValue.str().contains('.')) {
       os << strValue;
       return;
     }
@@ -1516,8 +1516,9 @@ static void printDialectSymbol(raw_ostream &os, StringRef symPrefix,
     return;
   }
 
-  // TODO: escape the symbol name, it could contain " characters.
-  os << "<\"" << symString << "\">";
+  os << "<\"";
+  llvm::printEscapedString(symString, os);
+  os << "\">";
 }
 
 /// Returns true if the given string can be represented as a bare identifier.

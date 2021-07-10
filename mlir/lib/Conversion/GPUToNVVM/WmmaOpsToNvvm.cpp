@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
@@ -371,7 +371,7 @@ struct WmmaConstantOpToNVVMLowering
       for (int64_t vecEl = 0; vecEl < vecType.getNumElements(); vecEl++) {
         Value idx = rewriter.create<LLVM::ConstantOp>(
             loc, typeConverter->convertType(rewriter.getIntegerType(32)),
-            rewriter.getI32ArrayAttr(vecEl));
+            rewriter.getI32IntegerAttr(vecEl));
         vecCst = rewriter.create<LLVM::InsertElementOp>(loc, vecType, vecCst,
                                                         cst, idx);
       }

@@ -52,10 +52,6 @@ OPTIONS
 
  Display a summary of command line options.
 
-.. option:: --help-list
-
- Display an uncategorized summary of command line options.
-
 .. option:: --print-file-name, -f
 
  Display the name of the containing file before each string.

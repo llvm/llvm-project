@@ -629,6 +629,9 @@
 # DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: G_MEMCPY_INLINE (opcode {{[0-9]+}}): 3 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_MEMMOVE (opcode {{[0-9]+}}): 3 type indices, 1 imm index
 # DEBUG-NEXT: .. opcode {{[0-9]+}} is aliased to {{[0-9]+}}
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
