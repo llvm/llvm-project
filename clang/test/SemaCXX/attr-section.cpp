@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify -fsyntax-only -triple x86_64-linux-gnu %s
 
 int x __attribute__((section(
-   42)));  // expected-error {{'section' attribute requires a string}}
+   42)));  // expected-error {{expected string literal as argument of 'section' attribute}}
 
 
 // PR6007
