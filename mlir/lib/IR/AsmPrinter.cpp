@@ -789,15 +789,9 @@ public:
 
 private:
   /// Number the SSA values within the given IR unit.
-  void numberValuesInRegion(
-      Region &region,
-      DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
-  void numberValuesInBlock(
-      Block &block,
-      DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
-  void numberValuesInOp(
-      Operation &op,
-      DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
+  void numberValuesInRegion(Region &region);
+  void numberValuesInBlock(Block &block);
+  void numberValuesInOp(Operation &op);
 
   /// Given a result of an operation 'result', find the result group head
   /// 'lookupValue' and the result of 'result' within that group in
@@ -838,12 +832,15 @@ private:
   unsigned nextArgumentID = 0;
   /// This is the next ID to assign when a name conflict is detected.
   unsigned nextConflictID = 0;
+
+  DialectInterfaceCollection<OpAsmDialectInterface> &interfaces;
 };
 } // end anonymous namespace
 
 SSANameState::SSANameState(
     Operation *op,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces)
+    : interfaces(interfaces) {
   llvm::SaveAndRestore<unsigned> valueIDSaver(nextValueID);
   llvm::SaveAndRestore<unsigned> argumentIDSaver(nextArgumentID);
   llvm::SaveAndRestore<unsigned> conflictIDSaver(nextConflictID);
@@ -867,7 +864,7 @@ SSANameState::SSANameState(
     nameContext.push_back(std::make_tuple(&region, nextValueID, nextArgumentID,
                                           nextConflictID, topLevelNamesScope));
 
-  numberValuesInOp(*op, interfaces);
+  numberValuesInOp(*op);
 
   while (!nameContext.empty()) {
     Region *region;
@@ -887,7 +884,7 @@ SSANameState::SSANameState(
     auto *curNamesScope = new (allocator.Allocate<UsedNamesScopeTy>())
         UsedNamesScopeTy(usedNames);
 
-    numberValuesInRegion(*region, interfaces);
+    numberValuesInRegion(*region);
 
     for (Operation &op : region->getOps())
       for (Region &region : op.getRegions())
@@ -974,22 +971,18 @@ void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
   }
 }
 
-void SSANameState::numberValuesInRegion(
-    Region &region,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+void SSANameState::numberValuesInRegion(Region &region) {
   // Number the values within this region in a breadth-first order.
   unsigned nextBlockID = 0;
   for (auto &block : region) {
     // Each block gets a unique ID, and all of the operations within it get
     // numbered as well.
     blockIDs[&block] = nextBlockID++;
-    numberValuesInBlock(block, interfaces);
+    numberValuesInBlock(block);
   }
 }
 
-void SSANameState::numberValuesInBlock(
-    Block &block,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+void SSANameState::numberValuesInBlock(Block &block) {
   auto setArgNameFn = [&](Value arg, StringRef name) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
     assert(arg.cast<BlockArgument>().getOwner() == &block &&
@@ -1021,12 +1014,10 @@ void SSANameState::numberValuesInBlock(
 
   // Number the operations in this block.
   for (auto &op : block)
-    numberValuesInOp(op, interfaces);
+    numberValuesInOp(op);
 }
 
-void SSANameState::numberValuesInOp(
-    Operation &op,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+void SSANameState::numberValuesInOp(Operation &op) {
   unsigned numResults = op.getNumResults();
   if (numResults == 0)
     return;
