@@ -220,6 +220,51 @@ TEST_F(TestSwiftASTContext, SwiftFriendlyTriple) {
             llvm::Triple("aarch64-unknown-linux-gnu"));
 }
 
+TEST_F(TestSwiftASTContext, ApplyWorkingDir) {
+  std::string abs_working_dir = "/abs/dir";
+  std::string rel_working_dir = "rel/dir";
+
+  // non-include option should not apply working dir
+  llvm::SmallString<128> non_include_flag("-non-include-flag");
+  SwiftASTContext::ApplyWorkingDir(non_include_flag, abs_working_dir);
+  EXPECT_EQ(non_include_flag, llvm::SmallString<128>("-non-include-flag"));
+
+  // absolute paths should not apply working dir
+  llvm::SmallString<128> abs_path("/abs/path");
+  SwiftASTContext::ApplyWorkingDir(abs_path, abs_working_dir);
+  EXPECT_EQ(abs_path, llvm::SmallString<128>("/abs/path"));
+
+  llvm::SmallString<128> single_arg_abs_path(
+      "-fmodule-map-file=/module/map/path");
+  SwiftASTContext::ApplyWorkingDir(single_arg_abs_path, abs_working_dir);
+  EXPECT_EQ(single_arg_abs_path,
+            llvm::SmallString<128>("-fmodule-map-file=/module/map/path"));
+
+  // relative paths apply working dir
+  llvm::SmallString<128> rel_path("rel/path");
+  SwiftASTContext::ApplyWorkingDir(rel_path, abs_working_dir);
+  EXPECT_EQ(rel_path, llvm::SmallString<128>("/abs/dir/rel/path"));
+
+  rel_path = llvm::SmallString<128>("rel/path");
+  SwiftASTContext::ApplyWorkingDir(rel_path, rel_working_dir);
+  EXPECT_EQ(rel_path, llvm::SmallString<128>("rel/dir/rel/path"));
+
+  // single arg include option applies working dir
+  llvm::SmallString<128> single_arg_rel_path(
+      "-fmodule-map-file=module.modulemap");
+  SwiftASTContext::ApplyWorkingDir(single_arg_rel_path, abs_working_dir);
+  EXPECT_EQ(
+      single_arg_rel_path,
+      llvm::SmallString<128>("-fmodule-map-file=/abs/dir/module.modulemap"));
+
+  single_arg_rel_path =
+      llvm::SmallString<128>("-fmodule-map-file=module.modulemap");
+  SwiftASTContext::ApplyWorkingDir(single_arg_rel_path, rel_working_dir);
+  EXPECT_EQ(
+      single_arg_rel_path,
+      llvm::SmallString<128>("-fmodule-map-file=rel/dir/module.modulemap"));
+}
+
 namespace {
   const std::vector<std::string> duplicated_flags = {
     "-DMACRO1", "-D", "MACRO1", "-UMACRO2", "-U", "MACRO2",
