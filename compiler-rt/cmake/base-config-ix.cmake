@@ -68,8 +68,8 @@ else()
     "Path where built compiler-rt libraries should be stored.")
   set(COMPILER_RT_EXEC_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin CACHE PATH
     "Path where built compiler-rt executables should be stored.")
-  set(COMPILER_RT_INSTALL_PATH "" CACHE PATH
-    "Prefix for directories where built compiler-rt artifacts should be installed.")
+  set(COMPILER_RT_INSTALL_PATH ${CMAKE_INSTALL_PREFIX} CACHE PATH
+    "Path where built compiler-rt libraries should be installed.")
   option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests." OFF)
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered" OFF)
   # Use a host compiler to compile/link tests.
@@ -89,24 +89,16 @@ if(NOT DEFINED COMPILER_RT_OS_DIR)
   string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
 endif()
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(COMPILER_RT_OUTPUT_LIBRARY_DIR
-    ${COMPILER_RT_OUTPUT_DIR}/lib)
-  set(COMPILER_RT_INSTALL_LIBRARY_DIR
-    ${COMPILER_RT_INSTALL_PATH}/lib CACHE PATH
-    "Path where built compiler-rt libraries should be installed.")
-else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(COMPILER_RT_OUTPUT_LIBRARY_DIR
+  set(COMPILER_RT_LIBRARY_OUTPUT_DIR
+    ${COMPILER_RT_OUTPUT_DIR})
+  set(COMPILER_RT_LIBRARY_INSTALL_DIR
+    ${COMPILER_RT_INSTALL_PATH})
+else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  set(COMPILER_RT_LIBRARY_OUTPUT_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
-  set(COMPILER_RT_INSTALL_LIBRARY_DIR
-    ${COMPILER_RT_INSTALL_PATH}/lib/${COMPILER_RT_OS_DIR} CACHE PATH
-    "Path where built compiler-rt libraries should be installed.")
+  set(COMPILER_RT_LIBRARY_INSTALL_DIR
+    ${COMPILER_RT_INSTALL_PATH}/lib/${COMPILER_RT_OS_DIR})
 endif()
-set(COMPILER_RT_INSTALL_BINARY_DIR "${COMPILER_RT_INSTALL_PATH}/bin" CACHE PATH
-  "Path where built compiler-rt executables should be installed.")
-set(COMPILER_RT_INSTALL_INCLUDE_DIR "${COMPILER_RT_INSTALL_PATH}/include" CACHE PATH
-  "Path where compiler-rt headers should be installed.")
-set(COMPILER_RT_INSTALL_DATA_DIR "${COMPILER_RT_INSTALL_PATH}/share" CACHE PATH
-  "Path where compiler-rt data files should be installed.")
 
 if(APPLE)
   # On Darwin if /usr/include/c++ doesn't exist, the user probably has Xcode but

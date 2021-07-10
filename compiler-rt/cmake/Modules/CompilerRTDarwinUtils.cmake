@@ -457,8 +457,8 @@ macro(darwin_add_builtin_libraries)
                       PARENT_TARGET builtins
                       LIPO_FLAGS ${${os}_cc_kext_lipo_flags}
                       DEPENDS ${${os}_cc_kext_libs}
-                      OUTPUT_DIR ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
-                      INSTALL_DIR ${COMPILER_RT_INSTALL_LIBRARY_DIR})
+                      OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+                      INSTALL_DIR ${COMPILER_RT_LIBRARY_INSTALL_DIR})
     endif()
   endforeach()
 
@@ -467,8 +467,8 @@ macro(darwin_add_builtin_libraries)
                      PARENT_TARGET builtins
                      LIPO_FLAGS ${${os}_builtins_lipo_flags}
                      DEPENDS ${${os}_builtins_libs}
-                     OUTPUT_DIR ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
-                     INSTALL_DIR ${COMPILER_RT_INSTALL_LIBRARY_DIR})
+                     OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+                     INSTALL_DIR ${COMPILER_RT_LIBRARY_INSTALL_DIR})
   endforeach()
   darwin_add_embedded_builtin_libraries()
 endmacro()
@@ -506,9 +506,9 @@ macro(darwin_add_embedded_builtin_libraries)
     set(DARWIN_macho_embedded_ARCHS armv6m armv7m armv7em armv7 i386 x86_64)
 
     set(DARWIN_macho_embedded_LIBRARY_OUTPUT_DIR
-      ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/macho_embedded)
+      ${COMPILER_RT_OUTPUT_DIR}/lib/macho_embedded)
     set(DARWIN_macho_embedded_LIBRARY_INSTALL_DIR
-      ${COMPILER_RT_INSTALL_LIBRARY_DIR}/macho_embedded)
+      ${COMPILER_RT_INSTALL_PATH}/lib/macho_embedded)
       
     set(CFLAGS_armv7 "-target thumbv7-apple-darwin-eabi")
     set(CFLAGS_i386 "-march=pentium")
