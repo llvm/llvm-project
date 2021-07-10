@@ -3,10 +3,16 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
+%struct.ident_t = type { i32, i32, i32, i32, i8* }
+
 @S = external local_unnamed_addr global i8*
+@0 = private unnamed_addr constant [113 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;__omp_offloading_2a_d80d3d_test_fallback_l11;11;1;;\00", align 1
+@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([113 x i8], [113 x i8]* @0, i32 0, i32 0) }, align 8
 
 ; CHECK-REMARKS: remark: replace_globalization.c:5:7: Replaced globalized variable with 16 bytes of shared memory
 ; CHECK-REMARKS: remark: replace_globalization.c:5:14: Replaced globalized variable with 4 bytes of shared memory
+; CHECK-REMARKS-NOT: 6 bytes
+
 ; CHECK: [[SHARED_X:@.+]] = internal addrspace(3) global [16 x i8] undef
 ; CHECK: [[SHARED_Y:@.+]] = internal addrspace(3) global [4 x i8] undef
 
@@ -25,14 +31,15 @@ entry:
 define void @bar() {
   call void @baz()
   call void @qux()
+  call void @negative_qux_spmd()
   ret void
 }
 
 ; CHECK: call void @use.internalized(i8* nofree writeonly addrspacecast (i8 addrspace(3)* getelementptr inbounds ([16 x i8], [16 x i8] addrspace(3)* [[SHARED_X]], i32 0, i32 0) to i8*))
 define internal void @baz() {
 entry:
-  %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-  %cmp = icmp eq i32 %tid, 0
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 false, i1 false, i1 true)
+  %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %master, label %exit
 master:
   %x = call i8* @__kmpc_alloc_shared(i64 16), !dbg !11
@@ -48,20 +55,30 @@ exit:
 ; CHECK: call void @use.internalized(i8* nofree writeonly addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* [[SHARED_Y]], i32 0, i32 0) to i8*))
 define internal void @qux() {
 entry:
-  %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-  %ntid = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  %warpsize = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
-  %0 = sub nuw i32 %warpsize, 1
-  %1 = sub nuw i32 %ntid, 1
-  %2 = xor i32 %0, -1
-  %master_tid = and i32 %1, %2
-  %3 = icmp eq i32 %tid, %master_tid
-  br i1 %3, label %master, label %exit
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 false, i1 true, i1 true)
+  %0 = icmp eq i32 %call, -1
+  br i1 %0, label %master, label %exit
 master:
   %y = call i8* @__kmpc_alloc_shared(i64 4), !dbg !12
   %y_on_stack = bitcast i8* %y to [4 x i32]*
-  %4 = bitcast [4 x i32]* %y_on_stack to i8*
-  call void @use(i8* %4)
+  %1 = bitcast [4 x i32]* %y_on_stack to i8*
+  call void @use(i8* %1)
+  call void @__kmpc_free_shared(i8* %y)
+  br label %exit
+exit:
+  ret void
+}
+
+define internal void @negative_qux_spmd() {
+entry:
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 true, i1 true, i1 true)
+  %0 = icmp eq i32 %call, -1
+  br i1 %0, label %master, label %exit
+master:
+  %y = call i8* @__kmpc_alloc_shared(i64 6), !dbg !12
+  %y_on_stack = bitcast i8* %y to [6 x i32]*
+  %1 = bitcast [6 x i32]* %y_on_stack to i8*
+  call void @use(i8* %1)
   call void @__kmpc_free_shared(i8* %y)
   br label %exit
 exit:
@@ -85,6 +102,7 @@ declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 
 declare i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
+declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

@@ -3,8 +3,13 @@
 ; REQUIRES: asserts
 ; ModuleID = 'single_threaded_exeuction.c'
 
-define weak void @kernel() {
-  call void @__kmpc_kernel_init(i32 512, i16 1)
+%struct.ident_t = type { i32, i32, i32, i32, i8* }
+
+@0 = private unnamed_addr constant [1 x i8] c"\00", align 1
+@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @0, i32 0, i32 0) }, align 8
+
+define void @kernel() {
+  call void @__kmpc_kernel_prepare_parallel(i8* null)
   call void @nvptx()
   call void @amdgcn()
   ret void
@@ -19,8 +24,8 @@ define weak void @kernel() {
 ; Function Attrs: noinline
 define internal void @nvptx() {
 entry:
-  %call = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-  %cmp = icmp eq i32 %call, 0
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 false, i1 false, i1 false)
+  %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
@@ -40,8 +45,8 @@ if.end:
 ; Function Attrs: noinline
 define internal void @amdgcn() {
 entry:
-  %call = call i32 @llvm.amdgcn.workitem.id.x()
-  %cmp = icmp eq i32 %call, 0
+  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 false, i1 true, i1 true)
+  %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
@@ -87,7 +92,9 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-declare void @__kmpc_kernel_init(i32, i16)
+declare void @__kmpc_kernel_prepare_parallel(i8*)
+
+declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
 
 attributes #0 = { cold noinline }
 
