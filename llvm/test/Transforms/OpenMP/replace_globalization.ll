@@ -28,7 +28,7 @@ define void @bar() {
   ret void
 }
 
-; CHECK: %{{.*}} = bitcast i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([16 x i8], [16 x i8] addrspace(3)* [[SHARED_X]], i32 0, i32 0) to i8*) to [4 x i32]*
+; CHECK: call void @use.internalized(i8* nofree writeonly addrspacecast (i8 addrspace(3)* getelementptr inbounds ([16 x i8], [16 x i8] addrspace(3)* [[SHARED_X]], i32 0, i32 0) to i8*))
 define internal void @baz() {
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
@@ -45,7 +45,7 @@ exit:
   ret void
 }
 
-; CHECK: %{{.*}} = bitcast i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* [[SHARED_Y]], i32 0, i32 0) to i8*) to [4 x i32]*
+; CHECK: call void @use.internalized(i8* nofree writeonly addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* [[SHARED_Y]], i32 0, i32 0) to i8*))
 define internal void @qux() {
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
