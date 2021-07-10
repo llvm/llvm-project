@@ -765,16 +765,19 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
   const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
-  MachineOperand MO = MI->getOperand(OpNo);
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  MCOperand MCOp;
   if (ExtraCode) {
     if (ExtraCode[0] == 'N' && !ExtraCode[1] && MO.isReg() &&
         SystemZ::GR128BitRegClass.contains(MO.getReg()))
-      MO.setReg(MRI.getSubReg(MO.getReg(), SystemZ::subreg_l64));
+      MCOp =
+          MCOperand::createReg(MRI.getSubReg(MO.getReg(), SystemZ::subreg_l64));
     else
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  } else {
+    SystemZMCInstLower Lower(MF->getContext(), *this);
+    MCOp = Lower.lowerOperand(MO);
   }
-  SystemZMCInstLower Lower(MF->getContext(), *this);
-  MCOperand MCOp(Lower.lowerOperand(MO));
   SystemZInstPrinter::printOperand(MCOp, MAI, OS);
   return false;
 }
