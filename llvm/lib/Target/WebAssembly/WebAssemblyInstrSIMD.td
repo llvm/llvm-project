@@ -1288,11 +1288,13 @@ defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_signed,
 defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
                       "extadd_pairwise_i16x8_u", 0x7f>;
 
-// Prototype f64x2 conversions
+// f64x2 <-> f32x4 conversions
 defm "" : SIMDConvert<F32x4, F64x2, int_wasm_demote_zero,
                       "demote_zero_f64x2", 0x5e>;
-defm "" : SIMDConvert<F64x2, F32x4, int_wasm_promote_low,
-                      "promote_low_f32x4", 0x5f>;
+
+def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def promote_low : SDNode<"WebAssemblyISD::PROMOTE_LOW", promote_t>;
+defm "" : SIMDConvert<F64x2, F32x4, promote_low, "promote_low_f32x4", 0x5f>;
 
 //===----------------------------------------------------------------------===//
 // Saturating Rounding Q-Format Multiplication

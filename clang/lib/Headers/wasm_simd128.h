@@ -43,6 +43,7 @@ typedef unsigned short __u16x4
 typedef int __i32x2 __attribute__((__vector_size__(8), __aligned__(8)));
 typedef unsigned int __u32x2
     __attribute__((__vector_size__(8), __aligned__(8)));
+typedef float __f32x2 __attribute__((__vector_size__(8), __aligned__(8)));
 
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("simd128"),        \
@@ -1155,7 +1156,8 @@ wasm_f32x4_demote_f64x2_zero(v128_t __a) {
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_f64x2_promote_low_f32x4(v128_t __a) {
-  return (v128_t)__builtin_wasm_promote_low_f32x4_f64x2((__f32x4)__a);
+  return (v128_t) __builtin_convertvector(
+      (__f32x2){((__f32x4)__a)[0], ((__f32x4)__a)[1]}, __f64x2);
 }
 
 #define wasm_i8x16_shuffle(__a, __b, __c0, __c1, __c2, __c3, __c4, __c5, __c6, \

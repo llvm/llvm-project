@@ -149,9 +149,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTargetDAGCombine(ISD::SIGN_EXTEND);
     setTargetDAGCombine(ISD::ZERO_EXTEND);
 
-    // Combine int_to_fp of extract_vectors and vice versa into conversions ops
+    // Combine int_to_fp or fp_extend of extract_vectors and vice versa into
+    // conversions ops
     setTargetDAGCombine(ISD::SINT_TO_FP);
     setTargetDAGCombine(ISD::UINT_TO_FP);
+    setTargetDAGCombine(ISD::FP_EXTEND);
     setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
 
     // Combine concat of {s,u}int_to_fp_sat to i32x4.trunc_sat_f64x2_zero_{s,u}
@@ -2186,60 +2188,109 @@ performVectorConvertLowCombine(SDNode *N,
   if (ResVT != MVT::v2f64)
     return SDValue();
 
-  if (N->getOpcode() == ISD::SINT_TO_FP || N->getOpcode() == ISD::UINT_TO_FP) {
-    // Combine this:
-    //
-    //   (v2f64 ({s,u}int_to_fp
-    //     (v2i32 (extract_subvector (v4i32 $x), 0))))
-    //
-    // into (f64x2.convert_low_i32x4_{s,u} $x).
-    auto Extract = N->getOperand(0);
-    if (Extract.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-      return SDValue();
-    if (Extract.getValueType() != MVT::v2i32)
-      return SDValue();
-    auto Source = Extract.getOperand(0);
-    if (Source.getValueType() != MVT::v4i32)
-      return SDValue();
-    auto *IndexNode = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
-    if (IndexNode == nullptr || IndexNode->getZExtValue() != 0)
-      return SDValue();
+  auto GetWasmConversionOp = [](unsigned Op) {
+    switch (Op) {
+    case ISD::SINT_TO_FP:
+      return WebAssemblyISD::CONVERT_LOW_S;
+    case ISD::UINT_TO_FP:
+      return WebAssemblyISD::CONVERT_LOW_U;
+    case ISD::FP_EXTEND:
+      return WebAssemblyISD::PROMOTE_LOW;
+    }
+    llvm_unreachable("unexpected op");
+  };
 
-    unsigned Op = N->getOpcode() == ISD::SINT_TO_FP
-                      ? WebAssemblyISD::CONVERT_LOW_S
-                      : WebAssemblyISD::CONVERT_LOW_U;
-
-    return DAG.getNode(Op, SDLoc(N), ResVT, Source);
-
-  } else if (N->getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+  if (N->getOpcode() == ISD::EXTRACT_SUBVECTOR) {
     // Combine this:
     //
     //   (v2f64 (extract_subvector
     //     (v4f64 ({s,u}int_to_fp (v4i32 $x))), 0))
     //
     // into (f64x2.convert_low_i32x4_{s,u} $x).
-    auto IntToFP = N->getOperand(0);
-    if (IntToFP.getOpcode() != ISD::SINT_TO_FP &&
-        IntToFP.getOpcode() != ISD::UINT_TO_FP)
+    //
+    // Or this:
+    //
+    //  (v2f64 (extract_subvector
+    //    (v4f64 (fp_extend (v4f32 $x))), 0))
+    //
+    // into (f64x2.promote_low_f32x4 $x).
+    auto Conversion = N->getOperand(0);
+    auto ConversionOp = Conversion.getOpcode();
+    MVT ExpectedSourceType;
+    switch (ConversionOp) {
+    case ISD::SINT_TO_FP:
+    case ISD::UINT_TO_FP:
+      ExpectedSourceType = MVT::v4i32;
+      break;
+    case ISD::FP_EXTEND:
+      ExpectedSourceType = MVT::v4f32;
+      break;
+    default:
       return SDValue();
-    if (IntToFP.getValueType() != MVT::v4f64)
+    }
+
+    if (Conversion.getValueType() != MVT::v4f64)
       return SDValue();
-    auto Source = IntToFP.getOperand(0);
-    if (Source.getValueType() != MVT::v4i32)
+
+    auto Source = Conversion.getOperand(0);
+    if (Source.getValueType() != ExpectedSourceType)
       return SDValue();
+
     auto IndexNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (IndexNode == nullptr || IndexNode->getZExtValue() != 0)
       return SDValue();
 
-    unsigned Op = IntToFP->getOpcode() == ISD::SINT_TO_FP
-                      ? WebAssemblyISD::CONVERT_LOW_S
-                      : WebAssemblyISD::CONVERT_LOW_U;
-
+    auto Op = GetWasmConversionOp(ConversionOp);
     return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+  }
 
-  } else {
+  // Combine this:
+  //
+  //   (v2f64 ({s,u}int_to_fp
+  //     (v2i32 (extract_subvector (v4i32 $x), 0))))
+  //
+  // into (f64x2.convert_low_i32x4_{s,u} $x).
+  //
+  // Or this:
+  //
+  //   (v2f64 (fp_extend
+  //     (v2f32 (extract_subvector (v4f32 $x), 0))))
+  //
+  // into (f64x2.promote_low_f32x4 $x).
+  auto ConversionOp = N->getOpcode();
+  MVT ExpectedExtractType;
+  MVT ExpectedSourceType;
+  switch (ConversionOp) {
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:
+    ExpectedExtractType = MVT::v2i32;
+    ExpectedSourceType = MVT::v4i32;
+    break;
+  case ISD::FP_EXTEND:
+    ExpectedExtractType = MVT::v2f32;
+    ExpectedSourceType = MVT::v4f32;
+    break;
+  default:
     llvm_unreachable("unexpected opcode");
   }
+
+  auto Extract = N->getOperand(0);
+  if (Extract.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return SDValue();
+
+  if (Extract.getValueType() != ExpectedExtractType)
+    return SDValue();
+
+  auto Source = Extract.getOperand(0);
+  if (Source.getValueType() != ExpectedSourceType)
+    return SDValue();
+
+  auto *IndexNode = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
+  if (IndexNode == nullptr || IndexNode->getZExtValue() != 0)
+    return SDValue();
+
+  unsigned Op = GetWasmConversionOp(ConversionOp);
+  return DAG.getNode(Op, SDLoc(N), ResVT, Source);
 }
 
 static SDValue
@@ -2298,6 +2349,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorExtendCombine(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+  case ISD::FP_EXTEND:
   case ISD::EXTRACT_SUBVECTOR:
     return performVectorConvertLowCombine(N, DCI);
   case ISD::CONCAT_VECTORS:
