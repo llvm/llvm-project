@@ -3,8 +3,6 @@
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -verify=all,safe  -Rpass=openmp-opt -Rpass-analysis=openmp-opt -fopenmp -O2 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t.out
 
 // host-no-diagnostics
-// Will be renabled with D101977
-// XFAIL: *
 
 void bar1(void) {
 #pragma omp parallel // #0
@@ -25,6 +23,7 @@ void bar2(void) {
 
 void foo1(void) {
 #pragma omp target teams // #2
+                         // all-remark@#2 {{Generic-mode kernel is executed with a customized state machine [3 known parallel regions] (good).}}
                          // all-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__1_wrapper, kernel ID: __omp_offloading}}
                          // all-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__2_wrapper, kernel ID: __omp_offloading}}
   {
@@ -44,6 +43,7 @@ void foo1(void) {
 
 void foo2(void) {
 #pragma omp target teams // #5
+                         // all-remark@#5 {{Generic-mode kernel is executed with a customized state machine [4 known parallel regions] (good).}}
                          // all-remark@#5 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__5_wrapper, kernel ID: __omp_offloading}}
                          // all-remark@#5 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__4_wrapper, kernel ID: __omp_offloading}}
   {
@@ -66,6 +66,7 @@ void foo2(void) {
 
 void foo3(void) {
 #pragma omp target teams // #8
+                         // all-remark@#8 {{Generic-mode kernel is executed with a customized state machine [4 known parallel regions] (good).}}
                          // all-remark@#8 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__7_wrapper, kernel ID: __omp_offloading}}
                          // all-remark@#8 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__8_wrapper, kernel ID: __omp_offloading}}
   {
@@ -99,4 +100,4 @@ void spmd(void) {
 }
 
 // all-remark@* 5 {{OpenMP runtime call __kmpc_global_thread_num moved to beginning of OpenMP region}}
-// all-remark@* 12 {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
+// all-remark@* 9 {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
