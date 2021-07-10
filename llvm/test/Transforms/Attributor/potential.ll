@@ -100,10 +100,10 @@ define i32 @potential_test2(i1 %c) {
 define internal i32 @iszero3(i32 %c) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@iszero3
-; IS__CGSCC____-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], 0
-; IS__CGSCC____-NEXT:    [[RET:%.*]] = zext i1 [[CMP]] to i32
-; IS__CGSCC____-NEXT:    ret i32 [[RET]]
+; IS__CGSCC____-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 undef, 0
+; IS__CGSCC____-NEXT:    [[RET:%.*]] = zext i1 undef to i32
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %cmp = icmp eq i32 %c, 0
   %ret = zext i1 %cmp to i32
@@ -113,10 +113,10 @@ define internal i32 @iszero3(i32 %c) {
 define internal i32 @less_than_two(i32 %c) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@less_than_two
-; IS__CGSCC____-SAME: (i32 noundef [[C:%.*]]) #[[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp slt i32 [[C]], 2
+; IS__CGSCC____-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp slt i32 undef, 2
 ; IS__CGSCC____-NEXT:    [[RET:%.*]] = zext i1 true to i32
-; IS__CGSCC____-NEXT:    ret i32 1
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %cmp = icmp slt i32 %c, 2
   %ret = zext i1 %cmp to i32

@@ -8,7 +8,6 @@
 
 declare i32 @external()
 
-; FIXME: We should not return undef here.
 define i8* @start(i8 %v) {
 ;
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@start
