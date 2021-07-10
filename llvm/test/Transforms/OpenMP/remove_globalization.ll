@@ -7,25 +7,34 @@ target triple = "nvptx64"
 ; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured. Mark as noescape to override.
 ; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
 ; CHECK-REMARKS: remark: remove_globalization.c:6:2: Moving globalized variable to the stack.
+; CHECK-REMARKS: remark: remove_globalization.c:4:2: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
 @S = external local_unnamed_addr global i8*
+
+%struct.ident_t = type { i32, i32, i32, i32, i8* }
+
+declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
+declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
 
 define void @kernel() {
 ; CHECK-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 false, i1 true)
+; CHECK-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @bar() #[[ATTR0]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
 ; CHECK-NEXT:    ret void
-;
 entry:
+  %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 true, i1 true)
   call void @foo()
   call void @bar()
+  call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
   ret void
 }
 
 define internal void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    ret void
@@ -41,8 +50,8 @@ define internal void @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]], !dbg [[DBG6:![0-9]+]]
-; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]], !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
@@ -54,13 +63,18 @@ entry:
 }
 
 define internal void @use(i8* %x) {
+; CHECK-LABEL: define {{[^@]+}}@use
+; CHECK-SAME: (i8* noalias nocapture nofree readnone [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
 entry:
   ret void
 }
 
 define internal void @share(i8* %x) {
 ; CHECK-LABEL: define {{[^@]+}}@share
-; CHECK-SAME: (i8* nofree writeonly [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (i8* nofree writeonly [[X:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i8* [[X]], i8** @S, align 8
 ; CHECK-NEXT:    ret void
@@ -71,6 +85,12 @@ entry:
 }
 
 define void @unused() {
+; CHECK-LABEL: define {{[^@]+}}@unused() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    call void @use(i8* noalias readnone undef)
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !14
   call void @use(i8* %0)
