@@ -243,9 +243,10 @@ static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
 /// once. Note that the value used for the callback may still be the value
 /// associated with \p IRP (due to PHIs). To limit how much effort is invested,
 /// we will never visit more values than specified by \p MaxValues.
-template <typename AAType, typename StateTy>
+template <typename StateTy>
 static bool genericValueTraversal(
-    Attributor &A, IRPosition IRP, const AAType &QueryingAA, StateTy &State,
+    Attributor &A, IRPosition IRP, const AbstractAttribute &QueryingAA,
+    StateTy &State,
     function_ref<bool(Value &, const Instruction *, StateTy &, bool)>
         VisitValueCB,
     const Instruction *CtxI, bool UseValueSimplify = true, int MaxValues = 16,
@@ -348,6 +349,26 @@ static bool genericValueTraversal(
     A.recordDependence(*LivenessAA, QueryingAA, DepClassTy::OPTIONAL);
 
   // All values have been visited.
+  return true;
+}
+
+static bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
+                                        SmallVectorImpl<Value *> &Objects,
+                                        const AbstractAttribute &QueryingAA,
+                                        const Instruction *CtxI) {
+  auto StripCB = [&](Value *V) { return getUnderlyingObject(V); };
+  SmallPtrSet<Value *, 8> SeenObjects;
+  auto VisitValueCB = [&SeenObjects](Value &Val, const Instruction *,
+                                     SmallVectorImpl<Value *> &Objects,
+                                     bool) -> bool {
+    if (SeenObjects.insert(&Val).second)
+      Objects.push_back(&Val);
+    return true;
+  };
+  if (!genericValueTraversal<decltype(Objects)>(
+          A, IRPosition::value(Ptr), QueryingAA, Objects, VisitValueCB, CtxI,
+          true, 32, StripCB))
+    return false;
   return true;
 }
 
@@ -1070,9 +1091,9 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
   auto VisitReturnedValue = [&](Value &RV, RVState &RVS,
                                 const Instruction *CtxI) {
     IRPosition RetValPos = IRPosition::value(RV, getCallBaseContext());
-    return genericValueTraversal<AAReturnedValues, RVState>(
-        A, RetValPos, *this, RVS, VisitValueCB, CtxI,
-        /* UseValueSimplify */ false);
+    return genericValueTraversal<RVState>(A, RetValPos, *this, RVS,
+                                          VisitValueCB, CtxI,
+                                          /* UseValueSimplify */ false);
   };
 
   // Callback for all "return intructions" live in the associated function.
@@ -1748,8 +1769,8 @@ struct AANonNullFloating : public AANonNullImpl {
     };
 
     StateType T;
-    if (!genericValueTraversal<AANonNull, StateType>(
-            A, getIRPosition(), *this, T, VisitValueCB, getCtxI()))
+    if (!genericValueTraversal<StateType>(A, getIRPosition(), *this, T,
+                                          VisitValueCB, getCtxI()))
       return indicatePessimisticFixpoint();
 
     return clampStateAndIndicateChange(getState(), T);
@@ -3630,8 +3651,8 @@ struct AADereferenceableFloating : AADereferenceableImpl {
     };
 
     DerefState T;
-    if (!genericValueTraversal<AADereferenceable, DerefState>(
-            A, getIRPosition(), *this, T, VisitValueCB, getCtxI()))
+    if (!genericValueTraversal<DerefState>(A, getIRPosition(), *this, T,
+                                           VisitValueCB, getCtxI()))
       return indicatePessimisticFixpoint();
 
     return clampStateAndIndicateChange(getState(), T);
@@ -3896,8 +3917,8 @@ struct AAAlignFloating : AAAlignImpl {
     };
 
     StateType T;
-    if (!genericValueTraversal<AAAlign, StateType>(A, getIRPosition(), *this, T,
-                                                   VisitValueCB, getCtxI()))
+    if (!genericValueTraversal<StateType>(A, getIRPosition(), *this, T,
+                                          VisitValueCB, getCtxI()))
       return indicatePessimisticFixpoint();
 
     // TODO: If we know we visited all incoming values, thus no are assumed
@@ -4890,9 +4911,9 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     };
 
     bool Dummy = false;
-    if (!genericValueTraversal<AAValueSimplify, bool>(
-            A, getIRPosition(), *this, Dummy, VisitValueCB, getCtxI(),
-            /* UseValueSimplify */ false))
+    if (!genericValueTraversal<bool>(A, getIRPosition(), *this, Dummy,
+                                     VisitValueCB, getCtxI(),
+                                     /* UseValueSimplify */ false))
       if (!askSimplifiedValueForOtherAAs(A))
         return indicatePessimisticFixpoint();
 
@@ -6722,47 +6743,45 @@ void AAMemoryLocationImpl::categorizePtrValue(
                     << Ptr << " ["
                     << getMemoryLocationsAsStr(State.getAssumed()) << "]\n");
 
-  auto StripGEPCB = [](Value *V) -> Value * {
-    auto *GEP = dyn_cast<GEPOperator>(V);
-    while (GEP) {
-      V = GEP->getPointerOperand();
-      GEP = dyn_cast<GEPOperator>(V);
-    }
-    return V;
-  };
+  SmallVector<Value *, 8> Objects;
+  if (!getAssumedUnderlyingObjects(A, Ptr, Objects, *this, &I)) {
+    LLVM_DEBUG(
+        dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
+    updateStateAndAccessesMap(State, NO_UNKOWN_MEM, &I, nullptr, Changed,
+                              getAccessKindFromInst(&I));
+    return;
+  }
 
-  auto VisitValueCB = [&](Value &V, const Instruction *,
-                          AAMemoryLocation::StateType &T,
-                          bool Stripped) -> bool {
+  for (Value *Obj : Objects) {
     // TODO: recognize the TBAA used for constant accesses.
     MemoryLocationsKind MLK = NO_LOCATIONS;
-    assert(!isa<GEPOperator>(V) && "GEPs should have been stripped.");
-    if (isa<UndefValue>(V))
-      return true;
-    if (auto *Arg = dyn_cast<Argument>(&V)) {
+    assert(!isa<GEPOperator>(Obj) && "GEPs should have been stripped.");
+    if (isa<UndefValue>(Obj))
+      continue;
+    if (auto *Arg = dyn_cast<Argument>(Obj)) {
       if (Arg->hasByValAttr())
         MLK = NO_LOCAL_MEM;
       else
         MLK = NO_ARGUMENT_MEM;
-    } else if (auto *GV = dyn_cast<GlobalValue>(&V)) {
+    } else if (auto *GV = dyn_cast<GlobalValue>(Obj)) {
       // Reading constant memory is not treated as a read "effect" by the
       // function attr pass so we won't neither. Constants defined by TBAA are
       // similar. (We know we do not write it because it is constant.)
       if (auto *GVar = dyn_cast<GlobalVariable>(GV))
         if (GVar->isConstant())
-          return true;
+          continue;
 
       if (GV->hasLocalLinkage())
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else
         MLK = NO_GLOBAL_EXTERNAL_MEM;
-    } else if (isa<ConstantPointerNull>(V) &&
+    } else if (isa<ConstantPointerNull>(Obj) &&
                !NullPointerIsDefined(getAssociatedFunction(),
-                                     V.getType()->getPointerAddressSpace())) {
-      return true;
-    } else if (isa<AllocaInst>(V)) {
+                                     Ptr.getType()->getPointerAddressSpace())) {
+      continue;
+    } else if (isa<AllocaInst>(Obj)) {
       MLK = NO_LOCAL_MEM;
-    } else if (const auto *CB = dyn_cast<CallBase>(&V)) {
+    } else if (const auto *CB = dyn_cast<CallBase>(Obj)) {
       const auto &NoAliasAA = A.getAAFor<AANoAlias>(
           *this, IRPosition::callsite_returned(*CB), DepClassTy::OPTIONAL);
       if (NoAliasAA.isAssumedNoAlias())
@@ -6774,28 +6793,16 @@ void AAMemoryLocationImpl::categorizePtrValue(
     }
 
     assert(MLK != NO_LOCATIONS && "No location specified!");
-    updateStateAndAccessesMap(T, MLK, &I, &V, Changed,
-                              getAccessKindFromInst(&I));
-    LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Ptr value cannot be categorized: "
-                      << V << " -> " << getMemoryLocationsAsStr(T.getAssumed())
+    LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Ptr value can be categorized: "
+                      << *Obj << " -> " << getMemoryLocationsAsStr(MLK)
                       << "\n");
-    return true;
-  };
-
-  if (!genericValueTraversal<AAMemoryLocation, AAMemoryLocation::StateType>(
-          A, IRPosition::value(Ptr), *this, State, VisitValueCB, getCtxI(),
-          /* UseValueSimplify */ true,
-          /* MaxValues */ 32, StripGEPCB)) {
-    LLVM_DEBUG(
-        dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
-    updateStateAndAccessesMap(State, NO_UNKOWN_MEM, &I, nullptr, Changed,
+    updateStateAndAccessesMap(getState(), MLK, &I, Obj, Changed,
                               getAccessKindFromInst(&I));
-  } else {
-    LLVM_DEBUG(
-        dbgs()
-        << "[AAMemoryLocation] Accessed locations with pointer locations: "
-        << getMemoryLocationsAsStr(State.getAssumed()) << "\n");
   }
+
+  LLVM_DEBUG(
+      dbgs() << "[AAMemoryLocation] Accessed locations with pointer locations: "
+             << getMemoryLocationsAsStr(State.getAssumed()) << "\n");
 }
 
 void AAMemoryLocationImpl::categorizeArgumentPointerLocations(
@@ -7493,9 +7500,9 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
 
     IntegerRangeState T(getBitWidth());
 
-    if (!genericValueTraversal<AAValueConstantRange, IntegerRangeState>(
-            A, getIRPosition(), *this, T, VisitValueCB, getCtxI(),
-            /* UseValueSimplify */ false))
+    if (!genericValueTraversal<IntegerRangeState>(A, getIRPosition(), *this, T,
+                                                  VisitValueCB, getCtxI(),
+                                                  /* UseValueSimplify */ false))
       return indicatePessimisticFixpoint();
 
     return clampStateAndIndicateChange(getState(), T);
@@ -8260,8 +8267,8 @@ struct AANoUndefFloating : public AANoUndefImpl {
     };
 
     StateType T;
-    if (!genericValueTraversal<AANoUndef, StateType>(
-            A, getIRPosition(), *this, T, VisitValueCB, getCtxI()))
+    if (!genericValueTraversal<StateType>(A, getIRPosition(), *this, T,
+                                          VisitValueCB, getCtxI()))
       return indicatePessimisticFixpoint();
 
     return clampStateAndIndicateChange(getState(), T);
@@ -8338,9 +8345,9 @@ struct AACallEdgesFunction : public AACallEdges {
 
     // Process any value that we might call.
     auto ProcessCalledOperand = [&](Value *V, Instruction *Ctx) {
-      if (!genericValueTraversal<AACallEdges, bool>(A, IRPosition::value(*V),
-                                                    *this, HasUnknownCallee,
-                                                    VisitValue, nullptr, false))
+      if (!genericValueTraversal<bool>(A, IRPosition::value(*V), *this,
+                                       HasUnknownCallee, VisitValue, nullptr,
+                                       false))
         // If we haven't gone through all values, assume that there are unknown
         // callees.
         HasUnknownCallee = true;
