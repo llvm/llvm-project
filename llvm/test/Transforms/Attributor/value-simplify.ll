@@ -1224,6 +1224,47 @@ define internal i1 @cmp_null_after_cast(i32 %a, i8 %b) {
   ret i1 %c
 }
 
+
+declare i8* @m()
+
+define i32 @test(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@test
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ctx_test(i1 [[C]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = call i32 @ctx_test(i1 %c)
+  ret i32 %r
+}
+
+define internal i32 @ctx_test(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@ctx_test
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[JOIN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[M:%.*]] = tail call i8* @m()
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint i8* [[M]] to i64
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[I]], [[THEN]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i64 [[PHI]] to i32
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %join
+
+then:
+  %m = tail call i8* @m()
+  %i = ptrtoint i8* %m to i64
+  br label %join
+
+join:
+  %phi = phi i64 [ %i, %then ], [ undef, %entry ]
+  %ret = trunc i64 %phi to i32
+  ret i32 %ret
+}
+
 ;.
 ; IS__TUNIT_OPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }

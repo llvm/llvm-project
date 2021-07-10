@@ -4385,7 +4385,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
   /// Return a value we can use as replacement for the associated one, or
   /// nullptr if we don't have one that makes sense.
-  virtual Value *getReplacementValue() const {
+  Value *getReplacementValue(Attributor &A) const {
     Value *NewV;
     NewV = SimplifiedAssociatedValue.hasValue()
                ? SimplifiedAssociatedValue.getValue()
@@ -4393,8 +4393,12 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (!NewV)
       return nullptr;
     NewV = AA::getWithType(*NewV, *getAssociatedType());
-    if (!NewV || NewV == &getAssociatedValue() ||
-        !AA::isValidInScope(*NewV, getAnchorScope()))
+    if (!NewV || NewV == &getAssociatedValue())
+      return nullptr;
+    const Instruction *CtxI = getCtxI();
+    if (CtxI && !AA::isValidAtPosition(*NewV, *CtxI, A.getInfoCache()))
+      return nullptr;
+    if (!CtxI && !AA::isValidInScope(*NewV, getAnchorScope()))
       return nullptr;
     return NewV;
   }
@@ -4449,7 +4453,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (getAssociatedValue().user_empty())
       return Changed;
 
-    if (auto *NewV = getReplacementValue()) {
+    if (auto *NewV = getReplacementValue(A)) {
       LLVM_DEBUG(dbgs() << "[ValueSimplify] " << getAssociatedValue() << " -> "
                         << *NewV << " :: " << *this << "\n");
       if (A.changeValueAfterManifest(getAssociatedValue(), *NewV))
@@ -4596,7 +4600,7 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-    if (auto *NewV = getReplacementValue()) {
+    if (auto *NewV = getReplacementValue(A)) {
       auto PredForReturned =
           [&](Value &, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
             for (ReturnInst *RI : RetInsts) {
@@ -4821,7 +4825,7 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-    if (auto *NewV = getReplacementValue()) {
+    if (auto *NewV = getReplacementValue(A)) {
       Use &U = cast<CallBase>(&getAnchorValue())
                    ->getArgOperandUse(getCallSiteArgNo());
       if (A.changeUseAfterManifest(U, *NewV))
