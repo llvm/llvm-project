@@ -194,7 +194,6 @@ struct DeviceTy {
   // Return true if data can be copied to DstDevice directly
   bool isDataExchangable(const DeviceTy &DstDevice);
 
-  uint64_t getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   TargetPointerResultTy getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
                                          int64_t Size,
