@@ -626,8 +626,20 @@ void IRPosition::verify() {
 Optional<Constant *>
 Attributor::getAssumedConstant(const Value &V, const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
-  const auto &ValueSimplifyAA = getAAFor<AAValueSimplify>(
-      AA, IRPosition::value(V, AA.getCallBaseContext()), DepClassTy::NONE);
+  // First check all callbacks provided by outside AAs. If any of them returns
+  // a non-null value that is different from the associated value, or None, we
+  // assume it's simpliied.
+  IRPosition IRP = IRPosition::value(V, AA.getCallBaseContext());
+  for (auto &CB : SimplificationCallbacks[IRP]) {
+    Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
+    if (!SimplifiedV.hasValue())
+      return llvm::None;
+    if (*SimplifiedV && *SimplifiedV != &IRP.getAssociatedValue() &&
+        isa<Constant>(*SimplifiedV))
+      return cast<Constant>(*SimplifiedV);
+  }
+  const auto &ValueSimplifyAA =
+      getAAFor<AAValueSimplify>(AA, IRP, DepClassTy::NONE);
   Optional<Value *> SimplifiedV =
       ValueSimplifyAA.getAssumedSimplifiedValue(*this);
   bool IsKnown = ValueSimplifyAA.isAtFixpoint();
