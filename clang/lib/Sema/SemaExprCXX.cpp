@@ -4088,6 +4088,9 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
             case StringLiteral::Wide:
               return Context.typesAreCompatible(Context.getWideCharType(),
                                                 QualType(ToPointeeType, 0));
+            case StringLiteral::Unevaluated:
+              assert(false && "Unevaluated string literal in expression");
+              break;
           }
         }
       }

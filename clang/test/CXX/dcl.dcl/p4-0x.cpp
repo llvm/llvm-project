@@ -18,4 +18,7 @@ static_assert(S(false), "not so fast"); // expected-error {{not so fast}}
 static_assert(T(), "");
 static_assert(U(), ""); // expected-error {{ambiguous}}
 
-static_assert(false, L"\x14hi" "!" R"x(")x"); // expected-error {{static assertion failed: L"\024hi!\""}}
+static_assert(false, L"\x14hi" // expected-error {{an unevaluated string literal cannot have an encoding prefix}} \
+                               // expected-error {{invalid escape sequence '\x14' in an unevaluated string literal}}
+                     "!"
+                     R"x(")x");
