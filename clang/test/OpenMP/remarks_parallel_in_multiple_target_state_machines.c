@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -verify=all,safe  -Rpass=openmp-opt -Rpass-analysis=openmp-opt -fopenmp -O2 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t.out
 
 // host-no-diagnostics
+// Will be renabled with D101977
+// XFAIL: *
 
 void bar1(void) {
 #pragma omp parallel // #0
