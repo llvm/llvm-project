@@ -36,6 +36,7 @@ define i8* @test2(i8* nonnull %p) {
 }
 
 define i8* @test2A(i1 %c, i8* %ret) {
+; ATTRIBUTOR: define nonnull i8* @test2A(i1 %c, i8* nofree nonnull readnone returned %ret)
 ; NOT_CGSCC_OPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test2A
 ; NOT_CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -68,6 +69,7 @@ B:
 }
 
 define i8* @test2B(i1 %c, i8* %ret) {
+; ATTRIBUTOR: define nonnull dereferenceable(4) i8* @test2B(i1 %c, i8* nofree nonnull readnone returned dereferenceable(4) %ret)
 ; NOT_CGSCC_OPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test2B
 ; NOT_CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0]] {
@@ -144,30 +146,22 @@ define i8* @test3(i1 %c) {
 ; nonnull if neither can ever return null.  (In this case, they
 ; just never return period.)
 define i8* @test4_helper() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
-; NOT_CGSCC_NPM-SAME: () #[[ATTR2:[0-9]+]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4_helper
-; IS__CGSCC_NPM-SAME: () #[[ATTR2:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@test4_helper
+; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @test4() #[[ATTR2]]
+; CHECK-NEXT:    unreachable
 ;
   %ret = call i8* @test4()
   ret i8* %ret
 }
 
 define i8* @test4() {
-; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test4
-; NOT_CGSCC_NPM-SAME: () #[[ATTR2]] {
-; NOT_CGSCC_NPM-NEXT:    unreachable
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test4
-; IS__CGSCC_NPM-SAME: () #[[ATTR2]] {
-; IS__CGSCC_NPM-NEXT:    unreachable
+; CHECK: Function Attrs: nofree noreturn nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@test4
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @test4_helper() #[[ATTR2]]
+; CHECK-NEXT:    unreachable
 ;
   %ret = call i8* @test4_helper()
   ret i8* %ret
@@ -233,7 +227,6 @@ define i8* @test5(i1 %c) {
 
 ; Local analysis, but going through a self recursive phi
 define i8* @test6a() {
-;
 ; NOT_CGSCC_OPM: Function Attrs: noreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test6a
 ; NOT_CGSCC_OPM-SAME: () #[[ATTR3:[0-9]+]] {
@@ -292,12 +285,14 @@ define i8* @test7(i8* %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test7
 ; IS__TUNIT____-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    ret i8* [[A]]
+; IS__TUNIT____-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 0
+; IS__TUNIT____-NEXT:    ret i8* [[B]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test7
 ; IS__CGSCC____-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
-; IS__CGSCC____-NEXT:    ret i8* [[A]]
+; IS__CGSCC____-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 0
+; IS__CGSCC____-NEXT:    ret i8* [[B]]
 ;
   %b = getelementptr inbounds i8, i8* %a, i64 0
   ret i8* %b
@@ -427,7 +422,6 @@ define void @test13_helper() {
   ret void
 }
 define internal void @test13(i8* %a, i8* %b, i8* %c) {
-;
 ; NOT_CGSCC_OPM: Function Attrs: nounwind
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test13
 ; NOT_CGSCC_OPM-SAME: (i8* noalias nocapture nofree nonnull readnone [[A:%.*]], i8* noalias nocapture nofree readnone [[B:%.*]], i8* noalias nocapture nofree readnone [[C:%.*]]) #[[ATTR4]] {
@@ -641,7 +635,6 @@ if.else:
 ; fun1(nonnull %a)
 ; We can say that %a is nonnull
 define void @f17(i8* %a, i8 %c) {
-;
 ; NOT_CGSCC_OPM: Function Attrs: nounwind willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@f17
 ; NOT_CGSCC_OPM-SAME: (i8* nonnull [[A:%.*]], i8 [[C:%.*]]) #[[ATTR6]] {
@@ -1113,7 +1106,6 @@ define internal void @called_by_weak(i32* %a) {
 
 ; Check we do not annotate the function interface of this weak function.
 define weak_odr void @weak_caller(i32* nonnull %a) {
-;
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@weak_caller
 ; NOT_CGSCC_OPM-SAME: (i32* nonnull [[A:%.*]]) {
 ; NOT_CGSCC_OPM-NEXT:    call void @called_by_weak(i32* noalias nocapture nonnull readnone [[A]]) #[[ATTR4]]
@@ -1164,7 +1156,6 @@ define internal void @naked(i32* dereferenceable(4) %a) naked {
 }
 ; Avoid nonnull as we do not touch optnone
 define internal void @optnone(i32* dereferenceable(4) %a) optnone noinline {
-;
 ; NOT_CGSCC_OPM: Function Attrs: noinline optnone
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@optnone
 ; NOT_CGSCC_OPM-SAME: (i32* dereferenceable(4) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
@@ -1639,7 +1630,6 @@ define void @nonnull_assume_neg(i8* %arg) {
 ; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
-;
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@nonnull_assume_neg
 ; NOT_CGSCC_OPM-SAME: (i8* nocapture nofree readnone [[ARG:%.*]]) {
 ; NOT_CGSCC_OPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
@@ -1726,7 +1716,7 @@ attributes #1 = { nounwind willreturn}
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT____: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone willreturn }
+; IS__TUNIT____: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone }
 ; IS__TUNIT____: attributes #[[ATTR3]] = { noreturn }
 ; IS__TUNIT____: attributes #[[ATTR4]] = { nounwind }
 ; IS__TUNIT____: attributes #[[ATTR5]] = { argmemonly nofree nosync nounwind readonly }
@@ -1742,7 +1732,7 @@ attributes #1 = { nounwind willreturn}
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR4]] = { noreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR5]] = { nounwind }
@@ -1759,7 +1749,7 @@ attributes #1 = { nounwind willreturn}
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR3]] = { noreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR4]] = { nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR5]] = { argmemonly nofree nosync nounwind readonly }

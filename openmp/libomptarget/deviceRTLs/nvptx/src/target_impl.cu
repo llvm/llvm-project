@@ -60,13 +60,7 @@ EXTERN __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
   return Mask;
 }
 
-EXTERN void __kmpc_impl_syncthreads() { 
-  int barrier = 2;
-  asm volatile("barrier.sync %0;"
-               :
-               : "r"(barrier)
-               : "memory");
-}
+EXTERN void __kmpc_impl_syncthreads() { __syncthreads(); }
 
 EXTERN void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {
   __nvvm_bar_warp_sync(Mask);
@@ -81,7 +75,7 @@ EXTERN void __kmpc_impl_named_sync(uint32_t num_threads) {
   // The named barrier for active parallel threads of a team in an L1 parallel
   // region to synchronize with each other.
   int barrier = 1;
-  asm volatile("barrier.sync %0, %1;"
+  asm volatile("bar.sync %0, %1;"
                :
                : "r"(barrier), "r"(num_threads)
                : "memory");

@@ -26,7 +26,7 @@
 define internal fastcc void @fn(i32* nocapture readonly %p1, i64* nocapture readonly %p2) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@fn
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[TMP0:%.*]] = load i32, i32* @g, align 4, !tbaa [[TBAA0:![0-9]+]]
 ; IS__TUNIT____-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
@@ -60,7 +60,7 @@ define i32 @main() {
 ; IS__TUNIT____-NEXT:    store i32* @g, i32** [[TMP0]], align 8, !tbaa [[TBAA5]]
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = load i32*, i32** @a, align 8, !tbaa [[TBAA5]]
 ; IS__TUNIT____-NEXT:    store i32 1, i32* [[TMP1]], align 4, !tbaa [[TBAA0]]
-; IS__TUNIT____-NEXT:    call fastcc void @fn() #[[ATTR0]]
+; IS__TUNIT____-NEXT:    call fastcc void @fn(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @g) #[[ATTR0]]
 ; IS__TUNIT____-NEXT:    ret i32 0
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
