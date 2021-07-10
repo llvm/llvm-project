@@ -265,10 +265,11 @@ static bool genericValueTraversal(
         DepClassTy::NONE);
   bool AnyDead = false;
 
+  Value *InitialV = &IRP.getAssociatedValue();
   using Item = std::pair<Value *, const Instruction *>;
   SmallSet<Item, 16> Visited;
   SmallVector<Item, 16> Worklist;
-  Worklist.push_back({&IRP.getAssociatedValue(), CtxI});
+  Worklist.push_back({InitialV, CtxI});
 
   int Iteration = 0;
   do {
@@ -307,8 +308,22 @@ static bool genericValueTraversal(
       continue;
     }
 
-    // Look through select instructions, visit both potential values.
+    // Look through select instructions, visit assumed potential values.
     if (auto *SI = dyn_cast<SelectInst>(V)) {
+      bool UsedAssumedInformation = false;
+      Optional<Constant *> C = A.getAssumedConstant(
+          *SI->getCondition(), QueryingAA, UsedAssumedInformation);
+      bool NoValueYet = !C.hasValue();
+      if (NoValueYet || isa_and_nonnull<UndefValue>(*C))
+        continue;
+      if (auto *CI = dyn_cast_or_null<ConstantInt>(*C)) {
+        if (CI->isZero())
+          Worklist.push_back({SI->getFalseValue(), CtxI});
+        else
+          Worklist.push_back({SI->getTrueValue(), CtxI});
+        continue;
+      }
+      // We could not simplify the condition, assume both values.(
       Worklist.push_back({SI->getTrueValue(), CtxI});
       Worklist.push_back({SI->getFalseValue(), CtxI});
       continue;
