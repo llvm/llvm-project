@@ -731,14 +731,8 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
         if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
             HasCloseModifier) {
           if ((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-              !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
-            // Copy data only if the "parent" struct has RefCount==1.
-            int32_t ParentIdx = getParentIndex(ArgTypes[I]);
-            uint64_t ParentRC = Device.getMapEntryRefCnt(Args[ParentIdx]);
-            assert(ParentRC > 0 && "parent struct not found");
-            if (ParentRC == 1)
-              CopyMember = true;
-          }
+              !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ))
+            CopyMember = IsLast;
         }
 
         if ((DelEntry || Always || CopyMember) &&
