@@ -138,6 +138,7 @@ Attribute Attribute::get(LLVMContext &Context, StringRef Kind, StringRef Val) {
 
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
                          Type *Ty) {
+  assert(Attribute::isTypeAttrKind(Kind) && "Not a type attribute");
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
@@ -800,23 +801,13 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
     if (!B.contains(Kind))
       continue;
 
+    if (Attribute::isTypeAttrKind(Kind)) {
+      Attrs.push_back(Attribute::get(C, Kind, B.getTypeAttr(Kind)));
+      continue;
+    }
+
     Attribute Attr;
     switch (Kind) {
-    case Attribute::ByVal:
-      Attr = Attribute::getWithByValType(C, B.getByValType());
-      break;
-    case Attribute::StructRet:
-      Attr = Attribute::getWithStructRetType(C, B.getStructRetType());
-      break;
-    case Attribute::ByRef:
-      Attr = Attribute::getWithByRefType(C, B.getByRefType());
-      break;
-    case Attribute::Preallocated:
-      Attr = Attribute::getWithPreallocatedType(C, B.getPreallocatedType());
-      break;
-    case Attribute::InAlloca:
-      Attr = Attribute::getWithInAllocaType(C, B.getInAllocaType());
-      break;
     case Attribute::Alignment:
       assert(B.getAlignment() && "Alignment must be set");
       Attr = Attribute::getWithAlignment(C, *B.getAlignment());
@@ -1602,20 +1593,9 @@ void AttrBuilder::clear() {
 
 Optional<unsigned>
 AttrBuilder::kindToTypeIndex(Attribute::AttrKind Kind) const {
-  switch (Kind) {
-  case Attribute::ByVal:
-    return ByValTypeIndex;
-  case Attribute::ByRef:
-    return ByRefTypeIndex;
-  case Attribute::InAlloca:
-    return InAllocaTypeIndex;
-  case Attribute::Preallocated:
-    return PreallocatedTypeIndex;
-  case Attribute::StructRet:
-    return StructRetTypeIndex;
-  default:
-    return None;
-  }
+  if (Attribute::isTypeAttrKind(Kind))
+    return Kind - Attribute::FirstTypeAttr;
+  return None;
 }
 
 AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
@@ -1765,6 +1745,12 @@ AttrBuilder &AttrBuilder::addVScaleRangeAttrFromRawRepr(uint64_t RawArgs) {
   return *this;
 }
 
+Type *AttrBuilder::getTypeAttr(Attribute::AttrKind Kind) const {
+  Optional<unsigned> TypeIndex = kindToTypeIndex(Kind);
+  assert(TypeIndex && "Not a type attribute");
+  return TypeAttrs[*TypeIndex];
+}
+
 AttrBuilder &AttrBuilder::addTypeAttr(Attribute::AttrKind Kind, Type *Ty) {
   Optional<unsigned> TypeIndex = kindToTypeIndex(Kind);
   assert(TypeIndex && "Not a type attribute");
@@ -1813,7 +1799,7 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   if (!VScaleRangeArgs)
     VScaleRangeArgs = B.VScaleRangeArgs;
 
-  for (unsigned Index = 0; Index < NumTypeIndices; ++Index)
+  for (unsigned Index = 0; Index < Attribute::NumTypeAttrKinds; ++Index)
     if (!TypeAttrs[Index])
       TypeAttrs[Index] = B.TypeAttrs[Index];
 
@@ -1845,7 +1831,7 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
   if (B.VScaleRangeArgs)
     VScaleRangeArgs = 0;
 
-  for (unsigned Index = 0; Index < NumTypeIndices; ++Index)
+  for (unsigned Index = 0; Index < Attribute::NumTypeAttrKinds; ++Index)
     if (B.TypeAttrs[Index])
       TypeAttrs[Index] = nullptr;
 

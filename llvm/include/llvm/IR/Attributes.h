@@ -71,13 +71,18 @@ public:
   enum AttrKind {
     // IR-Level Attributes
     None,                  ///< No attributes have been set
-    #define GET_ATTR_NAMES
-    #define ATTRIBUTE_ENUM(ENUM_NAME, OTHER) ENUM_NAME,
+    #define GET_ATTR_ENUM
     #include "llvm/IR/Attributes.inc"
     EndAttrKinds,          ///< Sentinal value useful for loops
     EmptyKey,              ///< Use as Empty key for DenseMap of AttrKind
     TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };
+
+  static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
+
+  static bool isTypeAttrKind(AttrKind Kind) {
+    return Kind >= FirstTypeAttr && Kind <= LastTypeAttr;
+  }
 
 private:
   AttributeImpl *pImpl = nullptr;
@@ -802,16 +807,6 @@ template <> struct DenseMapInfo<AttributeList> {
 /// value, however, is not. So this can be used as a quick way to test for
 /// equality, presence of attributes, etc.
 class AttrBuilder {
-  // Indices into the TypeAttrs array.
-  enum : unsigned {
-    ByValTypeIndex = 0,
-    StructRetTypeIndex = 1,
-    ByRefTypeIndex = 2,
-    PreallocatedTypeIndex = 3,
-    InAllocaTypeIndex = 4,
-    NumTypeIndices = 5,
-  };
-
   std::bitset<Attribute::EndAttrKinds> Attrs;
   std::map<SmallString<32>, SmallString<32>, std::less<>> TargetDepAttrs;
   MaybeAlign Alignment;
@@ -820,7 +815,7 @@ class AttrBuilder {
   uint64_t DerefOrNullBytes = 0;
   uint64_t AllocSizeArgs = 0;
   uint64_t VScaleRangeArgs = 0;
-  std::array<Type *, NumTypeIndices> TypeAttrs = {};
+  std::array<Type *, Attribute::NumTypeAttrKinds> TypeAttrs = {};
 
   Optional<unsigned> kindToTypeIndex(Attribute::AttrKind Kind) const;
 
@@ -905,20 +900,25 @@ public:
   /// dereferenceable_or_null attribute exists (zero is returned otherwise).
   uint64_t getDereferenceableOrNullBytes() const { return DerefOrNullBytes; }
 
+  /// Retrieve type for the given type attribute.
+  Type *getTypeAttr(Attribute::AttrKind Kind) const;
+
   /// Retrieve the byval type.
-  Type *getByValType() const { return TypeAttrs[ByValTypeIndex]; }
+  Type *getByValType() const { return getTypeAttr(Attribute::ByVal); }
 
   /// Retrieve the sret type.
-  Type *getStructRetType() const { return TypeAttrs[StructRetTypeIndex]; }
+  Type *getStructRetType() const { return getTypeAttr(Attribute::StructRet); }
 
   /// Retrieve the byref type.
-  Type *getByRefType() const { return TypeAttrs[ByRefTypeIndex]; }
+  Type *getByRefType() const { return getTypeAttr(Attribute::ByRef); }
 
   /// Retrieve the preallocated type.
-  Type *getPreallocatedType() const { return TypeAttrs[PreallocatedTypeIndex]; }
+  Type *getPreallocatedType() const {
+    return getTypeAttr(Attribute::Preallocated);
+  }
 
   /// Retrieve the inalloca type.
-  Type *getInAllocaType() const { return TypeAttrs[InAllocaTypeIndex]; }
+  Type *getInAllocaType() const { return getTypeAttr(Attribute::InAlloca); }
 
   /// Retrieve the allocsize args, if the allocsize attribute exists.  If it
   /// doesn't exist, pair(0, 0) is returned.
