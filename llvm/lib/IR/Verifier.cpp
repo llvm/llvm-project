@@ -540,8 +540,7 @@ private:
   void verifyTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context);
   void verifyMustTailCall(CallInst &CI);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
-  void verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
-                            const Value *V);
+  void verifyAttributeTypes(AttributeSet Attrs, const Value *V);
   void verifyParameterAttrs(AttributeSet Attrs, Type *Ty, const Value *V);
   void checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
                                     const Value *V);
@@ -1654,76 +1653,7 @@ void Verifier::visitModuleFlagCGProfileEntry(const MDOperand &MDO) {
          "expected an integer constant", Node->getOperand(2));
 }
 
-/// Return true if this attribute kind only applies to functions.
-static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
-  switch (Kind) {
-  case Attribute::NoMerge:
-  case Attribute::NoReturn:
-  case Attribute::NoSync:
-  case Attribute::WillReturn:
-  case Attribute::NoCallback:
-  case Attribute::NoCfCheck:
-  case Attribute::NoUnwind:
-  case Attribute::NoInline:
-  case Attribute::NoSanitizeCoverage:
-  case Attribute::AlwaysInline:
-  case Attribute::OptimizeForSize:
-  case Attribute::StackProtect:
-  case Attribute::StackProtectReq:
-  case Attribute::StackProtectStrong:
-  case Attribute::SafeStack:
-  case Attribute::ShadowCallStack:
-  case Attribute::NoRedZone:
-  case Attribute::NoImplicitFloat:
-  case Attribute::Naked:
-  case Attribute::InlineHint:
-  case Attribute::UWTable:
-  case Attribute::VScaleRange:
-  case Attribute::NonLazyBind:
-  case Attribute::ReturnsTwice:
-  case Attribute::SanitizeAddress:
-  case Attribute::SanitizeHWAddress:
-  case Attribute::SanitizeMemTag:
-  case Attribute::SanitizeThread:
-  case Attribute::SanitizeMemory:
-  case Attribute::MinSize:
-  case Attribute::NoDuplicate:
-  case Attribute::Builtin:
-  case Attribute::NoBuiltin:
-  case Attribute::Cold:
-  case Attribute::Hot:
-  case Attribute::OptForFuzzing:
-  case Attribute::OptimizeNone:
-  case Attribute::JumpTable:
-  case Attribute::Convergent:
-  case Attribute::ArgMemOnly:
-  case Attribute::NoRecurse:
-  case Attribute::InaccessibleMemOnly:
-  case Attribute::InaccessibleMemOrArgMemOnly:
-  case Attribute::AllocSize:
-  case Attribute::SpeculativeLoadHardening:
-  case Attribute::Speculatable:
-  case Attribute::StrictFP:
-  case Attribute::NullPointerIsValid:
-  case Attribute::MustProgress:
-  case Attribute::NoProfile:
-    return true;
-  default:
-    break;
-  }
-  return false;
-}
-
-/// Return true if this is a function attribute that can also appear on
-/// arguments.
-static bool isFuncOrArgAttr(Attribute::AttrKind Kind) {
-  return Kind == Attribute::ReadOnly || Kind == Attribute::WriteOnly ||
-         Kind == Attribute::ReadNone || Kind == Attribute::NoFree ||
-         Kind == Attribute::Preallocated || Kind == Attribute::StackAlignment;
-}
-
-void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
-                                    const Value *V) {
+void Verifier::verifyAttributeTypes(AttributeSet Attrs, const Value *V) {
   for (Attribute A : Attrs) {
 
     if (A.isStringAttribute()) {
@@ -1746,20 +1676,6 @@ void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
                   V);
       return;
     }
-
-    if (isFuncOnlyAttr(A.getKindAsEnum())) {
-      if (!IsFunction) {
-        CheckFailed("Attribute '" + A.getAsString() +
-                        "' only applies to functions!",
-                    V);
-        return;
-      }
-    } else if (IsFunction && !isFuncOrArgAttr(A.getKindAsEnum())) {
-      CheckFailed("Attribute '" + A.getAsString() +
-                      "' does not apply to functions!",
-                  V);
-      return;
-    }
   }
 }
 
@@ -1770,7 +1686,14 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   if (!Attrs.hasAttributes())
     return;
 
-  verifyAttributeTypes(Attrs, /*IsFunction=*/false, V);
+  verifyAttributeTypes(Attrs, V);
+
+  for (Attribute Attr : Attrs)
+    Assert(Attr.isStringAttribute() ||
+           Attribute::canUseAsParamAttr(Attr.getKindAsEnum()),
+           "Attribute '" + Attr.getAsString() +
+               "' does not apply to parameters",
+           V);
 
   if (Attrs.hasAttribute(Attribute::ImmArg)) {
     Assert(Attrs.getNumAttributes() == 1,
@@ -1941,29 +1864,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   // Verify return value attributes.
   AttributeSet RetAttrs = Attrs.getRetAttributes();
-  Assert((!RetAttrs.hasAttribute(Attribute::ByVal) &&
-          !RetAttrs.hasAttribute(Attribute::Nest) &&
-          !RetAttrs.hasAttribute(Attribute::StructRet) &&
-          !RetAttrs.hasAttribute(Attribute::NoCapture) &&
-          !RetAttrs.hasAttribute(Attribute::NoFree) &&
-          !RetAttrs.hasAttribute(Attribute::Returned) &&
-          !RetAttrs.hasAttribute(Attribute::InAlloca) &&
-          !RetAttrs.hasAttribute(Attribute::Preallocated) &&
-          !RetAttrs.hasAttribute(Attribute::ByRef) &&
-          !RetAttrs.hasAttribute(Attribute::SwiftSelf) &&
-          !RetAttrs.hasAttribute(Attribute::SwiftAsync) &&
-          !RetAttrs.hasAttribute(Attribute::SwiftError)),
-         "Attributes 'byval', 'inalloca', 'preallocated', 'byref', "
-         "'nest', 'sret', 'nocapture', 'nofree', "
-         "'returned', 'swiftself', 'swiftasync', and 'swifterror'"
-         " do not apply to return values!",
-         V);
-  Assert((!RetAttrs.hasAttribute(Attribute::ReadOnly) &&
-          !RetAttrs.hasAttribute(Attribute::WriteOnly) &&
-          !RetAttrs.hasAttribute(Attribute::ReadNone)),
-         "Attribute '" + RetAttrs.getAsString() +
-             "' does not apply to function returns",
-         V);
+  for (Attribute RetAttr : RetAttrs)
+    Assert(RetAttr.isStringAttribute() ||
+           Attribute::canUseAsRetAttr(RetAttr.getKindAsEnum()),
+           "Attribute '" + RetAttr.getAsString() +
+               "' does not apply to function return values",
+           V);
+
   verifyParameterAttrs(RetAttrs, FT->getReturnType(), V);
 
   // Verify parameter attributes.
@@ -2024,7 +1931,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   if (!Attrs.hasAttributes(AttributeList::FunctionIndex))
     return;
 
-  verifyAttributeTypes(Attrs.getFnAttributes(), /*IsFunction=*/true, V);
+  verifyAttributeTypes(Attrs.getFnAttributes(), V);
+  for (Attribute FnAttr : Attrs.getFnAttributes())
+    Assert(FnAttr.isStringAttribute() ||
+           Attribute::canUseAsFnAttr(FnAttr.getKindAsEnum()),
+           "Attribute '" + FnAttr.getAsString() +
+               "' does not apply to functions!",
+           V);
 
   Assert(!(Attrs.hasFnAttribute(Attribute::ReadNone) &&
            Attrs.hasFnAttribute(Attribute::ReadOnly)),
@@ -4705,10 +4618,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         Assert(ArgCount == 2, "this attribute should have 2 arguments");
         Assert(isa<ConstantInt>(Call.getOperand(Elem.Begin + 1)),
                "the second argument should be a constant integral value");
-      } else if (isFuncOnlyAttr(Kind)) {
-        Assert((ArgCount) == 0, "this attribute has no argument");
-      } else if (!isFuncOrArgAttr(Kind)) {
+      } else if (Attribute::canUseAsParamAttr(Kind)) {
         Assert((ArgCount) == 1, "this attribute should have one argument");
+      } else if (Attribute::canUseAsFnAttr(Kind)) {
+        Assert((ArgCount) == 0, "this attribute has no argument");
       }
     }
     break;

@@ -90,6 +90,10 @@ public:
     return Kind >= FirstTypeAttr && Kind <= LastTypeAttr;
   }
 
+  static bool canUseAsFnAttr(AttrKind Kind);
+  static bool canUseAsParamAttr(AttrKind Kind);
+  static bool canUseAsRetAttr(AttrKind Kind);
+
 private:
   AttributeImpl *pImpl = nullptr;
 
