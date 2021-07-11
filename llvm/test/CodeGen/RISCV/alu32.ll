@@ -10,9 +10,6 @@
 
 ; Register-immediate instructions.
 
-; TODO: Sign-extension would also work when promoting the operands of
-; sltu/sltiu on RV64 and is cheaper than zero-extension (1 instruction vs 2).
-
 define i32 @addi(i32 %a) nounwind {
 ; RV32I-LABEL: addi:
 ; RV32I:       # %bb.0:
