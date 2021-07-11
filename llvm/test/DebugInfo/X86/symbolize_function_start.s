@@ -6,7 +6,7 @@
 # RUN: llvm-dwarfdump -lookup=0x1 test.o | FileCheck --check-prefix=LOOKUP %s
 
 # SYM: Filename: .{{[/\\]}}.{{[/\\]}}./test.h
-# SYM: Function start filename: ./test.cpp
+# SYM: Function start filename: .{{[/\\]}}test.cpp
 
 # LOOKUP: Line info: line 0, column 0, start file 'test.cpp', start line 1
 
