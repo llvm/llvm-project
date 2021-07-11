@@ -219,9 +219,7 @@ void internal__exit(int exitcode) {
   _exit(exitcode);
 }
 
-unsigned int internal_sleep(unsigned int seconds) {
-  return sleep(seconds);
-}
+void internal_usleep(u64 useconds) { usleep(useconds); }
 
 uptr internal_getpid() {
   return getpid();
