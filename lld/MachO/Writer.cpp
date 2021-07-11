@@ -467,7 +467,7 @@ public:
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
     t->tool = TOOL_LD;
-    t->version = encodeVersion(llvm::VersionTuple(
+    t->version = encodeVersion(VersionTuple(
         LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR, LLVM_VERSION_PATCH));
   }
 
@@ -666,14 +666,14 @@ void Writer::scanSymbols() {
 
 // TODO: ld64 enforces the old load commands in a few other cases.
 static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
-  static const std::vector<std::pair<PlatformKind, llvm::VersionTuple>>
-      minVersion = {{PlatformKind::macOS, llvm::VersionTuple(10, 14)},
-                    {PlatformKind::iOS, llvm::VersionTuple(12, 0)},
-                    {PlatformKind::iOSSimulator, llvm::VersionTuple(13, 0)},
-                    {PlatformKind::tvOS, llvm::VersionTuple(12, 0)},
-                    {PlatformKind::tvOSSimulator, llvm::VersionTuple(13, 0)},
-                    {PlatformKind::watchOS, llvm::VersionTuple(5, 0)},
-                    {PlatformKind::watchOSSimulator, llvm::VersionTuple(6, 0)}};
+  static const std::vector<std::pair<PlatformKind, VersionTuple>> minVersion = {
+      {PlatformKind::macOS, VersionTuple(10, 14)},
+      {PlatformKind::iOS, VersionTuple(12, 0)},
+      {PlatformKind::iOSSimulator, VersionTuple(13, 0)},
+      {PlatformKind::tvOS, VersionTuple(12, 0)},
+      {PlatformKind::tvOSSimulator, VersionTuple(13, 0)},
+      {PlatformKind::watchOS, VersionTuple(5, 0)},
+      {PlatformKind::watchOSSimulator, VersionTuple(6, 0)}};
   auto it = llvm::find_if(minVersion, [&](const auto &p) {
     return p.first == platformInfo.target.Platform;
   });
