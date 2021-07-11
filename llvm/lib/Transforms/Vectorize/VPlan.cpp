@@ -516,7 +516,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   }
   case VPReplicateSC:
   case VPWidenCallSC:
-    return cast<Instruction>(getVPValue()->getUnderlyingValue())
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayWriteToMemory();
   case VPBranchOnMaskSC:
     return false;
@@ -529,7 +529,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionSC:
   case VPWidenSelectSC: {
     const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPValue()->getUnderlyingValue());
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayWriteToMemory()) &&
            "underlying instruction may write to memory");
@@ -547,7 +547,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   }
   case VPReplicateSC:
   case VPWidenCallSC:
-    return cast<Instruction>(getVPValue()->getUnderlyingValue())
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
   case VPBranchOnMaskSC:
     return false;
@@ -560,7 +560,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPReductionSC:
   case VPWidenSelectSC: {
     const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPValue()->getUnderlyingValue());
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayReadFromMemory()) &&
            "underlying instruction may read from memory");
@@ -584,7 +584,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPReductionSC:
   case VPWidenSelectSC: {
     const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPValue()->getUnderlyingValue());
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayHaveSideEffects()) &&
            "underlying instruction has side-effects");
@@ -1179,7 +1179,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
 
   if (!isStore()) {
-    getVPValue()->printAsOperand(O, SlotTracker);
+    getVPSingleValue()->printAsOperand(O, SlotTracker);
     O << " = ";
   }
   O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
@@ -1217,7 +1217,7 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
 void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
-  getVPValue()->printAsOperand(O, SlotTracker);
+  getVPSingleValue()->printAsOperand(O, SlotTracker);
   O << " = WIDEN-CANONICAL-INDUCTION";
 }
 #endif
