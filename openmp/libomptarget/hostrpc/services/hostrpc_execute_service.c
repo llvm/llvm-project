@@ -210,6 +210,15 @@ static void hostrpc_handler_SERVICE_MALLOC(uint32_t device_id,
   payload[1] = (uint64_t)ptr;
 }
 
+static void hostrpc_handler_SERVICE_FTNASSIGN(uint32_t device_id,
+                                              uint64_t *payload) {
+  void *ptr = NULL;
+  hsa_status_t err = ftn_assign_wrapper(payload[0], payload[1], payload[2], payload[3], payload[4]);
+  payload[0] = (uint64_t)err;
+  payload[1] = (uint64_t)ptr;
+}
+
+
 static void hostrpc_handler_SERVICE_FREE(uint32_t device_id,
                                          uint64_t *payload) {
   char *device_buffer = (char *)payload[0];
@@ -331,6 +340,9 @@ extern void hostrpc_execute_service(uint32_t service, uint32_t device_id,
     break;
   case HOSTRPC_SERVICE_MALLOC:
     hostrpc_handler_SERVICE_MALLOC(device_id, payload);
+    break;
+  case HOSTRPC_SERVICE_FTNASSIGN:
+    hostrpc_handler_SERVICE_FTNASSIGN(device_id, payload);
     break;
   case HOSTRPC_SERVICE_FREE:
     hostrpc_handler_SERVICE_FREE(device_id, payload);

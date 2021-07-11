@@ -416,4 +416,9 @@ extern "C" {
   hsa_status_t atmi_free(void *mem) {
     return core::Runtime::Memfree(mem);
   }
+
+  hsa_status_t ftn_assign_wrapper(void *arg0, void *arg1, void *arg2, void *arg3, void *arg4) {
+    return core::Runtime::FtnAssignWrapper(arg0, arg1, arg2, arg3, arg4);
+  }
+
 }

@@ -109,6 +109,19 @@ EXTERN int fprintf_execute(char *print_buffer, uint32_t bufsz) {
   return (int)result.arg0;
 }
 
+EXTERN uint64_t tgt_fort_ptr_assn_i8(void *varg0, void * varg1, void* varg2, void *varg3, void *varg4) {
+  uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
+  arg0 = (uint64_t)varg0;
+  arg1 = (uint64_t)varg1;
+  arg2 = (uint64_t)varg2;
+  arg3 = (uint64_t)varg3;
+  arg4 = (uint64_t)varg4;
+  hostrpc_result_t result =
+      hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_FTNASSIGN), arg0, arg1, arg2, arg3,
+                     arg4, arg5, arg6, arg7);
+  return (uint64_t)result.arg0;
+}
+
 EXTERN uint32_t hostrpc_varfn_uint_execute(char *print_buffer, uint32_t bufsz) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
   arg0 = (uint64_t)bufsz;
