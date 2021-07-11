@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_LIB_INTERPRETER_INCREMENTALPARSER_H
 #define LLVM_CLANG_LIB_INTERPRETER_INCREMENTALPARSER_H
 
-#include "clang/Interpreter/Transaction.h"
+#include "clang/Interpreter/PartialTranslationUnit.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -55,7 +55,7 @@ class IncrementalParser {
 
   /// List containing every information about every incrementally parsed piece
   /// of code.
-  std::list<Transaction> Transactions;
+  std::list<PartialTranslationUnit> PTUs;
 
 public:
   IncrementalParser(std::unique_ptr<CompilerInstance> Instance,
@@ -65,12 +65,12 @@ public:
   const CompilerInstance *getCI() const { return CI.get(); }
 
   /// Parses incremental input by creating an in-memory file.
-  ///\returns a \c Transaction which holds information about the \c Decls and
-  /// \c llvm::Module corresponding to the input.
-  llvm::Expected<Transaction &> Parse(llvm::StringRef Input);
+  ///\returns a \c PartialTranslationUnit which holds information about the
+  /// \c TranslationUnitDecl and \c llvm::Module corresponding to the input.
+  llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Input);
 
 private:
-  llvm::Expected<Transaction &> ParseOrWrapTopLevelDecl();
+  llvm::Expected<PartialTranslationUnit &> ParseOrWrapTopLevelDecl();
 };
 } // end namespace clang
 
