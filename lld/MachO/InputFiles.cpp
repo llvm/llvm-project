@@ -547,11 +547,10 @@ template <class NList>
 static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
                                      StringRef name) {
   if (sym.n_type & N_EXT) {
-    return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
-                              /*isWeakDef=*/false, sym.n_type & N_PEXT,
-                              sym.n_desc & N_ARM_THUMB_DEF,
-                              /*isReferencedDynamically=*/false,
-                              sym.n_desc & N_NO_DEAD_STRIP);
+    return symtab->addDefined(
+        name, file, nullptr, sym.n_value, /*size=*/0,
+        /*isWeakDef=*/false, sym.n_type & N_PEXT, sym.n_desc & N_ARM_THUMB_DEF,
+        /*isReferencedDynamically=*/false, sym.n_desc & N_NO_DEAD_STRIP);
   }
   return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
                        /*isWeakDef=*/false,
