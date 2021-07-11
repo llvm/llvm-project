@@ -3,8 +3,6 @@
 // RUN: %clang_cc1 -fexperimental-new-pass-manager -verify      -Rpass=openmp-opt -Rpass-analysis=openmp-opt -fopenmp -O2 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t.out
 
 // host-no-diagnostics
-// Will be renabled with D101977
-// XFAIL: *
 
 void bar(void) {
 #pragma omp parallel // #1                                                                                                                                                                                                                                                                                                                                           \
@@ -16,6 +14,7 @@ void bar(void) {
 
 void foo(void) {
 #pragma omp target teams // #2                                                                                                                                                                      \
+                         // expected-remark@#2 {{Generic-mode kernel is executed with a customized state machine [3 known parallel regions] (good).}}
                          // expected-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__1_wrapper, kernel ID: __omp_offloading}} \
                          // expected-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__2_wrapper, kernel ID: __omp_offloading}}
   {
@@ -46,4 +45,4 @@ void spmd(void) {
 }
 
 // expected-remark@* {{OpenMP runtime call __kmpc_global_thread_num moved to beginning of OpenMP region}}
-// expected-remark@* 2 {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
+// expected-remark@* {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
