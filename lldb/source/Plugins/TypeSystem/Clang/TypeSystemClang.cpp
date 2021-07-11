@@ -746,7 +746,7 @@ void TypeSystemClang::CreateASTContext() {
       *m_diagnostics_engine_up, *m_file_manager_up);
   m_ast_up = std::make_unique<ASTContext>(
       *m_language_options_up, *m_source_manager_up, *m_identifier_table_up,
-      *m_selector_table_up, *m_builtins_up);
+      *m_selector_table_up, *m_builtins_up, TU_Complete);
 
   m_diagnostic_consumer_up = std::make_unique<NullDiagnosticConsumer>();
   m_ast_up->getDiagnostics().setClient(m_diagnostic_consumer_up.get(), false);
