@@ -323,7 +323,7 @@ protected:
     // according to LangOptions, so we init Parser to register opencl
     // pragma handlers
     ASTContext Context(OpenCLLangOpts, SourceMgr, PP.getIdentifierTable(),
-                       PP.getSelectorTable(), PP.getBuiltinInfo(), PP.TUKind);
+                       PP.getSelectorTable(), PP.getBuiltinInfo());
     Context.InitBuiltinTypes(*Target);
 
     ASTConsumer Consumer;

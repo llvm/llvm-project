@@ -1219,6 +1219,7 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
 
 DeclContext *DeclContext::getPrimaryContext() {
   switch (getDeclKind()) {
+  case Decl::TranslationUnit:
   case Decl::ExternCContext:
   case Decl::LinkageSpec:
   case Decl::Export:
@@ -1230,8 +1231,6 @@ DeclContext *DeclContext::getPrimaryContext() {
     // There is only one DeclContext for these entities.
     return this;
 
-  case Decl::TranslationUnit:
-    return static_cast<TranslationUnitDecl *>(this)->getFirstDecl();
   case Decl::Namespace:
     // The original namespace is our primary context.
     return static_cast<NamespaceDecl *>(this)->getOriginalNamespace();
@@ -1286,25 +1285,21 @@ DeclContext *DeclContext::getPrimaryContext() {
   }
 }
 
-template <typename T>
-void collectAllContextsImpl(T *Self, SmallVectorImpl<DeclContext *> &Contexts) {
-  for (T *D = Self->getMostRecentDecl(); D; D = D->getPreviousDecl())
-    Contexts.push_back(D);
-
-  std::reverse(Contexts.begin(), Contexts.end());
-}
-
-void DeclContext::collectAllContexts(SmallVectorImpl<DeclContext *> &Contexts) {
+void
+DeclContext::collectAllContexts(SmallVectorImpl<DeclContext *> &Contexts){
   Contexts.clear();
 
-  Decl::Kind Kind = getDeclKind();
-
-  if (Kind == Decl::TranslationUnit)
-    collectAllContextsImpl(static_cast<TranslationUnitDecl *>(this), Contexts);
-  else if (Kind == Decl::Namespace)
-    collectAllContextsImpl(static_cast<NamespaceDecl *>(this), Contexts);
-  else
+  if (getDeclKind() != Decl::Namespace) {
     Contexts.push_back(this);
+    return;
+  }
+
+  auto *Self = static_cast<NamespaceDecl *>(this);
+  for (NamespaceDecl *N = Self->getMostRecentDecl(); N;
+       N = N->getPreviousDecl())
+    Contexts.push_back(N);
+
+  std::reverse(Contexts.begin(), Contexts.end());
 }
 
 std::pair<Decl *, Decl *>
