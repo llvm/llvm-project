@@ -666,15 +666,17 @@ void Writer::scanSymbols() {
 
 // TODO: ld64 enforces the old load commands in a few other cases.
 static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
-  static const std::map<PlatformKind, llvm::VersionTuple> minVersion = {
-      {PlatformKind::macOS, llvm::VersionTuple(10, 14)},
-      {PlatformKind::iOS, llvm::VersionTuple(12, 0)},
-      {PlatformKind::iOSSimulator, llvm::VersionTuple(13, 0)},
-      {PlatformKind::tvOS, llvm::VersionTuple(12, 0)},
-      {PlatformKind::tvOSSimulator, llvm::VersionTuple(13, 0)},
-      {PlatformKind::watchOS, llvm::VersionTuple(5, 0)},
-      {PlatformKind::watchOSSimulator, llvm::VersionTuple(6, 0)}};
-  auto it = minVersion.find(platformInfo.target.Platform);
+  static const std::vector<std::pair<PlatformKind, llvm::VersionTuple>>
+      minVersion = {{PlatformKind::macOS, llvm::VersionTuple(10, 14)},
+                    {PlatformKind::iOS, llvm::VersionTuple(12, 0)},
+                    {PlatformKind::iOSSimulator, llvm::VersionTuple(13, 0)},
+                    {PlatformKind::tvOS, llvm::VersionTuple(12, 0)},
+                    {PlatformKind::tvOSSimulator, llvm::VersionTuple(13, 0)},
+                    {PlatformKind::watchOS, llvm::VersionTuple(5, 0)},
+                    {PlatformKind::watchOSSimulator, llvm::VersionTuple(6, 0)}};
+  auto it = llvm::find_if(minVersion, [&](const auto &p) {
+    return p.first == platformInfo.target.Platform;
+  });
   return it == minVersion.end() ? true : platformInfo.minimum >= it->second;
 }
 
