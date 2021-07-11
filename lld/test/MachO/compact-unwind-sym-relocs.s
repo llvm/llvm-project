@@ -1,5 +1,11 @@
 # REQUIRES: x86
-## These yaml files were  from an object file produced with 'ld -r', specifically:
+
+## Test that we correctly handle symbol relocations in the compact unwind
+## section.
+
+## llvm-mc does not emit such relocations for compact unwind, but `ld -r` does.
+## As such, these yaml files were from an object file produced with 'ld -r',
+## specifically:
 ##
 ##  // foo.s
 ## .text
@@ -13,10 +19,11 @@
 ## llvm-mc -filetype=obj -triple=x86_64-apple-macos10.15 -o foo1.o foo.s
 ## ld -r -o foo.o foo1.o
 
-
 # RUN: rm -rf %t; mkdir -p %t
 # RUN: yaml2obj %s -o %t/foo.o
 # RUN: %lld -o %t/a.out %t/foo.o
+# RUN: llvm-objdump --macho --section-headers %t/a.out | FileCheck %s
+# CHECK: __unwind_info {{.*}} DATA
 
 --- !mach-o
 FileHeader:
