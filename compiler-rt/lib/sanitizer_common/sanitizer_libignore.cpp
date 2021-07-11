@@ -84,6 +84,7 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
         ignored_code_ranges_[idx].begin = range.beg;
         ignored_code_ranges_[idx].end = range.end;
         atomic_store(&ignored_ranges_count_, idx + 1, memory_order_release);
+        atomic_store(&enabled_, 1, memory_order_release);
         break;
       }
     }
@@ -114,6 +115,7 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
         instrumented_code_ranges_[idx].end = range.end;
         atomic_store(&instrumented_ranges_count_, idx + 1,
                      memory_order_release);
+        atomic_store(&enabled_, 1, memory_order_release);
       }
     }
   }
@@ -121,6 +123,29 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
 
 void LibIgnore::OnLibraryUnloaded() {
   OnLibraryLoaded(nullptr);
+}
+
+bool LibIgnore::IsIgnoredSlow(uptr pc, bool *pc_in_ignored_lib) const {
+  const uptr n = atomic_load(&ignored_ranges_count_, memory_order_acquire);
+  for (uptr i = 0; i < n; i++) {
+    if (IsInRange(pc, ignored_code_ranges_[i])) {
+      *pc_in_ignored_lib = true;
+      return true;
+    }
+  }
+  *pc_in_ignored_lib = false;
+  if (track_instrumented_libs_ && !IsPcInstrumented(pc))
+    return true;
+  return false;
+}
+
+bool LibIgnore::IsPcInstrumented(uptr pc) const {
+  const uptr n = atomic_load(&instrumented_ranges_count_, memory_order_acquire);
+  for (uptr i = 0; i < n; i++) {
+    if (IsInRange(pc, instrumented_code_ranges_[i]))
+      return true;
+  }
+  return false;
 }
 
 } // namespace __sanitizer
