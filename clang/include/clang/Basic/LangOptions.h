@@ -697,11 +697,7 @@ enum TranslationUnitKind {
   TU_Prefix,
 
   /// The translation unit is a module.
-  TU_Module,
-
-  /// The translation unit is a is a complete translation unit that we might
-  /// incrementally extend later.
-  TU_Incremental
+  TU_Module
 };
 
 } // namespace clang
