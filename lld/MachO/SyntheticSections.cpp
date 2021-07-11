@@ -497,13 +497,17 @@ void StubHelperSection::writeTo(uint8_t *buf) const {
 }
 
 void StubHelperSection::setup() {
-  stubBinder = dyn_cast_or_null<DylibSymbol>(symtab->find("dyld_stub_binder"));
-  if (stubBinder == nullptr) {
-    error("symbol dyld_stub_binder not found (normally in libSystem.dylib). "
-          "Needed to perform lazy binding.");
+  Symbol *binder = symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr,
+                                        /*isWeakRef=*/false);
+  if (auto *undefined = dyn_cast<Undefined>(binder))
+    treatUndefinedSymbol(*undefined,
+                         "lazy binding (normally in libSystem.dylib)");
+
+  // treatUndefinedSymbol() can replace binder with a DylibSymbol; re-check.
+  stubBinder = dyn_cast_or_null<DylibSymbol>(binder);
+  if (stubBinder == nullptr)
     return;
-  }
-  stubBinder->reference(RefState::Strong);
+
   in.got->addEntry(stubBinder);
 
   inputSections.push_back(in.imageLoaderCache);
