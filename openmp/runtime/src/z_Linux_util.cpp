@@ -66,8 +66,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-#include "tsan_annotations.h"
-
 struct kmp_sys_timer {
   struct timespec start;
 };
@@ -1328,7 +1326,6 @@ void __kmp_suspend_initialize(void) {
 }
 
 void __kmp_suspend_initialize_thread(kmp_info_t *th) {
-  ANNOTATE_HAPPENS_AFTER(&th->th.th_suspend_init_count);
   int old_value = KMP_ATOMIC_LD_RLX(&th->th.th_suspend_init_count);
   int new_value = __kmp_fork_count + 1;
   // Return if already initialized
@@ -1350,7 +1347,6 @@ void __kmp_suspend_initialize_thread(kmp_info_t *th) {
                                 &__kmp_suspend_mutex_attr);
     KMP_CHECK_SYSFAIL("pthread_mutex_init", status);
     KMP_ATOMIC_ST_REL(&th->th.th_suspend_init_count, new_value);
-    ANNOTATE_HAPPENS_BEFORE(&th->th.th_suspend_init_count);
   }
 }
 

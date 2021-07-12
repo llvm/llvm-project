@@ -17,15 +17,15 @@
 // clang-format off
 template<class F, class T, class U>
 requires std::relation<F, T, U>
-[[nodiscard]] constexpr bool check_subsumption() { return false; }
+constexpr bool check_subsumption() { return false; }
 
 template<class F, class T>
 requires std::equivalence_relation<F, T, T> && true
-[[nodiscard]] constexpr bool check_subsumption() { return false; }
+constexpr bool check_subsumption() { return false; }
 
 template<class F, class T, class U>
 requires std::equivalence_relation<F, T, U> && true
-[[nodiscard]] constexpr bool check_subsumption() { return true; }
+constexpr bool check_subsumption() { return true; }
 // clang-format on
 
 static_assert(check_subsumption<int (*)(int, int), int, int>());
@@ -46,11 +46,11 @@ static_assert(check_subsumption<R, S1, S2>());
 // clang-format off
 template<class F, class T, class U>
 requires std::relation<F, T, U> && true
-[[nodiscard]] constexpr bool check_reverse_subsumption() { return true; }
+constexpr bool check_reverse_subsumption() { return true; }
 
 template<class F, class T, class U>
 requires std::equivalence_relation<F, T, U>
-[[nodiscard]] constexpr bool check_no_subsumption() { return false; }
+constexpr bool check_no_subsumption() { return false; }
 // clang-format on
 
 static_assert(check_reverse_subsumption<int (*)(int, int), int, int>());

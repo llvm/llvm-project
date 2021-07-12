@@ -406,7 +406,7 @@ Symbols:
 ## Check llvm-readobj reports it.
 
 # RUN: yaml2obj %s --docnum=19 -o %t19
-# RUN: llvm-readobj -dt %t19 2>&1 | FileCheck -DFILE=%t19 --check-prefix=INVALID-VERSION %s
+# RUN: llvm-readobj --dyn-symbols %t19 2>&1 | FileCheck -DFILE=%t19 --check-prefix=INVALID-VERSION %s
 
 # INVALID-VERSION: warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
 

@@ -95,6 +95,7 @@ struct Configuration {
   Symbol *entry = nullptr;
   bool hasReexports = false;
   bool allLoad = false;
+  bool applicationExtension = false;
   bool archMultiple = false;
   bool exportDynamic = false;
   bool forceLoadObjC = false;

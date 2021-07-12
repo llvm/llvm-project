@@ -1289,7 +1289,9 @@ defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
                       "extadd_pairwise_i16x8_u", 0x7f>;
 
 // f64x2 <-> f32x4 conversions
-defm "" : SIMDConvert<F32x4, F64x2, int_wasm_demote_zero,
+def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
+def demote_zero : SDNode<"WebAssemblyISD::DEMOTE_ZERO", demote_t>;
+defm "" : SIMDConvert<F32x4, F64x2, demote_zero,
                       "demote_zero_f64x2", 0x5e>;
 
 def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;

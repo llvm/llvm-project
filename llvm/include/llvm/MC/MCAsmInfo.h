@@ -390,6 +390,10 @@ protected:
   /// for ELF targets.  Defaults to true.
   bool HasSingleParameterDotFile = true;
 
+  /// True if the target has a four strings .file directive, strings seperated
+  /// by comma. Defaults to false.
+  bool HasFourStringsDotFile = false;
+
   /// True if the target has a .ident directive, this is true for ELF targets.
   /// Defaults to false.
   bool HasIdentDirective = false;
@@ -729,6 +733,7 @@ public:
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
+  bool hasFourStringsDotFile() const { return HasFourStringsDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }
   bool hasNoDeadStrip() const { return HasNoDeadStrip; }
   bool hasAltEntry() const { return HasAltEntry; }
