@@ -660,6 +660,51 @@ define <4 x i32> @signbits_mask_ashr_umin(<4 x i32> %a0, <4 x i32> %a1) {
 }
 declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
+define i32 @signbits_cmpss(float %0, float %1) {
+; X86-LABEL: signbits_cmpss:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vcmpeqss {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vmovd %xmm0, %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: signbits_cmpss:
+; X64:       # %bb.0:
+; X64-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    retq
+  %3 = fcmp oeq float %0, %1
+  %4 = sext i1 %3 to i32
+  ret i32 %4
+}
+
+define i64 @signbits_cmpsd(double %0, double %1) {
+; X86-LABEL: signbits_cmpsd:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vcmpeqsd {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vmovd %xmm0, %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: signbits_cmpsd:
+; X64:       # %bb.0:
+; X64-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovq %xmm0, %rax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    negq %rax
+; X64-NEXT:    retq
+  %3 = fcmp oeq double %0, %1
+  %4 = sext i1 %3 to i64
+  ret i64 %4
+}
+
 ; Make sure we can preserve sign bit information into the second basic block
 ; so we can avoid having to shift bit 0 into bit 7 for each element due to
 ; v32i1->v32i8 promotion and the splitting of v32i8 into 2xv16i8. This requires
