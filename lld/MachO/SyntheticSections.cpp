@@ -113,6 +113,9 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MH_EXECUTE && config->isPic)
     hdr->flags |= MH_PIE;
 
+  if (config->outputType == MH_DYLIB && config->applicationExtension)
+    hdr->flags |= MH_APP_EXTENSION_SAFE;
+
   if (in.exports->hasWeakSymbol || in.weakBinding->hasNonWeakDefinition())
     hdr->flags |= MH_WEAK_DEFINES;
 

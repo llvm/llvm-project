@@ -954,6 +954,8 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   if (!checkCompatibility(this))
     return;
 
+  checkAppExtensionSafety(hdr->flags & MH_APP_EXTENSION_SAFE);
+
   for (auto *cmd : findCommands<rpath_command>(hdr, LC_RPATH)) {
     StringRef rpath{reinterpret_cast<const char *>(cmd) + cmd->path};
     rpaths.push_back(rpath);
@@ -1042,6 +1044,8 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
           std::string(config->platformInfo.target));
     return;
   }
+
+  checkAppExtensionSafety(interface.isApplicationExtensionSafe());
 
   exportingFile = isImplicitlyLinked(installName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
@@ -1169,6 +1173,11 @@ void DylibFile::handleLDInstallNameSymbol(StringRef name,
     warn("failed to parse os version, symbol '" + originalName + "' ignored");
   else if (version == config->platformInfo.minimum)
     this->installName = saver.save(installName);
+}
+
+void DylibFile::checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const {
+  if (config->applicationExtension && !dylibIsAppExtensionSafe)
+    warn("using '-application_extension' with unsafe dylib: " + toString(this));
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
