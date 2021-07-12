@@ -63,7 +63,7 @@ class AsanAllocatorWithDevMem {
                  DeviceMemoryContext *dmctx);
   void Deallocate(AllocatorCache *cache, void *p,
                   DeviceMemoryContext *dmctx);
-  void *GetBlockBegin(const void *p, DeviceMemoryContext *dmctx);
+  void *GetBlockBegin(const void *p);
 };
 
 static DeviceMemoryContext dmctx_unknown;
@@ -248,7 +248,7 @@ struct QuarantineCallback {
 #if !SANITIZER_AMDGPU
     void *p = get_allocator().GetBlockBegin(m);
 #else
-    void *p = get_allocator(dmctx_).GetBlockBegin(m, dmctx_);
+    void *p = get_allocator(dmctx_).GetBlockBegin(m);
 #endif
     if (p != m) {
       // Clear the magic value, as allocator internals may overwrite the
@@ -922,7 +922,11 @@ struct Allocator {
   }
 
   AsanChunk *GetAsanChunkByAddr(uptr p) {
+#if !SANITIZER_AMDGPU
     void *alloc_beg = allocator.GetBlockBegin(reinterpret_cast<void *>(p));
+#else
+    void *alloc_beg = allocator_dev.GetBlockBegin(reinterpret_cast<void *>(p));
+#endif
     return GetAsanChunk(alloc_beg);
   }
 
@@ -1459,15 +1463,43 @@ void AsanAllocatorWithDevMem::Deallocate(AllocatorCache *cache, void *ptr,
   amctx->status = REAL(hsa_amd_memory_pool_free)(ptr);
 }
 
-void *AsanAllocatorWithDevMem::GetBlockBegin(const void *ptr,
-                                             DeviceMemoryContext *dmctx) {
-  if (!dmctx)
-    return get_allocator().GetBlockBegin(ptr);
+typedef hsa_status_t (*PFN_HSA_AMD_POINTER_INFO)(
+    void *ptr, hsa_amd_pointer_info_t *info, void *(*alloc)(size_t),
+    uint32_t *num_agents_accessible, hsa_agent_t **accessible);
 
-  uptr alloc_beg = reinterpret_cast<uptr>(ptr) + kChunkHeaderSize - kPageSize_;
-  AsanChunk *p = reinterpret_cast<LargeChunkHeader *>(alloc_beg)->Get();
+#include <dlfcn.h> // For dlsym
+void *AsanAllocatorWithDevMem::GetBlockBegin(const void *ptr) {
+  void *alloc_beg = get_allocator().GetBlockBegin(ptr);
+  if (alloc_beg)
+    return alloc_beg;
+
+  static PFN_HSA_AMD_POINTER_INFO hsa_amd_pointer_info = nullptr;
+  if (!hsa_amd_pointer_info)
+    hsa_amd_pointer_info =
+        (PFN_HSA_AMD_POINTER_INFO)dlsym(RTLD_NEXT, "hsa_amd_pointer_info");
+  if (!hsa_amd_pointer_info)
+    return nullptr;
+
+  uptr ptr_ = reinterpret_cast<uptr>(ptr) & ~(kPageSize_ - 1);
+  hsa_amd_pointer_info_t info;
+  info.size = sizeof(hsa_amd_pointer_info_t);
+  hsa_status_t status =
+      hsa_amd_pointer_info(reinterpret_cast<void *>(ptr_), &info, 0, 0, 0);
+
+  if (status != HSA_STATUS_SUCCESS)
+    return nullptr;
+
+  AsanChunk *p = nullptr;
+  size_t size = info.sizeInBytes;
+  do {
+    p = reinterpret_cast<LargeChunkHeader *>(ptr_)->Get();
+    if (p)
+      break;
+    ptr_ -= kPageSize_;
+    size -= kPageSize_;
+  } while (size > kPageSize_);
   if (p)
-    return reinterpret_cast<void *>(alloc_beg);
+    return reinterpret_cast<void*>(ptr_);
   else
     return nullptr;
 }
