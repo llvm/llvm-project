@@ -845,6 +845,62 @@ NARY_SHAPE_INFER(tosa::TanhOp)
 NARY_SHAPE_INFER(tosa::SigmoidOp)
 #undef PRED_SHAPE_INFER
 
+static LogicalResult poolingInferReturnTypes(
+    ValueRange operands, DictionaryAttr attributes,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  RankedTensorType inputTy = operands[0].getType().dyn_cast<RankedTensorType>();
+  llvm::SmallVector<int64_t> outputShape;
+  outputShape.resize(4, -1);
+
+  // We only know the rank if the input type is unranked.
+  if (!inputTy) {
+    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+    return success();
+  }
+
+  // Batch and number of channels are identical for pooling layer.
+  outputShape[0] = inputTy.getDimSize(0);
+  outputShape[3] = inputTy.getDimSize(3);
+
+  int32_t height = inputTy.getDimSize(1);
+  int32_t width = inputTy.getDimSize(2);
+
+  llvm::SmallVector<int64_t> kernel;
+  llvm::SmallVector<int64_t> stride;
+  llvm::SmallVector<int64_t> pad;
+
+  getI64Values(attributes.get("kernel").cast<ArrayAttr>(), kernel);
+  getI64Values(attributes.get("stride").cast<ArrayAttr>(), stride);
+  getI64Values(attributes.get("pad").cast<ArrayAttr>(), pad);
+
+  if (height != -1) {
+    int32_t padded = height + pad[0] + pad[1] - kernel[0];
+    outputShape[1] = padded / stride[0] + 1;
+  }
+
+  if (width != -1) {
+    int32_t padded = width + pad[2] + pad[3] - kernel[1];
+    outputShape[2] = padded / stride[1] + 1;
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult AvgPool2dOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
+}
+
+LogicalResult MaxPool2dOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Operator Definitions.
 //===----------------------------------------------------------------------===//
