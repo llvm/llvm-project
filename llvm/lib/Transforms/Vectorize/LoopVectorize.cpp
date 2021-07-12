@@ -1261,9 +1261,11 @@ public:
                                     const LoopVectorizationPlanner &LVP);
 
   /// Setup cost-based decisions for user vectorization factor.
-  void selectUserVectorizationFactor(ElementCount UserVF) {
+  /// \return true if the UserVF is a feasible VF to be chosen.
+  bool selectUserVectorizationFactor(ElementCount UserVF) {
     collectUniformsAndScalars(UserVF);
     collectInstsToScalarize(UserVF);
+    return expectedCost(UserVF).first.isValid();
   }
 
   /// \return The size (in bits) of the smallest and widest types in the code
@@ -5725,8 +5727,14 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
     auto MaxSafeUserVF =
         UserVF.isScalable() ? MaxSafeScalableVF : MaxSafeFixedVF;
 
-    if (ElementCount::isKnownLE(UserVF, MaxSafeUserVF))
-      return UserVF;
+    if (ElementCount::isKnownLE(UserVF, MaxSafeUserVF)) {
+      // If `VF=vscale x N` is safe, then so is `VF=N`
+      if (UserVF.isScalable())
+        return FixedScalableVFPair(
+            ElementCount::getFixed(UserVF.getKnownMinValue()), UserVF);
+      else
+        return UserVF;
+    }
 
     assert(ElementCount::isKnownGT(UserVF, MaxSafeUserVF));
 
@@ -6072,17 +6080,11 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
     if (i.isScalar())
       continue;
 
-    // Notice that the vector loop needs to be executed less times, so
-    // we need to divide the cost of the vector loops by the width of
-    // the vector elements.
     VectorizationCostTy C = expectedCost(i);
-
-    assert(C.first.isValid() && "Unexpected invalid cost for vector loop");
     VectorizationFactor Candidate(i, C.first);
     LLVM_DEBUG(
         dbgs() << "LV: Vector loop of width " << i << " costs: "
-               << (*Candidate.Cost.getValue() /
-                   Candidate.Width.getKnownMinValue())
+               << (Candidate.Cost / Candidate.Width.getKnownMinValue())
                << (i.isScalable() ? " (assuming a minimum vscale of 1)" : "")
                << ".\n");
 
@@ -6109,8 +6111,7 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
   }
 
   LLVM_DEBUG(if (ForceVectorization && !ChosenFactor.Width.isScalar() &&
-                 *ChosenFactor.Cost.getValue() >= *ScalarCost.Cost.getValue())
-                 dbgs()
+                 ChosenFactor.Cost >= ScalarCost.Cost) dbgs()
              << "LV: Vectorization seems to be not beneficial, "
              << "but was forced by a user.\n");
   LLVM_DEBUG(dbgs() << "LV: Selecting VF: " << ChosenFactor.Width << ".\n");
@@ -6438,8 +6439,9 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
   if (LoopCost == 0) {
-    assert(expectedCost(VF).first.isValid() && "Expected a valid cost");
-    LoopCost = *expectedCost(VF).first.getValue();
+    InstructionCost C = expectedCost(VF).first;
+    assert(C.isValid() && "Expected to have chosen a VF with valid cost");
+    LoopCost = *C.getValue();
   }
 
   assert(LoopCost && "Non-zero loop cost expected");
@@ -7295,6 +7297,8 @@ InstructionCost
 LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
                                                      ElementCount VF) const {
 
+  // There is no mechanism yet to create a scalable scalarization loop,
+  // so this is currently Invalid.
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
@@ -8013,17 +8017,19 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
   bool UserVFIsLegal = ElementCount::isKnownLE(UserVF, MaxUserVF);
   if (!UserVF.isZero() && UserVFIsLegal) {
-    LLVM_DEBUG(dbgs() << "LV: Using " << (UserVFIsLegal ? "user" : "max")
-                      << " VF " << UserVF << ".\n");
     assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
            "VF needs to be a power of two");
     // Collect the instructions (and their associated costs) that will be more
     // profitable to scalarize.
-    CM.selectUserVectorizationFactor(UserVF);
-    CM.collectInLoopReductions();
-    buildVPlansWithVPRecipes(UserVF, UserVF);
-    LLVM_DEBUG(printPlans(dbgs()));
-    return {{UserVF, 0}};
+    if (CM.selectUserVectorizationFactor(UserVF)) {
+      LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
+      CM.collectInLoopReductions();
+      buildVPlansWithVPRecipes(UserVF, UserVF);
+      LLVM_DEBUG(printPlans(dbgs()));
+      return {{UserVF, 0}};
+    } else
+      reportVectorizationInfo("UserVF ignored because of invalid costs.",
+                              "InvalidCost", ORE, OrigLoop);
   }
 
   // Populate the set of Vectorization Factor Candidates.
@@ -8798,8 +8804,6 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     InstructionCost CallCost = CM.getVectorCallCost(CI, VF, NeedToScalarize);
     InstructionCost IntrinsicCost = ID ? CM.getVectorIntrinsicCost(CI, VF) : 0;
     bool UseVectorIntrinsic = ID && IntrinsicCost <= CallCost;
-    assert((IntrinsicCost.isValid() || CallCost.isValid()) &&
-           "Either the intrinsic cost or vector call cost must be valid");
     return UseVectorIntrinsic || !NeedToScalarize;
   };
 
