@@ -113,9 +113,10 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
     if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
       continue;
 
-    // We can't remat physreg uses, unless it is a constant.
+    // We can't remat physreg uses, unless it is a constant or target wants
+    // to ignore this use.
     if (Register::isPhysicalRegister(MO.getReg())) {
-      if (MRI.isConstantPhysReg(MO.getReg()))
+      if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
         continue;
       return false;
     }
