@@ -149,70 +149,22 @@ define void @smul_v8i64() {
 
 define void @smul_v16i32() {
 ; SSE-LABEL: @smul_v16i32(
-; SSE-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; SSE-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; SSE-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; SSE-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; SSE-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; SSE-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; SSE-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; SSE-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; SSE-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; SSE-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; SSE-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; SSE-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; SSE-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; SSE-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; SSE-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
-; SSE-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
-; SSE-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
-; SSE-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
-; SSE-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
-; SSE-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
-; SSE-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
-; SSE-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
-; SSE-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
-; SSE-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
-; SSE-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
-; SSE-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
-; SSE-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
-; SSE-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
-; SSE-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
-; SSE-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
-; SSE-NEXT:    [[R0:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
-; SSE-NEXT:    [[R1:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
-; SSE-NEXT:    [[R2:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
-; SSE-NEXT:    [[R3:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
-; SSE-NEXT:    [[R4:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
-; SSE-NEXT:    [[R5:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
-; SSE-NEXT:    [[R6:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
-; SSE-NEXT:    [[R7:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
-; SSE-NEXT:    [[R8:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
-; SSE-NEXT:    [[R9:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
-; SSE-NEXT:    [[R10:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
-; SSE-NEXT:    [[R11:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
-; SSE-NEXT:    [[R12:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
-; SSE-NEXT:    [[R13:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
-; SSE-NEXT:    [[R14:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
-; SSE-NEXT:    [[R15:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
-; SSE-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; SSE-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; SSE-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; SSE-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; SSE-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; SSE-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; SSE-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; SSE-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; SSE-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; SSE-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; SSE-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; SSE-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; SSE-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; SSE-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; SSE-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; SSE-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @b32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP6:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP7:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP8:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP9:%.*]] = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP5]], i32 3)
+; SSE-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> [[TMP2]], <4 x i32> [[TMP6]], i32 3)
+; SSE-NEXT:    [[TMP11:%.*]] = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> [[TMP3]], <4 x i32> [[TMP7]], i32 3)
+; SSE-NEXT:    [[TMP12:%.*]] = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> [[TMP4]], <4 x i32> [[TMP8]], i32 3)
+; SSE-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP10]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP11]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP12]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
 ; SSE-NEXT:    ret void
 ;
 ; SLM-LABEL: @smul_v16i32(
