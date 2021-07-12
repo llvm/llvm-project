@@ -52,5 +52,11 @@ Optional<fp::ExceptionBehavior> StrToExceptionBehavior(StringRef);
 /// For any ExceptionBehavior enumerator, returns a string valid as
 /// input in constrained intrinsic exception behavior metadata.
 Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior);
+
+/// Returns true if the exception handling behavior and rounding mode
+/// match what is used in the default floating point environment.
+inline bool isDefaultFPEnvironment(fp::ExceptionBehavior EB, RoundingMode RM) {
+  return EB == fp::ebIgnore && RM == RoundingMode::NearestTiesToEven;
+}
 }
 #endif

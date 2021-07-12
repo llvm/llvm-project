@@ -87,6 +87,7 @@ define void @caller_with_unused_arg(i1 %c) {
 }
 
 define internal void @callee_with_dead_arg(i1 %create, ...) {
+;
 ; CHECK-LABEL: define {{[^@]+}}@callee_with_dead_arg
 ; CHECK-SAME: (i1 [[CREATE:%.*]], ...) {
 ; CHECK-NEXT:  entry:
@@ -113,6 +114,7 @@ if.then3:                                         ; preds = %entry
 ; try to come up with a different scheme to verify the `noundef` is dropped if
 ; signature rewriting is not happening.
 define void @caller_with_noundef_arg() {
+;
 ; CHECK-LABEL: define {{[^@]+}}@caller_with_noundef_arg() {
 ; CHECK-NEXT:    call void (i1, ...) @callee_with_dead_arg(i1 undef)
 ; CHECK-NEXT:    ret void

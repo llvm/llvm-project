@@ -2,6 +2,13 @@
 # RUN: wasm-ld -mwasm64 --experimental-pic -shared -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
+.functype func_external () -> ()
+
+# Linker-synthesized globals
+.globaltype __stack_pointer, i64
+.globaltype	__table_base, i64, immutable
+.globaltype	__memory_base, i64, immutable
+
 .section .data.data,"",@
 data:
   .p2align 2
@@ -29,8 +36,8 @@ data_addr:
 
 .section .data.data_addr_external,"",@
 data_addr_external:
-  .int32 data_external
-  .size data_addr_external, 4
+  .int64 data_external
+  .size data_addr_external, 8
 
 # .. including addends
 
@@ -72,12 +79,12 @@ foo:
   end_function
 
 get_func_address:
-  .functype get_func_address () -> (i32)
+  .functype get_func_address () -> (i64)
   global.get func_external@GOT
   end_function
 
 get_data_address:
-  .functype get_data_address () -> (i32)
+  .functype get_data_address () -> (i64)
   global.get  data_external@GOT
   end_function
 
@@ -116,19 +123,12 @@ get_local_func_address:
 .int8 15
 .ascii "mutable-globals"
 
-.functype func_external () -> ()
-
-# Linker-synthesized globals
-.globaltype __stack_pointer, i64
-.globaltype	__table_base, i64, immutable
-.globaltype	__memory_base, i64, immutable
-
 # check for dylink section at start
 
 # CHECK:      Sections:
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            dylink
-# CHECK-NEXT:     MemorySize:      24
+# CHECK-NEXT:     MemorySize:      28
 # CHECK-NEXT:     MemoryAlignment: 2
 # CHECK-NEXT:     TableSize:       2
 # CHECK-NEXT:     TableAlignment:  0
@@ -224,7 +224,7 @@ get_local_func_address:
 # CHECK-NEXT:         Body:            10020B
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            230142047C2305360200230142087C230241016A3602002301420C7C230141006A360200230142107C2306360200230142147C230741046A3602000B
+# CHECK-NEXT:         Body:            230142047C2305360200230142087C230241016A3602002301420C7C230141006A360200230142107C2306370200230142187C230741046A3602000B
 
 # check the data segment initialized with __memory_base global as offset
 
@@ -235,4 +235,4 @@ get_local_func_address:
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          GLOBAL_GET
 # CHECK-NEXT:           Index:           1
-# CHECK-NEXT:         Content:         '020000000000000001000000000000000000000000000000'
+# CHECK-NEXT:         Content:         '02000000000000000100000000000000000000000000000000000000'

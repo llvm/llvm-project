@@ -75,7 +75,7 @@ define void @vec_intrinsic(i64 %N, double* nocapture readonly %a) {
 ; CHECK-LABEL: @vec_intrinsic
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, <vscale x 2 x double>*
-; CHECK: call fast <vscale x 2 x double> @sin_vec(<vscale x 2 x double> %[[LOAD]])
+; CHECK: call fast <vscale x 2 x double> @sin_vec_nxv2f64(<vscale x 2 x double> %[[LOAD]])
 entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end
@@ -95,17 +95,90 @@ for.end:
   ret void
 }
 
+define void @vec_sin_no_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
+; CHECK: @vec_sin_no_mapping
+; CHECK: call fast <2 x float> @llvm.sin.v2f32
+; CHECK-NOT: <vscale x
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
+  %0 = load float, float* %arrayidx, align 4
+  %1 = tail call fast float @llvm.sin.f32(float %0)
+  %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
+  store float %1, float* %arrayidx1, align 4
+  %inc = add nuw nsw i64 %i.07, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+}
+
+define void @vec_sin_fixed_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
+; CHECK: @vec_sin_fixed_mapping
+; CHECK: call fast <2 x float> @llvm.sin.v2f32
+; CHECK-NOT: <vscale x
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
+  %0 = load float, float* %arrayidx, align 4
+  %1 = tail call fast float @llvm.sin.f32(float %0) #3
+  %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
+  store float %1, float* %arrayidx1, align 4
+  %inc = add nuw nsw i64 %i.07, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+}
+
+; Even though there are no function mappings attached to the call
+; in the loop below we can still vectorize the loop because SVE has
+; hardware support in the form of the 'fqsrt' instruction.
+define void @vec_sqrt_no_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) #0 {
+; CHECK: @vec_sqrt_no_mapping
+; CHECK: call fast <vscale x 2 x float> @llvm.sqrt.nxv2f32
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
+  %0 = load float, float* %arrayidx, align 4
+  %1 = tail call fast float @llvm.sqrt.f32(float %0)
+  %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
+  store float %1, float* %arrayidx1, align 4
+  %inc = add nuw nsw i64 %i.07, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+}
+
+
 declare double @foo(double)
 declare i64 @bar(i64*)
 declare double @llvm.sin.f64(double)
+declare float @llvm.sin.f32(float)
+declare float @llvm.sqrt.f32(float)
 
 declare <vscale x 2 x double> @foo_vec(<vscale x 2 x double>)
 declare <vscale x 2 x i64> @bar_vec(<vscale x 2 x i64*>)
-declare <vscale x 2 x double> @sin_vec(<vscale x 2 x double>)
+declare <vscale x 2 x double> @sin_vec_nxv2f64(<vscale x 2 x double>)
+declare <2 x double> @sin_vec_v2f64(<2 x double>)
 
 attributes #0 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_foo(foo_vec)" }
 attributes #1 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_bar(bar_vec)" }
-attributes #2 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_llvm.sin.f64(sin_vec)" }
+attributes #2 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_llvm.sin.f64(sin_vec_nxv2f64)" }
+attributes #3 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(sin_vec_v2f64)" }
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}

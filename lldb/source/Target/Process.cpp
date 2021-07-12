@@ -10,6 +10,7 @@
 #include <memory>
 #include <mutex>
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
 
@@ -68,6 +69,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2044,6 +2046,8 @@ size_t Process::ReadCStringFromMemory(addr_t addr, char *dst,
 
 size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
                                        Status &error) {
+  LLDB_SCOPED_TIMER();
+
   if (buf == nullptr || size == 0)
     return 0;
 
@@ -2469,6 +2473,11 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
     error = GetTarget().Install(&launch_info);
     if (error.Fail())
       return error;
+
+    // Listen and queue events that are broadcasted during the process launch.
+    ListenerSP listener_sp(Listener::MakeListener("LaunchEventHijack"));
+    HijackProcessEvents(listener_sp);
+    auto on_exit = llvm::make_scope_exit([this]() { RestoreProcessEvents(); });
 
     if (PrivateStateThreadIsValid())
       PausePrivateStateThread();

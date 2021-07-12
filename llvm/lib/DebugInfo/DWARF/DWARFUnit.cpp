@@ -388,6 +388,7 @@ void DWARFUnit::clear() {
   RangeSectionBase = 0;
   LocSectionBase = 0;
   AddrOffsetSectionBase = None;
+  SU = nullptr;
   clearDIEs(false);
   DWO.reset();
 }
@@ -586,6 +587,7 @@ bool DWARFUnit::parseDWO() {
   if (!DWOCU)
     return false;
   DWO = std::shared_ptr<DWARFCompileUnit>(std::move(DWOContext), DWOCU);
+  DWO->setSkeletonUnit(this);
   // Share .debug_addr and .debug_ranges section with compile unit in .dwo
   if (AddrOffsetSectionBase)
     DWO->setAddrOffsetSection(AddrOffsetSection, *AddrOffsetSectionBase);

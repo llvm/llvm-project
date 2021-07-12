@@ -571,11 +571,16 @@ uint64_t DWARFDie::getDeclLine() const {
 
 std::string
 DWARFDie::getDeclFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
+  auto D = getAttributeValueAsReferencedDie(DW_AT_abstract_origin);
+  if (!D)
+    D = *this;
   std::string FileName;
-  if (auto DeclFile = toUnsigned(findRecursively(DW_AT_decl_file))) {
-    if (const auto *LT = U->getContext().getLineTableForUnit(U)) {
-      LT->getFileNameByIndex(*DeclFile, U->getCompilationDir(), Kind, FileName);
-    }
+  if (auto DeclFile = toUnsigned(D.find(DW_AT_decl_file))) {
+    if (const auto *LineTable =
+            getDwarfUnit()->getContext().getLineTableForUnit(
+                D.getDwarfUnit()->getLinkedUnit()))
+      LineTable->getFileNameByIndex(
+          *DeclFile, D.getDwarfUnit()->getCompilationDir(), Kind, FileName);
   }
   return FileName;
 }

@@ -76,8 +76,8 @@ entry:
 define void @test3() nounwind {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.trap()
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    store volatile i32 4, i32* null, align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   store volatile i32 4, i32* null
@@ -101,8 +101,11 @@ entry:
 define void @test4(i1 %C, i32* %P) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    store volatile i32 0, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    unreachable
+; CHECK:       F:
 ; CHECK-NEXT:    ret void
 ;
 entry:

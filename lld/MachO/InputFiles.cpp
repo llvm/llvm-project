@@ -141,19 +141,6 @@ static std::vector<PlatformInfo> getPlatformInfos(const InputFile *input) {
   return platformInfos;
 }
 
-static PlatformKind removeSimulator(PlatformKind platform) {
-  // Mapping of platform to simulator and vice-versa.
-  static const std::map<PlatformKind, PlatformKind> platformMap = {
-      {PlatformKind::iOSSimulator, PlatformKind::iOS},
-      {PlatformKind::tvOSSimulator, PlatformKind::tvOS},
-      {PlatformKind::watchOSSimulator, PlatformKind::watchOS}};
-
-  auto iter = platformMap.find(platform);
-  if (iter == platformMap.end())
-    return platform;
-  return iter->second;
-}
-
 static bool checkCompatibility(const InputFile *input) {
   std::vector<PlatformInfo> platformInfos = getPlatformInfos(input);
   if (platformInfos.empty())
@@ -560,11 +547,10 @@ template <class NList>
 static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
                                      StringRef name) {
   if (sym.n_type & N_EXT) {
-    return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
-                              /*isWeakDef=*/false, sym.n_type & N_PEXT,
-                              sym.n_desc & N_ARM_THUMB_DEF,
-                              /*isReferencedDynamically=*/false,
-                              sym.n_desc & N_NO_DEAD_STRIP);
+    return symtab->addDefined(
+        name, file, nullptr, sym.n_value, /*size=*/0,
+        /*isWeakDef=*/false, sym.n_type & N_PEXT, sym.n_desc & N_ARM_THUMB_DEF,
+        /*isReferencedDynamically=*/false, sym.n_desc & N_NO_DEAD_STRIP);
   }
   return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
                        /*isWeakDef=*/false,

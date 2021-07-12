@@ -104,7 +104,13 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 // 64-bit vector move instruction. This is mainly used by the
 // SIFoldOperands pass to enable folding of inline immediates.
 def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
-                                      (ins VSrc_b64:$src0)>;
+                                      (ins VSrc_b64:$src0)> {
+  let isReMaterializable = 1;
+  let isAsCheapAsAMove = 1;
+  let isMoveImm = 1;
+  let SchedRW = [Write64Bit];
+  let Size = 16; // Needs maximum 2 v_mov_b32 instructions 8 byte long each.
+}
 
 // 64-bit vector move with dpp. Expanded post-RA.
 def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64> {

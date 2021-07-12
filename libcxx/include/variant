@@ -204,7 +204,6 @@ namespace std {
 #include <__utility/forward.h>
 #include <__variant/monostate.h>
 #include <__tuple>
-#include <array>
 #include <compare>
 #include <exception>
 #include <functional>
@@ -238,6 +237,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //       really doesn't). That breaks variant, which uses some C++17 features.
 //       Remove this once we drop support for GCC 5.
 #if _LIBCPP_STD_VER > 14 && !(defined(_LIBCPP_COMPILER_GCC) && _GNUC_VER_NEW < 6000)
+
+// Light N-dimensional array of function pointers. Used in place of std::array to avoid
+// adding a dependency.
+template<class _Tp, size_t _Size>
+struct __farray {
+  static_assert(_Size > 0, "N-dimensional array should never be empty in std::visit");
+  _Tp __buf_[_Size] = {};
+
+  _LIBCPP_INLINE_VISIBILITY constexpr
+  const _Tp &operator[](size_t __n) const noexcept {
+      return __buf_[__n];
+  }
+};
 
 _LIBCPP_NORETURN
 inline _LIBCPP_INLINE_VISIBILITY
@@ -499,7 +511,7 @@ private:
 
   template <class _Tp, size_t _Np, typename... _Indices>
   inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto&& __at(const array<_Tp, _Np>& __elems,
+  static constexpr auto&& __at(const __farray<_Tp, _Np>& __elems,
                                size_t __index, _Indices... __indices) {
     return __at(__elems[__index], __indices...);
   }
@@ -515,7 +527,7 @@ private:
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr auto __make_farray(_Fs&&... __fs) {
     __std_visit_visitor_return_type_check<__uncvref_t<_Fs>...>();
-    using __result = array<common_type_t<__uncvref_t<_Fs>...>, sizeof...(_Fs)>;
+    using __result = __farray<common_type_t<__uncvref_t<_Fs>...>, sizeof...(_Fs)>;
     return __result{{_VSTD::forward<_Fs>(__fs)...}};
   }
 

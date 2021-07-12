@@ -16,7 +16,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     Sink = new int[1 << 28]; // instant OOM with -rss_limit_mb=128.
   if (Size >= 4 && Data[0] == 'F' && Data[1] == 'U' && Data[2] == 'Z' &&
       Data[3] == 'Z')  // a bit deeper crash.
-    __builtin_trap();
+    *Zero = 42;
   return 0;
 }
 

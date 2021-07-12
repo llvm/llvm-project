@@ -32,7 +32,7 @@
 # IGNORE-NEXT:        Body:            000B
 # IGNORE-NEXT:      - Index:           1
 # IGNORE-NEXT:        Locals:          []
-# IGNORE-NEXT:        Body:            1080808080001082808080001083808080000B
+# IGNORE-NEXT:        Body:            1080808080001082808080001083808080001A1A0B
 # IGNORE-NEXT:      - Index:           2
 # IGNORE-NEXT:        Locals:          []
 # IGNORE-NEXT:        Body:            4180808080000F0B
@@ -75,12 +75,18 @@
 # RUN: wasm-ld -r %t1.o -o %t4.wasm --unresolved-symbols=report-all
 # RUN: llvm-readobj %t4.wasm > /dev/null 2>&1
 
+.functype undef_func () -> ()
+.functype get_data_addr () -> (i32)
+.functype get_func_addr () -> (i32)
+
 .globl _start
 _start:
     .functype _start () -> ()
     call undef_func
     call get_data_addr
     call get_func_addr
+    drop
+    drop
     end_function
 
 .globl get_data_addr
@@ -96,5 +102,3 @@ get_func_addr:
     i32.const undef_func
     return
     end_function
-
-.functype undef_func () -> ()

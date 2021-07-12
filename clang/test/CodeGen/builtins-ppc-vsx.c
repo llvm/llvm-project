@@ -407,8 +407,8 @@ void test1() {
 // CHECK-LE: call <4 x i32> @llvm.ppc.altivec.vperm(<4 x i32> [[T1]], <4 x i32> [[T2]], <16 x i8>
 
   res_vf = vec_round(vf);
-// CHECK: call <4 x float> @llvm.round.v4f32(<4 x float>
-// CHECK-LE: call <4 x float> @llvm.round.v4f32(<4 x float>
+// CHECK: call <4 x float> @llvm.ppc.altivec.vrfin(<4 x float>
+// CHECK-LE: call <4 x float> @llvm.ppc.altivec.vrfin(<4 x float>
 
   res_vd = vec_round(vd);
 // CHECK: call <2 x double> @llvm.round.v2f64(<2 x double>

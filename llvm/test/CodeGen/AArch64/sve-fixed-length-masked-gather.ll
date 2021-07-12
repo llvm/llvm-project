@@ -36,10 +36,7 @@ define void @masked_gather_v2i8(<2 x i8>* %a, <2 x i8*>* %b) #0 {
 ; CHECK-NEXT: cmpne [[MASK:p[0-9]+]].s, [[PG0]]/z, z[[CMP]].s, #0
 ; CHECK-NEXT: ld1sb { z[[RES:[0-9]+]].d }, [[MASK]]/z, [z[[PTRS]].d]
 ; CHECK-NEXT: xtn v[[XTN:[0-9]+]].2s, v[[RES]].2d
-; CHECK-NEXT: mov [[RES_HI:w[0-9]+]], v[[XTN]].s[1]
-; CHECK-NEXT: fmov [[RES_LO:w[0-9]+]], s[[XTN]]
-; CHECK-NEXT: strb [[RES_LO]], [x0]
-; CHECK-NEXT: strb [[RES_HI]], [x0, #1]
+; CHECK-NEXT: st1b { z[[XTN]].s }, [[PG0]],  [x0]
 ; CHECK-NEXT: ret
   %cval = load <2 x i8>, <2 x i8>* %a
   %ptrs = load <2 x i8*>, <2 x i8*>* %b
@@ -61,8 +58,7 @@ define void @masked_gather_v4i8(<4 x i8>* %a, <4 x i8*>* %b) #0 {
 ; CHECK-NEXT: ld1sb { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; CHECK-NEXT: uzp1 [[UZP1:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; CHECK-NEXT: uzp1 z[[UZP2:[0-9]+]].h, [[UZP1]].h, [[UZP1]].h
-; CHECK-NEXT: uzp1 v[[UZP3:[0-9]+]].8b, v[[UZP2]].8b, v[[UZP2]].8b
-; CHECK-NEXT: str s[[UZP3]], [x0]
+; CHECK-NEXT: st1b { z[[UZP2]].h }, [[PG0]], [x0]
 ; CHECK-NEXT: ret
   %cval = load <4 x i8>, <4 x i8>* %a
   %ptrs = load <4 x i8*>, <4 x i8*>* %b
@@ -178,10 +174,7 @@ define void @masked_gather_v2i16(<2 x i16>* %a, <2 x i16*>* %b) #0 {
 ; CHECK-NEXT: cmpne [[MASK:p[0-9]+]].s, [[PG0]]/z, z[[CMP]].s, #0
 ; CHECK-NEXT: ld1sh { z[[RES:[0-9]+]].d }, [[MASK]]/z, [z[[PTRS]].d]
 ; CHECK-NEXT: xtn v[[XTN:[0-9]+]].2s, v[[RES]].2d
-; CHECK-NEXT: mov [[RES_HI:w[0-9]+]], v[[XTN]].s[1]
-; CHECK-NEXT: fmov [[RES_LO:w[0-9]+]], s[[XTN]]
-; CHECK-NEXT: strh [[RES_LO]], [x0]
-; CHECK-NEXT: strh [[RES_HI]], [x0, #2]
+; CHECK-NEXT: st1h { z[[RES]].s }, [[PG0]], [x0]
 ; CHECK-NEXT: ret
   %cval = load <2 x i16>, <2 x i16>* %a
   %ptrs = load <2 x i16*>, <2 x i16*>* %b

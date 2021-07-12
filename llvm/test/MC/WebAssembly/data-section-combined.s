@@ -3,7 +3,7 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown < %s | FileCheck %s
 
 test0:
-    .functype   test0 () -> (i32)
+    .functype   test0 () -> (i32, i32)
     i32.const a
     i32.const b
     end_function

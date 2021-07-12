@@ -1411,10 +1411,9 @@ bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_willreturn: B.addAttribute(Attribute::WillReturn); break;
     case lltok::kw_writeonly: B.addAttribute(Attribute::WriteOnly); break;
     case lltok::kw_preallocated: {
-      Type *Ty;
-      if (parsePreallocated(Ty))
+      if (parseRequiredTypeAttr(B, lltok::kw_preallocated,
+                                Attribute::Preallocated))
         return true;
-      B.addPreallocatedAttr(Ty);
       break;
     }
 
@@ -1717,34 +1716,27 @@ bool LLParser::parseOptionalParamAttrs(AttrBuilder &B) {
       B.addStackAlignmentAttr(Alignment);
       continue;
     }
-    case lltok::kw_byval: {
-      Type *Ty;
-      if (parseRequiredTypeAttr(Ty, lltok::kw_byval))
+    case lltok::kw_byval:
+      if (parseRequiredTypeAttr(B, lltok::kw_byval, Attribute::ByVal))
         return true;
-      B.addByValAttr(Ty);
       continue;
-    }
-    case lltok::kw_sret: {
-      Type *Ty;
-      if (parseRequiredTypeAttr(Ty, lltok::kw_sret))
+    case lltok::kw_byref:
+      if (parseRequiredTypeAttr(B, lltok::kw_byref, Attribute::ByRef))
         return true;
-      B.addStructRetAttr(Ty);
       continue;
-    }
-    case lltok::kw_preallocated: {
-      Type *Ty;
-      if (parsePreallocated(Ty))
+    case lltok::kw_inalloca:
+      if (parseRequiredTypeAttr(B, lltok::kw_inalloca, Attribute::InAlloca))
         return true;
-      B.addPreallocatedAttr(Ty);
       continue;
-    }
-    case lltok::kw_inalloca: {
-      Type *Ty;
-      if (parseInalloca(Ty))
+    case lltok::kw_preallocated:
+      if (parseRequiredTypeAttr(B, lltok::kw_preallocated,
+                                Attribute::Preallocated))
         return true;
-      B.addInAllocaAttr(Ty);
       continue;
-    }
+    case lltok::kw_sret:
+      if (parseRequiredTypeAttr(B, lltok::kw_sret, Attribute::StructRet))
+        return true;
+      continue;
     case lltok::kw_dereferenceable: {
       uint64_t Bytes;
       if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable, Bytes))
@@ -1757,13 +1749,6 @@ bool LLParser::parseOptionalParamAttrs(AttrBuilder &B) {
       if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
         return true;
       B.addDereferenceableOrNullAttr(Bytes);
-      continue;
-    }
-    case lltok::kw_byref: {
-      Type *Ty;
-      if (parseByRef(Ty))
-        return true;
-      B.addByRefAttr(Ty);
       continue;
     }
     case lltok::kw_inreg:           B.addAttribute(Attribute::InReg); break;
@@ -2708,35 +2693,20 @@ bool LLParser::parseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
 
 /// parseRequiredTypeAttr
 ///   ::= attrname(<ty>)
-bool LLParser::parseRequiredTypeAttr(Type *&Result, lltok::Kind AttrName) {
-  Result = nullptr;
-  if (!EatIfPresent(AttrName))
+bool LLParser::parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
+                                     Attribute::AttrKind AttrKind) {
+  Type *Ty = nullptr;
+  if (!EatIfPresent(AttrToken))
     return true;
   if (!EatIfPresent(lltok::lparen))
     return error(Lex.getLoc(), "expected '('");
-  if (parseType(Result))
+  if (parseType(Ty))
     return true;
   if (!EatIfPresent(lltok::rparen))
     return error(Lex.getLoc(), "expected ')'");
+
+  B.addTypeAttr(AttrKind, Ty);
   return false;
-}
-
-/// parsePreallocated
-///   ::= preallocated(<ty>)
-bool LLParser::parsePreallocated(Type *&Result) {
-  return parseRequiredTypeAttr(Result, lltok::kw_preallocated);
-}
-
-/// parseInalloca
-///   ::= inalloca(<ty>)
-bool LLParser::parseInalloca(Type *&Result) {
-  return parseRequiredTypeAttr(Result, lltok::kw_inalloca);
-}
-
-/// parseByRef
-///   ::= byref(<type>)
-bool LLParser::parseByRef(Type *&Result) {
-  return parseRequiredTypeAttr(Result, lltok::kw_byref);
 }
 
 /// parseOptionalOperandBundles

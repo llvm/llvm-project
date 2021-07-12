@@ -9,10 +9,10 @@
 
 # CHECK: undefined symbol: foo
 
+.functype foo () -> ()
+
 _start:
     .globl _start
     .functype _start () -> ()
     call foo
     end_function
-
-.functype foo () -> ()

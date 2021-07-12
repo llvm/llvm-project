@@ -279,6 +279,10 @@ class VectorType;
     QSUB8b,
     QADD16b,
     QSUB16b,
+    UQADD8b,
+    UQSUB8b,
+    UQADD16b,
+    UQSUB16b,
 
     // Operands of the standard BUILD_VECTOR node are not legalized, which
     // is fine if BUILD_VECTORs are always lowered to shuffles or other

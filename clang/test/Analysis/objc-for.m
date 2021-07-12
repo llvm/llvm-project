@@ -86,7 +86,7 @@ void testNonNil(id a, id b) {
   if (b != nil)
     return;
   for (id x in b)
-    *(volatile int *)0 = 1;      // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+    *(volatile int *)0 = 1; // no-warning
   clang_analyzer_eval(b != nil); // expected-warning{{FALSE}}
 }
 

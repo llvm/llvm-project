@@ -338,7 +338,7 @@ void constraintManagerShouldTreatAsOpaque(int rhs) {
   if (i < rhs)
     return;
   if (i < rhs)
-    *(volatile int *)0; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+    *(volatile int *) 0; // no-warning
 }
 
 

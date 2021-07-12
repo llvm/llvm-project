@@ -7,6 +7,8 @@
 # foo which is not otherwise used and will not be marked a live in the output.
 # Verify the tombstone value is written to debug_info section.
 
+.globaltype foo, i32
+
 .globl  _start
 _start:
   .functype _start () -> ()
@@ -15,7 +17,6 @@ _start:
 .section .debug_info,"",@
   .int32 foo
 
-.globaltype foo, i32
 foo:
 
 # CHECK:       - Type:            CUSTOM

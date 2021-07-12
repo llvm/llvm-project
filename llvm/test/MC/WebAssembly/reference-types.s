@@ -16,12 +16,14 @@ ref_null_test:
 # CHECK-NEXT: .functype ref_sig_test_funcref (funcref) -> (funcref)
 ref_sig_test_funcref:
   .functype ref_sig_test_funcref (funcref) -> (funcref)
+  local.get 0
   end_function
 
 # CHECK-LABEL: ref_sig_test_externref:
 # CHECK-NEXT: .functype ref_sig_test_externref (externref) -> (externref)
 ref_sig_test_externref:
   .functype ref_sig_test_externref (externref) -> (externref)
+  local.get 0
   end_function
 
 # CHECK-LABEL: ref_select_test:
@@ -45,9 +47,11 @@ ref_select_test:
 # CHECK: block funcref
 # CHECK: block externref
 ref_block_test:
-  .functype ref_block_test () -> ()
+  .functype ref_block_test () -> (externref, funcref)
   block funcref
   block externref
+  ref.null extern
   end_block
+  ref.null func
   end_block
   end_function

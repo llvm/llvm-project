@@ -17,4 +17,4 @@ int main() {
 
 }
 
-// CHECK: attributes [[NI]] = { noduplicate {{.*}}nounwind{{.*}} }
+// CHECK: attributes [[NI]] = { {{.*}}noduplicate {{.*}}nounwind{{.*}} }

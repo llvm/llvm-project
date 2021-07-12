@@ -2140,25 +2140,25 @@ define void @willreturn_mustprogress_caller_1() mustprogress {
   ret void
 }
 define void @willreturn_mustprogress_caller_2() mustprogress {
-; IS__TUNIT_OPM: Function Attrs: readonly willreturn mustprogress
+; IS__TUNIT_OPM: Function Attrs: mustprogress readonly willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
 ; IS__TUNIT_OPM-SAME: () #[[ATTR20:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:    call void @readonly() #[[ATTR16:[0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: readonly willreturn mustprogress
+; IS__TUNIT_NPM: Function Attrs: mustprogress readonly willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
 ; IS__TUNIT_NPM-SAME: () #[[ATTR22:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:    call void @readonly() #[[ATTR18:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: readonly willreturn mustprogress
+; IS__CGSCC_OPM: Function Attrs: mustprogress readonly willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
 ; IS__CGSCC_OPM-SAME: () #[[ATTR23:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:    call void @readonly() #[[ATTR19:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: readonly willreturn mustprogress
+; IS__CGSCC_NPM: Function Attrs: mustprogress readonly willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
 ; IS__CGSCC_NPM-SAME: () #[[ATTR25:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    call void @readonly() #[[ATTR21:[0-9]+]]
@@ -2168,25 +2168,25 @@ define void @willreturn_mustprogress_caller_2() mustprogress {
   ret void
 }
 define void @willreturn_mustprogress_caller_3() mustprogress {
-; IS__TUNIT_OPM: Function Attrs: nosync readnone willreturn mustprogress
+; IS__TUNIT_OPM: Function Attrs: mustprogress nosync readnone willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
 ; IS__TUNIT_OPM-SAME: () #[[ATTR21:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:    call void @readnone()
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nosync readnone willreturn mustprogress
+; IS__TUNIT_NPM: Function Attrs: mustprogress nosync readnone willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
 ; IS__TUNIT_NPM-SAME: () #[[ATTR23:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:    call void @readnone()
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: nosync readnone willreturn mustprogress
+; IS__CGSCC_OPM: Function Attrs: mustprogress nosync readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
 ; IS__CGSCC_OPM-SAME: () #[[ATTR24:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:    call void @readnone()
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: nosync readnone willreturn mustprogress
+; IS__CGSCC_NPM: Function Attrs: mustprogress nosync readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
 ; IS__CGSCC_NPM-SAME: () #[[ATTR26:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    call void @readnone()
@@ -2290,9 +2290,9 @@ attributes #1 = { uwtable noinline }
 ; IS__TUNIT_OPM: attributes #[[ATTR16]] = { readonly }
 ; IS__TUNIT_OPM: attributes #[[ATTR17:[0-9]+]] = { readnone }
 ; IS__TUNIT_OPM: attributes #[[ATTR18]] = { mustprogress }
-; IS__TUNIT_OPM: attributes #[[ATTR19:[0-9]+]] = { readonly mustprogress }
-; IS__TUNIT_OPM: attributes #[[ATTR20]] = { readonly willreturn mustprogress }
-; IS__TUNIT_OPM: attributes #[[ATTR21]] = { nosync readnone willreturn mustprogress }
+; IS__TUNIT_OPM: attributes #[[ATTR19:[0-9]+]] = { mustprogress readonly }
+; IS__TUNIT_OPM: attributes #[[ATTR20]] = { mustprogress readonly willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR21]] = { mustprogress nosync readnone willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR22]] = { readonly willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR23]] = { nofree nosync nounwind }
 ; IS__TUNIT_OPM: attributes #[[ATTR24]] = { readnone willreturn }
@@ -2320,9 +2320,9 @@ attributes #1 = { uwtable noinline }
 ; IS__TUNIT_NPM: attributes #[[ATTR18]] = { readonly }
 ; IS__TUNIT_NPM: attributes #[[ATTR19:[0-9]+]] = { readnone }
 ; IS__TUNIT_NPM: attributes #[[ATTR20]] = { mustprogress }
-; IS__TUNIT_NPM: attributes #[[ATTR21:[0-9]+]] = { readonly mustprogress }
-; IS__TUNIT_NPM: attributes #[[ATTR22]] = { readonly willreturn mustprogress }
-; IS__TUNIT_NPM: attributes #[[ATTR23]] = { nosync readnone willreturn mustprogress }
+; IS__TUNIT_NPM: attributes #[[ATTR21:[0-9]+]] = { mustprogress readonly }
+; IS__TUNIT_NPM: attributes #[[ATTR22]] = { mustprogress readonly willreturn }
+; IS__TUNIT_NPM: attributes #[[ATTR23]] = { mustprogress nosync readnone willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR24]] = { readonly willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR25]] = { nofree nosync nounwind }
 ; IS__TUNIT_NPM: attributes #[[ATTR26]] = { readnone willreturn }
@@ -2351,9 +2351,9 @@ attributes #1 = { uwtable noinline }
 ; IS__CGSCC_OPM: attributes #[[ATTR19]] = { readonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR20:[0-9]+]] = { readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR21]] = { mustprogress }
-; IS__CGSCC_OPM: attributes #[[ATTR22:[0-9]+]] = { readonly mustprogress }
-; IS__CGSCC_OPM: attributes #[[ATTR23]] = { readonly willreturn mustprogress }
-; IS__CGSCC_OPM: attributes #[[ATTR24]] = { nosync readnone willreturn mustprogress }
+; IS__CGSCC_OPM: attributes #[[ATTR22:[0-9]+]] = { mustprogress readonly }
+; IS__CGSCC_OPM: attributes #[[ATTR23]] = { mustprogress readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR24]] = { mustprogress nosync readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR25]] = { readonly willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR26]] = { nofree nosync nounwind readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR27]] = { nofree nosync nounwind }
@@ -2386,9 +2386,9 @@ attributes #1 = { uwtable noinline }
 ; IS__CGSCC_NPM: attributes #[[ATTR21]] = { readonly }
 ; IS__CGSCC_NPM: attributes #[[ATTR22:[0-9]+]] = { readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR23]] = { mustprogress }
-; IS__CGSCC_NPM: attributes #[[ATTR24:[0-9]+]] = { readonly mustprogress }
-; IS__CGSCC_NPM: attributes #[[ATTR25]] = { readonly willreturn mustprogress }
-; IS__CGSCC_NPM: attributes #[[ATTR26]] = { nosync readnone willreturn mustprogress }
+; IS__CGSCC_NPM: attributes #[[ATTR24:[0-9]+]] = { mustprogress readonly }
+; IS__CGSCC_NPM: attributes #[[ATTR25]] = { mustprogress readonly willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR26]] = { mustprogress nosync readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR27]] = { readonly willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR28]] = { nofree nosync nounwind readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR29]] = { nofree nosync nounwind }

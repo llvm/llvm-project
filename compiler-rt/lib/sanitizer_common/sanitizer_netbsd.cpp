@@ -215,15 +215,12 @@ void internal__exit(int exitcode) {
   Die();  // Unreachable.
 }
 
-unsigned int internal_sleep(unsigned int seconds) {
+void internal_usleep(u64 useconds) {
   struct timespec ts;
-  ts.tv_sec = seconds;
-  ts.tv_nsec = 0;
+  ts.tv_sec = useconds / 1000000;
+  ts.tv_nsec = (useconds % 1000000) * 1000;
   CHECK(&_sys___nanosleep50);
-  int res = _sys___nanosleep50(&ts, &ts);
-  if (res)
-    return ts.tv_sec;
-  return 0;
+  _sys___nanosleep50(&ts, &ts);
 }
 
 uptr internal_execve(const char *filename, char *const argv[],
