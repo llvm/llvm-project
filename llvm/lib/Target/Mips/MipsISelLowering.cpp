@@ -114,15 +114,18 @@ MVT MipsTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   if (!VT.isVector())
     return getRegisterType(Context, VT);
 
-  return Subtarget.isABI_O32() || VT.getSizeInBits() == 32 ? MVT::i32
-                                                           : MVT::i64;
+  return (Subtarget.isABI_P32() || Subtarget.isABI_O32() ||
+          VT.getSizeInBits() == 32)
+             ? MVT::i32
+             : MVT::i64;
 }
 
 unsigned MipsTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
                                                            CallingConv::ID CC,
                                                            EVT VT) const {
   if (VT.isVector())
-    return divideCeil(VT.getSizeInBits(), Subtarget.isABI_O32() ? 32 : 64);
+    return divideCeil(VT.getSizeInBits(), (Subtarget.isABI_O32() ||
+                                           Subtarget.isABI_P32()) ? 32 : 64);
   return MipsTargetLowering::getNumRegisters(Context, VT);
 }
 
