@@ -38,7 +38,9 @@ enum class Kind {
   kAddF,
   kAddI,
   kSubF,
-  kSubI
+  kSubI,
+  kAndI,
+  kOrI,
 };
 
 /// Children subexpressions of tensor operations.
@@ -171,6 +173,11 @@ public:
   /// Returns true if any set bit corresponds to queried dim.
   bool hasAnyDimOf(const llvm::BitVector &bits, Dim d) const;
 
+  /// Returns true if given tensor co-iterates with conjunction only in the
+  /// given tensor expression. For the output tensor, this defines a "simply
+  /// dynamic" operation [Bik96]. For instance: a(i) *=  b(i) * c(i)
+  bool isConjunction(unsigned t, unsigned e) const;
+
   /// Dimension setter.
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
@@ -193,17 +200,21 @@ public:
   /// Builds the iteration lattices in a bottom-up traversal given the remaining
   /// tensor (sub)expression and the next loop index in the iteration graph.
   /// Returns index of the root expression.
-  unsigned buildLattices(unsigned exp, unsigned idx);
+  unsigned buildLattices(unsigned e, unsigned i);
 
   /// Builds a tensor expression from the given Linalg operation.
   /// Returns index of the root expression on success.
   Optional<unsigned> buildTensorExpFromLinalg(linalg::GenericOp op);
 
+  /// Rebuilds SSA format from a tensor expression.
+  Value buildExp(PatternRewriter &rewriter, Location loc, unsigned e, Value v0,
+                 Value v1);
+
 private:
   bool maybeZero(unsigned e);
 
   /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
-  Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value val);
+  Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value v);
 
   const unsigned outTensor;
   const unsigned syntheticTensor;
