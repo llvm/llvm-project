@@ -3953,10 +3953,7 @@ define i1 @thread_cmp_over_select_with_poison_falseval(i1 %b) {
 
 define i1 @signbit_true_logic(i8 %x) {
 ; CHECK-LABEL: @signbit_true_logic(
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[X]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[NOT]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[AND]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %dec = add i8 %x, -1
@@ -3968,10 +3965,7 @@ define i1 @signbit_true_logic(i8 %x) {
 
 define <2 x i1> @signbit_false_logic(<2 x i5> %x) {
 ; CHECK-LABEL: @signbit_false_logic(
-; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i5> [[X:%.*]], <i5 -1, i5 undef>
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i5> [[X]], <i5 -1, i5 -1>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i5> [[DEC]], [[NOT]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i5> [[AND]], <i5 -1, i5 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %dec = add <2 x i5> %x,  <i5 -1, i5 undef>
@@ -3991,7 +3985,7 @@ define i1 @signbit_true_logic_uses_commute(i64 %x) {
 ; CHECK-NEXT:    call void @use_i64(i64 [[NOT]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[DEC]], [[NOT]]
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[AND]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %dec = add i64 %x, -1
