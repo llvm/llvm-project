@@ -34922,6 +34922,11 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     return ShiftVal.uge(VTBits) ? VTBits : ShiftVal.getZExtValue();
   }
 
+  case X86ISD::FSETCC:
+    // Scalar cmpss/cmpsd return zero/all-bits result values.
+    assert((VT == MVT::f32 || VT == MVT::f64) && "Unexpected fp scalar result");
+    return VTBits;
+
   case X86ISD::PCMPGT:
   case X86ISD::PCMPEQ:
   case X86ISD::CMPP:
