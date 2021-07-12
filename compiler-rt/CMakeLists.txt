@@ -366,7 +366,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
       "-Werror=thread-safety-beta"
   )
   list(APPEND SANITIZER_COMMON_CFLAGS ${THREAD_SAFETY_FLAGS})
-  list(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS ${THREAD_SAFETY_FLAGS})
+  string(REPLACE ";" " " thread_safety_flags_space_sep "${THREAD_SAFETY_FLAGS}")
+  string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${thread_safety_flags_space_sep}")
 endif()
 
 # If we're using MSVC,
