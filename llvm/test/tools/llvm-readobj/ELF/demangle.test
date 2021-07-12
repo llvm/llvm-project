@@ -19,7 +19,7 @@
 # RUN:              %t.so > %t.llvm.default
 # RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
 # RUN:              --elf-section-groups --cg-profile --addrsig         \
-# RUN:              --demangle=false %t.so > %t.llvm.nodemangle
+# RUN:              --no-demangle %t.so > %t.llvm.nodemangle
 # RUN: FileCheck %s --input-file %t.llvm.default --check-prefixes=LLVM-COMMON,LLVM-MANGLED
 # RUN: diff %t.llvm.default %t.llvm.nodemangle
 
@@ -78,7 +78,7 @@
 # RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
 # RUN:              --elf-section-groups --addrsig %t.so > %t.gnu.default
 # RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
-# RUN:              --elf-section-groups --addrsig --demangle=false %t.so > %t.gnu.nodemangle
+# RUN:              --elf-section-groups --addrsig --no-demangle %t.so > %t.gnu.nodemangle
 # RUN: FileCheck %s --input-file %t.gnu.default --check-prefixes=GNU-COMMON,GNU-MANGLED
 # RUN: diff %t.gnu.default %t.gnu.nodemangle
 

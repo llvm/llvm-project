@@ -3385,6 +3385,18 @@ binary_alias(
     binary = ":llvm-rc",
 )
 
+gentbl(
+    name = "ReadobjOptsTableGen",
+    strip_include_prefix = "tools/llvm-readobj",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-readobj/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-readobj/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-readobj",
     srcs = glob([
@@ -3401,6 +3413,8 @@ cc_binary(
         ":DebugInfoDWARF",
         ":Demangle",
         ":Object",
+        ":Option",
+        ":ReadobjOptsTableGen",
         ":Support",
     ],
 )
