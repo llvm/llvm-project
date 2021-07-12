@@ -28,6 +28,7 @@ steps:
       - "**/clang-format.patch"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -41,6 +42,7 @@ steps:
       - "**/generated_output.patch"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -60,6 +62,7 @@ steps:
       - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -72,6 +75,7 @@ steps:
       - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -84,6 +88,7 @@ steps:
       - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -96,6 +101,7 @@ steps:
       - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -107,6 +113,7 @@ steps:
       - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -119,6 +126,7 @@ steps:
       - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -130,6 +138,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -146,6 +155,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -157,6 +167,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -168,6 +179,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -179,6 +191,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -190,6 +203,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -202,6 +216,7 @@ steps:
       - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -214,6 +229,7 @@ steps:
       - "**/*.abilist"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -225,6 +241,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -236,6 +253,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -247,6 +265,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -258,6 +277,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -269,6 +289,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -280,6 +301,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -291,6 +313,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -302,6 +325,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -313,6 +337,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -324,6 +349,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -335,6 +361,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -346,6 +373,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -357,6 +385,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -368,6 +397,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -379,6 +409,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -412,6 +443,7 @@ steps:
       - "**/test-results.xml"
     agents:
       queue: "libcxx-builders"
+      os: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
