@@ -106,6 +106,12 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     Features.push_back("+pauth");
   if (Extensions & AEK_FLAGM)
     Features.push_back("+flagm");
+  if (Extensions & AArch64::AEK_SME)
+    Features.push_back("+sme");
+  if (Extensions & AArch64::AEK_SMEF64)
+    Features.push_back("+sme-f64");
+  if (Extensions & AArch64::AEK_SMEI64)
+    Features.push_back("+sme-i64");
 
   return true;
 }

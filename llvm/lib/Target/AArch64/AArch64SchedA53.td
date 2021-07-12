@@ -27,7 +27,8 @@ def CortexA53Model : SchedMachineModel {
   let CompleteModel = 1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F);
+                                                    PAUnsupported.F,
+                                                    SMEUnsupported.F);
 }
 
 
