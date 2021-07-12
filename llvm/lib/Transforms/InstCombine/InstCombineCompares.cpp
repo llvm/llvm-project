@@ -1855,6 +1855,19 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   if (Instruction *I = foldICmpAndConstConst(Cmp, And, C))
     return I;
 
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
+  bool TrueIfNeg;
+  if (isSignBitCheck(Pred, C, TrueIfNeg)) {
+    // ((X - 1) & ~X) <  0 --> X == 0
+    // ((X - 1) & ~X) >= 0 --> X != 0
+    Value *X;
+    if (match(And->getOperand(0), m_Add(m_Value(X), m_AllOnes())) &&
+        match(And->getOperand(1), m_Not(m_Specific(X)))) {
+      auto NewPred = TrueIfNeg ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+      return new ICmpInst(NewPred, X, ConstantInt::getNullValue(X->getType()));
+    }
+  }
+
   // TODO: These all require that Y is constant too, so refactor with the above.
 
   // Try to optimize things like "A[i] & 42 == 0" to index computations.
@@ -1877,8 +1890,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   // X & -C != -C -> X <= u ~C
   //   iff C is a power of 2
   if (Cmp.getOperand(1) == Y && (-C).isPowerOf2()) {
-    auto NewPred = Cmp.getPredicate() == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT
-                                                          : CmpInst::ICMP_ULE;
+    auto NewPred =
+        Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGT : CmpInst::ICMP_ULE;
     return new ICmpInst(NewPred, X, SubOne(cast<Constant>(Cmp.getOperand(1))));
   }
 
@@ -1893,8 +1906,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
       if (auto *AndVTy = dyn_cast<VectorType>(And->getType()))
         NTy = VectorType::get(NTy, AndVTy->getElementCount());
       Value *Trunc = Builder.CreateTrunc(X, NTy);
-      auto NewPred = Cmp.getPredicate() == CmpInst::ICMP_EQ ? CmpInst::ICMP_SGE
-                                                            : CmpInst::ICMP_SLT;
+      auto NewPred =
+          Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_SGE : CmpInst::ICMP_SLT;
       return new ICmpInst(NewPred, Trunc, Constant::getNullValue(NTy));
     }
   }

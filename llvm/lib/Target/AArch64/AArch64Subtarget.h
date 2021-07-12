@@ -186,6 +186,11 @@ protected:
   // Armv9-A Extensions
   bool HasRME = false;
 
+  // Arm Scalable Matrix Extension (SME)
+  bool HasSME = false;
+  bool HasSMEF64 = false;
+  bool HasSMEI64 = false;
+
   // Future architecture extensions.
   bool HasETE = false;
   bool HasTRBE = false;
@@ -484,6 +489,11 @@ public:
   bool hasEnhancedCounterVirtualization() const {
     return HasEnhancedCounterVirtualization;
   }
+
+  // Arm Scalable Matrix Extension (SME)
+  bool hasSME() const { return HasSME; }
+  bool hasSMEF64() const { return HasSMEF64; }
+  bool hasSMEI64() const { return HasSMEI64; }
 
   bool isLittleEndian() const { return IsLittle; }
 

@@ -147,6 +147,7 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
     return compoundStmt(
                forEachDescendant(
                    declStmt(
+                       unless(has(decompositionDecl())),
                        has(varDecl(hasLocalStorage(),
                                    hasType(qualType(
                                        hasCanonicalType(allOf(

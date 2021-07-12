@@ -633,9 +633,9 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   SmallVector<std::pair<void *, bool>, 4> OpExprs;
   SmallVector<std::string, 4> Constraints;
   SmallVector<std::string, 4> Clobbers;
-  if (Parser->parseMSInlineAsm(AsmLoc.getPtrEncoding(), AsmStringIR, NumOutputs,
-                               NumInputs, OpExprs, Constraints, Clobbers,
-                               MII.get(), IP.get(), Callback))
+  if (Parser->parseMSInlineAsm(AsmStringIR, NumOutputs, NumInputs, OpExprs,
+                               Constraints, Clobbers, MII.get(), IP.get(),
+                               Callback))
     return StmtError();
 
   // Filter out "fpsw" and "mxcsr". They aren't valid GCC asm clobber

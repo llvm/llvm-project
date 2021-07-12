@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-copy-initialization %t
+// RUN: %check_clang_tidy -std=c++17 %s performance-unnecessary-copy-initialization %t
 
 template <typename T>
 struct Iterator {
@@ -636,4 +636,19 @@ void negativeReferenceIsInitializedOutsideOfBlock() {
       C2.constMethod();
     }
   };
+}
+
+void negativeStructuredBinding() {
+  // Structured bindings are not yet supported but can trigger false positives
+  // since the DecompositionDecl itself is unused and the check doesn't traverse
+  // VarDecls of the BindingDecls.
+  struct Pair {
+    ExpensiveToCopyType first;
+    ExpensiveToCopyType second;
+  };
+
+  Pair P;
+  const auto [C, D] = P;
+  C.constMethod();
+  D.constMethod();
 }

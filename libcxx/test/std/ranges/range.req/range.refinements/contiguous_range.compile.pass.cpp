@@ -10,7 +10,7 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
 
-// template<range _Rp>
+// template<class R>
 // concept contiguous_range;
 
 #include <ranges>
