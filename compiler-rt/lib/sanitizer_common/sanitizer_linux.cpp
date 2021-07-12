@@ -639,11 +639,7 @@ char **GetEnviron() {
 }
 
 #if !SANITIZER_SOLARIS
-enum MutexState {
-  MtxUnlocked = 0,
-  MtxLocked = 1,
-  MtxSleeping = 2
-};
+enum { MtxUnlocked = 0, MtxLocked = 1, MtxSleeping = 2 };
 
 BlockingMutex::BlockingMutex() {
   internal_memset(this, 0, sizeof(*this));
