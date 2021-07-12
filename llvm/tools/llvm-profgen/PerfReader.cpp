@@ -311,18 +311,46 @@ void PerfReader::updateBinaryAddress(const MMapEvent &Event) {
   auto I = BinaryTable.find(BinaryName);
   // Drop the event which doesn't belong to user-provided binaries
   // or if its image is loaded at the same address
-  if (I == BinaryTable.end() || Event.BaseAddress == I->second.getBaseAddress())
+  if (I == BinaryTable.end() || Event.Address == I->second.getBaseAddress())
     return;
 
   ProfiledBinary &Binary = I->second;
 
-  // A binary image could be uploaded and then reloaded at different
-  // place, so update the address map here
-  AddrToBinaryMap.erase(Binary.getBaseAddress());
-  AddrToBinaryMap[Event.BaseAddress] = &Binary;
+  if (Event.Offset == Binary.getTextSegmentOffset()) {
+    // A binary image could be unloaded and then reloaded at different
+    // place, so update the address map here.
+    // Only update for the first executable segment and assume all other
+    // segments are loaded at consecutive memory addresses, which is the case on
+    // X64.
+    AddrToBinaryMap.erase(Binary.getBaseAddress());
+    AddrToBinaryMap[Event.Address] = &Binary;
 
-  // Update binary load address.
-  Binary.setBaseAddress(Event.BaseAddress);
+    // Update binary load address.
+    Binary.setBaseAddress(Event.Address);
+  } else {
+    // Verify segments are loaded consecutively.
+    const auto &Offsets = Binary.getTextSegmentOffsets();
+    auto It = std::lower_bound(Offsets.begin(), Offsets.end(), Event.Offset);
+    if (It != Offsets.end() && *It == Event.Offset) {
+      // The event is for loading a separate executable segment.
+      auto I = std::distance(Offsets.begin(), It);
+      const auto &PreferredAddrs = Binary.getPreferredTextSegmentAddresses();
+      if (PreferredAddrs[I] - Binary.getPreferredBaseAddress() !=
+          Event.Address - Binary.getBaseAddress())
+        exitWithError("Executable segments not loaded consecutively");
+    } else {
+      if (It == Offsets.begin())
+        exitWithError("File offset not found");
+      else {
+        // Find the segment the event falls in. A large segment could be loaded
+        // via multiple mmap calls with consecutive memory addresses.
+        --It;
+        assert(*It < Event.Offset);
+        if (Event.Offset - *It != Event.Address - Binary.getBaseAddress())
+          exitWithError("Segment not loaded by consecutive mmaps");
+      }
+    }
+  }
 }
 
 ProfiledBinary *PerfReader::getBinary(uint64_t Address) {
@@ -637,14 +665,14 @@ void PerfReader::parseMMap2Event(TraceStream &TraceIt) {
   }
   MMapEvent Event;
   Fields[PID].getAsInteger(10, Event.PID);
-  Fields[BASE_ADDRESS].getAsInteger(0, Event.BaseAddress);
+  Fields[BASE_ADDRESS].getAsInteger(0, Event.Address);
   Fields[MMAPPED_SIZE].getAsInteger(0, Event.Size);
   Fields[PAGE_OFFSET].getAsInteger(0, Event.Offset);
   Event.BinaryPath = Fields[BINARY_PATH];
   updateBinaryAddress(Event);
   if (ShowMmapEvents) {
     outs() << "Mmap: Binary " << Event.BinaryPath << " loaded at "
-           << format("0x%" PRIx64 ":", Event.BaseAddress) << " \n";
+           << format("0x%" PRIx64 ":", Event.Address) << " \n";
   }
   TraceIt.advance();
 }
