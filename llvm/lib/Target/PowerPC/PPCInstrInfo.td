@@ -5416,3 +5416,24 @@ def : Pat<(int_ppc_lwarx ForceXForm:$dst),
           (LWARX ForceXForm:$dst)>;
 def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
           (STWCX gprc:$A, ForceXForm:$dst)>;
+def : Pat<(int_ppc_tw gprc:$A, gprc:$B, i32:$IMM),
+          (TW $IMM, $A, $B)>;
+def : Pat<(int_ppc_trap gprc:$A),
+          (TWI 24, $A, 0)>;
+
+def : Pat<(int_ppc_fcfid f64:$A),
+        (XSCVSXDDP $A)>;
+def : Pat<(int_ppc_fcfud f64:$A),
+        (XSCVUXDDP $A)>;
+def : Pat<(int_ppc_fctid f64:$A),
+        (FCTID $A)>;
+def : Pat<(int_ppc_fctidz f64:$A),
+        (XSCVDPSXDS $A)>;
+def : Pat<(int_ppc_fctiw f64:$A),
+        (FCTIW $A)>;
+def : Pat<(int_ppc_fctiwz f64:$A),
+        (XSCVDPSXWS $A)>;
+def : Pat<(int_ppc_fctudz f64:$A),
+        (XSCVDPUXDS $A)>;
+def : Pat<(int_ppc_fctuwz f64:$A),
+        (XSCVDPUXWS $A)>;

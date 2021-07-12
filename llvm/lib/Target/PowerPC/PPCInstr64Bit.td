@@ -1725,3 +1725,9 @@ def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
           (STDCX g8rc:$A, ForceXForm:$dst)>;
 def : Pat<(int_ppc_ldarx ForceXForm:$dst),
           (LDARX ForceXForm:$dst)>;
+def : Pat<(int_ppc_tdw g8rc:$A, g8rc:$B, i32:$IMM),
+          (TD $IMM, $A, $B)>;
+
+// trapd
+def : Pat<(int_ppc_trapd g8rc:$A),
+          (TDI 24, $A, 0)>;
