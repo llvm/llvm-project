@@ -32,6 +32,9 @@ enum class Kind {
   // Operation.
   kMulF,
   kMulI,
+  kDivF,
+  kDivS, // signed
+  kDivU, // unsigned
   kAddF,
   kAddI,
   kSubF,
@@ -197,6 +200,8 @@ public:
   Optional<unsigned> buildTensorExpFromLinalg(linalg::GenericOp op);
 
 private:
+  bool maybeZero(unsigned e);
+
   /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
   Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value val);
 
