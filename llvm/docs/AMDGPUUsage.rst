@@ -12200,6 +12200,7 @@ This kernel is equivalent to the following HIP program:
 
 .. code::
    :number-lines:
+
    __global__ void hello_world(float *p) {
        *p = 3.14159f;
    }
