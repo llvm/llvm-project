@@ -17,7 +17,7 @@
 namespace benchmark {
 namespace internal {
 
-double Finish(Counter const& c, int64_t iterations, double cpu_time,
+double Finish(Counter const& c, IterationCount iterations, double cpu_time,
               double num_threads) {
   double v = c.value;
   if (c.flags & Counter::kIsRate) {
@@ -32,10 +32,15 @@ double Finish(Counter const& c, int64_t iterations, double cpu_time,
   if (c.flags & Counter::kAvgIterations) {
     v /= iterations;
   }
+
+  if (c.flags & Counter::kInvert) {  // Invert is *always* last.
+    v = 1.0 / v;
+  }
   return v;
 }
 
-void Finish(UserCounters* l, int64_t iterations, double cpu_time, double num_threads) {
+void Finish(UserCounters* l, IterationCount iterations, double cpu_time,
+            double num_threads) {
   for (auto& c : *l) {
     c.second.value = Finish(c.second, iterations, cpu_time, num_threads);
   }
