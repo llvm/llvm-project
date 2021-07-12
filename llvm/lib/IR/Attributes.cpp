@@ -242,15 +242,6 @@ StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
   }
 }
 
-bool Attribute::doesAttrKindHaveArgument(Attribute::AttrKind AttrKind) {
-  return AttrKind == Attribute::Alignment ||
-         AttrKind == Attribute::StackAlignment ||
-         AttrKind == Attribute::Dereferenceable ||
-         AttrKind == Attribute::AllocSize ||
-         AttrKind == Attribute::DereferenceableOrNull ||
-         AttrKind == Attribute::VScaleRange;
-}
-
 bool Attribute::isExistingAttribute(StringRef Name) {
   return StringSwitch<bool>(Name)
 #define GET_ATTR_NAMES

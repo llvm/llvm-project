@@ -1741,8 +1741,7 @@ void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
       continue;
     }
 
-    if (A.isIntAttribute() !=
-        Attribute::doesAttrKindHaveArgument(A.getKindAsEnum())) {
+    if (A.isIntAttribute() != Attribute::isIntAttrKind(A.getKindAsEnum())) {
       CheckFailed("Attribute '" + A.getAsString() + "' should have an Argument",
                   V);
       return;
@@ -4702,7 +4701,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Assert(ArgCount <= 2, "to many arguments");
       if (Kind == Attribute::None)
         break;
-      if (Attribute::doesAttrKindHaveArgument(Kind)) {
+      if (Attribute::isIntAttrKind(Kind)) {
         Assert(ArgCount == 2, "this attribute should have 2 arguments");
         Assert(isa<ConstantInt>(Call.getOperand(Elem.Begin + 1)),
                "the second argument should be a constant integral value");
