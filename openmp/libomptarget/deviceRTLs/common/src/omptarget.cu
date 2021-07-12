@@ -68,8 +68,6 @@ static void __kmpc_generic_kernel_init() {
   nThreads = GetNumberOfWorkersInTeam();
   threadLimit = nThreads;
 
-  omptarget_nvptx_globalArgs.Init();
-
   __kmpc_data_sharing_init_stack();
   __kmpc_impl_target_init();
 }
