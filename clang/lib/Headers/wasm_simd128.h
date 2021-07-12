@@ -1151,7 +1151,9 @@ wasm_u32x4_trunc_sat_f64x2_zero(v128_t __a) {
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_f32x4_demote_f64x2_zero(v128_t __a) {
-  return (v128_t)__builtin_wasm_demote_zero_f64x2_f32x4((__f64x2)__a);
+  return (v128_t) __builtin_convertvector(
+      __builtin_shufflevector((__f64x2)__a, (__f64x2){0, 0}, 0, 1, 2, 3),
+      __f32x4);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
