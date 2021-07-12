@@ -48,8 +48,6 @@ extern uptr kHighShadowEnd;
 extern uptr kHighMemStart;
 extern uptr kHighMemEnd;
 
-extern uptr kAliasRegionStart;
-
 inline uptr GetShadowOffset() {
   return SANITIZER_FUCHSIA ? 0 : __hwasan_shadow_memory_dynamic_address;
 }
@@ -69,6 +67,8 @@ inline bool MemIsShadow(uptr p) {
   return (kLowShadowStart <= p && p <= kLowShadowEnd) ||
          (kHighShadowStart <= p && p <= kHighShadowEnd);
 }
+
+uptr GetAliasRegionStart();
 
 }  // namespace __hwasan
 
