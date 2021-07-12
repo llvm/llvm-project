@@ -38,8 +38,19 @@ static ompt_get_parallel_info_t ompt_multiplex_get_parallel_info;
 #error CLIENT_TOOL_LIBRARIES_VAR should be defined before including of ompt-multiplex.h
 #endif
 
-#if defined(CUSTOM_DELETE_DATA) && !defined(CUSTOM_GET_CLIENT_DATA)
-#error CUSTOM_GET_CLIENT_DATA must be set if CUSTOM_DELETE_DATA is set
+#if defined(OMPT_MULTIPLEX_CUSTOM_DELETE_TASK_DATA) &&                         \
+    !defined(OMPT_MULTIPLEX_CUSTOM_GET_CLIENT_TASK_DATA)
+#error OMPT_MULTIPLEX_CUSTOM_GET_CLIENT_TASK_DATA must be set if OMPT_MULTIPLEX_CUSTOM_DELETE_TASK_DATA is set
+#endif
+
+#if defined(OMPT_MULTIPLEX_CUSTOM_DELETE_PARALLEL_DATA) &&                     \
+    !defined(OMPT_MULTIPLEX_CUSTOM_GET_CLIENT_PARALLEL_DATA)
+#error OMPT_MULTIPLEX_CUSTOM_GET_CLIENT_PARALLEL_DATA must be set if OMPT_MULTIPLEX_CUSTOM_DELETE_PARALLEL_DATA is set
+#endif
+
+#if defined(OMPT_MULTIPLEX_CUSTOM_DELETE_THREAD_DATA) &&                       \
+    !defined(OMPT_MULTIPLEX_CUSTOM_GET_CLIENT_THREAD_DATA)
+#error OMPT_MULTIPLEX_CUSTOM_GET_CLIENT_THREAD_DATA must be set if OMPT_MULTIPLEX_CUSTOM_DELETE_THREAD_DATA is set
 #endif
 
 #define OMPT_API_ROUTINE static
