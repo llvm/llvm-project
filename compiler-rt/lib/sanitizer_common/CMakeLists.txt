@@ -185,6 +185,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_syscall_linux_riscv64.inc
   sanitizer_syscalls_netbsd.inc
   sanitizer_thread_registry.h
+  sanitizer_thread_safety.h
   sanitizer_tls_get_addr.h
   sanitizer_vector.h
   sanitizer_win.h

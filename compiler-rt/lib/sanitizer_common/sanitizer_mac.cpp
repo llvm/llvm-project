@@ -524,7 +524,7 @@ void BlockingMutex::Unlock() {
   OSSpinLockUnlock((OSSpinLock*)&opaque_storage_);
 }
 
-void BlockingMutex::CheckLocked() {
+void BlockingMutex::CheckLocked() const {
   CHECK_NE(*(OSSpinLock*)&opaque_storage_, 0);
 }
 

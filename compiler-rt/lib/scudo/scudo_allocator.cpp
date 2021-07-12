@@ -300,7 +300,7 @@ struct Allocator {
 
   // Allocates a chunk.
   void *allocate(uptr Size, uptr Alignment, AllocType Type,
-                 bool ForceZeroContents = false) {
+                 bool ForceZeroContents = false) NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
 
     if (UNLIKELY(Alignment > MaxAlignment)) {
@@ -405,7 +405,7 @@ struct Allocator {
   // a zero-sized quarantine, or if the size of the chunk is greater than the
   // quarantine chunk size threshold.
   void quarantineOrDeallocateChunk(void *Ptr, UnpackedHeader *Header,
-                                   uptr Size) {
+                                   uptr Size) NO_THREAD_SAFETY_ANALYSIS {
     const bool BypassQuarantine = !Size || (Size > QuarantineChunksUpToSize);
     if (BypassQuarantine) {
       UnpackedHeader NewHeader = *Header;
