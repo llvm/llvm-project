@@ -1043,13 +1043,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 ; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__2_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__2_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
 ; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** noundef [[TMP3]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1180,10 +1179,9 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR7]]
 ; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__5 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__5_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__5 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__5_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
 ; CHECK-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR7]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1326,13 +1324,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 ; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__7 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__7_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @unknown() #[[ATTR8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__8 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__8_wrapper to i8*), i8** noundef [[TMP4]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__7 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__7_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @unknown() #[[ATTR8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__8 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__8_wrapper to i8*), i8** noundef [[TMP3]], i64 noundef 0)
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1456,13 +1453,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 ; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__10 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__10_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__10 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__10_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
 ; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR9:[0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__11 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__11_wrapper to i8*), i8** noundef [[TMP3]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__11 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__11_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1552,12 +1548,11 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 ; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__13 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__13_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__14 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__14_wrapper to i8*), i8** noundef [[TMP3]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__13 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__13_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS1]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__14 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__14_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -1684,14 +1679,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[A]], i32* [[A_ADDR]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_ADDR]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], 1
 ; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR7]]
 ; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR7]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -1712,9 +1705,9 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR7]]
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR7]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], 1
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR8]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR8]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void

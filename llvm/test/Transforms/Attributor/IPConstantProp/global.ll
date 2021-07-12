@@ -10,29 +10,23 @@
 ; CHECK: @[[_ZL6TEST1G:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 42, align 4
 ;.
 define void @_Z7test1f1v() nounwind {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@_Z7test1f1v
 ; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[TMP:%.*]] = load i32, i32* @_ZL6test1g, align 4
-; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP]], 0
-; IS__TUNIT____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; IS__TUNIT____-NEXT:    br label [[IF_END:%.*]]
 ; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    store i32 0, i32* @_ZL6test1g, align 4
-; IS__TUNIT____-NEXT:    br label [[IF_END]]
+; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       if.end:
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@_Z7test1f1v
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[TMP:%.*]] = load i32, i32* @_ZL6test1g, align 4
-; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP]], 0
-; IS__CGSCC____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; IS__CGSCC____-NEXT:    br label [[IF_END:%.*]]
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    store i32 0, i32* @_ZL6test1g, align 4
-; IS__CGSCC____-NEXT:    br label [[IF_END]]
+; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -50,28 +44,24 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 define i32 @_Z7test1f2v() nounwind {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@_Z7test1f2v
-; IS__TUNIT____-SAME: () #[[ATTR1:[0-9]+]] {
+; IS__TUNIT____-SAME: () #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[TMP:%.*]] = load i32, i32* @_ZL6test1g, align 4
-; IS__TUNIT____-NEXT:    ret i32 [[TMP]]
+; IS__TUNIT____-NEXT:    ret i32 42
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@_Z7test1f2v
-; IS__CGSCC____-SAME: () #[[ATTR1:[0-9]+]] {
+; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[TMP:%.*]] = load i32, i32* @_ZL6test1g, align 4
-; IS__CGSCC____-NEXT:    ret i32 [[TMP]]
+; IS__CGSCC____-NEXT:    ret i32 42
 ;
 entry:
   %tmp = load i32, i32* @_ZL6test1g, align 4
   ret i32 %tmp
 }
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
-; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readonly willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
