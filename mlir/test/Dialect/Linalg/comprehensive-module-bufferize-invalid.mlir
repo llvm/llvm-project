@@ -18,7 +18,7 @@ func private @foo() -> tensor<?xf32>
 
 // expected-error @+1 {{cannot bufferize a FuncOp with tensors and without a unique ReturnOp}}
 func @swappy(%cond1 : i1, %cond2 : i1, %t1 : tensor<f32>, %t2 : tensor<f32>)
-    -> (tensor<f32>, tensor<f32>) 
+    -> (tensor<f32>, tensor<f32>)
 {
   cond_br %cond1, ^bb1, ^bb2
 
@@ -64,11 +64,32 @@ func @scf_for(%A : tensor<?xf32>,
     // Throw a wrench in the system by swapping yielded values: this result in a
     // ping-pong of values at each iteration on which we currently want to fail.
 
-    // expected-error @+1 {{Yield operand #1 does not bufferize to an equivalent buffer}}
+    // expected-error @+1 {{Yield operand #0 does not bufferize to an equivalent buffer}}
     scf.yield %ttB, %ttA : tensor<?xf32>, tensor<?xf32>
   }
 
   return %r0#0, %r0#1: tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+func private @fun_with_side_effects(%A: tensor<?xf32> {linalg.inplaceable = true})
+
+func @foo(%A: tensor<?xf32> {linalg.inplaceable = true}) -> (tensor<?xf32>) {
+  call @fun_with_side_effects(%A) : (tensor<?xf32>) -> ()
+  return %A: tensor<?xf32>
+}
+
+func @scf_yield_needs_copy(%A : tensor<?xf32> {linalg.inplaceable = true}, %iters : index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %res = scf.for %arg0 = %c0 to %iters step %c1 iter_args(%bbarg = %A) -> (tensor<?xf32>) {
+    %r = call @foo(%A) : (tensor<?xf32>) -> (tensor<?xf32>)
+    // expected-error @+1 {{Yield operand #0 does not bufferize to an equivalent buffer}}
+    scf.yield %r : tensor<?xf32>
+  }
+  call @fun_with_side_effects(%res) : (tensor<?xf32>) -> ()
+  return
 }
 
 // -----
@@ -92,8 +113,8 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
 
 func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<4xf32>
 {
-  %r = scf.if %b -> (tensor<4xf32>) { 
-    // expected-error @+1 {{not nested under ForOp}}
+  // expected-error @+1 {{unsupported op with tensors}}
+  %r = scf.if %b -> (tensor<4xf32>) {
     scf.yield %A : tensor<4xf32>
   } else {
     scf.yield %B : tensor<4xf32>

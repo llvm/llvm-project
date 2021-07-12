@@ -2075,14 +2075,24 @@ static LogicalResult bufferize(OpBuilder &b, scf::YieldOp yieldOp,
     auto tensorType = operand.get().getType().dyn_cast<TensorType>();
     if (!tensorType)
       continue;
+
     OpOperand &forOperand = forOp.getOpOperandForResult(
         forOp->getResult(operand.getOperandNumber()));
     auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-    if (getInPlace(bbArg) == InPlaceSpec::True)
-      operand.set(bbArg);
-    else
-      operand.set(
-          b.create<memref::TensorLoadOp>(yieldOp.getLoc(), lookup(bvm, bbArg)));
+    Value yieldedBuffer = lookup(bvm, operand.get());
+    Value bbArgBuffer = lookup(bvm, bbArg);
+    if (!aliasInfo.areEquivalentBufferizedValues(yieldedBuffer, bbArgBuffer)) {
+      // TODO: this could get resolved with copies but it can also turn into
+      // swaps so we need to be careful about order of copies.
+      return yieldOp->emitError()
+             << "Yield operand #" << operand.getOperandNumber()
+             << " does not bufferize to an equivalent buffer to the matching"
+             << " enclosing scf::for operand";
+    }
+
+    // Buffers are equivalent so the work is already done and we just yield the
+    // bbArg so that it later canonicalizes away.
+    operand.set(bbArg);
   }
   return success();
 }
@@ -2205,38 +2215,6 @@ bufferizableInPlaceAnalysis(OpOperand &operand, OpResult result,
   return success();
 }
 
-/// Return `failure()` if either
-/// scf::YieldOp are not explicitly bufferized and we need to perform a separate
-/// sanity check for now.
-static LogicalResult
-bufferizationSanityCheck(scf::YieldOp yieldOp,
-                         const BufferizationAliasInfo &aliasInfo) {
-  auto parentForOp = yieldOp->getParentOfType<scf::ForOp>();
-  if (!parentForOp)
-    return yieldOp->emitError() << "not nested under ForOp";
-
-  for (OpOperand &operand : yieldOp->getOpOperands()) {
-    OpResult matchingForOpResult =
-        parentForOp->getResult(operand.getOperandNumber());
-    // Nothing to do if operand bufferizes out of place.
-    if (getInPlace(matchingForOpResult) != InPlaceSpec::True)
-      continue;
-    OpOperand &machingForOpOperand =
-        parentForOp.getOpOperandForResult(matchingForOpResult);
-    BlockArgument matchingForOpIterArg =
-        parentForOp.getRegionIterArgForOpOperand(machingForOpOperand);
-    if (!aliasInfo.areEquivalentBufferizedValues(matchingForOpIterArg,
-                                                 operand.get())) {
-      return yieldOp->emitError()
-             << "Yield operand #" << operand.getOperandNumber()
-             << " does not bufferize to an equivalent buffer to the matching"
-             << " enclosing scf::for operand -> Fail the pass\n";
-    }
-  }
-
-  return success();
-}
-
 /// Analyze the `funcOp` body to determine which OpResults are inplaceable.
 static LogicalResult
 inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
@@ -2275,13 +2253,14 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
       return failure();
   }
 
-  // Bufferize all ops except ExtractSliceOp and InsertSliceOp which are handled
-  // separately.
+  // Analyze all ops that return a tensors, except ExtractSliceOp and
+  // InsertSliceOp which are handled separately.
   // Walk other ops in reverse for better interference behavior.
   for (Operation *op : reverse(nonSliceOps))
     for (OpOperand &opOperand : op->getOpOperands())
       if (OpResult result = getInplaceableOpResult(opOperand))
-        if (failed(bufferizableInPlaceAnalysis(opOperand, result, aliasInfo,
+        if (result.getType().isa<TensorType>() &&
+            failed(bufferizableInPlaceAnalysis(opOperand, result, aliasInfo,
                                                domInfo)))
           return failure();
 
@@ -2292,14 +2271,9 @@ inPlaceAnalysisFuncOpBody(FuncOp funcOp, BufferizationAliasInfo &aliasInfo,
     if (failed(bufferizableInPlaceAnalysis(extractSliceOp, aliasInfo, domInfo)))
       return failure();
 
-  // Sanity checks.
-  auto walkResult = funcOp.walk([&](scf::YieldOp yieldOp) -> WalkResult {
-    return bufferizationSanityCheck(yieldOp, aliasInfo);
-  });
-
   LDBG("End InPlaceAnalysisFuncOpInternals:\n" << funcOp << '\n');
 
-  return success(!walkResult.wasInterrupted());
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
