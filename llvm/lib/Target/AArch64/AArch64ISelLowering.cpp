@@ -3012,50 +3012,25 @@ getAArch64XALUOOp(AArch64CC::CondCode &CC, SDValue Op, SelectionDAG &DAG) {
     CC = AArch64CC::NE;
     bool IsSigned = Op.getOpcode() == ISD::SMULO;
     if (Op.getValueType() == MVT::i32) {
+      // Extend to 64-bits, then perform a 64-bit multiply.
       unsigned ExtendOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      // For a 32 bit multiply with overflow check we want the instruction
-      // selector to generate a widening multiply (SMADDL/UMADDL). For that we
-      // need to generate the following pattern:
-      // (i64 add 0, (i64 mul (i64 sext|zext i32 %a), (i64 sext|zext i32 %b))
       LHS = DAG.getNode(ExtendOpc, DL, MVT::i64, LHS);
       RHS = DAG.getNode(ExtendOpc, DL, MVT::i64, RHS);
       SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, LHS, RHS);
-      SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Mul,
-                                DAG.getConstant(0, DL, MVT::i64));
-      // On AArch64 the upper 32 bits are always zero extended for a 32 bit
-      // operation. We need to clear out the upper 32 bits, because we used a
-      // widening multiply that wrote all 64 bits. In the end this should be a
-      // noop.
-      Value = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Add);
+      Value = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mul);
+
+      // Check that the result fits into a 32-bit integer.
+      SDVTList VTs = DAG.getVTList(MVT::i64, MVT_CC);
       if (IsSigned) {
-        // The signed overflow check requires more than just a simple check for
-        // any bit set in the upper 32 bits of the result. These bits could be
-        // just the sign bits of a negative number. To perform the overflow
-        // check we have to arithmetic shift right the 32nd bit of the result by
-        // 31 bits. Then we compare the result to the upper 32 bits.
-        SDValue UpperBits = DAG.getNode(ISD::SRL, DL, MVT::i64, Add,
-                                        DAG.getConstant(32, DL, MVT::i64));
-        UpperBits = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, UpperBits);
-        SDValue LowerBits = DAG.getNode(ISD::SRA, DL, MVT::i32, Value,
-                                        DAG.getConstant(31, DL, MVT::i64));
-        // It is important that LowerBits is last, otherwise the arithmetic
-        // shift will not be folded into the compare (SUBS).
-        SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
-        Overflow = DAG.getNode(AArch64ISD::SUBS, DL, VTs, UpperBits, LowerBits)
-                       .getValue(1);
-      } else {
-        // The overflow check for unsigned multiply is easy. We only need to
-        // check if any of the upper 32 bits are set. This can be done with a
-        // CMP (shifted register). For that we need to generate the following
-        // pattern:
-        // (i64 AArch64ISD::SUBS i64 0, (i64 srl i64 %Mul, i64 32)
-        SDValue UpperBits = DAG.getNode(ISD::SRL, DL, MVT::i64, Mul,
-                                        DAG.getConstant(32, DL, MVT::i64));
-        SDVTList VTs = DAG.getVTList(MVT::i64, MVT::i32);
+        // cmp xreg, wreg, sxtw
+        SDValue SExtMul = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Value);
         Overflow =
-            DAG.getNode(AArch64ISD::SUBS, DL, VTs,
-                        DAG.getConstant(0, DL, MVT::i64),
-                        UpperBits).getValue(1);
+            DAG.getNode(AArch64ISD::SUBS, DL, VTs, Mul, SExtMul).getValue(1);
+      } else {
+        // tst xreg, #0xffffffff00000000
+        SDValue UpperBits = DAG.getConstant(0xFFFFFFFF00000000, DL, MVT::i64);
+        Overflow =
+            DAG.getNode(AArch64ISD::ANDS, DL, VTs, Mul, UpperBits).getValue(1);
       }
       break;
     }

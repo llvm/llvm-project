@@ -56,7 +56,10 @@ def Tosa_ArgMaxOp : Tosa_Op<"argmax", [
 //===----------------------------------------------------------------------===//
 // Operator: avg_pool2d
 //===----------------------------------------------------------------------===//
-def Tosa_AvgPool2dOp : Tosa_Op<"avg_pool2d", [NoSideEffect]> {
+def Tosa_AvgPool2dOp : Tosa_Op<"avg_pool2d", [
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>, 
+    NoSideEffect]> {
   let summary = "Performs max pooling on the input.";
 
   let description = [{
@@ -233,7 +236,10 @@ def Tosa_MatMulOp : Tosa_Op<"matmul", [
 //===----------------------------------------------------------------------===//
 // Operator: max_pool2d
 //===----------------------------------------------------------------------===//
-def Tosa_MaxPool2dOp : Tosa_Op<"max_pool2d", [NoSideEffect]> {
+def Tosa_MaxPool2dOp : Tosa_Op<"max_pool2d", [
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>,
+    NoSideEffect]> {
   let summary = "Performs max pooling on the input.";
 
   let description = [{
