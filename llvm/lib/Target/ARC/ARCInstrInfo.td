@@ -12,6 +12,24 @@
 
 include "ARCInstrFormats.td"
 
+//===----------------------------------------------------------------------===//
+// Operand Pattern Stuff.
+//===----------------------------------------------------------------------===//
+
+// Operand for printing out a condition code.
+let PrintMethod = "printCCOperand" in
+  def CCOp : PredicateOperand<i32, (ops i32imm), (ops)>;
+
+// The "u6" operand of a RRU6-type instruction
+let PrintMethod = "printU6" in {
+  def u6 : Operand<i32>, ImmLeaf<i32, [{
+    return isUInt<6>(Imm);
+  }]>;
+  def wide_u6 : Operand<i64>, ImmLeaf<i64, [{
+    return isUInt<6>(Imm);
+  }]>;
+}
+
 // ---------------------------------------------------------------------------
 // Selection DAG Nodes.
 // ---------------------------------------------------------------------------
@@ -299,14 +317,24 @@ def MOV_ru6 : F32_DOP_RU6<0b00100, 0b001010, 0,
 def cmov : PatFrag<(ops node:$op1, node:$op2, node:$cc),
                    (ARCcmov $op1, $op2, $cc)>;
 let Uses = [STATUS32] in {
-def MOVcc : F32_DOP_CC_RR<0b00100, 0b001010, 0,
-               (outs GPR32:$B),
-               (ins GPR32:$C, GPR32:$fval, cmovpred:$cc),
-               !strconcat("mov.", "$cc\t$B, $C"),
-               [(set GPR32:$B, (cmov i32:$C, i32:$fval, cmovpred:$cc))]> {
-  let Constraints = "$B = $fval";
+  def MOVcc : F32_DOP_CC_RR<0b00100, 0b001010, 0,
+                 (outs GPR32:$B),
+                 (ins GPR32:$C, GPR32:$fval, cmovpred:$cc),
+                 !strconcat("mov.", "$cc\t$B, $C"),
+                 [(set GPR32:$B, (cmov i32:$C, i32:$fval, cmovpred:$cc))]> {
+    let Constraints = "$B = $fval";
+  }
+
+  def MOVcc_ru6 : F32_SOP_CC_RU6<0b00100, 0b001010, 0,
+                 (outs GPR32:$b), (ins u6:$c, CCOp:$cc, GPR32:$b2),
+                 "mov.$cc\t$b, $c", []> {
+    let isAsCheapAsAMove=0;
+    let isPredicable=1;
+    let isReMaterializable=0;
+    let Constraints="$b2 = $b";
+  }
 }
-}
+
 def : Pat<(ARCGAWrapper tglobaladdr:$addr),
            (MOV_rlimm tglobaladdr:$addr)>;
 
