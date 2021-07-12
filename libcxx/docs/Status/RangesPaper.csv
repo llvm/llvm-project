@@ -77,12 +77,12 @@ Section,Description,Dependencies,Assignee,Complete
 [move.sentinel],,[predef.iterators],Unassigned,Not started
 [common.iterator],,"| [iterator.concepts]
 | [iterator.cust.swap]
-| [iterator.cust.move]",Zoe Carver,Not started
-[default.sentinels],std::default_sentinel_t.,No dependencies,Unassigned,Not started
+| [iterator.cust.move]",Zoe Carver,In Progress
+[default.sentinels],std::default_sentinel_t.,No dependencies,Zoe Carver,✅
 [counted.iterator],,"| [iterator.concepts]
 | [iterator.cust.swap]
 | [iterator.cust.move]
-| [default.sentinels]",Unassigned,Not started
+| [default.sentinels]",Zoe Carver,In Progress
 [stream.iterators],,[default.sentinels],Unassigned,Not started
 `[range.access] <http://wg21.link/range.access>`_,"| `ranges::begin <https://llvm.org/D100255>`_
 | `ranges::end <https://llvm.org/D100255>`_
@@ -124,26 +124,26 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.utility.helpers] <http://wg21.link/range.utility.helpers>`_,"| *simple-view*
 | *has-arrow*
 | *not-same-as*","| [range.range]
-| [iterator.concept.input]",Zoe Carver,In progress
+| [iterator.concept.input]",Zoe Carver,✅
 `[view.interface] <http://wg21.link/view.interface>`_,"`ranges::view_interface <https://llvm.org/D101737>`_","| [ranges.range]
 | [range.view]
 | [range.iterator.op.prev]
-| [range.refinements]",Zoe Carver,In progress
-`[range.subrange] <http://wg21.link/range.subrange>`_,`ranges::subrange <https://llvm.org/D102006>`_,[view.interface],Zoe Carver,In progress
+| [range.refinements]",Zoe Carver,✅
+`[range.subrange] <http://wg21.link/range.subrange>`_,`ranges::subrange <https://llvm.org/D102006>`_,[view.interface],Zoe Carver,✅
 `[range.dangling] <http://wg21.link/range.dangling>`_,"| ranges::dangling
 | ranges::borrowed_iterator_t
 | ranges::borrowed_subrange_t","| [range.range]
 | [range.subrange]",Unassigned,Not started
-`[range.all] <http://wg21.link/range.all>`_,`view::all <https://llvm.org/D102028>`_,"[range.subrange], [range.view.ref]",Zoe Carver,In progress
-`[range.view.ref] <http://wg21.link/range.view>`_,`ref-view <https://llvm.org/D102020>`_,[view.interface],Zoe Carver,In progress
+`[range.all] <http://wg21.link/range.all>`_,`view::all <https://llvm.org/D102028>`_,"[range.subrange], [range.view.ref]",Zoe Carver,✅
+`[range.view.ref] <http://wg21.link/range.view>`_,`ref-view <https://llvm.org/D102020>`_,[view.interface],Zoe Carver,✅
 `[range.filter] <http://wg21.link/range.filter>`_,filter_view,[range.all],Louis Dionne,Not started
 `[range.transform] <http://wg21.link/range.transform>`_,`transform_view <https://llvm.org/D103056>`_,[range.all],Zoe Carver,✅
 `[range.iota] <http://wg21.link/range.iota>`_,iota_view,[range.all],Louis Dionne,Not started
-`[range.take] <http://wg21.link/range.take>`_,take_view,[range.all],Zoe Carver,Not started
+`[range.take] <http://wg21.link/range.take>`_,take_view,[range.all],Zoe Carver,In Progress
 `[range.join] <http://wg21.link/range.join>`_,join_view,[range.all],Christopher Di Bella,Not started
 `[range.empty] <http://wg21.link/range.empty>`_,`empty_view <https://reviews.llvm.org/D103208>`_,[view.interface],Zoe Carver,✅
 `[range.single] <http://wg21.link/range.single>`_,single_view,[view.interface],Unassigned,Not started
 `[range.split] <http://wg21.link/range.split>`_,split_view,[range.all],Unassigned,Not started
-`[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Unassigned,Not started
-`[range.common] <http://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,Not started
+`[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Zoe Carver,Not started
+`[range.common] <http://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,In Progress
 `[range.reverse] <http://wg21.link/range.reverse>`_,reverse_view,[range.all],Unassigned,Not started

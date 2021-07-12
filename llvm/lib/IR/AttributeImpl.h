@@ -136,7 +136,7 @@ class IntAttributeImpl : public EnumAttributeImpl {
 public:
   IntAttributeImpl(Attribute::AttrKind Kind, uint64_t Val)
       : EnumAttributeImpl(IntAttrEntry, Kind), Val(Val) {
-    assert(Attribute::doesAttrKindHaveArgument(Kind) &&
+    assert(Attribute::isIntAttrKind(Kind) &&
            "Wrong kind for int attribute!");
   }
 

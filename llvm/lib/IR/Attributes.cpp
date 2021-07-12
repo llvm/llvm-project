@@ -242,15 +242,6 @@ StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
   }
 }
 
-bool Attribute::doesAttrKindHaveArgument(Attribute::AttrKind AttrKind) {
-  return AttrKind == Attribute::Alignment ||
-         AttrKind == Attribute::StackAlignment ||
-         AttrKind == Attribute::Dereferenceable ||
-         AttrKind == Attribute::AllocSize ||
-         AttrKind == Attribute::DereferenceableOrNull ||
-         AttrKind == Attribute::VScaleRange;
-}
-
 bool Attribute::isExistingAttribute(StringRef Name) {
   return StringSwitch<bool>(Name)
 #define GET_ATTR_NAMES
@@ -492,6 +483,35 @@ bool Attribute::operator<(Attribute A) const {
 
 void Attribute::Profile(FoldingSetNodeID &ID) const {
   ID.AddPointer(pImpl);
+}
+
+enum AttributeProperty {
+  FnAttr = (1 << 0),
+  ParamAttr = (1 << 1),
+  RetAttr = (1 << 2),
+};
+
+#define GET_ATTR_PROP_TABLE
+#include "llvm/IR/Attributes.inc"
+
+static bool hasAttributeProperty(Attribute::AttrKind Kind,
+                                 AttributeProperty Prop) {
+  unsigned Index = Kind - 1;
+  assert(Index < sizeof(AttrPropTable) / sizeof(AttrPropTable[0]) &&
+         "Invalid attribute kind");
+  return AttrPropTable[Index] & Prop;
+}
+
+bool Attribute::canUseAsFnAttr(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::FnAttr);
+}
+
+bool Attribute::canUseAsParamAttr(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::ParamAttr);
+}
+
+bool Attribute::canUseAsRetAttr(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::RetAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1908,7 +1928,6 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
         .addDereferenceableOrNullAttr(1) // the int here is ignored
         .addAttribute(Attribute::ReadNone)
         .addAttribute(Attribute::ReadOnly)
-        .addAttribute(Attribute::InAlloca)
         .addPreallocatedAttr(Ty)
         .addInAllocaAttr(Ty)
         .addByValAttr(Ty)
