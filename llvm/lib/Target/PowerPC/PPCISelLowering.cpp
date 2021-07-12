@@ -17330,6 +17330,17 @@ PPC::AddrMode PPCTargetLowering::SelectForceXFormMode(SDValue N, SDValue &Disp,
   return Mode;
 }
 
+// If we happen to match to an aligned D-Form, check if the Frame Index is
+// adequately aligned. If it is not, reset the mode to match to X-Form.
+static void setXFormForUnalignedFI(SDValue N, unsigned Flags,
+                                   PPC::AddrMode &Mode) {
+  if (!isa<FrameIndexSDNode>(N))
+    return;
+  if ((Mode == PPC::AM_DSForm && !(Flags & PPC::MOF_RPlusSImm16Mult4)) ||
+      (Mode == PPC::AM_DQForm && !(Flags & PPC::MOF_RPlusSImm16Mult16)))
+    Mode = PPC::AM_XForm;
+}
+
 /// SelectOptimalAddrMode - Based on a node N and it's Parent (a MemSDNode),
 /// compute the address flags of the node, get the optimal address mode based
 /// on the flags, and set the Base and Disp based on the address mode.
@@ -17345,6 +17356,10 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
 
   // Get the optimal address mode based on the Flags.
   PPC::AddrMode Mode = getAddrModeForFlags(Flags);
+
+  // If the address mode is DS-Form or DQ-Form, check if the FI is aligned.
+  // Select an X-Form load if it is not.
+  setXFormForUnalignedFI(N, Flags, Mode);
 
   // Set Base and Disp accordingly depending on the address mode.
   switch (Mode) {
