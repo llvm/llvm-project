@@ -10,6 +10,7 @@
 #include <memory>
 #include <mutex>
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
 
@@ -2472,6 +2473,11 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
     error = GetTarget().Install(&launch_info);
     if (error.Fail())
       return error;
+
+    // Listen and queue events that are broadcasted during the process launch.
+    ListenerSP listener_sp(Listener::MakeListener("LaunchEventHijack"));
+    HijackProcessEvents(listener_sp);
+    auto on_exit = llvm::make_scope_exit([this]() { RestoreProcessEvents(); });
 
     if (PrivateStateThreadIsValid())
       PausePrivateStateThread();
