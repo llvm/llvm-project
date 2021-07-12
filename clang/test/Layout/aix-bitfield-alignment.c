@@ -232,3 +232,37 @@ int s = sizeof(G);
 // CHECK-NEXT:          0 | struct G
 // CHECK-NEXT:     0:0-44 |   long long ll
 // CHECK-NEXT:               sizeof=8, {{(dsize=8, )?}}align=8, preferredalign=8
+
+#pragma align(packed)
+struct H {
+   char c;
+   int : 0;
+   int i;
+} H;
+#pragma align(reset)
+
+int h = sizeof(H);
+
+// CHECK:      *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct H
+// CHECK-NEXT:          0 |   char c
+// CHECK-NEXT:        4:- |   int
+// CHECK-NEXT:          4 |   int i
+// CHECK-NEXT:              sizeof=8, {{(dsize=8, )?}}align=1, preferredalign=1
+
+#pragma pack(2)
+struct I {
+   char c;
+   int : 0;
+   int i;
+} I;
+#pragma pack(pop)
+
+int i = sizeof(I);
+
+// CHECK:      *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct I
+// CHECK-NEXT:          0 |   char c
+// CHECK-NEXT:        4:- |   int
+// CHECK-NEXT:          4 |   int i
+// CHECK-NEXT:              sizeof=8, {{(dsize=8, )?}}align=2, preferredalign=2
