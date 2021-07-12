@@ -81,6 +81,7 @@ def main(args):
 
   # Print.
   if args.format == "yaml":
+    print("# Auto-generated file. Do not edit!")
     print(yaml_dump_all(configs))
   elif args.format == "repr":
     for config in configs:
