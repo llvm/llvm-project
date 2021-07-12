@@ -624,19 +624,25 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
                     obj_file->GetFileSpec().GetFilename().GetCString());
     return false;
   }
-  if (HasReflectionInfo(obj_file)) {
-    // When dealing with ELF, we need to pass in the contents of the on-disk
-    // file, since the Section Header Table is not present in the child process
-    if (obj_file->GetPluginName().GetStringRef().equals("elf")) {
-      DataExtractor extractor;
-      auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor);
-      const uint8_t *file_data = extractor.GetDataStart();
-      llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
-      m_reflection_ctx->readELF(swift::remote::RemoteAddress(load_ptr),
-          llvm::Optional<llvm::sys::MemoryBlock>(file_buffer));
-    } else {
-      m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
-    }
+  bool found = HasReflectionInfo(obj_file);
+  LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "%s reflection metadata in \"%s\"", found ? "Adding" : "No",
+            obj_file->GetFileSpec().GetCString());
+  if (!found)
+    return true;
+
+  // When dealing with ELF, we need to pass in the contents of the on-disk
+  // file, since the Section Header Table is not present in the child process
+  if (obj_file->GetPluginName().GetStringRef().equals("elf")) {
+    DataExtractor extractor;
+    auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor);
+    const uint8_t *file_data = extractor.GetDataStart();
+    llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
+    m_reflection_ctx->readELF(
+        swift::remote::RemoteAddress(load_ptr),
+        llvm::Optional<llvm::sys::MemoryBlock>(file_buffer));
+  } else {
+    m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
   }
   return true;
 }
