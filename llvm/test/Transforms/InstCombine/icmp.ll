@@ -3950,3 +3950,56 @@ define i1 @thread_cmp_over_select_with_poison_falseval(i1 %b) {
   %tobool = icmp ne i32 %s, 0
   ret i1 %tobool
 }
+
+define i1 @signbit_true_logic(i8 %x) {
+; CHECK-LABEL: @signbit_true_logic(
+; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[NOT]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %dec = add i8 %x, -1
+  %not = xor i8 %x, -1
+  %and = and i8 %dec, %not
+  %r = icmp slt i8 %and, 0
+  ret i1 %r
+}
+
+define <2 x i1> @signbit_false_logic(<2 x i5> %x) {
+; CHECK-LABEL: @signbit_false_logic(
+; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i5> [[X:%.*]], <i5 -1, i5 undef>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i5> [[X]], <i5 -1, i5 -1>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i5> [[DEC]], [[NOT]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i5> [[AND]], <i5 -1, i5 -1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %dec = add <2 x i5> %x,  <i5 -1, i5 undef>
+  %not = xor <2 x i5> %x,  <i5 -1, i5 -1>
+  %and = and <2 x i5> %dec, %not
+  %r = icmp sgt <2 x i5> %and, <i5 -1, i5 -1>
+  ret <2 x i1> %r
+}
+
+; Confirm that complexity canonicalization works for commuted pattern.
+
+define i1 @signbit_true_logic_uses_commute(i64 %x) {
+; CHECK-LABEL: @signbit_true_logic_uses_commute(
+; CHECK-NEXT:    [[DEC:%.*]] = add i64 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use_i64(i64 [[DEC]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i64 [[X]], -1
+; CHECK-NEXT:    call void @use_i64(i64 [[NOT]])
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[DEC]], [[NOT]]
+; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %dec = add i64 %x, -1
+  call void @use_i64(i64 %dec)
+  %not = xor i64 %x, -1
+  call void @use_i64(i64 %not)
+  %and = and i64 %not, %dec
+  call void @use_i64(i64 %and)
+  %r = icmp slt i64 %and, 0
+  ret i1 %r
+}
