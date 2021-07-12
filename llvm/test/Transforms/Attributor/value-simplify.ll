@@ -474,11 +474,17 @@ define i32* @complicated_args_preallocated() {
 ; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call noundef nonnull align 536870912 dereferenceable(4) i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) #[[ATTR1]] [ "preallocated"(token [[C]]) ]
 ; IS__TUNIT_NPM-NEXT:    ret i32* [[CALL]]
 ;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@complicated_args_preallocated
-; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR5:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32* null
+; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@complicated_args_preallocated
+; IS__CGSCC_OPM-SAME: () #[[ATTR0:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR5:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    ret i32* null
+;
+; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_preallocated
+; IS__CGSCC_NPM-SAME: () #[[ATTR0:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR4:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    ret i32* null
 ;
   %c = call token @llvm.call.preallocated.setup(i32 1)
   %call = call i32* @test_preallocated(i32* preallocated(i32) null) ["preallocated"(token %c)]
@@ -563,7 +569,7 @@ define internal void @test_byval(%struct.X* byval(%struct.X) %a) {
 ; IS__CGSCC_NPM-SAME: (i8* noalias nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.X* [[A_PRIV]] to i8**
-; IS__CGSCC_NPM-NEXT:    store i8* [[TMP0]], i8** [[A_PRIV_CAST]], align 8
+; IS__CGSCC_NPM-NEXT:    store i8* undef, i8** [[A_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X]], %struct.X* [[A_PRIV]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    store i8* null, i8** [[G0]], align 8
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -578,15 +584,10 @@ define void @complicated_args_byval() {
 ; IS__TUNIT____-SAME: () #[[ATTR1]] {
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@complicated_args_byval
-; IS__CGSCC_OPM-SAME: () #[[ATTR1]] {
-; IS__CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_byval
-; IS__CGSCC_NPM-SAME: () #[[ATTR3:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    ret void
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@complicated_args_byval
+; IS__CGSCC____-SAME: () #[[ATTR1]] {
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @test_byval(%struct.X* byval(%struct.X) @S)
   ret void
@@ -613,7 +614,7 @@ define internal i8*@test_byval2(%struct.X* byval(%struct.X) %a) {
 ; IS__TUNIT_NPM-NEXT:    ret i8* [[L]]
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test_byval2
-; IS__CGSCC_NPM-SAME: (i8* nofree [[TMP0:%.*]]) {
+; IS__CGSCC_NPM-SAME: (i8* noalias nofree readnone "no-capture-maybe-returned" [[TMP0:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[A_PRIV_CAST:%.*]] = bitcast %struct.X* [[A_PRIV]] to i8**
 ; IS__CGSCC_NPM-NEXT:    store i8* [[TMP0]], i8** [[A_PRIV_CAST]], align 8
@@ -645,7 +646,7 @@ define i8* @complicated_args_byval2() {
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_byval2() {
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i8*, i8** getelementptr inbounds ([[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0), align 8
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i8* @test_byval2(i8* nofree [[TMP1]])
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i8* @test_byval2(i8* noalias nofree readnone "no-capture-maybe-returned" [[TMP1]])
 ; IS__CGSCC_NPM-NEXT:    ret i8* [[C]]
 ;
   %c = call i8* @test_byval2(%struct.X* byval(%struct.X) @S)
@@ -879,11 +880,17 @@ define void @user_as3() {
 ; IS__TUNIT_NPM-NEXT:    store i32 0, i32 addrspace(3)* @ConstAS3Ptr, align 4
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
-; IS__CGSCC____-LABEL: define {{[^@]+}}@user_as3
-; IS__CGSCC____-SAME: () #[[ATTR4:[0-9]+]] {
-; IS__CGSCC____-NEXT:    store i32 0, i32 addrspace(3)* @ConstAS3Ptr, align 4
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@user_as3
+; IS__CGSCC_OPM-SAME: () #[[ATTR4:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:    store i32 0, i32 addrspace(3)* @ConstAS3Ptr, align 4
+; IS__CGSCC_OPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@user_as3
+; IS__CGSCC_NPM-SAME: () #[[ATTR3:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    store i32 0, i32 addrspace(3)* @ConstAS3Ptr, align 4
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %call = call fastcc i32 addrspace(3)* @const_ptr_return_as3()
   store i32 0, i32 addrspace(3)* %call
@@ -902,11 +909,17 @@ define void @user() {
 ; IS__TUNIT_NPM-NEXT:    store i32 0, i32* addrspacecast (i32 addrspace(3)* @ConstAS3Ptr to i32*), align 4
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
-; IS__CGSCC____-LABEL: define {{[^@]+}}@user
-; IS__CGSCC____-SAME: () #[[ATTR4]] {
-; IS__CGSCC____-NEXT:    store i32 0, i32* addrspacecast (i32 addrspace(3)* @ConstAS3Ptr to i32*), align 4
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@user
+; IS__CGSCC_OPM-SAME: () #[[ATTR4]] {
+; IS__CGSCC_OPM-NEXT:    store i32 0, i32* addrspacecast (i32 addrspace(3)* @ConstAS3Ptr to i32*), align 4
+; IS__CGSCC_OPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@user
+; IS__CGSCC_NPM-SAME: () #[[ATTR3]] {
+; IS__CGSCC_NPM-NEXT:    store i32 0, i32* addrspacecast (i32 addrspace(3)* @ConstAS3Ptr to i32*), align 4
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %call = call fastcc i32* @const_ptr_return()
   store i32 0, i32* %call
@@ -1269,9 +1282,8 @@ join:
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR2]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind readonly willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn writeonly }
-; IS__CGSCC_NPM: attributes #[[ATTR5]] = { willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind willreturn writeonly }
+; IS__CGSCC_NPM: attributes #[[ATTR4]] = { willreturn }
 ;.
 ; CHECK: [[RNG0]] = !{i32 0, i32 -2147483648}
 ;.

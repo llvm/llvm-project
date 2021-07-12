@@ -919,8 +919,8 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    store i32 undef, i32* [[DOTTHREADID_TEMP_]], align 4
+; CHECK-NEXT:    call void @__omp_outlined__(i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -936,12 +936,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__
-; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1027,7 +1027,7 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__1(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__omp_outlined__1(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -1036,14 +1036,14 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__1
-; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* noundef @__omp_outlined__2_wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
@@ -1055,12 +1055,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__2
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p0() #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1083,12 +1083,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__3
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p1() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1162,7 +1162,7 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__4(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__omp_outlined__4(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -1171,13 +1171,13 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__4
-; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR7]]
 ; CHECK-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR7]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
@@ -1211,12 +1211,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__5
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p1() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1308,7 +1308,7 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__6(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__omp_outlined__6(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -1317,14 +1317,14 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__6
-; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__7 to i8*), i8* noundef @__omp_outlined__7_wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
@@ -1336,12 +1336,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__7
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p0() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1364,12 +1364,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__8
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p1() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1437,7 +1437,7 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__9(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__omp_outlined__9(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -1446,14 +1446,14 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__9
-; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__10 to i8*), i8* noundef @__omp_outlined__10_wrapper.ID, i8** noundef [[TMP1]], i64 noundef 0)
@@ -1465,12 +1465,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__10
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p0() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1493,12 +1493,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__11
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p1() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1532,7 +1532,7 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__12(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__omp_outlined__12(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -1541,14 +1541,14 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__12
-; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x i8*], align 8
 ; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__13 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__13_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
@@ -1559,12 +1559,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__13
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p0() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1587,12 +1587,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__14
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p1() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1653,8 +1653,8 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__15(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    store i32 undef, i32* [[DOTTHREADID_TEMP_]], align 4
+; CHECK-NEXT:    call void @__omp_outlined__15(i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -1663,12 +1663,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__15
-; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR2]]
 ; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR7]]
 ; CHECK-NEXT:    ret void
@@ -1750,8 +1750,8 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__16(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    store i32 undef, i32* [[DOTTHREADID_TEMP_]], align 4
+; CHECK-NEXT:    call void @__omp_outlined__16(i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -1760,12 +1760,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__16
-; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @weak_callee_empty() #[[ATTR7]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1779,12 +1779,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__17
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p0() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1807,12 +1807,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__18
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p0() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1857,12 +1857,12 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ;
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__19
-; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
-; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* undef, i32** [[DOTBOUND_TID__ADDR]], align 8
 ; CHECK-NEXT:    call void @p0() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
