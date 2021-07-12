@@ -8386,11 +8386,7 @@ vec_vrlw(vector unsigned int __a, vector unsigned int __b) {
 /* vec_round */
 
 static __inline__ vector float __ATTRS_o_ai vec_round(vector float __a) {
-#ifdef __VSX__
-  return __builtin_vsx_xvrspi(__a);
-#else
   return __builtin_altivec_vrfin(__a);
-#endif
 }
 
 #ifdef __VSX__
