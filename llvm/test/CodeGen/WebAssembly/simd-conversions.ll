@@ -82,6 +82,30 @@ define <2 x i64> @trunc_sat_u_v2i64(<2 x double> %x) {
   ret <2 x i64> %a
 }
 
+; CHECK-LABEL: demote_zero_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype demote_zero_v4f32 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.demote_zero_f64x2 $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <4 x float> @demote_zero_v4f32(<2 x double> %x) {
+  %v = shufflevector <2 x double> %x, <2 x double> zeroinitializer,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = fptrunc <4 x double> %v to <4 x float>
+  ret <4 x float> %a
+}
+
+; CHECK-LABEL: demote_zero_v4f32_2:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype demote_zero_v4f32_2 (v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.demote_zero_f64x2 $push[[R:[0-9]+]]=, $0
+; SIMD128-NEXT: return $pop[[R]]
+define <4 x float> @demote_zero_v4f32_2(<2 x double> %x) {
+  %v = fptrunc <2 x double> %x to <2 x float>
+  %a = shufflevector <2 x float> %v, <2 x float> zeroinitializer,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %a
+}
+
 ; CHECK-LABEL: convert_low_s_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-NEXT: .functype convert_low_s_v2f64 (v128) -> (v128){{$}}
