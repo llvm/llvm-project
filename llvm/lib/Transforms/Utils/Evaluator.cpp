@@ -174,16 +174,16 @@ static bool isSimpleEnoughPointerToCommit(Constant *C, const DataLayout &DL) {
   return false;
 }
 
-/// Apply 'Func' to Ptr. If this returns nullptr, introspect the pointer's
-/// type and walk down through the initial elements to obtain additional
-/// pointers to try. Returns the first non-null return value from Func, or
-/// nullptr if the type can't be introspected further.
+/// Apply \p TryLoad to Ptr. If this returns \p nullptr, introspect the
+/// pointer's type and walk down through the initial elements to obtain
+/// additional pointers to try. Returns the first non-null return value from
+/// \p TryLoad, or \p nullptr if the type can't be introspected further.
 static Constant *
 evaluateBitcastFromPtr(Constant *Ptr, const DataLayout &DL,
                        const TargetLibraryInfo *TLI,
-                       std::function<Constant *(Constant *)> Func) {
+                       std::function<Constant *(Constant *)> TryLoad) {
   Constant *Val;
-  while (!(Val = Func(Ptr))) {
+  while (!(Val = TryLoad(Ptr))) {
     // If Ty is a non-opaque struct, we can convert the pointer to the struct
     // into a pointer to its first member.
     // FIXME: This could be extended to support arrays as well.
@@ -211,9 +211,11 @@ static Constant *getInitializer(Constant *C) {
 Constant *Evaluator::ComputeLoadResult(Constant *P, Type *Ty) {
   // If this memory location has been recently stored, use the stored value: it
   // is the most up-to-date.
-  auto findMemLoc = [this](Constant *Ptr) { return MutatedMemory.lookup(Ptr); };
+  auto TryFindMemLoc = [this](Constant *Ptr) {
+    return MutatedMemory.lookup(Ptr);
+  };
 
-  if (Constant *Val = findMemLoc(P))
+  if (Constant *Val = TryFindMemLoc(P))
     return Val;
 
   // Access it.
@@ -237,7 +239,7 @@ Constant *Evaluator::ComputeLoadResult(Constant *P, Type *Ty) {
       // If it hasn't, we may still be able to find a stored pointer by
       // introspecting the type.
       Constant *Val =
-          evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, findMemLoc);
+          evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, TryFindMemLoc);
       if (!Val)
         Val = getInitializer(CE->getOperand(0));
       if (Val)
@@ -369,9 +371,17 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           // legal. If it's not, we can try introspecting the type to find a
           // legal conversion.
 
-          auto castValTy = [&](Constant *P) -> Constant * {
-            Type *Ty = cast<PointerType>(P->getType())->getElementType();
-            if (Constant *FV = ConstantFoldLoadThroughBitcast(Val, Ty, DL)) {
+          auto TryCastValTy = [&](Constant *P) -> Constant * {
+            // The conversion is illegal if the store is wider than the
+            // pointee proposed by `evaluateBitcastFromPtr`, since that would
+            // drop stores to other struct elements when the caller attempts to
+            // look through a struct's 0th element.
+            Type *NewTy = cast<PointerType>(P->getType())->getElementType();
+            Type *STy = Val->getType();
+            if (DL.getTypeSizeInBits(NewTy) < DL.getTypeSizeInBits(STy))
+              return nullptr;
+
+            if (Constant *FV = ConstantFoldLoadThroughBitcast(Val, NewTy, DL)) {
               Ptr = P;
               return FV;
             }
@@ -379,7 +389,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           };
 
           Constant *NewVal =
-              evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, castValTy);
+              evaluateBitcastFromPtr(CE->getOperand(0), DL, TLI, TryCastValTy);
           if (!NewVal) {
             LLVM_DEBUG(dbgs() << "Failed to bitcast constant ptr, can not "
                                  "evaluate.\n");
