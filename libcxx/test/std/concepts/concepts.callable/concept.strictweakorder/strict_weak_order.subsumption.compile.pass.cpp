@@ -27,13 +27,13 @@ struct R {
 // clang-format off
 template<class F, class T, class U>
 requires std::relation<F, T, U>
-[[nodiscard]] constexpr bool check_strict_weak_order_subsumes_relation() {
+constexpr bool check_strict_weak_order_subsumes_relation() {
   return false;
 }
 
 template<class F, class T, class U>
 requires std::strict_weak_order<F, T, U> && true
-[[nodiscard]] constexpr bool check_strict_weak_order_subsumes_relation() {
+constexpr bool check_strict_weak_order_subsumes_relation() {
   return true;
 }
 // clang-format on
@@ -48,13 +48,13 @@ static_assert(check_strict_weak_order_subsumes_relation<R, S1, S2>());
 // clang-format off
 template<class F, class T, class U>
 requires std::relation<F, T, U> && true
-[[nodiscard]] constexpr bool check_relation_subsumes_strict_weak_order() {
+constexpr bool check_relation_subsumes_strict_weak_order() {
   return true;
 }
 
 template<class F, class T, class U>
 requires std::strict_weak_order<F, T, U>
-[[nodiscard]] constexpr bool check_relation_subsumes_strict_weak_order() {
+constexpr bool check_relation_subsumes_strict_weak_order() {
   return false;
 }
 // clang-format on
@@ -69,13 +69,13 @@ static_assert(check_relation_subsumes_strict_weak_order<R, S1, S2>());
 // clang-format off
 template<class F, class T, class U>
 requires std::strict_weak_order<F, T, T> && std::strict_weak_order<F, U, U>
-[[nodiscard]] constexpr bool check_strict_weak_order_subsumes_itself() {
+constexpr bool check_strict_weak_order_subsumes_itself() {
   return false;
 }
 
 template<class F, class T, class U>
 requires std::strict_weak_order<F, T, U>
-[[nodiscard]] constexpr bool check_strict_weak_order_subsumes_itself() {
+constexpr bool check_strict_weak_order_subsumes_itself() {
   return true;
 }
 // clang-format on

@@ -17,12 +17,12 @@
 
 // clang-format off
 template<std::weakly_incrementable>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return false;
 }
 
 template<std::input_or_output_iterator>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return true;
 }
 // clang-format on
