@@ -492,6 +492,11 @@ public:
     Second->PragmaComment(Loc, Kind, Str);
   }
 
+  void PragmaMark(SourceLocation Loc, StringRef Trivia) override {
+    First->PragmaMark(Loc, Trivia);
+    Second->PragmaMark(Loc, Trivia);
+  }
+
   void PragmaDetectMismatch(SourceLocation Loc, StringRef Name,
                             StringRef Value) override {
     First->PragmaDetectMismatch(Loc, Name, Value);
