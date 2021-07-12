@@ -10,7 +10,9 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
 
-// std::ranges::ref_view
+// template<range R>
+//  requires is_object_v<R>
+// class ref_view;
 
 #include <ranges>
 
