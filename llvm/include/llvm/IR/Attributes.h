@@ -138,9 +138,6 @@ public:
 
   static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
 
-  /// Return true if and only if the attribute has an Argument.
-  static bool doesAttrKindHaveArgument(Attribute::AttrKind AttrKind);
-
   /// Return true if the provided string matches the IR name of an attribute.
   /// example: "noalias" return true but not "NoAlias"
   static bool isExistingAttribute(StringRef Name);
@@ -841,7 +838,8 @@ public:
   AttrBuilder &addAttribute(Attribute::AttrKind Val) {
     assert((unsigned)Val < Attribute::EndAttrKinds &&
            "Attribute out of range!");
-    assert(!Attribute::doesAttrKindHaveArgument(Val) &&
+    // TODO: This should really assert isEnumAttrKind().
+    assert(!Attribute::isIntAttrKind(Val) &&
            "Adding integer attribute without adding a value!");
     Attrs[Val] = true;
     return *this;
