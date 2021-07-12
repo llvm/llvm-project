@@ -40,7 +40,4 @@ add_subdirectory(Optimizer)
 add_subdirectory(Decimal)
 add_subdirectory(Evaluate)
 add_subdirectory(Runtime)
-
-if (FLANG_BUILD_NEW_DRIVER)
-  add_subdirectory(Frontend)
-endif()
+add_subdirectory(Frontend)

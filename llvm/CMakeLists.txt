@@ -81,9 +81,8 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND LLVM_ENABLE_PROJECTS "mlir")
   endif()
 
-  option(FLANG_BUILD_NEW_DRIVER "Build the flang compiler driver" ON)
-  if (FLANG_BUILD_NEW_DRIVER AND NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "Clang is not enabled, but it's required by the new Flang driver")
+  if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
   endif()
 endif()
 
