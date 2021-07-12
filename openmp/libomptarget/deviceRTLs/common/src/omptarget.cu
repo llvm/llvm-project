@@ -160,6 +160,10 @@ EXTERN int8_t __kmpc_is_spmd_exec_mode() {
   return (execution_param & ModeMask) == Spmd;
 }
 
+EXTERN int8_t __kmpc_is_generic_main_thread(kmp_int32 Tid) {
+  return !__kmpc_is_spmd_exec_mode() && GetMasterThreadID() == Tid;
+}
+
 EXTERN bool __kmpc_kernel_parallel(void**WorkFn);
 
 static void __kmpc_target_region_state_machine(ident_t *Ident) {

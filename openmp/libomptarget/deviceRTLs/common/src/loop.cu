@@ -210,7 +210,7 @@ public:
       ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(), "Expected non-SPMD mode.");
       return;
     }
-    int tid = GetLogicalThreadIdInBlock(__kmpc_is_spmd_exec_mode());
+    int tid = GetLogicalThreadIdInBlock();
     omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(tid);
     T tnum = GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode());
     T tripCount = ub - lb + 1; // +1 because ub is inclusive
@@ -453,7 +453,7 @@ public:
     // ID of a thread in its own warp
 
     // automatically selects thread or warp ID based on selected implementation
-    int tid = GetLogicalThreadIdInBlock(__kmpc_is_spmd_exec_mode());
+    int tid = GetLogicalThreadIdInBlock();
     ASSERT0(LT_FUSSY, gtid < GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode()),
             "current thread is not needed here; error");
     // retrieve schedule

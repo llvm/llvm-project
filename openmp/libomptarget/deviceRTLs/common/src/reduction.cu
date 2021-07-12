@@ -69,7 +69,7 @@ static int32_t nvptx_parallel_reduce_nowait(
     int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
     kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
     bool isSPMDExecutionMode, bool isRuntimeUninitialized) {
-  uint32_t BlockThreadId = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
+  uint32_t BlockThreadId = GetLogicalThreadIdInBlock();
   uint32_t NumThreads = GetNumberOfOmpThreads(isSPMDExecutionMode);
   if (NumThreads == 1)
     return 1;
@@ -184,10 +184,11 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     kmp_ListGlobalFctPtr glredFct) {
 
   // Terminate all threads in non-SPMD mode except for the master thread.
-  if (!__kmpc_is_spmd_exec_mode() && GetThreadIdInBlock() != GetMasterThreadID())
+  if (!__kmpc_is_spmd_exec_mode() &&
+      !__kmpc_is_generic_main_thread(GetThreadIdInBlock()))
     return 0;
 
-  uint32_t ThreadId = GetLogicalThreadIdInBlock(__kmpc_is_spmd_exec_mode());
+  uint32_t ThreadId = GetLogicalThreadIdInBlock();
 
   // In non-generic mode all workers participate in the teams reduction.
   // In generic mode only the team master participates in the teams
