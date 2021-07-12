@@ -490,14 +490,6 @@ static bool ShouldEnableAutolink(const ArgList &Args, const ToolChain &TC,
                       Default);
 }
 
-static bool ShouldDisableDwarfDirectory(const ArgList &Args,
-                                        const ToolChain &TC) {
-  bool UseDwarfDirectory =
-      Args.hasFlag(options::OPT_fdwarf_directory_asm,
-                   options::OPT_fno_dwarf_directory_asm, TC.useIntegratedAs());
-  return !UseDwarfDirectory;
-}
-
 // Convert an arg of the form "-gN" or "-ggdbN" or one of their aliases
 // to the corresponding DebugInfoKind.
 static codegenoptions::DebugInfoKind DebugLevelToInfoKind(const Arg &A) {
@@ -4175,6 +4167,14 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
     }
   }
 
+  // To avoid join/split of directory+filename, the integrated assembler prefers
+  // the directory form of .file on all DWARF versions. GNU as doesn't allow the
+  // form before DWARF v5.
+  if (!Args.hasFlag(options::OPT_fdwarf_directory_asm,
+                    options::OPT_fno_dwarf_directory_asm,
+                    TC.useIntegratedAs() || EffectiveDWARFVersion >= 5))
+    CmdArgs.push_back("-fno-dwarf-directory-asm");
+
   // Decide how to render forward declarations of template instantiations.
   // SCE wants full descriptions, others just get them in the name.
   if (DebuggerTuning == llvm::DebuggerKind::SCE)
@@ -5505,9 +5505,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back("-fno-gnu-keywords");
   }
-
-  if (ShouldDisableDwarfDirectory(Args, TC))
-    CmdArgs.push_back("-fno-dwarf-directory-asm");
 
   if (!ShouldEnableAutolink(Args, TC, JA))
     CmdArgs.push_back("-fno-autolink");
