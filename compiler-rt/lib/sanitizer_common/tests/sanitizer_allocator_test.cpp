@@ -1243,7 +1243,7 @@ class RangeRecorder {
             Log2(GetPageSizeCached() >> Allocator64::kCompactPtrScale)),
         last_page_reported(0) {}
 
-  void ReleasePageRangeToOS(u32 from, u32 to) {
+  void ReleasePageRangeToOS(u32 class_id, u32 from, u32 to) {
     from >>= page_size_scaled_log;
     to >>= page_size_scaled_log;
     ASSERT_LT(from, to);
@@ -1253,6 +1253,7 @@ class RangeRecorder {
     reported_pages.append(to - from, 'x');
     last_page_reported = to;
   }
+
  private:
   const uptr page_size_scaled_log;
   u32 last_page_reported;
@@ -1282,7 +1283,7 @@ TEST(SanitizerCommon, SizeClassAllocator64FreePagesRangeTracker) {
 
   for (auto test_case : test_cases) {
     RangeRecorder range_recorder;
-    RangeTracker tracker(&range_recorder);
+    RangeTracker tracker(&range_recorder, 1);
     for (int i = 0; test_case[i] != 0; i++)
       tracker.NextPage(test_case[i] == 'x');
     tracker.Done();
@@ -1308,7 +1309,7 @@ class ReleasedPagesTrackingMemoryMapper {
     free(buffer);
   }
 
-  void ReleasePageRangeToOS(u32 from, u32 to) {
+  void ReleasePageRangeToOS(u32 class_id, u32 from, u32 to) {
     uptr page_size_scaled =
         GetPageSizeCached() >> Allocator64::kCompactPtrScale;
     for (u32 i = from; i < to; i += page_size_scaled)
@@ -1352,7 +1353,7 @@ void TestReleaseFreeMemoryToOS() {
 
     Allocator::ReleaseFreeMemoryToOS(&free_array[0], free_array.size(),
                                      chunk_size, kAllocatedPagesCount,
-                                     &memory_mapper);
+                                     &memory_mapper, class_id);
 
     // Verify that there are no released pages touched by used chunks and all
     // ranges of free chunks big enough to contain the entire memory pages had
