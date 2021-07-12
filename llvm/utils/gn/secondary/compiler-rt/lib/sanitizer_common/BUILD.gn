@@ -144,6 +144,7 @@ source_set("sources") {
     "sanitizer_termination.cpp",
     "sanitizer_thread_registry.cpp",
     "sanitizer_thread_registry.h",
+    "sanitizer_thread_safety.h",
     "sanitizer_tls_get_addr.cpp",
     "sanitizer_tls_get_addr.h",
     "sanitizer_type_traits.cpp",
