@@ -124,11 +124,8 @@ define dso_local void @test4(<2 x i64>* nocapture %c, i64* nocapture readonly %a
 ;
 ; P7-LABEL: test4:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    ld r4, 24(r4)
-; P7-NEXT:    addi r5, r1, -16
-; P7-NEXT:    std r4, -8(r1)
-; P7-NEXT:    std r4, -16(r1)
-; P7-NEXT:    lxvd2x vs0, 0, r5
+; P7-NEXT:    addi r4, r4, 24
+; P7-NEXT:    lxvdsx vs0, 0, r4
 ; P7-NEXT:    stxvd2x vs0, 0, r3
 ; P7-NEXT:    blr
 entry:
