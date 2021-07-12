@@ -99,6 +99,8 @@ MATCHER_P(RangeIs, R, "") {
   return arg.beginOffset() == R.Begin && arg.endOffset() == R.End;
 }
 
+MATCHER_P(PragmaTrivia, P, "") { return arg.Trivia == P; }
+
 MATCHER(EqInc, "") {
   Inclusion Actual = testing::get<0>(arg);
   Inclusion Expected = testing::get<1>(arg);
@@ -884,6 +886,27 @@ TEST(ParsedASTTest, HeaderGuardsImplIface) {
               ElementsAre(Diag("in included file: main file cannot be included "
                                "recursively when building a preamble")));
   EXPECT_FALSE(mainIsGuarded(AST));
+}
+
+TEST(ParsedASTTest, DiscoversPragmaMarks) {
+  TestTU TU;
+  TU.AdditionalFiles["Header.h"] = R"(
+    #pragma mark - Something API
+    int something();
+    #pragma mark Something else
+  )";
+  TU.Code = R"cpp(
+    #include "Header.h"
+    #pragma mark In Preamble
+    #pragma mark - Something Impl
+    int something() { return 1; }
+    #pragma mark End
+  )cpp";
+  auto AST = TU.build();
+
+  EXPECT_THAT(AST.getMarks(), ElementsAre(PragmaTrivia(" In Preamble"),
+                                          PragmaTrivia(" - Something Impl"),
+                                          PragmaTrivia(" End")));
 }
 
 } // namespace

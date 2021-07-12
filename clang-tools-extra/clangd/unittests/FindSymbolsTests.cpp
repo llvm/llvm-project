@@ -42,7 +42,7 @@ MATCHER_P(SymRange, Range, "") { return arg.range == Range; }
 MATCHER_P(SymNameRange, Range, "") { return arg.selectionRange == Range; }
 template <class... ChildMatchers>
 ::testing::Matcher<DocumentSymbol> Children(ChildMatchers... ChildrenM) {
-  return Field(&DocumentSymbol::children, ElementsAre(ChildrenM...));
+  return Field(&DocumentSymbol::children, UnorderedElementsAre(ChildrenM...));
 }
 
 std::vector<SymbolInformation> getSymbols(TestTU &TU, llvm::StringRef Query,
@@ -1025,6 +1025,100 @@ TEST(DocumentSymbolsTest, ObjCCategoriesAndClassExtensions) {
           AllOf(WithName("Cat()"), SymRange(Main.range("PurCat")),
                 Children(
                     AllOf(WithName("-pur"), WithKind(SymbolKind::Method))))));
+}
+
+TEST(DocumentSymbolsTest, PragmaMarkGroups) {
+  TestTU TU;
+  TU.ExtraArgs = {"-xobjective-c++", "-Wno-objc-root-class"};
+  Annotations Main(R"cpp(
+      $DogDef[[@interface Dog
+      @end]]
+
+      $DogImpl[[@implementation Dog
+
+      + (id)sharedDoggo { return 0; }
+
+      #pragma $Overrides[[mark - Overrides
+
+      - (id)init {
+        return self;
+      }
+      - (void)bark {}]]
+
+      #pragma $Specifics[[mark - Dog Specifics
+
+      - (int)isAGoodBoy {
+        return 1;
+      }]]
+      @]]end  // FIXME: Why doesn't this include the 'end'?
+
+      #pragma $End[[mark - End
+]]
+    )cpp");
+  TU.Code = Main.code().str();
+  EXPECT_THAT(
+      getSymbols(TU.build()),
+      UnorderedElementsAre(
+          AllOf(WithName("Dog"), SymRange(Main.range("DogDef"))),
+          AllOf(WithName("Dog"), SymRange(Main.range("DogImpl")),
+                Children(AllOf(WithName("+sharedDoggo"),
+                               WithKind(SymbolKind::Method)),
+                         AllOf(WithName("Overrides"),
+                               SymRange(Main.range("Overrides")),
+                               Children(AllOf(WithName("-init"),
+                                              WithKind(SymbolKind::Method)),
+                                        AllOf(WithName("-bark"),
+                                              WithKind(SymbolKind::Method)))),
+                         AllOf(WithName("Dog Specifics"),
+                               SymRange(Main.range("Specifics")),
+                               Children(AllOf(WithName("-isAGoodBoy"),
+                                              WithKind(SymbolKind::Method)))))),
+          AllOf(WithName("End"), SymRange(Main.range("End")))));
+}
+
+TEST(DocumentSymbolsTest, PragmaMarkGroupsNesting) {
+  TestTU TU;
+  TU.ExtraArgs = {"-xobjective-c++", "-Wno-objc-root-class"};
+  Annotations Main(R"cpp(
+      #pragma mark - Foo
+      struct Foo {
+        #pragma mark - Bar
+        void bar() {
+           #pragma mark - NotTopDecl
+        }
+      };
+      void bar() {}
+    )cpp");
+  TU.Code = Main.code().str();
+  EXPECT_THAT(
+      getSymbols(TU.build()),
+      UnorderedElementsAre(AllOf(
+          WithName("Foo"),
+          Children(AllOf(WithName("Foo"),
+                         Children(AllOf(WithName("Bar"),
+                                        Children(AllOf(WithName("bar"),
+                                                       Children(WithName(
+                                                           "NotTopDecl"))))))),
+                   WithName("bar")))));
+}
+
+TEST(DocumentSymbolsTest, PragmaMarkGroupsNoNesting) {
+  TestTU TU;
+  TU.ExtraArgs = {"-xobjective-c++", "-Wno-objc-root-class"};
+  Annotations Main(R"cpp(
+      #pragma mark Helpers
+      void helpA(id obj) {}
+
+      #pragma mark -
+      #pragma mark Core
+
+      void coreMethod() {}
+    )cpp");
+  TU.Code = Main.code().str();
+  EXPECT_THAT(getSymbols(TU.build()),
+              UnorderedElementsAre(WithName("Helpers"), WithName("helpA"),
+                                   WithName("(unnamed group)"),
+                                   WithName("Core"), WithName("coreMethod")));
 }
 
 } // namespace
