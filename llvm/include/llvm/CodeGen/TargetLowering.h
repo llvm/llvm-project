@@ -1271,6 +1271,14 @@ public:
        getTruncStoreAction(ValVT, MemVT) == Custom);
   }
 
+  virtual bool canCombineTruncStore(EVT ValVT, EVT MemVT,
+                                    bool LegalOnly) const {
+    if (LegalOnly)
+      return isTruncStoreLegal(ValVT, MemVT);
+
+    return isTruncStoreLegalOrCustom(ValVT, MemVT);
+  }
+
   /// Return how the indexed load should be treated: either it is legal, needs
   /// to be promoted to a larger size, needs to be expanded to some other code
   /// sequence, or the target has a custom expander for it.
