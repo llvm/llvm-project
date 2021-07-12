@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "benchmark/benchmark.h"
-#include "complexity.h"
-#include "counter.h"
-
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <tuple>
 #include <vector>
 
+#include "benchmark/benchmark.h"
 #include "check.h"
 #include "colorprint.h"
 #include "commandlineflags.h"
+#include "complexity.h"
+#include "counter.h"
 #include "internal_macros.h"
 #include "string_util.h"
 #include "timers.h"
@@ -64,9 +64,8 @@ void ConsoleReporter::PrintHeader(const Run& run) {
       str += " UserCounters...";
     }
   }
-  str += "\n";
   std::string line = std::string(str.length(), '-');
-  GetOutputStream() << line << "\n" << str << line << "\n";
+  GetOutputStream() << line << "\n" << str << "\n" << line << "\n";
 }
 
 void ConsoleReporter::ReportRuns(const std::vector<Run>& reports) {
@@ -157,16 +156,14 @@ void ConsoleReporter::PrintRunData(const Run& result) {
     const std::size_t cNameLen = std::max(std::string::size_type(10),
                                           c.first.length());
     auto const& s = HumanReadableNumber(c.second.value, c.second.oneK);
+    const char* unit = "";
+    if (c.second.flags & Counter::kIsRate)
+      unit = (c.second.flags & Counter::kInvert) ? "s" : "/s";
     if (output_options_ & OO_Tabular) {
-      if (c.second.flags & Counter::kIsRate) {
-        printer(Out, COLOR_DEFAULT, " %*s/s", cNameLen - 2, s.c_str());
-      } else {
-        printer(Out, COLOR_DEFAULT, " %*s", cNameLen, s.c_str());
-      }
-    } else {
-      const char* unit = (c.second.flags & Counter::kIsRate) ? "/s" : "";
-      printer(Out, COLOR_DEFAULT, " %s=%s%s", c.first.c_str(), s.c_str(),
+      printer(Out, COLOR_DEFAULT, " %*s%s", cNameLen - strlen(unit), s.c_str(),
               unit);
+    } else {
+      printer(Out, COLOR_DEFAULT, " %s=%s%s", c.first.c_str(), s.c_str(), unit);
     }
   }
 

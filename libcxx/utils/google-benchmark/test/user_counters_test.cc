@@ -32,8 +32,13 @@ BENCHMARK(BM_Counters_Simple);
 ADD_CASES(TC_ConsoleOut,
           {{"^BM_Counters_Simple %console_report bar=%hrfloat foo=%hrfloat$"}});
 ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_Counters_Simple\",$"},
+                       {"\"family_index\": 0,$", MR_Next},
+                       {"\"per_family_instance_index\": 0,$", MR_Next},
                        {"\"run_name\": \"BM_Counters_Simple\",$", MR_Next},
                        {"\"run_type\": \"iteration\",$", MR_Next},
+                       {"\"repetitions\": 1,$", MR_Next},
+                       {"\"repetition_index\": 0,$", MR_Next},
+                       {"\"threads\": 1,$", MR_Next},
                        {"\"iterations\": %int,$", MR_Next},
                        {"\"real_time\": %float,$", MR_Next},
                        {"\"cpu_time\": %float,$", MR_Next},
@@ -61,6 +66,8 @@ int num_calls1 = 0;
 }
 void BM_Counters_WithBytesAndItemsPSec(benchmark::State& state) {
   for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    benchmark::DoNotOptimize(state.iterations());
   }
   state.counters["foo"] = 1;
   state.counters["bar"] = ++num_calls1;
@@ -73,8 +80,13 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_WithBytesAndItemsPSec %console_report "
                            "foo=%hrfloat items_per_second=%hrfloat/s$"}});
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_Counters_WithBytesAndItemsPSec\",$"},
+           {"\"family_index\": 1,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_Counters_WithBytesAndItemsPSec\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -105,6 +117,8 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_WithBytesAndItemsPSec",
 
 void BM_Counters_Rate(benchmark::State& state) {
   for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] = bm::Counter{1, bm::Counter::kIsRate};
@@ -115,8 +129,13 @@ ADD_CASES(
     TC_ConsoleOut,
     {{"^BM_Counters_Rate %console_report bar=%hrfloat/s foo=%hrfloat/s$"}});
 ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_Counters_Rate\",$"},
+                       {"\"family_index\": 2,$", MR_Next},
+                       {"\"per_family_instance_index\": 0,$", MR_Next},
                        {"\"run_name\": \"BM_Counters_Rate\",$", MR_Next},
                        {"\"run_type\": \"iteration\",$", MR_Next},
+                       {"\"repetitions\": 1,$", MR_Next},
+                       {"\"repetition_index\": 0,$", MR_Next},
+                       {"\"threads\": 1,$", MR_Next},
                        {"\"iterations\": %int,$", MR_Next},
                        {"\"real_time\": %float,$", MR_Next},
                        {"\"cpu_time\": %float,$", MR_Next},
@@ -136,6 +155,93 @@ void CheckRate(Results const& e) {
 CHECK_BENCHMARK_RESULTS("BM_Counters_Rate", &CheckRate);
 
 // ========================================================================= //
+// ----------------------- Inverted Counters Output ------------------------ //
+// ========================================================================= //
+
+void BM_Invert(benchmark::State& state) {
+  for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    benchmark::DoNotOptimize(state.iterations());
+  }
+  namespace bm = benchmark;
+  state.counters["foo"] = bm::Counter{0.0001, bm::Counter::kInvert};
+  state.counters["bar"] = bm::Counter{10000, bm::Counter::kInvert};
+}
+BENCHMARK(BM_Invert);
+ADD_CASES(TC_ConsoleOut,
+          {{"^BM_Invert %console_report bar=%hrfloatu foo=%hrfloatk$"}});
+ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_Invert\",$"},
+                       {"\"family_index\": 3,$", MR_Next},
+                       {"\"per_family_instance_index\": 0,$", MR_Next},
+                       {"\"run_name\": \"BM_Invert\",$", MR_Next},
+                       {"\"run_type\": \"iteration\",$", MR_Next},
+                       {"\"repetitions\": 1,$", MR_Next},
+                       {"\"repetition_index\": 0,$", MR_Next},
+                       {"\"threads\": 1,$", MR_Next},
+                       {"\"iterations\": %int,$", MR_Next},
+                       {"\"real_time\": %float,$", MR_Next},
+                       {"\"cpu_time\": %float,$", MR_Next},
+                       {"\"time_unit\": \"ns\",$", MR_Next},
+                       {"\"bar\": %float,$", MR_Next},
+                       {"\"foo\": %float$", MR_Next},
+                       {"}", MR_Next}});
+ADD_CASES(TC_CSVOut, {{"^\"BM_Invert\",%csv_report,%float,%float$"}});
+// VS2013 does not allow this function to be passed as a lambda argument
+// to CHECK_BENCHMARK_RESULTS()
+void CheckInvert(Results const& e) {
+  CHECK_FLOAT_COUNTER_VALUE(e, "foo", EQ, 10000, 0.0001);
+  CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, 0.0001, 0.0001);
+}
+CHECK_BENCHMARK_RESULTS("BM_Invert", &CheckInvert);
+
+// ========================================================================= //
+// ------------------------- InvertedRate Counters Output
+// -------------------------- //
+// ========================================================================= //
+
+void BM_Counters_InvertedRate(benchmark::State& state) {
+  for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    benchmark::DoNotOptimize(state.iterations());
+  }
+  namespace bm = benchmark;
+  state.counters["foo"] =
+      bm::Counter{1, bm::Counter::kIsRate | bm::Counter::kInvert};
+  state.counters["bar"] =
+      bm::Counter{8192, bm::Counter::kIsRate | bm::Counter::kInvert};
+}
+BENCHMARK(BM_Counters_InvertedRate);
+ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_InvertedRate %console_report "
+                           "bar=%hrfloats foo=%hrfloats$"}});
+ADD_CASES(TC_JSONOut,
+          {{"\"name\": \"BM_Counters_InvertedRate\",$"},
+           {"\"family_index\": 4,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
+           {"\"run_name\": \"BM_Counters_InvertedRate\",$", MR_Next},
+           {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
+           {"\"iterations\": %int,$", MR_Next},
+           {"\"real_time\": %float,$", MR_Next},
+           {"\"cpu_time\": %float,$", MR_Next},
+           {"\"time_unit\": \"ns\",$", MR_Next},
+           {"\"bar\": %float,$", MR_Next},
+           {"\"foo\": %float$", MR_Next},
+           {"}", MR_Next}});
+ADD_CASES(TC_CSVOut,
+          {{"^\"BM_Counters_InvertedRate\",%csv_report,%float,%float$"}});
+// VS2013 does not allow this function to be passed as a lambda argument
+// to CHECK_BENCHMARK_RESULTS()
+void CheckInvertedRate(Results const& e) {
+  double t = e.DurationCPUTime();  // this (and not real time) is the time used
+  // check that the values are within 0.1% of the expected values
+  CHECK_FLOAT_COUNTER_VALUE(e, "foo", EQ, t, 0.001);
+  CHECK_FLOAT_COUNTER_VALUE(e, "bar", EQ, t / 8192.0, 0.001);
+}
+CHECK_BENCHMARK_RESULTS("BM_Counters_InvertedRate", &CheckInvertedRate);
+
+// ========================================================================= //
 // ------------------------- Thread Counters Output ------------------------ //
 // ========================================================================= //
 
@@ -150,8 +256,13 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_Threads/threads:%int %console_report "
                            "bar=%hrfloat foo=%hrfloat$"}});
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_Counters_Threads/threads:%int\",$"},
+           {"\"family_index\": 5,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_Counters_Threads/threads:%int\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -186,8 +297,13 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_AvgThreads/threads:%int "
                            "%console_report bar=%hrfloat foo=%hrfloat$"}});
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_Counters_AvgThreads/threads:%int\",$"},
+           {"\"family_index\": 6,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_Counters_AvgThreads/threads:%int\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -213,6 +329,8 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_AvgThreads/threads:%int",
 
 void BM_Counters_AvgThreadsRate(benchmark::State& state) {
   for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] = bm::Counter{1, bm::Counter::kAvgThreadsRate};
@@ -223,9 +341,14 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_AvgThreadsRate/threads:%int "
                            "%console_report bar=%hrfloat/s foo=%hrfloat/s$"}});
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_Counters_AvgThreadsRate/threads:%int\",$"},
+           {"\"family_index\": 7,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_Counters_AvgThreadsRate/threads:%int\",$",
             MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -260,8 +383,13 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_IterationInvariant %console_report "
                            "bar=%hrfloat foo=%hrfloat$"}});
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_Counters_IterationInvariant\",$"},
+           {"\"family_index\": 8,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_Counters_IterationInvariant\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -288,6 +416,8 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_IterationInvariant",
 
 void BM_Counters_kIsIterationInvariantRate(benchmark::State& state) {
   for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] =
@@ -300,9 +430,14 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_kIsIterationInvariantRate "
                            "%console_report bar=%hrfloat/s foo=%hrfloat/s$"}});
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_Counters_kIsIterationInvariantRate\",$"},
+           {"\"family_index\": 9,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_Counters_kIsIterationInvariantRate\",$",
             MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -340,8 +475,13 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_AvgIterations %console_report "
                            "bar=%hrfloat foo=%hrfloat$"}});
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_Counters_AvgIterations\",$"},
+           {"\"family_index\": 10,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_Counters_AvgIterations\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},
@@ -367,6 +507,8 @@ CHECK_BENCHMARK_RESULTS("BM_Counters_AvgIterations", &CheckAvgIterations);
 
 void BM_Counters_kAvgIterationsRate(benchmark::State& state) {
   for (auto _ : state) {
+    // This test requires a non-zero CPU time to avoid divide-by-zero
+    benchmark::DoNotOptimize(state.iterations());
   }
   namespace bm = benchmark;
   state.counters["foo"] = bm::Counter{1, bm::Counter::kAvgIterationsRate};
@@ -378,8 +520,13 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_Counters_kAvgIterationsRate "
                            "%console_report bar=%hrfloat/s foo=%hrfloat/s$"}});
 ADD_CASES(TC_JSONOut,
           {{"\"name\": \"BM_Counters_kAvgIterationsRate\",$"},
+           {"\"family_index\": 11,$", MR_Next},
+           {"\"per_family_instance_index\": 0,$", MR_Next},
            {"\"run_name\": \"BM_Counters_kAvgIterationsRate\",$", MR_Next},
            {"\"run_type\": \"iteration\",$", MR_Next},
+           {"\"repetitions\": 1,$", MR_Next},
+           {"\"repetition_index\": 0,$", MR_Next},
+           {"\"threads\": 1,$", MR_Next},
            {"\"iterations\": %int,$", MR_Next},
            {"\"real_time\": %float,$", MR_Next},
            {"\"cpu_time\": %float,$", MR_Next},

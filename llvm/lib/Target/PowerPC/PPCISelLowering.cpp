@@ -1079,8 +1079,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FCOPYSIGN, MVT::v4f32, Legal);
       setOperationAction(ISD::FCOPYSIGN, MVT::v2f64, Legal);
 
-      if (Subtarget.hasDirectMove())
-        setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
       setOperationAction(ISD::BUILD_VECTOR, MVT::v2f64, Custom);
 
       // Handle constrained floating-point operations of vector.

@@ -15,8 +15,13 @@
 #ifndef BENCHMARK_RUNNER_H_
 #define BENCHMARK_RUNNER_H_
 
+#include <thread>
+#include <vector>
+
 #include "benchmark_api_internal.h"
 #include "internal_macros.h"
+#include "perf_counters.h"
+#include "thread_manager.h"
 
 DECLARE_double(benchmark_min_time);
 
@@ -25,6 +30,8 @@ DECLARE_int32(benchmark_repetitions);
 DECLARE_bool(benchmark_report_aggregates_only);
 
 DECLARE_bool(benchmark_display_aggregates_only);
+
+DECLARE_string(benchmark_perf_counters);
 
 namespace benchmark {
 
@@ -40,9 +47,57 @@ struct RunResults {
   bool file_report_aggregates_only = false;
 };
 
-RunResults RunBenchmark(
-    const benchmark::internal::BenchmarkInstance& b,
-    std::vector<BenchmarkReporter::Run>* complexity_reports);
+class BenchmarkRunner {
+ public:
+  BenchmarkRunner(const benchmark::internal::BenchmarkInstance& b_,
+                  BenchmarkReporter::PerFamilyRunReports* reports_for_family);
+
+  int GetNumRepeats() const { return repeats; }
+
+  bool HasRepeatsRemaining() const {
+    return GetNumRepeats() != num_repetitions_done;
+  }
+
+  void DoOneRepetition();
+
+  RunResults&& GetResults();
+
+  BenchmarkReporter::PerFamilyRunReports* GetReportsForFamily() const {
+    return reports_for_family;
+  };
+
+ private:
+  RunResults run_results;
+
+  const benchmark::internal::BenchmarkInstance& b;
+  BenchmarkReporter::PerFamilyRunReports* reports_for_family;
+
+  const double min_time;
+  const int repeats;
+  const bool has_explicit_iteration_count;
+
+  int num_repetitions_done = 0;
+
+  std::vector<std::thread> pool;
+
+  IterationCount iters;  // preserved between repetitions!
+  // So only the first repetition has to find/calculate it,
+  // the other repetitions will just use that precomputed iteration count.
+
+  PerfCountersMeasurement perf_counters_measurement;
+  PerfCountersMeasurement* const perf_counters_measurement_ptr;
+
+  struct IterationResults {
+    internal::ThreadManager::Result results;
+    IterationCount iters;
+    double seconds;
+  };
+  IterationResults DoNIterations();
+
+  IterationCount PredictNumItersNeeded(const IterationResults& i) const;
+
+  bool ShouldReportIterationResults(const IterationResults& i) const;
+};
 
 }  // namespace internal
 

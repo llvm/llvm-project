@@ -11969,6 +11969,7 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; PWR7-LABEL: ugt_1_v2i64:
 ; PWR7:       # %bb.0:
 ; PWR7-NEXT:    addi 3, 1, -32
+; PWR7-NEXT:    xxlxor 35, 35, 35
 ; PWR7-NEXT:    stxvd2x 34, 0, 3
 ; PWR7-NEXT:    ld 3, -24(1)
 ; PWR7-NEXT:    addi 3, 3, -1
@@ -11978,9 +11979,6 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; PWR7-NEXT:    std 3, -16(1)
 ; PWR7-NEXT:    addi 3, 1, -16
 ; PWR7-NEXT:    lxvw4x 0, 0, 3
-; PWR7-NEXT:    addis 3, 2, .LCPI100_0@toc@ha
-; PWR7-NEXT:    addi 3, 3, .LCPI100_0@toc@l
-; PWR7-NEXT:    lxvw4x 35, 0, 3
 ; PWR7-NEXT:    xxland 34, 34, 0
 ; PWR7-NEXT:    vcmpequw 2, 2, 3
 ; PWR7-NEXT:    xxlnor 34, 34, 34
@@ -12037,6 +12035,7 @@ define <2 x i64> @ult_2_v2i64(<2 x i64> %0) {
 ; PWR7-LABEL: ult_2_v2i64:
 ; PWR7:       # %bb.0:
 ; PWR7-NEXT:    addi 3, 1, -32
+; PWR7-NEXT:    xxlxor 35, 35, 35
 ; PWR7-NEXT:    stxvd2x 34, 0, 3
 ; PWR7-NEXT:    ld 3, -24(1)
 ; PWR7-NEXT:    addi 3, 3, -1
@@ -12046,9 +12045,6 @@ define <2 x i64> @ult_2_v2i64(<2 x i64> %0) {
 ; PWR7-NEXT:    std 3, -16(1)
 ; PWR7-NEXT:    addi 3, 1, -16
 ; PWR7-NEXT:    lxvw4x 0, 0, 3
-; PWR7-NEXT:    addis 3, 2, .LCPI101_0@toc@ha
-; PWR7-NEXT:    addi 3, 3, .LCPI101_0@toc@l
-; PWR7-NEXT:    lxvw4x 35, 0, 3
 ; PWR7-NEXT:    xxland 34, 34, 0
 ; PWR7-NEXT:    vcmpequw 2, 2, 3
 ; PWR7-NEXT:    blr

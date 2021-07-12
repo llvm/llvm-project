@@ -16,10 +16,10 @@ define double @caller() {
 ; 32BIT-NEXT:    mflr 0
 ; 32BIT-NEXT:    stw 0, 8(1)
 ; 32BIT-NEXT:    stwu 1, -192(1)
-; 32BIT-NEXT:    lwz 3, L..C0(2)
+; 32BIT-NEXT:    lwz 3, L..C0(2) # @__const.caller.t
 ; 32BIT-NEXT:    li 4, 31
 ; 32BIT-NEXT:    xxlxor 0, 0, 0
-; 32BIT-NEXT:    lwz 5, L..C1(2)
+; 32BIT-NEXT:    lwz 5, L..C1(2) # %const.0
 ; 32BIT-NEXT:    li 6, 512
 ; 32BIT-NEXT:    xxlxor 1, 1, 1
 ; 32BIT-NEXT:    xxlxor 2, 2, 2
@@ -79,13 +79,13 @@ define double @caller() {
 ; 32BIT-NEXT:    lwz 0, 8(1)
 ; 32BIT-NEXT:    mtlr 0
 ; 32BIT-NEXT:    blr
-
+;
 ; 64BIT-LABEL: caller:
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    mflr 0
 ; 64BIT-NEXT:    std 0, 16(1)
 ; 64BIT-NEXT:    stdu 1, -224(1)
-; 64BIT-NEXT:    ld 3, L..C0(2)
+; 64BIT-NEXT:    ld 3, L..C0(2) # @__const.caller.t
 ; 64BIT-NEXT:    li 4, 16
 ; 64BIT-NEXT:    li 5, 144
 ; 64BIT-NEXT:    xxlxor 1, 1, 1
@@ -98,39 +98,38 @@ define double @caller() {
 ; 64BIT-NEXT:    xxlxor 36, 36, 36
 ; 64BIT-NEXT:    xxlxor 37, 37, 37
 ; 64BIT-NEXT:    stxvd2x 0, 1, 4
-; 64BIT-NEXT:    ld 4, L..C1(2)
+; 64BIT-NEXT:    li 4, 160
 ; 64BIT-NEXT:    xxlxor 38, 38, 38
 ; 64BIT-NEXT:    lxvd2x 0, 0, 3
 ; 64BIT-NEXT:    li 3, 192
 ; 64BIT-NEXT:    xxlxor 39, 39, 39
 ; 64BIT-NEXT:    xxlxor 40, 40, 40
-; 64BIT-NEXT:    lxvd2x 13, 0, 4
-; 64BIT-NEXT:    li 4, 80
 ; 64BIT-NEXT:    xxlxor 41, 41, 41
 ; 64BIT-NEXT:    stxvd2x 0, 1, 3
-; 64BIT-NEXT:    ld 3, L..C2(2)
+; 64BIT-NEXT:    ld 3, L..C1(2) # %const.0
+; 64BIT-NEXT:    xxlxor 0, 0, 0
 ; 64BIT-NEXT:    xxlxor 42, 42, 42
+; 64BIT-NEXT:    stxvw4x 0, 1, 4
+; 64BIT-NEXT:    li 4, 80
 ; 64BIT-NEXT:    xxlxor 43, 43, 43
+; 64BIT-NEXT:    lxvd2x 13, 0, 3
+; 64BIT-NEXT:    li 3, 128
 ; 64BIT-NEXT:    xxlxor 44, 44, 44
-; 64BIT-NEXT:    lxvd2x 0, 0, 3
-; 64BIT-NEXT:    li 3, 160
+; 64BIT-NEXT:    stxvw4x 0, 1, 5
 ; 64BIT-NEXT:    xxlxor 45, 45, 45
+; 64BIT-NEXT:    stxvw4x 0, 1, 3
+; 64BIT-NEXT:    li 5, 512
 ; 64BIT-NEXT:    xxlxor 3, 3, 3
 ; 64BIT-NEXT:    xxlxor 4, 4, 4
-; 64BIT-NEXT:    stxvd2x 0, 1, 3
-; 64BIT-NEXT:    li 3, 128
-; 64BIT-NEXT:    xxlxor 5, 5, 5
-; 64BIT-NEXT:    xxlxor 6, 6, 6
-; 64BIT-NEXT:    stxvd2x 0, 1, 5
-; 64BIT-NEXT:    li 5, 512
-; 64BIT-NEXT:    xxlxor 7, 7, 7
-; 64BIT-NEXT:    stxvd2x 0, 1, 3
-; 64BIT-NEXT:    xxlxor 8, 8, 8
 ; 64BIT-NEXT:    stxvd2x 13, 1, 4
 ; 64BIT-NEXT:    li 4, 256
 ; 64BIT-NEXT:    std 5, 184(1)
-; 64BIT-NEXT:    xxlxor 9, 9, 9
+; 64BIT-NEXT:    xxlxor 5, 5, 5
 ; 64BIT-NEXT:    std 6, 176(1)
+; 64BIT-NEXT:    xxlxor 6, 6, 6
+; 64BIT-NEXT:    xxlxor 7, 7, 7
+; 64BIT-NEXT:    xxlxor 8, 8, 8
+; 64BIT-NEXT:    xxlxor 9, 9, 9
 ; 64BIT-NEXT:    xxlxor 10, 10, 10
 ; 64BIT-NEXT:    xxlxor 11, 11, 11
 ; 64BIT-NEXT:    xxlxor 12, 12, 12
@@ -141,6 +140,7 @@ define double @caller() {
 ; 64BIT-NEXT:    ld 0, 16(1)
 ; 64BIT-NEXT:    mtlr 0
 ; 64BIT-NEXT:    blr
+
   entry:
     %call = tail call double @callee(i32 signext 128, i32 signext 256, double 0.000000e+00, double 0.000000e+00, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 0.000000e+00, double 0.000000e+00>, <2 x double> <double 2.400000e+01, double 2.500000e+01>, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, i32 signext 512, %struct.Test* nonnull byval(%struct.Test) align 4 @__const.caller.t)
       ret double %call

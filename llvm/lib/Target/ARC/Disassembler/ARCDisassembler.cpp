@@ -107,6 +107,9 @@ static DecodeStatus DecodeStLImmInstruction(MCInst &, uint64_t, uint64_t,
 static DecodeStatus DecodeLdRLImmInstruction(MCInst &, uint64_t, uint64_t,
                                              const void *);
 
+static DecodeStatus DecodeCCRU6Instruction(MCInst &, uint64_t, uint64_t,
+                                           const void *);
+
 static DecodeStatus DecodeMoveHRegInstruction(MCInst &Inst, uint64_t, uint64_t,
                                               const void *);
 
@@ -167,19 +170,19 @@ static DecodeStatus DecodeMEMrs9(MCInst &Inst, unsigned Insn, uint64_t Address,
 
 static bool DecodeSymbolicOperand(MCInst &Inst, uint64_t Address,
                                   uint64_t Value, const void *Decoder) {
-  static const uint64_t atLeast = 2;
+  static const uint64_t AtLeast = 2;
   // TODO: Try to force emitter to use MCDisassembler* instead of void*.
   auto Disassembler = static_cast<const MCDisassembler *>(Decoder);
   return (nullptr != Disassembler &&
           Disassembler->tryAddingSymbolicOperand(Inst, Value, Address, true, 0,
-                                                 atLeast));
+                                                 AtLeast));
 }
 
 static void DecodeSymbolicOperandOff(MCInst &Inst, uint64_t Address,
                                      uint64_t Offset, const void *Decoder) {
-  uint64_t nextAddress = Address + Offset;
+  uint64_t NextAddress = Address + Offset;
 
-  if (!DecodeSymbolicOperand(Inst, Address, nextAddress, Decoder))
+  if (!DecodeSymbolicOperand(Inst, Address, NextAddress, Decoder))
     Inst.addOperand(MCOperand::createImm(Offset));
 }
 
@@ -272,9 +275,9 @@ static DecodeStatus DecodeMoveHRegInstruction(MCInst &Inst, uint64_t Insn,
                                               const void *Decoder) {
   LLVM_DEBUG(dbgs() << "Decoding MOV_S h-register\n");
   using Field = decltype(Insn);
-  Field h = fieldFromInstruction(Insn, 5, 3) |
+  Field H = fieldFromInstruction(Insn, 5, 3) |
             (fieldFromInstruction(Insn, 0, 2) << 3);
-  Field g = fieldFromInstruction(Insn, 8, 3) |
+  Field G = fieldFromInstruction(Insn, 8, 3) |
             (fieldFromInstruction(Insn, 3, 2) << 3);
 
   auto DecodeRegisterOrImm = [&Inst, Address, Decoder](Field RegNum,
@@ -287,10 +290,25 @@ static DecodeStatus DecodeMoveHRegInstruction(MCInst &Inst, uint64_t Insn,
     return DecodeGPR32RegisterClass(Inst, RegNum, Address, Decoder);
   };
 
-  if (MCDisassembler::Success != DecodeRegisterOrImm(g, 0))
+  if (MCDisassembler::Success != DecodeRegisterOrImm(G, 0))
     return MCDisassembler::Fail;
 
-  return DecodeRegisterOrImm(h, Insn >> 16u);
+  return DecodeRegisterOrImm(H, Insn >> 16u);
+}
+
+static DecodeStatus DecodeCCRU6Instruction(MCInst &Inst, uint64_t Insn,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  unsigned DstB;
+  LLVM_DEBUG(dbgs() << "Decoding CCRU6 instruction:\n");
+  DstB = decodeBField(Insn);
+  DecodeGPR32RegisterClass(Inst, DstB, Address, Decoder);
+  using Field = decltype(Insn);
+  Field U6Field = fieldFromInstruction(Insn, 6, 11);
+  Inst.addOperand(MCOperand::createImm(U6Field));
+  Field CCField = fieldFromInstruction(Insn, 0, 4);
+  Inst.addOperand(MCOperand::createImm(CCField));
+  return MCDisassembler::Success;
 }
 
 DecodeStatus ARCDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
