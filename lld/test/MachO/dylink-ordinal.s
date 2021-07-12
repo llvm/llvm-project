@@ -39,6 +39,7 @@ current-version:  0001.001.1
 exports:
   - targets:      [ x86_64-macos ]
     symbols:      [ _foo ]
+...
 
 #--- libBar.tbd
 --- !tapi-tbd
@@ -54,6 +55,7 @@ current-version:  0001.001.1
 exports:
   - targets:      [ x86_64-macos ]
     symbols:      [ _bar ]
+...
 
 #--- main.s
 .section __TEXT,__text
