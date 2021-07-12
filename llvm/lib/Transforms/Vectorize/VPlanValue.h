@@ -371,7 +371,7 @@ public:
     assert(DefinedValues[I] && "defined value must be non-null");
     return DefinedValues[I];
   }
-  const VPValue *getVPValue(unsigned I = 0) const {
+  const VPValue *getVPValue(unsigned I) const {
     assert(DefinedValues[I] && "defined value must be non-null");
     return DefinedValues[I];
   }

@@ -18,5 +18,8 @@ static_library("AsmParser") {
     "//llvm/lib/Target/WebAssembly/Utils",
   ]
   include_dirs = [ ".." ]
-  sources = [ "WebAssemblyAsmParser.cpp" ]
+  sources = [
+    "WebAssemblyAsmParser.cpp",
+    "WebAssemblyAsmTypeCheck.cpp",
+  ]
 }

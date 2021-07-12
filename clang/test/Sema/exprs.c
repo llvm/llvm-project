@@ -22,7 +22,7 @@ void radar9171946() {
 
 int test_pr8876() {
   PR8876(0); // no-warning
-  PR8876_pos(0); // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+  PR8876_pos(0); // expected-warning{{indirection of non-volatile null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap() or qualifying pointer with 'volatile'}}
   return 0;
 }
 
@@ -31,7 +31,7 @@ int test_pr8876() {
 void pr8183(unsigned long long test)
 {
   (void)((((void*)0)) && (*((unsigned long long*)(((void*)0))) = ((unsigned long long)((test)) % (unsigned long long)((1000000000)))));  // no-warning
-  (*((unsigned long long *)(((void *)0))) = ((unsigned long long)((test)) % (unsigned long long)((1000000000))));                        // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+  (*((unsigned long long*)(((void*)0))) = ((unsigned long long)((test)) % (unsigned long long)((1000000000)))); // expected-warning {{indirection of non-volatile null pointer will be deleted, not trap}} expected-note {{consider using __builtin_trap() or qualifying pointer with 'volatile'}}
 }
 
 // PR1966
@@ -59,7 +59,7 @@ void test4() {
 
       var =+5;  // no warning when the subexpr of the unary op has no space before it.
       var =-5;
-
+  
 #define FIVE 5
       var=-FIVE;  // no warning with macros.
       var=-FIVE;
@@ -159,7 +159,7 @@ void test17(int x) {
   x = x % 0;  // expected-warning {{remainder by zero is undefined}}
   x /= 0;  // expected-warning {{division by zero is undefined}}
   x %= 0;  // expected-warning {{remainder by zero is undefined}}
-
+  
   x = sizeof(x/0);  // no warning.
 }
 
@@ -187,17 +187,21 @@ void test18(int b) {
 typedef int __attribute__((address_space(256))) int_AS256;
 // PR7569
 void test19() {
-  *(int *)0 = 0;                                     // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
-  *(volatile int *)0 = 0;                            // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
-  *(int __attribute__((address_space(256))) *)0 = 0; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
-  *(int __attribute__((address_space(0))) *)0 = 0;   // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
-  *(int_AS256 *)0 = 0;                               // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+  *(int *)0 = 0;                                     // expected-warning {{indirection of non-volatile null pointer}} \
+                  // expected-note {{consider using __builtin_trap}}
+  *(volatile int *)0 = 0;                            // Ok.
+  *(int __attribute__((address_space(256))) *)0 = 0; // Ok.
+  *(int __attribute__((address_space(0))) *)0 = 0;   // expected-warning {{indirection of non-volatile null pointer}} \
+                     // expected-note {{consider using __builtin_trap}}
+  *(int_AS256 *)0 = 0;                               // Ok.
 
   // rdar://9269271
-  int x = *(int *)0;                                                                          // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
-  int x2 = *(volatile int *)0;                                                                // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
-  int x3 = *(int __attribute__((address_space(0))) *)0;                                       // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
-  int x4 = *(int_AS256 *)0;                                                                   // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}}
+  int x = *(int *)0;                                                                          // expected-warning {{indirection of non-volatile null pointer}} \
+                     // expected-note {{consider using __builtin_trap}}
+  int x2 = *(volatile int *)0;                                                                // Ok.
+  int x3 = *(int __attribute__((address_space(0))) *)0;                                       // expected-warning {{indirection of non-volatile null pointer}} \
+                     // expected-note {{consider using __builtin_trap}}
+  int x4 = *(int_AS256 *)0;                                                                   // Ok.
   int *p = &(*(int *)0);                                                                      // Ok.
   int_AS256 *p1 = &(*(int __attribute__((address_space(256))) *)0);                           // Ok.
   int __attribute__((address_space(0))) *p2 = &(*(int __attribute__((address_space(0))) *)0); // Ok.
@@ -209,7 +213,7 @@ int test20(int x) {
                  // expected-note {{remove constant to silence this warning}}
 
   return x && sizeof(int) == 4;  // no warning, RHS is logical op.
-
+  
   // no warning, this is an idiom for "true" in old C style.
   return x && (signed char)1;
 

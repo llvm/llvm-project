@@ -473,6 +473,11 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
 
       return false;
     }
+
+    if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I)) {
+      Optional<fp::ExceptionBehavior> ExBehavior = FPI->getExceptionBehavior();
+      return ExBehavior.getValue() != fp::ebStrict;
+    }
   }
 
   if (isAllocLikeFn(I, TLI))
@@ -2296,6 +2301,9 @@ static bool markAliveBlocks(Function &F,
         // Store to undef and store to null are undefined and used to signal
         // that they should be changed to unreachable by passes that can't
         // modify the CFG.
+
+        // Don't touch volatile stores.
+        if (SI->isVolatile()) continue;
 
         Value *Ptr = SI->getOperand(1);
 

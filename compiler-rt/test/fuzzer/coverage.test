@@ -2,14 +2,14 @@
 UNSUPPORTED: windows
 # FIXME: CreatePCArray() emits PLT stub addresses for entry blocks, which are ignored by TracePC::PrintCoverage().
 XFAIL: s390x
-RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable  %S/TrapTest.cpp -o %t-TrapTest
+RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable  %S/NullDerefTest.cpp -o %t-NullDerefTest
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO1.cpp -fPIC %ld_flags_rpath_so1 -O0 -shared -o %dynamiclib1
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO2.cpp -fPIC %ld_flags_rpath_so2 -O0 -shared -o %dynamiclib2
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSOTestMain.cpp %S/DSOTestExtra.cpp %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t-DSOTest
 
 CHECK: COVERAGE:
-CHECK: COVERED_FUNC: {{.*}}LLVMFuzzerTestOneInput {{.*}}TrapTest.cpp:13
-RUN: not %run %t-TrapTest -print_coverage=1 2>&1 | FileCheck %s
+CHECK: COVERED_FUNC: {{.*}}LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:14
+RUN: not %run %t-NullDerefTest -print_coverage=1 2>&1 | FileCheck %s
 
 RUN: %run %t-DSOTest -print_coverage=1 -runs=0 2>&1 | FileCheck %s --check-prefix=DSO
 DSO: COVERAGE:

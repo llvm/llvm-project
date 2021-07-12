@@ -155,7 +155,7 @@ entry:
 ; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                        # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
 ; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; COMMON-NEXT:  .byte   0x00                            # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; COMMON-NEXT:  .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x05                            # NumberOfFixedParms = 5
 ; COMMON-NEXT:  .byte   0x05                            # NumberOfFPParms = 2, +HasParmsOnStack
 ; COMMON-NEXT:  .vbyte  4, 0x58000000                   # Parameter type = i, f, d, i, i, i, i
@@ -184,7 +184,7 @@ entry:
 ; COMMON-NEXT:  .byte   0x41                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                        # OnConditionDirective = 0, -IsCRSaved, +IsLRSaved
 ; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; COMMON-NEXT:  .byte   0x00                            # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; COMMON-NEXT:  .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x00                            # NumberOfFixedParms = 0
 ; COMMON-NEXT:  .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; CHECK-ASM-NEXT:   .vbyte  4, L..main0-.main               # Function size
@@ -207,7 +207,7 @@ entry:
 ; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                        # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
 ; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; COMMON-NEXT:  .byte   0x00                            # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; COMMON-NEXT:  .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x05                            # NumberOfFixedParms = 5
 ; COMMON-NEXT:  .byte   0x05                            # NumberOfFPParms = 2, +HasParmsOnStack
 ; COMMON-NEXT:  .vbyte  4, 0x16000000                   # Parameter type = i, i, i, f, d, i, i

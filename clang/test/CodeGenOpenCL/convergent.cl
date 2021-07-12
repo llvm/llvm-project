@@ -3,10 +3,11 @@
 
 // This is initially assumed convergent, but can be deduced to not require it.
 
-// CHECK-LABEL: define{{.*}} spir_func void @non_convfun(i32* %p) local_unnamed_addr #0
+// CHECK-LABEL: define{{.*}} spir_func void @non_convfun() local_unnamed_addr #0
 // CHECK: ret void
 __attribute__((noinline))
-void non_convfun(volatile int* p) {
+void non_convfun(void) {
+  volatile int* p;
   *p = 0;
 }
 
@@ -27,29 +28,29 @@ void g(void);
 //      non_convfun();
 //    }
 //
-// CHECK-LABEL: define{{.*}} spir_func void @test_merge_if(i32 %a, i32* %p) local_unnamed_addr #1 {
+// CHECK-LABEL: define{{.*}} spir_func void @test_merge_if(i32 %a) local_unnamed_addr #1 {
 // CHECK: %[[tobool:.+]] = icmp eq i32 %a, 0
 // CHECK: br i1 %[[tobool]], label %[[if_end3_critedge:.+]], label %[[if_then:.+]]
 
 // CHECK: [[if_then]]:
 // CHECK: tail call spir_func void @f()
-// CHECK: tail call spir_func void @non_convfun(i32* %p)
+// CHECK: tail call spir_func void @non_convfun()
 // CHECK: tail call spir_func void @g()
 
 // CHECK: br label %[[if_end3:.+]]
 
 // CHECK: [[if_end3_critedge]]:
-// CHECK: tail call spir_func void @non_convfun(i32* %p)
+// CHECK: tail call spir_func void @non_convfun()
 // CHECK: br label %[[if_end3]]
 
 // CHECK: [[if_end3]]:
 // CHECK: ret void
 
-void test_merge_if(int a, volatile int* p) {
+void test_merge_if(int a) {
   if (a) {
     f();
   }
-  non_convfun(p);
+  non_convfun();
   if (a) {
     g();
   }
@@ -133,7 +134,7 @@ kernel void assume_convergent_asm()
   __asm__ volatile("s_barrier");
 }
 
-// CHECK: attributes #0 = { nofree noinline norecurse nounwind willreturn mustprogress "
+// CHECK: attributes #0 = { mustprogress nofree noinline norecurse nounwind willreturn "
 // CHECK: attributes #1 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #2 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #3 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }

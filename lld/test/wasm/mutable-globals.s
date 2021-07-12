@@ -2,6 +2,8 @@
 # RUN: not wasm-ld %t.o -o %t.wasm 2>&1 | FileCheck %s
 # RUN: wasm-ld --features=mutable-globals %t.o -o %t.wasm
 
+.globaltype foo, i32
+
 .globl _start
 _start:
   .functype _start () -> ()
@@ -9,7 +11,6 @@ _start:
   global.set foo
   end_function
 
-.globaltype foo, i32
 .import_module foo, env
 .import_name foo, foo
 

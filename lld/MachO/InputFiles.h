@@ -22,7 +22,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 
-#include <map>
 #include <vector>
 
 namespace llvm {
@@ -166,9 +165,7 @@ public:
 
   unsigned numReferencedSymbols = 0;
 
-  bool isReferenced() const {
-    return numReferencedSymbols > 0;
-  }
+  bool isReferenced() const { return numReferencedSymbols > 0; }
 
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not

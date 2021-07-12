@@ -4,6 +4,8 @@
 
 // host-no-diagnostics
 
+void baz(void) __attribute__((assume("omp_no_openmp")));
+
 void bar1(void) {
 #pragma omp parallel // #0
                      // all-remark@#0 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
@@ -23,9 +25,11 @@ void bar2(void) {
 
 void foo1(void) {
 #pragma omp target teams // #2
+                         // all-remark@#2 {{Generic-mode kernel is executed with a customized state machine [3 known parallel regions] (good).}}
                          // all-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__1_wrapper, kernel ID: __omp_offloading}}
                          // all-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__2_wrapper, kernel ID: __omp_offloading}}
   {
+    baz();           // all-remark {{Kernel will be executed in generic-mode due to this potential side-effect, consider to add `__attribute__((assume("ompx_spmd_amenable")))` to the called function '_Z3bazv'.}}
 #pragma omp parallel // #3
                      // all-remark@#3 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#3 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__1_wrapper, kernel ID: __omp_offloading}}
@@ -42,9 +46,11 @@ void foo1(void) {
 
 void foo2(void) {
 #pragma omp target teams // #5
+                         // all-remark@#5 {{Generic-mode kernel is executed with a customized state machine [4 known parallel regions] (good).}}
                          // all-remark@#5 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__5_wrapper, kernel ID: __omp_offloading}}
                          // all-remark@#5 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__4_wrapper, kernel ID: __omp_offloading}}
   {
+    baz();           // all-remark {{Kernel will be executed in generic-mode due to this potential side-effect, consider to add `__attribute__((assume("ompx_spmd_amenable")))` to the called function '_Z3bazv'.}}
 #pragma omp parallel // #6
                      // all-remark@#6 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#6 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__4_wrapper, kernel ID: __omp_offloading}}
@@ -64,9 +70,11 @@ void foo2(void) {
 
 void foo3(void) {
 #pragma omp target teams // #8
+                         // all-remark@#8 {{Generic-mode kernel is executed with a customized state machine [4 known parallel regions] (good).}}
                          // all-remark@#8 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__7_wrapper, kernel ID: __omp_offloading}}
                          // all-remark@#8 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__8_wrapper, kernel ID: __omp_offloading}}
   {
+    baz();           // all-remark {{Kernel will be executed in generic-mode due to this potential side-effect, consider to add `__attribute__((assume("ompx_spmd_amenable")))` to the called function '_Z3bazv'.}}
 #pragma omp parallel // #9
                      // all-remark@#9 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nested inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // all-remark@#9 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__7_wrapper, kernel ID: __omp_offloading}}
@@ -97,4 +105,4 @@ void spmd(void) {
 }
 
 // all-remark@* 5 {{OpenMP runtime call __kmpc_global_thread_num moved to beginning of OpenMP region}}
-// all-remark@* 12 {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
+// all-remark@* 9 {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}

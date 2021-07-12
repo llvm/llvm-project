@@ -36,14 +36,9 @@ uptr internal_sched_yield() {
   return 0;  // Why doesn't this return void?
 }
 
-static void internal_nanosleep(zx_time_t ns) {
-  zx_status_t status = _zx_nanosleep(_zx_deadline_after(ns));
+void internal_usleep(u64 useconds) {
+  zx_status_t status = _zx_nanosleep(_zx_deadline_after(ZX_USEC(useconds)));
   CHECK_EQ(status, ZX_OK);
-}
-
-unsigned int internal_sleep(unsigned int seconds) {
-  internal_nanosleep(ZX_SEC(seconds));
-  return 0;
 }
 
 u64 NanoTime() {
@@ -77,10 +72,6 @@ tid_t GetTid() { return GetThreadSelf(); }
 void Abort() { abort(); }
 
 int Atexit(void (*function)(void)) { return atexit(function); }
-
-void SleepForSeconds(int seconds) { internal_sleep(seconds); }
-
-void SleepForMillis(int millis) { internal_nanosleep(ZX_MSEC(millis)); }
 
 void GetThreadStackTopAndBottom(bool, uptr *stack_top, uptr *stack_bottom) {
   pthread_attr_t attr;
@@ -145,8 +136,8 @@ void BlockingMutex::Unlock() {
   }
 }
 
-void BlockingMutex::CheckLocked() {
-  atomic_uint32_t *m = reinterpret_cast<atomic_uint32_t *>(&opaque_storage_);
+void BlockingMutex::CheckLocked() const {
+  auto m = reinterpret_cast<atomic_uint32_t const *>(&opaque_storage_);
   CHECK_NE(MtxUnlocked, atomic_load(m, memory_order_relaxed));
 }
 

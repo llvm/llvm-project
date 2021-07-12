@@ -806,13 +806,3 @@ define <2 x double> @nearest_v2f64(<2 x double> %a) {
   %v = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %a)
   ret <2 x double> %v
 }
-
-; CHECK-LABEL: promote_low_v2f64:
-; CHECK-NEXT: .functype promote_low_v2f64 (v128) -> (v128){{$}}
-; CHECK-NEXT: f64x2.promote_low_f32x4 $push[[R:[0-9]+]]=, $0{{$}}
-; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.promote.low(<4 x float>)
-define <2 x double> @promote_low_v2f64(<4 x float> %a) {
-  %v = call <2 x double> @llvm.wasm.promote.low(<4 x float> %a)
-  ret <2 x double> %v
-}

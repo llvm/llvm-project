@@ -306,7 +306,7 @@ static Optional<StringRef> nameOrNone(const Value *V) {
 void MemoryOpRemark::visitVariable(const Value *V,
                                    SmallVectorImpl<VariableInfo> &Result) {
   if (auto *GV = dyn_cast<GlobalVariable>(V)) {
-    auto *Ty = cast<PointerType>(GV->getType())->getElementType();
+    auto *Ty = GV->getValueType();
     uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedSize();
     VariableInfo Var{nameOrNone(GV), Size};
     if (!Var.isEmpty())

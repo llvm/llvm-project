@@ -23,7 +23,6 @@ MODULE_DIR=""
 INTRINSICS_MOD_DIR=""
 COMPILE_ONLY="False"
 PREPROCESS_ONLY="False"
-TEMP_OUTPUT="flang_temp_out_"
 PRINT_VERSION="False"
 
 # === parse_args ==============================================================
@@ -106,7 +105,7 @@ parse_args()
 
       else
         # CASE 3: Unsupported
-        echo "ERROR: unrecognised option format $1"
+        echo "ERROR: unrecognised option format: \`$1\`. Perhaps non-existent file?"
         exit 1
       fi
   done
@@ -258,10 +257,35 @@ preprocess() {
   for idx in "${!other_srcs[@]}"; do
     if ! $ext_fc -E "${opts[@]}" "${other_srcs[$idx]}" ${output_definition:+$output_definition}
     then status=$?
-         echo flang: in "$PWD", flang-new failed with exit status $status: "$wd/bin/flang-new" "${flang_options[@]}" "$@" >&2
+         echo flang: in "$PWD", flang-new failed with exit status $status: "$wd/bin/flang-new" "${opts[@]}" "$@" >&2
          exit $status
     fi
   done
+}
+
+# === get_relocatable_name ======================================================
+#
+# Generate a name for the output object file based on the source file, e.g.
+#   * file.f --> file.o
+#   * file.c --> file.o
+# If OUTPUT_FILE is defined, use that instead.
+#
+# INPUTS:
+#   $1 - input source file for which to generate the output name
+# =============================================================================
+get_relocatable_name() {
+  local -r src_file=$1
+
+  if [[ ! -z ${OUTPUT_FILE:+x} ]]; then
+    out_file="$OUTPUT_FILE"
+  else
+    current_ext=${src_file##*.}
+    new_ext="o"
+
+    out_file=$(basename "${src_file}" "$current_ext")${new_ext}
+  fi
+
+  echo "$out_file"
 }
 
 # === main ====================================================================
@@ -275,10 +299,10 @@ main() {
     exit 0
   fi
 
-  fortran_source_files=()
-  other_source_files=()
-  object_files=()
-  lib_files=()
+  local fortran_source_files=()
+  local other_source_files=()
+  local object_files=()
+  local lib_files=()
   categorise_files INPUT_FILES fortran_source_files other_source_files object_files lib_files
 
   if [[ $PREPROCESS_ONLY == "True" ]]; then
@@ -292,9 +316,9 @@ main() {
   # flag that the driver will see (otherwise it assumes compiler/toolchain
   # driver mode).`f18` will just ignore this flag when uparsing, so it's fine
   # to add it here unconditionally.
-  flang_options=("-fc1")
+  local flang_options=("-fc1")
   # Options for the external Fortran Compiler
-  ext_fc_options=()
+  local ext_fc_options=()
   categorise_opts OPTIONS flang_options ext_fc_options
 
   local -r wd=$(cd "$(dirname "$0")/.." && pwd)
@@ -319,19 +343,17 @@ main() {
   # STEP 2: Compile Fortran Source Files
   readonly ext_fc="${F18_FC:-gfortran}"
   for idx in "${!fortran_source_files[@]}"; do
-    # Use the value of $OUTPUT_FILE for the output file iff `-c` was used.
-    if [[ ! -z ${OUTPUT_FILE:+x} ]] && [[ $COMPILE_ONLY == "True" ]]; then
-      output_definition="-o $OUTPUT_FILE"
-    elif [[ $COMPILE_ONLY == "False" ]]; then
-      output_definition="-o ${TEMP_OUTPUT}_${idx}"
-    fi
+    # We always have to specify the output name with `-o <out_obj_file>`. This
+    # is because we are using the unparsed rather than the original source file
+    # below. As a result, we cannot rely on the compiler-generated output name.
+    out_obj_file=$(get_relocatable_name "${fortran_source_files[$idx]}")
 
-    if ! $ext_fc -c "${ext_fc_options[@]}" "${unparsed_file}_${idx}.f90" ${output_definition:+$output_definition}
+    if ! $ext_fc "-c" "${ext_fc_options[@]}" "${unparsed_file}_${idx}.f90" "-o" "${out_obj_file}"
     then status=$?
       echo flang: in "$PWD", "$ext_fc" failed with exit status $status: "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
          exit $status
     fi
-    object_files+=(${TEMP_OUTPUT}_${idx})
+    object_files+=(${out_obj_file})
   done
 
   # Delete the unparsed files
@@ -341,19 +363,17 @@ main() {
 
   # STEP 3: Compile Other Source Files
   for idx in "${!other_source_files[@]}"; do
-    # Use the value of $OUTPUT_FILE for the output file iff `-c` was used.
-    if [[ ! -z ${OUTPUT_FILE:+x} ]] && [[ $COMPILE_ONLY == "True" ]]; then
-      output_definition="-o $OUTPUT_FILE"
-    elif [[ $COMPILE_ONLY == "False" ]]; then
-      output_definition="-o ${TEMP_OUTPUT}_${idx}"
-    fi
+    # We always specify the output name with `-o <out_obj_file>`. The user
+    # might have used `-o`, but we never add it to $OPTIONS (or
+    # $ext_fc_options). Hence we need to use `get_relocatable_name`.
+    out_obj_file=$(get_relocatable_name "${other_source_files[$idx]}")
 
-    if ! $ext_fc -c "${ext_fc_options[@]}" "${other_source_files[${idx}]}" ${output_definition:+$output_definition}
+    if ! $ext_fc "-c" "${ext_fc_options[@]}" "${other_source_files[${idx}]}" "-o" "${out_obj_file}"
     then status=$?
       echo flang: in "$PWD", "$ext_fc" failed with exit status $status: "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
          exit $status
     fi
-    object_files+=(${TEMP_OUTPUT}_${idx})
+    object_files+=(${out_obj_file})
   done
 
   # STEP 4: Link
@@ -378,7 +398,7 @@ main() {
 
   # Delete intermediate object files
   for idx in "${!fortran_source_files[@]}"; do
-    rm "${TEMP_OUTPUT}_${idx}"
+    rm "${object_files[$idx]}"
   done
 }
 

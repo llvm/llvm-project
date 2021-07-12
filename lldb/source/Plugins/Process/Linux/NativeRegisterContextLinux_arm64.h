@@ -76,6 +76,8 @@ protected:
 
   size_t GetFPRSize() override { return sizeof(m_fpr); }
 
+  lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) override;
+
 private:
   bool m_gpr_is_valid;
   bool m_fpu_is_valid;

@@ -129,6 +129,8 @@ private:
     case CC_C:
     case CC_Swift:
       return CCCR_OK;
+    case CC_SwiftAsync:
+      return CCCR_Error;
     default:
       return CCCR_Warning;
     }
@@ -147,7 +149,10 @@ public:
   explicit WebAssembly32TargetInfo(const llvm::Triple &T,
                                    const TargetOptions &Opts)
       : WebAssemblyTargetInfo(T, Opts) {
-    resetDataLayout("e-m:e-p:32:32-i64:64-n32:64-S128-ni:1");
+    if (T.isOSEmscripten())
+      resetDataLayout("e-m:e-p:32:32-i64:64-f128:64-n32:64-S128-ni:1");
+    else
+      resetDataLayout("e-m:e-p:32:32-i64:64-n32:64-S128-ni:1");
   }
 
 protected:
@@ -166,7 +171,10 @@ public:
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
-    resetDataLayout("e-m:e-p:64:64-i64:64-n32:64-S128-ni:1");
+    if (T.isOSEmscripten())
+      resetDataLayout("e-m:e-p:64:64-i64:64-f128:64-n32:64-S128-ni:1");
+    else
+      resetDataLayout("e-m:e-p:64:64-i64:64-n32:64-S128-ni:1");
   }
 
 protected:

@@ -59,7 +59,7 @@ void testDiagnosableBranch(int a) {
   if (a) {
     // expected-note@-1 {{Assuming 'a' is not equal to 0}}
     // expected-note@-2 {{Taking true branch}}
-    *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+    *(volatile int *)0 = 1; // expected-warning{{Dereference of null pointer}}
     // expected-note@-1 {{Dereference of null pointer}}
   }
 }
@@ -70,7 +70,7 @@ void testDiagnosableBranchLogical(int a, int b) {
     // expected-note@-2 {{Left side of '&&' is true}}
     // expected-note@-3 {{Assuming 'b' is not equal to 0}}
     // expected-note@-4 {{Taking true branch}}
-    *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+    *(volatile int *)0 = 1; // expected-warning{{Dereference of null pointer}}
     // expected-note@-1 {{Dereference of null pointer}}
   }
 }
@@ -79,7 +79,7 @@ void testNonDiagnosableBranchArithmetic(int a, int b) {
   if (a - b) {
     // expected-note@-1 {{Taking true branch}}
     // expected-note@-2 {{Assuming the condition is true}}
-    *(volatile int *)0 = 1; // expected-warning{{indirection of null pointer will be deleted, not trap}} expected-note{{consider using __builtin_trap()}} expected-warning {{Dereference of null pointer}}
+    *(volatile int *)0 = 1; // expected-warning{{Dereference of null pointer}}
     // expected-note@-1 {{Dereference of null pointer}}
   }
 }

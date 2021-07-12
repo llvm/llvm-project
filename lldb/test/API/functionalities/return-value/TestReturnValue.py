@@ -15,8 +15,8 @@ class ReturnValueTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def affected_by_pr33042(self):
-        return ("clang" in self.getCompiler() and self.getArchitecture() ==
-            "aarch64" and self.getPlatform() == "linux")
+        return ("clang" in self.getCompiler() and self.isAArch64() and
+            self.getPlatform() == "linux")
 
     def affected_by_pr44132(self):
         return (self.getArchitecture() in ["aarch64", "arm"] and

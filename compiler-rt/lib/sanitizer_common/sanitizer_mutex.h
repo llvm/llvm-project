@@ -16,30 +16,29 @@
 #include "sanitizer_atomic.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
+#include "sanitizer_thread_safety.h"
 
 namespace __sanitizer {
 
-class StaticSpinMutex {
+class MUTEX StaticSpinMutex {
  public:
   void Init() {
     atomic_store(&state_, 0, memory_order_relaxed);
   }
 
-  void Lock() {
+  void Lock() ACQUIRE() {
     if (TryLock())
       return;
     LockSlow();
   }
 
-  bool TryLock() {
+  bool TryLock() TRY_ACQUIRE(true) {
     return atomic_exchange(&state_, 1, memory_order_acquire) == 0;
   }
 
-  void Unlock() {
-    atomic_store(&state_, 0, memory_order_release);
-  }
+  void Unlock() RELEASE() { atomic_store(&state_, 0, memory_order_release); }
 
-  void CheckLocked() {
+  void CheckLocked() const CHECK_LOCKED {
     CHECK_EQ(atomic_load(&state_, memory_order_relaxed), 1);
   }
 
@@ -59,7 +58,7 @@ class StaticSpinMutex {
   }
 };
 
-class SpinMutex : public StaticSpinMutex {
+class MUTEX SpinMutex : public StaticSpinMutex {
  public:
   SpinMutex() {
     Init();
@@ -70,13 +69,13 @@ class SpinMutex : public StaticSpinMutex {
   void operator=(const SpinMutex &) = delete;
 };
 
-class BlockingMutex {
+class MUTEX BlockingMutex {
  public:
   explicit constexpr BlockingMutex(LinkerInitialized)
       : opaque_storage_ {0, }, owner_ {0} {}
   BlockingMutex();
-  void Lock();
-  void Unlock();
+  void Lock() ACQUIRE();
+  void Unlock() RELEASE();
 
   // This function does not guarantee an explicit check that the calling thread
   // is the thread which owns the mutex. This behavior, while more strictly
@@ -85,7 +84,7 @@ class BlockingMutex {
   // maintaining complex state to work around those situations, the check only
   // checks that the mutex is owned, and assumes callers to be generally
   // well-behaved.
-  void CheckLocked();
+  void CheckLocked() const CHECK_LOCKED;
 
  private:
   // Solaris mutex_t has a member that requires 64-bit alignment.
@@ -94,7 +93,7 @@ class BlockingMutex {
 };
 
 // Reader-writer spin mutex.
-class RWMutex {
+class MUTEX RWMutex {
  public:
   RWMutex() {
     atomic_store(&state_, kUnlocked, memory_order_relaxed);
@@ -104,7 +103,7 @@ class RWMutex {
     CHECK_EQ(atomic_load(&state_, memory_order_relaxed), kUnlocked);
   }
 
-  void Lock() {
+  void Lock() ACQUIRE() {
     u32 cmp = kUnlocked;
     if (atomic_compare_exchange_strong(&state_, &cmp, kWriteLock,
                                        memory_order_acquire))
@@ -112,27 +111,27 @@ class RWMutex {
     LockSlow();
   }
 
-  void Unlock() {
+  void Unlock() RELEASE() {
     u32 prev = atomic_fetch_sub(&state_, kWriteLock, memory_order_release);
     DCHECK_NE(prev & kWriteLock, 0);
     (void)prev;
   }
 
-  void ReadLock() {
+  void ReadLock() ACQUIRE_SHARED() {
     u32 prev = atomic_fetch_add(&state_, kReadLock, memory_order_acquire);
     if ((prev & kWriteLock) == 0)
       return;
     ReadLockSlow();
   }
 
-  void ReadUnlock() {
+  void ReadUnlock() RELEASE_SHARED() {
     u32 prev = atomic_fetch_sub(&state_, kReadLock, memory_order_release);
     DCHECK_EQ(prev & kWriteLock, 0);
     DCHECK_GT(prev & ~kWriteLock, 0);
     (void)prev;
   }
 
-  void CheckLocked() {
+  void CheckLocked() const CHECK_LOCKED {
     CHECK_NE(atomic_load(&state_, memory_order_relaxed), kUnlocked);
   }
 
@@ -175,17 +174,14 @@ class RWMutex {
   void operator=(const RWMutex &) = delete;
 };
 
-template<typename MutexType>
-class GenericScopedLock {
+template <typename MutexType>
+class SCOPED_LOCK GenericScopedLock {
  public:
-  explicit GenericScopedLock(MutexType *mu)
-      : mu_(mu) {
+  explicit GenericScopedLock(MutexType *mu) ACQUIRE(mu) : mu_(mu) {
     mu_->Lock();
   }
 
-  ~GenericScopedLock() {
-    mu_->Unlock();
-  }
+  ~GenericScopedLock() RELEASE() { mu_->Unlock(); }
 
  private:
   MutexType *mu_;
@@ -194,17 +190,14 @@ class GenericScopedLock {
   void operator=(const GenericScopedLock &) = delete;
 };
 
-template<typename MutexType>
-class GenericScopedReadLock {
+template <typename MutexType>
+class SCOPED_LOCK GenericScopedReadLock {
  public:
-  explicit GenericScopedReadLock(MutexType *mu)
-      : mu_(mu) {
+  explicit GenericScopedReadLock(MutexType *mu) ACQUIRE(mu) : mu_(mu) {
     mu_->ReadLock();
   }
 
-  ~GenericScopedReadLock() {
-    mu_->ReadUnlock();
-  }
+  ~GenericScopedReadLock() RELEASE() { mu_->ReadUnlock(); }
 
  private:
   MutexType *mu_;

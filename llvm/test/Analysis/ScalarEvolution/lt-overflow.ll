@@ -27,6 +27,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK: Determining loop execution counts for: @test_other_exit
 ; CHECK: Loop %for.body: <multiple exits> Unpredictable backedge-taken count.
+; CHECK: Determining loop execution counts for: @test_gt
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
 
 define void @test(i32 %N) mustprogress {
 entry:
@@ -184,4 +186,16 @@ for.cond.cleanup:
   ret void
 }
 
+define void @test_gt(i32 %S, i32 %N) mustprogress {
+entry:
+  br label %for.body
 
+for.body:
+  %iv = phi i32 [ %iv.next, %for.body ], [ %S, %entry ]
+  %iv.next = add i32 %iv, -2
+  %cmp = icmp ugt i32 %iv.next, %N
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+}

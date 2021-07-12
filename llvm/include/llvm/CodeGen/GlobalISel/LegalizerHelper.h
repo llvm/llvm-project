@@ -293,6 +293,8 @@ public:
 
   LegalizeResult moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
                                        LLT MoreTy);
+  LegalizeResult moreElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT MoreTy);
 
   LegalizeResult fewerElementsVectorUnmergeValues(MachineInstr &MI,
                                                   unsigned TypeIdx,

@@ -13,9 +13,7 @@ int test_amdgcn_target_tid_threads() {
 
   int arr[N];
 
-// CHECK: [[NUM_THREADS:%.+]] = call i32 @__kmpc_amdgcn_gpu_num_threads()
-// CHECK: sub nuw i32 [[NUM_THREADS]], 64
-// CHECK: call i32 @llvm.amdgcn.workitem.id.x()
+// CHECK: call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast (%struct.ident_t addrspace(1)* @1 to %struct.ident_t*), i1 false, i1 true, i1 true)
 #pragma omp target
   for (int i = 0; i < N; i++) {
     arr[i] = 1;
@@ -29,8 +27,7 @@ int test_amdgcn_target_tid_threads_simd() {
 
   int arr[N];
 
-// CHECK: [[NUM_THREADS:%.+]] = call i32 @__kmpc_amdgcn_gpu_num_threads()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[NUM_THREADS]], i16 0)
+// CHECK: call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast (%struct.ident_t addrspace(1)* @1 to %struct.ident_t*), i1 true, i1 false, i1 false)
 #pragma omp target simd
   for (int i = 0; i < N; i++) {
     arr[i] = 1;

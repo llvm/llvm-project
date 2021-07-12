@@ -73,7 +73,7 @@ B:
 
 ; Function without loops or non-willreturn calls will return.
 define void @willreturn_no_loop(i1 %c, i32* %p) {
-; CHECK: Function Attrs: willreturn
+; CHECK: Function Attrs: mustprogress willreturn
 ; CHECK-NEXT: define void @willreturn_no_loop(
 ;
   br i1 %c, label %if, label %else

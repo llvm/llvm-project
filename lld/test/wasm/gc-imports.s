@@ -7,7 +7,8 @@
 .functype use_undef_global () -> (i64)
 
 foo:
-  .functype foo () -> ()
+  .functype foo (i64) -> (i64)
+  local.get 0
   call unused_undef_function
   end_function
 
@@ -16,7 +17,9 @@ foo:
 _start:
   .functype _start () -> ()
   call used_undef_function
+  drop
   call use_undef_global
+  drop
   end_function
 
 # RUN: obj2yaml %t1.wasm | FileCheck %s

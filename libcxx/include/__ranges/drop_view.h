@@ -12,6 +12,7 @@
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/concepts.h>
+#include <__iterator/next.h>
 #include <__ranges/access.h>
 #include <__ranges/view_interface.h>
 #include <__ranges/all.h>

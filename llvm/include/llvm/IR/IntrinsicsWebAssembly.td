@@ -263,12 +263,9 @@ def int_wasm_extadd_pairwise_unsigned :
             [LLVMSubdivide2VectorType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
-// TODO: Remove these if possible if they are merged to the spec.
+// TODO: Remove this if possible.
 def int_wasm_demote_zero :
   Intrinsic<[llvm_v4f32_ty], [llvm_v2f64_ty],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_promote_low :
-  Intrinsic<[llvm_v2f64_ty], [llvm_v4f32_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
 //===----------------------------------------------------------------------===//

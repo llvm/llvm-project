@@ -51,6 +51,8 @@ declare void @after_the_null()
   { i32, void ()*, i8* } { i32 65535, void ()* @after_the_null, i8* null }
 ]
 
+; CHECK-LABEL: .functype __cxa_atexit (i32, i32, i32) -> (i32){{$}}
+
 ; CHECK-LABEL: .Lcall_dtors.0:
 ; CHECK-NEXT: .functype .Lcall_dtors.0 (i32) -> (){{$}}
 ; CHECK-NEXT: call            orig_dtor0{{$}}
@@ -185,8 +187,6 @@ declare void @after_the_null()
 ;      CHECK: .int32  .Lregister_call_dtors$1{{$}}
 
 ; CHECK-LABEL: .weak __dso_handle
-
-; CHECK-LABEL: .functype __cxa_atexit (i32, i32, i32) -> (i32){{$}}
 
 ; We shouldn't make use of a .fini_array section.
 

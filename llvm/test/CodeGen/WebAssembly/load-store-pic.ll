@@ -11,6 +11,8 @@
 @external_global       = external        global i32
 @external_global_array = external        global [10 x i32]
 
+; PIC: .globaltype __memory_base, [[PTR]]
+
 declare i32 @foo();
 
 ; For hidden symbols PIC code needs to offset all loads and stores
@@ -128,5 +130,3 @@ define void @store_external_global_offset(i32 %n) {
   store i32 %n, i32* %1
   ret void
 }
-
-; PIC: .globaltype __memory_base, [[PTR]]

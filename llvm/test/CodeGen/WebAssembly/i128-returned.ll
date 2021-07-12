@@ -13,7 +13,8 @@ define i128 @foo(i128) {
   ret i128 %r
 }
 
+; CHECK: .functype bar (i32, i64, i64) -> ()
+
 ; CHECK-LABEL: foo:
 ; CHECK-NEXT: .functype foo (i32, i64, i64) -> ()
 
-; CHECK: .functype bar (i32, i64, i64) -> ()

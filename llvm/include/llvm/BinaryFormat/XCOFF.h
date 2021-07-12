@@ -350,8 +350,8 @@ struct TracebackTable {
   static constexpr uint32_t FPRSavedShift = 24;
 
   // Byte 6
-  static constexpr uint32_t HasVectorInfoMask = 0x0080'0000;
-  static constexpr uint32_t HasExtensionTableMask = 0x0040'0000;
+  static constexpr uint32_t HasExtensionTableMask = 0x0080'0000;
+  static constexpr uint32_t HasVectorInfoMask = 0x0040'0000;
   static constexpr uint32_t GPRSavedMask = 0x003F'0000;
   static constexpr uint32_t GPRSavedShift = 16;
 

@@ -92,7 +92,7 @@ using namespace lld::macho;
 // TODO(gkm): prune __eh_frame entries superseded by __unwind_info, PR50410
 // TODO(gkm): how do we align the 2nd-level pages?
 
-using EncodingMap = llvm::DenseMap<compact_unwind_encoding_t, size_t>;
+using EncodingMap = DenseMap<compact_unwind_encoding_t, size_t>;
 
 struct SecondLevelPage {
   uint32_t kind;
@@ -121,7 +121,7 @@ private:
   std::vector<unwind_info_section_header_lsda_index_entry> lsdaEntries;
   // Map of function offset (from the image base) to an index within the LSDA
   // array.
-  llvm::DenseMap<uint32_t, uint32_t> functionToLsdaIndex;
+  DenseMap<uint32_t, uint32_t> functionToLsdaIndex;
   std::vector<CompactUnwindEntry<Ptr>> cuVector;
   std::vector<CompactUnwindEntry<Ptr> *> cuPtrVector;
   std::vector<SecondLevelPage> secondLevelPages;
@@ -167,9 +167,14 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
 
     if (r.offset % sizeof(CompactUnwindEntry<Ptr>) == 0) {
-      if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
-        if (!cast<ConcatInputSection>(referentIsec)->shouldOmitFromOutput())
-          allEntriesAreOmitted = false;
+      InputSection *referentIsec;
+      if (auto *isec = r.referent.dyn_cast<InputSection *>())
+        referentIsec = isec;
+      else
+        referentIsec = cast<Defined>(r.referent.dyn_cast<Symbol *>())->isec;
+
+      if (!cast<ConcatInputSection>(referentIsec)->shouldOmitFromOutput())
+        allEntriesAreOmitted = false;
       continue;
     }
 
@@ -257,7 +262,6 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
       uint64_t referentVA = TombstoneValue<Ptr>;
       if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
-          assert(referentSym->isInGot());
           if (auto *defined = dyn_cast<Defined>(referentSym))
             checkTextSegment(defined->isec);
           // At this point in the link, we may not yet know the final address of

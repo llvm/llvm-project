@@ -2521,6 +2521,7 @@ def : Thumb2DSPPat<(saddsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                    (t2QDADD rGPR:$Rm, rGPR:$Rn)>;
 def : Thumb2DSPPat<(ssubsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
                    (t2QDSUB rGPR:$Rm, rGPR:$Rn)>;
+
 def : Thumb2DSPPat<(ARMqadd8b rGPR:$Rm, rGPR:$Rn),
                    (t2QADD8 rGPR:$Rm, rGPR:$Rn)>;
 def : Thumb2DSPPat<(ARMqsub8b rGPR:$Rm, rGPR:$Rn),
@@ -2529,6 +2530,15 @@ def : Thumb2DSPPat<(ARMqadd16b rGPR:$Rm, rGPR:$Rn),
                    (t2QADD16 rGPR:$Rm, rGPR:$Rn)>;
 def : Thumb2DSPPat<(ARMqsub16b rGPR:$Rm, rGPR:$Rn),
                    (t2QSUB16 rGPR:$Rm, rGPR:$Rn)>;
+
+def : Thumb2DSPPat<(ARMuqadd8b rGPR:$Rm, rGPR:$Rn),
+                   (t2UQADD8 rGPR:$Rm, rGPR:$Rn)>;
+def : Thumb2DSPPat<(ARMuqsub8b rGPR:$Rm, rGPR:$Rn),
+                   (t2UQSUB8 rGPR:$Rm, rGPR:$Rn)>;
+def : Thumb2DSPPat<(ARMuqadd16b rGPR:$Rm, rGPR:$Rn),
+                   (t2UQADD16 rGPR:$Rm, rGPR:$Rn)>;
+def : Thumb2DSPPat<(ARMuqsub16b rGPR:$Rm, rGPR:$Rn),
+                   (t2UQSUB16 rGPR:$Rm, rGPR:$Rn)>;
 
 // Signed/Unsigned add/subtract
 

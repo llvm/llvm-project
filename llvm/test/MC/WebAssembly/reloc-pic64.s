@@ -5,6 +5,11 @@
 # against the corrsponding function or data symbol and that the corresponding
 # data symbols are imported as a wasm globals.
 
+.functype default_func () -> (i32)
+
+.globaltype __memory_base, i64
+.globaltype __table_base, i64
+
 load_default_data:
     .functype   load_default_data () -> (i32)
     global.get  default_data@GOT
@@ -44,7 +49,6 @@ hidden_func:
 #.hidden hidden_func
 #.hidden hidden_data
 .size default_data, 4
-.functype default_func () -> (i32)
 
 # CHECK:      --- !WASM
 # CHECK-NEXT: FileHeader:
@@ -72,6 +76,16 @@ hidden_func:
 # CHECK-NEXT:         Field:           default_func
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         SigIndex:        0
+# CHECK-NEXT:       - Module:          env
+# CHECK-NEXT:         Field:           __memory_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         GlobalType:      I64
+# CHECK-NEXT:         GlobalMutable:   true
+# CHECK-NEXT:       - Module:          env
+# CHECK-NEXT:         Field:           __table_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         GlobalType:      I64
+# CHECK-NEXT:         GlobalMutable:   true
 # CHECK-NEXT:       - Module:          env
 # CHECK-NEXT:         Field:           __indirect_function_table
 # CHECK-NEXT:         Kind:            TABLE
@@ -108,31 +122,31 @@ hidden_func:
 # CHECK-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 # CHECK-NEXT:         Index:           3
 # CHECK-NEXT:         Offset:          0x10
-# CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
+# CHECK-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 # CHECK-NEXT:         Index:           5
 # CHECK-NEXT:         Offset:          0x1C
-# CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_REL_SLEB
+# CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_REL_SLEB64
 # CHECK-NEXT:         Index:           6
 # CHECK-NEXT:         Offset:          0x22
-# CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
+# CHECK-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 # CHECK-NEXT:         Index:           8
 # CHECK-NEXT:         Offset:          0x31
-# CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_REL_SLEB
+# CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_REL_SLEB64
 # CHECK-NEXT:         Index:           9
 # CHECK-NEXT:         Offset:          0x37
 # CHECK-NEXT:     Functions:
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            2380808080002802000B
+# CHECK-NEXT:         Body:            2382808080002802000B
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            2381808080002802000B
+# CHECK-NEXT:         Body:            2383808080002802000B
 # CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            23808080800042808080808080808080007C0B
 # CHECK-NEXT:       - Index:           4
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            23808080800042808080808080808080007C0B
+# CHECK-NEXT:         Body:            23818080800042808080808080808080007C0B
 # CHECK-NEXT:       - Index:           5
 # CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            41000B
@@ -173,9 +187,10 @@ hidden_func:
 # CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
 # CHECK-NEXT:         Function:        3
 # CHECK-NEXT:       - Index:           5
-# CHECK-NEXT:         Kind:            DATA
+# CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Name:            __memory_base
 # CHECK-NEXT:         Flags:           [ UNDEFINED ]
+# CHECK-NEXT:         Global:          0
 # CHECK-NEXT:       - Index:           6
 # CHECK-NEXT:         Kind:            DATA
 # CHECK-NEXT:         Name:            .L.hidden_data
@@ -188,9 +203,10 @@ hidden_func:
 # CHECK-NEXT:         Flags:           [ BINDING_LOCAL ]
 # CHECK-NEXT:         Function:        4
 # CHECK-NEXT:       - Index:           8
-# CHECK-NEXT:         Kind:            DATA
+# CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Name:            __table_base
 # CHECK-NEXT:         Flags:           [ UNDEFINED ]
+# CHECK-NEXT:         Global:          1
 # CHECK-NEXT:       - Index:           9
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Name:            hidden_func

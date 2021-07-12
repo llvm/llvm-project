@@ -57,8 +57,8 @@ ThreadRegistry &memprofThreadRegistry() {
     // in TSD and can't reliably tell when no more TSD destructors will
     // be called. It would be wrong to reuse MemprofThreadContext for another
     // thread before all TSD destructors will be called for it.
-    memprof_thread_registry = new (thread_registry_placeholder) ThreadRegistry(
-        GetMemprofThreadContext, kMaxNumberOfThreads, kMaxNumberOfThreads);
+    memprof_thread_registry = new (thread_registry_placeholder)
+        ThreadRegistry(GetMemprofThreadContext);
     initialized = true;
   }
   return *memprof_thread_registry;

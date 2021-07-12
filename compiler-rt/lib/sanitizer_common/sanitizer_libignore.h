@@ -45,9 +45,6 @@ class LibIgnore {
   // "pc_in_ignored_lib" if the PC is in an ignored library, false otherwise.
   bool IsIgnored(uptr pc, bool *pc_in_ignored_lib) const;
 
-  // Checks whether the provided PC belongs to an instrumented module.
-  bool IsPcInstrumented(uptr pc) const;
-
  private:
   struct Lib {
     char *templ;
@@ -61,6 +58,10 @@ class LibIgnore {
     uptr end;
   };
 
+  // Checks whether the provided PC belongs to an instrumented module.
+  bool IsPcInstrumented(uptr pc) const;
+  bool IsIgnoredSlow(uptr pc, bool *pc_in_ignored_lib) const;
+
   inline bool IsInRange(uptr pc, const LibCodeRange &range) const {
     return (pc >= range.begin && pc < range.end);
   }
@@ -70,6 +71,8 @@ class LibIgnore {
   static const uptr kMaxLibs = 1024;
 
   // Hot part:
+  atomic_uintptr_t enabled_;
+
   atomic_uintptr_t ignored_ranges_count_;
   LibCodeRange ignored_code_ranges_[kMaxIgnoredRanges];
 
@@ -87,27 +90,11 @@ class LibIgnore {
   void operator = (const LibIgnore&);  // not implemented
 };
 
-inline bool LibIgnore::IsIgnored(uptr pc, bool *pc_in_ignored_lib) const {
-  const uptr n = atomic_load(&ignored_ranges_count_, memory_order_acquire);
-  for (uptr i = 0; i < n; i++) {
-    if (IsInRange(pc, ignored_code_ranges_[i])) {
-      *pc_in_ignored_lib = true;
-      return true;
-    }
-  }
-  *pc_in_ignored_lib = false;
-  if (track_instrumented_libs_ && !IsPcInstrumented(pc))
-    return true;
-  return false;
-}
-
-inline bool LibIgnore::IsPcInstrumented(uptr pc) const {
-  const uptr n = atomic_load(&instrumented_ranges_count_, memory_order_acquire);
-  for (uptr i = 0; i < n; i++) {
-    if (IsInRange(pc, instrumented_code_ranges_[i]))
-      return true;
-  }
-  return false;
+ALWAYS_INLINE
+bool LibIgnore::IsIgnored(uptr pc, bool *pc_in_ignored_lib) const {
+  if (LIKELY(atomic_load(&enabled_, memory_order_acquire) == 0))
+    return false;
+  return IsIgnoredSlow(pc, pc_in_ignored_lib);
 }
 
 }  // namespace __sanitizer

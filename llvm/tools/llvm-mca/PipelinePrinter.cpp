@@ -12,24 +12,87 @@
 //===----------------------------------------------------------------------===//
 
 #include "PipelinePrinter.h"
+#include "CodeRegion.h"
+#include "Views/InstructionView.h"
 #include "Views/View.h"
 
 namespace llvm {
 namespace mca {
 
-void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
+void PipelinePrinter::printRegionHeader(llvm::raw_ostream &OS) const {
+  StringRef RegionName;
+  if (!Region.getDescription().empty())
+    RegionName = Region.getDescription();
+
+  OS << "\n[" << RegionIdx << "] Code Region";
+  if (!RegionName.empty())
+    OS << " - " << RegionName;
+  OS << "\n\n";
+}
+
+json::Object PipelinePrinter::getJSONReportRegion() const {
   json::Object JO;
-  for (const auto &V : Views) {
-    if ((OutputKind == View::OK_JSON)) {
-      if (V->isSerializable()) {
-        JO.try_emplace(V->getNameAsString().str(), V->toJSON());
+
+  StringRef RegionName = "";
+  if (!Region.getDescription().empty())
+    RegionName = Region.getDescription();
+
+  JO.try_emplace("Name", RegionName);
+  for (const auto &V : Views)
+    if (V->isSerializable())
+      JO.try_emplace(V->getNameAsString().str(), V->toJSON());
+
+  return JO;
+}
+
+json::Object PipelinePrinter::getJSONTargetInfo() const {
+  json::Array Resources;
+  const MCSchedModel &SM = STI.getSchedModel();
+  StringRef MCPU = STI.getCPU();
+
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
+    unsigned NumUnits = ProcResource.NumUnits;
+    if (ProcResource.SubUnitsIdxBegin || !NumUnits)
+      continue;
+
+    for (unsigned J = 0; J < NumUnits; ++J) {
+      std::string ResourceName = ProcResource.Name;
+      if (NumUnits > 1) {
+        ResourceName +=  ".";
+        ResourceName += J;
       }
-    } else {
-      V->printView(OS);
+
+      Resources.push_back(ResourceName);
     }
   }
-  if (OutputKind == View::OK_JSON)
-    OS << formatv("{0:2}", json::Value(std::move(JO))) << "\n";
+
+  return json::Object({{"CPUName", MCPU}, {"Resources", std::move(Resources)}});
 }
-} // namespace mca.
+
+void PipelinePrinter::printReport(json::Object &JO) const {
+  if (!RegionIdx)
+    JO.try_emplace("TargetInfo", getJSONTargetInfo());
+
+  if (!RegionIdx) {
+    // Construct an array of regions.
+    JO.try_emplace("CodeRegions", json::Array());
+  }
+
+  json::Array *Regions = JO.getArray("CodeRegions");
+  assert(Regions && "This array must exist!");
+  Regions->push_back(getJSONReportRegion());
+}
+
+void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
+  // Don't print the header of this region if it is the default region, and if
+  // it doesn't have an end location.
+  if (Region.startLoc().isValid() || Region.endLoc().isValid())
+    printRegionHeader(OS);
+
+  for (const auto &V : Views)
+    V->printView(OS);
+}
+
+} // namespace mca
 } // namespace llvm

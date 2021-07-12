@@ -68,9 +68,7 @@ EXTERN int omp_get_thread_limit(void) {
 }
 
 EXTERN int omp_get_thread_num() {
-  bool isSPMDExecutionMode = __kmpc_is_spmd_exec_mode();
-  int tid = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
-  int rc = GetOmpThreadId(tid, isSPMDExecutionMode);
+  int rc = GetOmpThreadId();
   PRINT(LD_IO, "call omp_get_thread_num() returns %d\n", rc);
   return rc;
 }

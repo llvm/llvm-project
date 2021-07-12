@@ -898,12 +898,6 @@ f32x4 wasm_demote_zero_f64x2_f32x4(f64x2 x) {
   // WEBASSEMBLY: ret
 }
 
-f64x2 wasm_promote_low_f32x4_f64x2(f32x4 x) {
-  return __builtin_wasm_promote_low_f32x4_f64x2(x);
-  // WEBASSEMBLY: call <2 x double> @llvm.wasm.promote.low(<4 x float> %x)
-  // WEBASSEMBLY: ret
-}
-
 i32x4 load32_zero(const int *p) {
   return __builtin_wasm_load32_zero(p);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.load32.zero(i32* %p)
