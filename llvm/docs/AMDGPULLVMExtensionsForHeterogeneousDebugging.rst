@@ -1279,6 +1279,7 @@ expression ``DIExpr(DIOpReferrer(<type>*), DIOpDeref()``, referring to the
 generate the DWARF ``DW_AT_location`` attributes on variables.
 
 .. code:: llvm
+   :number-lines:
 
    %x.addr = alloca i64, addrspace(5)
    call void @llvm.dbg.def(metadata !2, metadata i64 addrspace(5)* %x.addr)
@@ -1299,6 +1300,7 @@ referrer, an additional ``DIOpAddrOf(N)`` is needed.
 An example is ``mem2reg`` where an ``alloca`` can be replaced with an SSA value:
 
 .. code:: llvm
+   :number-lines:
 
    %x = i64 ...
    call void @llvm.dbg.def(metadata !2, metadata i64 %x)
@@ -1312,6 +1314,7 @@ The canonical form of this is then just ``DIOpReferrer(i64)`` as the pair of
 ``DIOpAddrOf(N)``, ``DIOpDeref()`` cancel out:
 
 .. code:: llvm
+   :number-lines:
 
    %x = i64 ...
    call void @llvm.dbg.def(metadata !2, metadata i64 %x)
@@ -1329,12 +1332,14 @@ The transformation for removing a level of indirection is to add an
 non-memory object.
 
 .. code:: c
+   :number-lines:
 
    int x = ...;
    int *p = &x;
    return *p;
 
 .. code:: llvm
+   :number-lines:
 
    %x.addr = alloca i64, addrspace(5)
    call void @llvm.dbg.def(metadata !2, metadata i64 addrspace(5)* %x.addr)
@@ -1360,6 +1365,7 @@ when a variable is uninitialized separately from defining its location.]*
 First round of ``mem2reg`` promotes ``%p.addr`` to an SSA register ``%p``:
 
 .. code:: llvm
+   :number-lines:
 
    %x.addr = alloca i64, addrspace(5)
    store i64 addrspace(5)* %x.addr, i64 ...
@@ -1377,6 +1383,7 @@ First round of ``mem2reg`` promotes ``%p.addr`` to an SSA register ``%p``:
 Simplify by eliminating ``%p`` and directly using ``%x.addr``:
 
 .. code:: llvm
+   :number-lines:
 
    %x.addr = alloca i64, addrspace(5)
    store i64 addrspace(5)* %x.addr, i64 ...
@@ -1393,6 +1400,7 @@ Simplify by eliminating ``%p`` and directly using ``%x.addr``:
 Second round of ``mem2reg`` promotes ``%x.addr`` to an SSA register ``%x``:
 
 .. code:: llvm
+   :number-lines:
 
    %x = i64 ...
    call void @llvm.dbg.def(metadata !2, metadata i64 %x)
@@ -1409,6 +1417,7 @@ Simplify by eliminating adjacent ``DIOpAddrOf(5), DIOpDeref()`` and use ``%x``
 directly in the ``return``:
 
 .. code:: llvm
+   :number-lines:
 
    %x = i64 ...
    call void @llvm.dbg.def(metadata !2, metadata i64 %x)
@@ -1424,6 +1433,7 @@ If ``%x`` was being assigned a constant, then can eliminated ``%x`` entirely and
 substitute all uses with the constant:
 
 .. code:: llvm
+   :number-lines:
 
    call void @llvm.dbg.def(metadata !2, metadata i1 undef)
    call void @llvm.dbg.def(metadata !4, metadata i1 undef)
@@ -1460,6 +1470,7 @@ updated, as the result is referentially transparent to any other dependent
 ``DILifetime``\ s.
 
 .. code:: llvm
+   :number-lines:
 
    %x = ...
    call void @llvm.dbg.def(metadata !2, metadata i64 addrspace(5)* %x)
@@ -1472,6 +1483,7 @@ updated, as the result is referentially transparent to any other dependent
 Transformed a ``i64`` SSA value into two ``i32`` SSA values:
 
 .. code:: llvm
+   :number-lines:
 
    %x.lo = i32 ...
    call void @llvm.dbg.def(metadata !4, metadata i32 %x.lo)
@@ -1495,6 +1507,7 @@ Further Decomposition Of An Already SRoA’d Local Variable
 An example to demonstrate the “shallow update” property is to take the above IR:
 
 .. code:: llvm
+   :number-lines:
 
    %x.lo = i32 ...
    call void @llvm.dbg.def(metadata !4, metadata i32 %x.lo)
@@ -1515,6 +1528,7 @@ An example to demonstrate the “shallow update” property is to take the above
 and subdivide ``%x.hi`` again:
 
 .. code:: llvm
+   :number-lines:
 
    %x.lo = i32 ...
    call void @llvm.dbg.def(metadata !4, metadata i32 %x.lo)
@@ -1552,6 +1566,7 @@ maintaining *defs* and *kills* for these live ranges independently at, for
 example, definitions and clobbers.
 
 .. code:: llvm
+   :number-lines:
 
    $r0 = MOV ...
    DBG_DEF !2, $r0
@@ -1596,6 +1611,7 @@ Global Variable Broken Into Two Scalars
 ---------------------------------------
 
 .. code:: llvm
+   :number-lines:
 
    @g = i64 !dbg.def !2
 
@@ -1616,6 +1632,7 @@ Global Variable Broken Into Two Scalars
 Becomes:
 
 .. code:: llvm
+   :number-lines:
 
    @g.lo = i32 !dbg.def !2
    @g.hi = i32 !dbg.def !3
@@ -1649,6 +1666,7 @@ Induction Variable
 Starting with some program:
 
 .. code:: llvm
+   :number-lines:
 
    %x = i64 ...
    call void @llvm.dbg.def(metadata !2, metadata i64 %x)
@@ -1675,6 +1693,7 @@ If analysis proves ``i`` over some range is equal to ``x + y``, the storage for
 corresponding change needed in the debug information is:
 
 .. code:: llvm
+   :number-lines:
 
    %x = i64 ...
    call void @llvm.dbg.def(metadata !2, metadata i64 %x)
@@ -1716,6 +1735,7 @@ updates needed in the debug information), the case where a variable is proven to
 be a statically known constant over some range turns the following:
 
 .. code:: llvm
+   :number-lines:
 
    %x = i64 ...
    call void @llvm.dbg.def(metadata !2, metadata i64 %x)
@@ -1728,6 +1748,7 @@ be a statically known constant over some range turns the following:
 into:
 
 .. code:: llvm
+   :number-lines:
 
    call void @llvm.dbg.def(metadata !2, metadata i64 undef)
    ...
@@ -1744,6 +1765,7 @@ observe subsequent memory writes
 <https://bugs.llvm.org/show_bug.cgi?id=40628>`__:
 
 .. code:: c
+   :number-lines:
 
     int
     foo(int *bar, int arg, int more)
@@ -1767,6 +1789,7 @@ Which after ``SROA+mem2reg`` becomes (where ``redundant`` is ``!17`` and
 ``loaded`` is ``!16``):
 
 .. code:: llvm
+   :number-lines:
 
    ; Function Attrs: noinline nounwind uwtable
    define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !7 {
@@ -1791,6 +1814,7 @@ And previously led to this after ``EarlyCSE``, which removes the redundant load
 from ``%bar``:
 
 .. code:: llvm
+   :number-lines:
 
    define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !7 {
    entry:
@@ -1818,6 +1842,7 @@ from ``%bar``:
 But now becomes (conservatively):
 
 .. code:: llvm
+   :number-lines:
 
    define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !7 {
    entry:
@@ -1860,6 +1885,7 @@ of ``loaded`` is permitted and would have the effect of also updating
 ``loaded``. An example of the modified source needed to cause this is:
 
 .. code:: c
+   :number-lines:
 
    int
    foo(int *bar, int arg, int more)
@@ -1885,6 +1911,7 @@ description for both ``redundant`` and ``loaded`` (metadata ``!17`` and
 ``!18``):
 
 .. code:: llvm
+   :number-lines:
 
    define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !8 {
    entry:
@@ -1922,6 +1949,7 @@ composability with other optimizations. The expected result of ``EarlyCSE``
 would be:
 
 .. code:: llvm
+   :number-lines:
 
    define dso_local i32 @foo(i32* %bar, i32 %arg, i32 %more) #0 !dbg !8 {
    entry:
@@ -1979,23 +2007,24 @@ location list expression for the nested ``IF/THEN/ELSE`` structures of the
 following subprogram pseudo code for a target with 64 lanes per wavefront.
 
 .. code:: llvm
+   :number-lines:
 
-     SUBPROGRAM X
-     BEGIN
-       a;
-       IF (c1) THEN
-         b;
-         IF (c2) THEN
-           c;
-         ELSE
-           d;
-         ENDIF
-         e;
+   SUBPROGRAM X
+   BEGIN
+     a;
+     IF (c1) THEN
+       b;
+       IF (c2) THEN
+         c;
        ELSE
-         f;
+         d;
        ENDIF
-       g;
-     END
+       e;
+     ELSE
+       f;
+     ENDIF
+     g;
+   END
 
 The AMDGPU backend may generate the following pseudo LLVM MIR to manipulate the
 execution mask (``EXEC``) to linearize the control flow. The condition is
@@ -2009,34 +2038,35 @@ region. This is shown below. Other approaches are possible, but the basic
 concept is the same.
 
 .. code:: llvm
+   :number-lines:
 
-     %lex_start:
-       a;
-       %1 = EXEC
-       %2 = c1
-     %lex_1_start:
-       EXEC = %1 & %2
-     $if_1_then:
-         b;
-         %3 = EXEC
-         %4 = c2
-     %lex_1_1_start:
-         EXEC = %3 & %4
-     %lex_1_1_then:
-           c;
-         EXEC = ~EXEC & %3
-     %lex_1_1_else:
-           d;
-         EXEC = %3
-     %lex_1_1_end:
-         e;
-       EXEC = ~EXEC & %1
-     %lex_1_else:
-         f;
-       EXEC = %1
-     %lex_1_end:
-       g;
-     %lex_end:
+   %lex_start:
+     a;
+     %1 = EXEC
+     %2 = c1
+   %lex_1_start:
+     EXEC = %1 & %2
+   $if_1_then:
+       b;
+       %3 = EXEC
+       %4 = c2
+   %lex_1_1_start:
+       EXEC = %3 & %4
+   %lex_1_1_then:
+         c;
+       EXEC = ~EXEC & %3
+   %lex_1_1_else:
+         d;
+       EXEC = %3
+   %lex_1_1_end:
+       e;
+     EXEC = ~EXEC & %1
+   %lex_1_else:
+       f;
+     EXEC = %1
+   %lex_1_end:
+     g;
+   %lex_end:
 
 To create the DWARF location list expression that defines the location
 description of a vector of lane program locations, the LLVM MIR ``DBG_DEF``
@@ -2078,6 +2108,7 @@ each lane that the ``EXEC`` mask indicates is active.
 The following provides an example using pseudo LLVM MIR.
 
 .. code:: llvm
+   :number-lines:
 
    ; NOTE: This listing is written in a pseudo LLVM MIR, as this debug information
    ; will be inserted as part of inserting EXEC manipulation into LLVM MIR.
@@ -2431,6 +2462,7 @@ Spilling
    SSA -> stack slot
 
 .. code:: llvm
+   :number-lines:
 
    %x = i32 ...
    call void @llvm.dbg.def(metadata !1, metadata i32 %x)
@@ -2443,6 +2475,7 @@ Spilling
 spill %x:
 
 .. code:: llvm
+   :number-lines:
 
    %x.addr = alloca i32, addrspace(5)
    store i32* %x.addr, ...
@@ -2525,6 +2558,7 @@ Local Variable Broken Into Two Scalars
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: llvm
+   :number-lines:
 
    %x.lo = i32 ...
    call void @llvm.dbg.def(metadata i32 %x.lo, metadata !4)
@@ -2544,6 +2578,7 @@ Further Decomposition Of An Already SRoA’d Local Variable
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: llvm
+   :number-lines:
 
    %x.lo = i32 ...
    call void @llvm.dbg.def(metadata i32 %x.lo, metadata !3)
@@ -2567,6 +2602,7 @@ Multiple Live Ranges For A Fragment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: llvm
+   :number-lines:
 
    %x.lo.0 = i32 ...
    call void @llvm.dbg.def(metadata i32 %x.lo, metadata !3)
