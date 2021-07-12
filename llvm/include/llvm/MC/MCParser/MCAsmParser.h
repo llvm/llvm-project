@@ -202,8 +202,8 @@ public:
 
   /// Parse MS-style inline assembly.
   virtual bool parseMSInlineAsm(
-      void *AsmLoc, std::string &AsmString, unsigned &NumOutputs,
-      unsigned &NumInputs, SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
+      std::string &AsmString, unsigned &NumOutputs, unsigned &NumInputs,
+      SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
       SmallVectorImpl<std::string> &Constraints,
       SmallVectorImpl<std::string> &Clobbers, const MCInstrInfo *MII,
       const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
