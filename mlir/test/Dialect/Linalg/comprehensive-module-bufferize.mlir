@@ -1,5 +1,19 @@
 // RUN: mlir-opt %s -linalg-comprehensive-module-bufferize -split-input-file | FileCheck %s
 
+// CHECK-LABEL: func @transfer_read(%{{.*}}: memref<?xf32, #map>) -> vector<4xf32> {
+func @transfer_read(%A : tensor<?xf32>) -> (vector<4xf32>) {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+
+//       CHECK: %[[RES:.*]] = vector.transfer_read {{.*}} : memref<?xf32, #{{.*}}>, vector<4xf32>
+  %0 = vector.transfer_read %A[%c0], %f0 : tensor<?xf32>, vector<4xf32>
+
+//       CHECK: return %[[RES]] : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
 // CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
 // CHECK-LABEL: func @fill_inplace(
