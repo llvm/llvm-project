@@ -4,7 +4,7 @@
 ; ScalarEvolution should be able to compute trip count of the loop by proving
 ; that this is not an infinite loop with side effects.
 
-; CHECK: Determining loop execution counts for: @foo1
+; CHECK-LABEL: Determining loop execution counts for: @foo1
 ; CHECK: backedge-taken count is ((-1 + %n) /u %s)
 
 ; We should have a conservative estimate for the max backedge taken count for
@@ -34,7 +34,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 
 ; Check that we are able to compute trip count of a loop without an entry guard.
-; CHECK: Determining loop execution counts for: @foo2
+; CHECK-LABEL: Determining loop execution counts for: @foo2
 ; CHECK: backedge-taken count is ((-1 + (%n smax %s)) /u %s)
 
 ; We should have a conservative estimate for the max backedge taken count for
@@ -61,7 +61,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; Check that without mustprogress we don't make assumptions about infinite
 ; loops being UB.
-; CHECK: Determining loop execution counts for: @foo3
+; CHECK-LABEL: Determining loop execution counts for: @foo3
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK: Loop %for.body: Unpredictable max backedge-taken count.
 
@@ -84,7 +84,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; Same as foo2, but with mustprogress on loop, not function
-; CHECK: Determining loop execution counts for: @foo4
+; CHECK-LABEL: Determining loop execution counts for: @foo4
 ; CHECK: backedge-taken count is ((-1 + (%n smax %s)) /u %s)
 ; CHECK: max backedge-taken count is -1
 
@@ -134,7 +134,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; FIXME: Currently we are more conservative for known zero stride than
 ; for unknown but potentially zero stride.
-; CHECK: Determining loop execution counts for: @zero_stride
+; CHECK-LABEL: Determining loop execution counts for: @zero_stride
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK: Loop %for.body: Unpredictable max backedge-taken count.
 ; CHECK: Loop %for.body: Unpredictable predicated backedge-taken count.
@@ -157,7 +157,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-; CHECK: Determining loop execution counts for: @zero_stride_ub
+; CHECK-LABEL: Determining loop execution counts for: @zero_stride_ub
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK: Loop %for.body: Unpredictable max backedge-taken count.
 ; CHECK: Loop %for.body: Unpredictable predicated backedge-taken count.
