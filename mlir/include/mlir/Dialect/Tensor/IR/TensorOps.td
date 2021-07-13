@@ -12,6 +12,7 @@
 include "mlir/Dialect/Tensor/IR/TensorBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
@@ -99,8 +100,7 @@ def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect]> {
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$source, "int64_t":$index)>,
-    OpBuilder<(ins "Value":$source, "Value":$index)>
+    OpBuilder<(ins "Value":$source, "int64_t":$index)>
   ];
 
   let extraClassDeclaration = [{
@@ -432,6 +432,8 @@ def Tensor_InsertOp : Tensor_Op<"insert",
 def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
     Tensor_Dialect, "insert_slice",
     [NoSideEffect, AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface,
+     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+         ["reifyReturnTypeShapesPerResultDim"]>,
      TypesMatchWith<"expected result type to match dest type",
                     "dest", "result", "$_self">]> {
   let summary = "insert_slice operation";
