@@ -32,6 +32,8 @@
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
@@ -51,6 +53,115 @@
 #include "llvm/Transforms/Vectorize.h"
 
 using namespace llvm;
+
+namespace {
+class SGPRRegisterRegAlloc : public RegisterRegAllocBase<SGPRRegisterRegAlloc> {
+public:
+  SGPRRegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)
+    : RegisterRegAllocBase(N, D, C) {}
+};
+
+class VGPRRegisterRegAlloc : public RegisterRegAllocBase<VGPRRegisterRegAlloc> {
+public:
+  VGPRRegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)
+    : RegisterRegAllocBase(N, D, C) {}
+};
+
+static bool onlyAllocateSGPRs(const TargetRegisterInfo &TRI,
+                              const TargetRegisterClass &RC) {
+  return static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(&RC);
+}
+
+static bool onlyAllocateVGPRs(const TargetRegisterInfo &TRI,
+                              const TargetRegisterClass &RC) {
+  return !static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(&RC);
+}
+
+
+/// -{sgpr|vgpr}-regalloc=... command line option.
+static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
+
+/// A dummy default pass factory indicates whether the register allocator is
+/// overridden on the command line.
+static llvm::once_flag InitializeDefaultSGPRRegisterAllocatorFlag;
+static llvm::once_flag InitializeDefaultVGPRRegisterAllocatorFlag;
+
+static SGPRRegisterRegAlloc
+defaultSGPRRegAlloc("default",
+                    "pick SGPR register allocator based on -O option",
+                    useDefaultRegisterAllocator);
+
+static cl::opt<SGPRRegisterRegAlloc::FunctionPassCtor, false,
+               RegisterPassParser<SGPRRegisterRegAlloc>>
+SGPRRegAlloc("sgpr-regalloc", cl::Hidden, cl::init(&useDefaultRegisterAllocator),
+             cl::desc("Register allocator to use for SGPRs"));
+
+static cl::opt<VGPRRegisterRegAlloc::FunctionPassCtor, false,
+               RegisterPassParser<VGPRRegisterRegAlloc>>
+VGPRRegAlloc("vgpr-regalloc", cl::Hidden, cl::init(&useDefaultRegisterAllocator),
+             cl::desc("Register allocator to use for VGPRs"));
+
+
+static void initializeDefaultSGPRRegisterAllocatorOnce() {
+  RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
+
+  if (!Ctor) {
+    Ctor = SGPRRegAlloc;
+    SGPRRegisterRegAlloc::setDefault(SGPRRegAlloc);
+  }
+}
+
+static void initializeDefaultVGPRRegisterAllocatorOnce() {
+  RegisterRegAlloc::FunctionPassCtor Ctor = VGPRRegisterRegAlloc::getDefault();
+
+  if (!Ctor) {
+    Ctor = VGPRRegAlloc;
+    VGPRRegisterRegAlloc::setDefault(VGPRRegAlloc);
+  }
+}
+
+static FunctionPass *createBasicSGPRRegisterAllocator() {
+  return createBasicRegisterAllocator(onlyAllocateSGPRs);
+}
+
+static FunctionPass *createGreedySGPRRegisterAllocator() {
+  return createGreedyRegisterAllocator(onlyAllocateSGPRs);
+}
+
+static FunctionPass *createFastSGPRRegisterAllocator() {
+  return createFastRegisterAllocator(onlyAllocateSGPRs, false);
+}
+
+static FunctionPass *createBasicVGPRRegisterAllocator() {
+  return createBasicRegisterAllocator(onlyAllocateVGPRs);
+}
+
+static FunctionPass *createGreedyVGPRRegisterAllocator() {
+  return createGreedyRegisterAllocator(onlyAllocateVGPRs);
+}
+
+static FunctionPass *createFastVGPRRegisterAllocator() {
+  return createFastRegisterAllocator(onlyAllocateVGPRs, true);
+}
+
+static SGPRRegisterRegAlloc basicRegAllocSGPR(
+  "basic", "basic register allocator", createBasicSGPRRegisterAllocator);
+static SGPRRegisterRegAlloc greedyRegAllocSGPR(
+  "greedy", "greedy register allocator", createGreedySGPRRegisterAllocator);
+
+static SGPRRegisterRegAlloc fastRegAllocSGPR(
+  "fast", "fast register allocator", createFastSGPRRegisterAllocator);
+
+
+static VGPRRegisterRegAlloc basicRegAllocVGPR(
+  "basic", "basic register allocator", createBasicVGPRRegisterAllocator);
+static VGPRRegisterRegAlloc greedyRegAllocVGPR(
+  "greedy", "greedy register allocator", createGreedyVGPRRegisterAllocator);
+
+static VGPRRegisterRegAlloc fastRegAllocVGPR(
+  "fast", "fast register allocator", createFastVGPRRegisterAllocator);
+}
+
 
 static cl::opt<bool> EnableR600StructurizeCFG(
   "r600-ir-structurize",
@@ -852,6 +963,14 @@ public:
   bool addGlobalInstructionSelect() override;
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
+
+  FunctionPass *createSGPRAllocPass(bool Optimized);
+  FunctionPass *createVGPRAllocPass(bool Optimized);
+  FunctionPass *createRegAllocPass(bool Optimized) override;
+
+  bool addRegAssignAndRewriteFast() override;
+  bool addRegAssignAndRewriteOptimized() override;
+
   void addPreRegAlloc() override;
   bool addPreRewrite() override;
   void addPostRegAlloc() override;
@@ -1237,14 +1356,84 @@ bool GCNPassConfig::addPreRewrite() {
   return true;
 }
 
+FunctionPass *GCNPassConfig::createSGPRAllocPass(bool Optimized) {
+  // Initialize the global default.
+  llvm::call_once(InitializeDefaultSGPRRegisterAllocatorFlag,
+                  initializeDefaultSGPRRegisterAllocatorOnce);
+
+  RegisterRegAlloc::FunctionPassCtor Ctor = SGPRRegisterRegAlloc::getDefault();
+  if (Ctor != useDefaultRegisterAllocator)
+    return Ctor();
+
+  if (Optimized)
+    return createGreedyRegisterAllocator(onlyAllocateSGPRs);
+
+  return createFastRegisterAllocator(onlyAllocateSGPRs, false);
+}
+
+FunctionPass *GCNPassConfig::createVGPRAllocPass(bool Optimized) {
+  // Initialize the global default.
+  llvm::call_once(InitializeDefaultVGPRRegisterAllocatorFlag,
+                  initializeDefaultVGPRRegisterAllocatorOnce);
+
+  RegisterRegAlloc::FunctionPassCtor Ctor = VGPRRegisterRegAlloc::getDefault();
+  if (Ctor != useDefaultRegisterAllocator)
+    return Ctor();
+
+  if (Optimized)
+    return createGreedyVGPRRegisterAllocator();
+
+  return createFastVGPRRegisterAllocator();
+}
+
+FunctionPass *GCNPassConfig::createRegAllocPass(bool Optimized) {
+  llvm_unreachable("should not be used");
+}
+
+static const char RegAllocOptNotSupportedMessage[] =
+  "-regalloc not supported with amdgcn. Use -sgpr-regalloc and -vgpr-regalloc";
+
+bool GCNPassConfig::addRegAssignAndRewriteFast() {
+  if (!usingDefaultRegAlloc())
+    report_fatal_error(RegAllocOptNotSupportedMessage);
+
+  addPass(createSGPRAllocPass(false));
+
+  // Equivalent of PEI for SGPRs.
+  addPass(&SILowerSGPRSpillsID);
+
+  addPass(createVGPRAllocPass(false));
+  return true;
+}
+
+bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
+  if (!usingDefaultRegAlloc())
+    report_fatal_error(RegAllocOptNotSupportedMessage);
+
+  addPass(createSGPRAllocPass(true));
+
+  // Commit allocated register changes. This is mostly necessary because too
+  // many things rely on the use lists of the physical registers, such as the
+  // verifier. This is only necessary with allocators which use LiveIntervals,
+  // since FastRegAlloc does the replacments itself.
+  addPass(createVirtRegRewriter(false));
+
+  // Equivalent of PEI for SGPRs.
+  addPass(&SILowerSGPRSpillsID);
+
+  addPass(createVGPRAllocPass(true));
+
+  addPreRewrite();
+  addPass(&VirtRegRewriterID);
+
+  return true;
+}
+
 void GCNPassConfig::addPostRegAlloc() {
   addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOpt::None)
     addPass(&SIOptimizeExecMaskingID);
   TargetPassConfig::addPostRegAlloc();
-
-  // Equivalent of PEI for SGPRs.
-  addPass(&SILowerSGPRSpillsID);
 }
 
 void GCNPassConfig::addPreSched2() {
