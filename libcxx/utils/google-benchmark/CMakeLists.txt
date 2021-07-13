@@ -1,16 +1,19 @@
-cmake_minimum_required (VERSION 2.8.12)
-
-project (benchmark)
+cmake_minimum_required (VERSION 3.5.1)
 
 foreach(p
+    CMP0048 # OK to clear PROJECT_VERSION on project()
     CMP0054 # CMake 3.1
     CMP0056 # export EXE_LINKER_FLAGS to try_run
     CMP0057 # Support no if() IN_LIST operator
+    CMP0063 # Honor visibility properties for all targets
+    CMP0077 # Allow option() overrides in importing projects
     )
   if(POLICY ${p})
     cmake_policy(SET ${p} NEW)
   endif()
 endforeach()
+
+project (benchmark VERSION 1.5.4 LANGUAGES CXX)
 
 option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." ON)
 option(BENCHMARK_ENABLE_EXCEPTIONS "Enable the use of exceptions in the benchmark library." ON)
@@ -30,6 +33,20 @@ option(BENCHMARK_DOWNLOAD_DEPENDENCIES "Allow the downloading and in-tree buildi
 # This option can be used to disable building and running unit tests which depend on gtest
 # in cases where it is not possible to build or find a valid version of gtest.
 option(BENCHMARK_ENABLE_GTEST_TESTS "Enable building the unit tests which depend on gtest" ON)
+
+option(BENCHMARK_ENABLE_LIBPFM "Enable performance counters provided by libpfm" OFF)
+
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(MSVC)
+    # As of CMake 3.18, CMAKE_SYSTEM_PROCESSOR is not set properly for MSVC and
+    # cross-compilation (e.g. Host=x86_64, target=aarch64) requires using the
+    # undocumented, but working variable.
+    # See https://gitlab.kitware.com/cmake/cmake/-/issues/15170
+    set(CMAKE_SYSTEM_PROCESSOR ${MSVC_CXX_ARCHITECTURE_ID})
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM")
+      set(CMAKE_CROSSCOMPILING TRUE)
+    endif()
+endif()
 
 set(ENABLE_ASSEMBLY_TESTS_DEFAULT OFF)
 function(should_enable_assembly_tests)
@@ -77,8 +94,14 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(GetGitVersion)
 get_git_version(GIT_VERSION)
 
+# If no git version can be determined, use the version
+# from the project() command
+if ("${GIT_VERSION}" STREQUAL "0.0.0")
+  set(VERSION "${benchmark_VERSION}")
+else()
+  set(VERSION "${GIT_VERSION}")
+endif()
 # Tell the user what versions we are using
-string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" VERSION ${GIT_VERSION})
 message(STATUS "Version: ${VERSION}")
 
 # The version of the libraries
@@ -140,6 +163,10 @@ else()
   add_cxx_compiler_flag(-Werror RELEASE)
   add_cxx_compiler_flag(-Werror RELWITHDEBINFO)
   add_cxx_compiler_flag(-Werror MINSIZEREL)
+  if (NOT BENCHMARK_ENABLE_TESTING)
+    # Disable warning when compiling tests as gtest does not use 'override'.
+    add_cxx_compiler_flag(-Wsuggest-override)
+  endif()
   add_cxx_compiler_flag(-pedantic)
   add_cxx_compiler_flag(-pedantic-errors)
   add_cxx_compiler_flag(-Wshorten-64-to-32)
@@ -182,10 +209,15 @@ else()
     add_definitions(-D_GNU_SOURCE=1)
   endif()
 
+  if (QNXNTO)
+    add_definitions(-D_QNX_SOURCE)
+  endif()
+
   # Link time optimisation
   if (BENCHMARK_ENABLE_LTO)
     add_cxx_compiler_flag(-flto)
-    if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+    add_cxx_compiler_flag(-Wno-lto-type-mismatch)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
       find_program(GCC_AR gcc-ar)
       if (GCC_AR)
         set(CMAKE_AR ${GCC_AR})
@@ -194,7 +226,7 @@ else()
       if (GCC_RANLIB)
         set(CMAKE_RANLIB ${GCC_RANLIB})
       endif()
-    elseif("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+    elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
       include(llvm-toolchain)
     endif()
   endif()
@@ -236,11 +268,17 @@ if (BENCHMARK_USE_LIBCXX)
   endif()
 endif(BENCHMARK_USE_LIBCXX)
 
+set(EXTRA_CXX_FLAGS "")
+if (WIN32 AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  # Clang on Windows fails to compile the regex feature check under C++11
+  set(EXTRA_CXX_FLAGS "-DCMAKE_CXX_STANDARD=14")
+endif()
+
 # C++ feature checks
 # Determine the correct regular expression engine to use
-cxx_feature_check(STD_REGEX)
-cxx_feature_check(GNU_POSIX_REGEX)
-cxx_feature_check(POSIX_REGEX)
+cxx_feature_check(STD_REGEX ${EXTRA_CXX_FLAGS})
+cxx_feature_check(GNU_POSIX_REGEX ${EXTRA_CXX_FLAGS})
+cxx_feature_check(POSIX_REGEX ${EXTRA_CXX_FLAGS})
 if(NOT HAVE_STD_REGEX AND NOT HAVE_GNU_POSIX_REGEX AND NOT HAVE_POSIX_REGEX)
   message(FATAL_ERROR "Failed to determine the source files for the regular expression backend")
 endif()
@@ -248,9 +286,15 @@ if (NOT BENCHMARK_ENABLE_EXCEPTIONS AND HAVE_STD_REGEX
         AND NOT HAVE_GNU_POSIX_REGEX AND NOT HAVE_POSIX_REGEX)
   message(WARNING "Using std::regex with exceptions disabled is not fully supported")
 endif()
+
 cxx_feature_check(STEADY_CLOCK)
 # Ensure we have pthreads
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
+if (BENCHMARK_ENABLE_LIBPFM)
+  find_package(PFM)
+endif()
 
 # Set up directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -260,8 +304,10 @@ add_subdirectory(src)
 
 if (BENCHMARK_ENABLE_TESTING)
   enable_testing()
-  if (BENCHMARK_ENABLE_GTEST_TESTS)
-    include(HandleGTest)
+  if (BENCHMARK_ENABLE_GTEST_TESTS AND
+      NOT (TARGET gtest AND TARGET gtest_main AND
+           TARGET gmock AND TARGET gmock_main))
+    include(GoogleTest)
   endif()
   add_subdirectory(test)
 endif()

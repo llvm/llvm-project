@@ -190,6 +190,23 @@ bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
   return false;
 }
 
+bool Merger::isConjunction(unsigned t, unsigned e) const {
+  switch (tensorExps[e].kind) {
+  case Kind::kTensor:
+    return tensorExps[e].tensor == t;
+  case Kind::kMulF:
+  case Kind::kMulI:
+  case Kind::kAndI:
+  case Kind::kDivF: // note: x / c only
+  case Kind::kDivS:
+  case Kind::kDivU:
+    return isConjunction(t, tensorExps[e].children.e0) ||
+           isConjunction(t, tensorExps[e].children.e1);
+  default:
+    return false;
+  }
+}
+
 #ifndef NDEBUG
 
 //
@@ -201,12 +218,20 @@ static char kindToOpSymbol(Kind kind) {
   case Kind::kMulF:
   case Kind::kMulI:
     return '*';
+  case Kind::kDivF:
+  case Kind::kDivS:
+  case Kind::kDivU:
+    return '/';
   case Kind::kAddF:
   case Kind::kAddI:
     return '+';
   case Kind::kSubF:
   case Kind::kSubI:
     return '-';
+  case Kind::kAndI:
+    return '&';
+  case Kind::kOrI:
+    return '|';
   default:
     break;
   }
@@ -286,7 +311,7 @@ void Merger::dumpBits(const llvm::BitVector &bits) const {
 // Builder methods.
 //
 
-unsigned Merger::buildLattices(unsigned e, unsigned idx) {
+unsigned Merger::buildLattices(unsigned e, unsigned i) {
   Kind kind = tensorExps[e].kind;
   switch (kind) {
   case Kind::kTensor:
@@ -297,25 +322,61 @@ unsigned Merger::buildLattices(unsigned e, unsigned idx) {
     // is set to a synthetic tensor with undefined indices only.
     unsigned s = addSet();
     unsigned t = kind == Kind::kTensor ? tensorExps[e].tensor : syntheticTensor;
-    latSets[s].push_back(addLat(t, idx, e));
+    latSets[s].push_back(addLat(t, i, e));
     return s;
   }
   case Kind::kMulF:
   case Kind::kMulI:
+  case Kind::kAndI:
+    // A multiplicative operation only needs to be performed
+    // for the conjunction of sparse iteration spaces.
+    //
+    //  x*y|!y | y |
+    //  ---+---+---+
+    //  !x | 0 | 0 |
+    //   x | 0 |x*y|
     return takeConj(kind, // take binary conjunction
-                    buildLattices(tensorExps[e].children.e0, idx),
-                    buildLattices(tensorExps[e].children.e1, idx));
+                    buildLattices(tensorExps[e].children.e0, i),
+                    buildLattices(tensorExps[e].children.e1, i));
+  case Kind::kDivF:
+  case Kind::kDivS:
+  case Kind::kDivU:
+    // A division is tricky, since 0/0, 0/c, c/0 all have
+    // specific outcomes for floating-point and integers.
+    // Thus, we need to traverse the full iteration space.
+    //
+    //  x/y|!y | y |
+    //  ---+---+---+
+    //  !x |0/0|0/y|   FP: 0/0=NaN,c/0=Inf,0/c=0 with c true nonzero
+    //   x |x/0|x/y|  INT: x/0=exception for any x
+    //
+    // TODO: for now we "fixed" this by only accepting x/c cases
+    //       during expression building, so that the conjunction
+    //       rules applies (viz. x/c = x*(1/c) as far as lattice
+    //       construction is concerned).
+    return takeConj(kind, // take binary conjunction
+                    buildLattices(tensorExps[e].children.e0, i),
+                    buildLattices(tensorExps[e].children.e1, i));
   case Kind::kSubF:
   case Kind::kSubI:
+    // Special case: 0-y is -y.
     if (tensorExps[tensorExps[e].children.e0].kind == Kind::kZero)
       return mapZero(kind, // maps to 0-y with just y's lattices
-                     buildLattices(tensorExps[e].children.e1, idx));
+                     buildLattices(tensorExps[e].children.e1, i));
     LLVM_FALLTHROUGH;
   case Kind::kAddF:
   case Kind::kAddI:
+  case Kind::kOrI:
+    // An additive operation needs to be performed
+    // for the disjunction of sparse iteration spaces.
+    //
+    //  x+y|!y | y |    x-y|!y | y |
+    //  ---+---+---+    ---+---+---+
+    //  !x | 0 | y |    !x | 0 |-y |
+    //   x | x |x+y|     x | x |x-y|
     return takeDisj(kind, // take binary disjunction
-                    buildLattices(tensorExps[e].children.e0, idx),
-                    buildLattices(tensorExps[e].children.e1, idx));
+                    buildLattices(tensorExps[e].children.e0, i),
+                    buildLattices(tensorExps[e].children.e1, i));
   }
   llvm_unreachable("unexpected expression kind");
 }
@@ -325,8 +386,18 @@ Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   return buildTensorExp(op, yield->getOperand(0));
 }
 
-Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
-  if (auto arg = val.dyn_cast<BlockArgument>()) {
+bool Merger::maybeZero(unsigned e) {
+  if (tensorExps[e].kind == Kind::kInvariant) {
+    if (auto c = tensorExps[e].val.getDefiningOp<ConstantIntOp>())
+      return c.getValue() == 0;
+    if (auto c = tensorExps[e].val.getDefiningOp<ConstantFloatOp>())
+      return c.getValue().isZero();
+  }
+  return true;
+}
+
+Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
+  if (auto arg = v.dyn_cast<BlockArgument>()) {
     unsigned argN = arg.getArgNumber();
     // Any argument of the generic op that is not marked as a scalar
     // argument is considered a tensor, indexed by the implicit loop
@@ -335,16 +406,16 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
       OpOperand *t = op.getInputAndOutputOperands()[argN];
       if (!op.isScalar(t))
         return addExp(Kind::kTensor, argN);
-      val = t->get(); // get scalar value
+      v = t->get(); // get scalar value
     }
     // Any other argument (marked as scalar argument for the generic op
     // or belonging to an enveloping op) is considered invariant.
-    return addExp(Kind::kInvariant, val);
+    return addExp(Kind::kInvariant, v);
   }
   // Something defined outside is invariant.
-  Operation *def = val.getDefiningOp();
+  Operation *def = v.getDefiningOp();
   if (def->getBlock() != &op.region().front())
-    return addExp(Kind::kInvariant, val);
+    return addExp(Kind::kInvariant, v);
   // Construct unary operations if subexpression can be built.
   if (def->getNumOperands() == 1) {
     auto x = buildTensorExp(op, def->getOperand(0));
@@ -357,6 +428,7 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
     }
   }
   // Construct binary operations if subexpressions can be built.
+  // TODO: see buildLattices() for an explanation of rejecting certain divisions
   if (def->getNumOperands() == 2) {
     auto x = buildTensorExp(op, def->getOperand(0));
     auto y = buildTensorExp(op, def->getOperand(1));
@@ -367,6 +439,12 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
         return addExp(Kind::kMulF, e0, e1);
       if (isa<MulIOp>(def))
         return addExp(Kind::kMulI, e0, e1);
+      if (isa<DivFOp>(def) && !maybeZero(e1))
+        return addExp(Kind::kDivF, e0, e1);
+      if (isa<SignedDivIOp>(def) && !maybeZero(e1))
+        return addExp(Kind::kDivS, e0, e1);
+      if (isa<UnsignedDivIOp>(def) && !maybeZero(e1))
+        return addExp(Kind::kDivU, e0, e1);
       if (isa<AddFOp>(def))
         return addExp(Kind::kAddF, e0, e1);
       if (isa<AddIOp>(def))
@@ -375,10 +453,47 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value val) {
         return addExp(Kind::kSubF, e0, e1);
       if (isa<SubIOp>(def))
         return addExp(Kind::kSubI, e0, e1);
+      if (isa<AndOp>(def))
+        return addExp(Kind::kAndI, e0, e1);
+      if (isa<OrOp>(def))
+        return addExp(Kind::kOrI, e0, e1);
     }
   }
   // Cannot build.
   return None;
+}
+
+Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
+                       Value v0, Value v1) {
+  switch (tensorExps[e].kind) {
+  case Kind::kTensor:
+  case Kind::kInvariant:
+  case Kind::kZero:
+    llvm_unreachable("unexpected non-op");
+  case Kind::kMulF:
+    return rewriter.create<MulFOp>(loc, v0, v1);
+  case Kind::kMulI:
+    return rewriter.create<MulIOp>(loc, v0, v1);
+  case Kind::kDivF:
+    return rewriter.create<DivFOp>(loc, v0, v1);
+  case Kind::kDivS:
+    return rewriter.create<SignedDivIOp>(loc, v0, v1);
+  case Kind::kDivU:
+    return rewriter.create<UnsignedDivIOp>(loc, v0, v1);
+  case Kind::kAddF:
+    return rewriter.create<AddFOp>(loc, v0, v1);
+  case Kind::kAddI:
+    return rewriter.create<AddIOp>(loc, v0, v1);
+  case Kind::kSubF:
+    return rewriter.create<SubFOp>(loc, v0, v1);
+  case Kind::kSubI:
+    return rewriter.create<SubIOp>(loc, v0, v1);
+  case Kind::kAndI:
+    return rewriter.create<AndOp>(loc, v0, v1);
+  case Kind::kOrI:
+    return rewriter.create<OrOp>(loc, v0, v1);
+  }
+  llvm_unreachable("unexpected expression kind in build");
 }
 
 } // namespace sparse_tensor

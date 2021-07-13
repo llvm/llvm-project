@@ -27,6 +27,8 @@ struct DTLS;
 
 namespace __memprof {
 
+const u32 kMaxNumberOfThreads = (1 << 22); // 4M
+
 class MemprofThread;
 
 // These objects are created for every thread and are never deleted,

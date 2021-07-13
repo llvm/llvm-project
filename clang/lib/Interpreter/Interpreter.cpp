@@ -198,11 +198,12 @@ const CompilerInstance *Interpreter::getCompilerInstance() const {
   return IncrParser->getCI();
 }
 
-llvm::Expected<Transaction &> Interpreter::Parse(llvm::StringRef Code) {
+llvm::Expected<PartialTranslationUnit &>
+Interpreter::Parse(llvm::StringRef Code) {
   return IncrParser->Parse(Code);
 }
 
-llvm::Error Interpreter::Execute(Transaction &T) {
+llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
   if (!IncrExecutor) {
     const llvm::Triple &Triple =

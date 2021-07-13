@@ -202,8 +202,7 @@ define zeroext i1 @smulo.i32(i32 %v1, i32 %v2, i32* %res) {
 entry:
 ; CHECK-LABEL:  smulo.i32
 ; CHECK:        smull x[[MREG:[0-9]+]], w0, w1
-; CHECK-NEXT:   lsr x[[SREG:[0-9]+]], x[[MREG]], #32
-; CHECK-NEXT:   cmp w[[SREG]], w[[MREG]], asr #31
+; CHECK-NEXT:   cmp x[[MREG]], w[[MREG]], sxtw
 ; CHECK-NEXT:   cset {{w[0-9]+}}, ne
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -242,7 +241,7 @@ define zeroext i1 @umulo.i32(i32 %v1, i32 %v2, i32* %res) {
 entry:
 ; CHECK-LABEL:  umulo.i32
 ; CHECK:        umull [[MREG:x[0-9]+]], w0, w1
-; CHECK-NEXT:   cmp xzr, [[MREG]], lsr #32
+; CHECK-NEXT:   tst [[MREG]], #0xffffffff00000000
 ; CHECK-NEXT:   cset {{w[0-9]+}}, ne
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -460,8 +459,7 @@ define i32 @smulo.select.i32(i32 %v1, i32 %v2) {
 entry:
 ; CHECK-LABEL:  smulo.select.i32
 ; CHECK:        smull   x[[MREG:[0-9]+]], w0, w1
-; CHECK-NEXT:   lsr     x[[SREG:[0-9]+]], x[[MREG]], #32
-; CHECK-NEXT:   cmp     w[[SREG]], w[[MREG]], asr #31
+; CHECK-NEXT:   cmp     x[[MREG]], w[[MREG]], sxtw
 ; CHECK-NEXT:   csel    w0, w0, w1, ne
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -473,8 +471,7 @@ define i1 @smulo.not.i32(i32 %v1, i32 %v2) {
 entry:
 ; CHECK-LABEL:  smulo.not.i32
 ; CHECK:        smull   x[[MREG:[0-9]+]], w0, w1
-; CHECK-NEXT:   lsr     x[[SREG:[0-9]+]], x[[MREG]], #32
-; CHECK-NEXT:   cmp     w[[SREG]], w[[MREG]], asr #31
+; CHECK-NEXT:   cmp     x[[MREG]], w[[MREG]], sxtw
 ; CHECK-NEXT:   cset    w0, eq
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -512,7 +509,7 @@ define i32 @umulo.select.i32(i32 %v1, i32 %v2) {
 entry:
 ; CHECK-LABEL:  umulo.select.i32
 ; CHECK:        umull   [[MREG:x[0-9]+]], w0, w1
-; CHECK-NEXT:   cmp     xzr, [[MREG]], lsr #32
+; CHECK-NEXT:   tst     [[MREG]], #0xffffffff00000000
 ; CHECK-NEXT:   csel    w0, w0, w1, ne
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -524,7 +521,7 @@ define i1 @umulo.not.i32(i32 %v1, i32 %v2) {
 entry:
 ; CHECK-LABEL:  umulo.not.i32
 ; CHECK:        umull   [[MREG:x[0-9]+]], w0, w1
-; CHECK-NEXT:   cmp     xzr, [[MREG]], lsr #32
+; CHECK-NEXT:   tst     [[MREG]], #0xffffffff00000000
 ; CHECK-NEXT:   cset    w0, eq
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -700,8 +697,7 @@ define zeroext i1 @smulo.br.i32(i32 %v1, i32 %v2) {
 entry:
 ; CHECK-LABEL:  smulo.br.i32
 ; CHECK:        smull   x[[MREG:[0-9]+]], w0, w1
-; CHECK-NEXT:   lsr     x[[SREG:[0-9]+]], x8, #32
-; CHECK-NEXT:   cmp     w[[SREG]], w[[MREG]], asr #31
+; CHECK-NEXT:   cmp     x[[MREG]], w[[MREG]], sxtw
 ; CHECK-NEXT:   b.eq
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -755,7 +751,7 @@ define zeroext i1 @umulo.br.i32(i32 %v1, i32 %v2) {
 entry:
 ; CHECK-LABEL:  umulo.br.i32
 ; CHECK:        umull   [[MREG:x[0-9]+]], w0, w1
-; CHECK-NEXT:   cmp     xzr, [[MREG]], lsr #32
+; CHECK-NEXT:   tst     [[MREG]], #0xffffffff00000000
 ; CHECK-NEXT:   b.eq
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0

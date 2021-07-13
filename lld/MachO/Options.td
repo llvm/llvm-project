@@ -689,12 +689,10 @@ def allow_heap_execute : Flag<["-"], "allow_heap_execute">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def application_extension : Flag<["-"], "application_extension">,
-    HelpText<"Designate the linker output as safe for use in an application extension">,
-    Flags<[HelpHidden]>,
+    HelpText<"Mark output as safe for use in an application extension, and validate that linked dylibs are safe">,
     Group<grp_rare>;
 def no_application_extension : Flag<["-"], "no_application_extension">,
-    HelpText<"Designate the linker output as unsafe for use in an application extension">,
-    Flags<[HelpHidden]>,
+    HelpText<"Disable application extension functionality (default)">,
     Group<grp_rare>;
 def fatal_warnings : Flag<["-"], "fatal_warnings">,
     HelpText<"Treat warnings as errors">,

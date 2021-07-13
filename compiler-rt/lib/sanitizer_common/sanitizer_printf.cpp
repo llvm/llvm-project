@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#if defined(__x86_64__)
+#  include <emmintrin.h>
+#endif
+
 #if SANITIZER_WINDOWS && defined(_MSC_VER) && _MSC_VER < 1800 &&               \
       !defined(va_copy)
 # define va_copy(dst, src) ((dst) = (src))
@@ -162,17 +166,15 @@ int VSNPrintf(char *buff, int buff_length,
     cur += have_z;
     bool have_ll = !have_z && (cur[0] == 'l' && cur[1] == 'l');
     cur += have_ll * 2;
-    s64 dval;
-    u64 uval;
     const bool have_length = have_z || have_ll;
     const bool have_flags = have_width || have_length;
     // At the moment only %s supports precision and left-justification.
     CHECK(!((precision >= 0 || left_justified) && *cur != 's'));
     switch (*cur) {
       case 'd': {
-        dval = have_ll ? va_arg(args, s64)
-             : have_z ? va_arg(args, sptr)
-             : va_arg(args, int);
+        s64 dval = have_ll  ? va_arg(args, s64)
+                   : have_z ? va_arg(args, sptr)
+                            : va_arg(args, int);
         result += AppendSignedDecimal(&buff, buff_end, dval, width,
                                       pad_with_zero);
         break;
@@ -180,14 +182,24 @@ int VSNPrintf(char *buff, int buff_length,
       case 'u':
       case 'x':
       case 'X': {
-        uval = have_ll ? va_arg(args, u64)
-             : have_z ? va_arg(args, uptr)
-             : va_arg(args, unsigned);
+        u64 uval = have_ll  ? va_arg(args, u64)
+                   : have_z ? va_arg(args, uptr)
+                            : va_arg(args, unsigned);
         bool uppercase = (*cur == 'X');
         result += AppendUnsigned(&buff, buff_end, uval, (*cur == 'u') ? 10 : 16,
                                  width, pad_with_zero, uppercase);
         break;
       }
+#if defined(__x86_64__)
+      case 'V': {
+        __m128i v = va_arg(args, __m128i);
+        u8 x[sizeof(v)];
+        internal_memcpy(x, &v, sizeof(x));
+        for (uptr i = 0; i < sizeof(x); i++)
+          result += AppendUnsigned(&buff, buff_end, x[i], 16, 2, true, false);
+        break;
+      }
+#endif
       case 'p': {
         RAW_CHECK_MSG(!have_flags, kPrintfFormatsHelp);
         result += AppendPointer(&buff, buff_end, va_arg(args, uptr));

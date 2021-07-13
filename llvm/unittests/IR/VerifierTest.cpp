@@ -106,7 +106,7 @@ TEST(VerifierTest, InvalidRetAttribute) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
   EXPECT_TRUE(StringRef(ErrorOS.str()).startswith(
-      "Attribute 'uwtable' only applies to functions!"));
+      "Attribute 'uwtable' does not apply to function return values"));
 }
 
 TEST(VerifierTest, CrossModuleRef) {

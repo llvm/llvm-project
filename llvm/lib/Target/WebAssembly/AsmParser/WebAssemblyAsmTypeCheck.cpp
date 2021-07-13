@@ -102,8 +102,8 @@ bool WebAssemblyAsmTypeCheck::popType(SMLoc ErrorLoc,
 
 bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCInst &Inst,
                                        wasm::ValType &Type) {
-  auto Local = Inst.getOperand(0).getImm();
-  if (static_cast<size_t>(Local) > LocalTypes.size())
+  auto Local = static_cast<size_t>(Inst.getOperand(0).getImm());
+  if (Local >= LocalTypes.size())
     return typeError(ErrorLoc, StringRef("no local type specified for index ") +
                           std::to_string(Local));
   Type = LocalTypes[Local];

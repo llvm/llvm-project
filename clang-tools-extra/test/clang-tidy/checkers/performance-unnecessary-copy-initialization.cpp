@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-copy-initialization %t
+// RUN: %check_clang_tidy -std=c++17 %s performance-unnecessary-copy-initialization %t
 
 template <typename T>
 struct Iterator {
@@ -596,8 +596,15 @@ void positiveUnusedReferenceIsRemoved() {
   // CHECK-FIXES: int i = 0; // Foo bar.
   auto TrailingCommentRemoved = ExpensiveTypeReference(); // Trailing comment.
   // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'TrailingCommentRemoved' is copy-constructed from a const reference but is never used;
-  // CHECK-FIXES-NOT: auto TrailingCommentRemoved = ExpensiveTypeReference(); // Trailing comment.
+  // CHECK-FIXES-NOT: auto TrailingCommentRemoved = ExpensiveTypeReference();
+  // CHECK-FIXES-NOT: // Trailing comment.
   // clang-format on
+
+  auto UnusedAndUnnecessary = ExpensiveTypeReference();
+  // Comments on a new line should not be deleted.
+  // CHECK-MESSAGES: [[@LINE-2]]:8: warning: the variable 'UnusedAndUnnecessary' is copy-constructed
+  // CHECK-FIXES-NOT: auto UnusedAndUnnecessary = ExpensiveTypeReference();
+  // CHECK-FIXES: // Comments on a new line should not be deleted.
 }
 
 void negativeloopedOverObjectIsModified() {
@@ -636,4 +643,19 @@ void negativeReferenceIsInitializedOutsideOfBlock() {
       C2.constMethod();
     }
   };
+}
+
+void negativeStructuredBinding() {
+  // Structured bindings are not yet supported but can trigger false positives
+  // since the DecompositionDecl itself is unused and the check doesn't traverse
+  // VarDecls of the BindingDecls.
+  struct Pair {
+    ExpensiveToCopyType first;
+    ExpensiveToCopyType second;
+  };
+
+  Pair P;
+  const auto [C, D] = P;
+  C.constMethod();
+  D.constMethod();
 }

@@ -32,15 +32,15 @@ namespace llvm {
 } // namespace llvm
 
 namespace opts {
-  extern llvm::cl::opt<bool> SectionRelocations;
-  extern llvm::cl::opt<bool> SectionSymbols;
-  extern llvm::cl::opt<bool> SectionData;
-  extern llvm::cl::opt<bool> ExpandRelocs;
-  extern llvm::cl::opt<bool> RawRelr;
-  extern llvm::cl::opt<bool> CodeViewSubsectionBytes;
-  extern llvm::cl::opt<bool> Demangle;
-  enum OutputStyleTy { LLVM, GNU };
-  extern llvm::cl::opt<OutputStyleTy> Output;
+extern bool SectionRelocations;
+extern bool SectionSymbols;
+extern bool SectionData;
+extern bool ExpandRelocs;
+extern bool RawRelr;
+extern bool CodeViewSubsectionBytes;
+extern bool Demangle;
+enum OutputStyleTy { LLVM, GNU };
+extern OutputStyleTy Output;
 } // namespace opts
 
 #define LLVM_READOBJ_ENUM_ENT(ns, enum) \

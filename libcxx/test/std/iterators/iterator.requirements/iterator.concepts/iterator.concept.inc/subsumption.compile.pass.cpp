@@ -20,12 +20,12 @@
 // clang-format off
 template<std::weakly_incrementable I>
 requires std::regular<I>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return false;
 }
 
 template<std::incrementable>
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return true;
 }
 // clang-format on

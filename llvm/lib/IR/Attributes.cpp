@@ -91,6 +91,11 @@ static std::pair<unsigned, unsigned> unpackVScaleRangeArgs(uint64_t Value) {
 
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
                          uint64_t Val) {
+  if (Val)
+    assert(Attribute::isIntAttrKind(Kind) && "Not an int attribute");
+  else
+    assert(Attribute::isEnumAttrKind(Kind) && "Not an enum attribute");
+
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
@@ -138,6 +143,7 @@ Attribute Attribute::get(LLVMContext &Context, StringRef Kind, StringRef Val) {
 
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
                          Type *Ty) {
+  assert(Attribute::isTypeAttrKind(Kind) && "Not a type attribute");
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
@@ -234,15 +240,6 @@ StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
   default:
     llvm_unreachable("invalid Kind");
   }
-}
-
-bool Attribute::doesAttrKindHaveArgument(Attribute::AttrKind AttrKind) {
-  return AttrKind == Attribute::Alignment ||
-         AttrKind == Attribute::StackAlignment ||
-         AttrKind == Attribute::Dereferenceable ||
-         AttrKind == Attribute::AllocSize ||
-         AttrKind == Attribute::DereferenceableOrNull ||
-         AttrKind == Attribute::VScaleRange;
 }
 
 bool Attribute::isExistingAttribute(StringRef Name) {
@@ -488,6 +485,35 @@ void Attribute::Profile(FoldingSetNodeID &ID) const {
   ID.AddPointer(pImpl);
 }
 
+enum AttributeProperty {
+  FnAttr = (1 << 0),
+  ParamAttr = (1 << 1),
+  RetAttr = (1 << 2),
+};
+
+#define GET_ATTR_PROP_TABLE
+#include "llvm/IR/Attributes.inc"
+
+static bool hasAttributeProperty(Attribute::AttrKind Kind,
+                                 AttributeProperty Prop) {
+  unsigned Index = Kind - 1;
+  assert(Index < sizeof(AttrPropTable) / sizeof(AttrPropTable[0]) &&
+         "Invalid attribute kind");
+  return AttrPropTable[Index] & Prop;
+}
+
+bool Attribute::canUseAsFnAttr(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::FnAttr);
+}
+
+bool Attribute::canUseAsParamAttr(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::ParamAttr);
+}
+
+bool Attribute::canUseAsRetAttr(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::RetAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // AttributeImpl Definition
 //===----------------------------------------------------------------------===//
@@ -535,41 +561,23 @@ Type *AttributeImpl::getValueAsType() const {
 bool AttributeImpl::operator<(const AttributeImpl &AI) const {
   if (this == &AI)
     return false;
+
   // This sorts the attributes with Attribute::AttrKinds coming first (sorted
   // relative to their enum value) and then strings.
-  if (isEnumAttribute()) {
-    if (AI.isEnumAttribute()) return getKindAsEnum() < AI.getKindAsEnum();
-    if (AI.isIntAttribute()) return true;
-    if (AI.isStringAttribute()) return true;
-    if (AI.isTypeAttribute()) return true;
-  }
-
-  if (isTypeAttribute()) {
-    if (AI.isEnumAttribute()) return false;
-    if (AI.isTypeAttribute()) {
-      assert(getKindAsEnum() != AI.getKindAsEnum() &&
-             "Comparison of types would be unstable");
+  if (!isStringAttribute()) {
+    if (AI.isStringAttribute())
+      return true;
+    if (getKindAsEnum() != AI.getKindAsEnum())
       return getKindAsEnum() < AI.getKindAsEnum();
-    }
-    if (AI.isIntAttribute()) return true;
-    if (AI.isStringAttribute()) return true;
+    assert(!AI.isEnumAttribute() && "Non-unique attribute");
+    assert(!AI.isTypeAttribute() && "Comparison of types would be unstable");
+    // TODO: Is this actually needed?
+    assert(AI.isIntAttribute() && "Only possibility left");
+    return getValueAsInt() < AI.getValueAsInt();
   }
 
-  if (isIntAttribute()) {
-    if (AI.isEnumAttribute()) return false;
-    if (AI.isTypeAttribute()) return false;
-    if (AI.isIntAttribute()) {
-      if (getKindAsEnum() == AI.getKindAsEnum())
-        return getValueAsInt() < AI.getValueAsInt();
-      return getKindAsEnum() < AI.getKindAsEnum();
-    }
-    if (AI.isStringAttribute()) return true;
-  }
-
-  assert(isStringAttribute());
-  if (AI.isEnumAttribute()) return false;
-  if (AI.isTypeAttribute()) return false;
-  if (AI.isIntAttribute()) return false;
+  if (!AI.isStringAttribute())
+    return false;
   if (getKindAsString() == AI.getKindAsString())
     return getValueAsString() < AI.getValueAsString();
   return getKindAsString() < AI.getKindAsString();
@@ -800,23 +808,13 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
     if (!B.contains(Kind))
       continue;
 
+    if (Attribute::isTypeAttrKind(Kind)) {
+      Attrs.push_back(Attribute::get(C, Kind, B.getTypeAttr(Kind)));
+      continue;
+    }
+
     Attribute Attr;
     switch (Kind) {
-    case Attribute::ByVal:
-      Attr = Attribute::getWithByValType(C, B.getByValType());
-      break;
-    case Attribute::StructRet:
-      Attr = Attribute::getWithStructRetType(C, B.getStructRetType());
-      break;
-    case Attribute::ByRef:
-      Attr = Attribute::getWithByRefType(C, B.getByRefType());
-      break;
-    case Attribute::Preallocated:
-      Attr = Attribute::getWithPreallocatedType(C, B.getPreallocatedType());
-      break;
-    case Attribute::InAlloca:
-      Attr = Attribute::getWithInAllocaType(C, B.getInAllocaType());
-      break;
     case Attribute::Alignment:
       assert(B.getAlignment() && "Alignment must be set");
       Attr = Attribute::getWithAlignment(C, *B.getAlignment());
@@ -1602,20 +1600,9 @@ void AttrBuilder::clear() {
 
 Optional<unsigned>
 AttrBuilder::kindToTypeIndex(Attribute::AttrKind Kind) const {
-  switch (Kind) {
-  case Attribute::ByVal:
-    return ByValTypeIndex;
-  case Attribute::ByRef:
-    return ByRefTypeIndex;
-  case Attribute::InAlloca:
-    return InAllocaTypeIndex;
-  case Attribute::Preallocated:
-    return PreallocatedTypeIndex;
-  case Attribute::StructRet:
-    return StructRetTypeIndex;
-  default:
-    return None;
-  }
+  if (Attribute::isTypeAttrKind(Kind))
+    return Kind - Attribute::FirstTypeAttr;
+  return None;
 }
 
 AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
@@ -1765,6 +1752,12 @@ AttrBuilder &AttrBuilder::addVScaleRangeAttrFromRawRepr(uint64_t RawArgs) {
   return *this;
 }
 
+Type *AttrBuilder::getTypeAttr(Attribute::AttrKind Kind) const {
+  Optional<unsigned> TypeIndex = kindToTypeIndex(Kind);
+  assert(TypeIndex && "Not a type attribute");
+  return TypeAttrs[*TypeIndex];
+}
+
 AttrBuilder &AttrBuilder::addTypeAttr(Attribute::AttrKind Kind, Type *Ty) {
   Optional<unsigned> TypeIndex = kindToTypeIndex(Kind);
   assert(TypeIndex && "Not a type attribute");
@@ -1813,7 +1806,7 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   if (!VScaleRangeArgs)
     VScaleRangeArgs = B.VScaleRangeArgs;
 
-  for (unsigned Index = 0; Index < NumTypeIndices; ++Index)
+  for (unsigned Index = 0; Index < Attribute::NumTypeAttrKinds; ++Index)
     if (!TypeAttrs[Index])
       TypeAttrs[Index] = B.TypeAttrs[Index];
 
@@ -1845,7 +1838,7 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
   if (B.VScaleRangeArgs)
     VScaleRangeArgs = 0;
 
-  for (unsigned Index = 0; Index < NumTypeIndices; ++Index)
+  for (unsigned Index = 0; Index < Attribute::NumTypeAttrKinds; ++Index)
     if (B.TypeAttrs[Index])
       TypeAttrs[Index] = nullptr;
 
@@ -1935,7 +1928,6 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
         .addDereferenceableOrNullAttr(1) // the int here is ignored
         .addAttribute(Attribute::ReadNone)
         .addAttribute(Attribute::ReadOnly)
-        .addAttribute(Attribute::InAlloca)
         .addPreallocatedAttr(Ty)
         .addInAllocaAttr(Ty)
         .addByValAttr(Ty)

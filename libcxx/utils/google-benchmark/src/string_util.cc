@@ -1,6 +1,9 @@
 #include "string_util.h"
 
 #include <array>
+#ifdef BENCHMARK_STL_ANDROID_GNUSTL
+#include <cerrno>
+#endif
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
@@ -160,13 +163,17 @@ std::string StrFormat(const char* format, ...) {
   return tmp;
 }
 
-void ReplaceAll(std::string* str, const std::string& from,
-                const std::string& to) {
-  std::size_t start = 0;
-  while ((start = str->find(from, start)) != std::string::npos) {
-    str->replace(start, from.length(), to);
-    start += to.length();
+std::vector<std::string> StrSplit(const std::string& str, char delim) {
+  if (str.empty()) return {};
+  std::vector<std::string> ret;
+  size_t first = 0;
+  size_t next = str.find(delim);
+  for (; next != std::string::npos;
+       first = next + 1, next = str.find(delim, first)) {
+    ret.push_back(str.substr(first, next - first));
   }
+  ret.push_back(str.substr(first));
+  return ret;
 }
 
 #ifdef BENCHMARK_STL_ANDROID_GNUSTL

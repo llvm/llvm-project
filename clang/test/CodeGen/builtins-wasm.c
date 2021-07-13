@@ -892,12 +892,6 @@ u32x4 trunc_sat_zero_u_f64x2_i32x4(f64x2 x) {
   // WEBASSEMBLY: ret <4 x i32> %1
 }
 
-f32x4 wasm_demote_zero_f64x2_f32x4(f64x2 x) {
-  return __builtin_wasm_demote_zero_f64x2_f32x4(x);
-  // WEBASSEMBLY: call <4 x float> @llvm.wasm.demote.zero(<2 x double> %x)
-  // WEBASSEMBLY: ret
-}
-
 i32x4 load32_zero(const int *p) {
   return __builtin_wasm_load32_zero(p);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.load32.zero(i32* %p)

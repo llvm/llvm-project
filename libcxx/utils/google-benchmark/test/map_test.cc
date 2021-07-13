@@ -34,11 +34,11 @@ BENCHMARK(BM_MapLookup)->Range(1 << 3, 1 << 12);
 // Using fixtures.
 class MapFixture : public ::benchmark::Fixture {
  public:
-  void SetUp(const ::benchmark::State& st) {
+  void SetUp(const ::benchmark::State& st) BENCHMARK_OVERRIDE {
     m = ConstructRandomMap(static_cast<int>(st.range(0)));
   }
 
-  void TearDown(const ::benchmark::State&) { m.clear(); }
+  void TearDown(const ::benchmark::State&) BENCHMARK_OVERRIDE { m.clear(); }
 
   std::map<int, int> m;
 };

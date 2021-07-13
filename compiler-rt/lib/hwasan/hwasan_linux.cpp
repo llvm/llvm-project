@@ -69,14 +69,8 @@ static void ProtectGap(uptr addr, uptr size) {
 
 uptr kLowMemStart;
 uptr kLowMemEnd;
-uptr kLowShadowEnd;
-uptr kLowShadowStart;
-uptr kHighShadowStart;
-uptr kHighShadowEnd;
 uptr kHighMemStart;
 uptr kHighMemEnd;
-
-uptr kAliasRegionStart;  // Always 0 when aliases aren't used.
 
 static void PrintRange(uptr start, uptr end, const char *name) {
   Printf("|| [%p, %p] || %.*s ||\n", (void *)start, (void *)end, 10, name);
@@ -197,18 +191,6 @@ bool InitShadow() {
 
   // High memory starts where allocated shadow allows.
   kHighMemStart = ShadowToMem(kHighShadowStart);
-
-#  if defined(HWASAN_ALIASING_MODE)
-  constexpr uptr kAliasRegionOffset = 1ULL << (kTaggableRegionCheckShift - 1);
-  kAliasRegionStart =
-      __hwasan_shadow_memory_dynamic_address + kAliasRegionOffset;
-
-  CHECK_EQ(kAliasRegionStart >> kTaggableRegionCheckShift,
-           __hwasan_shadow_memory_dynamic_address >> kTaggableRegionCheckShift);
-  CHECK_EQ(
-      (kAliasRegionStart + kAliasRegionOffset - 1) >> kTaggableRegionCheckShift,
-      __hwasan_shadow_memory_dynamic_address >> kTaggableRegionCheckShift);
-#  endif
 
   // Check the sanity of the defined memory ranges (there might be gaps).
   CHECK_EQ(kHighMemStart % GetMmapGranularity(), 0);

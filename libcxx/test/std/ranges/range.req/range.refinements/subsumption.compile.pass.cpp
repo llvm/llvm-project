@@ -26,13 +26,13 @@ struct range {
 
 template<std::ranges::range R>
 requires std::input_iterator<std::ranges::iterator_t<R>>
-[[nodiscard]] constexpr bool check_input_range_subsumption() {
+constexpr bool check_input_range_subsumption() {
   return false;
 }
 
 template<std::ranges::input_range>
 requires true
-[[nodiscard]] constexpr bool check_input_range_subsumption() {
+constexpr bool check_input_range_subsumption() {
   return true;
 }
 
@@ -40,13 +40,13 @@ static_assert(check_input_range_subsumption<range>());
 
 template<std::ranges::input_range R>
 requires std::forward_iterator<std::ranges::iterator_t<R>>
-[[nodiscard]] constexpr bool check_forward_range_subsumption() {
+constexpr bool check_forward_range_subsumption() {
   return false;
 }
 
 template<std::ranges::forward_range>
 requires true
-[[nodiscard]] constexpr bool check_forward_range_subsumption() {
+constexpr bool check_forward_range_subsumption() {
   return true;
 }
 
@@ -54,13 +54,13 @@ static_assert(check_forward_range_subsumption<range>());
 
 template<std::ranges::forward_range R>
 requires std::bidirectional_iterator<std::ranges::iterator_t<R>>
-[[nodiscard]] constexpr bool check_bidirectional_range_subsumption() {
+constexpr bool check_bidirectional_range_subsumption() {
   return false;
 }
 
 template<std::ranges::bidirectional_range>
 requires true
-[[nodiscard]] constexpr bool check_bidirectional_range_subsumption() {
+constexpr bool check_bidirectional_range_subsumption() {
   return true;
 }
 
