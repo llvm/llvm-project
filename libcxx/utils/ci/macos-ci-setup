@@ -3,6 +3,16 @@
 # This simple script can be used to set up a CI node running MacOS.
 # An additional requirement that is *not* handled by this script is the
 # installation of Xcode, which requires manual intervention.
+#
+# This script should be run from an administrator account. It can be run
+# without having to clone the LLVM repository with:
+#
+#   $ /bin/bash -c "$(curl -fsSl https://raw.githubusercontent.com/llvm/llvm-project/main/libcxx/utils/ci/macos-ci-setup)"
+#
+# Once the necessary dependencies have been installed, you can switch
+# to a non-administrator account and run:
+#
+#   $ caffeinate -s buildkite-agent start --build-path /tmp/buildkite-builds
 
 set -e
 

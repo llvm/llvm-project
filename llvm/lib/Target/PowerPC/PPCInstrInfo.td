@@ -1176,6 +1176,7 @@ def NaNsFPMath
     : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
 def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
 def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
+def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
 def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
 def HasFPU : Predicate<"Subtarget->hasFPU()">;
 def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
@@ -5412,8 +5413,6 @@ def DWBytes3210 {
 def : Pat<(i64 (bitreverse i64:$A)),
   (OR8 (RLDICR DWBytes7654.DWord, 32, 31), DWBytes3210.DWord)>;
 
-def : Pat<(int_ppc_lwarx ForceXForm:$dst),
-          (LWARX ForceXForm:$dst)>;
 def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
           (STWCX gprc:$A, ForceXForm:$dst)>;
 def : Pat<(int_ppc_tw gprc:$A, gprc:$B, i32:$IMM),

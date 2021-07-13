@@ -49,7 +49,7 @@ def Linalg_Dialect : Dialect {
       kInplaceableAttrName = "linalg.inplaceable";
 
     /// Attribute name used to mark the bufferization layout for region
-    // arguments during linalg comprehensive bufferization.
+    /// arguments during linalg comprehensive bufferization.
     constexpr const static ::llvm::StringLiteral
       kBufferLayoutAttrName = "linalg.buffer_layout";
 

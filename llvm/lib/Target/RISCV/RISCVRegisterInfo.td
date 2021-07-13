@@ -162,6 +162,20 @@ def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (add
   let RegInfos = XLenRI;
 }
 
+// Don't use X1 or X5 for JALR since that is a hint to pop the return address
+// stack on some microarchitectures. Also remove the reserved registers X0, X2,
+// X3, and X4 as it reduces the number of register classes that get synthesized
+// by tablegen.
+def GPRJALR : RegisterClass<"RISCV", [XLenVT], 32, (add
+    (sequence "X%u", 10, 17),
+    (sequence "X%u", 6, 7),
+    (sequence "X%u", 28, 31),
+    (sequence "X%u", 8, 9),
+    (sequence "X%u", 18, 27)
+  )> {
+  let RegInfos = XLenRI;
+}
+
 def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 10, 15),
     (sequence "X%u", 8, 9)
@@ -171,9 +185,10 @@ def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
 
 // For indirect tail calls, we can't use callee-saved registers, as they are
 // restored to the saved value before the tail call, which would clobber a call
-// address.
+// address. We shouldn't use x5 since that is a hint for to pop the return
+// address stack on some microarchitectures.
 def GPRTC : RegisterClass<"RISCV", [XLenVT], 32, (add
-    (sequence "X%u", 5, 7),
+    (sequence "X%u", 6, 7),
     (sequence "X%u", 10, 17),
     (sequence "X%u", 28, 31)
   )> {
