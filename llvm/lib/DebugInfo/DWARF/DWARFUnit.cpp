@@ -591,10 +591,7 @@ bool DWARFUnit::parseDWO() {
   // Share .debug_addr and .debug_ranges section with compile unit in .dwo
   if (AddrOffsetSectionBase)
     DWO->setAddrOffsetSection(AddrOffsetSection, *AddrOffsetSectionBase);
-  if (getVersion() >= 5) {
-    DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(),
-                          DWARFListTableHeader::getHeaderSize(getFormat()));
-  } else {
+  if (getVersion() == 4) {
     auto DWORangesBase = UnitDie.getRangesBaseAttribute();
     DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
   }
