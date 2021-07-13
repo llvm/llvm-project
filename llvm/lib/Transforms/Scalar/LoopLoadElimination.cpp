@@ -99,10 +99,9 @@ struct StoreToLoadForwardingCandidate {
                                  Loop *L) const {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
-    Type *LoadPtrType = LoadPtr->getType();
     Type *LoadType = getLoadStoreType(Load);
 
-    assert(LoadPtrType->getPointerAddressSpace() ==
+    assert(LoadPtr->getType()->getPointerAddressSpace() ==
                StorePtr->getType()->getPointerAddressSpace() &&
            LoadType == getLoadStoreType(Store) &&
            "Should be a known dependence");
