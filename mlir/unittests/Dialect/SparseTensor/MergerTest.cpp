@@ -145,14 +145,24 @@ protected:
     switch (tensorExp.kind) {
     case Kind::kTensor:
       return tensorExp.tensor == pattern->tensorNum;
-    case Kind::kZero:
-      return true;
+    case Kind::kAbsF:
+    case Kind::kCeilF:
+    case Kind::kFloorF:
+    case Kind::kNegF:
+    case Kind::kNegI:
+      return compareExpression(tensorExp.children.e0, pattern->e0);
     case Kind::kMulF:
     case Kind::kMulI:
+    case Kind::kDivF:
+    case Kind::kDivS:
+    case Kind::kDivU:
     case Kind::kAddF:
     case Kind::kAddI:
     case Kind::kSubF:
     case Kind::kSubI:
+    case Kind::kAndI:
+    case Kind::kOrI:
+    case Kind::kXorI:
       return compareExpression(tensorExp.children.e0, pattern->e0) &&
              compareExpression(tensorExp.children.e1, pattern->e1);
     default:
