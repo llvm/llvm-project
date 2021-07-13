@@ -7,53 +7,6 @@
 
 typedef ulong uptr;
 
-void __asan_report_load_n(uptr addr, uptr size) {}
-
-void __asan_loadN(uptr addr, uptr size) {}
-
-void __asan_report_load1(uptr addr) {}
-
-void __asan_load1(uptr addr) {}
-
-void __asan_report_load2(uptr addr) {}
-
-void __asan_load2(uptr addr) {}
-
-void __asan_report_load4(uptr addr) {}
-
-void __asan_load4(uptr addr) {}
-
-void __asan_report_load8(uptr addr) {}
-
-void __asan_load8(uptr addr) {}
-
-void __asan_report_load16(uptr addr) {}
-
-void __asan_load16(uptr addr) {}
-
-void __asan_report_store_n(uptr addr, uptr size) {}
-
-void __asan_storeN(uptr addr, uptr size) {}
-
-void __asan_report_store1(uptr addr) {}
-
-void __asan_store1(uptr addr) {}
-
-void __asan_report_store2(uptr addr) {}
-
-void __asan_store2(uptr addr) {}
-
-void __asan_report_store4(uptr addr) {}
-
-void __asan_store4(uptr addr) {}
-
-void __asan_report_store8(uptr addr) {}
-
-void __asan_store8(uptr addr) {}
-
-void __asan_report_store16(uptr addr) {}
-
-void __asan_store16(uptr addr) {}
 
 void* __asan_memmove(void* to, void* from, uptr size) { return to; }
 
