@@ -6843,6 +6843,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Str));
   }
 
+  if (Args.hasArg(options::OPT_gheterogeneous_dwarf))
+    CmdArgs.push_back("-gheterogeneous-dwarf");
+
   // Add the "-o out -x type src.c" flags last. This is done primarily to make
   // the -cc1 command easier to edit when reproducing compiler crashes.
   if (Output.getType() == types::TY_Dependencies) {
