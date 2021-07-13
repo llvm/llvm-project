@@ -208,22 +208,6 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   return true;
 }
 
-/// Returns true if given tensor co-iterates with conjunction only.
-/// For the output tensor, this defines a "simply dynamic" operation.
-/// For instance: A(I) = A(I) * B(I) * C(I)
-static unsigned isConjunction(Merger &merger, unsigned tensor, unsigned exp) {
-  switch (merger.exp(exp).kind) {
-  case Kind::kTensor:
-    return merger.exp(exp).tensor == tensor;
-  case Kind::kMulF:
-  case Kind::kMulI:
-    return isConjunction(merger, tensor, merger.exp(exp).children.e0) ||
-           isConjunction(merger, tensor, merger.exp(exp).children.e1);
-  default:
-    return false;
-  }
-}
-
 /// Returns true when the tensor expression is admissable for codegen.
 /// Since all sparse input tensors are admissable, we just need to check
 /// whether the output tensor in the tensor expression codegen is admissable.
@@ -250,7 +234,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // A tensor expression with a sparse output tensor that changes its values
   // but not its nonzero structure, an operation called "simply dynamic" in
   // [Bik96,Ch9], is also admissable without special codegen.
-  if (isConjunction(merger, tensor, exp))
+  if (merger.isConjunction(tensor, exp))
     return true;
   // Reject for now since this requires changes to the nonzero structure.
   // TODO: implement "workspaces" [Kjolstad2019]
@@ -637,31 +621,7 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   }
   Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0);
   Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1);
-  switch (merger.exp(exp).kind) {
-  case Kind::kTensor:
-  case Kind::kInvariant:
-  case Kind::kZero:
-    llvm_unreachable("handled above");
-  case Kind::kMulF:
-    return rewriter.create<MulFOp>(loc, v0, v1);
-  case Kind::kMulI:
-    return rewriter.create<MulIOp>(loc, v0, v1);
-  case Kind::kDivF:
-    return rewriter.create<DivFOp>(loc, v0, v1);
-  case Kind::kDivS:
-    return rewriter.create<SignedDivIOp>(loc, v0, v1);
-  case Kind::kDivU:
-    return rewriter.create<UnsignedDivIOp>(loc, v0, v1);
-  case Kind::kAddF:
-    return rewriter.create<AddFOp>(loc, v0, v1);
-  case Kind::kAddI:
-    return rewriter.create<AddIOp>(loc, v0, v1);
-  case Kind::kSubF:
-    return rewriter.create<SubFOp>(loc, v0, v1);
-  case Kind::kSubI:
-    return rewriter.create<SubIOp>(loc, v0, v1);
-  }
-  llvm_unreachable("unexpected expression kind");
+  return merger.buildExp(rewriter, loc, exp, v0, v1);
 }
 
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
