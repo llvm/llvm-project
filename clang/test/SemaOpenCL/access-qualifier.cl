@@ -1,12 +1,14 @@
-// RUN: %clang_cc1 -verify -pedantic -fsyntax-only -cl-std=CL1.2 %s -cl-ext=-cl_khr_3d_image_writes
-// RUN: %clang_cc1 -verify -pedantic -fsyntax-only -cl-std=CL2.0 %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL1.2 %s -cl-ext=-cl_khr_3d_image_writes
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL2.0 %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL3.0 %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -pedantic -fsyntax-only -cl-std=CL3.0 %s -cl-ext=-__opencl_c_read_write_images
 
 typedef image1d_t img1d_ro_default; // expected-note {{previously declared 'read_only' here}}
 
 typedef write_only image1d_t img1d_wo; // expected-note {{previously declared 'write_only' here}}
 typedef read_only image1d_t img1d_ro;
 
-#if __OPENCL_C_VERSION__ >= 200
+#if (__OPENCL_C_VERSION__ == 200) || (__OPENCL_C_VERSION__ == 300 && defined(__opencl_c_read_write_images))
 typedef read_write image1d_t img1d_rw;
 #endif
 
@@ -17,10 +19,10 @@ typedef read_only int IntRO; // expected-error {{access qualifier can only be us
 void myWrite(write_only image1d_t); // expected-note {{passing argument to parameter here}} expected-note {{passing argument to parameter here}}
 void myRead(read_only image1d_t); // expected-note {{passing argument to parameter here}}
 
-#if __OPENCL_C_VERSION__ >= 200
+#if (__OPENCL_C_VERSION__ == 200) || (__OPENCL_C_VERSION__ == 300 && defined(__opencl_c_read_write_images))
 void myReadWrite(read_write image1d_t);
 #else
-void myReadWrite(read_write image1d_t); // expected-error {{access qualifier 'read_write' can not be used for '__read_write image1d_t' prior to OpenCL version 2.0}}
+void myReadWrite(read_write image1d_t); // expected-error {{access qualifier 'read_write' can not be used for '__read_write image1d_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
 #endif
 
 
@@ -36,7 +38,7 @@ kernel void k3(img1d_wo img) {
   myWrite(img);
 }
 
-#if __OPENCL_C_VERSION__ >= 200
+#if (__OPENCL_C_VERSION__ == 200) || (__OPENCL_C_VERSION__ == 300 && defined(__opencl_c_read_write_images))
 kernel void k4(img1d_rw img) {
   myReadWrite(img);
 }
@@ -62,26 +64,26 @@ kernel void k11(read_only write_only image1d_t i){} // expected-error{{multiple 
 
 kernel void k12(read_only read_only image1d_t i){} // expected-warning {{duplicate 'read_only' declaration specifier}}
 
-#if __OPENCL_C_VERSION__ >= 200
+#if (__OPENCL_C_VERSION__ == 200) || (__OPENCL_C_VERSION__ == 300 && defined(__opencl_c_read_write_images))
 kernel void k13(read_write pipe int i){} // expected-error{{access qualifier 'read_write' can not be used for 'read_only pipe int'}}
 #else
-kernel void k13(__read_write image1d_t i){} // expected-error{{access qualifier '__read_write' can not be used for '__read_write image1d_t' prior to OpenCL version 2.0}}
-#endif
-
-#if __OPENCL_C_VERSION__ >= 200
-void myPipeWrite(write_only pipe int); // expected-note {{passing argument to parameter here}}
-kernel void k14(read_only pipe int p) {
-  myPipeWrite(p); // expected-error {{passing '__private read_only pipe int' to parameter of incompatible type 'write_only pipe int'}}
-}
+kernel void k13(__read_write image1d_t i){} // expected-error{{access qualifier '__read_write' can not be used for '__read_write image1d_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
 #endif
 
 #if __OPENCL_C_VERSION__ < 200
 kernel void test_image3d_wo(write_only image3d_t img) {} // expected-error {{use of type '__write_only image3d_t' requires cl_khr_3d_image_writes support}}
 #endif
 
-#if __OPENCL_C_VERSION__ >= 200
+#if (__OPENCL_C_VERSION__ == 200) || (__OPENCL_C_VERSION__ == 300 && defined(__opencl_c_read_write_images))
 kernel void read_write_twice_typedef(read_write img1d_rw i){} // expected-warning {{duplicate 'read_write' declaration specifier}}
-// expected-note@-74 {{previously declared 'read_write' here}}
+// expected-note@-67 {{previously declared 'read_write' here}}
+#endif
+
+#if OPENCL_C_VERSION__ >= 200
+void myPipeWrite(write_only pipe int); // expected-note {{passing argument to parameter here}}
+kernel void k14(read_only pipe int p) {
+  myPipeWrite(p); // expected-error {{passing '__private read_only pipe int' to parameter of incompatible type 'write_only pipe int'}}
+}
 
 kernel void pipe_ro_twice(read_only read_only pipe int i){} // expected-warning{{duplicate 'read_only' declaration specifier}}
 // Conflicting access qualifiers
@@ -94,7 +96,7 @@ kernel void pipe_ro_twice_typedef(read_only ROPipeInt i){} // expected-warning{{
 
 kernel void pass_ro_typedef_to_wo(ROPipeInt p) {
   myPipeWrite(p); // expected-error {{passing '__private ROPipeInt' (aka '__private read_only pipe int') to parameter of incompatible type 'write_only pipe int'}}
-  // expected-note@-25 {{passing argument to parameter here}}
+  // expected-note@-16 {{passing argument to parameter here}}
 }
 #endif
 
