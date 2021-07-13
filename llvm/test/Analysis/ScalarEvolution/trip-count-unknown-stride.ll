@@ -106,5 +106,55 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+; FIXME: Currently we are more conservative for known zero stride than
+; for unknown but potentially zero stride.
+; CHECK: Determining loop execution counts for: @zero_stride
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.body: Unpredictable predicated backedge-taken count.
+; Note that this function is well defined only when %n <=s 0
+define void @zero_stride(i32* nocapture %A, i32 %n) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.05
+  %0 = load i32, i32* %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, i32* %arrayidx, align 4
+  %add = add nsw i32 %i.05, 0
+  %cmp = icmp slt i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end, !llvm.loop !8
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; CHECK: Determining loop execution counts for: @zero_stride_ub
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.body: Unpredictable predicated backedge-taken count.
+; Note that this function will always execute undefined behavior and thus
+; any value is valid for a backedge taken count.
+define void @zero_stride_ub(i32* nocapture %A, i32 %n, i32 %s) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.05
+  %0 = load i32, i32* %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, i32* %arrayidx, align 4
+  %add = add nsw i32 %i.05, 0
+  %cmp = icmp slt i32 %add, 2
+  br i1 %cmp, label %for.body, label %for.end, !llvm.loop !8
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+
 !8 = distinct !{!8, !9}
 !9 = !{!"llvm.loop.mustprogress"}
