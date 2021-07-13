@@ -556,22 +556,35 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
     }
 
     if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
-      DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
-         DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
+      // Check whether we need to update the pointer on the device
+      bool UpdateDevPtr = false;
+
       uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
-      void *&TgtPtrBase = AsyncInfo.getVoidPtrLocation();
-      TgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
-      int rt = Device.submitData(PointerTgtPtrBegin, &TgtPtrBase,
-                                 sizeof(void *), AsyncInfo);
-      if (rt != OFFLOAD_SUCCESS) {
-        REPORT("Copying data to device failed.\n");
-        return OFFLOAD_FAIL;
-      }
-      // create shadow pointers for this entry
+      void *ExpectedTgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
+
       Device.ShadowMtx.lock();
-      Device.ShadowPtrMap[Pointer_HstPtrBegin] = {
-          HstPtrBase, PointerTgtPtrBegin, TgtPtrBase};
+      auto Entry = Device.ShadowPtrMap.find(Pointer_HstPtrBegin);
+      // If this pointer is not in the map we need to insert it.
+      if (Entry == Device.ShadowPtrMap.end()) {
+        // create shadow pointers for this entry
+        Device.ShadowPtrMap[Pointer_HstPtrBegin] = {
+            HstPtrBase, PointerTgtPtrBegin, ExpectedTgtPtrBase};
+        UpdateDevPtr = true;
+      }
       Device.ShadowMtx.unlock();
+
+      if (UpdateDevPtr) {
+        DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
+           DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
+        void *&TgtPtrBase = AsyncInfo.getVoidPtrLocation();
+        TgtPtrBase = ExpectedTgtPtrBase;
+        int rt = Device.submitData(PointerTgtPtrBegin, &TgtPtrBase,
+                                   sizeof(void *), AsyncInfo);
+        if (rt != OFFLOAD_SUCCESS) {
+          REPORT("Copying data to device failed.\n");
+          return OFFLOAD_FAIL;
+        }
+      }
     }
   }
 
