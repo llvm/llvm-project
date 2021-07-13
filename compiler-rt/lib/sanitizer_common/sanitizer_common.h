@@ -990,7 +990,7 @@ struct SignalContext {
 };
 
 void InitializePlatformEarly();
-void MaybeReexec();
+void MaybeReexec(); 
 
 template <typename Fn>
 class RunOnDestruction {
@@ -1056,6 +1056,13 @@ class ArrayRef {
   T *begin_ = nullptr;
   T *end_ = nullptr;
 };
+
+#define PRINTF_128(v)                                                         \
+  (*((u8 *)&v + 0)), (*((u8 *)&v + 1)), (*((u8 *)&v + 2)), (*((u8 *)&v + 3)), \
+      (*((u8 *)&v + 4)), (*((u8 *)&v + 5)), (*((u8 *)&v + 6)),                \
+      (*((u8 *)&v + 7)), (*((u8 *)&v + 8)), (*((u8 *)&v + 9)),                \
+      (*((u8 *)&v + 10)), (*((u8 *)&v + 11)), (*((u8 *)&v + 12)),             \
+      (*((u8 *)&v + 13)), (*((u8 *)&v + 14)), (*((u8 *)&v + 15))
 
 }  // namespace __sanitizer
 
