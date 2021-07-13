@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=-__opencl_c_images %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=-__opencl_c_images,-__opencl_c_read_write_images %s
 // RUN: %clang_cc1 -triple spir-unknown-unknown -verify -cl-std=CL3.0 -cl-ext=+__opencl_c_images %s
 
 #ifdef __opencl_c_images
