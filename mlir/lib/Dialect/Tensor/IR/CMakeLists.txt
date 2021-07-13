@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRTensor
   MLIRCastInterfaces
   MLIRDialectUtils
   MLIRIR
+  MLIRInferTypeOpInterface
   MLIRSideEffectInterfaces
   MLIRSupport
   MLIRStandard
