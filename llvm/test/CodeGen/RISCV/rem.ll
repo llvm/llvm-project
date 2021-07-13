@@ -76,10 +76,8 @@ define i32 @urem_constant_lhs(i32 %a) nounwind {
 ;
 ; RV64IM-LABEL: urem_constant_lhs:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a0, a0, 32
-; RV64IM-NEXT:    srli a0, a0, 32
 ; RV64IM-NEXT:    addi a1, zero, 10
-; RV64IM-NEXT:    remu a0, a1, a0
+; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = urem i32 10, %a
   ret i32 %1
@@ -397,7 +395,7 @@ define i8 @urem8_constant_lhs(i8 %a) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    andi a0, a0, 255
 ; RV64IM-NEXT:    addi a1, zero, 10
-; RV64IM-NEXT:    remu a0, a1, a0
+; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = urem i8 10, %a
   ret i8 %1
@@ -587,7 +585,7 @@ define i16 @urem16_constant_lhs(i16 %a) nounwind {
 ; RV64IM-NEXT:    addiw a1, a1, -1
 ; RV64IM-NEXT:    and a0, a0, a1
 ; RV64IM-NEXT:    addi a1, zero, 10
-; RV64IM-NEXT:    remu a0, a1, a0
+; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = urem i16 10, %a
   ret i16 %1
