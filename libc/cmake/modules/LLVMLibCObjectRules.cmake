@@ -1,7 +1,11 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
 
 function(_get_common_compile_options output_var)
-  set(${output_var} -fpie ${LLVM_CXX_STD_default} -ffreestanding ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN} PARENT_SCOPE)
+  set(compile_options ${LLVM_CXX_STD_default} ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
+  if(NOT ${LIBC_TARGET_OS} STREQUAL "windows")
+    set(compile_options ${compile_options} -fpie -ffreestanding)
+  endif()
+  set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
 
 # Rule which is essentially a wrapper over add_library to compile a set of
