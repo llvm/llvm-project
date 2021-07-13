@@ -114,6 +114,46 @@ define i32 @test_call_indirect(i32 (i32)* %a, i32 %b) nounwind {
   ret i32 %1
 }
 
+; Make sure we don't use t0 as the source for jalr as that is a hint to pop the
+; return address stack on some microarchitectures.
+define i32 @test_call_indirect_no_t0(i32 (i32, i32, i32, i32, i32, i32, i32)* %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) nounwind {
+; RV32I-LABEL: test_call_indirect_no_t0:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv t1, a0
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    mv a1, a2
+; RV32I-NEXT:    mv a2, a3
+; RV32I-NEXT:    mv a3, a4
+; RV32I-NEXT:    mv a4, a5
+; RV32I-NEXT:    mv a5, a6
+; RV32I-NEXT:    mv a6, a7
+; RV32I-NEXT:    jalr t1
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32I-PIC-LABEL: test_call_indirect_no_t0:
+; RV32I-PIC:       # %bb.0:
+; RV32I-PIC-NEXT:    addi sp, sp, -16
+; RV32I-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-PIC-NEXT:    mv t1, a0
+; RV32I-PIC-NEXT:    mv a0, a1
+; RV32I-PIC-NEXT:    mv a1, a2
+; RV32I-PIC-NEXT:    mv a2, a3
+; RV32I-PIC-NEXT:    mv a3, a4
+; RV32I-PIC-NEXT:    mv a4, a5
+; RV32I-PIC-NEXT:    mv a5, a6
+; RV32I-PIC-NEXT:    mv a6, a7
+; RV32I-PIC-NEXT:    jalr t1
+; RV32I-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-PIC-NEXT:    addi sp, sp, 16
+; RV32I-PIC-NEXT:    ret
+  %1 = call i32 %a(i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
+  ret i32 %1
+}
+
 ; Ensure that calls to fastcc functions aren't rejected. Such calls may be
 ; introduced when compiling with optimisation.
 
