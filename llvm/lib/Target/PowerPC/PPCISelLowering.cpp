@@ -14530,7 +14530,7 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     unsigned ValidLaneWidth =
         SToVLHS ? SToVLHS.getValueType().getScalarSizeInBits() /
                       LHS.getValueType().getScalarSizeInBits()
-                : SToVRHS.getValueType().getVectorNumElements() /
+                : SToVRHS.getValueType().getScalarSizeInBits() /
                       RHS.getValueType().getScalarSizeInBits();
 
     // Initially assume that neither input is permuted. These will be adjusted
