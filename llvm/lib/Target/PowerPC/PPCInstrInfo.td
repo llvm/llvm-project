@@ -5260,6 +5260,15 @@ def SETB : XForm_44<31, 128, (outs gprc:$RT), (ins crrc:$BFA),
                        "setb $RT, $BFA", IIC_IntGeneral>;
 } // IsISA3_0
 
+let Predicates = [IsISA3_0] in {
+def : Pat<(i32 (int_ppc_cmprb i32:$a, gprc:$b, gprc:$c)),
+          (i32 (SETB (CMPRB u1imm:$a, $b, $c)))>;
+}
+def : Pat<(i32 (int_ppc_mulhw gprc:$a, gprc:$b)),
+          (i32 (MULHW $a, $b))>;
+def : Pat<(i32 (int_ppc_mulhwu gprc:$a, gprc:$b)),
+          (i32 (MULHWU $a, $b))>;
+
 // Fast 32-bit reverse bits algorithm:
 // Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):
 // n = ((n >> 1) & 0x55555555) | ((n << 1) & 0xAAAAAAAA);
