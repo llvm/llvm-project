@@ -64,8 +64,7 @@ struct SizeClassAllocator64LocalCache {
   void Drain(SizeClassAllocator *allocator) {
     for (uptr i = 1; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
-      while (c->count > 0)
-        Drain(c, allocator, i, c->count);
+      while (c->count > 0) Drain(c, allocator, i, c->count);
     }
   }
 
