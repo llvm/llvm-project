@@ -18,6 +18,7 @@
 # CHECK-NEXT:   0x0 R_AMDGPU_REL32_LO       - 0x0
 # CHECK-NEXT:   0x0 R_AMDGPU_REL32_HI       - 0x0
 # CHECK-NEXT:   0x0 R_AMDGPU_RELATIVE64     - 0x0
+# CHECK-NEXT:   0x0 R_AMDGPU_REL16          - 0x0
 # CHECK-NEXT: }
 
 !ELF
@@ -43,3 +44,4 @@ Sections:
       - Type: R_AMDGPU_REL32_LO
       - Type: R_AMDGPU_REL32_HI
       - Type: R_AMDGPU_RELATIVE64
+      - Type: R_AMDGPU_REL16
