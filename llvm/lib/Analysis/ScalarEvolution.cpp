@@ -11653,6 +11653,30 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (PredicatedIV || !NoWrap || isKnownNonPositive(Stride) ||
         !loopIsFiniteByAssumption(L))
       return getCouldNotCompute();
+
+    // We allow a potentially zero stride, but we need to divide by stride
+    // below.  Since the loop can't be infinite and this check must control
+    // the sole exit, we can infer the exit must be taken on the first
+    // iteration (e.g. backedge count = 0) if the stride is zero.  Given that,
+    // we know the numerator in the divides below must be zero, so we can
+    // pick an arbitrary non-zero value for the denominator (e.g. stride)
+    // and produce the right result.
+    // FIXME: Handle the case where Stride is poison?
+    auto wouldZeroStrideBeUB = [&]() {
+      // Proof by contradiction.  Suppose the stride were zero.  If we can
+      // prove that the backedge *is* taken on the first iteration, then since
+      // we know this condition controls the sole exit, we must have an
+      // infinite loop.  We can't have a (well defined) infinite loop per
+      // check just above.
+      // Note: The (Start - Stride) term is used to get the start' term from
+      // (start' + stride,+,stride). Remember that we only care about the
+      // result of this expression when stride == 0 at runtime.
+      auto *StartIfZero = getMinusSCEV(IV->getStart(), Stride);
+      return isLoopEntryGuardedByCond(L, Cond, StartIfZero, RHS);
+    };
+    if (!isKnownNonZero(Stride) && !wouldZeroStrideBeUB()) {
+      Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
+    }
   } else if (!Stride->isOne() && !NoWrap) {
     auto isUBOnWrap = [&]() {
       // Can we prove this loop *must* be UB if overflow of IV occurs?

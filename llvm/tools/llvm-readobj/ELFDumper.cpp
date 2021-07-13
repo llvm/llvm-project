@@ -6702,6 +6702,55 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printHashHistograms() {
   W.startLine() << "Hash Histogram not implemented!\n";
 }
 
+// Returns true if rel/rela section exists, and populates SymbolIndices.
+// Otherwise returns false.
+template <class ELFT>
+static bool getSymbolIndices(const typename ELFT::Shdr *CGRelSection,
+                             const ELFFile<ELFT> &Obj,
+                             const LLVMELFDumper<ELFT> *Dumper,
+                             SmallVector<uint32_t, 128> &SymbolIndices) {
+  if (!CGRelSection) {
+    Dumper->reportUniqueWarning(
+        "relocation section for a call graph section doesn't exist");
+    return false;
+  }
+
+  if (CGRelSection->sh_type == SHT_REL) {
+    typename ELFT::RelRange CGProfileRel;
+    Expected<typename ELFT::RelRange> CGProfileRelOrError =
+        Obj.rels(*CGRelSection);
+    if (!CGProfileRelOrError) {
+      Dumper->reportUniqueWarning("unable to load relocations for "
+                                  "SHT_LLVM_CALL_GRAPH_PROFILE section: " +
+                                  toString(CGProfileRelOrError.takeError()));
+      return false;
+    }
+
+    CGProfileRel = *CGProfileRelOrError;
+    for (const typename ELFT::Rel &Rel : CGProfileRel)
+      SymbolIndices.push_back(Rel.getSymbol(Obj.isMips64EL()));
+  } else {
+    // MC unconditionally produces SHT_REL, but GNU strip/objcopy may convert
+    // the format to SHT_RELA
+    // (https://sourceware.org/bugzilla/show_bug.cgi?id=28035)
+    typename ELFT::RelaRange CGProfileRela;
+    Expected<typename ELFT::RelaRange> CGProfileRelaOrError =
+        Obj.relas(*CGRelSection);
+    if (!CGProfileRelaOrError) {
+      Dumper->reportUniqueWarning("unable to load relocations for "
+                                  "SHT_LLVM_CALL_GRAPH_PROFILE section: " +
+                                  toString(CGProfileRelaOrError.takeError()));
+      return false;
+    }
+
+    CGProfileRela = *CGProfileRelaOrError;
+    for (const typename ELFT::Rela &Rela : CGProfileRela)
+      SymbolIndices.push_back(Rela.getSymbol(Obj.isMips64EL()));
+  }
+
+  return true;
+}
+
 template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
   llvm::MapVector<const Elf_Shdr *, const Elf_Shdr *> SecToRelocMap;
 
@@ -6723,40 +6772,22 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
       return;
     }
 
-    Elf_Rel_Range CGProfileRel;
-    bool UseReloc = (CGRelSection != nullptr);
-    if (UseReloc) {
-      Expected<Elf_Rel_Range> CGProfileRelaOrError =
-          this->Obj.rels(*CGRelSection);
-      if (!CGProfileRelaOrError) {
-        this->reportUniqueWarning("unable to load relocations for "
-                                  "SHT_LLVM_CALL_GRAPH_PROFILE section: " +
-                                  toString(CGProfileRelaOrError.takeError()));
-        UseReloc = false;
-      } else
-        CGProfileRel = *CGProfileRelaOrError;
-
-      if (UseReloc && CGProfileRel.size() != (CGProfileOrErr->size() * 2)) {
-        this->reportUniqueWarning(
-            "number of from/to pairs does not match number of frequencies");
-        UseReloc = false;
-      }
-    } else
+    SmallVector<uint32_t, 128> SymbolIndices;
+    bool UseReloc =
+        getSymbolIndices<ELFT>(CGRelSection, this->Obj, this, SymbolIndices);
+    if (UseReloc && SymbolIndices.size() != CGProfileOrErr->size() * 2) {
       this->reportUniqueWarning(
-          "relocation section for a call graph section doesn't exist");
-
-    auto GetIndex = [&](uint32_t Index) {
-      const Elf_Rel_Impl<ELFT, false> &Rel = CGProfileRel[Index];
-      return Rel.getSymbol(this->Obj.isMips64EL());
-    };
+          "number of from/to pairs does not match number of frequencies");
+      UseReloc = false;
+    }
 
     ListScope L(W, "CGProfile");
     for (uint32_t I = 0, Size = CGProfileOrErr->size(); I != Size; ++I) {
       const Elf_CGProfile &CGPE = (*CGProfileOrErr)[I];
       DictScope D(W, "CGProfileEntry");
       if (UseReloc) {
-        uint32_t From = GetIndex(I * 2);
-        uint32_t To = GetIndex(I * 2 + 1);
+        uint32_t From = SymbolIndices[I * 2];
+        uint32_t To = SymbolIndices[I * 2 + 1];
         W.printNumber("From", this->getStaticSymbolName(From), From);
         W.printNumber("To", this->getStaticSymbolName(To), To);
       }

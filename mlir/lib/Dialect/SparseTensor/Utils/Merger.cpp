@@ -28,8 +28,14 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
   case Kind::kInvariant:
     assert(x == -1u && y == -1u && v);
     break;
-  case Kind::kZero:
-    assert(x == -1u && y == -1u && !v);
+  case kAbsF:
+  case kCeilF:
+  case kFloorF:
+  case kNegF:
+  case kNegI:
+    assert(x != -1u && y == -1u && !v);
+    children.e0 = x;
+    children.e1 = y;
     break;
   default:
     assert(x != -1u && y != -1u && !v);
@@ -89,22 +95,25 @@ unsigned Merger::takeConj(Kind kind, unsigned s0, unsigned s1) {
 
 unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1) {
   unsigned s = takeConj(kind, s0, s1);
-  // Followed by all in s0 and s1.
+  // Followed by all in s0.
   for (unsigned p : latSets[s0])
     latSets[s].push_back(p);
-  if (Kind::kSubF <= kind && kind <= Kind::kSubI)
-    s1 = mapZero(kind, s1);
+  // Map binary 0-y to unary -y.
+  if (kind == Kind::kSubF)
+    s1 = mapSet(Kind::kNegF, s1);
+  else if (kind == Kind::kSubI)
+    s1 = mapSet(Kind::kNegI, s1);
+  // Followed by all in s1.
   for (unsigned p : latSets[s1])
     latSets[s].push_back(p);
   return s;
 }
 
-unsigned Merger::mapZero(Kind kind, unsigned s0) {
-  assert(Kind::kSubF <= kind && kind <= Kind::kSubI);
+unsigned Merger::mapSet(Kind kind, unsigned s0) {
+  assert(Kind::kAbsF <= kind && kind <= Kind::kNegI);
   unsigned s = addSet();
-  unsigned z = addExp(Kind::kZero);
   for (unsigned p : latSets[s0]) {
-    unsigned e = addExp(kind, z, latPoints[p].exp);
+    unsigned e = addExp(kind, latPoints[p].exp);
     latPoints.push_back(LatPoint(latPoints[p].bits, e));
     latSets[s].push_back(latPoints.size() - 1);
   }
@@ -194,6 +203,12 @@ bool Merger::isConjunction(unsigned t, unsigned e) const {
   switch (tensorExps[e].kind) {
   case Kind::kTensor:
     return tensorExps[e].tensor == t;
+  case kAbsF:
+  case kCeilF:
+  case kFloorF:
+  case kNegF:
+  case kNegI:
+    return isConjunction(t, tensorExps[e].children.e0);
   case Kind::kMulF:
   case Kind::kMulI:
   case Kind::kAndI:
@@ -213,30 +228,9 @@ bool Merger::isConjunction(unsigned t, unsigned e) const {
 // Print methods (for debugging).
 //
 
-static char kindToOpSymbol(Kind kind) {
-  switch (kind) {
-  case Kind::kMulF:
-  case Kind::kMulI:
-    return '*';
-  case Kind::kDivF:
-  case Kind::kDivS:
-  case Kind::kDivU:
-    return '/';
-  case Kind::kAddF:
-  case Kind::kAddI:
-    return '+';
-  case Kind::kSubF:
-  case Kind::kSubI:
-    return '-';
-  case Kind::kAndI:
-    return '&';
-  case Kind::kOrI:
-    return '|';
-  default:
-    break;
-  }
-  llvm_unreachable("unexpected kind");
-}
+static const char *kOpSymbols[] = {"",  "",  "abs", "ceil", "floor", "-",
+                                   "-", "*", "*",   "/",    "/",     "+",
+                                   "+", "-", "-",   "&",    "|",     "^"};
 
 void Merger::dumpExp(unsigned e) const {
   switch (tensorExps[e].kind) {
@@ -250,13 +244,18 @@ void Merger::dumpExp(unsigned e) const {
   case Kind::kInvariant:
     llvm::dbgs() << "invariant";
     break;
-  case Kind::kZero:
-    llvm::dbgs() << "zero";
+  case kAbsF:
+  case kCeilF:
+  case kFloorF:
+  case kNegF:
+  case kNegI:
+    llvm::dbgs() << kOpSymbols[tensorExps[e].kind] << " ";
+    dumpExp(tensorExps[e].children.e0);
     break;
   default:
     llvm::dbgs() << "(";
     dumpExp(tensorExps[e].children.e0);
-    llvm::dbgs() << " " << kindToOpSymbol(tensorExps[e].kind) << " ";
+    llvm::dbgs() << " " << kOpSymbols[tensorExps[e].kind] << " ";
     dumpExp(tensorExps[e].children.e1);
     llvm::dbgs() << ")";
   }
@@ -315,8 +314,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   Kind kind = tensorExps[e].kind;
   switch (kind) {
   case Kind::kTensor:
-  case Kind::kInvariant:
-  case Kind::kZero: {
+  case Kind::kInvariant: {
     // Either the index is really used in the tensor expression, or it is
     // set to the undefined index in that dimension. An invariant expression
     // is set to a synthetic tensor with undefined indices only.
@@ -325,6 +323,18 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     latSets[s].push_back(addLat(t, i, e));
     return s;
   }
+  case kAbsF:
+  case kCeilF:
+  case kFloorF:
+  case kNegF:
+  case kNegI:
+    // A zero preserving operation (viz. f(0) = 0, [Bik96,Ch5]) maps the
+    // lattice set of the operand through the operator into a new set.
+    //
+    //  -y|!y | y |
+    //  --+---+---+
+    //    | 0 |-y |
+    return mapSet(kind, buildLattices(tensorExps[e].children.e0, i));
   case Kind::kMulF:
   case Kind::kMulI:
   case Kind::kAndI:
@@ -357,16 +367,12 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     return takeConj(kind, // take binary conjunction
                     buildLattices(tensorExps[e].children.e0, i),
                     buildLattices(tensorExps[e].children.e1, i));
-  case Kind::kSubF:
-  case Kind::kSubI:
-    // Special case: 0-y is -y.
-    if (tensorExps[tensorExps[e].children.e0].kind == Kind::kZero)
-      return mapZero(kind, // maps to 0-y with just y's lattices
-                     buildLattices(tensorExps[e].children.e1, i));
-    LLVM_FALLTHROUGH;
   case Kind::kAddF:
   case Kind::kAddI:
+  case Kind::kSubF:
+  case Kind::kSubI:
   case Kind::kOrI:
+  case Kind::kXorI:
     // An additive operation needs to be performed
     // for the disjunction of sparse iteration spaces.
     //
@@ -420,10 +426,15 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   if (def->getNumOperands() == 1) {
     auto x = buildTensorExp(op, def->getOperand(0));
     if (x.hasValue()) {
-      unsigned e0 = addExp(Kind::kZero);
-      unsigned e1 = x.getValue();
+      unsigned e = x.getValue();
+      if (isa<AbsFOp>(def))
+        return addExp(Kind::kAbsF, e);
+      if (isa<CeilFOp>(def))
+        return addExp(Kind::kCeilF, e);
+      if (isa<FloorFOp>(def))
+        return addExp(Kind::kFloorF, e);
       if (isa<NegFOp>(def))
-        return addExp(Kind::kSubF, e0, e1);
+        return addExp(Kind::kNegF, e);
       // TODO: no negi in std?
     }
   }
@@ -457,6 +468,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(Kind::kAndI, e0, e1);
       if (isa<OrOp>(def))
         return addExp(Kind::kOrI, e0, e1);
+      if (isa<XOrOp>(def))
+        return addExp(Kind::kXorI, e0, e1);
     }
   }
   // Cannot build.
@@ -468,8 +481,18 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
   switch (tensorExps[e].kind) {
   case Kind::kTensor:
   case Kind::kInvariant:
-  case Kind::kZero:
     llvm_unreachable("unexpected non-op");
+  case kAbsF:
+    return rewriter.create<AbsFOp>(loc, v0);
+  case kCeilF:
+    return rewriter.create<CeilFOp>(loc, v0);
+  case kFloorF:
+    return rewriter.create<FloorFOp>(loc, v0);
+  case kNegF:
+    return rewriter.create<NegFOp>(loc, v0);
+  case kNegI:
+    assert(v1); // no negi in std
+    return rewriter.create<SubIOp>(loc, v0, v1);
   case Kind::kMulF:
     return rewriter.create<MulFOp>(loc, v0, v1);
   case Kind::kMulI:
@@ -492,6 +515,8 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
     return rewriter.create<AndOp>(loc, v0, v1);
   case Kind::kOrI:
     return rewriter.create<OrOp>(loc, v0, v1);
+  case Kind::kXorI:
+    return rewriter.create<XOrOp>(loc, v0, v1);
   }
   llvm_unreachable("unexpected expression kind in build");
 }
