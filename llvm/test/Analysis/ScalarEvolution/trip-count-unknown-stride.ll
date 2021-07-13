@@ -106,6 +106,32 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+; A more complex case with pre-increment compare instead of post-increment.
+; CHECK-LABEL: Determining loop execution counts for: @foo5
+; CHECK: Loop %for.body: backedge-taken count is ((-1 + (-1 * %start) + (%n smax %start) + %s) /u %s)
+
+; We should have a conservative estimate for the max backedge taken count for
+; loops with unknown stride.
+; CHECK: max backedge-taken count is -1
+
+define void @foo5(i32* nocapture %A, i32 %n, i32 %s, i32 %start) mustprogress {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ %start, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.05
+  %0 = load i32, i32* %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, i32* %arrayidx, align 4
+  %add = add nsw i32 %i.05, %s
+  %cmp = icmp slt i32 %i.05, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 ; FIXME: Currently we are more conservative for known zero stride than
 ; for unknown but potentially zero stride.
 ; CHECK: Determining loop execution counts for: @zero_stride
