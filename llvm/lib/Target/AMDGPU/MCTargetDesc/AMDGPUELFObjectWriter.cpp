@@ -80,9 +80,12 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
     const auto *SymA = Target.getSymA();
     assert(SymA);
 
-    Ctx.reportError(Fixup.getLoc(),
-                    Twine("undefined label '") + SymA->getSymbol().getName() + "'");
-    return ELF::R_AMDGPU_NONE;
+    if (SymA->getSymbol().isUndefined()) {
+      Ctx.reportError(Fixup.getLoc(), Twine("undefined label '") +
+                                          SymA->getSymbol().getName() + "'");
+      return ELF::R_AMDGPU_NONE;
+    }
+    return ELF::R_AMDGPU_REL16;
   }
 
   llvm_unreachable("unhandled relocation type");
