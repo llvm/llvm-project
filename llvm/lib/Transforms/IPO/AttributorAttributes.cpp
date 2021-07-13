@@ -352,13 +352,15 @@ static bool genericValueTraversal(
 
     if (UseValueSimplify && !isa<Constant>(V)) {
       bool UsedAssumedInformation = false;
-      Optional<Constant *> C =
-          A.getAssumedConstant(*V, QueryingAA, UsedAssumedInformation);
-      if (!C.hasValue())
+      Optional<Value *> SimpleV =
+          A.getAssumedSimplified(*V, QueryingAA, UsedAssumedInformation);
+      if (!SimpleV.hasValue())
         continue;
-      if (Value *NewV = C.getValue()) {
-        Worklist.push_back({NewV, CtxI});
-        continue;
+      if (Value *NewV = SimpleV.getValue()) {
+        if (NewV != V) {
+          Worklist.push_back({NewV, CtxI});
+          continue;
+        }
       }
     }
 
