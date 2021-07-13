@@ -331,7 +331,7 @@ getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
 
   std::error_code EC;
   auto Out = std::make_unique<raw_fd_ostream>(
-      Opts.OutputPath, EC, (Binary ? sys::fs::F_None : sys::fs::F_Text));
+      Opts.OutputPath, EC, (Binary ? sys::fs::OF_None : sys::fs::OF_Text));
   if (EC) {
     Diags.Report(diag::err_fe_unable_to_open_output)
         << Opts.OutputPath << EC.message();
@@ -405,8 +405,9 @@ static bool executeAssembler(AssemblerInvocation &Opts,
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(Opts.Triple, Opts.CPU, FS));
 
-  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(), MOFI.get(),
+  MCContext Ctx(Triple(Opts.Triple), MAI.get(), MRI.get(),
                 STI.get(), &SrcMgr);
+  Ctx.setObjectFileInfo(MOFI.get());
 
   bool PIC = false;
   if (Opts.RelocationModel == "static") {
@@ -555,7 +556,7 @@ static amd_comgr_status_t outputToFile(StringRef Data, StringRef Path) {
   }
   std::error_code EC;
   ProfilePoint Point("FileIO");
-  raw_fd_ostream OS(Path, EC, fs::F_None);
+  raw_fd_ostream OS(Path, EC, fs::OF_None);
   if (EC) {
     return AMD_COMGR_STATUS_ERROR;
   }

@@ -106,8 +106,10 @@ These include:
 
 * `ROCM_PATH`: If this is set it is used as an absolute path to the root of the
   ROCm installation, which is used when determining the default values for
-  `HIP_PATH` and `LLVM_PATH` (see below). If this is not set, it has a default
-  value of "/opt/rocm".
+  `HIP_PATH` and `LLVM_PATH` (see below). If this is not set and if a ROCM
+  package is provided during the build, ROCM path is set to it. Otherwise Comgr
+  tries to construct the ROCM path from the path where amd_comgr library
+  is located.
 * `HIP_PATH`: If this is set it is used as an absolute path to the root of the
   HIP installation. If this is not set, it has a default value of
   "${ROCM_PATH}/hip".

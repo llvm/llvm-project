@@ -120,7 +120,7 @@ add_comgr_test(get_data_isa_name_test)
 add_comgr_test(include_subdirectory_test)
 add_comgr_test(options_test)
 # Test : Compile HIP only if HIP-Clang is installed.
-find_package(hip CONFIG PATHS /opt/rocm/hip QUIET)
+find_package(hip CONFIG PATHS ${ROCM_INSTALL_PATH}/hip QUIET)
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
   add_comgr_test(compile_hip_test)
   add_comgr_test(compile_hip_test_in_process)
