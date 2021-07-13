@@ -92,6 +92,14 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
       VersionMappings[OSEnvPair::macOStoMacCatalystPair().Value] =
           std::move(VersionMap);
     }
+    if (const auto *Mapping = VM->getObject("iOSMac_macOS")) {
+      auto VersionMap = RelatedTargetVersionMapping::parseJSON(
+          *Mapping, *MaximumDeploymentVersion);
+      if (!VersionMap)
+        return None;
+      VersionMappings[OSEnvPair::macCatalystToMacOSPair().Value] =
+          std::move(VersionMap);
+    }
   }
 
   return DarwinSDKInfo(std::move(*Version),

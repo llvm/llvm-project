@@ -93,7 +93,7 @@
 // CHECK-CHECK-ARMV7_IPHONE3_0-NOT: -fobjc-dispatch-method
 // CHECK-CHECK-ARMV7_IPHONE3_0: darwin-objc-defaults
 
-// RUN: %clang -target x86_64-apple-ios13-macabi -S -### %s 2> %t
+// RUN: %clang -target x86_64-apple-ios13.1-macabi -S -### %s 2> %t
 // RUN: FileCheck --check-prefix CHECK-CHECK-MACCATALYST < %t %s
 
 // CHECK-CHECK-MACCATALYST: "-cc1"
