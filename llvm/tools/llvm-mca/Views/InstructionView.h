@@ -1,4 +1,4 @@
-//===----------------------- InstrucionView.h -----------------------------*- C++ -*-===//
+//===----------------------- InstructionView.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,8 +16,8 @@
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTIONVIEW_H
 
 #include "Views/View.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace mca {
@@ -34,15 +34,12 @@ class InstructionView : public View {
 public:
   void printView(llvm::raw_ostream &) const override {}
   InstructionView(const llvm::MCSubtargetInfo &STI,
-                  llvm::MCInstPrinter &Printer,
-                  llvm::ArrayRef<llvm::MCInst> S)
+                  llvm::MCInstPrinter &Printer, llvm::ArrayRef<llvm::MCInst> S)
       : STI(STI), MCIP(Printer), Source(S), InstrStream(InstructionString) {}
 
   virtual ~InstructionView();
 
-  StringRef getNameAsString() const override {
-    return "Instructions";
-  }
+  StringRef getNameAsString() const override { return "Instructions"; }
 
   // Return a reference to a string representing a given machine instruction.
   // The result should be used or copied before the next call to
