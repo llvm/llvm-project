@@ -810,6 +810,27 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+@a = external global [2 x [512 x i64]], align 16
+@b = external global [512 x [4 x i64]], align 16
+
+define void @ptr_step_crash() {
+; CHECK-LABEL: @ptr_step_crash(
+entry:
+  br label %for.body42.3
+
+for.body42.3:                                     ; preds = %for.body42.3, %entry
+  %k.2207.3 = phi i32 [ -512, %entry ], [ %inc63.3, %for.body42.3 ]
+  %sub46.3 = add nsw i32 %k.2207.3, 512
+  %idxprom47.3 = zext i32 %sub46.3 to i64
+  %arrayidx48.3 = getelementptr inbounds [2 x [512 x i64]], [2 x [512 x i64]]* @a, i64 0, i64 0, i64 %idxprom47.3
+  %arrayidx55.3 = getelementptr inbounds [512 x [4 x i64]], [512 x [4 x i64]]* @b, i64 0, i64 %idxprom47.3, i64 3
+  %0 = load i64, i64* %arrayidx55.3, align 8
+  %inc63.3 = add nsw i32 %k.2207.3, 1
+  br i1 undef, label %for.inc65.3, label %for.body42.3
+
+for.inc65.3:                                      ; preds = %for.body42.3
+  ret void
+}
+
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
-
