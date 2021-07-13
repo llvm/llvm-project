@@ -90,12 +90,13 @@ static void __kmpc_spmd_kernel_init(bool RequiresFullRuntime) {
   int threadId = GetThreadIdInBlock();
   if (threadId == 0) {
     usedSlotIdx = __kmpc_impl_smid() % MAX_SM;
-    parallelLevel[0] =
-        1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
-  } else if (GetLaneId() == 0) {
+  }
+
+  if (GetLaneId() == 0) {
     parallelLevel[GetWarpId()] =
         1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
   }
+
   __kmpc_data_sharing_init_stack();
   if (!RequiresFullRuntime)
     return;
