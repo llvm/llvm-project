@@ -7405,8 +7405,8 @@ static void handleOpenCLAccessAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *PDecl = dyn_cast<ParmVarDecl>(D)) {
     const Type *DeclTy = PDecl->getType().getCanonicalType().getTypePtr();
     if (AL.getAttrName()->getName().find("read_write") != StringRef::npos) {
-      if ((!S.getLangOpts().OpenCLCPlusPlus &&
-               (S.getLangOpts().OpenCLVersion < 200) ||
+      if (((!S.getLangOpts().OpenCLCPlusPlus &&
+            (S.getLangOpts().OpenCLVersion < 200)) ||
            (S.getLangOpts().OpenCLVersion == 300 &&
             !S.getOpenCLOptions().isSupported("__opencl_c_read_write_images",
                                               S.getLangOpts()))) ||
