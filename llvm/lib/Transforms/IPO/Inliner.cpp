@@ -1007,6 +1007,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
         for (CallBase *ICB : reverse(IFI.InlinedCallSites)) {
           Function *NewCallee = ICB->getCalledFunction();
+          assert(!(NewCallee && NewCallee->isIntrinsic()) &&
+                 "Intrinsic calls should not be tracked.");
           if (!NewCallee) {
             // Try to promote an indirect (virtual) call without waiting for
             // the post-inline cleanup and the next DevirtSCCRepeatedPass
