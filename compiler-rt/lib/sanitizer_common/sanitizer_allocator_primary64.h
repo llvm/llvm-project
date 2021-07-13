@@ -42,6 +42,50 @@ struct SizeClassAllocator64FlagMasks {  //  Bit masks.
   };
 };
 
+template <typename Allocator>
+class MemoryMapper {
+ public:
+  typedef typename Allocator::CompactPtrT CompactPtrT;
+  typedef Allocator ThisT;
+
+  MemoryMapper(const ThisT &base_allocator, uptr class_id)
+      : allocator(base_allocator),
+        region_base(base_allocator.GetRegionBeginBySizeClass(class_id)),
+        released_ranges_count(0),
+        released_bytes(0) {}
+
+  uptr GetReleasedRangesCount() const { return released_ranges_count; }
+
+  uptr GetReleasedBytes() const { return released_bytes; }
+
+  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    // TODO(alekseyshl): The idea to explore is to check if we have enough
+    // space between num_freed_chunks*sizeof(CompactPtrT) and
+    // mapped_free_array to fit buffer_size bytes and use that space instead
+    // of mapping a temporary one.
+    return MmapOrDieOnFatalError(buffer_size, "ReleaseToOSPageCounters");
+  }
+
+  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {
+    UnmapOrDie(buffer, buffer_size);
+  }
+
+  // Releases [from, to) range of pages back to OS.
+  void ReleasePageRangeToOS(CompactPtrT from, CompactPtrT to) {
+    const uptr from_page = allocator.CompactPtrToPointer(region_base, from);
+    const uptr to_page = allocator.CompactPtrToPointer(region_base, to);
+    ReleaseMemoryPagesToOS(from_page, to_page);
+    released_ranges_count++;
+    released_bytes += to_page - from_page;
+  }
+
+ private:
+  const ThisT &allocator;
+  const uptr region_base;
+  uptr released_ranges_count;
+  uptr released_bytes;
+};
+
 template <class Params>
 class SizeClassAllocator64 {
  public:
@@ -587,7 +631,7 @@ class SizeClassAllocator64 {
   }
 
  private:
-  friend class MemoryMapper;
+  friend class MemoryMapper<ThisT>;
 
   ReservedAddressRange address_range;
 
@@ -821,46 +865,6 @@ class SizeClassAllocator64 {
     return true;
   }
 
-  class MemoryMapper {
-   public:
-    MemoryMapper(const ThisT &base_allocator, uptr class_id)
-        : allocator(base_allocator),
-          region_base(base_allocator.GetRegionBeginBySizeClass(class_id)),
-          released_ranges_count(0),
-          released_bytes(0) {}
-
-    uptr GetReleasedRangesCount() const { return released_ranges_count; }
-
-    uptr GetReleasedBytes() const { return released_bytes; }
-
-    void *MapPackedCounterArrayBuffer(uptr buffer_size) {
-      // TODO(alekseyshl): The idea to explore is to check if we have enough
-      // space between num_freed_chunks*sizeof(CompactPtrT) and
-      // mapped_free_array to fit buffer_size bytes and use that space instead
-      // of mapping a temporary one.
-      return MmapOrDieOnFatalError(buffer_size, "ReleaseToOSPageCounters");
-    }
-
-    void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {
-      UnmapOrDie(buffer, buffer_size);
-    }
-
-    // Releases [from, to) range of pages back to OS.
-    void ReleasePageRangeToOS(CompactPtrT from, CompactPtrT to) {
-      const uptr from_page = allocator.CompactPtrToPointer(region_base, from);
-      const uptr to_page = allocator.CompactPtrToPointer(region_base, to);
-      ReleaseMemoryPagesToOS(from_page, to_page);
-      released_ranges_count++;
-      released_bytes += to_page - from_page;
-    }
-
-   private:
-    const ThisT &allocator;
-    const uptr region_base;
-    uptr released_ranges_count;
-    uptr released_bytes;
-  };
-
   // Attempts to release RAM occupied by freed chunks back to OS. The region is
   // expected to be locked.
   //
@@ -890,9 +894,9 @@ class SizeClassAllocator64 {
       }
     }
 
-    MemoryMapper memory_mapper(*this, class_id);
+    MemoryMapper<ThisT> memory_mapper(*this, class_id);
 
-    ReleaseFreeMemoryToOS<MemoryMapper>(
+    ReleaseFreeMemoryToOS(
         GetFreeArray(GetRegionBeginBySizeClass(class_id)), n, chunk_size,
         RoundUpTo(region->allocated_user, page_size) / page_size,
         &memory_mapper);
