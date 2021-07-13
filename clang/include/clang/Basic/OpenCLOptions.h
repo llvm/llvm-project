@@ -19,6 +19,9 @@
 
 namespace clang {
 
+class DiagnosticsEngine;
+class TargetInfo;
+
 namespace {
 // This enum maps OpenCL version(s) into value. These values are used as
 // a mask to indicate in which OpenCL version(s) extension is a core or
@@ -178,6 +181,16 @@ public:
                                         Args &&... args) {
     return OpenCLOptionInfo(std::forward<Args>(args)...).isAvailableIn(LO);
   }
+
+  // Diagnose feature dependencies for OpenCL C 3.0. Return false if target
+  // doesn't follow these requirements.
+  static bool diagnoseUnsupportedFeatureDependencies(const TargetInfo &TI,
+                                                     DiagnosticsEngine &Diags);
+
+  // Diagnose that features and equivalent extension are set to same values.
+  // Return false if target doesn't follow these requirements.
+  static bool diagnoseFeatureExtensionDifferences(const TargetInfo &TI,
+                                                  DiagnosticsEngine &Diags);
 
 private:
   // Option is enabled via pragma
