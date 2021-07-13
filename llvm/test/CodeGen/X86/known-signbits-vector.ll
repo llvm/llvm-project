@@ -666,16 +666,12 @@ define i32 @signbits_cmpss(float %0, float %1) {
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vcmpeqss {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    negl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: signbits_cmpss:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovd %xmm0, %eax
-; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    negl %eax
 ; X64-NEXT:    retq
   %3 = fcmp oeq float %0, %1
   %4 = sext i1 %3 to i32
@@ -687,7 +683,6 @@ define i32 @signbits_cmpss_int(<4 x float> %0, <4 x float> %1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vextractps $0, %xmm0, %eax
-; CHECK-NEXT:    sarl $31, %eax
 ; CHECK-NEXT:    ret{{[l|q]}}
   %3 = tail call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %0, <4 x float> %1, i8 0)
   %4 = bitcast <4 x float> %3 to <4 x i32>
@@ -712,8 +707,6 @@ define i64 @signbits_cmpsd(double %0, double %1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    negq %rax
 ; X64-NEXT:    retq
   %3 = fcmp oeq double %0, %1
   %4 = sext i1 %3 to i64
@@ -725,7 +718,6 @@ define i64 @signbits_cmpsd_int(<2 x double> %0, <2 x double> %1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vextractps $1, %xmm0, %eax
-; X86-NEXT:    sarl $31, %eax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    retl
 ;
@@ -733,7 +725,6 @@ define i64 @signbits_cmpsd_int(<2 x double> %0, <2 x double> %1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    sarq $63, %rax
 ; X64-NEXT:    retq
   %3 = tail call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %0, <2 x double> %1, i8 0)
   %4 = bitcast <2 x double> %3 to <2 x i64>
