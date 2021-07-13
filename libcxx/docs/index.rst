@@ -125,8 +125,10 @@ systems that provide incomplete support.
 However, libc++ aims to provide a high-quality implementation of the C++ Standard
 Library, especially when it comes to correctness. As such, we aim to have test coverage
 for all the platforms and compilers that we claim to support. If a platform or compiler
-is not listed here, it is not officially supported. It may happen to work, but we don't
-make any guarantees. If you would like your compiler and/or platform to be listed here,
+is not listed here, it is not officially supported. It may happen to work, and
+in practice the library is known to work on some platforms not listed here, but
+we don't make any guarantees. If you would like your compiler and/or platform
+to be formally supported and listed here,
 please work with the libc++ team to set up testing for your configuration.
 
 
