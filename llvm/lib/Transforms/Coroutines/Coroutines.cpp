@@ -697,7 +697,7 @@ void CoroIdAsyncInst::checkWellFormed() const {
 
 static void checkAsyncContextProjectFunction(const Instruction *I,
                                              Function *F) {
-  auto *FunTy = cast<FunctionType>(F->getType()->getPointerElementType());
+  auto *FunTy = cast<FunctionType>(F->getValueType());
   if (!FunTy->getReturnType()->isPointerTy() ||
       !FunTy->getReturnType()->getPointerElementType()->isIntegerTy(8))
     fail(I,
