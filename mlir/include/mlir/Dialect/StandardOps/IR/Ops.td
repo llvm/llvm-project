@@ -49,7 +49,8 @@ class ArithmeticCastOp<string mnemonic, list<OpTrait> traits = []> :
       DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
       NoSideEffect, SameOperandsAndResultShape,
       DeclareOpInterfaceMethods<CastOpInterface>]> {
-  let results = (outs AnyType);
+  let arguments = (ins AnyType:$in);
+  let results = (outs AnyType:$out);
 
   let builders = [
     OpBuilder<(ins "Value":$source, "Type":$destType), [{
@@ -1146,12 +1147,12 @@ def FmaFOp : FloatTernaryOp<"fmaf"> {
 // FPExtOp
 //===----------------------------------------------------------------------===//
 
-def FPExtOp : ArithmeticCastOp<"fpext">, Arguments<(ins AnyType:$in)> {
+def FPExtOp : ArithmeticCastOp<"fpext"> {
   let summary = "cast from floating-point to wider floating-point";
   let description = [{
     Cast a floating-point value to a larger floating-point-typed value.
     The destination type must to be strictly wider than the source type.
-    Only scalars are currently supported.
+    When operating on vectors, casts elementwise.
   }];
 }
 
@@ -1159,11 +1160,12 @@ def FPExtOp : ArithmeticCastOp<"fpext">, Arguments<(ins AnyType:$in)> {
 // FPToSIOp
 //===----------------------------------------------------------------------===//
 
-def FPToSIOp : ArithmeticCastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
+def FPToSIOp : ArithmeticCastOp<"fptosi"> {
   let summary = "cast from floating-point type to integer type";
   let description = [{
     Cast from a value interpreted as floating-point to the nearest (rounding
-    towards zero) signed integer value.
+    towards zero) signed integer value. When operating on vectors, casts
+    elementwise.
   }];
 }
 
@@ -1171,11 +1173,12 @@ def FPToSIOp : ArithmeticCastOp<"fptosi">, Arguments<(ins AnyType:$in)> {
 // FPToUIOp
 //===----------------------------------------------------------------------===//
 
-def FPToUIOp : ArithmeticCastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
+def FPToUIOp : ArithmeticCastOp<"fptoui"> {
   let summary = "cast from floating-point type to integer type";
   let description = [{
     Cast from a value interpreted as floating-point to the nearest (rounding
-    towards zero) unsigned integer value.
+    towards zero) unsigned integer value. When operating on vectors, casts
+    elementwise.
   }];
 }
 
@@ -1183,13 +1186,13 @@ def FPToUIOp : ArithmeticCastOp<"fptoui">, Arguments<(ins AnyType:$in)> {
 // FPTruncOp
 //===----------------------------------------------------------------------===//
 
-def FPTruncOp : ArithmeticCastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
+def FPTruncOp : ArithmeticCastOp<"fptrunc"> {
   let summary = "cast from floating-point to narrower floating-point";
   let description = [{
     Truncate a floating-point value to a smaller floating-point-typed value.
     The destination type must be strictly narrower than the source type.
     If the value cannot be exactly represented, it is rounded using the default
-    rounding mode. Only scalars are currently supported.
+    rounding mode. When operating on vectors, casts elementwise.
   }];
 }
 
@@ -1197,7 +1200,7 @@ def FPTruncOp : ArithmeticCastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-def IndexCastOp : ArithmeticCastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
+def IndexCastOp : ArithmeticCastOp<"index_cast"> {
   let summary = "cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
@@ -1678,13 +1681,13 @@ def SignExtendIOp : Std_Op<"sexti", [NoSideEffect,
 // SIToFPOp
 //===----------------------------------------------------------------------===//
 
-def SIToFPOp : ArithmeticCastOp<"sitofp">, Arguments<(ins AnyType:$in)> {
+def SIToFPOp : ArithmeticCastOp<"sitofp"> {
   let summary = "cast from integer type to floating-point";
   let description = [{
-    Cast from a value interpreted as signed or vector of signed integers to the
-    corresponding floating-point scalar or vector value. If the value cannot be
-    exactly represented, it is rounded using the default rounding mode. Scalars
-    and vector types are currently supported.
+    Cast from a value interpreted as a signed integer to the corresponding
+    floating-point value. If the value cannot be exactly represented, it is
+    rounded using the default rounding mode. When operating on vectors, casts
+    elementwise.
   }];
 }
 
@@ -1884,13 +1887,13 @@ def TruncateIOp : Std_Op<"trunci", [NoSideEffect,
 // UIToFPOp
 //===----------------------------------------------------------------------===//
 
-def UIToFPOp : ArithmeticCastOp<"uitofp">, Arguments<(ins AnyType:$in)> {
+def UIToFPOp : ArithmeticCastOp<"uitofp"> {
   let summary = "cast from unsigned integer type to floating-point";
   let description = [{
-    Cast from a value interpreted as unsigned integer or vector of unsigned
-    integers to the corresponding scalar or vector floating-point value. If the
-    value cannot be exactly represented, it is rounded using the default
-    rounding mode. Scalars and vector types are currently supported.
+    Cast from a value interpreted as unsigned integer to the corresponding
+    floating-point value. If the value cannot be exactly represented, it is
+    rounded using the default rounding mode. When operating on vectors, casts
+    elementwise.
   }];
 }
 
