@@ -684,58 +684,30 @@ LLVM_NODISCARD ProgramStateRef setConstraints(ProgramStateRef State,
 //                       Equality/diseqiality abstraction
 //===----------------------------------------------------------------------===//
 
-/// A small helper structure representing symbolic equality.
+/// A small helper function for detecting symbolic (dis)equality.
 ///
 /// Equality check can have different forms (like a == b or a - b) and this
 /// class encapsulates those away if the only thing the user wants to check -
-/// whether it's equality/diseqiality or not and have an easy access to the
-/// compared symbols.
-struct EqualityInfo {
-public:
-  SymbolRef Left, Right;
-  // true for equality and false for disequality.
-  bool IsEquality = true;
-
-  void invert() { IsEquality = !IsEquality; }
-  /// Extract equality information from the given symbol and the constants.
-  ///
-  /// This function assumes the following expression Sym + Adjustment != Int.
-  /// It is a default because the most widespread case of the equality check
-  /// is (A == B) + 0 != 0.
-  static Optional<EqualityInfo> extract(SymbolRef Sym, const llvm::APSInt &Int,
-                                        const llvm::APSInt &Adjustment) {
-    // As of now, the only equality form supported is Sym + 0 != 0.
-    if (!Int.isNullValue() || !Adjustment.isNullValue())
-      return llvm::None;
-
-    return extract(Sym);
+/// whether it's equality/diseqiality or not.
+///
+/// \returns true if assuming this Sym to be true means equality of operands
+///          false if it means disequality of operands
+///          None otherwise
+Optional<bool> meansEquality(const SymSymExpr *Sym) {
+  switch (Sym->getOpcode()) {
+  case BO_Sub:
+    // This case is: A - B != 0 -> disequality check.
+    return false;
+  case BO_EQ:
+    // This case is: A == B != 0 -> equality check.
+    return true;
+  case BO_NE:
+    // This case is: A != B != 0 -> diseqiality check.
+    return false;
+  default:
+    return llvm::None;
   }
-  /// Extract equality information from the given symbol.
-  static Optional<EqualityInfo> extract(SymbolRef Sym) {
-    return EqualityExtractor().Visit(Sym);
-  }
-
-private:
-  class EqualityExtractor
-      : public SymExprVisitor<EqualityExtractor, Optional<EqualityInfo>> {
-  public:
-    Optional<EqualityInfo> VisitSymSymExpr(const SymSymExpr *Sym) const {
-      switch (Sym->getOpcode()) {
-      case BO_Sub:
-        // This case is: A - B != 0 -> disequality check.
-        return EqualityInfo{Sym->getLHS(), Sym->getRHS(), false};
-      case BO_EQ:
-        // This case is: A == B != 0 -> equality check.
-        return EqualityInfo{Sym->getLHS(), Sym->getRHS(), true};
-      case BO_NE:
-        // This case is: A != B != 0 -> diseqiality check.
-        return EqualityInfo{Sym->getLHS(), Sym->getRHS(), false};
-      default:
-        return llvm::None;
-      }
-    }
-  };
-};
+}
 
 //===----------------------------------------------------------------------===//
 //                            Intersection functions
@@ -866,7 +838,13 @@ public:
   }
 
   RangeSet VisitSymSymExpr(const SymSymExpr *Sym) {
-    return VisitBinaryOperator(Sym);
+    return intersect(
+        RangeFactory,
+        // If Sym is (dis)equality, we might have some information
+        // on that in our equality classes data structure.
+        getRangeForEqualities(Sym),
+        // And we should always check what we can get from the operands.
+        VisitBinaryOperator(Sym));
   }
 
 private:
@@ -907,9 +885,6 @@ private:
         // calculate the effective range set by intersecting the range set
         // for A - B and the negated range set of B - A.
         getRangeForNegatedSub(Sym),
-        // If Sym is (dis)equality, we might have some information on that
-        // in our equality classes data structure.
-        getRangeForEqualities(Sym),
         // If Sym is a comparison expression (except <=>),
         // find any other comparisons with the same operands.
         // See function description.
@@ -1188,17 +1163,21 @@ private:
     return llvm::None;
   }
 
-  Optional<RangeSet> getRangeForEqualities(SymbolRef Sym) {
-    Optional<EqualityInfo> Equality = EqualityInfo::extract(Sym);
+  Optional<RangeSet> getRangeForEqualities(const SymSymExpr *Sym) {
+    Optional<bool> Equality = meansEquality(Sym);
 
     if (!Equality)
       return llvm::None;
 
-    if (Optional<bool> AreEqual = EquivalenceClass::areEqual(
-            State, Equality->Left, Equality->Right)) {
-      if (*AreEqual == Equality->IsEquality) {
+    if (Optional<bool> AreEqual =
+            EquivalenceClass::areEqual(State, Sym->getLHS(), Sym->getRHS())) {
+      // Here we cover two cases at once:
+      //   * if Sym is equality and its operands are known to be equal -> true
+      //   * if Sym is disequality and its operands are disequal -> true
+      if (*AreEqual == *Equality) {
         return getTrueRange(Sym->getType());
       }
+      // Opposite combinations result in false.
       return getFalseRange(Sym->getType());
     }
 
@@ -1496,6 +1475,8 @@ public:
   }
 
   inline bool assignSymExprToConst(const SymExpr *Sym, Const Constraint);
+  inline bool assignSymSymExprToRangeSet(const SymSymExpr *Sym,
+                                         RangeSet Constraint);
 
 private:
   ConstraintAssignor(ProgramStateRef State, SValBuilder &Builder,
@@ -1553,6 +1534,30 @@ private:
     }
 
     return setConstraint(State, Class, NewConstraint);
+  }
+
+  ProgramStateRef trackDisequality(ProgramStateRef State, SymbolRef LHS,
+                                   SymbolRef RHS) {
+    return EquivalenceClass::markDisequal(RangeFactory, State, LHS, RHS);
+  }
+
+  ProgramStateRef trackEquality(ProgramStateRef State, SymbolRef LHS,
+                                SymbolRef RHS) {
+    return EquivalenceClass::merge(RangeFactory, State, LHS, RHS);
+  }
+
+  LLVM_NODISCARD Optional<bool> interpreteAsBool(RangeSet Constraint) {
+    assert(!Constraint.isEmpty() && "Empty ranges shouldn't get here");
+
+    if (Constraint.getConcreteValue())
+      return !Constraint.getConcreteValue()->isNullValue();
+
+    APSIntType T{Constraint.getMinValue()};
+    Const Zero = T.getZeroValue();
+    if (!Constraint.contains(Zero))
+      return true;
+
+    return llvm::None;
   }
 
   ProgramStateRef State;
@@ -1656,61 +1661,6 @@ private:
   RangeSet getSymGERange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
                          const llvm::APSInt &Adjustment);
-
-  //===------------------------------------------------------------------===//
-  // Equality tracking implementation
-  //===------------------------------------------------------------------===//
-
-  ProgramStateRef trackEQ(RangeSet NewConstraint, ProgramStateRef State,
-                          SymbolRef Sym, const llvm::APSInt &Int,
-                          const llvm::APSInt &Adjustment) {
-    return track<true>(NewConstraint, State, Sym, Int, Adjustment);
-  }
-
-  ProgramStateRef trackNE(RangeSet NewConstraint, ProgramStateRef State,
-                          SymbolRef Sym, const llvm::APSInt &Int,
-                          const llvm::APSInt &Adjustment) {
-    return track<false>(NewConstraint, State, Sym, Int, Adjustment);
-  }
-
-  template <bool EQ>
-  ProgramStateRef track(RangeSet NewConstraint, ProgramStateRef State,
-                        SymbolRef Sym, const llvm::APSInt &Int,
-                        const llvm::APSInt &Adjustment) {
-    if (NewConstraint.isEmpty())
-      // This is an infeasible assumption.
-      return nullptr;
-
-    if (ProgramStateRef NewState = setRange(State, Sym, NewConstraint)) {
-      if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
-        // If the original assumption is not Sym + Adjustment !=/</> Int,
-        // we should invert IsEquality flag.
-        Equality->IsEquality = Equality->IsEquality != EQ;
-        return track(NewState, *Equality);
-      }
-
-      return NewState;
-    }
-
-    return nullptr;
-  }
-
-  ProgramStateRef track(ProgramStateRef State, EqualityInfo ToTrack) {
-    if (ToTrack.IsEquality) {
-      return trackEquality(State, ToTrack.Left, ToTrack.Right);
-    }
-    return trackDisequality(State, ToTrack.Left, ToTrack.Right);
-  }
-
-  ProgramStateRef trackDisequality(ProgramStateRef State, SymbolRef LHS,
-                                   SymbolRef RHS) {
-    return EquivalenceClass::markDisequal(F, State, LHS, RHS);
-  }
-
-  ProgramStateRef trackEquality(ProgramStateRef State, SymbolRef LHS,
-                                SymbolRef RHS) {
-    return EquivalenceClass::merge(F, State, LHS, RHS);
-  }
 };
 
 bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
@@ -1735,6 +1685,33 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
     if (SimplifiedClasses.count(Class)) // Already simplified.
       continue;
     State = Class.simplify(Builder, RangeFactory, State);
+    if (!State)
+      return false;
+  }
+
+  return true;
+}
+
+bool ConstraintAssignor::assignSymSymExprToRangeSet(const SymSymExpr *Sym,
+                                                    RangeSet Constraint) {
+  Optional<bool> ConstraintAsBool = interpreteAsBool(Constraint);
+
+  if (!ConstraintAsBool)
+    return true;
+
+  if (Optional<bool> Equality = meansEquality(Sym)) {
+    // Here we cover two cases:
+    //   * if Sym is equality and the new constraint is true -> Sym's operands
+    //     should be marked as equal
+    //   * if Sym is disequality and the new constraint is false -> Sym's
+    //     operands should be also marked as equal
+    if (*Equality == *ConstraintAsBool) {
+      State = trackEquality(State, Sym->getLHS(), Sym->getRHS());
+    } else {
+      // Other combinations leave as with disequal operands.
+      State = trackDisequality(State, Sym->getLHS(), Sym->getRHS());
+    }
+
     if (!State)
       return false;
   }
@@ -2423,7 +2400,7 @@ RangeConstraintManager::assumeSymNE(ProgramStateRef St, SymbolRef Sym,
   RangeSet New = getRange(St, Sym);
   New = F.deletePoint(New, Point);
 
-  return trackNE(New, St, Sym, Int, Adjustment);
+  return setRange(St, Sym, New);
 }
 
 ProgramStateRef
@@ -2440,7 +2417,7 @@ RangeConstraintManager::assumeSymEQ(ProgramStateRef St, SymbolRef Sym,
   RangeSet New = getRange(St, Sym);
   New = F.intersect(New, AdjInt);
 
-  return trackEQ(New, St, Sym, Int, Adjustment);
+  return setRange(St, Sym, New);
 }
 
 RangeSet RangeConstraintManager::getSymLTRange(ProgramStateRef St,
@@ -2477,7 +2454,7 @@ RangeConstraintManager::assumeSymLT(ProgramStateRef St, SymbolRef Sym,
                                     const llvm::APSInt &Int,
                                     const llvm::APSInt &Adjustment) {
   RangeSet New = getSymLTRange(St, Sym, Int, Adjustment);
-  return trackNE(New, St, Sym, Int, Adjustment);
+  return setRange(St, Sym, New);
 }
 
 RangeSet RangeConstraintManager::getSymGTRange(ProgramStateRef St,
@@ -2514,7 +2491,7 @@ RangeConstraintManager::assumeSymGT(ProgramStateRef St, SymbolRef Sym,
                                     const llvm::APSInt &Int,
                                     const llvm::APSInt &Adjustment) {
   RangeSet New = getSymGTRange(St, Sym, Int, Adjustment);
-  return trackNE(New, St, Sym, Int, Adjustment);
+  return setRange(St, Sym, New);
 }
 
 RangeSet RangeConstraintManager::getSymGERange(ProgramStateRef St,
