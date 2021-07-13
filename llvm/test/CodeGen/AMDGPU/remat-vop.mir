@@ -193,13 +193,38 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_i32_f64_e32
-    ; GCN: dead renamable $vgpr0 = V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+machineFunctionInfo:
+  stackPtrOffsetReg:  $sgpr32
+name:            test_no_remat_v_cvt_i32_f64_e32_fp_except
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_no_remat_v_cvt_i32_f64_e32_fp_except
+    ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: SI_SPILL_V32_SAVE killed $vgpr0, %stack.1, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
+    ; GCN: renamable $vgpr1 = V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
     ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    ; GCN: renamable $vgpr0 = SI_SPILL_V32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
     %0:vgpr_32 = V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
@@ -220,10 +245,10 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: test_no_remat_v_cvt_i32_f64_e32_mode_def
     ; GCN: $mode = IMPLICIT_DEF
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
     ; GCN: SI_SPILL_V32_SAVE killed $vgpr0, %stack.1, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN: renamable $vgpr1 = V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
     ; GCN: SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     ; GCN: renamable $vgpr0 = SI_SPILL_V32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
@@ -232,9 +257,9 @@ body:             |
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
     $mode = IMPLICIT_DEF
-    %0:vgpr_32 = V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
-    %1:vgpr_32 = V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
@@ -246,18 +271,16 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_i32_f64_e64
-    ; GCN: dead renamable $vgpr0 = V_CVT_I32_F64_e64 0, 1, 0, 0, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_I32_F64_e64 0, 2, 0, 0, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_I32_F64_e64 0, 3, 0, 0, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e64 0, 1, 0, 0, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F64_e64 0, 1, 0, 0, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_I32_F64_e64 0, 2, 0, 0, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_NOP 0, implicit killed renamable $vgpr1
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e64 0, 3, 0, 0, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F64_e64 0, 3, 0, 0, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
-    %0:vgpr_32 = V_CVT_I32_F64_e64 0, 1, 0, 0, implicit $exec, implicit $mode
-    %1:vgpr_32 = V_CVT_I32_F64_e64 0, 2, 0, 0, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_I32_F64_e64 0, 3, 0, 0, implicit $exec, implicit $mode
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, 1, 0, 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, 2, 0, 0, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, 3, 0, 0, implicit $exec, implicit $mode
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
@@ -271,18 +294,16 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_i32_f64_e64_undef
-    ; GCN: dead renamable $vgpr0 = V_CVT_I32_F64_e64 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_I32_F64_e64 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_I32_F64_e64 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e64 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F64_e64 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_I32_F64_e64 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_NOP 0, implicit killed renamable $vgpr1
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F64_e64 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F64_e64 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
-    %1:vgpr_32 = V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
-    %3:vgpr_32 = V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e64 0, undef %0:vreg_64, 0, 0, implicit $exec, implicit $mode
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
     S_NOP 0, implicit %3
@@ -396,18 +417,16 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_f32_f64_e32
-    ; GCN: dead renamable $vgpr0 = V_CVT_F32_F64_e32 1, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_F32_F64_e32 2, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_F32_F64_e32 3, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_F32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_F32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_F32_F64_e32 2, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_NOP 0, implicit killed renamable $vgpr1
-    ; GCN: renamable $vgpr0 = V_CVT_F32_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_F32_F64_e32 3, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
-    %0:vgpr_32 = V_CVT_F32_F64_e32 1, implicit $exec, implicit $mode
-    %1:vgpr_32 = V_CVT_F32_F64_e32 2, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_F32_F64_e32 3, implicit $exec, implicit $mode
+    %0:vgpr_32 = nofpexcept V_CVT_F32_F64_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_F32_F64_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_F32_F64_e32 3, implicit $exec, implicit $mode
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
@@ -419,18 +438,16 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_f64_f32_e32
-    ; GCN: dead renamable $vgpr0_vgpr1 = V_CVT_F64_F32_e32 1, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr2_vgpr3 = V_CVT_F64_F32_e32 2, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0_vgpr1 = V_CVT_F64_F32_e32 3, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0_vgpr1 = V_CVT_F64_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_CVT_F64_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr2_vgpr3 = nofpexcept V_CVT_F64_F32_e32 2, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
     ; GCN: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
-    ; GCN: renamable $vgpr0_vgpr1 = V_CVT_F64_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_CVT_F64_F32_e32 3, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
     ; GCN: S_ENDPGM 0
-    %0:vreg_64_align2 = V_CVT_F64_F32_e32 1, implicit $exec, implicit $mode
-    %1:vreg_64_align2 = V_CVT_F64_F32_e32 2, implicit $exec, implicit $mode
-    %2:vreg_64_align2 = V_CVT_F64_F32_e32 3, implicit $exec, implicit $mode
+    %0:vreg_64_align2 = nofpexcept V_CVT_F64_F32_e32 1, implicit $exec, implicit $mode
+    %1:vreg_64_align2 = nofpexcept V_CVT_F64_F32_e32 2, implicit $exec, implicit $mode
+    %2:vreg_64_align2 = nofpexcept V_CVT_F64_F32_e32 3, implicit $exec, implicit $mode
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
@@ -442,18 +459,16 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_u32_f64_e32
-    ; GCN: dead renamable $vgpr0 = V_CVT_U32_F64_e32 1, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_U32_F64_e32 2, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_U32_F64_e32 3, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_U32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_U32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_U32_F64_e32 2, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_NOP 0, implicit killed renamable $vgpr1
-    ; GCN: renamable $vgpr0 = V_CVT_U32_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_U32_F64_e32 3, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
-    %0:vgpr_32 = V_CVT_U32_F64_e32 1, implicit $exec, implicit $mode
-    %1:vgpr_32 = V_CVT_U32_F64_e32 2, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_U32_F64_e32 3, implicit $exec, implicit $mode
+    %0:vgpr_32 = nofpexcept V_CVT_U32_F64_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_U32_F64_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_U32_F64_e32 3, implicit $exec, implicit $mode
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
@@ -578,18 +593,16 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_u32_f32_e32
-    ; GCN: dead renamable $vgpr0 = V_CVT_U32_F32_e32 1, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_U32_F32_e32 2, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_U32_F32_e32 3, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_U32_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_U32_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_U32_F32_e32 2, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_NOP 0, implicit killed renamable $vgpr1
-    ; GCN: renamable $vgpr0 = V_CVT_U32_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_U32_F32_e32 3, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
-    %0:vgpr_32 = V_CVT_U32_F32_e32 1, implicit $exec, implicit $mode
-    %1:vgpr_32 = V_CVT_U32_F32_e32 2, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_U32_F32_e32 3, implicit $exec, implicit $mode
+    %0:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_U32_F32_e32 3, implicit $exec, implicit $mode
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
@@ -601,41 +614,16 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_i32_f32_e32
-    ; GCN: dead renamable $vgpr0 = V_CVT_I32_F32_e32 1, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_I32_F32_e32 2, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_I32_F32_e32 3, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_I32_F32_e32 2, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_NOP 0, implicit killed renamable $vgpr1
-    ; GCN: renamable $vgpr0 = V_CVT_I32_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_I32_F32_e32 3, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
-    %0:vgpr_32 = V_CVT_I32_F32_e32 1, implicit $exec, implicit $mode
-    %1:vgpr_32 = V_CVT_I32_F32_e32 2, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_I32_F32_e32 3, implicit $exec, implicit $mode
-    S_NOP 0, implicit %0
-    S_NOP 0, implicit %1
-    S_NOP 0, implicit %2
-    S_ENDPGM 0
-...
----
-name:            test_remat_v_cvt_f16_f32_e32
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    ; GCN-LABEL: name: test_remat_v_cvt_f16_f32_e32
-    ; GCN: dead renamable $vgpr0 = V_CVT_F16_F32_e32 1, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_F16_F32_e32 2, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_F16_F32_e32 3, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_F16_F32_e32 1, implicit $exec, implicit $mode
-    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
-    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
-    ; GCN: renamable $vgpr0 = V_CVT_F16_F32_e32 3, implicit $exec, implicit $mode
-    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
-    ; GCN: S_ENDPGM 0
-    %0:vgpr_32 = V_CVT_F16_F32_e32 1, implicit $exec, implicit $mode
-    %1:vgpr_32 = V_CVT_F16_F32_e32 2, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_F16_F32_e32 3, implicit $exec, implicit $mode
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 3, implicit $exec, implicit $mode
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
@@ -647,18 +635,16 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: test_remat_v_cvt_f32_f16_e32
-    ; GCN: dead renamable $vgpr0 = V_CVT_F32_F16_e32 1, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr1 = V_CVT_F32_F16_e32 2, implicit $exec, implicit $mode
-    ; GCN: dead renamable $vgpr0 = V_CVT_F32_F16_e32 3, implicit $exec, implicit $mode
-    ; GCN: renamable $vgpr0 = V_CVT_F32_F16_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_F32_F16_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CVT_F32_F16_e32 2, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_NOP 0, implicit killed renamable $vgpr1
-    ; GCN: renamable $vgpr0 = V_CVT_F32_F16_e32 3, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr0 = nofpexcept V_CVT_F32_F16_e32 3, implicit $exec, implicit $mode
     ; GCN: S_NOP 0, implicit killed renamable $vgpr0
     ; GCN: S_ENDPGM 0
-    %0:vgpr_32 = V_CVT_F32_F16_e32 1, implicit $exec, implicit $mode
-    %1:vgpr_32 = V_CVT_F32_F16_e32 2, implicit $exec, implicit $mode
-    %2:vgpr_32 = V_CVT_F32_F16_e32 3, implicit $exec, implicit $mode
+    %0:vgpr_32 = nofpexcept V_CVT_F32_F16_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_F32_F16_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CVT_F32_F16_e32 3, implicit $exec, implicit $mode
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
@@ -722,6 +708,657 @@ body:             |
     %0:vgpr_32 = V_CVT_OFF_F32_I4_e32 1, implicit $exec, implicit $mode
     %1:vgpr_32 = V_CVT_OFF_F32_I4_e32 2, implicit $exec, implicit $mode
     %2:vgpr_32 = V_CVT_OFF_F32_I4_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_cvt_f32_ubyte0_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_cvt_f32_ubyte0_e32
+    ; GCN: renamable $vgpr0 = V_CVT_F32_UBYTE0_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = V_CVT_F32_UBYTE0_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = V_CVT_F32_UBYTE0_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = V_CVT_F32_UBYTE0_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = V_CVT_F32_UBYTE0_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_CVT_F32_UBYTE0_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_fract_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_fract_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_FRACT_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_FRACT_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_FRACT_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_FRACT_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_FRACT_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_FRACT_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_trunc_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_trunc_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_TRUNC_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_TRUNC_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_TRUNC_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_TRUNC_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_TRUNC_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_TRUNC_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_ceil_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_ceil_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_CEIL_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_CEIL_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_CEIL_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_CEIL_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CEIL_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_CEIL_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_rndne_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_rndne_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_RNDNE_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_RNDNE_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_RNDNE_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_RNDNE_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_RNDNE_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_RNDNE_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_floor_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_floor_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_FLOOR_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_FLOOR_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_FLOOR_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_FLOOR_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_FLOOR_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_FLOOR_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_exp_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_exp_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_EXP_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_EXP_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_EXP_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_EXP_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_EXP_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_EXP_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_log_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_log_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_LOG_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_LOG_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_LOG_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_LOG_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_LOG_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_LOG_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_rcp_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_rcp_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_RCP_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_RCP_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_RCP_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_RCP_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_RCP_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_RCP_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_rcp_iflag_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_rcp_iflag_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_RCP_IFLAG_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_RCP_IFLAG_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_RCP_IFLAG_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_RCP_IFLAG_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_RCP_IFLAG_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_RCP_IFLAG_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_rsq_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_rsq_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_RSQ_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_RSQ_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_RSQ_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_RSQ_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_RSQ_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_RSQ_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_sqrt_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_sqrt_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_SQRT_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_SQRT_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_SQRT_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_SQRT_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_SQRT_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_SQRT_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_rcp_f64_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_rcp_f64_e32
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_RCP_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr2_vgpr3 = nofpexcept V_RCP_F64_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_RCP_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_ENDPGM 0
+    %0:vreg_64_align2 = nofpexcept V_RCP_F64_e32 1, implicit $exec, implicit $mode
+    %1:vreg_64_align2 = nofpexcept V_RCP_F64_e32 2, implicit $exec, implicit $mode
+    %2:vreg_64_align2 = nofpexcept V_RCP_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_rsq_f64_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_rsq_f64_e32
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_RSQ_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr2_vgpr3 = nofpexcept V_RSQ_F64_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_RSQ_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_ENDPGM 0
+    %0:vreg_64_align2 = nofpexcept V_RSQ_F64_e32 1, implicit $exec, implicit $mode
+    %1:vreg_64_align2 = nofpexcept V_RSQ_F64_e32 2, implicit $exec, implicit $mode
+    %2:vreg_64_align2 = nofpexcept V_RSQ_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_sqrt_f64_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_sqrt_f64_e32
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_SQRT_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr2_vgpr3 = nofpexcept V_SQRT_F64_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_SQRT_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_ENDPGM 0
+    %0:vreg_64_align2 = nofpexcept V_SQRT_F64_e32 1, implicit $exec, implicit $mode
+    %1:vreg_64_align2 = nofpexcept V_SQRT_F64_e32 2, implicit $exec, implicit $mode
+    %2:vreg_64_align2 = nofpexcept V_SQRT_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_sin_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_sin_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_SIN_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_SIN_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_SIN_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_SIN_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_SIN_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_SIN_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_cos_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_cos_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_COS_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_COS_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_COS_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_COS_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_COS_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_COS_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_not_b32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_not_b32_e32
+    ; GCN: renamable $vgpr0 = V_NOT_B32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = V_NOT_B32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = V_NOT_B32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = V_NOT_B32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = V_NOT_B32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_NOT_B32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_bfrev_b32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_bfrev_b32_e32
+    ; GCN: renamable $vgpr0 = V_BFREV_B32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = V_BFREV_B32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = V_BFREV_B32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = V_BFREV_B32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = V_BFREV_B32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_BFREV_B32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_ffbh_u32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_ffbh_u32_e32
+    ; GCN: renamable $vgpr0 = V_FFBH_U32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = V_FFBH_U32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = V_FFBH_U32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = V_FFBH_U32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = V_FFBH_U32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_FFBH_U32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_ffbl_b32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_ffbl_b32_e32
+    ; GCN: renamable $vgpr0 = V_FFBL_B32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = V_FFBL_B32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = V_FFBL_B32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = V_FFBL_B32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = V_FFBL_B32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_FFBL_B32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_ffbh_i32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_ffbh_i32_e32
+    ; GCN: renamable $vgpr0 = V_FFBH_I32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = V_FFBH_I32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = V_FFBH_I32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = V_FFBH_I32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = V_FFBH_I32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_FFBH_I32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_frexp_exp_i32_f64_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_frexp_exp_i32_f64_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_FREXP_EXP_I32_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_FREXP_EXP_I32_F64_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_FREXP_EXP_I32_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_FREXP_EXP_I32_F64_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_FREXP_EXP_I32_F64_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_FREXP_EXP_I32_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_frexp_mant_f64_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_frexp_mant_f64_e32
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_FREXP_MANT_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr2_vgpr3 = nofpexcept V_FREXP_MANT_F64_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_FREXP_MANT_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_ENDPGM 0
+    %0:vreg_64_align2 = nofpexcept V_FREXP_MANT_F64_e32 1, implicit $exec, implicit $mode
+    %1:vreg_64_align2 = nofpexcept V_FREXP_MANT_F64_e32 2, implicit $exec, implicit $mode
+    %2:vreg_64_align2 = nofpexcept V_FREXP_MANT_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_fract_f64_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_fract_f64_e32
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_FRACT_F64_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr2_vgpr3 = nofpexcept V_FRACT_F64_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr2_vgpr3
+    ; GCN: renamable $vgpr0_vgpr1 = nofpexcept V_FRACT_F64_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+    ; GCN: S_ENDPGM 0
+    %0:vreg_64_align2 = nofpexcept V_FRACT_F64_e32 1, implicit $exec, implicit $mode
+    %1:vreg_64_align2 = nofpexcept V_FRACT_F64_e32 2, implicit $exec, implicit $mode
+    %2:vreg_64_align2 = nofpexcept V_FRACT_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_frexp_exp_i32_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_frexp_exp_i32_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_FREXP_EXP_I32_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_FREXP_EXP_I32_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_FREXP_EXP_I32_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_FREXP_EXP_I32_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_FREXP_EXP_I32_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_FREXP_EXP_I32_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_frexp_mant_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_frexp_mant_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_FREXP_MANT_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_FREXP_MANT_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_FREXP_MANT_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_FREXP_MANT_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_FREXP_MANT_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_FREXP_MANT_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_exp_legacy_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_exp_legacy_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_EXP_LEGACY_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_EXP_LEGACY_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_EXP_LEGACY_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_EXP_LEGACY_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_EXP_LEGACY_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_EXP_LEGACY_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_log_legacy_f32_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_log_legacy_f32_e32
+    ; GCN: renamable $vgpr0 = nofpexcept V_LOG_LEGACY_F32_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = nofpexcept V_LOG_LEGACY_F32_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = nofpexcept V_LOG_LEGACY_F32_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = nofpexcept V_LOG_LEGACY_F32_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_LOG_LEGACY_F32_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = nofpexcept V_LOG_LEGACY_F32_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_sat_pk_u8_i16_e32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_sat_pk_u8_i16_e32
+    ; GCN: renamable $vgpr0 = V_SAT_PK_U8_I16_e32 1, implicit $exec, implicit $mode
+    ; GCN: renamable $vgpr1 = V_SAT_PK_U8_I16_e32 2, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr1
+    ; GCN: renamable $vgpr0 = V_SAT_PK_U8_I16_e32 3, implicit $exec, implicit $mode
+    ; GCN: S_NOP 0, implicit killed renamable $vgpr0
+    ; GCN: S_ENDPGM 0
+    %0:vgpr_32 = V_SAT_PK_U8_I16_e32 1, implicit $exec, implicit $mode
+    %1:vgpr_32 = V_SAT_PK_U8_I16_e32 2, implicit $exec, implicit $mode
+    %2:vgpr_32 = V_SAT_PK_U8_I16_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...
+---
+name:            test_remat_v_accvgpr_mov_b32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_v_accvgpr_mov_b32
+    ; GCN: renamable $agpr0 = V_ACCVGPR_MOV_B32 undef $agpr0, implicit $exec
+    ; GCN: renamable $agpr1 = V_ACCVGPR_MOV_B32 undef $agpr0, implicit $exec
+    ; GCN: S_NOP 0, implicit killed renamable $agpr0
+    ; GCN: S_NOP 0, implicit killed renamable $agpr1
+    ; GCN: renamable $agpr0 = V_ACCVGPR_MOV_B32 undef $agpr0, implicit $exec
+    ; GCN: S_NOP 0, implicit killed renamable $agpr0
+    ; GCN: S_ENDPGM 0
+    %0:agpr_32 = V_ACCVGPR_MOV_B32 undef $agpr0, implicit $exec
+    %1:agpr_32 = V_ACCVGPR_MOV_B32 undef $agpr0, implicit $exec
+    %2:agpr_32 = V_ACCVGPR_MOV_B32 undef $agpr0, implicit $exec
     S_NOP 0, implicit %0
     S_NOP 0, implicit %1
     S_NOP 0, implicit %2
