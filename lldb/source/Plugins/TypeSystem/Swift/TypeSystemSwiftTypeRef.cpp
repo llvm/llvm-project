@@ -1457,6 +1457,8 @@ StripPrivateIDs(swift::Demangle::Demangler &dem,
 /// Compare two swift types from different type systems by comparing their
 /// (canonicalized) mangled name.
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
+  if (!l || !r)
+    return !l && !r;
   // See comments in SwiftASTContext::ReconstructType(). For
   // SILFunctionTypes the mapping isn't bijective.
   auto *ast_ctx = llvm::cast<SwiftASTContext>(r.GetTypeSystem());
