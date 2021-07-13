@@ -544,8 +544,8 @@ define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    ldr q0, [x0]
 ; GISEL-NEXT:    add x8, x1, #2 // =2
-; GISEL-NEXT:    st1.h { v0 }[5], [x8]
 ; GISEL-NEXT:    st1.h { v0 }[6], [x1]
+; GISEL-NEXT:    st1.h { v0 }[5], [x8]
 ; GISEL-NEXT:    ret
 entry:
   %0 = bitcast <4 x i16>* %source to <8 x i16>*
