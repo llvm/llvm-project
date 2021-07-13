@@ -12,8 +12,8 @@
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=sm_20 -fno-cuda-flush-denormals-to-zero -nocudainc -nocudalib %s 2>&1 | FileCheck -check-prefix=NOFTZ %s
 
 // Test explicit argument, with CUDA offload kind
-// RUN: %clang -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=gfx803 -fgpu-flush-denormals-to-zero -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=FTZ %s
-// RUN: %clang -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=gfx803 -fno-gpu-flush-denormals-to-zero -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=NOFTZ %s
+// RUN: %clang -x hip -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=gfx803 -fgpu-flush-denormals-to-zero -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=FTZ %s
+// RUN: %clang -x hip -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=gfx803 -fno-gpu-flush-denormals-to-zero -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=NOFTZ %s
 
 // Test explicit argument, with HIP offload kind
 // RUN: %clang -x hip -no-canonical-prefixes -### -target x86_64-linux-gnu -c -march=haswell --cuda-gpu-arch=gfx803 -fgpu-flush-denormals-to-zero -nocudainc -nogpulib %s 2>&1 | FileCheck -check-prefix=FTZ %s
