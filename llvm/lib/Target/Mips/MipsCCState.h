@@ -26,6 +26,21 @@ public:
   getSpecialCallingConvForCallee(const SDNode *Callee,
                                  const MipsSubtarget &Subtarget);
 
+  /// This function returns true if CallSym is a long double emulation routine.
+  ///
+  /// FIXME: Changing the ABI based on the callee name is unsound. The lib func
+  /// address could be captured.
+  static bool isF128SoftLibCall(const char *CallSym);
+
+  static bool originalTypeIsF128(const Type *Ty, const char *Func);
+  static bool originalEVTTypeIsVectorFloat(EVT Ty);
+  static bool originalTypeIsVectorFloat(const Type *Ty);
+
+  void PreAnalyzeCallOperand(const Type *ArgTy, bool IsFixed, const char *Func);
+
+  void PreAnalyzeFormalArgument(const Type *ArgTy, ISD::ArgFlagsTy Flags);
+  void PreAnalyzeReturnValue(EVT ArgVT);
+
 private:
   /// Identify lowered values that originated from f128 arguments and record
   /// this for use by RetCC_MipsN.
@@ -85,17 +100,23 @@ public:
               SpecialCallingConvType SpecialCC = NoSpecialCallingConv)
       : CCState(CC, isVarArg, MF, locs, C), SpecialCallingConv(SpecialCC) {}
 
+  void PreAnalyzeCallOperands(
+      const SmallVectorImpl<ISD::OutputArg> &Outs, CCAssignFn Fn,
+      std::vector<TargetLowering::ArgListEntry> &FuncArgs, const char *Func) {
+    OriginalArgWasF128.clear();
+    OriginalArgWasFloat.clear();
+    OriginalArgWasFloatVector.clear();
+    CallOperandIsFixed.clear();
+    PreAnalyzeCallOperands(Outs, FuncArgs, Func);
+  }
+
   void
   AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
                       CCAssignFn Fn,
                       std::vector<TargetLowering::ArgListEntry> &FuncArgs,
                       const char *Func) {
-    PreAnalyzeCallOperands(Outs, FuncArgs, Func);
+    PreAnalyzeCallOperands(Outs, Fn, FuncArgs, Func);
     CCState::AnalyzeCallOperands(Outs, Fn);
-    OriginalArgWasF128.clear();
-    OriginalArgWasFloat.clear();
-    OriginalArgWasFloatVector.clear();
-    CallOperandIsFixed.clear();
   }
 
   // The AnalyzeCallOperands in the base class is not usable since we must
@@ -107,34 +128,56 @@ public:
                            SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
                            CCAssignFn Fn) = delete;
 
-  void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
-                              CCAssignFn Fn) {
-    PreAnalyzeFormalArgumentsForF128(Ins);
-    CCState::AnalyzeFormalArguments(Ins, Fn);
+  void PreAnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
+                                 CCAssignFn Fn) {
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
     OriginalArgWasFloatVector.clear();
+    PreAnalyzeFormalArgumentsForF128(Ins);
+  }
+
+  void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
+                              CCAssignFn Fn) {
+    PreAnalyzeFormalArguments(Ins, Fn);
+    CCState::AnalyzeFormalArguments(Ins, Fn);
+  }
+
+  void PreAnalyzeCallResult(const Type *RetTy, const char *Func) {
+    OriginalArgWasF128.push_back(originalTypeIsF128(RetTy, Func));
+    OriginalArgWasFloat.push_back(RetTy->isFloatingPointTy());
+    OriginalRetWasFloatVector.push_back(originalTypeIsVectorFloat(RetTy));
+  }
+
+  void PreAnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
+                            CCAssignFn Fn, const Type *RetTy,
+                            const char *Func) {
+    OriginalArgWasFloat.clear();
+    OriginalArgWasF128.clear();
+    OriginalArgWasFloatVector.clear();
+    PreAnalyzeCallResultForF128(Ins, RetTy, Func);
+    PreAnalyzeCallResultForVectorFloat(Ins, RetTy);
   }
 
   void AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
                          CCAssignFn Fn, const Type *RetTy,
                          const char *Func) {
-    PreAnalyzeCallResultForF128(Ins, RetTy, Func);
-    PreAnalyzeCallResultForVectorFloat(Ins, RetTy);
+    PreAnalyzeCallResult(Ins, Fn, RetTy, Func);
     CCState::AnalyzeCallResult(Ins, Fn);
+  }
+
+  void PreAnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        CCAssignFn Fn) {
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
     OriginalArgWasFloatVector.clear();
+    PreAnalyzeReturnForF128(Outs);
+    PreAnalyzeReturnForVectorFloat(Outs);
   }
 
   void AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
                      CCAssignFn Fn) {
-    PreAnalyzeReturnForF128(Outs);
-    PreAnalyzeReturnForVectorFloat(Outs);
+    PreAnalyzeReturn(Outs, Fn);
     CCState::AnalyzeReturn(Outs, Fn);
-    OriginalArgWasFloat.clear();
-    OriginalArgWasF128.clear();
-    OriginalArgWasFloatVector.clear();
   }
 
   bool CheckReturn(const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
