@@ -686,6 +686,115 @@ instCombineSVECntElts(InstCombiner &IC, IntrinsicInst &II, unsigned NumElts) {
              : None;
 }
 
+static Optional<Instruction *> instCombineSVEPTest(InstCombiner &IC,
+                                                   IntrinsicInst &II) {
+  IntrinsicInst *Op1 = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
+  IntrinsicInst *Op2 = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
+
+  if (Op1 && Op2 &&
+      Op1->getIntrinsicID() == Intrinsic::aarch64_sve_convert_to_svbool &&
+      Op2->getIntrinsicID() == Intrinsic::aarch64_sve_convert_to_svbool &&
+      Op1->getArgOperand(0)->getType() == Op2->getArgOperand(0)->getType()) {
+
+    IRBuilder<> Builder(II.getContext());
+    Builder.SetInsertPoint(&II);
+
+    Value *Ops[] = {Op1->getArgOperand(0), Op2->getArgOperand(0)};
+    Type *Tys[] = {Op1->getArgOperand(0)->getType()};
+
+    auto *PTest = Builder.CreateIntrinsic(II.getIntrinsicID(), Tys, Ops);
+
+    PTest->takeName(&II);
+    return IC.replaceInstUsesWith(II, PTest);
+  }
+
+  return None;
+}
+
+static Optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  auto *OpPredicate = II.getOperand(0);
+  auto *OpMultiplicand = II.getOperand(1);
+  auto *OpMultiplier = II.getOperand(2);
+
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+
+  // Return true if a given instruction is an aarch64_sve_dup_x intrinsic call
+  // with a unit splat value, false otherwise.
+  auto IsUnitDupX = [](auto *I) {
+    auto *IntrI = dyn_cast<IntrinsicInst>(I);
+    if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup_x)
+      return false;
+
+    auto *SplatValue = IntrI->getOperand(0);
+    return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
+  };
+
+  // Return true if a given instruction is an aarch64_sve_dup intrinsic call
+  // with a unit splat value, false otherwise.
+  auto IsUnitDup = [](auto *I) {
+    auto *IntrI = dyn_cast<IntrinsicInst>(I);
+    if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup)
+      return false;
+
+    auto *SplatValue = IntrI->getOperand(2);
+    return match(SplatValue, m_FPOne()) || match(SplatValue, m_One());
+  };
+
+  // The OpMultiplier variable should always point to the dup (if any), so
+  // swap if necessary.
+  if (IsUnitDup(OpMultiplicand) || IsUnitDupX(OpMultiplicand))
+    std::swap(OpMultiplier, OpMultiplicand);
+
+  if (IsUnitDupX(OpMultiplier)) {
+    // [f]mul pg (dupx 1) %n => %n
+    OpMultiplicand->takeName(&II);
+    return IC.replaceInstUsesWith(II, OpMultiplicand);
+  } else if (IsUnitDup(OpMultiplier)) {
+    // [f]mul pg (dup pg 1) %n => %n
+    auto *DupInst = cast<IntrinsicInst>(OpMultiplier);
+    auto *DupPg = DupInst->getOperand(1);
+    // TODO: this is naive. The optimization is still valid if DupPg
+    // 'encompasses' OpPredicate, not only if they're the same predicate.
+    if (OpPredicate == DupPg) {
+      OpMultiplicand->takeName(&II);
+      return IC.replaceInstUsesWith(II, OpMultiplicand);
+    }
+  }
+
+  return None;
+}
+
+static Optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
+                                                 IntrinsicInst &II) {
+  auto *OpVal = II.getOperand(0);
+  auto *OpIndices = II.getOperand(1);
+  VectorType *VTy = cast<VectorType>(II.getType());
+
+  // Check whether OpIndices is an aarch64_sve_dup_x intrinsic call with
+  // constant splat value < minimal element count of result.
+  auto *DupXIntrI = dyn_cast<IntrinsicInst>(OpIndices);
+  if (!DupXIntrI || DupXIntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup_x)
+    return None;
+
+  auto *SplatValue = dyn_cast<ConstantInt>(DupXIntrI->getOperand(0));
+  if (!SplatValue ||
+      SplatValue->getValue().uge(VTy->getElementCount().getKnownMinValue()))
+    return None;
+
+  // Convert sve_tbl(OpVal sve_dup_x(SplatValue)) to
+  // splat_vector(extractelement(OpVal, SplatValue)) for further optimization.
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+  auto *Extract = Builder.CreateExtractElement(OpVal, SplatValue);
+  auto *VectorSplat =
+      Builder.CreateVectorSplat(VTy->getElementCount(), Extract);
+
+  VectorSplat->takeName(&II);
+  return IC.replaceInstUsesWith(II, VectorSplat);
+}
+
 Optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -713,6 +822,15 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVECntElts(IC, II, 8);
   case Intrinsic::aarch64_sve_cntb:
     return instCombineSVECntElts(IC, II, 16);
+  case Intrinsic::aarch64_sve_ptest_any:
+  case Intrinsic::aarch64_sve_ptest_first:
+  case Intrinsic::aarch64_sve_ptest_last:
+    return instCombineSVEPTest(IC, II);
+  case Intrinsic::aarch64_sve_mul:
+  case Intrinsic::aarch64_sve_fmul:
+    return instCombineSVEVectorMul(IC, II);
+  case Intrinsic::aarch64_sve_tbl:
+    return instCombineSVETBL(IC, II);
   }
 
   return None;
