@@ -2029,6 +2029,16 @@ private:
   /// that the result is undefined if it does.
   const SCEV *computeBECount(const SCEV *Delta, const SCEV *Stride);
 
+  /// Compute ceil(N / D). N and D are treated as unsigned values.
+  ///
+  /// Since SCEV doesn't have native ceiling division, this generates a
+  /// SCEV expression of the following form:
+  ///
+  /// umin(N, 1) + floor((N - umin(N, 1)) / D)
+  ///
+  /// A denominator of zero or poison is handled the same way as getUDivExpr().
+  const SCEV *getUDivCeilSCEV(const SCEV *N, const SCEV *D);
+
   /// Compute the maximum backedge count based on the range of values
   /// permitted by Start, End, and Stride. This is for loops of the form
   /// {Start, +, Stride} LT End.
