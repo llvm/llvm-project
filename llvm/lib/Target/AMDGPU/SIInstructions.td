@@ -318,6 +318,14 @@ def SI_ELSE : CFPseudoInstSI <
   let hasSideEffects = 1;
 }
 
+def SI_WATERFALL_LOOP : CFPseudoInstSI <
+  (outs),
+  (ins brtarget:$target), [], 1> {
+  let Size = 8;
+  let isBranch = 1;
+  let Defs = [];
+}
+
 def SI_LOOP : CFPseudoInstSI <
   (outs), (ins SReg_1:$saved, brtarget:$target),
   [(AMDGPUloop i1:$saved, bb:$target)], 1, 1> {

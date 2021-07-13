@@ -48,6 +48,11 @@ def Linalg_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
       kInplaceableAttrName = "linalg.inplaceable";
 
+    /// Attribute name used to mark the bufferization layout for region
+    // arguments during linalg comprehensive bufferization.
+    constexpr const static ::llvm::StringLiteral
+      kBufferLayoutAttrName = "linalg.buffer_layout";
+
     using RegionBuilderFunType =
       llvm::function_ref<void(ImplicitLocOpBuilder &b, Block &)>;
     RegionBuilderFunType getRegionBuilder(StringRef name) {
