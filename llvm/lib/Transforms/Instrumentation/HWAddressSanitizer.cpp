@@ -1201,10 +1201,10 @@ bool HWAddressSanitizer::instrumentStack(
       // to put it at the beginning of the expression.
       SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
                                          retagMask(N)};
-      auto Locations = DDI->location_ops();
-      unsigned LocNo = std::distance(Locations.begin(), find(Locations, AI));
-      DDI->setExpression(
-          DIExpression::appendOpsToArg(DDI->getExpression(), NewOps, LocNo));
+      for (size_t LocNo = 0; LocNo < DDI->getNumVariableLocationOps(); ++LocNo)
+        if (DDI->getVariableLocationOp(LocNo) == AI)
+          DDI->setExpression(DIExpression::appendOpsToArg(DDI->getExpression(),
+                                                          NewOps, LocNo));
     }
 
     size_t Size = getAllocaSizeInBytes(*AI);
@@ -1266,10 +1266,14 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
           isa<CleanupReturnInst>(Inst))
         RetVec.push_back(&Inst);
 
-      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst))
-        for (Value *V : DVI->location_ops())
+      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
+        for (Value *V : DVI->location_ops()) {
           if (auto *Alloca = dyn_cast_or_null<AllocaInst>(V))
-            AllocaDbgMap[Alloca].push_back(DVI);
+            if (!AllocaDbgMap.count(Alloca) ||
+                AllocaDbgMap[Alloca].back() != DVI)
+              AllocaDbgMap[Alloca].push_back(DVI);
+        }
+      }
 
       if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
