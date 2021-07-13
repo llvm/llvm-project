@@ -7,11 +7,11 @@ namespace test_delete_function {
 struct A1 {
   A1();
   A1(const A1 &);
-  A1(A1 &&) = delete; // cxx11_2b-note {{'A1' has been explicitly marked deleted here}}
+  A1(A1 &&) = delete; // expected-note {{'A1' has been explicitly marked deleted here}}
 };
 A1 test1() {
   A1 a;
-  return a; // cxx11_2b-error {{call to deleted constructor of 'test_delete_function::A1'}}
+  return a; // expected-error {{call to deleted constructor of 'test_delete_function::A1'}}
 }
 
 struct A2 {
@@ -19,33 +19,33 @@ struct A2 {
   A2(const A2 &);
 
 private:
-  A2(A2 &&); // cxx11_2b-note {{declared private here}}
+  A2(A2 &&); // expected-note {{declared private here}}
 };
 A2 test2() {
   A2 a;
-  return a; // cxx11_2b-error {{calling a private constructor of class 'test_delete_function::A2'}}
+  return a; // expected-error {{calling a private constructor of class 'test_delete_function::A2'}}
 }
 
 struct C {};
 
 struct B1 {
   B1(C &);
-  B1(C &&) = delete; // cxx11_2b-note {{'B1' has been explicitly marked deleted here}}
+  B1(C &&) = delete; // expected-note {{'B1' has been explicitly marked deleted here}}
 };
 B1 test3() {
   C c;
-  return c; // cxx11_2b-error {{conversion function from 'test_delete_function::C' to 'test_delete_function::B1' invokes a deleted function}}
+  return c; // expected-error {{conversion function from 'test_delete_function::C' to 'test_delete_function::B1' invokes a deleted function}}
 }
 
 struct B2 {
   B2(C &);
 
 private:
-  B2(C &&); // cxx11_2b-note {{declared private here}}
+  B2(C &&); // expected-note {{declared private here}}
 };
 B2 test4() {
   C c;
-  return c; // cxx11_2b-error {{calling a private constructor of class 'test_delete_function::B2'}}
+  return c; // expected-error {{calling a private constructor of class 'test_delete_function::B2'}}
 }
 } // namespace test_delete_function
 
@@ -54,38 +54,38 @@ B2 test4() {
 namespace test_implicitly_movable_rvalue_ref {
 struct A1 {
   A1(A1 &&);
-  A1(const A1 &) = delete; // cxx98-note {{marked deleted here}}
+  A1(const A1 &) = delete;
 };
 A1 test1(A1 &&a) {
-  return a; // cxx98-error {{call to deleted constructor}}
+  return a;
 }
 
 struct A2 {
   A2(A2 &&);
 
 private:
-  A2(const A2 &); // cxx98-note {{declared private here}}
+  A2(const A2 &);
 };
 A2 test2(A2 &&a) {
-  return a; // cxx98-error {{calling a private constructor}}
+  return a;
 }
 
 struct B1 {
   B1(const B1 &);
-  B1(B1 &&) = delete; // cxx11_2b-note {{'B1' has been explicitly marked deleted here}}
+  B1(B1 &&) = delete; // expected-note {{'B1' has been explicitly marked deleted here}}
 };
 B1 test3(B1 &&b) {
-  return b; // cxx11_2b-error {{call to deleted constructor of 'test_implicitly_movable_rvalue_ref::B1'}}
+  return b; // expected-error {{call to deleted constructor of 'test_implicitly_movable_rvalue_ref::B1'}}
 }
 
 struct B2 {
   B2(const B2 &);
 
 private:
-  B2(B2 &&); // cxx11_2b-note {{declared private here}}
+  B2(B2 &&); // expected-note {{declared private here}}
 };
 B2 test4(B2 &&b) {
-  return b; // cxx11_2b-error {{calling a private constructor of class 'test_implicitly_movable_rvalue_ref::B2'}}
+  return b; // expected-error {{calling a private constructor of class 'test_implicitly_movable_rvalue_ref::B2'}}
 }
 } // namespace test_implicitly_movable_rvalue_ref
 
@@ -96,13 +96,13 @@ void func();
 
 struct A1 {
   A1(const A1 &);
-  A1(A1 &&) = delete; // cxx11_2b-note 2{{'A1' has been explicitly marked deleted here}}
+  A1(A1 &&) = delete; // expected-note 2{{'A1' has been explicitly marked deleted here}}
 };
 void test1() {
   try {
     func();
   } catch (A1 a) {
-    throw a; // cxx11_2b-error {{call to deleted constructor of 'test_throw_parameter::A1'}}
+    throw a; // expected-error {{call to deleted constructor of 'test_throw_parameter::A1'}}
   }
 }
 
@@ -110,20 +110,20 @@ struct A2 {
   A2(const A2 &);
 
 private:
-  A2(A2 &&); // cxx11_2b-note {{declared private here}}
+  A2(A2 &&); // expected-note {{declared private here}}
 };
 void test2() {
   try {
     func();
   } catch (A2 a) {
-    throw a; // cxx11_2b-error {{calling a private constructor of class 'test_throw_parameter::A2'}}
+    throw a; // expected-error {{calling a private constructor of class 'test_throw_parameter::A2'}}
   }
 }
 
 void test3(A1 a) try {
   func();
 } catch (...) {
-  throw a; // cxx11_2b-error {{call to deleted constructor of 'test_throw_parameter::A1'}}
+  throw a; // expected-error {{call to deleted constructor of 'test_throw_parameter::A1'}}
 }
 } // namespace test_throw_parameter
 
@@ -134,42 +134,42 @@ class C {};
 
 struct A1 {
   operator C() &&;
-  operator C() const & = delete; // cxx98-note {{marked deleted here}}
+  operator C() const & = delete;
 };
 C test1() {
   A1 a;
-  return a; // cxx98-error {{invokes a deleted function}}
+  return a;
 }
 
 struct A2 {
   operator C() &&;
 
 private:
-  operator C() const &; // cxx98-note {{declared private here}}
+  operator C() const &;
 };
 C test2() {
   A2 a;
-  return a; // cxx98-error {{'operator C' is a private member}}
+  return a;
 }
 
 struct B1 {
   operator C() const &;
-  operator C() && = delete; // cxx11_2b-note {{'operator C' has been explicitly marked deleted here}}
+  operator C() && = delete; // expected-note {{'operator C' has been explicitly marked deleted here}}
 };
 C test3() {
   B1 b;
-  return b; // cxx11_2b-error {{conversion function from 'test_non_ctor_conversion::B1' to 'test_non_ctor_conversion::C' invokes a deleted function}}
+  return b; // expected-error {{conversion function from 'test_non_ctor_conversion::B1' to 'test_non_ctor_conversion::C' invokes a deleted function}}
 }
 
 struct B2 {
   operator C() const &;
 
 private:
-  operator C() &&; // cxx11_2b-note {{declared private here}}
+  operator C() &&; // expected-note {{declared private here}}
 };
 C test4() {
   B2 b;
-  return b; // cxx11_2b-error {{'operator C' is a private member of 'test_non_ctor_conversion::B2'}}
+  return b; // expected-error {{'operator C' is a private member of 'test_non_ctor_conversion::B2'}}
 }
 } // namespace test_non_ctor_conversion
 
@@ -197,7 +197,7 @@ struct NeedValue {
 struct A1 {
   A1();
   A1(A1 &&);
-  A1(const A1 &) = delete; // cxx98-note 3{{marked deleted here}}
+  A1(const A1 &) = delete; // cxx98-note 2 {{marked deleted here}}
 };
 NeedValue test_1_1() {
   // not rvalue reference
@@ -210,7 +210,7 @@ A1 test_1_2() {
   // rvalue reference
   // not same type
   DerivedA1 a;
-  return a; // cxx98-error {{call to deleted constructor}}
+  return a;
 }
 NeedValue test_1_3() {
   // not rvalue reference
@@ -224,7 +224,7 @@ struct A2 {
   A2(A2 &&);
 
 private:
-  A2(const A2 &); // cxx98-note 3{{declared private here}}
+  A2(const A2 &); // cxx98-note 2 {{declared private here}}
 };
 NeedValue test_2_1() {
   // not rvalue reference
@@ -237,7 +237,7 @@ A2 test_2_2() {
   // rvalue reference
   // not same type
   DerivedA2 a;
-  return a; // cxx98-error {{calling a private constructor}}
+  return a;
 }
 NeedValue test_2_3() {
   // not rvalue reference
@@ -250,6 +250,7 @@ struct B1 {
   B1();
   B1(const B1 &);
   B1(B1 &&) = delete; // cxx11_2b-note 3 {{'B1' has been explicitly marked deleted here}}
+                      // cxx98-note@-1 {{'B1' has been explicitly marked deleted here}}
 };
 NeedValue test_3_1() {
   // not rvalue reference
@@ -262,7 +263,7 @@ B1 test_3_2() {
   // rvalue reference
   // not same type
   DerivedB1 b;
-  return b; // cxx11_2b-error {{call to deleted constructor of 'test_ctor_param_rvalue_ref::B1'}}
+  return b; // expected-error {{call to deleted constructor of 'test_ctor_param_rvalue_ref::B1'}}
 }
 NeedValue test_3_3() {
   // not rvalue reference
@@ -277,6 +278,7 @@ struct B2 {
 
 private:
   B2(B2 &&); // cxx11_2b-note 3 {{declared private here}}
+             // cxx98-note@-1 {{declared private here}}
 };
 NeedValue test_4_1() {
   // not rvalue reference
@@ -289,7 +291,7 @@ B2 test_4_2() {
   // rvalue reference
   // not same type
   DerivedB2 b;
-  return b; // cxx11_2b-error {{calling a private constructor of class 'test_ctor_param_rvalue_ref::B2'}}
+  return b; // expected-error {{calling a private constructor of class 'test_ctor_param_rvalue_ref::B2'}}
 }
 NeedValue test_4_3() {
   // not rvalue reference
@@ -302,20 +304,19 @@ NeedValue test_4_3() {
 namespace test_lvalue_ref_is_not_moved_from {
 
 struct Target {};
-// cxx11_2b-note@-1  {{candidate constructor (the implicit copy constructor) not viable}}
-// cxx98-note@-2    2{{candidate constructor (the implicit copy constructor) not viable}}
-// cxx11_2b-note@-3  {{candidate constructor (the implicit move constructor) not viable}}
+// expected-note@-1  {{candidate constructor (the implicit copy constructor) not viable}}
+// cxx11_2b-note@-2  {{candidate constructor (the implicit move constructor) not viable}}
 
 struct CopyOnly {
-  CopyOnly(CopyOnly &&) = delete; // cxx11_2b-note {{has been explicitly marked deleted here}}
+  CopyOnly(CopyOnly &&) = delete; // expected-note {{has been explicitly marked deleted here}}
   CopyOnly(CopyOnly&);
-  operator Target() && = delete; // cxx11_2b-note {{has been explicitly marked deleted here}}
+  operator Target() && = delete; // expected-note {{has been explicitly marked deleted here}}
   operator Target() &;
 };
 
 struct MoveOnly {
   MoveOnly(MoveOnly &&); // cxx11_2b-note {{copy constructor is implicitly deleted because}}
-  operator Target() &&;  // expected-note {{candidate function not viable}} cxx98-note {{candidate function not viable}}
+  operator Target() &&;  // expected-note {{candidate function not viable}}
 };
 
 extern CopyOnly copyonly;
@@ -328,7 +329,7 @@ CopyOnly t1() {
 
 CopyOnly t2() {
     CopyOnly&& r = static_cast<CopyOnly&&>(copyonly);
-    return r; // cxx11_2b-error {{call to deleted constructor}}
+    return r; // expected-error {{call to deleted constructor}}
 }
 
 MoveOnly t3() {
@@ -348,7 +349,7 @@ Target t5() {
 
 Target t6() {
     CopyOnly&& r = static_cast<CopyOnly&&>(copyonly);
-    return r; // cxx11_2b-error {{invokes a deleted function}}
+    return r; // expected-error {{invokes a deleted function}}
 }
 
 Target t7() {
@@ -358,7 +359,7 @@ Target t7() {
 
 Target t8() {
     MoveOnly&& r = static_cast<MoveOnly&&>(moveonly);
-    return r; // cxx98-error {{no viable conversion}}
+    return r;
 }
 
 } // namespace test_lvalue_ref_is_not_moved_from
@@ -400,6 +401,10 @@ Target t4() {
 
 } // namespace test_rvalue_ref_to_nonobject
 
+// Both tests in test_constandnonconstcopy, and also test_conversion::test1, are
+// "pure" C++98 tests (pretend 'delete' means 'private').
+// However we may extend implicit moves into C++98, we must make sure the
+// results in these are not changed.
 namespace test_constandnonconstcopy {
 struct ConstCopyOnly {
   ConstCopyOnly();
@@ -437,9 +442,9 @@ A test1(B x) { return x; } // cxx98-error-re {{conversion {{.*}} is ambiguous}}
 struct C {};
 struct D {
   operator C() &;
-  operator C() const & = delete; // cxx11_2b-note {{marked deleted here}}
+  operator C() const & = delete; // expected-note {{marked deleted here}}
 };
-C test2(D x) { return x; } // cxx11_2b-error {{invokes a deleted function}}
+C test2(D x) { return x; } // expected-error {{invokes a deleted function}}
 
 } // namespace test_conversion
 
