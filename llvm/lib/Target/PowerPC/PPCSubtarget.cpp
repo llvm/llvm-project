@@ -126,7 +126,6 @@ void PPCSubtarget::initializeEnvironment() {
   HasStoreFusion = false;
   HasAddiLoadFusion = false;
   HasAddisLoadFusion = false;
-  IsISA2_07 = false;
   IsISA3_0 = false;
   IsISA3_1 = false;
   UseLongCalls = false;
