@@ -2635,6 +2635,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
   SmallVector<FuncOp> orderedFuncOps;
   DenseMap<FuncOp, DenseSet<Operation *>> callerMap;
   auto res = getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap);
+  (void) res;
   assert(succeeded(res) && "unexpected getFuncOpsOrderedByCalls failure");
 
   for (FuncOp funcOp : orderedFuncOps) {
