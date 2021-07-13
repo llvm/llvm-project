@@ -17,6 +17,7 @@
 template <class SizeClassAllocator>
 struct SizeClassAllocator64LocalCache {
   typedef SizeClassAllocator Allocator;
+  typedef MemoryMapper<Allocator> MemoryMapperT;
 
   void Init(AllocatorGlobalStats *s) {
     stats_.Init();

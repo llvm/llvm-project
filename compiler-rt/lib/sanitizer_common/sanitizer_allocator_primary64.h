@@ -46,13 +46,10 @@ template <typename Allocator>
 class MemoryMapper {
  public:
   typedef typename Allocator::CompactPtrT CompactPtrT;
-  typedef Allocator ThisT;
 
-  MemoryMapper(const ThisT &base_allocator, uptr class_id)
+  MemoryMapper(const Allocator &base_allocator, uptr class_id)
       : allocator(base_allocator),
-        region_base(base_allocator.GetRegionBeginBySizeClass(class_id)),
-        released_ranges_count(0),
-        released_bytes(0) {}
+        region_base(base_allocator.GetRegionBeginBySizeClass(class_id)) {}
 
   uptr GetReleasedRangesCount() const { return released_ranges_count; }
 
@@ -80,10 +77,10 @@ class MemoryMapper {
   }
 
  private:
-  const ThisT &allocator;
-  const uptr region_base;
-  uptr released_ranges_count;
-  uptr released_bytes;
+  const Allocator &allocator;
+  const uptr region_base = 0;
+  uptr released_ranges_count = 0;
+  uptr released_bytes = 0;
 };
 
 template <class Params>
@@ -101,6 +98,7 @@ class SizeClassAllocator64 {
 
   typedef SizeClassAllocator64<Params> ThisT;
   typedef SizeClassAllocator64LocalCache<ThisT> AllocatorCache;
+  typedef MemoryMapper<ThisT> MemoryMapperT;
 
   // When we know the size class (the region base) we can represent a pointer
   // as a 4-byte integer (offset from the region start shifted right by 4).
@@ -406,10 +404,10 @@ class SizeClassAllocator64 {
   // For the performance sake, none of the accessors check the validity of the
   // arguments, it is assumed that index is always in [0, n) range and the value
   // is not incremented past max_value.
-  template <class MemoryMapperT>
+  template <typename MemoryMapper>
   class PackedCounterArray {
    public:
-    PackedCounterArray(u64 num_counters, u64 max_value, MemoryMapperT *mapper)
+    PackedCounterArray(u64 num_counters, u64 max_value, MemoryMapper *mapper)
         : n(num_counters), memory_mapper(mapper) {
       CHECK_GT(num_counters, 0);
       CHECK_GT(max_value, 0);
@@ -474,7 +472,7 @@ class SizeClassAllocator64 {
     u64 packing_ratio_log;
     u64 bit_offset_mask;
 
-    MemoryMapperT *const memory_mapper;
+    MemoryMapper *const memory_mapper;
     u64 buffer_size;
     u64* buffer;
   };
@@ -526,11 +524,11 @@ class SizeClassAllocator64 {
   // chunks only and returns these pages back to OS.
   // allocated_pages_count is the total number of pages allocated for the
   // current bucket.
-  template <class MemoryMapperT>
+  template <typename MemoryMapper>
   static void ReleaseFreeMemoryToOS(CompactPtrT *free_array,
                                     uptr free_array_count, uptr chunk_size,
                                     uptr allocated_pages_count,
-                                    MemoryMapperT *memory_mapper) {
+                                    MemoryMapper *memory_mapper) {
     const uptr page_size = GetPageSizeCached();
 
     // Figure out the number of chunks per page and whether we can take a fast
@@ -566,7 +564,7 @@ class SizeClassAllocator64 {
       UNREACHABLE("All chunk_size/page_size ratios must be handled.");
     }
 
-    PackedCounterArray<MemoryMapperT> counters(
+    PackedCounterArray<MemoryMapper> counters(
         allocated_pages_count, full_pages_chunk_count_max, memory_mapper);
     if (!counters.IsAllocated())
       return;
@@ -592,7 +590,7 @@ class SizeClassAllocator64 {
 
     // Iterate over pages detecting ranges of pages with chunk counters equal
     // to the expected number of chunks for the particular page.
-    FreePagesRangeTracker<MemoryMapperT> range_tracker(memory_mapper);
+    FreePagesRangeTracker<MemoryMapper> range_tracker(memory_mapper);
     if (same_chunk_count_per_page) {
       // Fast path, every page has the same number of chunks affecting it.
       for (uptr i = 0; i < counters.GetCount(); i++)
