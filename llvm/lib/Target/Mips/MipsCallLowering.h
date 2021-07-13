@@ -24,6 +24,7 @@ class MipsTargetLowering;
 class MipsCallLowering : public CallLowering {
 
 public:
+#if 0
   class MipsHandler {
   public:
     MipsHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
@@ -60,6 +61,7 @@ public:
                              unsigned ArgLocsStartIndex, Register ArgsReg,
                              const EVT &VT) = 0;
   };
+#endif
 
   MipsCallLowering(const MipsTargetLowering &TLI);
 
@@ -73,14 +75,6 @@ public:
 
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
-
-private:
-  /// Based on registers available on target machine split or extend
-  /// type if needed, also change pointer type to appropriate integer
-  /// type.
-  template <typename T>
-  void subTargetRegTypeForCallingConv(const Function &F, ArrayRef<ArgInfo> Args,
-                                      SmallVectorImpl<T> &ISDArgs) const;
 };
 
 } // end namespace llvm
