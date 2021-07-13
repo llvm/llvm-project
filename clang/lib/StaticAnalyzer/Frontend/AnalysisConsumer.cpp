@@ -128,7 +128,8 @@ public:
         Plugins(plugins), Injector(injector), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
     DigestAnalyzerOptions();
-    if (Opts->PrintStats || Opts->ShouldSerializeStats) {
+    if (Opts->AnalyzerDisplayProgress || Opts->PrintStats ||
+        Opts->ShouldSerializeStats) {
       AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
           "analyzer", "Analyzer timers");
       SyntaxCheckTimer = std::make_unique<llvm::Timer>(
@@ -138,6 +139,9 @@ public:
       BugReporterTimer = std::make_unique<llvm::Timer>(
           "bugreporter", "Path-sensitive report post-processing time",
           *AnalyzerTimers);
+    }
+
+    if (Opts->PrintStats || Opts->ShouldSerializeStats) {
       llvm::EnableStatistics(/* PrintOnExit= */ false);
     }
 
@@ -183,6 +187,14 @@ public:
     }
   }
 
+  void DisplayTime(llvm::TimeRecord &Time) {
+    if (!Opts->AnalyzerDisplayProgress) {
+      return;
+    }
+    llvm::errs() << " : " << llvm::format("%1.1f", Time.getWallTime() * 1000)
+                 << " ms\n";
+  }
+
   void DisplayFunction(const Decl *D, AnalysisMode Mode,
                        ExprEngine::InliningModes IMode) {
     if (!Opts->AnalyzerDisplayProgress)
@@ -210,7 +222,7 @@ public:
         assert(Mode == (AM_Syntax | AM_Path) && "Unexpected mode!");
 
       llvm::errs() << ": " << Loc.getFilename() << ' '
-                   << AnalysisDeclContext::getFunctionName(D) << '\n';
+                   << AnalysisDeclContext::getFunctionName(D);
     }
   }
 
@@ -608,19 +620,26 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
   if (Mgr->getAnalysisDeclContext(D)->isBodyAutosynthesized())
     return;
 
-  DisplayFunction(D, Mode, IMode);
   CFG *DeclCFG = Mgr->getCFG(D);
   if (DeclCFG)
     MaxCFGSize.updateMax(DeclCFG->size());
 
+  DisplayFunction(D, Mode, IMode);
   BugReporter BR(*Mgr);
 
   if (Mode & AM_Syntax) {
-    if (SyntaxCheckTimer)
+    llvm::TimeRecord CheckerStartTime;
+    if (SyntaxCheckTimer) {
+      CheckerStartTime = SyntaxCheckTimer->getTotalTime();
       SyntaxCheckTimer->startTimer();
+    }
     checkerMgr->runCheckersOnASTBody(D, *Mgr, BR);
-    if (SyntaxCheckTimer)
+    if (SyntaxCheckTimer) {
       SyntaxCheckTimer->stopTimer();
+      llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
+      CheckerEndTime -= CheckerStartTime;
+      DisplayTime(CheckerEndTime);
+    }
   }
 
   BR.FlushReports();
@@ -651,12 +670,19 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
   // Execute the worklist algorithm.
-  if (ExprEngineTimer)
+  llvm::TimeRecord ExprEngineStartTime;
+  if (ExprEngineTimer) {
+    ExprEngineStartTime = ExprEngineTimer->getTotalTime();
     ExprEngineTimer->startTimer();
+  }
   Eng.ExecuteWorkList(Mgr->getAnalysisDeclContextManager().getStackFrame(D),
                       Mgr->options.MaxNodesPerTopLevelFunction);
-  if (ExprEngineTimer)
+  if (ExprEngineTimer) {
     ExprEngineTimer->stopTimer();
+    llvm::TimeRecord ExprEngineEndTime = ExprEngineTimer->getTotalTime();
+    ExprEngineEndTime -= ExprEngineStartTime;
+    DisplayTime(ExprEngineEndTime);
+  }
 
   if (!Mgr->options.DumpExplodedGraphTo.empty())
     Eng.DumpGraph(Mgr->options.TrimGraph, Mgr->options.DumpExplodedGraphTo);
