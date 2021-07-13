@@ -621,6 +621,8 @@ static void createSyntheticSymbols() {
       "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
       make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
+    bool is64 = config->is64.getValueOr(false);
+
   if (config->isPic) {
     WasmSym::stackPointer =
         createUndefinedGlobal("__stack_pointer", config->is64.getValueOr(false)
@@ -631,7 +633,6 @@ static void createSyntheticSymbols() {
     // which to load our static data and function table.
     // See:
     // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
-    bool is64 = config->is64.getValueOr(false);
     auto *globalType = is64 ? &globalTypeI64 : &globalTypeI32;
     WasmSym::memoryBase = createUndefinedGlobal("__memory_base", globalType);
     WasmSym::tableBase = createUndefinedGlobal("__table_base", globalType);
@@ -657,7 +658,7 @@ static void createSyntheticSymbols() {
     WasmSym::initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(
-            config->is64.getValueOr(false) ? i64ArgSignature : i32ArgSignature,
+            is64 ? i64ArgSignature : i32ArgSignature,
             "__wasm_init_tls"));
   }
 }
