@@ -682,6 +682,21 @@ define i32 @signbits_cmpss(float %0, float %1) {
   ret i32 %4
 }
 
+define i32 @signbits_cmpss_int(<4 x float> %0, <4 x float> %1) {
+; CHECK-LABEL: signbits_cmpss_int:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vextractps $0, %xmm0, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
+  %3 = tail call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %0, <4 x float> %1, i8 0)
+  %4 = bitcast <4 x float> %3 to <4 x i32>
+  %5 = extractelement <4 x i32> %4, i32 0
+  %6 = ashr i32 %5, 31
+  ret i32 %6
+}
+declare <4 x float> @llvm.x86.sse.cmp.ss(<4 x float>, <4 x float>, i8 immarg)
+
 define i64 @signbits_cmpsd(double %0, double %1) {
 ; X86-LABEL: signbits_cmpsd:
 ; X86:       # %bb.0:
@@ -704,6 +719,29 @@ define i64 @signbits_cmpsd(double %0, double %1) {
   %4 = sext i1 %3 to i64
   ret i64 %4
 }
+
+define i64 @signbits_cmpsd_int(<2 x double> %0, <2 x double> %1) {
+; X86-LABEL: signbits_cmpsd_int:
+; X86:       # %bb.0:
+; X86-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vextractps $1, %xmm0, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: signbits_cmpsd_int:
+; X64:       # %bb.0:
+; X64-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovq %xmm0, %rax
+; X64-NEXT:    sarq $63, %rax
+; X64-NEXT:    retq
+  %3 = tail call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %0, <2 x double> %1, i8 0)
+  %4 = bitcast <2 x double> %3 to <2 x i64>
+  %5 = extractelement <2 x i64> %4, i32 0
+  %6 = ashr i64 %5, 63
+  ret i64 %6
+}
+declare <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double>, <2 x double>, i8 immarg)
 
 ; Make sure we can preserve sign bit information into the second basic block
 ; so we can avoid having to shift bit 0 into bit 7 for each element due to
