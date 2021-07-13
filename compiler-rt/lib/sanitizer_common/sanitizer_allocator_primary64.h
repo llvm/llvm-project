@@ -47,13 +47,13 @@ class MemoryMapper {
  public:
   typedef typename Allocator::CompactPtrT CompactPtrT;
 
-  MemoryMapper(const Allocator &base_allocator, uptr class_id)
-      : allocator(base_allocator),
-        region_base(base_allocator.GetRegionBeginBySizeClass(class_id)) {}
+  MemoryMapper(const Allocator &allocator, uptr class_id)
+      : allocator_(allocator),
+        region_base_(allocator.GetRegionBeginBySizeClass(class_id)) {}
 
-  uptr GetReleasedRangesCount() const { return released_ranges_count; }
+  uptr GetReleasedRangesCount() const { return released_ranges_count_; }
 
-  uptr GetReleasedBytes() const { return released_bytes; }
+  uptr GetReleasedBytes() const { return released_bytes_; }
 
   void *MapPackedCounterArrayBuffer(uptr buffer_size) {
     // TODO(alekseyshl): The idea to explore is to check if we have enough
@@ -69,18 +69,18 @@ class MemoryMapper {
 
   // Releases [from, to) range of pages back to OS.
   void ReleasePageRangeToOS(CompactPtrT from, CompactPtrT to) {
-    const uptr from_page = allocator.CompactPtrToPointer(region_base, from);
-    const uptr to_page = allocator.CompactPtrToPointer(region_base, to);
+    const uptr from_page = allocator_.CompactPtrToPointer(region_base_, from);
+    const uptr to_page = allocator_.CompactPtrToPointer(region_base_, to);
     ReleaseMemoryPagesToOS(from_page, to_page);
-    released_ranges_count++;
-    released_bytes += to_page - from_page;
+    released_ranges_count_++;
+    released_bytes_ += to_page - from_page;
   }
 
  private:
-  const Allocator &allocator;
-  const uptr region_base = 0;
-  uptr released_ranges_count = 0;
-  uptr released_bytes = 0;
+  const Allocator &allocator_;
+  const uptr region_base_ = 0;
+  uptr released_ranges_count_ = 0;
+  uptr released_bytes_ = 0;
 };
 
 template <class Params>
