@@ -139,27 +139,27 @@ static inline T hypot(T x, T y) {
   DUIntType a_mant_sq, b_mant_sq;
   bool sticky_bits;
 
-  if ((x_bits.encoding.exponent >=
-       y_bits.encoding.exponent + MantissaWidth<T>::value + 2) ||
+  if ((x_bits.getUnbiasedExponent() >=
+       y_bits.getUnbiasedExponent() + MantissaWidth<T>::value + 2) ||
       (y == 0)) {
     return abs(x);
-  } else if ((y_bits.encoding.exponent >=
-              x_bits.encoding.exponent + MantissaWidth<T>::value + 2) ||
+  } else if ((y_bits.getUnbiasedExponent() >=
+              x_bits.getUnbiasedExponent() + MantissaWidth<T>::value + 2) ||
              (x == 0)) {
-    y_bits.encoding.sign = 0;
+    y_bits.setSign(0);
     return abs(y);
   }
 
   if (x >= y) {
-    a_exp = x_bits.encoding.exponent;
-    a_mant = x_bits.encoding.mantissa;
-    b_exp = y_bits.encoding.exponent;
-    b_mant = y_bits.encoding.mantissa;
+    a_exp = x_bits.getUnbiasedExponent();
+    a_mant = x_bits.getMantissa();
+    b_exp = y_bits.getUnbiasedExponent();
+    b_mant = y_bits.getMantissa();
   } else {
-    a_exp = y_bits.encoding.exponent;
-    a_mant = y_bits.encoding.mantissa;
-    b_exp = x_bits.encoding.exponent;
-    b_mant = x_bits.encoding.mantissa;
+    a_exp = y_bits.getUnbiasedExponent();
+    a_mant = y_bits.getMantissa();
+    b_exp = x_bits.getUnbiasedExponent();
+    b_mant = x_bits.getMantissa();
   }
 
   out_exp = a_exp;

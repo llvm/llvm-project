@@ -163,31 +163,29 @@ public:
     result = func(x, 0);
     FPBits xBits = FPBits(x);
     FPBits resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.encoding.exponent,
-              uint16_t(xBits.encoding.exponent - 1));
-    ASSERT_EQ(resultBits.encoding.mantissa,
+    ASSERT_EQ(resultBits.getUnbiasedExponent(),
+              uint16_t(xBits.getUnbiasedExponent() - 1));
+    ASSERT_EQ(resultBits.getMantissa(),
               (UIntType(1) << MantissaWidth::value) - 1);
 
     result = func(x, T(33.0));
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.encoding.exponent, xBits.encoding.exponent);
-    ASSERT_EQ(resultBits.encoding.mantissa,
-              xBits.encoding.mantissa + UIntType(1));
+    ASSERT_EQ(resultBits.getUnbiasedExponent(), xBits.getUnbiasedExponent());
+    ASSERT_EQ(resultBits.getMantissa(), xBits.getMantissa() + UIntType(1));
 
     x = -x;
 
     result = func(x, 0);
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.encoding.exponent,
-              uint16_t(xBits.encoding.exponent - 1));
-    ASSERT_EQ(resultBits.encoding.mantissa,
+    ASSERT_EQ(resultBits.getUnbiasedExponent(),
+              uint16_t(xBits.getUnbiasedExponent() - 1));
+    ASSERT_EQ(resultBits.getMantissa(),
               (UIntType(1) << MantissaWidth::value) - 1);
 
     result = func(x, T(-33.0));
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.encoding.exponent, xBits.encoding.exponent);
-    ASSERT_EQ(resultBits.encoding.mantissa,
-              xBits.encoding.mantissa + UIntType(1));
+    ASSERT_EQ(resultBits.getUnbiasedExponent(), xBits.getUnbiasedExponent());
+    ASSERT_EQ(resultBits.getMantissa(), xBits.getMantissa() + UIntType(1));
   }
 };
 
