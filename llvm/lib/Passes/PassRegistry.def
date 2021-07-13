@@ -445,9 +445,9 @@ LOOP_PASS("loop-versioning-licm", LoopVersioningLICMPass())
 #endif
 LOOP_PASS_WITH_PARAMS("simple-loop-unswitch",
                       "SimpleLoopUnswitchPass",
-                      [](bool NonTrivial) {
-                        return SimpleLoopUnswitchPass(NonTrivial);
+                      [](std::pair<bool, bool> Params) {
+                        return SimpleLoopUnswitchPass(Params.first, Params.second);
                       },
                       parseLoopUnswitchOptions,
-                      "no-nontrivial;nontrivial")
+                      "nontrivial;no-nontrivial;trivial;no-trivial")
 #undef LOOP_PASS_WITH_PARAMS
