@@ -495,6 +495,7 @@ steps:
     agents:
       queue: "libcxx-builders"
       os: "macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
+      arch: "x86_64"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -507,6 +508,7 @@ steps:
     agents:
       queue: "libcxx-builders"
       os: "macos10.15"
+      arch: "x86_64"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
