@@ -15,46 +15,29 @@
 #ifndef LLVM_ADT_SEQUENCE_H
 #define LLVM_ADT_SEQUENCE_H
 
-#include <cstddef>  //std::ptrdiff_t
-#include <iterator> //std::random_access_iterator_tag
+#include <cassert>     // assert
+#include <cstddef>     // std::ptrdiff_t
+#include <iterator>    // std::random_access_iterator_tag
+#include <limits>      // std::numeric_limits
+#include <type_traits> // std::underlying_type, std::is_enum
 
 namespace llvm {
 
 namespace detail {
 
-template <typename T, bool IsReversed> struct iota_range_iterator {
+template <typename T, typename U, bool IsReversed> struct iota_range_iterator {
   using iterator_category = std::random_access_iterator_tag;
   using value_type = T;
   using difference_type = std::ptrdiff_t;
   using pointer = T *;
   using reference = T &;
 
-private:
-  struct Forward {
-    static void increment(T &V) { ++V; }
-    static void decrement(T &V) { --V; }
-    static void offset(T &V, difference_type Offset) { V += Offset; }
-    static T add(const T &V, difference_type Offset) { return V + Offset; }
-    static difference_type difference(const T &A, const T &B) { return A - B; }
-  };
-
-  struct Reverse {
-    static void increment(T &V) { --V; }
-    static void decrement(T &V) { ++V; }
-    static void offset(T &V, difference_type Offset) { V -= Offset; }
-    static T add(const T &V, difference_type Offset) { return V - Offset; }
-    static difference_type difference(const T &A, const T &B) { return B - A; }
-  };
-
-  using Op = std::conditional_t<!IsReversed, Forward, Reverse>;
-
-public:
   // default-constructible
   iota_range_iterator() = default;
   // copy-constructible
   iota_range_iterator(const iota_range_iterator &) = default;
   // value constructor
-  explicit iota_range_iterator(T Value) : Value(Value) {}
+  explicit iota_range_iterator(U Value) : Value(Value) {}
   // copy-assignable
   iota_range_iterator &operator=(const iota_range_iterator &) = default;
   // destructible
@@ -83,8 +66,10 @@ public:
   }
 
   // Dereference
-  T operator*() const { return Value; }
-  T operator[](difference_type Offset) const { return Op::add(Value, Offset); }
+  T operator*() const { return static_cast<T>(Value); }
+  T operator[](difference_type Offset) const {
+    return static_cast<T>(Op::add(Value, Offset));
+  }
 
   // Arithmetic
   iota_range_iterator operator+(difference_type Offset) const {
@@ -132,46 +117,116 @@ public:
   }
 
 private:
-  T Value;
+  struct Forward {
+    static void increment(U &V) { ++V; }
+    static void decrement(U &V) { --V; }
+    static void offset(U &V, difference_type Offset) { V += Offset; }
+    static U add(const U &V, difference_type Offset) { return V + Offset; }
+    static difference_type difference(const U &A, const U &B) {
+      return difference_type(A) - difference_type(B);
+    }
+  };
+
+  struct Reverse {
+    static void increment(U &V) { --V; }
+    static void decrement(U &V) { ++V; }
+    static void offset(U &V, difference_type Offset) { V -= Offset; }
+    static U add(const U &V, difference_type Offset) { return V - Offset; }
+    static difference_type difference(const U &A, const U &B) {
+      return difference_type(B) - difference_type(A);
+    }
+  };
+
+  using Op = std::conditional_t<!IsReversed, Forward, Reverse>;
+
+  U Value;
 };
+
+// Providing std::type_identity for C++14.
+template <class T> struct type_identity { using type = T; };
 
 } // namespace detail
 
-template <typename ValueT> struct iota_range {
-  static_assert(std::is_integral<ValueT>::value,
-                "ValueT must be an integral type");
+template <typename T> struct iota_range {
+private:
+  using underlying_type =
+      typename std::conditional_t<std::is_enum<T>::value,
+                                  std::underlying_type<T>,
+                                  detail::type_identity<T>>::type;
+  using numeric_type =
+      typename std::conditional_t<std::is_signed<underlying_type>::value,
+                                  intmax_t, uintmax_t>;
 
-  using value_type = ValueT;
-  using reference = ValueT &;
-  using const_reference = const ValueT &;
-  using iterator = detail::iota_range_iterator<value_type, false>;
+  static numeric_type compute_past_end(numeric_type End, bool Inclusive) {
+    if (Inclusive) {
+      // This assertion forbids overflow of `PastEndValue`.
+      assert(End != std::numeric_limits<numeric_type>::max() &&
+             "Forbidden End value for seq_inclusive.");
+      return End + 1;
+    }
+    return End;
+  }
+  static numeric_type raw(T Value) { return static_cast<numeric_type>(Value); }
+
+  numeric_type BeginValue;
+  numeric_type PastEndValue;
+
+public:
+  using value_type = T;
+  using reference = T &;
+  using const_reference = const T &;
+  using iterator = detail::iota_range_iterator<value_type, numeric_type, false>;
   using const_iterator = iterator;
-  using reverse_iterator = detail::iota_range_iterator<value_type, true>;
+  using reverse_iterator =
+      detail::iota_range_iterator<value_type, numeric_type, true>;
   using const_reverse_iterator = reverse_iterator;
   using difference_type = std::ptrdiff_t;
   using size_type = std::size_t;
 
-  value_type Begin;
-  value_type End;
+  explicit iota_range(T Begin, T End, bool Inclusive)
+      : BeginValue(raw(Begin)),
+        PastEndValue(compute_past_end(raw(End), Inclusive)) {
+    assert(Begin <= End && "Begin must be less or equal to End.");
+  }
 
-  explicit iota_range(ValueT Begin, ValueT End) : Begin(Begin), End(End) {}
+  size_t size() const { return PastEndValue - BeginValue; }
+  bool empty() const { return BeginValue == PastEndValue; }
 
-  size_t size() const { return End - Begin; }
-  bool empty() const { return Begin == End; }
+  auto begin() const { return const_iterator(BeginValue); }
+  auto end() const { return const_iterator(PastEndValue); }
 
-  auto begin() const { return const_iterator(Begin); }
-  auto end() const { return const_iterator(End); }
-
-  auto rbegin() const { return const_reverse_iterator(End - 1); }
-  auto rend() const { return const_reverse_iterator(Begin - 1); }
+  auto rbegin() const { return const_reverse_iterator(PastEndValue - 1); }
+  auto rend() const {
+    assert(std::is_unsigned<numeric_type>::value ||
+           BeginValue != std::numeric_limits<numeric_type>::min() &&
+               "Forbidden Begin value for reverse iteration");
+    return const_reverse_iterator(BeginValue - 1);
+  }
 
 private:
-  static_assert(std::is_same<ValueT, std::remove_cv_t<ValueT>>::value,
-                "ValueT must not be const nor volatile");
+  static_assert(std::is_integral<T>::value || std::is_enum<T>::value,
+                "T must be an integral or enum type");
+  static_assert(std::is_same<T, std::remove_cv_t<T>>::value,
+                "T must not be const nor volatile");
+  static_assert(std::is_integral<numeric_type>::value,
+                "numeric_type must be an integral type");
 };
 
-template <typename ValueT> auto seq(ValueT Begin, ValueT End) {
-  return iota_range<ValueT>(Begin, End);
+/// Iterate over an integral/enum type from Begin up to - but not including -
+/// End.
+/// Note on enum iteration: `seq` will generate each consecutive value, even if
+/// no enumerator with that value exists.
+template <typename T> auto seq(T Begin, T End) {
+  return iota_range<T>(Begin, End, false);
+}
+
+/// Iterate over an integral/enum type from Begin to End inclusive.
+/// Note on enum iteration: `seq_inclusive` will generate each consecutive
+/// value, even if no enumerator with that value exists.
+/// To prevent overflow, `End` must be different from INTMAX_MAX if T is signed
+/// (resp. UINTMAX_MAX if T is unsigned).
+template <typename T> auto seq_inclusive(T Begin, T End) {
+  return iota_range<T>(Begin, End, true);
 }
 
 } // end namespace llvm
