@@ -419,11 +419,11 @@ class SizeClassAllocator64 {
   // For the performance sake, none of the accessors check the validity of the
   // arguments, it is assumed that index is always in [0, n) range and the value
   // is not incremented past max_value.
-  template <typename MemoryMapper>
   class PackedCounterArray {
    public:
+    template <typename MemoryMapper>
     PackedCounterArray(u64 num_counters, u64 max_value, MemoryMapper *mapper)
-        : n(num_counters), memory_mapper(mapper) {
+        : n(num_counters) {
       CHECK_GT(num_counters, 0);
       CHECK_GT(max_value, 0);
       constexpr u64 kMaxCounterBits = sizeof(*buffer) * 8ULL;
@@ -443,8 +443,8 @@ class SizeClassAllocator64 {
       buffer_size =
           (RoundUpTo(n, 1ULL << packing_ratio_log) >> packing_ratio_log) *
           sizeof(*buffer);
-      buffer = reinterpret_cast<u64*>(
-          memory_mapper->MapPackedCounterArrayBuffer(buffer_size));
+      buffer = reinterpret_cast<u64 *>(
+          mapper->MapPackedCounterArrayBuffer(buffer_size));
     }
 
     bool IsAllocated() const {
@@ -482,7 +482,6 @@ class SizeClassAllocator64 {
     u64 packing_ratio_log;
     u64 bit_offset_mask;
 
-    MemoryMapper *const memory_mapper;
     u64 buffer_size;
     u64* buffer;
   };
@@ -574,8 +573,8 @@ class SizeClassAllocator64 {
       UNREACHABLE("All chunk_size/page_size ratios must be handled.");
     }
 
-    PackedCounterArray<MemoryMapper> counters(
-        allocated_pages_count, full_pages_chunk_count_max, memory_mapper);
+    PackedCounterArray counters(allocated_pages_count,
+                                full_pages_chunk_count_max, memory_mapper);
     if (!counters.IsAllocated())
       return;
 
