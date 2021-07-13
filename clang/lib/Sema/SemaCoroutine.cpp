@@ -977,7 +977,7 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
   VarDecl *Promise = FSI->CoroutinePromise;
   ExprResult PC;
   if (E && (isa<InitListExpr>(E) || !E->getType()->isVoidType())) {
-    getNamedReturnInfo(E, /*ForceCXX2b=*/true);
+    getNamedReturnInfo(E, SimplerImplicitMoveMode::ForceOn);
     PC = buildPromiseCall(*this, Promise, Loc, "return_value", E);
   } else {
     E = MakeFullDiscardedValueExpr(E).get();
