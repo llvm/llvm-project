@@ -60,3 +60,23 @@ unsigned long long test_builtin_ppc_maddld_unsigned() {
   // CHECK-NONPWR9-ERR:  error: this builtin is only valid on POWER9 or later CPUs
   return __builtin_ppc_maddld(ull, ull, ull);
 }
+
+unsigned long long extract_sig (double d) {
+// CHECK-LABEL: @extract_sig(
+// CHECK:       [[TMP1:%.*]] = call i64 @llvm.ppc.extract.sig(double %0)
+// CHECK-NEXT:  ret i64 [[TMP1]]
+//
+// CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+// CHECK-NONPWR9-ERR:  error: this builtin is only valid on POWER9 or later CPUs
+  return __extract_sig (d);
+}
+
+double insert_exp (double d, unsigned long long ull) {
+// CHECK-LABEL: @insert_exp(
+// CHECK:       [[TMP2:%.*]] = call double @llvm.ppc.insert.exp(double %0, i64 %1)
+// CHECK-NEXT:    ret double [[TMP2]]
+//
+// CHECK-32-ERROR: error: this builtin is only available on 64-bit targets
+// CHECK-NONPWR9-ERR:  error: this builtin is only valid on POWER9 or later CPUs
+  return __insert_exp (d, ull);
+}
