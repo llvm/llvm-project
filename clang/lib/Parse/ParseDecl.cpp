@@ -4110,6 +4110,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw___generic:
       // generic address space is introduced only in OpenCL v2.0
       // see OpenCL C Spec v2.0 s6.5.5
+      // OpenCL v3.0 introduces __opencl_c_generic_address_space
+      // feature macro to indicate if generic address space is supported
       if (!Actions.getLangOpts().OpenCLGenericAddressSpace) {
         DiagID = diag::err_opencl_unknown_type_specifier;
         PrevSpec = Tok.getIdentifierInfo()->getNameStart();
