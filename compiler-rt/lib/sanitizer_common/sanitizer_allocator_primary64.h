@@ -47,9 +47,7 @@ class MemoryMapper {
  public:
   typedef typename Allocator::CompactPtrT CompactPtrT;
 
-  MemoryMapper(const Allocator &allocator, uptr class_id)
-      : allocator_(allocator),
-        region_base_(allocator.GetRegionBeginBySizeClass(class_id)) {}
+  explicit MemoryMapper(const Allocator &allocator) : allocator_(allocator) {}
 
   uptr GetReleasedRangesCount() const { return released_ranges_count_; }
 
@@ -68,9 +66,10 @@ class MemoryMapper {
   }
 
   // Releases [from, to) range of pages back to OS.
-  void ReleasePageRangeToOS(CompactPtrT from, CompactPtrT to) {
-    const uptr from_page = allocator_.CompactPtrToPointer(region_base_, from);
-    const uptr to_page = allocator_.CompactPtrToPointer(region_base_, to);
+  void ReleasePageRangeToOS(uptr class_id, CompactPtrT from, CompactPtrT to) {
+    const uptr region_base = allocator_.GetRegionBeginBySizeClass(class_id);
+    const uptr from_page = allocator_.CompactPtrToPointer(region_base, from);
+    const uptr to_page = allocator_.CompactPtrToPointer(region_base, to);
     ReleaseMemoryPagesToOS(from_page, to_page);
     released_ranges_count_++;
     released_bytes_ += to_page - from_page;
@@ -78,7 +77,6 @@ class MemoryMapper {
 
  private:
   const Allocator &allocator_;
-  const uptr region_base_ = 0;
   uptr released_ranges_count_ = 0;
   uptr released_bytes_ = 0;
 };
@@ -480,12 +478,10 @@ class SizeClassAllocator64 {
   template <class MemoryMapperT>
   class FreePagesRangeTracker {
    public:
-    explicit FreePagesRangeTracker(MemoryMapperT *mapper)
+    FreePagesRangeTracker(MemoryMapperT *mapper, uptr class_id)
         : memory_mapper(mapper),
-          page_size_scaled_log(Log2(GetPageSizeCached() >> kCompactPtrScale)),
-          in_the_range(false),
-          current_page(0),
-          current_range_start_page(0) {}
+          class_id(class_id),
+          page_size_scaled_log(Log2(GetPageSizeCached() >> kCompactPtrScale)) {}
 
     void NextPage(bool freed) {
       if (freed) {
@@ -507,17 +503,18 @@ class SizeClassAllocator64 {
     void CloseOpenedRange() {
       if (in_the_range) {
         memory_mapper->ReleasePageRangeToOS(
-            current_range_start_page << page_size_scaled_log,
+            class_id, current_range_start_page << page_size_scaled_log,
             current_page << page_size_scaled_log);
         in_the_range = false;
       }
     }
 
-    MemoryMapperT *const memory_mapper;
-    const uptr page_size_scaled_log;
-    bool in_the_range;
-    uptr current_page;
-    uptr current_range_start_page;
+    MemoryMapperT *const memory_mapper = nullptr;
+    const uptr class_id = 0;
+    const uptr page_size_scaled_log = 0;
+    bool in_the_range = false;
+    uptr current_page = 0;
+    uptr current_range_start_page = 0;
   };
 
   // Iterates over the free_array to identify memory pages containing freed
@@ -528,7 +525,8 @@ class SizeClassAllocator64 {
   static void ReleaseFreeMemoryToOS(CompactPtrT *free_array,
                                     uptr free_array_count, uptr chunk_size,
                                     uptr allocated_pages_count,
-                                    MemoryMapper *memory_mapper) {
+                                    MemoryMapper *memory_mapper,
+                                    uptr class_id) {
     const uptr page_size = GetPageSizeCached();
 
     // Figure out the number of chunks per page and whether we can take a fast
@@ -590,7 +588,7 @@ class SizeClassAllocator64 {
 
     // Iterate over pages detecting ranges of pages with chunk counters equal
     // to the expected number of chunks for the particular page.
-    FreePagesRangeTracker<MemoryMapper> range_tracker(memory_mapper);
+    FreePagesRangeTracker<MemoryMapper> range_tracker(memory_mapper, class_id);
     if (same_chunk_count_per_page) {
       // Fast path, every page has the same number of chunks affecting it.
       for (uptr i = 0; i < counters.GetCount(); i++)
@@ -892,12 +890,12 @@ class SizeClassAllocator64 {
       }
     }
 
-    MemoryMapper<ThisT> memory_mapper(*this, class_id);
+    MemoryMapper<ThisT> memory_mapper(*this);
 
     ReleaseFreeMemoryToOS(
         GetFreeArray(GetRegionBeginBySizeClass(class_id)), n, chunk_size,
         RoundUpTo(region->allocated_user, page_size) / page_size,
-        &memory_mapper);
+        &memory_mapper, class_id);
 
     if (memory_mapper.GetReleasedRangesCount() > 0) {
       region->rtoi.n_freed_at_last_release = region->stats.n_freed;
