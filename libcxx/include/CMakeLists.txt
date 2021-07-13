@@ -135,6 +135,7 @@ set(files
   __iterator/back_insert_iterator.h
   __iterator/common_iterator.h
   __iterator/concepts.h
+  __iterator/counted_iterator.h
   __iterator/data.h
   __iterator/default_sentinel.h
   __iterator/distance.h
