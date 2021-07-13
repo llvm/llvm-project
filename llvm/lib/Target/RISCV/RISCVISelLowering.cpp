@@ -1826,14 +1826,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ InvertMask;
     MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     if (!IsSelect) {
-      bool IsLHS = MaskIndex < (int)NumElts;
-      // For "undef" elements of -1, shuffle in element 0 instead.
-      GatherIndicesLHS.push_back(
-          DAG.getConstant(IsLHS ? std::max(MaskIndex, 0) : 0, DL, XLenVT));
-      // TODO: If we're masking out unused elements anyway, it might produce
-      // better code if we use the most-common element index instead of 0.
+      bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
+      GatherIndicesLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
+                                     ? DAG.getConstant(MaskIndex, DL, XLenVT)
+                                     : DAG.getUNDEF(XLenVT));
       GatherIndicesRHS.push_back(
-          DAG.getConstant(IsLHS ? 0 : MaskIndex - NumElts, DL, XLenVT));
+          IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
+                            : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
     }
   }
 
