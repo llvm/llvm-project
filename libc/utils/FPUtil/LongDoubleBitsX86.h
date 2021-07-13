@@ -16,10 +16,6 @@
 namespace __llvm_libc {
 namespace fputil {
 
-template <> struct MantissaWidth<long double> {
-  static constexpr unsigned value = 63;
-};
-
 template <unsigned Width> struct Padding;
 
 // i386 padding.
@@ -43,25 +39,61 @@ template <> union FPBits<long double> {
       ((UIntType(maxExponent) - 1) << (MantissaWidth<long double>::value + 1)) |
       (UIntType(1) << MantissaWidth<long double>::value) | maxSubnormal;
 
-  struct __attribute__((packed)) {
-    UIntType mantissa : MantissaWidth<long double>::value;
-    uint8_t implicitBit : 1;
-    uint16_t exponent : ExponentWidth<long double>::value;
-    uint8_t sign : 1;
-    uint64_t padding : Padding<sizeof(uintptr_t)>::value;
-  } encoding;
-  UIntType integer;
+  using FloatProp = FloatProperties<long double>;
+
+  UIntType bits;
+
+  void setMantissa(UIntType mantVal) {
+    mantVal &= (FloatProp::mantissaMask);
+    bits &= ~(FloatProp::mantissaMask);
+    bits |= mantVal;
+  }
+
+  UIntType getMantissa() const { return bits & FloatProp::mantissaMask; }
+
+  void setUnbiasedExponent(UIntType expVal) {
+    expVal = (expVal << (FloatProp::bitWidth - 1 - FloatProp::exponentWidth)) &
+             FloatProp::exponentMask;
+    bits &= ~(FloatProp::exponentMask);
+    bits |= expVal;
+  }
+
+  uint16_t getUnbiasedExponent() const {
+    return uint16_t((bits & FloatProp::exponentMask) >>
+                    (FloatProp::bitWidth - 1 - FloatProp::exponentWidth));
+  }
+
+  void setImplicitBit(bool implicitVal) {
+    bits &= ~(UIntType(1) << FloatProp::mantissaWidth);
+    bits |= (UIntType(implicitVal) << FloatProp::mantissaWidth);
+  }
+
+  bool getImplicitBit() const {
+    return ((bits & (UIntType(1) << FloatProp::mantissaWidth)) >>
+            FloatProp::mantissaWidth);
+  }
+
+  void setSign(bool signVal) {
+    bits &= ~(FloatProp::signMask);
+    UIntType sign1 = UIntType(signVal) << (FloatProp::bitWidth - 1);
+    bits |= sign1;
+  }
+
+  bool getSign() const {
+    return ((bits & FloatProp::signMask) >> (FloatProp::bitWidth - 1));
+  }
+
   long double val;
 
-  FPBits() : integer(0) {}
+  FPBits() : bits(0) {}
 
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<long double, XType>::Value, int> = 0>
-  explicit FPBits<long double>(XType x) : val(x) {}
+  explicit FPBits(XType x) : val(x) {}
 
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>
-  explicit FPBits(XType x) : integer(x) {}
+  explicit FPBits(XType x) : bits(x) {}
 
   operator long double() { return val; }
 
@@ -71,37 +103,37 @@ template <> union FPBits<long double> {
         (UIntType(1) << (sizeof(long double) * 8 -
                          Padding<sizeof(uintptr_t)>::value)) -
         1;
-    return integer & mask;
+    return bits & mask;
   }
 
   int getExponent() const {
-    if (encoding.exponent == 0)
+    if (getUnbiasedExponent() == 0)
       return int(1) - exponentBias;
-    return int(encoding.exponent) - exponentBias;
+    return int(getUnbiasedExponent()) - exponentBias;
   }
 
   bool isZero() const {
-    return encoding.exponent == 0 && encoding.mantissa == 0 &&
-           encoding.implicitBit == 0;
+    return getUnbiasedExponent() == 0 && getMantissa() == 0 &&
+           getImplicitBit() == 0;
   }
 
   bool isInf() const {
-    return encoding.exponent == maxExponent && encoding.mantissa == 0 &&
-           encoding.implicitBit == 1;
+    return getUnbiasedExponent() == maxExponent && getMantissa() == 0 &&
+           getImplicitBit() == 1;
   }
 
   bool isNaN() const {
-    if (encoding.exponent == maxExponent) {
-      return (encoding.implicitBit == 0) || encoding.mantissa != 0;
-    } else if (encoding.exponent != 0) {
-      return encoding.implicitBit == 0;
+    if (getUnbiasedExponent() == maxExponent) {
+      return (getImplicitBit() == 0) || getMantissa() != 0;
+    } else if (getUnbiasedExponent() != 0) {
+      return getImplicitBit() == 0;
     }
     return false;
   }
 
   bool isInfOrNaN() const {
-    return (encoding.exponent == maxExponent) ||
-           (encoding.exponent != 0 && encoding.implicitBit == 0);
+    return (getUnbiasedExponent() == maxExponent) ||
+           (getUnbiasedExponent() != 0 && getImplicitBit() == 0);
   }
 
   // Methods below this are used by tests.
@@ -110,30 +142,30 @@ template <> union FPBits<long double> {
 
   static FPBits<long double> negZero() {
     FPBits<long double> bits(0.0l);
-    bits.encoding.sign = 1;
+    bits.setSign(1);
     return bits;
   }
 
   static FPBits<long double> inf() {
     FPBits<long double> bits(0.0l);
-    bits.encoding.exponent = maxExponent;
-    bits.encoding.implicitBit = 1;
+    bits.setUnbiasedExponent(maxExponent);
+    bits.setImplicitBit(1);
     return bits;
   }
 
   static FPBits<long double> negInf() {
     FPBits<long double> bits(0.0l);
-    bits.encoding.exponent = maxExponent;
-    bits.encoding.implicitBit = 1;
-    bits.encoding.sign = 1;
+    bits.setUnbiasedExponent(maxExponent);
+    bits.setImplicitBit(1);
+    bits.setSign(1);
     return bits;
   }
 
   static long double buildNaN(UIntType v) {
     FPBits<long double> bits(0.0l);
-    bits.encoding.exponent = maxExponent;
-    bits.encoding.implicitBit = 1;
-    bits.encoding.mantissa = v;
+    bits.setUnbiasedExponent(maxExponent);
+    bits.setImplicitBit(1);
+    bits.setMantissa(v);
     return bits;
   }
 };

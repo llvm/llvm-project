@@ -13,47 +13,19 @@
 
 #include "utils/CPP/TypeTraits.h"
 
+#include "FloatProperties.h"
 #include <stdint.h>
 
 namespace __llvm_libc {
 namespace fputil {
 
-template <typename T> struct MantissaWidth {};
-template <> struct MantissaWidth<float> {
-  static constexpr unsigned value = 23;
-};
-template <> struct MantissaWidth<double> {
-  static constexpr unsigned value = 52;
+template <typename T> struct MantissaWidth {
+  static constexpr unsigned value = FloatProperties<T>::mantissaWidth;
 };
 
-template <typename T> struct ExponentWidth {};
-template <> struct ExponentWidth<float> {
-  static constexpr unsigned value = 8;
+template <typename T> struct ExponentWidth {
+  static constexpr unsigned value = FloatProperties<T>::exponentWidth;
 };
-template <> struct ExponentWidth<double> {
-  static constexpr unsigned value = 11;
-};
-template <> struct ExponentWidth<long double> {
-  static constexpr unsigned value = 15;
-};
-
-template <typename T> struct FPUIntType {};
-template <> struct FPUIntType<float> { using Type = uint32_t; };
-template <> struct FPUIntType<double> { using Type = uint64_t; };
-
-#ifdef LONG_DOUBLE_IS_DOUBLE
-template <> struct MantissaWidth<long double> {
-  static constexpr unsigned value = MantissaWidth<double>::value;
-};
-template <> struct FPUIntType<long double> {
-  using Type = FPUIntType<double>::Type;
-};
-#elif !defined(SPECIAL_X86_LONG_DOUBLE)
-template <> struct MantissaWidth<long double> {
-  static constexpr unsigned value = 112;
-};
-template <> struct FPUIntType<long double> { using Type = __uint128_t; };
-#endif
 
 // A generic class to represent single precision, double precision, and quad
 // precision IEEE 754 floating point formats.
@@ -70,20 +42,44 @@ template <typename T> union FPBits {
   // Reinterpreting bits as an integer value and interpreting the bits of an
   // integer value as a floating point value is used in tests. So, a convenient
   // type is provided for such reinterpretations.
-  using UIntType = typename FPUIntType<T>::Type;
+  using FloatProp = FloatProperties<T>;
+  // TODO: Change UintType name to BitsType for consistency.
+  using UIntType = typename FloatProp::BitsType;
 
-  struct __attribute__((packed)) {
-    UIntType mantissa : MantissaWidth<T>::value;
-    uint16_t exponent : ExponentWidth<T>::value;
-    uint8_t sign : 1;
-  } encoding;
-  UIntType integer;
+  UIntType bits;
+
+  void setMantissa(UIntType mantVal) {
+    mantVal &= (FloatProp::mantissaMask);
+    bits &= ~(FloatProp::mantissaMask);
+    bits |= mantVal;
+  }
+
+  UIntType getMantissa() const { return bits & FloatProp::mantissaMask; }
+
+  void setUnbiasedExponent(UIntType expVal) {
+    expVal = (expVal << (FloatProp::mantissaWidth)) & FloatProp::exponentMask;
+    bits &= ~(FloatProp::exponentMask);
+    bits |= expVal;
+  }
+
+  uint16_t getUnbiasedExponent() const {
+    return uint16_t((bits & FloatProp::exponentMask) >>
+                    (FloatProp::mantissaWidth));
+  }
+
+  void setSign(bool signVal) {
+    bits &= ~(FloatProp::signMask);
+    UIntType sign = UIntType(signVal) << (FloatProp::bitWidth - 1);
+    bits |= sign;
+  }
+
+  bool getSign() const {
+    return ((bits & FloatProp::signMask) >> (FloatProp::bitWidth - 1));
+  }
   T val;
 
-  static_assert(sizeof(encoding) == sizeof(UIntType),
-                "Encoding and integral representation have different sizes.");
-  static_assert(sizeof(integer) == sizeof(UIntType),
-                "Integral representation and value type have different sizes.");
+  static_assert(sizeof(T) == sizeof(UIntType),
+                "Data type and integral representation have different sizes.");
 
   static constexpr int exponentBias = (1 << (ExponentWidth<T>::value - 1)) - 1;
   static constexpr int maxExponent = (1 << ExponentWidth<T>::value) - 1;
@@ -104,29 +100,29 @@ template <typename T> union FPBits {
 
   template <typename XType,
             cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>
-  explicit FPBits(XType x) : integer(x) {}
+  explicit FPBits(XType x) : bits(x) {}
 
-  FPBits() : integer(0) {}
+  FPBits() : bits(0) {}
 
   explicit operator T() { return val; }
 
-  UIntType uintval() const { return integer; }
+  UIntType uintval() const { return bits; }
 
-  int getExponent() const { return int(encoding.exponent) - exponentBias; }
+  int getExponent() const { return int(getUnbiasedExponent()) - exponentBias; }
 
   bool isZero() const {
-    return encoding.mantissa == 0 && encoding.exponent == 0;
+    return getMantissa() == 0 && getUnbiasedExponent() == 0;
   }
 
   bool isInf() const {
-    return encoding.mantissa == 0 && encoding.exponent == maxExponent;
+    return getMantissa() == 0 && getUnbiasedExponent() == maxExponent;
   }
 
   bool isNaN() const {
-    return encoding.exponent == maxExponent && encoding.mantissa != 0;
+    return getUnbiasedExponent() == maxExponent && getMantissa() != 0;
   }
 
-  bool isInfOrNaN() const { return encoding.exponent == maxExponent; }
+  bool isInfOrNaN() const { return getUnbiasedExponent() == maxExponent; }
 
   static FPBits<T> zero() { return FPBits(); }
 
@@ -136,19 +132,19 @@ template <typename T> union FPBits {
 
   static FPBits<T> inf() {
     FPBits<T> bits;
-    bits.encoding.exponent = maxExponent;
+    bits.setUnbiasedExponent(maxExponent);
     return bits;
   }
 
   static FPBits<T> negInf() {
     FPBits<T> bits = inf();
-    bits.encoding.sign = 1;
+    bits.setSign(1);
     return bits;
   }
 
   static T buildNaN(UIntType v) {
     FPBits<T> bits = inf();
-    bits.encoding.mantissa = v;
+    bits.setMantissa(v);
     return T(bits);
   }
 };
