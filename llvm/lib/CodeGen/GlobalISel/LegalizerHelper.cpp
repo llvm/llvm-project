@@ -223,13 +223,9 @@ void LegalizerHelper::insertParts(Register DstReg,
   }
 
   SmallVector<Register> GCDRegs;
-  LLT GCDTy;
-  for (Register PartReg : PartRegs)
-    GCDTy = extractGCDType(GCDRegs, ResultTy, LeftoverTy, PartReg);
-
-  for (Register PartReg : LeftoverRegs)
-    extractGCDType(GCDRegs, ResultTy, LeftoverTy, PartReg);
-
+  LLT GCDTy = getGCDType(getGCDType(ResultTy, LeftoverTy), PartTy);
+  for (auto PartReg : concat<const Register>(PartRegs, LeftoverRegs))
+    extractGCDType(GCDRegs, GCDTy, PartReg);
   LLT ResultLCMTy = buildLCMMergePieces(ResultTy, LeftoverTy, GCDTy, GCDRegs);
   buildWidenedRemergeToDst(DstReg, ResultLCMTy, GCDRegs);
 }
