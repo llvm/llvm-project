@@ -1224,15 +1224,19 @@ declare i8* @m()
 define i32 @test(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@test
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ctx_test(i1 [[C]])
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @ctx_test1(i1 [[C]])
+; CHECK-NEXT:    [[R2:%.*]] = call i32 @ctx_test2(i1 [[C]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[R1]], [[R2]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
-  %r = call i32 @ctx_test(i1 %c)
-  ret i32 %r
+  %r1 = call i32 @ctx_test1(i1 %c)
+  %r2 = call i32 @ctx_test2(i1 %c)
+  %add = add i32 %r1, %r2
+  ret i32 %add
 }
 
-define internal i32 @ctx_test(i1 %c) {
-; CHECK-LABEL: define {{[^@]+}}@ctx_test
+define internal i32 @ctx_test1(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@ctx_test1
 ; CHECK-SAME: (i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[JOIN:%.*]]
@@ -1257,6 +1261,36 @@ join:
   %phi = phi i64 [ %i, %then ], [ undef, %entry ]
   %ret = trunc i64 %phi to i32
   ret i32 %ret
+}
+
+define internal i32 @ctx_test2(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@ctx_test2
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[JOIN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[M:%.*]] = tail call i8* @m()
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint i8* [[M]] to i32
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[I]], [[THEN]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[PHI]], 1
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  br i1 %c, label %then, label %join
+
+then:
+  %m = tail call i8* @m()
+  %i = ptrtoint i8* %m to i32
+  br label %join
+
+join:
+  %phi = phi i32 [ %i, %then ], [ undef, %entry ]
+  %ret = lshr i32 %phi, 1
+  ret i32 %ret
+
+  uselistorder label %join, { 1, 0 }
 }
 
 ;.
@@ -1297,4 +1331,6 @@ join:
 ; IS__CGSCC_NPM: attributes #[[ATTR6]] = { willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR7]] = { readonly willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR8]] = { nofree nosync nounwind readnone }
+;.
+; CHECK: [[RNG0]] = !{i32 0, i32 -2147483648}
 ;.
