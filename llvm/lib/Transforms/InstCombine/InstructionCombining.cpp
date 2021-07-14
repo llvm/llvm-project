@@ -3514,6 +3514,57 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   return nullptr;
 }
 
+Value *
+InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
+  // Try to push freeze through instructions that propagate but don't produce
+  // poison as far as possible.  If an operand of freeze follows three
+  // conditions 1) one-use, 2) does not produce poison, and 3) has all but one
+  // guaranteed-non-poison operands then push the freeze through to the one
+  // operand that is not guaranteed non-poison.  The actual transform is as
+  // follows.
+  //   Op1 = ...                        ; Op1 can be posion
+  //   Op0 = Inst(Op1, NonPoisonOps...) ; Op0 has only one use and only have
+  //                                    ; single guaranteed-non-poison operands
+  //   ... = Freeze(Op0)
+  // =>
+  //   Op1 = ...
+  //   Op1.fr = Freeze(Op1)
+  //   ... = Inst(Op1.fr, NonPoisonOps...)
+  auto *OrigOp = OrigFI.getOperand(0);
+  auto *OrigOpInst = dyn_cast<Instruction>(OrigOp);
+
+  // While we could change the other users of OrigOp to use freeze(OrigOp), that
+  // potentially reduces their optimization potential, so let's only do this iff
+  // the OrigOp is only used by the freeze.
+  if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp) ||
+      canCreateUndefOrPoison(dyn_cast<Operator>(OrigOp)))
+    return nullptr;
+
+  // If operand is guaranteed not to be poison, there is no need to add freeze
+  // to the operand. So we first find the operand that is not guaranteed to be
+  // poison.
+  Use *MaybePoisonOperand = nullptr;
+  for (Use &U : OrigOpInst->operands()) {
+    if (isGuaranteedNotToBeUndefOrPoison(U.get()))
+      continue;
+    if (!MaybePoisonOperand)
+      MaybePoisonOperand = &U;
+    else
+      return nullptr;
+  }
+
+  // If all operands are guaranteed to be non-poison, we can drop freeze.
+  if (!MaybePoisonOperand)
+    return OrigOp;
+
+  auto *FrozenMaybePoisonOperand = new FreezeInst(
+      MaybePoisonOperand->get(), MaybePoisonOperand->get()->getName() + ".fr");
+
+  replaceUse(*MaybePoisonOperand, FrozenMaybePoisonOperand);
+  FrozenMaybePoisonOperand->insertBefore(OrigOpInst);
+  return OrigOp;
+}
+
 Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   Value *Op0 = I.getOperand(0);
 
@@ -3525,6 +3576,9 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     if (Instruction *NV = foldOpIntoPhi(I, PN))
       return NV;
   }
+
+  if (Value *NI = pushFreezeToPreventPoisonFromPropagating(I))
+    return replaceInstUsesWith(I, NI);
 
   if (match(Op0, m_Undef())) {
     // If I is freeze(undef), see its uses and fold it to the best constant.
