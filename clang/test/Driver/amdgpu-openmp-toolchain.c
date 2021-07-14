@@ -74,3 +74,6 @@
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR
 // CHECK-EMIT-LLVM-IR: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm"
+
+// RUN: env LIBRARY_PATH=%S/Inputs/hip_dev_lib %clang -### -target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -lm --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s 2>&1 | FileCheck %s --check-prefix=CHECK-LIB-DEVICE
+// CHECK-LIB-DEVICE: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-mlink-builtin-bitcode"{{.*}}libomptarget-amdgcn-gfx803.bc"{{.*}}"-mlink-builtin-bitcode"{{.*}}ocml.bc" "-mlink-builtin-bitcode"{{.*}}ockl.bc" "-mlink-builtin-bitcode"{{.*}}oclc_daz_opt_on.bc" "-mlink-builtin-bitcode"{{.*}}oclc_unsafe_math_off.bc" "-mlink-builtin-bitcode"{{.*}}oclc_finite_only_off.bc" "-mlink-builtin-bitcode"{{.*}}oclc_correctly_rounded_sqrt_on.bc" "-mlink-builtin-bitcode"{{.*}}oclc_wavefrontsize64_on.bc" "-mlink-builtin-bitcode"{{.*}}oclc_isa_version_803.bc"
