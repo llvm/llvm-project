@@ -1582,14 +1582,7 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
                   ptr = value_maker.GetValue(function);
 
                 std::vector<Value *> index_vector;
-
-                unsigned operand_index;
-                unsigned num_operands = constant_expr->getNumOperands();
-
-                for (operand_index = 1; operand_index < num_operands;
-                     ++operand_index) {
-                  Value *operand = constant_expr->getOperand(operand_index);
-
+                for (Value *operand : gep->indices()) {
                   if (operand == old_constant)
                     operand = value_maker.GetValue(function);
 
