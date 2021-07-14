@@ -20,6 +20,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -2189,6 +2190,70 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_threadprivate_cached);
 
   return Builder.CreateCall(Fn, Args);
+}
+
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD, bool RequiresFullRuntime) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  ConstantInt *IsSPMDVal = ConstantInt::getBool(Int32->getContext(), IsSPMD);
+  ConstantInt *UseGenericStateMachine =
+      ConstantInt::getBool(Int32->getContext(), !IsSPMD);
+  ConstantInt *RequiresFullRuntimeVal = ConstantInt::getBool(Int32->getContext(), RequiresFullRuntime);
+
+  Function *Fn = getOrCreateRuntimeFunctionPtr(
+      omp::RuntimeFunction::OMPRTL___kmpc_target_init);
+
+  CallInst *ThreadKind =
+      Builder.CreateCall(Fn, {Ident, IsSPMDVal, UseGenericStateMachine, RequiresFullRuntimeVal});
+
+  Value *ExecUserCode = Builder.CreateICmpEQ(
+      ThreadKind, ConstantInt::get(ThreadKind->getType(), -1), "exec_user_code");
+
+  // ThreadKind = __kmpc_target_init(...)
+  // if (ThreadKind == -1)
+  //   user_code
+  // else
+  //   return;
+
+  auto *UI = Builder.CreateUnreachable();
+  BasicBlock *CheckBB = UI->getParent();
+  BasicBlock *UserCodeEntryBB = CheckBB->splitBasicBlock(UI, "user_code.entry");
+
+  BasicBlock *WorkerExitBB = BasicBlock::Create(
+      CheckBB->getContext(), "worker.exit", CheckBB->getParent());
+  Builder.SetInsertPoint(WorkerExitBB);
+  Builder.CreateRetVoid();
+
+  auto *CheckBBTI = CheckBB->getTerminator();
+  Builder.SetInsertPoint(CheckBBTI);
+  Builder.CreateCondBr(ExecUserCode, UI->getParent(), WorkerExitBB);
+
+  CheckBBTI->eraseFromParent();
+  UI->eraseFromParent();
+
+  // Continue in the "user_code" block, see diagram above and in
+  // openmp/libomptarget/deviceRTLs/common/include/target.h .
+  return InsertPointTy(UserCodeEntryBB, UserCodeEntryBB->getFirstInsertionPt());
+}
+
+void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
+                                         bool IsSPMD, bool RequiresFullRuntime) {
+  if (!updateToLocation(Loc))
+    return;
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  ConstantInt *IsSPMDVal = ConstantInt::getBool(Int32->getContext(), IsSPMD);
+  ConstantInt *RequiresFullRuntimeVal = ConstantInt::getBool(Int32->getContext(), RequiresFullRuntime);
+
+  Function *Fn = getOrCreateRuntimeFunctionPtr(
+      omp::RuntimeFunction::OMPRTL___kmpc_target_deinit);
+
+  Builder.CreateCall(Fn, {Ident, IsSPMDVal, RequiresFullRuntimeVal});
 }
 
 std::string OpenMPIRBuilder::getNameWithSeparators(ArrayRef<StringRef> Parts,
