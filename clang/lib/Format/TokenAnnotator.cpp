@@ -2476,6 +2476,14 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
   if (Next->MatchingParen->Next &&
       Next->MatchingParen->Next->is(TT_PointerOrReference))
     return true;
+  // Check for K&R C function definitions, e.g.:
+  //   int f(i)
+  //   {
+  //     return i + 1;
+  //   }
+  if (Next->Next && Next->Next->is(tok::identifier) &&
+      !(Next->MatchingParen->Next && Next->MatchingParen->Next->is(tok::semi)))
+    return true;
   for (const FormatToken *Tok = Next->Next; Tok && Tok != Next->MatchingParen;
        Tok = Tok->Next) {
     if (Tok->is(TT_TypeDeclarationParen))
