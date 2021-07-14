@@ -22,12 +22,14 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CXXFieldCollector.h"
 #include "clang/Sema/DelayedDiagnostic.h"
@@ -54,6 +56,27 @@ SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
 }
 
 ModuleLoader &Sema::getModuleLoader() const { return PP.getModuleLoader(); }
+
+DarwinSDKInfo *
+Sema::getDarwinSDKInfoForAvailabilityChecking(SourceLocation Loc,
+                                              StringRef Platform) {
+  if (!CachedDarwinSDKInfo) {
+    auto SDKInfo = parseDarwinSDKInfo(
+        PP.getFileManager().getVirtualFileSystem(),
+        PP.getHeaderSearchInfo().getHeaderSearchOpts().Sysroot);
+    if (SDKInfo && *SDKInfo)
+      CachedDarwinSDKInfo =
+          std::make_unique<DarwinSDKInfo>(std::move(**SDKInfo));
+    else {
+      if (!SDKInfo)
+        llvm::consumeError(SDKInfo.takeError());
+      Diag(Loc, diag::warn_missing_sdksettings_for_availability_checking)
+          << Platform;
+      CachedDarwinSDKInfo = std::unique_ptr<DarwinSDKInfo>();
+    }
+  }
+  return CachedDarwinSDKInfo->get();
+}
 
 IdentifierInfo *
 Sema::InventAbbreviatedTemplateParameterTypeName(IdentifierInfo *ParamName,
