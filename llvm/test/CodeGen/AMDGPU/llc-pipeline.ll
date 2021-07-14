@@ -133,6 +133,7 @@
 ; GCN-O0-NEXT:         SI lower SGPR spill instructions
 ; GCN-O0-NEXT:         Fast Register Allocator
 ; GCN-O0-NEXT:         SI Fix VGPR copies
+; GCN-O0-NEXT:         Remove Redundant DEBUG_VALUE analysis
 ; GCN-O0-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O0-NEXT:         Lazy Machine Block Frequency Analysis
 ; GCN-O0-NEXT:         Machine Optimization Remark Emitter
@@ -380,6 +381,7 @@
 ; GCN-O1-NEXT:         Machine Loop Invariant Code Motion
 ; GCN-O1-NEXT:         SI Fix VGPR copies
 ; GCN-O1-NEXT:         SI optimize exec mask operations
+; GCN-O1-NEXT:         Remove Redundant DEBUG_VALUE analysis
 ; GCN-O1-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O1-NEXT:         PostRA Machine Sink
 ; GCN-O1-NEXT:         MachineDominator Tree Construction
@@ -678,6 +680,7 @@
 ; GCN-O1-OPTS-NEXT:         Machine Loop Invariant Code Motion
 ; GCN-O1-OPTS-NEXT:         SI Fix VGPR copies
 ; GCN-O1-OPTS-NEXT:         SI optimize exec mask operations
+; GCN-O1-OPTS-NEXT:         Remove Redundant DEBUG_VALUE analysis
 ; GCN-O1-OPTS-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O1-OPTS-NEXT:         PostRA Machine Sink
 ; GCN-O1-OPTS-NEXT:         MachineDominator Tree Construction
@@ -977,6 +980,7 @@
 ; GCN-O2-NEXT:         Machine Loop Invariant Code Motion
 ; GCN-O2-NEXT:         SI Fix VGPR copies
 ; GCN-O2-NEXT:         SI optimize exec mask operations
+; GCN-O2-NEXT:         Remove Redundant DEBUG_VALUE analysis
 ; GCN-O2-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O2-NEXT:         PostRA Machine Sink
 ; GCN-O2-NEXT:         MachineDominator Tree Construction
@@ -1289,6 +1293,7 @@
 ; GCN-O3-NEXT:         Machine Loop Invariant Code Motion
 ; GCN-O3-NEXT:         SI Fix VGPR copies
 ; GCN-O3-NEXT:         SI optimize exec mask operations
+; GCN-O3-NEXT:         Remove Redundant DEBUG_VALUE analysis
 ; GCN-O3-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O3-NEXT:         PostRA Machine Sink
 ; GCN-O3-NEXT:         MachineDominator Tree Construction

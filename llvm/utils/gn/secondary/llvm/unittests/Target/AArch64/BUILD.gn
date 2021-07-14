@@ -17,5 +17,6 @@ unittest("AArch64Tests") {
   sources = [
     "DecomposeStackOffsetTest.cpp",
     "InstSizes.cpp",
+    "MatrixRegisterAliasing.cpp",
   ]
 }
