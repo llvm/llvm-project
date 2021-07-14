@@ -1404,7 +1404,7 @@ int computeHostNumPhysicalCores() {
 }
 #elif defined(__linux__) && defined(__s390x__)
 int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
-#elif defined(__APPLE__) && defined(__x86_64__)
+#elif defined(__APPLE__)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 
