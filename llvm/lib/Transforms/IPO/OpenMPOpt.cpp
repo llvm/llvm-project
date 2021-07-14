@@ -497,6 +497,12 @@ struct KernelInfoState : AbstractState {
   /// one we abort as the kernel is malformed.
   CallBase *KernelDeinitCB = nullptr;
 
+  /// Flag to indicate if the associated function is a kernel entry.
+  bool IsKernelEntry = false;
+
+  /// State to track what kernel entries can reach the associated function.
+  BooleanStateWithPtrSetVector<Function> ReachingKernelEntries;
+
   /// Abstract State interface
   ///{
 
@@ -536,6 +542,8 @@ struct KernelInfoState : AbstractState {
     if (ReachedKnownParallelRegions != RHS.ReachedKnownParallelRegions)
       return false;
     if (ReachedUnknownParallelRegions != RHS.ReachedUnknownParallelRegions)
+      return false;
+    if (ReachingKernelEntries != RHS.ReachingKernelEntries)
       return false;
     return true;
   }
@@ -2729,6 +2737,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
     if (!OMPInfoCache.Kernels.count(Fn))
       return;
 
+    // Add itself to the reaching kernel and set IsKernelEntry.
+    ReachingKernelEntries.insert(Fn);
+    IsKernelEntry = true;
+
     OMPInformationCache::RuntimeFunctionInfo &InitRFI =
         OMPInfoCache.RFIs[OMPRTL___kmpc_target_init];
     OMPInformationCache::RuntimeFunctionInfo &DeinitRFI =
@@ -3213,6 +3225,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
             CheckRWInst, *this, UsedAssumedInformationInCheckRWInst))
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
 
+    if (!IsKernelEntry)
+      updateReachingKernelEntries(A);
+
     // Callback to check a call instruction.
     auto CheckCallInst = [&](Instruction &I) {
       auto &CB = cast<CallBase>(I);
@@ -3220,6 +3235,19 @@ struct AAKernelInfoFunction : AAKernelInfo {
           *this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
       if (CBAA.getState().isValidState())
         getState() ^= CBAA.getState();
+
+      Function *Callee = CB.getCalledFunction();
+      if (Callee) {
+        // We need to propagate information to the callee, but since the
+        // construction of AA always starts with kernel entries, we have to
+        // create AAKernelInfoFunction for all called functions. However, here
+        // the caller doesn't depend on the callee.
+        // TODO: We might want to change the dependence here later if we need
+        // information from callee to caller.
+        A.getOrCreateAAFor<AAKernelInfo>(IRPosition::function(*Callee), this,
+                                         DepClassTy::NONE);
+      }
+
       return true;
     };
 
@@ -3230,6 +3258,35 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     return StateBefore == getState() ? ChangeStatus::UNCHANGED
                                      : ChangeStatus::CHANGED;
+  }
+
+private:
+  /// Update info regarding reaching kernels.
+  void updateReachingKernelEntries(Attributor &A) {
+    auto PredCallSite = [&](AbstractCallSite ACS) {
+      Function *Caller = ACS.getInstruction()->getFunction();
+
+      assert(Caller && "Caller is nullptr");
+
+      auto &CAA =
+          A.getOrCreateAAFor<AAKernelInfo>(IRPosition::function(*Caller));
+      if (CAA.isValidState()) {
+        ReachingKernelEntries ^= CAA.ReachingKernelEntries;
+        return true;
+      }
+
+      // We lost track of the caller of the associated function, any kernel
+      // could reach now.
+      ReachingKernelEntries.indicatePessimisticFixpoint();
+
+      return true;
+    };
+
+    bool AllCallSitesKnown;
+    if (!A.checkForAllCallSites(PredCallSite, *this,
+                                true /* RequireAllCallSites */,
+                                AllCallSitesKnown))
+      ReachingKernelEntries.indicatePessimisticFixpoint();
   }
 };
 
@@ -3377,6 +3434,180 @@ struct AAKernelInfoCallSite : AAKernelInfo {
   }
 };
 
+struct AAFoldRuntimeCall
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+
+  AAFoldRuntimeCall(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Statistics are tracked as part of manifest for now.
+  void trackStatistics() const override {}
+
+  /// Create an abstract attribute biew for the position \p IRP.
+  static AAFoldRuntimeCall &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAFoldRuntimeCall"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAFoldRuntimeCall
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  static const char ID;
+};
+
+struct AAFoldRuntimeCallCallSite : AAFoldRuntimeCall {
+  AAFoldRuntimeCallCallSite(const IRPosition &IRP, Attributor &A)
+      : AAFoldRuntimeCall(IRP, A) {}
+
+  /// See AbstractAttribute::getAsStr()
+  const std::string getAsStr() const override {
+    if (!isValidState())
+      return "<invalid>";
+
+    std::string Str("simplified value: ");
+
+    if (!SimplifiedValue.hasValue())
+      return Str + std::string("none");
+
+    if (!SimplifiedValue.getValue())
+      return Str + std::string("nullptr");
+
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(SimplifiedValue.getValue()))
+      return Str + std::to_string(CI->getSExtValue());
+
+    return Str + std::string("unknown");
+  }
+
+  void initialize(Attributor &A) override {
+    Function *Callee = getAssociatedFunction();
+
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    const auto &It = OMPInfoCache.RuntimeFunctionIDMap.find(Callee);
+    assert(It != OMPInfoCache.RuntimeFunctionIDMap.end() &&
+           "Expected a known OpenMP runtime function");
+
+    RFKind = It->getSecond();
+
+    CallBase &CB = cast<CallBase>(getAssociatedValue());
+    A.registerSimplificationCallback(
+        IRPosition::callsite_returned(CB),
+        [&](const IRPosition &IRP, const AbstractAttribute *AA,
+            bool &UsedAssumedInformation) -> Optional<Value *> {
+          if (!isAtFixpoint()) {
+            UsedAssumedInformation = true;
+            if (AA)
+              A.recordDependence(*this, *AA, DepClassTy::OPTIONAL);
+          }
+          return SimplifiedValue;
+        });
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    switch (RFKind) {
+    case OMPRTL___kmpc_is_spmd_exec_mode:
+      Changed = Changed | foldIsSPMDExecMode(A);
+      break;
+    default:
+      llvm_unreachable("Unhandled OpenMP runtime function!");
+    }
+
+    return Changed;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    if (SimplifiedValue.hasValue() && SimplifiedValue.getValue()) {
+      Instruction &CB = *getCtxI();
+      A.changeValueAfterManifest(CB, **SimplifiedValue);
+      A.deleteAfterManifest(CB);
+      Changed = ChangeStatus::CHANGED;
+    }
+
+    return Changed;
+  }
+
+private:
+  /// Fold __kmpc_is_spmd_exec_mode into a constant if possible.
+  ChangeStatus foldIsSPMDExecMode(Attributor &A) {
+    BooleanState StateBefore = getState();
+
+    unsigned AssumedSPMDCount = 0, KnownSPMDCount = 0;
+    unsigned AssumedNonSPMDCount = 0, KnownNonSPMDCount = 0;
+    auto &CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
+        *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
+
+    for (Kernel K : CallerKernelInfoAA.ReachingKernelEntries) {
+      auto &AA = A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*K),
+                                          DepClassTy::REQUIRED);
+
+      if (!AA.isValidState()) {
+        SimplifiedValue = nullptr;
+        return indicatePessimisticFixpoint();
+      }
+
+      if (AA.SPMDCompatibilityTracker.isAssumed()) {
+        if (AA.SPMDCompatibilityTracker.isAtFixpoint())
+          ++KnownSPMDCount;
+        else
+          ++AssumedSPMDCount;
+      } else {
+        if (AA.SPMDCompatibilityTracker.isAtFixpoint())
+          ++KnownNonSPMDCount;
+        else
+          ++AssumedNonSPMDCount;
+      }
+    }
+
+    if (KnownSPMDCount && KnownNonSPMDCount) {
+      SimplifiedValue = nullptr;
+      return getState() == StateBefore ? ChangeStatus::UNCHANGED
+                                       : ChangeStatus::CHANGED;
+    }
+
+    if (AssumedSPMDCount && AssumedNonSPMDCount) {
+      SimplifiedValue = nullptr;
+      return getState() == StateBefore ? ChangeStatus::UNCHANGED
+                                       : ChangeStatus::CHANGED;
+    }
+
+    auto &Ctx = getAnchorValue().getContext();
+    if (KnownSPMDCount || AssumedSPMDCount) {
+      assert(KnownNonSPMDCount == 0 && AssumedNonSPMDCount == 0 &&
+             "Expected only SPMD kernels!");
+      // All reaching kernels are in SPMD mode. Update all function calls to
+      // __kmpc_is_spmd_exec_mode to 1.
+      SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), true);
+    } else {
+      assert(KnownSPMDCount == 0 && AssumedSPMDCount == 0 &&
+             "Expected only non-SPMD kernels!");
+      // All reaching kernels are in non-SPMD mode. Update all function
+      // calls to __kmpc_is_spmd_exec_mode to 0.
+      SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), false);
+    }
+
+    return getState() == StateBefore ? ChangeStatus::UNCHANGED
+                                     : ChangeStatus::CHANGED;
+  }
+
+  /// An optional value the associated value is assumed to fold to. That is, we
+  /// assume the associated value (which is a call) can be replaced by this
+  /// simplified value.
+  Optional<Value *> SimplifiedValue;
+
+  /// The runtime function kind of the callee of the associated call site.
+  RuntimeFunction RFKind;
+};
+
 } // namespace
 
 void OpenMPOpt::registerAAs(bool IsModulePass) {
@@ -3393,6 +3624,18 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
           IRPosition::function(*Kernel), /* QueryingAA */ nullptr,
           DepClassTy::NONE, /* ForceUpdate */ false,
           /* UpdateAfterInit */ false);
+
+    auto &IsSPMDRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_is_spmd_exec_mode];
+    IsSPMDRFI.foreachUse(SCC, [&](Use &U, Function &) {
+      CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &IsSPMDRFI);
+      if (!CI)
+        return false;
+      A.getOrCreateAAFor<AAFoldRuntimeCall>(
+          IRPosition::callsite_function(*CI), /* QueryingAA */ nullptr,
+          DepClassTy::NONE, /* ForceUpdate */ false,
+          /* UpdateAfterInit */ false);
+      return false;
+    });
   }
 
   // Create CallSite AA for all Getters.
@@ -3436,6 +3679,7 @@ const char AAICVTracker::ID = 0;
 const char AAKernelInfo::ID = 0;
 const char AAExecutionDomain::ID = 0;
 const char AAHeapToShared::ID = 0;
+const char AAFoldRuntimeCall::ID = 0;
 
 AAICVTracker &AAICVTracker::createForPosition(const IRPosition &IRP,
                                               Attributor &A) {
@@ -3521,6 +3765,26 @@ AAKernelInfo &AAKernelInfo::createForPosition(const IRPosition &IRP,
     break;
   case IRPosition::IRP_FUNCTION:
     AA = new (A.Allocator) AAKernelInfoFunction(IRP, A);
+    break;
+  }
+
+  return *AA;
+}
+
+AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
+                                                        Attributor &A) {
+  AAFoldRuntimeCall *AA = nullptr;
+  switch (IRP.getPositionKind()) {
+  case IRPosition::IRP_INVALID:
+  case IRPosition::IRP_FLOAT:
+  case IRPosition::IRP_ARGUMENT:
+  case IRPosition::IRP_RETURNED:
+  case IRPosition::IRP_CALL_SITE_RETURNED:
+  case IRPosition::IRP_CALL_SITE_ARGUMENT:
+  case IRPosition::IRP_FUNCTION:
+    llvm_unreachable("KernelInfo can only be created for call site position!");
+  case IRPosition::IRP_CALL_SITE:
+    AA = new (A.Allocator) AAFoldRuntimeCallCallSite(IRP, A);
     break;
   }
 
