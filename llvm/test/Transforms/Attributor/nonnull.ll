@@ -276,7 +276,7 @@ define i8* @test6b(i1 %c) {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i8* [ [[RET]], [[ENTRY:%.*]] ], [ [[PHI]], [[LOOP]] ]
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i8* [[PHI]]
+; CHECK-NEXT:    ret i8* [[RET]]
 ;
 entry:
   %ret = call i8* @ret_nonnull()
@@ -292,14 +292,12 @@ define i8* @test7(i8* %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test7
 ; IS__TUNIT____-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 0
-; IS__TUNIT____-NEXT:    ret i8* [[B]]
+; IS__TUNIT____-NEXT:    ret i8* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test7
 ; IS__CGSCC____-SAME: (i8* nofree readnone returned "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
-; IS__CGSCC____-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 0
-; IS__CGSCC____-NEXT:    ret i8* [[B]]
+; IS__CGSCC____-NEXT:    ret i8* [[A]]
 ;
   %b = getelementptr inbounds i8, i8* %a, i64 0
   ret i8* %b

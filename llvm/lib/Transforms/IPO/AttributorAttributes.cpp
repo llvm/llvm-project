@@ -831,13 +831,6 @@ class AAReturnedValuesImpl : public AAReturnedValues, public AbstractState {
   /// return instructions that might return them.
   MapVector<Value *, SmallSetVector<ReturnInst *, 4>> ReturnedValues;
 
-  /// Mapping to remember the number of returned values for a call site such
-  /// that we can avoid updates if nothing changed.
-  DenseMap<const CallBase *, unsigned> NumReturnedValuesPerKnownAA;
-
-  /// Set of unresolved calls returned by the associated function.
-  SmallSetVector<CallBase *, 4> UnresolvedCalls;
-
   /// State flags
   ///
   ///{
@@ -904,10 +897,6 @@ public:
     return llvm::make_range(ReturnedValues.begin(), ReturnedValues.end());
   }
 
-  const SmallSetVector<CallBase *, 4> &getUnresolvedCalls() const override {
-    return UnresolvedCalls;
-  }
-
   /// Return the number of potential return values, -1 if unknown.
   size_t getNumReturnValues() const override {
     return isValidState() ? ReturnedValues.size() : -1;
@@ -962,16 +951,6 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   // Bookkeeping.
   STATS_DECLTRACK(UniqueReturnValue, FunctionReturn,
                   "Number of function with unique return");
-
-  // Callback to replace the uses of CB with the constant C.
-  auto ReplaceCallSiteUsersWith = [&A](CallBase &CB, Constant &C) {
-    if (CB.use_empty())
-      return ChangeStatus::UNCHANGED;
-    if (A.changeValueAfterManifest(CB, C))
-      return ChangeStatus::CHANGED;
-    return ChangeStatus::UNCHANGED;
-  };
-
   // If the assumed unique return value is an argument, annotate it.
   if (auto *UniqueRVArg = dyn_cast<Argument>(UniqueRV.getValue())) {
     if (UniqueRVArg->getType()->canLosslesslyBitCastTo(
@@ -979,40 +958,13 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
       getIRPosition() = IRPosition::argument(*UniqueRVArg);
       Changed = IRAttribute::manifest(A);
     }
-  } else if (auto *RVC = dyn_cast<Constant>(UniqueRV.getValue())) {
-    // We can replace the returned value with the unique returned constant.
-    Value &AnchorValue = getAnchorValue();
-    if (Function *F = dyn_cast<Function>(&AnchorValue)) {
-      for (const Use &U : F->uses())
-        if (CallBase *CB = dyn_cast<CallBase>(U.getUser()))
-          if (CB->isCallee(&U)) {
-            Constant *RVCCast =
-                CB->getType() == RVC->getType()
-                    ? RVC
-                    : ConstantExpr::getPointerCast(RVC, CB->getType());
-            Changed = ReplaceCallSiteUsersWith(*CB, *RVCCast) | Changed;
-          }
-    } else {
-      assert(isa<CallBase>(AnchorValue) &&
-             "Expcected a function or call base anchor!");
-      Constant *RVCCast =
-          AnchorValue.getType() == RVC->getType()
-              ? RVC
-              : ConstantExpr::getPointerCast(RVC, AnchorValue.getType());
-      Changed = ReplaceCallSiteUsersWith(cast<CallBase>(AnchorValue), *RVCCast);
-    }
-    if (Changed == ChangeStatus::CHANGED)
-      STATS_DECLTRACK(UniqueConstantReturnValue, FunctionReturn,
-                      "Number of function returns replaced by constant return");
   }
-
   return Changed;
 }
 
 const std::string AAReturnedValuesImpl::getAsStr() const {
   return (isAtFixpoint() ? "returns(#" : "may-return(#") +
-         (isValidState() ? std::to_string(getNumReturnValues()) : "?") +
-         ")[#UC: " + std::to_string(UnresolvedCalls.size()) + "]";
+         (isValidState() ? std::to_string(getNumReturnValues()) : "?") + ")";
 }
 
 Optional<Value *>
@@ -1046,11 +998,6 @@ bool AAReturnedValuesImpl::checkForAllReturnedValuesAndReturnInsts(
   // encountered an overdefined one during an update.
   for (auto &It : ReturnedValues) {
     Value *RV = It.first;
-
-    CallBase *CB = dyn_cast<CallBase>(RV);
-    if (CB && !UnresolvedCalls.count(CB))
-      continue;
-
     if (!Pred(*RV, It.second))
       return false;
   }
@@ -1059,180 +1006,35 @@ bool AAReturnedValuesImpl::checkForAllReturnedValuesAndReturnInsts(
 }
 
 ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
-  size_t NumUnresolvedCalls = UnresolvedCalls.size();
-  bool Changed = false;
+  ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-  // State used in the value traversals starting in returned values.
-  struct RVState {
-    // The map in which we collect return values -> return instrs.
-    decltype(ReturnedValues) &RetValsMap;
-    // The flag to indicate a change.
-    bool &Changed;
-    // The return instrs we come from.
-    SmallSetVector<ReturnInst *, 4> RetInsts;
-  };
-
-  // Callback for a leaf value returned by the associated function.
-  auto VisitValueCB = [](Value &Val, const Instruction *, RVState &RVS,
-                         bool) -> bool {
-    auto Size = RVS.RetValsMap[&Val].size();
-    RVS.RetValsMap[&Val].insert(RVS.RetInsts.begin(), RVS.RetInsts.end());
-    bool Inserted = RVS.RetValsMap[&Val].size() != Size;
-    RVS.Changed |= Inserted;
-    LLVM_DEBUG({
-      if (Inserted)
-        dbgs() << "[AAReturnedValues] 1 Add new returned value " << Val
-               << " => " << RVS.RetInsts.size() << "\n";
-    });
+  auto ReturnValueCB = [&](Value &V, const Instruction *CtxI, ReturnInst &Ret,
+                           bool) -> bool {
+    bool UsedAssumedInformation = false;
+    Optional<Value *> SimpleRetVal =
+        A.getAssumedSimplified(V, *this, UsedAssumedInformation);
+    if (!SimpleRetVal.hasValue())
+      return true;
+    Value *RetVal = *SimpleRetVal ? *SimpleRetVal : &V;
+    assert(AA::isValidInScope(*RetVal, Ret.getFunction()) &&
+           "Assumed returned value should be valid in function scope!");
+    if (ReturnedValues[RetVal].insert(&Ret))
+      Changed = ChangeStatus::CHANGED;
     return true;
   };
 
-  // Helper method to invoke the generic value traversal.
-  auto VisitReturnedValue = [&](Value &RV, RVState &RVS,
-                                const Instruction *CtxI) {
-    IRPosition RetValPos = IRPosition::value(RV, getCallBaseContext());
-    return genericValueTraversal<RVState>(A, RetValPos, *this, RVS,
-                                          VisitValueCB, CtxI,
-                                          /* UseValueSimplify */ false);
-  };
-
-  // Callback for all "return intructions" live in the associated function.
-  auto CheckReturnInst = [this, &VisitReturnedValue, &Changed](Instruction &I) {
+  auto ReturnInstCB = [&](Instruction &I) {
     ReturnInst &Ret = cast<ReturnInst>(I);
-    RVState RVS({ReturnedValues, Changed, {}});
-    RVS.RetInsts.insert(&Ret);
-    return VisitReturnedValue(*Ret.getReturnValue(), RVS, &I);
+    return genericValueTraversal<ReturnInst>(
+        A, IRPosition::value(*Ret.getReturnValue()), *this, Ret, ReturnValueCB,
+        &I);
   };
 
-  // Start by discovering returned values from all live returned instructions in
-  // the associated function.
-  if (!A.checkForAllInstructions(CheckReturnInst, *this, {Instruction::Ret}))
+  // Discover returned values from all live returned instructions in the
+  // associated function.
+  if (!A.checkForAllInstructions(ReturnInstCB, *this, {Instruction::Ret}))
     return indicatePessimisticFixpoint();
-
-  // Once returned values "directly" present in the code are handled we try to
-  // resolve returned calls. To avoid modifications to the ReturnedValues map
-  // while we iterate over it we kept record of potential new entries in a copy
-  // map, NewRVsMap.
-  decltype(ReturnedValues) NewRVsMap;
-
-  auto HandleReturnValue = [&](Value *RV,
-                               SmallSetVector<ReturnInst *, 4> &RIs) {
-    LLVM_DEBUG(dbgs() << "[AAReturnedValues] Returned value: " << *RV << " by #"
-                      << RIs.size() << " RIs\n");
-    CallBase *CB = dyn_cast<CallBase>(RV);
-    if (!CB || UnresolvedCalls.count(CB))
-      return;
-
-    if (!CB->getCalledFunction()) {
-      LLVM_DEBUG(dbgs() << "[AAReturnedValues] Unresolved call: " << *CB
-                        << "\n");
-      UnresolvedCalls.insert(CB);
-      return;
-    }
-
-    // TODO: use the function scope once we have call site AAReturnedValues.
-    const auto &RetValAA = A.getAAFor<AAReturnedValues>(
-        *this, IRPosition::function(*CB->getCalledFunction()),
-        DepClassTy::REQUIRED);
-    LLVM_DEBUG(dbgs() << "[AAReturnedValues] Found another AAReturnedValues: "
-                      << RetValAA << "\n");
-
-    // Skip dead ends, thus if we do not know anything about the returned
-    // call we mark it as unresolved and it will stay that way.
-    if (!RetValAA.getState().isValidState()) {
-      LLVM_DEBUG(dbgs() << "[AAReturnedValues] Unresolved call: " << *CB
-                        << "\n");
-      UnresolvedCalls.insert(CB);
-      return;
-    }
-
-    // Do not try to learn partial information. If the callee has unresolved
-    // return values we will treat the call as unresolved/opaque.
-    auto &RetValAAUnresolvedCalls = RetValAA.getUnresolvedCalls();
-    if (!RetValAAUnresolvedCalls.empty()) {
-      UnresolvedCalls.insert(CB);
-      return;
-    }
-
-    // Now check if we can track transitively returned values. If possible, thus
-    // if all return value can be represented in the current scope, do so.
-    bool Unresolved = false;
-    for (auto &RetValAAIt : RetValAA.returned_values()) {
-      Value *RetVal = RetValAAIt.first;
-      if (isa<Argument>(RetVal) || isa<CallBase>(RetVal) ||
-          isa<Constant>(RetVal))
-        continue;
-      // Anything that did not fit in the above categories cannot be resolved,
-      // mark the call as unresolved.
-      LLVM_DEBUG(dbgs() << "[AAReturnedValues] transitively returned value "
-                           "cannot be translated: "
-                        << *RetVal << "\n");
-      UnresolvedCalls.insert(CB);
-      Unresolved = true;
-      break;
-    }
-
-    if (Unresolved)
-      return;
-
-    // Now track transitively returned values.
-    unsigned &NumRetAA = NumReturnedValuesPerKnownAA[CB];
-    if (NumRetAA == RetValAA.getNumReturnValues()) {
-      LLVM_DEBUG(dbgs() << "[AAReturnedValues] Skip call as it has not "
-                           "changed since it was seen last\n");
-      return;
-    }
-    NumRetAA = RetValAA.getNumReturnValues();
-
-    for (auto &RetValAAIt : RetValAA.returned_values()) {
-      Value *RetVal = RetValAAIt.first;
-      if (Argument *Arg = dyn_cast<Argument>(RetVal)) {
-        // Arguments are mapped to call site operands and we begin the traversal
-        // again.
-        bool Unused = false;
-        RVState RVS({NewRVsMap, Unused, RetValAAIt.second});
-        VisitReturnedValue(*CB->getArgOperand(Arg->getArgNo()), RVS, CB);
-        continue;
-      }
-      if (isa<CallBase>(RetVal)) {
-        // Call sites are resolved by the callee attribute over time, no need to
-        // do anything for us.
-        continue;
-      }
-      if (isa<Constant>(RetVal)) {
-        // Constants are valid everywhere, we can simply take them.
-        NewRVsMap[RetVal].insert(RIs.begin(), RIs.end());
-        continue;
-      }
-    }
-  };
-
-  for (auto &It : ReturnedValues)
-    HandleReturnValue(It.first, It.second);
-
-  // Because processing the new information can again lead to new return values
-  // we have to be careful and iterate until this iteration is complete. The
-  // idea is that we are in a stable state at the end of an update. All return
-  // values have been handled and properly categorized. We might not update
-  // again if we have not requested a non-fix attribute so we cannot "wait" for
-  // the next update to analyze a new return value.
-  while (!NewRVsMap.empty()) {
-    auto It = std::move(NewRVsMap.back());
-    NewRVsMap.pop_back();
-
-    assert(!It.second.empty() && "Entry does not add anything.");
-    auto &ReturnInsts = ReturnedValues[It.first];
-    for (ReturnInst *RI : It.second)
-      if (ReturnInsts.insert(RI)) {
-        LLVM_DEBUG(dbgs() << "[AAReturnedValues] Add new returned value "
-                          << *It.first << " => " << *RI << "\n");
-        HandleReturnValue(It.first, ReturnInsts);
-        Changed = true;
-      }
-  }
-
-  Changed |= (NumUnresolvedCalls != UnresolvedCalls.size());
-  return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  return Changed;
 }
 
 struct AAReturnedValuesFunction final : public AAReturnedValuesImpl {
@@ -1943,7 +1745,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       // If we reach here, we know we have an instruction
       // that accesses memory through a pointer operand,
       // for which getPointerOperand() should give it to us.
-      const Value *PtrOp = getPointerOperand(&I, /* AllowVolatile */ true);
+      Value *PtrOp =
+          const_cast<Value *>(getPointerOperand(&I, /* AllowVolatile */ true));
       assert(PtrOp &&
              "Expected pointer operand of memory accessing instruction");
 
@@ -1985,7 +1788,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         return true;
 
       // We know we have a branch instruction.
-      auto BrInst = cast<BranchInst>(&I);
+      auto *BrInst = cast<BranchInst>(&I);
 
       // Unconditional branches are never considered UB.
       if (BrInst->isUnconditional())
@@ -2202,27 +2005,27 @@ private:
   // action was taken and the caller should stop.
   // Otherwise, we return the simplified value that the caller should
   // use for specific processing.
-  Optional<Value *> stopOnUndefOrAssumed(Attributor &A, const Value *V,
+  Optional<Value *> stopOnUndefOrAssumed(Attributor &A, Value *V,
                                          Instruction *I) {
     bool UsedAssumedInformation = false;
     Optional<Value *> SimplifiedV = A.getAssumedSimplified(
         IRPosition::value(*V), *this, UsedAssumedInformation);
-    if (UsedAssumedInformation) {
+    if (!UsedAssumedInformation) {
       // Don't depend on assumed values.
-      return llvm::None;
+      if (!SimplifiedV.hasValue()) {
+        // If it is known (which we tested above) but it doesn't have a value,
+        // then we can assume `undef` and hence the instruction is UB.
+        KnownUBInsts.insert(I);
+        return llvm::None;
+      }
+      if (*SimplifiedV != nullptr)
+        V = *SimplifiedV;
     }
-    if (!SimplifiedV.hasValue()) {
-      // If it is known (which we tested above) but it doesn't have a value,
-      // then we can assume `undef` and hence the instruction is UB.
+    if (isa<UndefValue>(V)) {
       KnownUBInsts.insert(I);
       return llvm::None;
     }
-    Value *Val = SimplifiedV.getValue();
-    if (isa<UndefValue>(Val)) {
-      KnownUBInsts.insert(I);
-      return llvm::None;
-    }
-    return Val;
+    return V;
   }
 };
 
@@ -2821,6 +2624,10 @@ struct AAIsDeadValueImpl : public AAIsDead {
 
   /// Check if all uses are assumed dead.
   bool areAllUsesAssumedDead(Attributor &A, Value &V) {
+    // Callers might not check the type, void has no uses.
+    if (V.getType()->isVoidTy())
+      return true;
+
     // If we replace a value with a constant there are no uses left afterwards.
     if (!isa<Constant>(V)) {
       bool UsedAssumedInformation = false;
@@ -4561,7 +4368,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   const std::string getAsStr() const override {
     LLVM_DEBUG({
       errs() << "SAV: " << SimplifiedAssociatedValue << " ";
-      if (SimplifiedAssociatedValue)
+      if (SimplifiedAssociatedValue && *SimplifiedAssociatedValue)
         errs() << "SAV: " << **SimplifiedAssociatedValue << " ";
     });
     return isValidState() ? (isAtFixpoint() ? "simplified" : "maybe-simple")
@@ -4573,18 +4380,34 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
   /// See AAValueSimplify::getAssumedSimplifiedValue()
   Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const override {
-    if (!isValidState())
-      return const_cast<Value *>(&getAssociatedValue());
     return SimplifiedAssociatedValue;
+  }
+
+  /// Return a value we can use as replacement for the associated one, or
+  /// nullptr if we don't have one that makes sense.
+  virtual Value *getReplacementValue() const {
+    Value *NewV;
+    NewV = SimplifiedAssociatedValue.hasValue()
+               ? SimplifiedAssociatedValue.getValue()
+               : UndefValue::get(getAssociatedType());
+    if (!NewV)
+      return nullptr;
+    NewV = AA::getWithType(*NewV, *getAssociatedType());
+    if (!NewV || NewV == &getAssociatedValue() ||
+        !AA::isValidInScope(*NewV, getAnchorScope()))
+      return nullptr;
+    return NewV;
   }
 
   /// Helper function for querying AAValueSimplify and updating candicate.
   /// \param IRP The value position we are trying to unify with SimplifiedValue
   bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
-                      const IRPosition &IRP) {
+                      const IRPosition &IRP, bool Simplify = true) {
     bool UsedAssumedInformation = false;
-    Optional<Value *> QueryingValueSimplified =
-        A.getAssumedSimplified(IRP, QueryingAA, UsedAssumedInformation);
+    Optional<Value *> QueryingValueSimplified = &IRP.getAssociatedValue();
+    if (Simplify)
+      QueryingValueSimplified =
+          A.getAssumedSimplified(IRP, QueryingAA, UsedAssumedInformation);
     return unionAssumed(QueryingValueSimplified);
   }
 
@@ -4623,24 +4446,14 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-
-    if (SimplifiedAssociatedValue.hasValue() &&
-        !SimplifiedAssociatedValue.getValue())
+    if (getAssociatedValue().user_empty())
       return Changed;
 
-    Value &V = getAssociatedValue();
-    auto *C = SimplifiedAssociatedValue.hasValue()
-                  ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
-                  : UndefValue::get(V.getType());
-    if (C && C != &V && !V.user_empty()) {
-      Value *NewV = AA::getWithType(*C, *V.getType());
-      // We can replace the AssociatedValue with the constant.
-      if (NewV && NewV != &V) {
-        LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
-                          << " :: " << *this << "\n");
-        if (A.changeValueAfterManifest(V, *NewV))
-          Changed = ChangeStatus::CHANGED;
-      }
+    if (auto *NewV = getReplacementValue()) {
+      LLVM_DEBUG(dbgs() << "[ValueSimplify] " << getAssociatedValue() << " -> "
+                        << *NewV << " :: " << *this << "\n");
+      if (A.changeValueAfterManifest(getAssociatedValue(), *NewV))
+        Changed = ChangeStatus::CHANGED;
     }
 
     return Changed | AAValueSimplify::manifest(A);
@@ -4648,11 +4461,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
   /// See AbstractState::indicatePessimisticFixpoint(...).
   ChangeStatus indicatePessimisticFixpoint() override {
-    // NOTE: Associated value will be returned in a pessimistic fixpoint and is
-    // regarded as known. That's why`indicateOptimisticFixpoint` is called.
     SimplifiedAssociatedValue = &getAssociatedValue();
-    indicateOptimisticFixpoint();
-    return ChangeStatus::CHANGED;
+    return AAValueSimplify::indicatePessimisticFixpoint();
   }
 };
 
@@ -4703,14 +4513,27 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
       if (ACSArgPos.getPositionKind() == IRPosition::IRP_INVALID)
         return false;
 
+      // Simplify the argument operand explicitly and check if the result is
+      // valid in the current scope. This avoids refering to simplified values
+      // in other functions, e.g., we don't want to say a an argument in a
+      // static function is actually an argument in a different function.
+      Value &ArgOp = ACSArgPos.getAssociatedValue();
+      bool UsedAssumedInformation;
+      Optional<Value *> SimpleArgOp =
+          A.getAssumedSimplified(ACSArgPos, *this, UsedAssumedInformation);
+      if (!SimpleArgOp.hasValue())
+        return true;
+      Value *SimpleArgOpVal = *SimpleArgOp ? *SimpleArgOp : &ArgOp;
+      if (!AA::isValidInScope(*SimpleArgOpVal, getAnchorScope()))
+        return false;
+
       // We can only propagate thread independent values through callbacks.
       // This is different to direct/indirect call sites because for them we
       // know the thread executing the caller and callee is the same. For
       // callbacks this is not guaranteed, thus a thread dependent value could
       // be different for the caller and callee, making it invalid to propagate.
-      Value &ArgOp = ACSArgPos.getAssociatedValue();
       if (ACS.isCallbackCall())
-        if (auto *C = dyn_cast<Constant>(&ArgOp))
+        if (auto *C = dyn_cast<Constant>(SimpleArgOpVal))
           if (C->isThreadDependent())
             return false;
       return checkAndUpdate(A, *this, ACSArgPos);
@@ -4745,6 +4568,13 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
   AAValueSimplifyReturned(const IRPosition &IRP, Attributor &A)
       : AAValueSimplifyImpl(IRP, A) {}
 
+  /// See AAValueSimplify::getAssumedSimplifiedValue()
+  Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const override {
+    if (!isValidState())
+      return nullptr;
+    return SimplifiedAssociatedValue;
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto Before = SimplifiedAssociatedValue;
@@ -4766,36 +4596,25 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-    if (SimplifiedAssociatedValue.hasValue() &&
-        !SimplifiedAssociatedValue.getValue())
-      return Changed | AAValueSimplify::manifest(A);
-
-    auto *C = SimplifiedAssociatedValue.hasValue()
-                  ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
-                  : UndefValue::get(getAssociatedType());
-    if (!C || C == &getAssociatedValue())
-      return Changed | AAValueSimplify::manifest(A);
-
-    auto PredForReturned =
-        [&](Value &V, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
-          // We can replace the AssociatedValue with the constant.
-          if (&V == C || isa<UndefValue>(V))
+    if (auto *NewV = getReplacementValue()) {
+      auto PredForReturned =
+          [&](Value &, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
+            for (ReturnInst *RI : RetInsts) {
+              Value *ReturnedVal = RI->getReturnValue();
+              if (ReturnedVal == NewV || isa<UndefValue>(ReturnedVal))
+                return true;
+              assert(RI->getFunction() == getAnchorScope() &&
+                     "ReturnInst in wrong function!");
+              LLVM_DEBUG(dbgs()
+                         << "[ValueSimplify] " << *ReturnedVal << " -> "
+                         << *NewV << " in " << *RI << " :: " << *this << "\n");
+              if (A.changeUseAfterManifest(RI->getOperandUse(0), *NewV))
+                Changed = ChangeStatus::CHANGED;
+            }
             return true;
-
-          for (ReturnInst *RI : RetInsts) {
-            if (RI->getFunction() != getAnchorScope())
-              continue;
-            Value *NewV = AA::getWithType(*C, *RI->getReturnValue()->getType());
-            if (!NewV)
-              continue;
-            LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
-                              << " in " << *RI << " :: " << *this << "\n");
-            if (A.changeUseAfterManifest(RI->getOperandUse(0), *NewV))
-              Changed = ChangeStatus::CHANGED;
-          }
-          return true;
-        };
-    A.checkForAllReturnedValuesAndReturnInsts(PredForReturned, *this);
+          };
+      A.checkForAllReturnedValuesAndReturnInsts(PredForReturned, *this);
+    }
 
     return Changed | AAValueSimplify::manifest(A);
   }
@@ -4934,7 +4753,7 @@ struct AAValueSimplifyFunction : AAValueSimplifyImpl {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    SimplifiedAssociatedValue = &getAnchorValue();
+    SimplifiedAssociatedValue = nullptr;
     indicateOptimisticFixpoint();
   }
   /// See AbstractAttribute::initialize(...).
@@ -4957,19 +4776,43 @@ struct AAValueSimplifyCallSite : AAValueSimplifyFunction {
   }
 };
 
-struct AAValueSimplifyCallSiteReturned : AAValueSimplifyReturned {
+struct AAValueSimplifyCallSiteReturned : AAValueSimplifyImpl {
   AAValueSimplifyCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AAValueSimplifyReturned(IRP, A) {}
+      : AAValueSimplifyImpl(IRP, A) {}
 
-  /// See AbstractAttribute::manifest(...).
-  ChangeStatus manifest(Attributor &A) override {
-    return AAValueSimplifyImpl::manifest(A);
+  void initialize(Attributor &A) override {
+    if (!getAssociatedFunction())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto Before = SimplifiedAssociatedValue;
+    auto &RetAA = A.getAAFor<AAReturnedValues>(
+        *this, IRPosition::function(*getAssociatedFunction()),
+        DepClassTy::REQUIRED);
+    auto PredForReturned =
+        [&](Value &RetVal, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
+          bool UsedAssumedInformation;
+          Optional<Value *> CSRetVal = A.translateArgumentToCallSiteContent(
+              &RetVal, *cast<CallBase>(getCtxI()), *this,
+              UsedAssumedInformation);
+          SimplifiedAssociatedValue = AA::combineOptionalValuesInAAValueLatice(
+              SimplifiedAssociatedValue, CSRetVal, getAssociatedType());
+          return SimplifiedAssociatedValue != Optional<Value *>(nullptr);
+        };
+    if (!RetAA.checkForAllReturnedValuesAndReturnInsts(PredForReturned))
+      if (!askSimplifiedValueForOtherAAs(A))
+        return indicatePessimisticFixpoint();
+    return Before == SimplifiedAssociatedValue ? ChangeStatus::UNCHANGED
+                                               : ChangeStatus ::CHANGED;
   }
 
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(value_simplify)
   }
 };
+
 struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
   AAValueSimplifyCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAValueSimplifyFloating(IRP, A) {}
@@ -4978,23 +4821,11 @@ struct AAValueSimplifyCallSiteArgument : AAValueSimplifyFloating {
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-    if (SimplifiedAssociatedValue.hasValue() &&
-        !SimplifiedAssociatedValue.getValue())
-      return Changed;
-
-    Value &V = getAssociatedValue();
-    auto *C = SimplifiedAssociatedValue.hasValue()
-                  ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
-                  : UndefValue::get(V.getType());
-    if (C) {
+    if (auto *NewV = getReplacementValue()) {
       Use &U = cast<CallBase>(&getAnchorValue())
                    ->getArgOperandUse(getCallSiteArgNo());
-      // We can replace the AssociatedValue with the constant.
-      if (&V != C) {
-        if (Value *NewV = AA::getWithType(*C, *V.getType()))
-          if (A.changeUseAfterManifest(U, *NewV))
-            Changed = ChangeStatus::CHANGED;
-      }
+      if (A.changeUseAfterManifest(U, *NewV))
+        Changed = ChangeStatus::CHANGED;
     }
 
     return Changed | AAValueSimplify::manifest(A);
