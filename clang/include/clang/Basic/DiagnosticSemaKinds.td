@@ -5909,11 +5909,8 @@ def err_anon_bitfield_has_negative_width : Error<
   "anonymous bit-field has negative width (%0)">;
 def err_bitfield_has_zero_width : Error<"named bit-field %0 has zero width">;
 def err_bitfield_width_exceeds_type_width : Error<
-  "width of bit-field %0 (%1 bits) exceeds %select{width|size}2 "
-  "of its type (%3 bit%s3)">;
-def err_anon_bitfield_width_exceeds_type_width : Error<
-  "width of anonymous bit-field (%0 bits) exceeds %select{width|size}1 "
-  "of its type (%2 bit%s2)">;
+  "width of%select{ anonymous|}0 bit-field%select{| %1}0 (%2 bits) exceeds the "
+  "%select{width|size}3 of its type (%4 bit%s4)">;
 def err_incorrect_number_of_vector_initializers : Error<
   "number of elements must be either one or match the size of the vector">;
 
