@@ -321,7 +321,7 @@ public:
     }
   }
 
-  void push(NestingType NT) { NestingStack.push_back({NT}); }
+  void push(NestingType NT) { NestingStack.push_back({NT, wasm::WasmSignature()}); }
 
   bool pop(StringRef Ins, NestingType NT1, NestingType NT2 = Undefined) {
     if (NestingStack.empty())
