@@ -16,7 +16,7 @@ def build_env():
             args.append('%s="%s"' % (key, value.replace('"', '\\"')))
     return ' '.join(args)
 
-is_64bit = (subprocess.check_output(['file', sys.argv[0] + '.real']).find('64-bit') != -1)
+is_64bit = str(subprocess.check_output(['file', sys.argv[0] + '.real'])).find('64-bit') != -1
 
 device_env = build_env()
 device_args = ' '.join(sys.argv[1:]) # FIXME: escape?
