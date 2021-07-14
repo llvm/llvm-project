@@ -709,11 +709,10 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
 
   CallInst *CI = Builder.CreateCall(F, Args);
   ReturnInst *RI = nullptr;
-  bool isSwiftTailCall =
-   F->getCallingConv() == CallingConv::SwiftTail &&
-   G->getCallingConv() == CallingConv::SwiftTail;
-  CI->setTailCallKind(
-    isSwiftTailCall ? llvm::CallInst::TCK_MustTail : llvm::CallInst::TCK_Tail);
+  bool isSwiftTailCall = F->getCallingConv() == CallingConv::SwiftTail &&
+                         G->getCallingConv() == CallingConv::SwiftTail;
+  CI->setTailCallKind(isSwiftTailCall ? llvm::CallInst::TCK_MustTail
+                                      : llvm::CallInst::TCK_Tail);
   CI->setCallingConv(F->getCallingConv());
   CI->setAttributes(F->getAttributes());
   if (H->getReturnType()->isVoidTy()) {

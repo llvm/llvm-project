@@ -24,7 +24,6 @@ void indirect_result_multiple(INDIRECT_RESULT void *out1, INDIRECT_RESULT void *
 void indirect_result_single_async(INDIRECT_RESULT void *out) SWIFTASYNCCALL;
 void indirect_result_multiple_async(INDIRECT_RESULT void *out1, INDIRECT_RESULT void *out2) SWIFTASYNCCALL;
 
-
 void error_result_nonswift(ERROR_RESULT void **error); // expected-error {{'swift_error_result' parameter can only be used with swiftcall calling convention}} expected-error{{'swift_error_result' parameter must follow 'swift_context' parameter}}
 void error_result_bad_position2(int first, ERROR_RESULT void **error) SWIFTCALL; // expected-error {{'swift_error_result' parameter must follow 'swift_context' parameter}}
 void error_result_bad_type(CONTEXT void *context, ERROR_RESULT int error) SWIFTCALL; // expected-error {{'swift_error_result' parameter must have pointer to unqualified pointer type; type here is 'int'}}

@@ -100,7 +100,9 @@ FEATURE(ptrauth_calls, LangOpts.PointerAuthCalls)
 FEATURE(ptrauth_returns, LangOpts.PointerAuthReturns)
 FEATURE(ptrauth_indirect_gotos, LangOpts.PointerAuthIndirectGotos)
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
-FEATURE(swiftasynccc, PP.getTargetInfo().isSwiftAsyncCCSupported())
+FEATURE(swiftasynccc,
+  PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
+  clang::TargetInfo::CCCR_OK)
 // Objective-C features
 FEATURE(objc_arr, LangOpts.ObjCAutoRefCount) // FIXME: REMOVE?
 FEATURE(objc_arc, LangOpts.ObjCAutoRefCount)

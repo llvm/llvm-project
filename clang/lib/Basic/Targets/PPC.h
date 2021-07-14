@@ -455,7 +455,7 @@ public:
     case CC_Swift:
       return CCCR_OK;
     case CC_SwiftAsync:
-      return checkSwiftAsyncCCSupported();
+      return CCCR_Error;
     default:
       return CCCR_Warning;
     }

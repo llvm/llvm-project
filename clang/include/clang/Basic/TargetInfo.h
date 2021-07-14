@@ -1479,18 +1479,6 @@ public:
 
   virtual CallingConvKind getCallingConvKind(bool ClangABICompat4) const;
 
-  /// \brief Is the Swift async calling convention supported for this target.
-  bool isSwiftAsyncCCSupported() const {
-    auto &triple = getTriple();
-    return triple.getArch() == llvm::Triple::x86_64 ||
-           triple.isARM() ||
-           triple.isAArch64();
-  }
-
-  CallingConvCheckResult checkSwiftAsyncCCSupported() const {
-    return isSwiftAsyncCCSupported() ? CCCR_OK : CCCR_Error;
-  }
-
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
   virtual bool hasSjLjLowering() const {
