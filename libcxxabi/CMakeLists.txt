@@ -273,10 +273,6 @@ elseif(CMAKE_SYSROOT)
   set(LIBCXXABI_SYSROOT "${CMAKE_SYSROOT}")
 endif()
 
-if (LIBCXXABI_TARGET_TRIPLE)
-  set(TARGET_TRIPLE "${LIBCXXABI_TARGET_TRIPLE}")
-endif()
-
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
 
