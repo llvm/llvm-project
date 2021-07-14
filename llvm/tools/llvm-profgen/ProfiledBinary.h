@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#pragma clang optimize off
+
 #ifndef LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
 #define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
 
@@ -100,7 +100,7 @@ class ProfiledBinary {
   // The target triple.
   Triple TheTriple;
   // The runtime base address that the first executable segment is loaded at.
-  uint64_t BaseAddress = 0;
+  uint64_t BaseAddress;
   // The preferred load address of each executable segment.
   std::vector<uint64_t> PreferredTextSegmentAddresses;
   // The file offset of each executable segment.
@@ -190,7 +190,7 @@ public:
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
-
+  
   // Return the preferred load address for the first executable segment.
   uint64_t getPreferredBaseAddress() const { return PreferredTextSegmentAddresses[0]; }
   // Return the file offset for the first executable segment.
