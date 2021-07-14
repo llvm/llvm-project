@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+exception-handling < %s | FileCheck %s
 
 # Tests if block/loop/try/catch/end/branch/rethrow instructions are correctly
 # printed with their annotations.

@@ -6,6 +6,8 @@ _start:
   .functype _start () -> ()
   i32.const foo@TLSREL
   i32.const bar@TLSREL
+  drop
+  drop
   end_function
 
 .section  .data,"",@

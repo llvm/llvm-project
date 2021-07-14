@@ -24,11 +24,11 @@ entry:
 ; ASM:     	.text
 ; ASM:      	.file	"assembler-binary.ll"
 ; ASM:      	.globl	foo
+; ASM:       	.functype	bar () -> ()
 ; ASM:      foo:
 ; ASM-NEXT: 	.functype	foo (i32) -> ()
 ; ASM-NEXT: 	call	bar
 ; ASM-NEXT: 	end_function
-; ASM:       	.functype	bar () -> ()
 
 
 ; CHECK:      --- !WASM
