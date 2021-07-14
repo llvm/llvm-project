@@ -1034,6 +1034,23 @@ static void foldIdenticalLiterals() {
     in.wordLiteralSection->finalizeContents();
 }
 
+static void referenceStubBinder() {
+  bool needsStubHelper = config->outputType == MH_DYLIB ||
+                         config->outputType == MH_EXECUTE ||
+                         config->outputType == MH_BUNDLE;
+  if (!needsStubHelper || !symtab->find("dyld_stub_binder"))
+    return;
+
+  // dyld_stub_binder is used by dyld to resolve lazy bindings. This code here
+  // adds a opportunistic reference to dyld_stub_binder if it happens to exist.
+  // dyld_stub_binder is in libSystem.dylib, which is usually linked in. This
+  // isn't needed for correctness, but the presence of that symbol suppresses
+  // "no symbols" diagnostics from `nm`.
+  // StubHelperSection::setup() adds a reference and errors out if
+  // dyld_stub_binder doesn't exist in case it is actually needed.
+  symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
+}
+
 bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -1369,6 +1386,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         if (const auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
     }
+
+    referenceStubBinder();
 
     // FIXME: should terminate the link early based on errors encountered so
     // far?

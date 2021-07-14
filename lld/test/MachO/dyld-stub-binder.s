@@ -8,6 +8,13 @@
 # RUN: %lld -arch arm64 -dylib %t/foo.o -o %t/libfoo.dylib
 # RUN: llvm-nm -m %t/libfoo.dylib | FileCheck --check-prefix=NOSTUB %s
 
+## Binaries that don't do lazy dynamic calls but are linked against
+## libSystem.dylib get a reference to dyld_stub_binder even if it's
+## not needed.
+# RUN: %lld -arch arm64 -lSystem -dylib %t/foo.o -o %t/libfoo.dylib
+# RUN: llvm-nm -m %t/libfoo.dylib | FileCheck --check-prefix=STUB %s
+
+
 ## Dylibs that do lazy dynamic calls do need dyld_stub_binder.
 # RUN: not %lld -arch arm64 -dylib %t/bar.o %t/libfoo.dylib \
 # RUN:     -o %t/libbar.dylib 2>&1 | FileCheck --check-prefix=MISSINGSTUB %s
