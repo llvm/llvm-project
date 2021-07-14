@@ -34,8 +34,8 @@ for.end:                                          ; preds = %for.body, %entry
 
 
 ; Check that we are able to compute trip count of a loop without an entry guard.
-; CHECK: Determining loop execution counts for: @foo2
-; CHECK: backedge-taken count is ((-1 + (-1 * %s) + (1 umax %s) + (%n smax %s)) /u (1 umax %s))
+; CHECK-LABEL: Determining loop execution counts for: @foo2
+; CHECK: backedge-taken count is ((-1 + (%n smax %s)) /u %s)
 
 ; We should have a conservative estimate for the max backedge taken count for
 ; loops with unknown stride.
@@ -84,8 +84,8 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; Same as foo2, but with mustprogress on loop, not function
-; CHECK: Determining loop execution counts for: @foo4
-; CHECK: backedge-taken count is ((-1 + (-1 * %s) + (1 umax %s) + (%n smax %s)) /u (1 umax %s))
+; CHECK-LABEL: Determining loop execution counts for: @foo4
+; CHECK: backedge-taken count is ((-1 + (%n smax %s)) /u %s)
 ; CHECK: max backedge-taken count is -1
 
 define void @foo4(i32* nocapture %A, i32 %n, i32 %s) {
@@ -108,7 +108,7 @@ for.end:                                          ; preds = %for.body, %entry
 
 ; A more complex case with pre-increment compare instead of post-increment.
 ; CHECK-LABEL: Determining loop execution counts for: @foo5
-; CHECK: Loop %for.body: backedge-taken count is ((-1 + (-1 * %start) + (1 umax %s) + (%n smax %start)) /u (1 umax %s))
+; CHECK: Loop %for.body: backedge-taken count is ((-1 + (-1 * %start) + (%n smax %start) + %s) /u %s)
 
 ; We should have a conservative estimate for the max backedge taken count for
 ; loops with unknown stride.
