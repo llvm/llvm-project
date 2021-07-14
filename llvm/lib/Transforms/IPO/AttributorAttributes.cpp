@@ -4907,6 +4907,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
   AAHeapToStackFunction(const IRPosition &IRP, Attributor &A)
       : AAHeapToStack(IRP, A) {}
 
+  ~AAHeapToStackFunction() {
+    // Ensure we call the destructor so we release any memory allocated in the
+    // sets.
+    for (auto &It : AllocationInfos)
+      It.getSecond()->~AllocationInfo();
+    for (auto &It : DeallocationInfos)
+      It.getSecond()->~DeallocationInfo();
+  }
+
   void initialize(Attributor &A) override {
     AAHeapToStack::initialize(A);
 
@@ -7158,7 +7167,7 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
       const DominatorTree *DT =
           InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(
               *I->getFunction());
-       return DT && DT->dominates(I, CtxI);
+      return DT && DT->dominates(I, CtxI);
     }
 
     return true;
