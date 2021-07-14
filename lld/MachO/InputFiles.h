@@ -22,7 +22,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 
-#include <map>
 #include <vector>
 
 namespace llvm {
