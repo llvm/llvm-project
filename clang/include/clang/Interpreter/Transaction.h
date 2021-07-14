@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_INTERPRETER_PARTIALTRANSLATIONUNIT_H
-#define LLVM_CLANG_INTERPRETER_PARTIALTRANSLATIONUNIT_H
+#ifndef LLVM_CLANG_INTERPRETER_TRANSACTION_H
+#define LLVM_CLANG_INTERPRETER_TRANSACTION_H
 
 #include <memory>
+#include <vector>
 
 namespace llvm {
 class Module;
@@ -22,16 +23,17 @@ class Module;
 
 namespace clang {
 
-class TranslationUnitDecl;
+class DeclGroupRef;
 
 /// The class keeps track of various objects created as part of processing
 /// incremental inputs.
-struct PartialTranslationUnit {
-  TranslationUnitDecl *TUPart = nullptr;
+struct Transaction {
+  /// The decls created for the input.
+  std::vector<clang::DeclGroupRef> Decls;
 
   /// The llvm IR produced for the input.
   std::unique_ptr<llvm::Module> TheModule;
 };
 } // namespace clang
 
-#endif // LLVM_CLANG_INTERPRETER_PARTIALTRANSLATIONUNIT_H
+#endif // LLVM_CLANG_INTERPRETER_TRANSACTION_H

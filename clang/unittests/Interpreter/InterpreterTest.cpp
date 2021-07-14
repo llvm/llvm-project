@@ -37,41 +37,34 @@ createInterpreter(const Args &ExtraArgs = {},
   return cantFail(clang::Interpreter::create(std::move(CI)));
 }
 
-static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
-  return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
-}
-
 TEST(InterpreterTest, Sanity) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
+  Transaction &R1(cantFail(Interp->Parse("void g(); void g() {}")));
+  EXPECT_EQ(2U, R1.Decls.size());
 
-  using PTU = PartialTranslationUnit;
-
-  PTU &R1(cantFail(Interp->Parse("void g(); void g() {}")));
-  EXPECT_EQ(2U, DeclsSize(R1.TUPart));
-
-  PTU &R2(cantFail(Interp->Parse("int i;")));
-  EXPECT_EQ(1U, DeclsSize(R2.TUPart));
+  Transaction &R2(cantFail(Interp->Parse("int i;")));
+  EXPECT_EQ(1U, R2.Decls.size());
 }
 
-static std::string DeclToString(Decl *D) {
-  return llvm::cast<NamedDecl>(D)->getQualifiedNameAsString();
+static std::string DeclToString(DeclGroupRef DGR) {
+  return llvm::cast<NamedDecl>(DGR.getSingleDecl())->getQualifiedNameAsString();
 }
 
 TEST(InterpreterTest, IncrementalInputTopLevelDecls) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
-  auto R1 = Interp->Parse("int var1 = 42; int f() { return var1; }");
+  auto R1OrErr = Interp->Parse("int var1 = 42; int f() { return var1; }");
   // gtest doesn't expand into explicit bool conversions.
-  EXPECT_TRUE(!!R1);
-  auto R1DeclRange = R1->TUPart->decls();
-  EXPECT_EQ(2U, DeclsSize(R1->TUPart));
-  EXPECT_EQ("var1", DeclToString(*R1DeclRange.begin()));
-  EXPECT_EQ("f", DeclToString(*(++R1DeclRange.begin())));
+  EXPECT_TRUE(!!R1OrErr);
+  auto R1 = R1OrErr->Decls;
+  EXPECT_EQ(2U, R1.size());
+  EXPECT_EQ("var1", DeclToString(R1[0]));
+  EXPECT_EQ("f", DeclToString(R1[1]));
 
-  auto R2 = Interp->Parse("int var2 = f();");
-  EXPECT_TRUE(!!R2);
-  auto R2DeclRange = R2->TUPart->decls();
-  EXPECT_EQ(1U, DeclsSize(R2->TUPart));
-  EXPECT_EQ("var2", DeclToString(*R2DeclRange.begin()));
+  auto R2OrErr = Interp->Parse("int var2 = f();");
+  EXPECT_TRUE(!!R2OrErr);
+  auto R2 = R2OrErr->Decls;
+  EXPECT_EQ(1U, R2.size());
+  EXPECT_EQ("var2", DeclToString(R2[0]));
 }
 
 TEST(InterpreterTest, Errors) {
@@ -90,8 +83,9 @@ TEST(InterpreterTest, Errors) {
               HasSubstr("error: unknown type name 'intentional_error'"));
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 
-  auto RecoverErr = Interp->Parse("int var1 = 42;");
-  EXPECT_TRUE(!!RecoverErr);
+#ifdef GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH((void)Interp->Parse("int var1 = 42;"), "");
+#endif
 }
 
 // Here we test whether the user can mix declarations and statements. The
@@ -107,21 +101,21 @@ TEST(InterpreterTest, DeclsAndStatements) {
       DiagnosticsOS, new DiagnosticOptions());
 
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
-  auto R1 = Interp->Parse(
+  auto R1OrErr = Interp->Parse(
       "int var1 = 42; extern \"C\" int printf(const char*, ...);");
   // gtest doesn't expand into explicit bool conversions.
-  EXPECT_TRUE(!!R1);
+  EXPECT_TRUE(!!R1OrErr);
 
-  auto *PTU1 = R1->TUPart;
-  EXPECT_EQ(2U, DeclsSize(PTU1));
+  auto R1 = R1OrErr->Decls;
+  EXPECT_EQ(2U, R1.size());
 
   // FIXME: Add support for wrapping and running statements.
-  auto R2 = Interp->Parse("var1++; printf(\"var1 value %d\\n\", var1);");
-  EXPECT_FALSE(!!R2);
+  auto R2OrErr = Interp->Parse("var1++; printf(\"var1 value %d\\n\", var1);");
+  EXPECT_FALSE(!!R2OrErr);
   using ::testing::HasSubstr;
   EXPECT_THAT(DiagnosticsOS.str(),
               HasSubstr("error: unknown type name 'var1'"));
-  auto Err = R2.takeError();
+  auto Err = R2OrErr.takeError();
   EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
 }
 

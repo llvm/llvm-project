@@ -29,7 +29,7 @@ protected:
       : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
         Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), Idents(LangOpts, nullptr),
-        Ctxt(LangOpts, SourceMgr, Idents, Sels, Builtins, TU_Complete) {}
+        Ctxt(LangOpts, SourceMgr, Idents, Sels, Builtins) {}
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
