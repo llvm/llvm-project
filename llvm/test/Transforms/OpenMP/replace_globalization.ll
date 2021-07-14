@@ -20,18 +20,22 @@ target triple = "nvptx64"
 ; CHECK: call void @__kmpc_free_shared({{.*}})
 define dso_local void @foo() {
 entry:
+  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i1 false, i1 true, i1 true)
   %x = call i8* @__kmpc_alloc_shared(i64 4)
   %x_on_stack = bitcast i8* %x to i32*
   %0 = bitcast i32* %x_on_stack to i8*
   call void @use(i8* %0)
   call void @__kmpc_free_shared(i8* %x)
+  call void @__kmpc_target_deinit(%struct.ident_t* @1, i1 false, i1 true)
   ret void
 }
 
 define void @bar() {
+  %c = call i32 @__kmpc_target_init(%struct.ident_t* @1, i1 false, i1 true, i1 true)
   call void @baz()
   call void @qux()
   call void @negative_qux_spmd()
+  call void @__kmpc_target_deinit(%struct.ident_t* @1, i1 false, i1 true)
   ret void
 }
 
@@ -103,6 +107,8 @@ declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
 declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
+
+declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}
