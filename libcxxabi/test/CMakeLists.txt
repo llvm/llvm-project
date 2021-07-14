@@ -86,8 +86,8 @@ if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
 endif()
 
-if (LIBCXXABI_TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${LIBCXXABI_TARGET_TRIPLE}\"")
+if (TARGET_TRIPLE)
+  serialize_lit_param(target_triple "\"${TARGET_TRIPLE}\"")
 endif()
 
 if (LIBCXXABI_BUILD_32_BITS)

@@ -251,7 +251,7 @@ option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 
 # Target options --------------------------------------------------------------
 option(LIBCXX_BUILD_32_BITS "Build 32 bit libc++." ${LLVM_BUILD_32_BITS})
-set(LIBCXX_TARGET_TRIPLE "${TARGET_TRIPLE}" CACHE STRING "Use alternate target triple.")
+set(LIBCXX_TARGET_TRIPLE "" CACHE STRING "Use alternate target triple.")
 set(LIBCXX_SYSROOT "" CACHE STRING "Use alternate sysroot.")
 set(LIBCXX_GCC_TOOLCHAIN "" CACHE STRING "Use alternate GCC toolchain.")
 
@@ -478,6 +478,10 @@ if(LIBCXX_GCC_TOOLCHAIN)
   add_target_flags("--gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
 elseif(CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN)
   set(LIBCXX_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}")
+endif()
+
+if(LIBCXX_TARGET_TRIPLE)
+  set(TARGET_TRIPLE "${LIBCXX_TARGET_TRIPLE}")
 endif()
 
 # Configure compiler.
