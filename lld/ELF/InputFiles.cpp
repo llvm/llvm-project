@@ -1262,7 +1262,7 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
 //
 // 2) Consider the tentative definition as still undefined (ie the promotion to
 //    a real definition happens only after all symbol resolution is done).
-//    The linker searches archive members for global or weak definitions to
+//    The linker searches archive members for STB_GLOBAL definitions to
 //    replace the tentative definition with. This is the behavior used by
 //    GNU ld.
 //
@@ -1278,7 +1278,7 @@ static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
   for (const irsymtab::Reader::SymbolRef &sym :
        symtabFile.TheReader.symbols()) {
     if (sym.isGlobal() && sym.getName() == symName)
-      return !sym.isUndefined() && !sym.isCommon();
+      return !sym.isUndefined() && !sym.isWeak() && !sym.isCommon();
   }
   return false;
 }
@@ -1292,7 +1292,8 @@ static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
   for (auto sym : obj->template getGlobalELFSyms<ELFT>()) {
     Expected<StringRef> name = sym.getName(stringtable);
     if (name && name.get() == symName)
-      return sym.isDefined() && !sym.isCommon();
+      return sym.isDefined() && sym.getBinding() == STB_GLOBAL &&
+             !sym.isCommon();
   }
   return false;
 }
