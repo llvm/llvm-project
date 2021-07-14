@@ -2800,6 +2800,15 @@ struct AAIsDeadValueImpl : public AAIsDead {
 
   /// Check if all uses are assumed dead.
   bool areAllUsesAssumedDead(Attributor &A, Value &V) {
+    // If we replace a value with a constant there are no uses left afterwards.
+    if (!isa<Constant>(V)) {
+      bool UsedAssumedInformation = false;
+      Optional<Constant *> C =
+          A.getAssumedConstant(V, *this, UsedAssumedInformation);
+      if (!C.hasValue() || *C)
+        return true;
+    }
+
     auto UsePred = [&](const Use &U, bool &Follow) { return false; };
     // Explicitly set the dependence class to required because we want a long
     // chain of N dependent instructions to be considered live as soon as one is
@@ -2857,7 +2866,6 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     Instruction *I = dyn_cast<Instruction>(&getAssociatedValue());
     if (!isAssumedSideEffectFree(A, I))
       return indicatePessimisticFixpoint();
-
     if (!areAllUsesAssumedDead(A, getAssociatedValue()))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
@@ -2995,7 +3003,6 @@ struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
       IsAssumedSideEffectFree = false;
       Changed = ChangeStatus::CHANGED;
     }
-
     if (!areAllUsesAssumedDead(A, getAssociatedValue()))
       return indicatePessimisticFixpoint();
     return Changed;
