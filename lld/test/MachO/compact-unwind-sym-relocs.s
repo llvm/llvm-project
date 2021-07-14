@@ -76,7 +76,7 @@ LoadCommands:
         content:         '0000000000000000010000000000020200000000000000000000000000000000'
         relocations:
           - address:         0x00000000
-            symbolnum:       1
+            symbolnum:       0
             pcrel:           false
             length:          3
             extern:          true
@@ -86,16 +86,11 @@ LoadCommands:
   - cmd:             LC_SYMTAB
     cmdsize:         24
     symoff:          520
-    nsyms:           2
+    nsyms:           1
     stroff:          552
-    strsize:         24
+    strsize:         8
 LinkEditData:
   NameList:
-    - n_strx:          8
-      n_type:          0x0E
-      n_sect:          2
-      n_desc:          0
-      n_value:         8
     - n_strx:          2
       n_type:          0x0F
       n_sect:          1
