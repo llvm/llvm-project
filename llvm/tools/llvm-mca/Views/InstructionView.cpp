@@ -11,9 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include <sstream>
 #include "Views/InstructionView.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
@@ -38,26 +38,5 @@ json::Value InstructionView::toJSON() const {
   return SourceInfo;
 }
 
-json::Object InstructionView::getJSONTargetInfo(const MCSubtargetInfo &STI) {
-  json::Array Resources;
-  const MCSchedModel &SM = STI.getSchedModel();
-  StringRef MCPU = STI.getCPU();
-
-  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
-    const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
-    unsigned NumUnits = ProcResource.NumUnits;
-    // Skip groups and invalid resources with zero units.
-    if (ProcResource.SubUnitsIdxBegin || !NumUnits)
-      continue;
-    for (unsigned J = 0; J < NumUnits; ++J) {
-      std::stringstream ResNameStream;
-      ResNameStream << ProcResource.Name;
-      if (NumUnits > 1)
-        ResNameStream << "." << J;
-      Resources.push_back(ResNameStream.str());
-    }
-  }
-  return json::Object({{"CPUName", MCPU}, {"Resources", std::move(Resources)}});
-}
 } // namespace mca
 } // namespace llvm

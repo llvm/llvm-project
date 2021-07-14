@@ -16,7 +16,6 @@
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTIONVIEW_H
 
 #include "Views/View.h"
-#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/JSON.h"
 
@@ -44,6 +43,7 @@ public:
   StringRef getNameAsString() const override {
     return "Instructions";
   }
+
   // Return a reference to a string representing a given machine instruction.
   // The result should be used or copied before the next call to
   // printInstructionString() as it will overwrite the previous result.
@@ -52,14 +52,10 @@ public:
 
   llvm::MCInstPrinter &getInstPrinter() const { return MCIP; }
   llvm::ArrayRef<llvm::MCInst> getSource() const { return Source; }
-  json::Value toJSON() const override;
-  virtual void printViewJSON(llvm::raw_ostream &OS) override {
-    json::Value JV = toJSON();
-    OS << formatv("{0:2}", JV) << "\n";
-  }
 
-  static json::Object getJSONTargetInfo(const llvm::MCSubtargetInfo &STI);
+  json::Value toJSON() const override;
 };
+
 } // namespace mca
 } // namespace llvm
 

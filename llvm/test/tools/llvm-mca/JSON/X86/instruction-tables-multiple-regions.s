@@ -15,7 +15,7 @@ add %edx, %edx
 # LLVM-MCA-END foo
 
 # CHECK:      {
-# CHECK-NEXT:   "Resources": {
+# CHECK-NEXT:   "TargetInfo": {
 # CHECK-NEXT:     "CPUName": "haswell",
 # CHECK-NEXT:     "Resources": [
 # CHECK-NEXT:       "HWDivider",
