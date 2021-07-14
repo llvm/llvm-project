@@ -189,6 +189,24 @@ define i32 @sub(i32 %a, i32 %b) nounwind {
   ret i32 %1
 }
 
+define i32 @sub_negative_constant_lhs(i32 %a) nounwind {
+; RV32I-LABEL: sub_negative_constant_lhs:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, -2
+; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sub_negative_constant_lhs:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, 1
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    addi a1, a1, -2
+; RV64I-NEXT:    subw a0, a1, a0
+; RV64I-NEXT:    ret
+  %1 = sub i32 -2, %a
+  ret i32 %1
+}
+
 define i32 @sll(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: sll:
 ; RV32I:       # %bb.0:
@@ -200,6 +218,23 @@ define i32 @sll(i32 %a, i32 %b) nounwind {
 ; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = shl i32 %a, %b
+  ret i32 %1
+}
+
+define i32 @sll_negative_constant_lhs(i32 %a) nounwind {
+; RV32I-LABEL: sll_negative_constant_lhs:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, -1
+; RV32I-NEXT:    sll a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sll_negative_constant_lhs:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    sllw a0, a1, a0
+; RV64I-NEXT:    ret
+  %1 = shl i32 -1, %a
   ret i32 %1
 }
 
@@ -265,6 +300,23 @@ define i32 @srl(i32 %a, i32 %b) nounwind {
   ret i32 %1
 }
 
+define i32 @srl_negative_constant_lhs(i32 %a) nounwind {
+; RV32I-LABEL: srl_negative_constant_lhs:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, -1
+; RV32I-NEXT:    srl a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: srl_negative_constant_lhs:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, -1
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    srlw a0, a1, a0
+; RV64I-NEXT:    ret
+  %1 = lshr i32 -1, %a
+  ret i32 %1
+}
+
 define i32 @sra(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: sra:
 ; RV32I:       # %bb.0:
@@ -276,6 +328,23 @@ define i32 @sra(i32 %a, i32 %b) nounwind {
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = ashr i32 %a, %b
+  ret i32 %1
+}
+
+define i32 @sra_negative_constant_lhs(i32 %a) nounwind {
+; RV32I-LABEL: sra_negative_constant_lhs:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    sra a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sra_negative_constant_lhs:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, 1
+; RV64I-NEXT:    slli a1, a1, 31
+; RV64I-NEXT:    sraw a0, a1, a0
+; RV64I-NEXT:    ret
+  %1 = ashr i32 2147483648, %a
   ret i32 %1
 }
 
