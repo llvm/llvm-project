@@ -880,6 +880,59 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   return true;
 }
 
+template <int EltSize>
+void AArch64InstPrinter::printMatrix(const MCInst *MI, unsigned OpNum,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  const MCOperand &RegOp = MI->getOperand(OpNum);
+  assert(RegOp.isReg() && "Unexpected operand type!");
+
+  O << getRegisterName(RegOp.getReg());
+  switch (EltSize) {
+  case 0:
+    break;
+  case 8:
+    O << ".b";
+    break;
+  case 16:
+    O << ".h";
+    break;
+  case 32:
+    O << ".s";
+    break;
+  case 64:
+    O << ".d";
+    break;
+  case 128:
+    O << ".q";
+    break;
+  default:
+    llvm_unreachable("Unsupported element size");
+  }
+}
+
+template <bool IsVertical>
+void AArch64InstPrinter::printMatrixTileVector(const MCInst *MI, unsigned OpNum,
+                                               const MCSubtargetInfo &STI,
+                                               raw_ostream &O) {
+  const MCOperand &RegOp = MI->getOperand(OpNum);
+  assert(RegOp.isReg() && "Unexpected operand type!");
+  StringRef RegName = getRegisterName(RegOp.getReg());
+
+  // Insert the horizontal/vertical flag before the suffix.
+  StringRef Base, Suffix;
+  std::tie(Base, Suffix) = RegName.split('.');
+  O << Base << (IsVertical ? "v" : "h") << '.' << Suffix;
+}
+
+void AArch64InstPrinter::printMatrixTile(const MCInst *MI, unsigned OpNum,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  const MCOperand &RegOp = MI->getOperand(OpNum);
+  assert(RegOp.isReg() && "Unexpected operand type!");
+  O << getRegisterName(RegOp.getReg());
+}
+
 void AArch64InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
