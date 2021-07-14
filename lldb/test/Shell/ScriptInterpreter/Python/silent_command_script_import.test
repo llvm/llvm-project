@@ -1,8 +1,11 @@
 # REQUIRES: python
 
-# RUN: %lldb --script-language python -o 'command script import lldb.macosx.crashlog' 2>&1 | FileCheck %s
-# RUN: %lldb --script-language python -o 'command script import -s lldb.macosx.crashlog' 2>&1 | FileCheck %s --check-prefix SILENT
-# RUN: %lldb --script-language python -o 'command script import --silent lldb.macosx.crashlog' 2>&1 | FileCheck %s --check-prefix SILENT
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: echo "print('Rene Magritte')" >> %t/foo.py
 
-CHECK: commands have been installed
-SILENT-NOT: commands have been installed
+# RUN: %lldb --script-language python -o 'command script import %t/foo.py' 2>&1 | FileCheck %s
+# RUN: %lldb --script-language python -o 'command script import -s %t/foo.py' 2>&1 | FileCheck %s --check-prefix SILENT
+# RUN: %lldb --script-language python -o 'command script import --silent %t/foo.py' 2>&1 | FileCheck %s --check-prefix SILENT
+
+CHECK: Rene Magritte
+SILENT-NOT: Rene Magritte
