@@ -27,7 +27,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
   endif()
 
   if (DEFINED LLVM_HAVE_TF_API)
-    list(APPEND MLLinkDeps ${tensorflow_c_api})
+    list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
   endif()
 endif()
 
