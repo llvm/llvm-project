@@ -187,6 +187,33 @@ entry:
         ret i32 %tmp1
 }
 
+; Make sure we reuse the original ___udivsi3 rather than creating a new one
+; called ___udivsi3.1 or whatever.
+define i32 @LibCall2(i32 %a, i32 %b) {
+entry:
+; ARM-LABEL: LibCall2:
+; ARM: bl {{___udivsi3|__aeabi_uidiv}}
+; ARM-LONG-LABEL: LibCall2:
+
+; ARM-LONG-MACHO: {{(movw r2, :lower16:L___udivsi3\$non_lazy_ptr)|(ldr r2, .LCPI)}}
+; ARM-LONG-MACHO: {{(movt r2, :upper16:L___udivsi3\$non_lazy_ptr)?}}
+; ARM-LONG-MACHO: ldr r2, [r2]
+
+; ARM-LONG-ELF: movw r2, :lower16:__aeabi_uidiv
+; ARM-LONG-ELF: movt r2, :upper16:__aeabi_uidiv
+
+; ARM-LONG: blx r2
+; THUMB-LABEL: LibCall2:
+; THUMB: bl {{___udivsi3|__aeabi_uidiv}}
+; THUMB-LONG-LABEL: LibCall2
+; THUMB-LONG: {{(movw r2, :lower16:L___udivsi3\$non_lazy_ptr)|(ldr.n r2, .LCPI)}}
+; THUMB-LONG: {{(movt r2, :upper16:L___udivsi3\$non_lazy_ptr)?}}
+; THUMB-LONG: ldr r2, [r2]
+; THUMB-LONG: blx r2
+        %tmp1 = udiv i32 %a, %b         ; <i32> [#uses=1]
+        ret i32 %tmp1
+}
+
 ; Test fastcc
 
 define fastcc void @fast_callee(float %i) ssp {
