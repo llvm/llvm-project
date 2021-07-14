@@ -1224,24 +1224,20 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_zext(<16 x i8> %x, <16 x i8> %y, i64 %a) {
 ; CHECK-LABEL: add_v16i8_v16i64_acc_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .pad #32
 ; CHECK-NEXT:    sub sp, #32
-; CHECK-NEXT:    add r4, sp, #16
+; CHECK-NEXT:    add r2, sp, #16
 ; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    vstrw.32 q1, [r4]
+; CHECK-NEXT:    vstrw.32 q1, [r2]
 ; CHECK-NEXT:    vstrw.32 q0, [r3]
-; CHECK-NEXT:    vldrb.u16 q0, [r4]
+; CHECK-NEXT:    vldrb.u16 q0, [r2]
 ; CHECK-NEXT:    vldrb.u16 q1, [r3]
-; CHECK-NEXT:    vmlalv.u16 r2, r5, q1, q0
-; CHECK-NEXT:    vldrb.u16 q0, [r4, #8]
+; CHECK-NEXT:    vmlalva.u16 r0, r1, q1, q0
+; CHECK-NEXT:    vldrb.u16 q0, [r2, #8]
 ; CHECK-NEXT:    vldrb.u16 q1, [r3, #8]
-; CHECK-NEXT:    vmlalva.u16 r2, r5, q1, q0
-; CHECK-NEXT:    adds r0, r0, r2
-; CHECK-NEXT:    adcs r1, r5
+; CHECK-NEXT:    vmlalva.u16 r0, r1, q1, q0
 ; CHECK-NEXT:    add sp, #32
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    bx lr
 entry:
   %xx = zext <16 x i8> %x to <16 x i64>
   %yy = zext <16 x i8> %y to <16 x i64>
@@ -1254,24 +1250,20 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_sext(<16 x i8> %x, <16 x i8> %y, i64 %a) {
 ; CHECK-LABEL: add_v16i8_v16i64_acc_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .pad #32
 ; CHECK-NEXT:    sub sp, #32
-; CHECK-NEXT:    add r4, sp, #16
+; CHECK-NEXT:    add r2, sp, #16
 ; CHECK-NEXT:    mov r3, sp
-; CHECK-NEXT:    vstrw.32 q1, [r4]
+; CHECK-NEXT:    vstrw.32 q1, [r2]
 ; CHECK-NEXT:    vstrw.32 q0, [r3]
-; CHECK-NEXT:    vldrb.s16 q0, [r4]
+; CHECK-NEXT:    vldrb.s16 q0, [r2]
 ; CHECK-NEXT:    vldrb.s16 q1, [r3]
-; CHECK-NEXT:    vmlalv.s16 r2, r5, q1, q0
-; CHECK-NEXT:    vldrb.s16 q0, [r4, #8]
+; CHECK-NEXT:    vmlalva.s16 r0, r1, q1, q0
+; CHECK-NEXT:    vldrb.s16 q0, [r2, #8]
 ; CHECK-NEXT:    vldrb.s16 q1, [r3, #8]
-; CHECK-NEXT:    vmlalva.s16 r2, r5, q1, q0
-; CHECK-NEXT:    adds r0, r0, r2
-; CHECK-NEXT:    adcs r1, r5
+; CHECK-NEXT:    vmlalva.s16 r0, r1, q1, q0
 ; CHECK-NEXT:    add sp, #32
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    bx lr
 entry:
   %xx = sext <16 x i8> %x to <16 x i64>
   %yy = sext <16 x i8> %y to <16 x i64>
@@ -1284,17 +1276,15 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_zext_load(<16 x i8> *%xp, <16 x i8> *%yp, i64 %a) {
 ; CHECK-LABEL: add_v16i8_v16i64_acc_zext_load:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r5, lr}
-; CHECK-NEXT:    push {r5, lr}
 ; CHECK-NEXT:    vldrb.u16 q0, [r1]
 ; CHECK-NEXT:    vldrb.u16 q1, [r0]
-; CHECK-NEXT:    vmlalv.u16 r12, r5, q1, q0
+; CHECK-NEXT:    vmlalva.u16 r2, r3, q1, q0
 ; CHECK-NEXT:    vldrb.u16 q0, [r1, #8]
 ; CHECK-NEXT:    vldrb.u16 q1, [r0, #8]
-; CHECK-NEXT:    vmlalva.u16 r12, r5, q1, q0
-; CHECK-NEXT:    adds.w r0, r12, r2
-; CHECK-NEXT:    adc.w r1, r5, r3
-; CHECK-NEXT:    pop {r5, pc}
+; CHECK-NEXT:    vmlalva.u16 r2, r3, q1, q0
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bx lr
 entry:
   %x = load <16 x i8>, <16 x i8>* %xp
   %y = load <16 x i8>, <16 x i8>* %yp
@@ -1309,17 +1299,15 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_sext_load(<16 x i8> *%xp, <16 x i8> *%yp, i64 %a) {
 ; CHECK-LABEL: add_v16i8_v16i64_acc_sext_load:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r5, lr}
-; CHECK-NEXT:    push {r5, lr}
 ; CHECK-NEXT:    vldrb.s16 q0, [r1]
 ; CHECK-NEXT:    vldrb.s16 q1, [r0]
-; CHECK-NEXT:    vmlalv.s16 r12, r5, q1, q0
+; CHECK-NEXT:    vmlalva.s16 r2, r3, q1, q0
 ; CHECK-NEXT:    vldrb.s16 q0, [r1, #8]
 ; CHECK-NEXT:    vldrb.s16 q1, [r0, #8]
-; CHECK-NEXT:    vmlalva.s16 r12, r5, q1, q0
-; CHECK-NEXT:    adds.w r0, r12, r2
-; CHECK-NEXT:    adc.w r1, r5, r3
-; CHECK-NEXT:    pop {r5, pc}
+; CHECK-NEXT:    vmlalva.s16 r2, r3, q1, q0
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bx lr
 entry:
   %x = load <16 x i8>, <16 x i8>* %xp
   %y = load <16 x i8>, <16 x i8>* %yp
