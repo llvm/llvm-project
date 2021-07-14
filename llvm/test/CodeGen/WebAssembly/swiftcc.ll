@@ -1,7 +1,6 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-keep-registers | FileCheck %s --check-prefix=REG
 ; RUN: llc < %s -asm-verbose=false | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; Test direct and indirect function call between mismatched signatures
@@ -43,4 +42,3 @@ define swiftcc void @bar() {
 
   ret void
 }
-

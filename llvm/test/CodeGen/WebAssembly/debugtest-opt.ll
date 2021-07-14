@@ -17,7 +17,6 @@
 
 ; ModuleID = 'debugtest-opt.c'
 source_filename = "debugtest-opt.c"
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32"
 
 @globl = hidden local_unnamed_addr global i32* null, align 4, !dbg !0

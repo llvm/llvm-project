@@ -3,7 +3,6 @@
 
 ; Test SIMD v128.load{32,64}_zero instructions
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare <4 x i32> @llvm.wasm.load32.zero(i32*)

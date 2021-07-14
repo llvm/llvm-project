@@ -2,7 +2,6 @@
 
 ; Test a subset of compiler-rt/libm libcalls expected to be emitted by the wasm backend
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare fp128 @llvm.sqrt.f128(fp128)
