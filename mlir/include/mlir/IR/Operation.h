@@ -204,9 +204,9 @@ public:
   /// take O(N) where N is the number of operations within the parent block.
   bool isBeforeInBlock(Operation *other);
 
-  void print(raw_ostream &os, OpPrintingFlags flags = llvm::None);
+  void print(raw_ostream &os, const OpPrintingFlags &flags = llvm::None);
   void print(raw_ostream &os, AsmState &state,
-             OpPrintingFlags flags = llvm::None);
+             const OpPrintingFlags &flags = llvm::None);
   void dump();
 
   //===--------------------------------------------------------------------===//
