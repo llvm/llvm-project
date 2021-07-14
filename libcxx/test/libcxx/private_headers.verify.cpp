@@ -402,6 +402,7 @@ END-SCRIPT
 #include <__ranges/empty_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/empty_view.h'}}
 #include <__ranges/enable_borrowed_range.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_borrowed_range.h'}}
 #include <__ranges/enable_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_view.h'}}
+#include <__ranges/filter_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/filter_view.h'}}
 #include <__ranges/iota_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/iota_view.h'}}
 #include <__ranges/join_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/join_view.h'}}
 #include <__ranges/lazy_split_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/lazy_split_view.h'}}

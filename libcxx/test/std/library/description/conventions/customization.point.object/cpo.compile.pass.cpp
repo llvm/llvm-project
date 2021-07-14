@@ -89,7 +89,7 @@ static_assert(test(std::views::counted, a, 10));
 //static_assert(test(std::views::drop, a, 10));
 //static_assert(test(std::views::drop_while, a, [](int x){ return x < 10; }));
 //static_assert(test(std::views::elements<0>, pairs));
-//static_assert(test(std::views::filter, a, [](int x){ return x < 10; }));
+static_assert(test(std::views::filter, a, [](int x){ return x < 10; }));
 //static_assert(test(std::views::join, arrays));
 static_assert(test(std::views::lazy_split, a, 4));
 static_assert(test(std::views::reverse, a));
