@@ -31,5 +31,8 @@ if config.clangd_build_xpc:
 if config.clangd_enable_remote:
   config.available_features.add('clangd-remote-index')
 
+if config.clangd_tidy_checks:
+  config.available_features.add('clangd-tidy-checks')
+
 if config.have_zlib:
   config.available_features.add('zlib')
