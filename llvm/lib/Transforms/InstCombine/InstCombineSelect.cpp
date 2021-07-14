@@ -2933,33 +2933,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = foldSelectExtConst(SI))
     return I;
 
-  // Fold (select C, (gep Ptr, Idx), Ptr) -> (gep Ptr, (select C, Idx, 0))
-  // Fold (select C, Ptr, (gep Ptr, Idx)) -> (gep Ptr, (select C, 0, Idx))
-  auto SelectGepWithBase = [&](GetElementPtrInst *Gep, Value *Base,
-                               bool Swap) -> GetElementPtrInst * {
-    Value *Ptr = Gep->getPointerOperand();
-    if (Gep->getNumOperands() != 2 || Gep->getPointerOperand() != Base ||
-        !Gep->hasOneUse())
-      return nullptr;
-    Type *ElementType = Gep->getResultElementType();
-    Value *Idx = Gep->getOperand(1);
-    Value *NewT = Idx;
-    Value *NewF = Constant::getNullValue(Idx->getType());
-    if (Swap)
-      std::swap(NewT, NewF);
-    Value *NewSI =
-        Builder.CreateSelect(CondVal, NewT, NewF, SI.getName() + ".idx", &SI);
-    return Gep->isInBounds()
-               ? GetElementPtrInst::CreateInBounds(ElementType, Ptr, {NewSI})
-               : GetElementPtrInst::Create(ElementType, Ptr, {NewSI});
-  };
-  if (auto *TrueGep = dyn_cast<GetElementPtrInst>(TrueVal))
-    if (auto *NewGep = SelectGepWithBase(TrueGep, FalseVal, false))
-      return NewGep;
-  if (auto *FalseGep = dyn_cast<GetElementPtrInst>(FalseVal))
-    if (auto *NewGep = SelectGepWithBase(FalseGep, TrueVal, true))
-      return NewGep;
-
   // See if we can fold the select into one of our operands.
   if (SelType->isIntOrIntVectorTy() || SelType->isFPOrFPVectorTy()) {
     if (Instruction *FoldI = foldSelectIntoOp(SI, TrueVal, FalseVal))
