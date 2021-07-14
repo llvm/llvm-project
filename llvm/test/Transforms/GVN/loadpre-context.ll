@@ -3,7 +3,7 @@
 
 ; load may be speculated, address is not null using context search.
 ; There is a critical edge.
-define i32 @loadpre_critical_edge(i32* align 8 dereferenceable_or_null(48) %arg, i32 %N) {
+define i32 @loadpre_critical_edge(i32* align 8 dereferenceable_or_null(48) %arg, i32 %N) nofree nosync {
 ; CHECK-LABEL: @loadpre_critical_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[ARG:%.*]], null
@@ -48,7 +48,7 @@ null_exit:
 }
 
 ; load may be speculated, address is not null using context search.
-define i32 @loadpre_basic(i32* align 8 dereferenceable_or_null(48) %arg, i32 %N) {
+define i32 @loadpre_basic(i32* align 8 dereferenceable_or_null(48) %arg, i32 %N) nofree nosync {
 ; CHECK-LABEL: @loadpre_basic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[ARG:%.*]], null
@@ -96,7 +96,7 @@ null_exit:
 }
 
 ; load cannot be speculated, check "address is not null" does not dominate the loop.
-define i32 @loadpre_maybe_null(i32* align 8 dereferenceable_or_null(48) %arg, i32 %N, i1 %c) {
+define i32 @loadpre_maybe_null(i32* align 8 dereferenceable_or_null(48) %arg, i32 %N, i1 %c) nofree nosync {
 ; CHECK-LABEL: @loadpre_maybe_null(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[NULL_CHECK:%.*]], label [[PREHEADER:%.*]]

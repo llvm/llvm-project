@@ -263,7 +263,7 @@ header:
   br label %header
 }
 
-define i32 @test6b(i1 %cnd, i32* dereferenceable(8) align 4 %p) {
+define i32 @test6b(i1 %cnd, i32* dereferenceable(8) align 4 %p) nofree nosync {
 ; CHECK-LABEL: @test6b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V1_PRE:%.*]] = load i32, i32* [[P:%.*]], align 4

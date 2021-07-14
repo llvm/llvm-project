@@ -683,7 +683,7 @@ follow_2:
 ; dereferenceable can be loaded from speculatively without a risk of trapping.
 ; Since it is OK to speculate, PRE is allowed.
 
-define i32 @test15(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) {
+define i32 @test15(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) nofree nosync {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
@@ -724,7 +724,7 @@ if.end:
 ; dereferenceable can be loaded from speculatively without a risk of trapping.
 ; Since it is OK to speculate, PRE is allowed.
 
-define i32 @test16(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) {
+define i32 @test16(i32* noalias nocapture readonly dereferenceable(8) align 4 %x, i32* noalias nocapture %r, i32 %a) nofree nosync {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A:%.*]], 0
