@@ -6,7 +6,6 @@
 ; TODO: Use the offset field by supporting more patterns. Right now only the
 ; equivalents of LoadPatNoOffset/StorePatNoOffset are supported.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare <16 x i8> @llvm.wasm.load8.lane(i8*, <16 x i8>, i32)

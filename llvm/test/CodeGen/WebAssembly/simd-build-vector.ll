@@ -4,7 +4,6 @@
 ; initialization and splat vector initialization and to optimize the
 ; choice of splat value works correctly.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: same_const_one_replaced_i16x8:
