@@ -897,6 +897,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       // CanBeNull flag.
       DerefBytes = DL.getTypeStoreSize(GV->getValueType()).getFixedSize();
       CanBeNull = false;
+      CanBeFreed = false;
     }
   }
   return DerefBytes;
