@@ -404,10 +404,9 @@ define i32 @irreducible_cfg(i32 %0) {
 ; CHECK-NEXT:    br label [[TMP8]]
 ; CHECK:       15:
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP3]] to i8*
-; CHECK-NEXT:    call void @free(i8* nocapture noundef [[TMP17]])
-; CHECK-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    ret i32 [[TMP18]]
+; CHECK-NEXT:    call void @free(i8* nocapture noundef [[TMP2]])
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP3]], align 4
+; CHECK-NEXT:    ret i32 [[TMP17]]
 ;
   %2 = call noalias i8* @malloc(i64 4)
   %3 = bitcast i8* %2 to i32*

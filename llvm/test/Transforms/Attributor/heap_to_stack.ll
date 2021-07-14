@@ -41,11 +41,9 @@ define void @h2s_value_simplify_interaction(i1 %c, i8* %A) {
 ; IS________OPM:       f:
 ; IS________OPM-NEXT:    br label [[J:%.*]]
 ; IS________OPM:       f2:
-; IS________OPM-NEXT:    [[C1:%.*]] = bitcast i8* [[M]] to i32*
-; IS________OPM-NEXT:    [[C2:%.*]] = bitcast i32* [[C1]] to i8*
-; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[C2]], align 1
+; IS________OPM-NEXT:    [[L:%.*]] = load i8, i8* [[M]], align 1
 ; IS________OPM-NEXT:    call void @usei8(i8 [[L]])
-; IS________OPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef [[C2]]) #[[ATTR5:[0-9]+]]
+; IS________OPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef [[M]]) #[[ATTR5:[0-9]+]]
 ; IS________OPM-NEXT:    br label [[J]]
 ; IS________OPM:       dead:
 ; IS________OPM-NEXT:    unreachable
@@ -64,11 +62,9 @@ define void @h2s_value_simplify_interaction(i1 %c, i8* %A) {
 ; IS________NPM:       f:
 ; IS________NPM-NEXT:    br label [[J:%.*]]
 ; IS________NPM:       f2:
-; IS________NPM-NEXT:    [[C1:%.*]] = bitcast i8* [[M]] to i32*
-; IS________NPM-NEXT:    [[C2:%.*]] = bitcast i32* [[C1]] to i8*
-; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[C2]], align 1
+; IS________NPM-NEXT:    [[L:%.*]] = load i8, i8* [[M]], align 1
 ; IS________NPM-NEXT:    call void @usei8(i8 [[L]])
-; IS________NPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef [[C2]]) #[[ATTR6:[0-9]+]]
+; IS________NPM-NEXT:    call void @no_sync_func(i8* nocapture nofree noundef [[M]]) #[[ATTR6:[0-9]+]]
 ; IS________NPM-NEXT:    br label [[J]]
 ; IS________NPM:       dead:
 ; IS________NPM-NEXT:    unreachable
@@ -540,10 +536,9 @@ define i32 @irreducible_cfg(i32 %0) {
 ; IS________OPM-NEXT:    br label [[TMP8]]
 ; IS________OPM:       15:
 ; IS________OPM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP3]], align 4
-; IS________OPM-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP3]] to i8*
-; IS________OPM-NEXT:    call void @free(i8* nocapture noundef [[TMP17]])
-; IS________OPM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP3]], align 4
-; IS________OPM-NEXT:    ret i32 [[TMP18]]
+; IS________OPM-NEXT:    call void @free(i8* nocapture noundef [[TMP2]])
+; IS________OPM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________OPM-NEXT:    ret i32 [[TMP17]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@irreducible_cfg
 ; IS________NPM-SAME: (i32 [[TMP0:%.*]]) {
@@ -571,9 +566,8 @@ define i32 @irreducible_cfg(i32 %0) {
 ; IS________NPM-NEXT:    [[TMP14]] = add nsw i32 [[DOT1]], 1
 ; IS________NPM-NEXT:    br label [[TMP8]]
 ; IS________NPM:       15:
-; IS________NPM-NEXT:    [[TMP16:%.*]] = bitcast i32* [[TMP3]] to i8*
-; IS________NPM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP3]], align 4
-; IS________NPM-NEXT:    ret i32 [[TMP17]]
+; IS________NPM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________NPM-NEXT:    ret i32 [[TMP16]]
 ;
   %2 = call noalias i8* @malloc(i64 4)
   %3 = bitcast i8* %2 to i32*
