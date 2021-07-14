@@ -1758,10 +1758,14 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
          V);
 
   AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
-  Assert(!AttrBuilder(Attrs).overlaps(IncompatibleAttrs),
-         "Wrong types for attribute: " +
-             AttributeSet::get(Context, IncompatibleAttrs).getAsString(),
-         V);
+  for (Attribute Attr : Attrs) {
+    if (!Attr.isStringAttribute() &&
+        IncompatibleAttrs.contains(Attr.getKindAsEnum())) {
+      CheckFailed("Attribute '" + Attr.getAsString() +
+                  "' applied to incompatible type!", V);
+      return;
+    }
+  }
 
   if (PointerType *PTy = dyn_cast<PointerType>(Ty)) {
     if (Attrs.hasAttribute(Attribute::ByVal)) {
@@ -1810,17 +1814,6 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
                "Attribute 'inalloca' type does not match parameter!", V);
       }
     }
-  } else {
-    Assert(!Attrs.hasAttribute(Attribute::ByVal),
-           "Attribute 'byval' only applies to parameters with pointer type!",
-           V);
-    Assert(!Attrs.hasAttribute(Attribute::ByRef),
-           "Attribute 'byref' only applies to parameters with pointer type!",
-           V);
-    Assert(!Attrs.hasAttribute(Attribute::SwiftError),
-           "Attribute 'swifterror' only applies to parameters "
-           "with pointer type!",
-           V);
   }
 }
 
