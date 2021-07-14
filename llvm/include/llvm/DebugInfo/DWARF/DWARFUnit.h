@@ -218,7 +218,6 @@ class DWARFUnit {
   StringRef StringSection;
   const DWARFSection &StringOffsetSection;
   const DWARFSection *AddrOffsetSection;
-  DWARFUnit *SU;
   Optional<uint64_t> AddrOffsetSectionBase;
   bool isLittleEndian;
   bool IsDWO;
@@ -301,12 +300,6 @@ public:
   const DWARFSection &getStringOffsetSection() const {
     return StringOffsetSection;
   }
-
-  void setSkeletonUnit(DWARFUnit *SU) { this->SU = SU; }
-  // Returns itself if not using Split DWARF, or if the unit is a skeleton unit
-  // - otherwise returns the split full unit's corresponding skeleton, if
-  // available.
-  DWARFUnit *getLinkedUnit() { return IsDWO ? SU : this; }
 
   void setAddrOffsetSection(const DWARFSection *AOS, uint64_t Base) {
     AddrOffsetSection = AOS;
