@@ -9822,7 +9822,7 @@ bool ScalarEvolution::isKnownNonPositive(const SCEV *S) {
 }
 
 bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
-  return isKnownNegative(S) || isKnownPositive(S);
+  return getUnsignedRangeMin(S) != 0;
 }
 
 std::pair<const SCEV *, const SCEV *>
@@ -11663,6 +11663,12 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // and produce the right result.
     // FIXME: Handle the case where Stride is poison?
     auto wouldZeroStrideBeUB = [&]() {
+      // If RHS isn't loop invariant, bail out for now. This isn't necessary
+      // for the proof, but isLoopEntryGuardedByCond only works on
+      // loop-invariant values.
+      if (!isLoopInvariant(RHS, L))
+        return false;
+
       // Proof by contradiction.  Suppose the stride were zero.  If we can
       // prove that the backedge *is* taken on the first iteration, then since
       // we know this condition controls the sole exit, we must have an

@@ -311,9 +311,9 @@ exit:
 define void @even_start1(i4 %n) {
 ; CHECK-LABEL: 'even_start1'
 ; CHECK-NEXT:  Determining loop execution counts for: @even_start1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + (2 smax (2 * %n)))<nsw>
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + (2 * %n))
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-2 + (2 smax (2 * %n)))<nsw>
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-2 + (2 * %n))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -333,9 +333,9 @@ exit:
 define void @even_start1_step2(i4 %n) {
 ; CHECK-LABEL: 'even_start1_step2'
 ; CHECK-NEXT:  Determining loop execution counts for: @even_start1_step2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-2 + (3 smax (2 * %n)))<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-2 + (2 * %n)) /u 2)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-2 + (3 smax (2 * %n)))<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-2 + (2 * %n)) /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -443,9 +443,9 @@ exit:
 define void @even_nsw_start1(i4 %n) {
 ; CHECK-LABEL: 'even_nsw_start1'
 ; CHECK-NEXT:  Determining loop execution counts for: @even_nsw_start1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + (2 smax (2 * %n)))<nsw>
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + (2 * %n))
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-2 + (2 smax (2 * %n)))<nsw>
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-2 + (2 * %n))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -465,9 +465,9 @@ exit:
 define void @even_nsw_start1_step2(i4 %n) {
 ; CHECK-LABEL: 'even_nsw_start1_step2'
 ; CHECK-NEXT:  Determining loop execution counts for: @even_nsw_start1_step2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-2 + (3 smax (2 * %n)))<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-2 + (2 * %n)) /u 2)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 2
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-2 + (3 smax (2 * %n)))<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-2 + (2 * %n)) /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;

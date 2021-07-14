@@ -99,10 +99,13 @@ class ProfiledBinary {
   std::string Path;
   // The target triple.
   Triple TheTriple;
-  // The runtime base address that the executable sections are loaded at.
-  mutable uint64_t BaseAddress = 0;
-  // The preferred base address that the executable sections are loaded at.
-  uint64_t PreferredBaseAddress = 0;
+  // The runtime base address that the first executable segment is loaded at.
+  uint64_t BaseAddress = 0;
+  // The preferred load address of each executable segment.
+  std::vector<uint64_t> PreferredTextSegmentAddresses;
+  // The file offset of each executable segment.
+  std::vector<uint64_t> TextSegmentOffsets;
+
   // Mutiple MC component info
   std::unique_ptr<const MCRegisterInfo> MRI;
   std::unique_ptr<const MCAsmInfo> AsmInfo;
@@ -136,7 +139,10 @@ class ProfiledBinary {
 
   bool UsePseudoProbes = false;
 
-  void setPreferredBaseAddress(const ELFObjectFileBase *O);
+  void setPreferredTextSegmentAddresses(const ELFObjectFileBase *O);
+
+  template <class ELFT>
+  void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, StringRef FileName);
 
   void decodePseudoProbe(const ELFObjectFileBase *Obj);
 
@@ -174,8 +180,8 @@ public:
     setupSymbolizer();
     load();
   }
-  uint64_t virtualAddrToOffset(uint64_t VitualAddress) const {
-    return VitualAddress - BaseAddress;
+  uint64_t virtualAddrToOffset(uint64_t VirtualAddress) const {
+    return VirtualAddress - BaseAddress;
   }
   uint64_t offsetToVirtualAddr(uint64_t Offset) const {
     return Offset + BaseAddress;
@@ -184,7 +190,17 @@ public:
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
-  uint64_t getPreferredBaseAddress() const { return PreferredBaseAddress; }
+  
+  // Return the preferred load address for the first executable segment.
+  uint64_t getPreferredBaseAddress() const { return PreferredTextSegmentAddresses[0]; }
+  // Return the file offset for the first executable segment.
+  uint64_t getTextSegmentOffset() const { return TextSegmentOffsets[0]; }
+  const std::vector<uint64_t> &getPreferredTextSegmentAddresses() const {
+    return PreferredTextSegmentAddresses;
+  }
+  const std::vector<uint64_t> &getTextSegmentOffsets() const {
+    return TextSegmentOffsets;
+  }
 
   bool addressIsCode(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);

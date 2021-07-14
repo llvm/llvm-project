@@ -71,6 +71,18 @@ BUILTIN(__builtin_ppc_fctiw, "dd", "")
 BUILTIN(__builtin_ppc_fctiwz, "dd", "")
 BUILTIN(__builtin_ppc_fctudz, "dd", "")
 BUILTIN(__builtin_ppc_fctuwz, "dd", "")
+// Compare
+BUILTIN(__builtin_ppc_cmpeqb, "LLiLLiLLi", "")
+BUILTIN(__builtin_ppc_cmprb, "iCIiii", "")
+BUILTIN(__builtin_ppc_setb, "LLiLLiLLi", "")
+// Multiply
+BUILTIN(__builtin_ppc_mulhd, "LLiLiLi", "")
+BUILTIN(__builtin_ppc_mulhdu, "ULLiULiULi", "")
+BUILTIN(__builtin_ppc_mulhw, "iii", "")
+BUILTIN(__builtin_ppc_mulhwu, "UiUiUi", "")
+BUILTIN(__builtin_ppc_maddhd, "LLiLLiLLiLLi", "")
+BUILTIN(__builtin_ppc_maddhdu, "ULLiULLiULLiULLi", "")
+BUILTIN(__builtin_ppc_maddld, "LLiLLiLLiLLi", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 

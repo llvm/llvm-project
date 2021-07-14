@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ASTPrint.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -67,11 +66,31 @@ public:
     const DeclarationMatcher &NodeMatch, StringRef ExpectedPrinted,
     StringRef FileName,
     std::function<void(llvm::raw_ostream &, const NamedDecl *)> Print) {
-  return PrintedNodeMatches<NamedDecl>(
-      Code, Args, NodeMatch, ExpectedPrinted, FileName,
-      [Print](llvm::raw_ostream &Out, const ASTContext *Context,
-              const NamedDecl *ND,
-              PrintingPolicyAdjuster PolicyAdjuster) { Print(Out, ND); });
+  PrintMatch Printer(std::move(Print));
+  MatchFinder Finder;
+  Finder.addMatcher(NodeMatch, &Printer);
+  std::unique_ptr<FrontendActionFactory> Factory =
+      newFrontendActionFactory(&Finder);
+
+  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName))
+    return testing::AssertionFailure()
+        << "Parsing error in \"" << Code.str() << "\"";
+
+  if (Printer.getNumFoundDecls() == 0)
+    return testing::AssertionFailure()
+        << "Matcher didn't find any named declarations";
+
+  if (Printer.getNumFoundDecls() > 1)
+    return testing::AssertionFailure()
+        << "Matcher should match only one named declaration "
+           "(found " << Printer.getNumFoundDecls() << ")";
+
+  if (Printer.getPrinted() != ExpectedPrinted)
+    return ::testing::AssertionFailure()
+        << "Expected \"" << ExpectedPrinted.str() << "\", "
+           "got \"" << Printer.getPrinted().str() << "\"";
+
+  return ::testing::AssertionSuccess();
 }
 
 ::testing::AssertionResult

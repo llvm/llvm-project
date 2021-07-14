@@ -2091,9 +2091,8 @@ auto parsePassParameters(ParametersParseCallableT &&Parser, StringRef Name,
     assert(false &&
            "unable to strip pass name from parametrized pass specification");
   }
-  if (Params.empty())
-    return ParametersT{};
-  if (!Params.consume_front("<") || !Params.consume_back(">")) {
+  if (!Params.empty() &&
+      (!Params.consume_front("<") || !Params.consume_back(">"))) {
     assert(false && "invalid format for parametrized pass name");
   }
 
@@ -2234,15 +2233,17 @@ Expected<LoopVectorizeOptions> parseLoopVectorizeOptions(StringRef Params) {
   return Opts;
 }
 
-Expected<bool> parseLoopUnswitchOptions(StringRef Params) {
-  bool Result = false;
+Expected<std::pair<bool, bool>> parseLoopUnswitchOptions(StringRef Params) {
+  std::pair<bool, bool> Result = {false, true};
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "nontrivial") {
-      Result = Enable;
+      Result.first = Enable;
+    } else if (ParamName == "trivial") {
+      Result.second = Enable;
     } else {
       return make_error<StringError>(
           formatv("invalid LoopUnswitch pass parameter '{0}' ", ParamName)
