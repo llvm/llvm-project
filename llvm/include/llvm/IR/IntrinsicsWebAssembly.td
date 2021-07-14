@@ -186,32 +186,6 @@ def int_wasm_load64_zero :
             [IntrReadMem, IntrArgMemOnly],
              "", [SDNPMemOperand]>;
 
-// These intrinsics do not mark their lane index arguments as immediate because
-// that changes the corresponding SDNode from ISD::Constant to
-// ISD::TargetConstant, which would require extra complications in the ISel
-// tablegen patterns. TODO: Replace these intrinsic with normal ISel patterns
-// once the load_lane instructions are merged to the proposal.
-def int_wasm_store8_lane :
-  Intrinsic<[],
-            [LLVMPointerType<llvm_i8_ty>, llvm_v16i8_ty, llvm_i32_ty],
-            [IntrWriteMem, IntrArgMemOnly],
-            "", [SDNPMemOperand]>;
-def int_wasm_store16_lane :
-  Intrinsic<[],
-            [LLVMPointerType<llvm_i16_ty>, llvm_v8i16_ty, llvm_i32_ty],
-            [IntrWriteMem, IntrArgMemOnly],
-            "", [SDNPMemOperand]>;
-def int_wasm_store32_lane :
-  Intrinsic<[],
-            [LLVMPointerType<llvm_i32_ty>, llvm_v4i32_ty, llvm_i32_ty],
-            [IntrWriteMem, IntrArgMemOnly],
-            "", [SDNPMemOperand]>;
-def int_wasm_store64_lane :
-  Intrinsic<[],
-            [LLVMPointerType<llvm_i64_ty>, llvm_v2i64_ty, llvm_i32_ty],
-            [IntrWriteMem, IntrArgMemOnly],
-            "", [SDNPMemOperand]>;
-
 // TODO: Replace this intrinsic with normal ISel patterns once popcnt is merged
 // to the proposal.
 def int_wasm_popcnt :

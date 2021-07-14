@@ -767,35 +767,6 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(1);
     Info.flags = MachineMemOperand::MOLoad;
     return true;
-  case Intrinsic::wasm_store8_lane:
-  case Intrinsic::wasm_store16_lane:
-  case Intrinsic::wasm_store32_lane:
-  case Intrinsic::wasm_store64_lane: {
-    MVT MemVT;
-    switch (Intrinsic) {
-    case Intrinsic::wasm_store8_lane:
-      MemVT = MVT::i8;
-      break;
-    case Intrinsic::wasm_store16_lane:
-      MemVT = MVT::i16;
-      break;
-    case Intrinsic::wasm_store32_lane:
-      MemVT = MVT::i32;
-      break;
-    case Intrinsic::wasm_store64_lane:
-      MemVT = MVT::i64;
-      break;
-    default:
-      llvm_unreachable("unexpected intrinsic");
-    }
-    Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = MemVT;
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.align = Align(1);
-    Info.flags = MachineMemOperand::MOStore;
-    return true;
-  }
   default:
     return false;
   }
