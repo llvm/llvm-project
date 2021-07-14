@@ -1,7 +1,7 @@
 ; RUN: opt < %s -function-attrs -S | FileCheck %s
 
 ; TEST 1
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone
 ; CHECK-NEXT: define i32 @foo1()
 define i32 @foo1() {
   ret i32 1
