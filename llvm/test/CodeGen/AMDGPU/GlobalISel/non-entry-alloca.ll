@@ -13,15 +13,13 @@
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align4(i32 addrspace(1)* %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) {
 ; GCN-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align4:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
 ; GCN-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; GCN-NEXT:    s_add_u32 s0, s0, s9
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_movk_i32 s32, 0x400
+; GCN-NEXT:    s_mov_b32 s33, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s6, 0
-; GCN-NEXT:    s_mov_b32 s33, 0
 ; GCN-NEXT:    s_cbranch_scc1 BB0_3
 ; GCN-NEXT:  ; %bb.1: ; %bb.0
 ; GCN-NEXT:    s_load_dword s6, s[4:5], 0xc
@@ -86,15 +84,13 @@ bb.2:
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(i32 addrspace(1)* %out, i32 %arg.cond, i32 %in) {
 ; GCN-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
 ; GCN-NEXT:    s_load_dword s6, s[4:5], 0x8
-; GCN-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; GCN-NEXT:    s_add_u32 s0, s0, s9
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_movk_i32 s32, 0x1000
+; GCN-NEXT:    s_mov_b32 s33, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s6, 0
-; GCN-NEXT:    s_mov_b32 s33, 0
 ; GCN-NEXT:    s_cbranch_scc1 BB1_2
 ; GCN-NEXT:  ; %bb.1: ; %bb.0
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x0
