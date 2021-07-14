@@ -539,20 +539,8 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       bool copy = false;
       if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
           HasCloseModifier) {
-        if (TPR.Flags.IsNewEntry || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS)) {
+        if (TPR.Flags.IsNewEntry || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS))
           copy = true;
-        } else if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-                   !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
-          // Copy data only if the "parent" struct has RefCount==1.
-          // If this is a PTR_AND_OBJ entry, the OBJ is not part of the struct,
-          // so exclude it from this check.
-          int32_t parent_idx = getParentIndex(arg_types[i]);
-          uint64_t parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
-          assert(parent_rc > 0 && "parent struct not found");
-          if (parent_rc == 1) {
-            copy = true;
-          }
-        }
       }
 
       if (copy && !IsHostPtr) {
