@@ -4,7 +4,7 @@ source_filename = "declare_target_codegen_globalization.cpp"
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
-; CHECK: remark: globalization_remarks.c:5:7: Could not move globalized variable to the stack. Variable is potentially captured.
+; CHECK: remark: globalization_remarks.c:5:7: Could not move globalized variable to the stack as variable is potentially captured in call; mark parameter as `__attribute__((noescape))` to override.
 ; CHECK: remark: globalization_remarks.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
 @S = external local_unnamed_addr global i8*
