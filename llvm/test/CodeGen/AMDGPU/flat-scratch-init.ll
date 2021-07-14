@@ -181,7 +181,6 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, vcc_lo
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_mov_b32 s2, exec_lo
 ; GCN-NEXT:    s_mov_b32 exec_lo, 3
 ; GCN-NEXT:    s_mov_b32 s3, 0
@@ -198,6 +197,7 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_mov_b32 exec_lo, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{s[0:7]}" ()
@@ -254,10 +254,6 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
 define amdgpu_kernel void @kernel_no_calls_no_stack() {
 ; GCN-LABEL: kernel_no_calls_no_stack:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_add_u32 s0, s0, s3
-; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
-; GCN-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GCN-NEXT:    s_endpgm
   ret void
 }
