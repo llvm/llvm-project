@@ -2775,14 +2775,15 @@ static bool unswitchBestCondition(
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L.getUniqueExitBlocks(ExitBlocks);
 
-  // We cannot unswitch if exit blocks contain a cleanuppad instruction as we
-  // don't know how to split those exit blocks.
+  // We cannot unswitch if exit blocks contain a cleanuppad/catchswitch
+  // instruction as we don't know how to split those exit blocks.
   // FIXME: We should teach SplitBlock to handle this and remove this
   // restriction.
   for (auto *ExitBB : ExitBlocks) {
-    if (isa<CleanupPadInst>(ExitBB->getFirstNonPHI())) {
-      LLVM_DEBUG(
-          dbgs() << "Cannot unswitch because of cleanuppad in exit block\n");
+    auto *I = ExitBB->getFirstNonPHI();
+    if (isa<CleanupPadInst>(I) || isa<CatchSwitchInst>(I)) {
+      LLVM_DEBUG(dbgs() << "Cannot unswitch because of cleanuppad/catchswitch "
+                           "in exit block\n");
       return false;
     }
   }
