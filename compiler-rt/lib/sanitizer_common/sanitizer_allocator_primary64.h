@@ -49,11 +49,6 @@ class MemoryMapper {
 
   explicit MemoryMapper(const Allocator &allocator) : allocator_(allocator) {}
 
-  ~MemoryMapper() {
-    if (buffer_)
-      UnmapOrDie(buffer_, buffer_size_);
-  }
-
   bool GetAndResetStats(uptr &ranges, uptr &bytes) {
     ranges = released_ranges_count_;
     released_ranges_count_ = 0;
@@ -62,20 +57,10 @@ class MemoryMapper {
     return ranges != 0;
   }
 
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
-    // TODO(alekseyshl): The idea to explore is to check if we have enough
-    // space between num_freed_chunks*sizeof(CompactPtrT) and
-    // mapped_free_array to fit buffer_size bytes and use that space instead
-    // of mapping a temporary one.
-    if (buffer_size_ < buffer_size) {
-      if (buffer_)
-        UnmapOrDie(buffer_, buffer_size_);
-      buffer_ = MmapOrDieOnFatalError(buffer_size, "ReleaseToOSPageCounters");
-      buffer_size_ = buffer_size;
-    } else {
-      internal_memset(buffer_, 0, buffer_size);
-    }
-    return buffer_;
+  u64 *MapPackedCounterArrayBuffer(uptr count) {
+    buffer_.clear();
+    buffer_.resize(count);
+    return buffer_.data();
   }
 
   // Releases [from, to) range of pages back to OS.
@@ -92,8 +77,7 @@ class MemoryMapper {
   const Allocator &allocator_;
   uptr released_ranges_count_ = 0;
   uptr released_bytes_ = 0;
-  void *buffer_ = nullptr;
-  uptr buffer_size_ = 0;
+  InternalMmapVector<u64> buffer_;
 };
 
 template <class Params>
@@ -440,11 +424,8 @@ class SizeClassAllocator64 {
       packing_ratio_log = Log2(packing_ratio);
       bit_offset_mask = packing_ratio - 1;
 
-      buffer_size =
-          (RoundUpTo(n, 1ULL << packing_ratio_log) >> packing_ratio_log) *
-          sizeof(*buffer);
-      buffer = reinterpret_cast<u64 *>(
-          mapper->MapPackedCounterArrayBuffer(buffer_size));
+      buffer = mapper->MapPackedCounterArrayBuffer(
+          RoundUpTo(n, 1ULL << packing_ratio_log) >> packing_ratio_log);
     }
 
     bool IsAllocated() const {
@@ -481,8 +462,6 @@ class SizeClassAllocator64 {
     u64 counter_mask;
     u64 packing_ratio_log;
     u64 bit_offset_mask;
-
-    u64 buffer_size;
     u64* buffer;
   };
 
