@@ -648,7 +648,7 @@ void PerfReader::parseMMap2Event(TraceStream &TraceIt) {
   enum EventIndex {
     WHOLE_LINE = 0,
     PID = 1,
-    BASE_ADDRESS = 2,
+    MMAPPED_ADDRESS = 2,
     MMAPPED_SIZE = 3,
     PAGE_OFFSET = 4,
     BINARY_PATH = 5
@@ -665,7 +665,7 @@ void PerfReader::parseMMap2Event(TraceStream &TraceIt) {
   }
   MMapEvent Event;
   Fields[PID].getAsInteger(10, Event.PID);
-  Fields[BASE_ADDRESS].getAsInteger(0, Event.Address);
+  Fields[MMAPPED_ADDRESS].getAsInteger(0, Event.Address);
   Fields[MMAPPED_SIZE].getAsInteger(0, Event.Size);
   Fields[PAGE_OFFSET].getAsInteger(0, Event.Offset);
   Event.BinaryPath = Fields[BINARY_PATH];
