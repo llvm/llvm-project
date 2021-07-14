@@ -33,6 +33,11 @@ void PipelinePrinter::printRegionHeader(llvm::raw_ostream &OS) const {
 json::Object PipelinePrinter::getJSONReportRegion() const {
   json::Object JO;
 
+  StringRef RegionName = "";
+  if (!Region.getDescription().empty())
+    RegionName = Region.getDescription();
+
+  JO.try_emplace("Name", RegionName);
   for (const auto &V : Views)
     if (V->isSerializable())
       JO.try_emplace(V->getNameAsString().str(), V->toJSON());
@@ -69,13 +74,14 @@ void PipelinePrinter::printReport(json::Object &JO) const {
   if (!RegionIdx)
     JO.try_emplace("TargetInfo", getJSONTargetInfo());
 
-  StringRef RegionName;
-  if (Region.getDescription().empty())
-    RegionName = "main";
-  else
-    RegionName = Region.getDescription();
+  if (!RegionIdx) {
+    // Construct an array of regions.
+    JO.try_emplace("CodeRegions", json::Array());
+  }
 
-  JO.try_emplace(RegionName, getJSONReportRegion());
+  json::Array *Regions = JO.getArray("CodeRegions");
+  assert(Regions && "This array must exist!");
+  Regions->push_back(getJSONReportRegion());
 }
 
 void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {

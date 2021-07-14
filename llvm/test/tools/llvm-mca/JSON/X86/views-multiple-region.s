@@ -18,6 +18,262 @@ add %edx, %edx
 # LLVM-MCA-END foo
 
 # CHECK:      {
+# CHECK-NEXT:   "CodeRegions": [
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "DispatchStatistics": {
+# CHECK-NEXT:         "GROUP": 0,
+# CHECK-NEXT:         "LQ": 0,
+# CHECK-NEXT:         "RAT": 0,
+# CHECK-NEXT:         "RCU": 0,
+# CHECK-NEXT:         "SCHEDQ": 0,
+# CHECK-NEXT:         "SQ": 0,
+# CHECK-NEXT:         "USH": 0
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "InstructionInfoView": {
+# CHECK-NEXT:         "InstructionList": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "Instruction": 0,
+# CHECK-NEXT:             "Latency": 1,
+# CHECK-NEXT:             "NumMicroOpcodes": 1,
+# CHECK-NEXT:             "RThroughput": 0.25,
+# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
+# CHECK-NEXT:             "mayLoad": false,
+# CHECK-NEXT:             "mayStore": false
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "Instruction": 1,
+# CHECK-NEXT:             "Latency": 1,
+# CHECK-NEXT:             "NumMicroOpcodes": 1,
+# CHECK-NEXT:             "RThroughput": 0.25,
+# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
+# CHECK-NEXT:             "mayLoad": false,
+# CHECK-NEXT:             "mayStore": false
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "Instruction": 2,
+# CHECK-NEXT:             "Latency": 1,
+# CHECK-NEXT:             "NumMicroOpcodes": 1,
+# CHECK-NEXT:             "RThroughput": 0.25,
+# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
+# CHECK-NEXT:             "mayLoad": false,
+# CHECK-NEXT:             "mayStore": false
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "Instruction": 3,
+# CHECK-NEXT:             "Latency": 1,
+# CHECK-NEXT:             "NumMicroOpcodes": 1,
+# CHECK-NEXT:             "RThroughput": 0.25,
+# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
+# CHECK-NEXT:             "mayLoad": false,
+# CHECK-NEXT:             "mayStore": false
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "Instructions": [
+# CHECK-NEXT:         "addl\t%eax, %eax",
+# CHECK-NEXT:         "addl\t%ebx, %ebx",
+# CHECK-NEXT:         "addl\t%ecx, %ecx",
+# CHECK-NEXT:         "addl\t%edx, %edx"
+# CHECK-NEXT:       ],
+# CHECK-NEXT:       "Name": "foo",
+# CHECK-NEXT:       "ResourcePressureView": {
+# CHECK-NEXT:         "ResourcePressureInfo": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 0,
+# CHECK-NEXT:             "ResourceIndex": 8,
+# CHECK-NEXT:             "ResourceUsage": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 1,
+# CHECK-NEXT:             "ResourceIndex": 7,
+# CHECK-NEXT:             "ResourceUsage": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 2,
+# CHECK-NEXT:             "ResourceIndex": 3,
+# CHECK-NEXT:             "ResourceUsage": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 3,
+# CHECK-NEXT:             "ResourceIndex": 2,
+# CHECK-NEXT:             "ResourceUsage": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 4,
+# CHECK-NEXT:             "ResourceIndex": 2,
+# CHECK-NEXT:             "ResourceUsage": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 4,
+# CHECK-NEXT:             "ResourceIndex": 3,
+# CHECK-NEXT:             "ResourceUsage": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 4,
+# CHECK-NEXT:             "ResourceIndex": 7,
+# CHECK-NEXT:             "ResourceUsage": 1
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 4,
+# CHECK-NEXT:             "ResourceIndex": 8,
+# CHECK-NEXT:             "ResourceUsage": 1
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "SummaryView": {
+# CHECK-NEXT:         "BlockRThroughput": 1,
+# CHECK-NEXT:         "DispatchWidth": 4,
+# CHECK-NEXT:         "IPC": 3.883495145631068,
+# CHECK-NEXT:         "Instructions": 400,
+# CHECK-NEXT:         "Iterations": 100,
+# CHECK-NEXT:         "TotalCycles": 103,
+# CHECK-NEXT:         "TotaluOps": 400,
+# CHECK-NEXT:         "uOpsPerCycle": 3.883495145631068
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "TimelineView": {
+# CHECK-NEXT:         "TimelineInfo": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "CycleDispatched": 0,
+# CHECK-NEXT:             "CycleExecuted": 2,
+# CHECK-NEXT:             "CycleIssued": 1,
+# CHECK-NEXT:             "CycleReady": 0,
+# CHECK-NEXT:             "CycleRetired": 3
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "CycleDispatched": 0,
+# CHECK-NEXT:             "CycleExecuted": 2,
+# CHECK-NEXT:             "CycleIssued": 1,
+# CHECK-NEXT:             "CycleReady": 0,
+# CHECK-NEXT:             "CycleRetired": 3
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "CycleDispatched": 0,
+# CHECK-NEXT:             "CycleExecuted": 2,
+# CHECK-NEXT:             "CycleIssued": 1,
+# CHECK-NEXT:             "CycleReady": 0,
+# CHECK-NEXT:             "CycleRetired": 3
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "CycleDispatched": 0,
+# CHECK-NEXT:             "CycleExecuted": 2,
+# CHECK-NEXT:             "CycleIssued": 1,
+# CHECK-NEXT:             "CycleReady": 0,
+# CHECK-NEXT:             "CycleRetired": 3
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     },
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "DispatchStatistics": {
+# CHECK-NEXT:         "GROUP": 0,
+# CHECK-NEXT:         "LQ": 0,
+# CHECK-NEXT:         "RAT": 0,
+# CHECK-NEXT:         "RCU": 0,
+# CHECK-NEXT:         "SCHEDQ": 41,
+# CHECK-NEXT:         "SQ": 0,
+# CHECK-NEXT:         "USH": 0
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "InstructionInfoView": {
+# CHECK-NEXT:         "InstructionList": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "Instruction": 0,
+# CHECK-NEXT:             "Latency": 1,
+# CHECK-NEXT:             "NumMicroOpcodes": 1,
+# CHECK-NEXT:             "RThroughput": 0.25,
+# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
+# CHECK-NEXT:             "mayLoad": false,
+# CHECK-NEXT:             "mayStore": false
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "Instruction": 1,
+# CHECK-NEXT:             "Latency": 1,
+# CHECK-NEXT:             "NumMicroOpcodes": 1,
+# CHECK-NEXT:             "RThroughput": 0.25,
+# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
+# CHECK-NEXT:             "mayLoad": false,
+# CHECK-NEXT:             "mayStore": false
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "Instructions": [
+# CHECK-NEXT:         "addl\t%ebx, %ebx",
+# CHECK-NEXT:         "addl\t%ecx, %ecx"
+# CHECK-NEXT:       ],
+# CHECK-NEXT:       "Name": "bar",
+# CHECK-NEXT:       "ResourcePressureView": {
+# CHECK-NEXT:         "ResourcePressureInfo": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 0,
+# CHECK-NEXT:             "ResourceIndex": 3,
+# CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 0,
+# CHECK-NEXT:             "ResourceIndex": 8,
+# CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 1,
+# CHECK-NEXT:             "ResourceIndex": 2,
+# CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 1,
+# CHECK-NEXT:             "ResourceIndex": 7,
+# CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 2,
+# CHECK-NEXT:             "ResourceIndex": 2,
+# CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 2,
+# CHECK-NEXT:             "ResourceIndex": 3,
+# CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 2,
+# CHECK-NEXT:             "ResourceIndex": 7,
+# CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "InstructionIndex": 2,
+# CHECK-NEXT:             "ResourceIndex": 8,
+# CHECK-NEXT:             "ResourceUsage": 0.5
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "SummaryView": {
+# CHECK-NEXT:         "BlockRThroughput": 0.5,
+# CHECK-NEXT:         "DispatchWidth": 4,
+# CHECK-NEXT:         "IPC": 1.941747572815534,
+# CHECK-NEXT:         "Instructions": 200,
+# CHECK-NEXT:         "Iterations": 100,
+# CHECK-NEXT:         "TotalCycles": 103,
+# CHECK-NEXT:         "TotaluOps": 200,
+# CHECK-NEXT:         "uOpsPerCycle": 1.941747572815534
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "TimelineView": {
+# CHECK-NEXT:         "TimelineInfo": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "CycleDispatched": 0,
+# CHECK-NEXT:             "CycleExecuted": 2,
+# CHECK-NEXT:             "CycleIssued": 1,
+# CHECK-NEXT:             "CycleReady": 0,
+# CHECK-NEXT:             "CycleRetired": 3
+# CHECK-NEXT:           },
+# CHECK-NEXT:           {
+# CHECK-NEXT:             "CycleDispatched": 0,
+# CHECK-NEXT:             "CycleExecuted": 2,
+# CHECK-NEXT:             "CycleIssued": 1,
+# CHECK-NEXT:             "CycleReady": 0,
+# CHECK-NEXT:             "CycleRetired": 3
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ],
 # CHECK-NEXT:   "TargetInfo": {
 # CHECK-NEXT:     "CPUName": "haswell",
 # CHECK-NEXT:     "Resources": [
@@ -32,257 +288,5 @@ add %edx, %edx
 # CHECK-NEXT:       "HWPort6",
 # CHECK-NEXT:       "HWPort7"
 # CHECK-NEXT:     ]
-# CHECK-NEXT:   },
-# CHECK-NEXT:   "bar": {
-# CHECK-NEXT:     "DispatchStatistics": {
-# CHECK-NEXT:       "GROUP": 0,
-# CHECK-NEXT:       "LQ": 0,
-# CHECK-NEXT:       "RAT": 0,
-# CHECK-NEXT:       "RCU": 0,
-# CHECK-NEXT:       "SCHEDQ": 41,
-# CHECK-NEXT:       "SQ": 0,
-# CHECK-NEXT:       "USH": 0
-# CHECK-NEXT:     },
-# CHECK-NEXT:     "InstructionInfoView": {
-# CHECK-NEXT:       "InstructionList": [
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "Instruction": 0,
-# CHECK-NEXT:           "Latency": 1,
-# CHECK-NEXT:           "NumMicroOpcodes": 1,
-# CHECK-NEXT:           "RThroughput": 0.25,
-# CHECK-NEXT:           "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:           "mayLoad": false,
-# CHECK-NEXT:           "mayStore": false
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "Instruction": 1,
-# CHECK-NEXT:           "Latency": 1,
-# CHECK-NEXT:           "NumMicroOpcodes": 1,
-# CHECK-NEXT:           "RThroughput": 0.25,
-# CHECK-NEXT:           "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:           "mayLoad": false,
-# CHECK-NEXT:           "mayStore": false
-# CHECK-NEXT:         }
-# CHECK-NEXT:       ]
-# CHECK-NEXT:     },
-# CHECK-NEXT:     "Instructions": [
-# CHECK-NEXT:       "addl\t%ebx, %ebx",
-# CHECK-NEXT:       "addl\t%ecx, %ecx"
-# CHECK-NEXT:     ],
-# CHECK-NEXT:     "ResourcePressureView": {
-# CHECK-NEXT:       "ResourcePressureInfo": [
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 0,
-# CHECK-NEXT:           "ResourceIndex": 3,
-# CHECK-NEXT:           "ResourceUsage": 0.5
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 0,
-# CHECK-NEXT:           "ResourceIndex": 8,
-# CHECK-NEXT:           "ResourceUsage": 0.5
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 1,
-# CHECK-NEXT:           "ResourceIndex": 2,
-# CHECK-NEXT:           "ResourceUsage": 0.5
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 1,
-# CHECK-NEXT:           "ResourceIndex": 7,
-# CHECK-NEXT:           "ResourceUsage": 0.5
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 2,
-# CHECK-NEXT:           "ResourceIndex": 2,
-# CHECK-NEXT:           "ResourceUsage": 0.5
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 2,
-# CHECK-NEXT:           "ResourceIndex": 3,
-# CHECK-NEXT:           "ResourceUsage": 0.5
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 2,
-# CHECK-NEXT:           "ResourceIndex": 7,
-# CHECK-NEXT:           "ResourceUsage": 0.5
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 2,
-# CHECK-NEXT:           "ResourceIndex": 8,
-# CHECK-NEXT:           "ResourceUsage": 0.5
-# CHECK-NEXT:         }
-# CHECK-NEXT:       ]
-# CHECK-NEXT:     },
-# CHECK-NEXT:     "SummaryView": {
-# CHECK-NEXT:       "BlockRThroughput": 0.5,
-# CHECK-NEXT:       "DispatchWidth": 4,
-# CHECK-NEXT:       "IPC": 1.941747572815534,
-# CHECK-NEXT:       "Instructions": 200,
-# CHECK-NEXT:       "Iterations": 100,
-# CHECK-NEXT:       "TotalCycles": 103,
-# CHECK-NEXT:       "TotaluOps": 200,
-# CHECK-NEXT:       "uOpsPerCycle": 1.941747572815534
-# CHECK-NEXT:     },
-# CHECK-NEXT:     "TimelineView": {
-# CHECK-NEXT:       "TimelineInfo": [
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "CycleDispatched": 0,
-# CHECK-NEXT:           "CycleExecuted": 2,
-# CHECK-NEXT:           "CycleIssued": 1,
-# CHECK-NEXT:           "CycleReady": 0,
-# CHECK-NEXT:           "CycleRetired": 3
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "CycleDispatched": 0,
-# CHECK-NEXT:           "CycleExecuted": 2,
-# CHECK-NEXT:           "CycleIssued": 1,
-# CHECK-NEXT:           "CycleReady": 0,
-# CHECK-NEXT:           "CycleRetired": 3
-# CHECK-NEXT:         }
-# CHECK-NEXT:       ]
-# CHECK-NEXT:     }
-# CHECK-NEXT:   },
-# CHECK-NEXT:   "foo": {
-# CHECK-NEXT:     "DispatchStatistics": {
-# CHECK-NEXT:       "GROUP": 0,
-# CHECK-NEXT:       "LQ": 0,
-# CHECK-NEXT:       "RAT": 0,
-# CHECK-NEXT:       "RCU": 0,
-# CHECK-NEXT:       "SCHEDQ": 0,
-# CHECK-NEXT:       "SQ": 0,
-# CHECK-NEXT:       "USH": 0
-# CHECK-NEXT:     },
-# CHECK-NEXT:     "InstructionInfoView": {
-# CHECK-NEXT:       "InstructionList": [
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "Instruction": 0,
-# CHECK-NEXT:           "Latency": 1,
-# CHECK-NEXT:           "NumMicroOpcodes": 1,
-# CHECK-NEXT:           "RThroughput": 0.25,
-# CHECK-NEXT:           "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:           "mayLoad": false,
-# CHECK-NEXT:           "mayStore": false
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "Instruction": 1,
-# CHECK-NEXT:           "Latency": 1,
-# CHECK-NEXT:           "NumMicroOpcodes": 1,
-# CHECK-NEXT:           "RThroughput": 0.25,
-# CHECK-NEXT:           "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:           "mayLoad": false,
-# CHECK-NEXT:           "mayStore": false
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "Instruction": 2,
-# CHECK-NEXT:           "Latency": 1,
-# CHECK-NEXT:           "NumMicroOpcodes": 1,
-# CHECK-NEXT:           "RThroughput": 0.25,
-# CHECK-NEXT:           "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:           "mayLoad": false,
-# CHECK-NEXT:           "mayStore": false
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "Instruction": 3,
-# CHECK-NEXT:           "Latency": 1,
-# CHECK-NEXT:           "NumMicroOpcodes": 1,
-# CHECK-NEXT:           "RThroughput": 0.25,
-# CHECK-NEXT:           "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:           "mayLoad": false,
-# CHECK-NEXT:           "mayStore": false
-# CHECK-NEXT:         }
-# CHECK-NEXT:       ]
-# CHECK-NEXT:     },
-# CHECK-NEXT:     "Instructions": [
-# CHECK-NEXT:       "addl\t%eax, %eax",
-# CHECK-NEXT:       "addl\t%ebx, %ebx",
-# CHECK-NEXT:       "addl\t%ecx, %ecx",
-# CHECK-NEXT:       "addl\t%edx, %edx"
-# CHECK-NEXT:     ],
-# CHECK-NEXT:     "ResourcePressureView": {
-# CHECK-NEXT:       "ResourcePressureInfo": [
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 0,
-# CHECK-NEXT:           "ResourceIndex": 8,
-# CHECK-NEXT:           "ResourceUsage": 1
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 1,
-# CHECK-NEXT:           "ResourceIndex": 7,
-# CHECK-NEXT:           "ResourceUsage": 1
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 2,
-# CHECK-NEXT:           "ResourceIndex": 3,
-# CHECK-NEXT:           "ResourceUsage": 1
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 3,
-# CHECK-NEXT:           "ResourceIndex": 2,
-# CHECK-NEXT:           "ResourceUsage": 1
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 4,
-# CHECK-NEXT:           "ResourceIndex": 2,
-# CHECK-NEXT:           "ResourceUsage": 1
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 4,
-# CHECK-NEXT:           "ResourceIndex": 3,
-# CHECK-NEXT:           "ResourceUsage": 1
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 4,
-# CHECK-NEXT:           "ResourceIndex": 7,
-# CHECK-NEXT:           "ResourceUsage": 1
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "InstructionIndex": 4,
-# CHECK-NEXT:           "ResourceIndex": 8,
-# CHECK-NEXT:           "ResourceUsage": 1
-# CHECK-NEXT:         }
-# CHECK-NEXT:       ]
-# CHECK-NEXT:     },
-# CHECK-NEXT:     "SummaryView": {
-# CHECK-NEXT:       "BlockRThroughput": 1,
-# CHECK-NEXT:       "DispatchWidth": 4,
-# CHECK-NEXT:       "IPC": 3.883495145631068,
-# CHECK-NEXT:       "Instructions": 400,
-# CHECK-NEXT:       "Iterations": 100,
-# CHECK-NEXT:       "TotalCycles": 103,
-# CHECK-NEXT:       "TotaluOps": 400,
-# CHECK-NEXT:       "uOpsPerCycle": 3.883495145631068
-# CHECK-NEXT:     },
-# CHECK-NEXT:     "TimelineView": {
-# CHECK-NEXT:       "TimelineInfo": [
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "CycleDispatched": 0,
-# CHECK-NEXT:           "CycleExecuted": 2,
-# CHECK-NEXT:           "CycleIssued": 1,
-# CHECK-NEXT:           "CycleReady": 0,
-# CHECK-NEXT:           "CycleRetired": 3
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "CycleDispatched": 0,
-# CHECK-NEXT:           "CycleExecuted": 2,
-# CHECK-NEXT:           "CycleIssued": 1,
-# CHECK-NEXT:           "CycleReady": 0,
-# CHECK-NEXT:           "CycleRetired": 3
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "CycleDispatched": 0,
-# CHECK-NEXT:           "CycleExecuted": 2,
-# CHECK-NEXT:           "CycleIssued": 1,
-# CHECK-NEXT:           "CycleReady": 0,
-# CHECK-NEXT:           "CycleRetired": 3
-# CHECK-NEXT:         },
-# CHECK-NEXT:         {
-# CHECK-NEXT:           "CycleDispatched": 0,
-# CHECK-NEXT:           "CycleExecuted": 2,
-# CHECK-NEXT:           "CycleIssued": 1,
-# CHECK-NEXT:           "CycleReady": 0,
-# CHECK-NEXT:           "CycleRetired": 3
-# CHECK-NEXT:         }
-# CHECK-NEXT:       ]
-# CHECK-NEXT:     }
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
