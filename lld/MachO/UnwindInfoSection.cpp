@@ -92,7 +92,7 @@ using namespace lld::macho;
 // TODO(gkm): prune __eh_frame entries superseded by __unwind_info, PR50410
 // TODO(gkm): how do we align the 2nd-level pages?
 
-using EncodingMap = llvm::DenseMap<compact_unwind_encoding_t, size_t>;
+using EncodingMap = DenseMap<compact_unwind_encoding_t, size_t>;
 
 struct SecondLevelPage {
   uint32_t kind;
@@ -121,7 +121,7 @@ private:
   std::vector<unwind_info_section_header_lsda_index_entry> lsdaEntries;
   // Map of function offset (from the image base) to an index within the LSDA
   // array.
-  llvm::DenseMap<uint32_t, uint32_t> functionToLsdaIndex;
+  DenseMap<uint32_t, uint32_t> functionToLsdaIndex;
   std::vector<CompactUnwindEntry<Ptr>> cuVector;
   std::vector<CompactUnwindEntry<Ptr> *> cuPtrVector;
   std::vector<SecondLevelPage> secondLevelPages;

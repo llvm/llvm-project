@@ -914,7 +914,7 @@ bool SymbolPatterns::matchLiteral(StringRef symbolName) const {
 }
 
 bool SymbolPatterns::matchGlob(StringRef symbolName) const {
-  for (const llvm::GlobPattern &glob : globs)
+  for (const GlobPattern &glob : globs)
     if (glob.match(symbolName))
       return true;
   return false;

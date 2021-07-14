@@ -329,14 +329,14 @@ macho::DependencyTracker::DependencyTracker(StringRef path)
   }
 }
 
-void macho::DependencyTracker::write(llvm::StringRef version,
-                                     const llvm::SetVector<InputFile *> &inputs,
-                                     llvm::StringRef output) {
+void macho::DependencyTracker::write(StringRef version,
+                                     const SetVector<InputFile *> &inputs,
+                                     StringRef output) {
   if (!active)
     return;
 
   std::error_code ec;
-  llvm::raw_fd_ostream os(path, ec, llvm::sys::fs::OF_None);
+  raw_fd_ostream os(path, ec, fs::OF_None);
   if (ec) {
     warn("Error writing dependency info to file");
     return;
