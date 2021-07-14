@@ -4990,12 +4990,6 @@ cc_library(
     ],
 )
 
-alias(
-    name = "AllPassesAndDialectsNoRegistration",
-    actual = ":AllPassesAndDialects",
-    deprecation = "Use AllPassesAndDialects instead",
-)
-
 cc_binary(
     name = "mlir-lsp-server",
     srcs = ["tools/mlir-lsp-server/mlir-lsp-server.cpp"],
