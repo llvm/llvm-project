@@ -10581,7 +10581,7 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
     // For unsigned and equality predicates, try to prove that both found
     // operands fit into narrow unsigned range. If so, try to prove facts in
     // narrow types.
-    if (!CmpInst::isSigned(FoundPred)) {
+    if (!CmpInst::isSigned(FoundPred) && !FoundLHS->getType()->isPointerTy()) {
       auto *NarrowType = LHS->getType();
       auto *WideType = FoundLHS->getType();
       auto BitWidth = getTypeSizeInBits(NarrowType);
