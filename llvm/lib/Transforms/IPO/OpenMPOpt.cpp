@@ -2078,7 +2078,9 @@ struct AAICVTrackerFunction : public AAICVTracker {
       // Track all changes of an ICV.
       SetterRFI.foreachUse(TrackValues, F);
 
+      bool UsedAssumedInformation = false;
       A.checkForAllInstructions(CallCheck, *this, {Instruction::Call},
+                                UsedAssumedInformation,
                                 /* CheckBBLivenessOnly */ true);
 
       /// TODO: Figure out a way to avoid adding entry in
@@ -2261,7 +2263,9 @@ struct AAICVTrackerFunctionReturned : AAICVTracker {
         return true;
       };
 
+      bool UsedAssumedInformation = false;
       if (!A.checkForAllInstructions(CheckReturnInst, *this, {Instruction::Ret},
+                                     UsedAssumedInformation,
                                      /* CheckBBLivenessOnly */ true))
         UniqueICVValue = nullptr;
 
@@ -3203,7 +3207,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
       SPMDCompatibilityTracker.insert(&I);
       return true;
     };
-    if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this))
+
+    bool UsedAssumedInformationInCheckRWInst = false;
+    if (!A.checkForAllReadWriteInstructions(
+            CheckRWInst, *this, UsedAssumedInformationInCheckRWInst))
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
 
     // Callback to check a call instruction.
@@ -3216,7 +3223,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
       return true;
     };
 
-    if (!A.checkForAllCallLikeInstructions(CheckCallInst, *this))
+    bool UsedAssumedInformationInCheckCallInst = false;
+    if (!A.checkForAllCallLikeInstructions(
+            CheckCallInst, *this, UsedAssumedInformationInCheckCallInst))
       return indicatePessimisticFixpoint();
 
     return StateBefore == getState() ? ChangeStatus::UNCHANGED

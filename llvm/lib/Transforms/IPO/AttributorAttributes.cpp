@@ -335,8 +335,9 @@ static bool genericValueTraversal(
              "Expected liveness in the presence of instructions!");
       for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
         BasicBlock *IncomingBB = PHI->getIncomingBlock(u);
+        bool UsedAssumedInformation = false;
         if (A.isAssumedDead(*IncomingBB->getTerminator(), &QueryingAA,
-                            LivenessAA,
+                            LivenessAA, UsedAssumedInformation,
                             /* CheckBBLivenessOnly */ true)) {
           AnyDead = true;
           continue;
@@ -794,7 +795,9 @@ struct AANoUnwindImpl : AANoUnwind {
       return false;
     };
 
-    if (!A.checkForAllInstructions(CheckForNoUnwind, *this, Opcodes))
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllInstructions(CheckForNoUnwind, *this, Opcodes,
+                                   UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
     return ChangeStatus::UNCHANGED;
@@ -1052,7 +1055,9 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
 
   // Discover returned values from all live returned instructions in the
   // associated function.
-  if (!A.checkForAllInstructions(ReturnInstCB, *this, {Instruction::Ret}))
+  bool UsedAssumedInformation = false;
+  if (!A.checkForAllInstructions(ReturnInstCB, *this, {Instruction::Ret},
+                                 UsedAssumedInformation))
     return indicatePessimisticFixpoint();
   return Changed;
 }
@@ -1185,8 +1190,11 @@ ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
     return !cast<CallBase>(I).isConvergent();
   };
 
-  if (!A.checkForAllReadWriteInstructions(CheckRWInstForNoSync, *this) ||
-      !A.checkForAllCallLikeInstructions(CheckForNoSync, *this))
+  bool UsedAssumedInformation = false;
+  if (!A.checkForAllReadWriteInstructions(CheckRWInstForNoSync, *this,
+                                          UsedAssumedInformation) ||
+      !A.checkForAllCallLikeInstructions(CheckForNoSync, *this,
+                                         UsedAssumedInformation))
     return indicatePessimisticFixpoint();
 
   return ChangeStatus::UNCHANGED;
@@ -1246,7 +1254,9 @@ struct AANoFreeImpl : public AANoFree {
       return NoFreeAA.isAssumedNoFree();
     };
 
-    if (!A.checkForAllCallLikeInstructions(CheckForNoFree, *this))
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CheckForNoFree, *this,
+                                           UsedAssumedInformation))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
@@ -1708,7 +1718,9 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
       return true;
     };
 
-    if (!A.checkForAllCallLikeInstructions(CheckForNoRecurse, *this))
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CheckForNoRecurse, *this,
+                                           UsedAssumedInformation))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
@@ -1915,20 +1927,24 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
           return true;
         };
 
+    bool UsedAssumedInformation = false;
     A.checkForAllInstructions(InspectMemAccessInstForUB, *this,
                               {Instruction::Load, Instruction::Store,
                                Instruction::AtomicCmpXchg,
                                Instruction::AtomicRMW},
+                              UsedAssumedInformation,
                               /* CheckBBLivenessOnly */ true);
     A.checkForAllInstructions(InspectBrInstForUB, *this, {Instruction::Br},
+                              UsedAssumedInformation,
                               /* CheckBBLivenessOnly */ true);
-    A.checkForAllCallLikeInstructions(InspectCallSiteForUB, *this);
+    A.checkForAllCallLikeInstructions(InspectCallSiteForUB, *this,
+                                      UsedAssumedInformation);
 
     // If the returned position of the anchor scope has noundef attriubte, check
     // all returned instructions.
     if (!getAnchorScope()->getReturnType()->isVoidTy()) {
       const IRPosition &ReturnIRP = IRPosition::returned(*getAnchorScope());
-      if (!A.isAssumedDead(ReturnIRP, this, nullptr)) {
+      if (!A.isAssumedDead(ReturnIRP, this, nullptr, UsedAssumedInformation)) {
         auto &RetPosNoUndefAA =
             A.getAAFor<AANoUndef>(*this, ReturnIRP, DepClassTy::NONE);
         if (RetPosNoUndefAA.isKnownNoUndef())
@@ -2146,7 +2162,9 @@ struct AAWillReturnImpl : public AAWillReturn {
       return NoRecurseAA.isAssumedNoRecurse();
     };
 
-    if (!A.checkForAllCallLikeInstructions(CheckForWillReturn, *this))
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CheckForWillReturn, *this,
+                                           UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
     return ChangeStatus::UNCHANGED;
@@ -2882,8 +2900,9 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
 
+    bool UsedAssumedInformation = false;
     A.checkForAllInstructions([](Instruction &) { return true; }, *this,
-                              {Instruction::Ret});
+                              {Instruction::Ret}, UsedAssumedInformation);
 
     auto PredForCallSite = [&](AbstractCallSite ACS) {
       if (ACS.isCallbackCall() || !ACS.getInstruction())
@@ -2910,7 +2929,9 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
         AnyChange |= A.changeUseAfterManifest(RI.getOperandUse(0), UV);
       return true;
     };
-    A.checkForAllInstructions(RetInstPred, *this, {Instruction::Ret});
+    bool UsedAssumedInformation = false;
+    A.checkForAllInstructions(RetInstPred, *this, {Instruction::Ret},
+                              UsedAssumedInformation);
     return AnyChange ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
@@ -3871,8 +3892,10 @@ struct AANoReturnImpl : public AANoReturn {
   /// See AbstractAttribute::updateImpl(Attributor &A).
   virtual ChangeStatus updateImpl(Attributor &A) override {
     auto CheckForNoReturn = [](Instruction &) { return false; };
+    bool UsedAssumedInformation = false;
     if (!A.checkForAllInstructions(CheckForNoReturn, *this,
-                                   {(unsigned)Instruction::Ret}))
+                                   {(unsigned)Instruction::Ret},
+                                   UsedAssumedInformation))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
@@ -4134,8 +4157,10 @@ struct AACaptureUseTracker final : public CaptureTracker {
   /// See CaptureTracker::shouldExplore(...).
   bool shouldExplore(const Use *U) override {
     // Check liveness and ignore droppable users.
+    bool UsedAssumedInformation = false;
     return !U->getUser()->isDroppable() &&
-           !A.isAssumedDead(*U, &NoCaptureAA, &IsDeadAA);
+           !A.isAssumedDead(*U, &NoCaptureAA, &IsDeadAA,
+                            UsedAssumedInformation);
   }
 
   /// Update the state according to \p CapturedInMem, \p CapturedInInt, and
@@ -4542,7 +4567,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
       // in other functions, e.g., we don't want to say a an argument in a
       // static function is actually an argument in a different function.
       Value &ArgOp = ACSArgPos.getAssociatedValue();
-      bool UsedAssumedInformation;
+      bool UsedAssumedInformation = false;
       Optional<Value *> SimpleArgOp =
           A.getAssumedSimplified(ACSArgPos, *this, UsedAssumedInformation);
       if (!SimpleArgOp.hasValue())
@@ -4817,7 +4842,7 @@ struct AAValueSimplifyCallSiteReturned : AAValueSimplifyImpl {
         DepClassTy::REQUIRED);
     auto PredForReturned =
         [&](Value &RetVal, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
-          bool UsedAssumedInformation;
+          bool UsedAssumedInformation = false;
           Optional<Value *> CSRetVal = A.translateArgumentToCallSiteContent(
               &RetVal, *cast<CallBase>(getCtxI()), *this,
               UsedAssumedInformation);
@@ -4938,8 +4963,10 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       return true;
     };
 
+    bool UsedAssumedInformation = false;
     bool Success = A.checkForAllCallLikeInstructions(
-        AllocationIdentifierCB, *this, /* CheckBBLivenessOnly */ false,
+        AllocationIdentifierCB, *this, UsedAssumedInformation,
+        /* CheckBBLivenessOnly */ false,
         /* CheckPotentiallyDead */ true);
     (void)Success;
     assert(Success && "Did not expect the call base visit callback to fail!");
@@ -5142,7 +5169,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         continue;
 
       // No need to analyze dead calls, ignore them instead.
-      if (A.isAssumedDead(*DI.CB, this, &LivenessAA,
+      bool UsedAssumedInformation = false;
+      if (A.isAssumedDead(*DI.CB, this, &LivenessAA, UsedAssumedInformation,
                           /* CheckBBLivenessOnly */ true))
         continue;
 
@@ -5768,6 +5796,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // escape into tail recursion.
     // TODO: Be smarter about new allocas escaping into tail calls.
     SmallVector<CallInst *, 16> TailCalls;
+    bool UsedAssumedInformation = false;
     if (!A.checkForAllInstructions(
             [&](Instruction &I) {
               CallInst &CI = cast<CallInst>(I);
@@ -5775,7 +5804,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                 TailCalls.push_back(&CI);
               return true;
             },
-            *this, {Instruction::Call}))
+            *this, {Instruction::Call}, UsedAssumedInformation))
       return ChangeStatus::UNCHANGED;
 
     Argument *Arg = getAssociatedArgument();
@@ -6323,7 +6352,9 @@ ChangeStatus AAMemoryBehaviorFunction::updateImpl(Attributor &A) {
     return !isAtFixpoint();
   };
 
-  if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this))
+  bool UsedAssumedInformation = false;
+  if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this,
+                                          UsedAssumedInformation))
     return indicatePessimisticFixpoint();
 
   return (AssumedState != getAssumed()) ? ChangeStatus::CHANGED
@@ -6375,10 +6406,13 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
   for (unsigned i = 0; i < Uses.size() && !isAtFixpoint(); i++) {
     const Use *U = Uses[i];
     Instruction *UserI = cast<Instruction>(U->getUser());
+    bool UsedAssumedInformation = false;
     LLVM_DEBUG(dbgs() << "[AAMemoryBehavior] Use: " << **U << " in " << *UserI
-                      << " [Dead: " << (A.isAssumedDead(*U, this, &LivenessAA))
+                      << " [Dead: "
+                      << (A.isAssumedDead(*U, this, &LivenessAA,
+                                          UsedAssumedInformation))
                       << "]\n");
-    if (A.isAssumedDead(*U, this, &LivenessAA))
+    if (A.isAssumedDead(*U, this, &LivenessAA, UsedAssumedInformation))
       continue;
 
     // Droppable users, e.g., llvm::assume does not actually perform any action.
@@ -6995,7 +7029,9 @@ struct AAMemoryLocationFunction final : public AAMemoryLocationImpl {
       return getAssumedNotAccessedLocation() != VALID_STATE;
     };
 
-    if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this))
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this,
+                                            UsedAssumedInformation))
       return indicatePessimisticFixpoint();
 
     Changed |= AssumedState != getAssumed();
@@ -7159,7 +7195,7 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
       const DominatorTree *DT =
           InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(
               *I->getFunction());
-       return DT && DT->dominates(I, CtxI);
+      return DT && DT->dominates(I, CtxI);
     }
 
     return true;
@@ -8302,12 +8338,13 @@ struct AANoUndefImpl : AANoUndef {
     // We don't manifest noundef attribute for dead positions because the
     // associated values with dead positions would be replaced with undef
     // values.
-    if (A.isAssumedDead(getIRPosition(), nullptr, nullptr))
+    bool UsedAssumedInformation = false;
+    if (A.isAssumedDead(getIRPosition(), nullptr, nullptr,
+                        UsedAssumedInformation))
       return ChangeStatus::UNCHANGED;
     // A position whose simplified value does not have any value is
     // considered to be dead. We don't manifest noundef in such positions for
     // the same reason above.
-    bool UsedAssumedInformation = false;
     if (!A.getAssumedSimplified(getIRPosition(), *this, UsedAssumedInformation)
              .hasValue())
       return ChangeStatus::UNCHANGED;
@@ -8458,7 +8495,9 @@ struct AACallEdgesFunction : public AACallEdges {
     };
 
     // Visit all callable instructions.
-    if (!A.checkForAllCallLikeInstructions(ProcessCallInst, *this))
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(ProcessCallInst, *this,
+                                           UsedAssumedInformation))
       // If we haven't looked at all call like instructions, assume that there
       // are unknown callees.
       HasUnknownCallee = true;
