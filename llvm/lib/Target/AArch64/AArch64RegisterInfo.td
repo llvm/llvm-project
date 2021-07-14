@@ -24,7 +24,7 @@ let Namespace = "AArch64" in {
   def bsub : SubRegIndex<8>;
   def hsub : SubRegIndex<16>;
   def ssub : SubRegIndex<32>;
-  def dsub : SubRegIndex<32>;
+  def dsub : SubRegIndex<64>;
   def sube32 : SubRegIndex<32>;
   def subo32 : SubRegIndex<32>;
   def qhisub : SubRegIndex<64>;
