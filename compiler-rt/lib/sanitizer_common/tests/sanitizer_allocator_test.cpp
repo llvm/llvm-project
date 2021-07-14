@@ -1149,15 +1149,12 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
 
 class NoMemoryMapper {
  public:
-  uptr last_request_buffer_size;
+  uptr last_request_buffer_size = 0;
 
-  NoMemoryMapper() : last_request_buffer_size(0) {}
-
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
-    last_request_buffer_size = buffer_size;
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    last_request_buffer_size = buffer_size * sizeof(u64);
     return nullptr;
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 };
 
 class RedZoneMemoryMapper {
@@ -1168,19 +1165,17 @@ class RedZoneMemoryMapper {
     MprotectNoAccess(reinterpret_cast<uptr>(buffer), page_size);
     MprotectNoAccess(reinterpret_cast<uptr>(buffer) + page_size * 2, page_size);
   }
-  ~RedZoneMemoryMapper() {
-    UnmapOrDie(buffer, 3 * GetPageSize());
-  }
+  ~RedZoneMemoryMapper() { UnmapOrDie(buffer, 3 * GetPageSize()); }
 
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    buffer_size *= sizeof(u64);
     const auto page_size = GetPageSize();
     CHECK_EQ(buffer_size, page_size);
-    void *p =
-        reinterpret_cast<void *>(reinterpret_cast<uptr>(buffer) + page_size);
+    u64 *p =
+        reinterpret_cast<u64 *>(reinterpret_cast<uptr>(buffer) + page_size);
     memset(p, 0, page_size);
     return p;
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 
  private:
   void *buffer;
