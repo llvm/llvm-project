@@ -931,7 +931,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPAtomicConstruct &) {
 // 3. Checks on clauses which are not in 'struct OmpClause' from parse-tree.h.
 
 void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
-  // 2.7 Loop Construct Restriction
+  // 2.7.1 Loop Construct Restriction
   if (llvm::omp::doSet.test(GetContext().directive)) {
     if (auto *clause{FindClause(llvm::omp::Clause::OMPC_schedule)}) {
       // only one schedule clause is allowed
