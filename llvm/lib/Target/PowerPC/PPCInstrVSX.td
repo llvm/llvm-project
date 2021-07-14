@@ -316,13 +316,13 @@ let hasSideEffects = 0 in {
     let CodeSize = 3 in
       def XFLOADf64  : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
                               "#XFLOADf64",
-                              [(set f64:$XT, (load ForceXForm:$src))]>;
+                              [(set f64:$XT, (load XForm:$src))]>;
 
     let Predicates = [HasVSX, HasOnlySwappingMemOps] in
     def LXVD2X : XX1Form_memOp<31, 844,
                          (outs vsrc:$XT), (ins memrr:$src),
                          "lxvd2x $XT, $src", IIC_LdStLFD,
-                         [(set v2f64:$XT, (int_ppc_vsx_lxvd2x ForceXForm:$src))]>;
+                         []>;
 
     def LXVDSX : XX1Form_memOp<31, 332,
                          (outs vsrc:$XT), (ins memrr:$src),
@@ -347,7 +347,7 @@ let hasSideEffects = 0 in {
     let CodeSize = 3 in
       def XFSTOREf64 : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, memrr:$dst),
                               "#XFSTOREf64",
-                              [(store f64:$XT, ForceXForm:$dst)]>;
+                              [(store f64:$XT, XForm:$dst)]>;
 
     let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
     // The behaviour of this instruction is endianness-specific so we provide no
@@ -1128,7 +1128,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
     let CodeSize = 3 in
     def XFLOADf32  : PseudoXFormMemOp<(outs vssrc:$XT), (ins memrr:$src),
                             "#XFLOADf32",
-                            [(set f32:$XT, (load ForceXForm:$src))]>;
+                            [(set f32:$XT, (load XForm:$src))]>;
     // Pseudo instruction LIWAX will be expanded to LXSIWAX or LFIWAX later
     def LIWAX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
                        "#LIWAX",
@@ -1151,7 +1151,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
     let CodeSize = 3 in
     def XFSTOREf32 : PseudoXFormMemOp<(outs), (ins vssrc:$XT, memrr:$dst),
                             "#XFSTOREf32",
-                            [(store f32:$XT, ForceXForm:$dst)]>;
+                            [(store f32:$XT, XForm:$dst)]>;
     // Pseudo instruction STIWX will be expanded to STXSIWX or STFIWX later
     def STIWX : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, memrr:$dst),
                        "#STIWX",
@@ -2453,6 +2453,7 @@ def DblwdCmp {
 // [HasVSX, IsLittleEndian]
 // [HasVSX, NoP9Vector]
 // [HasVSX, NoP9Vector, IsLittleEndian]
+// [HasVSX, NoP9Vector, IsBigEndian]
 // [HasVSX, HasOnlySwappingMemOps]
 // [HasVSX, HasOnlySwappingMemOps, IsBigEndian]
 // [HasVSX, HasP8Vector]
@@ -3136,14 +3137,19 @@ defm : ScalToVecWPermute<
   (SUBREG_TO_REG (i64 1), (XFLOADf64 ForceXForm:$src), sub_64)>;
 } // HasVSX, NoP9Vector, IsLittleEndian
 
+let Predicates = [HasVSX, NoP9Vector, IsBigEndian] in {
+  def : Pat<(v2f64 (int_ppc_vsx_lxvd2x ForceXForm:$src)),
+            (LXVD2X ForceXForm:$src)>;
+  def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, ForceXForm:$dst),
+            (STXVD2X $rS, ForceXForm:$dst)>;
+} // HasVSX, NoP9Vector, IsBigEndian
+
 // Any VSX subtarget that only has loads and stores that load in big endian
 // order regardless of endianness. This is really pre-Power9 subtargets.
 let Predicates = [HasVSX, HasOnlySwappingMemOps] in {
   def : Pat<(v2f64 (PPClxvd2x ForceXForm:$src)), (LXVD2X ForceXForm:$src)>;
 
   // Stores.
-  def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, ForceXForm:$dst),
-            (STXVD2X $rS, ForceXForm:$dst)>;
   def : Pat<(PPCstxvd2x v2f64:$rS, ForceXForm:$dst), (STXVD2X $rS, ForceXForm:$dst)>;
 } // HasVSX, HasOnlySwappingMemOps
 
@@ -3167,8 +3173,8 @@ let Predicates = [HasVSX, HasOnlySwappingMemOps, IsBigEndian] in {
 let Predicates = [HasVSX, HasP8Vector] in {
 def : Pat<(int_ppc_vsx_xxleqv v4i32:$A, v4i32:$B),
           (XXLEQV $A, $B)>;
-def : Pat<(f64 (extloadf32 ForceXForm:$src)),
-          (COPY_TO_REGCLASS (XFLOADf32 ForceXForm:$src), VSFRC)>;
+def : Pat<(f64 (extloadf32 XForm:$src)),
+          (COPY_TO_REGCLASS (XFLOADf32 XForm:$src), VSFRC)>;
 def : Pat<(f32 (fpround (f64 (extloadf32 ForceXForm:$src)))),
           (f32 (XFLOADf32 ForceXForm:$src))>;
 def : Pat<(f64 (any_fpextend f32:$src)),
@@ -3803,48 +3809,34 @@ def : Pat<(v1i128 (bswap v1i128 :$A)),
           (v1i128 (COPY_TO_REGCLASS (XXBRQ (COPY_TO_REGCLASS $A, VSRC)), VRRC))>;
 
 // D-Form Load/Store
-def : Pat<(v4i32 (quadwOffsetLoad DQForm:$src)), (LXV memrix16:$src)>;
-def : Pat<(v4f32 (quadwOffsetLoad DQForm:$src)), (LXV memrix16:$src)>;
-def : Pat<(v2i64 (quadwOffsetLoad DQForm:$src)), (LXV memrix16:$src)>;
-def : Pat<(v2f64 (quadwOffsetLoad DQForm:$src)), (LXV memrix16:$src)>;
-def : Pat<(f128  (quadwOffsetLoad DQForm:$src)),
+foreach Ty = [v4i32, v4f32, v2i64, v2f64] in {
+  def : Pat<(Ty (load DQForm:$src)), (LXV memrix16:$src)>;
+  def : Pat<(Ty (load XForm:$src)), (LXVX XForm:$src)>;
+  def : Pat<(store Ty:$rS, DQForm:$dst), (STXV $rS, memrix16:$dst)>;
+  def : Pat<(store Ty:$rS, XForm:$dst), (STXVX $rS, XForm:$dst)>;
+}
+
+def : Pat<(f128 (load DQForm:$src)),
           (COPY_TO_REGCLASS (LXV memrix16:$src), VRRC)>;
+def : Pat<(f128 (load XForm:$src)),
+          (COPY_TO_REGCLASS (LXVX XForm:$src), VRRC)>;
 def : Pat<(v4i32 (int_ppc_vsx_lxvw4x DQForm:$src)), (LXV memrix16:$src)>;
 def : Pat<(v2f64 (int_ppc_vsx_lxvd2x DQForm:$src)), (LXV memrix16:$src)>;
+def : Pat<(v4i32 (int_ppc_vsx_lxvw4x XForm:$src)), (LXVX XForm:$src)>;
+def : Pat<(v2f64 (int_ppc_vsx_lxvd2x XForm:$src)), (LXVX XForm:$src)>;
 
-def : Pat<(quadwOffsetStore v4f32:$rS, DQForm:$dst), (STXV $rS, memrix16:$dst)>;
-def : Pat<(quadwOffsetStore v4i32:$rS, DQForm:$dst), (STXV $rS, memrix16:$dst)>;
-def : Pat<(quadwOffsetStore v2f64:$rS, DQForm:$dst), (STXV $rS, memrix16:$dst)>;
-def : Pat<(quadwOffsetStore  f128:$rS, DQForm:$dst),
+def : Pat<(store f128:$rS, DQForm:$dst),
           (STXV (COPY_TO_REGCLASS $rS, VSRC), memrix16:$dst)>;
-def : Pat<(quadwOffsetStore v2i64:$rS, DQForm:$dst), (STXV $rS, memrix16:$dst)>;
+def : Pat<(store f128:$rS, XForm:$dst),
+          (STXVX (COPY_TO_REGCLASS $rS, VSRC), XForm:$dst)>;
 def : Pat<(int_ppc_vsx_stxvw4x v4i32:$rS, DQForm:$dst),
           (STXV $rS, memrix16:$dst)>;
 def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, DQForm:$dst),
           (STXV $rS, memrix16:$dst)>;
-
-def : Pat<(v2f64 (nonQuadwOffsetLoad ForceXForm:$src)), (LXVX ForceXForm:$src)>;
-def : Pat<(v2i64 (nonQuadwOffsetLoad ForceXForm:$src)), (LXVX ForceXForm:$src)>;
-def : Pat<(v4f32 (nonQuadwOffsetLoad ForceXForm:$src)), (LXVX ForceXForm:$src)>;
-def : Pat<(v4i32 (nonQuadwOffsetLoad ForceXForm:$src)), (LXVX ForceXForm:$src)>;
-def : Pat<(v4i32 (int_ppc_vsx_lxvw4x ForceXForm:$src)), (LXVX ForceXForm:$src)>;
-def : Pat<(v2f64 (int_ppc_vsx_lxvd2x ForceXForm:$src)), (LXVX ForceXForm:$src)>;
-def : Pat<(f128  (nonQuadwOffsetLoad ForceXForm:$src)),
-          (COPY_TO_REGCLASS (LXVX ForceXForm:$src), VRRC)>;
-def : Pat<(nonQuadwOffsetStore f128:$rS, ForceXForm:$dst),
-          (STXVX (COPY_TO_REGCLASS $rS, VSRC), ForceXForm:$dst)>;
-def : Pat<(nonQuadwOffsetStore v2f64:$rS, ForceXForm:$dst),
-          (STXVX $rS, ForceXForm:$dst)>;
-def : Pat<(nonQuadwOffsetStore v2i64:$rS, ForceXForm:$dst),
-          (STXVX $rS, ForceXForm:$dst)>;
-def : Pat<(nonQuadwOffsetStore v4f32:$rS, ForceXForm:$dst),
-          (STXVX $rS, ForceXForm:$dst)>;
-def : Pat<(nonQuadwOffsetStore v4i32:$rS, ForceXForm:$dst),
-          (STXVX $rS, ForceXForm:$dst)>;
-def : Pat<(int_ppc_vsx_stxvw4x v4i32:$rS, ForceXForm:$dst),
-          (STXVX $rS, ForceXForm:$dst)>;
-def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, ForceXForm:$dst),
-          (STXVX $rS, ForceXForm:$dst)>;
+def : Pat<(int_ppc_vsx_stxvw4x v4i32:$rS, XForm:$dst),
+          (STXVX $rS, XForm:$dst)>;
+def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, XForm:$dst),
+          (STXVX $rS, XForm:$dst)>;
 
 // Build vectors from i8 loads
 defm : ScalToVecWPermute<v8i16, ScalarLoads.ZELi8,

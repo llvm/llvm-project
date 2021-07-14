@@ -23,7 +23,7 @@ define dso_local void @speculatable_callee_non_return_use_only (double* nocaptur
 ; CHECK-NEXT: stdu r1, -48(r1)
 ; CHECK-NEXT: mr r30, r3
 ; CHECK-NEXT: bl callee
-; CHECK-NEXT: stfdx f1, 0, r30
+; CHECK-NEXT: stfd f1, 0(r30)
 ; CHECK-NEXT: addi r1, r1, 48
 ; CHECK-NEXT: ld r0, 16(r1)
 ; CHECK-NEXT: ld r30, -16(r1) # 8-byte Folded Reload
@@ -45,7 +45,7 @@ define dso_local double @speculatable_callee_multi_use (double* nocapture %res, 
   ; CHECK-NEXT: stdu r1, -48(r1)
   ; CHECK-NEXT: mr r30, r3
   ; CHECK-NEXT: bl callee
-  ; CHECK-NEXT: stfdx f1, 0, r30
+  ; CHECK-NEXT: stfd f1, 0(r30)
   ; CHECK-NEXT: addi r1, r1, 48
   ; CHECK-NEXT: ld r0, 16(r1)
   ; CHECK-NEXT: ld r30, -16(r1) # 8-byte Folded Reload

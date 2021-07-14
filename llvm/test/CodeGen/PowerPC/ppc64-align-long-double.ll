@@ -33,14 +33,14 @@ define ppc_fp128 @test(%struct.S* byval(%struct.S) %x) nounwind {
 ;
 ; CHECK-VSX-LABEL: test:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    std 3, 48(1)
-; CHECK-VSX-NEXT:    std 6, 72(1)
-; CHECK-VSX-NEXT:    std 5, 64(1)
-; CHECK-VSX-NEXT:    std 4, 56(1)
 ; CHECK-VSX-NEXT:    std 5, -16(1)
 ; CHECK-VSX-NEXT:    std 6, -8(1)
 ; CHECK-VSX-NEXT:    lfd 1, -16(1)
 ; CHECK-VSX-NEXT:    lfd 2, -8(1)
+; CHECK-VSX-NEXT:    std 6, 72(1)
+; CHECK-VSX-NEXT:    std 5, 64(1)
+; CHECK-VSX-NEXT:    std 3, 48(1)
+; CHECK-VSX-NEXT:    std 4, 56(1)
 ; CHECK-VSX-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test:

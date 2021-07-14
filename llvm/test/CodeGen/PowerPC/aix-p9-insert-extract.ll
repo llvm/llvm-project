@@ -455,14 +455,14 @@ define <8 x i16> @shuffle_vector_halfword_0_4(<8 x i16> %a) {
 ; CHECK-64-LABEL: shuffle_vector_halfword_0_4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C0(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_halfword_0_4:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C0(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -534,14 +534,14 @@ define <8 x i16> @shuffle_vector_halfword_3_4(<8 x i16> %a) {
 ; CHECK-64-LABEL: shuffle_vector_halfword_3_4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C1(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_halfword_3_4:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C1(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -613,14 +613,14 @@ define <8 x i16> @shuffle_vector_halfword_6_4(<8 x i16> %a) {
 ; CHECK-64-LABEL: shuffle_vector_halfword_6_4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C2(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_halfword_6_4:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C2(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -642,14 +642,14 @@ define <8 x i16> @shuffle_vector_halfword_7_4(<8 x i16> %a) {
 ; CHECK-64-LABEL: shuffle_vector_halfword_7_4:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C3(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_halfword_7_4:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C3(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -1703,14 +1703,14 @@ define <16 x i8> @shuffle_vector_byte_1_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_1_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C4(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_1_8:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C4(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -1732,14 +1732,14 @@ define <16 x i8> @shuffle_vector_byte_2_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_2_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C5(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_2_8:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C5(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -1811,14 +1811,14 @@ define <16 x i8> @shuffle_vector_byte_5_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_5_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C6(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_5_8:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C6(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -1840,14 +1840,14 @@ define <16 x i8> @shuffle_vector_byte_6_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_6_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C7(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_6_8:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C7(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -1869,14 +1869,14 @@ define <16 x i8> @shuffle_vector_byte_7_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_7_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C8(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_7_8:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C8(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -1973,14 +1973,14 @@ define <16 x i8> @shuffle_vector_byte_11_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_11_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C9(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_11_8:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C9(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -2002,14 +2002,14 @@ define <16 x i8> @shuffle_vector_byte_12_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_12_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C10(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_12_8:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C10(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
@@ -2081,14 +2081,14 @@ define <16 x i8> @shuffle_vector_byte_15_8(<16 x i8> %a) {
 ; CHECK-64-LABEL: shuffle_vector_byte_15_8:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C11(2)
-; CHECK-64-NEXT:    lxvx 35, 0, 3
+; CHECK-64-NEXT:    lxv 35, 0(3)
 ; CHECK-64-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: shuffle_vector_byte_15_8:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C11(2)
-; CHECK-32-NEXT:    lxvx 35, 0, 3
+; CHECK-32-NEXT:    lxv 35, 0(3)
 ; CHECK-32-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-32-NEXT:    blr
 entry:
