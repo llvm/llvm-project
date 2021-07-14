@@ -6813,12 +6813,6 @@ struct AAMemoryBehaviorFloating : AAMemoryBehaviorImpl {
   AAMemoryBehaviorFloating(const IRPosition &IRP, Attributor &A)
       : AAMemoryBehaviorImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    AAMemoryBehaviorImpl::initialize(A);
-    addUsesOf(A, getAssociatedValue());
-  }
-
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
@@ -6835,21 +6829,11 @@ struct AAMemoryBehaviorFloating : AAMemoryBehaviorImpl {
 private:
   /// Return true if users of \p UserI might access the underlying
   /// variable/location described by \p U and should therefore be analyzed.
-  bool followUsersOfUseIn(Attributor &A, const Use *U,
+  bool followUsersOfUseIn(Attributor &A, const Use &U,
                           const Instruction *UserI);
 
   /// Update the state according to the effect of use \p U in \p UserI.
-  void analyzeUseIn(Attributor &A, const Use *U, const Instruction *UserI);
-
-protected:
-  /// Add the uses of \p V to the `Uses` set we look at during the update step.
-  void addUsesOf(Attributor &A, const Value &V);
-
-  /// Container for (transitive) uses of the associated argument.
-  SmallVector<const Use *, 8> Uses;
-
-  /// Set to remember the uses we already traversed.
-  SmallPtrSet<const Use *, 8> Visited;
+  void analyzeUseIn(Attributor &A, const Use &U, const Instruction *UserI);
 };
 
 /// Memory behavior attribute for function argument.
@@ -6871,11 +6855,8 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
 
     // Initialize the use vector with all direct uses of the associated value.
     Argument *Arg = getAssociatedArgument();
-    if (!Arg || !A.isFunctionIPOAmendable(*(Arg->getParent()))) {
+    if (!Arg || !A.isFunctionIPOAmendable(*(Arg->getParent())))
       indicatePessimisticFixpoint();
-    } else {
-      addUsesOf(A, *Arg);
-    }
   }
 
   ChangeStatus manifest(Attributor &A) override {
@@ -7108,65 +7089,34 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
   // The current assumed state used to determine a change.
   auto AssumedState = S.getAssumed();
 
-  // Liveness information to exclude dead users.
-  // TODO: Take the FnPos once we have call site specific liveness information.
-  const auto &LivenessAA = A.getAAFor<AAIsDead>(
-      *this, IRPosition::function(*IRP.getAssociatedFunction()),
-      DepClassTy::NONE);
-
   // Visit and expand uses until all are analyzed or a fixpoint is reached.
-  for (unsigned i = 0; i < Uses.size() && !isAtFixpoint(); i++) {
-    const Use *U = Uses[i];
-    Instruction *UserI = cast<Instruction>(U->getUser());
-    bool UsedAssumedInformation = false;
-    LLVM_DEBUG(dbgs() << "[AAMemoryBehavior] Use: " << **U << " in " << *UserI
-                      << " [Dead: "
-                      << (A.isAssumedDead(*U, this, &LivenessAA,
-                                          UsedAssumedInformation))
-                      << "]\n");
-    if (A.isAssumedDead(*U, this, &LivenessAA, UsedAssumedInformation))
-      continue;
+  auto UsePred = [&](const Use &U, bool &Follow) -> bool {
+    Instruction *UserI = cast<Instruction>(U.getUser());
+    LLVM_DEBUG(dbgs() << "[AAMemoryBehavior] Use: " << *U << " in " << *UserI
+                      << " \n");
 
     // Droppable users, e.g., llvm::assume does not actually perform any action.
     if (UserI->isDroppable())
-      continue;
+      return true;
 
     // Check if the users of UserI should also be visited.
-    if (followUsersOfUseIn(A, U, UserI))
-      addUsesOf(A, *UserI);
+    Follow = followUsersOfUseIn(A, U, UserI);
 
     // If UserI might touch memory we analyze the use in detail.
     if (UserI->mayReadOrWriteMemory())
       analyzeUseIn(A, U, UserI);
-  }
+
+    return !isAtFixpoint();
+  };
+
+  if (!A.checkForAllUses(UsePred, *this, getAssociatedValue()))
+    return indicatePessimisticFixpoint();
 
   return (AssumedState != getAssumed()) ? ChangeStatus::CHANGED
                                         : ChangeStatus::UNCHANGED;
 }
 
-void AAMemoryBehaviorFloating::addUsesOf(Attributor &A, const Value &V) {
-  SmallVector<const Use *, 8> WL;
-  for (const Use &U : V.uses())
-    WL.push_back(&U);
-
-  while (!WL.empty()) {
-    const Use *U = WL.pop_back_val();
-    if (!Visited.insert(U).second)
-      continue;
-
-    const Instruction *UserI = cast<Instruction>(U->getUser());
-    if (UserI->mayReadOrWriteMemory()) {
-      Uses.push_back(U);
-      continue;
-    }
-    if (!followUsersOfUseIn(A, U, UserI))
-      continue;
-    for (const Use &UU : UserI->uses())
-      WL.push_back(&UU);
-  }
-}
-
-bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
+bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use &U,
                                                   const Instruction *UserI) {
   // The loaded value is unrelated to the pointer argument, no need to
   // follow the users of the load.
@@ -7176,7 +7126,7 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
   // By default we follow all uses assuming UserI might leak information on U,
   // we have special handling for call sites operands though.
   const auto *CB = dyn_cast<CallBase>(UserI);
-  if (!CB || !CB->isArgOperand(U))
+  if (!CB || !CB->isArgOperand(&U))
     return true;
 
   // If the use is a call argument known not to be captured, the users of
@@ -7185,8 +7135,8 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
   // general capturing of the underlying argument. The reason is that the
   // call might the argument "through return", which we allow and for which we
   // need to check call users.
-  if (U->get()->getType()->isPointerTy()) {
-    unsigned ArgNo = CB->getArgOperandNo(U);
+  if (U.get()->getType()->isPointerTy()) {
+    unsigned ArgNo = CB->getArgOperandNo(&U);
     const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(
         *this, IRPosition::callsite_argument(*CB, ArgNo), DepClassTy::OPTIONAL);
     return !ArgNoCaptureAA.isAssumedNoCapture();
@@ -7195,7 +7145,7 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
   return true;
 }
 
-void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
+void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use &U,
                                             const Instruction *UserI) {
   assert(UserI->mayReadOrWriteMemory());
 
@@ -7212,7 +7162,7 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
     // Stores cause the NO_WRITES property to disappear if the use is the
     // pointer operand. Note that we do assume that capturing was taken care of
     // somewhere else.
-    if (cast<StoreInst>(UserI)->getPointerOperand() == U->get())
+    if (cast<StoreInst>(UserI)->getPointerOperand() == U.get())
       removeAssumedBits(NO_WRITES);
     return;
 
@@ -7224,14 +7174,14 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
     const auto *CB = cast<CallBase>(UserI);
 
     // Give up on operand bundles.
-    if (CB->isBundleOperand(U)) {
+    if (CB->isBundleOperand(&U)) {
       indicatePessimisticFixpoint();
       return;
     }
 
     // Calling a function does read the function pointer, maybe write it if the
     // function is self-modifying.
-    if (CB->isCallee(U)) {
+    if (CB->isCallee(&U)) {
       removeAssumedBits(NO_READS);
       break;
     }
@@ -7239,8 +7189,8 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
     // Adjust the possible access behavior based on the information on the
     // argument.
     IRPosition Pos;
-    if (U->get()->getType()->isPointerTy())
-      Pos = IRPosition::callsite_argument(*CB, CB->getArgOperandNo(U));
+    if (U.get()->getType()->isPointerTy())
+      Pos = IRPosition::callsite_argument(*CB, CB->getArgOperandNo(&U));
     else
       Pos = IRPosition::callsite_function(*CB);
     const auto &MemBehaviorAA =
