@@ -19,88 +19,72 @@
 
 namespace clang {
 
-using PrintingPolicyAdjuster = llvm::function_ref<void(PrintingPolicy &Policy)>;
+using PolicyAdjusterType =
+    Optional<llvm::function_ref<void(PrintingPolicy &Policy)>>;
 
-template <typename NodeType>
-using NodePrinter =
-    std::function<void(llvm::raw_ostream &Out, const ASTContext *Context,
-                       const NodeType *Node,
-                       PrintingPolicyAdjuster PolicyAdjuster)>;
+static void PrintStmt(raw_ostream &Out, const ASTContext *Context,
+                      const Stmt *S, PolicyAdjusterType PolicyAdjuster) {
+  assert(S != nullptr && "Expected non-null Stmt");
+  PrintingPolicy Policy = Context->getPrintingPolicy();
+  if (PolicyAdjuster)
+    (*PolicyAdjuster)(Policy);
+  S->printPretty(Out, /*Helper*/ nullptr, Policy);
+}
 
-template <typename NodeType>
-using NodeFilter = std::function<bool(const NodeType *Node)>;
-
-template <typename NodeType>
 class PrintMatch : public ast_matchers::MatchFinder::MatchCallback {
-  using PrinterT = NodePrinter<NodeType>;
-  using FilterT = NodeFilter<NodeType>;
-
   SmallString<1024> Printed;
-  unsigned NumFoundNodes;
-  PrinterT Printer;
-  FilterT Filter;
-  PrintingPolicyAdjuster PolicyAdjuster;
+  unsigned NumFoundStmts;
+  PolicyAdjusterType PolicyAdjuster;
 
 public:
-  PrintMatch(PrinterT Printer, PrintingPolicyAdjuster PolicyAdjuster,
-             FilterT Filter)
-      : NumFoundNodes(0), Printer(std::move(Printer)),
-        Filter(std::move(Filter)), PolicyAdjuster(PolicyAdjuster) {}
+  PrintMatch(PolicyAdjusterType PolicyAdjuster)
+      : NumFoundStmts(0), PolicyAdjuster(PolicyAdjuster) {}
 
   void run(const ast_matchers::MatchFinder::MatchResult &Result) override {
-    const NodeType *N = Result.Nodes.getNodeAs<NodeType>("id");
-    if (!N || !Filter(N))
+    const Stmt *S = Result.Nodes.getNodeAs<Stmt>("id");
+    if (!S)
       return;
-    NumFoundNodes++;
-    if (NumFoundNodes > 1)
+    NumFoundStmts++;
+    if (NumFoundStmts > 1)
       return;
 
     llvm::raw_svector_ostream Out(Printed);
-    Printer(Out, Result.Context, N, PolicyAdjuster);
+    PrintStmt(Out, Result.Context, S, PolicyAdjuster);
   }
 
   StringRef getPrinted() const { return Printed; }
 
-  unsigned getNumFoundNodes() const { return NumFoundNodes; }
+  unsigned getNumFoundStmts() const { return NumFoundStmts; }
 };
 
-template <typename NodeType, typename Matcher>
-::testing::AssertionResult PrintedNodeMatches(
-    StringRef Code, const std::vector<std::string> &Args,
-    const Matcher &NodeMatch, StringRef ExpectedPrinted, StringRef FileName,
-    NodePrinter<NodeType> Printer,
-    PrintingPolicyAdjuster PolicyAdjuster = nullptr, bool AllowError = false,
-    NodeFilter<NodeType> Filter = [](const NodeType *) { return true; }) {
+template <typename T>
+::testing::AssertionResult
+PrintedStmtMatches(StringRef Code, const std::vector<std::string> &Args,
+                   const T &NodeMatch, StringRef ExpectedPrinted,
+                   PolicyAdjusterType PolicyAdjuster = None) {
 
-  PrintMatch<NodeType> Callback(Printer, PolicyAdjuster, Filter);
+  PrintMatch Printer(PolicyAdjuster);
   ast_matchers::MatchFinder Finder;
-  Finder.addMatcher(NodeMatch, &Callback);
+  Finder.addMatcher(NodeMatch, &Printer);
   std::unique_ptr<tooling::FrontendActionFactory> Factory(
       tooling::newFrontendActionFactory(&Finder));
 
-  bool ToolResult;
-  if (FileName.empty()) {
-    ToolResult = tooling::runToolOnCodeWithArgs(Factory->create(), Code, Args);
-  } else {
-    ToolResult =
-        tooling::runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName);
-  }
-  if (!ToolResult && !AllowError)
+  if (!tooling::runToolOnCodeWithArgs(Factory->create(), Code, Args))
     return testing::AssertionFailure()
            << "Parsing error in \"" << Code.str() << "\"";
 
-  if (Callback.getNumFoundNodes() == 0)
-    return testing::AssertionFailure() << "Matcher didn't find any nodes";
+  if (Printer.getNumFoundStmts() == 0)
+    return testing::AssertionFailure() << "Matcher didn't find any statements";
 
-  if (Callback.getNumFoundNodes() > 1)
+  if (Printer.getNumFoundStmts() > 1)
     return testing::AssertionFailure()
-           << "Matcher should match only one node (found "
-           << Callback.getNumFoundNodes() << ")";
+           << "Matcher should match only one statement (found "
+           << Printer.getNumFoundStmts() << ")";
 
-  if (Callback.getPrinted() != ExpectedPrinted)
+  if (Printer.getPrinted() != ExpectedPrinted)
     return ::testing::AssertionFailure()
            << "Expected \"" << ExpectedPrinted.str() << "\", got \""
-           << Callback.getPrinted().str() << "\"";
+           << Printer.getPrinted().str() << "\"";
 
   return ::testing::AssertionSuccess();
 }
