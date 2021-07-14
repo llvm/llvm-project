@@ -6,7 +6,6 @@
 # FIXME: Run with and without unaligned access turned on
 
 # ERR-NOT: remark
-# ERR: remark: <unknown>:0:0: unable to legalize instruction: %1:_(s32) = G_SEXTLOAD %0:_(p1) :: (load (s24), align 4, addrspace 1) (in function: test_sextload_global_i32_i24)
 # ERR: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<2 x s16>) = G_SEXTLOAD %0:_(p1) :: (load (<2 x s8>), addrspace 1) (in function: test_sextload_global_v2i16_from_v2s8)
 # ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<2 x s32>) = G_SEXTLOAD %0:_(p1) :: (load (<2 x s8>), addrspace 1) (in function: test_sextload_global_v2i32_from_v2s8)
 # ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<2 x s32>) = G_SEXTLOAD %0:_(p1) :: (load (<2 x s16>), addrspace 1) (in function: test_sextload_global_v2i32_from_v2s16)
@@ -64,12 +63,24 @@ body: |
 
     ; GFX8-LABEL: name: test_sextload_global_i32_i24
     ; GFX8: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s24), align 4, addrspace 1)
-    ; GFX8: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX8: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
+    ; GFX8: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX8: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX8: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 2, align 2, addrspace 1)
+    ; GFX8: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX8: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
+    ; GFX8: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX8: $vgpr0 = COPY [[OR]](s32)
     ; GFX6-LABEL: name: test_sextload_global_i32_i24
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s24), align 4, addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
+    ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; GFX6: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 2, align 2, addrspace 1)
+    ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX6: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
+    ; GFX6: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX6: $vgpr0 = COPY [[OR]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s24), addrspace 1)
     $vgpr0 = COPY %1
