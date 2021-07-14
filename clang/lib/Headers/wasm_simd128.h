@@ -170,21 +170,49 @@ wasm_v128_load64_zero(const void *__mem) {
   return (v128_t)(__i64x2){__v, 0};
 }
 
-#define wasm_v128_load8_lane(__ptr, __vec, __i)                                \
-  ((v128_t)__builtin_wasm_load8_lane((const signed char *)(__ptr),             \
-                                     (__i8x16)(__vec), (__i)))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v128_load8_lane(
+    const void *__mem, v128_t __vec, int __i) __REQUIRE_CONSTANT(__i) {
+  struct __wasm_v128_load8_lane_struct {
+    int8_t __v;
+  } __attribute__((__packed__, __may_alias__));
+  int8_t __v = ((const struct __wasm_v128_load8_lane_struct *)__mem)->__v;
+  __i8x16 __ret = (__i8x16)__vec;
+  __ret[__i] = __v;
+  return (v128_t)__ret;
+}
 
-#define wasm_v128_load16_lane(__ptr, __vec, __i)                               \
-  ((v128_t)__builtin_wasm_load16_lane((const short *)(__ptr),                  \
-                                      (__i16x8)(__vec), (__i)))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v128_load16_lane(
+    const void *__mem, v128_t __vec, int __i) __REQUIRE_CONSTANT(__i) {
+  struct __wasm_v128_load16_lane_struct {
+    int16_t __v;
+  } __attribute__((__packed__, __may_alias__));
+  int16_t __v = ((const struct __wasm_v128_load16_lane_struct *)__mem)->__v;
+  __i16x8 __ret = (__i16x8)__vec;
+  __ret[__i] = __v;
+  return (v128_t)__ret;
+}
 
-#define wasm_v128_load32_lane(__ptr, __vec, __i)                               \
-  ((v128_t)__builtin_wasm_load32_lane((const int *)(__ptr), (__i32x4)(__vec),  \
-                                      (__i)))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v128_load32_lane(
+    const void *__mem, v128_t __vec, int __i) __REQUIRE_CONSTANT(__i) {
+  struct __wasm_v128_load32_lane_struct {
+    int32_t __v;
+  } __attribute__((__packed__, __may_alias__));
+  int32_t __v = ((const struct __wasm_v128_load32_lane_struct *)__mem)->__v;
+  __i32x4 __ret = (__i32x4)__vec;
+  __ret[__i] = __v;
+  return (v128_t)__ret;
+}
 
-#define wasm_v128_load64_lane(__ptr, __vec, __i)                               \
-  ((v128_t)__builtin_wasm_load64_lane((const long long int *)(__ptr),          \
-                                      (__i64x2)(__vec), (__i)))
+static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_v128_load64_lane(
+    const void *__mem, v128_t __vec, int __i) __REQUIRE_CONSTANT(__i) {
+  struct __wasm_v128_load64_lane_struct {
+    int64_t __v;
+  } __attribute__((__packed__, __may_alias__));
+  int64_t __v = ((const struct __wasm_v128_load64_lane_struct *)__mem)->__v;
+  __i64x2 __ret = (__i64x2)__vec;
+  __ret[__i] = __v;
+  return (v128_t)__ret;
+}
 
 static __inline__ void __DEFAULT_FN_ATTRS wasm_v128_store(void *__mem,
                                                           v128_t __a) {

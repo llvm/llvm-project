@@ -284,34 +284,6 @@ f64x2 replace_lane_f64x2(f64x2 v, double x) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i8x16 load8_lane(const signed char *p, i8x16 v) {
-  return __builtin_wasm_load8_lane(p, v, 0);
-  // WEBASSEMBLY: tail call <16 x i8> @llvm.wasm.load8.lane(
-  // WEBASSEMBLY-SAME: i8* %p, <16 x i8> %v, i32 0)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-i16x8 load16_lane(const short *p, i16x8 v) {
-  return __builtin_wasm_load16_lane(p, v, 0);
-  // WEBASSEMBLY: tail call <8 x i16> @llvm.wasm.load16.lane(
-  // WEBASSEMBLY-SAME: i16* %p, <8 x i16> %v, i32 0)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-i32x4 load32_lane(const int *p, i32x4 v) {
-  return __builtin_wasm_load32_lane(p, v, 0);
-  // WEBASSEMBLY: tail call <4 x i32> @llvm.wasm.load32.lane(
-  // WEBASSEMBLY-SAME: i32* %p, <4 x i32> %v, i32 0)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-i64x2 load64_lane(const long long *p, i64x2 v) {
-  return __builtin_wasm_load64_lane(p, v, 0);
-  // WEBASSEMBLY: tail call <2 x i64> @llvm.wasm.load64.lane(
-  // WEBASSEMBLY-SAME: i64* %p, <2 x i64> %v, i32 0)
-  // WEBASSEMBLY-NEXT: ret
-}
-
 void store8_lane(signed char *p, i8x16 v) {
   __builtin_wasm_store8_lane(p, v, 0);
   // WEBASSEMBLY: call void @llvm.wasm.store8.lane(
