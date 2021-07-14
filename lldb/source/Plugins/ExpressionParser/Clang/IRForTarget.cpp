@@ -14,6 +14,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -1574,7 +1575,8 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
           FunctionValueCache get_element_pointer_maker(
               [&value_maker, &entry_instruction_finder, old_constant,
                constant_expr](llvm::Function *function) -> llvm::Value * {
-                Value *ptr = constant_expr->getOperand(0);
+                auto *gep = cast<llvm::GEPOperator>(constant_expr);
+                Value *ptr = gep->getPointerOperand();
 
                 if (ptr == old_constant)
                   ptr = value_maker.GetValue(function);
@@ -1597,7 +1599,7 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
                 ArrayRef<Value *> indices(index_vector);
 
                 return GetElementPtrInst::Create(
-                    nullptr, ptr, indices, "",
+                    gep->getSourceElementType(), ptr, indices, "",
                     llvm::cast<Instruction>(
                         entry_instruction_finder.GetValue(function)));
               });
@@ -1780,7 +1782,8 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
             ConstantInt *offset_int(
                 ConstantInt::get(offset_type, offset, true));
             GetElementPtrInst *get_element_ptr = GetElementPtrInst::Create(
-                nullptr, argument, offset_int, "", entry_instruction);
+                argument->getType()->getPointerElementType(), argument,
+                offset_int, "", entry_instruction);
 
             if (name == m_result_name && !m_result_is_pointer) {
               BitCastInst *bit_cast = new BitCastInst(
