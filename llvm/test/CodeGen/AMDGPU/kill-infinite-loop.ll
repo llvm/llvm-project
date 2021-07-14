@@ -30,12 +30,11 @@ define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-NEXT:  BB0_3: ; %Flow1
 ; CHECK-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz BB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1.0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    exp mrt0 v1, v1, v1, v0 done vm
-; CHECK-NEXT:  BB0_5: ; %UnifiedReturnBlock
+; CHECK-NEXT:  ; %bb.5: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  BB0_6:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
@@ -75,11 +74,10 @@ define amdgpu_ps void @return_void_compr(float %0) #0 {
 ; CHECK-NEXT:  BB1_3: ; %Flow1
 ; CHECK-NEXT:    s_or_saveexec_b64 s[0:1], s[2:3]
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execz BB1_5
 ; CHECK-NEXT:  ; %bb.4: ; %end
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    exp mrt0 v0, off, v0, off done compr vm
-; CHECK-NEXT:  BB1_5: ; %UnifiedReturnBlock
+; CHECK-NEXT:  ; %bb.5: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  BB1_6:
 ; CHECK-NEXT:    s_mov_b64 exec, 0
