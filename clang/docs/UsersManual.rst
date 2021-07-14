@@ -1649,6 +1649,14 @@ are listed below.
    Enable simple code coverage in addition to certain sanitizers.
    See :doc:`SanitizerCoverage` for more details.
 
+**-f[no-]sanitize-address-outline-instrumentation**
+
+   Controls how address sanitizer code is generated. If enabled will always use
+   a function call instead of inlining the code. Turning this option on could
+   reduce the binary size, but might result in a worse run-time performance.
+
+   See :doc: `AddressSanitizer` for more details.
+
 **-f[no-]sanitize-stats**
 
    Enable simple statistics gathering for the enabled sanitizers.
