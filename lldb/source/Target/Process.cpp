@@ -493,25 +493,9 @@ void Process::Finalize() {
   if (m_finalizing.exchange(true))
     return;
 
-  // Destroy this process if needed
-  switch (GetPrivateState()) {
-  case eStateConnected:
-  case eStateAttaching:
-  case eStateLaunching:
-  case eStateStopped:
-  case eStateRunning:
-  case eStateStepping:
-  case eStateCrashed:
-  case eStateSuspended:
-    DestroyImpl(false);
-    break;
-
-  case eStateInvalid:
-  case eStateUnloaded:
-  case eStateDetached:
-  case eStateExited:
-    break;
-  }
+  // Destroy the process. This will call the virtual function DoDestroy under
+  // the hood, giving our derived class a chance to do the ncessary tear down.
+  DestroyImpl(false);
 
   // Clear our broadcaster before we proceed with destroying
   Broadcaster::Clear();
