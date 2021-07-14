@@ -3064,11 +3064,12 @@ void Verifier::visitCallBase(CallBase &Call) {
   Assert(verifyAttributeCount(Attrs, Call.arg_size()),
          "Attribute after last parameter!", Call);
 
-  bool IsIntrinsic = Call.getCalledFunction() &&
-                     Call.getCalledFunction()->isIntrinsic();
-
   Function *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
+  bool IsIntrinsic = Callee && Callee->isIntrinsic();
+  if (IsIntrinsic)
+    Assert(Callee->getValueType() == FTy,
+           "Intrinsic called with incompatible signature", Call);
 
   if (Attrs.hasFnAttribute(Attribute::Speculatable)) {
     // Don't allow speculatable on call sites, unless the underlying function
