@@ -6014,8 +6014,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
 
 bool LoopVectorizationCostModel::isMoreProfitable(
     const VectorizationFactor &A, const VectorizationFactor &B) const {
-  InstructionCost::CostType CostA = *A.Cost.getValue();
-  InstructionCost::CostType CostB = *B.Cost.getValue();
+  InstructionCost CostA = A.Cost;
+  InstructionCost CostB = B.Cost;
 
   unsigned MaxTripCount = PSE.getSE()->getSmallConstantMaxTripCount(TheLoop);
 
@@ -6028,8 +6028,8 @@ bool LoopVectorizationCostModel::isMoreProfitable(
     // be PerIterationCost*floor(TC/VF) + Scalar remainder cost, and so is
     // approximated with the per-lane cost below instead of using the tripcount
     // as here.
-    int64_t RTCostA = CostA * divideCeil(MaxTripCount, A.Width.getFixedValue());
-    int64_t RTCostB = CostB * divideCeil(MaxTripCount, B.Width.getFixedValue());
+    auto RTCostA = CostA * divideCeil(MaxTripCount, A.Width.getFixedValue());
+    auto RTCostB = CostB * divideCeil(MaxTripCount, B.Width.getFixedValue());
     return RTCostA < RTCostB;
   }
 
@@ -6064,7 +6064,7 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
     // Ignore scalar width, because the user explicitly wants vectorization.
     // Initialize cost to max so that VF = 2 is, at least, chosen during cost
     // evaluation.
-    ChosenFactor.Cost = std::numeric_limits<InstructionCost::CostType>::max();
+    ChosenFactor.Cost = InstructionCost::getMax();
   }
 
   for (const auto &i : VFCandidates) {
@@ -6600,10 +6600,14 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
 
   // A lambda that gets the register usage for the given type and VF.
   const auto &TTICapture = TTI;
-  auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) {
+  auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty))
       return 0;
-    return *TTICapture.getRegUsageForType(VectorType::get(Ty, VF)).getValue();
+    InstructionCost::CostType RegUsage =
+        *TTICapture.getRegUsageForType(VectorType::get(Ty, VF)).getValue();
+    assert(RegUsage >= 0 && RegUsage <= std::numeric_limits<unsigned>::max() &&
+           "Nonsensical values for register usage.");
+    return RegUsage;
   };
 
   for (unsigned int i = 0, s = IdxToInstr.size(); i < s; ++i) {

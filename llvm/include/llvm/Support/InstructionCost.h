@@ -28,7 +28,7 @@ class raw_ostream;
 
 class InstructionCost {
 public:
-  using CostType = int;
+  using CostType = int64_t;
 
   /// CostState describes the state of a cost.
   enum CostState {
