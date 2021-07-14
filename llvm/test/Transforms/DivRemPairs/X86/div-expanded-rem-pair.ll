@@ -210,13 +210,13 @@ define i64 @remainder_triangle_i64(i64 %a, i64 %b, i64* %rp) {
 ; CHECK-LABEL: @remainder_triangle_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64* [[RP:%.*]], null
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    store i64 [[REM]], i64* [[RP]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 [[DIV]]
 ;
 entry:
@@ -239,13 +239,16 @@ define i128 @remainder_triangle_i128(i128 %a, i128 %b, i128* %rp) {
 ; CHECK-LABEL: @remainder_triangle_i128(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i128* [[RP:%.*]], null
+; CHECK-NEXT:    [[A_FROZEN:%.*]] = freeze i128 [[A:%.*]]
+; CHECK-NEXT:    [[B_FROZEN:%.*]] = freeze i128 [[B:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i128 [[A_FROZEN]], [[B_FROZEN]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[REM:%.*]] = urem i128 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    store i128 [[REM]], i128* [[RP]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i128 [[DIV]], [[B_FROZEN]]
+; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub i128 [[A_FROZEN]], [[TMP0]]
+; CHECK-NEXT:    store i128 [[REM_DECOMPOSED]], i128* [[RP]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i128 [[A]], [[B]]
 ; CHECK-NEXT:    ret i128 [[DIV]]
 ;
 entry:
@@ -265,16 +268,16 @@ end:
 define i64 @remainder_triangle_i64_multiple_rem_edges(i64 %a, i64 %b, i64 %c, i64* %rp) {
 ; CHECK-LABEL: @remainder_triangle_i64_multiple_rem_edges(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A]], [[B]]
 ; CHECK-NEXT:    switch i64 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i64 0, label [[SW_BB:%.*]]
 ; CHECK-NEXT:    i64 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    store i64 [[REM]], i64* [[RP:%.*]], align 4
 ; CHECK-NEXT:    br label [[SW_DEFAULT]]
 ; CHECK:       sw.default:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 [[DIV]]
 ;
 entry:
@@ -296,16 +299,16 @@ sw.default:                                       ; preds = %entry, %sw.bb
 define i64 @remainder_triangle_i64_multiple_div_edges(i64 %a, i64 %b, i64 %c, i64* %rp) {
 ; CHECK-LABEL: @remainder_triangle_i64_multiple_div_edges(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A]], [[B]]
 ; CHECK-NEXT:    switch i64 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:    i64 0, label [[SW_BB:%.*]]
 ; CHECK-NEXT:    i64 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.default:
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    store i64 [[REM]], i64* [[RP:%.*]], align 4
 ; CHECK-NEXT:    br label [[SW_BB]]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 [[DIV]]
 ;
 entry:
