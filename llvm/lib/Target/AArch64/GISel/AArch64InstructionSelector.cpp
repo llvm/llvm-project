@@ -3988,6 +3988,13 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   } else {
     // No. We have to perform subregister inserts. For each insert, create an
     // implicit def and a subregister insert, and save the register we create.
+    const TargetRegisterClass *RC =
+        getMinClassForRegBank(*RBI.getRegBank(SrcReg, MRI, TRI),
+                              WideTy.getScalarSizeInBits() * NumElts);
+    unsigned SubReg = 0;
+    bool Found = getSubRegForClass(RC, TRI, SubReg);
+    (void)Found;
+    assert(Found && "expected to find last operand's subeg idx");
     for (unsigned Idx = 0; Idx < NumInsertRegs; ++Idx) {
       Register ImpDefReg = MRI.createVirtualRegister(&AArch64::FPR128RegClass);
       MachineInstr &ImpDefMI =
@@ -4001,7 +4008,7 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
                    TII.get(TargetOpcode::INSERT_SUBREG), InsertReg)
                .addUse(ImpDefReg)
                .addUse(SrcReg)
-               .addImm(AArch64::dsub);
+               .addImm(SubReg);
 
       constrainSelectedInstRegOperands(ImpDefMI, TII, TRI, RBI);
       constrainSelectedInstRegOperands(InsMI, TII, TRI, RBI);

@@ -11,6 +11,10 @@
     ret <4 x float> %a
   }
 
+  define <2 x half> @test_v2s16_unmerge(<2 x half> %a) {
+    ret <2 x half> %a
+  }
+
   define <4 x half> @test_v4s16_unmerge(<4 x half> %a) {
     ret <4 x half> %a
   }
@@ -85,6 +89,49 @@ body:             |
     %1:fpr(<4 x s32>) = G_BUILD_VECTOR %2(s32), %3(s32), %4(s32), %5(s32)
     $q0 = COPY %1(<4 x s32>)
     RET_ReallyLR implicit $q0
+...
+---
+name:            test_v2s16_unmerge
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: fpr }
+  - { id: 4, class: fpr }
+  - { id: 5, class: fpr }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $s0
+    ; CHECK-LABEL: name: test_v2s16_unmerge
+
+    ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
+    %0:fpr(<2 x s16>) = COPY $s0
+
+    ; Since 2 * 16 != 128, we need to widen using implicit defs.
+    ; Note that we expect to reuse one of the INSERT_SUBREG results, as CPYi16
+    ; expects a lane > 0.
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr16 = COPY [[INSERT_SUBREG]].hsub
+    ; CHECK: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[INSERT_SUBREG]], 1
+    %2:fpr(s16), %3:fpr(s16) = G_UNMERGE_VALUES %0(<2 x s16>)
+
+    ; CHECK: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
+    ; CHECK: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[CPYi16_]], %subreg.hsub
+    ; CHECK: [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG2]], 0
+    ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY [[INSvi16lane]].ssub
+    %1:fpr(<2 x s16>) = G_BUILD_VECTOR %2(s16), %3(s16)
+
+    ; CHECK: $s0 = COPY [[COPY2]]
+    $s0 = COPY %1(<2 x s16>)
+
+    ; CHECK: RET_ReallyLR implicit $s0
+    RET_ReallyLR implicit $s0
 ...
 ---
 name:            test_v4s16_unmerge
