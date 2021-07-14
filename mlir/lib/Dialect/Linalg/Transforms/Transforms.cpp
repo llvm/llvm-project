@@ -954,7 +954,7 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     SmallVector<Value> dynDims;
     for (unsigned i = 0; i < type.getRank(); ++i) {
       if (type.isDynamicDim(i))
-        dynDims.push_back(asValue(rewriter, loc, sliceOp.getMixedOffsets()[i]));
+        dynDims.push_back(asValue(rewriter, loc, sliceOp.getMixedSizes()[i]));
     }
 
     // Create GenerateOp.
