@@ -6,7 +6,7 @@
 // RUN:   -target-cpu pwr9 -o - | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc-unknown-aix %s -emit-llvm %s \
 // RUN:   -target-cpu pwr9 -o - | FileCheck %s
-// RUN: not %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm %s \
+// RUN: not %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm-only %s \
 // RUN:   -target-cpu pwr8 2>&1 | FileCheck %s --check-prefix=CHECK-NONPWR9-ERR
 
 extern unsigned int ui;
