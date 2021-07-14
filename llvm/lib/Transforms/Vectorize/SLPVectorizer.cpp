@@ -7295,11 +7295,22 @@ class HorizontalReduction {
            RecurrenceDescriptor::isMinMaxRecurrenceKind(getRdxKind(I));
   }
 
+  // And/or are potentially poison-safe logical patterns like:
+  // select x, y, false
+  // select x, true, y
+  static bool isBoolLogicOp(Instruction *I) {
+    return match(I, m_LogicalAnd(m_Value(), m_Value())) ||
+           match(I, m_LogicalOr(m_Value(), m_Value()));
+  }
+
   /// Checks if instruction is associative and can be vectorized.
   static bool isVectorizable(RecurKind Kind, Instruction *I) {
     if (Kind == RecurKind::None)
       return false;
-    if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind))
+
+    // Integer ops that map to select instructions or intrinsics are fine.
+    if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind) ||
+        isBoolLogicOp(I))
       return true;
 
     if (Kind == RecurKind::FMax || Kind == RecurKind::FMin) {
@@ -7310,6 +7321,16 @@ class HorizontalReduction {
     }
 
     return I->isAssociative();
+  }
+
+  static Value *getRdxOperand(Instruction *I, unsigned Index) {
+    // Poison-safe 'or' takes the form: select X, true, Y
+    // To make that work with the normal operand processing, we skip the
+    // true value operand.
+    // TODO: Change the code and data structures to handle this without a hack.
+    if (getRdxKind(I) == RecurKind::Or && isa<SelectInst>(I) && Index == 1)
+      return I->getOperand(2);
+    return I->getOperand(Index);
   }
 
   /// Checks if the ParentStackElem.first should be marked as a reduction
@@ -7420,9 +7441,11 @@ class HorizontalReduction {
       return RecurKind::Add;
     if (match(I, m_Mul(m_Value(), m_Value())))
       return RecurKind::Mul;
-    if (match(I, m_And(m_Value(), m_Value())))
+    if (match(I, m_And(m_Value(), m_Value())) ||
+        match(I, m_LogicalAnd(m_Value(), m_Value())))
       return RecurKind::And;
-    if (match(I, m_Or(m_Value(), m_Value())))
+    if (match(I, m_Or(m_Value(), m_Value())) ||
+        match(I, m_LogicalOr(m_Value(), m_Value())))
       return RecurKind::Or;
     if (match(I, m_Xor(m_Value(), m_Value())))
       return RecurKind::Xor;
@@ -7664,7 +7687,7 @@ public:
       }
 
       // Visit operands.
-      Value *EdgeVal = TreeN->getOperand(EdgeToVisit);
+      Value *EdgeVal = getRdxOperand(TreeN, EdgeToVisit);
       auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
       if (!EdgeInst) {
         // Edge value is not a reduction instruction or a leaf instruction.
@@ -7848,6 +7871,11 @@ public:
         Builder.SetInsertPoint(getCmpForMinMaxReduction(RdxRootInst));
       else
         Builder.SetInsertPoint(RdxRootInst);
+
+      // To prevent poison from leaking across what used to be sequential, safe,
+      // scalar boolean logic operations, the reduction operand must be frozen.
+      if (isa<SelectInst>(RdxRootInst) && isBoolLogicOp(RdxRootInst))
+        VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
       Value *ReducedSubTree =
           emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
