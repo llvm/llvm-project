@@ -1583,16 +1583,15 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   // At O0 we want to fully disable inlining outside of cases marked with
   // 'alwaysinline' that are required for correctness.
-  Opts.setInlining(
-      (!Args.hasArg(OPT_disable_O0_noinline) && Opts.OptimizationLevel == 0)
-          ? CodeGenOptions::OnlyAlwaysInlining
-          : CodeGenOptions::NormalInlining);
+  Opts.setInlining((Opts.OptimizationLevel == 0)
+                       ? CodeGenOptions::OnlyAlwaysInlining
+                       : CodeGenOptions::NormalInlining);
   // Explicit inlining flags can disable some or all inlining even at
   // optimization levels above zero.
   if (Arg *InlineArg = Args.getLastArg(
           options::OPT_finline_functions, options::OPT_finline_hint_functions,
           options::OPT_fno_inline_functions, options::OPT_fno_inline)) {
-    if (Args.hasArg(OPT_disable_O0_noinline) || Opts.OptimizationLevel > 0) {
+    if (Opts.OptimizationLevel > 0) {
       const Option &InlineOpt = InlineArg->getOption();
       if (InlineOpt.matches(options::OPT_finline_functions))
         Opts.setInlining(CodeGenOptions::NormalInlining);
