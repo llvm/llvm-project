@@ -16685,14 +16685,9 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     if (CStdConstraintViolation || MSBitfieldViolation) {
       unsigned DiagWidth =
           CStdConstraintViolation ? TypeWidth : TypeStorageSize;
-      if (FieldName)
-        return Diag(FieldLoc, diag::err_bitfield_width_exceeds_type_width)
-               << FieldName << toString(Value, 10)
-               << !CStdConstraintViolation << DiagWidth;
-
-      return Diag(FieldLoc, diag::err_anon_bitfield_width_exceeds_type_width)
-             << toString(Value, 10) << !CStdConstraintViolation
-             << DiagWidth;
+      return Diag(FieldLoc, diag::err_bitfield_width_exceeds_type_width)
+             << (bool)FieldName << FieldName << toString(Value, 10)
+             << !CStdConstraintViolation << DiagWidth;
     }
 
     // Warn on types where the user might conceivably expect to get all
