@@ -188,7 +188,7 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   }
 
   // assume this is only called for nested parallel
-  int threadId = GetLogicalThreadIdInBlock(__kmpc_is_spmd_exec_mode());
+  int threadId = GetLogicalThreadIdInBlock();
 
   // unlike actual parallel, threads in the same team do not share
   // the workTaskDescr in this case and num threads is fixed to 1
@@ -227,7 +227,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   }
 
   // pop stack
-  int threadId = GetLogicalThreadIdInBlock(__kmpc_is_spmd_exec_mode());
+  int threadId = GetLogicalThreadIdInBlock();
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   // set new top
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
@@ -249,8 +249,7 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
 // it's cheap to recalculate this value so we never use the result
 // of this call.
 EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
-  int tid = GetLogicalThreadIdInBlock(__kmpc_is_spmd_exec_mode());
-  return GetOmpThreadId(tid, __kmpc_is_spmd_exec_mode());
+  return GetOmpThreadId();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -262,7 +261,7 @@ EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
   PRINT(LD_IO, "call kmpc_push_num_threads %d\n", num_threads);
   ASSERT0(LT_FUSSY, isRuntimeInitialized(),
           "Runtime must be initialized.");
-  tid = GetLogicalThreadIdInBlock(__kmpc_is_spmd_exec_mode());
+  tid = GetLogicalThreadIdInBlock();
   omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid) =
       num_threads;
 }

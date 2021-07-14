@@ -449,6 +449,10 @@ EXTERN void __kmpc_parallel_51(ident_t *ident, kmp_int32 global_tid,
 // SPMD execution mode interrogation function.
 EXTERN int8_t __kmpc_is_spmd_exec_mode();
 
+/// Return true if the hardware thread id \p Tid represents the OpenMP main
+/// thread in generic mode outside of a parallel region.
+EXTERN int8_t __kmpc_is_generic_main_thread(kmp_int32 Tid);
+
 EXTERN void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
                                           const void *buf, size_t size,
                                           int16_t is_shared, const void **res);

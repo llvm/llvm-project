@@ -15,11 +15,6 @@
 #include "target/shuffle.h"
 #include "target_impl.h"
 
-// Return true if this is the master thread.
-INLINE static bool IsMasterThread(bool isSPMDExecutionMode) {
-  return !isSPMDExecutionMode && GetMasterThreadID() == GetThreadIdInBlock();
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Runtime functions for trunk data sharing scheme.
 ////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +61,8 @@ static void *__kmpc_alloc_for_warp(AllocTy Alloc, unsigned Bytes,
 
 EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
   Bytes = Bytes + (Bytes % MinBytes);
-  if (IsMasterThread(__kmpc_is_spmd_exec_mode())) {
+  int TID = GetThreadIdInBlock();
+  if (__kmpc_is_generic_main_thread(TID)) {
     // Main thread alone, use shared memory if space is available.
     if (MainSharedStack.Usage[0] + Bytes <= MainSharedStack.MaxSize) {
       void *Ptr = &MainSharedStack.Data[MainSharedStack.Usage[0]];
@@ -75,7 +71,6 @@ EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
       return Ptr;
     }
   } else {
-    int TID = GetThreadIdInBlock();
     int WID = GetWarpId();
     unsigned WarpBytes = Bytes * WARPSIZE;
     auto AllocSharedStack = [&]() {
@@ -92,7 +87,6 @@ EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
       return __kmpc_alloc_for_warp(AllocSharedStack, Bytes, WarpBytes);
   }
   // Fallback to malloc
-  int TID = GetThreadIdInBlock();
   unsigned WarpBytes = Bytes * WARPSIZE;
   auto AllocGlobal = [&] {
     return SafeMalloc(WarpBytes, "AllocGlobalFallback");
