@@ -10,6 +10,8 @@
 // RUN: | FileCheck -check-prefix BAD %s
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_19 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix BAD %s
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix BAD %s
 
 // BAD: error: Unsupported CUDA gpu architecture
 
@@ -23,9 +25,9 @@
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_52 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=gfx908 -c %s 2>&1 \
+// RUN: %clang -### -x hip -target x86_64-linux-gnu --cuda-gpu-arch=gfx908 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=gfx90a -c %s 2>&1 \
+// RUN: %clang -### -x hip -target x86_64-linux-gnu --cuda-gpu-arch=gfx90a -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s

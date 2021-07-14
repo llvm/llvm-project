@@ -2101,39 +2101,6 @@ def Vector_CreateMaskOp :
   let assemblyFormat = "$operands attr-dict `:` type(results)";
 }
 
-def Vector_TupleOp :
-  Vector_Op<"tuple", [NoSideEffect]>,
-    Arguments<(ins Variadic<AnyVector>:$vectors)>,
-    Results<(outs TupleOf<[AnyVector]>)> {
-  let summary = "make tuple of vectors operation";
-  let description = [{
-    Returns a tuple of its operands 'vectors'.
-
-    Note that this operation is used during the vector op unrolling
-    transformation and should be removed before lowering to lower-level
-    dialects.
-
-
-    Example:
-
-    ```mlir
-    %0 = vector.transfer_read ... : vector<2x2xf32>
-    %1 = vector.transfer_read ... : vector<2x1xf32>
-    %2 = vector.transfer_read ... : vector<2x2xf32>
-    %3 = vector.transfer_read ... : vector<2x1xf32>
-
-    %4 = vector.tuple %0, %1, %2, %3
-      : vector<2x2xf32>, vector<2x1xf32>, vector<2x2xf32>, vector<2x1xf32>
-    ```
-  }];
-
-  let extraClassDeclaration = [{
-    TupleType getResultTupleType() {
-      return getResult().getType().cast<TupleType>();
-    }
-  }];
-}
-
 def Vector_TransposeOp :
   Vector_Op<"transpose", [NoSideEffect,
     PredOpTrait<"operand and result have same element type",

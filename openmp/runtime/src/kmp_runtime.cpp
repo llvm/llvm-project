@@ -6552,7 +6552,7 @@ void __kmp_register_library_startup(void) {
       __kmp_str_split(tail, '-', &flag_val_str, &tail);
       file_name = tail;
       if (tail != NULL) {
-        long *flag_addr = 0;
+        unsigned long *flag_addr = 0;
         unsigned long flag_val = 0;
         KMP_SSCANF(flag_addr_str, "%p", RCAST(void **, &flag_addr));
         KMP_SSCANF(flag_val_str, "%lx", &flag_val);

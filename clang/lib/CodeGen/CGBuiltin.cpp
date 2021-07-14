@@ -994,6 +994,46 @@ static llvm::Value *EmitBitTestIntrinsic(CodeGenFunction &CGF,
       ShiftedByte, llvm::ConstantInt::get(CGF.Int8Ty, 1), "bittest.res");
 }
 
+static llvm::Value *emitPPCLoadReserveIntrinsic(CodeGenFunction &CGF,
+                                                unsigned BuiltinID,
+                                                const CallExpr *E) {
+  Value *Addr = CGF.EmitScalarExpr(E->getArg(0));
+
+  SmallString<64> Asm;
+  raw_svector_ostream AsmOS(Asm);
+  llvm::IntegerType *RetType = CGF.Int32Ty;
+
+  switch (BuiltinID) {
+  case clang::PPC::BI__builtin_ppc_ldarx:
+    AsmOS << "ldarx ";
+    RetType = CGF.Int64Ty;
+    break;
+  case clang::PPC::BI__builtin_ppc_lwarx:
+    AsmOS << "lwarx ";
+    RetType = CGF.Int32Ty;
+    break;
+  default:
+    llvm_unreachable("Expected only PowerPC load reserve intrinsics");
+  }
+
+  AsmOS << "$0, ${1:y}";
+
+  std::string Constraints = "=r,*Z,~{memory}";
+  std::string MachineClobbers = CGF.getTarget().getClobbers();
+  if (!MachineClobbers.empty()) {
+    Constraints += ',';
+    Constraints += MachineClobbers;
+  }
+
+  llvm::Type *IntPtrType = RetType->getPointerTo();
+  llvm::FunctionType *FTy =
+      llvm::FunctionType::get(RetType, {IntPtrType}, false);
+
+  llvm::InlineAsm *IA =
+      llvm::InlineAsm::get(FTy, Asm, Constraints, /*hasSideEffects=*/true);
+  return CGF.Builder.CreateCall(IA, {Addr});
+}
+
 namespace {
 enum class MSVCSetJmpKind {
   _setjmpex,
@@ -15532,6 +15572,9 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return MakeBinaryAtomicValue(*this, AtomicRMWInst::Xchg, E,
                                  llvm::AtomicOrdering::Monotonic);
   }
+  case PPC::BI__builtin_ppc_ldarx:
+  case PPC::BI__builtin_ppc_lwarx:
+    return emitPPCLoadReserveIntrinsic(*this, BuiltinID, E);
   }
 }
 

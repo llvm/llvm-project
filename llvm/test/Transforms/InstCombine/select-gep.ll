@@ -71,6 +71,34 @@ define i32* @test2(i32* %p, i64 %x, i64 %y) {
   ret i32* %select
 }
 
+; PR50183
+define i32* @test2a(i32* %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test2a(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT_IDX:%.*]] = select i1 [[CMP]], i64 [[X]], i64 0
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[SELECT_IDX]]
+; CHECK-NEXT:    ret i32* [[SELECT]]
+;
+  %gep = getelementptr inbounds i32, i32* %p, i64 %x
+  %cmp = icmp ugt i64 %x, %y
+  %select = select i1 %cmp, i32* %gep, i32* %p
+  ret i32* %select
+}
+
+; PR50183
+define i32* @test2b(i32* %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test2b(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT_IDX:%.*]] = select i1 [[CMP]], i64 0, i64 [[X]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[SELECT_IDX]]
+; CHECK-NEXT:    ret i32* [[SELECT]]
+;
+  %gep = getelementptr inbounds i32, i32* %p, i64 %x
+  %cmp = icmp ugt i64 %x, %y
+  %select = select i1 %cmp, i32* %p, i32* %gep
+  ret i32* %select
+}
+
 ; Three (or more) operand GEPs are currently expected to not be optimised,
 ; though they could be in principle.
 
@@ -140,9 +168,9 @@ define i32* @test4(i32* %p, i32* %q, i64 %x, i64 %y) {
 
 define <2 x i64*> @test5(i64* %p1, i64* %p2, <2 x i64> %idx, <2 x i1> %cc) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, i64* %p1, <2 x i64> %idx
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, i64* %p2, <2 x i64> %idx
-; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> %cc, <2 x i64*> [[GEP1]], <2 x i64*> [[GEP2]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, i64* [[P1:%.*]], <2 x i64> [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, i64* [[P2:%.*]], <2 x i64> [[IDX]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[CC:%.*]], <2 x i64*> [[GEP1]], <2 x i64*> [[GEP2]]
 ; CHECK-NEXT:    ret <2 x i64*> [[SELECT]]
 ;
   %gep1 = getelementptr i64, i64* %p1, <2 x i64> %idx

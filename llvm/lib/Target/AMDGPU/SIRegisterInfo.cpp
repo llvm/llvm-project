@@ -572,6 +572,17 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, Reg.first);
   }
 
+  // Reserve VGPRs used for SGPR spilling.
+  // Note we treat freezeReservedRegs unusually because we run register
+  // allocation in two phases. It's OK to re-freeze with new registers for the
+  // second run.
+#if 0
+  for (auto &SpilledFI : MFI->sgpr_spill_vgprs()) {
+    for (auto &SpilledVGPR : SpilledFI.second)
+      reserveRegisterTuples(Reserved, SpilledVGPR.VGPR);
+  }
+#endif
+
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())
     reserveRegisterTuples(Reserved, Reg);
@@ -1311,6 +1322,7 @@ void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
 bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                                int Index,
                                RegScavenger *RS,
+                               LiveIntervals *LIS,
                                bool OnlyToVGPR) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
@@ -1340,6 +1352,12 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                      .addReg(SubReg, getKillRegState(UseKill))
                      .addImm(Spill.Lane)
                      .addReg(Spill.VGPR);
+      if (LIS) {
+        if (i == 0)
+          LIS->ReplaceMachineInstrInMaps(*MI, *MIB);
+        else
+          LIS->InsertMachineInstrInMaps(*MIB);
+      }
 
       if (i == 0 && SB.NumSubRegs > 1) {
         // We may be spilling a super-register which is only partially defined,
@@ -1383,6 +1401,13 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                 .addReg(SB.TmpVGPR, TmpVGPRFlags);
         TmpVGPRFlags = 0;
 
+        if (LIS) {
+          if (i == 0)
+            LIS->ReplaceMachineInstrInMaps(*MI, *WriteLane);
+          else
+            LIS->InsertMachineInstrInMaps(*WriteLane);
+        }
+
         // There could be undef components of a spilled super register.
         // TODO: Can we detect this and skip the spill?
         if (SB.NumSubRegs > 1) {
@@ -1403,12 +1428,17 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
 
   MI->eraseFromParent();
   SB.MFI.addToSpilledSGPRs(SB.NumSubRegs);
+
+  if (LIS)
+    LIS->removeAllRegUnitsForPhysReg(SB.SuperReg);
+
   return true;
 }
 
 bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                                  int Index,
                                  RegScavenger *RS,
+                                 LiveIntervals *LIS,
                                  bool OnlyToVGPR) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
@@ -1432,6 +1462,13 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
               .addImm(Spill.Lane);
       if (SB.NumSubRegs > 1 && i == 0)
         MIB.addReg(SB.SuperReg, RegState::ImplicitDefine);
+      if (LIS) {
+        if (i == e - 1)
+          LIS->ReplaceMachineInstrInMaps(*MI, *MIB);
+        else
+          LIS->InsertMachineInstrInMaps(*MIB);
+      }
+
     }
   } else {
     SB.prepare();
@@ -1459,6 +1496,12 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                        .addImm(i);
         if (SB.NumSubRegs > 1 && i == 0)
           MIB.addReg(SB.SuperReg, RegState::ImplicitDefine);
+        if (LIS) {
+          if (i == e - 1)
+            LIS->ReplaceMachineInstrInMaps(*MI, *MIB);
+          else
+            LIS->InsertMachineInstrInMaps(*MIB);
+        }
       }
     }
 
@@ -1466,6 +1509,10 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   }
 
   MI->eraseFromParent();
+
+  if (LIS)
+    LIS->removeAllRegUnitsForPhysReg(SB.SuperReg);
+
   return true;
 }
 
@@ -1475,7 +1522,8 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
 bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   MachineBasicBlock::iterator MI,
   int FI,
-  RegScavenger *RS) const {
+  RegScavenger *RS,
+  LiveIntervals *LIS) const {
   switch (MI->getOpcode()) {
   case AMDGPU::SI_SPILL_S1024_SAVE:
   case AMDGPU::SI_SPILL_S512_SAVE:
@@ -1487,7 +1535,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   case AMDGPU::SI_SPILL_S96_SAVE:
   case AMDGPU::SI_SPILL_S64_SAVE:
   case AMDGPU::SI_SPILL_S32_SAVE:
-    return spillSGPR(MI, FI, RS, true);
+    return spillSGPR(MI, FI, RS, LIS, true);
   case AMDGPU::SI_SPILL_S1024_RESTORE:
   case AMDGPU::SI_SPILL_S512_RESTORE:
   case AMDGPU::SI_SPILL_S256_RESTORE:
@@ -1498,7 +1546,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   case AMDGPU::SI_SPILL_S96_RESTORE:
   case AMDGPU::SI_SPILL_S64_RESTORE:
   case AMDGPU::SI_SPILL_S32_RESTORE:
-    return restoreSGPR(MI, FI, RS, true);
+    return restoreSGPR(MI, FI, RS, LIS, true);
   default:
     llvm_unreachable("not an SGPR spill instruction");
   }

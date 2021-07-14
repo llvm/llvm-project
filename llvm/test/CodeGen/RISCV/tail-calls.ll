@@ -58,6 +58,24 @@ entry:
   ret void
 }
 
+; Make sure we don't use t0 as the source for jr as that is a hint to pop the
+; return address stack on some microarchitectures.
+define i32 @caller_indirect_no_t0(i32 (i32, i32, i32, i32, i32, i32, i32)* %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7) {
+; CHECK-LABEL: caller_indirect_no_t0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mv t1, a0
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:    mv a3, a4
+; CHECK-NEXT:    mv a4, a5
+; CHECK-NEXT:    mv a5, a6
+; CHECK-NEXT:    mv a6, a7
+; CHECK-NEXT:    jr t1
+  %9 = tail call i32 %0(i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7)
+  ret i32 %9
+}
+
 ; Do not tail call optimize functions with varargs passed by stack.
 declare i32 @callee_varargs(i32, ...)
 define void @caller_varargs(i32 %a, i32 %b) nounwind {

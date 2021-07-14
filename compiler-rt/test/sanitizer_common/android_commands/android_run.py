@@ -11,12 +11,12 @@ def build_env():
     args = []
     # Android linker ignores RPATH. Set LD_LIBRARY_PATH to Output dir.
     args.append('LD_LIBRARY_PATH=%s' % (ANDROID_TMPDIR,))
-    for (key, value) in os.environ.items():
+    for (key, value) in list(os.environ.items()):
         if key in ['ASAN_ACTIVATION_OPTIONS', 'SCUDO_OPTIONS'] or key.endswith('SAN_OPTIONS'):
             args.append('%s="%s"' % (key, value.replace('"', '\\"')))
     return ' '.join(args)
 
-is_64bit = (subprocess.check_output(['file', sys.argv[0] + '.real']).find('64-bit') != -1)
+is_64bit = str(subprocess.check_output(['file', sys.argv[0] + '.real'])).find('64-bit') != -1
 
 device_env = build_env()
 device_args = ' '.join(sys.argv[1:]) # FIXME: escape?

@@ -48,14 +48,13 @@ static inline T modf(T x, T &iptr) {
     return x;
   } else if (bits.isInf()) {
     iptr = x;
-    return bits.encoding.sign ? T(FPBits<T>::negZero()) : T(FPBits<T>::zero());
+    return bits.getSign() ? T(FPBits<T>::negZero()) : T(FPBits<T>::zero());
   } else {
     iptr = trunc(x);
     if (x == iptr) {
       // If x is already an integer value, then return zero with the right
       // sign.
-      return bits.encoding.sign ? T(FPBits<T>::negZero())
-                                : T(FPBits<T>::zero());
+      return bits.getSign() ? T(FPBits<T>::negZero()) : T(FPBits<T>::zero());
     } else {
       return x - iptr;
     }
@@ -66,7 +65,7 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T copysign(T x, T y) {
   FPBits<T> xbits(x);
-  xbits.encoding.sign = FPBits<T>(y).encoding.sign;
+  xbits.setSign(FPBits<T>(y).getSign());
   return T(xbits);
 }
 
@@ -133,11 +132,11 @@ static inline T ldexp(T x, int exp) {
   // calculating the limit.
   int expLimit = FPBits<T>::maxExponent + MantissaWidth<T>::value + 1;
   if (exp > expLimit)
-    return bits.encoding.sign ? T(FPBits<T>::negInf()) : T(FPBits<T>::inf());
+    return bits.getSign() ? T(FPBits<T>::negInf()) : T(FPBits<T>::inf());
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (exp < -expLimit)
-    return bits.encoding.sign ? T(FPBits<T>::negZero()) : T(FPBits<T>::zero());
+    return bits.getSign() ? T(FPBits<T>::negZero()) : T(FPBits<T>::zero());
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   NormalFloat<T> normal(bits);

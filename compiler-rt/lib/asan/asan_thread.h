@@ -28,8 +28,6 @@ struct DTLS;
 
 namespace __asan {
 
-const u32 kMaxNumberOfThreads = (1 << 22);  // 4M
-
 class AsanThread;
 
 // These objects are created for every thread and are never deleted,

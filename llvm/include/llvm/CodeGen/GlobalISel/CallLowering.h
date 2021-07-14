@@ -281,7 +281,7 @@ public:
     /// \return The number of \p VAs that have been assigned after the first
     ///         one, and which should therefore be skipped from further
     ///         processing.
-    virtual unsigned assignCustomValue(const ArgInfo &Arg,
+    virtual unsigned assignCustomValue(ArgInfo &Arg,
                                        ArrayRef<CCValAssign> VAs) {
       // This is not a pure virtual method because not all targets need to worry
       // about custom values.

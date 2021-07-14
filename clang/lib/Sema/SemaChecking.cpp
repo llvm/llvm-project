@@ -3269,16 +3269,31 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_stdcx:
   case PPC::BI__builtin_ppc_tdw:
   case PPC::BI__builtin_ppc_trapd:
+  case PPC::BI__builtin_ppc_cmpeqb:
+  case PPC::BI__builtin_ppc_setb:
+  case PPC::BI__builtin_ppc_mulhd:
+  case PPC::BI__builtin_ppc_mulhdu:
+  case PPC::BI__builtin_ppc_maddhd:
+  case PPC::BI__builtin_ppc_maddhdu:
+  case PPC::BI__builtin_ppc_maddld:
     return true;
   }
   return false;
 }
 
 static bool SemaFeatureCheck(Sema &S, CallExpr *TheCall,
-                             StringRef FeatureToCheck, unsigned DiagID) {
-  if (!S.Context.getTargetInfo().hasFeature(FeatureToCheck))
-    return S.Diag(TheCall->getBeginLoc(), DiagID) << TheCall->getSourceRange();
-  return false;
+                             StringRef FeatureToCheck, unsigned DiagID,
+                             StringRef DiagArg = "") {
+  if (S.Context.getTargetInfo().hasFeature(FeatureToCheck))
+    return false;
+
+  if (DiagArg.empty())
+    S.Diag(TheCall->getBeginLoc(), DiagID) << TheCall->getSourceRange();
+  else
+    S.Diag(TheCall->getBeginLoc(), DiagID)
+        << DiagArg << TheCall->getSourceRange();
+
+  return true;
 }
 
 bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
@@ -3320,17 +3335,17 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_divde:
   case PPC::BI__builtin_divdeu:
     return SemaFeatureCheck(*this, TheCall, "extdiv",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_bpermd:
     return SemaFeatureCheck(*this, TheCall, "bpermd",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_unpack_vector_int128:
     return SemaFeatureCheck(*this, TheCall, "vsx",
-                            diag::err_ppc_builtin_only_on_pwr7) ||
+                            diag::err_ppc_builtin_only_on_arch, "7") ||
            SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_pack_vector_int128:
     return SemaFeatureCheck(*this, TheCall, "vsx",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_altivec_vgnb:
      return SemaBuiltinConstantArgRange(TheCall, 1, 2, 7);
   case PPC::BI__builtin_altivec_vec_replace_elt:
@@ -3352,6 +3367,17 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_ppc_tw:
   case PPC::BI__builtin_ppc_tdw:
     return SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  case PPC::BI__builtin_ppc_cmpeqb:
+  case PPC::BI__builtin_ppc_setb:
+  case PPC::BI__builtin_ppc_maddhd:
+  case PPC::BI__builtin_ppc_maddhdu:
+  case PPC::BI__builtin_ppc_maddld:
+    return SemaFeatureCheck(*this, TheCall, "isa-v30-instructions",
+                            diag::err_ppc_builtin_only_on_arch, "9");
+  case PPC::BI__builtin_ppc_cmprb:
+    return SemaFeatureCheck(*this, TheCall, "isa-v30-instructions",
+                            diag::err_ppc_builtin_only_on_arch, "9") ||
+           SemaBuiltinConstantArgRange(TheCall, 0, 0, 1);
 #define CUSTOM_BUILTIN(Name, Intr, Types, Acc) \
   case PPC::BI__builtin_##Name: \
     return SemaBuiltinPPCMMACall(TheCall, Types);

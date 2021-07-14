@@ -5973,7 +5973,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       // common case. It should also work for fundamental types too.
       uint32_t BEAlign = 0;
       unsigned OpSize;
-      if (VA.getLocInfo() == CCValAssign::Indirect)
+      if (VA.getLocInfo() == CCValAssign::Indirect ||
+          VA.getLocInfo() == CCValAssign::Trunc)
         OpSize = VA.getLocVT().getFixedSizeInBits();
       else
         OpSize = Flags.isByVal() ? Flags.getByValSize() * 8

@@ -449,7 +449,7 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "MacOS C++20"
+  - label: "MacOS x86_64"
     command: "libcxx/utils/ci/run-buildbot generic-cxx20"
     artifact_paths:
       - "**/test-results.xml"
@@ -457,6 +457,21 @@ steps:
     agents:
       queue: "libcxx-builders"
       os: "macos"
+      arch: "x86_64"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "MacOS arm64"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx20"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+      os: "macos"
+      arch: "arm64"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -495,6 +510,7 @@ steps:
     agents:
       queue: "libcxx-builders"
       os: "macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
+      arch: "x86_64"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -507,6 +523,7 @@ steps:
     agents:
       queue: "libcxx-builders"
       os: "macos10.15"
+      arch: "x86_64"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost

@@ -65,7 +65,7 @@ void RegisterFileStatistics::updateMoveElimInfo(const Instruction &Inst) {
 
   for (size_t I = 0, E = Inst.getDefs().size(); I < E; ++I) {
     const WriteState &WS = Inst.getDefs()[I];
-    const ReadState &RS = Inst.getUses()[E - (I+1)];
+    const ReadState &RS = Inst.getUses()[E - (I + 1)];
 
     MoveEliminationInfo &Info =
         MoveElimInfo[Inst.getDefs()[0].getRegisterFileID()];

@@ -324,8 +324,10 @@ setInPlaceFuncArgument(BlockArgument bbArg,
 
 /// Remove the attribute that triggers inplace bufferization on a FuncOp
 /// argument `bbArg`.
-static void removeInPlaceFuncArgument(BlockArgument bbArg) {
+static void removeBufferizationFuncArguments(BlockArgument bbArg) {
   auto funcOp = cast<FuncOp>(bbArg.getOwner()->getParentOp());
+  funcOp.removeArgAttr(bbArg.getArgNumber(),
+                       LinalgDialect::kBufferLayoutAttrName);
   funcOp.removeArgAttr(bbArg.getArgNumber(),
                        LinalgDialect::kInplaceableAttrName);
 }
@@ -2113,6 +2115,22 @@ static LogicalResult bufferize(OpBuilder &b, linalg::YieldOp yieldOp,
     return success();
   llvm_unreachable("unexpected yieldOp");
 }
+
+/// Bufferization for tensor::ExtractOp just translate to memref.load, it only
+/// reads the tensor.
+static LogicalResult bufferize(OpBuilder &b, tensor::ExtractOp extractOp,
+                               BlockAndValueMapping &bvm,
+                               BufferizationAliasInfo &aliasInfo) {
+  // Take a guard before anything else.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(extractOp);
+
+  Location loc = extractOp.getLoc();
+  Value srcMemref = lookup(bvm, extractOp.tensor());
+  Value l = b.create<memref::LoadOp>(loc, srcMemref, extractOp.indices());
+  extractOp.replaceAllUsesWith(l);
+  return success();
+}
 //===----------------------------------------------------------------------===//
 // Bufferization analyses.
 //===----------------------------------------------------------------------===//
@@ -2308,6 +2326,7 @@ static LogicalResult bufferizeFuncOpInternals(
             scf::ForOp,
             InitTensorOp,
             InsertSliceOp,
+            tensor::ExtractOp,
             LinalgOp,
             ReturnOp,
             TiledLoopOp,
@@ -2377,6 +2396,8 @@ static Operation *getEquivalentAlloc(Value value,
 static BlockArgument
 getEquivalentEnclosingFuncBBArg(Value v,
                                 const BufferizationAliasInfo &aliasInfo) {
+  if (!v.getType().isa<RankedTensorType>())
+    return nullptr;
   Operation *op = v.getParentBlock()->getParentOp();
   FuncOp funcOp = dyn_cast<FuncOp>(op);
   if (!funcOp)
@@ -2453,6 +2474,12 @@ static LogicalResult bufferizeFuncOpBoundary(
   // 1. For each FuncOp result, keep track of which inplace argument it reuses.
   SmallVector<Value> returnValues;
   for (OpOperand &returnOperand : returnOp->getOpOperands()) {
+    // If not a renturn tensor type just forward it.
+    if (!returnOperand.get().getType().isa<RankedTensorType>()) {
+      returnValues.push_back(returnOperand.get());
+      continue;
+    }
+
     // If return operand is equivalent to some bbArg, no need to return it.
     Value returnVal = returnOperand.get();
     if (getEquivalentEnclosingFuncBBArg(returnVal, aliasInfo))
@@ -2608,6 +2635,97 @@ static void applyEnablingTransformations(ModuleOp moduleOp) {
   (void)applyPatternsAndFoldGreedily(moduleOp, std::move(patterns));
 }
 
+static void
+foreachCaller(const DenseMap<FuncOp, DenseSet<Operation *>> &callerMap,
+              FuncOp callee, llvm::function_ref<void(Operation *)> doit) {
+  auto itCallers = callerMap.find(callee);
+  if (itCallers == callerMap.end())
+    return;
+  for (Operation *caller : itCallers->second)
+    doit(caller);
+}
+
+/// Postprocess the linalg.buffer_layout annotation across function boundaries.
+/// This is a purely mechanical process that may later become part of a
+/// separate pass with its own layout assignment heuristic.
+static void layoutPostProcessing(ModuleOp moduleOp) {
+  SmallVector<FuncOp> orderedFuncOps;
+  DenseMap<FuncOp, DenseSet<Operation *>> callerMap;
+  auto res = getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, callerMap);
+  (void) res;
+  assert(succeeded(res) && "unexpected getFuncOpsOrderedByCalls failure");
+
+  for (FuncOp funcOp : orderedFuncOps) {
+    DenseMap<Operation *, SmallVector<Value>> operandsPerCaller;
+    foreachCaller(callerMap, funcOp, [&](Operation *caller) {
+      operandsPerCaller.try_emplace(caller, SmallVector<Value>());
+    });
+
+    SmallVector<Type> argumentTypes;
+    // Iterate on each function argument and check it it was marked with a
+    // desired layout.
+    for (auto it : llvm::enumerate(funcOp.getType().getInputs())) {
+      int argNumber = it.index();
+      Type inputType = it.value();
+      auto memrefType = inputType.dyn_cast<MemRefType>();
+      auto layoutAttr = funcOp.getArgAttrOfType<AffineMapAttr>(
+          argNumber, LinalgDialect::kBufferLayoutAttrName);
+      AffineMap desiredLayoutMap =
+          layoutAttr ? layoutAttr.getValue() : AffineMap();
+      AffineMap currentLayoutMap =
+          memrefType ? getStridedLinearLayoutMap(memrefType) : AffineMap();
+      if (!memrefType || !layoutAttr || desiredLayoutMap == currentLayoutMap) {
+        argumentTypes.push_back(inputType);
+        foreachCaller(callerMap, funcOp, [&](Operation *caller) {
+          operandsPerCaller.find(caller)->getSecond().push_back(
+              caller->getOperand(argNumber));
+        });
+        continue;
+      }
+
+      // Compute the buffer type with desired layout and add to input argument
+      // types.
+      MemRefType desiredMemrefType = MemRefType::get(
+          memrefType.getShape(), memrefType.getElementType(), desiredLayoutMap);
+      argumentTypes.push_back(desiredMemrefType);
+
+      // If funcOp's body is not empty, change the bbArg type and propagate.
+      if (!funcOp.body().empty()) {
+        BlockArgument bbArg = funcOp.getArgument(argNumber);
+        bbArg.setType(desiredMemrefType);
+        OpBuilder b(bbArg.getContext());
+        b.setInsertionPointToStart(bbArg.getOwner());
+        // Cast back to the original memrefType and let it canonicalize.
+        Value cast =
+            b.create<memref::CastOp>(funcOp.getLoc(), memrefType, bbArg);
+        bbArg.replaceAllUsesExcept(cast, cast.getDefiningOp());
+      }
+
+      // Cast to desired buffer type on all callers to `funcOp`.
+      // TODO: on the callee side, this may even have to trigger a copy to
+      // change the layout. For now let the memref::CastOp fail to verify in
+      // such cases.
+      auto castArg = [&](Operation *caller) {
+        OpBuilder b(caller);
+        Value newOperand = b.create<memref::CastOp>(
+            funcOp.getLoc(), desiredMemrefType, caller->getOperand(argNumber));
+        operandsPerCaller.find(caller)->getSecond().push_back(newOperand);
+      };
+      foreachCaller(callerMap, funcOp, castArg);
+    }
+
+    // Set operands with cast buffer on all callers to `funcOp`.
+    foreachCaller(callerMap, funcOp, [&](Operation *caller) {
+      caller->setOperands(operandsPerCaller.lookup(caller));
+    });
+
+    // Finally set the funcOp type to update the arguments.
+    auto newFuncType = FunctionType::get(moduleOp.getContext(), argumentTypes,
+                                         funcOp.getType().getResults());
+    funcOp.setType(newFuncType);
+  }
+}
+
 void LinalgComprehensiveModuleBufferize::runOnOperation() {
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);
@@ -2672,12 +2790,16 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     }
   }
 
-  // Post-pass cleanup of inplaceable attributes.
+  // Perform a post-processing pass of layout modification at function boundary
+  // according to the kBufferLayoutAttrName.
+  layoutPostProcessing(moduleOp);
+
+  // Post-pass cleanup of inplaceable and buffer_layout attributes.
   moduleOp.walk(
       [&](Operation *op) { op->removeAttr(kInPlaceResultsAttrName); });
   moduleOp.walk([&](FuncOp op) {
     for (BlockArgument bbArg : op.getArguments())
-      removeInPlaceFuncArgument(bbArg);
+      removeBufferizationFuncArguments(bbArg);
   });
 
   OpPassManager cleanupPipeline(OpPassManager("module"));

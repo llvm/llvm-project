@@ -1,4 +1,4 @@
-//===----------------------- View.cpp ---------------------------*- C++ -*-===//
+//===----------------------- InstructionView.cpp ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,8 @@ namespace mca {
 
 InstructionView::~InstructionView() = default;
 
-StringRef InstructionView::printInstructionString(const llvm::MCInst &MCI) const {
+StringRef
+InstructionView::printInstructionString(const llvm::MCInst &MCI) const {
   InstructionString = "";
   MCIP.printInst(&MCI, 0, "", STI, InstrStream);
   InstrStream.flush();

@@ -224,9 +224,9 @@ Most layers that derived from IRLayer can rely on this default implementation
 of the ``add`` method.
 
 These two operations, ``add`` and ``emit``, together constitute the layer
-concept: A layer is a way to wrap a portion of a compiler pipeline (in this case
-the "opt" phase of an LLVM compiler) whose API is is opaque to ORC in an
-interface that allows ORC to invoke it when needed. The add method takes an
+concept: A layer is a way to wrap a part of a compiler pipeline (in this case
+the "opt" phase of an LLVM compiler) whose API is opaque to ORC with an
+interface that ORC can call as needed. The add method takes an
 module in some input program representation (in this case an LLVM IR module) and
 stores it in the target JITDylib, arranging for it to be passed back to the
 Layer's emit method when any symbol defined by that module is requested. Layers

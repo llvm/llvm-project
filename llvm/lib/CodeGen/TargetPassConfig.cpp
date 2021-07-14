@@ -1123,6 +1123,8 @@ void TargetPassConfig::addMachinePasses() {
   // Run post-ra passes.
   addPostRegAlloc();
 
+  addPass(&RemoveRedundantDebugValuesID, false);
+
   addPass(&FixupStatepointCallerSavedID);
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
@@ -1333,8 +1335,8 @@ FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
 }
 
 bool TargetPassConfig::addRegAssignAndRewriteFast() {
-  if (RegAlloc != &useDefaultRegisterAllocator &&
-      RegAlloc != &createFastRegisterAllocator)
+  if (RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator &&
+      RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator)
     report_fatal_error("Must use fast (default) register allocator for unoptimized regalloc.");
 
   addPass(createRegAllocPass(false));

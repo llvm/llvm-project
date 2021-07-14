@@ -1033,7 +1033,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
   for (auto &Arg : CLI.getArgs()) {
     Type *FinalType = Arg.Ty;
     if (Arg.IsByVal)
-      FinalType = cast<PointerType>(Arg.Ty)->getElementType();
+      FinalType = Arg.IndirectType;
     bool NeedsRegBlock = TLI.functionArgumentNeedsConsecutiveRegisters(
         FinalType, CLI.CallConv, CLI.IsVarArg, DL);
 

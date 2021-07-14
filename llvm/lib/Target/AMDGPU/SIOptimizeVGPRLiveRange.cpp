@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass tries to remove unnecessary VGPR live range in divergent if-else
-/// structure.
+/// This pass tries to remove unnecessary VGPR live ranges in divergent if-else
+/// structures and waterfall loops.
 ///
-/// When we do structurization, we usually transform a if-else into two
+/// When we do structurization, we usually transform an if-else into two
 /// sucessive if-then (with a flow block to do predicate inversion). Consider a
 /// simple case after structurization: A divergent value %a was defined before
 /// if-else and used in both THEN (use in THEN is optional) and ELSE part:
@@ -29,10 +29,10 @@
 ///
 ///  As register allocator has no idea of the thread-control-flow, it will just
 ///  assume %a would be alive in the whole range of bb.then because of a later
-///  use in bb.else. On AMDGPU architecture, the VGPR was accessed with respect
+///  use in bb.else. On AMDGPU architecture, the VGPR is accessed with respect
 ///  to exec mask. For this if-else case, the lanes active in bb.then will be
-///  inactive in bb.else, and vice-verse. So we are safe to say that %a was dead
-///  after the last use in bb.then untill the end of the block. The reason is
+///  inactive in bb.else, and vice-versa. So we are safe to say that %a was dead
+///  after the last use in bb.then until the end of the block. The reason is
 ///  the instructions in bb.then will only overwrite lanes that will never be
 ///  accessed in bb.else.
 ///
@@ -45,6 +45,28 @@
 ///  1.) The def-point should be in the same loop-level as if-else-endif to make
 ///      sure the second loop iteration still get correct data.
 ///  2.) There should be no further uses after the IF-ELSE region.
+///
+///
+/// Waterfall loops get inserted around instructions that use divergent values
+/// but can only be executed with a uniform value. For example an indirect call
+/// to a divergent address:
+///    bb.start:
+///      %a = ...
+///      %fun = ...
+///      ...
+///    bb.loop:
+///      call %fun (%a)
+///      ... // %a can be dead here
+///      loop %bb.loop
+///
+///  The loop block is executed multiple times, but it is run exactly once for
+///  each active lane. Similar to the if-else case, the register allocator
+///  assumes that %a is live throughout the loop as it is used again in the next
+///  iteration. If %a is a VGPR that is unused after the loop, it does not need
+///  to be live after its last use in the loop block. By inserting a phi-node at
+///  the start of bb.loop that is undef when coming from bb.loop, the register
+///  allocation knows that the value of %a does not need to be preserved through
+///  iterations of the loop.
 ///
 //
 //===----------------------------------------------------------------------===//
@@ -89,6 +111,10 @@ public:
                             SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks,
                             SmallVectorImpl<Register> &CandidateRegs) const;
 
+  void collectWaterfallCandidateRegisters(
+      MachineBasicBlock *Loop,
+      SmallSetVector<Register, 16> &CandidateRegs) const;
+
   void findNonPHIUsesInBlock(Register Reg, MachineBasicBlock *MBB,
                              SmallVectorImpl<MachineInstr *> &Uses) const;
 
@@ -104,6 +130,8 @@ public:
   optimizeLiveRange(Register Reg, MachineBasicBlock *If,
                     MachineBasicBlock *Flow, MachineBasicBlock *Endif,
                     SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const;
+
+  void optimizeWaterfallLiveRange(Register Reg, MachineBasicBlock *If) const;
 
   SIOptimizeVGPRLiveRange() : MachineFunctionPass(ID) {}
 
@@ -278,6 +306,54 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
   }
 }
 
+/// Collect the registers used in the waterfall loop block that are defined
+/// before.
+void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
+    MachineBasicBlock *Loop,
+    SmallSetVector<Register, 16> &CandidateRegs) const {
+
+  for (auto &MI : Loop->instrs()) {
+    if (MI.isDebugInstr())
+      continue;
+
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.getReg() || MO.isDef())
+        continue;
+
+      Register MOReg = MO.getReg();
+      // We can only optimize AGPR/VGPR virtual register
+      if (MOReg.isPhysical() || !TRI->isVectorRegister(*MRI, MOReg))
+        continue;
+
+      if (MO.readsReg()) {
+        const MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
+        // Make sure the value is defined before the LOOP block
+        if (DefMBB != Loop && !CandidateRegs.contains(MOReg)) {
+          // If the variable is used after the loop, the register coalescer will
+          // merge the newly created register and remove the phi node again.
+          // Just do nothing in that case.
+          LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(MOReg);
+          bool IsUsed = false;
+          for (auto *Succ : Loop->successors()) {
+            if (Succ != Loop && OldVarInfo.isLiveIn(*Succ, MOReg, *MRI)) {
+              IsUsed = true;
+              break;
+            }
+          }
+          if (!IsUsed) {
+            LLVM_DEBUG(dbgs() << "Found candidate reg: "
+                              << printReg(MOReg, TRI, 0, MRI) << '\n');
+            CandidateRegs.insert(MOReg);
+          } else {
+            LLVM_DEBUG(dbgs() << "Reg is used after loop, ignoring: "
+                              << printReg(MOReg, TRI, 0, MRI) << '\n');
+          }
+        }
+      }
+    }
+  }
+}
+
 // Re-calculate the liveness of \p Reg in the THEN-region
 void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
     Register Reg, MachineBasicBlock *If, MachineBasicBlock *Flow) const {
@@ -403,12 +479,8 @@ void SIOptimizeVGPRLiveRange::optimizeLiveRange(
   }
 
   // Replace all uses in the ELSE region or the PHIs in ENDIF block
-  for (auto I = MRI->use_begin(Reg), E = MRI->use_end(); I != E;) {
-    MachineOperand &O = *I;
-    // This is a little bit tricky, the setReg() will update the linked list,
-    // so we have to increment the iterator before setReg() to avoid skipping
-    // some uses.
-    ++I;
+  // Use early increment range because setReg() will update the linked list.
+  for (auto &O : make_early_inc_range(MRI->use_operands(Reg))) {
     auto *UseMI = O.getParent();
     auto *UseBlock = UseMI->getParent();
     // Replace uses in Endif block
@@ -429,6 +501,53 @@ void SIOptimizeVGPRLiveRange::optimizeLiveRange(
 
   updateLiveRangeInElseRegion(Reg, NewReg, Flow, Endif, ElseBlocks);
   updateLiveRangeInThenRegion(Reg, If, Flow);
+}
+
+void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
+    Register Reg, MachineBasicBlock *Loop) const {
+  // Insert a new PHI, marking the value from the last loop iteration undef.
+  LLVM_DEBUG(dbgs() << "Optimizing " << printReg(Reg, TRI) << '\n');
+  const auto *RC = MRI->getRegClass(Reg);
+  Register NewReg = MRI->createVirtualRegister(RC);
+  Register UndefReg = MRI->createVirtualRegister(RC);
+
+  // Replace all uses in the LOOP region
+  // Use early increment range because setReg() will update the linked list.
+  for (auto &O : make_early_inc_range(MRI->use_operands(Reg))) {
+    auto *UseMI = O.getParent();
+    auto *UseBlock = UseMI->getParent();
+    // Replace uses in Loop block
+    if (UseBlock == Loop)
+      O.setReg(NewReg);
+  }
+
+  MachineInstrBuilder PHI = BuildMI(*Loop, Loop->getFirstNonPHI(), DebugLoc(),
+                                    TII->get(TargetOpcode::PHI), NewReg);
+  for (auto *Pred : Loop->predecessors()) {
+    if (Pred == Loop)
+      PHI.addReg(UndefReg, RegState::Undef).addMBB(Pred);
+    else
+      PHI.addReg(Reg).addMBB(Pred);
+  }
+
+  LiveVariables::VarInfo &NewVarInfo = LV->getVarInfo(NewReg);
+  LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
+
+  // collectWaterfallCandidateRegisters only collects registers that are dead
+  // after the loop. So we know that the old reg is not live throughout the
+  // whole block anymore.
+  OldVarInfo.AliveBlocks.reset(Loop->getNumber());
+
+  // Mark the last use as kill
+  for (auto &MI : reverse(Loop->instrs())) {
+    if (MI.readsRegister(NewReg, TRI)) {
+      MI.addRegisterKilled(NewReg, TRI);
+      NewVarInfo.Kills.push_back(&MI);
+      break;
+    }
+  }
+  assert(!NewVarInfo.Kills.empty() &&
+         "Failed to find last usage of register in loop");
 }
 
 char SIOptimizeVGPRLiveRange::ID = 0;
@@ -491,6 +610,16 @@ bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
         // Now we are safe to optimize.
         for (auto Reg : CandidateRegs)
           optimizeLiveRange(Reg, &MBB, IfTarget, Endif, ElseBlocks);
+      } else if (MI.getOpcode() == AMDGPU::SI_WATERFALL_LOOP) {
+        LLVM_DEBUG(dbgs() << "Checking Waterfall loop: "
+                          << printMBBReference(MBB) << '\n');
+
+        SmallSetVector<Register, 16> CandidateRegs;
+        collectWaterfallCandidateRegisters(&MBB, CandidateRegs);
+        MadeChange |= !CandidateRegs.empty();
+        // Now we are safe to optimize.
+        for (auto Reg : CandidateRegs)
+          optimizeWaterfallLiveRange(Reg, &MBB);
       }
     }
   }

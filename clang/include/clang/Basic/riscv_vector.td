@@ -131,7 +131,7 @@
 // There are a number of attributes that are used to constraint the number and
 // shape of the builtins generated. Refer to the comments below for them.
 class RVVBuiltin<string suffix, string prototype, string type_range,
-                 string managed_suffix = ""> {
+                 string mangled_suffix = ""> {
   // Base name that will be prepended in __builtin_rvv_ and appended the
   // computed Suffix.
   string Name = NAME;
@@ -144,6 +144,10 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // '_'. For example, the default mangled name  is `vadd` for Name `vadd_vv`.
   // It's used for describe some special naming cases.
   string MangledName = "";
+
+  // If not empty, each MangledName will have this appended after an
+  // underscore (_). It is instantiated like Prototype.
+  string MangledSuffix = mangled_suffix;
 
   // The different variants of the builtin, parameterised with a type.
   string TypeRange = type_range;
@@ -1711,29 +1715,30 @@ let HasMask = false,
 }
 
 // Miscellaneous
-let HasMask = false, HasVL = false, HasNoMaskedOverloaded = false,
-    IRName = "" in {
+let HasMask = false, HasVL = false, IRName = "" in {
   let Name = "vreinterpret_v",
       ManualCodegen = [{
         return Builder.CreateBitCast(Ops[0], ResultType);
       }] in {
     // Reinterpret between different type under the same SEW and LMUL
-    def vreinterpret_i_u : RVVBuiltin<"Uvv", "vUv", "csil">;
-    def vreinterpret_i_f : RVVBuiltin<"Fvv", "vFv", "il">;
-    def vreinterpret_u_i : RVVBuiltin<"vUv", "Uvv", "csil">;
-    def vreinterpret_u_f : RVVBuiltin<"FvUv", "UvFv", "il">;
-    def vreinterpret_f_i : RVVBuiltin<"vFv", "Fvv", "il">;
-    def vreinterpret_f_u : RVVBuiltin<"UvFv", "FvUv", "il">;
+    def vreinterpret_i_u : RVVBuiltin<"Uvv", "vUv", "csil", "v">;
+    def vreinterpret_i_f : RVVBuiltin<"Fvv", "vFv", "il", "v">;
+    def vreinterpret_u_i : RVVBuiltin<"vUv", "Uvv", "csil", "Uv">;
+    def vreinterpret_u_f : RVVBuiltin<"FvUv", "UvFv", "il", "Uv">;
+    def vreinterpret_f_i : RVVBuiltin<"vFv", "Fvv", "il", "Fv">;
+    def vreinterpret_f_u : RVVBuiltin<"UvFv", "FvUv", "il", "Fv">;
 
     // Reinterpret between different SEW under the same LMUL
     foreach dst_sew = ["(FixedSEW:8)", "(FixedSEW:16)", "(FixedSEW:32)",
                        "(FixedSEW:64)"] in {
-      def vreinterpret_i_ # dst_sew : RVVBuiltin<"v" # dst_sew # "v", dst_sew # "vv", "csil">;
-      def vreinterpret_u_ # dst_sew : RVVBuiltin<"Uv" # dst_sew # "Uv", dst_sew # "UvUv", "csil">;
+      def vreinterpret_i_ # dst_sew : RVVBuiltin<"v" # dst_sew # "v",
+                                                 dst_sew # "vv", "csil", dst_sew # "v">;
+      def vreinterpret_u_ # dst_sew : RVVBuiltin<"Uv" # dst_sew # "Uv",
+                                                 dst_sew # "UvUv", "csil", dst_sew # "Uv">;
     }
   }
 
-  let Name = "vundefined",
+  let Name = "vundefined", HasNoMaskedOverloaded = false,
       ManualCodegen = [{
         return llvm::UndefValue::get(ResultType);
       }] in {
@@ -1743,7 +1748,7 @@ let HasMask = false, HasVL = false, HasNoMaskedOverloaded = false,
 
   // LMUL truncation
   // C/C++ Operand: VecTy, IR Operand: VecTy, Index
-  let Name = "vlmul_trunc_v",
+  let Name = "vlmul_trunc_v", MangledName = "vlmul_trunc",
       ManualCodegen = [{ {
         ID = Intrinsic::experimental_vector_extract;
         IntrinsicTypes = {ResultType, Ops[0]->getType()};
@@ -1752,14 +1757,16 @@ let HasMask = false, HasVL = false, HasNoMaskedOverloaded = false,
       } }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:-3)", "(SFixedLog2LMUL:-2)", "(SFixedLog2LMUL:-1)",
                         "(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
-      def vlmul_trunc # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vv", "csilfd">;
-      def vlmul_trunc_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUv", "csil">;
+      def vlmul_trunc # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
+                                              dst_lmul # "vv", "csilfd", dst_lmul # "v">;
+      def vlmul_trunc_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv",
+                                                dst_lmul # "UvUv", "csil", dst_lmul # "Uv">;
     }
   }
 
   // LMUL extension
   // C/C++ Operand: SubVecTy, IR Operand: VecTy, SubVecTy, Index
-  let Name = "vlmul_ext_v",
+  let Name = "vlmul_ext_v", MangledName = "vlmul_ext",
       ManualCodegen = [{
         ID = Intrinsic::experimental_vector_insert;
         IntrinsicTypes = {ResultType, Ops[0]->getType()};
@@ -1770,8 +1777,10 @@ let HasMask = false, HasVL = false, HasNoMaskedOverloaded = false,
       }] in {
     foreach dst_lmul = ["(LFixedLog2LMUL:-2)", "(LFixedLog2LMUL:-1)", "(LFixedLog2LMUL:-0)",
                         "(LFixedLog2LMUL:1)", "(LFixedLog2LMUL:2)", "(LFixedLog2LMUL:3)"] in {
-      def vlmul_ext # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vv", "csilfd">;
-      def vlmul_ext_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUv", "csil">;
+      def vlmul_ext # dst_lmul : RVVBuiltin<"v" # dst_lmul # "v",
+                                            dst_lmul # "vv", "csilfd", dst_lmul # "v">;
+      def vlmul_ext_u # dst_lmul : RVVBuiltin<"Uv" # dst_lmul # "Uv",
+                                              dst_lmul # "UvUv", "csil", dst_lmul # "Uv">;
     }
   }
 
@@ -1788,8 +1797,8 @@ let HasMask = false, HasVL = false, HasNoMaskedOverloaded = false,
       }
       }] in {
     foreach dst_lmul = ["(SFixedLog2LMUL:0)", "(SFixedLog2LMUL:1)", "(SFixedLog2LMUL:2)"] in {
-      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilfd">;
-      def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil">;
+      def : RVVBuiltin<"v" # dst_lmul # "v", dst_lmul # "vvKz", "csilfd", dst_lmul # "v">;
+      def : RVVBuiltin<"Uv" # dst_lmul # "Uv", dst_lmul # "UvUvKz", "csil", dst_lmul # "Uv">;
     }
   }
 

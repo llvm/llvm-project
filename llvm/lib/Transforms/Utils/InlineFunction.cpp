@@ -2438,14 +2438,17 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // before we splice the inlined code into the CFG and lose track of which
   // blocks were actually inlined, collect the call sites. We only do this if
   // call graph updates weren't requested, as those provide value handle based
-  // tracking of inlined call sites instead.
+  // tracking of inlined call sites instead. Calls to intrinsics are not
+  // collected because they are not inlineable.
   if (InlinedFunctionInfo.ContainsCalls && !IFI.CG) {
     // Otherwise just collect the raw call sites that were inlined.
     for (BasicBlock &NewBB :
          make_range(FirstNewBlock->getIterator(), Caller->end()))
       for (Instruction &I : NewBB)
         if (auto *CB = dyn_cast<CallBase>(&I))
-          IFI.InlinedCallSites.push_back(CB);
+          if (!(CB->getCalledFunction() &&
+                CB->getCalledFunction()->isIntrinsic()))
+            IFI.InlinedCallSites.push_back(CB);
   }
 
   // If we cloned in _exactly one_ basic block, and if that block ends in a

@@ -1689,6 +1689,26 @@ def : Pat<(atomic_load_64 XForm:$src),  (LDX memrr:$src)>;
 def : Pat<(atomic_store_64 DSForm:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr)>;
 def : Pat<(atomic_store_64 XForm:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
 
+let Predicates = [IsISA3_0, In64BitMode] in {
+def : Pat<(i64 (int_ppc_cmpeqb g8rc:$a, g8rc:$b)),
+          (i64 (SETB8 (CMPEQB $a, $b)))>;
+def : Pat<(i64 (int_ppc_setb g8rc:$a, g8rc:$b)),
+          (i64 (SETB8 (CMPD $a, $b)))>;
+def : Pat<(i64 (int_ppc_maddhd g8rc:$a, g8rc:$b, g8rc:$c)),
+          (i64 (MADDHD $a, $b, $c))>;
+def : Pat<(i64 (int_ppc_maddhdu g8rc:$a, g8rc:$b, g8rc:$c)),
+          (i64 (MADDHDU $a, $b, $c))>;
+def : Pat<(i64 (int_ppc_maddld g8rc:$a, g8rc:$b, g8rc:$c)),
+          (i64 (MADDLD8 $a, $b, $c))>;
+}
+
+let Predicates = [In64BitMode] in {
+def : Pat<(i64 (int_ppc_mulhd g8rc:$a, g8rc:$b)),
+          (i64 (MULHD $a, $b))>;
+def : Pat<(i64 (int_ppc_mulhdu g8rc:$a, g8rc:$b)),
+          (i64 (MULHDU $a, $b))>;
+}
+
 let Predicates = [IsISA3_0] in {
 // DARN (deliver random number)
 // L=0 for 32-bit, L=1 for conditioned random, L=2 for raw random
@@ -1723,8 +1743,6 @@ def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
 
 def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
           (STDCX g8rc:$A, ForceXForm:$dst)>;
-def : Pat<(int_ppc_ldarx ForceXForm:$dst),
-          (LDARX ForceXForm:$dst)>;
 def : Pat<(int_ppc_tdw g8rc:$A, g8rc:$B, i32:$IMM),
           (TD $IMM, $A, $B)>;
 

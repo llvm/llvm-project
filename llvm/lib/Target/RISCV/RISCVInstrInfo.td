@@ -1002,12 +1002,12 @@ def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
 let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
-def PseudoBRIND : Pseudo<(outs), (ins GPR:$rs1, simm12:$imm12), []>,
+def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12:$imm12)>;
 
-def : Pat<(brind GPR:$rs1), (PseudoBRIND GPR:$rs1, 0)>;
-def : Pat<(brind (add GPR:$rs1, simm12:$imm12)),
-          (PseudoBRIND GPR:$rs1, simm12:$imm12)>;
+def : Pat<(brind GPRJALR:$rs1), (PseudoBRIND GPRJALR:$rs1, 0)>;
+def : Pat<(brind (add GPRJALR:$rs1, simm12:$imm12)),
+          (PseudoBRIND GPRJALR:$rs1, simm12:$imm12)>;
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
 // expand to auipc and jalr while encoding, with any given register used as the
@@ -1039,8 +1039,8 @@ def : Pat<(riscv_sret_flag), (SRET X0, X0)>;
 def : Pat<(riscv_mret_flag), (MRET X0, X0)>;
 
 let isCall = 1, Defs = [X1] in
-def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rs1),
-                                [(riscv_call GPR:$rs1)]>,
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
+                                [(riscv_call GPRJALR:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in

@@ -160,6 +160,13 @@ DECLARE__REAL_AND_INTERNAL(uptr, sched_yield, void) {
   return sched_yield();
 }
 
+DECLARE__REAL_AND_INTERNAL(void, usleep, u64 useconds) {
+  struct timespec ts;
+  ts.tv_sec = useconds / 1000000;
+  ts.tv_nsec = (useconds % 1000000) * 1000;
+  nanosleep(&ts, nullptr);
+}
+
 DECLARE__REAL_AND_INTERNAL(uptr, execve, const char *filename,
                            char *const argv[], char *const envp[]) {
   return _REAL(execve)(filename, argv, envp);

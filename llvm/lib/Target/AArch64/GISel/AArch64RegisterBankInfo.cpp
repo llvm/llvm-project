@@ -487,7 +487,7 @@ bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                                const TargetRegisterInfo &TRI,
                                                unsigned Depth) const {
   unsigned Op = MI.getOpcode();
-  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(getIntrinsicID(MI)))
+  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MI.getIntrinsicID()))
     return true;
 
   // Do we have an explicit floating point instruction?
@@ -945,7 +945,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_INTRINSIC: {
     // Check if we know that the intrinsic has any constraints on its register
     // banks. If it does, then update the mapping accordingly.
-    unsigned ID = getIntrinsicID(MI);
+    unsigned ID = MI.getIntrinsicID();
     unsigned Idx = 0;
     if (!isFPIntrinsic(ID))
       break;

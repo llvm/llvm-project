@@ -349,43 +349,47 @@ entry:
 
 
 define void @foo_int32_int8_both(<16 x i32>* %dest, <16 x i8>* readonly %src, i32 %n) {
-; CHECK-LABEL: foo_int32_int8_both:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.s16 q1, [r1, #8]
-; CHECK-NEXT:    vmov.u16 r2, q1[6]
-; CHECK-NEXT:    vmov.u16 r3, q1[4]
-; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
-; CHECK-NEXT:    vmov.u16 r2, q1[7]
-; CHECK-NEXT:    vmov.u16 r3, q1[5]
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r2
-; CHECK-NEXT:    vmov.u16 r2, q1[0]
-; CHECK-NEXT:    vmovlb.u16 q2, q0
-; CHECK-NEXT:    vldrb.s16 q0, [r1]
-; CHECK-NEXT:    vmov.u16 r1, q1[2]
-; CHECK-NEXT:    vstrw.32 q2, [r0, #48]
-; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1
-; CHECK-NEXT:    vmov.u16 r1, q1[3]
-; CHECK-NEXT:    vmov.u16 r2, q1[1]
-; CHECK-NEXT:    vmov q2[3], q2[1], r2, r1
-; CHECK-NEXT:    vmov.u16 r1, q0[6]
-; CHECK-NEXT:    vmovlb.u16 q1, q2
-; CHECK-NEXT:    vmov.u16 r2, q0[4]
-; CHECK-NEXT:    vstrw.32 q1, [r0, #32]
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r1
-; CHECK-NEXT:    vmov.u16 r1, q0[7]
-; CHECK-NEXT:    vmov.u16 r2, q0[5]
-; CHECK-NEXT:    vmov q1[3], q1[1], r2, r1
-; CHECK-NEXT:    vmov.u16 r1, q0[2]
-; CHECK-NEXT:    vmovlb.u16 q1, q1
-; CHECK-NEXT:    vmov.u16 r2, q0[0]
-; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r1
-; CHECK-NEXT:    vmov.u16 r1, q0[3]
-; CHECK-NEXT:    vmov.u16 r2, q0[1]
-; CHECK-NEXT:    vmov q1[3], q1[1], r2, r1
-; CHECK-NEXT:    vmovlb.u16 q0, q1
-; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    bx lr
+; CHECK-LE-LABEL: foo_int32_int8_both:
+; CHECK-LE:       @ %bb.0: @ %entry
+; CHECK-LE-NEXT:    .pad #32
+; CHECK-LE-NEXT:    sub sp, #32
+; CHECK-LE-NEXT:    vldrb.s16 q0, [r1, #8]
+; CHECK-LE-NEXT:    add r2, sp, #16
+; CHECK-LE-NEXT:    vstrw.32 q0, [r2]
+; CHECK-LE-NEXT:    vldrb.s16 q0, [r1]
+; CHECK-LE-NEXT:    mov r1, sp
+; CHECK-LE-NEXT:    vstrw.32 q0, [r1]
+; CHECK-LE-NEXT:    vldrh.u32 q0, [r2, #8]
+; CHECK-LE-NEXT:    vstrw.32 q0, [r0, #48]
+; CHECK-LE-NEXT:    vldrh.u32 q0, [r2]
+; CHECK-LE-NEXT:    vstrw.32 q0, [r0, #32]
+; CHECK-LE-NEXT:    vldrh.u32 q0, [r1, #8]
+; CHECK-LE-NEXT:    vstrw.32 q0, [r0, #16]
+; CHECK-LE-NEXT:    vldrh.u32 q0, [r1]
+; CHECK-LE-NEXT:    vstrw.32 q0, [r0]
+; CHECK-LE-NEXT:    add sp, #32
+; CHECK-LE-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: foo_int32_int8_both:
+; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    .pad #32
+; CHECK-BE-NEXT:    sub sp, #32
+; CHECK-BE-NEXT:    vldrb.s16 q0, [r1, #8]
+; CHECK-BE-NEXT:    add r2, sp, #16
+; CHECK-BE-NEXT:    vstrh.16 q0, [r2]
+; CHECK-BE-NEXT:    vldrb.s16 q0, [r1]
+; CHECK-BE-NEXT:    mov r1, sp
+; CHECK-BE-NEXT:    vstrh.16 q0, [r1]
+; CHECK-BE-NEXT:    vldrh.u32 q0, [r2, #8]
+; CHECK-BE-NEXT:    vstrw.32 q0, [r0, #48]
+; CHECK-BE-NEXT:    vldrh.u32 q0, [r2]
+; CHECK-BE-NEXT:    vstrw.32 q0, [r0, #32]
+; CHECK-BE-NEXT:    vldrh.u32 q0, [r1, #8]
+; CHECK-BE-NEXT:    vstrw.32 q0, [r0, #16]
+; CHECK-BE-NEXT:    vldrh.u32 q0, [r1]
+; CHECK-BE-NEXT:    vstrw.32 q0, [r0]
+; CHECK-BE-NEXT:    add sp, #32
+; CHECK-BE-NEXT:    bx lr
 entry:
   %wide.load = load <16 x i8>, <16 x i8>* %src, align 1
   %0 = sext <16 x i8> %wide.load to <16 x i16>
@@ -416,12 +420,12 @@ define <16 x i16>* @foo_uint32_uint16_quad_offset(<16 x i32>* %dest, <16 x i16>*
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrh.s32 q0, [r1, #32]!
 ; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
-; CHECK-NEXT:    vldrh.s32 q2, [r1, #16]
-; CHECK-NEXT:    vldrh.s32 q3, [r1, #24]
+; CHECK-NEXT:    vldrh.s32 q2, [r1, #24]
+; CHECK-NEXT:    vldrh.s32 q3, [r1, #16]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    vstrw.32 q2, [r0, #32]
+; CHECK-NEXT:    vstrw.32 q2, [r0, #48]
 ; CHECK-NEXT:    vstrw.32 q1, [r0, #16]
-; CHECK-NEXT:    vstrw.32 q3, [r0, #48]
+; CHECK-NEXT:    vstrw.32 q3, [r0, #32]
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
