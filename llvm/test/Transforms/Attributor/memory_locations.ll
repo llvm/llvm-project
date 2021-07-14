@@ -639,20 +639,20 @@ define internal i8 @recursive_not_readnone_internal2(i8* %ptr, i1 %c) {
 ; IS__TUNIT____-NEXT:    [[R:%.*]] = load i8, i8* [[ALLOC]], align 1
 ; IS__TUNIT____-NEXT:    ret i8 [[R]]
 ; IS__TUNIT____:       f:
-; IS__TUNIT____-NEXT:    store i8 1, i8* [[ALLOC]], align 1
+; IS__TUNIT____-NEXT:    store i8 1, i8* [[PTR]], align 1
 ; IS__TUNIT____-NEXT:    ret i8 0
 ;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone
+; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@recursive_not_readnone_internal2
-; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull readnone [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR9]] {
+; IS__CGSCC____-SAME: (i8* nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
 ; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal2(i8* noalias nocapture nofree nonnull readnone dereferenceable(1) undef, i1 noundef false) #[[ATTR9]]
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal2(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) #[[ATTR11]]
 ; IS__CGSCC____-NEXT:    [[R:%.*]] = load i8, i8* [[ALLOC]], align 1
 ; IS__CGSCC____-NEXT:    ret i8 [[R]]
 ; IS__CGSCC____:       f:
-; IS__CGSCC____-NEXT:    store i8 1, i8* [[ALLOC]], align 1
+; IS__CGSCC____-NEXT:    store i8 1, i8* [[PTR]], align 1
 ; IS__CGSCC____-NEXT:    ret i8 0
 ;
   %alloc = alloca i8
@@ -676,7 +676,7 @@ define i8 @readnone_caller2(i1 %c) {
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@readnone_caller2
 ; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #[[ATTR9]] {
-; IS__CGSCC____-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal2(i8* undef, i1 [[C]]) #[[ATTR13:[0-9]+]]
+; IS__CGSCC____-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal2(i8* undef, i1 [[C]]) #[[ATTR12]]
 ; IS__CGSCC____-NEXT:    ret i8 [[R]]
 ;
   %r = call i8 @recursive_not_readnone_internal2(i8* undef, i1 %c)
@@ -742,5 +742,4 @@ define void @argmemonky_caller() {
 ; IS__CGSCC____: attributes #[[ATTR10]] = { nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR11]] = { nofree nosync nounwind }
 ; IS__CGSCC____: attributes #[[ATTR12]] = { nounwind }
-; IS__CGSCC____: attributes #[[ATTR13]] = { nounwind readnone }
 ;.

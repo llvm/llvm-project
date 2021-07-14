@@ -377,36 +377,68 @@ define void @test11() {
 
 ; TEST 12
 define i32 @irreducible_cfg(i32 %0) {
-; CHECK-LABEL: define {{[^@]+}}@irreducible_cfg
-; CHECK-SAME: (i32 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = call noalias i8* @malloc(i64 noundef 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
-; CHECK-NEXT:    store i32 10, i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP7:%.*]]
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], 5
-; CHECK-NEXT:    br label [[TMP13:%.*]]
-; CHECK:       7:
-; CHECK-NEXT:    br label [[TMP8:%.*]]
-; CHECK:       8:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ [[TMP14:%.*]], [[TMP13]] ], [ 1, [[TMP7]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], -1
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP15:%.*]]
-; CHECK:       12:
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
-; CHECK-NEXT:    [[DOT1:%.*]] = phi i32 [ [[TMP6]], [[TMP5]] ], [ [[DOT0]], [[TMP12]] ]
-; CHECK-NEXT:    [[TMP14]] = add nsw i32 [[DOT1]], 1
-; CHECK-NEXT:    br label [[TMP8]]
-; CHECK:       15:
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    call void @free(i8* nocapture noundef [[TMP2]])
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    ret i32 [[TMP17]]
+; IS________OPM-LABEL: define {{[^@]+}}@irreducible_cfg
+; IS________OPM-SAME: (i32 [[TMP0:%.*]]) {
+; IS________OPM-NEXT:    [[TMP2:%.*]] = call noalias i8* @malloc(i64 noundef 4)
+; IS________OPM-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
+; IS________OPM-NEXT:    store i32 10, i32* [[TMP3]], align 4
+; IS________OPM-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0]], 1
+; IS________OPM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP7:%.*]]
+; IS________OPM:       5:
+; IS________OPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], 5
+; IS________OPM-NEXT:    br label [[TMP13:%.*]]
+; IS________OPM:       7:
+; IS________OPM-NEXT:    br label [[TMP8:%.*]]
+; IS________OPM:       8:
+; IS________OPM-NEXT:    [[DOT0:%.*]] = phi i32 [ [[TMP14:%.*]], [[TMP13]] ], [ 1, [[TMP7]] ]
+; IS________OPM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________OPM-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], -1
+; IS________OPM-NEXT:    store i32 [[TMP10]], i32* [[TMP3]], align 4
+; IS________OPM-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], 0
+; IS________OPM-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP15:%.*]]
+; IS________OPM:       12:
+; IS________OPM-NEXT:    br label [[TMP13]]
+; IS________OPM:       13:
+; IS________OPM-NEXT:    [[DOT1:%.*]] = phi i32 [ [[TMP6]], [[TMP5]] ], [ [[DOT0]], [[TMP12]] ]
+; IS________OPM-NEXT:    [[TMP14]] = add nsw i32 [[DOT1]], 1
+; IS________OPM-NEXT:    br label [[TMP8]]
+; IS________OPM:       15:
+; IS________OPM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________OPM-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP3]] to i8*
+; IS________OPM-NEXT:    call void @free(i8* nocapture noundef [[TMP17]])
+; IS________OPM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________OPM-NEXT:    ret i32 [[TMP18]]
+;
+; IS________NPM-LABEL: define {{[^@]+}}@irreducible_cfg
+; IS________NPM-SAME: (i32 [[TMP0:%.*]]) {
+; IS________NPM-NEXT:    [[TMP2:%.*]] = call noalias i8* @malloc(i64 noundef 4)
+; IS________NPM-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
+; IS________NPM-NEXT:    store i32 10, i32* [[TMP3]], align 4
+; IS________NPM-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0]], 1
+; IS________NPM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP7:%.*]]
+; IS________NPM:       5:
+; IS________NPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], 5
+; IS________NPM-NEXT:    br label [[TMP13:%.*]]
+; IS________NPM:       7:
+; IS________NPM-NEXT:    br label [[TMP8:%.*]]
+; IS________NPM:       8:
+; IS________NPM-NEXT:    [[DOT0:%.*]] = phi i32 [ [[TMP14:%.*]], [[TMP13]] ], [ 1, [[TMP7]] ]
+; IS________NPM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________NPM-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], -1
+; IS________NPM-NEXT:    store i32 [[TMP10]], i32* [[TMP3]], align 4
+; IS________NPM-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], 0
+; IS________NPM-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP15:%.*]]
+; IS________NPM:       12:
+; IS________NPM-NEXT:    br label [[TMP13]]
+; IS________NPM:       13:
+; IS________NPM-NEXT:    [[DOT1:%.*]] = phi i32 [ [[TMP6]], [[TMP5]] ], [ [[DOT0]], [[TMP12]] ]
+; IS________NPM-NEXT:    [[TMP14]] = add nsw i32 [[DOT1]], 1
+; IS________NPM-NEXT:    br label [[TMP8]]
+; IS________NPM:       15:
+; IS________NPM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________NPM-NEXT:    call void @free(i8* nocapture noundef [[TMP2]])
+; IS________NPM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________NPM-NEXT:    ret i32 [[TMP17]]
 ;
   %2 = call noalias i8* @malloc(i64 4)
   %3 = bitcast i8* %2 to i32*
