@@ -1,4 +1,6 @@
-; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -instcombine -mattr=+sve -mtriple aarch64-unknown-linux-gnu -scalable-vectorization=on < %s | FileCheck %s
+; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -instcombine -mattr=+sve -mtriple aarch64-unknown-linux-gnu -scalable-vectorization=on \
+; RUN:     -pass-remarks-missed=loop-vectorize < %s 2>%t | FileCheck %s
+; RUN: cat %t | FileCheck %s --check-prefix=CHECK-REMARKS
 
 define void @vec_load(i64 %N, double* nocapture %a, double* nocapture readonly %b) {
 ; CHECK-LABEL: @vec_load
@@ -95,6 +97,10 @@ for.end:
   ret void
 }
 
+; CHECK-REMARKS: UserVF ignored because of invalid costs.
+; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_no_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_no_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
@@ -105,10 +111,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
-  %0 = load float, float* %arrayidx, align 4
-  %1 = tail call fast float @llvm.sin.f32(float %0)
+  %0 = load float, float* %arrayidx, align 4, !dbg !11
+  %1 = tail call fast float @llvm.sin.f32(float %0), !dbg !12
   %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
-  store float %1, float* %arrayidx1, align 4
+  store float %1, float* %arrayidx1, align 4, !dbg !13
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
@@ -117,6 +123,10 @@ for.cond.cleanup:                                 ; preds = %for.body
   ret void
 }
 
+; CHECK-REMARKS: UserVF ignored because of invalid costs.
+; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_fixed_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_fixed_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
@@ -127,10 +137,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
-  %0 = load float, float* %arrayidx, align 4
-  %1 = tail call fast float @llvm.sin.f32(float %0) #3
+  %0 = load float, float* %arrayidx, align 4, !dbg !11
+  %1 = tail call fast float @llvm.sin.f32(float %0) #3, !dbg !12
   %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
-  store float %1, float* %arrayidx1, align 4
+  store float %1, float* %arrayidx1, align 4, !dbg !13
   %inc = add nuw nsw i64 %i.07, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
@@ -183,3 +193,18 @@ attributes #3 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(sin_
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
 !3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+
+!llvm.dbg.cu = !{!4}
+!llvm.module.flags = !{!7}
+!llvm.ident = !{!8}
+
+!4 = distinct !DICompileUnit(language: DW_LANG_C99, file: !5, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !6, splitDebugInlining: false, nameTableKind: None)
+!5 = !DIFile(filename: "t.c", directory: "somedir")
+!6 = !{}
+!7 = !{i32 2, !"Debug Info Version", i32 3}
+!8 = !{!"clang"}
+!9 = distinct !DISubprogram(name: "foo", scope: !5, file: !5, line: 2, type: !10, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !4, retainedNodes: !6)
+!10 = !DISubroutineType(types: !6)
+!11 = !DILocation(line: 3, column: 10, scope: !9)
+!12 = !DILocation(line: 3, column: 20, scope: !9)
+!13 = !DILocation(line: 3, column: 30, scope: !9)
