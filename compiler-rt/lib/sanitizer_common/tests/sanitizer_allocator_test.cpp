@@ -1188,35 +1188,31 @@ class RedZoneMemoryMapper {
 
 TEST(SanitizerCommon, SizeClassAllocator64PackedCounterArray) {
   NoMemoryMapper no_memory_mapper;
-  typedef Allocator64::PackedCounterArray<NoMemoryMapper>
-      NoMemoryPackedCounterArray;
-
   for (int i = 0; i < 64; i++) {
     // Various valid counter's max values packed into one word.
-    NoMemoryPackedCounterArray counters_2n(1, 1ULL << i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters_2n(1, 1ULL << i,
+                                                &no_memory_mapper);
     EXPECT_EQ(8ULL, no_memory_mapper.last_request_buffer_size);
 
     // Check the "all bit set" values too.
-    NoMemoryPackedCounterArray counters_2n1_1(1, ~0ULL >> i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters_2n1_1(1, ~0ULL >> i,
+                                                   &no_memory_mapper);
     EXPECT_EQ(8ULL, no_memory_mapper.last_request_buffer_size);
 
     // Verify the packing ratio, the counter is expected to be packed into the
     // closest power of 2 bits.
-    NoMemoryPackedCounterArray counters(64, 1ULL << i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters(64, 1ULL << i, &no_memory_mapper);
     EXPECT_EQ(8ULL * RoundUpToPowerOfTwo(i + 1),
               no_memory_mapper.last_request_buffer_size);
   }
 
   RedZoneMemoryMapper memory_mapper;
-  typedef Allocator64::PackedCounterArray<RedZoneMemoryMapper>
-      RedZonePackedCounterArray;
   // Go through 1, 2, 4, 8, .. 64 bits per counter.
   for (int i = 0; i < 7; i++) {
     // Make sure counters request one memory page for the buffer.
     const u64 kNumCounters = (GetPageSize() / 8) * (64 >> i);
-    RedZonePackedCounterArray counters(kNumCounters,
-                                       1ULL << ((1 << i) - 1),
-                                       &memory_mapper);
+    Allocator64::PackedCounterArray counters(
+        kNumCounters, 1ULL << ((1 << i) - 1), &memory_mapper);
     counters.Inc(0);
     for (u64 c = 1; c < kNumCounters - 1; c++) {
       ASSERT_EQ(0ULL, counters.Get(c));
