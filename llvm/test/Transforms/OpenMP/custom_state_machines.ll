@@ -1526,51 +1526,17 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2c_389eb_simple_state_machine_pure_l72
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noalias noundef nonnull readnone align 8 dereferenceable(24) @[[GLOB1]], i1 noundef false, i1 noundef false, i1 noundef true)
-; CHECK-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
-; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
-; CHECK:       worker_state_machine.begin:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(i8** [[WORKER_WORK_FN_ADDR]])
-; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load i8*, i8** [[WORKER_WORK_FN_ADDR]], align 8
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast i8* [[WORKER_WORK_FN]] to void (i16, i32)*
-; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq i8* [[WORKER_WORK_FN]], null
-; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
-; CHECK:       worker_state_machine.finished:
-; CHECK-NEXT:    ret void
-; CHECK:       worker_state_machine.is_active.check:
-; CHECK-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
-; CHECK:       worker_state_machine.parallel_region.check:
-; CHECK-NEXT:    [[WORKER_CHECK_PARALLEL_REGION:%.*]] = icmp eq void (i16, i32)* [[WORKER_WORK_FN_ADDR_CAST]], @__omp_outlined__13_wrapper
-; CHECK-NEXT:    br i1 [[WORKER_CHECK_PARALLEL_REGION]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK1:%.*]]
-; CHECK:       worker_state_machine.parallel_region.execute:
-; CHECK-NEXT:    call void @__omp_outlined__13_wrapper(i16 0, i32 [[TMP0]])
-; CHECK-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
-; CHECK:       worker_state_machine.parallel_region.check1:
-; CHECK-NEXT:    br i1 true, label [[WORKER_STATE_MACHINE_PARALLEL_REGION_EXECUTE2:%.*]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_CHECK3:%.*]]
-; CHECK:       worker_state_machine.parallel_region.execute2:
-; CHECK-NEXT:    call void @__omp_outlined__14_wrapper(i16 0, i32 [[TMP0]])
-; CHECK-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; CHECK:       worker_state_machine.parallel_region.check3:
-; CHECK-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END]]
-; CHECK:       worker_state_machine.parallel_region.end:
-; CHECK-NEXT:    call void @__kmpc_kernel_end_parallel()
-; CHECK-NEXT:    br label [[WORKER_STATE_MACHINE_DONE_BARRIER]]
-; CHECK:       worker_state_machine.done.barrier:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
-; CHECK-NEXT:    br label [[WORKER_STATE_MACHINE_BEGIN]]
-; CHECK:       thread.user_code.check:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noalias noundef nonnull readnone align 8 dereferenceable(24) @[[GLOB1]], i1 noundef true, i1 noundef false, i1 noundef true)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
 ; CHECK-NEXT:    call void @__omp_outlined__12(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 false, i1 true)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
 ; CHECK-NEXT:    ret void

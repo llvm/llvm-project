@@ -111,7 +111,10 @@ inline std::string getAllAssumeClauseOptions() {
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
 ///       To complete this, more enum values will need to be moved here.
 enum class OMPScheduleType {
+  StaticChunked = 33,
   Static = 34, // static unspecialized
+  DistributeChunked = 91,
+  Distribute = 92,
   DynamicChunked = 35,
   GuidedChunked = 36, // guided unspecialized
   Runtime = 37,
