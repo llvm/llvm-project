@@ -3,41 +3,25 @@
 ; REQUIRES: asserts
 ; ModuleID = 'single_threaded_exeuction.c'
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
-
-@0 = private unnamed_addr constant [1 x i8] c"\00", align 1
-@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @0, i32 0, i32 0) }, align 8
-
-
-; CHECK-NOT: [openmp-opt] Basic block @kernel entry is executed by a single thread.
-; CHECK: [openmp-opt] Basic block @kernel if.then is executed by a single thread.
-; CHECK-NOT: [openmp-opt] Basic block @kernel if.else is executed by a single thread.
-; CHECK-NOT: [openmp-opt] Basic block @kernel if.end is executed by a single thread.
-define void @kernel() {
-  %call = call i32 @__kmpc_target_init(%struct.ident_t* nonnull @1, i1 false, i1 false, i1 false)
-  %cmp = icmp eq i32 %call, -1
-  br i1 %cmp, label %if.then, label %if.else
-if.then:
+define weak void @kernel() {
+  call void @__kmpc_kernel_init(i32 512, i16 1)
   call void @nvptx()
   call void @amdgcn()
-  br label %if.end
-if.else:
-  br label %if.end
-if.end:
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 true)
   ret void
 }
 
 ; REMARKS: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
 ; REMARKS-NOT: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
 
-; CHECK-DAG: [openmp-opt] Basic block @nvptx entry is executed by a single thread.
-; CHECK-DAG: [openmp-opt] Basic block @nvptx if.then is executed by a single thread.
-; CHECK-DAG: [openmp-opt] Basic block @nvptx if.end is executed by a single thread.
+; CHECK-NOT: [openmp-opt] Basic block @nvptx entry is executed by a single thread.
+; CHECK: [openmp-opt] Basic block @nvptx if.then is executed by a single thread.
+; CHECK-NOT: [openmp-opt] Basic block @nvptx if.end is executed by a single thread.
 ; Function Attrs: noinline
 define internal void @nvptx() {
 entry:
-  br i1 true, label %if.then, label %if.end
+  %call = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %cmp = icmp eq i32 %call, 0
+  br i1 %cmp, label %if.then, label %if.end
 
 if.then:
   call void @foo()
@@ -50,13 +34,15 @@ if.end:
   ret void
 }
 
-; CHECK-DAG: [openmp-opt] Basic block @amdgcn entry is executed by a single thread.
-; CHECK-DAG: [openmp-opt] Basic block @amdgcn if.then is executed by a single thread.
-; CHECK-DAG: [openmp-opt] Basic block @amdgcn if.end is executed by a single thread.
+; CHECK-NOT: [openmp-opt] Basic block @amdgcn entry is executed by a single thread.
+; CHECK: [openmp-opt] Basic block @amdgcn if.then is executed by a single thread.
+; CHECK-NOT: [openmp-opt] Basic block @amdgcn if.end is executed by a single thread.
 ; Function Attrs: noinline
 define internal void @amdgcn() {
 entry:
-  br i1 false, label %if.then, label %if.end
+  %call = call i32 @llvm.amdgcn.workitem.id.x()
+  %cmp = icmp eq i32 %call, 0
+  br i1 %cmp, label %if.then, label %if.end
 
 if.then:
   call void @foo()
@@ -101,10 +87,7 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-declare void @__kmpc_kernel_prepare_parallel(i8*)
-
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
-declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
+declare void @__kmpc_kernel_init(i32, i16)
 
 attributes #0 = { cold noinline }
 

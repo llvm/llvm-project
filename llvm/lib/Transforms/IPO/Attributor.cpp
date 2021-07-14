@@ -26,7 +26,6 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
@@ -173,22 +172,6 @@ bool AA::isValidInScope(const Value &V, const Function *Scope) {
     return I->getFunction() == Scope;
   if (auto *A = dyn_cast<Argument>(&V))
     return A->getParent() == Scope;
-  return false;
-}
-
-bool AA::isValidAtPosition(const Value &V, const Instruction &CtxI,
-                           InformationCache &InfoCache) {
-  if (isa<Constant>(V))
-    return true;
-  const Function *Scope = CtxI.getFunction();
-  if (auto *A = dyn_cast<Argument>(&V))
-    return A->getParent() == Scope;
-  if (auto *I = dyn_cast<Instruction>(&V))
-    if (I->getFunction() == Scope) {
-      const DominatorTree *DT =
-          InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*Scope);
-      return DT && DT->dominates(I, &CtxI);
-    }
   return false;
 }
 
@@ -626,20 +609,8 @@ void IRPosition::verify() {
 Optional<Constant *>
 Attributor::getAssumedConstant(const Value &V, const AbstractAttribute &AA,
                                bool &UsedAssumedInformation) {
-  // First check all callbacks provided by outside AAs. If any of them returns
-  // a non-null value that is different from the associated value, or None, we
-  // assume it's simpliied.
-  IRPosition IRP = IRPosition::value(V, AA.getCallBaseContext());
-  for (auto &CB : SimplificationCallbacks[IRP]) {
-    Optional<Value *> SimplifiedV = CB(IRP, &AA, UsedAssumedInformation);
-    if (!SimplifiedV.hasValue())
-      return llvm::None;
-    if (*SimplifiedV && *SimplifiedV != &IRP.getAssociatedValue() &&
-        isa<Constant>(*SimplifiedV))
-      return cast<Constant>(*SimplifiedV);
-  }
-  const auto &ValueSimplifyAA =
-      getAAFor<AAValueSimplify>(AA, IRP, DepClassTy::NONE);
+  const auto &ValueSimplifyAA = getAAFor<AAValueSimplify>(
+      AA, IRPosition::value(V, AA.getCallBaseContext()), DepClassTy::NONE);
   Optional<Value *> SimplifiedV =
       ValueSimplifyAA.getAssumedSimplifiedValue(*this);
   bool IsKnown = ValueSimplifyAA.isAtFixpoint();
@@ -699,21 +670,6 @@ Attributor::getAssumedSimplified(const IRPosition &IRP,
   return const_cast<Value *>(&IRP.getAssociatedValue());
 }
 
-Optional<Value *> Attributor::translateArgumentToCallSiteContent(
-    Optional<Value *> V, CallBase &CB, const AbstractAttribute &AA,
-    bool &UsedAssumedInformation) {
-  if (!V.hasValue())
-    return V;
-  if (*V == nullptr || isa<Constant>(*V))
-    return V;
-  if (auto *Arg = dyn_cast<Argument>(*V))
-    if (!Arg->hasPointeeInMemoryValueAttr())
-      return getAssumedSimplified(
-          IRPosition::callsite_argument(CB, Arg->getArgNo()), AA,
-          UsedAssumedInformation);
-  return nullptr;
-}
-
 Attributor::~Attributor() {
   // The abstract attributes are allocated via the BumpPtrAllocator Allocator,
   // thus we cannot delete them. We can, and want to, destruct them though.
@@ -725,24 +681,21 @@ Attributor::~Attributor() {
 
 bool Attributor::isAssumedDead(const AbstractAttribute &AA,
                                const AAIsDead *FnLivenessAA,
-                               bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
   const IRPosition &IRP = AA.getIRPosition();
   if (!Functions.count(IRP.getAnchorScope()))
     return false;
-  return isAssumedDead(IRP, &AA, FnLivenessAA, UsedAssumedInformation,
-                       CheckBBLivenessOnly, DepClass);
+  return isAssumedDead(IRP, &AA, FnLivenessAA, CheckBBLivenessOnly, DepClass);
 }
 
 bool Attributor::isAssumedDead(const Use &U,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
-                               bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
   Instruction *UserI = dyn_cast<Instruction>(U.getUser());
   if (!UserI)
     return isAssumedDead(IRPosition::value(*U.get()), QueryingAA, FnLivenessAA,
-                         UsedAssumedInformation, CheckBBLivenessOnly, DepClass);
+                         CheckBBLivenessOnly, DepClass);
 
   if (auto *CB = dyn_cast<CallBase>(UserI)) {
     // For call site argument uses we can check if the argument is
@@ -751,27 +704,25 @@ bool Attributor::isAssumedDead(const Use &U,
       const IRPosition &CSArgPos =
           IRPosition::callsite_argument(*CB, CB->getArgOperandNo(&U));
       return isAssumedDead(CSArgPos, QueryingAA, FnLivenessAA,
-                           UsedAssumedInformation, CheckBBLivenessOnly,
-                           DepClass);
+                           CheckBBLivenessOnly, DepClass);
     }
   } else if (ReturnInst *RI = dyn_cast<ReturnInst>(UserI)) {
     const IRPosition &RetPos = IRPosition::returned(*RI->getFunction());
-    return isAssumedDead(RetPos, QueryingAA, FnLivenessAA,
-                         UsedAssumedInformation, CheckBBLivenessOnly, DepClass);
+    return isAssumedDead(RetPos, QueryingAA, FnLivenessAA, CheckBBLivenessOnly,
+                         DepClass);
   } else if (PHINode *PHI = dyn_cast<PHINode>(UserI)) {
     BasicBlock *IncomingBB = PHI->getIncomingBlock(U);
     return isAssumedDead(*IncomingBB->getTerminator(), QueryingAA, FnLivenessAA,
-                         UsedAssumedInformation, CheckBBLivenessOnly, DepClass);
+                         CheckBBLivenessOnly, DepClass);
   }
 
   return isAssumedDead(IRPosition::value(*UserI), QueryingAA, FnLivenessAA,
-                       UsedAssumedInformation, CheckBBLivenessOnly, DepClass);
+                       CheckBBLivenessOnly, DepClass);
 }
 
 bool Attributor::isAssumedDead(const Instruction &I,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
-                               bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
   const IRPosition::CallBaseContext *CBCtx =
       QueryingAA ? QueryingAA->getCallBaseContext() : nullptr;
@@ -787,8 +738,6 @@ bool Attributor::isAssumedDead(const Instruction &I,
       FnLivenessAA->isAssumedDead(&I)) {
     if (QueryingAA)
       recordDependence(*FnLivenessAA, *QueryingAA, DepClass);
-    if (!FnLivenessAA->isKnownDead(&I))
-      UsedAssumedInformation = true;
     return true;
   }
 
@@ -804,8 +753,6 @@ bool Attributor::isAssumedDead(const Instruction &I,
   if (IsDeadAA.isAssumedDead()) {
     if (QueryingAA)
       recordDependence(IsDeadAA, *QueryingAA, DepClass);
-    if (!IsDeadAA.isKnownDead())
-      UsedAssumedInformation = true;
     return true;
   }
 
@@ -815,11 +762,10 @@ bool Attributor::isAssumedDead(const Instruction &I,
 bool Attributor::isAssumedDead(const IRPosition &IRP,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
-                               bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
   Instruction *CtxI = IRP.getCtxI();
   if (CtxI &&
-      isAssumedDead(*CtxI, QueryingAA, FnLivenessAA, UsedAssumedInformation,
+      isAssumedDead(*CtxI, QueryingAA, FnLivenessAA,
                     /* CheckBBLivenessOnly */ true,
                     CheckBBLivenessOnly ? DepClass : DepClassTy::OPTIONAL))
     return true;
@@ -842,8 +788,6 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
   if (IsDeadAA->isAssumedDead()) {
     if (QueryingAA)
       recordDependence(*IsDeadAA, *QueryingAA, DepClass);
-    if (!IsDeadAA->isKnownDead())
-      UsedAssumedInformation = true;
     return true;
   }
 
@@ -857,6 +801,19 @@ bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
   // Check the trivial case first as it catches void values.
   if (V.use_empty())
     return true;
+
+  // If the value is replaced by another one, for now a constant, we do not have
+  // uses. Note that this requires users of `checkForAllUses` to not recurse but
+  // instead use the `follow` callback argument to look at transitive users,
+  // however, that should be clear from the presence of the argument.
+  bool UsedAssumedInformation = false;
+  Optional<Constant *> C =
+      getAssumedConstant(V, QueryingAA, UsedAssumedInformation);
+  if (C.hasValue() && C.getValue()) {
+    LLVM_DEBUG(dbgs() << "[Attributor] Value is simplified, uses skipped: " << V
+                      << " -> " << *C.getValue() << "\n");
+    return true;
+  }
 
   const IRPosition &IRP = QueryingAA.getIRPosition();
   SmallVector<const Use *, 16> Worklist;
@@ -880,8 +837,7 @@ bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
       continue;
     LLVM_DEBUG(dbgs() << "[Attributor] Check use: " << **U << " in "
                       << *U->getUser() << "\n");
-    bool UsedAssumedInformation = false;
-    if (isAssumedDead(*U, &QueryingAA, LivenessAA, UsedAssumedInformation,
+    if (isAssumedDead(*U, &QueryingAA, LivenessAA,
                       /* CheckBBLivenessOnly */ false, LivenessDepClass)) {
       LLVM_DEBUG(dbgs() << "[Attributor] Dead use, skip!\n");
       continue;
@@ -945,9 +901,7 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
     const Use &U = *Uses[u];
     LLVM_DEBUG(dbgs() << "[Attributor] Check use: " << *U << " in "
                       << *U.getUser() << "\n");
-    bool UsedAssumedInformation = false;
-    if (isAssumedDead(U, QueryingAA, nullptr, UsedAssumedInformation,
-                      /* CheckBBLivenessOnly */ true)) {
+    if (isAssumedDead(U, QueryingAA, nullptr, /* CheckBBLivenessOnly */ true)) {
       LLVM_DEBUG(dbgs() << "[Attributor] Dead use, skip!\n");
       continue;
     }
@@ -1066,8 +1020,7 @@ static bool checkForAllInstructionsImpl(
     Attributor *A, InformationCache::OpcodeInstMapTy &OpcodeInstMap,
     function_ref<bool(Instruction &)> Pred, const AbstractAttribute *QueryingAA,
     const AAIsDead *LivenessAA, const ArrayRef<unsigned> &Opcodes,
-    bool &UsedAssumedInformation, bool CheckBBLivenessOnly = false,
-    bool CheckPotentiallyDead = false) {
+    bool CheckBBLivenessOnly = false) {
   for (unsigned Opcode : Opcodes) {
     // Check if we have instructions with this opcode at all first.
     auto *Insts = OpcodeInstMap.lookup(Opcode);
@@ -1076,9 +1029,8 @@ static bool checkForAllInstructionsImpl(
 
     for (Instruction *I : *Insts) {
       // Skip dead instructions.
-      if (A && !CheckPotentiallyDead &&
-          A->isAssumedDead(IRPosition::value(*I), QueryingAA, LivenessAA,
-                           UsedAssumedInformation, CheckBBLivenessOnly))
+      if (A && A->isAssumedDead(IRPosition::value(*I), QueryingAA, LivenessAA,
+                                CheckBBLivenessOnly))
         continue;
 
       if (!Pred(*I))
@@ -1091,9 +1043,7 @@ static bool checkForAllInstructionsImpl(
 bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          const AbstractAttribute &QueryingAA,
                                          const ArrayRef<unsigned> &Opcodes,
-                                         bool &UsedAssumedInformation,
-                                         bool CheckBBLivenessOnly,
-                                         bool CheckPotentiallyDead) {
+                                         bool CheckBBLivenessOnly) {
 
   const IRPosition &IRP = QueryingAA.getIRPosition();
   // Since we need to provide instructions we have to have an exact definition.
@@ -1104,23 +1054,21 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto *LivenessAA =
-      (CheckBBLivenessOnly || CheckPotentiallyDead)
+      CheckBBLivenessOnly
           ? nullptr
           : &(getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE));
 
   auto &OpcodeInstMap =
       InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
   if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, &QueryingAA,
-                                   LivenessAA, Opcodes, UsedAssumedInformation,
-                                   CheckBBLivenessOnly, CheckPotentiallyDead))
+                                   LivenessAA, Opcodes, CheckBBLivenessOnly))
     return false;
 
   return true;
 }
 
 bool Attributor::checkForAllReadWriteInstructions(
-    function_ref<bool(Instruction &)> Pred, AbstractAttribute &QueryingAA,
-    bool &UsedAssumedInformation) {
+    function_ref<bool(Instruction &)> Pred, AbstractAttribute &QueryingAA) {
 
   const Function *AssociatedFunction =
       QueryingAA.getIRPosition().getAssociatedFunction();
@@ -1135,8 +1083,7 @@ bool Attributor::checkForAllReadWriteInstructions(
   for (Instruction *I :
        InfoCache.getReadOrWriteInstsForFunction(*AssociatedFunction)) {
     // Skip dead instructions.
-    if (isAssumedDead(IRPosition::value(*I), &QueryingAA, &LivenessAA,
-                      UsedAssumedInformation))
+    if (isAssumedDead(IRPosition::value(*I), &QueryingAA, &LivenessAA))
       continue;
 
     if (!Pred(*I))
@@ -1161,6 +1108,7 @@ void Attributor::runTillFixpoint() {
     MaxFixedPointIterations = MaxFixpointIterations.getValue();
   else
     MaxFixedPointIterations = SetFixpointIterations;
+
 
   SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
@@ -1314,9 +1262,7 @@ ChangeStatus Attributor::manifestAttributes() {
       continue;
 
     // Skip dead code.
-    bool UsedAssumedInformation = false;
-    if (isAssumedDead(*AA, nullptr, UsedAssumedInformation,
-                      /* CheckBBLivenessOnly */ true))
+    if (isAssumedDead(*AA, nullptr, /* CheckBBLivenessOnly */ true))
       continue;
     // Check if the manifest debug counter that allows skipping manifestation of
     // AAs
@@ -1432,17 +1378,11 @@ ChangeStatus Attributor::cleanupIR() {
 
     // Do not replace uses in returns if the value is a must-tail call we will
     // not delete.
-    if (auto *RI = dyn_cast<ReturnInst>(U->getUser())) {
+    if (isa<ReturnInst>(U->getUser()))
       if (auto *CI = dyn_cast<CallInst>(OldV->stripPointerCasts()))
         if (CI->isMustTailCall() &&
             (!ToBeDeletedInsts.count(CI) || !isRunOn(*CI->getCaller())))
           return;
-      // If we rewrite a return and the new value is not an argument, strip the
-      // `returned` attribute as it is wrong now.
-      if (!isa<Argument>(NewV))
-        for (auto &Arg : RI->getFunction()->args())
-          Arg.removeAttr(Attribute::Returned);
-    }
 
     // Do not perform call graph altering changes outside the SCC.
     if (auto *CB = dyn_cast<CallBase>(U->getUser()))
@@ -1680,9 +1620,7 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
 
   auto &AAState = AA.getState();
   ChangeStatus CS = ChangeStatus::UNCHANGED;
-  bool UsedAssumedInformation = false;
-  if (!isAssumedDead(AA, nullptr, UsedAssumedInformation,
-                     /* CheckBBLivenessOnly */ true))
+  if (!isAssumedDead(AA, nullptr, /* CheckBBLivenessOnly */ true))
     CS = AA.update(*this);
 
   if (DV.empty()) {
@@ -1847,11 +1785,9 @@ bool Attributor::isValidFunctionSignatureRewrite(
 
   // Forbid must-tail calls for now.
   // TODO:
-  bool UsedAssumedInformation = false;
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(*Fn);
   if (!checkForAllInstructionsImpl(nullptr, OpcodeInstMap, InstPred, nullptr,
-                                   nullptr, {Instruction::Call},
-                                   UsedAssumedInformation)) {
+                                   nullptr, {Instruction::Call})) {
     LLVM_DEBUG(dbgs() << "[Attributor] Cannot rewrite due to instructions\n");
     return false;
   }
@@ -2369,7 +2305,10 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     if (!Callee->getReturnType()->isVoidTy() && !CB.use_empty()) {
 
       IRPosition CBRetPos = IRPosition::callsite_returned(CB);
-      getOrCreateAAFor<AAValueSimplify>(CBRetPos);
+
+      // Call site return integer values might be limited by a constant range.
+      if (Callee->getReturnType()->isIntegerTy())
+        getOrCreateAAFor<AAValueConstantRange>(CBRetPos);
     }
 
     for (int I = 0, E = CB.getNumArgOperands(); I < E; ++I) {
@@ -2418,12 +2357,10 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
   bool Success;
-  bool UsedAssumedInformation = false;
   Success = checkForAllInstructionsImpl(
       nullptr, OpcodeInstMap, CallSitePred, nullptr, nullptr,
       {(unsigned)Instruction::Invoke, (unsigned)Instruction::CallBr,
-       (unsigned)Instruction::Call},
-      UsedAssumedInformation);
+       (unsigned)Instruction::Call});
   (void)Success;
   assert(Success && "Expected the check call to be successful!");
 
@@ -2438,8 +2375,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   };
   Success = checkForAllInstructionsImpl(
       nullptr, OpcodeInstMap, LoadStorePred, nullptr, nullptr,
-      {(unsigned)Instruction::Load, (unsigned)Instruction::Store},
-      UsedAssumedInformation);
+      {(unsigned)Instruction::Load, (unsigned)Instruction::Store});
   (void)Success;
   assert(Success && "Expected the check call to be successful!");
 }
