@@ -117,13 +117,12 @@ define <2 x i16> @cvt_v2f32_v2u16(<2 x float> %src) {
 define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2u32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
-; CHECK-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vsubps %xmm1, %xmm0, %xmm1
-; CHECK-NEXT:    vcvttps2dq %xmm1, %xmm1
-; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
+; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm1
+; CHECK-NEXT:    vpsrad $31, %xmm1, %xmm2
+; CHECK-NEXT:    vsubps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retl
   %res = fptoui <2 x float> %src to <2 x i32>
   ret <2 x i32> %res
