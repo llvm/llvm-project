@@ -2472,7 +2472,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     for (CallBase *CB : MallocCalls) {
       // Skip replacing this if HeapToStack has already claimed it.
-      if (HS && HS->isKnownHeapToStack(*CB))
+      if (HS && HS->isAssumedHeapToStack(*CB))
         continue;
 
       // Find the unique free call to remove it.
