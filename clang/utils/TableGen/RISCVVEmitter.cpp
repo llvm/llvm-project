@@ -170,9 +170,10 @@ private:
 
 public:
   RVVIntrinsic(StringRef Name, StringRef Suffix, StringRef MangledName,
-               StringRef IRName, bool HasSideEffects, bool IsMask,
-               bool HasMaskedOffOperand, bool HasVL, bool HasNoMaskedOverloaded,
-               bool HasAutoDef, StringRef ManualCodegen, const RVVTypes &Types,
+               StringRef MangledSuffix, StringRef IRName, bool HasSideEffects,
+               bool IsMask, bool HasMaskedOffOperand, bool HasVL,
+               bool HasNoMaskedOverloaded, bool HasAutoDef,
+               StringRef ManualCodegen, const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
                StringRef RequiredExtension, unsigned NF);
   ~RVVIntrinsic() = default;
@@ -751,8 +752,8 @@ void RVVType::applyModifier(StringRef Transformer) {
 // RVVIntrinsic implementation
 //===----------------------------------------------------------------------===//
 RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
-                           StringRef NewMangledName, StringRef IRName,
-                           bool HasSideEffects, bool IsMask,
+                           StringRef NewMangledName, StringRef MangledSuffix,
+                           StringRef IRName, bool HasSideEffects, bool IsMask,
                            bool HasMaskedOffOperand, bool HasVL,
                            bool HasNoMaskedOverloaded, bool HasAutoDef,
                            StringRef ManualCodegen, const RVVTypes &OutInTypes,
@@ -771,6 +772,8 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
     MangledName = NewMangledName.str();
   if (!Suffix.empty())
     Name += "_" + Suffix.str();
+  if (!MangledSuffix.empty())
+    MangledName += "_" + MangledSuffix.str();
   if (IsMask) {
     Name += "_m";
   }
@@ -1073,6 +1076,7 @@ void RVVEmitter::createRVVIntrinsics(
     StringRef Name = R->getValueAsString("Name");
     StringRef SuffixProto = R->getValueAsString("Suffix");
     StringRef MangledName = R->getValueAsString("MangledName");
+    StringRef MangledSuffixProto = R->getValueAsString("MangledSuffix");
     StringRef Prototypes = R->getValueAsString("Prototype");
     StringRef TypeRange = R->getValueAsString("TypeRange");
     bool HasMask = R->getValueAsBit("HasMask");
@@ -1147,19 +1151,20 @@ void RVVEmitter::createRVVIntrinsics(
           continue;
 
         auto SuffixStr = getSuffixStr(I, Log2LMUL, SuffixProto);
+        auto MangledSuffixStr = getSuffixStr(I, Log2LMUL, MangledSuffixProto);
         // Create a non-mask intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
-            Name, SuffixStr, MangledName, IRName, HasSideEffects,
-            /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
-            HasNoMaskedOverloaded, HasAutoDef, ManualCodegen, Types.getValue(),
-            IntrinsicTypes, RequiredExtension, NF));
+            Name, SuffixStr, MangledName, MangledSuffixStr, IRName,
+            HasSideEffects, /*IsMask=*/false, /*HasMaskedOffOperand=*/false,
+            HasVL, HasNoMaskedOverloaded, HasAutoDef, ManualCodegen,
+            Types.getValue(), IntrinsicTypes, RequiredExtension, NF));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
               computeTypes(I, Log2LMUL, NF, ProtoMaskSeq);
           Out.push_back(std::make_unique<RVVIntrinsic>(
-              Name, SuffixStr, MangledName, IRNameMask, HasSideEffects,
-              /*IsMask=*/true, HasMaskedOffOperand, HasVL,
+              Name, SuffixStr, MangledName, MangledSuffixStr, IRNameMask,
+              HasSideEffects, /*IsMask=*/true, HasMaskedOffOperand, HasVL,
               HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
               MaskTypes.getValue(), IntrinsicTypes, RequiredExtension, NF));
         }
