@@ -357,8 +357,6 @@ bb:
 define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %in, <2 x i16> addrspace(1)* nocapture %out) #0 {
 ; GFX900-LABEL: vload2_private:
 ; GFX900:       ; %bb.0: ; %entry
-; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; GFX900-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX900-NEXT:    s_add_u32 s0, s0, s9
@@ -420,10 +418,6 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ;
 ; GFX10_DEFAULT-LABEL: vload2_private:
 ; GFX10_DEFAULT:       ; %bb.0: ; %entry
-; GFX10_DEFAULT-NEXT:    s_add_u32 s6, s6, s9
-; GFX10_DEFAULT-NEXT:    s_addc_u32 s7, s7, 0
-; GFX10_DEFAULT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
-; GFX10_DEFAULT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
 ; GFX10_DEFAULT-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
 ; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10_DEFAULT-NEXT:    s_add_u32 s0, s0, s9

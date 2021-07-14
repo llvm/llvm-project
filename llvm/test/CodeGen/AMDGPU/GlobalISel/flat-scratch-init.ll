@@ -28,8 +28,6 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 
 ; TODO: Could optimize out in this case
 ; GCN-LABEL: {{^}}stack_object_in_kernel_no_calls:
-; RW-FLAT:     s_add_u32 flat_scratch_lo, s4, s7
-; RW-FLAT:     s_addc_u32 flat_scratch_hi, s5, 0
 ; RO-FLAT-NOT: flat_scratch
 ; RW-FLAT:     buffer_store_dword
 ; RO-FLAT:     scratch_store_dword
@@ -41,7 +39,8 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; RW-FLAT-NOT: .amdhsa_enable_private_segment
 ; RO-FLAT-NOT: .amdhsa_system_sgpr_private_segment_wavefront_offset
 ; RO-FLAT:     .amdhsa_enable_private_segment 1
-; GCN-NOT:     .amdhsa_reserve_flat_scratch
+; RW-FLAT:     .amdhsa_reserve_flat_scratch 0
+; RO-FLAT-NOT: .amdhsa_reserve_flat_scratch
 ; GCN:         COMPUTE_PGM_RSRC2:SCRATCH_EN: 1
 ; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0

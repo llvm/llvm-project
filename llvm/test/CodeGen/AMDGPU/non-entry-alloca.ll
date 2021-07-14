@@ -15,8 +15,6 @@
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align4(i32 addrspace(1)* %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) {
 ; MUBUF-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align4:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; MUBUF-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
 ; MUBUF-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x8
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
@@ -119,8 +117,6 @@ bb.2:
 define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(i32 addrspace(1)* %out, i32 %arg.cond, i32 %in) {
 ; MUBUF-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; MUBUF:       ; %bb.0: ; %entry
-; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; MUBUF-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; MUBUF-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x8
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0

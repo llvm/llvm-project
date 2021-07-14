@@ -648,6 +648,7 @@ let RecomputePerFunction = 1 in {
 
 include "AArch64InstrFormats.td"
 include "SVEInstrFormats.td"
+include "SMEInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
 
@@ -8115,5 +8116,5 @@ def StoreSwiftAsyncContext
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
-
+include "AArch64SMEInstrInfo.td"
 include "AArch64InstrGISel.td"
