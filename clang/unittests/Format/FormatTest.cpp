@@ -8209,6 +8209,16 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "}\n",
                Style);
 
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("int f(i);\n" // No break here.
+               "int\n"       // Break here.
+               "f(i)\n"
+               "{\n"
+               "  return i + 1;\n"
+               "}\n",
+               Style);
+
   Style = getGNUStyle();
 
   // Test for comments at the end of function declarations.
