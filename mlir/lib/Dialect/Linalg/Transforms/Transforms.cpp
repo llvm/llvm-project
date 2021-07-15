@@ -866,6 +866,9 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
   int64_t rank = padOp.getSourceType().getRank();
   for (unsigned dim = 0; dim < rank; ++dim) {
     auto low = asValue(rewriter, loc, padOp.getMixedLowPad()[dim]);
+    bool hasLowPad = getConstantIntValue(low) != static_cast<int64_t>(0);
+    auto high = asValue(rewriter, loc, padOp.getMixedHighPad()[dim]);
+    bool hasHighPad = getConstantIntValue(high) != static_cast<int64_t>(0);
     auto offset = asValue(rewriter, loc, sliceOp.getMixedOffsets()[dim]);
     auto length = asValue(rewriter, loc, sliceOp.getMixedSizes()[dim]);
     auto srcSize =
@@ -874,7 +877,9 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     // The new amount of low padding is `low - offset`. Except for the case
     // where none of the low padding is read. In that case, the new amount of
     // low padding is zero.
-    Value newLow = max(zero, sub(low, offset));
+    //
+    // Optimization: If low = 0, then newLow = 0.
+    Value newLow = hasLowPad ? max(zero, sub(low, offset)) : zero;
     appendIndex(newLow, newLows, staticNewLows);
 
     // Start reading the data from position `offset - low`. Since the original
@@ -887,7 +892,10 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     // In that case, set the offset to the end of source tensor. The new
     // ExtractSliceOp length will be zero in that case. (Effectively reading no
     // data from the source.)
-    Value newOffset = min(max(sub(offset, low), zero), srcSize);
+    //
+    // Optimization: If low = 0, then the formula can be simplified.
+    Value newOffset = hasLowPad ? min(max(sub(offset, low), zero), srcSize)
+                                : min(offset, srcSize);
     newOffsets.push_back(getAsOpFoldResult(newOffset));
 
     // The original ExtractSliceOp was reading until position `offset + length`.
@@ -906,7 +914,11 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     // endLoc = min(max(offset - low + length, 0), srcSize)
     //
     // The new ExtractSliceOp length is `endLoc - newOffset`.
-    Value endLoc = min(max(add(sub(offset, low), length), zero), srcSize);
+    //
+    // Optimization: If low = 0, then the formula can be simplified.
+    Value endLoc = hasLowPad
+                       ? min(max(add(sub(offset, low), length), zero), srcSize)
+                       : min(add(offset, length), srcSize);
     Value newLength = sub(endLoc, newOffset);
     newLengths.push_back(getAsOpFoldResult(newLength));
 
@@ -925,7 +937,9 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 
     // The amount of high padding is simply the number of elements remaining,
     // so that the result has the same length as the original ExtractSliceOp.
-    Value newHigh = sub(sub(length, newLength), newLow);
+    // As an optimization, if the original high padding is zero, then the new
+    // high padding must also be zero.
+    Value newHigh = hasHighPad ? sub(sub(length, newLength), newLow) : zero;
     appendIndex(newHigh, newHighs, staticNewHighs);
 
     // Only unit stride supported.
