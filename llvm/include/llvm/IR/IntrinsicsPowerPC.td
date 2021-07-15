@@ -1600,3 +1600,23 @@ let TargetPrefix = "ppc" in {
         Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 }
 
+//===----------------------------------------------------------------------===//
+// PowerPC Atomic Intrinsic Definitions.
+let TargetPrefix = "ppc" in {
+  class AtomicRMW128Intrinsic
+    : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+                [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+                [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_atomicrmw_xchg_i128 : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_add_i128  : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_sub_i128  : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_and_i128  : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_or_i128   : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_xor_i128  : AtomicRMW128Intrinsic;
+  def int_ppc_atomicrmw_nand_i128 : AtomicRMW128Intrinsic;
+  def int_ppc_cmpxchg_i128 : Intrinsic<[llvm_i64_ty, llvm_i64_ty],
+                                       [llvm_ptr_ty,
+                                        llvm_i64_ty, llvm_i64_ty,
+                                        llvm_i64_ty, llvm_i64_ty],
+                                       [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+}
