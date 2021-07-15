@@ -177,3 +177,43 @@ func @dynamic_extract_size(%arg0 : tensor<?x5xf32>, %s1: index, %pad : f32) -> t
   %1 = tensor.extract_slice %0[2, 4] [%s1, 4] [1, 1] : tensor<?x13xf32> to tensor<?x4xf32>
   return %1 : tensor<?x4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @dynamic_zero_low_padding
+//       CHECK:   scf.if
+//       CHECK:     tensor.generate
+//       CHECK:   else
+//       CHECK:     %[[SLICE:.*]] = tensor.extract_slice
+//       CHECK:     linalg.pad_tensor %[[SLICE]] low[0, 0]
+func @dynamic_zero_low_padding(%arg0 : tensor<?x?xf32>, %pad : f32,
+                               %o1 : index, %o2 : index,
+                               %s1 : index, %s2 : index)
+    -> tensor<?x?xf32> {
+  %0 = linalg.pad_tensor %arg0 low[0, 0] high[7, 8] {
+    ^bb0(%arg1: index, %arg2: index):
+      linalg.yield %pad : f32
+    } : tensor<?x?xf32> to tensor<?x?xf32>
+  %1 = tensor.extract_slice %0[%o1, %o2] [%s1, %s2] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dynamic_zero_high_padding
+//       CHECK:   scf.if
+//       CHECK:     tensor.generate
+//       CHECK:   else
+//       CHECK:     %[[SLICE:.*]] = tensor.extract_slice
+//       CHECK:     linalg.pad_tensor %[[SLICE]] low[%{{.*}}, %{{.*}}] high[0, 0]
+func @dynamic_zero_high_padding(%arg0 : tensor<?x?xf32>, %pad : f32,
+                                %o1 : index, %o2 : index,
+                                %s1 : index, %s2 : index)
+    -> tensor<?x?xf32> {
+  %0 = linalg.pad_tensor %arg0 low[7, 8] high[0, 0] {
+    ^bb0(%arg1: index, %arg2: index):
+      linalg.yield %pad : f32
+    } : tensor<?x?xf32> to tensor<?x?xf32>
+  %1 = tensor.extract_slice %0[%o1, %o2] [%s1, %s2] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
