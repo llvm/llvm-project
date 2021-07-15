@@ -603,10 +603,14 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
   }
 
   Operation *sliceOp = shapedType.isa<MemRefType>()
-                           ? builder.create<memref::SubViewOp>(
-                                 loc, valueToTile, offsets, sizes, strides)
-                           : builder.create<tensor::ExtractSliceOp>(
-                                 loc, valueToTile, offsets, sizes, strides);
+                           ? builder
+                                 .create<memref::SubViewOp>(
+                                     loc, valueToTile, offsets, sizes, strides)
+                                 .getOperation()
+                           : builder
+                                 .create<tensor::ExtractSliceOp>(
+                                     loc, valueToTile, offsets, sizes, strides)
+                                 .getOperation();
   return sliceOp->getResult(0);
 }
 
