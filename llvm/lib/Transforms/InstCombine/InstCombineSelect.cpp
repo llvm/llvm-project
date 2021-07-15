@@ -2949,9 +2949,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       std::swap(NewT, NewF);
     Value *NewSI =
         Builder.CreateSelect(CondVal, NewT, NewF, SI.getName() + ".idx", &SI);
-    return Gep->isInBounds()
-               ? GetElementPtrInst::CreateInBounds(ElementType, Ptr, {NewSI})
-               : GetElementPtrInst::Create(ElementType, Ptr, {NewSI});
+    return GetElementPtrInst::Create(ElementType, Ptr, {NewSI});
   };
   if (auto *TrueGep = dyn_cast<GetElementPtrInst>(TrueVal))
     if (auto *NewGep = SelectGepWithBase(TrueGep, FalseVal, false))
