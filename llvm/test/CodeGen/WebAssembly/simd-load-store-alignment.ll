@@ -161,6 +161,34 @@ define <16 x i8> @load_lane_i8_a2(i8* %p, <16 x i8> %v) {
   ret <16 x i8> %v1
 }
 
+; 1 is the default alignment for v128.store8_lane so no attribute is needed.
+define void @store_lane_i8_a1(<16 x i8> %v, i8* %p) {
+; CHECK-LABEL: store_lane_i8_a1:
+; CHECK:         .functype store_lane_i8_a1 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store8_lane 0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <16 x i8> %v, i32 0
+  store i8 %x, i8* %p, align 1
+  ret void
+}
+
+; 2 is greater than the default alignment so it is ignored.
+define void @store_lane_i8_a2(<16 x i8> %v, i8* %p) {
+; CHECK-LABEL: store_lane_i8_a2:
+; CHECK:         .functype store_lane_i8_a2 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store8_lane 0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <16 x i8> %v, i32 0
+  store i8 %x, i8* %p, align 2
+  ret void
+}
+
 ; ==============================================================================
 ; 8 x i16
 ; ==============================================================================
@@ -460,6 +488,47 @@ define <8 x i16> @load_lane_i16_a4(i16* %p, <8 x i16> %v) {
   %e = load i16, i16* %p, align 4
   %v1 = insertelement <8 x i16> %v, i16 %e, i32 0
   ret <8 x i16> %v1
+}
+
+define void @store_lane_i16_a1(<8 x i16> %v, i16* %p) {
+; CHECK-LABEL: store_lane_i16_a1:
+; CHECK:         .functype store_lane_i16_a1 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store16_lane 0:p2align=0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <8 x i16> %v, i32 0
+  store i16 %x, i16* %p, align 1
+  ret void
+}
+
+; 2 is the default alignment for v128.store16_lane so no attribute is needed.
+define void @store_lane_i16_a2(<8 x i16> %v, i16* %p) {
+; CHECK-LABEL: store_lane_i16_a2:
+; CHECK:         .functype store_lane_i16_a2 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store16_lane 0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <8 x i16> %v, i32 0
+  store i16 %x, i16* %p, align 2
+  ret void
+}
+
+; 4 is greater than the default alignment so it is ignored.
+define void @store_lane_i16_a4(<8 x i16> %v, i16* %p) {
+; CHECK-LABEL: store_lane_i16_a4:
+; CHECK:         .functype store_lane_i16_a4 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store16_lane 0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <8 x i16> %v, i32 0
+  store i16 %x, i16* %p, align 4
+  ret void
 }
 
 ; ==============================================================================
@@ -789,6 +858,60 @@ define <4 x i32> @load_lane_i32_a8(i32* %p, <4 x i32> %v) {
   ret <4 x i32> %v1
 }
 
+define void @store_lane_i32_a1(<4 x i32> %v, i32* %p) {
+; CHECK-LABEL: store_lane_i32_a1:
+; CHECK:         .functype store_lane_i32_a1 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store32_lane 0:p2align=0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <4 x i32> %v, i32 0
+  store i32 %x, i32* %p, align 1
+  ret void
+}
+
+define void @store_lane_i32_a2(<4 x i32> %v, i32* %p) {
+; CHECK-LABEL: store_lane_i32_a2:
+; CHECK:         .functype store_lane_i32_a2 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store32_lane 0:p2align=1, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <4 x i32> %v, i32 0
+  store i32 %x, i32* %p, align 2
+  ret void
+}
+
+; 4 is the default alignment for v128.store32_lane so no attribute is needed.
+define void @store_lane_i32_a4(<4 x i32> %v, i32* %p) {
+; CHECK-LABEL: store_lane_i32_a4:
+; CHECK:         .functype store_lane_i32_a4 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store32_lane 0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <4 x i32> %v, i32 0
+  store i32 %x, i32* %p, align 4
+  ret void
+}
+
+; 8 is greater than the default alignment so it is ignored.
+define void @store_lane_i32_a8(<4 x i32> %v, i32* %p) {
+; CHECK-LABEL: store_lane_i32_a8:
+; CHECK:         .functype store_lane_i32_a8 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store32_lane 0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <4 x i32> %v, i32 0
+  store i32 %x, i32* %p, align 8
+  ret void
+}
+
 ; ==============================================================================
 ; 2 x i64
 ; ==============================================================================
@@ -1021,6 +1144,73 @@ define <2 x i64> @load_lane_i64_a16(i64* %p, <2 x i64> %v) {
   %e = load i64, i64* %p, align 16
   %v1 = insertelement <2 x i64> %v, i64 %e, i32 0
   ret <2 x i64> %v1
+}
+
+define void @store_lane_i64_a1(<2 x i64> %v, i64* %p) {
+; CHECK-LABEL: store_lane_i64_a1:
+; CHECK:         .functype store_lane_i64_a1 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store64_lane 0:p2align=0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <2 x i64> %v, i32 0
+  store i64 %x, i64* %p, align 1
+  ret void
+}
+
+define void @store_lane_i64_a2(<2 x i64> %v, i64* %p) {
+; CHECK-LABEL: store_lane_i64_a2:
+; CHECK:         .functype store_lane_i64_a2 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store64_lane 0:p2align=1, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <2 x i64> %v, i32 0
+  store i64 %x, i64* %p, align 2
+  ret void
+}
+
+define void @store_lane_i64_a4(<2 x i64> %v, i64* %p) {
+; CHECK-LABEL: store_lane_i64_a4:
+; CHECK:         .functype store_lane_i64_a4 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store64_lane 0:p2align=2, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <2 x i64> %v, i32 0
+  store i64 %x, i64* %p, align 4
+  ret void
+}
+
+; 8 is the default alignment for v128.store64_lane so no attribute is needed.
+define void @store_lane_i64_a8(<2 x i64> %v, i64* %p) {
+; CHECK-LABEL: store_lane_i64_a8:
+; CHECK:         .functype store_lane_i64_a8 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <2 x i64> %v, i32 0
+  store i64 %x, i64* %p, align 8
+  ret void
+}
+
+; 16 is greater than the default alignment so it is ignored.
+define void @store_lane_i64_a16(<2 x i64> %v, i64* %p) {
+; CHECK-LABEL: store_lane_i64_a16:
+; CHECK:         .functype store_lane_i64_a16 (v128, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.store64_lane 0, 0
+; CHECK-NEXT:    # fallthrough-return
+  %x = extractelement <2 x i64> %v, i32 0
+  store i64 %x, i64* %p, align 16
+  ret void
 }
 
 ; ==============================================================================

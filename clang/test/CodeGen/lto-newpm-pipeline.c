@@ -28,6 +28,8 @@
 // CHECK-FULL-O0: Running pass: AlwaysInlinerPass
 // CHECK-FULL-O0-NEXT: Running analysis: InnerAnalysisManagerProxy
 // CHECK-FULL-O0-NEXT: Running analysis: ProfileSummaryAnalysis
+// CHECK-FULL-O0: Running pass: CoroSplitPass
+// CHECK-FULL-O0-NEXT: Running pass: CoroCleanupPass
 // CHECK-FULL-O0-NEXT: Running pass: CanonicalizeAliasesPass
 // CHECK-FULL-O0-NEXT: Running pass: NameAnonGlobalPass
 // CHECK-FULL-O0-NEXT: Running pass: BitcodeWriterPass
@@ -35,6 +37,7 @@
 // CHECK-THIN-O0: Running pass: AlwaysInlinerPass
 // CHECK-THIN-O0-NEXT: Running analysis: InnerAnalysisManagerProxy
 // CHECK-THIN-O0-NEXT: Running analysis: ProfileSummaryAnalysis
+// CHECK-THIN-O0: Running pass: CoroCleanupPass
 // CHECK-THIN-O0-NEXT: Running pass: CanonicalizeAliasesPass
 // CHECK-THIN-O0-NEXT: Running pass: NameAnonGlobalPass
 // CHECK-THIN-O0-NEXT: Running pass: ThinLTOBitcodeWriterPass

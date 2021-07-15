@@ -1170,6 +1170,7 @@ def IsE500  : Predicate<"Subtarget->isE500()">;
 def HasSPE  : Predicate<"Subtarget->hasSPE()">;
 def HasICBT : Predicate<"Subtarget->hasICBT()">;
 def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
+def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
 def NoNaNsFPMath
     : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
 def NaNsFPMath

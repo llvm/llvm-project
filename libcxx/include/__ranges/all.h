@@ -17,6 +17,7 @@
 #include <__ranges/ref_view.h>
 #include <__ranges/subrange.h>
 #include <__utility/__decay_copy.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <type_traits>
 
@@ -67,6 +68,9 @@ namespace __all {
 inline namespace __cpo {
   inline constexpr auto all = __all::__fn{};
 } // namespace __cpo
+
+template<ranges::viewable_range _Range>
+using all_t = decltype(views::all(declval<_Range>()));
 
 } // namespace views
 

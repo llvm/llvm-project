@@ -13,8 +13,7 @@ target triple = "wasm32-unknown-unknown"
 ;    t8: ch = store<(store 8 into `i64* undef`, align 1)> t3:1, t24, undef:i32, undef:i32
 ;  t9: ch = WebAssemblyISD::RETURN t8
 
-; CHECK:      i64x2.extract_lane
-; CHECK-NEXT: i64.store
+; CHECK:      v128.store64_lane
 define void @build_pair_i32s() {
 entry:
   %0 = load <4 x i32>, <4 x i32>* undef, align 16

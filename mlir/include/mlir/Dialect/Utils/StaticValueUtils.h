@@ -44,6 +44,14 @@ void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
 /// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
 SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr);
 
+/// Given a value, try to extract a constant Attribute. If this fails, return
+/// the original value.
+OpFoldResult getAsOpFoldResult(Value val);
+
+/// Given an array of values, try to extract a constant Attribute from each
+/// value. If this fails, return the original value.
+SmallVector<OpFoldResult> getAsOpFoldResult(ArrayRef<Value> values);
+
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 Optional<int64_t> getConstantIntValue(OpFoldResult ofr);
 

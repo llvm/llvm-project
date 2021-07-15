@@ -385,15 +385,13 @@ multiclass SIMDStoreLane<Vec vec, bits<32> simdop> {
   } // mayStore = 1, UseNamedOperandTable = 1
 }
 
-// TODO: Also support v4f32 and v2f64 once the instructions are merged
-// to the proposal
 defm "" : SIMDStoreLane<I8x16, 0x58>;
 defm "" : SIMDStoreLane<I16x8, 0x59>;
 defm "" : SIMDStoreLane<I32x4, 0x5a>;
 defm "" : SIMDStoreLane<I64x2, 0x5b>;
 
 // Select stores with no constant offset.
-multiclass StoreLanePatNoOffset<Vec vec, Intrinsic kind> {
+multiclass StoreLanePatNoOffset<Vec vec, SDPatternOperator kind> {
   def : Pat<(kind (i32 I32:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
             (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, 0, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr32]>;
@@ -402,13 +400,26 @@ multiclass StoreLanePatNoOffset<Vec vec, Intrinsic kind> {
         Requires<[HasAddr64]>;
 }
 
-defm : StoreLanePatNoOffset<I8x16, int_wasm_store8_lane>;
-defm : StoreLanePatNoOffset<I16x8, int_wasm_store16_lane>;
-defm : StoreLanePatNoOffset<I32x4, int_wasm_store32_lane>;
-defm : StoreLanePatNoOffset<I64x2, int_wasm_store64_lane>;
+def store8_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (truncstorei8 (i32 (vector_extract $vec, $idx)), $ptr)>;
+def store16_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (truncstorei16 (i32 (vector_extract $vec, $idx)), $ptr)>;
+def store32_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (store (i32 (vector_extract $vec, $idx)), $ptr)>;
+def store64_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (store (i64 (vector_extract $vec, $idx)), $ptr)>;
+// TODO: floating point lanes as well
 
-// TODO: Also support the other store patterns for store_lane once the
-// instructions are merged to the proposal.
+let AddedComplexity = 1 in {
+defm : StoreLanePatNoOffset<I8x16, store8_lane>;
+defm : StoreLanePatNoOffset<I16x8, store16_lane>;
+defm : StoreLanePatNoOffset<I32x4, store32_lane>;
+defm : StoreLanePatNoOffset<I64x2, store64_lane>;
+}
 
 //===----------------------------------------------------------------------===//
 // Constructing SIMD values
