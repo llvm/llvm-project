@@ -71,7 +71,8 @@ struct ucontext_t {
 };
 #endif
 
-#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1
+#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
+    defined(__s390x__)
 #define PTHREAD_ABI_BASE  "GLIBC_2.3.2"
 #elif defined(__aarch64__) || SANITIZER_PPC64V2
 #define PTHREAD_ABI_BASE  "GLIBC_2.17"
