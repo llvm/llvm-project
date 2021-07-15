@@ -2271,6 +2271,7 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define NEED_TLS_GET_ADDR
 #endif
 #undef SANITIZER_INTERCEPT_TLS_GET_ADDR
+#define SANITIZER_INTERCEPT_TLS_GET_OFFSET 1
 #undef SANITIZER_INTERCEPT_PTHREAD_SIGMASK
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
@@ -2586,6 +2587,20 @@ static void syscall_post_fork(uptr pc, int pid) {
 #include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 #ifdef NEED_TLS_GET_ADDR
+
+static void handle_tls_addr(void *arg, void *res) {
+  ThreadState *thr = cur_thread();
+  if (!thr)
+    return;
+  DTLS::DTV *dtv = DTLS_on_tls_get_addr(arg, res, thr->tls_addr,
+                                        thr->tls_addr + thr->tls_size);
+  if (!dtv)
+    return;
+  // New DTLS block has been allocated.
+  MemoryResetRange(thr, 0, dtv->beg, dtv->size);
+}
+
+#if !SANITIZER_S390
 // Define own interceptor instead of sanitizer_common's for three reasons:
 // 1. It must not process pending signals.
 //    Signal handlers may contain MOVDQA instruction (see below).
@@ -2598,17 +2613,17 @@ static void syscall_post_fork(uptr pc, int pid) {
 // execute MOVDQA with stack addresses.
 TSAN_INTERCEPTOR(void *, __tls_get_addr, void *arg) {
   void *res = REAL(__tls_get_addr)(arg);
-  ThreadState *thr = cur_thread();
-  if (!thr)
-    return res;
-  DTLS::DTV *dtv = DTLS_on_tls_get_addr(arg, res, thr->tls_addr,
-                                        thr->tls_addr + thr->tls_size);
-  if (!dtv)
-    return res;
-  // New DTLS block has been allocated.
-  MemoryResetRange(thr, 0, dtv->beg, dtv->size);
+  handle_tls_addr(arg, res);
   return res;
 }
+#else // SANITIZER_S390
+TSAN_INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
+  uptr res = __tls_get_offset_wrapper(arg, REAL(__tls_get_offset));
+  char *tp = static_cast<char *>(__builtin_thread_pointer());
+  handle_tls_addr(arg, res + tp);
+  return res;
+}
+#endif
 #endif
 
 #if SANITIZER_NETBSD
@@ -2831,7 +2846,12 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(_exit);
 
 #ifdef NEED_TLS_GET_ADDR
+#if !SANITIZER_S390
   TSAN_INTERCEPT(__tls_get_addr);
+#else
+  TSAN_INTERCEPT(__tls_get_addr_internal);
+  TSAN_INTERCEPT(__tls_get_offset);
+#endif
 #endif
 
   TSAN_MAYBE_INTERCEPT__LWP_EXIT;
