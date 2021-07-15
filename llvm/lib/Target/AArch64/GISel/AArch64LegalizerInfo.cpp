@@ -168,6 +168,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      // FIXME: This sholdn't be needed as v2s64 types are going to
+      // be expanded anyway, but G_ICMP doesn't support splitting vectors yet
+      .clampNumElements(0, v2s64, v2s64)
       .lower();
 
   getActionDefinitionsBuilder(
