@@ -149,6 +149,7 @@ define float @repeated_div_recip_allowed(i1 %pred, float %a, float %b, float %di
 ; CHECK: rcp.rn.f32
 ; CHECK: mul.rn.f32
 ; CHECK: mul.rn.f32
+; CHECK: selp.f32
   %x = fdiv arcp float %a, %divisor
   %y = fdiv arcp float %b, %divisor
   %z = select i1 %pred, float %x, float %y
@@ -160,6 +161,7 @@ define float @repeated_div_recip_allowed_ftz(i1 %pred, float %a, float %b, float
 ; CHECK: rcp.rn.ftz.f32
 ; CHECK: mul.rn.ftz.f32
 ; CHECK: mul.rn.ftz.f32
+; CHECK: selp.f32
   %x = fdiv arcp float %a, %divisor
   %y = fdiv arcp float %b, %divisor
   %z = select i1 %pred, float %x, float %y
@@ -171,6 +173,7 @@ define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) #0
 ; CHECK: rcp.approx.f32
 ; CHECK: mul.f32
 ; CHECK: mul.f32
+; CHECK: selp.f32
   %x = fdiv float %a, %divisor
   %y = fdiv float %b, %divisor
   %z = select i1 %pred, float %x, float %y
@@ -182,6 +185,7 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
 ; CHECK: rcp.approx.ftz.f32
 ; CHECK: mul.ftz.f32
 ; CHECK: mul.ftz.f32
+; CHECK: selp.f32
   %x = fdiv float %a, %divisor
   %y = fdiv float %b, %divisor
   %z = select i1 %pred, float %x, float %y
