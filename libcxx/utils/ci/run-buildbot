@@ -187,9 +187,6 @@ check-generated-output)
     python3 libcxx/utils/graph_header_deps.py >/dev/null
 ;;
 generic-cxx03)
-    # TODO: Switch to compiling with Clang ToT once issues with https://reviews.llvm.org/D104500 are resolved.
-    export CC=clang-12
-    export CXX=clang++-12
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake" \
                    -DLIBCXX_TEST_CONFIG="${MONOREPO_ROOT}/libcxx/test/configs/libcxx-trunk-shared.cfg.in"
