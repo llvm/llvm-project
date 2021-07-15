@@ -17,6 +17,7 @@
 
 #include <shared_mutex>
 #include <cassert>
+#include <system_error>
 
 #include "test_macros.h"
 

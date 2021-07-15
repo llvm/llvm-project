@@ -18,7 +18,9 @@
 #include <__ranges/concepts.h>
 #include <__ranges/copyable_box.h>
 #include <__ranges/empty.h>
+#include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -254,6 +254,7 @@ module std [system] {
       module is_permutation           { header "__algorithm/is_permutation.h" }
       module is_sorted                { header "__algorithm/is_sorted.h" }
       module is_sorted_until          { header "__algorithm/is_sorted_until.h" }
+      module iter_swap                { header "__algorithm/iter_swap.h" }
       module lexicographical_compare  { header "__algorithm/lexicographical_compare.h" }
       module lower_bound              { header "__algorithm/lower_bound.h" }
       module make_heap                { header "__algorithm/make_heap.h" }
@@ -305,6 +306,7 @@ module std [system] {
       module sort_heap                { header "__algorithm/sort_heap.h" }
       module stable_partition         { header "__algorithm/stable_partition.h" }
       module stable_sort              { header "__algorithm/stable_sort.h" }
+      module swap_ranges              { header "__algorithm/swap_ranges.h" }
       module transform                { header "__algorithm/transform.h" }
       module unique                   { header "__algorithm/unique.h" }
       module unique_copy              { header "__algorithm/unique_copy.h" }
@@ -419,6 +421,7 @@ module std [system] {
       module function                   { header "__functional/function.h" }
       module hash                       { header "__functional/hash.h" }
       module identity                   { header "__functional/identity.h" }
+      module is_transparent             { header "__functional/is_transparent.h" }
       module invoke                     { header "__functional/invoke.h" }
       module mem_fn                     { header "__functional/mem_fn.h"  }
       module mem_fun_ref                { header "__functional/mem_fun_ref.h"  }
@@ -548,6 +551,7 @@ module std [system] {
       module temporary_buffer         { header "__memory/temporary_buffer.h"         }
       module uninitialized_algorithms { header "__memory/uninitialized_algorithms.h" }
       module unique_ptr               { header "__memory/unique_ptr.h"               }
+      module uses_allocator           { header "__memory/uses_allocator.h"           }
     }
   }
   module mutex {
@@ -602,6 +606,7 @@ module std [system] {
       module concepts               { header "__ranges/concepts.h"              }
       module copyable_box           { header "__ranges/copyable_box.h"          }
       module data                   { header "__ranges/data.h"                  }
+      module drop_view              { header "__ranges/drop_view.h"             }
       module empty                  { header "__ranges/empty.h"                 }
       module empty_view             { header "__ranges/empty_view.h"            }
       module enable_borrowed_range  { header "__ranges/enable_borrowed_range.h" }
@@ -609,6 +614,7 @@ module std [system] {
       module ref_view               { header "__ranges/ref_view.h"              }
       module size                   { header "__ranges/size.h"                  }
       module subrange               { header "__ranges/subrange.h"              }
+      module transform_view         { header "__ranges/transform_view.h"        }
       module view_interface         { header "__ranges/view_interface.h"        }
     }
   }
@@ -634,6 +640,15 @@ module std [system] {
     header "set"
     export initializer_list
     export *
+  }
+  module shared_mutex {
+    header "shared_mutex"
+    export version
+  }
+  module span {
+    header "span"
+    export ranges.__ranges.enable_borrowed_range
+    export version
   }
   module sstream {
     header "sstream"
