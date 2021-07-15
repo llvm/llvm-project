@@ -12573,6 +12573,7 @@ private:
   bool SemaBuiltinComplex(CallExpr *TheCall);
   bool SemaBuiltinVSX(CallExpr *TheCall);
   bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
+  bool SemaValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
 public:
   // Used by C++ template instantiation.

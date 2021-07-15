@@ -83,6 +83,10 @@ BUILTIN(__builtin_ppc_mulhwu, "UiUiUi", "")
 BUILTIN(__builtin_ppc_maddhd, "LLiLLiLLiLLi", "")
 BUILTIN(__builtin_ppc_maddhdu, "ULLiULLiULLiULLi", "")
 BUILTIN(__builtin_ppc_maddld, "LLiLLiLLiLLi", "")
+// Rotate
+BUILTIN(__builtin_ppc_rlwnm, "UiUiIUiIUi", "")
+BUILTIN(__builtin_ppc_rlwimi, "UiUiUiIUiIUi", "")
+BUILTIN(__builtin_ppc_rldimi, "ULLiULLiULLiIUiIULLi", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
