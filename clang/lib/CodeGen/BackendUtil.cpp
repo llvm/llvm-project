@@ -1278,7 +1278,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   // Only enable CGProfilePass when using integrated assembler, since
   // non-integrated assemblers don't recognize .cgprofile section.
   PTO.CallGraphProfile = !CodeGenOpts.DisableIntegratedAS;
-  PTO.Coroutines = LangOpts.Coroutines;
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;

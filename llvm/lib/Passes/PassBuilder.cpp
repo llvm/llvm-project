@@ -284,7 +284,6 @@ PipelineTuningOptions::PipelineTuningOptions() {
   SLPVectorization = false;
   LoopUnrolling = true;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
-  Coroutines = false;
   LicmMssaOptCap = SetLicmMssaOptCap;
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
   CallGraphProfile = true;
@@ -650,8 +649,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
-  if (PTO.Coroutines)
-    FPM.addPass(CoroElidePass());
+  FPM.addPass(CoroElidePass());
 
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
@@ -848,8 +846,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
       EnableMSSALoopDependency, /*UseBlockFrequencyInfo=*/true));
 
-  if (PTO.Coroutines)
-    FPM.addPass(CoroElidePass());
+  FPM.addPass(CoroElidePass());
 
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
@@ -1028,8 +1025,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, Phase)));
 
-  if (PTO.Coroutines)
-    MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+  MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
 
   return MIWP;
 }
@@ -1084,8 +1080,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   EarlyFPM.addPass(SimplifyCFGPass());
   EarlyFPM.addPass(SROA());
   EarlyFPM.addPass(EarlyCSEPass());
-  if (PTO.Coroutines)
-    EarlyFPM.addPass(CoroEarlyPass());
+  EarlyFPM.addPass(CoroEarlyPass());
   if (Level == OptimizationLevel::O3)
     EarlyFPM.addPass(CallSiteSplittingPass());
 
@@ -1452,8 +1447,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   OptimizePM.addPass(SimplifyCFGPass());
 
-  if (PTO.Coroutines)
-    OptimizePM.addPass(CoroCleanupPass());
+  OptimizePM.addPass(CoroCleanupPass());
 
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM)));
@@ -1563,8 +1557,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // Module simplification splits coroutines, but does not fully clean up
   // coroutine intrinsics. To ensure ThinLTO optimization passes don't trip up
   // on these, we schedule the cleanup here.
-  if (PTO.Coroutines)
-    MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
+  MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
 
   if (PGOOpt && PGOOpt->PseudoProbeForProfiling)
     MPM.addPass(PseudoProbeUpdatePass());
@@ -1938,10 +1931,8 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   // which is just that always inlining occurs. Further, disable generating
   // lifetime intrinsics to avoid enabling further optimizations during
   // code generation.
-  // However, we need to insert lifetime intrinsics to avoid invalid access
-  // caused by multithreaded coroutines.
   MPM.addPass(AlwaysInlinerPass(
-      /*InsertLifetimeIntrinsics=*/PTO.Coroutines));
+      /*InsertLifetimeIntrinsics=*/false));
 
   if (PTO.MergeFunctions)
     MPM.addPass(MergeFunctionsPass());
@@ -1990,15 +1981,11 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
       MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
-  if (PTO.Coroutines) {
-    MPM.addPass(createModuleToFunctionPassAdaptor(CoroEarlyPass()));
-
-    CGSCCPassManager CGPM;
-    CGPM.addPass(CoroSplitPass());
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
-
-    MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
-  }
+  MPM.addPass(createModuleToFunctionPassAdaptor(CoroEarlyPass()));
+  CGSCCPassManager CGPM;
+  CGPM.addPass(CoroSplitPass());
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(CoroCleanupPass()));
 
   for (auto &C : OptimizerLastEPCallbacks)
     C(MPM, Level);
