@@ -243,7 +243,9 @@ multiclass VOP2eInst <string opName,
     }
 
     def _e64 : VOP3_Pseudo <opName, P, getVOP2Pat64<node, P>.ret>,
-               Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
+               Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
+      let isReMaterializable = 1;
+    }
   }
 }
 
@@ -483,10 +485,11 @@ def VOP_WRITELANE : VOPProfile<[i32, i32, i32, i32]> {
 //===----------------------------------------------------------------------===//
 
 defm V_CNDMASK_B32 : VOP2eInst <"v_cndmask_b32", VOP2e_I32_I32_I32_I1>;
-let SubtargetPredicate = HasMadMacF32Insts in
+let SubtargetPredicate = HasMadMacF32Insts, isReMaterializable = 1 in
 def V_MADMK_F32 : VOP2_Pseudo <"v_madmk_f32", VOP_MADMK_F32, []>;
 
 let isCommutable = 1 in {
+let isReMaterializable = 1 in {
 defm V_ADD_F32 : VOP2Inst <"v_add_f32", VOP_F32_F32_F32, any_fadd>;
 defm V_SUB_F32 : VOP2Inst <"v_sub_f32", VOP_F32_F32_F32, any_fsub>;
 defm V_SUBREV_F32 : VOP2Inst <"v_subrev_f32", VOP_F32_F32_F32, null_frag, "v_sub_f32">;
@@ -508,6 +511,7 @@ defm V_LSHLREV_B32 : VOP2Inst <"v_lshlrev_b32", VOP_I32_I32_I32, lshl_rev, "v_ls
 defm V_AND_B32 : VOP2Inst <"v_and_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, and>;
 defm V_OR_B32 : VOP2Inst <"v_or_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, or>;
 defm V_XOR_B32 : VOP2Inst <"v_xor_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, xor>;
+} // End isReMaterializable = 1
 
 let mayRaiseFPException = 0 in {
 let OtherPredicates = [HasMadMacF32Insts] in {
@@ -520,6 +524,7 @@ defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_MAC_LEGACY_F32>;
 } // End Constraints = "$vdst = $src2", DisableEncoding="$src2",
   //     isConvertibleToThreeAddress = 1
 
+let isReMaterializable = 1 in
 def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32, []>;
 } // End OtherPredicates = [HasMadMacF32Insts]
 } // End mayRaiseFPException = 0
@@ -534,7 +539,7 @@ defm V_SUBB_U32 : VOP2bInst <"v_subb_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "
 defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_subb_u32", 1>;
 
 
-let SubtargetPredicate = HasAddNoCarryInsts in {
+let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in {
 defm V_ADD_U32 : VOP2Inst <"v_add_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_add_u32", 1>;
 defm V_SUB_U32 : VOP2Inst <"v_sub_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32", 1>;
 defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32", 1>;
@@ -553,12 +558,12 @@ def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE,
 } // End $vdst = $vdst_in, DisableEncoding $vdst_in
 } // End isConvergent = 1
 
+let isReMaterializable = 1 in {
 defm V_BFM_B32 : VOP2Inst <"v_bfm_b32", VOP_NO_EXT<VOP_I32_I32_I32>>;
 defm V_BCNT_U32_B32 : VOP2Inst <"v_bcnt_u32_b32", VOP_NO_EXT<VOP_I32_I32_I32>, add_ctpop>;
 defm V_MBCNT_LO_U32_B32 : VOP2Inst <"v_mbcnt_lo_u32_b32", VOP_NO_EXT<VOP_I32_I32_I32>, int_amdgcn_mbcnt_lo>;
 defm V_MBCNT_HI_U32_B32 : VOP2Inst <"v_mbcnt_hi_u32_b32", VOP_NO_EXT<VOP_I32_I32_I32>, int_amdgcn_mbcnt_hi>;
 defm V_LDEXP_F32 : VOP2Inst <"v_ldexp_f32", VOP_NO_EXT<VOP_F32_F32_I32>, AMDGPUldexp>;
-defm V_CVT_PKACCUM_U8_F32 : VOP2Inst <"v_cvt_pkaccum_u8_f32", VOP_NO_EXT<VOP_I32_F32_I32>>; // TODO: set "Uses = dst"
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_PKNORM_I16_F32 : VOP2Inst <"v_cvt_pknorm_i16_f32", VOP_NO_EXT<VOP_V2I16_F32_F32>, AMDGPUpknorm_i16_f32>;
@@ -582,7 +587,9 @@ defm V_ASHR_I32 : VOP2Inst <"v_ashr_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, sra>;
 defm V_LSHL_B32 : VOP2Inst <"v_lshl_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, shl>;
 } // End SubtargetPredicate = isGFX6GFX7
 } // End isCommutable = 1
+} // End isReMaterializable = 1
 
+defm V_CVT_PKACCUM_U8_F32 : VOP2Inst <"v_cvt_pkaccum_u8_f32", VOP_NO_EXT<VOP_I32_F32_I32>>; // TODO: set "Uses = dst"
 
 class DivergentBinOp<SDPatternOperator Op, VOP_Pseudo Inst> :
   GCNPat<
@@ -682,6 +689,7 @@ defm V_MAC_F16 : VOP2Inst <"v_mac_f16", VOP_MAC_F16>;
 
 let SubtargetPredicate = HasDLInsts in {
 
+let isReMaterializable = 1 in
 defm V_XNOR_B32 : VOP2Inst <"v_xnor_b32", VOP_I32_I32_I32, xnor>;
 
 let Constraints = "$vdst = $src2",
@@ -753,7 +761,7 @@ let AddedComplexity = 30 in {
   }
 } // End AddedComplexity = 30
 
-let SubtargetPredicate = HasFmaakFmamkF32Insts in {
+let SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1 in {
 def V_FMAMK_F32 : VOP2_Pseudo<"v_fmamk_f32", VOP_MADMK_F32, [], "">;
 
 let isCommutable = 1 in
