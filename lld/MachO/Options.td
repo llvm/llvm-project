@@ -68,6 +68,9 @@ def lto_O: Joined<["--"], "lto-O">,
     HelpText<"Set optimization level for LTO (default: 2)">,
     MetaVarName<"<opt-level>">,
     Group<grp_lld>;
+def thinlto_cache_policy: Joined<["--"], "thinlto-cache-policy=">,
+    HelpText<"Pruning policy for the ThinLTO cache">,
+    Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -915,22 +918,18 @@ def object_path_lto : Separate<["-"], "object_path_lto">,
 def cache_path_lto : Separate<["-"], "cache_path_lto">,
     MetaVarName<"<path>">,
     HelpText<"Use <path> as a directory for the incremental LTO cache">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def prune_interval_lto : Separate<["-"], "prune_interval_lto">,
     MetaVarName<"<seconds>">,
     HelpText<"Prune the incremental LTO cache after <seconds> (-1 disables pruning)">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def prune_after_lto : Separate<["-"], "prune_after_lto">,
     MetaVarName<"<seconds>">,
     HelpText<"Remove LTO cache entries after <seconds>">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def max_relative_cache_size_lto : Separate<["-"], "max_relative_cache_size_lto">,
     MetaVarName<"<percent>">,
     HelpText<"Limit the incremental LTO cache growth to <percent> of free disk, space">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def page_align_data_atoms : Flag<["-"], "page_align_data_atoms">,
     HelpText<"Distribute global variables on separate pages so page used/dirty status can guide creation of an order file to cluster commonly used/dirty globals">,

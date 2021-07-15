@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TextAPI/Architecture.h"
@@ -139,6 +140,8 @@ struct Configuration {
   llvm::StringRef thinLTOJobs;
   llvm::StringRef umbrella;
   uint32_t ltoo = 2;
+  llvm::CachePruningPolicy thinLTOCachePolicy;
+  llvm::StringRef thinLTOCacheDir;
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
