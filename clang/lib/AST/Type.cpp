@@ -1801,6 +1801,9 @@ namespace {
     }
 
     // Only these types can contain the desired 'auto' type.
+    Type *VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
+      return Visit(T->getReplacementType());
+    }
 
     Type *VisitElaboratedType(const ElaboratedType *T) {
       return Visit(T->getNamedType());
