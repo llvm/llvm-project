@@ -107,24 +107,11 @@ void ImportSection::addGOTEntry(Symbol *sym) {
   gotSymbols.push_back(sym);
 }
 
-template <typename UndefinedT>
-static void getImportModuleAndName(Symbol *sym, StringRef *outModule,
-                                   StringRef *outName) {
-  if (auto *undef = dyn_cast<UndefinedT>(sym)) {
-    *outModule = undef->importModule ? *undef->importModule : defaultModule;
-    *outName = undef->importName ? *undef->importName : sym->getName();
-  } else {
-    *outModule = defaultModule;
-    *outName = sym->getName();
-  }
-}
-
 void ImportSection::addImport(Symbol *sym) {
   assert(!isSealed);
-  StringRef module;
-  StringRef name;
+  StringRef module = sym->importModule.getValueOr(defaultModule);
+  StringRef name = sym->importName.getValueOr(sym->getName());
   if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
-    getImportModuleAndName<UndefinedFunction>(sym, &module, &name);
     ImportKey<WasmSignature> key(*(f->getSignature()), module, name);
     auto entry = importedFunctions.try_emplace(key, numImportedFunctions);
     if (entry.second) {
@@ -134,7 +121,6 @@ void ImportSection::addImport(Symbol *sym) {
       f->setFunctionIndex(entry.first->second);
     }
   } else if (auto *g = dyn_cast<GlobalSymbol>(sym)) {
-    getImportModuleAndName<UndefinedGlobal>(sym, &module, &name);
     ImportKey<WasmGlobalType> key(*(g->getGlobalType()), module, name);
     auto entry = importedGlobals.try_emplace(key, numImportedGlobals);
     if (entry.second) {
@@ -150,7 +136,6 @@ void ImportSection::addImport(Symbol *sym) {
     t->setTagIndex(numImportedTags++);
   } else {
     auto *table = cast<TableSymbol>(sym);
-    getImportModuleAndName<UndefinedTable>(sym, &module, &name);
     ImportKey<WasmTableType> key(*(table->getTableType()), module, name);
     auto entry = importedTables.try_emplace(key, numImportedTables);
     if (entry.second) {
@@ -189,19 +174,8 @@ void ImportSection::writeBody() {
 
   for (const Symbol *sym : importedSymbols) {
     WasmImport import;
-    if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
-      import.Field = f->importName ? *f->importName : sym->getName();
-      import.Module = f->importModule ? *f->importModule : defaultModule;
-    } else if (auto *g = dyn_cast<UndefinedGlobal>(sym)) {
-      import.Field = g->importName ? *g->importName : sym->getName();
-      import.Module = g->importModule ? *g->importModule : defaultModule;
-    } else if (auto *t = dyn_cast<UndefinedTable>(sym)) {
-      import.Field = t->importName ? *t->importName : sym->getName();
-      import.Module = t->importModule ? *t->importModule : defaultModule;
-    } else {
-      import.Field = sym->getName();
-      import.Module = defaultModule;
-    }
+    import.Field = sym->importName.getValueOr(sym->getName());
+    import.Module = sym->importModule.getValueOr(defaultModule);
 
     if (auto *functionSym = dyn_cast<FunctionSymbol>(sym)) {
       import.Kind = WASM_EXTERNAL_FUNCTION;
