@@ -137,10 +137,6 @@ particular order:
 
   * This is mostly Clang, see ``clang::CodeGen::Address::getElementType()``
 
-* Figure out how to name overloaded intrinsics with pointer parameters
-
-  * See ``getMangledTypeStr()``
-
 * Add option to internally treat all pointer types opaque pointers and see what
   breaks, starting with LLVM tests, then run Clang over large codebases
 

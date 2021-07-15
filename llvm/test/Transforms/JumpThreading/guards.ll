@@ -358,7 +358,7 @@ exit:                                             ; preds = %loop
 }
 
 ; Make sure that we can safely PRE a speculable load across a guard.
-define void @safe_pre_across_guard(i8* noalias nocapture readonly dereferenceable(8) %p, i1 %load.is.valid) {
+define void @safe_pre_across_guard(i8* noalias nocapture readonly dereferenceable(8) %p, i1 %load.is.valid) nofree nosync {
 ; CHECK-LABEL: @safe_pre_across_guard(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOADED_PR:%.*]] = load i8, i8* [[P:%.*]], align 1
@@ -413,7 +413,7 @@ exit:                                             ; preds = %loop
 }
 
 ; Make sure that we can safely PRE a speculable load across a call.
-define void @safe_pre_across_call(i8* noalias nocapture readonly dereferenceable(8) %p) {
+define void @safe_pre_across_call(i8* noalias nocapture readonly dereferenceable(8) %p) nofree nosync {
 ; CHECK-LABEL: @safe_pre_across_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOADED_PR:%.*]] = load i8, i8* [[P:%.*]], align 1

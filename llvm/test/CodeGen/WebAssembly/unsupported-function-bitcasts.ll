@@ -3,7 +3,6 @@
 ; Test that function pointer casts that require conversions of arguments or
 ; return types are converted to unreachable.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare i32 @has_i64_arg(i64)

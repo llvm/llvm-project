@@ -98,7 +98,7 @@ OPTIONS
 
 .. option:: --headers, -e
 
- Equivalent to setting: :option:`--file-headers`, :option:`--program-headers`,
+ Equivalent to setting: :option:`--file-header`, :option:`--program-headers`,
  and :option:`--sections`.
 
 .. option:: --help

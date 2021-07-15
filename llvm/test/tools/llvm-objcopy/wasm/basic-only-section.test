@@ -1,0 +1,44 @@
+## Test --only-section.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --only-section=producers %t %t2
+# RUN: obj2yaml %t2 | FileCheck --implicit-check-not TYPE --implicit-check-not linking %s
+
+## Test that it's the same with only-section + keep-section (for the same section).
+# RUN: llvm-objcopy --only-section=producers --keep-section=producers %t %t2
+# RUN: obj2yaml %t2 | FileCheck --implicit-check-not TYPE --implicit-check-not linking %s
+
+## Also test that only-section overrides remove-section.
+# RUN: llvm-objcopy --only-section=producers --remove-section=producers %t %t2
+# RUN: obj2yaml %t2 | FileCheck --implicit-check-not linking %s
+
+## This file has both known and custom sections. Check that only the producers section is left.
+# CHECK:      Sections:
+# CHECK-NEXT:   - Type: CUSTOM
+# CHECK-NEXT:     Name: producers
+# CHECK-NEXT:     Tools:
+
+## Test that only-section + keep-section keeps both sections.
+# RUN: llvm-objcopy --only-section=producers --keep-section=linking %t %t2
+# RUN: obj2yaml %t2 | FileCheck --implicit-check-not=TYPE --check-prefix=KEEP %s
+# KEEP: Name: linking
+# KEEP: Name: producers
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - F32
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+  - Type: CUSTOM
+    Name: producers
+    Tools:
+      - Name:   clang
+        Version: 9.0.0

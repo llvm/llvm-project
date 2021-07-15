@@ -44,6 +44,7 @@ class SanitizerArgs {
   bool AsanUseOdrIndicator = false;
   bool AsanInvalidPointerCmp = false;
   bool AsanInvalidPointerSub = false;
+  bool AsanOutlineInstrumentation = false;
   llvm::AsanDtorKind AsanDtorKind = llvm::AsanDtorKind::Invalid;
   std::string HwasanAbi;
   bool LinkRuntimes = true;

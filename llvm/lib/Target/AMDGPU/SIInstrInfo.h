@@ -181,6 +181,8 @@ public:
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                          AAResults *AA) const override;
 
+  bool isIgnorableUse(const MachineOperand &MO) const override;
+
   bool areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
                                int64_t &Offset1,
                                int64_t &Offset2) const override;

@@ -300,8 +300,6 @@ multiclass SIMDLoadLane<Vec vec, bits<32> simdop> {
   } // mayLoad = 1, UseNamedOperandTable = 1
 }
 
-// TODO: Also support v4f32 and v2f64 once the instructions are merged
-// to the proposal
 defm "" : SIMDLoadLane<I8x16, 0x54>;
 defm "" : SIMDLoadLane<I16x8, 0x55>;
 defm "" : SIMDLoadLane<I32x4, 0x56>;
@@ -321,10 +319,24 @@ multiclass LoadLanePatNoOffset<Vec vec, SDPatternOperator kind> {
         Requires<[HasAddr64]>;
 }
 
-defm : LoadLanePatNoOffset<I8x16, int_wasm_load8_lane>;
-defm : LoadLanePatNoOffset<I16x8, int_wasm_load16_lane>;
-defm : LoadLanePatNoOffset<I32x4, int_wasm_load32_lane>;
-defm : LoadLanePatNoOffset<I64x2, int_wasm_load64_lane>;
+def load8_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (vector_insert $vec, (i32 (extloadi8 $ptr)), $idx)>;
+def load16_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (vector_insert $vec, (i32 (extloadi16 $ptr)), $idx)>;
+def load32_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (vector_insert $vec, (i32 (load $ptr)), $idx)>;
+def load64_lane :
+  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
+          (vector_insert $vec, (i64 (load $ptr)), $idx)>;
+// TODO: floating point lanes as well
+
+defm : LoadLanePatNoOffset<I8x16, load8_lane>;
+defm : LoadLanePatNoOffset<I16x8, load16_lane>;
+defm : LoadLanePatNoOffset<I32x4, load32_lane>;
+defm : LoadLanePatNoOffset<I64x2, load64_lane>;
 
 // TODO: Also support the other load patterns for load_lane once the instructions
 // are merged to the proposal.
