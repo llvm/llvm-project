@@ -5,7 +5,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:     -xcoff-traceback-table=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefix=CHECKOBJ %s
-; RUN: llvm-readobj -syms %t.o | FileCheck --check-prefix=CHECKSYM %s
+; RUN: llvm-readobj -s %t.o | FileCheck --check-prefix=CHECKSYM %s
 
 @ext_const = constant i32 1, section ".ext_const_sec", align 4
 @ext_var = global i32 1, section ".ext_var_sec", align 4

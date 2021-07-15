@@ -253,7 +253,7 @@ def have_cxx_shared_library():
 
     try:
         readobj_cmd = subprocess.Popen(
-            [readobj_exe, '-needed-libs', readobj_exe], stdout=subprocess.PIPE)
+            [readobj_exe, '--needed-libs', readobj_exe], stdout=subprocess.PIPE)
     except OSError:
         print('could not exec llvm-readobj')
         return False
