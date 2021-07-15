@@ -494,6 +494,7 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
   scf::ParallelOp::getCanonicalizationPatterns(patterns, ctx);
   ConstantIndexOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, ctx);
+  tensor::InsertSliceOp::getCanonicalizationPatterns(patterns, ctx);
   memref::SubViewOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::CastOp::getCanonicalizationPatterns(patterns, ctx);
   memref::ViewOp::getCanonicalizationPatterns(patterns, ctx);
@@ -513,7 +514,15 @@ static void insertTilingPatterns(RewritePatternSet &patterns,
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
                      >::insert(patterns, options);
   patterns.add<PadTensorOpTilingPattern>(patterns.getContext(), options);
+}
+
+static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
+  MLIRContext *ctx = funcOp.getContext();
+  RewritePatternSet patterns(ctx);
   patterns.add<ExtractSliceOfPadTensorSwapPattern>(patterns.getContext());
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(
+      funcOp, getLinalgTilingCanonicalizationPatterns(ctx));
 }
 
 static void
@@ -527,6 +536,7 @@ applyTilingToLoopPatterns(LinalgTilingLoopType loopType, FuncOp funcOp,
   MLIRContext *ctx = funcOp.getContext();
   RewritePatternSet patterns(ctx);
   insertTilingPatterns(patterns, options);
+  patterns.add<AffineMinSCFCanonicalizationPattern>(patterns.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
   (void)applyPatternsAndFoldGreedily(
       funcOp, getLinalgTilingCanonicalizationPatterns(ctx));
@@ -534,6 +544,10 @@ applyTilingToLoopPatterns(LinalgTilingLoopType loopType, FuncOp funcOp,
   funcOp.walk([](LinalgOp op) {
     op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
   });
+
+  // Apply swap pattern after generating loop nest and running
+  // canonicalizations.
+  applyExtractSliceOfPadTensorSwapPattern(funcOp);
 }
 
 namespace {
