@@ -1,11 +1,11 @@
 // RUN: mlir-opt %s -sparsification | FileCheck %s --check-prefix=CHECK-HIR
 //
-// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion                 \
-// RUN: --convert-linalg-to-loops | FileCheck %s --check-prefix=CHECK-MIR
+// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion | \
+// RUN: FileCheck %s --check-prefix=CHECK-MIR
 //
-// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion                 \
-// RUN: --convert-linalg-to-loops --func-bufferize --tensor-constant-bufferize \
-// RUN: --tensor-bufferize --finalizing-bufferize |                            \
+// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion \
+// RUN: --func-bufferize --tensor-constant-bufferize           \
+// RUN: --tensor-bufferize --finalizing-bufferize |            \
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
 
 #CSR = #sparse_tensor.encoding<{dimLevelType = [ "dense", "compressed" ]}>
