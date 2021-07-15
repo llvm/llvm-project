@@ -159,6 +159,22 @@ gpu.module @test_module {
   }
 }
 
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_exp2_f32(f32) -> f32
+  // CHECK: llvm.func @__ocml_exp2_f64(f64) -> f64
+  // CHECK-LABEL: func @gpu_exp2
+  func @gpu_exp2(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %exp2_f32 = math.exp2 %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_exp2_f32(%{{.*}}) : (f32) -> f32
+    %result32 = math.exp2 %exp2_f32 : f32
+    // CHECK: llvm.call @__ocml_exp2_f32(%{{.*}}) : (f32) -> f32
+    %result64 = math.exp2 %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_exp2_f64(%{{.*}}) : (f64) -> f64
+    std.return %result32, %result64 : f32, f64
+  }
+}
 
 // -----
 

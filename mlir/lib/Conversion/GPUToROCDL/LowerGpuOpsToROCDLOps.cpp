@@ -91,9 +91,9 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<ROCDL::ROCDLDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
-  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
-                      LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op,
-                      LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
+  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
+                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
+                      LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
@@ -128,6 +128,8 @@ void mlir::populateGpuToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                   "__ocml_cos_f64");
   patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__ocml_exp_f32",
                                                   "__ocml_exp_f64");
+  patterns.add<OpToFuncCallLowering<math::Exp2Op>>(converter, "__ocml_exp2_f32",
+                                                   "__ocml_exp2_f64");
   patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(
       converter, "__ocml_expm1_f32", "__ocml_expm1_f64");
   patterns.add<OpToFuncCallLowering<FloorFOp>>(converter, "__ocml_floor_f32",
