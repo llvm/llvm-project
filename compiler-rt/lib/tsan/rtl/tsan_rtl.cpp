@@ -77,7 +77,7 @@ void OnInitialize() {
 }
 #endif
 
-static char thread_registry_placeholder[sizeof(ThreadRegistry)];
+static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
   // Map thread trace when context is created.
