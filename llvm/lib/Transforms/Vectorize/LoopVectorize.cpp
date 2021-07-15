@@ -1676,13 +1676,8 @@ private:
   /// Returns the expected execution cost. The unit of the cost does
   /// not matter because we use the 'cost' units to compare different
   /// vector widths. The cost that is returned is *not* normalized by
-  /// the factor width. If \p Invalid is not nullptr, this function
-  /// will add a pair(Instruction*, ElementCount) to \p Invalid for
-  /// each instruction that has an Invalid cost for the given VF.
-  using InstructionVFPair = std::pair<Instruction *, ElementCount>;
-  VectorizationCostTy
-  expectedCost(ElementCount VF,
-               SmallVectorImpl<InstructionVFPair> *Invalid = nullptr);
+  /// the factor width.
+  VectorizationCostTy expectedCost(ElementCount VF);
 
   /// Returns the execution time cost of an instruction for a given vector
   /// width. Vector width of one means scalar.
@@ -6080,13 +6075,12 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
     ChosenFactor.Cost = InstructionCost::getMax();
   }
 
-  SmallVector<InstructionVFPair> InvalidCosts;
   for (const auto &i : VFCandidates) {
     // The cost for scalar VF=1 is already calculated, so ignore it.
     if (i.isScalar())
       continue;
 
-    VectorizationCostTy C = expectedCost(i, &InvalidCosts);
+    VectorizationCostTy C = expectedCost(i);
     VectorizationFactor Candidate(i, C.first);
     LLVM_DEBUG(
         dbgs() << "LV: Vector loop of width " << i << " costs: "
@@ -6107,60 +6101,6 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
 
     if (isMoreProfitable(Candidate, ChosenFactor))
       ChosenFactor = Candidate;
-  }
-
-  // Emit a report of VFs with invalid costs in the loop.
-  if (!InvalidCosts.empty()) {
-    // Sort/group per instruction (lexicographically within basic blocks).
-    llvm::sort(InvalidCosts, [](InstructionVFPair &A, InstructionVFPair &B) {
-      const Instruction *AI = A.first, *BI = B.first;
-      if (AI->getParent() != BI->getParent())
-        return AI->getParent() < BI->getParent();
-      ElementCountComparator ECC;
-      if (AI != BI)
-        return AI->comesBefore(BI);
-      return ECC(A.second, B.second);
-    });
-
-    // For a list of ordered instruction-vf pairs:
-    //   [(load, vf1), (load, vf2), (store, vf1)]
-    // Group the instructions together to emit separate remarks for:
-    //   load  (vf1, vf2)
-    //   store (vf1)
-    auto Tail = ArrayRef<InstructionVFPair>(InvalidCosts);
-    auto Subset = ArrayRef<InstructionVFPair>();
-    do {
-      if (Subset.empty())
-        Subset = Tail.take_front(1);
-
-      Instruction *I = Subset.front().first;
-
-      // If the next instruction is different, or if there are no other pairs,
-      // emit a remark for the collated subset. e.g.
-      //   [(load, vf1), (load, vf2))]
-      // to emit:
-      //  remark: invalid costs for 'load' at VF=(vf, vf2)
-      if (Subset == Tail || Tail[Subset.size()].first != I) {
-        std::string OutString;
-        raw_string_ostream OS(OutString);
-        assert(!Subset.empty() && "Unexpected empty range");
-        OS << "Instruction with invalid costs prevented vectorization at VF=(";
-        for (auto &Pair : Subset)
-          OS << (Pair.second == Subset.front().second ? "" : ", ")
-             << Pair.second;
-        OS << "):";
-        if (auto *CI = dyn_cast<CallInst>(I))
-          OS << " call to " << CI->getCalledFunction()->getName();
-        else
-          OS << " " << I->getOpcodeName();
-        OS.flush();
-        reportVectorizationInfo(OutString, "InvalidCost", ORE, TheLoop, I);
-        Tail = Tail.drop_front(Subset.size());
-        Subset = {};
-      } else
-        // Grow the subset by one element
-        Subset = Tail.take_front(Subset.size() + 1);
-    } while (!Tail.empty());
   }
 
   if (!EnableCondStoresVectorization && NumPredStores) {
@@ -6944,8 +6884,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
 }
 
 LoopVectorizationCostModel::VectorizationCostTy
-LoopVectorizationCostModel::expectedCost(
-    ElementCount VF, SmallVectorImpl<InstructionVFPair> *Invalid) {
+LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   VectorizationCostTy Cost;
 
   // For each block.
@@ -6964,10 +6903,6 @@ LoopVectorizationCostModel::expectedCost(
       // Check if we should override the cost.
       if (ForceTargetInstructionCost.getNumOccurrences() > 0)
         C.first = InstructionCost(ForceTargetInstructionCost);
-
-      // Keep a list of instructions with invalid costs.
-      if (Invalid && !C.first.isValid())
-        Invalid->emplace_back(&I, VF);
 
       BlockCost.first += C.first;
       BlockCost.second |= C.second;
