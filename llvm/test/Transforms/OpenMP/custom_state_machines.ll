@@ -1713,8 +1713,8 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A_ADDR]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR7]]
-; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR7]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR8]]
+; CHECK-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR8]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
