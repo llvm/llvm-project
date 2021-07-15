@@ -2157,7 +2157,7 @@ void atfork_prepare() {
   if (in_symbolizer())
     return;
   ThreadState *thr = cur_thread();
-  const uptr pc = StackTrace::GetCurrentPc();
+  const uptr pc = GET_CURRENT_PC();
   ForkBefore(thr, pc);
 }
 
@@ -2165,7 +2165,7 @@ void atfork_parent() {
   if (in_symbolizer())
     return;
   ThreadState *thr = cur_thread();
-  const uptr pc = StackTrace::GetCurrentPc();
+  const uptr pc = GET_CURRENT_PC();
   ForkParentAfter(thr, pc);
 }
 
@@ -2173,7 +2173,7 @@ void atfork_child() {
   if (in_symbolizer())
     return;
   ThreadState *thr = cur_thread();
-  const uptr pc = StackTrace::GetCurrentPc();
+  const uptr pc = GET_CURRENT_PC();
   ForkChildAfter(thr, pc);
   FdOnFork(thr, pc);
 }

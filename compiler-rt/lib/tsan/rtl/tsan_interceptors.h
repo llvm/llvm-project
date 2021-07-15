@@ -30,14 +30,14 @@ inline bool in_symbolizer() {
 
 }  // namespace __tsan
 
-#define SCOPED_INTERCEPTOR_RAW(func, ...) \
-    cur_thread_init(); \
-    ThreadState *thr = cur_thread(); \
-    const uptr caller_pc = GET_CALLER_PC(); \
-    ScopedInterceptor si(thr, #func, caller_pc); \
-    const uptr pc = StackTrace::GetCurrentPc(); \
-    (void)pc; \
-/**/
+#define SCOPED_INTERCEPTOR_RAW(func, ...)      \
+  cur_thread_init();                           \
+  ThreadState *thr = cur_thread();             \
+  const uptr caller_pc = GET_CALLER_PC();      \
+  ScopedInterceptor si(thr, #func, caller_pc); \
+  const uptr pc = GET_CURRENT_PC();            \
+  (void)pc;                                    \
+  /**/
 
 #define SCOPED_TSAN_INTERCEPTOR(func, ...) \
     SCOPED_INTERCEPTOR_RAW(func, __VA_ARGS__); \
