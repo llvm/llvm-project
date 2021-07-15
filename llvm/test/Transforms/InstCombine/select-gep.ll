@@ -76,7 +76,7 @@ define i32* @test2a(i32* %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test2a(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SELECT_IDX:%.*]] = select i1 [[CMP]], i64 [[X]], i64 0
-; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[SELECT_IDX]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[SELECT_IDX]]
 ; CHECK-NEXT:    ret i32* [[SELECT]]
 ;
   %gep = getelementptr inbounds i32, i32* %p, i64 %x
@@ -90,7 +90,7 @@ define i32* @test2b(i32* %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test2b(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SELECT_IDX:%.*]] = select i1 [[CMP]], i64 0, i64 [[X]]
-; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[SELECT_IDX]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[SELECT_IDX]]
 ; CHECK-NEXT:    ret i32* [[SELECT]]
 ;
   %gep = getelementptr inbounds i32, i32* %p, i64 %x
