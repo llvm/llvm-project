@@ -61,6 +61,7 @@ public:
   static hsa_status_t Memfree(void *);
   static hsa_status_t HostMalloc(void **ptr, size_t size);
   static hsa_status_t DeviceMalloc(void **ptr, size_t size, int DeviceId);
+  static hsa_status_t FtnAssignWrapper(void *, void *, void *, void *, void *);
 
   int getMaxQueueSize() const { return env_.getMaxQueueSize(); }
   int getDebugMode() const { return env_.getDebugMode(); }

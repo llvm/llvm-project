@@ -408,7 +408,7 @@ void StackAddressDescription::Print() const {
   DescribeThread(GetThreadContextByTidLocked(tid));
 }
 
-void HeapAddressDescription::Print() const {
+void HeapAddressDescription::Print(bool nonself) const {
   PrintHeapChunkAccess(addr, chunk_access);
 
   asanThreadRegistry().CheckLocked();
@@ -430,7 +430,8 @@ void HeapAddressDescription::Print() const {
            AsanThreadIdAndName(alloc_thread).c_str(), d.Default());
   }
   alloc_stack.Print();
-  DescribeThread(GetCurrentThread());
+  if (!nonself)
+    DescribeThread(GetCurrentThread());
   if (free_thread) DescribeThread(free_thread);
   DescribeThread(alloc_thread);
 }

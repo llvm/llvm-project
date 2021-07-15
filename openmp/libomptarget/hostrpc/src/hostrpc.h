@@ -110,6 +110,7 @@ enum hostcall_service_id {
   HOSTRPC_SERVICE_VARFNUINT64,
   HOSTRPC_SERVICE_VARFNDOUBLE,
   HOSTRPC_SERVICE_FPRINTF,
+  HOSTRPC_SERVICE_FTNASSIGN,
 };
 typedef enum hostcall_service_id hostcall_service_id_t;
 

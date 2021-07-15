@@ -82,6 +82,8 @@ append_rtti_flag(OFF ASAN_CFLAGS)
 
 if(SANITIZER_AMDGPU)
   list(APPEND ASAN_CFLAGS -DSANITIZER_AMDGPU=1)
+  find_path(HSA_INCLUDE hsa.h HINTS ${CMAKE_INSTALL_PREFIX}/include/hsa ${CMAKE_INSTALL_PREFIX}/../include/hsa /opt/rocm/include/hsa PATH_SUFFIXES hsa)
+  include_directories(${HSA_INCLUDE})
 endif()
 
 set(ASAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
