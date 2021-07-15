@@ -76,3 +76,64 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i32 %inc, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+; char foo1(char *p, int n, int count) {
+;   int j = 0;
+;   char sum = 0;
+;   for (int i = 0; i < n; i++) {
+;     sum += *(p + j + 1000);
+;     j += count;
+;    }
+;   return sum;
+; }
+
+define zeroext i8 @foo1(i8* %p, i32 signext %n, i32 signext %count) {
+; CHECK-LABEL: foo1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpwi r4, 1
+; CHECK-NEXT:    blt cr0, .LBB1_4
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    addi r6, r3, 1000
+; CHECK-NEXT:    clrldi r3, r4, 32
+; CHECK-NEXT:    extsw r5, r5
+; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:    mtctr r3
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB1_2: # %for.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    lbzx r7, r6, r4
+; CHECK-NEXT:    add r4, r4, r5
+; CHECK-NEXT:    add r3, r7, r3
+; CHECK-NEXT:    bdnz .LBB1_2
+; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
+; CHECK-NEXT:    clrldi r3, r3, 56
+; CHECK-NEXT:    blr
+; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    blr
+entry:
+  %cmp10 = icmp sgt i32 %n, 0
+  br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:                               ; preds = %entry
+  %0 = sext i32 %count to i64
+  %add.ptr = getelementptr inbounds i8, i8* %p, i64 1000
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %sum.0.lcssa = phi i8 [ 0, %entry ], [ %add, %for.body ]
+  ret i8 %sum.0.lcssa
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+  %i.013 = phi i32 [ 0, %for.body.preheader ], [ %inc, %for.body ]
+  %sum.012 = phi i8 [ 0, %for.body.preheader ], [ %add, %for.body ]
+  %add.ptr1 = getelementptr inbounds i8, i8* %add.ptr, i64 %indvars.iv
+  %1 = load i8, i8* %add.ptr1, align 1
+  %add = add i8 %1, %sum.012
+  %indvars.iv.next = add nsw i64 %indvars.iv, %0
+  %inc = add nuw nsw i32 %i.013, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
