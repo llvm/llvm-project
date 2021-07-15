@@ -2381,21 +2381,10 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
   return SymbolicRangeInferrer::inferRange(F, State, Sym);
 }
 
-RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
-                                          EquivalenceClass Class) {
-  return SymbolicRangeInferrer::inferRange(F, State, Class);
-}
-
 ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
                                                  SymbolRef Sym,
                                                  RangeSet Range) {
   return ConstraintAssignor::assign(State, getSValBuilder(), F, Sym, Range);
-}
-
-ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
-                                                 EquivalenceClass Class,
-                                                 RangeSet Range) {
-  return ConstraintAssignor::assign(State, getSValBuilder(), F, Class, Range);
 }
 
 //===------------------------------------------------------------------------===
