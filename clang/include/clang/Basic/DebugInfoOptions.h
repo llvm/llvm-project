@@ -37,6 +37,7 @@ enum DebugInfoKind {
   /// Limit generated debug info for classes to reduce size. This emits class
   /// type info only where the constructor is emitted, if it is a class that
   /// has a constructor.
+  /// FIXME: Consider combining this with LimitedDebugInfo.
   DebugInfoConstructor,
 
   /// Limit generated debug info to reduce size (-fno-standalone-debug). This
