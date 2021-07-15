@@ -1,19 +1,19 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown < %s | FileCheck %s
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -o %t.o < %s
-# RUN: obj2yaml %t.o | FileCheck %s --check-prefix=CHECK-OBJ
+# RUN: llvm-mc -triple=wasm64-unknown-unknown < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj -o %t.o < %s
+# RUN: obj2yaml %t.o | FileCheck %s --check-prefix=CHECK-OBJ --match-full-lines
 
-.globaltype __tls_base, i32
+.globaltype __tls_base, i64
 
 tls_store:
   .functype tls_store (i32) -> ()
   # CHECK: global.get __tls_base
-  # CHECK-NEXT: i32.const tls1@TLSREL
-  # CHECK-NEXT: i32.add
+  # CHECK-NEXT: i64.const tls1@TLSREL
+  # CHECK-NEXT: i64.add
   # CHECK-NEXT: local.get 0
   # CHECK-NEXT: i32.store 0
   global.get __tls_base
-  i32.const tls1@TLSREL
-  i32.add
+  i64.const tls1@TLSREL
+  i64.add
   local.get 0
   i32.store 0
   end_function
@@ -35,7 +35,7 @@ tls2:
 # CHECK-OBJ-NEXT:      - Type:            R_WASM_GLOBAL_INDEX_LEB
 # CHECK-OBJ-NEXT:        Index:           1
 # CHECK-OBJ-NEXT:        Offset:          0x4
-# CHECK-OBJ-NEXT:      - Type:            R_WASM_MEMORY_ADDR_TLS_SLEB
+# CHECK-OBJ-NEXT:      - Type:            R_WASM_MEMORY_ADDR_TLS_SLEB64
 # CHECK-OBJ-NEXT:        Index:           2
 # CHECK-OBJ-NEXT:        Offset:          0xA
 

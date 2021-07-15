@@ -115,6 +115,7 @@ void scanRelocations(InputChunk *chunk) {
         addGOTEntry(sym);
       break;
     case R_WASM_MEMORY_ADDR_TLS_SLEB:
+    case R_WASM_MEMORY_ADDR_TLS_SLEB64:
       // In single-threaded builds TLS is lowered away and TLS data can be
       // merged with normal data and allowing TLS relocation in non-TLS
       // segments.
