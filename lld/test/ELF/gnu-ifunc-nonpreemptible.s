@@ -20,8 +20,8 @@
 # RUN: ld.lld -shared %t.o -o %t2
 # RUN: llvm-readelf -s %t2 | FileCheck %s --check-prefix=PIC
 
-# PIC:        0 NOTYPE  LOCAL  HIDDEN     [[#]] __rela_iplt_start
-# PIC-NEXT:   0 NOTYPE  LOCAL  HIDDEN     [[#]] __rela_iplt_end
+# PIC:        0 NOTYPE  WEAK   DEFAULT    UND __rela_iplt_start
+# PIC-NEXT:   0 NOTYPE  WEAK   DEFAULT    UND __rela_iplt_end
 
 # DISASM: Disassembly of section .text:
 # DISASM-EMPTY:
