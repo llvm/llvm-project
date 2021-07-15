@@ -11,27 +11,11 @@
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = constant [[T:%.*]] { i32 0, i32 0, i32 17, i32 25 }
 ;.
 define internal i32 @test(%T* %p) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@test
-; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
-; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], %T* @G, i64 0, i32 3
-; IS__TUNIT____-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], %T* @G, i64 0, i32 2
-; IS__TUNIT____-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]], align 4
-; IS__TUNIT____-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]], align 4
-; IS__TUNIT____-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
-; IS__TUNIT____-NEXT:    ret i32 [[V]]
-;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], %T* @G, i64 0, i32 3
-; IS__CGSCC____-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], %T* @G, i64 0, i32 2
-; IS__CGSCC____-NEXT:    [[A:%.*]] = load i32, i32* [[A_GEP]], align 4
-; IS__CGSCC____-NEXT:    [[B:%.*]] = load i32, i32* [[B_GEP]], align 8
-; IS__CGSCC____-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
-; IS__CGSCC____-NEXT:    ret i32 [[V]]
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
 entry:
   %a.gep = getelementptr %T, %T* %p, i64 0, i32 3
@@ -45,17 +29,15 @@ entry:
 define i32 @caller() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT____-SAME: () #[[ATTR0]] {
+; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[V:%.*]] = call i32 @test() #[[ATTR0]]
-; IS__TUNIT____-NEXT:    ret i32 [[V]]
+; IS__TUNIT____-NEXT:    ret i32 42
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: () #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[V:%.*]] = call i32 @test() #[[ATTR1:[0-9]+]]
-; IS__CGSCC____-NEXT:    ret i32 [[V]]
+; IS__CGSCC____-NEXT:    ret i32 42
 ;
 entry:
   %v = call i32 @test(%T* @G)
@@ -65,5 +47,4 @@ entry:
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { readnone willreturn }
 ;.
