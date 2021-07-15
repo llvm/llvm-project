@@ -1,3 +1,4 @@
+// REQUIRES: powerpc-registered-target
 // RUN: not %clang_cc1 -triple=powerpc-unknown-aix -emit-llvm %s -o - 2>&1 |\
 // RUN: FileCheck %s --check-prefix=CHECK32-ERROR
 // RUN: %clang_cc1 -O2 -triple=powerpc64-unknown-aix -emit-llvm %s -o - | \
