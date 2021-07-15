@@ -490,6 +490,8 @@ DeclRefExpr *DeclRefExpr::CreateEmpty(const ASTContext &Context,
 
 void DeclRefExpr::setDecl(ValueDecl *NewD) {
   D = NewD;
+  if (getType()->isUndeducedType())
+    setType(NewD->getType());
   setDependence(computeDependence(this, NewD->getASTContext()));
 }
 
@@ -1722,8 +1724,10 @@ MemberExpr *MemberExpr::CreateEmpty(const ASTContext &Context,
   return new (Mem) MemberExpr(EmptyShell());
 }
 
-void MemberExpr::setMemberDecl(ValueDecl *D) {
-  MemberDecl = D;
+void MemberExpr::setMemberDecl(ValueDecl *NewD) {
+  MemberDecl = NewD;
+  if (getType()->isUndeducedType())
+    setType(NewD->getType());
   setDependence(computeDependence(this));
 }
 
