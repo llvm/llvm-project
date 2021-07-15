@@ -95,7 +95,7 @@ class MUTEX ThreadRegistry {
   uptr GetMaxAliveThreads();
 
   void Lock() ACQUIRE() { mtx_.Lock(); }
-  void CheckLocked() const CHECK_LOCKED { mtx_.CheckLocked(); }
+  void CheckLocked() const CHECK_LOCKED() { mtx_.CheckLocked(); }
   void Unlock() RELEASE() { mtx_.Unlock(); }
 
   // Should be guarded by ThreadRegistryLock.

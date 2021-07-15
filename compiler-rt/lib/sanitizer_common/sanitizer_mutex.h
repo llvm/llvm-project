@@ -38,7 +38,7 @@ class MUTEX StaticSpinMutex {
 
   void Unlock() RELEASE() { atomic_store(&state_, 0, memory_order_release); }
 
-  void CheckLocked() const CHECK_LOCKED {
+  void CheckLocked() const CHECK_LOCKED() {
     CHECK_EQ(atomic_load(&state_, memory_order_relaxed), 1);
   }
 
@@ -84,7 +84,7 @@ class MUTEX BlockingMutex {
   // maintaining complex state to work around those situations, the check only
   // checks that the mutex is owned, and assumes callers to be generally
   // well-behaved.
-  void CheckLocked() const CHECK_LOCKED;
+  void CheckLocked() const CHECK_LOCKED();
 
  private:
   // Solaris mutex_t has a member that requires 64-bit alignment.
@@ -131,7 +131,7 @@ class MUTEX RWMutex {
     (void)prev;
   }
 
-  void CheckLocked() const CHECK_LOCKED {
+  void CheckLocked() const CHECK_LOCKED() {
     CHECK_NE(atomic_load(&state_, memory_order_relaxed), kUnlocked);
   }
 
