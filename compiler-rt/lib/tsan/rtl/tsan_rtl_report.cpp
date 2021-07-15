@@ -47,7 +47,24 @@ void __tsan_on_report(const ReportDesc *rep) {
   (void)rep;
 }
 
-static void StackStripMain(SymbolizedStack *frames) {
+bool InternalFrame(const char *func) {
+  static const char *frames[] = {
+      "__tsan::ScopedInterceptor",
+      "__sanitizer::StackTrace",
+  };
+  for (auto frame : frames) {
+    if (!internal_strncmp(func, frame, internal_strlen(frame)))
+      return true;
+  }
+  return false;
+}
+
+static SymbolizedStack *StackStripMain(SymbolizedStack *frames) {
+  for (; frames && frames->info.function; frames = frames->next) {
+    // Remove top inlined frames from our interceptors.
+    if (!InternalFrame(frames->info.function))
+      break;
+  }
   SymbolizedStack *last_frame = nullptr;
   SymbolizedStack *last_frame2 = nullptr;
   for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
@@ -56,7 +73,7 @@ static void StackStripMain(SymbolizedStack *frames) {
   }
 
   if (last_frame2 == 0)
-    return;
+    return frames;
 #if !SANITIZER_GO
   const char *last = last_frame->info.function;
   const char *last2 = last_frame2->info.function;
@@ -69,7 +86,8 @@ static void StackStripMain(SymbolizedStack *frames) {
     last_frame->ClearAll();
     last_frame2->next = nullptr;
   // Strip global ctors init.
-  } else if (last && 0 == internal_strcmp(last, "__do_global_ctors_aux")) {
+  } else if (last && (0 == internal_strcmp(last, "__do_global_ctors_aux") ||
+                      0 == internal_strcmp(last, "__libc_csu_init"))) {
     last_frame->ClearAll();
     last_frame2->next = nullptr;
   // If both are 0, then we probably just failed to symbolize.
@@ -85,6 +103,7 @@ static void StackStripMain(SymbolizedStack *frames) {
   last_frame->ClearAll();
   last_frame2->next = nullptr;
 #endif
+  return frames;
 }
 
 ReportStack *SymbolizeStackId(u32 stack_id) {
@@ -118,10 +137,8 @@ static ReportStack *SymbolizeStack(StackTrace trace) {
     last->next = top;
     top = ent;
   }
-  StackStripMain(top);
-
   ReportStack *stack = ReportStack::New();
-  stack->frames = top;
+  stack->frames = StackStripMain(top);
   return stack;
 }
 
