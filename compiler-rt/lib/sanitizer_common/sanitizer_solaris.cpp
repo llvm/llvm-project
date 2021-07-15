@@ -218,6 +218,13 @@ uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
 }
 
 // ----------------- sanitizer_common.h
+void FutexWait(atomic_uint32_t *p, u32 cmp) {
+  // FIXME: implement actual blocking.
+  sched_yield();
+}
+
+void FutexWake(atomic_uint32_t *p, u32 count) {}
+
 BlockingMutex::BlockingMutex() {
   CHECK(sizeof(mutex_t) <= sizeof(opaque_storage_));
   internal_memset(this, 0, sizeof(*this));
