@@ -9,7 +9,9 @@ def run(f):
 
 # CHECK-LABEL: TEST: testAttributes
 def testAttributes():
-  with Context(), Location.unknown():
+  with Context() as ctx, Location.unknown():
+    ctx.allow_unregistered_dialects = True
+
     #
     # Check op construction with attributes.
     #
