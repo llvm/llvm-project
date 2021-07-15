@@ -223,6 +223,16 @@ else()
       add_asm_sources(TSAN_ASM_SOURCES
         rtl/tsan_rtl_s390x.S
         )
+      # Sanity check for Go runtime.
+      set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
+      add_custom_target(GotsanRuntimeCheck
+	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+		EXTRA_CFLAGS=${EXTRA_CFLAGS}
+		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
+	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
+	COMMENT "Checking TSan Go runtime..."
+	VERBATIM)
     else()
       set(TSAN_ASM_SOURCES)
     endif()
