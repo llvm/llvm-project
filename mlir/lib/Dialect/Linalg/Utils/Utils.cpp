@@ -20,6 +20,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
@@ -550,7 +551,7 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
     if (!isTiled(map.getSubMap({r}), tileSizes)) {
       offsets.push_back(builder.getIndexAttr(0));
       Value dim = createOrFoldDimOp(builder, loc, valueToTile, r);
-      sizes.push_back(dim);
+      sizes.push_back(getAsOpFoldResult(dim));
       strides.push_back(builder.getIndexAttr(1));
       LLVM_DEBUG(llvm::dbgs() << ": not tiled: use size: " << dim << "\n");
       continue;
