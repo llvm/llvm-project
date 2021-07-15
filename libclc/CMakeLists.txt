@@ -124,13 +124,21 @@ set( CMAKE_CLC_ARCHIVE ${LLVM_LINK} )
 set( CMAKE_LLAsm_PREPROCESSOR ${LLVM_CLANG} )
 set( CMAKE_LLAsm_COMPILER ${LLVM_AS} )
 set( CMAKE_LLAsm_ARCHIVE ${LLVM_LINK} )
-enable_language( CLC LLAsm )
 
 # Construct LLVM version define
 string( REPLACE "." ";" LLVM_VERSION_LIST ${LLVM_VERSION} )
 list( GET LLVM_VERSION_LIST 0 LLVM_MAJOR )
 list( GET LLVM_VERSION_LIST 1 LLVM_MINOR )
 set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_MAJOR}0${LLVM_MINOR}" )
+
+
+# LLVM 13 enables standard includes by default
+if( ${LLVM_VERSION} VERSION_GREATER "12.99.99" )
+				set( CMAKE_LLAsm_FLAGS ${CMAKE_LLAsm_FLAGS} -cl-no-stdinc )
+				set( CMAKE_CLC_FLAGS ${CMAKE_CLC_FLAGS} -cl-no-stdinc )
+endif()
+
+enable_language( CLC LLAsm )
 
 # This needs to be set before any target that needs it
 link_directories( ${LLVM_LIBDIR} )
