@@ -40,6 +40,7 @@
 ; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-O-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O3-NEXT: Running pass: CallSiteSplittingPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass on foo
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on foo
@@ -146,18 +147,22 @@
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
+; CHECK-O1-NEXT: Running pass: CoroElidePass
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass
+; CHECK-O23SZ-NEXT: Running pass: CoroElidePass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass on foo
 ; CHECK-O3-NEXT: Running analysis: RegionInfoAnalysis on foo
 ; CHECK-O3-NEXT: Running analysis: DominanceFrontierAnalysis on foo
+; CHECK-O-NEXT: Running pass: CoroSplitPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
+; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
