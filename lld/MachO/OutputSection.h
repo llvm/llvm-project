@@ -9,14 +9,17 @@
 #ifndef LLD_MACHO_OUTPUT_SECTION_H
 #define LLD_MACHO_OUTPUT_SECTION_H
 
+#include "Symbols.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/TinyPtrVector.h"
 
 #include <limits>
 
 namespace lld {
 namespace macho {
 
+class Defined;
 class InputSection;
 class OutputSegment;
 
@@ -62,7 +65,11 @@ public:
 
   virtual void writeTo(uint8_t *buf) const = 0;
 
+  void assignAddressesToStartEndSymbols();
+
   StringRef name;
+  llvm::TinyPtrVector<Defined *> sectionStartSymbols;
+  llvm::TinyPtrVector<Defined *> sectionEndSymbols;
   OutputSegment *parent = nullptr;
   // For output sections that don't have explicit ordering requirements, their
   // output order should be based on the order of the input sections they
