@@ -855,6 +855,19 @@ LogicalResult InitTensorOp::reifyReturnTypeShapesPerResultDim(
 // PadTensorOp
 //===----------------------------------------------------------------------===//
 
+// TODO: Replace custom<InferType> directive with AllTypesMatch as soon as it
+// supports optional types.
+void printInferType(OpAsmPrinter &printer, Operation *op, Value optOperand,
+                    Type typeToInfer, Type typeToInferFrom) {}
+
+ParseResult parseInferType(OpAsmParser &parser,
+                           Optional<OpAsmParser::OperandType> optOperand,
+                           Type &typeToInfer, Type typeToInferFrom) {
+  if (optOperand)
+    typeToInfer = typeToInferFrom;
+  return success();
+}
+
 static LogicalResult verify(PadTensorOp op) {
   auto sourceType = op.source().getType().cast<RankedTensorType>();
   auto resultType = op.result().getType().cast<RankedTensorType>();
@@ -869,6 +882,9 @@ static LogicalResult verify(PadTensorOp op) {
     return op.emitError("specified type ")
            << resultType << " does not match the inferred type "
            << expectedType;
+  }
+  if (op.output() && op.output().getType() != op.getResultType()) {
+    op.emitError("expected that output operand type equals result type");
   }
 
   auto &region = op.region();
@@ -916,7 +932,7 @@ void PadTensorOp::build(OpBuilder &b, OperationState &result, Value source,
   auto sourceType = source.getType().cast<RankedTensorType>();
   auto resultType = inferResultType(sourceType, staticLow, staticHigh);
   build(b, result, resultType, source, low, high, b.getI64ArrayAttr(staticLow),
-        b.getI64ArrayAttr(staticHigh));
+        b.getI64ArrayAttr(staticHigh), /*output=*/Value());
   result.addAttributes(attrs);
 }
 
@@ -953,7 +969,15 @@ void PadTensorOp::build(OpBuilder &b, OperationState &result, Type resultType,
         PadTensorOp::inferResultType(sourceType, staticLow, staticHigh);
   }
   build(b, result, resultType, source, dynamicLow, dynamicHigh,
-        b.getI64ArrayAttr(staticLow), b.getI64ArrayAttr(staticHigh));
+        b.getI64ArrayAttr(staticLow), b.getI64ArrayAttr(staticHigh),
+        /*output=*/Value());
+}
+
+void PadTensorOp::build(OpBuilder &b, OperationState &result, Type resultType,
+                        Value source, ArrayRef<Value> low, ArrayRef<Value> high,
+                        ArrayAttr staticLow, ArrayAttr staticHigh) {
+  build(b, result, resultType, source, low, high, staticLow, staticHigh,
+        /*output=*/{});
 }
 
 PadTensorOp PadTensorOp::createPadScalarOp(Type type, Value source, Value pad,
@@ -1038,11 +1062,25 @@ struct FoldStaticZeroPadding : public OpRewritePattern<PadTensorOp> {
   }
 };
 
+// Fold tensor.dim(pad_tensor(%input, %output)) to tensor.dim(%output).
+struct FoldToDimOfOutputOperand : public OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto padTensorOp = dimOp.source().getDefiningOp<PadTensorOp>();
+    if (!padTensorOp || !padTensorOp.output())
+      return failure();
+    rewriter.replaceOpWithNewOp<tensor::DimOp>(dimOp, padTensorOp.output(),
+                                               dimOp.index());
+    return success();
+  }
+};
 } // namespace
 
 void PadTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<FoldStaticZeroPadding>(context);
+  results.add<FoldStaticZeroPadding, FoldToDimOfOutputOperand>(context);
 }
 
 /// Return the padding value of the PadTensorOp if it constant. In this context,
