@@ -5363,66 +5363,87 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
       indicatePessimisticFixpoint();
   }
 
-  /// Check if \p ICmp is an equality comparison (==/!=) with at least one
-  /// nullptr. If so, try to simplify it using AANonNull on the other operand.
-  /// Return true if successful, in that case SimplifiedAssociatedValue will be
-  /// updated and \p Changed is set appropriately.
-  bool checkForNullPtrCompare(Attributor &A, ICmpInst *ICmp,
-                              ChangeStatus &Changed) {
-    if (!ICmp)
-      return false;
-    if (!ICmp->isEquality())
-      return false;
+  /// Check if \p Cmp is a comparison we can simplify.
+  ///
+  /// We handle multiple cases, one in which at least one operand is an
+  /// (assumed) nullptr. If so, try to simplify it using AANonNull on the other
+  /// operand. Return true if successful, in that case SimplifiedAssociatedValue
+  /// will be updated.
+  bool handleCmp(Attributor &A, CmpInst &Cmp) {
+    auto Union = [&](Value &V) {
+      SimplifiedAssociatedValue = AA::combineOptionalValuesInAAValueLatice(
+          SimplifiedAssociatedValue, &V, V.getType());
+      return SimplifiedAssociatedValue != Optional<Value *>(nullptr);
+    };
 
-    // This is a comparison with == or !-. We check for nullptr now.
-    bool Op0IsNull = isa<ConstantPointerNull>(ICmp->getOperand(0));
-    bool Op1IsNull = isa<ConstantPointerNull>(ICmp->getOperand(1));
-    if (!Op0IsNull && !Op1IsNull)
-      return false;
+    Value *LHS = Cmp.getOperand(0);
+    Value *RHS = Cmp.getOperand(1);
 
-    LLVMContext &Ctx = ICmp->getContext();
-    // Check for `nullptr ==/!= nullptr` first:
-    if (Op0IsNull && Op1IsNull) {
-      Value *NewVal = ConstantInt::get(
-          Type::getInt1Ty(Ctx), ICmp->getPredicate() == CmpInst::ICMP_EQ);
-      assert(!SimplifiedAssociatedValue.hasValue() &&
-             "Did not expect non-fixed value for constant comparison");
-      SimplifiedAssociatedValue = NewVal;
-      indicateOptimisticFixpoint();
-      Changed = ChangeStatus::CHANGED;
+    // Simplify the operands first.
+    bool UsedAssumedInformation = false;
+    const auto &SimplifiedLHS =
+        A.getAssumedSimplified(IRPosition::value(*LHS, getCallBaseContext()),
+                               *this, UsedAssumedInformation);
+    if (!SimplifiedLHS.hasValue())
+      return true;
+    if (SimplifiedLHS.getValue())
+      LHS = *SimplifiedLHS;
+
+    const auto &SimplifiedRHS =
+        A.getAssumedSimplified(IRPosition::value(*RHS, getCallBaseContext()),
+                               *this, UsedAssumedInformation);
+    if (!SimplifiedRHS.hasValue())
+      return true;
+    if (SimplifiedRHS.getValue())
+      RHS = *SimplifiedRHS;
+
+    LLVMContext &Ctx = Cmp.getContext();
+    // Handle the trivial case first in which we don't even need to think about
+    // null or non-null.
+    if (LHS == RHS && (Cmp.isTrueWhenEqual() || Cmp.isFalseWhenEqual())) {
+      Constant *NewVal =
+          ConstantInt::get(Type::getInt1Ty(Ctx), Cmp.isTrueWhenEqual());
+      if (!Union(*NewVal))
+        return false;
+      if (!UsedAssumedInformation)
+        indicateOptimisticFixpoint();
       return true;
     }
+
+    // From now on we only handle equalities (==, !=).
+    ICmpInst *ICmp = dyn_cast<ICmpInst>(&Cmp);
+    if (!ICmp || !ICmp->isEquality())
+      return false;
+
+    bool LHSIsNull = isa<ConstantPointerNull>(LHS);
+    bool RHSIsNull = isa<ConstantPointerNull>(RHS);
+    if (!LHSIsNull && !RHSIsNull)
+      return false;
 
     // Left is the nullptr ==/!= non-nullptr case. We'll use AANonNull on the
     // non-nullptr operand and if we assume it's non-null we can conclude the
     // result of the comparison.
-    assert((Op0IsNull || Op1IsNull) &&
+    assert((LHSIsNull || RHSIsNull) &&
            "Expected nullptr versus non-nullptr comparison at this point");
 
     // The index is the operand that we assume is not null.
-    unsigned PtrIdx = Op0IsNull;
+    unsigned PtrIdx = LHSIsNull;
     auto &PtrNonNullAA = A.getAAFor<AANonNull>(
         *this, IRPosition::value(*ICmp->getOperand(PtrIdx)),
         DepClassTy::REQUIRED);
     if (!PtrNonNullAA.isAssumedNonNull())
       return false;
+    UsedAssumedInformation |= !PtrNonNullAA.isKnownNonNull();
 
     // The new value depends on the predicate, true for != and false for ==.
-    Value *NewVal = ConstantInt::get(Type::getInt1Ty(Ctx),
-                                     ICmp->getPredicate() == CmpInst::ICMP_NE);
+    Constant *NewVal = ConstantInt::get(
+        Type::getInt1Ty(Ctx), ICmp->getPredicate() == CmpInst::ICMP_NE);
+    if (!Union(*NewVal))
+      return false;
 
-    assert((!SimplifiedAssociatedValue.hasValue() ||
-            SimplifiedAssociatedValue == NewVal) &&
-           "Did not expect to change value for zero-comparison");
-
-    auto Before = SimplifiedAssociatedValue;
-    SimplifiedAssociatedValue = NewVal;
-
-    if (PtrNonNullAA.isKnownNonNull())
+    if (!UsedAssumedInformation)
       indicateOptimisticFixpoint();
 
-    Changed = Before == SimplifiedAssociatedValue ? ChangeStatus::UNCHANGED
-                                                  : ChangeStatus ::CHANGED;
     return true;
   }
 
@@ -5439,11 +5460,6 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
   ChangeStatus updateImpl(Attributor &A) override {
     auto Before = SimplifiedAssociatedValue;
 
-    ChangeStatus Changed;
-    if (checkForNullPtrCompare(A, dyn_cast<ICmpInst>(&getAnchorValue()),
-                               Changed))
-      return Changed;
-
     auto VisitValueCB = [&](Value &V, const Instruction *CtxI, bool &,
                             bool Stripped) -> bool {
       auto &AA = A.getAAFor<AAValueSimplify>(
@@ -5452,6 +5468,8 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
       if (!Stripped && this == &AA) {
         if (auto *LI = dyn_cast<LoadInst>(&V))
           return updateWithLoad(A, *LI);
+        if (auto *Cmp = dyn_cast<CmpInst>(&V))
+          return handleCmp(A, *Cmp);
         // TODO: Look the instruction and check recursively.
 
         LLVM_DEBUG(dbgs() << "[ValueSimplify] Can't be stripped more : " << V
