@@ -2521,7 +2521,7 @@ void Verifier::visitFunction(const Function &F) {
   // direct call/invokes, never having its "address taken".
   // Only do this if the module is materialized, otherwise we don't have all the
   // uses.
-  if (F.getIntrinsicID() && F.getParent()->isMaterialized()) {
+  if (F.isIntrinsic() && F.getParent()->isMaterialized()) {
     const User *U;
     if (F.hasAddressTaken(&U))
       Assert(false, "Invalid user of intrinsic instruction!", U);
