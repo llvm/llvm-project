@@ -121,7 +121,7 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
-  unsigned getMinVectorRegisterBitWidth() {
+  unsigned getMinVectorRegisterBitWidth() const {
     return ST->getMinVectorRegisterBitWidth();
   }
 
