@@ -112,6 +112,13 @@ namespace ranges {
 
   template <class _Tp>
   concept common_range = range<_Tp> && same_as<iterator_t<_Tp>, sentinel_t<_Tp> >;
+
+  template<class _Tp>
+  concept viewable_range =
+    range<_Tp> && (
+      (view<remove_cvref_t<_Tp>> && constructible_from<remove_cvref_t<_Tp>, _Tp>) ||
+      (!view<remove_cvref_t<_Tp>> && borrowed_range<_Tp>)
+    );
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
