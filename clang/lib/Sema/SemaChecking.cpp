@@ -3276,6 +3276,8 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_maddhd:
   case PPC::BI__builtin_ppc_maddhdu:
   case PPC::BI__builtin_ppc_maddld:
+  case PPC::BI__builtin_ppc_load8r:
+  case PPC::BI__builtin_ppc_store8r:
     return true;
   }
   return false;

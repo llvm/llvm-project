@@ -15197,6 +15197,20 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *Shift = Builder.CreateCall(F, {Ops[0], Ops[0], Ops[1]});
     return Builder.CreateAnd(Shift, Ops[2]);
   }
+  case PPC::BI__builtin_ppc_poppar4:
+  case PPC::BI__builtin_ppc_poppar8: {
+    llvm::Type *ArgType = Ops[0]->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
+    Value *Tmp = Builder.CreateCall(F, Ops[0]);
+
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *Result = Builder.CreateAnd(Tmp, llvm::ConstantInt::get(ArgType, 1));
+    if (Result->getType() != ResultType)
+      Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true,
+                                     "cast");
+    return Result;
+  }
+
   // Copy sign
   case PPC::BI__builtin_vsx_xvcpsgnsp:
   case PPC::BI__builtin_vsx_xvcpsgndp: {
