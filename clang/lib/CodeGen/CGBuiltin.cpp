@@ -15244,6 +15244,31 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     else
       return Builder.CreateSub(Ops[0], Ops[1], "vsubuqm");
   }
+  // Rotate and insert under mask operation.
+  // __rldimi(rs, is, shift, mask)
+  // (rotl64(rs, shift) & mask) | (is & ~mask)
+  // __rlwimi(rs, is, shift, mask)
+  // (rotl(rs, shift) & mask) | (is & ~mask)
+  case PPC::BI__builtin_ppc_rldimi:
+  case PPC::BI__builtin_ppc_rlwimi: {
+    llvm::Type *Ty = Ops[0]->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::fshl, Ty);
+    if (BuiltinID == PPC::BI__builtin_ppc_rldimi)
+      Ops[2] = Builder.CreateZExt(Ops[2], Int64Ty);
+    Value *Shift = Builder.CreateCall(F, {Ops[0], Ops[0], Ops[2]});
+    Value *X = Builder.CreateAnd(Shift, Ops[3]);
+    Value *Y = Builder.CreateAnd(Ops[1], Builder.CreateNot(Ops[3]));
+    return Builder.CreateOr(X, Y);
+  }
+  // Rotate and insert under mask operation.
+  // __rlwnm(rs, shift, mask)
+  // rotl(rs, shift) & mask
+  case PPC::BI__builtin_ppc_rlwnm: {
+    llvm::Type *Ty = Ops[0]->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::fshl, Ty);
+    Value *Shift = Builder.CreateCall(F, {Ops[0], Ops[0], Ops[1]});
+    return Builder.CreateAnd(Shift, Ops[2]);
+  }
   // Copy sign
   case PPC::BI__builtin_vsx_xvcpsgnsp:
   case PPC::BI__builtin_vsx_xvcpsgndp: {
