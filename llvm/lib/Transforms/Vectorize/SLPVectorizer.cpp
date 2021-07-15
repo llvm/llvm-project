@@ -3885,16 +3885,14 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       Cost -= TTI->getScalarizationOverhead(SrcVecTy, DemandedElts,
                                             /*Insert*/ true, /*Extract*/ false);
 
-      if (IsIdentity && NumElts != NumScalars && Offset % NumScalars != 0) {
-        // FIXME: Replace with SK_InsertSubvector once it is properly supported.
-        unsigned Sz = PowerOf2Ceil(Offset + NumScalars);
+      if (IsIdentity && NumElts != NumScalars && Offset % NumScalars != 0)
         Cost += TTI->getShuffleCost(
-            TargetTransformInfo::SK_PermuteSingleSrc,
-            FixedVectorType::get(SrcVecTy->getElementType(), Sz));
-      } else if (!IsIdentity) {
+            TargetTransformInfo::SK_InsertSubvector, SrcVecTy, /*Mask*/ None,
+            Offset,
+            FixedVectorType::get(SrcVecTy->getElementType(), NumScalars));
+      else if (!IsIdentity)
         Cost += TTI->getShuffleCost(TTI::SK_PermuteSingleSrc, SrcVecTy,
                                     ShuffleMask);
-      }
 
       return Cost;
     }
