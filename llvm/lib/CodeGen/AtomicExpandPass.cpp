@@ -689,6 +689,8 @@ static PartwordMaskValues createMaskInstrs(IRBuilder<> &Builder, Instruction *I,
   if (PMV.ValueType == PMV.WordType) {
     PMV.AlignedAddr = Addr;
     PMV.AlignedAddrAlignment = AddrAlign;
+    PMV.ShiftAmt = ConstantInt::get(PMV.ValueType, 0);
+    PMV.Mask = ConstantInt::get(PMV.ValueType, ~0);
     return PMV;
   }
 
