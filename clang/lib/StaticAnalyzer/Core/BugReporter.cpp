@@ -2249,8 +2249,20 @@ void PathSensitiveBugReport::markInteresting(SymbolRef sym,
 
   insertToInterestingnessMap(InterestingSymbols, sym, TKind);
 
+  // FIXME: No tests exist for this code and it is questionable:
+  // How to handle multiple metadata for the same region?
   if (const auto *meta = dyn_cast<SymbolMetadata>(sym))
     markInteresting(meta->getRegion(), TKind);
+}
+
+void PathSensitiveBugReport::markNotInteresting(SymbolRef sym) {
+  if (!sym)
+    return;
+  InterestingSymbols.erase(sym);
+
+  // The metadata part of markInteresting is not reversed here.
+  // Just making the same region not interesting is incorrect
+  // in specific cases.
 }
 
 void PathSensitiveBugReport::markInteresting(const MemRegion *R,
@@ -2263,6 +2275,17 @@ void PathSensitiveBugReport::markInteresting(const MemRegion *R,
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
     markInteresting(SR->getSymbol(), TKind);
+}
+
+void PathSensitiveBugReport::markNotInteresting(const MemRegion *R) {
+  if (!R)
+    return;
+
+  R = R->getBaseRegion();
+  InterestingRegions.erase(R);
+
+  if (const auto *SR = dyn_cast<SymbolicRegion>(R))
+    markNotInteresting(SR->getSymbol());
 }
 
 void PathSensitiveBugReport::markInteresting(SVal V,
