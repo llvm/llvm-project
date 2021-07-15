@@ -43,7 +43,7 @@
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xf32>
 // CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32x16xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.alloc() : memref<32x16xf32>
-// CHECK:           linalg.copy(%[[VAL_8]], %[[VAL_9]]) : memref<32x16xf32>, memref<32x16xf32>
+// CHECK:           memref.copy %[[VAL_8]], %[[VAL_9]] : memref<32x16xf32> to memref<32x16xf32>
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
 // CHECK:               %[[VAL_12:.*]] = muli %[[VAL_10]], %[[VAL_4]] : index

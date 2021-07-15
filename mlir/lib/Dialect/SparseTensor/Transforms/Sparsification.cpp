@@ -276,7 +276,7 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
   // impact the running complexity of the sparse kernel.
   Value init = rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
   Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
-  rewriter.create<linalg::CopyOp>(loc, init, alloc);
+  rewriter.create<memref::CopyOp>(loc, init, alloc);
   return alloc;
 }
 
