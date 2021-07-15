@@ -37,13 +37,8 @@ class Configuration(LibcxxConfiguration):
         self.libcxxabi_obj_root = self.get_lit_conf('libcxxabi_obj_root')
         super(Configuration, self).configure_obj_root()
 
-    def has_cpp_feature(self, feature, required_value):
-        return intMacroValue(self.cxx.dumpMacros().get('__cpp_' + feature, '0')) >= required_value
-
     def configure_features(self):
         super(Configuration, self).configure_features()
-        if not self.has_cpp_feature('noexcept_function_type', 201510):
-            self.config.available_features.add('libcxxabi-no-noexcept-function-type')
         if not self.get_lit_bool('llvm_unwinder', False):
             self.config.available_features.add('libcxxabi-has-system-unwinder')
 
