@@ -639,6 +639,26 @@ char **GetEnviron() {
 }
 
 #if !SANITIZER_SOLARIS
+void FutexWait(atomic_uint32_t *p, u32 cmp) {
+#    if SANITIZER_FREEBSD
+  _umtx_op(p, UMTX_OP_WAIT_UINT, cmp, 0, 0);
+#    elif SANITIZER_NETBSD
+  sched_yield();   /* No userspace futex-like synchronization */
+#    else
+  internal_syscall(SYSCALL(futex), (uptr)p, FUTEX_WAIT_PRIVATE, cmp, 0, 0, 0);
+#    endif
+}
+
+void FutexWake(atomic_uint32_t *p, u32 count) {
+#    if SANITIZER_FREEBSD
+  _umtx_op(p_, UMTX_OP_WAKE, count, 0, 0);
+#    elif SANITIZER_NETBSD
+                   /* No userspace futex-like synchronization */
+#    else
+  internal_syscall(SYSCALL(futex), (uptr)p, FUTEX_WAKE_PRIVATE, count, 0, 0, 0);
+#    endif
+}
+
 enum { MtxUnlocked = 0, MtxLocked = 1, MtxSleeping = 2 };
 
 BlockingMutex::BlockingMutex() {

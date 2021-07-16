@@ -100,6 +100,18 @@ bool SignalContext::IsStackOverflow() const { return false; }
 void SignalContext::DumpAllRegisters(void *context) { UNIMPLEMENTED(); }
 const char *SignalContext::Describe() const { UNIMPLEMENTED(); }
 
+void FutexWait(atomic_uint32_t *p, u32 cmp) {
+  zx_status_t status = _zx_futex_wait(reinterpret_cast<zx_futex_t *>(p), cmp,
+                                      ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+  if (status != ZX_ERR_BAD_STATE)  // Normal race.
+    CHECK_EQ(status, ZX_OK);
+}
+
+void FutexWake(atomic_uint32_t *p, u32 count) {
+  zx_status_t status = _zx_futex_wake(reinterpret_cast<zx_futex_t *>(p), count);
+  CHECK_EQ(status, ZX_OK);
+}
+
 enum MutexState : int { MtxUnlocked = 0, MtxLocked = 1, MtxSleeping = 2 };
 
 BlockingMutex::BlockingMutex() {
