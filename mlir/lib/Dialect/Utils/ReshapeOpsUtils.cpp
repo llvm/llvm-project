@@ -15,8 +15,6 @@
 
 using namespace mlir;
 
-constexpr StringRef mlir::getReassociationAttrName() { return "reassociation"; }
-
 Optional<SmallVector<ReassociationIndices>>
 mlir::getReassociationIndicesForReshape(ShapedType sourceType,
                                         ShapedType targetType) {
@@ -183,6 +181,70 @@ Optional<SmallVector<ReassociationIndices>> mlir::composeReassociationIndices(
   return composedIndices;
 }
 
+SmallVector<SmallVector<AffineExpr, 2>, 2>
+mlir::convertReassociationIndicesToExprs(
+    OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices) {
+  SmallVector<SmallVector<AffineExpr, 2>, 2> reassociationMaps;
+  for (const auto &indices : reassociationIndices) {
+    SmallVector<AffineExpr, 2> reassociationMap;
+    reassociationMap.reserve(indices.size());
+    for (int64_t index : indices)
+      reassociationMap.push_back(b.getAffineDimExpr(index));
+    reassociationMaps.push_back(std::move(reassociationMap));
+  }
+  return reassociationMaps;
+}
+
+template <typename AffineExprTy>
+unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
+  unsigned pos = 0;
+  for (const auto &exprs : exprArrays) {
+    for (auto expr : exprs) {
+      expr.walk([&pos](AffineExpr e) {
+        if (auto d = e.dyn_cast<AffineExprTy>())
+          pos = std::max(pos, d.getPosition());
+      });
+    }
+  }
+  return pos;
+}
+
+ArrayAttr mlir::getReassociationIndicesAttribute(
+    OpBuilder &b, ArrayRef<ReassociationIndices> reassociation) {
+  SmallVector<Attribute, 4> reassociationAttr =
+      llvm::to_vector<4>(llvm::map_range(
+          reassociation, [&](ReassociationIndices indices) -> Attribute {
+            return b.getI64ArrayAttr(indices).cast<Attribute>();
+          }));
+  return b.getArrayAttr(reassociationAttr);
+}
+
+SmallVector<ReassociationIndices, 2> mlir::convertReassociationMapsToIndices(
+    OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs) {
+  SmallVector<ReassociationIndices, 2> reassociationIndices;
+  for (const auto &exprs : reassociationExprs) {
+    ReassociationIndices indices;
+    indices.reserve(exprs.size());
+    for (const auto &expr : exprs)
+      indices.push_back(expr.cast<AffineDimExpr>().getPosition());
+    reassociationIndices.push_back(indices);
+  }
+  return reassociationIndices;
+}
+
+SmallVector<AffineMap, 4>
+mlir::getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation) {
+  unsigned maxDim = getMaxPosOfType<AffineDimExpr>(reassociation);
+  assert(getMaxPosOfType<AffineSymbolExpr>(reassociation) == 0 &&
+         "Expected symbol-less expressions");
+  SmallVector<AffineMap, 4> maps;
+  maps.reserve(reassociation.size());
+  for (const auto &exprs : reassociation) {
+    assert(!exprs.empty());
+    maps.push_back(AffineMap::get(maxDim + 1, 0, exprs, exprs[0].getContext()));
+  }
+  return maps;
+}
 bool mlir::isReassociationValid(ArrayRef<AffineMap> reassociation,
                                 int *invalidIndex) {
   if (reassociation.empty())

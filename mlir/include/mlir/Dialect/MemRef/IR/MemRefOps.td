@@ -203,7 +203,7 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
 // AllocaScopeOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope", 
+def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
       [AutomaticAllocationScope,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
@@ -225,8 +225,8 @@ def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
 
     Here, `%myalloca` memref is valid within the explicitly delimited scope
     and is automatically deallocated at the end of the given region. Conceptually,
-    `memref.alloca_scope` is a passthrough operation with 
-    `AutomaticAllocationScope` that spans the body of the region within the operation. 
+    `memref.alloca_scope` is a passthrough operation with
+    `AutomaticAllocationScope` that spans the body of the region within the operation.
 
     `memref.alloca_scope` may also return results that are defined in the nested
     region. To return a value, one should use `memref.alloca_scope.return`
@@ -251,14 +251,14 @@ def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
 // AllocaScopeReturnOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return", 
+def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return",
       [HasParent<"AllocaScopeOp">,
        NoSideEffect,
        ReturnLike,
        Terminator]> {
   let summary = "terminator for alloca_scope operation";
   let description = [{
-    `memref.alloca_scope.return` operation returns zero or more SSA values 
+    `memref.alloca_scope.return` operation returns zero or more SSA values
     from the region within `memref.alloca_scope`. If no values are returned,
     the return operation may be omitted. Otherwise, it has to be present
     to indicate which values are going to be returned. For example:
@@ -925,6 +925,150 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
   let assemblyFormat = [{
     $source `(` $shape `)` attr-dict `:` functional-type(operands, results)
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// ExpandShapeOp / CollapseShapeOp
+//===----------------------------------------------------------------------===//
+
+def IndexListArrayAttr :
+  TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
+
+class MemRef_ReassociativeReshapeOp<string mnemonic, list<OpTrait> traits = []> :
+    MemRef_Op<mnemonic, !listconcat(traits,
+      [NoSideEffect, ViewLikeOpInterface])>,
+    Arguments<(ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation)>,
+    Results<(outs AnyStridedMemRef:$result)>{
+  let builders = [
+    // Builders for a contracting reshape whose result type is computed from
+    // `src` and `reassociation`.
+    OpBuilder<(ins "Value":$src,
+      "ArrayRef<ReassociationIndices>":$reassociation,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    OpBuilder<(ins "Value":$src,
+      "ArrayRef<ReassociationExprs>":$reassociation,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
+    [{
+      auto reassociationMaps =
+          convertReassociationMapsToIndices($_builder, reassociation);
+      build($_builder, $_state, src, reassociationMaps, attrs);
+    }]>,
+
+    // Builders for a reshape whose result type is passed explicitly. This may
+    // be either a contracting or expanding reshape.
+    OpBuilder<(ins "Type":$resultType, "Value":$src,
+      "ArrayRef<ReassociationIndices>":$reassociation,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
+    [{
+      build($_builder, $_state, resultType, src, attrs);
+      $_state.addAttribute("reassociation",
+                          getReassociationIndicesAttribute($_builder, reassociation));
+    }]>,
+    OpBuilder<(ins "Type":$resultType, "Value":$src,
+      "ArrayRef<ReassociationExprs>":$reassociation,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
+    [{
+      auto reassociationMaps =
+          convertReassociationMapsToIndices($_builder, reassociation);
+      build($_builder, $_state, resultType, src, reassociationMaps, attrs);
+    }]>
+  ];
+
+  code commonExtraClassDeclaration = [{
+    SmallVector<AffineMap, 4> getReassociationMaps();
+    SmallVector<ReassociationExprs, 4> getReassociationExprs();
+    SmallVector<ReassociationIndices, 4> getReassociationIndices() {
+      SmallVector<ReassociationIndices, 4> reassociationIndices;
+      for (auto attr : reassociation())
+        reassociationIndices.push_back(llvm::to_vector<2>(
+            llvm::map_range(attr.cast<ArrayAttr>(), [&](Attribute indexAttr) {
+              return indexAttr.cast<IntegerAttr>().getInt();
+            })));
+      return reassociationIndices;
+    };
+    MemRefType getSrcType() { return src().getType().cast<MemRefType>(); }
+    MemRefType getResultType() { return result().getType().cast<MemRefType>(); }
+    Value getViewSource() { return src(); }
+  }];
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
+}
+
+def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape"> {
+  let summary = "operation to produce a memref with a higher rank.";
+  let description = [{
+    The `memref.expand_shape` op produces a new view with a higher rank whose
+    sizes are a reassociation of the original `view`. Depending on whether or
+    not the reassociated MemRefType is contiguous, the resulting memref may
+    require explicit alloc and copies.
+
+    A reassociation is defined as a continuous grouping of dimensions and is
+    represented with an array of I64ArrayAttr attribute.
+
+    For now, it is assumed that either:
+      1. a reassociation produces and consumes contiguous MemRefType or,
+      2. the reshape op will be folded into its consumers (by changing the shape
+         of the computations).
+    All other cases are undefined behavior and a reshape op may not lower to
+    LLVM if it cannot be proven statically that it does not require alloc+copy.
+
+    The operand memref type when dimensions can be zero-ranked if the result
+    memref type is statically shaped with all dimensions being unit extent. In
+    such case the reassociation map is empty.
+
+    The verification rule is that the reassociation maps are applied to the
+    result memref with the larger rank to obtain the operand memref with the
+    smaller rank.
+
+    Example:
+
+    ```mlir
+    // Dimension expansion i -> (i', j') and (k) -> (k')
+    %1 = memref.expand_shape %0 [[0, 1], [2]] :
+      memref<?x?xf32, stride_spec> into memref<?x?x?xf32, stride_spec_2>
+    ```
+  }];
+  let extraClassDeclaration = commonExtraClassDeclaration;
+}
+
+def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape"> {
+  let summary = "operation to produce a memref with a smaller rank.";
+  let description = [{
+    The `memref.collapse_shape` op produces a new view with a smaller rank
+    whose sizes are a reassociation of the original `view`. Depending on
+    whether or not the reassociated MemRefType is contiguous, the resulting
+    memref may require explicit alloc and copies.
+
+    A reassociation is defined as a continuous grouping of dimensions and is
+    represented with an array of I64ArrayAttr attribute.
+
+    For now, it is assumed that either:
+      1. a reassociation produces and consumes contiguous MemRefType or,
+      2. the reshape op will be folded into its consumers (by changing the shape
+         of the computations).
+    All other cases are undefined behavior and a reshape op may not lower to
+    LLVM if it cannot be proven statically that it does not require alloc+copy.
+
+    The result memref type of a reshape can be zero-ranked if the operand
+    memref type is statically shaped with all dimensions being unit extent. In
+    such case the reassociation map is empty.
+
+    The verification rule is that the reassociation maps are applied to the
+    operand memref with the larger rank to obtain the result memref with the
+    smaller rank.
+
+    Examples:
+
+    ```mlir
+    // Dimension collapse (i, j) -> i' and k -> k'
+    %1 = memref.collapse_shape %0 [[0, 1], [2]] :
+      memref<?x?x?xf32, stride_spec> into memref<?x?xf32, stride_spec_2>
+    ```
+  }];
+  let extraClassDeclaration = commonExtraClassDeclaration;
 }
 
 //===----------------------------------------------------------------------===//

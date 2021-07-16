@@ -13,6 +13,7 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
@@ -93,48 +94,6 @@ public:
   }
 };
 
-// ReshapeOp creates a new view descriptor of the proper rank.
-// For now, the only conversion supported is for target MemRef with static sizes
-// and strides.
-template <typename ReshapeOp>
-class ReshapeOpConversion : public ConvertOpToLLVMPattern<ReshapeOp> {
-public:
-  using ConvertOpToLLVMPattern<ReshapeOp>::ConvertOpToLLVMPattern;
-  using ReshapeOpAdaptor = typename ReshapeOp::Adaptor;
-
-  LogicalResult
-  matchAndRewrite(ReshapeOp reshapeOp, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    MemRefType dstType = reshapeOp.getResultType();
-
-    if (!dstType.hasStaticShape())
-      return failure();
-
-    int64_t offset;
-    SmallVector<int64_t, 4> strides;
-    auto res = getStridesAndOffset(dstType, strides, offset);
-    if (failed(res) || llvm::any_of(strides, [](int64_t val) {
-          return ShapedType::isDynamicStrideOrOffset(val);
-        }))
-      return failure();
-
-    ReshapeOpAdaptor adaptor(operands);
-    MemRefDescriptor baseDesc(adaptor.src());
-    Location loc = reshapeOp->getLoc();
-    auto desc =
-        MemRefDescriptor::undef(rewriter, reshapeOp->getLoc(),
-                                this->typeConverter->convertType(dstType));
-    desc.setAllocatedPtr(rewriter, loc, baseDesc.allocatedPtr(rewriter, loc));
-    desc.setAlignedPtr(rewriter, loc, baseDesc.alignedPtr(rewriter, loc));
-    desc.setOffset(rewriter, loc, baseDesc.offset(rewriter, loc));
-    for (auto en : llvm::enumerate(dstType.getShape()))
-      desc.setConstantSize(rewriter, loc, en.index(), en.value());
-    for (auto en : llvm::enumerate(strides))
-      desc.setConstantStride(rewriter, loc, en.index(), en.value());
-    rewriter.replaceOp(reshapeOp, {desc});
-    return success();
-  }
-};
 
 // YieldOp produces and LLVM::ReturnOp.
 class YieldOpConversion : public ConvertOpToLLVMPattern<linalg::YieldOp> {
@@ -153,9 +112,7 @@ public:
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void mlir::populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
-  patterns.add<RangeOpConversion, ReshapeOpConversion<ExpandShapeOp>,
-               ReshapeOpConversion<CollapseShapeOp>, YieldOpConversion>(
-      converter);
+  patterns.add<RangeOpConversion, YieldOpConversion>(converter);
 
   // Populate the type conversions for the linalg types.
   converter.addConversion(
@@ -176,6 +133,7 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateLinalgToLLVMConversionPatterns(converter, patterns);
+  populateMemRefToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
   target.addIllegalOp<RangeOp>();
