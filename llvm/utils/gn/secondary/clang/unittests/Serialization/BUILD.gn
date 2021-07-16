@@ -5,6 +5,7 @@ unittest("SerializationTests") {
   deps = [
     "//clang/lib/AST",
     "//clang/lib/Basic",
+    "//clang/lib/Frontend",
     "//clang/lib/Lex",
     "//clang/lib/Sema",
     "//clang/lib/Serialization",
