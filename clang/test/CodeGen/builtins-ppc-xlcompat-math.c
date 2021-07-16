@@ -24,10 +24,8 @@ void mtfsb1 () {
 }
 
 // CHECK-LABEL: @mtfsf(
-// CHECK:         [[UI_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[UI:%.*]], i32* [[UI_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[UI_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.ppc.mtfsf(i32 8, i32 [[TMP0]])
+// CHECK:         [[TMP0:%.*]] = uitofp i32 %{{.*}} to double
+// CHECK-NEXT:    call void @llvm.ppc.mtfsf(i32 8, double [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 void mtfsf (unsigned int ui) {

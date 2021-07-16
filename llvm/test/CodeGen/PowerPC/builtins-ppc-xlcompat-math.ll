@@ -10,50 +10,6 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-aix -mcpu=pwr8 < %s |\
 ; RUN:   FileCheck %s --check-prefix=CHECK-PWR8
 
-define dso_local void @mtfsb0() {
-; CHECK-PWR8-LABEL: mtfsb0:
-; CHECK-PWR8:       # %bb.0: # %entry
-; CHECK-PWR8-NEXT:    mtfsb0 10
-; CHECK-PWR8-NEXT:    blr
-;
-; CHECK-NOVSX-LABEL: mtfsb0:
-; CHECK-NOVSX:       # %bb.0: # %entry
-; CHECK-NOVSX-NEXT:    mtfsb0 10
-; CHECK-NOVSX-NEXT:    blr
-;
-; CHECK-PWR7-LABEL: mtfsb0:
-; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    mtfsb0 10
-; CHECK-PWR7-NEXT:    blr
-entry:
-  tail call void @llvm.ppc.mtfsb0(i32 10)
-  ret void
-}
-
-declare void @llvm.ppc.mtfsb0(i32 immarg) #1
-
-define dso_local void @mtfsb1() {
-; CHECK-PWR8-LABEL: mtfsb1:
-; CHECK-PWR8:       # %bb.0: # %entry
-; CHECK-PWR8-NEXT:    mtfsb1 0
-; CHECK-PWR8-NEXT:    blr
-;
-; CHECK-NOVSX-LABEL: mtfsb1:
-; CHECK-NOVSX:       # %bb.0: # %entry
-; CHECK-NOVSX-NEXT:    mtfsb1 0
-; CHECK-NOVSX-NEXT:    blr
-;
-; CHECK-PWR7-LABEL: mtfsb1:
-; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    mtfsb1 0
-; CHECK-PWR7-NEXT:    blr
-entry:
-  tail call void @llvm.ppc.mtfsb1(i32 0)
-  ret void
-}
-
-declare void @llvm.ppc.mtfsb1(i32 immarg) #1
-
 define dso_local double @fmsub_t0(double %d, double %d2, double %d3) {
 ; CHECK-PWR8-LABEL: fmsub_t0:
 ; CHECK-PWR8:       # %bb.0: # %entry

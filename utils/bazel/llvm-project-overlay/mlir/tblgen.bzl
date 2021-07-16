@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """BUILD extensions for MLIR table generation."""
 
+load("@bazel_skylib//lib:paths.bzl", "paths")
+
+
 TdInfo = provider(
     "Holds TableGen files and the dependencies and include paths necessary to" +
     " build them.",
@@ -69,8 +72,8 @@ def _prefix_roots(ctx, includes):
     prefixed_includes = []
     for include in includes:
         prefixed_includes.append(include)
-        prefixed_includes.append(ctx.genfiles_dir.path + "/" + include)
-        prefixed_includes.append(ctx.bin_dir.path + "/" + include)
+        prefixed_includes.append(paths.join(ctx.genfiles_dir.path, include))
+        prefixed_includes.append(paths.join(ctx.bin_dir.path, include))
     return prefixed_includes
 
 def _resolve_includes(ctx, includes):
@@ -84,9 +87,11 @@ def _resolve_includes(ctx, includes):
     workspace_root = workspace_root if workspace_root else "."
     resolved_includes = []
     for include in includes:
-        if not include.startswith("/"):
-            include = "/" + package + "/" + include
-        include = workspace_root + include
+        if paths.is_absolute(include):
+            include = include.lstrip("/")
+        else:
+            include = paths.join(package, include)
+        include = paths.join(workspace_root, include)
         resolved_includes.extend(_prefix_roots(ctx, [include]))
     return resolved_includes
 
@@ -252,12 +257,19 @@ def _gentbl_test_impl(ctx):
         is_executable = True,
     )
 
-    return [DefaultInfo(
-        runfiles = ctx.runfiles(
-            [ctx.executable.tblgen],
-            transitive_files = trans_srcs,
+    return [
+        coverage_common.instrumented_files_info(
+            ctx,
+            source_attributes = ["td_file", "td_srcs"],
+            dependency_attributes = ["tblgen", "deps"],
         ),
-    )]
+        DefaultInfo(
+            runfiles = ctx.runfiles(
+                [ctx.executable.tblgen],
+                transitive_files = trans_srcs,
+            ),
+        ),
+    ]
 
 gentbl_test = rule(
     _gentbl_test_impl,
@@ -266,8 +278,6 @@ gentbl_test = rule(
           " that unlike gentbl_rule, this builds and invokes `tblgen` in the" +
           " target configuration. Takes all the same arguments as gentbl_rule" +
           " except for `out` (as it does not generate any output)",
-    # Match genrule behavior
-    output_to_genfiles = True,
     attrs = {
         "tblgen": attr.label(
             doc = "The TableGen executable run in the shell command. Note" +
@@ -324,12 +334,15 @@ def gentbl_filegroup(
       **kwargs: Extra keyword arguments to pass to all generated rules.
     """
 
-    llvm_project_execroot_path = Label("//mlir:tblgen.bzl", relative_to_caller_repository = False).workspace_root
+    llvm_project_execroot_path = Label(
+        "//mlir:tblgen.bzl",
+        relative_to_caller_repository = False,
+    ).workspace_root
 
     # TODO(gcmn): Update callers to td_library and explicit includes and drop
     # this hardcoded include.
     hardcoded_includes = [
-        "%s/mlir/include" % llvm_project_execroot_path,
+        paths.join(llvm_project_execroot_path, "mlir/include"),
     ]
 
     for (opts, out) in tbl_outs:
