@@ -643,6 +643,16 @@ public:
                            SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                            unsigned Depth = 0);
 
+  /// Compute ceil(N / D). N and D are treated as unsigned values.
+  ///
+  /// Since SCEV doesn't have native ceiling division, this generates a
+  /// SCEV expression of the following form:
+  ///
+  /// umin(N, 1) + floor((N - umin(N, 1)) / D)
+  ///
+  /// A denominator of zero or poison is handled the same way as getUDivExpr().
+  const SCEV *getUDivCeilSCEV(const SCEV *N, const SCEV *D);
+
   /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is zero extended.
   const SCEV *getTruncateOrZeroExtend(const SCEV *V, Type *Ty,
@@ -2028,16 +2038,6 @@ private:
   /// Caller must ensure that this expression either does not overflow or
   /// that the result is undefined if it does.
   const SCEV *computeBECount(const SCEV *Delta, const SCEV *Stride);
-
-  /// Compute ceil(N / D). N and D are treated as unsigned values.
-  ///
-  /// Since SCEV doesn't have native ceiling division, this generates a
-  /// SCEV expression of the following form:
-  ///
-  /// umin(N, 1) + floor((N - umin(N, 1)) / D)
-  ///
-  /// A denominator of zero or poison is handled the same way as getUDivExpr().
-  const SCEV *getUDivCeilSCEV(const SCEV *N, const SCEV *D);
 
   /// Compute the maximum backedge count based on the range of values
   /// permitted by Start, End, and Stride. This is for loops of the form
