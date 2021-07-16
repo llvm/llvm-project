@@ -514,18 +514,47 @@ if.end:
 define i32 @multiple_exit_blocks(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_exit_blocks(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i16* [[TMP7]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP8]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P]], i64 [[IPROM]]
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       if.end2:
@@ -577,18 +606,47 @@ if.end2:
 define i32 @multiple_exit_blocks2(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_exit_blocks2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i16* [[TMP7]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP8]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P]], i64 [[IPROM]]
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ]
 ; CHECK-NEXT:    ret i32 [[I_LCSSA]]
@@ -644,18 +702,48 @@ if.end2:
 define i32 @multiple_exit_blocks3(i16* %p, i32 %n) {
 ; CHECK-LABEL: @multiple_exit_blocks3(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 2096)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 2, i32 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, i16* [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i16* [[TMP7]] to <2 x i16>*
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, <2 x i16>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <2 x i32> [[VEC_IND]], <i32 1, i32 1>
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P]], i64 [[IPROM]]
 ; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END2:%.*]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ]
 ; CHECK-NEXT:    ret i32 [[I_LCSSA]]
@@ -983,7 +1071,7 @@ define void @scalar_predication(float* %addr) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1003,7 +1091,7 @@ define void @scalar_predication(float* %addr) {
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    br label [[LOOP_HEADER]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP_HEADER]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1074,7 +1162,7 @@ define i32 @me_reduction(i32* %addr) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 200
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP5]])
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
@@ -1093,7 +1181,7 @@ define i32 @me_reduction(i32* %addr) {
 ; CHECK-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[TMP8]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND2_NOT:%.*]] = icmp eq i64 [[IV]], 400
-; CHECK-NEXT:    br i1 [[EXITCOND2_NOT]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND2_NOT]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ 0, [[LOOP_HEADER]] ], [ [[ACCUM_NEXT]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[LCSSA]]
