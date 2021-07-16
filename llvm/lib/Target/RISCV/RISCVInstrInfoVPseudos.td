@@ -578,11 +578,12 @@ class PseudoToVInst<string PseudoInst> {
                  !subst("_B64", "",
                  !subst("_MASK", "",
                  !subst("_COMMUTABLE", "",
+                 !subst("_TA", "",
                  !subst("_TIED", "",
                  !subst("F16", "F",
                  !subst("F32", "F",
                  !subst("F64", "F",
-                 !subst("Pseudo", "", PseudoInst)))))))))))))))))))));
+                 !subst("Pseudo", "", PseudoInst))))))))))))))))))))));
 }
 
 // The destination vector register group for a masked vector instruction cannot
@@ -1931,22 +1932,42 @@ multiclass VPseudoTernaryV_VF_AAXA<string Constraint = ""> {
 
 multiclass VPseudoTernaryW_VV {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW.m in
+  foreach m = MxListW.m in {
     defm _VV : VPseudoTernary<m.wvrclass, m.vrclass, m.vrclass, m, constraint>;
+
+    // Add a tail agnostic version for us by IR mul+add.
+    let ForceTailAgnostic = true, VLMul = m.value in
+    def "_VV_" # m.MX # "_TA" : VPseudoTernaryNoMask<m.wvrclass,
+                                                     m.vrclass,
+                                                     m.vrclass,
+                                                     constraint>;
+  }
 }
 
 multiclass VPseudoTernaryW_VX {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW.m in
+  foreach m = MxListW.m in {
     defm "_VX" : VPseudoTernary<m.wvrclass, GPR, m.vrclass, m, constraint>;
+
+    // Add a tail agnostic version for use by IR mul+add.
+    let ForceTailAgnostic = true, VLMul = m.value in
+    def "_VX_" # m.MX # "_TA" :
+       VPseudoTernaryNoMask<m.wvrclass, GPR, m.vrclass, constraint>;
+  }
 }
 
 multiclass VPseudoTernaryW_VF {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListW.m in
-    foreach f = FPListW.fpinfo in
+    foreach f = FPListW.fpinfo in {
       defm "_V" # f.FX : VPseudoTernary<m.wvrclass, f.fprclass, m.vrclass, m,
                                         constraint>;
+
+      // Add a tail agnostic version for use by IR mul+add.
+      let ForceTailAgnostic = true, VLMul = m.value in
+      def "_V" # f.FX # "_" # m.MX # "_TA" :
+         VPseudoTernaryNoMask<m.vrclass, f.fprclass, m.vrclass, constraint>;
+    }
 }
 
 multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
