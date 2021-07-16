@@ -1,11 +1,5 @@
 include(GetLibraryName)
 
-# Ensure that libSupport does not carry any static global initializer.
-# libSupport can be embedded in use cases where we don't want to load all
-# cl::opt unless we want to parse the command line.
-# ManagedStatic can be used to enable lazy-initialization of globals.
-add_flag_if_supported("-Werror=global-constructors" WERROR_GLOBAL_CONSTRUCTOR)
-
 if(LLVM_ENABLE_ZLIB)
   set(imported_libs ZLIB::ZLIB)
 endif()
