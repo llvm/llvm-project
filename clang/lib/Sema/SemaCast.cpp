@@ -66,7 +66,7 @@ namespace {
       //   cv-unqualified non-class, non-array type, the type of the
       //   expression is adjusted to T prior to any further analysis.
       if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
-          !DestType->isArrayType()) {
+          !DestType->isArrayType() && !DestType.getPointerAuth()) {
         DestType = DestType.getUnqualifiedType();
       }
 
