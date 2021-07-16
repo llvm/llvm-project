@@ -270,13 +270,13 @@ define <1 x i128> @NO_rotl(<1 x i128> %num) {
 ; P9-VSX:       # %bb.0: # %entry
 ; P9-VSX-NEXT:    addis r3, r2, .LCPI8_0@toc@ha
 ; P9-VSX-NEXT:    addi r3, r3, .LCPI8_0@toc@l
-; P9-VSX-NEXT:    lxvx v3, 0, r3
+; P9-VSX-NEXT:    lxv v3, 0(r3)
 ; P9-VSX-NEXT:    addis r3, r2, .LCPI8_1@toc@ha
 ; P9-VSX-NEXT:    addi r3, r3, .LCPI8_1@toc@l
 ; P9-VSX-NEXT:    vslo v4, v2, v3
 ; P9-VSX-NEXT:    vspltb v3, v3, 15
 ; P9-VSX-NEXT:    vsl v3, v4, v3
-; P9-VSX-NEXT:    lxvx v4, 0, r3
+; P9-VSX-NEXT:    lxv v4, 0(r3)
 ; P9-VSX-NEXT:    vsro v2, v2, v4
 ; P9-VSX-NEXT:    vspltb v4, v4, 15
 ; P9-VSX-NEXT:    vsr v2, v2, v4

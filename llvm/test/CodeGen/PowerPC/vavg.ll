@@ -140,7 +140,7 @@ define <8 x i16> @test_v8i16_sign_negative(<8 x i16> %m, <8 x i16> %n) {
 ; CHECK-P9-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
 ; CHECK-P9-NEXT:    vadduhm 2, 2, 3
 ; CHECK-P9-NEXT:    addi 3, 3, .LCPI6_0@toc@l
-; CHECK-P9-NEXT:    lxvx 35, 0, 3
+; CHECK-P9-NEXT:    lxv 35, 0(3)
 ; CHECK-P9-NEXT:    vadduhm 2, 2, 3
 ; CHECK-P9-NEXT:    vspltish 3, 1
 ; CHECK-P9-NEXT:    vsrah 2, 2, 3
