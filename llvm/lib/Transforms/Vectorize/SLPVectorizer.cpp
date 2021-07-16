@@ -7826,6 +7826,14 @@ public:
       if (V.isLoadCombineReductionCandidate(RdxKind))
         break;
 
+      // For a poison-safe boolean logic reduction, do not replace select
+      // instructions with logic ops. All reduced values will be frozen (see
+      // below) to prevent leaking poison.
+      if (isa<SelectInst>(ReductionRoot) &&
+          isBoolLogicOp(cast<Instruction>(ReductionRoot)) &&
+          NumReducedVals != ReduxWidth)
+        break;
+
       V.computeMinimumValueSizes();
 
       // Estimate cost.
