@@ -32,21 +32,24 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::cfi_verify;
 
+static cl::OptionCategory CFIVerifyCategory("CFI Verify Options");
+
 cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
-                                   cl::Required);
+                                   cl::Required, cl::cat(CFIVerifyCategory));
 cl::opt<std::string> BlacklistFilename(cl::Positional,
                                        cl::desc("[blacklist file]"),
-                                       cl::init("-"));
+                                       cl::init("-"),
+                                       cl::cat(CFIVerifyCategory));
 cl::opt<bool> PrintGraphs(
     "print-graphs",
     cl::desc("Print graphs around indirect CF instructions in DOT format."),
-    cl::init(false));
+    cl::init(false), cl::cat(CFIVerifyCategory));
 cl::opt<unsigned> PrintBlameContext(
     "blame-context",
     cl::desc("Print the blame context (if possible) for BAD instructions. This "
              "specifies the number of lines of context to include, where zero "
              "disables this feature."),
-    cl::init(0));
+    cl::init(0), cl::cat(CFIVerifyCategory));
 cl::opt<unsigned> PrintBlameContextAll(
     "blame-context-all",
     cl::desc("Prints the blame context (if possible) for ALL instructions. "
@@ -54,9 +57,9 @@ cl::opt<unsigned> PrintBlameContextAll(
              "instructions (see --blame-context). If --blame-context is "
              "unspecified, it prints this number of contextual lines for BAD "
              "instructions as well."),
-    cl::init(0));
+    cl::init(0), cl::cat(CFIVerifyCategory));
 cl::opt<bool> Summarize("summarize", cl::desc("Print the summary only."),
-                        cl::init(false));
+                        cl::init(false), cl::cat(CFIVerifyCategory));
 
 ExitOnError ExitOnErr;
 
@@ -245,6 +248,7 @@ printIndirectCFInstructions(FileAnalysis &Analysis,
 }
 
 int main(int argc, char **argv) {
+  cl::HideUnrelatedOptions({&CFIVerifyCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(
       argc, argv,
       "Identifies whether Control Flow Integrity protects all indirect control "
