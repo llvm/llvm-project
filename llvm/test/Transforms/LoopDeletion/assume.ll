@@ -37,4 +37,4 @@ _ZSt8_DestroyIP3LocILi3EEEvT_S3_.exit:            ; preds = %2
 declare void @llvm.assume(i1) #1
 
 attributes #0 = { "target-cpu"="x86-64" }
-attributes #1 = { willreturn readnone norecurse nocapture nofree }
+attributes #1 = { willreturn readnone norecurse nofree }
