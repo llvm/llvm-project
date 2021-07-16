@@ -65,14 +65,12 @@ void Twine::printOneChild(raw_ostream &OS, Child Ptr,
   case Twine::CStringKind:
     OS << Ptr.cString;
     break;
+  case Twine::PtrAndLengthKind:
+    OS << StringRef(Ptr.ptrAndLength.ptr, Ptr.ptrAndLength.length);
+    break;
   case Twine::StdStringKind:
     OS << *Ptr.stdString;
     break;
-#if __cplusplus > 201402L
-  case StdStringViewKind:
-    OS << StringRef(*Ptr.stdStringView);
-    break;
-#endif
   case Twine::StringRefKind:
     OS << *Ptr.stringRef;
     break;
@@ -124,15 +122,14 @@ void Twine::printOneChildRepr(raw_ostream &OS, Child Ptr,
     OS << "cstring:\""
        << Ptr.cString << "\"";
     break;
+  case Twine::PtrAndLengthKind:
+    OS << "ptrAndLength:\""
+       << StringRef(Ptr.ptrAndLength.ptr, Ptr.ptrAndLength.length) << "\"";
+    break;
   case Twine::StdStringKind:
     OS << "std::string:\""
        << Ptr.stdString << "\"";
     break;
-#if __cplusplus > 201402L
-  case Twine::StdStringViewKind:
-    OS << "std::string_view:\"" << StringRef(*Ptr.stdStringView) << "\"";
-    break;
-#endif
   case Twine::StringRefKind:
     OS << "stringref:\""
        << Ptr.stringRef << "\"";
