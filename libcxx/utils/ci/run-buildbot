@@ -164,19 +164,19 @@ check-generated-output)
     # `! foo` doesn't work properly with `set -e`, use `! foo || false` instead.
     # https://stackoverflow.com/questions/57681955/set-e-does-not-respect-logical-not
     clean
-    echo "+++ Checking the output of the generator scripts"
-    mkdir -p ${BUILD_DIR}
-    # Reject patches that don't update the generated output correctly.
-    python3 libcxx/utils/generate_feature_test_macro_components.py
-    python3 libcxx/utils/generate_header_inclusion_tests.py
-    python3 libcxx/utils/generate_header_tests.py
+    generate-cmake
+
+    # Reject patches that forgot to re-run the generator scripts.
+    echo "+++ Making sure the generator scripts were run"
+    ${NINJA} -vC "${BUILD_DIR}" libcxx-generate-files
     git diff | tee ${BUILD_DIR}/generated_output.patch
-    # Check if the diffs are empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
+
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
     ! grep -rn '[^ -~]' libcxx/include/ || false
-    # Check that no dependency cycles have been introduced.
+
+    # Reject patches that introduce dependency cycles in the headers.
     python3 libcxx/utils/graph_header_deps.py >/dev/null
 ;;
 generic-cxx03)
