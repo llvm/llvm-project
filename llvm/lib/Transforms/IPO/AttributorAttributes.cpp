@@ -5328,10 +5328,10 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
           // Emit a missed remark if this is missed OpenMP globalization.
           auto Remark = [&](OptimizationRemarkMissed ORM) {
-            return ORM << "Could not move globalized variable to the stack as "
-                          "variable is potentially captured in call; mark "
-                          "parameter as "
-                          "`__attribute__((noescape))` to override.";
+            return ORM
+                   << "Could not move globalized variable to the stack. "
+                      "Variable is potentially captured in call. Mark "
+                      "parameter as `__attribute__((noescape))` to override.";
           };
 
           if (AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
