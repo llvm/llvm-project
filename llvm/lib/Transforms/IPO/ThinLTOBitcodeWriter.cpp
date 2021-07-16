@@ -55,6 +55,7 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       }
     }
 
+    std::string OldName = Name.str();
     std::string NewName = (Name + ModuleId).str();
 
     if (const auto *C = ExportGV.getComdat())
@@ -68,6 +69,13 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
     if (ImportGV) {
       ImportGV->setName(NewName);
       ImportGV->setVisibility(GlobalValue::HiddenVisibility);
+    }
+
+    if (Function *F = dyn_cast<Function>(&ExportGV)) {
+      // Create a local alias with the original name to avoid breaking
+      // references from inline assembly.
+      std::string Alias = ".set " + OldName + "," + NewName + "\n";
+      ExportM.appendModuleInlineAsm(Alias);
     }
   }
 
