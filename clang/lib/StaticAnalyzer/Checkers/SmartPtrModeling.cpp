@@ -72,6 +72,7 @@ private:
                                 const MemRegion *OtherSmartPtrRegion) const;
   void handleBoolConversion(const CallEvent &Call, CheckerContext &C) const;
   bool handleComparisionOp(const CallEvent &Call, CheckerContext &C) const;
+  bool handleOstreamOperator(const CallEvent &Call, CheckerContext &C) const;
   std::pair<SVal, ProgramStateRef>
   retrieveOrConjureInnerPtrVal(ProgramStateRef State,
                                const MemRegion *ThisRegion, const Expr *E,
@@ -88,6 +89,31 @@ private:
 } // end of anonymous namespace
 
 REGISTER_MAP_WITH_PROGRAMSTATE(TrackedRegionMap, const MemRegion *, SVal)
+
+// Checks if RD has name in Names and is in std namespace
+static bool hasStdClassWithName(const CXXRecordDecl *RD,
+                                ArrayRef<llvm::StringLiteral> Names) {
+  if (!RD || !RD->getDeclContext()->isStdNamespace())
+    return false;
+  if (RD->getDeclName().isIdentifier()) {
+    StringRef Name = RD->getName();
+    return llvm::any_of(Names, [&Name](StringRef GivenName) -> bool {
+      return Name == GivenName;
+    });
+  }
+  return false;
+}
+
+constexpr llvm::StringLiteral STD_PTR_NAMES[] = {"shared_ptr", "unique_ptr",
+                                                 "weak_ptr"};
+
+static bool isStdSmartPtr(const CXXRecordDecl *RD) {
+  return hasStdClassWithName(RD, STD_PTR_NAMES);
+}
+
+static bool isStdSmartPtr(const Expr *E) {
+  return isStdSmartPtr(E->getType()->getAsCXXRecordDecl());
+}
 
 // Define the inter-checker API.
 namespace clang {
@@ -193,6 +219,30 @@ bool SmartPtrModeling::isBoolConversionMethod(const CallEvent &Call) const {
   return CD && CD->getConversionType()->isBooleanType();
 }
 
+constexpr llvm::StringLiteral BASIC_OSTREAM_NAMES[] = {"basic_ostream"};
+
+bool isStdBasicOstream(const Expr *E) {
+  const auto *RD = E->getType()->getAsCXXRecordDecl();
+  return hasStdClassWithName(RD, BASIC_OSTREAM_NAMES);
+}
+
+bool isStdOstreamOperatorCall(const CallEvent &Call) {
+  if (Call.getNumArgs() != 2 ||
+      !Call.getDecl()->getDeclContext()->isStdNamespace())
+    return false;
+  const auto *FC = dyn_cast<SimpleFunctionCall>(&Call);
+  if (!FC)
+    return false;
+  const FunctionDecl *FD = FC->getDecl();
+  if (!FD->isOverloadedOperator())
+    return false;
+  const OverloadedOperatorKind OOK = FD->getOverloadedOperator();
+  if (OOK != clang::OO_LessLess)
+    return false;
+  return isStdSmartPtr(Call.getArgExpr(1)) &&
+         isStdBasicOstream(Call.getArgExpr(0));
+}
+
 bool SmartPtrModeling::evalCall(const CallEvent &Call,
                                 CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -205,6 +255,9 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
         smartptr::isStdSmartPtr(Call.getArgExpr(1)))
       if (handleComparisionOp(Call, C))
         return true;
+
+  if (isStdOstreamOperatorCall(Call))
+    return handleOstreamOperator(Call, C);
 
   if (!smartptr::isStdSmartPtrCall(Call))
     return false;
@@ -375,6 +428,30 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
   } else {
     C.addTransition(State->BindExpr(ResultExpr, LCtx, RetVal));
   }
+  return true;
+}
+
+bool SmartPtrModeling::handleOstreamOperator(const CallEvent &Call,
+                                             CheckerContext &C) const {
+  // operator<< does not modify the smart pointer.
+  // And we don't really have much of modelling of basic_ostream.
+  // So, we are better off:
+  // 1) Invalidating the mem-region of the ostream object at hand.
+  // 2) Setting the SVal of the basic_ostream as the return value.
+  // Not very satisfying, but it gets the job done, and is better
+  // than the default handling. :)
+
+  ProgramStateRef State = C.getState();
+  const auto StreamVal = Call.getArgSVal(0);
+  const MemRegion *StreamThisRegion = StreamVal.getAsRegion();
+  if (!StreamThisRegion)
+    return false;
+  State =
+      State->invalidateRegions({StreamThisRegion}, Call.getOriginExpr(),
+                               C.blockCount(), C.getLocationContext(), false);
+  State =
+      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(), StreamVal);
+  C.addTransition(State);
   return true;
 }
 
