@@ -27,6 +27,7 @@ set -e
 # Install a Launchd agent that will automatically start the BuildKite agent at login
 if [[ ${1} == "--setup-launchd" ]]; then
   HOMEBREW_PREFIX="$(brew --prefix)"
+  mkdir -p ~/Library/LaunchAgents
   cat <<EOF > ~/Library/LaunchAgents/libcxx.buildkite-agent.plist
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
