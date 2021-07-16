@@ -695,8 +695,22 @@ entry:
 define arm_aapcs_vfpcc signext i16 @add_v16i8_v16i16_szext(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: add_v16i8_v16i16_szext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmlav.s8 r0, q0, q1
+; CHECK-NEXT:    .pad #32
+; CHECK-NEXT:    sub sp, #32
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    mov r1, sp
+; CHECK-NEXT:    vstrw.32 q1, [r0]
+; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    vldrb.u16 q0, [r0, #8]
+; CHECK-NEXT:    vldrb.s16 q1, [r1, #8]
+; CHECK-NEXT:    vldrb.s16 q2, [r1]
+; CHECK-NEXT:    vmul.i16 q0, q1, q0
+; CHECK-NEXT:    vldrb.u16 q1, [r0]
+; CHECK-NEXT:    vmul.i16 q1, q2, q1
+; CHECK-NEXT:    vadd.i16 q0, q1, q0
+; CHECK-NEXT:    vaddv.u16 r0, q0
 ; CHECK-NEXT:    sxth r0, r0
+; CHECK-NEXT:    add sp, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %xx = sext <16 x i8> %x to <16 x i16>

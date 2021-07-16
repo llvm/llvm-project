@@ -1049,13 +1049,19 @@ let Command = "thread plan list" in {
 }
 
 let Command = "thread trace dump instructions" in {
+  def thread_trace_dump_instructions_forwards: Option<"forwards", "f">, Group<1>,
+    Desc<"If specified, the trace is traversed forwards chronologically "
+    "starting at the oldest instruction. Otherwise, it starts at the most "
+    "recent one and the traversal is backwards.">;
   def thread_trace_dump_instructions_count : Option<"count", "c">, Group<1>,
     Arg<"Count">,
-    Desc<"The number of instructions to display ending at the current position.">;
-  def thread_trace_dump_instructions_position : Option<"position", "p">,
+    Desc<"The number of instructions to display starting at the most recent "
+    "instruction, or the oldest if --forwards is provided.">;
+  def thread_trace_dump_instructions_skip: Option<"skip", "s">,
     Group<1>,
     Arg<"Index">,
-    Desc<"The position to use instead of the current position of the trace.">;
+    Desc<"How many instruction to skip from the end of the trace to start "
+    "dumping instructions, or from the beginning if --forwards is provided">;
   def thread_trace_dump_instructions_raw : Option<"raw", "r">,
     Group<1>,
     Desc<"Dump only instruction address without disassembly nor symbol information.">;

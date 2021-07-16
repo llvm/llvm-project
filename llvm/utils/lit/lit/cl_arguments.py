@@ -171,6 +171,11 @@ def parse_args():
             type=_semicolon_list,
             help="XFAIL tests with paths in the semicolon separated list",
             default=os.environ.get("LIT_XFAIL", ""))
+    selection_group.add_argument("--xfail-not",
+            metavar="LIST",
+            type=_semicolon_list,
+            help="do not XFAIL tests with paths in the semicolon separated list",
+            default=os.environ.get("LIT_XFAIL_NOT", ""))
     selection_group.add_argument("--num-shards",
             dest="numShards",
             metavar="M",
