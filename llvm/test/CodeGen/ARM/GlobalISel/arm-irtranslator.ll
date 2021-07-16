@@ -267,7 +267,7 @@ define i32 @test_ptr_arg_on_stack(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32* %p) {
 ; CHECK: id: [[P:[0-9]+]]{{.*}}offset: 0{{.*}}size: 4
 ; CHECK: liveins: $r0, $r1, $r2, $r3
 ; CHECK: [[FIP:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[P]]
-; CHECK: [[VREGP:%[0-9]+]]:_(p0) = G_LOAD [[FIP]](p0){{.*}}load (s32)
+; CHECK: [[VREGP:%[0-9]+]]:_(p0) = G_LOAD [[FIP]](p0){{.*}}load (p0)
 ; CHECK: [[VREGV:%[0-9]+]]:_(s32) = G_LOAD [[VREGP]](p0){{.*}}load (s32)
 ; CHECK: $r0 = COPY [[VREGV]]
 ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
