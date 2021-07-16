@@ -3505,7 +3505,7 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
 
     switch (RFKind) {
     case OMPRTL___kmpc_is_spmd_exec_mode:
-      Changed = Changed | foldIsSPMDExecMode(A);
+      Changed |= foldIsSPMDExecMode(A);
       break;
     default:
       llvm_unreachable("Unhandled OpenMP runtime function!");
