@@ -120,8 +120,9 @@ LLVMFunctionType::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 bool LLVMPointerType::isValidElementType(Type type) {
-  return !type.isa<LLVMVoidType, LLVMTokenType, LLVMMetadataType,
-                   LLVMLabelType>();
+  return isCompatibleType(type) ? !type.isa<LLVMVoidType, LLVMTokenType,
+                                            LLVMMetadataType, LLVMLabelType>()
+                                : type.isa<PointerElementTypeInterface>();
 }
 
 LLVMPointerType LLVMPointerType::get(Type pointee, unsigned addressSpace) {
@@ -607,3 +608,5 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
         return llvm::TypeSize::Fixed(0);
       });
 }
+
+#include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.cpp.inc"

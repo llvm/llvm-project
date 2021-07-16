@@ -75,12 +75,12 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: inlineasm_virt_mixed_types
-    ; CHECK: INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 655370 /* regdef:GPR32common */, def %0, 1245194 /* regdef:FPR64 */, def %1
+    ; CHECK: INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 655370 /* regdef:GPR32common */, def %0, 1376266 /* regdef:FPR64 */, def %1
     ; CHECK: [[COPY:%[0-9]+]]:gpr(s32) = COPY %0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr(s64) = COPY %1
     ; CHECK: $d0 = COPY [[COPY1]](s64)
     ; CHECK: RET_ReallyLR implicit $d0
-    INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 655370 /* regdef:GPR32common */, def %0:gpr32common, 1245194 /* regdef:FPR64 */, def %1:fpr64
+    INLINEASM &"mov $0, #0; mov $1, #0", 0 /* attdialect */, 655370 /* regdef:GPR32common */, def %0:gpr32common, 1376266 /* regdef:FPR64 */, def %1:fpr64
     %3:_(s32) = COPY %0
     %4:_(s64) = COPY %1
     $d0 = COPY %4(s64)

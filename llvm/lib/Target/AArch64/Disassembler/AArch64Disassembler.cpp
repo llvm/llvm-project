@@ -69,6 +69,10 @@ static DecodeStatus DecodeGPR64x8ClassRegisterClass(MCInst &Inst,
 static DecodeStatus DecodeGPR64spRegisterClass(MCInst &Inst,
                                                unsigned RegNo, uint64_t Address,
                                                const void *Decoder);
+static DecodeStatus DecodeMatrixIndexGPR32_12_15RegisterClass(MCInst &Inst,
+                                                              unsigned RegNo,
+                                                              uint64_t Address,
+                                                              const void *Decoder);
 static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const void *Decoder);
@@ -279,6 +283,21 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
   for (auto Table : Tables) {
     DecodeStatus Result =
         decodeInstruction(Table, MI, Insn, Address, this, STI);
+
+    switch (MI.getOpcode()) {
+    default:
+      break;
+    // For Scalable Matrix Extension (SME) instructions that have an implicit
+    // operand for the accumulator (ZA) which isn't encoded, manually insert
+    // operand.
+    case AArch64::LD1_MXIPXX_H_B:
+    case AArch64::LD1_MXIPXX_V_B:
+    case AArch64::ST1_MXIPXX_H_B:
+    case AArch64::ST1_MXIPXX_V_B:
+      MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZAB0));
+      break;
+    }
+
     if (Result != MCDisassembler::Fail)
       return Result;
   }
@@ -501,6 +520,22 @@ static DecodeStatus DecodeGPR64spRegisterClass(MCInst &Inst, unsigned RegNo,
   unsigned Register = GPR64DecoderTable[RegNo];
   if (Register == AArch64::XZR)
     Register = AArch64::SP;
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static const unsigned MatrixIndexGPR32_12_15DecoderTable[] = {
+    AArch64::W12, AArch64::W13, AArch64::W14, AArch64::W15
+};
+
+static DecodeStatus DecodeMatrixIndexGPR32_12_15RegisterClass(MCInst &Inst,
+                                                              unsigned RegNo,
+                                                              uint64_t Addr,
+                                                              const void *Decoder) {
+  if (RegNo > 3)
+    return Fail;
+
+  unsigned Register = MatrixIndexGPR32_12_15DecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
