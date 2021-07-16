@@ -32,9 +32,8 @@ template <typename T> struct EnumEntry {
   // "Advanced Micro Devices X86-64" on GNU style
   StringRef AltName;
   T Value;
-  constexpr EnumEntry(StringRef N, StringRef A, T V)
-      : Name(N), AltName(A), Value(V) {}
-  constexpr EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
+  EnumEntry(StringRef N, StringRef A, T V) : Name(N), AltName(A), Value(V) {}
+  EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
 };
 
 struct HexNumber {
