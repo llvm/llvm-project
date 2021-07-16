@@ -45,6 +45,39 @@ json::Object PipelinePrinter::getJSONReportRegion() const {
   return JO;
 }
 
+json::Object PipelinePrinter::getJSONSimulationParameters() const {
+  json::Object SimParameters({{"-mcpu", STI.getCPU()},
+                              {"-mtriple", STI.getTargetTriple().getTriple()},
+                              {"-march", STI.getTargetTriple().getArchName()}});
+
+  const MCSchedModel &SM = STI.getSchedModel();
+  if (!SM.isOutOfOrder())
+    return SimParameters;
+
+  if (PO.RegisterFileSize)
+    SimParameters.try_emplace("-register-file-size", PO.RegisterFileSize);
+
+  if (!PO.AssumeNoAlias)
+    SimParameters.try_emplace("-noalias", PO.AssumeNoAlias);
+
+  if (PO.DecodersThroughput)
+    SimParameters.try_emplace("-decoder-throughput", PO.DecodersThroughput);
+
+  if (PO.MicroOpQueueSize)
+    SimParameters.try_emplace("-micro-op-queue-size", PO.MicroOpQueueSize);
+
+  if (PO.DispatchWidth)
+    SimParameters.try_emplace("-dispatch", PO.DispatchWidth);
+
+  if (PO.LoadQueueSize)
+    SimParameters.try_emplace("-lqueue", PO.LoadQueueSize);
+
+  if (PO.StoreQueueSize)
+    SimParameters.try_emplace("-squeue", PO.StoreQueueSize);
+
+  return SimParameters;
+}
+
 json::Object PipelinePrinter::getJSONTargetInfo() const {
   json::Array Resources;
   const MCSchedModel &SM = STI.getSchedModel();
@@ -71,10 +104,9 @@ json::Object PipelinePrinter::getJSONTargetInfo() const {
 }
 
 void PipelinePrinter::printReport(json::Object &JO) const {
-  if (!RegionIdx)
-    JO.try_emplace("TargetInfo", getJSONTargetInfo());
-
   if (!RegionIdx) {
+    JO.try_emplace("TargetInfo", getJSONTargetInfo());
+    JO.try_emplace("SimulationParameters", getJSONSimulationParameters());
     // Construct an array of regions.
     JO.try_emplace("CodeRegions", json::Array());
   }

@@ -2,20 +2,16 @@
 # Verify that we create proper JSON for the MCA views TimelineView, ResourcePressureview,
 # InstructionInfoView and SummaryView.
 
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=haswell --json --timeline-max-iterations=1 --timeline --all-stats --all-views < %s | FileCheck %s
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=haswell --json --timeline-max-iterations=1 --timeline --all-stats --all-views -o %t.json < %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=haswell -lqueue=12 -squeue=12 --json --timeline-max-iterations=1 --timeline --all-stats --all-views < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=haswell -lqueue=12 -squeue=12 --json --timeline-max-iterations=1 --timeline --all-stats --all-views -o %t.json < %s
 # RUN: cat %t.json \
 # RUN:  | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:  | FileCheck %s
 
-# LLVM-MCA-BEGIN foo
 add %eax, %eax
-# LLVM-MCA-BEGIN bar
 add %ebx, %ebx
 add %ecx, %ecx
-# LLVM-MCA-END bar
 add %edx, %edx
-# LLVM-MCA-END foo
 
 # CHECK:      {
 # CHECK-NEXT:   "CodeRegions": [
@@ -75,7 +71,7 @@ add %edx, %edx
 # CHECK-NEXT:         "addl\t%ecx, %ecx",
 # CHECK-NEXT:         "addl\t%edx, %edx"
 # CHECK-NEXT:       ],
-# CHECK-NEXT:       "Name": "foo",
+# CHECK-NEXT:       "Name": "",
 # CHECK-NEXT:       "ResourcePressureView": {
 # CHECK-NEXT:         "ResourcePressureInfo": [
 # CHECK-NEXT:           {
@@ -162,122 +158,14 @@ add %edx, %edx
 # CHECK-NEXT:           }
 # CHECK-NEXT:         ]
 # CHECK-NEXT:       }
-# CHECK-NEXT:     },
-# CHECK-NEXT:     {
-# CHECK-NEXT:       "DispatchStatistics": {
-# CHECK-NEXT:         "GROUP": 0,
-# CHECK-NEXT:         "LQ": 0,
-# CHECK-NEXT:         "RAT": 0,
-# CHECK-NEXT:         "RCU": 0,
-# CHECK-NEXT:         "SCHEDQ": 41,
-# CHECK-NEXT:         "SQ": 0,
-# CHECK-NEXT:         "USH": 0
-# CHECK-NEXT:       },
-# CHECK-NEXT:       "InstructionInfoView": {
-# CHECK-NEXT:         "InstructionList": [
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "Instruction": 0,
-# CHECK-NEXT:             "Latency": 1,
-# CHECK-NEXT:             "NumMicroOpcodes": 1,
-# CHECK-NEXT:             "RThroughput": 0.25,
-# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:             "mayLoad": false,
-# CHECK-NEXT:             "mayStore": false
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "Instruction": 1,
-# CHECK-NEXT:             "Latency": 1,
-# CHECK-NEXT:             "NumMicroOpcodes": 1,
-# CHECK-NEXT:             "RThroughput": 0.25,
-# CHECK-NEXT:             "hasUnmodeledSideEffects": false,
-# CHECK-NEXT:             "mayLoad": false,
-# CHECK-NEXT:             "mayStore": false
-# CHECK-NEXT:           }
-# CHECK-NEXT:         ]
-# CHECK-NEXT:       },
-# CHECK-NEXT:       "Instructions": [
-# CHECK-NEXT:         "addl\t%ebx, %ebx",
-# CHECK-NEXT:         "addl\t%ecx, %ecx"
-# CHECK-NEXT:       ],
-# CHECK-NEXT:       "Name": "bar",
-# CHECK-NEXT:       "ResourcePressureView": {
-# CHECK-NEXT:         "ResourcePressureInfo": [
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 0,
-# CHECK-NEXT:             "ResourceIndex": 3,
-# CHECK-NEXT:             "ResourceUsage": 0.5
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 0,
-# CHECK-NEXT:             "ResourceIndex": 8,
-# CHECK-NEXT:             "ResourceUsage": 0.5
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 1,
-# CHECK-NEXT:             "ResourceIndex": 2,
-# CHECK-NEXT:             "ResourceUsage": 0.5
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 1,
-# CHECK-NEXT:             "ResourceIndex": 7,
-# CHECK-NEXT:             "ResourceUsage": 0.5
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 2,
-# CHECK-NEXT:             "ResourceIndex": 2,
-# CHECK-NEXT:             "ResourceUsage": 0.5
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 2,
-# CHECK-NEXT:             "ResourceIndex": 3,
-# CHECK-NEXT:             "ResourceUsage": 0.5
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 2,
-# CHECK-NEXT:             "ResourceIndex": 7,
-# CHECK-NEXT:             "ResourceUsage": 0.5
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "InstructionIndex": 2,
-# CHECK-NEXT:             "ResourceIndex": 8,
-# CHECK-NEXT:             "ResourceUsage": 0.5
-# CHECK-NEXT:           }
-# CHECK-NEXT:         ]
-# CHECK-NEXT:       },
-# CHECK-NEXT:       "SummaryView": {
-# CHECK-NEXT:         "BlockRThroughput": 0.5,
-# CHECK-NEXT:         "DispatchWidth": 4,
-# CHECK-NEXT:         "IPC": 1.941747572815534,
-# CHECK-NEXT:         "Instructions": 200,
-# CHECK-NEXT:         "Iterations": 100,
-# CHECK-NEXT:         "TotalCycles": 103,
-# CHECK-NEXT:         "TotaluOps": 200,
-# CHECK-NEXT:         "uOpsPerCycle": 1.941747572815534
-# CHECK-NEXT:       },
-# CHECK-NEXT:       "TimelineView": {
-# CHECK-NEXT:         "TimelineInfo": [
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "CycleDispatched": 0,
-# CHECK-NEXT:             "CycleExecuted": 2,
-# CHECK-NEXT:             "CycleIssued": 1,
-# CHECK-NEXT:             "CycleReady": 0,
-# CHECK-NEXT:             "CycleRetired": 3
-# CHECK-NEXT:           },
-# CHECK-NEXT:           {
-# CHECK-NEXT:             "CycleDispatched": 0,
-# CHECK-NEXT:             "CycleExecuted": 2,
-# CHECK-NEXT:             "CycleIssued": 1,
-# CHECK-NEXT:             "CycleReady": 0,
-# CHECK-NEXT:             "CycleRetired": 3
-# CHECK-NEXT:           }
-# CHECK-NEXT:         ]
-# CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ],
 # CHECK-NEXT:   "SimulationParameters": {
+# CHECK-NEXT:     "-lqueue": 12,
 # CHECK-NEXT:     "-march": "x86_64",
 # CHECK-NEXT:     "-mcpu": "haswell",
-# CHECK-NEXT:     "-mtriple": "x86_64-unknown-unknown"
+# CHECK-NEXT:     "-mtriple": "x86_64-unknown-unknown",
+# CHECK-NEXT:     "-squeue": 12
 # CHECK-NEXT:   },
 # CHECK-NEXT:   "TargetInfo": {
 # CHECK-NEXT:     "CPUName": "haswell",
