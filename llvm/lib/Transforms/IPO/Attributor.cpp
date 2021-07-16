@@ -31,6 +31,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/Verifier.h"
@@ -1589,9 +1590,12 @@ ChangeStatus Attributor::cleanupIR() {
 
   for (auto &V : ToBeDeletedInsts) {
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
-      if (auto *CB = dyn_cast<CallBase>(I))
-        if (CB->isMustTailCall() && !isRunOn(*I->getFunction()))
+      if (auto *CB = dyn_cast<CallBase>(I)) {
+        if (!isRunOn(*I->getFunction()))
           continue;
+        if (!isa<IntrinsicInst>(CB))
+          CGUpdater.removeCallSite(*CB);
+      }
       I->dropDroppableUses();
       CGModifiedFunctions.insert(I->getFunction());
       if (!I->getType()->isVoidTy())
