@@ -124,6 +124,7 @@ struct Configuration {
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
   uint32_t timeTraceGranularity = 500;
+  unsigned optimize;
   std::string progName;
 
   // For `clang -arch arm64 -arch x86_64`, clang will:
