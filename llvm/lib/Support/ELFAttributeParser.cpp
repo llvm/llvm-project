@@ -16,7 +16,7 @@
 using namespace llvm;
 using namespace llvm::ELFAttrs;
 
-static constexpr EnumEntry<unsigned> tagNames[] = {
+static const EnumEntry<unsigned> tagNames[] = {
     {"Tag_File", ELFAttrs::File},
     {"Tag_Section", ELFAttrs::Section},
     {"Tag_Symbol", ELFAttrs::Symbol},
