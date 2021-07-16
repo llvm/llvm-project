@@ -1,7 +1,7 @@
 # REQUIRES: ppc
 # XFAIL: *
 
-# RUN: llvm-readelf -relocations --wide  %p/Inputs/ppc64le-quadword-ldst.o | FileCheck --check-prefix=QuadInputRelocs %s
+# RUN: llvm-readelf -r --wide  %p/Inputs/ppc64le-quadword-ldst.o | FileCheck --check-prefix=QuadInputRelocs %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/shared-ppc64.s -o %t2.o
 # RUN: ld.lld -shared %t2.o -o %t2.so
