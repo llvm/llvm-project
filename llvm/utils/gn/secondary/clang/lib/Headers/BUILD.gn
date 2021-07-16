@@ -127,6 +127,7 @@ copy("Headers") {
     "avxvnniintrin.h",
     "bmi2intrin.h",
     "bmiintrin.h",
+    "builtins.h",
     "cet.h",
     "cetintrin.h",
     "cldemoteintrin.h",
