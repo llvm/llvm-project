@@ -15620,6 +15620,13 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::ppc_popcntb, {ArgType, ArgType});
     return Builder.CreateCall(F, Ops, "popcntb");
   }
+  case PPC::BI__builtin_ppc_mtfsf: {
+    // The builtin takes a uint32 that needs to be cast to an
+    // f64 to be passed to the intrinsic.
+    Value *Cast = Builder.CreateUIToFP(Ops[1], DoubleTy);
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_mtfsf);
+    return Builder.CreateCall(F, {Ops[0], Cast}, "");
+  }
   }
 }
 

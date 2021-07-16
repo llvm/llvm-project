@@ -3103,7 +3103,8 @@ def MTFSB1 : XForm_43<63, 38, (outs), (ins u5imm:$FM),
 let Defs = [RM] in {
   let isCodeGenOnly = 1 in
   def MTFSFb  : XFLForm<63, 711, (outs), (ins i32imm:$FM, f8rc:$rT),
-                        "mtfsf $FM, $rT", IIC_IntMTFSB0, []>,
+                        "mtfsf $FM, $rT", IIC_IntMTFSB0,
+                        [(int_ppc_mtfsf timm:$FM, f64:$rT)]>,
                 PPC970_DGroup_Single, PPC970_Unit_FPU;
 }
 let Uses = [RM] in {
@@ -4483,19 +4484,20 @@ def MTMSRD : XForm_mtmsr<31, 178, (outs), (ins gprc:$RS, u1imm:$L),
 def MCRFS : XLForm_3<63, 64, (outs crrc:$BF), (ins crrc:$BFA),
                      "mcrfs $BF, $BFA", IIC_BrMCR>;
 
-// If W is 0 and BF is 7, the 60:63 bits will be set, we should set the
-// implicit-def RM.
-def MTFSFI : XLForm_4<63, 134, (outs crrc:$BF), (ins i32imm:$U, i32imm:$W),
-                      "mtfsfi $BF, $U, $W", IIC_IntMFFS>;
-let Defs = [CR1] in
-def MTFSFI_rec : XLForm_4<63, 134, (outs crrc:$BF), (ins i32imm:$U, i32imm:$W),
-                       "mtfsfi. $BF, $U, $W", IIC_IntMFFS>, isRecordForm;
-
-def : InstAlias<"mtfsfi $BF, $U", (MTFSFI crrc:$BF, i32imm:$U, 0)>;
-def : InstAlias<"mtfsfi. $BF, $U", (MTFSFI_rec crrc:$BF, i32imm:$U, 0)>;
-
+// All MTFSF variants may change the rounding mode so conservatively set it
+// as an implicit def for all of them.
 let Predicates = [HasFPU] in {
 let Defs = [RM] in {
+let isCodeGenOnly = 1,
+    Pattern = [(int_ppc_mtfsfi timm:$BF, timm:$U)], W = 0 in
+def MTFSFIb : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U),
+                       "mtfsfi $BF, $U", IIC_IntMFFS>;
+def MTFSFI : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U, i32imm:$W),
+                      "mtfsfi $BF, $U, $W", IIC_IntMFFS>;
+let Defs = [CR1] in
+def MTFSFI_rec : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U, u1imm:$W),
+                       "mtfsfi. $BF, $U, $W", IIC_IntMFFS>, isRecordForm;
+
 def MTFSF : XFLForm_1<63, 711, (outs),
                       (ins i32imm:$FLM, f8rc:$FRB, u1imm:$L, i32imm:$W),
                       "mtfsf $FLM, $FRB, $L, $W", IIC_IntMFFS, []>;
@@ -4505,6 +4507,8 @@ def MTFSF_rec : XFLForm_1<63, 711, (outs),
                        "mtfsf. $FLM, $FRB, $L, $W", IIC_IntMFFS, []>, isRecordForm;
 }
 
+def : InstAlias<"mtfsfi $BF, $U", (MTFSFI u3imm:$BF, u4imm:$U, 0)>;
+def : InstAlias<"mtfsfi. $BF, $U", (MTFSFI_rec u3imm:$BF, u4imm:$U, 0)>;
 def : InstAlias<"mtfsf $FLM, $FRB", (MTFSF i32imm:$FLM, f8rc:$FRB, 0, 0)>;
 def : InstAlias<"mtfsf. $FLM, $FRB", (MTFSF_rec i32imm:$FLM, f8rc:$FRB, 0, 0)>;
 }
