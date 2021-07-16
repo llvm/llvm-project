@@ -75,7 +75,8 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
   }
 }
 
-AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningMethodCall) {
+AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
+                       std::vector<std::string>, ExcludedContainerTypes) {
   // Match method call expressions where the `this` argument is only used as
   // const, this will be checked in `check()` part. This returned const
   // reference is highly likely to outlive the local const reference of the
@@ -85,7 +86,11 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningMethodCall) {
   return cxxMemberCallExpr(
       callee(cxxMethodDecl(returns(matchers::isReferenceToConst()))
                  .bind(MethodDeclId)),
-      on(declRefExpr(to(varDecl().bind(ObjectArgId)))));
+      on(declRefExpr(to(
+          varDecl(
+              unless(hasType(qualType(hasCanonicalType(hasDeclaration(namedDecl(
+                  matchers::matchesAnyListedName(ExcludedContainerTypes))))))))
+              .bind(ObjectArgId)))));
 }
 
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
@@ -98,11 +103,13 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
       .bind(InitFunctionCallId);
 }
 
-AST_MATCHER_FUNCTION(StatementMatcher, initializerReturnsReferenceToConst) {
+AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
+                       std::vector<std::string>, ExcludedContainerTypes) {
   auto OldVarDeclRef =
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
-      anyOf(isConstRefReturningFunctionCall(), isConstRefReturningMethodCall(),
+      anyOf(isConstRefReturningFunctionCall(),
+            isConstRefReturningMethodCall(ExcludedContainerTypes),
             ignoringImpCasts(OldVarDeclRef),
             ignoringImpCasts(unaryOperator(hasOperatorName("&"),
                                            hasUnaryOperand(OldVarDeclRef)))));
@@ -120,9 +127,9 @@ AST_MATCHER_FUNCTION(StatementMatcher, initializerReturnsReferenceToConst) {
 // the same set of criteria we apply when identifying the unnecessary copied
 // variable in this check to begin with. In this case we check whether the
 // object arg or variable that is referenced is immutable as well.
-static bool isInitializingVariableImmutable(const VarDecl &InitializingVar,
-                                            const Stmt &BlockStmt,
-                                            ASTContext &Context) {
+static bool isInitializingVariableImmutable(
+    const VarDecl &InitializingVar, const Stmt &BlockStmt, ASTContext &Context,
+    const std::vector<std::string> &ExcludedContainerTypes) {
   if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context))
     return false;
 
@@ -138,18 +145,21 @@ static bool isInitializingVariableImmutable(const VarDecl &InitializingVar,
     return true;
   }
 
-  auto Matches = match(initializerReturnsReferenceToConst(),
-                       *InitializingVar.getInit(), Context);
+  auto Matches =
+      match(initializerReturnsReferenceToConst(ExcludedContainerTypes),
+            *InitializingVar.getInit(), Context);
   // The reference is initialized from a free function without arguments
   // returning a const reference. This is a global immutable object.
   if (selectFirst<CallExpr>(InitFunctionCallId, Matches) != nullptr)
     return true;
   // Check that the object argument is immutable as well.
   if (const auto *OrigVar = selectFirst<VarDecl>(ObjectArgId, Matches))
-    return isInitializingVariableImmutable(*OrigVar, BlockStmt, Context);
+    return isInitializingVariableImmutable(*OrigVar, BlockStmt, Context,
+                                           ExcludedContainerTypes);
   // Check that the old variable we reference is immutable as well.
   if (const auto *OrigVar = selectFirst<VarDecl>(OldVarDeclId, Matches))
-    return isInitializingVariableImmutable(*OrigVar, BlockStmt, Context);
+    return isInitializingVariableImmutable(*OrigVar, BlockStmt, Context,
+                                           ExcludedContainerTypes);
 
   return false;
 }
@@ -204,7 +214,9 @@ UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      ExcludedContainerTypes(utils::options::parseStringList(
+          Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
   auto LocalVarCopiedFrom = [this](const internal::Matcher<Expr> &CopyCtorArg) {
@@ -235,7 +247,8 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
   };
 
   Finder->addMatcher(LocalVarCopiedFrom(anyOf(isConstRefReturningFunctionCall(),
-                                              isConstRefReturningMethodCall())),
+                                              isConstRefReturningMethodCall(
+                                                  ExcludedContainerTypes))),
                      this);
 
   Finder->addMatcher(LocalVarCopiedFrom(declRefExpr(
@@ -291,7 +304,8 @@ void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
   if (!IsConstQualified && !isOnlyUsedAsConst(Var, BlockStmt, Context))
     return;
   if (ObjectArg != nullptr &&
-      !isInitializingVariableImmutable(*ObjectArg, BlockStmt, Context))
+      !isInitializingVariableImmutable(*ObjectArg, BlockStmt, Context,
+                                       ExcludedContainerTypes))
     return;
   if (isVariableUnused(Var, BlockStmt, Context)) {
     auto Diagnostic =
@@ -318,7 +332,8 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
     const VarDecl &NewVar, const VarDecl &OldVar, const Stmt &BlockStmt,
     const DeclStmt &Stmt, bool IssueFix, ASTContext &Context) {
   if (!isOnlyUsedAsConst(NewVar, BlockStmt, Context) ||
-      !isInitializingVariableImmutable(OldVar, BlockStmt, Context))
+      !isInitializingVariableImmutable(OldVar, BlockStmt, Context,
+                                       ExcludedContainerTypes))
     return;
 
   if (isVariableUnused(NewVar, BlockStmt, Context)) {
@@ -344,6 +359,8 @@ void UnnecessaryCopyInitialization::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "ExcludedContainerTypes",
+                utils::options::serializeStringList(ExcludedContainerTypes));
 }
 
 } // namespace performance
