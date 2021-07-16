@@ -4146,6 +4146,7 @@ bool CombinerHelper::reassociationCanBreakAddressingModePattern(
       if (!MRI.hasOneNonDBGUse(DefReg))
         break;
       ConvUseMI = &*MRI.use_instr_nodbg_begin(DefReg);
+      ConvUseOpc = ConvUseMI->getOpcode();
     }
     auto LoadStore = ConvUseOpc == TargetOpcode::G_LOAD ||
                      ConvUseOpc == TargetOpcode::G_STORE;
