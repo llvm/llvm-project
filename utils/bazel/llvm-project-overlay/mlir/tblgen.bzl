@@ -5,7 +5,6 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
-
 TdInfo = provider(
     "Holds TableGen files and the dependencies and include paths necessary to" +
     " build them.",
