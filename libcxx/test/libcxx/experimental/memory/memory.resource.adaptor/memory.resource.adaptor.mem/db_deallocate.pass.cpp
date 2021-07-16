@@ -14,8 +14,6 @@
 
 // T* polymorphic_allocator<T>::deallocate(T*, size_t size)
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 int AssertCount = 0;
 
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : (void)::AssertCount++)
@@ -38,13 +36,8 @@ int main(int, char**)
     ex::resource_adaptor<Alloc> r(Alloc{P});
     ex::memory_resource & m1 = r;
 
-#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
-    std::size_t maxSize = std::numeric_limits<std::size_t>::max()
-                            - __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-#else
     std::size_t maxSize = std::numeric_limits<std::size_t>::max()
                             - alignof(std::max_align_t);
-#endif
 
     m1.deallocate(nullptr, maxSize);
     assert(AssertCount == 0);
