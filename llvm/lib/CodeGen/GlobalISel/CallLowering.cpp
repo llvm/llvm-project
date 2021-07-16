@@ -791,7 +791,7 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
     Register Addr;
     MIRBuilder.materializePtrAdd(Addr, DemoteReg, OffsetLLTy, Offsets[I]);
     auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
-                                        MRI.getType(VRegs[I]).getSizeInBytes(),
+                                        MRI.getType(VRegs[I]),
                                         commonAlignment(BaseAlign, Offsets[I]));
     MIRBuilder.buildLoad(VRegs[I], Addr, *MMO);
   }
@@ -822,7 +822,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
     Register Addr;
     MIRBuilder.materializePtrAdd(Addr, DemoteReg, OffsetLLTy, Offsets[I]);
     auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
-                                        MRI.getType(VRegs[I]).getSizeInBytes(),
+                                        MRI.getType(VRegs[I]),
                                         commonAlignment(BaseAlign, Offsets[I]));
     MIRBuilder.buildStore(VRegs[I], Addr, *MMO);
   }
