@@ -5039,7 +5039,10 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
             return OR << "Moving globalized variable to the stack.";
         return OR << "Moving memory allocation from the heap to the stack.";
       };
-      A.emitRemark<OptimizationRemark>(AI.CB, "HeapToStack", Remark);
+      if (AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
+        A.emitRemark<OptimizationRemark>(AI.CB, "OMP110", Remark);
+      else
+        A.emitRemark<OptimizationRemark>(AI.CB, "HeapToStack", Remark);
 
       Value *Size;
       Optional<APInt> SizeAPI = getSize(A, *this, AI);
@@ -5328,15 +5331,14 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
           // Emit a missed remark if this is missed OpenMP globalization.
           auto Remark = [&](OptimizationRemarkMissed ORM) {
-            return ORM << "Could not move globalized variable to the stack as "
-                          "variable is potentially captured in call; mark "
-                          "parameter as "
-                          "`__attribute__((noescape))` to override.";
+            return ORM
+                   << "Could not move globalized variable to the stack. "
+                      "Variable is potentially captured in call. Mark "
+                      "parameter as `__attribute__((noescape))` to override.";
           };
 
           if (AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
-            A.emitRemark<OptimizationRemarkMissed>(AI.CB, "HeapToStackFailed",
-                                                   Remark);
+            A.emitRemark<OptimizationRemarkMissed>(AI.CB, "OMP113", Remark);
 
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
           ValidUsesOnly = false;

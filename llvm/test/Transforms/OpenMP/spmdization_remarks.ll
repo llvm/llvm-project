@@ -1,12 +1,13 @@
 ; RUN: opt -passes=openmp-opt -pass-remarks=openmp-opt -pass-remarks-missed=openmp-opt -pass-remarks-analysis=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 target triple = "nvptx64"
 
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Kernel will be executed in generic-mode due to this potential side-effect, consider to add `__attribute__((assume("ompx_spmd_amenable")))` to the called function 'unknown'.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Kernel will be executed in generic-mode due to this potential side-effect, consider to add `__attribute__((assume("ompx_spmd_amenable")))` to the called function 'unknown'.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback [1 known parallel regions, 2 unkown parallel regions] (bad).
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: State machine fallback caused by this call. If it is a false positive, use `__attribute__((assume("omp_no_openmp")))` (or "omp_no_parallelism").
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: State machine fallback caused by this call. If it is a false positive, use `__attribute__((assume("omp_no_openmp")))` (or "omp_no_parallelism").
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:20:1: Generic-mode kernel is changed to SPMD-mode.
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback.
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:20:1: Transformed generic-mode kernel to SPMD-mode.
+
 
 ;; void unknown(void);
 ;; void known(void) {

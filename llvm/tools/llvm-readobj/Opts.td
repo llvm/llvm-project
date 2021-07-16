@@ -1,17 +1,16 @@
 include "llvm/Option/OptParser.td"
 
 class F<string letter, string help> : Flag<["-"], letter>, HelpText<help>;
-class FF<string name, string help> : Flag<["--", "-"], name>, HelpText<help>;
+class FF<string name, string help> : Flag<["--"], name>, HelpText<help>;
 
 multiclass BB<string name, string help1, string help2> {
-  def NAME: Flag<["--", "-"], name>, HelpText<help1>;
-  def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
 }
 
 multiclass Eq<string name, string help> {
-  def NAME #_EQ : Joined<["--", "-"], name #"=">,
-                  HelpText<help>;
-  def : Separate<["--", "-"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
+  def NAME #_EQ : Joined<["--"], name #"=">, HelpText<help>;
+  def : Separate<["--"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
 }
 
 def addrsig : FF<"addrsig", "Display address-significance table">;
