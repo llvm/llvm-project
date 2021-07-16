@@ -21,9 +21,9 @@ target triple = "bpf"
 ; Function Attrs: nounwind
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !23 {
 entry:
-  %0 = tail call [5 x %struct.v3]* @llvm.preserve.array.access.index.p0a5s_struct.v3s.p0a4a5s_struct.v3s([4 x [5 x %struct.v3]]* nonnull @g, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !6
-  %1 = tail call %struct.v3* @llvm.preserve.array.access.index.p0s_struct.v3s.p0a5s_struct.v3s([5 x %struct.v3]* %0, i32 1, i32 2), !dbg !26, !llvm.preserve.access.index !16
-  %2 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v3s(%struct.v3* %1, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !8
+  %0 = tail call [5 x %struct.v3]* @llvm.preserve.array.access.index.p0a5s_struct.v3s.p0a4a5s_struct.v3s([4 x [5 x %struct.v3]]* elementtype([4 x [5 x %struct.v3]]) nonnull @g, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !6
+  %1 = tail call %struct.v3* @llvm.preserve.array.access.index.p0s_struct.v3s.p0a5s_struct.v3s([5 x %struct.v3]* elementtype([5 x %struct.v3]) %0, i32 1, i32 2), !dbg !26, !llvm.preserve.access.index !16
+  %2 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %1, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !8
   %call = tail call i32 @get_value(i32* %2) #3, !dbg !27
   ret i32 %call, !dbg !28
 }

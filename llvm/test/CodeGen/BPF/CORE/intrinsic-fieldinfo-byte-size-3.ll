@@ -25,11 +25,11 @@ entry:
   call void @llvm.dbg.value(metadata %union.u1* %arg, metadata !31, metadata !DIExpression()), !dbg !34
   %0 = tail call %union.u1* @llvm.preserve.union.access.index.p0s_union.u1s.p0s_union.u1s(%union.u1* %arg, i32 1), !dbg !35, !llvm.preserve.access.index !22
   %b2 = getelementptr inbounds %union.u1, %union.u1* %0, i64 0, i32 0, !dbg !35
-  %1 = tail call [10 x [10 x i32]]* @llvm.preserve.struct.access.index.p0a10a10i32.p0s_struct.s1s(%struct.s1* %b2, i32 0, i32 0), !dbg !36, !llvm.preserve.access.index !27
-  %2 = tail call [10 x i32]* @llvm.preserve.array.access.index.p0a10i32.p0a10a10i32([10 x [10 x i32]]* %1, i32 1, i32 5), !dbg !37, !llvm.preserve.access.index !8
+  %1 = tail call [10 x [10 x i32]]* @llvm.preserve.struct.access.index.p0a10a10i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 0), !dbg !36, !llvm.preserve.access.index !27
+  %2 = tail call [10 x i32]* @llvm.preserve.array.access.index.p0a10i32.p0a10a10i32([10 x [10 x i32]]* elementtype([10 x [10 x i32]]) %1, i32 1, i32 5), !dbg !37, !llvm.preserve.access.index !8
   %3 = tail call i32 @llvm.bpf.preserve.field.info.p0a10i32([10 x i32]* %2, i64 1), !dbg !38
   call void @llvm.dbg.value(metadata i32 %3, metadata !32, metadata !DIExpression()), !dbg !34
-  %4 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a10i32([10 x i32]* %2, i32 1, i32 5), !dbg !39, !llvm.preserve.access.index !12
+  %4 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a10i32([10 x i32]* elementtype([10 x i32]) %2, i32 1, i32 5), !dbg !39, !llvm.preserve.access.index !12
   %5 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %4, i64 1), !dbg !40
   call void @llvm.dbg.value(metadata i32 %5, metadata !33, metadata !DIExpression()), !dbg !34
   %add = add i32 %5, %3, !dbg !41
