@@ -54,22 +54,13 @@
 ; GCN-O0-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        AMDGPU Lower Kernel Arguments
-; GCN-O0-NEXT:      Analysis if a function is memory bound
-; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        Lazy Value Information Analysis
 ; GCN-O0-NEXT:        Lower SwitchInst's to branches
 ; GCN-O0-NEXT:        Lower invoke and unwind, for unwindless code generators
 ; GCN-O0-NEXT:        Remove unreachable blocks from the CFG
-; GCN-O0-NEXT:        Dominator Tree Construction
-; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
-; GCN-O0-NEXT:        Function Alias Analysis Results
-; GCN-O0-NEXT:        Flatten the CFG
-; GCN-O0-NEXT:        Dominator Tree Construction
-; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
-; GCN-O0-NEXT:        Function Alias Analysis Results
-; GCN-O0-NEXT:        Natural Loop Information
-; GCN-O0-NEXT:        Code sinking
 ; GCN-O0-NEXT:        Post-Dominator Tree Construction
+; GCN-O0-NEXT:        Dominator Tree Construction
+; GCN-O0-NEXT:        Natural Loop Information
 ; GCN-O0-NEXT:        Legacy Divergence Analysis
 ; GCN-O0-NEXT:        Unify divergent function exit nodes
 ; GCN-O0-NEXT:        Lazy Value Information Analysis
@@ -138,7 +129,6 @@
 ; GCN-O0-NEXT:        SI Memory Legalizer
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O0-NEXT:        SI insert wait instructions
-; GCN-O0-NEXT:        SI Shrink Instructions
 ; GCN-O0-NEXT:        Insert required mode register values
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        SI Final Branch Preparation
@@ -225,8 +215,6 @@
 ; GCN-O1-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        AMDGPU Lower Kernel Arguments
-; GCN-O1-NEXT:      Analysis if a function is memory bound
-; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        Dominator Tree Construction
 ; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        CodeGen Prepare
@@ -495,8 +483,6 @@
 ; GCN-O1-OPTS-NEXT:      AMDGPU Annotate Kernel Features
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        AMDGPU Lower Kernel Arguments
-; GCN-O1-OPTS-NEXT:      Analysis if a function is memory bound
-; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        CodeGen Prepare
