@@ -66,7 +66,7 @@ static inline uint16_t getStatusValueForExcept(int excepts) {
   // bit flags in the control registers.
   return (excepts & FE_INVALID ? ExceptionFlags::Invalid : 0) |
 #ifdef __FE_DENORM
-         (excepts & __FE_DENORM ? ExceptionFalgs::Denormal : 0) |
+         (excepts & __FE_DENORM ? ExceptionFlags::Denormal : 0) |
 #endif // __FE_DENORM
          (excepts & FE_DIVBYZERO ? ExceptionFlags::DivByZero : 0) |
          (excepts & FE_OVERFLOW ? ExceptionFlags::Overflow : 0) |
@@ -77,7 +77,7 @@ static inline uint16_t getStatusValueForExcept(int excepts) {
 static inline int exceptionStatusToMacro(uint16_t status) {
   return (status & ExceptionFlags::Invalid ? FE_INVALID : 0) |
 #ifdef __FE_DENORM
-         (status & ExceptionFalgs::Denormal ? __FE_DENORM : 0) |
+         (status & ExceptionFlags::Denormal ? __FE_DENORM : 0) |
 #endif // __FE_DENORM
          (status & ExceptionFlags::DivByZero ? FE_DIVBYZERO : 0) |
          (status & ExceptionFlags::Overflow ? FE_OVERFLOW : 0) |
