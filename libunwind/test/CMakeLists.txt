@@ -36,8 +36,8 @@ if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
 endif()
 
-if (TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${TARGET_TRIPLE}\"")
+if (LIBUNWIND_TARGET_TRIPLE)
+  serialize_lit_param(target_triple "\"${LIBUNWIND_TARGET_TRIPLE}\"")
 endif()
 
 if (LIBUNWIND_BUILD_32_BITS)
