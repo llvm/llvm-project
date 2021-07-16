@@ -886,3 +886,50 @@ define i64 @mul264(i64 %a) {
   %c = mul i64 %a, 264
   ret i64 %c
 }
+
+define i64 @imm_zextw() nounwind {
+; RV64I-LABEL: imm_zextw:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, zero, 1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    addi a0, a0, -2
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: imm_zextw:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    addi a0, zero, -2
+; RV64IB-NEXT:    zext.w a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBA-LABEL: imm_zextw:
+; RV64IBA:       # %bb.0:
+; RV64IBA-NEXT:    addi a0, zero, -2
+; RV64IBA-NEXT:    zext.w a0, a0
+; RV64IBA-NEXT:    ret
+  ret i64 4294967294 ; -2 in 32 bits.
+}
+
+define i64 @imm_zextw2() nounwind {
+; RV64I-LABEL: imm_zextw2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a0, 171
+; RV64I-NEXT:    addiw a0, a0, -1365
+; RV64I-NEXT:    slli a0, a0, 12
+; RV64I-NEXT:    addi a0, a0, -1366
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: imm_zextw2:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    lui a0, 699051
+; RV64IB-NEXT:    addiw a0, a0, -1366
+; RV64IB-NEXT:    zext.w a0, a0
+; RV64IB-NEXT:    ret
+;
+; RV64IBA-LABEL: imm_zextw2:
+; RV64IBA:       # %bb.0:
+; RV64IBA-NEXT:    lui a0, 699051
+; RV64IBA-NEXT:    addiw a0, a0, -1366
+; RV64IBA-NEXT:    zext.w a0, a0
+; RV64IBA-NEXT:    ret
+  ret i64 2863311530 ; 0xAAAAAAAA
+}
