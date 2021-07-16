@@ -166,6 +166,8 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__fnmsubs", "__builtin_ppc_fnmsubs");
   Builder.defineMacro("__fre", "__builtin_ppc_fre");
   Builder.defineMacro("__fres", "__builtin_ppc_fres");
+  Builder.defineMacro("__swdiv_nochk", "__builtin_ppc_swdiv_nochk");
+  Builder.defineMacro("__swdivs_nochk", "__builtin_ppc_swdivs_nochk");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
