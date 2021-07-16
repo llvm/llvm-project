@@ -97,7 +97,7 @@ struct SGPRSpillBuilder {
   unsigned EltSize = 4;
 
   RegScavenger *RS;
-  MachineBasicBlock &MBB;
+  MachineBasicBlock *MBB;
   MachineFunction &MF;
   SIMachineFunctionInfo &MFI;
   const SIInstrInfo &TII;
@@ -110,9 +110,14 @@ struct SGPRSpillBuilder {
   SGPRSpillBuilder(const SIRegisterInfo &TRI, const SIInstrInfo &TII,
                    bool IsWave32, MachineBasicBlock::iterator MI, int Index,
                    RegScavenger *RS)
-      : SuperReg(MI->getOperand(0).getReg()), MI(MI),
-        IsKill(MI->getOperand(0).isKill()), DL(MI->getDebugLoc()), Index(Index),
-        RS(RS), MBB(*MI->getParent()), MF(*MBB.getParent()),
+      : SGPRSpillBuilder(TRI, TII, IsWave32, MI, MI->getOperand(0).getReg(),
+                         MI->getOperand(0).isKill(), Index, RS) {}
+
+  SGPRSpillBuilder(const SIRegisterInfo &TRI, const SIInstrInfo &TII,
+                   bool IsWave32, MachineBasicBlock::iterator MI, Register Reg,
+                   bool IsKill, int Index, RegScavenger *RS)
+      : SuperReg(Reg), MI(MI), IsKill(IsKill), DL(MI->getDebugLoc()),
+        Index(Index), RS(RS), MBB(MI->getParent()), MF(*MBB->getParent()),
         MFI(*MF.getInfo<SIMachineFunctionInfo>()), TII(TII), TRI(TRI),
         IsWave32(IsWave32) {
     const TargetRegisterClass *RC = TRI.getPhysRegClass(SuperReg);
@@ -189,8 +194,9 @@ struct SGPRSpillBuilder {
     if (SavedExecReg) {
       RS->setRegUsed(SavedExecReg);
       // Set exec to needed lanes
-      BuildMI(MBB, MI, DL, TII.get(MovOpc), SavedExecReg).addReg(ExecReg);
-      auto I = BuildMI(MBB, MI, DL, TII.get(MovOpc), ExecReg).addImm(VGPRLanes);
+      BuildMI(*MBB, MI, DL, TII.get(MovOpc), SavedExecReg).addReg(ExecReg);
+      auto I =
+          BuildMI(*MBB, MI, DL, TII.get(MovOpc), ExecReg).addImm(VGPRLanes);
       if (!TmpVGPRLive)
         I.addReg(TmpVGPR, RegState::ImplicitDefine);
       // Spill needed lanes
@@ -201,7 +207,7 @@ struct SGPRSpillBuilder {
         TRI.buildVGPRSpillLoadStore(*this, TmpVGPRIndex, 0, /*IsLoad*/ false,
                                     /*IsKill*/ false);
       // Spill inactive lanes
-      auto I = BuildMI(MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
+      auto I = BuildMI(*MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
       if (!TmpVGPRLive)
         I.addReg(TmpVGPR, RegState::ImplicitDefine);
       TRI.buildVGPRSpillLoadStore(*this, TmpVGPRIndex, 0, /*IsLoad*/ false);
@@ -224,7 +230,7 @@ struct SGPRSpillBuilder {
       TRI.buildVGPRSpillLoadStore(*this, TmpVGPRIndex, 0, /*IsLoad*/ true,
                                   /*IsKill*/ false);
       // Restore exec
-      auto I = BuildMI(MBB, MI, DL, TII.get(MovOpc), ExecReg)
+      auto I = BuildMI(*MBB, MI, DL, TII.get(MovOpc), ExecReg)
                    .addReg(SavedExecReg, RegState::Kill);
       // Add an implicit use of the load so it is not dead.
       // FIXME This inserts an unnecessary waitcnt
@@ -235,7 +241,7 @@ struct SGPRSpillBuilder {
       // Restore inactive lanes
       TRI.buildVGPRSpillLoadStore(*this, TmpVGPRIndex, 0, /*IsLoad*/ true,
                                   /*IsKill*/ false);
-      auto I = BuildMI(MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
+      auto I = BuildMI(*MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
       if (!TmpVGPRLive) {
         I.addReg(TmpVGPR, RegState::ImplicitKill);
       }
@@ -261,10 +267,16 @@ struct SGPRSpillBuilder {
       TRI.buildVGPRSpillLoadStore(*this, Index, Offset, IsLoad,
                                   /*IsKill*/ false);
       // Spill inactive lanes
-      BuildMI(MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
+      BuildMI(*MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
       TRI.buildVGPRSpillLoadStore(*this, Index, Offset, IsLoad);
-      BuildMI(MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
+      BuildMI(*MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
     }
+  }
+
+  void setMI(MachineBasicBlock *NewMBB, MachineBasicBlock::iterator NewMI) {
+    assert(MBB->getParent() == &MF);
+    MI = NewMI;
+    MBB = NewMBB;
   }
 };
 
@@ -1337,13 +1349,13 @@ void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
   if (IsLoad) {
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
                                           : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
-    buildSpillLoadStore(SB.MBB, SB.MI, Opc, Index, SB.TmpVGPR, false, FrameReg,
+    buildSpillLoadStore(*SB.MBB, SB.MI, Opc, Index, SB.TmpVGPR, false, FrameReg,
                         Offset * SB.EltSize, MMO, SB.RS);
   } else {
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                           : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
-    buildSpillLoadStore(SB.MBB, SB.MI, Opc, Index, SB.TmpVGPR, IsKill, FrameReg,
-                        Offset * SB.EltSize, MMO, SB.RS);
+    buildSpillLoadStore(*SB.MBB, SB.MI, Opc, Index, SB.TmpVGPR, IsKill,
+                        FrameReg, Offset * SB.EltSize, MMO, SB.RS);
     // This only ever adds one VGPR spill
     SB.MFI.addToSpilledVGPRs(1);
   }
@@ -1381,8 +1393,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
 
       // Mark the "old value of vgpr" input undef only if this is the first sgpr
       // spill to this specific vgpr in the first basic block.
-      auto MIB = BuildMI(SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_WRITELANE_B32),
-                         Spill.VGPR)
+      auto MIB = BuildMI(*SB.MBB, MI, SB.DL,
+                         SB.TII.get(AMDGPU::V_WRITELANE_B32), Spill.VGPR)
                      .addReg(SubReg, getKillRegState(UseKill))
                      .addImm(Spill.Lane)
                      .addReg(Spill.VGPR);
@@ -1428,7 +1440,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
                 : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
         MachineInstrBuilder WriteLane =
-            BuildMI(SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_WRITELANE_B32),
+            BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_WRITELANE_B32),
                     SB.TmpVGPR)
                 .addReg(SubReg, SubKillState)
                 .addImm(i % PVD.PerVGPR)
@@ -1490,10 +1502,10 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
       SIMachineFunctionInfo::SpilledReg Spill = VGPRSpills[i];
-      auto MIB =
-          BuildMI(SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32), SubReg)
-              .addReg(Spill.VGPR)
-              .addImm(Spill.Lane);
+      auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
+                         SubReg)
+                     .addReg(Spill.VGPR)
+                     .addImm(Spill.Lane);
       if (SB.NumSubRegs > 1 && i == 0)
         MIB.addReg(SB.SuperReg, RegState::ImplicitDefine);
       if (LIS) {
@@ -1524,7 +1536,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
                 : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
 
         bool LastSubReg = (i + 1 == e);
-        auto MIB = BuildMI(SB.MBB, MI, SB.DL,
+        auto MIB = BuildMI(*SB.MBB, MI, SB.DL,
                            SB.TII.get(AMDGPU::V_READLANE_B32), SubReg)
                        .addReg(SB.TmpVGPR, getKillRegState(LastSubReg))
                        .addImm(i);
@@ -1548,6 +1560,75 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
     LIS->removeAllRegUnitsForPhysReg(SB.SuperReg);
 
   return true;
+}
+
+bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
+                                        MachineBasicBlock &RestoreMBB,
+                                        Register SGPR, RegScavenger *RS) const {
+  SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, SGPR, false, 0,
+                      RS);
+  SB.prepare();
+  // Generate the spill of SGPR to SB.TmpVGPR.
+  unsigned SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
+  auto PVD = SB.getPerVGPRData();
+  for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
+    unsigned TmpVGPRFlags = RegState::Undef;
+    // Write sub registers into the VGPR
+    for (unsigned i = Offset * PVD.PerVGPR,
+                  e = std::min((Offset + 1) * PVD.PerVGPR, SB.NumSubRegs);
+         i < e; ++i) {
+      Register SubReg =
+          SB.NumSubRegs == 1
+              ? SB.SuperReg
+              : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
+
+      MachineInstrBuilder WriteLane =
+          BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_WRITELANE_B32),
+                  SB.TmpVGPR)
+              .addReg(SubReg, SubKillState)
+              .addImm(i % PVD.PerVGPR)
+              .addReg(SB.TmpVGPR, TmpVGPRFlags);
+      TmpVGPRFlags = 0;
+      // There could be undef components of a spilled super register.
+      // TODO: Can we detect this and skip the spill?
+      if (SB.NumSubRegs > 1) {
+        // The last implicit use of the SB.SuperReg carries the "Kill" flag.
+        unsigned SuperKillState = 0;
+        if (i + 1 == SB.NumSubRegs)
+          SuperKillState |= getKillRegState(SB.IsKill);
+        WriteLane.addReg(SB.SuperReg, RegState::Implicit | SuperKillState);
+      }
+    }
+    // Don't need to write VGPR out.
+  }
+
+  // Restore clobbered registers in the specified restore block.
+  MI = RestoreMBB.end();
+  SB.setMI(&RestoreMBB, MI);
+  // Generate the restore of SGPR from SB.TmpVGPR.
+  for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
+    // Don't need to load VGPR in.
+    // Unpack lanes
+    for (unsigned i = Offset * PVD.PerVGPR,
+                  e = std::min((Offset + 1) * PVD.PerVGPR, SB.NumSubRegs);
+         i < e; ++i) {
+      Register SubReg =
+          SB.NumSubRegs == 1
+              ? SB.SuperReg
+              : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
+      bool LastSubReg = (i + 1 == e);
+      auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
+                         SubReg)
+                     .addReg(SB.TmpVGPR, getKillRegState(LastSubReg))
+                     .addImm(i);
+      if (SB.NumSubRegs > 1 && i == 0)
+        MIB.addReg(SB.SuperReg, RegState::ImplicitDefine);
+    }
+  }
+  SB.restore();
+
+  SB.MFI.addToSpilledSGPRs(SB.NumSubRegs);
+  return false;
 }
 
 /// Special case of eliminateFrameIndex. Returns true if the SGPR was spilled to
