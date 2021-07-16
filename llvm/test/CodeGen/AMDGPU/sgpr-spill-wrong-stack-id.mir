@@ -1,5 +1,8 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=3 -start-before=greedy -stop-after=stack-slot-coloring -o - %s | FileCheck -check-prefixes=SHARE,GCN %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=3 -start-before=greedy -stop-after=stack-slot-coloring -no-stack-slot-sharing -o - %s | FileCheck -check-prefixes=NOSHARE,GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=3 -run-pass=greedy,virtregrewriter,stack-slot-coloring -o - %s | FileCheck -check-prefixes=SHARE,GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=3 -run-pass=greedy,virtregrewriter,stack-slot-coloring -no-stack-slot-sharing -o - %s | FileCheck -check-prefixes=NOSHARE,GCN %s
+
+# -run-pass is used to artifically avoid using split register allocation, which would avoid stressing StackSlotColoring.
+
 
 # Make sure that stack slot coloring doesn't try to merge frame
 # indexes used for SGPR spilling with those that aren't.

@@ -22,12 +22,11 @@ define void @spill_more_than_wavesize_csr_sgprs() {
 }
 
 ; CHECK-LABEL: {{^}}spill_more_than_wavesize_csr_sgprs_with_stack_object:
-; CHECK-DAG:    v_writelane_b32 v1, s98, 63
-; CHECK-DAG:    v_writelane_b32 v2, s99, 0
+; CHECK-DAG:    v_writelane_b32 v0, s98, 63
+; CHECK-DAG:    v_writelane_b32 v1, s99, 0
 ; CHECK-NOT: dummy
-; CHECK-DAG:    v_readlane_b32 s99, v2, 0
-; CHECK-DAG:    v_readlane_b32 s98, v1, 63
-
+; CHECK-DAG:    v_readlane_b32 s99, v1, 0
+; CHECK-DAG:    v_readlane_b32 s98, v0, 63
 define void @spill_more_than_wavesize_csr_sgprs_with_stack_object() {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca

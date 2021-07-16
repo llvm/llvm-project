@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX900 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE64,GFX90A %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -filetype=asm -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
 
@@ -59,8 +59,11 @@ entry:
 
 ; SGPR33 = 65
 ; CHECK: v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
-; CHECK: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
-; WAVE64: .cfi_offset 65, 28928
+; GFX900: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
+; GFX90A: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:324 ; 4-byte Folded Spill
+
+; GFX900: .cfi_offset 65, 28928
+; GFX90A: .cfi_offset 65, 20736
 ; WAVE32: .cfi_offset 65, 14464
 
 ; CHECK: .cfi_endproc
