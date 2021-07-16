@@ -480,8 +480,8 @@ aarch64-noexceptions)
     export CXX=/usr/local/bin/c++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
-    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+                   -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+                   -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
     check-cxx-cxxabi
 ;;
 # Aka Armv8 32 bit
