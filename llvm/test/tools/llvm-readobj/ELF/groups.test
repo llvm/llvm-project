@@ -3,6 +3,7 @@
 
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj -g %t.o | FileCheck %s
+# RUN: llvm-readobj --elf-section-groups %t.o | FileCheck %s
 # RUN: llvm-readelf -g %t.o | FileCheck --check-prefix=GNU %s
 
 # CHECK:      Groups {
@@ -96,8 +97,8 @@ Symbols:
 ## in two group sections at the same time.
 
 # RUN: yaml2obj %s -DMEMBER2=.text.foo -o %t.dup.o
-# RUN: llvm-readobj --elf-section-groups %t.dup.o 2>&1 | FileCheck %s -DFILE=%t.dup.o --check-prefix=DUP-LLVM
-# RUN: llvm-readelf --elf-section-groups %t.dup.o 2>&1 | FileCheck %s -DFILE=%t.dup.o --check-prefix=DUP-GNU
+# RUN: llvm-readobj --section-groups %t.dup.o 2>&1 | FileCheck %s -DFILE=%t.dup.o --check-prefix=DUP-LLVM
+# RUN: llvm-readelf --section-groups %t.dup.o 2>&1 | FileCheck %s -DFILE=%t.dup.o --check-prefix=DUP-GNU
 
 # DUP-LLVM:      Group {
 # DUP-LLVM-NEXT:   Name: .group
@@ -142,9 +143,9 @@ Symbols:
 ## Check we report a warning in this case. Check we don't print the same warning message twice.
 
 # RUN: yaml2obj %s -DSYMTABLINK=0xFF -o %t.symtab.o
-# RUN: llvm-readobj --elf-section-groups %t.symtab.o 2>&1 | \
+# RUN: llvm-readobj --section-groups %t.symtab.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.symtab.o %s --check-prefix=SYMTAB-LLVM --implicit-check-not=warning:
-# RUN: llvm-readelf --elf-section-groups %t.symtab.o 2>&1 | \
+# RUN: llvm-readelf --section-groups %t.symtab.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.symtab.o %s --check-prefix=SYMTAB-GNU --implicit-check-not=warning:
 
 # SYMTAB-LLVM:      Groups {
@@ -195,9 +196,9 @@ Symbols:
 ## when we are unable to read a signature symbol.
 
 # RUN: yaml2obj %s -DSYMTAB1=0xFF -DSYMTAB2=0x1 -o %t.symtab2.o
-# RUN: llvm-readobj --elf-section-groups %t.symtab2.o 2>&1 | \
+# RUN: llvm-readobj --section-groups %t.symtab2.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.symtab2.o %s --check-prefix=SIGNATURE-LLVM --implicit-check-not=warning:
-# RUN: llvm-readelf --elf-section-groups %t.symtab2.o 2>&1 | \
+# RUN: llvm-readelf --section-groups %t.symtab2.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.symtab2.o %s --check-prefix=SIGNATURE-GNU --implicit-check-not=warning:
 
 # SIGNATURE:      Groups {
@@ -246,9 +247,9 @@ Symbols:
 ## In both cases we are unable to read the section group flag and dump it as 0.
 
 # RUN: yaml2obj %s -DSECSIZE1=0x0 -DSECSIZE2=0x1 -o %t.secsize.o
-# RUN: llvm-readobj --elf-section-groups %t.secsize.o 2>&1 | \
+# RUN: llvm-readobj --section-groups %t.secsize.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.secsize.o %s --check-prefix=CONTENT-LLVM --implicit-check-not=warning:
-# RUN: llvm-readelf --elf-section-groups %t.secsize.o 2>&1 | \
+# RUN: llvm-readelf --section-groups %t.secsize.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.secsize.o %s --check-prefix=CONTENT-GNU --implicit-check-not=warning:
 
 # CONTENT-LLVM:      Groups {
@@ -288,9 +289,9 @@ Symbols:
 ## Check that we emit a warning when we are unable to read the group section name or the name of a member.
 
 # RUN: yaml2obj %s -DGROUP1SHNAME=0xAAAA -DTEXTBARSHNAME=0xBBBB -o %t.name.o
-# RUN: llvm-readobj --elf-section-groups %t.name.o 2>&1 | \
+# RUN: llvm-readobj --section-groups %t.name.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.name.o %s --check-prefix=NAME-LLVM --implicit-check-not=warning:
-# RUN: llvm-readelf --elf-section-groups %t.name.o 2>&1 | \
+# RUN: llvm-readelf --section-groups %t.name.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.name.o %s --check-prefix=NAME-GNU --implicit-check-not=warning:
 
 # NAME-LLVM:      Groups {
@@ -338,9 +339,9 @@ Symbols:
 ## Check we report a warning then the section index of a section group member is invalid.
 
 # RUN: yaml2obj %s -DMEMBER1=0xEE -DMEMBER2=0xFF -o %t.member.index.o
-# RUN: llvm-readobj --elf-section-groups %t.member.index.o 2>&1 | \
+# RUN: llvm-readobj --section-groups %t.member.index.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.member.index.o %s --check-prefix=MEMBER-LLVM --implicit-check-not=warning:
-# RUN: llvm-readelf --elf-section-groups %t.member.index.o 2>&1 | \
+# RUN: llvm-readelf --section-groups %t.member.index.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.member.index.o %s --check-prefix=MEMBER-GNU --implicit-check-not=warning:
 
 # MEMBER-LLVM:      Groups {
@@ -390,9 +391,9 @@ Symbols:
 ## We set the content of the string table to '0061626300' ('\0abc\0') to fixup the size of the string table.
 ## This makes it easier to test the boundary conditions.
 # RUN: yaml2obj %s -DSTRTABCONTENT="0061626300" -DSYM1STNAME=4 -DSYM2STNAME=5 -o %t.signame.o
-# RUN: llvm-readobj --elf-section-groups %t.signame.o 2>&1 | \
+# RUN: llvm-readobj --section-groups %t.signame.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.signame.o %s --check-prefixes=SIGNAME1-WARN,SIGNAME1-LLVM --implicit-check-not=warning:
-# RUN: llvm-readelf --elf-section-groups %t.signame.o 2>&1 | \
+# RUN: llvm-readelf --section-groups %t.signame.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.signame.o %s --check-prefixes=SIGNAME1-WARN,SIGNAME1-GNU --implicit-check-not=warning:
 
 # SIGNAME1-WARN: warning: '[[FILE]]': unable to get the name of the symbol with index 2: st_name (0x5) is past the end of the string table of size 0x5
@@ -406,9 +407,9 @@ Symbols:
 ## Check we report a warning when the string table that contains the signature symbol name is not null-terminated.
 
 # RUN: yaml2obj %s -DSTRTABCONTENT="0061626361" -DSYM1STNAME=4 -DSYM2STNAME=5 -o %t.signame2.o
-# RUN: llvm-readobj --elf-section-groups %t.signame2.o 2>&1 | \
+# RUN: llvm-readobj --section-groups %t.signame2.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.signame2.o %s --check-prefixes=SIGNAME2-WARN,SIGNAME2-LLVM --implicit-check-not=warning:
-# RUN: llvm-readelf --elf-section-groups %t.signame2.o 2>&1 | \
+# RUN: llvm-readelf --section-groups %t.signame2.o 2>&1 | \
 # RUN:   FileCheck -DFILE=%t.signame2.o %s --check-prefixes=SIGNAME2-WARN,SIGNAME2-GNU --implicit-check-not=warning:
 
 # SIGNAME2-WARN: warning: '[[FILE]]': unable to get the string table for SHT_SYMTAB section with index 7: SHT_STRTAB string table section [index 8] is non-null terminated
