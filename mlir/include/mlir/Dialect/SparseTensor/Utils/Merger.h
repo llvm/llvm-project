@@ -47,6 +47,9 @@ enum Kind {
   kAndI,
   kOrI,
   kXorI,
+  kShrS, // signed
+  kShrU, // unsigned
+  kShlI,
 };
 
 /// Children subexpressions of tensor operations.
@@ -215,7 +218,8 @@ public:
                  Value v1);
 
 private:
-  bool maybeZero(unsigned e);
+  bool maybeZero(unsigned e) const;
+  bool isInvariant(unsigned e) const;
 
   /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
   Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value v);
