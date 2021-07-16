@@ -55,9 +55,7 @@ define internal void @vfu1(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounw
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_CAST:%.*]] = bitcast %struct.MYstr* [[U_PRIV]] to i8*
 ; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    store i32 undef, i32* [[U_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
-; IS__CGSCC_NPM-NEXT:    store i32 99, i32* [[TMP2]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
 ; IS__CGSCC_NPM-NEXT:    store i8 97, i8* [[TMP3]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[L:%.*]] = load i8, i8* [[TMP3]], align 8

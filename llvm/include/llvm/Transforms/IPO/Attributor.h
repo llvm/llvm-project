@@ -3106,9 +3106,19 @@ struct AANoReturn
 };
 
 /// An abstract interface for liveness abstract attribute.
-struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+struct AAIsDead
+    : public StateWrapper<BitIntegerState<uint8_t, 3, 0>, AbstractAttribute> {
+  using Base = StateWrapper<BitIntegerState<uint8_t, 3, 0>, AbstractAttribute>;
   AAIsDead(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// State encoding bits. A set bit in the state means the property holds.
+  enum {
+    HAS_NO_EFFECT = 1 << 0,
+    IS_REMOVABLE = 1 << 1,
+
+    IS_DEAD = HAS_NO_EFFECT | IS_REMOVABLE,
+  };
+  static_assert(IS_DEAD == getBestState(), "Unexpected BEST_STATE value");
 
 protected:
   /// The query functions are protected such that other attributes need to go

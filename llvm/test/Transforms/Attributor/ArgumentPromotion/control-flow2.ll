@@ -90,8 +90,6 @@ define i32 @foo() {
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
 ; IS__CGSCC_NPM-SAME: () #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC_NPM-NEXT:    store i32 17, i32* [[A]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = call i32 @callee(i32 undef) #[[ATTR1:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[X]]
 ;
