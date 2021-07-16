@@ -1,7 +1,0 @@
-# RUN: llvm-cfi-verify --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
-
-# HELP: OVERVIEW:
-# HELP: USAGE:
-# HELP: CFI Verify Options:
-# HELP: Color Options:
-# HELP: Generic Options:
