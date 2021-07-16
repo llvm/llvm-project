@@ -65,3 +65,13 @@ def SUMOPS_MPPZZ_D : sme_int_outer_product_i64<0b011, "sumops">;
 def USMOPA_MPPZZ_D : sme_int_outer_product_i64<0b100, "usmopa">;
 def USMOPS_MPPZZ_D : sme_int_outer_product_i64<0b101, "usmops">;
 }
+
+let Predicates = [HasSME] in {
+//===----------------------------------------------------------------------===//
+// Loads and stores
+//===----------------------------------------------------------------------===//
+
+defm LD1_MXIPXX : sme_mem_ld_ss<"ld1">;
+defm ST1_MXIPXX : sme_mem_st_ss<"st1">;
+
+} // End let Predicates = [HasSME]
