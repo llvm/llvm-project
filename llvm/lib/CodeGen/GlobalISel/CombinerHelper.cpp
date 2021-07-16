@@ -1302,7 +1302,7 @@ bool CombinerHelper::optimizeMemset(MachineInstr &MI, Register Dst,
     }
 
     auto *StoreMMO =
-        MF.getMachineMemOperand(&DstMMO, DstOff, Ty.getSizeInBytes());
+        MF.getMachineMemOperand(&DstMMO, DstOff, Ty);
 
     Register Ptr = Dst;
     if (DstOff != 0) {

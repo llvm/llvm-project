@@ -111,7 +111,7 @@ option(LIBCXXABI_INCLUDE_TESTS "Generate build targets for the libc++abi unit te
 set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
-set(LIBCXXABI_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
+set(LIBCXXABI_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}" CACHE STRING "Target triple for cross compiling.")
 set(LIBCXXABI_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBCXXABI_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
@@ -271,10 +271,6 @@ if(LIBCXXABI_SYSROOT)
   add_target_flags_if_supported("--sysroot=${LIBCXXABI_SYSROOT}")
 elseif(CMAKE_SYSROOT)
   set(LIBCXXABI_SYSROOT "${CMAKE_SYSROOT}")
-endif()
-
-if (LIBCXXABI_TARGET_TRIPLE)
-  set(TARGET_TRIPLE "${LIBCXXABI_TARGET_TRIPLE}")
 endif()
 
 # Configure compiler. Must happen after setting the target flags.

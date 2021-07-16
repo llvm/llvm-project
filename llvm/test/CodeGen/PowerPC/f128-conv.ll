@@ -1144,7 +1144,7 @@ define void @qpConv2dp_02(double* nocapture %res) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC6@toc@ha
 ; CHECK-NEXT:    ld r4, .LC6@toc@l(r4)
-; CHECK-NEXT:    lxvx v2, 0, r4
+; CHECK-NEXT:    lxv v2, 0(r4)
 ; CHECK-NEXT:    xscvqpdp v2, v2
 ; CHECK-NEXT:    stxsd v2, 0(r3)
 ; CHECK-NEXT:    blr
@@ -1164,7 +1164,7 @@ define void @qpConv2dp_02(double* nocapture %res) {
 ; CHECK-P8-NEXT:    lvx v2, 0, r4
 ; CHECK-P8-NEXT:    bl __trunckfdf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stfdx f1, 0, r30
+; CHECK-P8-NEXT:    stfd f1, 0(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -1184,7 +1184,7 @@ define void @qpConv2dp_03(double* nocapture %res, i32 signext %idx) {
 ; CHECK-NEXT:    addis r5, r2, .LC7@toc@ha
 ; CHECK-NEXT:    sldi r4, r4, 3
 ; CHECK-NEXT:    ld r5, .LC7@toc@l(r5)
-; CHECK-NEXT:    lxvx v2, 0, r5
+; CHECK-NEXT:    lxv v2, 0(r5)
 ; CHECK-NEXT:    xscvqpdp v2, v2
 ; CHECK-NEXT:    stxsdx v2, r3, r4
 ; CHECK-NEXT:    blr
@@ -1251,7 +1251,7 @@ define void @qpConv2dp_04(fp128* nocapture readonly %a, fp128* nocapture readonl
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    bl __trunckfdf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stfdx f1, 0, r30
+; CHECK-P8-NEXT:    stfd f1, 0(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -1303,7 +1303,7 @@ define void @qpConv2sp_02(float* nocapture %res) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC6@toc@ha
 ; CHECK-NEXT:    ld r4, .LC6@toc@l(r4)
-; CHECK-NEXT:    lxvx v2, 0, r4
+; CHECK-NEXT:    lxv v2, 0(r4)
 ; CHECK-NEXT:    xscvqpdpo v2, v2
 ; CHECK-NEXT:    xsrsp f0, v2
 ; CHECK-NEXT:    stfs f0, 0(r3)
@@ -1324,7 +1324,7 @@ define void @qpConv2sp_02(float* nocapture %res) {
 ; CHECK-P8-NEXT:    lvx v2, 0, r4
 ; CHECK-P8-NEXT:    bl __trunckfsf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stfsx f1, 0, r30
+; CHECK-P8-NEXT:    stfs f1, 0(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -1414,7 +1414,7 @@ define void @qpConv2sp_04(fp128* nocapture readonly %a, fp128* nocapture readonl
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    bl __trunckfsf2
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stfsx f1, 0, r30
+; CHECK-P8-NEXT:    stfs f1, 0(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -1465,7 +1465,7 @@ define void @dpConv2qp_02(double* nocapture readonly %a) {
 ; CHECK-NEXT:    addis r3, r2, .LC8@toc@ha
 ; CHECK-NEXT:    ld r3, .LC8@toc@l(r3)
 ; CHECK-NEXT:    xscvdpqp v2, v2
-; CHECK-NEXT:    stxvx v2, 0, r3
+; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: dpConv2qp_02:
@@ -1475,7 +1475,7 @@ define void @dpConv2qp_02(double* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lfdx f1, 0, r3
+; CHECK-P8-NEXT:    lfd f1, 0(r3)
 ; CHECK-P8-NEXT:    bl __extenddfkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addis r3, r2, .LC8@toc@ha
@@ -1501,7 +1501,7 @@ define void @dpConv2qp_02b(double* nocapture readonly %a, i32 signext %idx) {
 ; CHECK-NEXT:    addis r3, r2, .LC8@toc@ha
 ; CHECK-NEXT:    ld r3, .LC8@toc@l(r3)
 ; CHECK-NEXT:    xscvdpqp v2, v2
-; CHECK-NEXT:    stxvx v2, 0, r3
+; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: dpConv2qp_02b:
@@ -1639,7 +1639,7 @@ define void @spConv2qp_02(float* nocapture readonly %a) {
 ; CHECK-NEXT:    addis r3, r2, .LC8@toc@ha
 ; CHECK-NEXT:    ld r3, .LC8@toc@l(r3)
 ; CHECK-NEXT:    xscvdpqp v2, v2
-; CHECK-NEXT:    stxvx v2, 0, r3
+; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: spConv2qp_02:
@@ -1649,7 +1649,7 @@ define void @spConv2qp_02(float* nocapture readonly %a) {
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    lfsx f1, 0, r3
+; CHECK-P8-NEXT:    lfs f1, 0(r3)
 ; CHECK-P8-NEXT:    bl __extendsfkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addis r3, r2, .LC8@toc@ha
@@ -1675,7 +1675,7 @@ define void @spConv2qp_02b(float* nocapture readonly %a, i32 signext %idx) {
 ; CHECK-NEXT:    addis r3, r2, .LC8@toc@ha
 ; CHECK-NEXT:    ld r3, .LC8@toc@l(r3)
 ; CHECK-NEXT:    xscvdpqp v2, v2
-; CHECK-NEXT:    stxvx v2, 0, r3
+; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: spConv2qp_02b:

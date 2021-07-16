@@ -11,7 +11,7 @@ define fp128 @loadConstant() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: loadConstant:
@@ -31,7 +31,7 @@ define fp128 @loadConstant2(fp128 %a, fp128 %b) {
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    blr
 ;
@@ -554,7 +554,7 @@ define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, 104(r1)
 ; CHECK-NEXT:    stxv v2, 0(r9)
-; CHECK-NEXT:    stxvx v3, 0, r3
+; CHECK-NEXT:    stxv v3, 0(r3)
 ; CHECK-NEXT:    mtvsrwa v3, r10
 ; CHECK-NEXT:    lxv v2, 0(r9)
 ; CHECK-NEXT:    xscvsdqp v3, v3
@@ -590,7 +590,7 @@ define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK-P8-NEXT:    bl __trunckfdf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r3, 48
-; CHECK-P8-NEXT:    stfdx f1, 0, r30
+; CHECK-P8-NEXT:    stfd f1, 0(r30)
 ; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80
@@ -650,7 +650,7 @@ define fastcc void @mixParam_03f(fp128 %f1, double* nocapture %d1, <4 x i32> %ve
 ; CHECK-P8-NEXT:    bl __trunckfdf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r3, 48
-; CHECK-P8-NEXT:    stfdx f1, 0, r30
+; CHECK-P8-NEXT:    stfd f1, 0(r30)
 ; CHECK-P8-NEXT:    ld r30, 64(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
 ; CHECK-P8-NEXT:    addi r1, r1, 80

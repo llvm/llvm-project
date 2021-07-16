@@ -45,12 +45,12 @@ entry:
 ; PPC64-DAG: stfd 2, [[OFFSET_HI:-?[0-9]+]]([[SP:[0-9]+]])
 ; PPC64-DAG: stfd 1, [[OFFSET_LO:-?[0-9]+]]([[SP]]) 
 ; PPC64-DAG: li [[FLIP_BIT:[0-9]+]], 1
-; PPC64-DAG: rldic [[FLIP_BIT]], [[FLIP_BIT]], 63, 0
+; PPC64-DAG: rldic [[RES:[0-9]+]], [[FLIP_BIT]], 63, 0
 ; PPC64-DAG: ld [[HI:[0-9]+]], [[OFFSET_LO]]([[SP]])
 ; PPC64-DAG: ld [[LO:[0-9]+]], [[OFFSET_HI]]([[SP]])
 ; PPC64-NOT: BARRIER
-; PPC64-DAG: xor 3, [[HI]], [[FLIP_BIT]]
-; PPC64-DAG: xor 4, [[LO]], [[FLIP_BIT]]
+; PPC64-DAG: xor 3, [[HI]], [[RES]]
+; PPC64-DAG: xor 4, [[LO]], [[RES]]
 ; PPC64: blr
 
 ; PPC64-P8-LABEL: test_neg:

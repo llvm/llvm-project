@@ -599,7 +599,7 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, i32* nocapture 
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; CHECK-P9-NEXT:    xxsldwi vs0, vs34, vs34, 1
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI16_0@toc@l
-; CHECK-P9-NEXT:    lxvx vs35, 0, r3
+; CHECK-P9-NEXT:    lxv vs35, 0(r3)
 ; CHECK-P9-NEXT:    li r3, 16
 ; CHECK-P9-NEXT:    stfiwx f0, r5, r3
 ; CHECK-P9-NEXT:    li r3, 20

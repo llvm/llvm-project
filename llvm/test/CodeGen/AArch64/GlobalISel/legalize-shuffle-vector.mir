@@ -283,9 +283,9 @@ body:             |
     %9:_(s64) = COPY $d6
     %10:_(s64) = COPY $d7
     %15:_(p0) = G_FRAME_INDEX %fixed-stack.3
-    %11:_(s64) = G_LOAD %15(p0) :: (invariant load 8 from %fixed-stack.3, align 16)
+    %11:_(s64) = G_LOAD %15(p0) :: (invariant load (s64) from %fixed-stack.3, align 16)
     %16:_(p0) = G_FRAME_INDEX %fixed-stack.2
-    %12:_(s64) = G_LOAD %16(p0) :: (invariant load 8 from %fixed-stack.2)
+    %12:_(s64) = G_LOAD %16(p0) :: (invariant load (s64) from %fixed-stack.2)
     %17:_(p0) = G_FRAME_INDEX %fixed-stack.1
     %13:_(s64) = G_LOAD %17(p0) :: (invariant load 8 from %fixed-stack.1, align 16)
     %18:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -293,7 +293,7 @@ body:             |
     %1:_(<6 x s64>) = G_BUILD_VECTOR %9(s64), %10(s64), %11(s64), %12(s64), %13(s64), %14(s64)
     %2:_(p0) = COPY $x0
     %19:_(<6 x s64>) = G_SHUFFLE_VECTOR %0(<6 x s64>), %1, shufflemask(3, 4, 7, 0, 1, 11)
-    G_STORE %19(<6 x s64>), %2(p0) :: (store 48, align 64)
+    G_STORE %19(<6 x s64>), %2(p0) :: (store (<6 x s64>), align 64)
     RET_ReallyLR
 
 ...
