@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -fast-isel=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; This should be treated as a non-splat vector of pow2 divisor, so sdivs will be

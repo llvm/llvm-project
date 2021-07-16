@@ -255,11 +255,7 @@ public:
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
   std::string getAsString(bool InAttrGrp) const;
-  Type *getByValType() const;
-  Type *getStructRetType() const;
-  Type *getByRefType() const;
-  Type *getPreallocatedType() const;
-  Type *getInAllocaType() const;
+  Type *getAttributeType(Attribute::AttrKind Kind) const;
 
   using iterator = const Attribute *;
 

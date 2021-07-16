@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=ALL,AMDGCN %s
 // RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL2.0 -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=ALL,AMDGCN,AMDGCN20 %s
 // RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL1.2 -O0 -triple spir-unknown-unknown-unknown | FileCheck -enable-var-scope -check-prefixes=SPIR %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL3.0 -O0 -triple amdgcn -cl-ext=+__opencl_c_program_scope_global_variables | FileCheck -enable-var-scope -check-prefixes=ALL,AMDGCN,AMDGCN20 %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL3.0 -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=ALL,AMDGCN %s
 
 typedef int int2 __attribute__((ext_vector_type(2)));
 
@@ -39,7 +41,7 @@ struct LargeStructTwoMember {
   int2 y[20];
 };
 
-#if __OPENCL_C_VERSION__ >= 200
+#if (__OPENCL_C_VERSION__ == 200) || (__OPENCL_C_VERSION__ >= 300 && defined(__opencl_c_program_scope_global_variables))
 struct LargeStructOneMember g_s;
 #endif
 
@@ -98,7 +100,7 @@ void FuncOneLargeMember(struct LargeStructOneMember u) {
 // AMDGCN20:  %[[r0:.*]] = bitcast %struct.LargeStructOneMember addrspace(5)* %[[byval_temp]] to i8 addrspace(5)*
 // AMDGCN20:  call void @llvm.memcpy.p5i8.p1i8.i64(i8 addrspace(5)* align 8 %[[r0]], i8 addrspace(1)* align 8 bitcast (%struct.LargeStructOneMember addrspace(1)* @g_s to i8 addrspace(1)*), i64 800, i1 false)
 // AMDGCN20:  call void @FuncOneLargeMember(%struct.LargeStructOneMember addrspace(5)* byval(%struct.LargeStructOneMember) align 8 %[[byval_temp]])
-#if __OPENCL_C_VERSION__ >= 200
+#if (__OPENCL_C_VERSION__ == 200) || (__OPENCL_C_VERSION__ >= 300 && defined(__opencl_c_program_scope_global_variables))
 void test_indirect_arg_globl(void) {
   FuncOneLargeMember(g_s);
 }

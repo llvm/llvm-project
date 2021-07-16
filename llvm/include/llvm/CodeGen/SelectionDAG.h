@@ -837,6 +837,10 @@ public:
   ///   <0, Step, Step * 2, Step * 3, ...>
   SDValue getStepVector(const SDLoc &DL, EVT ResVT, SDValue Step);
 
+  /// Returns a vector of type ResVT whose elements contain the linear sequence
+  ///   <0, 1, 2, 3, ...>
+  SDValue getStepVector(const SDLoc &DL, EVT ResVT);
+
   /// Returns an ISD::VECTOR_SHUFFLE node semantically equivalent to
   /// the shuffle node in input but with swapped operands.
   ///

@@ -66,6 +66,63 @@ MemoryTagManagerAArch64MTE::ExpandToGranule(TagRange range) const {
   return TagRange(new_start, new_len);
 }
 
+llvm::Expected<MemoryTagManager::TagRange>
+MemoryTagManagerAArch64MTE::MakeTaggedRange(
+    lldb::addr_t addr, lldb::addr_t end_addr,
+    const lldb_private::MemoryRegionInfos &memory_regions) const {
+  // First check that the range is not inverted.
+  // We must remove tags here otherwise an address with a higher
+  // tag value will always be > the other.
+  ptrdiff_t len = AddressDiff(end_addr, addr);
+  if (len <= 0) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "End address (0x%" PRIx64
+        ") must be greater than the start address (0x%" PRIx64 ")",
+        end_addr, addr);
+  }
+
+  // Region addresses will not have memory tags. So when searching
+  // we must use an untagged address.
+  MemoryRegionInfo::RangeType tag_range(RemoveNonAddressBits(addr), len);
+  tag_range = ExpandToGranule(tag_range);
+
+  // Make a copy so we can use the original for errors and the final return.
+  MemoryRegionInfo::RangeType remaining_range(tag_range);
+
+  // While there are parts of the range that don't have a matching tagged memory
+  // region
+  while (remaining_range.IsValid()) {
+    // Search for a region that contains the start of the range
+    MemoryRegionInfos::const_iterator region = std::find_if(
+        memory_regions.cbegin(), memory_regions.cend(),
+        [&remaining_range](const MemoryRegionInfo &region) {
+          return region.GetRange().Contains(remaining_range.GetRangeBase());
+        });
+
+    if (region == memory_regions.cend() ||
+        region->GetMemoryTagged() != MemoryRegionInfo::eYes) {
+      // Some part of this range is untagged (or unmapped) so error
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Address range 0x%" PRIx64 ":0x%" PRIx64
+                                     " is not in a memory tagged region",
+                                     tag_range.GetRangeBase(),
+                                     tag_range.GetRangeEnd());
+    }
+
+    // We've found some part of the range so remove that part and continue
+    // searching for the rest. Moving the base "slides" the range so we need to
+    // save/restore the original end. If old_end is less than the new base, the
+    // range will be set to have 0 size and we'll exit the while.
+    lldb::addr_t old_end = remaining_range.GetRangeEnd();
+    remaining_range.SetRangeBase(region->GetRange().GetRangeEnd());
+    remaining_range.SetRangeEnd(old_end);
+  }
+
+  // Every part of the range is contained within a tagged memory region.
+  return tag_range;
+}
+
 llvm::Expected<std::vector<lldb::addr_t>>
 MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
                                            size_t granules) const {

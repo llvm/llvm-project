@@ -370,6 +370,45 @@ public:
   /// valid.
   lldb::SBProcessInfo GetProcessInfo();
 
+  /// Allocate memory within the process.
+  ///
+  /// This function will allocate memory in the process's address space.
+  ///
+  /// \param[in] size
+  ///     The size of the allocation requested.
+  ///
+  /// \param[in] permissions
+  ///     Or together any of the lldb::Permissions bits.  The
+  ///     permissions on a given memory allocation can't be changed
+  ///     after allocation.  Note that a block that isn't set writable
+  ///     can still be written from lldb, just not by the process
+  ///     itself.
+  ///
+  /// \param[out] error
+  ///     An error object that gets filled in with any errors that
+  ///     might occur when trying allocate.
+  ///
+  /// \return
+  ///     The address of the allocated buffer in the process, or
+  ///     LLDB_INVALID_ADDRESS if the allocation failed.
+  lldb::addr_t AllocateMemory(size_t size, uint32_t permissions,
+                              lldb::SBError &error);
+
+  /// Deallocate memory in the process.
+  ///
+  /// This function will deallocate memory in the process's address
+  /// space that was allocated with AllocateMemory.
+  ///
+  /// \param[in] ptr
+  ///     A return value from AllocateMemory, pointing to the memory you
+  ///     want to deallocate.
+  ///
+  /// \return
+  ///     An error object describes any errors that occurred while
+  ///     deallocating.
+  ///
+  lldb::SBError DeallocateMemory(lldb::addr_t ptr);
+
 protected:
   friend class SBAddress;
   friend class SBBreakpoint;

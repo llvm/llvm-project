@@ -36,7 +36,7 @@
 #define RELEASE_SHARED(...) \
   THREAD_ANNOTATION(release_shared_capability(__VA_ARGS__))
 #define EXCLUDES(...) THREAD_ANNOTATION(locks_excluded(__VA_ARGS__))
-#define CHECK_LOCKED THREAD_ANNOTATION(assert_capability(this))
+#define CHECK_LOCKED(...) THREAD_ANNOTATION(assert_capability(__VA_ARGS__))
 #define NO_THREAD_SAFETY_ANALYSIS THREAD_ANNOTATION(no_thread_safety_analysis)
 
 #endif

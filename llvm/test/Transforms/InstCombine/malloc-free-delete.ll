@@ -149,7 +149,7 @@ define void @test6a(i8* %foo) minsize {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[FOO:%.*]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]]) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    tail call void @_ZdlPv(i8* [[FOO]]) #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -352,7 +352,7 @@ define void @test10()  {
 
 define void @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) #[[ATTR8]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable(8) i8* @_Znwm(i64 8) #[[ATTR10]]
 ; CHECK-NEXT:    call void @_ZdlPv(i8* nonnull [[CALL]])
 ; CHECK-NEXT:    ret void
 ;
@@ -418,7 +418,7 @@ define void @test14(i8* %foo) nofree {
 ; TODO: free call marked no-free ->  %foo must be null
 define void @test15(i8* %foo) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    call void @free(i8* [[FOO:%.*]]) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @free(i8* %foo) nofree
@@ -432,5 +432,20 @@ define void @test16(i8* nonnull nofree %foo) {
 ; CHECK-NEXT:    ret void
 ;
   call void @free(i8* %foo)
+  ret void
+}
+
+declare i8* @llvm.launder.invariant.group(i8*)
+declare i8* @llvm.strip.invariant.group(i8*)
+
+define void @test17() {
+; CHECK-LABEL: @test17(
+; CHECK-NEXT:    ret void
+;
+  %nw1 = call i8* @_Znwm(i64 32) builtin
+  %nw2 = call i8* @llvm.launder.invariant.group(i8* %nw1)
+  %nw3 = call i8* @llvm.strip.invariant.group(i8* %nw2)
+  store i8 1, i8* %nw3
+  call void @_ZdlPv(i8* %nw2) builtin
   ret void
 }

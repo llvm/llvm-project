@@ -9503,7 +9503,7 @@ SDValue AArch64TargetLowering::LowerDUPQLane(SDValue Op,
   SDValue SplatOne = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::nxv2i64, One);
 
   // create the vector 0,1,0,1,...
-  SDValue SV = DAG.getNode(ISD::STEP_VECTOR, DL, MVT::nxv2i64, One);
+  SDValue SV = DAG.getStepVector(DL, MVT::nxv2i64);
   SV = DAG.getNode(ISD::AND, DL, MVT::nxv2i64, SV, SplatOne);
 
   // create the vector idx64,idx64+1,idx64,idx64+1,...
@@ -13998,9 +13998,7 @@ static SDValue LowerSVEIntrinsicIndex(SDNode *N, SelectionDAG &DAG) {
     ScalarTy = MVT::i32;
 
   // Lower index_vector(base, step) to mul(step step_vector(1)) + splat(base).
-  SDValue One = DAG.getConstant(1, DL, ScalarTy);
-  SDValue StepVector =
-      DAG.getNode(ISD::STEP_VECTOR, DL, N->getValueType(0), One);
+  SDValue StepVector = DAG.getStepVector(DL, N->getValueType(0));
   SDValue Step = DAG.getNode(ISD::SPLAT_VECTOR, DL, N->getValueType(0), Op2);
   SDValue Mul = DAG.getNode(ISD::MUL, DL, N->getValueType(0), StepVector, Step);
   SDValue Base = DAG.getNode(ISD::SPLAT_VECTOR, DL, N->getValueType(0), Op1);

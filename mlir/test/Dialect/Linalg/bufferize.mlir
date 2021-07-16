@@ -261,7 +261,7 @@ func @bufferize_tensor_collapse_shape(%arg0: tensor<4x5xf32>) -> tensor<20xf32> 
   return %out : tensor<20xf32>
 }
 // CHECK: %[[MEMREF:.*]] = memref.buffer_cast %[[IN]] : memref<4x5xf32>
-// CHECK: %[[RESHAPE:.*]] = linalg.collapse_shape %[[MEMREF]] {{\[}}[0, 1]]
+// CHECK: %[[RESHAPE:.*]] = memref.collapse_shape %[[MEMREF]] {{\[}}[0, 1]]
 // CHECK-SAME: : memref<4x5xf32> into memref<20xf32>
 // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[RESHAPE]] : memref<20xf32>
 // CHECK: return %[[TENSOR]]

@@ -5839,11 +5839,8 @@ def err_anon_bitfield_has_negative_width : Error<
   "anonymous bit-field has negative width (%0)">;
 def err_bitfield_has_zero_width : Error<"named bit-field %0 has zero width">;
 def err_bitfield_width_exceeds_type_width : Error<
-  "width of bit-field %0 (%1 bits) exceeds %select{width|size}2 "
-  "of its type (%3 bit%s3)">;
-def err_anon_bitfield_width_exceeds_type_width : Error<
-  "width of anonymous bit-field (%0 bits) exceeds %select{width|size}1 "
-  "of its type (%2 bit%s2)">;
+  "width of%select{ anonymous|}0 bit-field%select{| %1}0 (%2 bits) exceeds the "
+  "%select{width|size}3 of its type (%4 bit%s4)">;
 def err_incorrect_number_of_vector_initializers : Error<
   "number of elements must be either one or match the size of the vector">;
 
@@ -9729,6 +9726,8 @@ def err_argument_not_shifted_byte : Error<
   "argument should be an 8-bit value shifted by a multiple of 8 bits">;
 def err_argument_not_shifted_byte_or_xxff : Error<
   "argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF">;
+def err_argument_not_contiguous_bit_field : Error<
+  "argument %0 value should represent a contiguous bit field">;
 def err_rotation_argument_to_cadd
     : Error<"argument should be the value 90 or 270">;
 def err_rotation_argument_to_cmla

@@ -3724,10 +3724,10 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK:   G_STORE [[UV31]](s32), [[PTR_ADD1]](p5) :: (store (s32) into stack, align 16, addrspace 5)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C4]](s32)
-  ; CHECK:   G_STORE [[LOAD2]](p3), [[PTR_ADD2]](p5) :: (store (s32) into stack + 4, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD2]](p3), [[PTR_ADD2]](p5) :: (store (p3) into stack + 4, addrspace 5)
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY21]], [[C5]](s32)
-  ; CHECK:   G_STORE [[LOAD3]](p5), [[PTR_ADD3]](p5) :: (store (s32) into stack + 8, align 8, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD3]](p5), [[PTR_ADD3]](p5) :: (store (p5) into stack + 8, align 8, addrspace 5)
   ; CHECK:   [[COPY22:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
   ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY22]](<4 x s32>)
   ; CHECK:   $sgpr4_sgpr5 = COPY [[COPY11]](p4)

@@ -511,9 +511,16 @@ bool Formula::isCanonical(const Loop &L) const {
 void Formula::canonicalize(const Loop &L) {
   if (isCanonical(L))
     return;
-  // So far we did not need this case. This is easy to implement but it is
-  // useless to maintain dead code. Beside it could hurt compile time.
-  assert(!BaseRegs.empty() && "1*reg => reg, should not be needed.");
+
+  if (BaseRegs.empty()) {
+    // No base reg? Use scale reg with scale = 1 as such.
+    assert(ScaledReg && "Expected 1*reg => reg");
+    assert(Scale == 1 && "Expected 1*reg => reg");
+    BaseRegs.push_back(ScaledReg);
+    Scale = 0;
+    ScaledReg = nullptr;
+    return;
+  }
 
   // Keep the invariant sum in BaseRegs and one of the variant sum in ScaledReg.
   if (!ScaledReg) {

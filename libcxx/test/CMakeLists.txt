@@ -117,6 +117,12 @@ if (LIBCXX_BUILD_32_BITS)
   serialize_lit_param(enable_32bit True)
 endif()
 
+foreach(param IN LISTS LIBCXX_TEST_PARAMS)
+  string(REGEX REPLACE "(.+)=(.+)" "\\1" name "${param}")
+  string(REGEX REPLACE "(.+)=(.+)" "\\2" value "${param}")
+  serialize_lit_param("${name}" "\"${value}\"")
+endforeach()
+
 if (NOT DEFINED LIBCXX_TEST_DEPS)
   message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")
 endif()
@@ -136,8 +142,7 @@ if (LIBCXX_INCLUDE_TESTS)
   add_lit_testsuite(check-cxx
     "Running libcxx tests"
     ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS cxx-test-depends
-    PARAMS "${LIBCXX_TEST_PARAMS}")
+    DEPENDS cxx-test-depends)
 endif()
 
 if (LIBCXX_GENERATE_COVERAGE)

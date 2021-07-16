@@ -1274,6 +1274,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .lower();
   }
 
+  // FIXME: Unaligned accesses not lowered.
   auto &ExtLoads = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
                        .legalForTypesWithMemDesc({{S32, GlobalPtr, S8, 8},
                                                   {S32, GlobalPtr, S16, 2 * 8},
@@ -1302,7 +1303,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   ExtLoads.clampScalar(0, S32, S32)
           .widenScalarToNextPow2(0)
-          .unsupportedIfMemSizeNotPow2()
           .lower();
 
   auto &Atomics = getActionDefinitionsBuilder(

@@ -174,7 +174,7 @@ Symbols:
 # LLVM3-NEXT:   0x1218 R_X86_64_64 sym2 0x8
 # LLVM3-NEXT: }
 
-# RUN: yaml2obj --docnum=3 %s | llvm-readelf -relocations - | FileCheck --check-prefix=GNU3 %s
+# RUN: yaml2obj --docnum=3 %s | llvm-readelf -r - | FileCheck --check-prefix=GNU3 %s
 # GNU3:      Relocation section '.rela.dyn' at offset 0x40 contains 6 entries:
 # GNU3: 0000000000001100  0000000000000008 R_X86_64_RELATIVE                 0
 # GNU3-NEXT: 0000000000001180  0000000000000008 R_X86_64_RELATIVE                 8

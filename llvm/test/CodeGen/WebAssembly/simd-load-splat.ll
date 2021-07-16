@@ -3,7 +3,6 @@
 ; Regression test for an ISel failure when a splatted load had more
 ; than one use. The main tests for load_splat are in simd-offset.ll.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: load_splat:

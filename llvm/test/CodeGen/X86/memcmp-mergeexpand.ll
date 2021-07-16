@@ -26,7 +26,7 @@ define zeroext i1 @opeq1(
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %"struct.std::pair"* nocapture readonly dereferenceable(8) %a,
-  %"struct.std::pair"* nocapture readonly dereferenceable(8) %b) local_unnamed_addr #0 {
+  %"struct.std::pair"* nocapture readonly dereferenceable(8) %b) local_unnamed_addr nofree nosync {
 entry:
   %first.i = getelementptr inbounds %"struct.std::pair", %"struct.std::pair"* %a, i64 0, i32 0
   %0 = load i32, i32* %first.i, align 4

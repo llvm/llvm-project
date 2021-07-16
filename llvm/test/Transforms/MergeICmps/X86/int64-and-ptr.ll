@@ -7,7 +7,7 @@
 %struct.inner = type { i32, i32, i32 }
 
 ; Function Attrs: nounwind uwtable
-define i1 @test(%struct.outer* align 8 dereferenceable(16) %o1, %struct.outer* align 8 dereferenceable(116) %o2) local_unnamed_addr #0 {
+define i1 @test(%struct.outer* align 8 dereferenceable(16) %o1, %struct.outer* align 8 dereferenceable(116) %o2) local_unnamed_addr nofree nosync {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  "entry+if.then":
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_OUTER:%.*]], %struct.outer* [[O1:%.*]], i64 0, i32 0

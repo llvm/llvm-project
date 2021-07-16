@@ -564,9 +564,20 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
 
       Device.ShadowMtx.lock();
       auto Entry = Device.ShadowPtrMap.find(Pointer_HstPtrBegin);
-      // If this pointer is not in the map we need to insert it.
-      if (Entry == Device.ShadowPtrMap.end()) {
-        // create shadow pointers for this entry
+      // If this pointer is not in the map we need to insert it. If the map
+      // contains a stale entry, we need to update it (e.g. if the pointee was
+      // deallocated and later on is reallocated at another device address). The
+      // latter scenario is the subject of LIT test env/base_ptr_ref_count.c. An
+      // entry is removed from ShadowPtrMap only when the PTR of a PTR_AND_OBJ
+      // pair is deallocated, not when the OBJ is deallocated. In
+      // env/base_ptr_ref_count.c the PTR is a global "declare target" pointer,
+      // so it stays in the map for the lifetime of the application. When the
+      // OBJ is deallocated and later on allocated again (at a different device
+      // address), ShadowPtrMap still contains an entry for Pointer_HstPtrBegin
+      // which is stale, pointing to the old ExpectedTgtPtrBase of the OBJ.
+      if (Entry == Device.ShadowPtrMap.end() ||
+          Entry->second.TgtPtrVal != ExpectedTgtPtrBase) {
+        // create or update shadow pointers for this entry
         Device.ShadowPtrMap[Pointer_HstPtrBegin] = {
             HstPtrBase, PointerTgtPtrBegin, ExpectedTgtPtrBase};
         UpdateDevPtr = true;

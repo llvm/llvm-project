@@ -144,7 +144,7 @@ f:
 define internal void @is_mixed_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@is_mixed_helper() {
 ; CHECK-NEXT:    [[ISSPMD:%.*]] = call i8 @__kmpc_is_spmd_exec_mode()
-; CHECK-NEXT:    store i8 undef, i8* @G, align 1
+; CHECK-NEXT:    store i8 [[ISSPMD]], i8* @G, align 1
 ; CHECK-NEXT:    ret void
 ;
   %isSPMD = call i8 @__kmpc_is_spmd_exec_mode()

@@ -2,7 +2,6 @@
 
 ; Test that 128-bit smul.with.overflow assembles as expected.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 define i128 @call_muloti4(i128 %a, i128 %b) nounwind {

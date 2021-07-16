@@ -2189,7 +2189,11 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   // Leave lifetime markers for the static alloca's, scoping them to the
   // function we just inlined.
-  if (InsertLifetime && !IFI.StaticAllocas.empty()) {
+  // We need to insert lifetime intrinsics even at O0 to avoid invalid
+  // access caused by multithreaded coroutines. The check
+  // `Caller->isPresplitCoroutine()` would affect AlwaysInliner at O0 only.
+  if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
+      !IFI.StaticAllocas.empty()) {
     IRBuilder<> builder(&FirstNewBlock->front());
     for (unsigned ai = 0, ae = IFI.StaticAllocas.size(); ai != ae; ++ai) {
       AllocaInst *AI = IFI.StaticAllocas[ai];

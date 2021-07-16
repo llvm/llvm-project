@@ -8,7 +8,7 @@
 // REQUIRES: osx-ld64-live_support
 
 // RUN: %clang_asan %min_macos_deployment_target=10.11 -Xlinker -dead_strip -o %t %s
-// RUN: llvm-nm -format=posix %t | FileCheck --check-prefix NM-CHECK %s
+// RUN: llvm-nm --format=posix %t | FileCheck --check-prefix NM-CHECK %s
 // RUN: not %run %t 2>&1 | FileCheck --check-prefix ASAN-CHECK %s
 
 int alive[1] = {};

@@ -1504,11 +1504,13 @@ public:
 
   template <MatrixKind Kind, unsigned EltSize, unsigned RegClass>
   DiagnosticPredicate isMatrixRegOperand() const {
-    if (isMatrix() && getMatrixKind() == Kind &&
-        AArch64MCRegisterClasses[RegClass].contains(getMatrixReg()) &&
-        EltSize == getMatrixElementWidth())
-      return DiagnosticPredicateTy::Match;
-    return DiagnosticPredicateTy::NoMatch;
+    if (!isMatrix())
+      return DiagnosticPredicateTy::NoMatch;
+    if (getMatrixKind() != Kind ||
+        !AArch64MCRegisterClasses[RegClass].contains(getMatrixReg()) ||
+        EltSize != getMatrixElementWidth())
+      return DiagnosticPredicateTy::NearMatch;
+    return DiagnosticPredicateTy::Match;
   }
 
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
@@ -2986,6 +2988,12 @@ AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
     Operands.push_back(AArch64Operand::CreateMatrixRegister(
         AArch64::ZA, /*ElementWidth=*/0, MatrixKind::Array, S, getLoc(),
         getContext()));
+    if (getLexer().is(AsmToken::LBrac)) {
+      // There's no comma after matrix operand, so we can parse the next operand
+      // immediately.
+      if (parseOperand(Operands, false, false))
+        return MatchOperand_NoMatch;
+    }
     return MatchOperand_Success;
   }
 
@@ -3018,6 +3026,13 @@ AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
 
   Operands.push_back(AArch64Operand::CreateMatrixRegister(
       Reg, ElementWidth, Kind, S, getLoc(), getContext()));
+
+  if (getLexer().is(AsmToken::LBrac)) {
+    // There's no comma after matrix operand, so we can parse the next operand
+    // immediately.
+    if (parseOperand(Operands, false, false))
+      return MatchOperand_NoMatch;
+  }
   return MatchOperand_Success;
 }
 
@@ -3698,7 +3713,8 @@ AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
 
     if (RegTok.isNot(AsmToken::Identifier) ||
         ParseRes == MatchOperand_ParseFail ||
-        (ParseRes == MatchOperand_NoMatch && NoMatchIsError)) {
+        (ParseRes == MatchOperand_NoMatch && NoMatchIsError &&
+         !RegTok.getString().startswith_insensitive("za"))) {
       Error(Loc, "vector register expected");
       return MatchOperand_ParseFail;
     }
@@ -3971,8 +3987,19 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     // immediately.
     return parseOperand(Operands, false, false);
   }
-  case AsmToken::LCurly:
-    return parseNeonVectorList(Operands);
+  case AsmToken::LCurly: {
+    if (!parseNeonVectorList(Operands))
+      return false;
+
+    SMLoc Loc = Parser.getTok().getLoc();
+    Operands.push_back(
+        AArch64Operand::CreateToken("{", false, Loc, getContext()));
+    Parser.Lex(); // Eat '{'
+
+    // There's no comma after a '{', so we can parse the next operand
+    // immediately.
+    return parseOperand(Operands, false, false);
+  }
   case AsmToken::Identifier: {
     // If we're expecting a Condition Code operand, then just parse that.
     if (isCondCode)
@@ -4298,23 +4325,29 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
         return true;
       }
 
-      // After successfully parsing some operands there are two special cases to
-      // consider (i.e. notional operands not separated by commas). Both are due
-      // to memory specifiers:
+      // After successfully parsing some operands there are three special cases
+      // to consider (i.e. notional operands not separated by commas). Two are
+      // due to memory specifiers:
       //  + An RBrac will end an address for load/store/prefetch
       //  + An '!' will indicate a pre-indexed operation.
+      //
+      // And a further case is '}', which ends a group of tokens specifying the
+      // SME accumulator array 'ZA' or tile vector, i.e.
+      //
+      //   '{ ZA }' or '{ <ZAt><HV>.<BHSDQ>[<Wv>, #<imm>] }'
       //
       // It's someone else's responsibility to make sure these tokens are sane
       // in the given context!
 
-      SMLoc RLoc = Parser.getTok().getLoc();
       if (parseOptionalToken(AsmToken::RBrac))
         Operands.push_back(
-            AArch64Operand::CreateToken("]", false, RLoc, getContext()));
-      SMLoc ELoc = Parser.getTok().getLoc();
+            AArch64Operand::CreateToken("]", false, getLoc(), getContext()));
       if (parseOptionalToken(AsmToken::Exclaim))
         Operands.push_back(
-            AArch64Operand::CreateToken("!", false, ELoc, getContext()));
+            AArch64Operand::CreateToken("!", false, getLoc(), getContext()));
+      if (parseOptionalToken(AsmToken::RCurly))
+        Operands.push_back(
+            AArch64Operand::CreateToken("}", false, getLoc(), getContext()));
 
       ++N;
     } while (parseOptionalToken(AsmToken::Comma));
@@ -4769,6 +4802,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 16 in range [0, 65520].");
   case Match_InvalidImm0_1:
     return Error(Loc, "immediate must be an integer in range [0, 1].");
+  case Match_InvalidImm0_3:
+    return Error(Loc, "immediate must be an integer in range [0, 3].");
   case Match_InvalidImm0_7:
     return Error(Loc, "immediate must be an integer in range [0, 7].");
   case Match_InvalidImm0_15:
@@ -4853,6 +4888,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "register must be x0..x30 or xzr, with required shift 'lsl #2'");
   case Match_InvalidGPR64shifted64:
     return Error(Loc, "register must be x0..x30 or xzr, with required shift 'lsl #3'");
+  case Match_InvalidGPR64shifted128:
+    return Error(
+        Loc, "register must be x0..x30 or xzr, with required shift 'lsl #4'");
   case Match_InvalidGPR64NoXZRshifted8:
     return Error(Loc, "register must be x0..x30 without shift");
   case Match_InvalidGPR64NoXZRshifted16:
@@ -4861,6 +4899,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "register must be x0..x30 with required shift 'lsl #2'");
   case Match_InvalidGPR64NoXZRshifted64:
     return Error(Loc, "register must be x0..x30 with required shift 'lsl #3'");
+  case Match_InvalidGPR64NoXZRshifted128:
+    return Error(Loc, "register must be x0..x30 with required shift 'lsl #4'");
   case Match_InvalidZPR32UXTW8:
   case Match_InvalidZPR32SXTW8:
     return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'");
@@ -4946,25 +4986,24 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidSVEExactFPImmOperandZeroOne:
     return Error(Loc, "Invalid floating point constant, expected 0.0 or 1.0.");
   case Match_InvalidMatrixTileVectorH8:
-    return Error(Loc, "invalid matrix operand, expected za0h.b");
-  case Match_InvalidMatrixTileVectorH16:
-    return Error(Loc, "invalid matrix operand, expected za[0-1]h.h");
-  case Match_InvalidMatrixTileVectorH32:
-    return Error(Loc, "invalid matrix operand, expected za[0-3]h.s");
-  case Match_InvalidMatrixTileVectorH64:
-    return Error(Loc, "invalid matrix operand, expected za[0-7]h.d");
-  case Match_InvalidMatrixTileVectorH128:
-    return Error(Loc, "invalid matrix operand, expected za[0-15]h.q");
   case Match_InvalidMatrixTileVectorV8:
-    return Error(Loc, "invalid matrix operand, expected za0v.b");
+    return Error(Loc, "invalid matrix operand, expected za0h.b or za0v.b");
+  case Match_InvalidMatrixTileVectorH16:
   case Match_InvalidMatrixTileVectorV16:
-    return Error(Loc, "invalid matrix operand, expected za[0-1]v.h");
+    return Error(Loc,
+                 "invalid matrix operand, expected za[0-1]h.h or za[0-1]v.h");
+  case Match_InvalidMatrixTileVectorH32:
   case Match_InvalidMatrixTileVectorV32:
-    return Error(Loc, "invalid matrix operand, expected za[0-3]v.s");
+    return Error(Loc,
+                 "invalid matrix operand, expected za[0-3]h.s or za[0-3]v.s");
+  case Match_InvalidMatrixTileVectorH64:
   case Match_InvalidMatrixTileVectorV64:
-    return Error(Loc, "invalid matrix operand, expected za[0-7]v.d");
+    return Error(Loc,
+                 "invalid matrix operand, expected za[0-7]h.d or za[0-7]v.d");
+  case Match_InvalidMatrixTileVectorH128:
   case Match_InvalidMatrixTileVectorV128:
-    return Error(Loc, "invalid matrix operand, expected za[0-15]v.q");
+    return Error(Loc,
+                 "invalid matrix operand, expected za[0-15]h.q or za[0-15]v.q");
   case Match_InvalidMatrixTile32:
     return Error(Loc, "invalid matrix operand, expected za[0-3].s");
   case Match_InvalidMatrixTile64:
@@ -5399,6 +5438,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed16SImm9:
   case Match_InvalidMemoryIndexed8SImm10:
   case Match_InvalidImm0_1:
+  case Match_InvalidImm0_3:
   case Match_InvalidImm0_7:
   case Match_InvalidImm0_15:
   case Match_InvalidImm0_31:
@@ -5435,10 +5475,12 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidGPR64shifted16:
   case Match_InvalidGPR64shifted32:
   case Match_InvalidGPR64shifted64:
+  case Match_InvalidGPR64shifted128:
   case Match_InvalidGPR64NoXZRshifted8:
   case Match_InvalidGPR64NoXZRshifted16:
   case Match_InvalidGPR64NoXZRshifted32:
   case Match_InvalidGPR64NoXZRshifted64:
+  case Match_InvalidGPR64NoXZRshifted128:
   case Match_InvalidZPR32UXTW8:
   case Match_InvalidZPR32UXTW16:
   case Match_InvalidZPR32UXTW32:

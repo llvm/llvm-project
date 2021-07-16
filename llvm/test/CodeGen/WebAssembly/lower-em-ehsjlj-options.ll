@@ -3,7 +3,6 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=NONE
 ; RUN: not --crash llc < %s -enable-emscripten-cxx-exceptions -exception-model=wasm 2>&1 | FileCheck %s --check-prefix=WASM-EH-EM-EH
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; EH: .functype  invoke_vi (i32, i32) -> ()

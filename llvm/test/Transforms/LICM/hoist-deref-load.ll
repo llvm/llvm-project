@@ -1166,5 +1166,5 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
-attributes #0 = { nounwind uwtable }
+attributes #0 = { nounwind uwtable nofree nosync }
 !0 = !{i64 4}

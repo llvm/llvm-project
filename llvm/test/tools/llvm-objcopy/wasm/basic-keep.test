@@ -1,0 +1,26 @@
+## Test that --keep-section keeps a debug section when stripping.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --strip-all --keep-section=.debug_info %t %t2
+# RUN: obj2yaml %t2 | FileCheck --implicit-check-not linking %s
+
+# CHECK:      Sections:
+# CHECK:        Name: .debug_info
+# CHECK-NEXT:   Payload: DEADBEEF
+
+## Test that keep overrides an explicit removal.
+# RUN: llvm-objcopy --remove-section=.debug_info --keep-section=.debug_info %t %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=KEEP
+
+# KEEP: Sections:
+# KEEP:   Name: .debug_info
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+  - Type: CUSTOM
+    Name: .debug_info
+    Payload: DEADBEEF

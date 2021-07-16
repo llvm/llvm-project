@@ -331,7 +331,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
                    OptionalAttr<SymbolRefArrayAttr>:$access_groups,
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
-  let results = (outs LLVM_Type:$res);
+  let results = (outs LLVM_LoadableType:$res);
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad(
       $addr->getType()->getPointerElementType(), $addr, $volatile_);

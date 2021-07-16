@@ -4,7 +4,6 @@
 ; initialization and splat vector initialization and to optimize the
 ; choice of splat value works correctly.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: same_const_one_replaced_i16x8:
@@ -212,7 +211,7 @@ define <16 x i8> @mashup_swizzle_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %spla
 ; CHECK-LABEL: mashup_const_i8x16:
 ; CHECK-NEXT:  .functype       mashup_const_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK:       v128.const      $push[[L0:[0-9]+]]=, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0
-; CHECK:       i8x16.replace_lane
+; CHECK:       v128.load8_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       return
@@ -235,7 +234,7 @@ define <16 x i8> @mashup_const_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %splatt
 ; CHECK-LABEL: mashup_splat_i8x16:
 ; CHECK-NEXT:  .functype       mashup_splat_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK:       i8x16.splat     $push[[L0:[0-9]+]]=, $2
-; CHECK:       i8x16.replace_lane
+; CHECK:       v128.load8_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       return
 define <16 x i8> @mashup_splat_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %splatted) {

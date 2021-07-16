@@ -39,7 +39,7 @@ define void @CMSColorWorldCreateParametricData(
   i8* dereferenceable(1) %a1,
   i8* dereferenceable(1) %a2,
   i8* dereferenceable(1) %a3,
-  i64 %count) nounwind uwtable optsize ssp readonly {
+  i64 %count) nounwind uwtable optsize ssp readonly nofree nosync {
 entry:
   br label %for.body.i
 

@@ -111,3 +111,8 @@ if config.enable_bindings_python:
         # lib/Bindings/Python/CMakeLists.txt for where this is set up.
         os.path.join(config.llvm_obj_root, 'python'),
     ], append_path=True)
+
+if config.enable_assertions:
+    config.available_features.add('asserts')
+else:
+    config.available_features.add('noasserts')

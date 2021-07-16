@@ -197,6 +197,11 @@ public:
                     unsigned numResultDims, unsigned numResultSyms) const;
 
   /// Sparse replace method. Apply AffineExpr::replace(`map`) to each of the
+  /// results and return a new AffineMap with the new results and with inferred
+  /// number of dims and symbols.
+  AffineMap replace(const DenseMap<AffineExpr, AffineExpr> &map) const;
+
+  /// Sparse replace method. Apply AffineExpr::replace(`map`) to each of the
   /// results and return a new AffineMap with the new results and with the
   /// specified number of dims and symbols.
   AffineMap replace(const DenseMap<AffineExpr, AffineExpr> &map,

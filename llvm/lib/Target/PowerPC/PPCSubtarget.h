@@ -139,6 +139,7 @@ protected:
   bool HasICBT;
   bool HasInvariantFunctionDescriptors;
   bool HasPartwordAtomics;
+  bool HasQuadwordAtomics;
   bool HasDirectMove;
   bool HasHTM;
   bool HasFloat128;
@@ -302,6 +303,7 @@ public:
   bool usePPCPreRASchedStrategy() const { return UsePPCPreRASchedStrategy; }
   bool usePPCPostRASchedStrategy() const { return UsePPCPostRASchedStrategy; }
   bool hasPartwordAtomics() const { return HasPartwordAtomics; }
+  bool hasQuadwordAtomics() const { return HasQuadwordAtomics; }
   bool hasDirectMove() const { return HasDirectMove; }
 
   Align getPlatformStackAlignment() const {

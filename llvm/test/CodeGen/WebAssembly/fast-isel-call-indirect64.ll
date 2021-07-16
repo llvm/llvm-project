@@ -1,6 +1,5 @@
 ; RUN: llc < %s -fast-isel --mtriple=wasm64 -asm-verbose=false -wasm-keep-registers | FileCheck %s
 
-target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "wasm64"
 
 ; Ensure fast isel also lowers function pointers to 32-bit.

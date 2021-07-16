@@ -129,6 +129,12 @@ public:
              isReallyTriviallyReMaterializableGeneric(MI, AA)));
   }
 
+  /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
+  /// of instruction rematerialization.
+  virtual bool isIgnorableUse(const MachineOperand &MO) const {
+    return false;
+  }
+
 protected:
   /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is
   /// set, this hook lets the target specify whether the instruction is actually

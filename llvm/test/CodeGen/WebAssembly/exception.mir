@@ -1,7 +1,6 @@
 # RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -mattr=+exception-handling -run-pass wasm-late-eh-prepare -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
 
 --- |
-  target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
   target triple = "wasm32-unknown-unknown"
 
   declare i32 @__gxx_wasm_personality_v0(...)

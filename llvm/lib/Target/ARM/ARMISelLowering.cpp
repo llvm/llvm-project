@@ -12933,7 +12933,7 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
       Ext1.getOpcode() != ISD::SIGN_EXTEND)
     return SDValue();
   EVT VecVT = Ext0.getOperand(0).getValueType();
-  if (VecVT != MVT::v4i32 && VecVT != MVT::v8i16 && VecVT != MVT::v16i8)
+  if (!VecVT.isPow2VectorType() || VecVT.getVectorNumElements() == 1)
     return SDValue();
   if (Ext1.getOperand(0).getValueType() != VecVT ||
       VecVT.getScalarType() != ScalarType ||
@@ -12941,9 +12941,42 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDLoc DL(Mul);
-  SDValue VQDMULH = DAG.getNode(ARMISD::VQDMULH, DL, VecVT, Ext0.getOperand(0),
-                                Ext1.getOperand(0));
-  return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, VQDMULH);
+  unsigned LegalLanes = 128 / (ShftAmt + 1);
+  EVT LegalVecVT = MVT::getVectorVT(ScalarType, LegalLanes);
+  // For types smaller than legal vectors extend to be legal and only use needed
+  // lanes.
+  if (VecVT.getSizeInBits() < 128) {
+    EVT ExtVecVT =
+        MVT::getVectorVT(MVT::getIntegerVT(128 / VecVT.getVectorNumElements()),
+                         VecVT.getVectorNumElements());
+    SDValue Inp0 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, ExtVecVT, Ext0.getOperand(0));
+    SDValue Inp1 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, ExtVecVT, Ext1.getOperand(0));
+    Inp0 = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, LegalVecVT, Inp0);
+    Inp1 = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, LegalVecVT, Inp1);
+    SDValue VQDMULH = DAG.getNode(ARMISD::VQDMULH, DL, LegalVecVT, Inp0, Inp1);
+    SDValue Trunc = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, ExtVecVT, VQDMULH);
+    Trunc = DAG.getNode(ISD::TRUNCATE, DL, VecVT, Trunc);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Trunc);
+  }
+
+  // For larger types, split into legal sized chunks.
+  assert(VecVT.getSizeInBits() % 128 == 0 && "Expected a power2 type");
+  unsigned NumParts = VecVT.getSizeInBits() / 128;
+  SmallVector<SDValue> Parts;
+  for (unsigned I = 0; I < NumParts; ++I) {
+    SDValue Inp0 =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LegalVecVT, Ext0.getOperand(0),
+                    DAG.getVectorIdxConstant(I * LegalLanes, DL));
+    SDValue Inp1 =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LegalVecVT, Ext1.getOperand(0),
+                    DAG.getVectorIdxConstant(I * LegalLanes, DL));
+    SDValue VQDMULH = DAG.getNode(ARMISD::VQDMULH, DL, LegalVecVT, Inp0, Inp1);
+    Parts.push_back(VQDMULH);
+  }
+  return DAG.getNode(ISD::SIGN_EXTEND, DL, VT,
+                     DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Parts));
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,
@@ -13056,24 +13089,35 @@ static SDValue PerformADDVecReduce(SDNode *N,
   //   t1: i32,i32 = ARMISD::VADDLVs x
   //   t2: i64 = build_pair t1, t1:1
   //   t3: i64 = add t2, y
+  // Otherwise we try to push the add up above VADDLVAx, to potentially allow
+  // the add to be simplified seperately.
   // We also need to check for sext / zext and commutitive adds.
   auto MakeVecReduce = [&](unsigned Opcode, unsigned OpcodeA, SDValue NA,
                            SDValue NB) {
     if (NB->getOpcode() != ISD::BUILD_PAIR)
       return SDValue();
     SDValue VecRed = NB->getOperand(0);
-    if (VecRed->getOpcode() != Opcode || VecRed.getResNo() != 0 ||
+    if ((VecRed->getOpcode() != Opcode && VecRed->getOpcode() != OpcodeA) ||
+        VecRed.getResNo() != 0 ||
         NB->getOperand(1) != SDValue(VecRed.getNode(), 1))
       return SDValue();
 
     SDLoc dl(N);
+    if (VecRed->getOpcode() == OpcodeA) {
+      // add(NA, VADDLVA(Inp), Y) -> VADDLVA(add(NA, Inp), Y)
+      SDValue Inp = DCI.DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64,
+                                    VecRed.getOperand(0), VecRed.getOperand(1));
+      NA = DCI.DAG.getNode(ISD::ADD, dl, MVT::i64, Inp, NA);
+    }
+
     SmallVector<SDValue, 4> Ops;
     Ops.push_back(DCI.DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, NA,
                                   DCI.DAG.getConstant(0, dl, MVT::i32)));
     Ops.push_back(DCI.DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, NA,
                                   DCI.DAG.getConstant(1, dl, MVT::i32)));
-    for (unsigned i = 0, e = VecRed.getNumOperands(); i < e; i++)
-      Ops.push_back(VecRed->getOperand(i));
+    unsigned S = VecRed->getOpcode() == OpcodeA ? 2 : 0;
+    for (unsigned I = S, E = VecRed.getNumOperands(); I < E; I++)
+      Ops.push_back(VecRed->getOperand(I));
     SDValue Red = DCI.DAG.getNode(OpcodeA, dl,
                                   DCI.DAG.getVTList({MVT::i32, MVT::i32}), Ops);
     return DCI.DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Red,
@@ -15954,12 +15998,12 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
 
   // We are looking for something that will have illegal types if left alone,
-  // but that we can convert to a single instruction undef MVE. For example
+  // but that we can convert to a single instruction under MVE. For example
   // vecreduce_add(sext(A, v8i32)) => VADDV.s16 A
   // or
   // vecreduce_add(mul(zext(A, v16i32), zext(B, v16i32))) => VMLADAV.u8 A, B
 
-  // Cases:
+  // The legal cases are:
   //   VADDV u/s 8/16/32
   //   VMLAV u/s 8/16/32
   //   VADDLV u/s 32
@@ -16067,6 +16111,32 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
     return false;
   };
   auto Create64bitNode = [&](unsigned Opcode, ArrayRef<SDValue> Ops) {
+    // Split illegal MVT::v16i8->i64 vector reductions into two legal v8i16->i64
+    // reductions. The operands are extended with MVEEXT, but as they are
+    // reductions the lane orders do not matter. MVEEXT may be combined with
+    // loads to produce two extending loads, or else they will be expanded to
+    // VREV/VMOVL.
+    EVT VT = Ops[0].getValueType();
+    if (VT == MVT::v16i8) {
+      assert((Opcode == ARMISD::VMLALVs || Opcode == ARMISD::VMLALVu) &&
+             "Unexpected illegal long reduction opcode");
+      bool IsUnsigned = Opcode == ARMISD::VMLALVu;
+
+      SDValue Ext0 =
+          DAG.getNode(IsUnsigned ? ARMISD::MVEZEXT : ARMISD::MVESEXT, dl,
+                      DAG.getVTList(MVT::v8i16, MVT::v8i16), Ops[0]);
+      SDValue Ext1 =
+          DAG.getNode(IsUnsigned ? ARMISD::MVEZEXT : ARMISD::MVESEXT, dl,
+                      DAG.getVTList(MVT::v8i16, MVT::v8i16), Ops[1]);
+
+      SDValue MLA0 = DAG.getNode(Opcode, dl, DAG.getVTList(MVT::i32, MVT::i32),
+                                 Ext0, Ext1);
+      SDValue MLA1 =
+          DAG.getNode(IsUnsigned ? ARMISD::VMLALVAu : ARMISD::VMLALVAs, dl,
+                      DAG.getVTList(MVT::i32, MVT::i32), MLA0, MLA0.getValue(1),
+                      Ext0.getValue(1), Ext1.getValue(1));
+      return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, MLA1, MLA1.getValue(1));
+    }
     SDValue Node = DAG.getNode(Opcode, dl, {MVT::i32, MVT::i32}, Ops);
     return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Node,
                        SDValue(Node.getNode(), 1));
@@ -16113,10 +16183,10 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   if (IsVMLAV(MVT::i32, ISD::ZERO_EXTEND, {MVT::v8i16, MVT::v16i8}, A, B))
     return DAG.getNode(ARMISD::VMLAVu, dl, ResVT, A, B);
   if (IsVMLAV(MVT::i64, ISD::SIGN_EXTEND,
-              {MVT::v8i8, MVT::v8i16, MVT::v4i8, MVT::v4i16, MVT::v4i32}, A, B))
+              {MVT::v16i8, MVT::v8i8, MVT::v8i16, MVT::v4i8, MVT::v4i16, MVT::v4i32}, A, B))
     return Create64bitNode(ARMISD::VMLALVs, {A, B});
   if (IsVMLAV(MVT::i64, ISD::ZERO_EXTEND,
-              {MVT::v8i8, MVT::v8i16, MVT::v4i8, MVT::v4i16, MVT::v4i32}, A, B))
+              {MVT::v16i8, MVT::v8i8, MVT::v8i16, MVT::v4i8, MVT::v4i16, MVT::v4i32}, A, B))
     return Create64bitNode(ARMISD::VMLALVu, {A, B});
   if (IsVMLAV(MVT::i16, ISD::SIGN_EXTEND, {MVT::v16i8}, A, B))
     return DAG.getNode(ISD::TRUNCATE, dl, ResVT,

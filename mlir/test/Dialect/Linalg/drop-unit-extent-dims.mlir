@@ -479,7 +479,7 @@ func @drop_one_trip_loops(%arg0 : memref<?x1x?xf32>, %arg1 : f32, %shape: memref
 //   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
 //   CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-LABEL: func @drop_one_trip_loops
-//       CHECK: linalg.collapse_shape %{{.*}} {{\[}}[0, 1], [2]]
+//       CHECK: memref.collapse_shape %{{.*}} {{\[}}[0, 1], [2]]
 //       CHECK: linalg.generic
 //  CHECK-SAME:   indexing_maps = [#[[$MAP1]], #[[$MAP2]], #[[$MAP3]]]
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "parallel"]
@@ -556,7 +556,7 @@ func @drop_all_loops(%arg0 : memref<1x1xf32>) -> memref<1x1xf32>
 }
 //       CHECK: #[[$MAP0:.*]] = affine_map<() -> ()>
 // CHECK-LABEL: func @drop_all_loops
-//       CHECK:   linalg.collapse_shape %{{.*}} []
+//       CHECK:   memref.collapse_shape %{{.*}} []
 //       CHECK:   linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[$MAP0]], #[[$MAP0]]]
 //  CHECK-SAME:     iterator_types = []
@@ -617,7 +617,7 @@ func @leading_dim_1_canonicalization(%arg0: memref<1x5xf32>, %shape: memref<5xf3
 //   CHECK: #[[$MAP1:.*]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @leading_dim_1_canonicalization
-//       CHECK:   linalg.collapse_shape %{{.*}} {{\[}}[0, 1]]
+//       CHECK:   memref.collapse_shape %{{.*}} {{\[}}[0, 1]]
 //       CHECK:   linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[$MAP1]], #[[$MAP1]]]
 //  CHECK-SAME:     iterator_types = ["parallel"]
@@ -638,8 +638,8 @@ func @leading_dim_1_canonicalization(%arg0: memref<1x5xf32>, %shape: memref<5xf3
 
 func @broadcast_test(%arg0 : memref<5xf32>, %arg1 : memref<5xf32>, %shape : memref<5x5xf32>) -> memref<5x5xf32>
 {
-  %0 = linalg.expand_shape %arg0 [[0, 1]] : memref<5xf32> into memref<1x5xf32>
-  %1 = linalg.expand_shape %arg1 [[0, 1]] : memref<5xf32> into memref<5x1xf32>
+  %0 = memref.expand_shape %arg0 [[0, 1]] : memref<5xf32> into memref<1x5xf32>
+  %1 = memref.expand_shape %arg1 [[0, 1]] : memref<5xf32> into memref<5x1xf32>
   linalg.generic #trait
      ins(%0, %1 : memref<1x5xf32>, memref<5x1xf32>)
     outs(%shape : memref<5x5xf32>) {
@@ -686,7 +686,7 @@ func @broadcast_scalar(%arg0 : memref<1x1xf32>, %shape : memref<?x?xf32>) -> mem
 //   CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @broadcast_scalar
 //  CHECK-SAME:   %[[ARG0:.*]]: memref<1x1xf32>
-//       CHECK:   %[[A:.*]] = linalg.collapse_shape %[[ARG0]] []
+//       CHECK:   %[[A:.*]] = memref.collapse_shape %[[ARG0]] []
 //  CHECK-SAME:     memref<1x1xf32> into memref<f32>
 //       CHECK:   linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[$MAP0]], #[[$MAP1]]]
@@ -706,16 +706,16 @@ func @fold_unit_dim_memref_reshape_op(%arg0 : memref<5xf32>) -> memref<2x5xf32>
     ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
       linalg.yield %arg1 : f32
     }
-  %3 = linalg.collapse_shape %1 [[0, 1], [2]]
+  %3 = memref.collapse_shape %1 [[0, 1], [2]]
     : memref<1x2x5xf32> into memref<2x5xf32>
   return %3 : memref<2x5xf32>
 }
 // CHECK-LABEL: func @fold_unit_dim_memref_reshape_op
 //       CHECK:   %[[ALLOC:.*]] = memref.alloc() : memref<1x2x5xf32>
-//       CHECK:   %[[OUT:.*]] = linalg.collapse_shape %[[ALLOC]]
+//       CHECK:   %[[OUT:.*]] = memref.collapse_shape %[[ALLOC]]
 //       CHECK:   linalg.generic
 //       CHECK-SAME:   outs(%[[OUT:.*]] :
-//       CHECK:   %[[RESULT:.*]] = linalg.collapse_shape %[[ALLOC]]
+//       CHECK:   %[[RESULT:.*]] = memref.collapse_shape %[[ALLOC]]
 //       CHECK:   return %[[RESULT]]
 
 // -----
@@ -740,8 +740,8 @@ func @fold_unit_dim_for_init_memref(%input: memref<1x1000xf32>) -> memref<1xf32>
 
 //       CHECK: func @fold_unit_dim_for_init_memref
 //       CHECK: %[[INIT:.+]] = memref.alloc() : memref<1xf32>
-//       CHECK: %[[INPUT_RESHAPE:.+]] = linalg.collapse_shape %{{.+}} {{\[}}[0, 1]] : memref<1x1000xf32> into memref<1000xf32>
-//       CHECK: %[[INIT_RESHAPE:.+]] = linalg.collapse_shape %[[INIT]] [] : memref<1xf32> into memref<f32>
+//       CHECK: %[[INPUT_RESHAPE:.+]] = memref.collapse_shape %{{.+}} {{\[}}[0, 1]] : memref<1x1000xf32> into memref<1000xf32>
+//       CHECK: %[[INIT_RESHAPE:.+]] = memref.collapse_shape %[[INIT]] [] : memref<1xf32> into memref<f32>
 //       CHECK: linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[MAP1]], #[[MAP2]]]
 //  CHECK-SAME:     iterator_types = ["reduction"]

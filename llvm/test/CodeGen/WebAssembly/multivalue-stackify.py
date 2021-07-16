@@ -197,7 +197,6 @@ def print_header():
   print()
   print('; Test that the multivalue stackification works')
   print()
-  print('target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"')
   print('target triple = "wasm32-unknown-unknown"')
   print()
   for num_uses in range(MAX_OP_USES + 1):

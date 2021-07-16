@@ -176,6 +176,14 @@ Operation::Operation(Location location, OperationName name, unsigned numResults,
       numRegions(numRegions), hasOperandStorage(hasOperandStorage), name(name),
       attrs(attributes) {
   assert(attributes && "unexpected null attribute dictionary");
+#ifndef NDEBUG
+  if (!getDialect() && !getContext()->allowsUnregisteredDialects())
+    llvm::report_fatal_error(
+        name.getStringRef() +
+        " created with unregistered dialect. If this is intended, please call "
+        "allowUnregisteredDialects() on the MLIRContext, or use "
+        "-allow-unregistered-dialect with the MLIR opt tool used");
+#endif
 }
 
 // Operations are deleted through the destroy() member because they are

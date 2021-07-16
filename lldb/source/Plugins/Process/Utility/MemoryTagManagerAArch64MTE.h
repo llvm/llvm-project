@@ -32,6 +32,10 @@ public:
 
   TagRange ExpandToGranule(TagRange range) const override;
 
+  llvm::Expected<TagRange> MakeTaggedRange(
+      lldb::addr_t addr, lldb::addr_t end_addr,
+      const lldb_private::MemoryRegionInfos &memory_regions) const override;
+
   llvm::Expected<std::vector<lldb::addr_t>>
   UnpackTagsData(const std::vector<uint8_t> &tags,
                  size_t granules) const override;

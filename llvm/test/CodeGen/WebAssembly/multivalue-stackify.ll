@@ -5,7 +5,6 @@
 
 ; Test that the multivalue stackification works
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare {i32} @op_0_to_1()
@@ -3252,4 +3251,3 @@ define void @f429() {
   call void @op_2_to_0(i32 %t3, i32 %t4)
   ret void
 }
-

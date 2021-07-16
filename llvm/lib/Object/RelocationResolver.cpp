@@ -312,12 +312,17 @@ static bool supportsARM(uint64_t Type) {
 }
 
 static uint64_t resolveARM(uint64_t Type, uint64_t Offset, uint64_t S,
-                           uint64_t LocData, int64_t /*Addend*/) {
+                           uint64_t LocData, int64_t Addend) {
+  // Support both RELA and REL relocations. The caller is responsible
+  // for supplying the correct values for LocData and Addend, i.e.
+  // Addend == 0 for REL and LocData == 0 for RELA.
+  assert((LocData == 0 || Addend == 0) &&
+         "one of LocData and Addend must be 0");
   switch (Type) {
   case ELF::R_ARM_ABS32:
-    return (S + LocData) & 0xFFFFFFFF;
+    return (S + LocData + Addend) & 0xFFFFFFFF;
   case ELF::R_ARM_REL32:
-    return (S + LocData - Offset) & 0xFFFFFFFF;
+    return (S + LocData + Addend - Offset) & 0xFFFFFFFF;
   }
   llvm_unreachable("Invalid relocation type");
 }
@@ -744,8 +749,13 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
         return Elf64BEObj->getRelSection(R.getRawDataRefImpl())->sh_type;
       };
 
-      if (GetRelSectionType() == ELF::SHT_RELA)
+      if (GetRelSectionType() == ELF::SHT_RELA) {
         Addend = getELFAddend(R);
+        // RISCV relocations use both LocData and Addend.
+        if (Obj->getArch() != Triple::riscv32 &&
+            Obj->getArch() != Triple::riscv64)
+          LocData = 0;
+      }
     }
 
     return Resolver(R.getType(), R.getOffset(), S, LocData, Addend);

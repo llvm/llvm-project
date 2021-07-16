@@ -4072,26 +4072,26 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
     }
     case Instruction::Load: {
       // Cost of wide load - cost of scalar loads.
-      Align alignment = cast<LoadInst>(VL0)->getAlign();
+      Align Alignment = cast<LoadInst>(VL0)->getAlign();
       InstructionCost ScalarEltCost = TTI->getMemoryOpCost(
-          Instruction::Load, ScalarTy, alignment, 0, CostKind, VL0);
+          Instruction::Load, ScalarTy, Alignment, 0, CostKind, VL0);
       if (NeedToShuffleReuses) {
         ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       }
       InstructionCost ScalarLdCost = VecTy->getNumElements() * ScalarEltCost;
       InstructionCost VecLdCost;
       if (E->State == TreeEntry::Vectorize) {
-        VecLdCost = TTI->getMemoryOpCost(Instruction::Load, VecTy, alignment, 0,
+        VecLdCost = TTI->getMemoryOpCost(Instruction::Load, VecTy, Alignment, 0,
                                          CostKind, VL0);
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unknown EntryState");
-        Align CommonAlignment = alignment;
+        Align CommonAlignment = Alignment;
         for (Value *V : VL)
           CommonAlignment =
               commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
         VecLdCost = TTI->getGatherScatterOpCost(
             Instruction::Load, VecTy, cast<LoadInst>(VL0)->getPointerOperand(),
-            /*VariableMask=*/false, alignment, CostKind, VL0);
+            /*VariableMask=*/false, Alignment, CostKind, VL0);
       }
       if (!NeedToShuffleReuses && !E->ReorderIndices.empty()) {
         SmallVector<int> NewMask;
@@ -5612,17 +5612,17 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // Also, gather up main and alt scalar ops to propagate IR flags to
       // each vector operation.
       ValueList OpScalars, AltScalars;
-      unsigned e = E->Scalars.size();
-      SmallVector<int, 8> Mask(e);
-      for (unsigned i = 0; i < e; ++i) {
-        auto *OpInst = cast<Instruction>(E->Scalars[i]);
+      unsigned Sz = E->Scalars.size();
+      SmallVector<int> Mask(Sz);
+      for (unsigned I = 0; I < Sz; ++I) {
+        auto *OpInst = cast<Instruction>(E->Scalars[I]);
         assert(E->isOpcodeOrAlt(OpInst) && "Unexpected main/alternate opcode");
         if (OpInst->getOpcode() == E->getAltOpcode()) {
-          Mask[i] = e + i;
-          AltScalars.push_back(E->Scalars[i]);
+          Mask[I] = Sz + I;
+          AltScalars.push_back(E->Scalars[I]);
         } else {
-          Mask[i] = i;
-          OpScalars.push_back(E->Scalars[i]);
+          Mask[I] = I;
+          OpScalars.push_back(E->Scalars[I]);
         }
       }
 
@@ -7295,11 +7295,22 @@ class HorizontalReduction {
            RecurrenceDescriptor::isMinMaxRecurrenceKind(getRdxKind(I));
   }
 
+  // And/or are potentially poison-safe logical patterns like:
+  // select x, y, false
+  // select x, true, y
+  static bool isBoolLogicOp(Instruction *I) {
+    return match(I, m_LogicalAnd(m_Value(), m_Value())) ||
+           match(I, m_LogicalOr(m_Value(), m_Value()));
+  }
+
   /// Checks if instruction is associative and can be vectorized.
   static bool isVectorizable(RecurKind Kind, Instruction *I) {
     if (Kind == RecurKind::None)
       return false;
-    if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind))
+
+    // Integer ops that map to select instructions or intrinsics are fine.
+    if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind) ||
+        isBoolLogicOp(I))
       return true;
 
     if (Kind == RecurKind::FMax || Kind == RecurKind::FMin) {
@@ -7310,6 +7321,16 @@ class HorizontalReduction {
     }
 
     return I->isAssociative();
+  }
+
+  static Value *getRdxOperand(Instruction *I, unsigned Index) {
+    // Poison-safe 'or' takes the form: select X, true, Y
+    // To make that work with the normal operand processing, we skip the
+    // true value operand.
+    // TODO: Change the code and data structures to handle this without a hack.
+    if (getRdxKind(I) == RecurKind::Or && isa<SelectInst>(I) && Index == 1)
+      return I->getOperand(2);
+    return I->getOperand(Index);
   }
 
   /// Checks if the ParentStackElem.first should be marked as a reduction
@@ -7420,9 +7441,11 @@ class HorizontalReduction {
       return RecurKind::Add;
     if (match(I, m_Mul(m_Value(), m_Value())))
       return RecurKind::Mul;
-    if (match(I, m_And(m_Value(), m_Value())))
+    if (match(I, m_And(m_Value(), m_Value())) ||
+        match(I, m_LogicalAnd(m_Value(), m_Value())))
       return RecurKind::And;
-    if (match(I, m_Or(m_Value(), m_Value())))
+    if (match(I, m_Or(m_Value(), m_Value())) ||
+        match(I, m_LogicalOr(m_Value(), m_Value())))
       return RecurKind::Or;
     if (match(I, m_Xor(m_Value(), m_Value())))
       return RecurKind::Xor;
@@ -7664,7 +7687,7 @@ public:
       }
 
       // Visit operands.
-      Value *EdgeVal = TreeN->getOperand(EdgeToVisit);
+      Value *EdgeVal = getRdxOperand(TreeN, EdgeToVisit);
       auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
       if (!EdgeInst) {
         // Edge value is not a reduction instruction or a leaf instruction.
@@ -7803,6 +7826,14 @@ public:
       if (V.isLoadCombineReductionCandidate(RdxKind))
         break;
 
+      // For a poison-safe boolean logic reduction, do not replace select
+      // instructions with logic ops. All reduced values will be frozen (see
+      // below) to prevent leaking poison.
+      if (isa<SelectInst>(ReductionRoot) &&
+          isBoolLogicOp(cast<Instruction>(ReductionRoot)) &&
+          NumReducedVals != ReduxWidth)
+        break;
+
       V.computeMinimumValueSizes();
 
       // Estimate cost.
@@ -7848,6 +7879,11 @@ public:
         Builder.SetInsertPoint(getCmpForMinMaxReduction(RdxRootInst));
       else
         Builder.SetInsertPoint(RdxRootInst);
+
+      // To prevent poison from leaking across what used to be sequential, safe,
+      // scalar boolean logic operations, the reduction operand must be frozen.
+      if (isa<SelectInst>(RdxRootInst) && isBoolLogicOp(RdxRootInst))
+        VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
       Value *ReducedSubTree =
           emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);

@@ -9646,6 +9646,30 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     return SimplifySelect(DL, N0, N1, N2);
   }
 
+  if (N1.getOpcode() == N2.getOpcode() && TLI.isBinOp(N1.getOpcode()) &&
+      N->isOnlyUserOf(N0.getNode()) && N->isOnlyUserOf(N1.getNode())) {
+    // Fold select(cond, binop(x, y), binop(z, y))
+    //  --> binop(select(cond, x, z), y)
+    if (N1.getOperand(1) == N2.getOperand(1)) {
+      SDValue NewSel =
+          DAG.getSelect(DL, VT, N0, N1.getOperand(0), N2.getOperand(0));
+      return DAG.getNode(N1.getOpcode(), DL, VT, NewSel, N1.getOperand(1));
+    }
+
+    // Fold select(cond, binop(x, y), binop(x, z))
+    //  --> binop(x, select(cond, y, z))
+    // Second op VT might be different (e.g. shift amount type)
+    if (N1.getOperand(0) == N2.getOperand(0) &&
+        VT == N1.getOperand(1).getValueType() &&
+        VT == N2.getOperand(1).getValueType()) {
+      SDValue NewSel =
+          DAG.getSelect(DL, VT, N0, N1.getOperand(1), N2.getOperand(1));
+      return DAG.getNode(N1.getOpcode(), DL, VT, N1.getOperand(0), NewSel);
+    }
+
+    // TODO: Handle isCommutativeBinOp as well ?
+  }
+
   return SDValue();
 }
 

@@ -439,6 +439,15 @@ AffineMap AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map,
   return AffineMap::get(numResultDims, numResultSyms, newResults, getContext());
 }
 
+AffineMap
+AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map) const {
+  SmallVector<AffineExpr, 4> newResults;
+  newResults.reserve(getNumResults());
+  for (AffineExpr e : getResults())
+    newResults.push_back(e.replace(map));
+  return AffineMap::inferFromExprList(newResults).front();
+}
+
 AffineMap AffineMap::compose(AffineMap map) const {
   assert(getNumDims() == map.getNumResults() && "Number of results mismatch");
   // Prepare `map` by concatenating the symbols and rewriting its exprs.

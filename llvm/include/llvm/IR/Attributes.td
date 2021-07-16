@@ -86,6 +86,9 @@ def Dereferenceable : IntAttr<"dereferenceable", [ParamAttr, RetAttr]>;
 def DereferenceableOrNull : IntAttr<"dereferenceable_or_null",
                                     [ParamAttr, RetAttr]>;
 
+/// Provide pointer element type to intrinsic.
+def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
+
 /// Function may only access memory that is inaccessible from IR.
 def InaccessibleMemOnly : EnumAttr<"inaccessiblememonly", [FnAttr]>;
 

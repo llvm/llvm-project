@@ -140,9 +140,7 @@ public:
   };
 
   template<class _Range>
-  drop_view(_Range&&, range_difference_t<_Range>)
-  // TODO: this is just recreating all_t.
-    -> drop_view<decltype(views::all(std::declval<_Range>()))>;
+  drop_view(_Range&&, range_difference_t<_Range>) -> drop_view<views::all_t<_Range>>;
 
   template<class _Tp>
   inline constexpr bool enable_borrowed_range<drop_view<_Tp>> = enable_borrowed_range<_Tp>;

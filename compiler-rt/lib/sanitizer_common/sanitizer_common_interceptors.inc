@@ -5303,6 +5303,12 @@ INTERCEPTOR(__sanitizer_clock_t, times, void *tms) {
 #define INIT_TIMES
 #endif
 
+#if SANITIZER_S390 && \
+    (SANITIZER_INTERCEPT_TLS_GET_ADDR || SANITIZER_INTERCEPT_TLS_GET_OFFSET)
+extern "C" uptr __tls_get_offset_wrapper(void *arg, uptr (*fn)(void *arg));
+DEFINE_REAL(uptr, __tls_get_offset, void *arg)
+#endif
+
 #if SANITIZER_INTERCEPT_TLS_GET_ADDR
 #if !SANITIZER_S390
 #define INIT_TLS_GET_ADDR COMMON_INTERCEPT_FUNCTION(__tls_get_addr)
@@ -5342,11 +5348,7 @@ void *__tls_get_addr_opt(void *arg);
 //   descriptor offset as an argument instead of a pointer.  GOT address
 //   is passed in r12, so it's necessary to write it in assembly.  This is
 //   the function used by the compiler.
-extern "C" uptr __tls_get_offset_wrapper(void *arg, uptr (*fn)(void *arg));
 #define INIT_TLS_GET_ADDR COMMON_INTERCEPT_FUNCTION(__tls_get_offset)
-DEFINE_REAL(uptr, __tls_get_offset, void *arg)
-extern "C" uptr __tls_get_offset(void *arg);
-extern "C" uptr __interceptor___tls_get_offset(void *arg);
 INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, __tls_get_addr_internal, arg);
@@ -5362,6 +5364,15 @@ INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
   }
   return res;
 }
+#endif // SANITIZER_S390
+#else
+#define INIT_TLS_GET_ADDR
+#endif
+
+#if SANITIZER_S390 && \
+    (SANITIZER_INTERCEPT_TLS_GET_ADDR || SANITIZER_INTERCEPT_TLS_GET_OFFSET)
+extern "C" uptr __tls_get_offset(void *arg);
+extern "C" uptr __interceptor___tls_get_offset(void *arg);
 // We need a hidden symbol aliasing the above, so that we can jump
 // directly to it from the assembly below.
 extern "C" __attribute__((alias("__interceptor___tls_get_addr_internal"),
@@ -5400,9 +5411,6 @@ asm(
   "br %r3\n"
   ".size __tls_get_offset_wrapper, .-__tls_get_offset_wrapper\n"
 );
-#endif // SANITIZER_S390
-#else
-#define INIT_TLS_GET_ADDR
 #endif
 
 #if SANITIZER_INTERCEPT_LISTXATTR

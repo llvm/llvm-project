@@ -501,7 +501,7 @@ struct KernelInfoState : AbstractState {
   bool IsKernelEntry = false;
 
   /// State to track what kernel entries can reach the associated function.
-  BooleanStateWithPtrSetVector<Function> ReachingKernelEntries;
+  BooleanStateWithPtrSetVector<Function, false> ReachingKernelEntries;
 
   /// Abstract State interface
   ///{
@@ -3235,19 +3235,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
           *this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
       if (CBAA.getState().isValidState())
         getState() ^= CBAA.getState();
-
-      Function *Callee = CB.getCalledFunction();
-      if (Callee) {
-        // We need to propagate information to the callee, but since the
-        // construction of AA always starts with kernel entries, we have to
-        // create AAKernelInfoFunction for all called functions. However, here
-        // the caller doesn't depend on the callee.
-        // TODO: We might want to change the dependence here later if we need
-        // information from callee to caller.
-        A.getOrCreateAAFor<AAKernelInfo>(IRPosition::function(*Callee), this,
-                                         DepClassTy::NONE);
-      }
-
       return true;
     };
 
@@ -3270,7 +3257,7 @@ private:
 
       auto &CAA =
           A.getOrCreateAAFor<AAKernelInfo>(IRPosition::function(*Caller));
-      if (CAA.isValidState()) {
+      if (CAA.ReachingKernelEntries.isValidState()) {
         ReachingKernelEntries ^= CAA.ReachingKernelEntries;
         return true;
       }
@@ -3462,8 +3449,8 @@ struct AAFoldRuntimeCall
   static const char ID;
 };
 
-struct AAFoldRuntimeCallCallSite : AAFoldRuntimeCall {
-  AAFoldRuntimeCallCallSite(const IRPosition &IRP, Attributor &A)
+struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
+  AAFoldRuntimeCallCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAFoldRuntimeCall(IRP, A) {}
 
   /// See AbstractAttribute::getAsStr()
@@ -3500,6 +3487,10 @@ struct AAFoldRuntimeCallCallSite : AAFoldRuntimeCall {
         IRPosition::callsite_returned(CB),
         [&](const IRPosition &IRP, const AbstractAttribute *AA,
             bool &UsedAssumedInformation) -> Optional<Value *> {
+          assert((isValidState() || (SimplifiedValue.hasValue() &&
+                                     SimplifiedValue.getValue() == nullptr)) &&
+                 "Unexpected invalid state!");
+
           if (!isAtFixpoint()) {
             UsedAssumedInformation = true;
             if (AA)
@@ -3514,7 +3505,7 @@ struct AAFoldRuntimeCallCallSite : AAFoldRuntimeCall {
 
     switch (RFKind) {
     case OMPRTL___kmpc_is_spmd_exec_mode:
-      Changed = Changed | foldIsSPMDExecMode(A);
+      Changed |= foldIsSPMDExecMode(A);
       break;
     default:
       llvm_unreachable("Unhandled OpenMP runtime function!");
@@ -3536,15 +3527,23 @@ struct AAFoldRuntimeCallCallSite : AAFoldRuntimeCall {
     return Changed;
   }
 
+  ChangeStatus indicatePessimisticFixpoint() override {
+    SimplifiedValue = nullptr;
+    return AAFoldRuntimeCall::indicatePessimisticFixpoint();
+  }
+
 private:
   /// Fold __kmpc_is_spmd_exec_mode into a constant if possible.
   ChangeStatus foldIsSPMDExecMode(Attributor &A) {
-    BooleanState StateBefore = getState();
+    Optional<Value *> SimplifiedValueBefore = SimplifiedValue;
 
     unsigned AssumedSPMDCount = 0, KnownSPMDCount = 0;
     unsigned AssumedNonSPMDCount = 0, KnownNonSPMDCount = 0;
     auto &CallerKernelInfoAA = A.getAAFor<AAKernelInfo>(
         *this, IRPosition::function(*getAnchorScope()), DepClassTy::REQUIRED);
+
+    if (!CallerKernelInfoAA.ReachingKernelEntries.isValidState())
+      return indicatePessimisticFixpoint();
 
     for (Kernel K : CallerKernelInfoAA.ReachingKernelEntries) {
       auto &AA = A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*K),
@@ -3568,17 +3567,11 @@ private:
       }
     }
 
-    if (KnownSPMDCount && KnownNonSPMDCount) {
-      SimplifiedValue = nullptr;
-      return getState() == StateBefore ? ChangeStatus::UNCHANGED
-                                       : ChangeStatus::CHANGED;
-    }
+    if (KnownSPMDCount && KnownNonSPMDCount)
+      return indicatePessimisticFixpoint();
 
-    if (AssumedSPMDCount && AssumedNonSPMDCount) {
-      SimplifiedValue = nullptr;
-      return getState() == StateBefore ? ChangeStatus::UNCHANGED
-                                       : ChangeStatus::CHANGED;
-    }
+    if (AssumedSPMDCount && AssumedNonSPMDCount)
+      return indicatePessimisticFixpoint();
 
     auto &Ctx = getAnchorValue().getContext();
     if (KnownSPMDCount || AssumedSPMDCount) {
@@ -3595,8 +3588,8 @@ private:
       SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), false);
     }
 
-    return getState() == StateBefore ? ChangeStatus::UNCHANGED
-                                     : ChangeStatus::CHANGED;
+    return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
+                                                    : ChangeStatus::CHANGED;
   }
 
   /// An optional value the associated value is assumed to fold to. That is, we
@@ -3631,7 +3624,7 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
       if (!CI)
         return false;
       A.getOrCreateAAFor<AAFoldRuntimeCall>(
-          IRPosition::callsite_function(*CI), /* QueryingAA */ nullptr,
+          IRPosition::callsite_returned(*CI), /* QueryingAA */ nullptr,
           DepClassTy::NONE, /* ForceUpdate */ false,
           /* UpdateAfterInit */ false);
       return false;
@@ -3779,12 +3772,12 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
   case IRPosition::IRP_FLOAT:
   case IRPosition::IRP_ARGUMENT:
   case IRPosition::IRP_RETURNED:
-  case IRPosition::IRP_CALL_SITE_RETURNED:
-  case IRPosition::IRP_CALL_SITE_ARGUMENT:
   case IRPosition::IRP_FUNCTION:
-    llvm_unreachable("KernelInfo can only be created for call site position!");
   case IRPosition::IRP_CALL_SITE:
-    AA = new (A.Allocator) AAFoldRuntimeCallCallSite(IRP, A);
+  case IRPosition::IRP_CALL_SITE_ARGUMENT:
+    llvm_unreachable("KernelInfo can only be created for call site position!");
+  case IRPosition::IRP_CALL_SITE_RETURNED:
+    AA = new (A.Allocator) AAFoldRuntimeCallCallSiteReturned(IRP, A);
     break;
   }
 

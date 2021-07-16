@@ -15,8 +15,8 @@
 
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstdint>
@@ -54,9 +54,7 @@ public:
   LLVMSymbolizer() = default;
   LLVMSymbolizer(const Options &Opts) : Opts(Opts) {}
 
-  ~LLVMSymbolizer() {
-    flush();
-  }
+  ~LLVMSymbolizer() { flush(); }
 
   // Overloads accepting ObjectFile does not support COFF currently
   Expected<DILineInfo> symbolizeCode(const ObjectFile &Obj,
@@ -115,8 +113,7 @@ private:
   Expected<SymbolizableModule *> getOrCreateModuleInfo(const ObjectFile &Obj);
 
   Expected<SymbolizableModule *>
-  createModuleInfo(const ObjectFile *Obj,
-                   std::unique_ptr<DIContext> Context,
+  createModuleInfo(const ObjectFile *Obj, std::unique_ptr<DIContext> Context,
                    StringRef ModuleName);
 
   ObjectFile *lookUpDsymFile(const std::string &Path,
@@ -131,13 +128,13 @@ private:
 
   /// Returns pair of pointers to object and debug object.
   Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
-                                            const std::string &ArchName);
+                                             const std::string &ArchName);
 
   /// Return a pointer to object file at specified path, for a specified
   /// architecture (e.g. if path refers to a Mach-O universal binary, only one
   /// object file from it will be returned).
   Expected<ObjectFile *> getOrCreateObject(const std::string &Path,
-                                          const std::string &ArchName);
+                                           const std::string &ArchName);
 
   std::map<std::string, std::unique_ptr<SymbolizableModule>, std::less<>>
       Modules;

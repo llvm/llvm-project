@@ -177,7 +177,9 @@ enum class ChangeStatus {
 };
 
 ChangeStatus operator|(ChangeStatus l, ChangeStatus r);
+ChangeStatus &operator|=(ChangeStatus &l, ChangeStatus r);
 ChangeStatus operator&(ChangeStatus l, ChangeStatus r);
+ChangeStatus &operator&=(ChangeStatus &l, ChangeStatus r);
 
 enum class DepClassTy {
   REQUIRED, ///< The target cannot be valid if the source is not.
@@ -4186,8 +4188,11 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
   /// Get the optimistic edges.
   virtual const SetVector<Function *> &getOptimisticEdges() const = 0;
 
-  /// Is there in this function call with a unknown Callee.
+  /// Is there any call with a unknown callee.
   virtual bool hasUnknownCallee() const = 0;
+
+  /// Is there any call with a unknown callee, excluding any inline asm.
+  virtual bool hasNonAsmUnknownCallee() const = 0;
 
   /// Iterator for exploring the call graph.
   AACallEdgeIterator optimisticEdgesBegin() const override {

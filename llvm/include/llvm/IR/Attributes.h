@@ -346,6 +346,7 @@ public:
   Type *getByRefType() const;
   Type *getPreallocatedType() const;
   Type *getInAllocaType() const;
+  Type *getElementType() const;
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
   std::string getAsString(bool InAttrGrp = false) const;

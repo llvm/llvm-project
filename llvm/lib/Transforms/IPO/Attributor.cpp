@@ -161,8 +161,16 @@ static cl::opt<bool>
 ChangeStatus llvm::operator|(ChangeStatus L, ChangeStatus R) {
   return L == ChangeStatus::CHANGED ? L : R;
 }
+ChangeStatus &llvm::operator|=(ChangeStatus &L, ChangeStatus R) {
+  L = L | R;
+  return L;
+}
 ChangeStatus llvm::operator&(ChangeStatus L, ChangeStatus R) {
   return L == ChangeStatus::UNCHANGED ? L : R;
+}
+ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
+  L = L & R;
+  return L;
 }
 ///}
 
