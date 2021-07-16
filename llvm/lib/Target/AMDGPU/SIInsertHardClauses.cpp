@@ -58,6 +58,8 @@ enum HardClauseType {
   // Internal instructions, which are allowed in the middle of a hard clause,
   // except for s_waitcnt.
   HARDCLAUSE_INTERNAL,
+  // Meta instructions that do not result in any ISA like KILL.
+  HARDCLAUSE_IGNORE,
   // Instructions that are not allowed in a hard clause: SALU, export, branch,
   // message, GDS, s_waitcnt and anything else not mentioned above.
   HARDCLAUSE_ILLEGAL,
@@ -100,6 +102,8 @@ public:
     // It's safe to treat the rest as illegal.
     if (MI.getOpcode() == AMDGPU::S_NOP)
       return HARDCLAUSE_INTERNAL;
+    if (MI.isMetaInstruction())
+      return HARDCLAUSE_IGNORE;
     return HARDCLAUSE_ILLEGAL;
   }
 
@@ -112,25 +116,25 @@ public:
     // The last non-internal instruction in the clause.
     MachineInstr *Last = nullptr;
     // The length of the clause including any internal instructions in the
-    // middle or after the end of the clause.
+    // middle (but not at the end) of the clause.
     unsigned Length = 0;
+    // Internal instructions at the and of a clause should not be included in
+    // the clause. Count them in TrailingInternalLength until a new memory
+    // instruction is added.
+    unsigned TrailingInternalLength = 0;
     // The base operands of *Last.
     SmallVector<const MachineOperand *, 4> BaseOps;
   };
 
   bool emitClause(const ClauseInfo &CI, const SIInstrInfo *SII) {
-    // Get the size of the clause excluding any internal instructions at the
-    // end.
-    unsigned Size =
-        std::distance(CI.First->getIterator(), CI.Last->getIterator()) + 1;
-    if (Size < 2)
+    if (CI.First == CI.Last)
       return false;
-    assert(Size <= 64 && "Hard clause is too long!");
+    assert(CI.Length <= 64 && "Hard clause is too long!");
 
     auto &MBB = *CI.First->getParent();
     auto ClauseMI =
         BuildMI(MBB, *CI.First, DebugLoc(), SII->get(AMDGPU::S_CLAUSE))
-            .addImm(Size - 1);
+            .addImm(CI.Length - 1);
     finalizeBundle(MBB, ClauseMI->getIterator(),
                    std::next(CI.Last->getIterator()));
     return true;
@@ -168,6 +172,7 @@ public:
 
         if (CI.Length == 64 ||
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
+             Type != HARDCLAUSE_IGNORE &&
              (Type != CI.Type ||
               // Note that we lie to shouldClusterMemOps about the size of the
               // cluster. When shouldClusterMemOps is called from the machine
@@ -182,14 +187,20 @@ public:
 
         if (CI.Length) {
           // Extend the current clause.
-          ++CI.Length;
-          if (Type != HARDCLAUSE_INTERNAL) {
-            CI.Last = &MI;
-            CI.BaseOps = std::move(BaseOps);
+          if (Type != HARDCLAUSE_IGNORE) {
+            if (Type == HARDCLAUSE_INTERNAL) {
+              ++CI.TrailingInternalLength;
+            } else {
+              ++CI.Length;
+              CI.Length += CI.TrailingInternalLength;
+              CI.TrailingInternalLength = 0;
+              CI.Last = &MI;
+              CI.BaseOps = std::move(BaseOps);
+            }
           }
         } else if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           // Start a new clause.
-          CI = ClauseInfo{Type, &MI, &MI, 1, std::move(BaseOps)};
+          CI = ClauseInfo{Type, &MI, &MI, 1, 0, std::move(BaseOps)};
         }
       }
 
