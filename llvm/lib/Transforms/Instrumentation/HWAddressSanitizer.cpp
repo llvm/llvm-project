@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -108,6 +109,11 @@ static cl::opt<bool>
 static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
                                        cl::desc("instrument stack (allocas)"),
                                        cl::Hidden, cl::init(true));
+
+static cl::opt<bool>
+    ClUseStackSafety("hwasan-use-stack-safety", cl::Hidden, cl::init(true),
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
+                     cl::Optional);
 
 static cl::opt<bool> ClUARRetagToZero(
     "hwasan-uar-retag-to-zero",
@@ -216,11 +222,22 @@ bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
 #endif
 }
 
+bool shouldUseStackSafetyAnalysis(const Triple &TargetTriple,
+                                  bool DisableOptimization) {
+  auto StackSafety = ClUseStackSafety.getNumOccurrences()
+                         ? ClUseStackSafety
+                         : !DisableOptimization;
+  return shouldInstrumentStack(TargetTriple) && StackSafety;
+// No one should use the option directly.
+#pragma GCC poison ClUseStackSafety
+}
 /// An instrumentation pass implementing detection of addressability bugs
 /// using tagged pointers.
 class HWAddressSanitizer {
 public:
-  HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover) : M(M) {
+  HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover,
+                              const StackSafetyGlobalInfo *SSI)
+      : M(M), SSI(SSI) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
                               ? ClEnableKhwasan
@@ -228,6 +245,8 @@ public:
 
     initializeModule();
   }
+
+  void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
   bool sanitizeFunction(Function &F);
   void initializeModule();
@@ -281,6 +300,7 @@ public:
 private:
   LLVMContext *C;
   Module &M;
+  const StackSafetyGlobalInfo *SSI;
   Triple TargetTriple;
   FunctionCallee HWAsanMemmove, HWAsanMemcpy, HWAsanMemset;
   FunctionCallee HWAsanHandleVfork;
@@ -351,7 +371,8 @@ public:
   static char ID;
 
   explicit HWAddressSanitizerLegacyPass(bool CompileKernel = false,
-                                        bool Recover = false)
+                                        bool Recover = false,
+                                        bool DisableOptimization = false)
       : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover) {
     initializeHWAddressSanitizerLegacyPassPass(
         *PassRegistry::getPassRegistry());
@@ -360,11 +381,19 @@ public:
   StringRef getPassName() const override { return "HWAddressSanitizer"; }
 
   bool doInitialization(Module &M) override {
-    HWASan = std::make_unique<HWAddressSanitizer>(M, CompileKernel, Recover);
+    HWASan = std::make_unique<HWAddressSanitizer>(M, CompileKernel, Recover,
+                                                  /*SSI=*/nullptr);
     return true;
   }
 
   bool runOnFunction(Function &F) override {
+    if (shouldUseStackSafetyAnalysis(Triple(F.getParent()->getTargetTriple()),
+                                     DisableOptimization)) {
+      // We cannot call getAnalysis in doInitialization, that would cause a
+      // crash as the required analyses are not initialized yet.
+      HWASan->setSSI(
+          &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult());
+    }
     return HWASan->sanitizeFunction(F);
   }
 
@@ -373,10 +402,16 @@ public:
     return false;
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    if (!DisableOptimization)
+      AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
+  }
+
 private:
   std::unique_ptr<HWAddressSanitizer> HWASan;
   bool CompileKernel;
   bool Recover;
+  bool DisableOptimization;
 };
 
 } // end anonymous namespace
@@ -392,18 +427,26 @@ INITIALIZE_PASS_END(
     "HWAddressSanitizer: detect memory bugs using tagged addressing.", false,
     false)
 
-FunctionPass *llvm::createHWAddressSanitizerLegacyPassPass(bool CompileKernel,
-                                                           bool Recover) {
+FunctionPass *
+llvm::createHWAddressSanitizerLegacyPassPass(bool CompileKernel, bool Recover,
+                                             bool DisableOptimization) {
   assert(!CompileKernel || Recover);
-  return new HWAddressSanitizerLegacyPass(CompileKernel, Recover);
+  return new HWAddressSanitizerLegacyPass(CompileKernel, Recover,
+                                          DisableOptimization);
 }
 
-HWAddressSanitizerPass::HWAddressSanitizerPass(bool CompileKernel, bool Recover)
-    : CompileKernel(CompileKernel), Recover(Recover) {}
+HWAddressSanitizerPass::HWAddressSanitizerPass(bool CompileKernel, bool Recover,
+                                               bool DisableOptimization)
+    : CompileKernel(CompileKernel), Recover(Recover),
+      DisableOptimization(DisableOptimization) {}
 
 PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
-  HWAddressSanitizer HWASan(M, CompileKernel, Recover);
+  const StackSafetyGlobalInfo *SSI = nullptr;
+  if (shouldUseStackSafetyAnalysis(llvm::Triple(M.getTargetTriple()),
+                                   DisableOptimization))
+    SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
+  HWAddressSanitizer HWASan(M, CompileKernel, Recover, SSI);
   bool Modified = false;
   for (Function &F : M)
     Modified |= HWASan.sanitizeFunction(F);
@@ -1257,7 +1300,9 @@ bool HWAddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
           // dynamic alloca instrumentation for them as well.
           !AI.isUsedWithInAlloca() &&
           // swifterror allocas are register promoted by ISel
-          !AI.isSwiftError());
+          !AI.isSwiftError()) &&
+         // safe allocas are not interesting
+         !(SSI && SSI->isSafe(AI));
 }
 
 bool HWAddressSanitizer::sanitizeFunction(Function &F) {
