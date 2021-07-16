@@ -3089,12 +3089,16 @@ let Uses = [RM], mayRaiseFPException = 1 in {
 
 // When FM is 30/31, we are setting the 62/63 bit of FPSCR, the implicit-def
 // RM should be set.
+let hasSideEffects = 1 in {
 def MTFSB0 : XForm_43<63, 70, (outs), (ins u5imm:$FM),
-                      "mtfsb0 $FM", IIC_IntMTFSB0, []>,
+                      "mtfsb0 $FM", IIC_IntMTFSB0,
+                      [(int_ppc_mtfsb0 timm:$FM)]>,
              PPC970_DGroup_Single, PPC970_Unit_FPU;
 def MTFSB1 : XForm_43<63, 38, (outs), (ins u5imm:$FM),
-                      "mtfsb1 $FM", IIC_IntMTFSB0, []>,
+                      "mtfsb1 $FM", IIC_IntMTFSB0,
+                      [(int_ppc_mtfsb1 timm:$FM)]>,
              PPC970_DGroup_Single, PPC970_Unit_FPU;
+}
 
 let Defs = [RM] in {
   let isCodeGenOnly = 1 in
@@ -3646,6 +3650,16 @@ def : Pat<(fcopysign f64:$frB, f32:$frA),
 def : Pat<(fcopysign f32:$frB, f64:$frA),
           (FCPSGNS (COPY_TO_REGCLASS $frA, F4RC), $frB)>;
 }
+
+// XL Compat intrinsics.
+def : Pat<(int_ppc_fmsub f64:$A, f64:$B, f64:$C), (FMSUB $A, $B, $C)>;
+def : Pat<(int_ppc_fmsubs f32:$A, f32:$B, f32:$C), (FMSUBS $A, $B, $C)>;
+def : Pat<(int_ppc_fnmsub f64:$A, f64:$B, f64:$C), (FNMSUB $A, $B, $C)>;
+def : Pat<(int_ppc_fnmsubs f32:$A, f32:$B, f32:$C), (FNMSUBS $A, $B, $C)>;
+def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (FNMADD $A, $B, $C)>;
+def : Pat<(int_ppc_fnmadds f32:$A, f32:$B, f32:$C), (FNMADDS $A, $B, $C)>;
+def : Pat<(int_ppc_fre f64:$A), (FRE $A)>;
+def : Pat<(int_ppc_fres f32:$A), (FRES $A)>;
 
 include "PPCInstrAltivec.td"
 include "PPCInstrSPE.td"

@@ -29,7 +29,7 @@
 #define UNALIASED_CUSTOM_BUILTIN(ID, TYPES, ACCUMULATE) \
    CUSTOM_BUILTIN(ID, ID, TYPES, ACCUMULATE)
 
-// builtins for compatibility with the XL compiler
+// XL Compatibility built-ins
 BUILTIN(__builtin_ppc_popcntb, "ULiULi", "")
 BUILTIN(__builtin_ppc_poppar4, "iUi", "")
 BUILTIN(__builtin_ppc_poppar8, "iULLi", "")
@@ -97,6 +97,21 @@ BUILTIN(__builtin_ppc_load8r, "ULLiULLi*", "")
 BUILTIN(__builtin_ppc_store2r, "vUiUs*", "")
 BUILTIN(__builtin_ppc_store4r, "vUiUi*", "")
 BUILTIN(__builtin_ppc_store8r, "vULLiULLi*", "")
+BUILTIN(__builtin_ppc_extract_exp, "Uid", "")
+BUILTIN(__builtin_ppc_extract_sig, "ULLid", "")
+BUILTIN(__builtin_ppc_mtfsb0, "vUIi", "")
+BUILTIN(__builtin_ppc_mtfsb1, "vUIi", "")
+BUILTIN(__builtin_ppc_mtfsf, "vUIiUi", "")
+BUILTIN(__builtin_ppc_mtfsfi, "vUIiUIi", "")
+BUILTIN(__builtin_ppc_insert_exp, "ddULLi", "")
+BUILTIN(__builtin_ppc_fmsub, "dddd", "")
+BUILTIN(__builtin_ppc_fmsubs, "ffff", "")
+BUILTIN(__builtin_ppc_fnmadd, "dddd", "")
+BUILTIN(__builtin_ppc_fnmadds, "ffff", "")
+BUILTIN(__builtin_ppc_fnmsub, "dddd", "")
+BUILTIN(__builtin_ppc_fnmsubs, "ffff", "")
+BUILTIN(__builtin_ppc_fre, "dd", "")
+BUILTIN(__builtin_ppc_fres, "ff", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
