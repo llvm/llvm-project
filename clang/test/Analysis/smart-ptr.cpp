@@ -457,3 +457,52 @@ void derefAfterBranchingOnUnknownInnerPtr(std::unique_ptr<A> P) {
     P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   }
 }
+
+// The following is a silly function,
+// but serves to test if we are picking out
+// standard comparision functions from custom ones.
+template <typename T>
+bool operator<(std::unique_ptr<T> &x, double d);
+
+void uniquePtrComparision(std::unique_ptr<int> unknownPtr) {
+  auto ptr = std::unique_ptr<int>(new int(13));
+  auto nullPtr = std::unique_ptr<int>();
+  auto otherPtr = std::unique_ptr<int>(new int(29));
+
+  clang_analyzer_eval(ptr == ptr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr > ptr);  // expected-warning{{FALSE}}
+  clang_analyzer_eval(ptr <= ptr); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(nullPtr <= unknownPtr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(unknownPtr >= nullPtr); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ptr != otherPtr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr > nullPtr);   // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ptr != nullptr);        // expected-warning{{TRUE}}
+  clang_analyzer_eval(nullPtr != nullptr);    // expected-warning{{FALSE}}
+  clang_analyzer_eval(nullptr <= unknownPtr); // expected-warning{{TRUE}}
+}
+
+void uniquePtrComparisionStateSplitting(std::unique_ptr<int> unknownPtr) {
+  auto ptr = std::unique_ptr<int>(new int(13));
+
+  clang_analyzer_eval(ptr > unknownPtr); // expected-warning{{TRUE}}
+  // expected-warning@-1{{FALSE}}
+}
+
+void uniquePtrComparisionDifferingTypes(std::unique_ptr<int> unknownPtr) {
+  auto ptr = std::unique_ptr<int>(new int(13));
+  auto nullPtr = std::unique_ptr<A>();
+  auto otherPtr = std::unique_ptr<double>(new double(3.14));
+
+  clang_analyzer_eval(nullPtr <= unknownPtr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(unknownPtr >= nullPtr); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ptr != otherPtr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr > nullPtr);   // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ptr != nullptr);        // expected-warning{{TRUE}}
+  clang_analyzer_eval(nullPtr != nullptr);    // expected-warning{{FALSE}}
+  clang_analyzer_eval(nullptr <= unknownPtr); // expected-warning{{TRUE}}
+}
