@@ -146,7 +146,7 @@ define amdgpu_ps <4 x float> @raw_buffer_load_format_v4f32__sgpr_rsrc__vgpr_voff
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; CHECK:   [[BUFFER_LOAD_FORMAT_XYZW_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "BufferResource" + 4095, align 1, addrspace 4)
+  ; CHECK:   [[BUFFER_LOAD_FORMAT_XYZW_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 4095, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>) from custom "BufferResource" + 4095, align 1, addrspace 4)
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub0
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub1
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_XYZW_OFFEN]].sub2

@@ -416,7 +416,14 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
     Register PtrReg = B.getMRI()->createGenericVirtualRegister(PtrTy);
     lowerParameterPtr(PtrReg, B, Offset + FieldOffsets[Idx]);
 
-    const LLT ArgTy = getLLTForType(*SplitArg.Ty, DL);
+    LLT ArgTy = getLLTForType(*SplitArg.Ty, DL);
+    if (SplitArg.Flags[0].isPointer()) {
+      // Compensate for losing pointeriness in splitValueTypes.
+      LLT PtrTy = LLT::pointer(SplitArg.Flags[0].getPointerAddrSpace(),
+                               ArgTy.getScalarSizeInBits());
+      ArgTy = ArgTy.isVector() ? LLT::vector(ArgTy.getElementCount(), PtrTy)
+                               : PtrTy;
+    }
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         PtrInfo,
