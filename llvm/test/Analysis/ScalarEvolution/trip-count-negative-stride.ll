@@ -84,6 +84,25 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+; CHECK-LABEL: Determining loop execution counts for: @ult_129_unknown_start
+; CHECK: Loop %for.body: Unpredictable backedge-taken count
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+
+define void @ult_129_unknown_start(i8 %start) mustprogress {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i8 [ %add, %for.body ], [ %start, %entry ]
+  %add = add nuw i8 %i.05, 129
+  %cmp = icmp ult i8 %add, 128
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+
 ; A case with a non-constant stride where the backedge is not taken
 ; CHECK-LABEL: Determining loop execution counts for: @ult_not_taken
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count
@@ -288,6 +307,23 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+; CHECK-LABEL: Determining loop execution counts for: @slt_129_unknown_start
+; CHECK: Loop %for.body: Unpredictable backedge-taken count
+; CHECK: Loop %for.body: Unpredictable max backedge-taken count
+
+define void @slt_129_unknown_start(i8 %start) mustprogress {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i8 [ %add, %for.body ], [ %start, %entry ]
+  %add = add nsw i8 %i.05, 129
+  %cmp = icmp slt i8 %add, 0
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
 
 
 ; IV does wrap, and thus causes us to branch on poison.  This loop is
