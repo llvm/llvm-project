@@ -3925,11 +3925,13 @@ class DILifetime : public MDNode {
 
 public:
   static DILifetime *getDistinct(LLVMContext &Context, Metadata *Obj,
-                                 Metadata *Loc, ArrayRef<Metadata *> Args) {
+                                 Metadata *Loc,
+                                 ArrayRef<Metadata *> Args = None) {
     return getImpl(Context, Obj, Loc, Args, Distinct);
   }
   static TempDILifetime getTemporary(LLVMContext &Context, Metadata *Obj,
-                                     Metadata *Loc, ArrayRef<Metadata *> Args) {
+                                     Metadata *Loc,
+                                     ArrayRef<Metadata *> Args = None) {
     return TempDILifetime(getImpl(Context, Obj, Loc, Args, Temporary));
   }
 

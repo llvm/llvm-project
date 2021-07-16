@@ -1080,3 +1080,76 @@ void DIBuilder::replaceArrays(DICompositeType *&T, DINodeArray Elements,
   if (TParams)
     trackIfUnresolved(TParams.get());
 }
+
+DILifetime *DIBuilder::createLifetime(DIObject *Obj, DIExpr *Loc,
+                                      ArrayRef<Metadata *> Args) {
+  return DILifetime::getDistinct(VMContext, Obj, Loc, Args);
+}
+
+static Function *getDefIntrin(Module &M) {
+  return Intrinsic::getDeclaration(&M, Intrinsic::dbg_def);
+}
+
+Instruction *DIBuilder::insertDef(DILifetime *Lifetime, llvm::Value *Referrer,
+                                  const DILocation *DL, BasicBlock *InsertBB,
+                                  Instruction *InsertBefore) {
+  assert(Lifetime && "Empty or invalid Lifetime passed to dbg.def");
+  assert(Referrer && "Empty or invalid Referrer passed to dbg.def");
+  assert(DL && "Empty or invalid DL passed to dbg.def");
+
+  if (!DefFn)
+    DefFn = getDefIntrin(M);
+
+  trackIfUnresolved(Lifetime);
+  Value *Args[] = {MetadataAsValue::get(VMContext, Lifetime),
+                   getDbgIntrinsicValueImpl(VMContext, Referrer)};
+
+  IRBuilder<> B(DL->getContext());
+  initIRBuilder(B, DL, InsertBB, InsertBefore);
+  return B.CreateCall(DefFn, Args);
+}
+
+Instruction *DIBuilder::insertDef(DILifetime *Lifetime, llvm::Value *Referrer,
+                                  const DILocation *DL,
+                                  BasicBlock *InsertAtEnd) {
+  return insertDef(Lifetime, Referrer, DL, InsertAtEnd,
+                   InsertAtEnd->getTerminator());
+}
+
+Instruction *DIBuilder::insertDef(DILifetime *Lifetime, llvm::Value *Referrer,
+                                  const DILocation *DL,
+                                  Instruction *InsertBefore) {
+  return insertDef(Lifetime, Referrer, DL, InsertBefore->getParent(),
+                   InsertBefore);
+}
+
+static Function *getKillIntrin(Module &M) {
+  return Intrinsic::getDeclaration(&M, Intrinsic::dbg_kill);
+}
+
+Instruction *DIBuilder::insertKill(DILifetime *Lifetime, const DILocation *DL,
+                                   BasicBlock *InsertBB,
+                                   Instruction *InsertBefore) {
+  assert(Lifetime && "Empty or invalid Lifetime passed to dbg.kill");
+  assert(DL && "Empty or invalid DL passed to dbg.kill");
+
+  if (!KillFn)
+    KillFn = getKillIntrin(M);
+
+  trackIfUnresolved(Lifetime);
+  Value *Args[] = {MetadataAsValue::get(VMContext, Lifetime)};
+
+  IRBuilder<> B(DL->getContext());
+  initIRBuilder(B, DL, InsertBB, InsertBefore);
+  return B.CreateCall(KillFn, Args);
+}
+
+Instruction *DIBuilder::insertKill(DILifetime *Lifetime, const DILocation *DL,
+                                   BasicBlock *InsertAtEnd) {
+  return insertKill(Lifetime, DL, InsertAtEnd, InsertAtEnd->getTerminator());
+}
+
+Instruction *DIBuilder::insertKill(DILifetime *Lifetime, const DILocation *DL,
+                                   Instruction *InsertBefore) {
+  return insertKill(Lifetime, DL, InsertBefore->getParent(), InsertBefore);
+}
