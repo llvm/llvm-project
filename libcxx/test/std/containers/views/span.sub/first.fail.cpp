@@ -19,6 +19,8 @@
 
 #include <span>
 
+#include <cstddef>
+
 #include "test_macros.h"
 
 constexpr int carr[] = {1, 2, 3, 4};
