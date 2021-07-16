@@ -22,9 +22,9 @@ define float @fdiv_constant_fold_strict() #0 {
 
 define float @frem_constant_fold() #0 {
 ; CHECK-LABEL: @frem_constant_fold(
-; CHECK-NEXT:    ret float 1.500000e+00
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %f = call float @llvm.experimental.constrained.fdiv.f32(float 3.0, float 2.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
+  %f = call float @llvm.experimental.constrained.frem.f32(float 3.0, float 2.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
   ret float %f
 }
 
