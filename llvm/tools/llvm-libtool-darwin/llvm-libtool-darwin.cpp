@@ -571,7 +571,7 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
 
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
-  cl::HideUnrelatedOptions({&LibtoolCategory, &getColorCategory()});
+  cl::HideUnrelatedOptions({&LibtoolCategory, &ColorCategory});
   Expected<Config> ConfigOrErr = parseCommandLine(Argc, Argv);
   if (!ConfigOrErr) {
     WithColor::defaultErrorHandler(ConfigOrErr.takeError());

@@ -11325,8 +11325,8 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
   TagLoc = Parser.getTok().getLoc();
   if (Parser.getTok().is(AsmToken::Identifier)) {
     StringRef Name = Parser.getTok().getIdentifier();
-    Optional<unsigned> Ret = ELFAttrs::attrTypeFromString(
-        Name, ARMBuildAttrs::getARMAttributeTags());
+    Optional<unsigned> Ret =
+        ELFAttrs::attrTypeFromString(Name, ARMBuildAttrs::ARMAttributeTags);
     if (!Ret.hasValue()) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
