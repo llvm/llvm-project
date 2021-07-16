@@ -1172,9 +1172,11 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<memref::SubViewOp> {
         } else {
           Value pos = rewriter.create<LLVM::ConstantOp>(
               loc, llvmIndexType, rewriter.getI64IntegerAttr(i));
-          size = rewriter.create<LLVM::DialectCastOp>(
-              loc, llvmIndexType,
-              rewriter.create<memref::DimOp>(loc, subViewOp.source(), pos));
+          Value dim =
+              rewriter.create<memref::DimOp>(loc, subViewOp.source(), pos);
+          auto cast = rewriter.create<UnrealizedConversionCastOp>(
+              loc, llvmIndexType, dim);
+          size = cast.getResult(0);
         }
         stride = rewriter.create<LLVM::ConstantOp>(
             loc, llvmIndexType, rewriter.getI64IntegerAttr(1));
@@ -1432,7 +1434,7 @@ struct MemRefToLLVMPass : public ConvertMemRefToLLVMBase<MemRefToLLVMPass> {
     RewritePatternSet patterns(&getContext());
     populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
     LLVMConversionTarget target(getContext());
-    target.addLegalOp<LLVM::DialectCastOp, FuncOp>();
+    target.addLegalOp<FuncOp>();
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
   }
