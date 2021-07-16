@@ -7,7 +7,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t.s -o %t.o
 
 # RUN: ld.lld -o %t %t.o --script %s
-# RUN: llvm-readelf -sections -program-headers %t | FileCheck %s
+# RUN: llvm-readelf -S -l %t | FileCheck %s
 
 ## Check that we can produce output without errors,
 ## and .foo section has proper size.
