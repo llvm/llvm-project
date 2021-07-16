@@ -1221,25 +1221,6 @@ def LLVM_ConstantOp
   let verifier = [{ return ::verify(*this); }];
 }
 
-def LLVM_DialectCastOp : LLVM_Op<"mlir.cast", [NoSideEffect]> {
-  let summary = "Type cast between LLVM dialect and Standard.";
-  let description = [{
-    llvm.mlir.cast op casts between Standard and LLVM dialects. It only changes
-    the dialect, but does not change compile-time or runtime semantics.
-
-    Notice that index type is not supported, as it's Standard-specific.
-
-    Example:
-      llvm.mlir.cast %v : f16 to llvm.half
-      llvm.mlir.cast %v : llvm.float to f32
-      llvm.mlir.cast %v : !llvm."<2 x f32>"> to vector<2xf32>
-  }];
-  let arguments = (ins AnyType:$in);
-  let results = (outs AnyType:$res);
-  let assemblyFormat = "$in attr-dict `:` type($in) `to` type($res)";
-  let verifier = "return ::verify(*this);";
-}
-
 // Operations that correspond to LLVM intrinsics. With MLIR operation set being
 // extendable, there is no reason to introduce a hard boundary between "core"
 // operations and intrinsics. However, we systematically prefix them with

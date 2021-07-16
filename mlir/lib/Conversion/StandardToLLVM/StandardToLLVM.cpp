@@ -309,56 +309,9 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
   LogicalResult
   matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    // Store the type of memref-typed arguments before the conversion so that we
-    // can promote them to MemRef descriptor at the beginning of the function.
-    SmallVector<Type, 8> oldArgTypes =
-        llvm::to_vector<8>(funcOp.getType().getInputs());
-
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
     if (!newFuncOp)
       return failure();
-    if (newFuncOp.getBody().empty()) {
-      rewriter.eraseOp(funcOp);
-      return success();
-    }
-
-    // Promote bare pointers from memref arguments to memref descriptors at the
-    // beginning of the function so that all the memrefs in the function have a
-    // uniform representation.
-    Block *entryBlock = &newFuncOp.getBody().front();
-    auto blockArgs = entryBlock->getArguments();
-    assert(blockArgs.size() == oldArgTypes.size() &&
-           "The number of arguments and types doesn't match");
-
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(entryBlock);
-    for (auto it : llvm::zip(blockArgs, oldArgTypes)) {
-      BlockArgument arg = std::get<0>(it);
-      Type argTy = std::get<1>(it);
-
-      // Unranked memrefs are not supported in the bare pointer calling
-      // convention. We should have bailed out before in the presence of
-      // unranked memrefs.
-      assert(!argTy.isa<UnrankedMemRefType>() &&
-             "Unranked memref is not supported");
-      auto memrefTy = argTy.dyn_cast<MemRefType>();
-      if (!memrefTy)
-        continue;
-
-      // Replace barePtr with a placeholder (undef), promote barePtr to a ranked
-      // or unranked memref descriptor and replace placeholder with the last
-      // instruction of the memref descriptor.
-      // TODO: The placeholder is needed to avoid replacing barePtr uses in the
-      // MemRef descriptor instructions. We may want to have a utility in the
-      // rewriter to properly handle this use case.
-      Location loc = funcOp.getLoc();
-      auto placeholder = rewriter.create<LLVM::UndefOp>(loc, memrefTy);
-      rewriter.replaceUsesOfBlockArgument(arg, placeholder);
-
-      Value desc = MemRefDescriptor::fromStaticShape(
-          rewriter, loc, *getTypeConverter(), memrefTy, arg);
-      rewriter.replaceOp(placeholder, {desc});
-    }
 
     rewriter.eraseOp(funcOp);
     return success();
@@ -562,20 +515,31 @@ struct CallIndirectOpLowering : public CallOpInterfaceLowering<CallIndirectOp> {
   using Super::Super;
 };
 
-struct DialectCastOpLowering
-    : public ConvertOpToLLVMPattern<LLVM::DialectCastOp> {
-  using ConvertOpToLLVMPattern<LLVM::DialectCastOp>::ConvertOpToLLVMPattern;
+struct UnrealizedConversionCastOpLowering
+    : public ConvertOpToLLVMPattern<UnrealizedConversionCastOp> {
+  using ConvertOpToLLVMPattern<
+      UnrealizedConversionCastOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(LLVM::DialectCastOp castOp, ArrayRef<Value> operands,
+  matchAndRewrite(UnrealizedConversionCastOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    LLVM::DialectCastOp::Adaptor transformed(operands);
-    if (transformed.in().getType() !=
-        typeConverter->convertType(castOp.getType())) {
-      return failure();
+    UnrealizedConversionCastOp::Adaptor transformed(operands);
+    SmallVector<Type> convertedTypes;
+    if (succeeded(typeConverter->convertTypes(op.outputs().getTypes(),
+                                              convertedTypes)) &&
+        convertedTypes == transformed.inputs().getTypes()) {
+      rewriter.replaceOp(op, transformed.inputs());
+      return success();
     }
-    rewriter.replaceOp(castOp, transformed.in());
-    return success();
+
+    convertedTypes.clear();
+    if (succeeded(typeConverter->convertTypes(transformed.inputs().getTypes(),
+                                              convertedTypes)) &&
+        convertedTypes == op.outputs().getType()) {
+      rewriter.replaceOp(op, transformed.inputs());
+      return success();
+    }
+    return failure();
   }
 };
 
@@ -1118,7 +1082,6 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
       CondBranchOpLowering,
       CopySignOpLowering,
       ConstantOpLowering,
-      DialectCastOpLowering,
       DivFOpLowering,
       FloorFOpLowering,
       FmaFOpLowering,
@@ -1153,6 +1116,7 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
       UnsignedRemIOpLowering,
       UnsignedShiftRightOpLowering,
       XOrOpLowering,
+      UnrealizedConversionCastOpLowering,
       ZeroExtendIOpLowering>(converter);
   // clang-format on
 }
@@ -1205,8 +1169,10 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
+    target.addIllegalOp<UnrealizedConversionCastOp>();
     if (failed(applyPartialConversion(m, target, std::move(patterns))))
       signalPassFailure();
+
     m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
                StringAttr::get(m.getContext(), this->dataLayout));
   }

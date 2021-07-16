@@ -1818,7 +1818,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
       PtrInfo,
       MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
           MachineMemOperand::MOInvariant,
-      4, commonAlignment(Align(64), StructOffset));
+      LLT::scalar(32), commonAlignment(Align(64), StructOffset));
 
   Register LoadAddr;
 
@@ -2436,11 +2436,12 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
   Register GOTAddr = MRI.createGenericVirtualRegister(PtrTy);
 
+  LLT LoadTy = Ty.getSizeInBits() == 32 ? PtrTy : Ty;
   MachineMemOperand *GOTMMO = MF.getMachineMemOperand(
       MachinePointerInfo::getGOT(MF),
       MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
           MachineMemOperand::MOInvariant,
-      8 /*Size*/, Align(8));
+      LoadTy, Align(8));
 
   buildPCRelGlobalAddress(GOTAddr, PtrTy, B, GV, 0, SIInstrInfo::MO_GOTPCREL32);
 
@@ -3876,7 +3877,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
                                              bool IsTyped) const {
   // FIXME: Verifier should enforce 1 MMO for these intrinsics.
   MachineMemOperand *MMO = *MI.memoperands_begin();
-  const int MemSize = MMO->getSize();
+  const LLT MemTy = MMO->getMemoryType();
   const LLT S32 = LLT::scalar(32);
 
   Register Dst = MI.getOperand(0).getReg();
@@ -3914,7 +3915,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 
   std::tie(VOffset, ImmOffset, TotalOffset) = splitBufferOffsets(B, VOffset);
   if (TotalOffset != 0)
-    MMO = B.getMF().getMachineMemOperand(MMO, TotalOffset, MemSize);
+    MMO = B.getMF().getMachineMemOperand(MMO, TotalOffset, MemTy);
 
   unsigned Opc;
 
@@ -3925,11 +3926,11 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     Opc = IsD16 ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16 :
                   AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
   } else {
-    switch (MemSize) {
-    case 1:
+    switch (MemTy.getSizeInBits()) {
+    case 8:
       Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;
       break;
-    case 2:
+    case 16:
       Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
       break;
     default:
@@ -3940,7 +3941,8 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 
   Register LoadDstReg;
 
-  bool IsExtLoad = (!IsD16 && MemSize < 4) || (IsD16 && !Ty.isVector());
+  bool IsExtLoad =
+      (!IsD16 && MemTy.getSizeInBits() < 32) || (IsD16 && !Ty.isVector());
   LLT UnpackedTy = Ty.changeElementSize(32);
 
   if (IsExtLoad)

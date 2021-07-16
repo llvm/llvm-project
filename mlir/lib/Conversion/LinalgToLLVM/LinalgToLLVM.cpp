@@ -137,7 +137,7 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
 
   LLVMConversionTarget target(getContext());
   target.addIllegalOp<RangeOp>();
-  target.addLegalOp<ModuleOp, LLVM::DialectCastOp>();
+  target.addLegalOp<ModuleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

@@ -242,22 +242,6 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   SplitArgs.back().Flags[0].setInConsecutiveRegsLast();
 }
 
-void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
-                              Type *PackedTy,
-                              MachineIRBuilder &MIRBuilder) const {
-  assert(DstRegs.size() > 1 && "Nothing to unpack");
-
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-
-  SmallVector<LLT, 8> LLTs;
-  SmallVector<uint64_t, 8> Offsets;
-  computeValueLLTs(DL, *PackedTy, LLTs, &Offsets);
-  assert(LLTs.size() == DstRegs.size() && "Regs / types mismatch");
-
-  for (unsigned i = 0; i < DstRegs.size(); ++i)
-    MIRBuilder.buildExtract(DstRegs[i], SrcReg, Offsets[i]);
-}
-
 /// Pack values \p SrcRegs to cover the vector type result \p DstRegs.
 static MachineInstrBuilder
 mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
