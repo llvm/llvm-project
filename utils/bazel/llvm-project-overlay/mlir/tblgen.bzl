@@ -257,12 +257,19 @@ def _gentbl_test_impl(ctx):
         is_executable = True,
     )
 
-    return [DefaultInfo(
-        runfiles = ctx.runfiles(
-            [ctx.executable.tblgen],
-            transitive_files = trans_srcs,
+    return [
+        coverage_common.instrumented_files_info(
+            ctx,
+            source_attributes = ["td_file", "td_srcs"],
+            dependency_attributes = ["tblgen", "deps"],
         ),
-    )]
+        DefaultInfo(
+            runfiles = ctx.runfiles(
+                [ctx.executable.tblgen],
+                transitive_files = trans_srcs,
+            ),
+        ),
+    ]
 
 gentbl_test = rule(
     _gentbl_test_impl,
@@ -271,8 +278,6 @@ gentbl_test = rule(
           " that unlike gentbl_rule, this builds and invokes `tblgen` in the" +
           " target configuration. Takes all the same arguments as gentbl_rule" +
           " except for `out` (as it does not generate any output)",
-    # Match genrule behavior
-    output_to_genfiles = True,
     attrs = {
         "tblgen": attr.label(
             doc = "The TableGen executable run in the shell command. Note" +
