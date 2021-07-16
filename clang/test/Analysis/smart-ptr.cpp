@@ -3,6 +3,11 @@
 // RUN:   -analyzer-config cplusplus.SmartPtrModeling:ModelSmartPtrDereference=true\
 // RUN:   -std=c++11 -verify %s
 
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection\
+// RUN:   -analyzer-checker cplusplus.Move,alpha.cplusplus.SmartPtr\
+// RUN:   -analyzer-config cplusplus.SmartPtrModeling:ModelSmartPtrDereference=true\
+// RUN:   -std=c++20 -verify %s
+
 #include "Inputs/system-header-simulator-cxx.h"
 
 void clang_analyzer_warnIfReached();
@@ -506,3 +511,28 @@ void uniquePtrComparisionDifferingTypes(std::unique_ptr<int> unknownPtr) {
   clang_analyzer_eval(nullPtr != nullptr);    // expected-warning{{FALSE}}
   clang_analyzer_eval(nullptr <= unknownPtr); // expected-warning{{TRUE}}
 }
+
+#if __cplusplus >= 202002L
+
+void testOstreamOverload(std::unique_ptr<int> P) {
+  auto &Cout = std::cout;
+  auto &PtrCout = std::cout << P;
+  auto &StringCout = std::cout << "hello";
+  // We are testing the fact that in our modelling of
+  // operator<<(basic_ostream<T1> &, const unique_ptr<T2> &)
+  // we set the return SVal to the SVal of the ostream arg.
+  clang_analyzer_eval(&Cout == &PtrCout);    // expected-warning {{TRUE}}
+  // FIXME: Technically, they should be equal,
+  // that hasn't been modelled yet.
+  clang_analyzer_eval(&Cout == &StringCout); // expected-warning {{UNKNOWN}}
+}
+
+int glob;
+void testOstreamDoesntInvalidateGlobals(std::unique_ptr<int> P) {
+  int x = glob;
+  std::cout << P;
+  int y = glob;
+  clang_analyzer_eval(x == y); // expected-warning {{TRUE}}
+}
+
+#endif
