@@ -2947,15 +2947,17 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   if (isPowerOf2_32(MemTy.getSizeInBits()))
     return UnableToLegalize; // Don't know what we're being asked to do.
 
-  // Extend to the next pow-2.
-  const LLT ExtendTy = LLT::scalar(NextPowerOf2(MemTy.getSizeInBits()));
-  auto ExtVal = MIRBuilder.buildAnyExt(ExtendTy, SrcReg);
+  // Extend to the next pow-2. If this store was itself the result of lowering,
+  // e.g. an s56 store being broken into s32 + s24, we might have a stored type
+  // that's wider the stored size. 
+  const LLT NewSrcTy = LLT::scalar(NextPowerOf2(MemTy.getSizeInBits()));
+  auto ExtVal = MIRBuilder.buildAnyExtOrTrunc(NewSrcTy, SrcReg);
 
   // Obtain the smaller value by shifting away the larger value.
   uint64_t LargeSplitSize = PowerOf2Floor(MemTy.getSizeInBits());
-  uint64_t SmallSplitSize = SrcTy.getSizeInBits() - LargeSplitSize;
-  auto ShiftAmt = MIRBuilder.buildConstant(ExtendTy, LargeSplitSize);
-  auto SmallVal = MIRBuilder.buildLShr(ExtendTy, ExtVal, ShiftAmt);
+  uint64_t SmallSplitSize = MemTy.getSizeInBits() - LargeSplitSize;
+  auto ShiftAmt = MIRBuilder.buildConstant(NewSrcTy, LargeSplitSize);
+  auto SmallVal = MIRBuilder.buildLShr(NewSrcTy, ExtVal, ShiftAmt);
 
   // Generate the PtrAdd and truncating stores.
   LLT PtrTy = MRI.getType(PtrReg);
