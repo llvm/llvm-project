@@ -180,7 +180,7 @@ def find_reverts(git_dir: str, across_ref: str, root: str) -> List[Revert]:
                      '(common ancestor: {common_ancestor})')
 
   intermediate_commits = set(_shas_between(git_dir, across_sha, root_sha))
-  assert across_ref not in intermediate_commits
+  assert across_sha not in intermediate_commits
 
   logging.debug('%d commits appear between %s and %s',
                 len(intermediate_commits), across_sha, root_sha)
