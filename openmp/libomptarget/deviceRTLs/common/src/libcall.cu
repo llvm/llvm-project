@@ -129,7 +129,7 @@ EXTERN int omp_get_max_active_levels(void) {
 }
 
 EXTERN int omp_get_level(void) {
-  int level = parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
+  int level = __kmpc_parallel_level();
   PRINT(LD_IO, "call omp_get_level() returns %d\n", level);
   return level;
 }

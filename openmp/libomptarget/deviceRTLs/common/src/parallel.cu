@@ -238,9 +238,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   currTaskDescr->RestoreLoopData();
 }
 
-EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
-  PRINT0(LD_IO, "call to __kmpc_parallel_level\n");
-
+EXTERN uint16_t __kmpc_parallel_level() {
   return parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
 }
 
@@ -292,7 +290,7 @@ EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
   // SPMD mode we already incremented the parallel level counter, account for
   // that.
   bool InParallelRegion =
-      (__kmpc_parallel_level(ident, global_tid) > __kmpc_is_spmd_exec_mode());
+      (__kmpc_parallel_level() > __kmpc_is_spmd_exec_mode());
   if (!if_expr || InParallelRegion) {
     __kmpc_serialized_parallel(ident, global_tid);
     __kmp_invoke_microtask(global_tid, 0, fn, args, nargs);
