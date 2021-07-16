@@ -909,9 +909,10 @@ def POPCNTW : XForm_11<31, 378, (outs gprc:$rA), (ins gprc:$rS),
                        "popcntw $rA, $rS", IIC_IntGeneral,
                        [(set i32:$rA, (ctpop i32:$rS))]>;
 
-def POPCNTB : XForm_11<31, 122, (outs g8rc:$rA), (ins g8rc:$rS),
-                       "popcntb $rA, $rS", IIC_IntGeneral,
-                       [(set i64:$rA, (int_ppc_popcntb i64:$rS))]>;
+let isCodeGenOnly = 1 in
+def POPCNTB8 : XForm_11<31, 122, (outs g8rc:$rA), (ins g8rc:$rS),
+                        "popcntb $rA, $rS", IIC_IntGeneral,
+                        [(set i64:$rA, (int_ppc_popcntb i64:$rS))]>;
 
 defm DIVD  : XOForm_1rcr<31, 489, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                           "divd", "$rT, $rA, $rB", IIC_IntDivD,
@@ -1789,6 +1790,10 @@ def : Pat<(i64 (int_ppc_mulhd g8rc:$a, g8rc:$b)),
           (i64 (MULHD $a, $b))>;
 def : Pat<(i64 (int_ppc_mulhdu g8rc:$a, g8rc:$b)),
           (i64 (MULHDU $a, $b))>;
+def : Pat<(int_ppc_load8r ForceXForm:$ptr),
+          (LDBRX ForceXForm:$ptr)>;
+def : Pat<(int_ppc_store8r g8rc:$a, ForceXForm:$ptr),
+          (STDBRX g8rc:$a, ForceXForm:$ptr)>;
 }
 
 let Predicates = [IsISA3_0] in {

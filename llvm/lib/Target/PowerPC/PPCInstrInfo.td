@@ -2232,6 +2232,10 @@ def TDI : DForm_base<2, (outs), (ins u5imm:$to, g8rc:$rA, s16imm:$imm),
 def TD : XForm_1<31, 68, (outs), (ins u5imm:$to, g8rc:$rA, g8rc:$rB),
                  "td $to, $rA, $rB", IIC_IntTrapD, []>;
 
+def POPCNTB : XForm_11<31, 122, (outs gprc:$rA), (ins gprc:$rS),
+                       "popcntb $rA, $rS", IIC_IntGeneral,
+                       [(set i32:$rA, (int_ppc_popcntb i32:$rS))]>;
+
 //===----------------------------------------------------------------------===//
 // PPC32 Load Instructions.
 //
@@ -5269,6 +5273,16 @@ def : Pat<(i32 (int_ppc_mulhw gprc:$a, gprc:$b)),
           (i32 (MULHW $a, $b))>;
 def : Pat<(i32 (int_ppc_mulhwu gprc:$a, gprc:$b)),
           (i32 (MULHWU $a, $b))>;
+
+def : Pat<(int_ppc_load2r ForceXForm:$ptr),
+          (LHBRX ForceXForm:$ptr)>;
+def : Pat<(int_ppc_load4r ForceXForm:$ptr),
+          (LWBRX ForceXForm:$ptr)>;
+def : Pat<(int_ppc_store2r gprc:$a, ForceXForm:$ptr),
+          (STHBRX gprc:$a, ForceXForm:$ptr)>;
+def : Pat<(int_ppc_store4r gprc:$a, ForceXForm:$ptr),
+          (STWBRX gprc:$a, ForceXForm:$ptr)>;
+
 
 // Fast 32-bit reverse bits algorithm:
 // Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):

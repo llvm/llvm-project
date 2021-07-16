@@ -6424,7 +6424,11 @@ void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
     if (Type->isSamplerT() || Type->isVoidType())
       return;
     LangAS ImplAS = LangAS::opencl_private;
-    if ((getLangOpts().OpenCLCPlusPlus || getLangOpts().OpenCLVersion >= 200) &&
+    // OpenCL C v3.0 s6.7.8 - For OpenCL C 2.0 or with the
+    // __opencl_c_program_scope_global_variables feature, the address space
+    // for a variable at program scope or a static or extern variable inside
+    // a function are inferred to be __global.
+    if (getOpenCLOptions().areProgramScopeVariablesSupported(getLangOpts()) &&
         Var->hasGlobalStorage())
       ImplAS = LangAS::opencl_global;
     // If the original type from a decayed type is an array type and that array
@@ -8018,23 +8022,16 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       }
     }
 
-    // OpenCL C v1.2 s6.5 - All program scope variables must be declared in the
-    // __constant address space.
-    // OpenCL C v2.0 s6.5.1 - Variables defined at program scope and static
-    // variables inside a function can also be declared in the global
-    // address space.
-    // C++ for OpenCL inherits rule from OpenCL C v2.0.
     // FIXME: Adding local AS in C++ for OpenCL might make sense.
     if (NewVD->isFileVarDecl() || NewVD->isStaticLocal() ||
         NewVD->hasExternalStorage()) {
-      if (!T->isSamplerT() &&
-          !T->isDependentType() &&
+      if (!T->isSamplerT() && !T->isDependentType() &&
           !(T.getAddressSpace() == LangAS::opencl_constant ||
             (T.getAddressSpace() == LangAS::opencl_global &&
-             (getLangOpts().OpenCLVersion == 200 ||
-              getLangOpts().OpenCLCPlusPlus)))) {
+             getOpenCLOptions().areProgramScopeVariablesSupported(
+                 getLangOpts())))) {
         int Scope = NewVD->isStaticLocal() | NewVD->hasExternalStorage() << 1;
-        if (getLangOpts().OpenCLVersion == 200 || getLangOpts().OpenCLCPlusPlus)
+        if (getOpenCLOptions().areProgramScopeVariablesSupported(getLangOpts()))
           Diag(NewVD->getLocation(), diag::err_opencl_global_invalid_addr_space)
               << Scope << "global or constant";
         else

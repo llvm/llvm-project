@@ -263,6 +263,11 @@ add %edx, %edx
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ],
+# CHECK-NEXT:   "SimulationParameters": {
+# CHECK-NEXT:     "-march": "x86_64",
+# CHECK-NEXT:     "-mcpu": "haswell",
+# CHECK-NEXT:     "-mtriple": "x86_64-unknown-unknown"
+# CHECK-NEXT:   },
 # CHECK-NEXT:   "TargetInfo": {
 # CHECK-NEXT:     "CPUName": "haswell",
 # CHECK-NEXT:     "Resources": [

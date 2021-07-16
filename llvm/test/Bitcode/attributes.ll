@@ -465,6 +465,13 @@ define void @f78() noprofile
         ret void;
 }
 
+declare void @llvm.some.intrinsic(i32*)
+define void @f79() {
+; CHECK: call void @llvm.some.intrinsic(i32* elementtype(i32) null)
+  call void @llvm.some.intrinsic(i32* elementtype(i32) null)
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }

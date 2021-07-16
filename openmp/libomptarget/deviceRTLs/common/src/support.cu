@@ -89,7 +89,7 @@ int GetOmpThreadId() {
     return 0;
   // omp_thread_num
   int rc;
-  if ((parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1)) > 1) {
+  if (__kmpc_parallel_level() > 1) {
     rc = 0;
   } else if (__kmpc_is_spmd_exec_mode()) {
     rc = tid;

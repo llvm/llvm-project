@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 --amdhsa-code-object-version=3 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1010 --amdhsa-code-object-version=3 -mattr=+xnack -filetype=obj < %s > %t
-// RUN: llvm-readobj -elf-output-style=GNU -sections -symbols -relocations %t | FileCheck --check-prefix=READOBJ %s
+// RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // READOBJ: Section Headers

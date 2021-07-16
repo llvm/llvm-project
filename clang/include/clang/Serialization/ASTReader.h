@@ -1401,6 +1401,9 @@ private:
   llvm::iterator_range<PreprocessingRecord::iterator>
   getModulePreprocessedEntities(ModuleFile &Mod) const;
 
+  bool canRecoverFromOutOfDate(StringRef ModuleFileName,
+                               unsigned ClientLoadCapabilities);
+
 public:
   class ModuleDeclIterator
       : public llvm::iterator_adaptor_base<

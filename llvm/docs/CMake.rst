@@ -65,7 +65,10 @@ We use here the command-line, non-interactive CMake interface.
    itself is the correct one for your development environment. CMake will refuse
    to build MinGW makefiles if you have a POSIX shell reachable through the PATH
    environment variable, for instance. You can force CMake to use a given build
-   tool; for instructions, see the `Usage`_ section, below.
+   tool; for instructions, see the `Usage`_ section, below.  You may
+   also wish to control which targets LLVM enables, or which LLVM
+   components are built; see the `Frequently Used LLVM-related
+   variables`_ below.
 
 #. After CMake has finished running, proceed to use IDE project files, or start
    the build from the build directory:
@@ -179,46 +182,84 @@ Frequently-used CMake variables
 -------------------------------
 
 Here are some of the CMake variables that are used often, along with a
-brief explanation and LLVM-specific notes. For full documentation, consult the
-CMake manual, or execute ``cmake --help-variable VARIABLE_NAME``.
+brief explanation. For full documentation, consult the CMake manual,
+or execute ``cmake --help-variable VARIABLE_NAME``.  See `Frequently
+Used LLVM-related Variables`_ below for information about commonly
+used variables that control features of LLVM and enabled subprojects.
 
 **CMAKE_BUILD_TYPE**:STRING
   Sets the build type for ``make``-based generators. Possible values are
   Release, Debug, RelWithDebInfo and MinSizeRel. If you are using an IDE such as
   Visual Studio, you should use the IDE settings to set the build type.
   Be aware that Release and RelWithDebInfo use different optimization levels on
-  most platforms.
+  most platforms. Be aware that Release and
+  RelWithDebInfo use different optimization levels on most
+  platforms, and that the default value of ``LLVM_ENABLE_ASSERTIONS``
+  is affected.
 
 **CMAKE_INSTALL_PREFIX**:PATH
-  Path where LLVM will be installed if "make install" is invoked or the
-  "install" target is built.
+  Path where LLVM will be installed when the "install" target is built.
 
-**CMAKE_C_FLAGS**:STRING
-  Extra flags to use when compiling C source files.
+**CMAKE_{C,CXX}_FLAGS**:STRING
+  Extra flags to use when compiling C and C++ source files respectively.
 
-**CMAKE_CXX_FLAGS**:STRING
-  Extra flags to use when compiling C++ source files.
+**CMAKE_{C,CXX}_COMPILER**:STRING
+  Specify the C and C++ compilers to use. If you have multiple
+  compilers installed, CMake might not default to the one you wish to
+  use.
+
+.. _Frequently Used LLVM-related variables:
+
+Frequently Used LLVM-related variables
+--------------------------------------
+
+The default configuration may not match your requirements. Here are
+LLVM variables that are frequently used to control that. The full
+description is in `LLVM-related variables`_ below.
+
+**LLVM_ENABLE_PROJECTS**:STRING
+  Control which projects are enabled. For example you may want to work on clang
+  or lldb by specifying ``-DLLVM_ENABLE_PROJECTS="clang;lldb"``.
 
 **LLVM_LIBDIR_SUFFIX**:STRING
   Extra suffix to append to the directory where libraries are to be
   installed. On a 64-bit architecture, one could use ``-DLLVM_LIBDIR_SUFFIX=64``
   to install libraries to ``/usr/lib64``.
 
+**LLVM_PARALLEL_{COMPILE,LINK}_JOBS**:STRING
+  Building the llvm toolchain can use a lot of resources, particularly
+  linking. These options, when you use the Ninja generator, allow you
+  to restrict the parallelism. For example, to avoid OOMs or going
+  into swap, permit only one link job per 15GB of RAM available on a
+  32GB machine, specify ``-G Ninja -DLLVM_PARALLEL_LINK_JOBS=2``.
+
+**LLVM_TARGETS_TO_BUILD**:STRING
+  Control which targets are enabled. For example you may only need to enable
+  your native target with, for example, ``-DLLVM_TARGETS_TO_BUILD=X86``.
+
+**LLVM_USE_LINKER**:STRING
+  Override the system's default linker. For instance use ``lld`` with
+  ``-DLLVM_USE_LINKER=lld``.
+
 Rarely-used CMake variables
 ---------------------------
 
 Here are some of the CMake variables that are rarely used, along with a brief
-explanation and LLVM-specific notes.  For full documentation, consult the CMake
+explanation and LLVM-related notes.  For full documentation, consult the CMake
 manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 
 **CMAKE_CXX_STANDARD**:STRING
   Sets the C++ standard to conform to when building LLVM.  Possible values are
   14, 17, 20.  LLVM Requires C++ 14 or higher.  This defaults to 14.
 
-.. _LLVM-specific variables:
+.. _LLVM-related variables:
 
-LLVM-specific variables
+LLVM-related variables
 -----------------------
+
+These variables provide fine control over the build of LLVM and
+enabled sub-projects. Nearly all of these variable names begin with
+``LLVM_``.
 
 **BUILD_SHARED_LIBS**:BOOL
   Flag indicating if each LLVM component (e.g. Support) is built as a shared
@@ -740,7 +781,7 @@ several examples including toolchain files. Go directly to the
 ``Information how to set up various cross compiling toolchains`` section
 for a quick solution.
 
-Also see the `LLVM-specific variables`_ section for variables used when
+Also see the `LLVM-related variables`_ section for variables used when
 cross-compiling.
 
 Embedding LLVM in your project

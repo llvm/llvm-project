@@ -1,17 +1,16 @@
 include "llvm/Option/OptParser.td"
 
 class F<string letter, string help> : Flag<["-"], letter>, HelpText<help>;
-class FF<string name, string help> : Flag<["--", "-"], name>, HelpText<help>;
+class FF<string name, string help> : Flag<["--"], name>, HelpText<help>;
 
 multiclass BB<string name, string help1, string help2> {
-  def NAME: Flag<["--", "-"], name>, HelpText<help1>;
-  def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
 }
 
 multiclass Eq<string name, string help> {
-  def NAME #_EQ : Joined<["--", "-"], name #"=">,
-                  HelpText<help>;
-  def : Separate<["--", "-"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
+  def NAME #_EQ : Joined<["--"], name #"=">, HelpText<help>;
+  def : Separate<["--"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
 }
 
 def debug_syms : FF<"debug-syms", "Show all symbols, even debugger only">;
@@ -42,7 +41,8 @@ def grp_mach_o : OptionGroup<"kind">, HelpText<"llvm-nm Mach-O Specific Options"
 
 def add_dyldinfo : FF<"add-dyldinfo", "Add symbols from the dyldinfo not already in the symbol table">, Group<grp_mach_o>;
 def add_inlinedinfo : FF<"add-inlinedinfo", "Add symbols from the inlined libraries, TBD only">, Group<grp_mach_o>;
-defm arch : Eq<"arch", "architecture(s) from a Mach-O file to dump">, Group<grp_mach_o>;
+def arch_EQ : Joined<["--"], "arch=">, HelpText<"architecture(s) from a Mach-O file to dump">, Group<grp_mach_o>;
+def : Separate<["--", "-"], "arch">, Alias<arch_EQ>;
 def dyldinfo_only : FF<"dyldinfo-only", "Show only symbols from the dyldinfo">, Group<grp_mach_o>;
 def no_dyldinfo : FF<"no-dyldinfo", "Don't add any symbols from the dyldinfo">, Group<grp_mach_o>;
 def s : F<"s", "Dump only symbols from this segment and section name">, Group<grp_mach_o>;

@@ -11761,17 +11761,42 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // and End is the RHS.
   const SCEV *BECountIfBackedgeTaken =
     computeBECount(getMinusSCEV(End, Start), Stride);
-  // If the loop entry is guarded by the result of the backedge test of the
-  // first loop iteration, then we know the backedge will be taken at least
-  // once and so the backedge taken count is as above. If not then we use the
-  // expression (max(End,Start)-Start)/Stride to describe the backedge count,
-  // as if the backedge is taken at least once max(End,Start) is End and so the
-  // result is as above, and if not max(End,Start) is Start so we get a backedge
-  // count of zero.
-  const SCEV *BECount;
-  if (isLoopEntryGuardedByCond(L, Cond, getMinusSCEV(OrigStart, Stride), OrigRHS))
-    BECount = BECountIfBackedgeTaken;
-  else {
+  
+  // We use the expression (max(End,Start)-Start)/Stride to describe the
+  // backedge count, as if the backedge is taken at least once max(End,Start)
+  // is End and so the result is as above, and if not max(End,Start) is Start
+  // so we get a backedge count of zero.
+  const SCEV *BECount = nullptr;
+  auto *StartMinusStride = getMinusSCEV(OrigStart, Stride);
+  // Can we prove (max(RHS,Start) > Start - Stride?
+  if (isLoopEntryGuardedByCond(L, Cond, StartMinusStride, Start) &&
+      isLoopEntryGuardedByCond(L, Cond, StartMinusStride, RHS)) {
+    // In this case, we can use a refined formula for computing backedge taken
+    // count.  The general formula remains:
+    //   "End-Start /uceiling Stride" where "End = max(RHS,Start)"
+    // We want to use the alternate formula:
+    //   "((End - 1) - (Start - Stride)) /u Stride"
+    // Let's do a quick case analysis to show these are equivalent under
+    // our precondition that max(RHS,Start) > Start - Stride.
+    // * For RHS <= Start, the backedge-taken count must be zero.
+    //   "((End - 1) - (Start - Stride)) /u Stride" reduces to
+    //   "((Start - 1) - (Start - Stride)) /u Stride" which simplies to
+    //   "Stride - 1 /u Stride" which is indeed zero for all non-zero values
+    //     of Stride.  For 0 stride, we've use umin(1,Stride) above, reducing
+    //     this to the stride of 1 case.
+    // * For RHS >= Start, the backedge count must be "RHS-Start /uceil Stride".
+    //   "((End - 1) - (Start - Stride)) /u Stride" reduces to
+    //   "((RHS - 1) - (Start - Stride)) /u Stride" reassociates to
+    //   "((RHS - (Start - Stride) - 1) /u Stride".
+    //   Our preconditions trivially imply no overflow in that form.
+    const SCEV *MinusOne = getMinusOne(Stride->getType());
+    const SCEV *Numerator =
+        getMinusSCEV(getAddExpr(RHS, MinusOne), StartMinusStride);
+    if (!isa<SCEVCouldNotCompute>(Numerator)) {
+      BECount = getUDivExpr(Numerator, Stride);
+    }
+  }
+  if (!BECount) {
     auto canProveRHSGreaterThanEqualStart = [&]() {
       auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
       if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart))

@@ -237,10 +237,16 @@ void SetPrintfAndReportCallback(void (*callback)(const char *));
 // Lock sanitizer error reporting and protects against nested errors.
 class ScopedErrorReportLock {
  public:
-  ScopedErrorReportLock();
-  ~ScopedErrorReportLock();
+  ScopedErrorReportLock() ACQUIRE(mutex_) { Lock(); }
+  ~ScopedErrorReportLock() RELEASE(mutex_) { Unlock(); }
 
-  static void CheckLocked();
+  static void Lock() ACQUIRE(mutex_);
+  static void Unlock() RELEASE(mutex_);
+  static void CheckLocked() CHECK_LOCKED(mutex_);
+
+ private:
+  static atomic_uintptr_t reporting_thread_;
+  static StaticSpinMutex mutex_;
 };
 
 extern uptr stoptheworld_tracer_pid;

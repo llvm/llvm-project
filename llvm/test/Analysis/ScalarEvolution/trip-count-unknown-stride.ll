@@ -5,7 +5,7 @@
 ; that this is not an infinite loop with side effects.
 
 ; CHECK-LABEL: Determining loop execution counts for: @foo1
-; CHECK: backedge-taken count is ((-1 + %n) /u %s)
+; CHECK: backedge-taken count is ((-1 + (%n smax %s)) /u %s)
 
 ; We should have a conservative estimate for the max backedge taken count for
 ; loops with unknown stride.

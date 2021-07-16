@@ -146,8 +146,8 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  LLT getStackValueStoreType(const DataLayout &,
-                             const CCValAssign &VA) const override {
+  LLT getStackValueStoreType(const DataLayout &, const CCValAssign &VA,
+                             ISD::ArgFlagsTy Flags) const override {
     return getStackValueStoreTypeHack(VA);
   }
 
@@ -262,8 +262,8 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   /// we invert the interpretation of ValVT and LocVT in certain cases. This is
   /// for compatability with the DAG call lowering implementation, which we're
   /// currently building on top of.
-  LLT getStackValueStoreType(const DataLayout &,
-                             const CCValAssign &VA) const override {
+  LLT getStackValueStoreType(const DataLayout &, const CCValAssign &VA,
+                             ISD::ArgFlagsTy Flags) const override {
     return getStackValueStoreTypeHack(VA);
   }
 

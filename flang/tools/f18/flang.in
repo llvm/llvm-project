@@ -324,7 +324,13 @@ main() {
   local -r wd=$(cd "$(dirname "$0")/.." && pwd)
 
   # STEP 1: Unparse
-  local -r unparsed_file="flang_unparsed_source_file"
+  # Base-name for the unparsed files. These are just temporary files that are
+  # first generated and then deleted by this script.
+  # NOTE: We need to make sure that the base-name is unique to every
+  # invocation. Otherwise we can't use this script in parallel.
+  local -r unique_id=$(uuidgen | cut -b25-36)
+  local -r unparsed_file_base="flang_unparsed_file_$unique_id"
+
   flang_options+=("-module-suffix")
   flang_options+=(".f18.mod")
   flang_options+=("-fdebug-unparse")
@@ -333,7 +339,7 @@ main() {
   [[ ! -z ${MODULE_DIR} ]] && flang_options+=("-module-dir ${MODULE_DIR}")
   [[ ! -z ${INTRINSICS_MOD_DIR} ]] && flang_options+=("-intrinsics-module-directory ${INTRINSICS_MOD_DIR}")
   for idx in "${!fortran_source_files[@]}"; do
-    if ! "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "${fortran_source_files[$idx]}" -o "${unparsed_file}_${idx}.f90"
+    if ! "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "${fortran_source_files[$idx]}" -o "${unparsed_file_base}_${idx}.f90"
     then status=$?
          echo flang: in "$PWD", @FLANG_DEFAULT_DRIVER@ failed with exit status $status: "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "$@" >&2
          exit $status
@@ -348,7 +354,7 @@ main() {
     # below. As a result, we cannot rely on the compiler-generated output name.
     out_obj_file=$(get_relocatable_name "${fortran_source_files[$idx]}")
 
-    if ! $ext_fc "-c" "${ext_fc_options[@]}" "${unparsed_file}_${idx}.f90" "-o" "${out_obj_file}"
+    if ! $ext_fc "-c" "${ext_fc_options[@]}" "${unparsed_file_base}_${idx}.f90" "-o" "${out_obj_file}"
     then status=$?
       echo flang: in "$PWD", "$ext_fc" failed with exit status $status: "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
          exit $status
@@ -358,7 +364,7 @@ main() {
 
   # Delete the unparsed files
   for idx in "${!fortran_source_files[@]}"; do
-    rm "${unparsed_file}_${idx}.f90"
+    rm "${unparsed_file_base}_${idx}.f90"
   done
 
   # STEP 3: Compile Other Source Files

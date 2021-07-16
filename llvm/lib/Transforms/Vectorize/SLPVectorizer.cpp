@@ -3885,16 +3885,14 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       Cost -= TTI->getScalarizationOverhead(SrcVecTy, DemandedElts,
                                             /*Insert*/ true, /*Extract*/ false);
 
-      if (IsIdentity && NumElts != NumScalars && Offset % NumScalars != 0) {
-        // FIXME: Replace with SK_InsertSubvector once it is properly supported.
-        unsigned Sz = PowerOf2Ceil(Offset + NumScalars);
+      if (IsIdentity && NumElts != NumScalars && Offset % NumScalars != 0)
         Cost += TTI->getShuffleCost(
-            TargetTransformInfo::SK_PermuteSingleSrc,
-            FixedVectorType::get(SrcVecTy->getElementType(), Sz));
-      } else if (!IsIdentity) {
+            TargetTransformInfo::SK_InsertSubvector, SrcVecTy, /*Mask*/ None,
+            Offset,
+            FixedVectorType::get(SrcVecTy->getElementType(), NumScalars));
+      else if (!IsIdentity)
         Cost += TTI->getShuffleCost(TTI::SK_PermuteSingleSrc, SrcVecTy,
                                     ShuffleMask);
-      }
 
       return Cost;
     }
@@ -7826,6 +7824,14 @@ public:
       if (V.isTreeTinyAndNotFullyVectorizable())
         break;
       if (V.isLoadCombineReductionCandidate(RdxKind))
+        break;
+
+      // For a poison-safe boolean logic reduction, do not replace select
+      // instructions with logic ops. All reduced values will be frozen (see
+      // below) to prevent leaking poison.
+      if (isa<SelectInst>(ReductionRoot) &&
+          isBoolLogicOp(cast<Instruction>(ReductionRoot)) &&
+          NumReducedVals != ReduxWidth)
         break;
 
       V.computeMinimumValueSizes();

@@ -12933,7 +12933,7 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
       Ext1.getOpcode() != ISD::SIGN_EXTEND)
     return SDValue();
   EVT VecVT = Ext0.getOperand(0).getValueType();
-  if (VecVT != MVT::v4i32 && VecVT != MVT::v8i16 && VecVT != MVT::v16i8)
+  if (!VecVT.isPow2VectorType() || VecVT.getVectorNumElements() == 1)
     return SDValue();
   if (Ext1.getOperand(0).getValueType() != VecVT ||
       VecVT.getScalarType() != ScalarType ||
@@ -12941,9 +12941,42 @@ static SDValue PerformVQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDLoc DL(Mul);
-  SDValue VQDMULH = DAG.getNode(ARMISD::VQDMULH, DL, VecVT, Ext0.getOperand(0),
-                                Ext1.getOperand(0));
-  return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, VQDMULH);
+  unsigned LegalLanes = 128 / (ShftAmt + 1);
+  EVT LegalVecVT = MVT::getVectorVT(ScalarType, LegalLanes);
+  // For types smaller than legal vectors extend to be legal and only use needed
+  // lanes.
+  if (VecVT.getSizeInBits() < 128) {
+    EVT ExtVecVT =
+        MVT::getVectorVT(MVT::getIntegerVT(128 / VecVT.getVectorNumElements()),
+                         VecVT.getVectorNumElements());
+    SDValue Inp0 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, ExtVecVT, Ext0.getOperand(0));
+    SDValue Inp1 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, ExtVecVT, Ext1.getOperand(0));
+    Inp0 = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, LegalVecVT, Inp0);
+    Inp1 = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, LegalVecVT, Inp1);
+    SDValue VQDMULH = DAG.getNode(ARMISD::VQDMULH, DL, LegalVecVT, Inp0, Inp1);
+    SDValue Trunc = DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, ExtVecVT, VQDMULH);
+    Trunc = DAG.getNode(ISD::TRUNCATE, DL, VecVT, Trunc);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Trunc);
+  }
+
+  // For larger types, split into legal sized chunks.
+  assert(VecVT.getSizeInBits() % 128 == 0 && "Expected a power2 type");
+  unsigned NumParts = VecVT.getSizeInBits() / 128;
+  SmallVector<SDValue> Parts;
+  for (unsigned I = 0; I < NumParts; ++I) {
+    SDValue Inp0 =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LegalVecVT, Ext0.getOperand(0),
+                    DAG.getVectorIdxConstant(I * LegalLanes, DL));
+    SDValue Inp1 =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LegalVecVT, Ext1.getOperand(0),
+                    DAG.getVectorIdxConstant(I * LegalLanes, DL));
+    SDValue VQDMULH = DAG.getNode(ARMISD::VQDMULH, DL, LegalVecVT, Inp0, Inp1);
+    Parts.push_back(VQDMULH);
+  }
+  return DAG.getNode(ISD::SIGN_EXTEND, DL, VT,
+                     DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Parts));
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,

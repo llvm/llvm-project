@@ -1,3 +1,4 @@
+// REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -O2 -triple=powerpc-unknown-aix -emit-llvm %s -o - | \
 // RUN: FileCheck %s
 // RUN: %clang_cc1 -O2 -triple=powerpc64-unknown-aix -emit-llvm %s -o - | \

@@ -1110,7 +1110,8 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
       EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
-  addPass(&AMDGPUPerfHintAnalysisID);
+  if (TM->getOptLevel() > CodeGenOpt::Less)
+    addPass(&AMDGPUPerfHintAnalysisID);
 
   TargetPassConfig::addCodeGenPrepare();
 
@@ -1125,7 +1126,8 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
 }
 
 bool AMDGPUPassConfig::addPreISel() {
-  addPass(createFlattenCFGPass());
+  if (TM->getOptLevel() > CodeGenOpt::None)
+    addPass(createFlattenCFGPass());
   return false;
 }
 
@@ -1198,14 +1200,13 @@ bool GCNPassConfig::addPreISel() {
   if (TM->getOptLevel() > CodeGenOpt::None)
     addPass(createAMDGPULateCodeGenPreparePass());
 
-  if (EnableAtomicOptimizations) {
+  if (isPassEnabled(EnableAtomicOptimizations, CodeGenOpt::Less)) {
     addPass(createAMDGPUAtomicOptimizerPass());
   }
 
-  // FIXME: We need to run a pass to propagate the attributes when calls are
-  // supported.
+  if (TM->getOptLevel() > CodeGenOpt::None)
+    addPass(createSinkingPass());
 
-  addPass(createSinkingPass());
   addPass(createAMDGPUConditionalDiscardPass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
@@ -1463,7 +1464,10 @@ void GCNPassConfig::addPreSched2() {
 void GCNPassConfig::addPreEmitPass() {
   addPass(createSIMemoryLegalizerPass());
   addPass(createSIInsertWaitcntsPass());
-  addPass(createSIShrinkInstructionsPass());
+
+  if (TM->getOptLevel() > CodeGenOpt::None)
+    addPass(createSIShrinkInstructionsPass());
+
   addPass(createSIModeRegisterPass());
   addPass(createSIFixScratchSizePass());
 

@@ -192,9 +192,11 @@ void __llvm_profile_initialize(void) {
   lprofWrite("LLVM Profile: {{{dumpfile:%s:%s}}}\n", ProfileSinkName, VmoName);
 
   /* Update the profile fields based on the current mapping. */
-  __llvm_profile_counter_bias = (intptr_t)Mapping -
-                                (uintptr_t)__llvm_profile_begin_counters() +
-                                CountersOffset;
+  __llvm_profile_counter_bias =
+      (intptr_t)Mapping - (uintptr_t)CountersBegin + CountersOffset;
+
+  /* Return the memory allocated for counters to OS. */
+  lprofReleaseMemoryPagesToOS((uintptr_t)CountersBegin, (uintptr_t)CountersEnd);
 }
 
 #endif
