@@ -264,11 +264,12 @@ preprocess() {
 }
 
 # === get_relocatable_name ======================================================
-#
-# Generate a name for the output object file based on the source file, e.g.
+# This method generates the name of the output file for the compilation phase
+# (triggered with `-c`). If the user of this script is only interested in
+# compilation (`flang -c`), use $OUTPUT_FILE provided that it was defined.
+# Otherwise, use the usual heuristics:
 #   * file.f --> file.o
 #   * file.c --> file.o
-# If OUTPUT_FILE is defined, use that instead.
 #
 # INPUTS:
 #   $1 - input source file for which to generate the output name
@@ -276,7 +277,7 @@ preprocess() {
 get_relocatable_name() {
   local -r src_file=$1
 
-  if [[ ! -z ${OUTPUT_FILE:+x} ]]; then
+  if [[ $COMPILE_ONLY == "True" ]] && [[ ! -z ${OUTPUT_FILE:+x} ]]; then
     out_file="$OUTPUT_FILE"
   else
     current_ext=${src_file##*.}
@@ -339,10 +340,13 @@ main() {
   [[ ! -z ${MODULE_DIR} ]] && flang_options+=("-module-dir ${MODULE_DIR}")
   [[ ! -z ${INTRINSICS_MOD_DIR} ]] && flang_options+=("-intrinsics-module-directory ${INTRINSICS_MOD_DIR}")
   for idx in "${!fortran_source_files[@]}"; do
-    if ! "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "${fortran_source_files[$idx]}" -o "${unparsed_file_base}_${idx}.f90"
-    then status=$?
-         echo flang: in "$PWD", @FLANG_DEFAULT_DRIVER@ failed with exit status $status: "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "$@" >&2
-         exit $status
+    set +e
+    "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "${fortran_source_files[$idx]}" -o "${unparsed_file_base}_${idx}.f90"
+    ret_status=$?
+    set -e
+    if [[ $ret_status != 0 ]]; then
+         echo flang: in "$PWD", @FLANG_DEFAULT_DRIVER@ failed with exit status "$ret_status": "$wd/bin/@FLANG_DEFAULT_DRIVER@" "${flang_options[@]}" "$@" >&2
+         exit "$ret_status"
     fi
   done
 
@@ -354,10 +358,13 @@ main() {
     # below. As a result, we cannot rely on the compiler-generated output name.
     out_obj_file=$(get_relocatable_name "${fortran_source_files[$idx]}")
 
-    if ! $ext_fc "-c" "${ext_fc_options[@]}" "${unparsed_file_base}_${idx}.f90" "-o" "${out_obj_file}"
-    then status=$?
-      echo flang: in "$PWD", "$ext_fc" failed with exit status $status: "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
-         exit $status
+    set +e
+    $ext_fc "-c" "${ext_fc_options[@]}" "${unparsed_file_base}_${idx}.f90" "-o" "${out_obj_file}"
+    ret_status=$?
+    set -e
+    if [[ $ret_status != 0 ]]; then
+      echo flang: in "$PWD", "$ext_fc" failed with exit status "$ret_status": "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
+         exit "$ret_status"
     fi
     object_files+=(${out_obj_file})
   done
@@ -374,10 +381,13 @@ main() {
     # $ext_fc_options). Hence we need to use `get_relocatable_name`.
     out_obj_file=$(get_relocatable_name "${other_source_files[$idx]}")
 
-    if ! $ext_fc "-c" "${ext_fc_options[@]}" "${other_source_files[${idx}]}" "-o" "${out_obj_file}"
-    then status=$?
-      echo flang: in "$PWD", "$ext_fc" failed with exit status $status: "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
-         exit $status
+    set +e
+    $ext_fc "-c" "${ext_fc_options[@]}" "${other_source_files[${idx}]}" "-o" "${out_obj_file}"
+    ret_status=$?
+    set -e
+    if [[ $ret_status != 0 ]]; then
+      echo flang: in "$PWD", "$ext_fc" failed with exit status "$ret_status": "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
+         exit "$ret_status"
     fi
     object_files+=(${out_obj_file})
   done
@@ -395,10 +405,13 @@ main() {
       output_definition=""
     fi
 
-    if ! $ext_fc "${ext_fc_options[@]}" "${object_files[@]}" "${lib_files[@]}" ${output_definition:+$output_definition}
-    then status=$?
-         echo flang: in "$PWD", "$ext_fc" failed with exit status $status: "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
-         exit $status
+    set +e
+    $ext_fc "${ext_fc_options[@]}" "${object_files[@]}" "${lib_files[@]}" ${output_definition:+$output_definition}
+    ret_status=$?
+    set -e
+    if [[ $ret_status != 0 ]]; then
+         echo flang: in "$PWD", "$ext_fc" failed with exit status "$ret_status": "$ext_fc" "${ext_fc_options[@]}" "$@" >&2
+         exit "$ret_status"
     fi
   fi
 

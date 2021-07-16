@@ -12,7 +12,7 @@
 
 // bool <copyable-box>::__has_value() const
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 
 #include <cassert>
 #include <type_traits>

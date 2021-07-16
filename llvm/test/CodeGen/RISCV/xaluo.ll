@@ -420,9 +420,8 @@ define zeroext i1 @uaddo.i32.constant(i32 %v1, i32* %res) {
 ;
 ; RV64ZBA-LABEL: uaddo.i32.constant:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    addi a2, zero, 1
-; RV64ZBA-NEXT:    slli a2, a2, 32
-; RV64ZBA-NEXT:    addi a3, a2, -2
+; RV64ZBA-NEXT:    addi a2, zero, -2
+; RV64ZBA-NEXT:    zext.w a3, a2
 ; RV64ZBA-NEXT:    addw a2, a0, a3
 ; RV64ZBA-NEXT:    sext.w a4, a0
 ; RV64ZBA-NEXT:    sltu a2, a2, a4
@@ -758,9 +757,8 @@ define zeroext i1 @usubo.i32.constant.lhs(i32 %v1, i32* %res) {
 ;
 ; RV64ZBA-LABEL: usubo.i32.constant.lhs:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    addi a2, zero, 1
-; RV64ZBA-NEXT:    slli a2, a2, 32
-; RV64ZBA-NEXT:    addi a3, a2, -2
+; RV64ZBA-NEXT:    addi a2, zero, -2
+; RV64ZBA-NEXT:    zext.w a3, a2
 ; RV64ZBA-NEXT:    subw a2, a3, a0
 ; RV64ZBA-NEXT:    addi a2, a2, 1
 ; RV64ZBA-NEXT:    seqz a2, a2

@@ -69,6 +69,25 @@ class MUTEX SpinMutex : public StaticSpinMutex {
   void operator=(const SpinMutex &) = delete;
 };
 
+// Semaphore provides an OS-dependent way to park/unpark threads.
+// The last thread returned from Wait can destroy the object
+// (destruction-safety).
+class Semaphore {
+ public:
+  constexpr Semaphore() {}
+  Semaphore(const Semaphore &) = delete;
+  void operator=(const Semaphore &) = delete;
+
+  void Wait();
+  void Post(u32 count = 1);
+
+ private:
+  atomic_uint32_t state_ = {0};
+};
+
+void FutexWait(atomic_uint32_t *p, u32 cmp);
+void FutexWake(atomic_uint32_t *p, u32 count);
+
 class MUTEX BlockingMutex {
  public:
   explicit constexpr BlockingMutex(LinkerInitialized)

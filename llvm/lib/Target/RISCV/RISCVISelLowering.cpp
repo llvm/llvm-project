@@ -889,7 +889,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_masked_atomicrmw_min_i32:
   case Intrinsic::riscv_masked_atomicrmw_umax_i32:
   case Intrinsic::riscv_masked_atomicrmw_umin_i32:
-  case Intrinsic::riscv_masked_cmpxchg_i32:
+  case Intrinsic::riscv_masked_cmpxchg_i32: {
     PointerType *PtrTy = cast<PointerType>(I.getArgOperand(0)->getType());
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(PtrTy->getElementType());
@@ -899,6 +899,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
     return true;
+  }
   }
 }
 
@@ -6238,9 +6239,9 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // Neither constant will fit into an immediate, so find materialisation
       // costs.
       int C1Cost = RISCVMatInt::getIntMatCost(C1Int, Ty.getSizeInBits(),
-                                              Subtarget.is64Bit());
+                                              Subtarget.getFeatureBits());
       int ShiftedC1Cost = RISCVMatInt::getIntMatCost(
-          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.is64Bit());
+          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.getFeatureBits());
 
       // Materialising `c1` is cheaper than materialising `c1 << c2`, so the
       // combine should be prevented.
