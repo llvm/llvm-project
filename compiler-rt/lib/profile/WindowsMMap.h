@@ -37,6 +37,14 @@
 #define MS_SYNC         0x0010  /* msync synchronously */
 
 /*
+ * madvise() flags
+ */
+
+#define MADV_NORMAL     0   /* no special treatment */
+#define MADV_WILLNEED   3   /* expect access in the near future */
+#define MADV_DONTNEED   4   /* do not expect access in the near future */
+
+/*
  * flock() operations
  */
 #define   LOCK_SH   1    /* shared lock */
@@ -58,6 +66,8 @@ void *mmap(void *start, size_t length, int prot, int flags, int fd,
 void munmap(void *addr, size_t length);
 
 int msync(void *addr, size_t length, int flags);
+
+int madvise(void *addr, size_t length, int advice);
 
 int flock(int fd, int operation);
 
