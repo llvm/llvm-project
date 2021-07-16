@@ -197,6 +197,8 @@ def mark_xfail(selected_tests, opts):
         test_full_name = t.getFullName()
         if test_file in opts.xfail or test_full_name in opts.xfail:
             t.xfails += '*'
+        if test_file in opts.xfail_not or test_full_name in opts.xfail_not:
+            t.xfail_not = True
 
 def mark_excluded(discovered_tests, selected_tests):
     excluded_tests = set(discovered_tests) - set(selected_tests)
