@@ -11,6 +11,9 @@
 // - Deduplication of runtime calls, e.g., omp_get_thread_num.
 // - Replacing globalized device memory with stack memory.
 // - Replacing globalized device memory with shared memory.
+// - Parallel region merging.
+// - Transforming generic-mode device kernels to SPMD mode.
+// - Specializing the state machine for generic-mode device kernels.
 //
 //===----------------------------------------------------------------------===//
 
