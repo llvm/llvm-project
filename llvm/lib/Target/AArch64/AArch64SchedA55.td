@@ -90,6 +90,7 @@ def : WriteRes<WriteLDHi, [CortexA55UnitLd]> { let Latency = 5; }
 def : WriteRes<WriteVLD, [CortexA55UnitLd]> { let Latency = 6;
                                            let ResourceCycles = [3]; }
 def CortexA55WriteVLD1 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 4; }
+def CortexA55WriteVLD1SI : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 4; let SingleIssue = 1; }
 def CortexA55WriteVLD2 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 5;
                                                   let ResourceCycles = [2]; }
 def CortexA55WriteVLD3 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 6;
@@ -104,6 +105,10 @@ def CortexA55WriteVLD7 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 10;
                                                   let ResourceCycles = [7]; }
 def CortexA55WriteVLD8 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 11;
                                                   let ResourceCycles = [8]; }
+
+def CortexA55WriteLDP1 : SchedWriteRes<[]> { let Latency = 4; }
+def CortexA55WriteLDP2 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 5; }
+def CortexA55WriteLDP4 : SchedWriteRes<[CortexA55UnitLd, CortexA55UnitLd, CortexA55UnitLd, CortexA55UnitLd, CortexA55UnitLd]> { let Latency = 6; }
 
 // Pre/Post Indexing - Performed as part of address generation
 def : WriteRes<WriteAdr, []> { let Latency = 0; }
@@ -227,7 +232,10 @@ def : ReadAdvance<ReadID, 1, [WriteImm,WriteI,
 //---
 // Miscellaneous
 //---
-def : InstRW<[CortexA55WriteVLD2,CortexA55WriteVLD1], (instregex "LDP.*")>;
+def : InstRW<[CortexA55WriteVLD1SI,CortexA55WriteLDP1], (instregex "LDPS?W")>;
+def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP1], (instregex "LDPS[^W]")>;
+def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP2], (instregex "LDP(X|D)")>;
+def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP4], (instregex "LDPQ")>;
 def : InstRW<[WriteI], (instrs COPY)>;
 //---
 // Vector Loads - 64-bit per cycle
