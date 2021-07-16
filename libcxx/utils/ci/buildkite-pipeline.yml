@@ -132,7 +132,7 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "GCC 11"
+  - label: "GCC 11 / C++latest"
     command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
       - "**/test-results.xml"
@@ -148,6 +148,18 @@ steps:
   # All other supported configurations of libc++.
   #
   - wait
+
+  - label: "GCC 11 / C++11"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc-cxx11"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "Clang 11"
     command: "libcxx/utils/ci/run-buildbot generic-clang-11"

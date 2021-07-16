@@ -278,6 +278,13 @@ generic-gcc)
     generate-cmake
     check-cxx-cxxabi
 ;;
+generic-gcc-cxx11)
+    export CC=gcc-11
+    export CXX=g++-11
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
+    check-cxx-cxxabi
+;;
 generic-asan)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake"
