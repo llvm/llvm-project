@@ -99,6 +99,38 @@ define i32* @test2b(i32* %p, i64 %x, i64 %y) {
   ret i32* %select
 }
 
+; PR51069
+define i32* @test2c(i32* %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test2c(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i64 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL_IDX:%.*]] = select i1 [[ICMP]], i64 0, i64 6
+; CHECK-NEXT:    [[SEL:%.*]] = getelementptr i32, i32* [[GEP1]], i64 [[SEL_IDX]]
+; CHECK-NEXT:    ret i32* [[SEL]]
+;
+  %gep1 = getelementptr inbounds i32, i32* %p, i64 %x
+  %gep2 = getelementptr inbounds i32, i32* %gep1, i64 6
+  %icmp = icmp ugt i64 %x, %y
+  %sel = select i1 %icmp, i32* %gep1, i32* %gep2
+  ret i32* %sel
+}
+
+; PR51069
+define i32* @test2d(i32* %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test2d(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i64 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL_IDX:%.*]] = select i1 [[ICMP]], i64 6, i64 0
+; CHECK-NEXT:    [[SEL:%.*]] = getelementptr i32, i32* [[GEP1]], i64 [[SEL_IDX]]
+; CHECK-NEXT:    ret i32* [[SEL]]
+;
+  %gep1 = getelementptr inbounds i32, i32* %p, i64 %x
+  %gep2 = getelementptr inbounds i32, i32* %gep1, i64 6
+  %icmp = icmp ugt i64 %x, %y
+  %sel = select i1 %icmp, i32* %gep2, i32* %gep1
+  ret i32* %sel
+}
+
 ; Three (or more) operand GEPs are currently expected to not be optimised,
 ; though they could be in principle.
 
