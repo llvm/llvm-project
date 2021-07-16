@@ -146,8 +146,12 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  LLT getStackValueStoreType(const DataLayout &, const CCValAssign &VA,
+  LLT getStackValueStoreType(const DataLayout &DL, const CCValAssign &VA,
                              ISD::ArgFlagsTy Flags) const override {
+    // For pointers, we just need to fixup the integer types reported in the
+    // CCValAssign.
+    if (Flags.isPointer())
+      return CallLowering::ValueHandler::getStackValueStoreType(DL, VA, Flags);
     return getStackValueStoreTypeHack(VA);
   }
 
@@ -167,6 +171,12 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     // Fixup the types for the DAG compatibility hack.
     if (VA.getValVT() == MVT::i8 || VA.getValVT() == MVT::i16)
       std::swap(ValTy, LocTy);
+    else {
+      // The calling code knows if this is a pointer or not, we're only touching
+      // the LocTy for the i8/i16 hack.
+      assert(LocTy.getSizeInBits() == MemTy.getSizeInBits());
+      LocTy = MemTy;
+    }
 
     auto MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, LocTy,
@@ -252,8 +262,10 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   /// we invert the interpretation of ValVT and LocVT in certain cases. This is
   /// for compatability with the DAG call lowering implementation, which we're
   /// currently building on top of.
-  LLT getStackValueStoreType(const DataLayout &, const CCValAssign &VA,
+  LLT getStackValueStoreType(const DataLayout &DL, const CCValAssign &VA,
                              ISD::ArgFlagsTy Flags) const override {
+    if (Flags.isPointer())
+      return CallLowering::ValueHandler::getStackValueStoreType(DL, VA, Flags);
     return getStackValueStoreTypeHack(VA);
   }
 
