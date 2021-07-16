@@ -623,8 +623,7 @@ int main(int argc, char **argv) {
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
 
-  HideUnrelatedOptions(
-      {&DwarfDumpCategory, &SectionCategory, &getColorCategory()});
+  HideUnrelatedOptions({&DwarfDumpCategory, &SectionCategory, &ColorCategory});
   cl::ParseCommandLineOptions(
       argc, argv,
       "pretty-print DWARF debug information in object files"

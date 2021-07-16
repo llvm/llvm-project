@@ -20,7 +20,7 @@ namespace cl {
 class OptionCategory;
 }
 
-extern cl::OptionCategory &getColorCategory();
+extern cl::OptionCategory ColorCategory;
 
 // Symbolic names for various syntax elements.
 enum class HighlightColor {
