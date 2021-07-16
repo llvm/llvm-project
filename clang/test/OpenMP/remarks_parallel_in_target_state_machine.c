@@ -8,16 +8,16 @@ void baz(void) __attribute__((assume("omp_no_openmp")));
 
 void bar(void) {
 #pragma omp parallel // #1                                                                                                                                                                                                                                                                                                                                           \
-                     // expected-remark@#1 {{Parallel region is used in unknown ways. Will not attempt to rewrite the state machine.}}
+                     // expected-remark@#1 {{Parallel region is used in unknown ways. Will not attempt to rewrite the state machine. [OMP101]}}
   {
   }
 }
 
 void foo(void) {
 #pragma omp target teams // #2
-                         // expected-remark@#2 {{Rewriting generic-mode kernel with a customized state machine.}}
+                         // expected-remark@#2 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
   {
-    baz();               // expected-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.}}
+    baz();               // expected-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
 #pragma omp parallel
     {
     }
@@ -40,4 +40,4 @@ void spmd(void) {
   }
 }
 
-// expected-remark@* {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
+// expected-remark@* {{OpenMP runtime call __kmpc_global_thread_num deduplicated. [OMP170]}}

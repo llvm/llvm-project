@@ -949,8 +949,7 @@ private:
         return OR << ".";
       };
 
-      emitRemark<OptimizationRemark>(MergableCIs.front(),
-                                     "OpenMPParallelRegionMerging", Remark);
+      emitRemark<OptimizationRemark>(MergableCIs.front(), "OMP150", Remark);
 
       Function *OriginalFn = BB->getParent();
       LLVM_DEBUG(dbgs() << TAG << "Merge " << MergableCIs.size()
@@ -1204,8 +1203,7 @@ private:
       auto Remark = [&](OptimizationRemark OR) {
         return OR << "Removing parallel region with no side-effects.";
       };
-      emitRemark<OptimizationRemark>(CI, "OpenMPParallelRegionDeletion",
-                                     Remark);
+      emitRemark<OptimizationRemark>(CI, "OMP160", Remark);
 
       CGUpdater.removeCallSite(*CI);
       CI->eraseFromParent();
@@ -1311,7 +1309,7 @@ private:
                  << "Found thread data sharing on the GPU. "
                  << "Expect degraded performance due to data globalization.";
         };
-        emitRemark<OptimizationRemarkMissed>(CI, "OpenMPGlobalization", Remark);
+        emitRemark<OptimizationRemarkMissed>(CI, "OMP112", Remark);
       }
 
       return false;
@@ -1593,9 +1591,9 @@ private:
                   << ore::NV("OpenMPOptRuntime", RFI.Name) << " deduplicated.";
       };
       if (CI->getDebugLoc())
-        emitRemark<OptimizationRemark>(CI, "OpenMPRuntimeDeduplicated", Remark);
+        emitRemark<OptimizationRemark>(CI, "OMP170", Remark);
       else
-        emitRemark<OptimizationRemark>(&F, "OpenMPRuntimeDeduplicated", Remark);
+        emitRemark<OptimizationRemark>(&F, "OMP170", Remark);
 
       CGUpdater.removeCallSite(*CI);
       CI->replaceAllUsesWith(ReplVal);
@@ -1702,7 +1700,14 @@ private:
     Function *F = I->getParent()->getParent();
     auto &ORE = OREGetter(F);
 
-    ORE.emit([&]() { return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, I)); });
+    if (RemarkName.startswith("OMP"))
+      ORE.emit([&]() {
+        return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, I))
+               << " [" << RemarkName << "]";
+      });
+    else
+      ORE.emit(
+          [&]() { return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, I)); });
   }
 
   /// Emit a remark on a function.
@@ -1711,7 +1716,14 @@ private:
                   RemarkCallBack &&RemarkCB) const {
     auto &ORE = OREGetter(F);
 
-    ORE.emit([&]() { return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, F)); });
+    if (RemarkName.startswith("OMP"))
+      ORE.emit([&]() {
+        return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, F))
+               << " [" << RemarkName << "]";
+      });
+    else
+      ORE.emit(
+          [&]() { return RemarkCB(RemarkKind(DEBUG_TYPE, RemarkName, F)); });
   }
 
   /// The underlying module.
@@ -1880,8 +1892,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
                    << (UnknownUse ? "unknown" : "unexpected")
                    << " ways. Will not attempt to rewrite the state machine.";
       };
-      emitRemark<OptimizationRemarkAnalysis>(F, "OpenMPParallelRegionInNonSPMD",
-                                             Remark);
+      emitRemark<OptimizationRemarkAnalysis>(F, "OMP101", Remark);
       continue;
     }
 
@@ -1893,8 +1904,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
         return ORA << "Parallel region is not called from a unique kernel. "
                       "Will not attempt to rewrite the state machine.";
       };
-      emitRemark<OptimizationRemarkAnalysis>(
-          F, "OpenMPParallelRegionInMultipleKernesl", Remark);
+      emitRemark<OptimizationRemarkAnalysis>(F, "OMP102", Remark);
       continue;
     }
 
@@ -2581,8 +2591,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
                   << ((AllocSize->getZExtValue() != 1) ? " bytes " : " byte ")
                   << "of shared memory.";
       };
-      A.emitRemark<OptimizationRemark>(CB, "OpenMPReplaceGlobalization",
-                                       Remark);
+      A.emitRemark<OptimizationRemark>(CB, "OMP111", Remark);
 
       SharedMem->setAlignment(MaybeAlign(32));
 
@@ -2823,8 +2832,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
           }
           return ORA << ".";
         };
-        A.emitRemark<OptimizationRemarkAnalysis>(
-            NonCompatibleI, "OpenMPKernelNonSPMDMode", Remark);
+        A.emitRemark<OptimizationRemarkAnalysis>(NonCompatibleI, "OMP121",
+                                                 Remark);
 
         LLVM_DEBUG(dbgs() << TAG << "SPMD-incompatible side-effect: "
                           << *NonCompatibleI << "\n");
@@ -2864,8 +2873,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     auto Remark = [&](OptimizationRemark OR) {
       return OR << "Transformed generic-mode kernel to SPMD-mode.";
     };
-    A.emitRemark<OptimizationRemark>(KernelInitCB, "OpenMPKernelSPMDMode",
-                                     Remark);
+    A.emitRemark<OptimizationRemark>(KernelInitCB, "OMP120", Remark);
     return true;
   };
 
@@ -2909,8 +2917,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       auto Remark = [&](OptimizationRemark OR) {
         return OR << "Removing unused state machine from generic-mode kernel.";
       };
-      A.emitRemark<OptimizationRemark>(
-          KernelInitCB, "OpenMPKernelWithoutStateMachine", Remark);
+      A.emitRemark<OptimizationRemark>(KernelInitCB, "OMP130", Remark);
 
       return ChangeStatus::CHANGED;
     }
@@ -2923,8 +2930,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         return OR << "Rewriting generic-mode kernel with a customized state "
                      "machine.";
       };
-      A.emitRemark<OptimizationRemark>(
-          KernelInitCB, "OpenMPKernelWithCustomizedStateMachine", Remark);
+      A.emitRemark<OptimizationRemark>(KernelInitCB, "OMP131", Remark);
     } else {
       ++NumOpenMPTargetRegionKernelsCustomStateMachineWithFallback;
 
@@ -2932,9 +2938,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         return OR << "Generic-mode kernel is executed with a customized state "
                      "machine that requires a fallback.";
       };
-      A.emitRemark<OptimizationRemarkAnalysis>(
-          KernelInitCB, "OpenMPKernelWithCustomizedStateMachineAndFallback",
-          Remark);
+      A.emitRemark<OptimizationRemarkAnalysis>(KernelInitCB, "OMP132", Remark);
 
       // Tell the user why we ended up with a fallback.
       for (CallBase *UnknownParallelRegionCB : ReachedUnknownParallelRegions) {
@@ -2945,9 +2949,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
                      << "`__attribute__((assume(\"omp_no_parallelism\")))` to "
                         "override.";
         };
-        A.emitRemark<OptimizationRemarkAnalysis>(
-            UnknownParallelRegionCB,
-            "OpenMPKernelWithCustomizedStateMachineAndFallback", Remark);
+        A.emitRemark<OptimizationRemarkAnalysis>(UnknownParallelRegionCB,
+                                                 "OMP133", Remark);
       }
     }
 
@@ -3741,7 +3744,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto EmitRemark = [&](Function &F) {
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     ORE.emit([&]() {
-      OptimizationRemarkAnalysis ORA(DEBUG_TYPE, "InternalizationFailure", &F);
+      OptimizationRemarkAnalysis ORA(DEBUG_TYPE, "OMP140", &F);
       return ORA << "Could not internalize function. "
                  << "Some optimizations may not be possible.";
     });
