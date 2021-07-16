@@ -157,7 +157,7 @@ TEST(SanitizerCommon, Semaphore) {
   SemaphoreData data = {&sem, false};
   pthread_t thread;
   PTHREAD_CREATE(&thread, nullptr, SemaphoreThread, &data);
-  sleep(1);
+  internal_sleep(1);
   CHECK(!data.done);
   sem.Post(1);
   PTHREAD_JOIN(thread, nullptr);
