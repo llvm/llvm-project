@@ -37,6 +37,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -126,6 +127,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
+
+static cl::opt<bool>
+    EmbedBitcodeFinal("embed-bitcode-final", cl::NotHidden,
+                             cl::desc("Embed final IR as bitcode after all optimisations and transformations have run."));
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -1999,6 +2004,18 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 }
 
 bool AsmPrinter::doFinalization(Module &M) {
+  // The `embed-bitcode` flag serialises the IR after only architecture
+  // agnostic optimisations have been run, but then proceeds to apply other
+  // optimisations and transformations afterwards. Sometimes this final version
+  // is precisely what we are interested in. The `embed-bitcode-final` flag
+  // waits until all optimisations/transformations have been run before
+  // embedding the IR.
+  if (EmbedBitcodeFinal)
+    llvm::embedBitcodeInModule(M, llvm::MemoryBufferRef(),
+                               /*EmbedBitcode*/ true,
+                               /*EmbedCmdline*/ false,
+                               /*CmdArgs*/ std::vector<uint8_t>());
+
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.
