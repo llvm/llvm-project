@@ -1636,9 +1636,8 @@ let TargetPrefix = "ppc" in {
       : GCCBuiltin<"__builtin_ppc_mtfsb1">,
         Intrinsic <[], [llvm_i32_ty],
                    [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
-  def int_ppc_mtfsf
-      : GCCBuiltin<"__builtin_ppc_mtfsf">,
-        Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
+  def int_ppc_mtfsf :
+        Intrinsic <[], [llvm_i32_ty, llvm_double_ty],
                    [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
   def int_ppc_mtfsfi
       : GCCBuiltin<"__builtin_ppc_mtfsfi">,
