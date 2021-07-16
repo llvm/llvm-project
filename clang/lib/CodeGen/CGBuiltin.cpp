@@ -15672,6 +15672,12 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   case PPC::BI__builtin_ppc_ldarx:
   case PPC::BI__builtin_ppc_lwarx:
     return emitPPCLoadReserveIntrinsic(*this, BuiltinID, E);
+  case PPC::BI__builtin_ppc_popcntb: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::ppc_popcntb, {ArgType, ArgType});
+    return Builder.CreateCall(F, Ops, "popcntb");
+  }
   }
 }
 
