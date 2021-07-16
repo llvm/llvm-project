@@ -7,7 +7,14 @@ device_id = os.environ.get('SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER')
 if not device_id:
   raise EnvironmentError("Specify SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER to select which simulator to use.")
 
-for e in ["ASAN_OPTIONS", "TSAN_OPTIONS", "UBSAN_OPTIONS", "APPLE_ASAN_INIT_FOR_DLOPEN", "ASAN_ACTIVATION_OPTIONS"]:
+for e in [
+  "ASAN_OPTIONS",
+  "TSAN_OPTIONS",
+  "UBSAN_OPTIONS",
+  "APPLE_ASAN_INIT_FOR_DLOPEN",
+  "ASAN_ACTIVATION_OPTIONS",
+  "MallocNanoZone",
+]:
   if e in os.environ:
     os.environ["SIMCTL_CHILD_" + e] = os.environ[e]
 
