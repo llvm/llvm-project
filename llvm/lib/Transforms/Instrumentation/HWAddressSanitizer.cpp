@@ -220,9 +220,7 @@ bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
 /// using tagged pointers.
 class HWAddressSanitizer {
 public:
-  explicit HWAddressSanitizer(Module &M, bool CompileKernel = false,
-                              bool Recover = false)
-      : M(M) {
+  HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover) : M(M) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel = ClEnableKhwasan.getNumOccurrences() > 0
                               ? ClEnableKhwasan
