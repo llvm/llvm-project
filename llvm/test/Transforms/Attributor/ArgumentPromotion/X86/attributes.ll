@@ -213,5 +213,5 @@ attributes #2 = { argmemonly nounwind }
 ; IS__CGSCC____: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind uwtable willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR3:[0-9]+]] = { willreturn writeonly }
-; IS__CGSCC____: attributes #[[ATTR4:[0-9]+]] = { nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR4:[0-9]+]] = { nosync nounwind willreturn }
 ;.
