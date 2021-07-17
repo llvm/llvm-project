@@ -715,6 +715,9 @@ public:
   /// Return the inalloca type for the specified function parameter.
   Type *getParamInAllocaType(unsigned ArgNo) const;
 
+  /// Return the elementtype type for the specified function parameter.
+  Type *getParamElementType(unsigned ArgNo) const;
+
   /// Get the stack alignment.
   MaybeAlign getStackAlignment(unsigned Index) const;
 
