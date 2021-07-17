@@ -667,7 +667,7 @@ TEST(ParsedASTTest, HeaderGuards) {
   EXPECT_FALSE(mainIsGuarded(TU.build()));
 
   TU.Code = guard(";");
-  EXPECT_FALSE(mainIsGuarded(TU.build())); // FIXME: true
+  EXPECT_TRUE(mainIsGuarded(TU.build()));
 
   TU.Code = once(";");
   EXPECT_TRUE(mainIsGuarded(TU.build()));
@@ -768,7 +768,7 @@ TEST(ParsedASTTest, HeaderGuardsSelfInclude) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
-  EXPECT_FALSE(mainIsGuarded(AST)); // FIXME: true
+  EXPECT_TRUE(mainIsGuarded(AST));
 
   // Guarded too late...
   TU.Code = R"cpp(
@@ -858,7 +858,7 @@ TEST(ParsedASTTest, HeaderGuardsImplIface) {
   TU.AdditionalFiles = {{"impl.h", Implementation}};
   auto AST = TU.build();
   EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
-  EXPECT_FALSE(mainIsGuarded(AST)); // FIXME: true
+  EXPECT_TRUE(mainIsGuarded(AST));
   // Slightly harder: the `#pragma once` is part of the preamble, and we
   // need to transfer it to the main file's HeaderFileInfo.
   TU.Code = once(Interface);
