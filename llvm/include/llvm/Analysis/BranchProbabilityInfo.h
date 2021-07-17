@@ -168,12 +168,6 @@ public:
   /// as having a relative probability >= 80%.
   bool isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const;
 
-  /// Retrieve the hot successor of a block if one exists.
-  ///
-  /// Given a basic block, look through its successors and if one exists for
-  /// which \see isEdgeHot would return true, return that successor block.
-  const BasicBlock *getHotSucc(const BasicBlock *BB) const;
-
   /// Print an edge's probability.
   ///
   /// Retrieves an edge's probability similarly to \see getEdgeProbability, but
