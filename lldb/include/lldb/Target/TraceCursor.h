@@ -180,6 +180,15 @@ public:
   ///     LLDB_INVALID_ADDRESS.
   virtual lldb::addr_t GetLoadAddress() = 0;
 
+  /// Get the timestamp counter associated with the current instruction.
+  /// Modern Intel, ARM and AMD processors support this counter. However, a
+  /// trace plugin might decide to use a different time unit instead of an
+  /// actual TSC.
+  ///
+  /// \return
+  ///     The timestamp or \b llvm::None if not available.
+  virtual llvm::Optional<uint64_t> GetTimestampCounter() = 0;
+
   /// \return
   ///     The \a lldb::TraceInstructionControlFlowType categories the
   ///     instruction the cursor is pointing at falls into. If the cursor points
