@@ -1212,18 +1212,19 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 //       CHECK: %[[dimVec:.*]] = splat %[[dtrunc]] : vector<17xi32>
 //       CHECK: %[[mask:.*]] = cmpi slt, %[[offsetVec2]], %[[dimVec]] : vector<17xi32>
 //
-// 4. Bitcast to vector form.
+// 4. Create pass-through vector.
+//       CHECK: %[[PASS_THROUGH:.*]] = splat %[[c7]] : vector<17xf32>
+//
+// 5. Bitcast to vector form.
 //       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
 //  CHECK-SAME: (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
 //       CHECK: %[[vecPtr:.*]] = llvm.bitcast %[[gep]] :
 //  CHECK-SAME: !llvm.ptr<f32> to !llvm.ptr<vector<17xf32>>
 //
-// 5. Rewrite as a masked read.
-//       CHECK: %[[PASS_THROUGH:.*]] = splat %[[c7]] : vector<17xf32>
+// 6. Rewrite as a masked read.
 //       CHECK: %[[loaded:.*]] = llvm.intr.masked.load %[[vecPtr]], %[[mask]],
 //  CHECK-SAME: %[[PASS_THROUGH]] {alignment = 4 : i32} :
 //  CHECK-SAME: (!llvm.ptr<vector<17xf32>>, vector<17xi1>, vector<17xf32>) -> vector<17xf32>
-
 //
 // 1. Create a vector with linear indices [ 0 .. vector_length - 1 ].
 //       CHECK: %[[linearIndex_b:.*]] = constant dense
@@ -1264,8 +1265,9 @@ func @transfer_read_index_1d(%A : memref<?xindex>, %base: index) -> vector<17xin
 }
 // CHECK-LABEL: func @transfer_read_index_1d
 //  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<17xindex>
-//       CHECK: %[[C7:.*]] = constant 7
-//       CHECK: %{{.*}} = unrealized_conversion_cast %[[C7]] : index to i64
+//       CHECK: %[[C7:.*]] = constant 7 : index
+//       CHECK: %[[SPLAT:.*]] = splat %[[C7]] : vector<17xindex>
+//       CHECK: %{{.*}} = unrealized_conversion_cast %[[SPLAT]] : vector<17xindex> to vector<17xi64>
 
 //       CHECK: %[[loaded:.*]] = llvm.intr.masked.load %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} :
 //  CHECK-SAME: (!llvm.ptr<vector<17xi64>>, vector<17xi1>, vector<17xi64>) -> vector<17xi64>
@@ -1381,26 +1383,6 @@ func @transfer_read_1d_mask(%A : memref<?xf32>, %base : index) -> vector<5xf32> 
   %f = vector.transfer_read %A[%base], %f7, %m : memref<?xf32>, vector<5xf32>
   return %f: vector<5xf32>
 }
-
-// -----
-
-func @transfer_read_1d_cast(%A : memref<?xi32>, %base: index) -> vector<12xi8> {
-  %c0 = constant 0: i32
-  %v = vector.transfer_read %A[%base], %c0 {in_bounds = [true]} :
-    memref<?xi32>, vector<12xi8>
-  return %v: vector<12xi8>
-}
-// CHECK-LABEL: func @transfer_read_1d_cast
-//  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<12xi8>
-//
-// 1. Bitcast to vector form.
-//       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
-//  CHECK-SAME: (!llvm.ptr<i32>, i64) -> !llvm.ptr<i32>
-//       CHECK: %[[vecPtr:.*]] = llvm.bitcast %[[gep]] :
-//  CHECK-SAME: !llvm.ptr<i32> to !llvm.ptr<vector<12xi8>>
-//
-// 2. Rewrite as a load.
-//       CHECK: %[[loaded:.*]] = llvm.load %[[vecPtr]] {alignment = 4 : i64} : !llvm.ptr<vector<12xi8>>
 
 // -----
 

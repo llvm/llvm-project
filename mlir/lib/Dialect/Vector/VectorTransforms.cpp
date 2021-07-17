@@ -2464,25 +2464,33 @@ struct TransferWriteInsertPattern
 /// Progressive lowering of transfer_read. This pattern supports lowering of
 /// `vector.transfer_read` to a combination of `vector.load` and
 /// `vector.broadcast` if all of the following hold:
-/// - The op reads from a memref with the default layout.
+/// - Stride of most minor memref dimension must be 1.
 /// - Out-of-bounds masking is not required.
 /// - If the memref's element type is a vector type then it coincides with the
 ///   result type.
 /// - The permutation map doesn't perform permutation (broadcasting is allowed).
-/// - The op has no mask.
 struct TransferReadToVectorLoadLowering
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  TransferReadToVectorLoadLowering(MLIRContext *context,
+                                   llvm::Optional<unsigned> maxRank)
+      : OpRewritePattern<vector::TransferReadOp>(context),
+        maxTransferRank(maxRank) {}
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
+    if (maxTransferRank && read.getVectorType().getRank() > *maxTransferRank)
+      return failure();
     SmallVector<unsigned, 4> broadcastedDims;
-    // TODO: Support permutations.
+    // Permutations are handled by VectorToSCF or
+    // populateVectorTransferPermutationMapLoweringPatterns.
     if (!read.permutation_map().isMinorIdentityWithBroadcasting(
             &broadcastedDims))
       return failure();
     auto memRefType = read.getShapedType().dyn_cast<MemRefType>();
     if (!memRefType)
+      return failure();
+    // Non-unit strides are handled by VectorToSCF.
+    if (!vector::isLastMemrefDimUnitStride(memRefType))
       return failure();
 
     // If there is broadcasting involved then we first load the unbroadcasted
@@ -2497,32 +2505,44 @@ struct TransferReadToVectorLoadLowering
 
     // `vector.load` supports vector types as memref's elements only when the
     // resulting vector type is the same as the element type.
-    if (memRefType.getElementType().isa<VectorType>() &&
-        memRefType.getElementType() != unbroadcastedVectorType)
+    auto memrefElTy = memRefType.getElementType();
+    if (memrefElTy.isa<VectorType>() && memrefElTy != unbroadcastedVectorType)
       return failure();
-    // Only the default layout is supported by `vector.load`.
-    // TODO: Support non-default layouts.
-    if (!memRefType.getAffineMaps().empty())
-      return failure();
-    // TODO: When out-of-bounds masking is required, we can create a
-    //       MaskedLoadOp.
-    if (read.hasOutOfBoundsDim())
-      return failure();
-    if (read.mask())
+    // Otherwise, element types of the memref and the vector must match.
+    if (!memrefElTy.isa<VectorType>() &&
+        memrefElTy != read.getVectorType().getElementType())
       return failure();
 
-    auto loadOp = rewriter.create<vector::LoadOp>(
-        read.getLoc(), unbroadcastedVectorType, read.source(), read.indices());
+    // Out-of-bounds dims are handled by MaterializeTransferMask.
+    if (read.hasOutOfBoundsDim())
+      return failure();
+
+    // Create vector load op.
+    Operation *loadOp;
+    if (read.mask()) {
+      Value fill = rewriter.create<SplatOp>(
+          read.getLoc(), unbroadcastedVectorType, read.padding());
+      loadOp = rewriter.create<vector::MaskedLoadOp>(
+          read.getLoc(), unbroadcastedVectorType, read.source(), read.indices(),
+          read.mask(), fill);
+    } else {
+      loadOp = rewriter.create<vector::LoadOp>(read.getLoc(),
+                                               unbroadcastedVectorType,
+                                               read.source(), read.indices());
+    }
+
     // Insert a broadcasting op if required.
     if (!broadcastedDims.empty()) {
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          read, read.getVectorType(), loadOp.result());
+          read, read.getVectorType(), loadOp->getResult(0));
     } else {
-      rewriter.replaceOp(read, loadOp.result());
+      rewriter.replaceOp(read, loadOp->getResult(0));
     }
 
     return success();
   }
+
+  llvm::Optional<unsigned> maxTransferRank;
 };
 
 /// Replace a scalar vector.load with a memref.load.
@@ -2545,44 +2565,56 @@ struct VectorLoadToMemrefLoadLowering
 
 /// Progressive lowering of transfer_write. This pattern supports lowering of
 /// `vector.transfer_write` to `vector.store` if all of the following hold:
-/// - The op writes to a memref with the default layout.
+/// - Stride of most minor memref dimension must be 1.
 /// - Out-of-bounds masking is not required.
 /// - If the memref's element type is a vector type then it coincides with the
 ///   type of the written value.
 /// - The permutation map is the minor identity map (neither permutation nor
 ///   broadcasting is allowed).
-/// - The op has no mask.
 struct TransferWriteToVectorStoreLowering
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+  TransferWriteToVectorStoreLowering(MLIRContext *context,
+                                     llvm::Optional<unsigned> maxRank)
+      : OpRewritePattern<vector::TransferWriteOp>(context),
+        maxTransferRank(maxRank) {}
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support non-minor-identity maps
+    if (maxTransferRank && write.getVectorType().getRank() > *maxTransferRank)
+      return failure();
+    // Permutations are handled by VectorToSCF or
+    // populateVectorTransferPermutationMapLoweringPatterns.
     if (!write.permutation_map().isMinorIdentity())
       return failure();
     auto memRefType = write.getShapedType().dyn_cast<MemRefType>();
     if (!memRefType)
       return failure();
+    // Non-unit strides are handled by VectorToSCF.
+    if (!vector::isLastMemrefDimUnitStride(memRefType))
+      return failure();
     // `vector.store` supports vector types as memref's elements only when the
     // type of the vector value being written is the same as the element type.
-    if (memRefType.getElementType().isa<VectorType>() &&
-        memRefType.getElementType() != write.getVectorType())
+    auto memrefElTy = memRefType.getElementType();
+    if (memrefElTy.isa<VectorType>() && memrefElTy != write.getVectorType())
       return failure();
-    // Only the default layout is supported by `vector.store`.
-    // TODO: Support non-default layouts.
-    if (!memRefType.getAffineMaps().empty())
+    // Otherwise, element types of the memref and the vector must match.
+    if (!memrefElTy.isa<VectorType>() &&
+        memrefElTy != write.getVectorType().getElementType())
       return failure();
-    // TODO: When out-of-bounds masking is required, we can create a
-    //       MaskedStoreOp.
+    // Out-of-bounds dims are handled by MaterializeTransferMask.
     if (write.hasOutOfBoundsDim())
       return failure();
-    if (write.mask())
-      return failure();
-    rewriter.replaceOpWithNewOp<vector::StoreOp>(
-        write, write.vector(), write.source(), write.indices());
+    if (write.mask()) {
+      rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
+          write, write.source(), write.indices(), write.mask(), write.vector());
+    } else {
+      rewriter.replaceOpWithNewOp<vector::StoreOp>(
+          write, write.vector(), write.source(), write.indices());
+    }
     return success();
   }
+
+  llvm::Optional<unsigned> maxTransferRank;
 };
 
 /// Transpose a vector transfer op's `in_bounds` attribute according to given
@@ -2624,6 +2656,8 @@ struct TransferReadPermutationLowering
                                 PatternRewriter &rewriter) const override {
     SmallVector<unsigned> permutation;
     AffineMap map = op.permutation_map();
+    if (map.getNumResults() == 0)
+      return failure();
     if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
       return failure();
     AffineMap permutationMap =
@@ -3680,11 +3714,11 @@ void mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
 }
 
 void mlir::vector::populateVectorTransferLoweringPatterns(
-    RewritePatternSet &patterns) {
-  patterns
-      .add<TransferReadToVectorLoadLowering, TransferWriteToVectorStoreLowering,
-           VectorLoadToMemrefLoadLowering>(patterns.getContext());
-  populateVectorTransferPermutationMapLoweringPatterns(patterns);
+    RewritePatternSet &patterns, llvm::Optional<unsigned> maxTransferRank) {
+  patterns.add<TransferReadToVectorLoadLowering,
+               TransferWriteToVectorStoreLowering>(patterns.getContext(),
+                                                   maxTransferRank);
+  patterns.add<VectorLoadToMemrefLoadLowering>(patterns.getContext());
 }
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
