@@ -26,9 +26,6 @@
 namespace llvm {
 namespace orc {
 
-/// Enable registration of JIT'd ObjC classes and selectors.
-Error enableObjCRegistration(const char *PathToLibObjC);
-bool objCRegistrationEnabled();
 
 class MachOJITDylibInitializers {
 public:
