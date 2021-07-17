@@ -613,6 +613,18 @@ func @broadcast_folding2() -> vector<4x16xi32> {
 
 // -----
 
+// CHECK-LABEL: @fold_consecutive_broadcasts(
+//  CHECK-SAME:                              %[[ARG0:.*]]: i32
+//       CHECK: %[[RESULT:.*]] = vector.broadcast %[[ARG0]] : i32 to vector<4x16xi32>
+//       CHECK: return %[[RESULT]]
+func @fold_consecutive_broadcasts(%a : i32) -> vector<4x16xi32> {
+  %1 = vector.broadcast %a : i32 to vector<16xi32>
+  %2 = vector.broadcast %1 : vector<16xi32> to vector<4x16xi32>
+  return %2 : vector<4x16xi32>
+}
+
+// -----
+
 // CHECK-LABEL: shape_cast_constant
 //       CHECK-DAG: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
 //       CHECK-DAG: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
