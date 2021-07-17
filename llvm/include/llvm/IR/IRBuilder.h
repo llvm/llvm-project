@@ -1966,8 +1966,10 @@ public:
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idxs), Name);
   }
 
-  Value *CreateConstInBoundsGEP2_64(Value *Ptr, uint64_t Idx0, uint64_t Idx1,
-                                    const Twine &Name = "") {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      Value *CreateConstInBoundsGEP2_64(Value *Ptr, uint64_t Idx0,
+                                        uint64_t Idx1, const Twine &Name = ""),
+      "Use the version with explicit element type instead") {
     return CreateConstInBoundsGEP2_64(
         Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, Idx0,
         Idx1, Name);
