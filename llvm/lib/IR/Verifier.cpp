@@ -5292,6 +5292,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     NoAliasScopeDecls.push_back(cast<IntrinsicInst>(&Call));
     break;
   }
+  case Intrinsic::preserve_array_access_index:
+  case Intrinsic::preserve_struct_access_index: {
+    Type *ElemTy = Call.getAttributes().getParamElementType(0);
+    Assert(ElemTy,
+           "Intrinsic requires elementtype attribute on first argument.",
+           &Call);
+    break;
+  }
   };
 }
 

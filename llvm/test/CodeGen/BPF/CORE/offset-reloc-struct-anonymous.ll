@@ -32,9 +32,9 @@ define dso_local i32 @bpf_prog(%struct.sk_buff*) local_unnamed_addr #0 !dbg !15 
   call void @llvm.dbg.value(metadata %struct.sk_buff* %0, metadata !31, metadata !DIExpression()), !dbg !33
   %3 = bitcast i32* %2 to i8*, !dbg !34
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %3) #4, !dbg !34
-  %4 = tail call [10 x %struct.anon]* @llvm.preserve.struct.access.index.p0a10s_struct.anons.p0s_struct.sk_buffs(%struct.sk_buff* %0, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !19
-  %5 = tail call %struct.anon* @llvm.preserve.array.access.index.p0s_struct.anons.p0a10s_struct.anons([10 x %struct.anon]* %4, i32 1, i32 5), !dbg !35, !llvm.preserve.access.index !23
-  %6 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.anons(%struct.anon* %5, i32 0, i32 0), !dbg !35, !llvm.preserve.access.index !24
+  %4 = tail call [10 x %struct.anon]* @llvm.preserve.struct.access.index.p0a10s_struct.anons.p0s_struct.sk_buffs(%struct.sk_buff* elementtype(%struct.sk_buff) %0, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !19
+  %5 = tail call %struct.anon* @llvm.preserve.array.access.index.p0s_struct.anons.p0a10s_struct.anons([10 x %struct.anon]* elementtype([10 x %struct.anon]) %4, i32 1, i32 5), !dbg !35, !llvm.preserve.access.index !23
+  %6 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.anons(%struct.anon* elementtype(%struct.anon) %5, i32 0, i32 0), !dbg !35, !llvm.preserve.access.index !24
   %7 = bitcast i32* %6 to i8*, !dbg !35
   %8 = call i32 inttoptr (i64 4 to i32 (i8*, i32, i8*)*)(i8* nonnull %3, i32 4, i8* %7) #4, !dbg !36
   %9 = load i32, i32* %2, align 4, !dbg !37, !tbaa !38

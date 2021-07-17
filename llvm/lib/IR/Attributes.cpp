@@ -1467,6 +1467,10 @@ Type *AttributeList::getParamInAllocaType(unsigned Index) const {
   return getAttributes(Index + FirstArgIndex).getInAllocaType();
 }
 
+Type *AttributeList::getParamElementType(unsigned Index) const {
+  return getAttributes(Index + FirstArgIndex).getElementType();
+}
+
 MaybeAlign AttributeList::getStackAlignment(unsigned Index) const {
   return getAttributes(Index).getStackAlignment();
 }

@@ -1183,6 +1183,8 @@ Currently, only the following parameter attributes are defined:
     The sret type argument specifies the in memory type, which must be
     the same as the pointee type of the argument.
 
+.. _attr_elementtype:
+
 ``elementtype(<ty>)``
 
     The ``elementtype`` argument attribute can be used to specify a pointer
@@ -22553,6 +22555,10 @@ The ``base`` is the array base address.  The ``dim`` is the array dimension.
 The ``base`` is a pointer if ``dim`` equals 0.
 The ``index`` is the last access index into the array or pointer.
 
+The ``base`` argument must be annotated with an :ref:`elementtype
+<attr_elementtype>` attribute at the call-site. This attribute specifies the
+getelementptr element type.
+
 Semantics:
 """"""""""
 
@@ -22617,6 +22623,10 @@ Arguments:
 
 The ``base`` is the structure base address. The ``gep_index`` is the struct member index
 based on IR structures. The ``di_index`` is the struct member index based on debuginfo.
+
+The ``base`` argument must be annotated with an :ref:`elementtype
+<attr_elementtype>` attribute at the call-site. This attribute specifies the
+getelementptr element type.
 
 Semantics:
 """"""""""

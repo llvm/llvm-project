@@ -27,7 +27,7 @@ int test(__s3 *arg) {
 
 // CHECK: define dso_local i32 @test
 // CHECK-NOT: call %struct.s2* @llvm.preserve.struct.access.index.p0s_struct.s2s.p0s_struct.s3s
-// CHECK: call %union.anon* @llvm.preserve.struct.access.index.p0s_union.anons.p0s_struct.s2s(%struct.s2* %{{[0-9a-z]+}}, i32 0, i32 0)
+// CHECK: call %union.anon* @llvm.preserve.struct.access.index.p0s_union.anons.p0s_struct.s2s(%struct.s2* elementtype(%struct.s2) %{{[0-9a-z]+}}, i32 0, i32 0)
 // CHECK: call %union.anon* @llvm.preserve.union.access.index.p0s_union.anons.p0s_union.anons(%union.anon* %{{[0-9a-z]+}}, i32 0)
-// CHECK: call %struct.s1* @llvm.preserve.array.access.index.p0s_struct.s1s.p0a3s_struct.s1s([3 x %struct.s1]* %{{[0-9a-z]+}}, i32 1, i32 2)
+// CHECK: call %struct.s1* @llvm.preserve.array.access.index.p0s_struct.s1s.p0a3s_struct.s1s([3 x %struct.s1]* elementtype([3 x %struct.s1]) %{{[0-9a-z]+}}, i32 1, i32 2)
 // CHECK-NOT: call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s

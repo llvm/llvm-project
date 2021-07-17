@@ -268,6 +268,11 @@ static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
   return DimSize;
 }
 
+static Type *getBaseElementType(const CallInst *Call) {
+  // Element type is stored in an elementtype() attribute on the first param.
+  return Call->getAttributes().getParamElementType(0);
+}
+
 /// Check whether a call is a preserve_*_access_index intrinsic call or not.
 bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
                                                           CallInfo &CInfo) {
@@ -284,8 +289,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       report_fatal_error("Missing metadata for llvm.preserve.array.access.index intrinsic");
     CInfo.AccessIndex = getConstant(Call->getArgOperand(2));
     CInfo.Base = Call->getArgOperand(0);
-    CInfo.RecordAlignment =
-        DL->getABITypeAlign(CInfo.Base->getType()->getPointerElementType());
+    CInfo.RecordAlignment = DL->getABITypeAlign(getBaseElementType(Call));
     return true;
   }
   if (GV->getName().startswith("llvm.preserve.union.access.index")) {
@@ -306,8 +310,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       report_fatal_error("Missing metadata for llvm.preserve.struct.access.index intrinsic");
     CInfo.AccessIndex = getConstant(Call->getArgOperand(2));
     CInfo.Base = Call->getArgOperand(0);
-    CInfo.RecordAlignment =
-        DL->getABITypeAlign(CInfo.Base->getType()->getPointerElementType());
+    CInfo.RecordAlignment = DL->getABITypeAlign(getBaseElementType(Call));
     return true;
   }
   if (GV->getName().startswith("llvm.bpf.preserve.field.info")) {
@@ -368,8 +371,7 @@ void BPFAbstractMemberAccess::replaceWithGEP(std::vector<CallInst *> &CallList,
     IdxList.push_back(Call->getArgOperand(GEPIndex));
 
     auto *GEP = GetElementPtrInst::CreateInBounds(
-        Call->getArgOperand(0)->getType()->getPointerElementType(),
-        Call->getArgOperand(0), IdxList, "", Call);
+        getBaseElementType(Call), Call->getArgOperand(0), IdxList, "", Call);
     Call->replaceAllUsesWith(GEP);
     Call->eraseFromParent();
   }
