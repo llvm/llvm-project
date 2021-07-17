@@ -1576,8 +1576,9 @@ ItaniumCXXABI::GetVirtualBaseClassOffset(CodeGenFunction &CGF,
       CGM.getItaniumVTableContext().getVirtualBaseOffsetOffset(ClassDecl,
                                                                BaseClassDecl);
   llvm::Value *VBaseOffsetPtr =
-    CGF.Builder.CreateConstGEP1_64(VTablePtr, VBaseOffsetOffset.getQuantity(),
-                                   "vbase.offset.ptr");
+    CGF.Builder.CreateConstGEP1_64(
+        CGF.Int8Ty, VTablePtr, VBaseOffsetOffset.getQuantity(),
+        "vbase.offset.ptr");
 
   llvm::Value *VBaseOffset;
   if (CGM.getItaniumVTableContext().isRelativeLayout()) {
