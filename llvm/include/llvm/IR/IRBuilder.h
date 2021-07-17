@@ -1908,7 +1908,10 @@ public:
     return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
   }
 
-  Value *CreateConstGEP1_64(Value *Ptr, uint64_t Idx0, const Twine &Name = "") {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      Value *CreateConstGEP1_64(Value *Ptr, uint64_t Idx0,
+                                const Twine &Name = ""),
+      "Use the version with explicit element type instead") {
     return CreateConstGEP1_64(
         Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, Idx0,
         Name);
