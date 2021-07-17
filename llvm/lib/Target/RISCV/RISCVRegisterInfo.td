@@ -285,8 +285,7 @@ def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
 
 // Vector type mapping to LLVM types.
 //
-// Though the V extension allows that VLEN be as small as 8,
-// this approach assumes that VLEN>=64.
+// The V vector extension requires that VLEN >= 128 and <= 65536.
 // Additionally, the only supported ELEN values are 32 and 64,
 // thus `vscale` can be defined as VLEN/64,
 // allowing the same types with either ELEN value.
