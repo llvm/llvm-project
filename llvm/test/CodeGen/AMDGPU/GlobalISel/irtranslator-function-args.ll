@@ -2831,4 +2831,69 @@ define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
   ret void
 }
 
+define void @pointer_in_struct_argument({i8 addrspace(3)*, i8 addrspace(1)*} %arg0, i8 %pad, {i8 addrspace(3)*, i8 addrspace(1234)*} %arg1) {
+  ; CHECK-LABEL: name: pointer_in_struct_argument
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(p3) = COPY $vgpr4
+  ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; CHECK:   [[MV1:%[0-9]+]]:_(p1234) = G_MERGE_VALUES [[COPY5]](s32), [[COPY6]](s32)
+  ; CHECK:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+  ; CHECK:   [[COPY8:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   [[COPY9:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   [[COPY10:%[0-9]+]]:_(p1) = COPY [[C]](p1)
+  ; CHECK:   G_STORE [[COPY]](p3), [[C]](p1) :: (volatile store (p3) into `i8 addrspace(3)* addrspace(1)* null`, addrspace 1)
+  ; CHECK:   G_STORE [[MV]](p1), [[COPY8]](p1) :: (volatile store (p1) into `i8 addrspace(1)* addrspace(1)* null`, addrspace 1)
+  ; CHECK:   G_STORE [[TRUNC1]](s8), [[COPY9]](p1) :: (volatile store (s8) into `i8 addrspace(1)* null`, addrspace 1)
+  ; CHECK:   G_STORE [[COPY4]](p3), [[C]](p1) :: (volatile store (p3) into `i8 addrspace(3)* addrspace(1)* null`, addrspace 1)
+  ; CHECK:   G_STORE [[MV1]](p1234), [[COPY10]](p1) :: (volatile store (p1234) into `i8 addrspace(1234)* addrspace(1)* null`, addrspace 1)
+  ; CHECK:   [[COPY11:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY7]]
+  ; CHECK:   S_SETPC_B64_return [[COPY11]]
+  %val0 = extractvalue {i8 addrspace(3)*, i8 addrspace(1)*} %arg0, 0
+  %val1 = extractvalue {i8 addrspace(3)*, i8 addrspace(1)*} %arg0, 1
+  %val2 = extractvalue {i8 addrspace(3)*, i8 addrspace(1234)*} %arg1, 0
+  %val3 = extractvalue {i8 addrspace(3)*, i8 addrspace(1234)*} %arg1, 1
+  store volatile i8 addrspace(3)* %val0, i8 addrspace(3)* addrspace(1)* null
+  store volatile i8 addrspace(1)* %val1, i8 addrspace(1)* addrspace(1)* null
+  store volatile i8 %pad, i8 addrspace(1)* null
+  store volatile i8 addrspace(3)* %val2, i8 addrspace(3)* addrspace(1)* null
+  store volatile i8 addrspace(1234)* %val3, i8 addrspace(1234)* addrspace(1)* null
+  ret void
+}
+
+define void @vector_ptr_in_struct_arg({ <2 x i8 addrspace(1)*>, <2 x i8 addrspace(3)*> } %arg) {
+  ; CHECK-LABEL: name: vector_ptr_in_struct_arg
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[MV]](p1), [[MV1]](p1)
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(p3) = COPY $vgpr4
+  ; CHECK:   [[COPY5:%[0-9]+]]:_(p3) = COPY $vgpr5
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY4]](p3), [[COPY5]](p3)
+  ; CHECK:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; CHECK:   G_STORE [[BUILD_VECTOR]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `{ <2 x i8 addrspace(1)*>, <2 x i8 addrspace(3)*> } addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C]](s64)
+  ; CHECK:   G_STORE [[BUILD_VECTOR1]](<2 x p3>), [[PTR_ADD]](p1) :: (store (<2 x p3>) into `{ <2 x i8 addrspace(1)*>, <2 x i8 addrspace(3)*> } addrspace(1)* undef` + 16, align 16, addrspace 1)
+  ; CHECK:   [[COPY7:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY6]]
+  ; CHECK:   S_SETPC_B64_return [[COPY7]]
+  store { <2 x i8 addrspace(1)*>, <2 x i8 addrspace(3)*> } %arg, { <2 x i8 addrspace(1)*>, <2 x i8 addrspace(3)*> } addrspace(1)* undef
+  ret void
+}
+
 attributes #0 = { nounwind }

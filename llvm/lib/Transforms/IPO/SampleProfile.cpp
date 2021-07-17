@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -1803,6 +1804,10 @@ bool SampleProfileLoader::doInitialization(Module &M,
       ProfileSizeInline = true;
     if (!CallsitePrioritizedInline.getNumOccurrences())
       CallsitePrioritizedInline = true;
+
+    // Enable iterative-BFI by default for CSSPGO.
+    if (!UseIterativeBFIInference.getNumOccurrences())
+      UseIterativeBFIInference = true;
 
     // Tracker for profiles under different context
     ContextTracker =

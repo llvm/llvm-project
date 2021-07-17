@@ -22,47 +22,7 @@ class MachineMemOperand;
 class MipsTargetLowering;
 
 class MipsCallLowering : public CallLowering {
-
 public:
-#if 0
-  class MipsHandler {
-  public:
-    MipsHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
-        : MIRBuilder(MIRBuilder), MRI(MRI) {}
-
-    virtual ~MipsHandler() = default;
-
-    bool handle(ArrayRef<CCValAssign> ArgLocs,
-                ArrayRef<CallLowering::ArgInfo> Args);
-
-  protected:
-    bool assignVRegs(ArrayRef<Register> VRegs, ArrayRef<CCValAssign> ArgLocs,
-                     unsigned ArgLocsStartIndex, const EVT &VT);
-
-    void setLeastSignificantFirst(SmallVectorImpl<Register> &VRegs);
-
-    MachineIRBuilder &MIRBuilder;
-    MachineRegisterInfo &MRI;
-
-  private:
-    bool assign(Register VReg, const CCValAssign &VA, const EVT &VT);
-
-    virtual Register getStackAddress(const CCValAssign &VA,
-                                     MachineMemOperand *&MMO) = 0;
-
-    virtual void assignValueToReg(Register ValVReg, const CCValAssign &VA,
-                                  const EVT &VT) = 0;
-
-    virtual void assignValueToAddress(Register ValVReg,
-                                      const CCValAssign &VA) = 0;
-
-    virtual bool handleSplit(SmallVectorImpl<Register> &VRegs,
-                             ArrayRef<CCValAssign> ArgLocs,
-                             unsigned ArgLocsStartIndex, Register ArgsReg,
-                             const EVT &VT) = 0;
-  };
-#endif
-
   MipsCallLowering(const MipsTargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
