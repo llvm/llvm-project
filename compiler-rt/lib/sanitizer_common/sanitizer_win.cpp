@@ -45,7 +45,7 @@ TRACELOGGING_DEFINE_PROVIDER(g_asan_provider, "AddressSanitizerLoggingProvider",
 #endif
 
 // For WaitOnAddress
-#  pragma comment(lib, "Synchronization.lib")
+#  pragma comment(lib, "synchronization.lib")
 
 // A macro to tell the compiler that this part of the code cannot be reached,
 // if the compiler supports this feature. Since we're using this in

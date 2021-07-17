@@ -320,6 +320,32 @@ llvm::Value *CodeGenFunction::getTypeSize(QualType Ty) {
   return CGM.getSize(SizeInChars);
 }
 
+void CodeGenFunction::GenerateOpenMPCapturedVarsAggregate(
+    const CapturedStmt &S, SmallVectorImpl<llvm::Value *> &CapturedVars) {
+  const RecordDecl *RD = S.getCapturedRecordDecl();
+  QualType RecordTy = getContext().getRecordType(RD);
+  // Create the aggregate argument struct for the outlined function.
+  LValue AggLV = MakeAddrLValue(
+      CreateMemTemp(RecordTy, "omp.outlined.arg.agg."), RecordTy);
+
+  // Initialize the aggregate with captured values.
+  auto CurField = RD->field_begin();
+  for (CapturedStmt::const_capture_init_iterator I = S.capture_init_begin(),
+                                                 E = S.capture_init_end();
+       I != E; ++I, ++CurField) {
+    LValue LV = EmitLValueForFieldInitialization(AggLV, *CurField);
+    // Initialize for VLA.
+    if (CurField->hasCapturedVLAType()) {
+      EmitLambdaVLACapture(CurField->getCapturedVLAType(), LV);
+    } else
+      // Initialize for capturesThis, capturesVariableByCopy,
+      // capturesVariable
+      EmitInitializerForField(*CurField, LV, *I);
+  }
+
+  CapturedVars.push_back(AggLV.getPointer(*this));
+}
+
 void CodeGenFunction::GenerateOpenMPCapturedVars(
     const CapturedStmt &S, SmallVectorImpl<llvm::Value *> &CapturedVars) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
@@ -419,6 +445,101 @@ struct FunctionOptions {
         FunctionName(FunctionName), Loc(Loc) {}
 };
 } // namespace
+
+static llvm::Function *emitOutlinedFunctionPrologueAggregate(
+    CodeGenFunction &CGF, FunctionArgList &Args,
+    llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>>
+        &LocalAddrs,
+    llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>>
+        &VLASizes,
+    llvm::Value *&CXXThisValue, const CapturedStmt &CS, SourceLocation Loc,
+    StringRef FunctionName) {
+  const CapturedDecl *CD = CS.getCapturedDecl();
+  const RecordDecl *RD = CS.getCapturedRecordDecl();
+  assert(CD->hasBody() && "missing CapturedDecl body");
+
+  CXXThisValue = nullptr;
+  // Build the argument list.
+  CodeGenModule &CGM = CGF.CGM;
+  ASTContext &Ctx = CGM.getContext();
+  Args.append(CD->param_begin(), CD->param_end());
+
+  // Create the function declaration.
+  const CGFunctionInfo &FuncInfo =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
+  llvm::FunctionType *FuncLLVMTy = CGM.getTypes().GetFunctionType(FuncInfo);
+
+  auto *F =
+      llvm::Function::Create(FuncLLVMTy, llvm::GlobalValue::InternalLinkage,
+                             FunctionName, &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
+  if (CD->isNothrow())
+    F->setDoesNotThrow();
+  F->setDoesNotRecurse();
+
+  // Generate the function.
+  CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, Loc, Loc);
+  Address ContextAddr = CGF.GetAddrOfLocalVar(CD->getContextParam());
+  llvm::Value *ContextV = CGF.Builder.CreateLoad(ContextAddr);
+  LValue ContextLV = CGF.MakeNaturalAlignAddrLValue(
+      ContextV, CGM.getContext().getTagDeclType(RD));
+  auto I = CS.captures().begin();
+  for (const FieldDecl *FD : RD->fields()) {
+    LValue FieldLV = CGF.EmitLValueForFieldInitialization(ContextLV, FD);
+    // Do not map arguments if we emit function with non-original types.
+    Address LocalAddr = FieldLV.getAddress(CGF);
+    // If we are capturing a pointer by copy we don't need to do anything, just
+    // use the value that we get from the arguments.
+    if (I->capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
+      const VarDecl *CurVD = I->getCapturedVar();
+      LocalAddrs.insert({FD, {CurVD, LocalAddr}});
+      ++I;
+      continue;
+    }
+
+    LValue ArgLVal =
+        CGF.MakeAddrLValue(LocalAddr, FD->getType(), AlignmentSource::Decl);
+    if (FD->hasCapturedVLAType()) {
+      llvm::Value *ExprArg = CGF.EmitLoadOfScalar(ArgLVal, I->getLocation());
+      const VariableArrayType *VAT = FD->getCapturedVLAType();
+      VLASizes.try_emplace(FD, VAT->getSizeExpr(), ExprArg);
+    } else if (I->capturesVariable()) {
+      const VarDecl *Var = I->getCapturedVar();
+      QualType VarTy = Var->getType();
+      Address ArgAddr = ArgLVal.getAddress(CGF);
+      if (ArgLVal.getType()->isLValueReferenceType()) {
+        ArgAddr = CGF.EmitLoadOfReference(ArgLVal);
+      } else if (!VarTy->isVariablyModifiedType() || !VarTy->isPointerType()) {
+        assert(ArgLVal.getType()->isPointerType());
+        ArgAddr = CGF.EmitLoadOfPointer(
+            ArgAddr, ArgLVal.getType()->castAs<PointerType>());
+      }
+      LocalAddrs.insert(
+          {FD, {Var, Address(ArgAddr.getPointer(), Ctx.getDeclAlign(Var))}});
+    } else if (I->capturesVariableByCopy()) {
+      assert(!FD->getType()->isAnyPointerType() &&
+             "Not expecting a captured pointer.");
+      const VarDecl *Var = I->getCapturedVar();
+      Address CopyAddr = CGF.CreateMemTemp(FD->getType(), Ctx.getDeclAlign(FD),
+                                           Var->getName());
+      LValue CopyLVal =
+          CGF.MakeAddrLValue(CopyAddr, FD->getType(), AlignmentSource::Decl);
+
+      RValue ArgRVal = CGF.EmitLoadOfLValue(ArgLVal, I->getLocation());
+      CGF.EmitStoreThroughLValue(ArgRVal, CopyLVal);
+
+      LocalAddrs.insert({FD, {Var, CopyAddr}});
+    } else {
+      // If 'this' is captured, load it into CXXThisValue.
+      assert(I->capturesThis());
+      CXXThisValue = CGF.EmitLoadOfScalar(ArgLVal, I->getLocation());
+      LocalAddrs.insert({FD, {nullptr, ArgLVal.getAddress(CGF)}});
+    }
+    ++I;
+  }
+
+  return F;
+}
 
 static llvm::Function *emitOutlinedFunctionPrologue(
     CodeGenFunction &CGF, FunctionArgList &Args,
@@ -592,6 +713,37 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     ++I;
   }
 
+  return F;
+}
+
+llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
+    const CapturedStmt &S, SourceLocation Loc) {
+  assert(
+      CapturedStmtInfo &&
+      "CapturedStmtInfo should be set when generating the captured function");
+  const CapturedDecl *CD = S.getCapturedDecl();
+  // Build the argument list.
+  FunctionArgList Args;
+  llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
+  llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
+  StringRef FunctionName = CapturedStmtInfo->getHelperName();
+  llvm::Function *F = emitOutlinedFunctionPrologueAggregate(
+      *this, Args, LocalAddrs, VLASizes, CXXThisValue, S, Loc, FunctionName);
+  CodeGenFunction::OMPPrivateScope LocalScope(*this);
+  for (const auto &LocalAddrPair : LocalAddrs) {
+    if (LocalAddrPair.second.first) {
+      LocalScope.addPrivate(LocalAddrPair.second.first, [&LocalAddrPair]() {
+        return LocalAddrPair.second.second;
+      });
+    }
+  }
+  (void)LocalScope.Privatize();
+  for (const auto &VLASizePair : VLASizes)
+    VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
+  PGO.assignRegionCounters(GlobalDecl(CD), F);
+  CapturedStmtInfo->EmitBody(*this, CD->getBody());
+  (void)LocalScope.ForceCleanup();
+  FinishFunction(CD->getBodyRBrace());
   return F;
 }
 
@@ -1582,7 +1734,7 @@ static void emitCommonOMPParallelDirective(
   // The following lambda takes care of appending the lower and upper bound
   // parameters when necessary
   CodeGenBoundParameters(CGF, S, CapturedVars);
-  CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
+  CGF.GenerateOpenMPCapturedVarsAggregate(*CS, CapturedVars);
   CGF.CGM.getOpenMPRuntime().emitParallelCall(CGF, S.getBeginLoc(), OutlinedFn,
                                               CapturedVars, IfCond);
 }
@@ -6050,7 +6202,7 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
 
   OMPTeamsScope Scope(CGF, S);
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
-  CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
+  CGF.GenerateOpenMPCapturedVarsAggregate(*CS, CapturedVars);
   CGF.CGM.getOpenMPRuntime().emitTeamsCall(CGF, S, S.getBeginLoc(), OutlinedFn,
                                            CapturedVars);
 }
