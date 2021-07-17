@@ -226,6 +226,9 @@ namespace ranges {
     else
       return __subrange.end();
   }
+
+  template<class _Ip, class _Sp, subrange_kind _Kp>
+  inline constexpr bool enable_borrowed_range<subrange<_Ip, _Sp, _Kp>> = true;
 } // namespace ranges
 
 using ranges::get;
