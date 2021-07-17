@@ -2163,6 +2163,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // minimum size. e.g. <vscale x 2 x i32>. VLENB is in bytes so we calculate
     // vscale as VLENB / 8.
     assert(RISCV::RVVBitsPerBlock == 64 && "Unexpected bits per block!");
+    if (isa<ConstantSDNode>(Op.getOperand(0))) {
+      // We assume VLENB is a multiple of 8. We manually choose the best shift
+      // here because SimplifyDemandedBits isn't always able to simplify it.
+      uint64_t Val = Op.getConstantOperandVal(0);
+      if (isPowerOf2_64(Val)) {
+        uint64_t Log2 = Log2_64(Val);
+        if (Log2 < 3)
+          return DAG.getNode(ISD::SRL, DL, VT, VLENB,
+                             DAG.getConstant(3 - Log2, DL, VT));
+        if (Log2 > 3)
+          return DAG.getNode(ISD::SHL, DL, VT, VLENB,
+                             DAG.getConstant(Log2 - 3, DL, VT));
+        return VLENB;
+      }
+      // If the multiplier is a multiple of 8, scale it down to avoid needing
+      // to shift the VLENB value.
+      if ((Val % 8) == 0)
+        return DAG.getNode(ISD::MUL, DL, VT, VLENB,
+                           DAG.getConstant(Val / 8, DL, VT));
+    }
+
     SDValue VScale = DAG.getNode(ISD::SRL, DL, VT, VLENB,
                                  DAG.getConstant(3, DL, VT));
     return DAG.getNode(ISD::MUL, DL, VT, VScale, Op.getOperand(0));
