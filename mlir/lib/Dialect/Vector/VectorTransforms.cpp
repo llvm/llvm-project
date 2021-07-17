@@ -2510,28 +2510,35 @@ struct TransferReadToVectorLoadLowering
       return failure();
     if (read.mask())
       return failure();
-    Operation *loadOp;
-    if (!broadcastedDims.empty() &&
-        unbroadcastedVectorType.getNumElements() == 1) {
-      // If broadcasting is required and the number of loaded elements is 1 then
-      // we can create `memref.load` instead of `vector.load`.
-      loadOp = rewriter.create<memref::LoadOp>(read.getLoc(), read.source(),
-                                               read.indices());
-    } else {
-      // Otherwise create `vector.load`.
-      loadOp = rewriter.create<vector::LoadOp>(read.getLoc(),
-                                               unbroadcastedVectorType,
-                                               read.source(), read.indices());
-    }
 
+    auto loadOp = rewriter.create<vector::LoadOp>(
+        read.getLoc(), unbroadcastedVectorType, read.source(), read.indices());
     // Insert a broadcasting op if required.
     if (!broadcastedDims.empty()) {
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          read, read.getVectorType(), loadOp->getResult(0));
+          read, read.getVectorType(), loadOp.result());
     } else {
-      rewriter.replaceOp(read, loadOp->getResult(0));
+      rewriter.replaceOp(read, loadOp.result());
     }
 
+    return success();
+  }
+};
+
+/// Replace a scalar vector.load with a memref.load.
+struct VectorLoadToMemrefLoadLowering
+    : public OpRewritePattern<vector::LoadOp> {
+  using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::LoadOp loadOp,
+                                PatternRewriter &rewriter) const override {
+    auto vecType = loadOp.getVectorType();
+    if (vecType.getNumElements() != 1)
+      return failure();
+    auto memrefLoad = rewriter.create<memref::LoadOp>(
+        loadOp.getLoc(), loadOp.base(), loadOp.indices());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        loadOp, VectorType::get({1}, vecType.getElementType()), memrefLoad);
     return success();
   }
 };
@@ -3674,8 +3681,9 @@ void mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
 
 void mlir::vector::populateVectorTransferLoweringPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<TransferReadToVectorLoadLowering,
-               TransferWriteToVectorStoreLowering>(patterns.getContext());
+  patterns
+      .add<TransferReadToVectorLoadLowering, TransferWriteToVectorStoreLowering,
+           VectorLoadToMemrefLoadLowering>(patterns.getContext());
   populateVectorTransferPermutationMapLoweringPatterns(patterns);
 }
 
