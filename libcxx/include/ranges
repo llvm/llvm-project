@@ -93,6 +93,16 @@ namespace std::ranges {
     requires is_class_v<D> && same_as<D, remove_cv_t<D>>
   class view_interface;
 
+  // [range.subrange], sub-ranges
+  enum class subrange_kind : bool { unsized, sized };
+
+  template<input_or_output_iterator I, sentinel_for<I> S = I, subrange_kind K = see below>
+    requires (K == subrange_kind::sized || !sized_sentinel_for<S, I>)
+  class subrange;
+
+  template<class I, class S, subrange_kind K>
+    inline constexpr bool enable_borrowed_range<subrange<I, S, K>> = true;
+
   // [range.empty], empty view
   template<class T>
     requires is_object_v<T>

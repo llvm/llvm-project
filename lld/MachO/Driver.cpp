@@ -577,6 +577,7 @@ static void compileBitcodeFiles() {
 // any CommonSymbols.
 static void replaceCommonSymbols() {
   TimeTraceScope timeScope("Replace common symbols");
+  ConcatOutputSection *osec = nullptr;
   for (Symbol *sym : symtab->getSymbols()) {
     auto *common = dyn_cast<CommonSymbol>(sym);
     if (common == nullptr)
@@ -589,6 +590,9 @@ static void replaceCommonSymbols() {
     auto *isec = make<ConcatInputSection>(
         segment_names::data, section_names::common, common->getFile(), data,
         common->align, S_ZEROFILL);
+    if (!osec)
+      osec = ConcatOutputSection::getOrCreateForInput(isec);
+    isec->parent = osec;
     inputSections.push_back(isec);
 
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
@@ -1037,6 +1041,7 @@ static void gatherInputSections() {
   int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
     for (const SubsectionMap &map : file->subsections) {
+      ConcatOutputSection *osec = nullptr;
       for (const SubsectionEntry &entry : map) {
         if (auto *isec = dyn_cast<ConcatInputSection>(entry.isec)) {
           if (isec->isCoalescedWeak())
@@ -1047,6 +1052,9 @@ static void gatherInputSections() {
             continue;
           }
           isec->outSecOff = inputOrder++;
+          if (!osec)
+            osec = ConcatOutputSection::getOrCreateForInput(isec);
+          isec->parent = osec;
           inputSections.push_back(isec);
         } else if (auto *isec = dyn_cast<CStringInputSection>(entry.isec)) {
           if (in.cStringSection->inputOrder == UnspecifiedInputOrder)

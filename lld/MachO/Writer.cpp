@@ -76,10 +76,6 @@ public:
 
   LCUuid *uuidCommand = nullptr;
   OutputSegment *linkEditSegment = nullptr;
-
-  // Output sections are added to output segments in iteration order
-  // of ConcatOutputSection, so must have deterministic iteration order.
-  MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
@@ -879,16 +875,6 @@ static void sortSegmentsAndSections() {
   }
 }
 
-NamePair macho::maybeRenameSection(NamePair key) {
-  auto newNames = config->sectionRenameMap.find(key);
-  if (newNames != config->sectionRenameMap.end())
-    return newNames->second;
-  auto newName = config->segmentRenameMap.find(key.first);
-  if (newName != config->segmentRenameMap.end())
-    return std::make_pair(newName->second, key.second);
-  return key;
-}
-
 template <class LP> void Writer::createOutputSections() {
   TimeTraceScope timeScope("Create output sections");
   // First, create hidden sections
@@ -919,10 +905,7 @@ template <class LP> void Writer::createOutputSections() {
   for (ConcatInputSection *isec : inputSections) {
     if (isec->shouldOmitFromOutput())
       continue;
-    NamePair names = maybeRenameSection({isec->getSegName(), isec->getName()});
-    ConcatOutputSection *&osec = concatOutputSections[names];
-    if (!osec)
-      osec = make<ConcatOutputSection>(names.second);
+    ConcatOutputSection *osec = cast<ConcatOutputSection>(isec->parent);
     osec->addInput(isec);
     osec->inputOrder =
         std::min(osec->inputOrder, static_cast<int>(isec->outSecOff));
@@ -934,7 +917,8 @@ template <class LP> void Writer::createOutputSections() {
     StringRef segname = it.first.first;
     ConcatOutputSection *osec = it.second;
     assert(segname != segment_names::ld);
-    getOrCreateOutputSegment(segname)->addOutputSection(osec);
+    if (osec->isNeeded())
+      getOrCreateOutputSegment(segname)->addOutputSection(osec);
   }
 
   for (SyntheticSection *ssec : syntheticSections) {

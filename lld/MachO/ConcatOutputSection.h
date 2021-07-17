@@ -31,6 +31,7 @@ public:
 
   const ConcatInputSection *firstSection() const { return inputs.front(); }
   const ConcatInputSection *lastSection() const { return inputs.back(); }
+  bool isNeeded() const override { return !inputs.empty(); }
 
   // These accessors will only be valid after finalizing the section
   uint64_t getSize() const override { return size; }
@@ -49,6 +50,8 @@ public:
   static bool classof(const OutputSection *sec) {
     return sec->kind() == ConcatKind;
   }
+
+  static ConcatOutputSection *getOrCreateForInput(const InputSection *);
 
 private:
   void finalizeFlags(InputSection *input);
@@ -78,6 +81,12 @@ struct ThunkInfo {
   uint32_t thunkCallCount = 0; // how many call sites went to thunk?
   uint8_t sequence = 0;        // how many thunks created so-far?
 };
+
+NamePair maybeRenameSection(NamePair key);
+
+// Output sections are added to output segments in iteration order
+// of ConcatOutputSection, so must have deterministic iteration order.
+extern llvm::MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
 
 extern llvm::DenseMap<Symbol *, ThunkInfo> thunkMap;
 

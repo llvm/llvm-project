@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputSection.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"

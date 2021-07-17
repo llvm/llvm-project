@@ -4449,7 +4449,8 @@ static void InitCatchParam(CodeGenFunction &CGF,
         // we have to skip past in order to reach the exception data.
         unsigned HeaderSize =
           CGF.CGM.getTargetCodeGenInfo().getSizeOfUnwindException();
-        AdjustedExn = CGF.Builder.CreateConstGEP1_32(Exn, HeaderSize);
+        AdjustedExn =
+            CGF.Builder.CreateConstGEP1_32(CGF.Int8Ty, Exn, HeaderSize);
 
       // However, if we're catching a pointer-to-record type that won't
       // work, because the personality function might have adjusted
