@@ -227,6 +227,14 @@ LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J);
  */
 LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
 
+/**
+ * Get the LLJIT instance's default data layout string.
+ *
+ * This string is owned by the LLJIT instance and does not need to be freed
+ * by the caller.
+ */
+const char *LLVMOrcLLJITGetDataLayoutStr(LLVMOrcLLJITRef J);
+
 LLVM_C_EXTERN_C_END
 
 #endif /* LLVM_C_LLJIT_H */
