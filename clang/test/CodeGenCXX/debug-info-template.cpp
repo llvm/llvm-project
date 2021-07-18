@@ -187,3 +187,13 @@ template<typename T> struct ClassTemplateInlineNamespaceArg {
 };
 ClassTemplateInlineNamespaceArg<inl::t1> ClassTemplateInlineNamespaceArgObj;
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ClassTemplateInlineNamespaceArg<inl::t1>",
+
+namespace IndirectDefaultArgument {
+template<typename T1, typename T2 = int>
+struct t1 { };
+template<typename T>
+void f1() {
+}
+template void f1<t1<int>>();
+// CHECK: !DISubprogram(name: "f1<IndirectDefaultArgument::t1<int, int> >",
+}
