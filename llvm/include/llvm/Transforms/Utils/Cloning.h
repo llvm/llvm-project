@@ -185,8 +185,7 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
                                SmallVectorImpl<ReturnInst*> &Returns,
                                const char *NameSuffix = "",
-                               ClonedCodeInfo *CodeInfo = nullptr,
-                               Instruction *TheCall = nullptr);
+                               ClonedCodeInfo *CodeInfo = nullptr);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
