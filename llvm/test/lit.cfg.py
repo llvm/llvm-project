@@ -187,8 +187,7 @@ tools.extend([
     ToolSubst('OrcV2CBindingsAddObjectFile', unresolved='ignore'),
     ToolSubst('OrcV2CBindingsRemovableCode', unresolved='ignore'),
     ToolSubst('OrcV2CBindingsReflectProcessSymbols', unresolved='ignore'),
-    ToolSubst('OrcV2CBindingsLazy', unresolved='ignore'),
-    ToolSubst('OrcV2CBindingsVeryLazy', unresolved='ignore')])
+    ToolSubst('OrcV2CBindingsLazy', unresolved='ignore')])
 
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
