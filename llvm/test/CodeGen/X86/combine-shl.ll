@@ -470,12 +470,11 @@ define <4 x i32> @combine_vec_shl_ge_ashr_extact1(<4 x i32> %x) {
 define i32 @combine_shl_ge_sel_ashr_extact0(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: combine_shl_ge_sel_ashr_extact0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    shrl $3, %edi
-; CHECK-NEXT:    shrl $3, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    cmovnel %edi, %eax
-; CHECK-NEXT:    shll $5, %eax
+; CHECK-NEXT:    cmovel %esi, %edi
+; CHECK-NEXT:    leal (,%rdi,4), %eax
+; CHECK-NEXT:    andl $-32, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %z, 0
   %ashrx = ashr exact i32 %x, 3
