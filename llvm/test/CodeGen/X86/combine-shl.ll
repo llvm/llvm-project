@@ -474,7 +474,6 @@ define i32 @combine_shl_ge_sel_ashr_extact0(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    cmovel %esi, %edi
 ; CHECK-NEXT:    leal (,%rdi,4), %eax
-; CHECK-NEXT:    andl $-32, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %z, 0
   %ashrx = ashr exact i32 %x, 3
