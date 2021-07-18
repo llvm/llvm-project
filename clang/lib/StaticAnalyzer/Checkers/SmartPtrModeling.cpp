@@ -63,7 +63,7 @@ public:
 private:
   void handleReset(const CallEvent &Call, CheckerContext &C) const;
   void handleRelease(const CallEvent &Call, CheckerContext &C) const;
-  void handleSwap(const CallEvent &Call, CheckerContext &C) const;
+  void handleSwapMethod(const CallEvent &Call, CheckerContext &C) const;
   void handleGet(const CallEvent &Call, CheckerContext &C) const;
   bool handleAssignOp(const CallEvent &Call, CheckerContext &C) const;
   bool handleMoveCtr(const CallEvent &Call, CheckerContext &C,
@@ -73,6 +73,8 @@ private:
   void handleBoolConversion(const CallEvent &Call, CheckerContext &C) const;
   bool handleComparisionOp(const CallEvent &Call, CheckerContext &C) const;
   bool handleOstreamOperator(const CallEvent &Call, CheckerContext &C) const;
+  bool handleSwap(ProgramStateRef State, SVal First, SVal Second,
+                  CheckerContext &C) const;
   std::pair<SVal, ProgramStateRef>
   retrieveOrConjureInnerPtrVal(ProgramStateRef State,
                                const MemRegion *ThisRegion, const Expr *E,
@@ -83,8 +85,9 @@ private:
   CallDescriptionMap<SmartPtrMethodHandlerFn> SmartPtrMethodHandlers{
       {{"reset"}, &SmartPtrModeling::handleReset},
       {{"release"}, &SmartPtrModeling::handleRelease},
-      {{"swap", 1}, &SmartPtrModeling::handleSwap},
+      {{"swap", 1}, &SmartPtrModeling::handleSwapMethod},
       {{"get"}, &SmartPtrModeling::handleGet}};
+  const CallDescription StdSwapCall{{"std", "swap"}, 2};
 };
 } // end of anonymous namespace
 
@@ -258,6 +261,15 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
 
   if (isStdOstreamOperatorCall(Call))
     return handleOstreamOperator(Call, C);
+
+  if (Call.isCalled(StdSwapCall)) {
+    // Check the first arg, if it is of std::unique_ptr type.
+    assert(Call.getNumArgs() == 2 && "std::swap should have two arguments");
+    const Expr *FirstArg = Call.getArgExpr(0);
+    if (!smartptr::isStdSmartPtr(FirstArg->getType()->getAsCXXRecordDecl()))
+      return false;
+    return handleSwap(State, Call.getArgSVal(0), Call.getArgSVal(1), C);
+  }
 
   if (!smartptr::isStdSmartPtrCall(Call))
     return false;
@@ -578,43 +590,52 @@ void SmartPtrModeling::handleRelease(const CallEvent &Call,
   // pointer.
 }
 
-void SmartPtrModeling::handleSwap(const CallEvent &Call,
-                                  CheckerContext &C) const {
+void SmartPtrModeling::handleSwapMethod(const CallEvent &Call,
+                                        CheckerContext &C) const {
   // To model unique_ptr::swap() method.
   const auto *IC = dyn_cast<CXXInstanceCall>(&Call);
   if (!IC)
     return;
 
-  const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
-  if (!ThisRegion)
-    return;
-
-  const auto *ArgRegion = Call.getArgSVal(0).getAsRegion();
-  if (!ArgRegion)
-    return;
-
   auto State = C.getState();
-  const auto *ThisRegionInnerPointerVal =
-      State->get<TrackedRegionMap>(ThisRegion);
-  const auto *ArgRegionInnerPointerVal =
-      State->get<TrackedRegionMap>(ArgRegion);
+  handleSwap(State, IC->getCXXThisVal(), Call.getArgSVal(0), C);
+}
 
-  // Swap the tracked region values.
-  State = updateSwappedRegion(State, ThisRegion, ArgRegionInnerPointerVal);
-  State = updateSwappedRegion(State, ArgRegion, ThisRegionInnerPointerVal);
+bool SmartPtrModeling::handleSwap(ProgramStateRef State, SVal First,
+                                  SVal Second, CheckerContext &C) const {
+  const MemRegion *FirstThisRegion = First.getAsRegion();
+  if (!FirstThisRegion)
+    return false;
+  const MemRegion *SecondThisRegion = Second.getAsRegion();
+  if (!SecondThisRegion)
+    return false;
 
-  C.addTransition(
-      State, C.getNoteTag([ThisRegion, ArgRegion](PathSensitiveBugReport &BR,
-                                                  llvm::raw_ostream &OS) {
-        if (&BR.getBugType() != smartptr::getNullDereferenceBugType() ||
-            !BR.isInteresting(ThisRegion))
-          return;
-        BR.markInteresting(ArgRegion);
-        OS << "Swapped null smart pointer";
-        checkAndPrettyPrintRegion(OS, ArgRegion);
-        OS << " with smart pointer";
-        checkAndPrettyPrintRegion(OS, ThisRegion);
-      }));
+  const auto *FirstInnerPtrVal = State->get<TrackedRegionMap>(FirstThisRegion);
+  const auto *SecondInnerPtrVal =
+      State->get<TrackedRegionMap>(SecondThisRegion);
+
+  State = updateSwappedRegion(State, FirstThisRegion, SecondInnerPtrVal);
+  State = updateSwappedRegion(State, SecondThisRegion, FirstInnerPtrVal);
+
+  C.addTransition(State, C.getNoteTag([FirstThisRegion, SecondThisRegion](
+                                          PathSensitiveBugReport &BR,
+                                          llvm::raw_ostream &OS) {
+    if (&BR.getBugType() != smartptr::getNullDereferenceBugType())
+      return;
+    if (BR.isInteresting(FirstThisRegion) &&
+        !BR.isInteresting(SecondThisRegion)) {
+      BR.markInteresting(SecondThisRegion);
+      BR.markNotInteresting(FirstThisRegion);
+    }
+    if (BR.isInteresting(SecondThisRegion) &&
+        !BR.isInteresting(FirstThisRegion)) {
+      BR.markInteresting(FirstThisRegion);
+      BR.markNotInteresting(SecondThisRegion);
+    }
+    // TODO: We need to emit some note here probably!!
+  }));
+
+  return true;
 }
 
 void SmartPtrModeling::handleGet(const CallEvent &Call,
