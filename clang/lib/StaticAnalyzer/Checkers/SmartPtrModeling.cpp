@@ -38,6 +38,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
+
 class SmartPtrModeling
     : public Checker<eval::Call, check::DeadSymbols, check::RegionChanges,
                      check::LiveSymbols> {
@@ -88,6 +89,9 @@ private:
       {{"swap", 1}, &SmartPtrModeling::handleSwapMethod},
       {{"get"}, &SmartPtrModeling::handleGet}};
   const CallDescription StdSwapCall{{"std", "swap"}, 2};
+  const CallDescription StdMakeUniqueCall{{"std", "make_unique"}};
+  const CallDescription StdMakeUniqueForOverwriteCall{
+      {"std", "make_unique_for_overwrite"}};
 };
 } // end of anonymous namespace
 
@@ -187,10 +191,25 @@ static QualType getInnerPointerType(CheckerContext C, const CXXRecordDecl *RD) {
     return {};
 
   auto TemplateArgs = TSD->getTemplateArgs().asArray();
-  if (TemplateArgs.size() == 0)
+  if (TemplateArgs.empty())
     return {};
   auto InnerValueType = TemplateArgs[0].getAsType();
   return C.getASTContext().getPointerType(InnerValueType.getCanonicalType());
+}
+
+// This is for use with standalone-functions like std::make_unique,
+// std::make_unique_for_overwrite, etc. It reads the template parameter and
+// returns the pointer type corresponding to it,
+static QualType getPointerTypeFromTemplateArg(const CallEvent &Call,
+                                              CheckerContext &C) {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  if (!FD || !FD->isFunctionTemplateSpecialization())
+    return {};
+  const auto &TemplateArgs = FD->getTemplateSpecializationArgs()->asArray();
+  if (TemplateArgs.size() == 0)
+    return {};
+  auto ValueType = TemplateArgs[0].getAsType();
+  return C.getASTContext().getPointerType(ValueType.getCanonicalType());
 }
 
 // Helper method to get the inner pointer type of specialized smart pointer
@@ -248,6 +267,7 @@ bool isStdOstreamOperatorCall(const CallEvent &Call) {
 
 bool SmartPtrModeling::evalCall(const CallEvent &Call,
                                 CheckerContext &C) const {
+
   ProgramStateRef State = C.getState();
 
   // If any one of the arg is a unique_ptr, then
@@ -269,6 +289,50 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
     if (!smartptr::isStdSmartPtr(FirstArg->getType()->getAsCXXRecordDecl()))
       return false;
     return handleSwap(State, Call.getArgSVal(0), Call.getArgSVal(1), C);
+  }
+
+  if (Call.isCalled(StdMakeUniqueCall) ||
+      Call.isCalled(StdMakeUniqueForOverwriteCall)) {
+    if (!ModelSmartPtrDereference)
+      return false;
+    
+    const Optional<SVal> ThisRegionOpt = Call.getReturnValueUnderConstruction();
+    if (!ThisRegionOpt)
+      return false;
+
+    const auto PtrVal = C.getSValBuilder().getConjuredHeapSymbolVal(
+        Call.getOriginExpr(), C.getLocationContext(),
+        getPointerTypeFromTemplateArg(Call, C), C.blockCount());
+
+    const MemRegion *ThisRegion = ThisRegionOpt->getAsRegion();
+    State = State->set<TrackedRegionMap>(ThisRegion, PtrVal);
+    State = State->assume(PtrVal, true);
+
+    // TODO: ExprEngine should do this for us.
+    // For a bit more context:
+    // 1) Why do we need this? Since we are modelling a "function"
+    // that returns a constructed object we need to store this information in
+    // the program state.
+    //
+    // 2) Why does this work?
+    // `updateObjectsUnderConstruction` does exactly as it sounds.
+    //
+    // 3) How should it look like when moved to the Engine?
+    // It would be nice if we can just
+    // pretend we don't need to know about this - ie, completely automatic work.
+    // However, realistically speaking, I think we would need to "signal" the
+    // ExprEngine evalCall handler that we are constructing an object with this
+    // function call (constructors obviously construct, hence can be
+    // automatically deduced).
+    auto &Engine = State->getStateManager().getOwningEngine();
+    State = Engine.updateObjectsUnderConstruction(
+        *ThisRegionOpt, nullptr, State, C.getLocationContext(),
+        Call.getConstructionContext(), {});
+
+    // We don't leave a note here since it is guaranteed the
+    // unique_ptr from this call is non-null (hence is safe to de-reference).
+    C.addTransition(State);
+    return true;
   }
 
   if (!smartptr::isStdSmartPtrCall(Call))
