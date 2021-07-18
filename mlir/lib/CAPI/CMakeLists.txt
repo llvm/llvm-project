@@ -25,13 +25,19 @@ foreach(lib ${public_api_libs})
   list(APPEND _DEPS  $<TARGET_PROPERTY:${lib},LINK_LIBRARIES>)
 endforeach()
 
+if(MINGW)
+    set(MLIR_LINK_MLIR_DYLIB 0)
+else()
+    set(MLIR_LINK_MLIR_DYLIB ${LLVM_BUILD_LLVM_DYLIB})
+endif()
+
 add_mlir_library(MLIRPublicAPI
   SHARED
   ${_OBJECTS}
   EXCLUDE_FROM_LIBMLIR
   LINK_LIBS
   # Dependency on the implementation shared library.
-  $<$<BOOL:${LLVM_BUILD_LLVM_DYLIB}>:MLIR>
+  $<$<BOOL:${MLIR_LINK_MLIR_DYLIB}>:MLIR>
   ${_DEPS}
 )
 
