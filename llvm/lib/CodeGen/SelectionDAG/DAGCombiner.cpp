@@ -9644,11 +9644,13 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       return SelectNode;
     }
 
-    return SimplifySelect(DL, N0, N1, N2);
+    if (SDValue NewSel = SimplifySelect(DL, N0, N1, N2))
+      return NewSel;
   }
 
-  if (SDValue BinOp = foldSelectOfBinops(N))
-    return BinOp;
+  if (!VT.isVector())
+    if (SDValue BinOp = foldSelectOfBinops(N))
+      return BinOp;
 
   return SDValue();
 }
@@ -22388,7 +22390,10 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   if (N1.getOperand(1) == N2.getOperand(1)) {
     SDValue NewSel =
         DAG.getSelect(DL, VT, N0, N1.getOperand(0), N2.getOperand(0));
-    return DAG.getNode(BinOpc, DL, VT, NewSel, N1.getOperand(1));
+    SDValue NewBinOp = DAG.getNode(BinOpc, DL, VT, NewSel, N1.getOperand(1));
+    NewBinOp->setFlags(N1->getFlags());
+    NewBinOp->intersectFlagsWith(N2->getFlags());
+    return NewBinOp;
   }
 
   // Fold select(cond, binop(x, y), binop(x, z))
@@ -22399,7 +22404,10 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
       VT == N2.getOperand(1).getValueType()) {
     SDValue NewSel =
         DAG.getSelect(DL, VT, N0, N1.getOperand(1), N2.getOperand(1));
-    return DAG.getNode(BinOpc, DL, VT, N1.getOperand(0), NewSel);
+    SDValue NewBinOp = DAG.getNode(BinOpc, DL, VT, N1.getOperand(0), NewSel);
+    NewBinOp->setFlags(N1->getFlags());
+    NewBinOp->intersectFlagsWith(N2->getFlags());
+    return NewBinOp;
   }
 
   // TODO: Handle isCommutativeBinOp patterns as well?
