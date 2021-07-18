@@ -651,7 +651,7 @@ void FutexWait(atomic_uint32_t *p, u32 cmp) {
 
 void FutexWake(atomic_uint32_t *p, u32 count) {
 #    if SANITIZER_FREEBSD
-  _umtx_op(p_, UMTX_OP_WAKE, count, 0, 0);
+  _umtx_op(p, UMTX_OP_WAKE, count, 0, 0);
 #    elif SANITIZER_NETBSD
                    /* No userspace futex-like synchronization */
 #    else
