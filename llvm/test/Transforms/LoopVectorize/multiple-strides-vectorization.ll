@@ -80,7 +80,7 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    store <4 x i32> [[TMP11]], <4 x i32>* [[TMP12]], align 4, !alias.scope !5, !noalias !7
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP8:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[Z]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOTOUTER]], label [[SCALAR_PH]]
@@ -105,7 +105,7 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    store i32 [[TMP20]], i32* [[TMP18]], align 4
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i64 [[J_NEXT]], [[Z]]
-; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], [[LOOP10:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], !llvm.loop [[LOOP10:![0-9]+]]
 ;
   br label %.outer.preheader
 

@@ -21,8 +21,8 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    br i1 [[C_2]], label [[OUTER_LATCH:%.*]], label [[INNER_BB:%.*]]
 ; CHECK:       inner.bb:
 ; CHECK-NEXT:    [[C_3:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP3_PREHEADER:%.*]], label [[INNER_LATCH:%.*]]
-; CHECK:       loop3.preheader:
+; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_3_PREHEADER:%.*]], label [[INNER_LATCH:%.*]]
+; CHECK:       loop.3.preheader:
 ; CHECK-NEXT:    [[L_1_LCSSA8:%.*]] = phi i16* [ [[L_1]], [[INNER_BB]] ]
 ; CHECK-NEXT:    [[L_1_LCSSA:%.*]] = phi i16* [ [[L_1]], [[INNER_BB]] ]
 ; CHECK-NEXT:    [[L_2_LCSSA:%.*]] = phi i16* [ [[L_2]], [[INNER_BB]] ]
@@ -61,27 +61,27 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    store i16 [[TMP9]], i16* [[TMP7]], align 2, !alias.scope !3, !noalias !0
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP3_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    br label [[LOOP3:%.*]]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label [[LOOP_3:%.*]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[C_4:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_4]], label [[EXIT_LOOPEXIT1:%.*]], label [[INNER]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
-; CHECK:       loop3:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP3]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK:       loop.3:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_3]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ult i64 [[IV]], [[N]]
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, i16* [[L_1_LCSSA]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[LOOP_L_1:%.*]] = load i16, i16* [[GEP_1]], align 2
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, i16* [[L_2_LCSSA]], i64 0
 ; CHECK-NEXT:    store i16 [[LOOP_L_1]], i16* [[GEP_2]], align 2
-; CHECK-NEXT:    br i1 [[C_5]], label [[LOOP3]], label [[EXIT_LOOPEXIT]], [[LOOP7:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[C_5]], label [[LOOP_3]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit.loopexit1:
@@ -107,7 +107,7 @@ inner:                                              ; preds = %bb15, %bb1
 
 inner.bb:                                              ; preds = %bb3
   %c.3 = call i1 @cond()
-  br i1 %c.3, label %loop3, label %inner.latch
+  br i1 %c.3, label %loop.3, label %inner.latch
 
 inner.latch:                                             ; preds = %bb4
   %c.4 = call i1 @cond()
@@ -116,15 +116,15 @@ inner.latch:                                             ; preds = %bb4
 outer.latch:                                             ; preds = %bb3
   br label %outer
 
-loop3:                                              ; preds = %bb9, %bb4
-  %iv = phi i64 [ %iv.next, %loop3 ], [ 0, %inner.bb ]
+loop.3:                                              ; preds = %bb9, %bb4
+  %iv = phi i64 [ %iv.next, %loop.3 ], [ 0, %inner.bb ]
   %iv.next = add nsw nuw i64 %iv, 1
   %c.5  = icmp ult i64 %iv, %N
   %gep.1 = getelementptr inbounds i16, i16* %l.1, i64 %iv.next
   %loop.l.1 = load i16, i16* %gep.1, align 2
   %gep.2 = getelementptr inbounds i16, i16* %l.2, i64 0
   store i16 %loop.l.1, i16* %gep.2 , align 2
-  br i1 %c.5, label %loop3, label %exit
+  br i1 %c.5, label %loop.3, label %exit
 
 exit:                                             ; preds = %bb15, %bb5
   %l.3 = load i16, i16* %l.1, align 2
