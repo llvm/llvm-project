@@ -165,7 +165,7 @@ bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
                  BlockFrequencyInfo *, TargetLibraryInfo *, Loop *,
                  AliasSetTracker *, MemorySSAUpdater *, ScalarEvolution *,
                  ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
-                 OptimizationRemarkEmitter *);
+                 OptimizationRemarkEmitter *, bool);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
