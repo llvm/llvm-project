@@ -492,7 +492,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
      AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<LoopLikeOpInterface>,
      RecursiveSideEffects,
-     SingleBlockImplicitTerminator<"linalg::YieldOp">
+     SingleBlockImplicitTerminator<"linalg::TiledYieldOp">
     ]> {
   let summary = "Linalg tiled loop operation";
   let description = [{
@@ -509,7 +509,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     every tensor argument of TiledLoopOp.
 
     The body region must contain exactly one block that terminates with
-    `linalg.yield` with the operands resulting from `insert_slice` operations.
+    `linalg.tiled_yield`.
 
     Example:
 
@@ -528,9 +528,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
 
       %result_sub = linalg.generic ...
 
-      %result = tensor.insert_slice %result_sub into %out[%i, 0][%c4, %c64][1, 1]
-        : tensor<?x?xi8> into tensor<24x64xi8>
-      linalg.yield %result : tensor<24x64xi8>
+      linalg.tiled_yield %result_sub to %out_sub : tensor<?x?xi8>
     }
     ```
 
@@ -540,7 +538,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     every memref argument of TiledLoopOp.
 
     The body region must contain exactly one block that terminates with
-    `linalg.yield` with no operands.
+    `linalg.tiled_yield` with no operands.
 
     Example:
 
@@ -558,7 +556,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
           : memref<24x64xi8> to memref<?x?xi8>
 
       %result_sub = linalg.generic ...
-      linalg.yield
+      linalg.tiled_yield
     }
     ```
   }];
@@ -745,6 +743,28 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+}
+
+def Linalg_TiledYieldOp : Linalg_Op<"tiled_yield",
+    [NoSideEffect, ReturnLike, Terminator, SameVariadicOperandSize]>,
+    Arguments<(ins Variadic<AnyType>:$tiles, Variadic<AnyType>:$outputs)> {
+  let summary = "Linalg tiled yield operation";
+  let description = [{
+    `linalg.tiled_yield` is a special terminator operation for the block inside
+    the region of `linalg.tiled_loop` op. It updates the part of the enclosing
+    `linalg.tiled_loop` result specifies by the `outputs` operand with the
+    values from the `tiles` operand.
+
+    Example:
+
+    ```mlir
+    linalg.tiled_loop ... outs(%out_ = %out : tensor<?x?xf32>) {
+      %output = tensor.extract_slice %out_... // or %output = %out_
+      %tile = "some_computation"
+      linalg.tiled_yield %tile in %output : tensor<?x?xf32>
+    ```
+  }];
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 }
 
 def Linalg_IndexOp : Linalg_Op<"index", [NoSideEffect]>,

@@ -29,7 +29,7 @@ func @tiled_loop(%A: memref<192x192xf32>,
     linalg.matmul ins(%1, %3 : memref<?x192xf32, #map1>,
                                memref<192x?xf32, #map1>)
                   outs(%4 : memref<?x?xf32, #map1>)
-    linalg.yield
+    linalg.tiled_yield
   }
   return
 }
@@ -64,7 +64,7 @@ func @tiled_loop_reduction(%A: memref<192x192xf32>,
       outs (%C_ = %C: memref<f32>)
       iterators["reduction", "reduction"] {
     linalg.fill(%cst, %A_) : f32, memref<192x192xf32>
-    linalg.yield
+    linalg.tiled_yield
   }
   return
 }
