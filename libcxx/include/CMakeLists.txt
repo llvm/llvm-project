@@ -193,6 +193,7 @@ set(files
   __ranges/empty.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/non_propagating_cache.h
   __ranges/ref_view.h
   __ranges/size.h
   __ranges/subrange.h
