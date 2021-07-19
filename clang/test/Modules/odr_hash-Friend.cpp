@@ -1,3 +1,5 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 // RUN: rm -rf %t
 
 // PR35939: MicrosoftMangle.cpp triggers an assertion failure on this test.

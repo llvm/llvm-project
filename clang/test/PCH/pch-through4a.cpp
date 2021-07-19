@@ -1,5 +1,7 @@
 // expected-no-diagnostics
 // Create PCH with a through header.
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 // RUN: %clang_cc1 -verify -I %S -emit-pch \
 // RUN: -pch-through-header=Inputs/pch-through1.h \
 // RUN:   -fms-extensions -o %t.pch -x c++-header %s

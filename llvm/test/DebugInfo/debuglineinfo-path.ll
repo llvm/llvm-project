@@ -1,3 +1,5 @@
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
 ; Make sure that absolute source dir is detected correctly regardless of the platform.
 
 ; On powerpc llvm-nm describes win_func as a global variable, not a function. It breaks the test.

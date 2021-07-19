@@ -1,3 +1,5 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: cd %t

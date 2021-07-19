@@ -1,4 +1,6 @@
 // Create PCH with #pragma hdrstop
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 // RUN: %clang_cc1 -verify -I %S -emit-pch -pch-through-hdrstop-create \
 // RUN:   -fms-extensions -o %t.pch -x c++-header %s
 

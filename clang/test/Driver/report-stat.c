@@ -1,3 +1,5 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 // RUN: %clang -c -fproc-stat-report -fintegrated-as %s | FileCheck %s
 // CHECK: clang{{.*}}: output={{.*}}.o, total={{[0-9.]+}} ms, user={{[0-9.]+}} ms, mem={{[0-9]+}} Kb
 

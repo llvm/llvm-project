@@ -1,3 +1,5 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 ; Test enumeration representation in DWARF debug info:
 ; * test value representation for each possible underlying integer type
 ; * test the integer type is as expected

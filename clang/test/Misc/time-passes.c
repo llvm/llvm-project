@@ -1,3 +1,5 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 // Check that legacy pass manager could only use -ftime-report
 // RUN: %clang_cc1 -flegacy-pass-manager -emit-obj -O1 \
 // RUN:     -ftime-report %s -o /dev/null 2>&1 | \

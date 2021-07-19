@@ -1,3 +1,5 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 // RUN: env CC_PRINT_PROC_STAT=1 \
 // RUN:     CC_PRINT_PROC_STAT_FILE=%t.csv \
 // RUN: %clang -no-canonical-prefixes -S -o %t.s %s

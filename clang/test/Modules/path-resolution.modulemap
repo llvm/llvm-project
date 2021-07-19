@@ -1,3 +1,5 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 // RUN: rm -rf %t
 //
 // First, create two modules a and b, with a dependency b -> a, both within

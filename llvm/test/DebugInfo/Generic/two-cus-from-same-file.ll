@@ -1,3 +1,5 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 ; For http://llvm.org/bugs/show_bug.cgi?id=12942
 ;   There are two CUs coming from /tmp/foo.c in this module. Make sure it doesn't
 ;   blow llc up and produces something reasonable.

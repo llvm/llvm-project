@@ -3,6 +3,8 @@
 // PR42867: Disable this test for the new PM since the passes that lower the
 // llvm.coro.* intrinsics have not yet been ported.
 // RUN: %clang_cc1 -fno-experimental-new-pass-manager -emit-obj -std=c++2a -fsanitize=null %s -o %t.o
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
 
 namespace std::experimental {
 template <typename R, typename... T> struct coroutine_traits {
