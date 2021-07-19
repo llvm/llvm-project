@@ -1241,13 +1241,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    // SVE supports truncating stores of 64 and 128-bit vectors
-    setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
-    setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
-    setTruncStoreAction(MVT::v2i64, MVT::v2i32, Custom);
-    setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
-    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
-
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
                     MVT::nxv4f32, MVT::nxv2f64}) {
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
@@ -1492,16 +1485,6 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     setCondCodeAction(ISD::SETUGT, VT, Expand);
     setCondCodeAction(ISD::SETUEQ, VT, Expand);
     setCondCodeAction(ISD::SETUNE, VT, Expand);
-  }
-
-  // Mark integer truncating stores as having custom lowering
-  if (VT.isInteger()) {
-    MVT InnerVT = VT.changeVectorElementType(MVT::i8);
-    while (InnerVT != VT) {
-      setTruncStoreAction(VT, InnerVT, Custom);
-      InnerVT = InnerVT.changeVectorElementType(
-          MVT::getIntegerVT(2 * InnerVT.getScalarSizeInBits()));
-    }
   }
 
   // Lower fixed length vector operations to scalable equivalents.
@@ -4547,7 +4530,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT MemVT = StoreNode->getMemoryVT();
 
   if (VT.isVector()) {
-    if (useSVEForFixedLengthVectorVT(VT, true))
+    if (useSVEForFixedLengthVectorVT(VT))
       return LowerFixedLengthVectorStoreToSVE(Op, DAG);
 
     unsigned AS = StoreNode->getAddressSpace();
@@ -4559,8 +4542,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
       return scalarizeVectorStore(StoreNode, DAG);
     }
 
-    if (StoreNode->isTruncatingStore() && VT == MVT::v4i16 &&
-        MemVT == MVT::v4i8) {
+    if (StoreNode->isTruncatingStore()) {
       return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
     }
     // 256 bit non-temporal stores can be lowered to STNP. Do this as part of
@@ -15140,29 +15122,6 @@ static bool performTBISimplification(SDValue Addr,
   return false;
 }
 
-static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
-  assert((N->getOpcode() == ISD::STORE || N->getOpcode() == ISD::MSTORE) &&
-         "Expected STORE dag node in input!");
-
-  if (auto Store = dyn_cast<StoreSDNode>(N)) {
-    if (!Store->isTruncatingStore())
-      return SDValue();
-    SDValue Ext = Store->getValue();
-    auto ExtOpCode = Ext.getOpcode();
-    if (ExtOpCode != ISD::ZERO_EXTEND && ExtOpCode != ISD::SIGN_EXTEND &&
-        ExtOpCode != ISD::ANY_EXTEND)
-      return SDValue();
-    SDValue Orig = Ext->getOperand(0);
-    if (Store->getMemoryVT() != Orig->getValueType(0))
-      return SDValue();
-    return DAG.getStore(Store->getChain(), SDLoc(Store), Orig,
-                        Store->getBasePtr(), Store->getPointerInfo(),
-                        Store->getAlign());
-  }
-
-  return SDValue();
-}
-
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -15173,9 +15132,6 @@ static SDValue performSTORECombine(SDNode *N,
   if (Subtarget->supportsAddressTopByteIgnored() &&
       performTBISimplification(N->getOperand(2), DCI, DAG))
     return SDValue(N, 0);
-
-  if (SDValue Store = foldTruncStoreOfExt(DAG, N))
-    return Store;
 
   return SDValue();
 }
