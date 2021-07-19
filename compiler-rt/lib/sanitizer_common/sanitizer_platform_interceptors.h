@@ -577,6 +577,7 @@
   (SI_POSIX && !(SANITIZER_MAC && SANITIZER_I386))
 #define SANITIZER_INTERCEPT_UNAME (SI_POSIX && !SI_FREEBSD)
 #define SANITIZER_INTERCEPT___XUNAME SI_FREEBSD
+#define SANITIZER_INTERCEPT_FLOPEN SI_FREEBSD
 
 // This macro gives a way for downstream users to override the above
 // interceptor macros irrespective of the platform they are on. They have

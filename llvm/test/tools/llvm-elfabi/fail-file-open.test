@@ -1,5 +1,0 @@
-# RUN: not llvm-elfabi %s.NotAFileInTestingDir --emit-tbe=%t 2>&1 | FileCheck %s
-
-This file will not be read. An invalid file path is fed to llvm-elfabi.
-
-# CHECK: error: Could not open `{{.*}}.NotAFileInTestingDir`

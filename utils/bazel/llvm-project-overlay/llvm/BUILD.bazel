@@ -2735,22 +2735,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "llvm-elfabi",
-    srcs = glob([
-        "tools/llvm-elfabi/*.cpp",
-        "tools/llvm-elfabi/*.h",
-    ]),
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":InterfaceStub",
-        ":Object",
-        ":Support",
-        ":TextAPI",
-    ],
-)
-
-cc_binary(
     name = "llvm-exegesis",
     srcs = [
         "tools/llvm-exegesis/llvm-exegesis.cpp",

@@ -20,10 +20,11 @@ void Merger::ConstructJob(Compilation &C, const JobAction &JA,
                           const llvm::opt::ArgList &Args,
                           const char *LinkingOutput) const {
   std::string Merger = getToolChain().GetProgramPath(getShortName());
+  // TODO: Use IFS library directly in the future.
   llvm::opt::ArgStringList CmdArgs;
-  CmdArgs.push_back("-action");
+  CmdArgs.push_back("--input-format=IFS");
   const bool WriteBin = !Args.getLastArg(options::OPT_emit_merged_ifs);
-  CmdArgs.push_back(WriteBin ? "write-bin" : "write-ifs");
+  CmdArgs.push_back(WriteBin ? "--output-format=ELF" : "--output-format=IFS");
   CmdArgs.push_back("-o");
 
   // Normally we want to write to a side-car file ending in ".ifso" so for
