@@ -12,6 +12,10 @@ else()
   set(LIBOMPTARGET_DEBUG False)
 endif()
 
+# Replace the space from user's input with ";" in case that CMake add escape
+# char into the lit command.
+string(REPLACE " " ";" LIBOMPTARGET_LIT_ARG_LIST "${LIBOMPTARGET_LIT_ARGS}")
+
 string(REGEX MATCHALL "([^\ ]+\ |[^\ ]+$)" SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}")
 foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
   string(STRIP "${CURRENT_TARGET}" CURRENT_TARGET)
@@ -19,7 +23,7 @@ foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
     "Running libomptarget tests"
     ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET}
     DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
-    ARGS ${LIBOMPTARGET_LIT_ARGS})
+    ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
   list(APPEND LIBOMPTARGET_LIT_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET})
 
   # Configure the lit.site.cfg.in file
@@ -33,4 +37,4 @@ add_openmp_testsuite(check-libomptarget
   ${LIBOMPTARGET_LIT_TESTSUITES}
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS omptarget omp ${LIBOMPTARGET_TESTED_PLUGINS}
-  ARGS ${LIBOMPTARGET_LIT_ARGS})
+  ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
