@@ -42,21 +42,25 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 
 namespace ranges {
 struct __prev_fn final : private __function_like {
+  _LIBCPP_HIDE_FROM_ABI
   constexpr explicit __prev_fn(__tag __x) noexcept : __function_like(__x) {}
 
   template <bidirectional_iterator _Ip>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr _Ip operator()(_Ip __x) const {
     --__x;
     return __x;
   }
 
   template <bidirectional_iterator _Ip>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n) const {
     ranges::advance(__x, -__n);
     return __x;
   }
 
   template <bidirectional_iterator _Ip>
+  _LIBCPP_HIDE_FROM_ABI
   constexpr _Ip operator()(_Ip __x, iter_difference_t<_Ip> __n, _Ip __bound) const {
     ranges::advance(__x, -__n, __bound);
     return __x;
