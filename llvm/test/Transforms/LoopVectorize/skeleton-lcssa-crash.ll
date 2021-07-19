@@ -23,7 +23,7 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    [[C_3:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP_3_PREHEADER:%.*]], label [[INNER_LATCH:%.*]]
 ; CHECK:       loop.3.preheader:
-; CHECK-NEXT:    [[L_1_LCSSA8:%.*]] = phi i16* [ [[L_1]], [[INNER_BB]] ]
+; CHECK-NEXT:    [[L_1_LCSSA10:%.*]] = phi i16* [ [[L_1]], [[INNER_BB]] ]
 ; CHECK-NEXT:    [[L_1_LCSSA:%.*]] = phi i16* [ [[L_1]], [[INNER_BB]] ]
 ; CHECK-NEXT:    [[L_2_LCSSA:%.*]] = phi i16* [ [[L_2]], [[INNER_BB]] ]
 ; CHECK-NEXT:    [[L_2_LCSSA3:%.*]] = bitcast i16* [[L_2_LCSSA]] to i8*
@@ -31,14 +31,15 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[L_2_LCSSA3]], i64 1
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[L_1_LCSSA]], i64 1
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[L_2_LCSSA]], i64 1
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = bitcast i16* [[SCEVGEP]] to i8*
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i16, i16* [[L_1_LCSSA]], i64 1
+; CHECK-NEXT:    [[SCEVGEP58:%.*]] = bitcast i16* [[SCEVGEP5]] to i8*
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], 2
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i16, i16* [[L_1_LCSSA8]], i64 [[TMP1]]
-; CHECK-NEXT:    [[SCEVGEP710:%.*]] = bitcast i16* [[SCEVGEP7]] to i8*
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[L_2_LCSSA3]], [[SCEVGEP710]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[SCEVGEP6]], [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i16, i16* [[L_1_LCSSA10]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP912:%.*]] = bitcast i16* [[SCEVGEP9]] to i8*
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[L_2_LCSSA3]], [[SCEVGEP912]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[SCEVGEP58]], [[SCEVGEP4]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[FOUND_CONFLICT]], true
 ; CHECK-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -85,11 +86,11 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit.loopexit1:
-; CHECK-NEXT:    [[L_1_LCSSA4:%.*]] = phi i16* [ [[L_1]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[L_1_LCSSA6:%.*]] = phi i16* [ [[L_1]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[L_15:%.*]] = phi i16* [ [[L_1_LCSSA4]], [[EXIT_LOOPEXIT1]] ], [ [[L_1_LCSSA]], [[EXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    [[L_3:%.*]] = load i16, i16* [[L_15]], align 2
+; CHECK-NEXT:    [[L_17:%.*]] = phi i16* [ [[L_1_LCSSA6]], [[EXIT_LOOPEXIT1]] ], [ [[L_1_LCSSA]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[L_3:%.*]] = load i16, i16* [[L_17]], align 2
 ; CHECK-NEXT:    ret i16 [[L_3]]
 ;
 entry:
