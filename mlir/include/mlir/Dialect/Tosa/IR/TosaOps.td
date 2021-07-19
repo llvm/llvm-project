@@ -87,7 +87,10 @@ def Tosa_AvgPool2dOp : Tosa_Op<"avg_pool2d", [
 //===----------------------------------------------------------------------===//
 // Operator: conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_Conv2DOp : Tosa_Op<"conv2d", [NoSideEffect]> {
+def Tosa_Conv2DOp : Tosa_Op<"conv2d", [
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>,
+    NoSideEffect]> {
   let summary = "2D Convolution Operator";
 
   let description = [{
@@ -118,7 +121,10 @@ def Tosa_Conv2DOp : Tosa_Op<"conv2d", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 // Operator: conv3d
 //===----------------------------------------------------------------------===//
-def Tosa_Conv3DOp : Tosa_Op<"conv3d", [NoSideEffect]> {
+def Tosa_Conv3DOp : Tosa_Op<"conv3d", [
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>,
+    NoSideEffect]> {
   let summary = "3D Convolution operator";
 
   let description = [{
@@ -148,7 +154,10 @@ def Tosa_Conv3DOp : Tosa_Op<"conv3d", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 // Operator: depthwise_conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_DepthwiseConv2DOp : Tosa_Op<"depthwise_conv2d", [NoSideEffect]> {
+def Tosa_DepthwiseConv2DOp : Tosa_Op<"depthwise_conv2d", [
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>,
+    NoSideEffect]> {
   let summary = "Depthwise 2D Convolution operator";
 
   let description = [{
@@ -265,7 +274,10 @@ def Tosa_MaxPool2dOp : Tosa_Op<"max_pool2d", [
 //===----------------------------------------------------------------------===//
 // Operator: transpose_conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_TransposeConv2DOp : Tosa_Op<"transpose_conv2d", [NoSideEffect]> {
+def Tosa_TransposeConv2DOp : Tosa_Op<"transpose_conv2d", [
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>,
+    NoSideEffect]> {
   let summary = "Transpose 2D Convolution operator.";
 
   let description = [{
