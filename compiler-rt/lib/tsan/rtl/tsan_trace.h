@@ -65,9 +65,7 @@ struct Trace {
   // CreateThreadContext.
   TraceHeader headers[kTraceParts];
 
-  Trace()
-    : mtx(MutexTypeTrace, StatMtxTrace) {
-  }
+  Trace() : mtx(MutexTypeTrace) {}
 };
 
 }  // namespace __tsan

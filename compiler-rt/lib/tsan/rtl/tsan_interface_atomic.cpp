@@ -492,7 +492,6 @@ static morder convert_morder(morder mo) {
     const uptr callpc = (uptr)__builtin_return_address(0); \
     uptr pc = StackTrace::GetCurrentPc(); \
     mo = convert_morder(mo); \
-    AtomicStatInc(thr, sizeof(*a), mo, StatAtomic##func); \
     ScopedAtomic sa(thr, callpc, a, mo, __func__); \
     return Atomic##func(thr, pc, __VA_ARGS__); \
 /**/
@@ -512,22 +511,6 @@ class ScopedAtomic {
  private:
   ThreadState *thr_;
 };
-
-static void AtomicStatInc(ThreadState *thr, uptr size, morder mo, StatType t) {
-  StatInc(thr, StatAtomic);
-  StatInc(thr, t);
-  StatInc(thr, size == 1 ? StatAtomic1
-             : size == 2 ? StatAtomic2
-             : size == 4 ? StatAtomic4
-             : size == 8 ? StatAtomic8
-             :             StatAtomic16);
-  StatInc(thr, mo == mo_relaxed ? StatAtomicRelaxed
-             : mo == mo_consume ? StatAtomicConsume
-             : mo == mo_acquire ? StatAtomicAcquire
-             : mo == mo_release ? StatAtomicRelease
-             : mo == mo_acq_rel ? StatAtomicAcq_Rel
-             :                    StatAtomicSeq_Cst);
-}
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
