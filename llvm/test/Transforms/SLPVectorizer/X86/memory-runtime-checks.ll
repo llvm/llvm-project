@@ -58,22 +58,22 @@ declare void @use(<8 x float>)
 define void @delete_pointer_bound(float* %a, float* %b, i1 %c) #0 {
 ; CHECK-LABEL: @delete_pointer_bound(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float*> poison, float* [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float*> [[TMP0]], float* [[B]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, <2 x float*> [[TMP1]], <2 x i64> <i64 10, i64 14>
+; CHECK-NEXT:    [[B_10:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 10
+; CHECK-NEXT:    [[B_14:%.*]] = getelementptr inbounds float, float* [[B]], i64 14
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP2]], i32 4, <2 x i1> <i1 true, i1 true>, <2 x float> undef)
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[SHUFFLE]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 3, i32 undef, i32 undef>
-; CHECK-NEXT:    [[I71:%.*]] = shufflevector <8 x float> undef, <8 x float> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 10, i32 5, i32 6, i32 13>
-; CHECK-NEXT:    call void @use(<8 x float> [[I71]])
+; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[B_10]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load float, float* [[B_14]], align 4
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <8 x float> undef, float [[L0]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <8 x float> [[I2]], float [[L0]], i32 3
+; CHECK-NEXT:    [[I4:%.*]] = insertelement <8 x float> [[I3]], float [[L1]], i32 4
+; CHECK-NEXT:    [[I7:%.*]] = insertelement <8 x float> [[I4]], float [[L1]], i32 7
+; CHECK-NEXT:    call void @use(<8 x float> [[I7]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       then:
 ; CHECK-NEXT:    [[A_8:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 8
 ; CHECK-NEXT:    store float 0.000000e+00, float* [[A_8]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float*> [[TMP2]], i32 1
-; CHECK-NEXT:    [[L6:%.*]] = load float, float* [[TMP5]], align 4
+; CHECK-NEXT:    [[L6:%.*]] = load float, float* [[B_14]], align 4
 ; CHECK-NEXT:    [[A_5:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
 ; CHECK-NEXT:    store float [[L6]], float* [[A_5]], align 4
 ; CHECK-NEXT:    [[A_6:%.*]] = getelementptr inbounds float, float* [[A]], i64 6

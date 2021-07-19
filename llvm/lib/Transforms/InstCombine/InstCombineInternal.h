@@ -168,6 +168,7 @@ public:
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
   Instruction *visitVAEndInst(VAEndInst &I);
+  Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
   Instruction *visitFreeze(FreezeInst &I);
 
   /// Specify what to return for unhandled instructions.
@@ -339,6 +340,7 @@ private:
   /// \see CastInst::isEliminableCastPair
   Instruction::CastOps isEliminableCastPair(const CastInst *CI1,
                                             const CastInst *CI2);
+  Value *simplifyIntToPtrRoundTripCast(Value *Val);
 
   Value *foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &And);
   Value *foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Or);

@@ -21,8 +21,8 @@ TEST(StatisticsTest, Median) {
 TEST(StatisticsTest, StdDev) {
   EXPECT_DOUBLE_EQ(benchmark::StatisticsStdDev({101, 101, 101, 101}), 0.0);
   EXPECT_DOUBLE_EQ(benchmark::StatisticsStdDev({1, 2, 3}), 1.0);
-  EXPECT_FLOAT_EQ(benchmark::StatisticsStdDev({1.5, 2.4, 3.3, 4.2, 5.1}),
-                  1.42302495);
+  EXPECT_DOUBLE_EQ(benchmark::StatisticsStdDev({2.5, 2.4, 3.3, 4.2, 5.1}),
+                   1.151086443322134);
 }
 
 }  // end namespace

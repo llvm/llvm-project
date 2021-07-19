@@ -1,36 +1,41 @@
-#include "benchmark/benchmark.h"
-
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-
 #include <iostream>
 #include <limits>
 #include <sstream>
 #include <string>
 
+#include "benchmark/benchmark.h"
+
 namespace {
 
 class TestReporter : public benchmark::ConsoleReporter {
  public:
-  virtual bool ReportContext(const Context& context) {
+  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
     return ConsoleReporter::ReportContext(context);
   };
 
-  virtual void ReportRuns(const std::vector<Run>& report) {
+  virtual void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
     ++count_;
+    max_family_index_ =
+        std::max<size_t>(max_family_index_, report[0].family_index);
     ConsoleReporter::ReportRuns(report);
   };
 
-  TestReporter() : count_(0) {}
+  TestReporter() : count_(0), max_family_index_(0) {}
 
   virtual ~TestReporter() {}
 
   size_t GetCount() const { return count_; }
 
+  size_t GetMaxFamilyIndex() const { return max_family_index_; }
+
  private:
   mutable size_t count_;
+  mutable size_t max_family_index_;
 };
 
 }  // end namespace
@@ -96,6 +101,15 @@ int main(int argc, char **argv) {
       std::cerr << "ERROR: Expected " << expected_reports
                 << " tests to be run but reported_count = " << reports_count
                 << std::endl;
+      return -1;
+    }
+
+    const size_t max_family_index = test_reporter.GetMaxFamilyIndex();
+    const size_t num_families = reports_count == 0 ? 0 : 1 + max_family_index;
+    if (num_families != expected_reports) {
+      std::cerr << "ERROR: Expected " << expected_reports
+                << " test families to be run but num_families = "
+                << num_families << std::endl;
       return -1;
     }
   }

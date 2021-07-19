@@ -49,9 +49,7 @@ DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
-## llvm-readobj does not support grouped options, because it also supports some old
-## flags (-st, -sd, etc.), and it would be confusing if only some grouped options
-## were supported.
-# RUN: not llvm-readobj -aeWhSsrnudlVgIS %t.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
-
-# UNKNOWN:   for the --section-headers option: may only occur zero or one times!
+## Check llvm-readobj supports grouped short options as well.
+# RUN: llvm-readobj -aeWhSsrnudlVgIS %t.o > %t.grouped
+# RUN: llvm-readobj -a -e -W -h -S -r -n -u -d -l -V -g -I -s %t.o > %t.not-grouped
+# RUN: cmp %t.grouped %t.not-grouped

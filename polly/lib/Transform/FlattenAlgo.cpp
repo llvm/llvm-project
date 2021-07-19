@@ -175,7 +175,7 @@ isl::union_pw_aff scheduleExtractDimAff(isl::union_map UMap, unsigned pos) {
 /// The example schedule would be transformed to:
 ///   { Stmt_X[] -> [X - l_X, ...]; Stmt_B -> [l_X - u_X + 1 + Y - l_Y, ...] }
 isl::union_map tryFlattenSequence(isl::union_map Schedule) {
-  auto IslCtx = Schedule.get_ctx();
+  auto IslCtx = Schedule.ctx();
   auto ScatterSet = isl::set(Schedule.range());
 
   auto ParamSpace = Schedule.get_space().params();

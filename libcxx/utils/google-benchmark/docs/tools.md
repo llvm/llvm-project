@@ -4,7 +4,11 @@
 
 The `compare.py` can be used to compare the result of benchmarks.
 
-**NOTE**: the utility relies on the scipy package which can be installed using [these instructions](https://www.scipy.org/install.html).
+### Dependencies
+The utility relies on the [scipy](https://www.scipy.org) package which can be installed using pip:
+```bash
+pip3 install -r requirements.txt
+```
 
 ### Displaying aggregates only
 

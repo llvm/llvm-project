@@ -24,6 +24,8 @@ declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32(i32, float, float, <
 ; GCN-NEXT: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], [[AND]]
 ; GCN-NEXT: s_nop 0
 ; GCN-NEXT: image_gather4 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s{{\[}}[[SREG0]]:[[SREG7]]{{\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x1
+; GCN-NEXT: ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+; GCN-NEXT: ; implicit-def: $vgpr8_vgpr9
 ; GCN-NEXT: s_xor_b64 exec, exec, [[SAVE]]
 ; GCN-NEXT: s_cbranch_execnz [[RSRC_LOOP]]
 define amdgpu_ps <4 x float> @water_loop_rsrc(<8 x i32> %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
@@ -48,6 +50,8 @@ main_body:
 ; GCN-NEXT: s_nop 0
 
 ; GCN-NEXT: image_gather4 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, s{{\[}}[[SREG0]]:[[SREG3]]{{\]}} dmask:0x1
+; GCN-NEXT: ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GCN-NEXT: ; implicit-def: $vgpr4_vgpr5
 ; GCN-NEXT: s_xor_b64 exec, exec, [[SAVE]]
 ; GCN-NEXT: s_cbranch_execnz [[SAMP_LOOP]]
 define amdgpu_ps <4 x float> @water_loop_samp(<8 x i32> inreg %rsrc, <4 x i32> %samp, float %s, float %t) {

@@ -776,8 +776,8 @@ isl::map ZoneAlgorithm::makeValInst(Value *Val, ScopStmt *UserStmt, Loop *Scope,
     // Construct the SCEV space.
     // TODO: Add only the induction variables referenced in SCEVAddRecExpr
     // expressions, not just all of them.
-    auto ScevId = isl::manage(isl_id_alloc(
-        UseDomainSpace.get_ctx().get(), nullptr, const_cast<SCEV *>(ScevExpr)));
+    auto ScevId = isl::manage(isl_id_alloc(UseDomainSpace.ctx().get(), nullptr,
+                                           const_cast<SCEV *>(ScevExpr)));
 
     auto ScevSpace = UseDomainSpace.drop_dims(isl::dim::set, 0, 0);
     ScevSpace = ScevSpace.set_tuple_id(isl::dim::set, ScevId);

@@ -436,6 +436,7 @@ struct TestVectorTransferLoweringPatterns
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
     populateVectorTransferLoweringPatterns(patterns);
+    populateVectorTransferPermutationMapLoweringPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };

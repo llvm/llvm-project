@@ -24,7 +24,10 @@ using namespace llvm::MachO;
 using namespace lld;
 using namespace lld::macho;
 
+MapVector<NamePair, ConcatOutputSection *> macho::concatOutputSections;
+
 void ConcatOutputSection::addInput(ConcatInputSection *input) {
+  assert(input->parent == this);
   if (inputs.empty()) {
     align = input->align;
     flags = input->getFlags();
@@ -33,7 +36,6 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
     finalizeFlags(input);
   }
   inputs.push_back(input);
-  input->parent = this;
 }
 
 // Branch-range extension can be implemented in two ways, either through ...
@@ -356,4 +358,23 @@ void ConcatOutputSection::finalizeFlags(InputSection *input) {
     flags |= input->getFlags();
     break;
   }
+}
+
+ConcatOutputSection *
+ConcatOutputSection::getOrCreateForInput(const InputSection *isec) {
+  NamePair names = maybeRenameSection({isec->getSegName(), isec->getName()});
+  ConcatOutputSection *&osec = concatOutputSections[names];
+  if (!osec)
+    osec = make<ConcatOutputSection>(names.second);
+  return osec;
+}
+
+NamePair macho::maybeRenameSection(NamePair key) {
+  auto newNames = config->sectionRenameMap.find(key);
+  if (newNames != config->sectionRenameMap.end())
+    return newNames->second;
+  auto newName = config->segmentRenameMap.find(key.first);
+  if (newName != config->segmentRenameMap.end())
+    return std::make_pair(newName->second, key.second);
+  return key;
 }

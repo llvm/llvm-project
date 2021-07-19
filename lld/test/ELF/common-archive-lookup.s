@@ -20,6 +20,7 @@
 ## Bitcode files.
 # RUN: llvm-as -o 1.bc commonblock.ll
 # RUN: llvm-as -o 2.bc blockdata.ll
+# RUN: llvm-as -o 3.bc weak.ll
 
 ## Bitcode archive.
 # RUN: llvm-ar crs 4.a 1.bc 2.bc
@@ -31,10 +32,10 @@
 # RUN: llvm-objdump -D -j .data 2 | FileCheck --check-prefix=TEST1 %s
 
 # RUN: ld.lld -o 3 main.o 2.a
-# RUN: llvm-objdump -D -j .data 3 | FileCheck --check-prefix=TEST1 %s
+# RUN: llvm-objdump -t 3 | FileCheck --check-prefix=BSS %s
 
 # RUN: ld.lld -o 4 main.o --start-lib 1.o weak_data_only.o --end-lib
-# RUN: llvm-objdump -D -j .data 4 | FileCheck --check-prefix=TEST1 %s
+# RUN: llvm-objdump -t 4 | FileCheck --check-prefix=BSS %s
 
 # RUN: ld.lld -o 5 main.o 3.a --print-map | FileCheck --check-prefix=MAP %s
 
@@ -63,6 +64,9 @@
 # RUN: ld.lld -o - main.o  --start-lib 1.bc 2.bc --end-lib --lto-emit-asm | \
 # RUN:   FileCheck --check-prefix=ASM %s
 
+## COMMON overrides weak. Don't extract 3.bc which provides a weak definition.
+# RUN: ld.lld -o /dev/null main.o --start-lib 1.bc 3.bc --end-lib -y block | FileCheck --check-prefix=LTO_WEAK %s
+
 ## Old FORTRAN that mixes use of COMMON blocks and BLOCK DATA requires that we
 ## search through archives for non-tentative definitions (from the BLOCK DATA)
 ## to replace the tentative definitions (from the COMMON block(s)).
@@ -75,6 +79,7 @@
 # TEST1-NEXT:       fb 21 09 40
 # TEST1-NEXT:       ...
 
+# BSS:       [[#%x,]] g     O .bss   0000000000000028 block
 
 # NFC:       Name: block
 # NFC-NEXT:  Value:
@@ -99,6 +104,10 @@
 # ASM:       block:
 # ASM-NEXT:    .long 5
 # ASM:         .size   block, 20
+
+# LTO_WEAK:     1.bc: common definition of block
+# LTO_WEAK:     <internal>: reference to block
+# LTO_WEAK-NOT: {{.}}
 
 #--- ref.s
   .text
@@ -166,6 +175,12 @@ target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 @block = dso_local local_unnamed_addr global [5 x i32] [i32 5, i32 0, i32 0, i32 0, i32 0], align 4
+
+#--- weak.ll
+target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+target triple = "powerpc64le-unknown-linux-gnu"
+
+@block = weak dso_local global [5 x i32] [i32 5, i32 0, i32 0, i32 0, i32 0], align 4
 
 #--- commonblock.ll
 target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"

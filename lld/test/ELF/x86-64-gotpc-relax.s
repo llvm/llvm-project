@@ -1,12 +1,22 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -relax-relocations -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: ld.lld %t.o -o %t1 --no-apply-dynamic-relocs
+# RUN: llvm-readobj -x .got.plt -r %t1 | FileCheck --check-prefixes=RELOC,NO-APPLY-DYNAMIC-RELOCS %s
+# RUN: ld.lld %t.o -o %t1 --apply-dynamic-relocs
+# RUN: llvm-readobj -x .got.plt -r %t1 | FileCheck --check-prefixes=RELOC,APPLY-DYNAMIC-RELOCS %s
 # RUN: ld.lld %t.o -o %t1
-# RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
 
-## There is no relocations.
-# RELOC:    Relocations [
-# RELOC:    ]
+## There is one R_X86_64_IRELATIVE relocations.
+# RELOC-LABEL: Relocations [
+# RELOC-NEXT:    Section (1) .rela.dyn {
+# RELOC-NEXT:      0x202220 R_X86_64_IRELATIVE - 0x201172
+# RELOC-NEXT:    }
+# RELOC-NEXT:  ]
+# RELOC-LABEL: Hex dump of section '.got.plt':
+# NO-APPLY-DYNAMIC-RELOCS-NEXT:  0x00202220 00000000 00000000
+# APPLY-DYNAMIC-RELOCS-NEXT:     0x00202220 72112000 00000000
+# RELOC-EMPTY:
 
 # 0x201173 + 7 - 10 = 0x201170
 # 0x20117a + 7 - 17 = 0x201170

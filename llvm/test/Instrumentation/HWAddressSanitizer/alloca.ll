@@ -36,6 +36,7 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; CHECK: store i8 %[[X_TAG2]], i8* %[[X_I8_GEP]]
 ; CHECK: call void @llvm.dbg.value(
 ; CHECK-SAME: metadata !DIArgList(i32* %[[X_BC]], i32* %[[X_BC]])
+; CHECK-SAME: metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0,
 ; CHECK: call void @use32(i32* nonnull %[[X_HWASAN]])
 
 ; UAR-TAGS: %[[BASE_TAG_COMPL:[^ ]*]] = xor i64 %[[BASE_TAG]], 255

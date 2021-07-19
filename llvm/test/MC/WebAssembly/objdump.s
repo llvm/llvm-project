@@ -2,13 +2,13 @@
 # RUN: llvm-objdump --triple=wasm32-unknown-unknown -d %t.o | FileCheck %s
 
 test0:
-    .functype   test0 (i32, i64) -> (i32)
+    .functype   test0 (i32, i64) -> (f32)
     .local      f32, f64, v128, v128
     local.get   2
     end_function
 
 test1:
-    .functype   test1 (i32, i64) -> (i32)
+    .functype   test1 (i32, i64) -> (i64)
     .local      i32, i64, funcref
     local.get   3
     end_function

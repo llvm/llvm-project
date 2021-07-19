@@ -9,3 +9,4 @@ int main() {
   }
   return regexec(&re, str.c_str(), 0, nullptr, 0) ? -1 : 0;
 }
+

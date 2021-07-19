@@ -55,36 +55,6 @@ class Twine;
 /// false otherwise.
 bool llvm_is_multithreaded();
 
-/// Execute the given \p UserFn on a separate thread, passing it the provided \p
-/// UserData and waits for thread completion.
-///
-/// This function does not guarantee that the code will actually be executed
-/// on a separate thread or honoring the requested stack size, but tries to do
-/// so where system support is available.
-///
-/// \param UserFn - The callback to execute.
-/// \param UserData - An argument to pass to the callback function.
-/// \param StackSizeInBytes - A requested size (in bytes) for the thread stack
-/// (or None for default)
-void llvm_execute_on_thread(
-    void (*UserFn)(void *), void *UserData,
-    llvm::Optional<unsigned> StackSizeInBytes = llvm::None);
-
-/// Schedule the given \p Func for execution on a separate thread, then return
-/// to the caller immediately. Roughly equivalent to
-/// `std::thread(Func).detach()`, except it allows requesting a specific stack
-/// size, if supported for the platform.
-///
-/// This function would report a fatal error if it can't execute the code
-/// on a separate thread.
-///
-/// \param Func - The callback to execute.
-/// \param StackSizeInBytes - A requested size (in bytes) for the thread stack
-/// (or None for default)
-void llvm_execute_on_thread_async(
-    llvm::unique_function<void()> Func,
-    llvm::Optional<unsigned> StackSizeInBytes = llvm::None);
-
 #if LLVM_THREADING_USE_STD_CALL_ONCE
 
   typedef std::once_flag once_flag;

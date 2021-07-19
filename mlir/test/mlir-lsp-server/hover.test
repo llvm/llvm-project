@@ -18,7 +18,7 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "\"std.constant\"\n\nGeneric Form:\n\n```mlir\n%true = \"std.constant\"() {value = true} : () -> i1\n```\n"
+// CHECK-NEXT:      "value": "\"std.constant\"\n\nGeneric Form:\n\n```mlir\n%0 = \"std.constant\"() {value = true} : () -> i1\n```\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {

@@ -9,6 +9,8 @@
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 
 #include "../PassDetail.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -1001,7 +1003,7 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
           converter, ctx);
 
   ConversionTarget target(*ctx);
-  target.addLegalOp<ConstantOp>();
+  target.addLegalOp<ConstantOp, UnrealizedConversionCastOp>();
   target.addLegalDialect<LLVM::LLVMDialect>();
 
   // All operations from Async dialect must be lowered to the runtime API and

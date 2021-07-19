@@ -1123,5 +1123,43 @@ def SPV_GLSLLdexpOp :
   let verifier = [{ return ::verify(*this); }];
 }
 
+def SPV_GLSLFMixOp :
+  SPV_GLSLOp<"FMix", 46, [
+      NoSideEffect, AllTypesMatch<["x", "y", "a", "result"]>]> {
+  let summary = "Builds the linear blend of x and y";
+
+  let description = [{
+    Result is the linear blend of x and y, i.e., x * (1 - a) + y * a.
+
+    The operands must all be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are computed per component.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.GLSL.FMix %x : f32, %y : f32, %a : f32 -> f32
+    %0 = spv.GLSL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_ScalarOrVectorOf<SPV_Float>:$x,
+    SPV_ScalarOrVectorOf<SPV_Float>:$y,
+    SPV_ScalarOrVectorOf<SPV_Float>:$a
+  );
+
+  let results = (outs
+    SPV_ScalarOrVectorOf<SPV_Float>:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $x `:` type($x) `,` $y `:` type($y) `,` $a `:` type($a) `->` type($result)
+  }];
+
+  let verifier = [{ return success(); }];
+}
 
 #endif // MLIR_DIALECT_SPIRV_IR_GLSL_OPS

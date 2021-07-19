@@ -1146,10 +1146,11 @@ static Value *buildFADOutermostDimensionLoad(Value *GlobalDescriptor,
                                              PollyIRBuilder &Builder,
                                              std::string ArrayName) {
   assert(GlobalDescriptor && "invalid global descriptor given");
+  Type *Ty = GlobalDescriptor->getType()->getPointerElementType();
 
   Value *endIdx[4] = {Builder.getInt64(0), Builder.getInt32(3),
                       Builder.getInt64(0), Builder.getInt32(2)};
-  Value *endPtr = Builder.CreateInBoundsGEP(GlobalDescriptor, endIdx,
+  Value *endPtr = Builder.CreateInBoundsGEP(Ty, GlobalDescriptor, endIdx,
                                             ArrayName + "_end_ptr");
   Type *type = cast<GEPOperator>(endPtr)->getResultElementType();
   assert(isa<IntegerType>(type) && "expected type of end to be integral");
@@ -1158,7 +1159,7 @@ static Value *buildFADOutermostDimensionLoad(Value *GlobalDescriptor,
 
   Value *beginIdx[4] = {Builder.getInt64(0), Builder.getInt32(3),
                         Builder.getInt64(0), Builder.getInt32(1)};
-  Value *beginPtr = Builder.CreateInBoundsGEP(GlobalDescriptor, beginIdx,
+  Value *beginPtr = Builder.CreateInBoundsGEP(Ty, GlobalDescriptor, beginIdx,
                                               ArrayName + "_begin_ptr");
   Value *begin = Builder.CreateLoad(type, beginPtr, ArrayName + "_begin");
 

@@ -3,7 +3,6 @@
 ; Test that SIMD shifts can be lowered correctly even with shift
 ; values that are more complex than plain splats.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ;; TODO: Optimize this further by scalarizing the add

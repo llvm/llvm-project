@@ -15,135 +15,8 @@
 
 #define DEBUG_TYPE "orc"
 
-namespace {
-
-struct objc_class;
-struct objc_image_info;
-struct objc_object;
-struct objc_selector;
-
-using Class = objc_class *;
-using id = objc_object *;
-using SEL = objc_selector *;
-
-using ObjCMsgSendTy = id (*)(id, SEL, ...);
-using ObjCReadClassPairTy = Class (*)(Class, const objc_image_info *);
-using SelRegisterNameTy = SEL (*)(const char *);
-
-enum class ObjCRegistrationAPI { Uninitialized, Unavailable, Initialized };
-
-ObjCRegistrationAPI ObjCRegistrationAPIState =
-    ObjCRegistrationAPI::Uninitialized;
-ObjCMsgSendTy objc_msgSend = nullptr;
-ObjCReadClassPairTy objc_readClassPair = nullptr;
-SelRegisterNameTy sel_registerName = nullptr;
-
-} // end anonymous namespace
-
 namespace llvm {
 namespace orc {
-
-template <typename FnTy>
-static Error setUpObjCRegAPIFunc(FnTy &Target, sys::DynamicLibrary &LibObjC,
-                                 const char *Name) {
-  if (void *Addr = LibObjC.getAddressOfSymbol(Name))
-    Target = reinterpret_cast<FnTy>(Addr);
-  else
-    return make_error<StringError>(
-        (Twine("Could not find address for ") + Name).str(),
-        inconvertibleErrorCode());
-  return Error::success();
-}
-
-Error enableObjCRegistration(const char *PathToLibObjC) {
-  // If we've already tried to initialize then just bail out.
-  if (ObjCRegistrationAPIState != ObjCRegistrationAPI::Uninitialized)
-    return Error::success();
-
-  ObjCRegistrationAPIState = ObjCRegistrationAPI::Unavailable;
-
-  std::string ErrMsg;
-  auto LibObjC =
-      sys::DynamicLibrary::getPermanentLibrary(PathToLibObjC, &ErrMsg);
-
-  if (!LibObjC.isValid())
-    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-
-  if (auto Err = setUpObjCRegAPIFunc(objc_msgSend, LibObjC, "objc_msgSend"))
-    return Err;
-  if (auto Err = setUpObjCRegAPIFunc(objc_readClassPair, LibObjC,
-                                     "objc_readClassPair"))
-    return Err;
-  if (auto Err =
-          setUpObjCRegAPIFunc(sel_registerName, LibObjC, "sel_registerName"))
-    return Err;
-
-  ObjCRegistrationAPIState = ObjCRegistrationAPI::Initialized;
-  return Error::success();
-}
-
-bool objCRegistrationEnabled() {
-  return ObjCRegistrationAPIState == ObjCRegistrationAPI::Initialized;
-}
-
-void MachOJITDylibInitializers::runModInits() const {
-  for (const auto &ModInit : ModInitSections) {
-    for (uint64_t I = 0; I != ModInit.NumPtrs; ++I) {
-      auto *InitializerAddr = jitTargetAddressToPointer<uintptr_t *>(
-          ModInit.Address + (I * sizeof(uintptr_t)));
-      auto *Initializer =
-          jitTargetAddressToFunction<void (*)()>(*InitializerAddr);
-      Initializer();
-    }
-  }
-}
-
-void MachOJITDylibInitializers::registerObjCSelectors() const {
-  assert(objCRegistrationEnabled() && "ObjC registration not enabled.");
-
-  for (const auto &ObjCSelRefs : ObjCSelRefsSections) {
-    for (uint64_t I = 0; I != ObjCSelRefs.NumPtrs; ++I) {
-      auto SelEntryAddr = ObjCSelRefs.Address + (I * sizeof(uintptr_t));
-      const auto *SelName =
-          *jitTargetAddressToPointer<const char **>(SelEntryAddr);
-      auto Sel = sel_registerName(SelName);
-      *jitTargetAddressToPointer<SEL *>(SelEntryAddr) = Sel;
-    }
-  }
-}
-
-Error MachOJITDylibInitializers::registerObjCClasses() const {
-  assert(objCRegistrationEnabled() && "ObjC registration not enabled.");
-
-  struct ObjCClassCompiled {
-    void *Metaclass;
-    void *Parent;
-    void *Cache1;
-    void *Cache2;
-    void *Data;
-  };
-
-  auto *ImageInfo =
-      jitTargetAddressToPointer<const objc_image_info *>(ObjCImageInfoAddr);
-  auto ClassSelector = sel_registerName("class");
-
-  for (const auto &ObjCClassList : ObjCClassListSections) {
-    for (uint64_t I = 0; I != ObjCClassList.NumPtrs; ++I) {
-      auto ClassPtrAddr = ObjCClassList.Address + (I * sizeof(uintptr_t));
-      auto Cls = *jitTargetAddressToPointer<Class *>(ClassPtrAddr);
-      auto *ClassCompiled =
-          *jitTargetAddressToPointer<ObjCClassCompiled **>(ClassPtrAddr);
-      objc_msgSend(reinterpret_cast<id>(ClassCompiled->Parent), ClassSelector);
-      auto Registered = objc_readClassPair(Cls, ImageInfo);
-
-      // FIXME: Improve diagnostic by reporting the failed class's name.
-      if (Registered != Cls)
-        return make_error<StringError>("Unable to register Objective-C class",
-                                       inconvertibleErrorCode());
-    }
-  }
-  return Error::success();
-}
 
 MachOPlatform::MachOPlatform(
     ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
@@ -262,39 +135,39 @@ MachOPlatform::getDeinitializerSequence(JITDylib &JD) {
   return FullDeinitSeq;
 }
 
-void MachOPlatform::registerInitInfo(
-    JITDylib &JD, JITTargetAddress ObjCImageInfoAddr,
-    MachOJITDylibInitializers::SectionExtent ModInits,
-    MachOJITDylibInitializers::SectionExtent ObjCSelRefs,
-    MachOJITDylibInitializers::SectionExtent ObjCClassList) {
+void MachOPlatform::registerInitInfo(JITDylib &JD,
+                                     JITTargetAddress ObjCImageInfoAddr,
+                                     ExecutorAddressRange ModInits,
+                                     ExecutorAddressRange ObjCSelRefs,
+                                     ExecutorAddressRange ObjCClassList) {
   std::lock_guard<std::mutex> Lock(InitSeqsMutex);
 
   auto &InitSeq = InitSeqs[&JD];
 
   InitSeq.setObjCImageInfoAddr(ObjCImageInfoAddr);
 
-  if (ModInits.Address)
+  if (ModInits.StartAddress)
     InitSeq.addModInitsSection(std::move(ModInits));
 
-  if (ObjCSelRefs.Address)
+  if (ObjCSelRefs.StartAddress)
     InitSeq.addObjCSelRefsSection(std::move(ObjCSelRefs));
 
-  if (ObjCClassList.Address)
+  if (ObjCClassList.StartAddress)
     InitSeq.addObjCClassListSection(std::move(ObjCClassList));
 }
 
-static Expected<MachOJITDylibInitializers::SectionExtent>
-getSectionExtent(jitlink::LinkGraph &G, StringRef SectionName) {
+static Expected<ExecutorAddressRange> getSectionExtent(jitlink::LinkGraph &G,
+                                                       StringRef SectionName) {
   auto *Sec = G.findSectionByName(SectionName);
   if (!Sec)
-    return MachOJITDylibInitializers::SectionExtent();
+    return ExecutorAddressRange();
   jitlink::SectionRange R(*Sec);
   if (R.getSize() % G.getPointerSize() != 0)
     return make_error<StringError>(SectionName + " section size is not a "
                                                  "multiple of the pointer size",
                                    inconvertibleErrorCode());
-  return MachOJITDylibInitializers::SectionExtent(
-      R.getStart(), R.getSize() / G.getPointerSize());
+  return ExecutorAddressRange(ExecutorAddress(R.getStart()),
+                              ExecutorAddress(R.getEnd()));
 }
 
 void MachOPlatform::InitScraperPlugin::modifyPassConfig(
@@ -305,17 +178,14 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
     return;
 
   Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) -> Error {
-    JITLinkSymbolVector InitSectionSymbols;
-    preserveInitSectionIfPresent(InitSectionSymbols, G,
-                                 "__DATA,__mod_init_func");
-    preserveInitSectionIfPresent(InitSectionSymbols, G,
-                                 "__DATA,__objc_selrefs");
-    preserveInitSectionIfPresent(InitSectionSymbols, G,
-                                 "__DATA,__objc_classlist");
+    JITLinkSymbolSet InitSectionSyms;
+    preserveInitSectionIfPresent(InitSectionSyms, G, "__DATA,__mod_init_func");
+    preserveInitSectionIfPresent(InitSectionSyms, G, "__DATA,__objc_selrefs");
+    preserveInitSectionIfPresent(InitSectionSyms, G, "__DATA,__objc_classlist");
 
-    if (!InitSectionSymbols.empty()) {
+    if (!InitSectionSyms.empty()) {
       std::lock_guard<std::mutex> Lock(InitScraperMutex);
-      InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
+      InitSymbolDeps[&MR] = std::move(InitSectionSyms);
     }
 
     if (auto Err = processObjCImageInfo(G, MR))
@@ -326,8 +196,7 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
 
   Config.PostFixupPasses.push_back([this, &JD = MR.getTargetJITDylib()](
                                        jitlink::LinkGraph &G) -> Error {
-    MachOJITDylibInitializers::SectionExtent ModInits, ObjCSelRefs,
-        ObjCClassList;
+    ExecutorAddressRange ModInits, ObjCSelRefs, ObjCClassList;
 
     JITTargetAddress ObjCImageInfoAddr = 0;
     if (auto *ObjCImageInfoSec =
@@ -359,23 +228,28 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
     LLVM_DEBUG({
       dbgs() << "MachOPlatform: Scraped " << G.getName() << " init sections:\n";
       dbgs() << "  __objc_selrefs: ";
-      if (ObjCSelRefs.NumPtrs)
-        dbgs() << ObjCSelRefs.NumPtrs << " pointer(s) at "
-               << formatv("{0:x16}", ObjCSelRefs.Address) << "\n";
+      auto NumObjCSelRefs = ObjCSelRefs.size().getValue() / sizeof(uintptr_t);
+      if (NumObjCSelRefs)
+        dbgs() << NumObjCSelRefs << " pointer(s) at "
+               << formatv("{0:x16}", ObjCSelRefs.StartAddress.getValue())
+               << "\n";
       else
         dbgs() << "none\n";
 
       dbgs() << "  __objc_classlist: ";
-      if (ObjCClassList.NumPtrs)
-        dbgs() << ObjCClassList.NumPtrs << " pointer(s) at "
-               << formatv("{0:x16}", ObjCClassList.Address) << "\n";
+      auto NumObjCClasses = ObjCClassList.size().getValue() / sizeof(uintptr_t);
+      if (NumObjCClasses)
+        dbgs() << NumObjCClasses << " pointer(s) at "
+               << formatv("{0:x16}", ObjCClassList.StartAddress.getValue())
+               << "\n";
       else
         dbgs() << "none\n";
 
       dbgs() << "  __mod_init_func: ";
-      if (ModInits.NumPtrs)
-        dbgs() << ModInits.NumPtrs << " pointer(s) at "
-               << formatv("{0:x16}", ModInits.Address) << "\n";
+      auto NumModInits = ModInits.size().getValue() / sizeof(uintptr_t);
+      if (NumModInits)
+        dbgs() << NumModInits << " pointer(s) at "
+               << formatv("{0:x16}", ModInits.StartAddress.getValue()) << "\n";
       else
         dbgs() << "none\n";
     });
@@ -387,27 +261,26 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
   });
 }
 
-ObjectLinkingLayer::Plugin::LocalDependenciesMap
-MachOPlatform::InitScraperPlugin::getSyntheticSymbolLocalDependencies(
+ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
+MachOPlatform::InitScraperPlugin::getSyntheticSymbolDependencies(
     MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(InitScraperMutex);
   auto I = InitSymbolDeps.find(&MR);
   if (I != InitSymbolDeps.end()) {
-    LocalDependenciesMap Result;
+    SyntheticSymbolDependenciesMap Result;
     Result[MR.getInitializerSymbol()] = std::move(I->second);
     InitSymbolDeps.erase(&MR);
     return Result;
   }
-  return LocalDependenciesMap();
+  return SyntheticSymbolDependenciesMap();
 }
 
 void MachOPlatform::InitScraperPlugin::preserveInitSectionIfPresent(
-    JITLinkSymbolVector &Symbols, jitlink::LinkGraph &G,
-    StringRef SectionName) {
+    JITLinkSymbolSet &Symbols, jitlink::LinkGraph &G, StringRef SectionName) {
   if (auto *Sec = G.findSectionByName(SectionName)) {
     auto SecBlocks = Sec->blocks();
     if (!llvm::empty(SecBlocks))
-      Symbols.push_back(
+      Symbols.insert(
           &G.addAnonymousSymbol(**SecBlocks.begin(), 0, 0, false, true));
   }
 }

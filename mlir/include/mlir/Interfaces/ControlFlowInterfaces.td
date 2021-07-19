@@ -34,7 +34,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
         successor are non-materialized values, i.e. they are internal to the
         operation.
       }],
-      "Optional<MutableOperandRange>", "getMutableSuccessorOperands",
+      "::mlir::Optional<::mlir::MutableOperandRange>", "getMutableSuccessorOperands",
       (ins "unsigned":$index)
     >,
     InterfaceMethod<[{
@@ -43,11 +43,11 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
         successor are non-materialized values, i.e. they are internal to the
         operation.
       }],
-      "Optional<OperandRange>", "getSuccessorOperands",
+      "::mlir::Optional<::mlir::OperandRange>", "getSuccessorOperands",
       (ins "unsigned":$index), [{}], [{
         ConcreteOp *op = static_cast<ConcreteOp *>(this);
         auto operands = op->getMutableSuccessorOperands(index);
-        return operands ? Optional<OperandRange>(*operands) : llvm::None;
+        return operands ? ::mlir::Optional<::mlir::OperandRange>(*operands) : ::llvm::None;
       }]
     >,
     InterfaceMethod<[{
@@ -55,36 +55,36 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
         some successor, or None if `operandIndex` isn't a successor operand
         index.
       }],
-      "Optional<BlockArgument>", "getSuccessorBlockArgument",
+      "::mlir::Optional<::mlir::BlockArgument>", "getSuccessorBlockArgument",
       (ins "unsigned":$operandIndex), [{
-        Operation *opaqueOp = $_op;
+        ::mlir::Operation *opaqueOp = $_op;
         for (unsigned i = 0, e = opaqueOp->getNumSuccessors(); i != e; ++i) {
-          if (Optional<BlockArgument> arg = detail::getBranchSuccessorArgument(
+          if (::mlir::Optional<::mlir::BlockArgument> arg = ::mlir::detail::getBranchSuccessorArgument(
                 $_op.getSuccessorOperands(i), operandIndex,
                 opaqueOp->getSuccessor(i)))
             return arg;
         }
-        return llvm::None;
+        return ::llvm::None;
       }]
     >,
     InterfaceMethod<[{
         Returns the successor that would be chosen with the given constant
         operands. Returns nullptr if a single successor could not be chosen.
       }],
-      "Block *", "getSuccessorForOperands",
-      (ins "ArrayRef<Attribute>":$operands), [{}],
+      "::mlir::Block *", "getSuccessorForOperands",
+      (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands), [{}],
       /*defaultImplementation=*/[{ return nullptr; }]
     >
   ];
 
   let verify = [{
-    auto concreteOp = cast<ConcreteOp>($_op);
+    auto concreteOp = ::mlir::cast<ConcreteOp>($_op);
     for (unsigned i = 0, e = $_op->getNumSuccessors(); i != e; ++i) {
-      Optional<OperandRange> operands = concreteOp.getSuccessorOperands(i);
-      if (failed(detail::verifyBranchSuccessorOperands($_op, i, operands)))
-        return failure();
+      ::mlir::Optional<OperandRange> operands = concreteOp.getSuccessorOperands(i);
+      if (::mlir::failed(::mlir::detail::verifyBranchSuccessorOperands($_op, i, operands)))
+        return ::mlir::failure();
     }
-    return success();
+    return ::mlir::success();
   }];
 }
 
@@ -107,10 +107,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         operation by `getSuccessorRegions`. These operands should correspond 1-1
         with the successor inputs specified in `getSuccessorRegions`.
       }],
-      "OperandRange", "getSuccessorEntryOperands",
+      "::mlir::OperandRange", "getSuccessorEntryOperands",
       (ins "unsigned":$index), [{}], /*defaultImplementation=*/[{
         auto operandEnd = this->getOperation()->operand_end();
-        return OperandRange(operandEnd, operandEnd);
+        return ::mlir::OperandRange(operandEnd, operandEnd);
       }]
     >,
     InterfaceMethod<[{
@@ -128,8 +128,8 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         successor region must be non-empty.
       }],
       "void", "getSuccessorRegions",
-      (ins "Optional<unsigned>":$index, "ArrayRef<Attribute>":$operands,
-           "SmallVectorImpl<RegionSuccessor> &":$regions)
+      (ins "::mlir::Optional<unsigned>":$index, "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+           "::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
     >,
     InterfaceMethod<[{
         Populates countPerRegion with the number of times this operation will
@@ -143,8 +143,8 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         operand is not a constant.
       }],
       "void", "getNumRegionInvocations",
-      (ins "ArrayRef<Attribute>":$operands,
-           "SmallVectorImpl<int64_t> &":$countPerRegion), [{}],
+      (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+           "::mlir::SmallVectorImpl<int64_t> &":$countPerRegion), [{}],
       /*defaultImplementation=*/[{
         unsigned numRegions = this->getOperation()->getNumRegions();
         assert(countPerRegion.empty());

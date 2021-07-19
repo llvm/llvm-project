@@ -877,6 +877,14 @@ static CharSourceRange makeRangeFromFileLocs(CharSourceRange Range,
   return CharSourceRange::getCharRange(Begin, End);
 }
 
+// Assumes that `Loc` is in an expansion.
+static bool isInExpansionTokenRange(const SourceLocation Loc,
+                                    const SourceManager &SM) {
+  return SM.getSLocEntry(SM.getFileID(Loc))
+      .getExpansion()
+      .isExpansionTokenRange();
+}
+
 CharSourceRange Lexer::makeFileCharRange(CharSourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {
@@ -896,10 +904,12 @@ CharSourceRange Lexer::makeFileCharRange(CharSourceRange Range,
   }
 
   if (Begin.isFileID() && End.isMacroID()) {
-    if ((Range.isTokenRange() && !isAtEndOfMacroExpansion(End, SM, LangOpts,
-                                                          &End)) ||
-        (Range.isCharRange() && !isAtStartOfMacroExpansion(End, SM, LangOpts,
-                                                           &End)))
+    if (Range.isTokenRange()) {
+      if (!isAtEndOfMacroExpansion(End, SM, LangOpts, &End))
+        return {};
+      // Use the *original* end, not the expanded one in `End`.
+      Range.setTokenRange(isInExpansionTokenRange(Range.getEnd(), SM));
+    } else if (!isAtStartOfMacroExpansion(End, SM, LangOpts, &End))
       return {};
     Range.setEnd(End);
     return makeRangeFromFileLocs(Range, SM, LangOpts);
@@ -914,6 +924,9 @@ CharSourceRange Lexer::makeFileCharRange(CharSourceRange Range,
                                                          &MacroEnd)))) {
     Range.setBegin(MacroBegin);
     Range.setEnd(MacroEnd);
+    // Use the *original* `End`, not the expanded one in `MacroEnd`.
+    if (Range.isTokenRange())
+      Range.setTokenRange(isInExpansionTokenRange(End, SM));
     return makeRangeFromFileLocs(Range, SM, LangOpts);
   }
 

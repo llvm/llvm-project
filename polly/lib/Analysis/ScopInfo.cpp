@@ -172,7 +172,7 @@ static cl::list<std::string> IslArgs("polly-isl-arg",
 static isl::set addRangeBoundsToSet(isl::set S, const ConstantRange &Range,
                                     int dim, isl::dim type) {
   isl::val V;
-  isl::ctx Ctx = S.get_ctx();
+  isl::ctx Ctx = S.ctx();
 
   // The upper and lower bound for a parameter value is derived either from
   // the data type of the parameter or from the - possibly more restrictive -
@@ -253,7 +253,7 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl::ctx Ctx,
 ScopArrayInfo::~ScopArrayInfo() = default;
 
 isl::space ScopArrayInfo::getSpace() const {
-  auto Space = isl::space(Id.get_ctx(), 0, getNumberOfDimensions());
+  auto Space = isl::space(Id.ctx(), 0, getNumberOfDimensions());
   Space = Space.set_tuple_id(isl::dim::set, Id);
   return Space;
 }
@@ -418,7 +418,7 @@ const ScopArrayInfo *ScopArrayInfo::getFromId(isl::id Id) {
 void MemoryAccess::wrapConstantDimensions() {
   auto *SAI = getScopArrayInfo();
   isl::space ArraySpace = SAI->getSpace();
-  isl::ctx Ctx = ArraySpace.get_ctx();
+  isl::ctx Ctx = ArraySpace.ctx();
   unsigned DimsArray = SAI->getNumberOfDimensions();
 
   isl::multi_aff DivModAff = isl::multi_aff::identity(
@@ -471,7 +471,7 @@ void MemoryAccess::updateDimensionality() {
   auto *SAI = getScopArrayInfo();
   isl::space ArraySpace = SAI->getSpace();
   isl::space AccessSpace = AccessRelation.get_space().range();
-  isl::ctx Ctx = ArraySpace.get_ctx();
+  isl::ctx Ctx = ArraySpace.ctx();
 
   auto DimsArray = ArraySpace.dim(isl::dim::set);
   auto DimsAccess = AccessSpace.dim(isl::dim::set);
@@ -845,7 +845,7 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
   isl::set StmtInvalidDomain = getStatement()->getInvalidDomain();
   InvalidDomain = isl::set::empty(StmtInvalidDomain.get_space());
 
-  isl::ctx Ctx = Id.get_ctx();
+  isl::ctx Ctx = Id.ctx();
   isl::id BaseAddrId = SAI->getBasePtrId();
 
   if (getAccessInstruction() && isa<MemIntrinsic>(getAccessInstruction())) {

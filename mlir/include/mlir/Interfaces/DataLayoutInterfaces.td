@@ -98,7 +98,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
                       "innermost (newest). Returns null on failure.",
       /*retTy=*/"::mlir::DataLayoutSpecInterface",
       /*methodName=*/"combineWith",
-      /*args=*/(ins "::llvm::ArrayRef<DataLayoutSpecInterface>":$specs)
+      /*args=*/(ins "::llvm::ArrayRef<::mlir::DataLayoutSpecInterface>":$specs)
     >,
     InterfaceMethod<
       /*description=*/"Returns the list of layout entries.",
@@ -193,7 +193,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
     InterfaceMethod<
       /*description=*/"Returns the data layout specification for this op, or "
                       "null if it does not exist.",
-      /*retTy=*/"DataLayoutSpecInterface",
+      /*retTy=*/"::mlir::DataLayoutSpecInterface",
       /*methodName=*/"getDataLayoutSpec",
       /*args=*/(ins)
     >,

@@ -94,4 +94,4 @@ void baz(void) {
   bar(^(void) { return YES; });
 }
 
-// CHECK: attributes [[NUW]] = { noinline {{(norecurse )?}}nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { {{.*}}noinline {{(norecurse )?}}nounwind{{.*}} }

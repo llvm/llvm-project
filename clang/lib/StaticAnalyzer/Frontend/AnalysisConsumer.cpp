@@ -128,7 +128,8 @@ public:
         Plugins(plugins), Injector(injector), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
     DigestAnalyzerOptions();
-    if (Opts->PrintStats || Opts->ShouldSerializeStats) {
+    if (Opts->AnalyzerDisplayProgress || Opts->PrintStats ||
+        Opts->ShouldSerializeStats) {
       AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
           "analyzer", "Analyzer timers");
       SyntaxCheckTimer = std::make_unique<llvm::Timer>(
@@ -138,6 +139,9 @@ public:
       BugReporterTimer = std::make_unique<llvm::Timer>(
           "bugreporter", "Path-sensitive report post-processing time",
           *AnalyzerTimers);
+    }
+
+    if (Opts->PrintStats || Opts->ShouldSerializeStats) {
       llvm::EnableStatistics(/* PrintOnExit= */ false);
     }
 
@@ -183,6 +187,14 @@ public:
     }
   }
 
+  void DisplayTime(llvm::TimeRecord &Time) {
+    if (!Opts->AnalyzerDisplayProgress) {
+      return;
+    }
+    llvm::errs() << " : " << llvm::format("%1.1f", Time.getWallTime() * 1000)
+                 << " ms\n";
+  }
+
   void DisplayFunction(const Decl *D, AnalysisMode Mode,
                        ExprEngine::InliningModes IMode) {
     if (!Opts->AnalyzerDisplayProgress)
@@ -209,8 +221,8 @@ public:
       } else
         assert(Mode == (AM_Syntax | AM_Path) && "Unexpected mode!");
 
-      llvm::errs() << ": " << Loc.getFilename() << ' ' << getFunctionName(D)
-                   << '\n';
+      llvm::errs() << ": " << Loc.getFilename() << ' '
+                   << AnalysisDeclContext::getFunctionName(D);
     }
   }
 
@@ -568,63 +580,10 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
   Mgr.reset();
 }
 
-std::string AnalysisConsumer::getFunctionName(const Decl *D) {
-  std::string Str;
-  llvm::raw_string_ostream OS(Str);
-
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    OS << FD->getQualifiedNameAsString();
-
-    // In C++, there are overloads.
-    if (Ctx->getLangOpts().CPlusPlus) {
-      OS << '(';
-      for (const auto &P : FD->parameters()) {
-        if (P != *FD->param_begin())
-          OS << ", ";
-        OS << P->getType().getAsString();
-      }
-      OS << ')';
-    }
-
-  } else if (isa<BlockDecl>(D)) {
-    PresumedLoc Loc = Ctx->getSourceManager().getPresumedLoc(D->getLocation());
-
-    if (Loc.isValid()) {
-      OS << "block (line: " << Loc.getLine() << ", col: " << Loc.getColumn()
-         << ')';
-    }
-
-  } else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D)) {
-
-    // FIXME: copy-pasted from CGDebugInfo.cpp.
-    OS << (OMD->isInstanceMethod() ? '-' : '+') << '[';
-    const DeclContext *DC = OMD->getDeclContext();
-    if (const auto *OID = dyn_cast<ObjCImplementationDecl>(DC)) {
-      OS << OID->getName();
-    } else if (const auto *OID = dyn_cast<ObjCInterfaceDecl>(DC)) {
-      OS << OID->getName();
-    } else if (const auto *OC = dyn_cast<ObjCCategoryDecl>(DC)) {
-      if (OC->IsClassExtension()) {
-        OS << OC->getClassInterface()->getName();
-      } else {
-        OS << OC->getIdentifier()->getNameStart() << '('
-           << OC->getIdentifier()->getNameStart() << ')';
-      }
-    } else if (const auto *OCD = dyn_cast<ObjCCategoryImplDecl>(DC)) {
-      OS << OCD->getClassInterface()->getName() << '('
-         << OCD->getName() << ')';
-    }
-    OS << ' ' << OMD->getSelector().getAsString() << ']';
-
-  }
-
-  return OS.str();
-}
-
 AnalysisConsumer::AnalysisMode
 AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
   if (!Opts->AnalyzeSpecificFunction.empty() &&
-      getFunctionName(D) != Opts->AnalyzeSpecificFunction)
+      AnalysisDeclContext::getFunctionName(D) != Opts->AnalyzeSpecificFunction)
     return AM_None;
 
   // Unless -analyze-all is specified, treat decls differently depending on
@@ -661,19 +620,26 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
   if (Mgr->getAnalysisDeclContext(D)->isBodyAutosynthesized())
     return;
 
-  DisplayFunction(D, Mode, IMode);
   CFG *DeclCFG = Mgr->getCFG(D);
   if (DeclCFG)
     MaxCFGSize.updateMax(DeclCFG->size());
 
+  DisplayFunction(D, Mode, IMode);
   BugReporter BR(*Mgr);
 
   if (Mode & AM_Syntax) {
-    if (SyntaxCheckTimer)
+    llvm::TimeRecord CheckerStartTime;
+    if (SyntaxCheckTimer) {
+      CheckerStartTime = SyntaxCheckTimer->getTotalTime();
       SyntaxCheckTimer->startTimer();
+    }
     checkerMgr->runCheckersOnASTBody(D, *Mgr, BR);
-    if (SyntaxCheckTimer)
+    if (SyntaxCheckTimer) {
       SyntaxCheckTimer->stopTimer();
+      llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
+      CheckerEndTime -= CheckerStartTime;
+      DisplayTime(CheckerEndTime);
+    }
   }
 
   BR.FlushReports();
@@ -704,12 +670,19 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
   // Execute the worklist algorithm.
-  if (ExprEngineTimer)
+  llvm::TimeRecord ExprEngineStartTime;
+  if (ExprEngineTimer) {
+    ExprEngineStartTime = ExprEngineTimer->getTotalTime();
     ExprEngineTimer->startTimer();
+  }
   Eng.ExecuteWorkList(Mgr->getAnalysisDeclContextManager().getStackFrame(D),
                       Mgr->options.MaxNodesPerTopLevelFunction);
-  if (ExprEngineTimer)
+  if (ExprEngineTimer) {
     ExprEngineTimer->stopTimer();
+    llvm::TimeRecord ExprEngineEndTime = ExprEngineTimer->getTotalTime();
+    ExprEngineEndTime -= ExprEngineStartTime;
+    DisplayTime(ExprEngineEndTime);
+  }
 
   if (!Mgr->options.DumpExplodedGraphTo.empty())
     Eng.DumpGraph(Mgr->options.TrimGraph, Mgr->options.DumpExplodedGraphTo);

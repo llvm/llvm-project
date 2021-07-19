@@ -17,22 +17,24 @@ define void @foo(i32* nocapture %A, i32* nocapture readonly %B, i32 %m, i32 %n) 
 ; CHECK-NEXT:    [[CMP34:%.*]] = icmp slt i32 [[M:%.*]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP34]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[M]]
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[M]], 4
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[M]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i32 [[TMP4]], 3
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[M]], [[INDVAR]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[TMP6]], 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[M]], [[INDVAR]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[TMP7]], 2
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP6]]
 ; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVAR]], [[TMP4]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVAR]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

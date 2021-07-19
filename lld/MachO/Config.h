@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TextAPI/Architecture.h"
@@ -95,6 +96,7 @@ struct Configuration {
   Symbol *entry = nullptr;
   bool hasReexports = false;
   bool allLoad = false;
+  bool applicationExtension = false;
   bool archMultiple = false;
   bool exportDynamic = false;
   bool forceLoadObjC = false;
@@ -122,6 +124,7 @@ struct Configuration {
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
   uint32_t timeTraceGranularity = 500;
+  unsigned optimize;
   std::string progName;
 
   // For `clang -arch arm64 -arch x86_64`, clang will:
@@ -138,6 +141,8 @@ struct Configuration {
   llvm::StringRef thinLTOJobs;
   llvm::StringRef umbrella;
   uint32_t ltoo = 2;
+  llvm::CachePruningPolicy thinLTOCachePolicy;
+  llvm::StringRef thinLTOCacheDir;
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;

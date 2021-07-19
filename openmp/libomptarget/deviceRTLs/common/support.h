@@ -37,26 +37,16 @@ bool isRuntimeUninitialized();
 bool isRuntimeInitialized();
 
 ////////////////////////////////////////////////////////////////////////////////
-// Execution Modes based on location parameter fields
-////////////////////////////////////////////////////////////////////////////////
-
-bool checkSPMDMode(kmp_Ident *loc);
-bool checkGenericMode(kmp_Ident *loc);
-bool checkRuntimeUninitialized(kmp_Ident *loc);
-bool checkRuntimeInitialized(kmp_Ident *loc);
-
-////////////////////////////////////////////////////////////////////////////////
 // get info from machine
 ////////////////////////////////////////////////////////////////////////////////
 
 // get global ids to locate tread/team info (constant regardless of OMP)
-int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode);
+int GetLogicalThreadIdInBlock();
 int GetMasterThreadID();
 int GetNumberOfWorkersInTeam();
 
 // get OpenMP thread and team ids
-int GetOmpThreadId(int threadId,
-                   bool isSPMDExecutionMode); // omp_thread_num
+int GetOmpThreadId();                         // omp_thread_num
 int GetOmpTeamId();                           // omp_team_num
 
 // get OpenMP number of threads and team

@@ -33,9 +33,7 @@ entry:
 define <2 x i64> @One2i64() {
 ; P7BE-LABEL: One2i64:
 ; P7BE:       # %bb.0: # %entry
-; P7BE-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
-; P7BE-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; P7BE-NEXT:    lxvd2x vs34, 0, r3
+; P7BE-NEXT:    vspltisb v2, -1
 ; P7BE-NEXT:    blr
 ;
 ; P8LE-LABEL: One2i64:

@@ -85,6 +85,7 @@ entry:
   ret i1 %r
 }
 
+; FIXME: The andi instruction is redundant.
 define signext i8 @ashr_i8(i8 signext %a, i8 signext %b) {
 ; MIPS-LABEL: ashr_i8:
 ; MIPS:       # %bb.0: # %entry
@@ -146,11 +147,11 @@ define signext i8 @ashr_i8(i8 signext %a, i8 signext %b) {
 ; MMR6-NEXT:    srav $2, $4, $2
 ; MMR6-NEXT:    jrc $ra
 entry:
-  ; FIXME: The andi instruction is redundant.
   %r = ashr i8 %a, %b
   ret i8 %r
 }
 
+; FIXME: The andi instruction is redundant.
 define signext i16 @ashr_i16(i16 signext %a, i16 signext %b) {
 ; MIPS-LABEL: ashr_i16:
 ; MIPS:       # %bb.0: # %entry
@@ -212,7 +213,6 @@ define signext i16 @ashr_i16(i16 signext %a, i16 signext %b) {
 ; MMR6-NEXT:    srav $2, $4, $2
 ; MMR6-NEXT:    jrc $ra
 entry:
-  ; FIXME: The andi instruction is redundant.
   %r = ashr i16 %a, %b
   ret i16 %r
 }
@@ -274,21 +274,21 @@ entry:
 
 define signext i64 @ashr_i64(i64 signext %a, i64 signext %b) {
 ; MIPS-LABEL: ashr_i64:
-; MIPS:       # %bb.0:
-; MIPS-NEXT:    andi  $1, $7, 32
-; MIPS-NEXT:    bnez  $1, $BB4_2
-; MIPS-NEXT:    srav  $3, $4, $7
-; MIPS-NEXT:  # %bb.1:
-; MIPS-NEXT:    srlv  $1, $5, $7
+; MIPS:       # %bb.0: # %entry
+; MIPS-NEXT:    andi $1, $7, 32
+; MIPS-NEXT:    bnez $1, $BB4_2
+; MIPS-NEXT:    srav $3, $4, $7
+; MIPS-NEXT:  # %bb.1: # %entry
+; MIPS-NEXT:    srlv $1, $5, $7
 ; MIPS-NEXT:    not $2, $7
 ; MIPS-NEXT:    sll $4, $4, 1
-; MIPS-NEXT:    sllv  $2, $4, $2
-; MIPS-NEXT:    or  $1, $2, $1
-; MIPS-NEXT:    move  $2, $3
-; MIPS-NEXT:    jr  $ra
-; MIPS-NEXT:    move  $3, $1
+; MIPS-NEXT:    sllv $2, $4, $2
+; MIPS-NEXT:    or $1, $2, $1
+; MIPS-NEXT:    move $2, $3
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    move $3, $1
 ; MIPS-NEXT:  $BB4_2:
-; MIPS-NEXT:    jr  $ra
+; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    sra $2, $4, 31
 ;
 ; MIPS32-LABEL: ashr_i64:
@@ -395,114 +395,114 @@ entry:
 
 define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS-LABEL: ashr_i128:
-; MIPS:       # %bb.0:
-; MIPS-NEXT:    lw  $2, 28($sp)
+; MIPS:       # %bb.0: # %entry
+; MIPS-NEXT:    lw $2, 28($sp)
 ; MIPS-NEXT:    addiu $1, $zero, 64
-; MIPS-NEXT:    subu  $9, $1, $2
-; MIPS-NEXT:    sllv  $10, $5, $9
-; MIPS-NEXT:    andi  $13, $9, 32
-; MIPS-NEXT:    andi  $3, $2, 32
+; MIPS-NEXT:    subu $9, $1, $2
+; MIPS-NEXT:    sllv $10, $5, $9
+; MIPS-NEXT:    andi $13, $9, 32
+; MIPS-NEXT:    andi $3, $2, 32
 ; MIPS-NEXT:    addiu $11, $zero, 0
-; MIPS-NEXT:    bnez  $13, $BB5_2
+; MIPS-NEXT:    bnez $13, $BB5_2
 ; MIPS-NEXT:    addiu $12, $zero, 0
-; MIPS-NEXT:  # %bb.1:
-; MIPS-NEXT:    move  $12, $10
-; MIPS-NEXT:  $BB5_2:
+; MIPS-NEXT:  # %bb.1: # %entry
+; MIPS-NEXT:    move $12, $10
+; MIPS-NEXT:  $BB5_2: # %entry
 ; MIPS-NEXT:    not $8, $2
-; MIPS-NEXT:    bnez  $3, $BB5_5
-; MIPS-NEXT:    srlv  $14, $6, $2
-; MIPS-NEXT:  # %bb.3:
+; MIPS-NEXT:    bnez $3, $BB5_5
+; MIPS-NEXT:    srlv $14, $6, $2
+; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sll $1, $6, 1
-; MIPS-NEXT:    srlv  $11, $7, $2
-; MIPS-NEXT:    sllv  $1, $1, $8
-; MIPS-NEXT:    or  $15, $1, $11
-; MIPS-NEXT:    bnez  $13, $BB5_7
-; MIPS-NEXT:    move  $11, $14
-; MIPS-NEXT:  # %bb.4:
+; MIPS-NEXT:    srlv $11, $7, $2
+; MIPS-NEXT:    sllv $1, $1, $8
+; MIPS-NEXT:    or $15, $1, $11
+; MIPS-NEXT:    bnez $13, $BB5_7
+; MIPS-NEXT:    move $11, $14
+; MIPS-NEXT:  # %bb.4: # %entry
 ; MIPS-NEXT:    b $BB5_6
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  $BB5_5:
-; MIPS-NEXT:    bnez  $13, $BB5_7
-; MIPS-NEXT:    move  $15, $14
-; MIPS-NEXT:  $BB5_6:
-; MIPS-NEXT:    sllv  $1, $4, $9
+; MIPS-NEXT:    bnez $13, $BB5_7
+; MIPS-NEXT:    move $15, $14
+; MIPS-NEXT:  $BB5_6: # %entry
+; MIPS-NEXT:    sllv $1, $4, $9
 ; MIPS-NEXT:    not $9, $9
 ; MIPS-NEXT:    srl $10, $5, 1
-; MIPS-NEXT:    srlv  $9, $10, $9
-; MIPS-NEXT:    or  $10, $1, $9
-; MIPS-NEXT:  $BB5_7:
+; MIPS-NEXT:    srlv $9, $10, $9
+; MIPS-NEXT:    or $10, $1, $9
+; MIPS-NEXT:  $BB5_7: # %entry
 ; MIPS-NEXT:    addiu $24, $2, -64
 ; MIPS-NEXT:    sll $13, $4, 1
-; MIPS-NEXT:    srav  $14, $4, $24
-; MIPS-NEXT:    andi  $1, $24, 32
-; MIPS-NEXT:    bnez  $1, $BB5_10
+; MIPS-NEXT:    srav $14, $4, $24
+; MIPS-NEXT:    andi $1, $24, 32
+; MIPS-NEXT:    bnez $1, $BB5_10
 ; MIPS-NEXT:    sra $9, $4, 31
-; MIPS-NEXT:  # %bb.8:
-; MIPS-NEXT:    srlv  $1, $5, $24
+; MIPS-NEXT:  # %bb.8: # %entry
+; MIPS-NEXT:    srlv $1, $5, $24
 ; MIPS-NEXT:    not $24, $24
-; MIPS-NEXT:    sllv  $24, $13, $24
-; MIPS-NEXT:    or  $25, $24, $1
-; MIPS-NEXT:    move  $24, $14
+; MIPS-NEXT:    sllv $24, $13, $24
+; MIPS-NEXT:    or $25, $24, $1
+; MIPS-NEXT:    move $24, $14
 ; MIPS-NEXT:    sltiu $14, $2, 64
-; MIPS-NEXT:    beqz  $14, $BB5_12
+; MIPS-NEXT:    beqz $14, $BB5_12
 ; MIPS-NEXT:    nop
-; MIPS-NEXT:  # %bb.9:
+; MIPS-NEXT:  # %bb.9: # %entry
 ; MIPS-NEXT:    b $BB5_11
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  $BB5_10:
-; MIPS-NEXT:    move  $25, $14
+; MIPS-NEXT:    move $25, $14
 ; MIPS-NEXT:    sltiu $14, $2, 64
-; MIPS-NEXT:    beqz  $14, $BB5_12
-; MIPS-NEXT:    move  $24, $9
+; MIPS-NEXT:    beqz $14, $BB5_12
+; MIPS-NEXT:    move $24, $9
 ; MIPS-NEXT:  $BB5_11:
-; MIPS-NEXT:    or  $25, $15, $12
-; MIPS-NEXT:  $BB5_12:
+; MIPS-NEXT:    or $25, $15, $12
+; MIPS-NEXT:  $BB5_12: # %entry
 ; MIPS-NEXT:    sltiu $12, $2, 1
-; MIPS-NEXT:    beqz  $12, $BB5_18
+; MIPS-NEXT:    beqz $12, $BB5_18
 ; MIPS-NEXT:    nop
-; MIPS-NEXT:  # %bb.13:
-; MIPS-NEXT:    bnez  $14, $BB5_19
+; MIPS-NEXT:  # %bb.13: # %entry
+; MIPS-NEXT:    bnez $14, $BB5_19
 ; MIPS-NEXT:    nop
-; MIPS-NEXT:  $BB5_14:
-; MIPS-NEXT:    beqz  $12, $BB5_20
+; MIPS-NEXT:  $BB5_14: # %entry
+; MIPS-NEXT:    beqz $12, $BB5_20
 ; MIPS-NEXT:    nop
-; MIPS-NEXT:  $BB5_15:
-; MIPS-NEXT:    bnez  $3, $BB5_21
-; MIPS-NEXT:    srav  $4, $4, $2
-; MIPS-NEXT:  $BB5_16:
-; MIPS-NEXT:    srlv  $1, $5, $2
-; MIPS-NEXT:    sllv  $2, $13, $8
-; MIPS-NEXT:    or  $3, $2, $1
-; MIPS-NEXT:    bnez  $14, $BB5_23
-; MIPS-NEXT:    move  $2, $4
-; MIPS-NEXT:  # %bb.17:
+; MIPS-NEXT:  $BB5_15: # %entry
+; MIPS-NEXT:    bnez $3, $BB5_21
+; MIPS-NEXT:    srav $4, $4, $2
+; MIPS-NEXT:  $BB5_16: # %entry
+; MIPS-NEXT:    srlv $1, $5, $2
+; MIPS-NEXT:    sllv $2, $13, $8
+; MIPS-NEXT:    or $3, $2, $1
+; MIPS-NEXT:    bnez $14, $BB5_23
+; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:  # %bb.17: # %entry
 ; MIPS-NEXT:    b $BB5_22
 ; MIPS-NEXT:    nop
-; MIPS-NEXT:  $BB5_18:
-; MIPS-NEXT:    beqz  $14, $BB5_14
-; MIPS-NEXT:    move  $7, $25
+; MIPS-NEXT:  $BB5_18: # %entry
+; MIPS-NEXT:    beqz $14, $BB5_14
+; MIPS-NEXT:    move $7, $25
 ; MIPS-NEXT:  $BB5_19:
-; MIPS-NEXT:    bnez  $12, $BB5_15
-; MIPS-NEXT:    or  $24, $11, $10
-; MIPS-NEXT:  $BB5_20:
-; MIPS-NEXT:    move  $6, $24
-; MIPS-NEXT:    beqz  $3, $BB5_16
-; MIPS-NEXT:    srav  $4, $4, $2
+; MIPS-NEXT:    bnez $12, $BB5_15
+; MIPS-NEXT:    or $24, $11, $10
+; MIPS-NEXT:  $BB5_20: # %entry
+; MIPS-NEXT:    move $6, $24
+; MIPS-NEXT:    beqz $3, $BB5_16
+; MIPS-NEXT:    srav $4, $4, $2
 ; MIPS-NEXT:  $BB5_21:
-; MIPS-NEXT:    move  $2, $9
-; MIPS-NEXT:    bnez  $14, $BB5_23
-; MIPS-NEXT:    move  $3, $4
-; MIPS-NEXT:  $BB5_22:
-; MIPS-NEXT:    move  $2, $9
-; MIPS-NEXT:  $BB5_23:
-; MIPS-NEXT:    bnez  $14, $BB5_25
+; MIPS-NEXT:    move $2, $9
+; MIPS-NEXT:    bnez $14, $BB5_23
+; MIPS-NEXT:    move $3, $4
+; MIPS-NEXT:  $BB5_22: # %entry
+; MIPS-NEXT:    move $2, $9
+; MIPS-NEXT:  $BB5_23: # %entry
+; MIPS-NEXT:    bnez $14, $BB5_25
 ; MIPS-NEXT:    nop
-; MIPS-NEXT:  # %bb.24:
-; MIPS-NEXT:    move  $3, $9
-; MIPS-NEXT:  $BB5_25:
-; MIPS-NEXT:    move  $4, $6
-; MIPS-NEXT:    jr  $ra
-; MIPS-NEXT:    move  $5, $7
+; MIPS-NEXT:  # %bb.24: # %entry
+; MIPS-NEXT:    move $3, $9
+; MIPS-NEXT:  $BB5_25: # %entry
+; MIPS-NEXT:    move $4, $6
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    move $5, $7
 ;
 ; MIPS32-LABEL: ashr_i128:
 ; MIPS32:       # %bb.0: # %entry
@@ -692,22 +692,21 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS3-LABEL: ashr_i128:
 ; MIPS3:       # %bb.0: # %entry
 ; MIPS3-NEXT:    sll $2, $7, 0
-; MIPS3-NEXT:    andi  $1, $2, 64
-; MIPS3-NEXT:    bnez  $1, .LBB5_2
+; MIPS3-NEXT:    andi $1, $2, 64
+; MIPS3-NEXT:    bnez $1, .LBB5_2
 ; MIPS3-NEXT:    dsrav $3, $4, $7
-; MIPS3-NEXT:  # %bb.1:
+; MIPS3-NEXT:  # %bb.1: # %entry
 ; MIPS3-NEXT:    dsrlv $1, $5, $7
-; MIPS3-NEXT:    dsll  $4, $4, 1
+; MIPS3-NEXT:    dsll $4, $4, 1
 ; MIPS3-NEXT:    not $2, $2
 ; MIPS3-NEXT:    dsllv $2, $4, $2
-; MIPS3-NEXT:    or  $1, $2, $1
-; MIPS3-NEXT:    move  $2, $3
-; MIPS3-NEXT:    jr  $ra
-; MIPS3-NEXT:    move  $3, $1
+; MIPS3-NEXT:    or $1, $2, $1
+; MIPS3-NEXT:    move $2, $3
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    move $3, $1
 ; MIPS3-NEXT:  .LBB5_2:
-; MIPS3-NEXT:    jr  $ra
-; MIPS3-NEXT:    dsra  $2, $4, 63
-
+; MIPS3-NEXT:    jr $ra
+; MIPS3-NEXT:    dsra $2, $4, 63
 ;
 ; MIPS64-LABEL: ashr_i128:
 ; MIPS64:       # %bb.0: # %entry
@@ -932,10 +931,6 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MMR6-NEXT:    addiu $sp, $sp, 16
 ; MMR6-NEXT:    jrc $ra
 entry:
-; o32 shouldn't use TImode helpers.
-; GP32-NOT:       lw        $25, %call16(__ashrti3)($gp)
-; MM-NOT:         lw        $25, %call16(__ashrti3)($2)
-
   %r = ashr i128 %a, %b
   ret i128 %r
 }

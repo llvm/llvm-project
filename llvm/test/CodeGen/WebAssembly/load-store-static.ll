@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s -check-prefixes=NON-PIC,CHECK
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-emscripten"
 
 @hidden_global         = external hidden global i32

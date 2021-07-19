@@ -727,7 +727,7 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
   if (!isAngled && !FoundByHeaderMap) {
     SmallString<128> NewInclude("<");
     if (IsIncludeeInFramework) {
-      NewInclude += StringRef(ToFramework).drop_back(10); // drop .framework
+      NewInclude += ToFramework.str().drop_back(10); // drop .framework
       NewInclude += "/";
     }
     NewInclude += IncludeFilename;

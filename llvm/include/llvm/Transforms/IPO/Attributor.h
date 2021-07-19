@@ -142,6 +142,12 @@ namespace AA {
 /// instruction/argument of \p Scope.
 bool isValidInScope(const Value &V, const Function *Scope);
 
+/// Return true if \p V is a valid value at position \p CtxI, that is a
+/// constant, an argument of the same function as \p CtxI, or an instruction in
+/// that function that dominates \p CtxI.
+bool isValidAtPosition(const Value &V, const Instruction &CtxI,
+                       InformationCache &InfoCache);
+
 /// Try to convert \p V to type \p Ty without introducing new instructions. If
 /// this is not possible return `nullptr`. Note: this function basically knows
 /// how to cast various constants.
@@ -171,7 +177,9 @@ enum class ChangeStatus {
 };
 
 ChangeStatus operator|(ChangeStatus l, ChangeStatus r);
+ChangeStatus &operator|=(ChangeStatus &l, ChangeStatus r);
 ChangeStatus operator&(ChangeStatus l, ChangeStatus r);
+ChangeStatus &operator&=(ChangeStatus &l, ChangeStatus r);
 
 enum class DepClassTy {
   REQUIRED, ///< The target cannot be valid if the source is not.
@@ -1114,7 +1122,7 @@ struct Attributor {
       : Allocator(InfoCache.Allocator), Functions(Functions),
         InfoCache(InfoCache), CGUpdater(CGUpdater), Allowed(Allowed),
         DeleteFns(DeleteFns), RewriteSignatures(RewriteSignatures),
-        MaxFixpointIterations(None), OREGetter(None), PassName("")  {}
+        MaxFixpointIterations(None), OREGetter(None), PassName("") {}
 
   /// Constructor
   ///
@@ -1481,6 +1489,12 @@ struct Attributor {
                                          bool &UsedAssumedInformation) {
     return getAssumedSimplified(IRP, &AA, UsedAssumedInformation);
   }
+  Optional<Value *> getAssumedSimplified(const Value &V,
+                                         const AbstractAttribute &AA,
+                                         bool &UsedAssumedInformation) {
+    return getAssumedSimplified(IRPosition::value(V), AA,
+                                UsedAssumedInformation);
+  }
 
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
@@ -1507,10 +1521,17 @@ private:
                                          bool &UsedAssumedInformation);
 
 public:
+  /// Translate \p V from the callee context into the call site context.
+  Optional<Value *>
+  translateArgumentToCallSiteContent(Optional<Value *> V, CallBase &CB,
+                                     const AbstractAttribute &AA,
+                                     bool &UsedAssumedInformation);
+
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
   bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA,
+                     bool &UsedAssumedInformation,
                      bool CheckBBLivenessOnly = false,
                      DepClassTy DepClass = DepClassTy::OPTIONAL);
 
@@ -1518,7 +1539,7 @@ public:
   ///
   /// If \p LivenessAA is not provided it is queried.
   bool isAssumedDead(const Instruction &I, const AbstractAttribute *QueryingAA,
-                     const AAIsDead *LivenessAA,
+                     const AAIsDead *LivenessAA, bool &UsedAssumedInformation,
                      bool CheckBBLivenessOnly = false,
                      DepClassTy DepClass = DepClassTy::OPTIONAL);
 
@@ -1526,7 +1547,7 @@ public:
   ///
   /// If \p FnLivenessAA is not provided it is queried.
   bool isAssumedDead(const Use &U, const AbstractAttribute *QueryingAA,
-                     const AAIsDead *FnLivenessAA,
+                     const AAIsDead *FnLivenessAA, bool &UsedAssumedInformation,
                      bool CheckBBLivenessOnly = false,
                      DepClassTy DepClass = DepClassTy::OPTIONAL);
 
@@ -1534,7 +1555,7 @@ public:
   ///
   /// If \p FnLivenessAA is not provided it is queried.
   bool isAssumedDead(const IRPosition &IRP, const AbstractAttribute *QueryingAA,
-                     const AAIsDead *FnLivenessAA,
+                     const AAIsDead *FnLivenessAA, bool &UsedAssumedInformation,
                      bool CheckBBLivenessOnly = false,
                      DepClassTy DepClass = DepClassTy::OPTIONAL);
 
@@ -1566,7 +1587,13 @@ public:
     Function *F = I->getFunction();
     auto &ORE = OREGetter.getValue()(F);
 
-    ORE.emit([&]() { return RemarkCB(RemarkKind(PassName, RemarkName, I)); });
+    if (RemarkName.startswith("OMP"))
+      ORE.emit([&]() {
+        return RemarkCB(RemarkKind(PassName, RemarkName, I))
+               << " [" << RemarkName << "]";
+      });
+    else
+      ORE.emit([&]() { return RemarkCB(RemarkKind(PassName, RemarkName, I)); });
   }
 
   /// Emit a remark on a function.
@@ -1578,7 +1605,13 @@ public:
 
     auto &ORE = OREGetter.getValue()(F);
 
-    ORE.emit([&]() { return RemarkCB(RemarkKind(PassName, RemarkName, F)); });
+    if (RemarkName.startswith("OMP"))
+      ORE.emit([&]() {
+        return RemarkCB(RemarkKind(PassName, RemarkName, F))
+               << " [" << RemarkName << "]";
+      });
+    else
+      ORE.emit([&]() { return RemarkCB(RemarkKind(PassName, RemarkName, F)); });
   }
 
   /// Helper struct used in the communication between an abstract attribute (AA)
@@ -1717,17 +1750,23 @@ public:
   bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const AbstractAttribute &QueryingAA,
                                const ArrayRef<unsigned> &Opcodes,
-                               bool CheckBBLivenessOnly = false);
+                               bool &UsedAssumedInformation,
+                               bool CheckBBLivenessOnly = false,
+                               bool CheckPotentiallyDead = false);
 
   /// Check \p Pred on all call-like instructions (=CallBased derived).
   ///
   /// See checkForAllCallLikeInstructions(...) for more information.
   bool checkForAllCallLikeInstructions(function_ref<bool(Instruction &)> Pred,
-                                       const AbstractAttribute &QueryingAA) {
-    return checkForAllInstructions(Pred, QueryingAA,
-                                   {(unsigned)Instruction::Invoke,
-                                    (unsigned)Instruction::CallBr,
-                                    (unsigned)Instruction::Call});
+                                       const AbstractAttribute &QueryingAA,
+                                       bool &UsedAssumedInformation,
+                                       bool CheckBBLivenessOnly = false,
+                                       bool CheckPotentiallyDead = false) {
+    return checkForAllInstructions(
+        Pred, QueryingAA,
+        {(unsigned)Instruction::Invoke, (unsigned)Instruction::CallBr,
+         (unsigned)Instruction::Call},
+        UsedAssumedInformation, CheckBBLivenessOnly, CheckPotentiallyDead);
   }
 
   /// Check \p Pred on all Read/Write instructions.
@@ -1736,7 +1775,8 @@ public:
   /// to memory present in the information cache and return true if \p Pred
   /// holds on all of them.
   bool checkForAllReadWriteInstructions(function_ref<bool(Instruction &)> Pred,
-                                        AbstractAttribute &QueryingAA);
+                                        AbstractAttribute &QueryingAA,
+                                        bool &UsedAssumedInformation);
 
   /// Create a shallow wrapper for \p F such that \p F has internal linkage
   /// afterwards. It also sets the original \p F 's name to anonymous
@@ -2654,7 +2694,6 @@ struct AAReturnedValues
   virtual llvm::iterator_range<const_iterator> returned_values() const = 0;
 
   virtual size_t getNumReturnValues() const = 0;
-  virtual const SmallSetVector<CallBase *, 4> &getUnresolvedCalls() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAReturnedValues &createForPosition(const IRPosition &IRP,
@@ -3482,9 +3521,6 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
   /// Returns true if HeapToStack conversion is assumed to be possible.
   virtual bool isAssumedHeapToStack(CallBase &CB) const = 0;
 
-  /// Returns true if HeapToStack conversion is known to be possible.
-  virtual bool isKnownHeapToStack(CallBase &CB) const = 0;
-
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
 
@@ -4164,8 +4200,11 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
   /// Get the optimistic edges.
   virtual const SetVector<Function *> &getOptimisticEdges() const = 0;
 
-  /// Is there in this function call with a unknown Callee.
+  /// Is there any call with a unknown callee.
   virtual bool hasUnknownCallee() const = 0;
+
+  /// Is there any call with a unknown callee, excluding any inline asm.
+  virtual bool hasNonAsmUnknownCallee() const = 0;
 
   /// Iterator for exploring the call graph.
   AACallEdgeIterator optimisticEdgesBegin() const override {

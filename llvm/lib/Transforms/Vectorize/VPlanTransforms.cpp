@@ -230,7 +230,7 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
     auto IsImmovableRecipe = [](VPRecipeBase &R) {
       assert(R.getNumDefinedValues() <= 1 &&
              "no multi-defs are expected in predicated blocks");
-      for (VPUser *U : R.getVPValue()->users()) {
+      for (VPUser *U : R.getVPSingleValue()->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI)
           continue;
@@ -255,12 +255,12 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
     for (VPRecipeBase &Phi1ToMove : make_early_inc_range(reverse(*Merge1))) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
-      for (VPUser *U : Phi1ToMove.getVPValue()->users()) {
+      for (VPUser *U : Phi1ToMove.getVPSingleValue()->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI || UI->getParent() != Then2)
           continue;
         for (unsigned I = 0, E = U->getNumOperands(); I != E; ++I) {
-          if (Phi1ToMove.getVPValue() != U->getOperand(I))
+          if (Phi1ToMove.getVPSingleValue() != U->getOperand(I))
             continue;
           U->setOperand(I, PredInst1);
         }

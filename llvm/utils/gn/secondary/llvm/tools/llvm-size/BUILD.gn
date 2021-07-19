@@ -1,5 +1,11 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-size" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
 
 if (llvm_install_binutils_symlinks) {
   symlink_or_copy("size") {
@@ -19,7 +25,9 @@ group("symlinks") {
 
 executable("llvm-size") {
   deps = [
+    ":Opts",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [ "llvm-size.cpp" ]

@@ -70,6 +70,7 @@ define void @scalable() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2f32 = call <vscale x 2 x float> @llvm.masked.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* undef, i32 8, <vscale x 2 x i1> undef, <vscale x 2 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv4f32 = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0nxv4f32(<vscale x 4 x float>* undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv2f64 = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0nxv2f64(<vscale x 2 x double>* undef, i32 8, <vscale x 2 x i1> undef, <vscale x 2 x double> undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0nxv1i64(<vscale x 1 x i64>* undef, i32 8, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0nxv4i64(<vscale x 4 x i64>* undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0nxv32f16(<vscale x 32 x half>* undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
@@ -96,6 +97,7 @@ entry:
   %nxv2f64 = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0nxv2f64(<vscale x 2 x double> *undef, i32 8, <vscale x 2 x i1> undef, <vscale x 2 x double> undef)
 
   ; A couple of examples of illegal scalable types
+  %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0nxv1i64(<vscale x 1 x i64> *undef, i32 8, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
   %nxv4i64 = call <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0nxv4i64(<vscale x 4 x i64> *undef, i32 8, <vscale x 4 x i1> undef, <vscale x 4 x i64> undef)
   %nxv32f16 = call <vscale x 32 x half> @llvm.masked.load.nxv32f16.p0nxv32f16(<vscale x 32 x half> *undef, i32 8, <vscale x 32 x i1> undef, <vscale x 32 x half> undef)
 
@@ -133,6 +135,7 @@ declare <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32
 declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>*, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0nxv2i64(<vscale x 2 x i64>*, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
 declare <vscale x 4 x i64> @llvm.masked.load.nxv4i64.p0nxv4i64(<vscale x 4 x i64>*, i32, <vscale x 4 x i1>, <vscale x 4 x i64>)
+declare <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0nxv1i64(<vscale x 1 x i64>*, i32, <vscale x 1 x i1>, <vscale x 1 x i64>)
 declare <vscale x 2 x half> @llvm.masked.load.nxv2f16.p0nxv2f16(<vscale x 2 x half>*, i32, <vscale x 2 x i1>, <vscale x 2 x half>)
 declare <vscale x 4 x half> @llvm.masked.load.nxv4f16.p0nxv4f16(<vscale x 4 x half>*, i32, <vscale x 4 x i1>, <vscale x 4 x half>)
 declare <vscale x 8 x half> @llvm.masked.load.nxv8f16.p0nxv8f16(<vscale x 8 x half>*, i32, <vscale x 8 x i1>, <vscale x 8 x half>)

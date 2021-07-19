@@ -20,8 +20,6 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; MUBUF-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x3000
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
@@ -204,8 +202,6 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(<3 x i64> addrspace(1
 ; MUBUF-LABEL: local_stack_offset_uses_sp_flat:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; MUBUF-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s9
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 0x4000

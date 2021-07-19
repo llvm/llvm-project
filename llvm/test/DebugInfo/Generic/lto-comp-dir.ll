@@ -27,8 +27,8 @@
 ; interpretations depending on which CU lead to the table - so ensure that
 ; full paths are always emitted in this case, never comp_dir relative.
 
-; ASM: .file   1 "/tmp/dbginfo/a{{[/\\]+}}a.cpp"
-; ASM: .file   2 "/tmp/dbginfo/b{{[/\\]+}}b.cpp"
+; ASM: .file   1 "/tmp/dbginfo/a" "a.cpp"
+; ASM: .file   2 "/tmp/dbginfo/b" "b.cpp"
 
 ; Generated from the following source compiled to bitcode from within their
 ; respective directories (with debug info) and linked together with llvm-link

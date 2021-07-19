@@ -48,6 +48,10 @@ std::string featureString() {
 #if CLANGD_BUILD_XPC
       "+xpc"
 #endif
+
+#if !CLANGD_TIDY_CHECKS
+      "-tidy"
+#endif
       ;
 }
 

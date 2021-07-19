@@ -93,6 +93,14 @@ defm EQZ_I64 : I<(outs I32:$dst), (ins I64:$src), (outs), (ins),
                  [(set I32:$dst, (setcc I64:$src, 0, SETEQ))],
                  "i64.eqz \t$dst, $src", "i64.eqz", 0x50>;
 
+// Optimize away an explicit mask on a shift count.
+def : Pat<(shl I32:$lhs, (and I32:$rhs, 31)), (SHL_I32 I32:$lhs, I32:$rhs)>;
+def : Pat<(sra I32:$lhs, (and I32:$rhs, 31)), (SHR_S_I32 I32:$lhs, I32:$rhs)>;
+def : Pat<(srl I32:$lhs, (and I32:$rhs, 31)), (SHR_U_I32 I32:$lhs, I32:$rhs)>;
+def : Pat<(shl I64:$lhs, (and I64:$rhs, 63)), (SHL_I64 I64:$lhs, I64:$rhs)>;
+def : Pat<(sra I64:$lhs, (and I64:$rhs, 63)), (SHR_S_I64 I64:$lhs, I64:$rhs)>;
+def : Pat<(srl I64:$lhs, (and I64:$rhs, 63)), (SHR_U_I64 I64:$lhs, I64:$rhs)>;
+
 // Optimize away an explicit mask on a rotate count.
 def : Pat<(rotl I32:$lhs, (and I32:$rhs, 31)), (ROTL_I32 I32:$lhs, I32:$rhs)>;
 def : Pat<(rotr I32:$lhs, (and I32:$rhs, 31)), (ROTR_I32 I32:$lhs, I32:$rhs)>;

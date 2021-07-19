@@ -39,14 +39,35 @@ void recordFixes(const VarDecl &Var, ASTContext &Context,
   }
 }
 
+llvm::Optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
+                                                    SourceManager &SM) {
+  bool Invalid;
+  const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
+  if (Invalid) {
+    return llvm::None;
+  }
+  size_t Offset = std::strcspn(TextAfter, "\n");
+  return Loc.getLocWithOffset(TextAfter[Offset] == '\0' ? Offset : Offset + 1);
+}
+
 void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
                    DiagnosticBuilder &Diagnostic) {
-  // Attempt to remove the whole line until the next non-comment token.
-  auto Tok = utils::lexer::findNextTokenSkippingComments(
-      Stmt.getEndLoc(), Context.getSourceManager(), Context.getLangOpts());
-  if (Tok) {
-    Diagnostic << FixItHint::CreateRemoval(SourceRange(
-        Stmt.getBeginLoc(), Tok->getLocation().getLocWithOffset(-1)));
+  auto &SM = Context.getSourceManager();
+  // Attempt to remove trailing comments as well.
+  auto Tok = utils::lexer::findNextTokenSkippingComments(Stmt.getEndLoc(), SM,
+                                                         Context.getLangOpts());
+  llvm::Optional<SourceLocation> PastNewLine =
+      firstLocAfterNewLine(Stmt.getEndLoc(), SM);
+  if (Tok && PastNewLine) {
+    auto BeforeFirstTokenAfterComment = Tok->getLocation().getLocWithOffset(-1);
+    // Remove until the end of the line or the end of a trailing comment which
+    // ever comes first.
+    auto End =
+        SM.isBeforeInTranslationUnit(*PastNewLine, BeforeFirstTokenAfterComment)
+            ? *PastNewLine
+            : BeforeFirstTokenAfterComment;
+    Diagnostic << FixItHint::CreateRemoval(
+        SourceRange(Stmt.getBeginLoc(), End));
   } else {
     Diagnostic << FixItHint::CreateRemoval(Stmt.getSourceRange());
   }
@@ -147,6 +168,7 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
     return compoundStmt(
                forEachDescendant(
                    declStmt(
+                       unless(has(decompositionDecl())),
                        has(varDecl(hasLocalStorage(),
                                    hasType(qualType(
                                        hasCanonicalType(allOf(

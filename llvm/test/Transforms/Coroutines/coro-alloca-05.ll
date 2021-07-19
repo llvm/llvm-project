@@ -1,6 +1,6 @@
 ; Tests that allocas after coro.begin are properly that do not need to
 ; live on the frame are properly moved to the .resume function.
-; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f() "coroutine.presplit"="1" {
 entry:

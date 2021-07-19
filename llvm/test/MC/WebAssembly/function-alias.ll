@@ -1,7 +1,6 @@
 ; RUN: llc -filetype=obj %s -o - | llvm-readobj --symbols - | FileCheck %s
 ; RUN: llc -filetype=obj %s -mattr=+reference-types -o - | llvm-readobj --symbols - | FileCheck --check-prefix=REF %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown-wasm"
 
 @foo = alias i8, bitcast (i8* ()* @func to i8*)

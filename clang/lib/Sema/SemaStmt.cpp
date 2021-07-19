@@ -1332,12 +1332,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
           if (PrevString == CurrString)
             Diag(CaseVals[i].second->getLHS()->getBeginLoc(),
                  diag::err_duplicate_case)
-                << (PrevString.empty() ? StringRef(CaseValStr) : PrevString);
+                << (PrevString.empty() ? CaseValStr.str() : PrevString);
           else
             Diag(CaseVals[i].second->getLHS()->getBeginLoc(),
                  diag::err_duplicate_case_differing_expr)
-                << (PrevString.empty() ? StringRef(CaseValStr) : PrevString)
-                << (CurrString.empty() ? StringRef(CaseValStr) : CurrString)
+                << (PrevString.empty() ? CaseValStr.str() : PrevString)
+                << (CurrString.empty() ? CaseValStr.str() : CurrString)
                 << CaseValStr;
 
           Diag(CaseVals[i - 1].second->getLHS()->getBeginLoc(),
@@ -3333,8 +3333,13 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E, bool ForceCXX2b) {
   if (!VD)
     return NamedReturnInfo();
   NamedReturnInfo Res = getNamedReturnInfo(VD);
+  // FIXME: We supress simpler implicit move here (unless ForceCXX2b is true)
+  //        in msvc compatibility mode just as a temporary work around,
+  //        as the MSVC STL has issues with this change.
+  //        We will come back later with a more targeted approach.
   if (Res.Candidate && !E->isXValue() &&
-      (ForceCXX2b || getLangOpts().CPlusPlus2b)) {
+      (ForceCXX2b ||
+       (getLangOpts().CPlusPlus2b && !getLangOpts().MSVCCompat))) {
     E = ImplicitCastExpr::Create(Context, VD->getType().getNonReferenceType(),
                                  CK_NoOp, E, nullptr, VK_XValue,
                                  FPOptionsOverride());
@@ -3446,6 +3451,28 @@ const VarDecl *Sema::getCopyElisionCandidate(NamedReturnInfo &Info,
   return Info.isCopyElidable() ? Info.Candidate : nullptr;
 }
 
+/// Verify that the initialization sequence that was picked for the
+/// first overload resolution is permissible under C++98.
+///
+/// Reject (possibly converting) contructors not taking an rvalue reference,
+/// or user conversion operators which are not ref-qualified.
+static bool
+VerifyInitializationSequenceCXX98(const Sema &S,
+                                  const InitializationSequence &Seq) {
+  const auto *Step = llvm::find_if(Seq.steps(), [](const auto &Step) {
+    return Step.Kind == InitializationSequence::SK_ConstructorInitialization ||
+           Step.Kind == InitializationSequence::SK_UserConversion;
+  });
+  if (Step != Seq.step_end()) {
+    const auto *FD = Step->Function.Function;
+    if (isa<CXXConstructorDecl>(FD)
+            ? !FD->getParamDecl(0)->getType()->isRValueReferenceType()
+            : cast<CXXMethodDecl>(FD)->getRefQualifier() == RQ_None)
+      return false;
+  }
+  return true;
+}
+
 /// Perform the initialization of a potentially-movable value, which
 /// is the result of return value.
 ///
@@ -3456,8 +3483,7 @@ ExprResult
 Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
                                       const NamedReturnInfo &NRInfo,
                                       Expr *Value) {
-  if (getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus2b &&
-      NRInfo.isMoveEligible()) {
+  if (!getLangOpts().CPlusPlus2b && NRInfo.isMoveEligible()) {
     ImplicitCastExpr AsRvalue(ImplicitCastExpr::OnStack, Value->getType(),
                               CK_NoOp, Value, VK_XValue, FPOptionsOverride());
     Expr *InitExpr = &AsRvalue;
@@ -3465,7 +3491,9 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
                                                Value->getBeginLoc());
     InitializationSequence Seq(*this, Entity, Kind, InitExpr);
     auto Res = Seq.getFailedOverloadResult();
-    if (Res == OR_Success || Res == OR_Deleted) {
+    if ((Res == OR_Success || Res == OR_Deleted) &&
+        (getLangOpts().CPlusPlus11 ||
+         VerifyInitializationSequenceCXX98(*this, Seq))) {
       // Promote "AsRvalue" to the heap, since we now need this
       // expression node to persist.
       Value =

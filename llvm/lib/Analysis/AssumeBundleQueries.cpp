@@ -44,7 +44,7 @@ bool llvm::hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
                                 StringRef AttrName, uint64_t *ArgVal) {
   assert(Attribute::isExistingAttribute(AttrName) &&
          "this attribute doesn't exist");
-  assert((ArgVal == nullptr || Attribute::doesAttrKindHaveArgument(
+  assert((ArgVal == nullptr || Attribute::isIntAttrKind(
                                    Attribute::getAttrKindFromName(AttrName))) &&
          "requested value for an attribute that has no argument");
   if (Assume.bundle_op_infos().empty())

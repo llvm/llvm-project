@@ -1676,11 +1676,26 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
   StringRef Name = F->getName();
-  if (Name ==
-      Intrinsic::getName(ID, ArgTys, F->getParent(), F->getFunctionType()))
+  std::string WantedName =
+      Intrinsic::getName(ID, ArgTys, F->getParent(), F->getFunctionType());
+  if (Name == WantedName)
     return None;
 
-  auto NewDecl = Intrinsic::getDeclaration(F->getParent(), ID, ArgTys);
+  Function *NewDecl = [&] {
+    if (auto *ExistingGV = F->getParent()->getNamedValue(WantedName)) {
+      if (auto *ExistingF = dyn_cast<Function>(ExistingGV))
+        if (ExistingF->getFunctionType() == F->getFunctionType())
+          return ExistingF;
+
+      // The name already exists, but is not a function or has the wrong
+      // prototype. Make place for the new one by renaming the old version.
+      // Either this old version will be removed later on or the module is
+      // invalid and we'll get an error.
+      ExistingGV->setName(WantedName + ".renamed");
+    }
+    return Intrinsic::getDeclaration(F->getParent(), ID, ArgTys);
+  }();
+
   NewDecl->setCallingConv(F->getCallingConv());
   assert(NewDecl->getFunctionType() == F->getFunctionType() &&
          "Shouldn't change the signature");

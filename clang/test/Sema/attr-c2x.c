@@ -16,6 +16,8 @@ enum [[clang::flag_enum]] EnumFlag {
 
 void context_okay(void *context [[clang::swift_context]]) [[clang::swiftcall]];
 void context_okay2(void *context [[clang::swift_context]], void *selfType, char **selfWitnessTable) [[clang::swiftcall]];
+void context_async_okay(void *context [[clang::swift_async_context]]) [[clang::swiftasynccall]];
+void context_async_okay2(void *context [[clang::swift_async_context]], void *selfType, char **selfWitnessTable) [[clang::swiftasynccall]];
 
 [[clang::ownership_returns(foo)]] void *f1(void);
 [[clang::ownership_returns(foo)]] void *f2(); // expected-warning {{'ownership_returns' attribute only applies to non-K&R-style functions}}

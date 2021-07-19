@@ -4,7 +4,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @G = global i32 0, align 4
 
-define i64 @global_and_deref_arg_1(i64* dereferenceable(8) %arg) {
+define i64 @global_and_deref_arg_1(i64* dereferenceable(8) %arg) nofree nosync {
 ; CHECK:     Function: global_and_deref_arg_1: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* @G, i64* %arg
 bb:
@@ -14,7 +14,7 @@ bb:
   ret i64 %tmp
 }
 
-define i32 @global_and_deref_arg_2(i32* dereferenceable(8) %arg) {
+define i32 @global_and_deref_arg_2(i32* dereferenceable(8) %arg) nofree nosync {
 ; CHECK:     Function: global_and_deref_arg_2: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %arg, i32* @G
 bb:
@@ -24,7 +24,7 @@ bb:
   ret i32 %tmp
 }
 
-define i32 @byval_and_deref_arg_1(i32* byval(i32) %obj, i64* dereferenceable(8) %arg) {
+define i32 @byval_and_deref_arg_1(i32* byval(i32) %obj, i64* dereferenceable(8) %arg) nofree nosync {
 ; CHECK:     Function: byval_and_deref_arg_1: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %obj, i64* %arg
 bb:
@@ -34,7 +34,7 @@ bb:
   ret i32 %tmp
 }
 
-define i32 @byval_and_deref_arg_2(i32* byval(i32) %obj, i32* dereferenceable(8) %arg) {
+define i32 @byval_and_deref_arg_2(i32* byval(i32) %obj, i32* dereferenceable(8) %arg) nofree nosync {
 ; CHECK:     Function: byval_and_deref_arg_2: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %arg, i32* %obj
 bb:
@@ -77,7 +77,7 @@ bb:
 
 ; Baseline tests, same as above but with 2 instead of 8 dereferenceable bytes.
 
-define i64 @global_and_deref_arg_non_deref_1(i64* dereferenceable(2) %arg) {
+define i64 @global_and_deref_arg_non_deref_1(i64* dereferenceable(2) %arg) nofree nosync {
 ; CHECK:     Function: global_and_deref_arg_non_deref_1: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* @G, i64* %arg
 bb:
@@ -87,7 +87,7 @@ bb:
   ret i64 %tmp
 }
 
-define i32 @global_and_deref_arg_non_deref_2(i32* dereferenceable(2) %arg) {
+define i32 @global_and_deref_arg_non_deref_2(i32* dereferenceable(2) %arg) nofree nosync {
 ; CHECK:     Function: global_and_deref_arg_non_deref_2: 2 pointers, 0 call sites
 ; Different result than above (see @global_and_deref_arg_2).
 ; CHECK-NEXT:  MayAlias:	i32* %arg, i32* @G
@@ -98,7 +98,7 @@ bb:
   ret i32 %tmp
 }
 
-define i32 @byval_and_deref_arg_non_deref_1(i32* byval(i32) %obj, i64* dereferenceable(2) %arg) {
+define i32 @byval_and_deref_arg_non_deref_1(i32* byval(i32) %obj, i64* dereferenceable(2) %arg) nofree nosync {
 ; CHECK:     Function: byval_and_deref_arg_non_deref_1: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %obj, i64* %arg
 bb:
@@ -108,7 +108,7 @@ bb:
   ret i32 %tmp
 }
 
-define i32 @byval_and_deref_arg_non_deref_2(i32* byval(i32) %obj, i32* dereferenceable(2) %arg) {
+define i32 @byval_and_deref_arg_non_deref_2(i32* byval(i32) %obj, i32* dereferenceable(2) %arg) nofree nosync {
 ; CHECK:     Function: byval_and_deref_arg_non_deref_2: 2 pointers, 0 call sites
 ; CHECK-NEXT:  NoAlias:	i32* %arg, i32* %obj
 bb:

@@ -27,6 +27,7 @@ static_assert(stdr::contiguous_range<range>);
 static_assert(stdr::view<range> && stdr::enable_view<range>);
 static_assert(stdr::sized_range<range>);
 static_assert(stdr::borrowed_range<range>);
+static_assert(stdr::viewable_range<range>);
 
 static_assert(std::same_as<stdr::iterator_t<range const>, range::iterator>);
 static_assert(stdr::common_range<range const>);
@@ -35,3 +36,4 @@ static_assert(stdr::contiguous_range<range const>);
 static_assert(!stdr::view<range const> && !stdr::enable_view<range const>);
 static_assert(stdr::sized_range<range const>);
 static_assert(stdr::borrowed_range<range const>);
+static_assert(stdr::viewable_range<range const>);

@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_MEMORYTAGMANAGER_H
 #define LLDB_TARGET_MEMORYTAGMANAGER_H
 
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"
@@ -57,6 +58,20 @@ public:
   // expanded to 2 granules.
   virtual TagRange ExpandToGranule(TagRange range) const = 0;
 
+  // Given a range addr to end_addr, check that:
+  // * end_addr >= addr (when memory tags are removed)
+  // * the granule aligned range is completely covered by tagged memory
+  //   (which may include one or more memory regions)
+  //
+  // If so, return a modified range which will have been expanded
+  // to be granule aligned.
+  //
+  // Tags in the input addresses are ignored and not present
+  // in the returned range.
+  virtual llvm::Expected<TagRange> MakeTaggedRange(
+      lldb::addr_t addr, lldb::addr_t end_addr,
+      const lldb_private::MemoryRegionInfos &memory_regions) const = 0;
+
   // Return the type value to use in GDB protocol qMemTags packets to read
   // allocation tags. This is named "Allocation" specifically because the spec
   // allows for logical tags to be read the same way, though we do not use that.
@@ -72,11 +87,45 @@ public:
   virtual size_t GetTagSizeInBytes() const = 0;
 
   // Unpack tags from their stored format (e.g. gdb qMemTags data) into seperate
-  // tags. Checks that each tag is within the expected value range and that the
-  // number of tags found matches the number of granules we originally asked
-  // for.
+  // tags.
+  //
+  // Checks that each tag is within the expected value range and if granules is
+  // set to non-zero, that the number of tags found matches the number of
+  // granules we expected to cover.
   virtual llvm::Expected<std::vector<lldb::addr_t>>
-  UnpackTagsData(const std::vector<uint8_t> &tags, size_t granules) const = 0;
+  UnpackTagsData(const std::vector<uint8_t> &tags,
+                 size_t granules = 0) const = 0;
+
+  // Pack uncompressed tags into their storage format (e.g. for gdb QMemTags).
+  // Checks that each tag is within the expected value range.
+  // We do not check the number of tags or range they apply to because
+  // it is up to the remote to repeat them as needed.
+  virtual llvm::Expected<std::vector<uint8_t>>
+  PackTags(const std::vector<lldb::addr_t> &tags) const = 0;
+
+  // Take a set of tags and repeat them as much as needed to cover the given
+  // range. We assume that this range has been previously expanded/aligned to
+  // granules. (this method is used by lldb-server to implement QMemTags
+  // packet handling)
+  //
+  // If the range is empty, zero tags are returned.
+  // If the range is not empty and...
+  //   * there are no tags, an error is returned.
+  //   * there are fewer tags than granules, the tags are repeated to fill the
+  //     range.
+  //   * there are more tags than granules, only the tags required to cover
+  //     the range are returned.
+  //
+  // When repeating tags it will not always return a multiple of the original
+  // list. For example if your range is 3 granules and your tags are 1 and 2.
+  // You will get tags 1, 2 and 1 returned. Rather than getting 1, 2, 1, 2,
+  // which would be one too many tags for the range.
+  //
+  // A single tag will just be repeated as you'd expected. Tag 1 over 3 granules
+  // would return 1, 1, 1.
+  virtual llvm::Expected<std::vector<lldb::addr_t>>
+  RepeatTagsForRange(const std::vector<lldb::addr_t> &tags,
+                     TagRange range) const = 0;
 
   virtual ~MemoryTagManager() {}
 };

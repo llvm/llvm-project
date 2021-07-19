@@ -288,16 +288,26 @@ TEST_F(ConfigCompileTests, Tidy) {
   Tidy.CheckOptions.emplace_back(std::make_pair(
       std::string("example-check.ExampleOption"), std::string("0")));
   EXPECT_TRUE(compileAndApply());
-  EXPECT_EQ(
-      Conf.Diagnostics.ClangTidy.Checks,
-      "bugprone-use-after-move,llvm-*,-llvm-include-order,-readability-*");
   EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.size(), 2U);
   EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup("StrictMode"),
             "true");
   EXPECT_EQ(Conf.Diagnostics.ClangTidy.CheckOptions.lookup(
                 "example-check.ExampleOption"),
             "0");
+#if CLANGD_TIDY_CHECKS
+  EXPECT_EQ(
+      Conf.Diagnostics.ClangTidy.Checks,
+      "bugprone-use-after-move,llvm-*,-llvm-include-order,-readability-*");
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+#else // !CLANGD_TIDY_CHECKS
+  EXPECT_EQ(Conf.Diagnostics.ClangTidy.Checks, "llvm-*,-readability-*");
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      ElementsAre(
+          DiagMessage(
+              "clang-tidy check 'bugprone-use-after-move' was not found"),
+          DiagMessage("clang-tidy check 'llvm-include-order' was not found")));
+#endif
 }
 
 TEST_F(ConfigCompileTests, TidyBadChecks) {

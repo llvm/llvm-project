@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Signals.h"
+
+#include "DebugOptions.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
@@ -39,15 +42,33 @@ using namespace llvm;
 
 // Use explicit storage to avoid accessing cl::opt in a signal handler.
 static bool DisableSymbolicationFlag = false;
-static cl::opt<bool, true>
-    DisableSymbolication("disable-symbolication",
-                         cl::desc("Disable symbolizing crash backtraces."),
-                         cl::location(DisableSymbolicationFlag), cl::Hidden);
-static std::string CrashDiagnosticsDirectory;
-static cl::opt<std::string, true>
-    CrashDiagnosticsDir("crash-diagnostics-dir", cl::value_desc("directory"),
-                        cl::desc("Directory for crash diagnostic files."),
-                        cl::location(CrashDiagnosticsDirectory), cl::Hidden);
+static ManagedStatic<std::string> CrashDiagnosticsDirectory;
+namespace {
+struct CreateDisableSymbolication {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "disable-symbolication",
+        cl::desc("Disable symbolizing crash backtraces."),
+        cl::location(DisableSymbolicationFlag), cl::Hidden);
+  }
+};
+struct CreateCrashDiagnosticsDir {
+  static void *call() {
+    return new cl::opt<std::string, true>(
+        "crash-diagnostics-dir", cl::value_desc("directory"),
+        cl::desc("Directory for crash diagnostic files."),
+        cl::location(*CrashDiagnosticsDirectory), cl::Hidden);
+  }
+};
+} // namespace
+void llvm::initSignalsOptions() {
+  static ManagedStatic<cl::opt<bool, true>, CreateDisableSymbolication>
+      DisableSymbolication;
+  static ManagedStatic<cl::opt<std::string, true>, CreateCrashDiagnosticsDir>
+      CrashDiagnosticsDir;
+  *DisableSymbolication;
+  *CrashDiagnosticsDir;
+}
 
 constexpr char DisableSymbolizationEnv[] = "LLVM_DISABLE_SYMBOLIZATION";
 constexpr char LLVMSymbolizerPathEnv[] = "LLVM_SYMBOLIZER_PATH";
@@ -165,8 +186,8 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
     }
   }
 
-  Optional<StringRef> Redirects[] = {StringRef(InputFile),
-                                     StringRef(OutputFile), StringRef("")};
+  Optional<StringRef> Redirects[] = {InputFile.str(), OutputFile.str(),
+                                     StringRef("")};
   StringRef Args[] = {"llvm-symbolizer", "--functions=linkage", "--inlining",
 #ifdef _WIN32
                       // Pass --relative-address on Windows so that we don't

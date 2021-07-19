@@ -243,8 +243,8 @@ define amdgpu_kernel void @cast_0_flat_to_group_addrspacecast() #0 {
 
 ; HSA-LABEL: {{^}}cast_neg1_group_to_flat_addrspacecast:
 ; HSA: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; HSA: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
-; HSA: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
+; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; HSA: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define amdgpu_kernel void @cast_neg1_group_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(3)* inttoptr (i32 -1 to i32 addrspace(3)*) to i32*
@@ -296,9 +296,9 @@ define amdgpu_kernel void @cast_0_flat_to_private_addrspacecast() #0 {
 ; CI: enable_sgpr_queue_ptr = 1
 ; GFX9: enable_sgpr_queue_ptr = 0
 
-; HSA-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; HSA: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
-; HSA: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; HSA-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; HSA: {{flat|global}}_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define amdgpu_kernel void @cast_neg1_private_to_flat_addrspacecast() #0 {
   %cast = addrspacecast i32 addrspace(5)* inttoptr (i32 -1 to i32 addrspace(5)*) to i32*

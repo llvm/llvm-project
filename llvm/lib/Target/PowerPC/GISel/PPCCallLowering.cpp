@@ -63,7 +63,7 @@ bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     if (DL.getTypeStoreSize(Arg.getType()).isZero())
       continue;
 
-    ArgInfo OrigArg{VRegs[I], Arg};
+    ArgInfo OrigArg{VRegs[I], Arg, I};
     setArgFlags(OrigArg, I + AttributeList::FirstArgIndex, DL, F);
     splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
     ++I;

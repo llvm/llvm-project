@@ -119,31 +119,6 @@ int DeviceTy::disassociatePtr(void *HstPtrBegin) {
   return OFFLOAD_FAIL;
 }
 
-// Get ref count of map entry containing HstPtrBegin
-uint64_t DeviceTy::getMapEntryRefCnt(void *HstPtrBegin) {
-  uintptr_t hp = (uintptr_t)HstPtrBegin;
-  uint64_t RefCnt = 0;
-
-  DataMapMtx.lock();
-  if (!HostDataToTargetMap.empty()) {
-    auto upper = HostDataToTargetMap.upper_bound(hp);
-    if (upper != HostDataToTargetMap.begin()) {
-      upper--;
-      if (hp >= upper->HstPtrBegin && hp < upper->HstPtrEnd) {
-        DP("DeviceTy::getMapEntry: requested entry found\n");
-        RefCnt = upper->getRefCount();
-      }
-    }
-  }
-  DataMapMtx.unlock();
-
-  if (RefCnt == 0) {
-    DP("DeviceTy::getMapEntry: requested entry not found\n");
-  }
-
-  return RefCnt;
-}
-
 LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
   uintptr_t hp = (uintptr_t)HstPtrBegin;
   LookupResult lr;
@@ -220,8 +195,13 @@ DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
   if (LR.Flags.IsContained ||
       ((LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter) && IsImplicit)) {
     auto &HT = *LR.Entry;
+    assert(HT.getRefCount() > 0 && "expected existing RefCount > 0");
     if (UpdateRefCount)
+      // After this, RefCount > 1.
       HT.incRefCount();
+    else
+      // It might have been allocated with the parent, but it's still new.
+      IsNew = HT.getRefCount() == 1;
     uintptr_t Ptr = HT.TgtPtrBegin + ((uintptr_t)HstPtrBegin - HT.HstPtrBegin);
     INFO(OMP_INFOTYPE_MAPPING_EXISTS, DeviceID,
          "Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD

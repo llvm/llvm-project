@@ -127,7 +127,7 @@ def transform(module, boilerplate):
       boilerplate)
   pm = PassManager.parse("func(convert-linalg-to-loops, lower-affine, " +
                          "convert-scf-to-std), convert-vector-to-llvm," +
-                         "convert-std-to-llvm")
+                         "convert-memref-to-llvm,convert-std-to-llvm")
   pm.run(mod)
   return mod
 

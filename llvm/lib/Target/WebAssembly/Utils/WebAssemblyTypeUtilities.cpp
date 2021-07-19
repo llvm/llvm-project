@@ -14,6 +14,10 @@
 #include "WebAssemblyTypeUtilities.h"
 #include "llvm/ADT/StringSwitch.h"
 
+// Get register classes enum.
+#define GET_REGINFO_ENUM
+#include "WebAssemblyGenRegisterInfo.inc"
+
 using namespace llvm;
 
 Optional<wasm::ValType> WebAssembly::parseType(StringRef Type) {
@@ -144,6 +148,27 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
   case MVT::funcref:
     return wasm::ValType::FUNCREF;
   case MVT::externref:
+    return wasm::ValType::EXTERNREF;
+  default:
+    llvm_unreachable("unexpected type");
+  }
+}
+
+wasm::ValType WebAssembly::regClassToValType(unsigned RC) {
+  switch (RC) {
+  case WebAssembly::I32RegClassID:
+    return wasm::ValType::I32;
+  case WebAssembly::I64RegClassID:
+    return wasm::ValType::I64;
+  case WebAssembly::F32RegClassID:
+    return wasm::ValType::F32;
+  case WebAssembly::F64RegClassID:
+    return wasm::ValType::F64;
+  case WebAssembly::V128RegClassID:
+    return wasm::ValType::V128;
+  case WebAssembly::FUNCREFRegClassID:
+    return wasm::ValType::FUNCREF;
+  case WebAssembly::EXTERNREFRegClassID:
     return wasm::ValType::EXTERNREF;
   default:
     llvm_unreachable("unexpected type");

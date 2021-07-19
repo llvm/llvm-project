@@ -38,8 +38,8 @@ kernel void builtins_amdgcn_dl_insts_err(
   uiOut[2] = __builtin_amdgcn_udot4(uiA, uiB, uiC, false);          // expected-error {{'__builtin_amdgcn_udot4' needs target feature dot7-insts}}
   uiOut[3] = __builtin_amdgcn_udot4(uiA, uiB, uiC, true);           // expected-error {{'__builtin_amdgcn_udot4' needs target feature dot7-insts}}
 
-  iOut[0] = __builtin_amdgcn_iudot4(true, A, false, B, C, false);   // expected-error {{'__builtin_amdgcn_iudot4' needs target feature dot8-insts}}
-  iOut[1] = __builtin_amdgcn_iudot4(false, A, true, B, C, true);    // expected-error {{'__builtin_amdgcn_iudot4' needs target feature dot8-insts}}
+  iOut[0] = __builtin_amdgcn_sudot4(true, A, false, B, C, false);   // expected-error {{'__builtin_amdgcn_sudot4' needs target feature dot8-insts}}
+  iOut[1] = __builtin_amdgcn_sudot4(false, A, true, B, C, true);    // expected-error {{'__builtin_amdgcn_sudot4' needs target feature dot8-insts}}
 
   siOut[4] = __builtin_amdgcn_sdot8(siA, siB, siC, false);          // expected-error {{'__builtin_amdgcn_sdot8' needs target feature dot1-insts}}
   siOut[5] = __builtin_amdgcn_sdot8(siA, siB, siC, true);           // expected-error {{'__builtin_amdgcn_sdot8' needs target feature dot1-insts}}
@@ -47,6 +47,6 @@ kernel void builtins_amdgcn_dl_insts_err(
   uiOut[4] = __builtin_amdgcn_udot8(uiA, uiB, uiC, false);          // expected-error {{'__builtin_amdgcn_udot8' needs target feature dot7-insts}}
   uiOut[5] = __builtin_amdgcn_udot8(uiA, uiB, uiC, true);           // expected-error {{'__builtin_amdgcn_udot8' needs target feature dot7-insts}}
 
-  iOut[3] = __builtin_amdgcn_iudot8(false, A, true, B, C, false);    // expected-error {{'__builtin_amdgcn_iudot8' needs target feature dot8-insts}}
-  iOut[4] = __builtin_amdgcn_iudot8(true, A, false, B, C, true);     // expected-error {{'__builtin_amdgcn_iudot8' needs target feature dot8-insts}}
+  iOut[3] = __builtin_amdgcn_sudot8(false, A, true, B, C, false);    // expected-error {{'__builtin_amdgcn_sudot8' needs target feature dot8-insts}}
+  iOut[4] = __builtin_amdgcn_sudot8(true, A, false, B, C, true);     // expected-error {{'__builtin_amdgcn_sudot8' needs target feature dot8-insts}}
 }

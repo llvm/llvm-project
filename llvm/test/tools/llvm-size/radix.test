@@ -121,7 +121,7 @@
 # RUN: not llvm-size %t1.o --radix=bad 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=BAD-VAL -DNUM=bad
 
-# BAD-VAL: {{.*}}llvm-size{{.*}}: for the --radix option: Cannot find option named '[[NUM]]'!
+# BAD-VAL: {{.*}}llvm-size{{.*}}: error: --radix value should be one of: 8, 10, 16
 
 --- !ELF
 FileHeader:

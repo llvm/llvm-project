@@ -237,10 +237,16 @@ void SetPrintfAndReportCallback(void (*callback)(const char *));
 // Lock sanitizer error reporting and protects against nested errors.
 class ScopedErrorReportLock {
  public:
-  ScopedErrorReportLock();
-  ~ScopedErrorReportLock();
+  ScopedErrorReportLock() ACQUIRE(mutex_) { Lock(); }
+  ~ScopedErrorReportLock() RELEASE(mutex_) { Unlock(); }
 
-  static void CheckLocked();
+  static void Lock() ACQUIRE(mutex_);
+  static void Unlock() RELEASE(mutex_);
+  static void CheckLocked() CHECK_LOCKED(mutex_);
+
+ private:
+  static atomic_uintptr_t reporting_thread_;
+  static StaticSpinMutex mutex_;
 };
 
 extern uptr stoptheworld_tracer_pid;
@@ -288,8 +294,8 @@ void InitTlsSize();
 uptr GetTlsSize();
 
 // Other
-void SleepForSeconds(int seconds);
-void SleepForMillis(int millis);
+void SleepForSeconds(unsigned seconds);
+void SleepForMillis(unsigned millis);
 u64 NanoTime();
 u64 MonotonicNanoTime();
 int Atexit(void (*function)(void));
@@ -1056,6 +1062,13 @@ class ArrayRef {
   T *begin_ = nullptr;
   T *end_ = nullptr;
 };
+
+#define PRINTF_128(v)                                                         \
+  (*((u8 *)&v + 0)), (*((u8 *)&v + 1)), (*((u8 *)&v + 2)), (*((u8 *)&v + 3)), \
+      (*((u8 *)&v + 4)), (*((u8 *)&v + 5)), (*((u8 *)&v + 6)),                \
+      (*((u8 *)&v + 7)), (*((u8 *)&v + 8)), (*((u8 *)&v + 9)),                \
+      (*((u8 *)&v + 10)), (*((u8 *)&v + 11)), (*((u8 *)&v + 12)),             \
+      (*((u8 *)&v + 13)), (*((u8 *)&v + 14)), (*((u8 *)&v + 15))
 
 }  // namespace __sanitizer
 

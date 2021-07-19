@@ -1186,7 +1186,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         DIExpression *E = GVe->getExpression();
         const DataLayout &DL = GV->getParent()->getDataLayout();
         unsigned SizeInOctets =
-          DL.getTypeAllocSizeInBits(NewGV->getType()->getElementType()) / 8;
+            DL.getTypeAllocSizeInBits(NewGV->getValueType()) / 8;
 
         // It is expected that the address of global optimized variable is on
         // top of the stack. After optimization, value of that variable will

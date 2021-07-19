@@ -23,6 +23,23 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(LLVM, llvm);
 MLIR_CAPI_EXPORTED MlirType mlirLLVMPointerTypeGet(MlirType pointee,
                                                    unsigned addressSpace);
 
+/// Creates an llmv.void type.
+MLIR_CAPI_EXPORTED MlirType mlirLLVMVoidTypeGet(MlirContext ctx);
+
+/// Creates an llvm.array type.
+MLIR_CAPI_EXPORTED MlirType mlirLLVMArrayTypeGet(MlirType elementType,
+                                                 unsigned numElements);
+
+/// Creates an llvm.func type.
+MLIR_CAPI_EXPORTED MlirType
+mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
+                        MlirType const *argumentTypes, bool isVarArg);
+
+/// Creates an LLVM literal (unnamed) struct type.
+MLIR_CAPI_EXPORTED MlirType
+mlirLLVMStructTypeLiteralGet(MlirContext ctx, intptr_t nFieldTypes,
+                             MlirType const *fieldTypes, bool isPacked);
+
 #ifdef __cplusplus
 }
 #endif

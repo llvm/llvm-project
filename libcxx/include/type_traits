@@ -4474,6 +4474,11 @@ using _IsCharLikeType = _And<is_standard_layout<_CharT>, is_trivial<_CharT> >;
 template<class _Tp>
 using __make_const_lvalue_ref = const typename remove_reference<_Tp>::type&;
 
+#if _LIBCPP_STD_VER > 17
+template<bool _Const, class _Tp>
+using __maybe_const = conditional_t<_Const, const _Tp, _Tp>;
+#endif // _LIBCPP_STD_VER > 17
+
 _LIBCPP_END_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14

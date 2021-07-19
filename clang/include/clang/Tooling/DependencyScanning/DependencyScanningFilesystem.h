@@ -65,7 +65,7 @@ public:
       return MaybeStat.getError();
     assert(!MaybeStat->isDirectory() && "not a file");
     assert(isValid() && "not initialized");
-    return StringRef(Contents);
+    return Contents.str();
   }
 
   /// \returns The error or the status of the entry.

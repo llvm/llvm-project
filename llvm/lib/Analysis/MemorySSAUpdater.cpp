@@ -1426,22 +1426,6 @@ void MemorySSAUpdater::changeToUnreachable(const Instruction *I) {
   tryRemoveTrivialPhis(UpdatedPHIs);
 }
 
-void MemorySSAUpdater::changeCondBranchToUnconditionalTo(const BranchInst *BI,
-                                                         const BasicBlock *To) {
-  const BasicBlock *BB = BI->getParent();
-  SmallVector<WeakVH, 16> UpdatedPHIs;
-  for (const BasicBlock *Succ : successors(BB)) {
-    removeDuplicatePhiEdgesBetween(BB, Succ);
-    if (Succ != To)
-      if (auto *MPhi = MSSA->getMemoryAccess(Succ)) {
-        MPhi->unorderedDeleteIncomingBlock(BB);
-        UpdatedPHIs.push_back(MPhi);
-      }
-  }
-  // Optimize trivial phis.
-  tryRemoveTrivialPhis(UpdatedPHIs);
-}
-
 MemoryAccess *MemorySSAUpdater::createMemoryAccessInBB(
     Instruction *I, MemoryAccess *Definition, const BasicBlock *BB,
     MemorySSA::InsertionPlace Point) {

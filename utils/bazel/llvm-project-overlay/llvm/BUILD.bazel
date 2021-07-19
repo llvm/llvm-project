@@ -2653,6 +2653,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "CxxfiltOptsTableGen",
+    strip_include_prefix = "tools/llvm-cxxfilt",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-cxxfilt/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-cxxfilt/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-cxxfilt",
     srcs = glob([
@@ -2662,7 +2674,9 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":CxxfiltOptsTableGen",
         ":Demangle",
+        ":Option",
         ":Support",
     ],
 )
@@ -3059,6 +3073,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "NmOptsTableGen",
+    strip_include_prefix = "tools/llvm-nm",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-nm/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-nm/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-nm",
     srcs = glob([
@@ -3074,7 +3100,9 @@ cc_binary(
         ":BitReader",
         ":Core",
         ":Demangle",
+        ":NmOptsTableGen",
         ":Object",
+        ":Option",
         ":Support",
     ],
 )
@@ -3357,6 +3385,18 @@ binary_alias(
     binary = ":llvm-rc",
 )
 
+gentbl(
+    name = "ReadobjOptsTableGen",
+    strip_include_prefix = "tools/llvm-readobj",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-readobj/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-readobj/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-readobj",
     srcs = glob([
@@ -3373,6 +3413,8 @@ cc_binary(
         ":DebugInfoDWARF",
         ":Demangle",
         ":Object",
+        ":Option",
+        ":ReadobjOptsTableGen",
         ":Support",
     ],
 )
@@ -3420,6 +3462,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "SizeOptsTableGen",
+    strip_include_prefix = "tools/llvm-size",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-size/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-size/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-size",
     srcs = glob([
@@ -3430,6 +3484,8 @@ cc_binary(
     stamp = 0,
     deps = [
         ":Object",
+        ":Option",
+        ":SizeOptsTableGen",
         ":Support",
     ],
 )

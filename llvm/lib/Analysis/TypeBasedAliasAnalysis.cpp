@@ -738,7 +738,7 @@ void TypeBasedAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-MDNode *AAMDNodes::ShiftTBAA(MDNode *MD, size_t Offset) {
+MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
     return MD;
@@ -757,7 +757,7 @@ MDNode *AAMDNodes::ShiftTBAA(MDNode *MD, size_t Offset) {
   return MD;
 }
 
-MDNode *AAMDNodes::ShiftTBAAStruct(MDNode *MD, size_t Offset) {
+MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
     return MD;

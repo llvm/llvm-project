@@ -7,6 +7,6 @@ add_mlir_dialect_library(MLIRX86VectorTransforms
   LINK_LIBS PUBLIC
   MLIRX86Vector
   MLIRIR
+  MLIRLLVMCommonConversion
   MLIRLLVMIR
-  MLIRStandardToLLVM
   )

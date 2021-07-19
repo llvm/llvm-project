@@ -671,7 +671,7 @@ struct Proxy {
 constexpr Proxy proxy(A& a) { return Proxy{a}; }
 } // namespace N
 
-[[nodiscard]] constexpr bool CheckRegression() {
+constexpr bool CheckRegression() {
   int i = 1, j = 2;
   lv_swap(i, j);
   assert(i == 2 && j == 1);

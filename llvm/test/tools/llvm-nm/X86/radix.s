@@ -2,7 +2,8 @@
 // RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t.o
 // RUN: llvm-nm --radix=d %t.o | FileCheck %s
 // RUN: llvm-nm --radix=o %t.o | FileCheck --check-prefix=OCTAL %s
-// RUN: llvm-nm -t=x %t.o | FileCheck --check-prefix=HEX %s
+// RUN: llvm-nm -tx %t.o | FileCheck --check-prefix=HEX %s
+// RUN: llvm-nm -t x %t.o | FileCheck --check-prefix=HEX %s
 
 	.text
 	.file	"1.c"

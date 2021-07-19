@@ -188,3 +188,14 @@ void foo4(T t) {
 }
 void callFoo4() { foo4(42); }
 // expected-note@-1{{in instantiation of function template specialization 'foo4<int>' requested here}}
+
+static_assert(42, "message");
+static_assert(42.0, "message"); // expected-warning {{implicit conversion from 'double' to 'bool' changes value from 42 to true}}
+constexpr int *p = 0;
+static_assert(p, "message"); // expected-error {{static_assert failed}}
+
+struct NotBool {
+} notBool;
+constexpr NotBool constexprNotBool;
+static_assert(notBool, "message");          // expected-error {{value of type 'struct NotBool' is not contextually convertible to 'bool'}}
+static_assert(constexprNotBool, "message"); // expected-error {{value of type 'const NotBool' is not contextually convertible to 'bool'}}

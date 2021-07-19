@@ -73,6 +73,12 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasROPProtect = true;
     } else if (Feature == "+privileged") {
       HasPrivileged = true;
+    } else if (Feature == "+isa-v207-instructions") {
+      IsISA2_07 = true;
+    } else if (Feature == "+isa-v30-instructions") {
+      IsISA3_0 = true;
+    } else if (Feature == "+isa-v31-instructions") {
+      IsISA3_1 = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -83,6 +89,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
 static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__popcntb", "__builtin_ppc_popcntb");
+  Builder.defineMacro("__poppar4", "__builtin_ppc_poppar4");
+  Builder.defineMacro("__poppar8", "__builtin_ppc_poppar8");
   Builder.defineMacro("__eieio", "__builtin_ppc_eieio");
   Builder.defineMacro("__iospace_eieio", "__builtin_ppc_iospace_eieio");
   Builder.defineMacro("__isync", "__builtin_ppc_isync");
@@ -112,6 +120,52 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__lwarx", "__builtin_ppc_lwarx");
   Builder.defineMacro("__stdcx", "__builtin_ppc_stdcx");
   Builder.defineMacro("__stwcx", "__builtin_ppc_stwcx");
+  Builder.defineMacro("__tdw", "__builtin_ppc_tdw");
+  Builder.defineMacro("__tw", "__builtin_ppc_tw");
+  Builder.defineMacro("__trap", "__builtin_ppc_trap");
+  Builder.defineMacro("__trapd", "__builtin_ppc_trapd");
+  Builder.defineMacro("__fcfid", "__builtin_ppc_fcfid");
+  Builder.defineMacro("__fcfud", "__builtin_ppc_fcfud");
+  Builder.defineMacro("__fctid", "__builtin_ppc_fctid");
+  Builder.defineMacro("__fctidz", "__builtin_ppc_fctidz");
+  Builder.defineMacro("__fctiw", "__builtin_ppc_fctiw");
+  Builder.defineMacro("__fctiwz", "__builtin_ppc_fctiwz");
+  Builder.defineMacro("__fctudz", "__builtin_ppc_fctudz");
+  Builder.defineMacro("__fctuwz", "__builtin_ppc_fctuwz");
+  Builder.defineMacro("__cmpeqb", "__builtin_ppc_cmpeqb");
+  Builder.defineMacro("__cmprb", "__builtin_ppc_cmprb");
+  Builder.defineMacro("__setb", "__builtin_ppc_setb");
+  Builder.defineMacro("__mulhd", "__builtin_ppc_mulhd");
+  Builder.defineMacro("__mulhdu", "__builtin_ppc_mulhdu");
+  Builder.defineMacro("__mulhw", "__builtin_ppc_mulhw");
+  Builder.defineMacro("__mulhwu", "__builtin_ppc_mulhwu");
+  Builder.defineMacro("__maddhd", "__builtin_ppc_maddhd");
+  Builder.defineMacro("__maddhdu", "__builtin_ppc_maddhdu");
+  Builder.defineMacro("__maddld", "__builtin_ppc_maddld");
+  Builder.defineMacro("__rlwnm", "__builtin_ppc_rlwnm");
+  Builder.defineMacro("__rlwimi", "__builtin_ppc_rlwimi");
+  Builder.defineMacro("__rldimi", "__builtin_ppc_rldimi");
+  Builder.defineMacro("__load2r", "__builtin_ppc_load2r");
+  Builder.defineMacro("__load4r", "__builtin_ppc_load4r");
+  Builder.defineMacro("__load8r", "__builtin_ppc_load8r");
+  Builder.defineMacro("__store2r", "__builtin_ppc_store2r");
+  Builder.defineMacro("__store4r", "__builtin_ppc_store4r");
+  Builder.defineMacro("__store8r", "__builtin_ppc_store8r");
+  Builder.defineMacro("__extract_exp", "__builtin_ppc_extract_exp");
+  Builder.defineMacro("__extract_sig", "__builtin_ppc_extract_sig");
+  Builder.defineMacro("__mtfsb0", "__builtin_ppc_mtfsb0");
+  Builder.defineMacro("__mtfsb1", "__builtin_ppc_mtfsb1");
+  Builder.defineMacro("__mtfsf", "__builtin_ppc_mtfsf");
+  Builder.defineMacro("__mtfsfi", "__builtin_ppc_mtfsfi");
+  Builder.defineMacro("__insert_exp", "__builtin_ppc_insert_exp");
+  Builder.defineMacro("__fmsub", "__builtin_ppc_fmsub");
+  Builder.defineMacro("__fmsubs", "__builtin_ppc_fmsubs");
+  Builder.defineMacro("__fnmadd", "__builtin_ppc_fnmadd");
+  Builder.defineMacro("__fnmadds", "__builtin_ppc_fnmadds");
+  Builder.defineMacro("__fnmsub", "__builtin_ppc_fnmsub");
+  Builder.defineMacro("__fnmsubs", "__builtin_ppc_fnmsubs");
+  Builder.defineMacro("__fre", "__builtin_ppc_fre");
+  Builder.defineMacro("__fres", "__builtin_ppc_fres");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
@@ -378,6 +432,15 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("e500", true)
                         .Default(false);
 
+  Features["isa-v207-instructions"] = llvm::StringSwitch<bool>(CPU)
+                                          .Case("ppc64le", true)
+                                          .Case("pwr9", true)
+                                          .Case("pwr8", true)
+                                          .Default(false);
+
+  Features["isa-v30-instructions"] =
+      llvm::StringSwitch<bool>(CPU).Case("pwr9", true).Default(false);
+
   // Power10 includes all the same features as Power9 plus any features specific
   // to the Power10 core.
   if (CPU == "pwr10" || CPU == "power10") {
@@ -434,6 +497,7 @@ void PPCTargetInfo::addP10SpecificFeatures(
   Features["power10-vector"] = true;
   Features["pcrelative-memops"] = true;
   Features["prefix-instrs"] = true;
+  Features["isa-v31-instructions"] = true;
   return;
 }
 
@@ -464,6 +528,9 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mma", HasMMA)
       .Case("rop-protect", HasROPProtect)
       .Case("privileged", HasPrivileged)
+      .Case("isa-v207-instructions", IsISA2_07)
+      .Case("isa-v30-instructions", IsISA3_0)
+      .Case("isa-v31-instructions", IsISA3_1)
       .Default(false);
 }
 

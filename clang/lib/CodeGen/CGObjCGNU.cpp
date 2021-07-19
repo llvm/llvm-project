@@ -739,9 +739,11 @@ class CGObjCGNUstep : public CGObjCGNU {
     /// Function to perform atomic copies of C++ objects with nontrivial copy
     /// constructors to Objective-C ivars.
     LazyRuntimeFunction CxxAtomicObjectSetFn;
-    /// Type of an slot structure pointer.  This is returned by the various
+    /// Type of a slot structure pointer.  This is returned by the various
     /// lookup functions.
     llvm::Type *SlotTy;
+    /// Type of a slot structure.
+    llvm::Type *SlotStructTy;
 
   public:
     llvm::Constant *GetEHType(QualType T) override;
@@ -780,7 +782,7 @@ class CGObjCGNUstep : public CGObjCGNU {
 
       // Load the imp from the slot
       llvm::Value *imp = Builder.CreateAlignedLoad(
-          IMPTy, Builder.CreateStructGEP(nullptr, slot, 4),
+          IMPTy, Builder.CreateStructGEP(SlotStructTy, slot, 4),
           CGF.getPointerAlign());
 
       // The lookup function may have changed the receiver, so make sure we use
@@ -800,7 +802,7 @@ class CGObjCGNUstep : public CGObjCGNU {
       slot->setOnlyReadsMemory();
 
       return Builder.CreateAlignedLoad(
-          IMPTy, Builder.CreateStructGEP(nullptr, slot, 4),
+          IMPTy, Builder.CreateStructGEP(SlotStructTy, slot, 4),
           CGF.getPointerAlign());
     }
 
@@ -811,8 +813,7 @@ class CGObjCGNUstep : public CGObjCGNU {
       CGObjCGNU(Mod, ABI, ProtocolABI, ClassABI) {
       const ObjCRuntime &R = CGM.getLangOpts().ObjCRuntime;
 
-      llvm::StructType *SlotStructTy =
-          llvm::StructType::get(PtrTy, PtrTy, PtrTy, IntTy, IMPTy);
+      SlotStructTy = llvm::StructType::get(PtrTy, PtrTy, PtrTy, IntTy, IMPTy);
       SlotTy = llvm::PointerType::getUnqual(SlotStructTy);
       // Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender);
       SlotLookupFn.init(&CGM, "objc_msg_lookup_sender", SlotTy, PtrToIdTy,
@@ -944,7 +945,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   /// Generate the name of a symbol for a reference to a class.  Accesses to
   /// classes should be indirected via this.
 
-  typedef std::pair<std::string, std::pair<llvm::Constant*, int>> EarlyInitPair;
+  typedef std::pair<std::string, std::pair<llvm::GlobalVariable*, int>>
+      EarlyInitPair;
   std::vector<EarlyInitPair> EarlyInitList;
 
   std::string SymbolForClassRef(StringRef Name, bool isWeak) {
@@ -1095,7 +1097,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         }
       }
     }
-    auto *ObjCStrGV =
+    llvm::GlobalVariable *ObjCStrGV =
       Fields.finishAndCreateGlobal(
           isNamed ? StringRef(StringName) : ".objc_string",
           Align, false, isNamed ? llvm::GlobalValue::LinkOnceODRLinkage
@@ -1106,7 +1108,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       ObjCStrGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
     }
     if (CGM.getTriple().isOSBinFormatCOFF()) {
-      std::pair<llvm::Constant*, int> v{ObjCStrGV, 0};
+      std::pair<llvm::GlobalVariable*, int> v{ObjCStrGV, 0};
       EarlyInitList.emplace_back(Sym, v);
     }
     llvm::Constant *ObjCStr = llvm::ConstantExpr::getBitCast(ObjCStrGV, IdTy);
@@ -1653,9 +1655,10 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       for (const auto &lateInit : EarlyInitList) {
         auto *global = TheModule.getGlobalVariable(lateInit.first);
         if (global) {
+          llvm::GlobalVariable *GV = lateInit.second.first;
           b.CreateAlignedStore(
               global,
-              b.CreateStructGEP(lateInit.second.first, lateInit.second.second),
+              b.CreateStructGEP(GV->getValueType(), GV, lateInit.second.second),
               CGM.getPointerAlign().getAsAlign());
         }
       }
@@ -1937,7 +1940,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // struct objc_property_list *properties
     classFields.add(GeneratePropertyList(OID, classDecl));
 
-    auto *classStruct =
+    llvm::GlobalVariable *classStruct =
       classFields.finishAndCreateGlobal(SymbolForClass(className),
         CGM.getPointerAlign(), false, llvm::GlobalValue::ExternalLinkage);
 
@@ -1948,12 +1951,12 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     if (IsCOFF) {
       // we can't import a class struct.
       if (OID->getClassInterface()->hasAttr<DLLExportAttr>()) {
-        cast<llvm::GlobalValue>(classStruct)->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+        classStruct->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
         cast<llvm::GlobalValue>(classRefSymbol)->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
       }
 
       if (SuperClass) {
-        std::pair<llvm::Constant*, int> v{classStruct, 1};
+        std::pair<llvm::GlobalVariable*, int> v{classStruct, 1};
         EarlyInitList.emplace_back(std::string(SuperClass->getName()),
                                    std::move(v));
       }

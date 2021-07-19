@@ -208,22 +208,6 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   return true;
 }
 
-/// Returns true if given tensor co-iterates with conjunction only.
-/// For the output tensor, this defines a "simply dynamic" operation.
-/// For instance: A(I) = A(I) * B(I) * C(I)
-static unsigned isConjunction(Merger &merger, unsigned tensor, unsigned exp) {
-  switch (merger.exp(exp).kind) {
-  case Kind::kTensor:
-    return merger.exp(exp).tensor == tensor;
-  case Kind::kMulF:
-  case Kind::kMulI:
-    return isConjunction(merger, tensor, merger.exp(exp).children.e0) ||
-           isConjunction(merger, tensor, merger.exp(exp).children.e1);
-  default:
-    return false;
-  }
-}
-
 /// Returns true when the tensor expression is admissable for codegen.
 /// Since all sparse input tensors are admissable, we just need to check
 /// whether the output tensor in the tensor expression codegen is admissable.
@@ -250,7 +234,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   // A tensor expression with a sparse output tensor that changes its values
   // but not its nonzero structure, an operation called "simply dynamic" in
   // [Bik96,Ch9], is also admissable without special codegen.
-  if (isConjunction(merger, tensor, exp))
+  if (merger.isConjunction(tensor, exp))
     return true;
   // Reject for now since this requires changes to the nonzero structure.
   // TODO: implement "workspaces" [Kjolstad2019]
@@ -292,7 +276,7 @@ static Value genOutputBuffer(CodeGen &codegen, PatternRewriter &rewriter,
   // impact the running complexity of the sparse kernel.
   Value init = rewriter.create<memref::BufferCastOp>(loc, denseTp, tensor);
   Value alloc = rewriter.create<memref::AllocOp>(loc, denseTp, args);
-  rewriter.create<linalg::CopyOp>(loc, init, alloc);
+  rewriter.create<memref::CopyOp>(loc, init, alloc);
   return alloc;
 }
 
@@ -625,43 +609,31 @@ static void genReductionEnd(Merger &merger, CodeGen &codegen,
 static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
                     linalg::GenericOp op, unsigned exp) {
   Location loc = op.getLoc();
+  if (exp == -1u)
+    return Value();
   if (merger.exp(exp).kind == Kind::kTensor)
     return genTensorLoad(merger, codegen, rewriter, op, exp);
   if (merger.exp(exp).kind == Kind::kInvariant)
     return genInvariantValue(merger, codegen, rewriter, exp);
-  if (merger.exp(exp).kind == Kind::kZero) {
-    Type tp = op.getOutputTensorTypes()[0].getElementType();
-    merger.exp(exp).val =
-        rewriter.create<ConstantOp>(loc, tp, rewriter.getZeroAttr(tp));
-    return genInvariantValue(merger, codegen, rewriter, exp);
-  }
   Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0);
   Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1);
-  switch (merger.exp(exp).kind) {
-  case Kind::kTensor:
-  case Kind::kInvariant:
-  case Kind::kZero:
-    llvm_unreachable("handled above");
-  case Kind::kMulF:
-    return rewriter.create<MulFOp>(loc, v0, v1);
-  case Kind::kMulI:
-    return rewriter.create<MulIOp>(loc, v0, v1);
-  case Kind::kAddF:
-    return rewriter.create<AddFOp>(loc, v0, v1);
-  case Kind::kAddI:
-    return rewriter.create<AddIOp>(loc, v0, v1);
-  case Kind::kSubF:
-    return rewriter.create<SubFOp>(loc, v0, v1);
-  case Kind::kSubI:
-    return rewriter.create<SubIOp>(loc, v0, v1);
+  if (merger.exp(exp).kind == Kind::kNegI) {
+    // TODO: no negi in std, need to make zero explicit.
+    Type tp = op.getOutputTensorTypes()[0].getElementType();
+    v1 = v0;
+    v0 = rewriter.create<ConstantOp>(loc, tp, rewriter.getZeroAttr(tp));
+    if (codegen.curVecLength > 1)
+      v0 = genVectorInvariantValue(codegen, rewriter, v0);
   }
-  llvm_unreachable("unexpected expression kind");
+  return merger.buildExp(rewriter, loc, exp, v0, v1);
 }
 
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(Merger &merger, CodeGen &codegen,
                           PatternRewriter &rewriter, linalg::GenericOp op,
                           unsigned exp, unsigned ldx, bool hoist) {
+  if (exp == -1u)
+    return;
   if (merger.exp(exp).kind == Kind::kTensor) {
     // Inspect tensor indices.
     bool atLevel = ldx == -1u;
@@ -683,8 +655,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
       merger.exp(exp).val =
           hoist ? genTensorLoad(merger, codegen, rewriter, op, exp) : Value();
     }
-  } else if (merger.exp(exp).kind != Kind::kInvariant &&
-             merger.exp(exp).kind != Kind::kZero) {
+  } else if (merger.exp(exp).kind != Kind::kInvariant) {
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.

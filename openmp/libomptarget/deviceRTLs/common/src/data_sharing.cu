@@ -15,11 +15,6 @@
 #include "target/shuffle.h"
 #include "target_impl.h"
 
-// Return true if this is the master thread.
-INLINE static bool IsMasterThread(bool isSPMDExecutionMode) {
-  return !isSPMDExecutionMode && GetMasterThreadID() == GetThreadIdInBlock();
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Runtime functions for trunk data sharing scheme.
 ////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +61,8 @@ static void *__kmpc_alloc_for_warp(AllocTy Alloc, unsigned Bytes,
 
 EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
   Bytes = Bytes + (Bytes % MinBytes);
-  if (IsMasterThread(__kmpc_is_spmd_exec_mode())) {
+  int TID = GetThreadIdInBlock();
+  if (__kmpc_is_generic_main_thread(TID)) {
     // Main thread alone, use shared memory if space is available.
     if (MainSharedStack.Usage[0] + Bytes <= MainSharedStack.MaxSize) {
       void *Ptr = &MainSharedStack.Data[MainSharedStack.Usage[0]];
@@ -75,7 +71,6 @@ EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
       return Ptr;
     }
   } else {
-    int TID = GetThreadIdInBlock();
     int WID = GetWarpId();
     unsigned WarpBytes = Bytes * WARPSIZE;
     auto AllocSharedStack = [&]() {
@@ -92,7 +87,6 @@ EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
       return __kmpc_alloc_for_warp(AllocSharedStack, Bytes, WarpBytes);
   }
   // Fallback to malloc
-  int TID = GetThreadIdInBlock();
   unsigned WarpBytes = Bytes * WARPSIZE;
   auto AllocGlobal = [&] {
     return SafeMalloc(WarpBytes, "AllocGlobalFallback");
@@ -135,14 +129,32 @@ EXTERN void __kmpc_data_sharing_init_stack() {
   }
 }
 
+/// Allocate storage in shared memory to communicate arguments from the main
+/// thread to the workers in generic mode. If we exceed
+/// NUM_SHARED_VARIABLES_IN_SHARED_MEM we will malloc space for communication.
+#define NUM_SHARED_VARIABLES_IN_SHARED_MEM 64
+
+[[clang::loader_uninitialized]] static void
+    *SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
+#pragma omp allocate(SharedMemVariableSharingSpace)                            \
+    allocator(omp_pteam_mem_alloc)
+[[clang::loader_uninitialized]] static void **SharedMemVariableSharingSpacePtr;
+#pragma omp allocate(SharedMemVariableSharingSpacePtr)                         \
+    allocator(omp_pteam_mem_alloc)
+
 // Begin a data sharing context. Maintain a list of references to shared
 // variables. This list of references to shared variables will be passed
 // to one or more threads.
 // In L0 data sharing this is called by master thread.
 // In L1 data sharing this is called by active warp master thread.
 EXTERN void __kmpc_begin_sharing_variables(void ***GlobalArgs, size_t nArgs) {
-  omptarget_nvptx_globalArgs.EnsureSize(nArgs);
-  *GlobalArgs = omptarget_nvptx_globalArgs.GetArgs();
+  if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
+    SharedMemVariableSharingSpacePtr = &SharedMemVariableSharingSpace[0];
+  } else {
+    SharedMemVariableSharingSpacePtr =
+        (void **)SafeMalloc(nArgs * sizeof(void *), "new extended args");
+  }
+  *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 
 // End a data sharing context. There is no need to have a list of refs
@@ -152,7 +164,8 @@ EXTERN void __kmpc_begin_sharing_variables(void ***GlobalArgs, size_t nArgs) {
 // In L0 data sharing this is called by master thread.
 // In L1 data sharing this is called by active warp master thread.
 EXTERN void __kmpc_end_sharing_variables() {
-  omptarget_nvptx_globalArgs.DeInit();
+  if (SharedMemVariableSharingSpacePtr != &SharedMemVariableSharingSpace[0])
+    SafeFree(SharedMemVariableSharingSpacePtr, "new extended args");
 }
 
 // This function will return a list of references to global variables. This
@@ -161,7 +174,7 @@ EXTERN void __kmpc_end_sharing_variables() {
 // preserving the order.
 // Called by all workers.
 EXTERN void __kmpc_get_shared_variables(void ***GlobalArgs) {
-  *GlobalArgs = omptarget_nvptx_globalArgs.GetArgs();
+  *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 
 // This function is used to init static memory manager. This manager is used to

@@ -192,14 +192,18 @@ static std::tuple<bool, bool> hasTensorOrVectorType(iterator_range types) {
       llvm::any_of(types, [](Type t) { return t.isa<VectorType>(); }));
 }
 
-static bool areCompatibleShapes(ArrayRef<int64_t> shape1,
-                                ArrayRef<int64_t> shape2) {
+static bool isCompatibleInferredReturnShape(ArrayRef<int64_t> inferred,
+                                            ArrayRef<int64_t> existing) {
   auto isCompatible = [](int64_t dim1, int64_t dim2) {
-    return dim1 == dim2 || dim1 == -1 || dim2 == -1;
+    // If the inferred and existing dim is the same, or one of them is unknown
+    // then it is compatible, else if the inferred dim is 1 then it is also
+    // compatible. But if the existing dim is 1 and the inferred is greater than
+    // 1 then flag.
+    return dim1 == dim2 || dim1 == -1 || dim2 == -1 || dim1 == 1;
   };
-  if (shape1.size() != shape2.size())
+  if (inferred.size() != existing.size())
     return false;
-  for (auto p : llvm::zip(shape1, shape2))
+  for (auto p : llvm::zip(inferred, existing))
     if (!isCompatible(std::get<0>(p), std::get<1>(p)))
       return false;
   return true;
@@ -208,8 +212,20 @@ static bool areCompatibleShapes(ArrayRef<int64_t> shape1,
 static std::string getShapeString(ArrayRef<int64_t> shape) {
   // TODO: should replace with printing shape more uniformly across here and
   // when in type.
-  return std::string(
-      formatv("'{0:$[x]}'", llvm::make_range(shape.begin(), shape.end())));
+  std::string ret;
+  llvm::raw_string_ostream ss(ret);
+  ss << '\'';
+  llvm::interleave(
+      shape, ss,
+      [&](int64_t dim) {
+        if (ShapedType::isDynamic(dim))
+          ss << '?';
+        else
+          ss << dim;
+      },
+      "x");
+  ss << '\'';
+  return ss.str();
 }
 
 LogicalResult OpTrait::impl::verifyCompatibleOperandBroadcast(Operation *op) {
@@ -252,7 +268,7 @@ LogicalResult OpTrait::impl::verifyCompatibleOperandBroadcast(Operation *op) {
   for (auto type : rankedResults) {
     ArrayRef<int64_t> actualSuffix =
         getShape(type).take_back(resultShape.size());
-    if (!areCompatibleShapes(actualSuffix, resultShape))
+    if (!isCompatibleInferredReturnShape(resultShape, actualSuffix))
       return op->emitOpError()
              << "result type " << getShapeString(getShape(type))
              << " not broadcast compatible with broadcasted operands's shapes "

@@ -74,7 +74,6 @@ body:             |
     liveins: $edi
 
     DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !18
-    DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !18
     DBG_VALUE $esi, $noreg, !16, !DIExpression(), debug-location !18
     DBG_VALUE $edx, $noreg, !17, !DIExpression(), debug-location !18
     renamable $edi = nsw INC32r killed renamable $edi, implicit-def dead $eflags, debug-location !18

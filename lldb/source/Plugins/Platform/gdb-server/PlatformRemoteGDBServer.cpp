@@ -740,8 +740,8 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
   m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
 
   StringExtractorGDBRemote response;
-  auto result = m_gdb_client.SendPacketAndWaitForResponse("jSignalsInfo",
-                                                          response, false);
+  auto result =
+      m_gdb_client.SendPacketAndWaitForResponse("jSignalsInfo", response);
 
   if (result != decltype(result)::Success ||
       response.GetResponseType() != response.eResponse)

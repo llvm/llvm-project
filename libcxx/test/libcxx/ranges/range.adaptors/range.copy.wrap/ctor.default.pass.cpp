@@ -12,7 +12,7 @@
 
 // <copyable-box>::<copyable-box>()
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 
 #include <cassert>
 #include <type_traits>

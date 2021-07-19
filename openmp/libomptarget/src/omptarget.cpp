@@ -539,20 +539,8 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       bool copy = false;
       if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
           HasCloseModifier) {
-        if (TPR.Flags.IsNewEntry || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS)) {
+        if (TPR.Flags.IsNewEntry || (arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS))
           copy = true;
-        } else if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-                   !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
-          // Copy data only if the "parent" struct has RefCount==1.
-          // If this is a PTR_AND_OBJ entry, the OBJ is not part of the struct,
-          // so exclude it from this check.
-          int32_t parent_idx = getParentIndex(arg_types[i]);
-          uint64_t parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
-          assert(parent_rc > 0 && "parent struct not found");
-          if (parent_rc == 1) {
-            copy = true;
-          }
-        }
       }
 
       if (copy && !IsHostPtr) {
@@ -568,22 +556,46 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
     }
 
     if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
-      DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
-         DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
+      // Check whether we need to update the pointer on the device
+      bool UpdateDevPtr = false;
+
       uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
-      void *&TgtPtrBase = AsyncInfo.getVoidPtrLocation();
-      TgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
-      int rt = Device.submitData(PointerTgtPtrBegin, &TgtPtrBase,
-                                 sizeof(void *), AsyncInfo);
-      if (rt != OFFLOAD_SUCCESS) {
-        REPORT("Copying data to device failed.\n");
-        return OFFLOAD_FAIL;
-      }
-      // create shadow pointers for this entry
+      void *ExpectedTgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
+
       Device.ShadowMtx.lock();
-      Device.ShadowPtrMap[Pointer_HstPtrBegin] = {
-          HstPtrBase, PointerTgtPtrBegin, TgtPtrBase};
+      auto Entry = Device.ShadowPtrMap.find(Pointer_HstPtrBegin);
+      // If this pointer is not in the map we need to insert it. If the map
+      // contains a stale entry, we need to update it (e.g. if the pointee was
+      // deallocated and later on is reallocated at another device address). The
+      // latter scenario is the subject of LIT test env/base_ptr_ref_count.c. An
+      // entry is removed from ShadowPtrMap only when the PTR of a PTR_AND_OBJ
+      // pair is deallocated, not when the OBJ is deallocated. In
+      // env/base_ptr_ref_count.c the PTR is a global "declare target" pointer,
+      // so it stays in the map for the lifetime of the application. When the
+      // OBJ is deallocated and later on allocated again (at a different device
+      // address), ShadowPtrMap still contains an entry for Pointer_HstPtrBegin
+      // which is stale, pointing to the old ExpectedTgtPtrBase of the OBJ.
+      if (Entry == Device.ShadowPtrMap.end() ||
+          Entry->second.TgtPtrVal != ExpectedTgtPtrBase) {
+        // create or update shadow pointers for this entry
+        Device.ShadowPtrMap[Pointer_HstPtrBegin] = {
+            HstPtrBase, PointerTgtPtrBegin, ExpectedTgtPtrBase};
+        UpdateDevPtr = true;
+      }
       Device.ShadowMtx.unlock();
+
+      if (UpdateDevPtr) {
+        DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
+           DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
+        void *&TgtPtrBase = AsyncInfo.getVoidPtrLocation();
+        TgtPtrBase = ExpectedTgtPtrBase;
+        int rt = Device.submitData(PointerTgtPtrBegin, &TgtPtrBase,
+                                   sizeof(void *), AsyncInfo);
+        if (rt != OFFLOAD_SUCCESS) {
+          REPORT("Copying data to device failed.\n");
+          return OFFLOAD_FAIL;
+        }
+      }
     }
   }
 
@@ -731,14 +743,8 @@ int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
         if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
             HasCloseModifier) {
           if ((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-              !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
-            // Copy data only if the "parent" struct has RefCount==1.
-            int32_t ParentIdx = getParentIndex(ArgTypes[I]);
-            uint64_t ParentRC = Device.getMapEntryRefCnt(Args[ParentIdx]);
-            assert(ParentRC > 0 && "parent struct not found");
-            if (ParentRC == 1)
-              CopyMember = true;
-          }
+              !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ))
+            CopyMember = IsLast;
         }
 
         if ((DelEntry || Always || CopyMember) &&

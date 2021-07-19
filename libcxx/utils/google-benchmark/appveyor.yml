@@ -41,7 +41,7 @@ build_script:
   - cmake --build . --config %configuration%
 
 test_script:
-  - ctest -c %configuration% --timeout 300 --output-on-failure
+  - ctest --build-config %configuration% --timeout 300 --output-on-failure
 
 artifacts:
   - path: '_build/CMakeFiles/*.log'

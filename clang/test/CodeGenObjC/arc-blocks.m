@@ -477,7 +477,7 @@ void test11b(void) {
 // CHECK:    call void @objc_setProperty(i8* {{%.*}}, i8* {{%.*}}, i64 {{%.*}}, i8* {{%.*}}, i1 zeroext true, i1 zeroext true)
 
 // CHECK:    define internal void ()* @"\01-[Test12 nblock]"(
-// CHECK:    call i8* @objc_getProperty(i8* {{%.*}}, i8* {{%.*}}, i64 {{%.*}}, i1 zeroext false)
+// CHECK:    %add.ptr = getelementptr inbounds i8, i8* %1, i64 %ivar
 
 // CHECK:    define internal void @"\01-[Test12 setNblock:]"(
 // CHECK:    call void @objc_setProperty(i8* {{%.*}}, i8* {{%.*}}, i64 {{%.*}}, i8* {{%.*}}, i1 zeroext false, i1 zeroext true)

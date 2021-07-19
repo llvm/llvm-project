@@ -427,11 +427,11 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       }],
       /*retTy=*/"bool",
       /*methodName=*/"isSameAs",
-      /*args=*/(ins "OffsetSizeAndStrideOpInterface":$other,
-                   "llvm::function_ref<bool(OpFoldResult, OpFoldResult)>":$cmp),
+      /*args=*/(ins "::mlir::OffsetSizeAndStrideOpInterface":$other,
+                   "::llvm::function_ref<bool(::mlir::OpFoldResult, ::mlir::OpFoldResult)>":$cmp),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return detail::sameOffsetsSizesAndStrides(
+        return ::mlir::detail::sameOffsetsSizesAndStrides(
           ::mlir::cast<::mlir::OffsetSizeAndStrideOpInterface>(
             $_op.getOperation()), other, cmp);
       }]
@@ -443,7 +443,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::llvm::all_of(getMixedStrides(), [](OpFoldResult ofr) {
+        return ::llvm::all_of(getMixedStrides(), [](::mlir::OpFoldResult ofr) {
           return ::mlir::getConstantIntValue(ofr) == static_cast<int64_t>(1);
         });
       }]
@@ -455,7 +455,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::llvm::all_of(getMixedOffsets(), [](OpFoldResult ofr) {
+        return ::llvm::all_of(getMixedOffsets(), [](::mlir::OpFoldResult ofr) {
           return ::mlir::getConstantIntValue(ofr) == static_cast<int64_t>(0);
         });
       }]

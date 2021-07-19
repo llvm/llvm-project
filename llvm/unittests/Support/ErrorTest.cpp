@@ -556,7 +556,7 @@ TEST(Error, ExpectedWithReferenceType) {
 TEST(Error, UncheckedExpectedInSuccessModeDestruction) {
   EXPECT_DEATH({ Expected<int> A = 7; },
                "Expected<T> must be checked before access or destruction.")
-    << "Unchecekd Expected<T> success value did not cause an abort().";
+      << "Unchecked Expected<T> success value did not cause an abort().";
 }
 #endif
 
@@ -565,9 +565,13 @@ TEST(Error, UncheckedExpectedInSuccessModeDestruction) {
 // Test runs in debug mode only.
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 TEST(Error, UncheckedExpectedInSuccessModeAccess) {
-  EXPECT_DEATH({ Expected<int> A = 7; *A; },
-               "Expected<T> must be checked before access or destruction.")
-    << "Unchecekd Expected<T> success value did not cause an abort().";
+  EXPECT_DEATH(
+      {
+        const Expected<int> A = 7;
+        *A;
+      },
+      "Expected<T> must be checked before access or destruction.")
+      << "Unchecked Expected<T> success value did not cause an abort().";
 }
 #endif
 
@@ -576,9 +580,13 @@ TEST(Error, UncheckedExpectedInSuccessModeAccess) {
 // Test runs in debug mode only.
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 TEST(Error, UncheckedExpectedInSuccessModeAssignment) {
-  EXPECT_DEATH({ Expected<int> A = 7; A = 7; },
-               "Expected<T> must be checked before access or destruction.")
-    << "Unchecekd Expected<T> success value did not cause an abort().";
+  EXPECT_DEATH(
+      {
+        Expected<int> A = 7;
+        A = 7;
+      },
+      "Expected<T> must be checked before access or destruction.")
+      << "Unchecked Expected<T> success value did not cause an abort().";
 }
 #endif
 

@@ -7,6 +7,7 @@ from typing import Dict, Sequence
 from mlir.ir import *
 from mlir.dialects import linalg
 from mlir.dialects import std
+from mlir.dialects import math
 # TODO: resolve name collision for Linalg functionality that is injected inside
 # the _mlir.dialects.linalg directly via pybind.
 from _mlir.dialects.linalg import fill_builtin_region
@@ -292,6 +293,16 @@ class _BodyBuilder:
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return std.AddIOp(lhs.type, lhs, rhs).result
     raise NotImplementedError("Unsupported 'add' operand: {lhs}")
+
+  def _eval_exp(self, x: Value) -> Value:
+    if _is_floating_point_type(x.type):
+      return math.ExpOp(x.type, x).result
+    raise NotImplementedError("Unsupported 'exp' operand: {x}")
+
+  def _eval_log(self, x: Value) -> Value:
+    if _is_floating_point_type(x.type):
+      return math.LogOp(x.type, x).result
+    raise NotImplementedError("Unsupported 'log' operand: {x}")
 
   def _eval_sub(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):

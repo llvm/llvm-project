@@ -9,7 +9,8 @@
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
 
 #include "../PassDetail.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
@@ -326,7 +327,6 @@ void ConvertComplexToLLVMPass::runOnOperation() {
 
   LLVMConversionTarget target(getContext());
   target.addLegalOp<ModuleOp, FuncOp>();
-  target.addLegalOp<LLVM::DialectCastOp>();
   target.addIllegalDialect<complex::ComplexDialect>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

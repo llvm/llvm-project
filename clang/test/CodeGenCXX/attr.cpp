@@ -31,4 +31,4 @@ int test1() { return 10; }
 // CHECK at top of file
 extern "C" int test2() __attribute__((alias("_Z5test1v")));
 
-// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { {{.*}}noinline nounwind{{.*}} }

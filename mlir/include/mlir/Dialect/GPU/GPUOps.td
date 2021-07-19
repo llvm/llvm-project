@@ -912,23 +912,22 @@ def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
     The `gpu.subgroup_mma_load_matrix` operation loads a matrix collectively
     using all the threads in a subgroup.
 
-    This operation takes a memref as argument. It is the source matrix from which
-    data is to be loaded. The op returns a `!gpu.mma_matrix`. The source memref
-    can be in the global or shared memory space. The starting of the load address
-    is determined using indices provided. The matrix being loaded is specified in
-    the result type. This attribute is necessary because there exists a different
-    LLVM intrinsic for loading each operand, This is probably because all operands
-    need to be laid out in a specific/different way for the operation in the registers.
-    `leadDimension` attribute specifies the leading dimension of the source matrix.
+    This operation takes a memref as its first operand: it is the source matrix
+    from which data is to be loaded. The op returns a `!gpu.mma_matrix`. The
+    source memref can be in global memory or shared memory. The load address is
+    determined using `indices`. The matrix being loaded into is the result.  The
+    `leadDimension` attribute specifies the leading dimension size of the source
+    matrix which eventually allows the lowering to determine the size of each
+    row.
 
-    This op is meant to be used along with `gpu.subgroup_mma_store_matrix` and
+    This op is often meant to be used along with `gpu.subgroup_mma_store_matrix` and
     `gpu.subgroup_mma_compute`.
 
     Example:
 
     ```mlir
-     %0 = gpu.subgroup_mma_load_matrix src[%i,%j] : {leadDimension = 32
-    : i32} : memref<32x32xf16, 3>, !gpu.mma_matrix<16x16xf16, "AOp">
+     %0 = gpu.subgroup_mma_load_matrix src[%i,%j] : {leadDimension = 32 : i32}
+          : memref<32x32xf16, 3>, !gpu.mma_matrix<16x16xf16, "AOp">
     ```
   }];
 
@@ -954,20 +953,20 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
     The `gpu.subgroup_mma_store_matrix` operation stores a matrix collectively
     using all the threads in a subgroup.
 
-    This operation takes a `!gpu.mma_matrix` and a memref as arguments.
-    `!gpu.mma_matrix` is the source which contains the data to be stored.
-    The destination can be in the global or shared memory space. The starting
-    of store address is determined using indices provided. The `leadDimension`
-    attribute specifies the leading dimension of the destination matrix.
+    This operation takes a `!gpu.mma_matrix` and a memref as operands.
+    `!gpu.mma_matrix` is the source value containing the data to be stored into the
+    destination memref which can be in global or shared memory.  The store address
+    is determined using the indices provided. The `leadDimension` attribute
+    specifies the leading dimension of the destination matrix.
 
-    This op is meant to be used along with `gpu.subgroup_mma_load_matrix` and
+    This op is often meant to be used along with `gpu.subgroup_mma_load_matrix` and
     `gpu.subgroup_mma_compute`.
 
     Example:
 
     ```mlir
-    gpu.subgroup_mma_store_matrix %D, %sg[%i,%j] : { leadDimension = 32 : i32} :
-    !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 3>
+    gpu.subgroup_mma_store_matrix %D, %sg[%i,%j] : { leadDimension = 32 : i32}
+                    : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 3>
     ```
   }];
 
@@ -989,23 +988,23 @@ def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute",
   let summary = "GPU warp synchronous matrix multiply accumulate";
 
   let description = [{
-    The `gpu.subgroup_mma_compute` operation performs a matrix-multiply accumulate(mma)
+    The `gpu.subgroup_mma_compute` operation performs a matrix-multiply accumulate (mma)
     operation using all the threads in a subgroup.
 
-    This operation takes three `!gpu.mma_matrix`s as arguments. All of them hold `A`,
+    This operation takes three `!gpu.mma_matrix`s as arguments: these hold `A`,
      `B` and `C`operands for the mma operation. The operation performed is represented
     as `C += A * B`. The op returns a `!gpu.mma_matrix` which contains the result of
-    the operation held by the current thread.
+    the operation held by all threads in a subgroup.
 
     This op is meant to be used along with `gpu.subgroup_mma_store_matrix` and
-    `gpu.subgroup_mma_load_matrix`.
+    `gpu.subgroup_mma_load_matrix` ops.
 
     Example:
 
     ```mlir
     %D = gpu.subgroup_mma_compute_matrix %A, %B, %C :
-    !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp">>
-    -> !gpu.mma_matrix<16x16xf16, "COp">
+      !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp">>
+      -> !gpu.mma_matrix<16x16xf16, "COp">
     ```
   }];
 

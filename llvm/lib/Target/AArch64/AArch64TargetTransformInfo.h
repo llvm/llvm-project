@@ -121,7 +121,7 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
-  unsigned getMinVectorRegisterBitWidth() {
+  unsigned getMinVectorRegisterBitWidth() const {
     return ST->getMinVectorRegisterBitWidth();
   }
 
@@ -158,12 +158,11 @@ public:
                                      unsigned Index);
 
   InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                         bool IsPairwise, bool IsUnsigned,
+                                         bool IsUnsigned,
                                          TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticReductionCostSVE(unsigned Opcode,
                                                 VectorType *ValTy,
-                                                bool IsPairwiseForm,
                                                 TTI::TargetCostKind CostKind);
 
   InstructionCost getSpliceCost(VectorType *Tp, int Index);
@@ -306,7 +305,7 @@ public:
                                    ElementCount VF) const;
 
   InstructionCost getArithmeticReductionCost(
-      unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
+      unsigned Opcode, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,

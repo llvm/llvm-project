@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines constants and types related to Swift ABI lowering.
+// Defines constants and types related to Swift ABI lowering. The same ABI
+// lowering applies to both sync and async functions.
 //
 //===----------------------------------------------------------------------===//
 

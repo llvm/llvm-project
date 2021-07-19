@@ -69,4 +69,7 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
 
   // Set up DWARF directives
   MinInstAlignment = 4;
+
+  // Support $ as PC in inline asm
+  DollarIsPC = true;
 }

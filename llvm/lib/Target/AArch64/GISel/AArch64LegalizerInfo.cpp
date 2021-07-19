@@ -46,7 +46,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
   const LLT s256 = LLT::scalar(256);
-  const LLT s512 = LLT::scalar(512);
   const LLT v16s8 = LLT::fixed_vector(16, 8);
   const LLT v8s8 = LLT::fixed_vector(8, 8);
   const LLT v4s8 = LLT::fixed_vector(4, 8);
@@ -104,7 +103,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({s32, s64, v4s32, v2s32, v2s64})
       .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .customIf(typeIs(0, v2s16)); // custom lower as G_REV32 + G_LSHR
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
       .legalFor({s32, s64, v2s32, v4s32, v4s16, v8s16, v16s8, v8s8})
@@ -169,6 +169,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      // FIXME: This sholdn't be needed as v2s64 types are going to
+      // be expanded anyway, but G_ICMP doesn't support splitting vectors yet
+      .clampNumElements(0, v2s64, v2s64)
       .lower();
 
   getActionDefinitionsBuilder(
@@ -312,7 +318,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
-      .customIf(IsPtrVecPred);
+      .customIf(IsPtrVecPred)
+      .scalarizeIf(typeIs(0, v2s16), 0);
 
   getActionDefinitionsBuilder(G_STORE)
       .legalForTypesWithMemDesc({{s8, p0, s8, 8},
@@ -347,7 +354,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
       .lowerIfMemSizeNotPow2()
-      .customIf(IsPtrVecPred);
+      .customIf(IsPtrVecPred)
+      .scalarizeIf(typeIs(0, v2s16), 0);
 
   // Constants
   getActionDefinitionsBuilder(G_CONSTANT)
@@ -491,7 +499,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .unsupportedIf([&](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() != Query.Types[1].getSizeInBits();
       })
-      .legalFor({{p0, s64}});
+      .legalFor({{p0, s64}, {v2p0, v2s64}});
 
   // Casts for 32 and 64-bit width type are just copies.
   // Same for 128-bit width type, except they are on the FPR bank.
@@ -563,9 +571,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         .fewerElementsIf(
             [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
             scalarize(1))
-        // Clamp the big scalar to s8-s512 and make it either a power of 2, 192,
-        // or 384.
-        .clampScalar(BigTyIdx, s8, s512)
+        // Clamp the big scalar to s8-s128 and make it a power of 2.
+        .clampScalar(BigTyIdx, s8, s128)
         .widenScalarIf(
             [=](const LegalityQuery &Query) {
               const LLT &Ty = Query.Types[BigTyIdx];
@@ -644,7 +651,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarOrElt(0, s8) // Worst case, we need at least s8.
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
-      .clampMaxNumElements(1, s16, 8);
+      .clampMaxNumElements(1, s16, 8)
+      .clampMaxNumElements(1, p0, 2);
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf(typeInSet(0, {v8s16, v2s32, v4s32, v2s64}));
@@ -652,6 +660,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalFor({{v8s8, s8},
                  {v16s8, s8},
+                 {v2s16, s16},
                  {v4s16, s16},
                  {v8s16, s16},
                  {v2s32, s32},
@@ -700,6 +709,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf([=](const LegalityQuery &Query) {
         return !Query.Types[1].isVector();
       })
+      .moreElementsToNextPow2(0)
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64);
 
@@ -782,6 +792,8 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, MRI, MIRBuilder, Observer);
+  case TargetOpcode::G_BSWAP:
+    return legalizeBSwap(MI, MRI, MIRBuilder);
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -988,6 +1000,46 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     auto NewLoad = MIRBuilder.buildLoad(NewTy, MI.getOperand(1), MMO);
     MIRBuilder.buildBitcast(ValReg, NewLoad);
   }
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeBSwap(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &MIRBuilder) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BSWAP);
+
+  // The <2 x half> case needs special lowering because there isn't an
+  // instruction that does that directly. Instead, we widen to <8 x i8>
+  // and emit a G_REV32 followed by a G_LSHR knowing that instruction selection
+  // will later match them as:
+  //
+  //   rev32.8b v0, v0
+  //   ushr.2s v0, v0, #16
+  //
+  // We could emit those here directly, but it seems better to keep things as
+  // generic as possible through legalization, and avoid committing layering
+  // violations by legalizing & selecting here at the same time.
+
+  Register ValReg = MI.getOperand(1).getReg();
+  assert(LLT::fixed_vector(2, 16) == MRI.getType(ValReg));
+  const LLT v2s32 = LLT::fixed_vector(2, 32);
+  const LLT v8s8 = LLT::fixed_vector(8, 8);
+  const LLT s32 = LLT::scalar(32);
+
+  auto Undef = MIRBuilder.buildUndef(v8s8);
+  auto Insert =
+      MIRBuilder
+          .buildInstr(TargetOpcode::INSERT_SUBREG, {v8s8}, {Undef, ValReg})
+          .addImm(AArch64::ssub);
+  auto Rev32 = MIRBuilder.buildInstr(AArch64::G_REV32, {v8s8}, {Insert});
+  auto Bitcast = MIRBuilder.buildBitcast(v2s32, Rev32);
+  auto Amt = MIRBuilder.buildConstant(v2s32, 16);
+  auto UShr =
+      MIRBuilder.buildInstr(TargetOpcode::G_LSHR, {v2s32}, {Bitcast, Amt});
+  auto Zero = MIRBuilder.buildConstant(s32, 0);
+  auto Extract = MIRBuilder.buildExtractVectorElement(s32, UShr, Zero);
+  MIRBuilder.buildBitcast({MI.getOperand(0).getReg()}, Extract);
   MI.eraseFromParent();
   return true;
 }

@@ -192,7 +192,7 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int threadId) {
 
 INLINE omptarget_nvptx_TaskDescr *
 getMyTopTaskDescriptor(bool isSPMDExecutionMode) {
-  return getMyTopTaskDescriptor(GetLogicalThreadIdInBlock(isSPMDExecutionMode));
+  return getMyTopTaskDescriptor(GetLogicalThreadIdInBlock());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

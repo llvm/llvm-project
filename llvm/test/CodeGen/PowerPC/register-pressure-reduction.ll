@@ -100,15 +100,15 @@ define float @foo_float_reuse_const(float %0, float %1, float %2, float %3) {
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    xsmulsp f1, f2, f1
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
-; CHECK-P8-NEXT:    addis r4, r2, .LCPI2_1@toc@ha
 ; CHECK-P8-NEXT:    xssubsp f0, f3, f4
 ; CHECK-P8-NEXT:    lfs f3, .LCPI2_0@toc@l(r3)
-; CHECK-P8-NEXT:    lfs f4, .LCPI2_1@toc@l(r4)
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI2_1@toc@ha
+; CHECK-P8-NEXT:    lfs f4, .LCPI2_1@toc@l(r3)
 ; CHECK-P8-NEXT:    addis r3, r2, .LC0@toc@ha
 ; CHECK-P8-NEXT:    ld r3, .LC0@toc@l(r3)
 ; CHECK-P8-NEXT:    xsmaddasp f1, f0, f3
 ; CHECK-P8-NEXT:    xsmulsp f0, f2, f4
-; CHECK-P8-NEXT:    stfsx f0, 0, r3
+; CHECK-P8-NEXT:    stfs f0, 0(r3)
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-FMA-LABEL: foo_float_reuse_const:

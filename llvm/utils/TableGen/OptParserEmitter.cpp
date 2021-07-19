@@ -251,7 +251,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
 
     // Prefix values.
     OS << ", {";
-    for (StringRef PrefixKey : Prefix.first)
+    for (const auto &PrefixKey : Prefix.first)
       OS << "\"" << PrefixKey << "\" COMMA ";
     OS << "nullptr})\n";
   }

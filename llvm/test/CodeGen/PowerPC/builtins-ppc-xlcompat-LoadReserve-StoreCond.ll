@@ -12,18 +12,21 @@ declare i32 @llvm.ppc.lwarx(i8*)
 define dso_local signext i32 @test_lwarx(i32* readnone %a) {
 ; CHECK-64-LABEL: test_lwarx:
 ; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    #APP
 ; CHECK-64-NEXT:    lwarx 3, 0, 3
+; CHECK-64-NEXT:    #NO_APP
 ; CHECK-64-NEXT:    extsw 3, 3
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: test_lwarx:
 ; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    #APP
 ; CHECK-32-NEXT:    lwarx 3, 0, 3
+; CHECK-32-NEXT:    #NO_APP
 ; CHECK-32-NEXT:    blr
 entry:
-  %0 = bitcast i32* %a to i8*
-  %1 = tail call i32 @llvm.ppc.lwarx(i8* %0)
-  ret i32 %1
+  %0 = call i32 asm sideeffect "lwarx $0, ${1:y}", "=r,*Z,~{memory}"(i32* %a)
+  ret i32 %0
 }
 
 declare i32 @llvm.ppc.stwcx(i8*, i32)

@@ -10,13 +10,17 @@
 #define _LIBCPP___RANGES_DROP_VIEW_H
 
 #include <__config>
-#include <__iterator/iterator_traits.h>
 #include <__iterator/concepts.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__ranges/access.h>
-#include <__ranges/view_interface.h>
 #include <__ranges/all.h>
-#include <type_traits>
+#include <__ranges/concepts.h>
+#include <__ranges/enable_borrowed_range.h>
+#include <__ranges/size.h>
+#include <__ranges/view_interface.h>
 #include <optional>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -139,9 +143,7 @@ public:
   };
 
   template<class _Range>
-  drop_view(_Range&&, range_difference_t<_Range>)
-  // TODO: this is just recreating all_t.
-    -> drop_view<decltype(views::all(std::declval<_Range>()))>;
+  drop_view(_Range&&, range_difference_t<_Range>) -> drop_view<views::all_t<_Range>>;
 
   template<class _Tp>
   inline constexpr bool enable_borrowed_range<drop_view<_Tp>> = enable_borrowed_range<_Tp>;

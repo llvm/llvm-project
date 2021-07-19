@@ -22,7 +22,7 @@
 #include "read_write.h"
 
 template <class Out, class T>
-[[nodiscard]] constexpr bool check_indirectly_writable() {
+constexpr bool check_indirectly_writable() {
   constexpr bool result = std::indirectly_writable<Out, T>;
   static_assert(std::indirectly_writable<Out const, T> == result);
   return result;

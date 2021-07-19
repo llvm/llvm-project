@@ -33,6 +33,8 @@ public:
   void printRegName(raw_ostream &OS, unsigned RegNo) const override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
+  void printCCOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printU6(const MCInst *MI, int OpNum, raw_ostream &O);
 
 private:
   void printMemOperandRI(const MCInst *MI, unsigned OpNum, raw_ostream &O);
@@ -44,6 +46,8 @@ private:
   void printPredicateOperand(const MCInst *MI, unsigned OpNum, raw_ostream &O);
   void printBRCCPredicateOperand(const MCInst *MI, unsigned OpNum,
                                  raw_ostream &O);
+  void printU6ShiftedBy(unsigned ShiftBy, const MCInst *MI, int OpNum,
+                        raw_ostream &O);
 };
 } // end namespace llvm
 

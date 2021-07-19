@@ -4,7 +4,6 @@
 ; optimizes and lowers to a single splat instruction. Without a custom
 ; DAG combine, this ends up doing both a splat and a shuffle.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: f32x4_splat:

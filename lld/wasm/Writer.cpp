@@ -1057,7 +1057,7 @@ void Writer::createInitMemoryFunction() {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
       writePtrConst(os, flagAddress, is64, "flag address");
-      writeU8(os, WASM_OPCODE_I32_ADD, "add");
+      writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD, "add");
       writeU8(os, WASM_OPCODE_LOCAL_SET, "local.set");
       writeUleb128(os, 0, "local 0");
     } else {
@@ -1104,7 +1104,8 @@ void Writer::createInitMemoryFunction() {
           writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
           writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
                        "memory_base");
-          writeU8(os, WASM_OPCODE_I32_ADD, "i32.add");
+          writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD,
+                  "i32.add");
         }
         // source segment offset
         writeI32Const(os, 0, "segment offset");

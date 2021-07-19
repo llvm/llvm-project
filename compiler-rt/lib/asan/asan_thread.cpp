@@ -60,8 +60,8 @@ ThreadRegistry &asanThreadRegistry() {
     // in TSD and can't reliably tell when no more TSD destructors will
     // be called. It would be wrong to reuse AsanThreadContext for another
     // thread before all TSD destructors will be called for it.
-    asan_thread_registry = new(thread_registry_placeholder) ThreadRegistry(
-        GetAsanThreadContext, kMaxNumberOfThreads, kMaxNumberOfThreads);
+    asan_thread_registry =
+        new (thread_registry_placeholder) ThreadRegistry(GetAsanThreadContext);
     initialized = true;
   }
   return *asan_thread_registry;

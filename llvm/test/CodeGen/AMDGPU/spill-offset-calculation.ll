@@ -37,8 +37,8 @@ entry:
 
   %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
-  ; MUBUF:   s_mov_b32 s6, 0x40000
-  ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
+  ; MUBUF:   s_mov_b32 s4, 0x40000
+  ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 ; 4-byte Folded Spill
   ; FLATSCR: s_movk_i32 s2, 0x1000
   ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, s2 ; 4-byte Folded Spill
   %a = load volatile i32, i32 addrspace(5)* %aptr
@@ -149,9 +149,9 @@ entry:
   %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
   ; 0x3ff00 / 64 = 4092 (for wave64)
-  ; MUBUF:   s_mov_b32 s6, 0x3ff00
-  ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
-  ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 offset:4 ; 4-byte Folded Spill
+  ; MUBUF:   s_mov_b32 s4, 0x3ff00
+  ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 ; 4-byte Folded Spill
+  ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 offset:4 ; 4-byte Folded Spill
   ; FLATSCR: s_movk_i32 [[SOFF:s[0-9]+]], 0xffc
   ; FLATSCR: scratch_store_dwordx2 off, v[{{[0-9:]+}}], [[SOFF]]          ; 8-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1

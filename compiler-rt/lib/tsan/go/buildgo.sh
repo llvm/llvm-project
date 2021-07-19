@@ -28,6 +28,7 @@ SRCS="
 	../../sanitizer_common/sanitizer_flag_parser.cpp
 	../../sanitizer_common/sanitizer_flags.cpp
 	../../sanitizer_common/sanitizer_libc.cpp
+	../../sanitizer_common/sanitizer_mutex.cpp
 	../../sanitizer_common/sanitizer_persistent_allocator.cpp
 	../../sanitizer_common/sanitizer_printf.cpp
 	../../sanitizer_common/sanitizer_suppressions.cpp
@@ -72,6 +73,10 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 			SUFFIX="linux_mips64"
 			ARCHCFLAGS="-mips64 -EB"
 		fi
+	elif [ "`uname -a | grep s390x`" != "" ]; then
+		SRCS="$SRCS ../../sanitizer_common/sanitizer_linux_s390.cpp"
+		SUFFIX="linux_s390x"
+		ARCHCFLAGS=""
 	fi
 elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 	# The resulting object still depends on libc.

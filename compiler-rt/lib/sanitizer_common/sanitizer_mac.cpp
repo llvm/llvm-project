@@ -219,9 +219,7 @@ void internal__exit(int exitcode) {
   _exit(exitcode);
 }
 
-unsigned int internal_sleep(unsigned int seconds) {
-  return sleep(seconds);
-}
+void internal_usleep(u64 useconds) { usleep(useconds); }
 
 uptr internal_getpid() {
   return getpid();
@@ -511,6 +509,13 @@ void MprotectMallocZones(void *addr, int prot) {
   }
 }
 
+void FutexWait(atomic_uint32_t *p, u32 cmp) {
+  // FIXME: implement actual blocking.
+  sched_yield();
+}
+
+void FutexWake(atomic_uint32_t *p, u32 count) {}
+
 BlockingMutex::BlockingMutex() {
   internal_memset(this, 0, sizeof(*this));
 }
@@ -526,7 +531,7 @@ void BlockingMutex::Unlock() {
   OSSpinLockUnlock((OSSpinLock*)&opaque_storage_);
 }
 
-void BlockingMutex::CheckLocked() {
+void BlockingMutex::CheckLocked() const {
   CHECK_NE(*(OSSpinLock*)&opaque_storage_, 0);
 }
 

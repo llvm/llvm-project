@@ -125,6 +125,8 @@ target(tsan_target_type, "tsan") {
     sources += [ "rtl/tsan_rtl_ppc64.S" ]
   } else if (target_cpu == "mips64") {
     sources += [ "rtl/tsan_rtl_mips64.S" ]
+  } else if (target_cpu == "s390x") {
+    sources += [ "rtl/tsan_rtl_s390x.S" ]
   }
 
   # To be able to include sanitizer_common.

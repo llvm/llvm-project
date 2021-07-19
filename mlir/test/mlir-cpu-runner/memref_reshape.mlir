@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-std -std-expand -convert-std-to-llvm \
+// RUN: mlir-opt %s -convert-scf-to-std -std-expand -convert-memref-to-llvm -convert-std-to-llvm \
 // RUN: | mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
 // RUN: | FileCheck %s

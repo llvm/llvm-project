@@ -23,22 +23,10 @@
 #undef MemoryFence
 #endif
 
-static unsigned __stdcall threadFuncSync(void *Arg) {
-  SyncThreadInfo *TI = static_cast<SyncThreadInfo *>(Arg);
-  TI->UserFn(TI->UserData);
-  return 0;
-}
-
-static unsigned __stdcall threadFuncAsync(void *Arg) {
-  std::unique_ptr<AsyncThreadInfo> Info(static_cast<AsyncThreadInfo *>(Arg));
-  (*Info)();
-  return 0;
-}
-
-static void
-llvm_execute_on_thread_impl(unsigned (__stdcall *ThreadFunc)(void *), void *Arg,
-                            llvm::Optional<unsigned> StackSizeInBytes,
-                            JoiningPolicy JP) {
+namespace llvm {
+HANDLE
+llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *), void *Arg,
+                            llvm::Optional<unsigned> StackSizeInBytes) {
   HANDLE hThread = (HANDLE)::_beginthreadex(
       NULL, StackSizeInBytes.getValueOr(0), ThreadFunc, Arg, 0, NULL);
 
@@ -46,15 +34,30 @@ llvm_execute_on_thread_impl(unsigned (__stdcall *ThreadFunc)(void *), void *Arg,
     ReportLastErrorFatal("_beginthreadex failed");
   }
 
-  if (JP == JoiningPolicy::Join) {
-    if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
-      ReportLastErrorFatal("WaitForSingleObject failed");
-    }
+  return hThread;
+}
+
+void llvm_thread_join_impl(HANDLE hThread) {
+  if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
+    ReportLastErrorFatal("WaitForSingleObject failed");
   }
+}
+
+void llvm_thread_detach_impl(HANDLE hThread) {
   if (::CloseHandle(hThread) == FALSE) {
     ReportLastErrorFatal("CloseHandle failed");
   }
 }
+
+DWORD llvm_thread_get_id_impl(HANDLE hThread) {
+  return ::GetThreadId(hThread);
+}
+
+DWORD llvm_thread_get_current_id_impl() {
+  return ::GetCurrentThreadId();
+}
+
+} // namespace llvm
 
 uint64_t llvm::get_threadid() {
   return uint64_t(::GetCurrentThreadId());

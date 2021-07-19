@@ -20,12 +20,12 @@
 
 // clang-format off
 template<std::input_or_output_iterator, std::semiregular>
-[[nodiscard]] constexpr bool check_sentinel_subsumption() {
+constexpr bool check_sentinel_subsumption() {
   return false;
 }
 
 template<class I, std::sentinel_for<I> >
-[[nodiscard]] constexpr bool check_subsumption() {
+constexpr bool check_subsumption() {
   return true;
 }
 // clang-format on

@@ -15,7 +15,7 @@ def host_to_device_path(path):
 
 def adb(args, attempts = 1, timeout_sec = 600):
     if verbose:
-        print args
+        print(args)
     tmpname = tempfile.mktemp()
     out = open(tmpname, 'w')
     ret = 255
@@ -23,11 +23,11 @@ def adb(args, attempts = 1, timeout_sec = 600):
       attempts -= 1
       ret = subprocess.call(['timeout', str(timeout_sec), ADB] + args, stdout=out, stderr=subprocess.STDOUT)
     if ret != 0:
-      print "adb command failed", args
-      print tmpname
+      print("adb command failed", args)
+      print(tmpname)
       out.close()
       out = open(tmpname, 'r')
-      print out.read()
+      print(out.read())
     out.close()
     os.unlink(tmpname)
     return ret

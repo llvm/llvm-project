@@ -217,7 +217,7 @@ void MemoryOpRemark::visitIntrinsicCall(const IntrinsicInst &II) {
   }
 
   auto R = makeRemark(RemarkPass.data(), remarkName(RK_IntrinsicCall), &II);
-  visitCallee(StringRef(CallTo), /*KnownLibCall=*/true, *R);
+  visitCallee(CallTo.str(), /*KnownLibCall=*/true, *R);
   visitSizeOperand(II.getOperand(2), *R);
 
   auto *CIVolatile = dyn_cast<ConstantInt>(II.getOperand(3));
@@ -306,7 +306,7 @@ static Optional<StringRef> nameOrNone(const Value *V) {
 void MemoryOpRemark::visitVariable(const Value *V,
                                    SmallVectorImpl<VariableInfo> &Result) {
   if (auto *GV = dyn_cast<GlobalVariable>(V)) {
-    auto *Ty = cast<PointerType>(GV->getType())->getElementType();
+    auto *Ty = GV->getValueType();
     uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedSize();
     VariableInfo Var{nameOrNone(GV), Size};
     if (!Var.isEmpty())

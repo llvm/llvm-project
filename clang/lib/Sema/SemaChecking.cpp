@@ -3267,22 +3267,68 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_bpermd:
   case PPC::BI__builtin_ppc_ldarx:
   case PPC::BI__builtin_ppc_stdcx:
+  case PPC::BI__builtin_ppc_tdw:
+  case PPC::BI__builtin_ppc_trapd:
+  case PPC::BI__builtin_ppc_cmpeqb:
+  case PPC::BI__builtin_ppc_setb:
+  case PPC::BI__builtin_ppc_mulhd:
+  case PPC::BI__builtin_ppc_mulhdu:
+  case PPC::BI__builtin_ppc_maddhd:
+  case PPC::BI__builtin_ppc_maddhdu:
+  case PPC::BI__builtin_ppc_maddld:
+  case PPC::BI__builtin_ppc_load8r:
+  case PPC::BI__builtin_ppc_store8r:
+  case PPC::BI__builtin_ppc_insert_exp:
+  case PPC::BI__builtin_ppc_extract_sig:
     return true;
   }
   return false;
 }
 
 static bool SemaFeatureCheck(Sema &S, CallExpr *TheCall,
-                             StringRef FeatureToCheck, unsigned DiagID) {
-  if (!S.Context.getTargetInfo().hasFeature(FeatureToCheck))
-    return S.Diag(TheCall->getBeginLoc(), DiagID) << TheCall->getSourceRange();
-  return false;
+                             StringRef FeatureToCheck, unsigned DiagID,
+                             StringRef DiagArg = "") {
+  if (S.Context.getTargetInfo().hasFeature(FeatureToCheck))
+    return false;
+
+  if (DiagArg.empty())
+    S.Diag(TheCall->getBeginLoc(), DiagID) << TheCall->getSourceRange();
+  else
+    S.Diag(TheCall->getBeginLoc(), DiagID)
+        << DiagArg << TheCall->getSourceRange();
+
+  return true;
+}
+
+/// Returns true if the argument consists of one contiguous run of 1s with any
+/// number of 0s on either side. The 1s are allowed to wrap from LSB to MSB, so
+/// 0x000FFF0, 0x0000FFFF, 0xFF0000FF, 0x0 are all runs. 0x0F0F0000 is not,
+/// since all 1s are not contiguous.
+bool Sema::SemaValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum) {
+  llvm::APSInt Result;
+  // We can't check the value of a dependent argument.
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  // Check constant-ness first.
+  if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
+    return true;
+
+  // Check contiguous run of 1s, 0xFF0000FF is also a run of 1s.
+  if (Result.isShiftedMask() || (~Result).isShiftedMask())
+    return false;
+
+  return Diag(TheCall->getBeginLoc(),
+              diag::err_argument_not_contiguous_bit_field)
+         << ArgNum << Arg->getSourceRange();
 }
 
 bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                        CallExpr *TheCall) {
   unsigned i = 0, l = 0, u = 0;
   bool IsTarget64Bit = TI.getTypeWidth(TI.getIntPtrType()) == 64;
+  llvm::APSInt Result;
 
   if (isPPC_64Builtin(BuiltinID) && !IsTarget64Bit)
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
@@ -3318,17 +3364,17 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_divde:
   case PPC::BI__builtin_divdeu:
     return SemaFeatureCheck(*this, TheCall, "extdiv",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_bpermd:
     return SemaFeatureCheck(*this, TheCall, "bpermd",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_unpack_vector_int128:
     return SemaFeatureCheck(*this, TheCall, "vsx",
-                            diag::err_ppc_builtin_only_on_pwr7) ||
+                            diag::err_ppc_builtin_only_on_arch, "7") ||
            SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_pack_vector_int128:
     return SemaFeatureCheck(*this, TheCall, "vsx",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_altivec_vgnb:
      return SemaBuiltinConstantArgRange(TheCall, 1, 2, 7);
   case PPC::BI__builtin_altivec_vec_replace_elt:
@@ -3347,6 +3393,42 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
      return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
   case PPC::BI__builtin_vsx_xxpermx:
      return SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
+  case PPC::BI__builtin_ppc_tw:
+  case PPC::BI__builtin_ppc_tdw:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  case PPC::BI__builtin_ppc_cmpeqb:
+  case PPC::BI__builtin_ppc_setb:
+  case PPC::BI__builtin_ppc_maddhd:
+  case PPC::BI__builtin_ppc_maddhdu:
+  case PPC::BI__builtin_ppc_maddld:
+    return SemaFeatureCheck(*this, TheCall, "isa-v30-instructions",
+                            diag::err_ppc_builtin_only_on_arch, "9");
+  case PPC::BI__builtin_ppc_cmprb:
+    return SemaFeatureCheck(*this, TheCall, "isa-v30-instructions",
+                            diag::err_ppc_builtin_only_on_arch, "9") ||
+           SemaBuiltinConstantArgRange(TheCall, 0, 0, 1);
+  // For __rlwnm, __rlwimi and __rldimi, the last parameter mask must
+  // be a constant that represents a contiguous bit field.
+  case PPC::BI__builtin_ppc_rlwnm:
+    return SemaBuiltinConstantArg(TheCall, 1, Result) ||
+           SemaValueIsRunOfOnes(TheCall, 2);
+  case PPC::BI__builtin_ppc_rlwimi:
+  case PPC::BI__builtin_ppc_rldimi:
+    return SemaBuiltinConstantArg(TheCall, 2, Result) ||
+           SemaValueIsRunOfOnes(TheCall, 3);
+  case PPC::BI__builtin_ppc_extract_exp:
+  case PPC::BI__builtin_ppc_extract_sig:
+  case PPC::BI__builtin_ppc_insert_exp:
+    return SemaFeatureCheck(*this, TheCall, "power9-vector",
+                            diag::err_ppc_builtin_only_on_arch, "9");
+  case PPC::BI__builtin_ppc_mtfsb0:
+  case PPC::BI__builtin_ppc_mtfsb1:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31);
+  case PPC::BI__builtin_ppc_mtfsf:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 255);
+  case PPC::BI__builtin_ppc_mtfsfi:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 7) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
 #define CUSTOM_BUILTIN(Name, Intr, Types, Acc) \
   case PPC::BI__builtin_##Name: \
     return SemaBuiltinPPCMMACall(TheCall, Types);

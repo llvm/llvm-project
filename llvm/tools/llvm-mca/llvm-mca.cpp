@@ -95,15 +95,13 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(ToolOptions), cl::init("native"));
 
-static cl::opt<std::string>
-    MATTR("mattr",
-          cl::desc("Additional target features."),
-          cl::cat(ToolOptions));
+static cl::opt<std::string> MATTR("mattr",
+                                  cl::desc("Additional target features."),
+                                  cl::cat(ToolOptions));
 
-static cl::opt<bool>
-    PrintJson("json",
-          cl::desc("Print the output in json format"),
-          cl::cat(ToolOptions), cl::init(false));
+static cl::opt<bool> PrintJson("json",
+                               cl::desc("Print the output in json format"),
+                               cl::cat(ToolOptions), cl::init(false));
 
 static cl::opt<int>
     OutputAsmVariant("output-asm-variant",
@@ -523,20 +521,13 @@ int main(int argc, char **argv) {
       *STI, *MRI, mc::InitMCTargetOptionsFromFlags()));
   assert(MAB && "Unable to create asm backend!");
 
+  json::Object JSONOutput;
   for (const std::unique_ptr<mca::CodeRegion> &Region : Regions) {
     // Skip empty code regions.
     if (Region->empty())
       continue;
 
-    // Don't print the header of this region if it is the default region, and
-    // it doesn't have an end location.
-    if (Region->startLoc().isValid() || Region->endLoc().isValid()) {
-      TOF->os() << "\n[" << RegionIdx++ << "] Code Region";
-      StringRef Desc = Region->getDescription();
-      if (!Desc.empty())
-        TOF->os() << " - " << Desc;
-      TOF->os() << "\n\n";
-    }
+    IB.clear();
 
     // Lower the MCInst sequence into an mca::Instruction sequence.
     ArrayRef<MCInst> Insts = Region->getInstructions();
@@ -577,7 +568,12 @@ int main(int argc, char **argv) {
       auto P = std::make_unique<mca::Pipeline>();
       P->appendStage(std::make_unique<mca::EntryStage>(S));
       P->appendStage(std::make_unique<mca::InstructionTables>(SM));
-      mca::PipelinePrinter Printer(*P, mca::View::OK_READABLE);
+
+      mca::PipelinePrinter Printer(*P, *Region, RegionIdx, *STI, PO);
+      if (PrintJson) {
+        Printer.addView(
+            std::make_unique<mca::InstructionView>(*STI, *IP, Insts));
+      }
 
       // Create the views for this pipeline, execute, and emit a report.
       if (PrintInstructionInfoView) {
@@ -590,7 +586,13 @@ int main(int argc, char **argv) {
       if (!runPipeline(*P))
         return 1;
 
-      Printer.printReport(TOF->os());
+      if (PrintJson) {
+        Printer.printReport(JSONOutput);
+      } else {
+        Printer.printReport(TOF->os());
+      }
+
+      ++RegionIdx;
       continue;
     }
 
@@ -605,14 +607,15 @@ int main(int argc, char **argv) {
 
     // Create a basic pipeline simulating an out-of-order backend.
     auto P = MCA.createDefaultPipeline(PO, S, *CB);
-    mca::PipelinePrinter Printer(*P, PrintJson ? mca::View::OK_JSON
-                                               : mca::View::OK_READABLE);
+
+    mca::PipelinePrinter Printer(*P, *Region, RegionIdx, *STI, PO);
 
     // When we output JSON, we add a view that contains the instructions
     // and CPU resource information.
-    if (PrintJson)
-      Printer.addView(
-          std::make_unique<mca::InstructionView>(*STI, *IP, Insts, MCPU));
+    if (PrintJson) {
+      auto IV = std::make_unique<mca::InstructionView>(*STI, *IP, Insts);
+      Printer.addView(std::move(IV));
+    }
 
     if (PrintSummaryView)
       Printer.addView(
@@ -659,11 +662,17 @@ int main(int argc, char **argv) {
     if (!runPipeline(*P))
       return 1;
 
-    Printer.printReport(TOF->os());
+    if (PrintJson) {
+      Printer.printReport(JSONOutput);
+    } else {
+      Printer.printReport(TOF->os());
+    }
 
-    // Clear the InstrBuilder internal state in preparation for another round.
-    IB.clear();
+    ++RegionIdx;
   }
+
+  if (PrintJson)
+    TOF->os() << formatv("{0:2}", json::Value(std::move(JSONOutput))) << "\n";
 
   TOF->keep();
   return 0;

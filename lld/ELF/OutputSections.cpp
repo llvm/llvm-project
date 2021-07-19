@@ -539,6 +539,41 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
   return {0, 0, 0, 0};
 }
 
+void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
+  assert(config->writeAddends && config->checkDynamicRelocs);
+  assert(type == SHT_REL || type == SHT_RELA);
+  std::vector<InputSection *> sections = getInputSections(this);
+  parallelForEachN(0, sections.size(), [&](size_t i) {
+    // When linking with -r or --emit-relocs we might also call this function
+    // for input .rel[a].<sec> sections which we simply pass through to the
+    // output. We skip over those and only look at the synthetic relocation
+    // sections created during linking.
+    const auto *sec = dyn_cast<RelocationBaseSection>(sections[i]);
+    if (!sec)
+      return;
+    for (const DynamicReloc &rel : sec->relocs) {
+      int64_t addend = rel.computeAddend();
+      const OutputSection *relOsec = rel.inputSec->getOutputSection();
+      assert(relOsec != nullptr && "missing output section for relocation");
+      const uint8_t *relocTarget =
+          bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
+      // For SHT_NOBITS the written addend is always zero.
+      int64_t writtenAddend =
+          relOsec->type == SHT_NOBITS
+              ? 0
+              : target->getImplicitAddend(relocTarget, rel.type);
+      if (addend != writtenAddend)
+        internalLinkerError(
+            getErrorLocation(relocTarget),
+            "wrote incorrect addend value 0x" + utohexstr(writtenAddend) +
+                " instead of 0x" + utohexstr(addend) +
+                " for dynamic relocation " + toString(rel.type) +
+                " at offset 0x" + utohexstr(rel.getOffset()) +
+                (rel.sym ? " against symbol " + toString(*rel.sym) : ""));
+    }
+  });
+}
+
 template void OutputSection::writeHeaderTo<ELF32LE>(ELF32LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF32BE>(ELF32BE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64LE>(ELF64LE::Shdr *Shdr);

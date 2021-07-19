@@ -82,4 +82,4 @@ BB* d() { return y; }
 // MSVC:   add nsw i32 4, %[[offset]]
 // MSVC: }
 
-// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { mustprogress noinline nounwind{{.*}} }

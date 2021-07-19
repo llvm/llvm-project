@@ -230,7 +230,7 @@ bool JSONTransport::readStandardMessage(std::string &JSON) {
       return false;
     InMirror << Line;
 
-    llvm::StringRef LineRef(Line);
+    llvm::StringRef LineRef = Line;
 
     // We allow comments in headers. Technically this isn't part
 
@@ -298,7 +298,7 @@ bool JSONTransport::readDelimitedMessage(std::string &JSON) {
   llvm::SmallString<128> Line;
   while (readLine(In, Line)) {
     InMirror << Line;
-    auto LineRef = llvm::StringRef(Line).trim();
+    auto LineRef = Line.str().trim();
     if (LineRef.startswith("#")) // comment
       continue;
 

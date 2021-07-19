@@ -385,8 +385,10 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
   const endianness e = ELFT::TargetEndianness;
   switch (type) {
   case R_MIPS_32:
+  case R_MIPS_REL32:
   case R_MIPS_GPREL32:
   case R_MIPS_TLS_DTPREL32:
+  case R_MIPS_TLS_DTPMOD32:
   case R_MIPS_TLS_TPREL32:
     return SignExtend64<32>(read32(buf));
   case R_MIPS_26:
@@ -394,25 +396,37 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // we should use another expression for calculation:
     // ((A << 2) | (P & 0xf0000000)) >> 2
     return SignExtend64<28>(read32(buf) << 2);
+  case R_MIPS_CALL_HI16:
   case R_MIPS_GOT16:
+  case R_MIPS_GOT_HI16:
   case R_MIPS_HI16:
   case R_MIPS_PCHI16:
     return SignExtend64<16>(read32(buf)) << 16;
+  case R_MIPS_CALL16:
+  case R_MIPS_CALL_LO16:
+  case R_MIPS_GOT_LO16:
   case R_MIPS_GPREL16:
   case R_MIPS_LO16:
   case R_MIPS_PCLO16:
   case R_MIPS_TLS_DTPREL_HI16:
   case R_MIPS_TLS_DTPREL_LO16:
+  case R_MIPS_TLS_GD:
+  case R_MIPS_TLS_GOTTPREL:
+  case R_MIPS_TLS_LDM:
   case R_MIPS_TLS_TPREL_HI16:
   case R_MIPS_TLS_TPREL_LO16:
     return SignExtend64<16>(read32(buf));
   case R_MICROMIPS_GOT16:
   case R_MICROMIPS_HI16:
     return SignExtend64<16>(readShuffle<e>(buf)) << 16;
+  case R_MICROMIPS_CALL16:
   case R_MICROMIPS_GPREL16:
   case R_MICROMIPS_LO16:
   case R_MICROMIPS_TLS_DTPREL_HI16:
   case R_MICROMIPS_TLS_DTPREL_LO16:
+  case R_MICROMIPS_TLS_GD:
+  case R_MICROMIPS_TLS_GOTTPREL:
+  case R_MICROMIPS_TLS_LDM:
   case R_MICROMIPS_TLS_TPREL_HI16:
   case R_MICROMIPS_TLS_TPREL_LO16:
     return SignExtend64<16>(readShuffle<e>(buf));
@@ -446,7 +460,22 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return SignExtend64<25>(readShuffle<e>(buf) << 2);
   case R_MICROMIPS_PC26_S1:
     return SignExtend64<27>(readShuffle<e>(buf) << 1);
+  case R_MIPS_64:
+  case R_MIPS_TLS_DTPMOD64:
+  case R_MIPS_TLS_DTPREL64:
+  case R_MIPS_TLS_TPREL64:
+  case (R_MIPS_64 << 8) | R_MIPS_REL32:
+    return read64(buf);
+  case R_MIPS_COPY:
+    return config->is64 ? read64(buf) : read32(buf);
+  case R_MIPS_NONE:
+  case R_MIPS_JUMP_SLOT:
+  case R_MIPS_JALR:
+    // These relocations are defined as not having an implicit addend.
+    return 0;
   default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
     return 0;
   }
 }

@@ -854,6 +854,10 @@ public:
   /// "foo.c"' assembler directive.
   virtual void emitFileDirective(StringRef Filename);
 
+  /// Emit ".file assembler diretive with additioal info.
+  virtual void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+                                 StringRef TimeStamp, StringRef Description);
+
   /// Emit the "identifiers" directive.  This implements the
   /// '.ident "version foo"' assembler directive.
   virtual void emitIdent(StringRef IdentString) {}

@@ -1,4 +1,4 @@
-; RUN: opt -passes='unswitch<nontrivial>' %s -S | FileCheck %s
+; RUN: opt -passes='simple-loop-unswitch<nontrivial>' %s -S | FileCheck %s
 
 declare i1 @foo()
 

@@ -1176,6 +1176,38 @@ struct SaveRetExprRAII {
 };
 } // namespace
 
+/// If we have 'return f(...);', where both caller and callee are SwiftAsync,
+/// codegen it as 'tail call ...; ret void;'.
+static void makeTailCallIfSwiftAsync(const CallExpr *CE, CGBuilderTy &Builder,
+                                     const CGFunctionInfo *CurFnInfo) {
+  auto calleeQualType = CE->getCallee()->getType();
+  const FunctionType *calleeType = nullptr;
+  if (calleeQualType->isFunctionPointerType() ||
+      calleeQualType->isFunctionReferenceType() ||
+      calleeQualType->isBlockPointerType() ||
+      calleeQualType->isMemberFunctionPointerType()) {
+    calleeType = calleeQualType->getPointeeType()->castAs<FunctionType>();
+  } else if (auto *ty = dyn_cast<FunctionType>(calleeQualType)) {
+    calleeType = ty;
+  } else if (auto CMCE = dyn_cast<CXXMemberCallExpr>(CE)) {
+    if (auto methodDecl = CMCE->getMethodDecl()) {
+      // getMethodDecl() doesn't handle member pointers at the moment.
+      calleeType = methodDecl->getType()->castAs<FunctionType>();
+    } else {
+      return;
+    }
+  } else {
+    return;
+  }
+  if (calleeType->getCallConv() == CallingConv::CC_SwiftAsync &&
+      (CurFnInfo->getASTCallingConvention() == CallingConv::CC_SwiftAsync)) {
+    auto CI = cast<llvm::CallInst>(&Builder.GetInsertBlock()->back());
+    CI->setTailCallKind(llvm::CallInst::TCK_MustTail);
+    Builder.CreateRetVoid();
+    Builder.ClearInsertionPoint();
+  }
+}
+
 /// EmitReturnStmt - Note that due to GCC extensions, this can have an operand
 /// if the function returns void, or may be missing one if the function returns
 /// non-void.  Fun stuff :).
@@ -1234,8 +1266,11 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
   } else if (!ReturnValue.isValid() || (RV && RV->getType()->isVoidType())) {
     // Make sure not to return anything, but evaluate the expression
     // for side effects.
-    if (RV)
+    if (RV) {
       EmitAnyExpr(RV);
+      if (auto *CE = dyn_cast<CallExpr>(RV))
+        makeTailCallIfSwiftAsync(CE, Builder, CurFnInfo);
+    }
   } else if (!RV) {
     // Do nothing (return value is left uninitialized)
   } else if (FnRetTy->isReferenceType()) {

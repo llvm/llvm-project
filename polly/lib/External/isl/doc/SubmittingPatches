@@ -11,6 +11,7 @@
 	- the body should provide a meaningful commit message, which
 	  includes motivation for the change, and contrasts
 	  its implementation with previous behaviour
+	- the lines of this body should have at most 76 columns
 	- if you want your work included in isl.git, add a
 	  "Signed-off-by: Your Name <you@example.com>" line to the
 	  commit message (or just use the option "-s" when

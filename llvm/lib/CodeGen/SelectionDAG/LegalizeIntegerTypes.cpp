@@ -2247,6 +2247,10 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FSHR:
     ExpandIntRes_FunnelShift(N, Lo, Hi);
     break;
+
+  case ISD::VSCALE:
+    ExpandIntRes_VSCALE(N, Lo, Hi);
+    break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -4198,6 +4202,21 @@ void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N,
   SplitInteger(Res, Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
+                                           SDValue &Hi) {
+  EVT VT = N->getValueType(0);
+  EVT HalfVT =
+      EVT::getIntegerVT(*DAG.getContext(), N->getValueSizeInBits(0) / 2);
+  SDLoc dl(N);
+
+  // We assume VSCALE(1) fits into a legal integer.
+  APInt One(HalfVT.getSizeInBits(), 1);
+  SDValue VScaleBase = DAG.getVScale(dl, HalfVT, One);
+  VScaleBase = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, VScaleBase);
+  SDValue Res = DAG.getNode(ISD::MUL, dl, VT, VScaleBase, N->getOperand(0));
+  SplitInteger(Res, Lo, Hi);
+}
+
 //===----------------------------------------------------------------------===//
 //  Integer Operand Expansion
 //===----------------------------------------------------------------------===//
@@ -4741,38 +4760,15 @@ SDValue DAGTypeLegalizer::PromoteIntRes_INSERT_SUBVECTOR(SDNode *N) {
   SDValue SubVec = N->getOperand(1);
   SDValue Idx = N->getOperand(2);
 
-  auto *ConstantIdx = cast<ConstantSDNode>(Idx);
-  unsigned IdxN = ConstantIdx->getZExtValue();
-
-  EVT VecVT = Vec.getValueType();
   EVT SubVecVT = SubVec.getValueType();
+  EVT NSubVT =
+      EVT::getVectorVT(*DAG.getContext(), NOutVT.getVectorElementType(),
+                       SubVecVT.getVectorElementCount());
 
-  // To insert SubVec into Vec, store the wider vector to memory, overwrite the
-  // appropriate bits with the narrower vector, and reload.
-  Align SmallestAlign = DAG.getReducedAlign(SubVecVT, /*UseABI=*/false);
+  Vec = GetPromotedInteger(Vec);
+  SubVec = DAG.getNode(ISD::ANY_EXTEND, dl, NSubVT, SubVec);
 
-  SDValue StackPtr =
-      DAG.CreateStackTemporary(VecVT.getStoreSize(), SmallestAlign);
-  auto StackPtrVT = StackPtr->getValueType(0);
-  auto &MF = DAG.getMachineFunction();
-  auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-  auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
-
-  SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, Vec, StackPtr, PtrInfo,
-                               SmallestAlign);
-
-  SDValue ScaledIdx = Idx;
-  if (SubVecVT.isScalableVector() && IdxN != 0) {
-    APInt IdxAPInt = cast<ConstantSDNode>(Idx)->getAPIntValue();
-    ScaledIdx = DAG.getVScale(dl, StackPtrVT,
-                              IdxAPInt.sextOrSelf(StackPtrVT.getSizeInBits()));
-  }
-
-  SDValue SubVecPtr =
-      TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, SubVecVT, ScaledIdx);
-  Store = DAG.getStore(Store, dl, SubVec, SubVecPtr, PtrInfo, SmallestAlign);
-  return DAG.getExtLoad(ISD::LoadExtType::EXTLOAD, dl, NOutVT, Store, StackPtr,
-                        PtrInfo, OutVT, SmallestAlign);
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, NOutVT, Vec, SubVec, Idx);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_REVERSE(SDNode *N) {

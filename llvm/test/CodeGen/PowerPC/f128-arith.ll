@@ -152,10 +152,10 @@ entry:
 define dso_local void @testLdNSt(i8* nocapture readonly %PtrC, fp128* nocapture %PtrF) {
 ; CHECK-LABEL: testLdNSt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi r3, r3, 4
-; CHECK-NEXT:    addi r4, r4, 8
-; CHECK-NEXT:    lxvx vs0, 0, r3
-; CHECK-NEXT:    stxvx vs0, 0, r4
+; CHECK-NEXT:    li r5, 4
+; CHECK-NEXT:    lxvx vs0, r3, r5
+; CHECK-NEXT:    li r3, 8
+; CHECK-NEXT:    stxvx vs0, r4, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: testLdNSt:
@@ -784,10 +784,10 @@ define fp128 @qp_frem() #0 {
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis r3, r2, a@toc@ha
 ; CHECK-NEXT:    addi r3, r3, a@toc@l
-; CHECK-NEXT:    lxvx v2, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    addis r3, r2, b@toc@ha
 ; CHECK-NEXT:    addi r3, r3, b@toc@l
-; CHECK-NEXT:    lxvx v3, 0, r3
+; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    bl fmodf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32

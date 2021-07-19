@@ -148,7 +148,10 @@ int main(int, char**)
 #ifndef _LIBCPP_HAS_NO_STDIN
     static_assert((std::is_same<decltype(std::getchar()), int>::value), "");
 #if TEST_STD_VER <= 11
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Wdeprecated-declarations" // disable the warning from the C library
     static_assert((std::is_same<decltype(std::gets(cp)), char*>::value), "");
+#   pragma GCC diagnostic pop
 #endif
     static_assert((std::is_same<decltype(std::scanf(" ")), int>::value), "");
     static_assert((std::is_same<decltype(std::vscanf(" ",va)), int>::value), "");

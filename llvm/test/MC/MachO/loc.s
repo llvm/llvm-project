@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r -S --sd - | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -S -r --sd - | FileCheck %s
         .file   2 "foo"
         .file   1 "bar"
         .loc    2 64 0

@@ -59,6 +59,9 @@ public:
   AIX(const Driver &D, const llvm::Triple &Triple,
       const llvm::opt::ArgList &Args);
 
+  bool parseInlineAsmUsingAsmParser() const override {
+    return ParseInlineAsmUsingAsmParser;
+  }
   bool isPICDefault() const override { return true; }
   bool isPIEDefault() const override { return false; }
   bool isPICDefaultForced() const override { return true; }
@@ -87,6 +90,7 @@ protected:
 
 private:
   llvm::StringRef GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const;
+  bool ParseInlineAsmUsingAsmParser;
 };
 
 } // end namespace toolchains

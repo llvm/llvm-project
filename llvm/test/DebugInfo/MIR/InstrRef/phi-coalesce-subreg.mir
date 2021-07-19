@@ -106,8 +106,6 @@ body:             |
     %3:gr32 = COPY $edi
     %6:gr16 = COPY %4.sub_16bit
     %5:gr16 = COPY %3.sub_16bit
-    DBG_VALUE %5, $noreg, !12, !DIExpression(), debug-location !13
-    DBG_VALUE %6, $noreg, !14, !DIExpression(), debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %15:gr32 = MOVSX32rr16 %5, debug-location !13
     $edi = COPY %15, debug-location !13
@@ -116,7 +114,6 @@ body:             |
     %14:gr32 = MOVSX32rr16 %5, debug-location !13
     %13:gr32 = ADD32ri8 killed %14, 12, implicit-def $eflags, debug-location !13
     %11:gr16 = COPY killed %13.sub_16bit, debug-location !13
-    DBG_VALUE %11, $noreg, !12, !DIExpression(), debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %9:gr32 = MOVSX32rr16 %11, debug-location !13
     $edi = COPY %9, debug-location !13
@@ -135,14 +132,12 @@ body:             |
     %20:gr32 = MOVSX32rr16 %11, debug-location !13
     %19:gr32 = ADD32ri8 killed %20, 1, implicit-def $eflags, debug-location !13
     %17:gr16 = COPY killed %19.sub_16bit, debug-location !13
-    DBG_VALUE %17, $noreg, !12, !DIExpression(), debug-location !13
 
-  ; Verify that vreg 17 is coalesced into gr32.
+  ; Verify that vreg 17 is coalesced into a gr32, and not copied any further.
   ; DOESCOALESCE:       %{{[0-9]+}}:gr32 = ADD32ri8
-  ; DOESCOALESCE-NEXT:  DBG_VALUE %{{[0-9]+}}.sub_16bit,
+  ; DOESCOALESCE-NOT:   COPY
   ; Verify those registers land in $bx
   ; CHECK:              renamable $ebp = ADD32ri8
-  ; CHECK-NEXT:         DBG_VALUE $bp
 
   ; DOESCOALESCE-LABEL: bb.2.if.end:
   ; CHECK-LABEL:        bb.2.if.end:
@@ -154,7 +149,6 @@ body:             |
     %30:gr32 = MOVSX32rr16 killed %2, debug-location !13
     %29:gr32 = ADD32rr killed %30, killed %31, implicit-def $eflags, debug-location !13
     %26:gr16 = COPY killed %29.sub_16bit, debug-location !13
-    DBG_VALUE %26, $noreg, !12, !DIExpression(), debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %24:gr32 = MOVSX32rr16 %26, debug-location !13
     $edi = COPY %24, debug-location !13

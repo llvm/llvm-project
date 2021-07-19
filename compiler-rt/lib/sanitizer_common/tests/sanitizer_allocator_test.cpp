@@ -1149,15 +1149,12 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
 
 class NoMemoryMapper {
  public:
-  uptr last_request_buffer_size;
+  uptr last_request_buffer_size = 0;
 
-  NoMemoryMapper() : last_request_buffer_size(0) {}
-
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
-    last_request_buffer_size = buffer_size;
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    last_request_buffer_size = buffer_size * sizeof(u64);
     return nullptr;
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 };
 
 class RedZoneMemoryMapper {
@@ -1168,19 +1165,17 @@ class RedZoneMemoryMapper {
     MprotectNoAccess(reinterpret_cast<uptr>(buffer), page_size);
     MprotectNoAccess(reinterpret_cast<uptr>(buffer) + page_size * 2, page_size);
   }
-  ~RedZoneMemoryMapper() {
-    UnmapOrDie(buffer, 3 * GetPageSize());
-  }
+  ~RedZoneMemoryMapper() { UnmapOrDie(buffer, 3 * GetPageSize()); }
 
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    buffer_size *= sizeof(u64);
     const auto page_size = GetPageSize();
     CHECK_EQ(buffer_size, page_size);
-    void *p =
-        reinterpret_cast<void *>(reinterpret_cast<uptr>(buffer) + page_size);
+    u64 *p =
+        reinterpret_cast<u64 *>(reinterpret_cast<uptr>(buffer) + page_size);
     memset(p, 0, page_size);
     return p;
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 
  private:
   void *buffer;
@@ -1188,35 +1183,31 @@ class RedZoneMemoryMapper {
 
 TEST(SanitizerCommon, SizeClassAllocator64PackedCounterArray) {
   NoMemoryMapper no_memory_mapper;
-  typedef Allocator64::PackedCounterArray<NoMemoryMapper>
-      NoMemoryPackedCounterArray;
-
   for (int i = 0; i < 64; i++) {
     // Various valid counter's max values packed into one word.
-    NoMemoryPackedCounterArray counters_2n(1, 1ULL << i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters_2n(1, 1ULL << i,
+                                                &no_memory_mapper);
     EXPECT_EQ(8ULL, no_memory_mapper.last_request_buffer_size);
 
     // Check the "all bit set" values too.
-    NoMemoryPackedCounterArray counters_2n1_1(1, ~0ULL >> i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters_2n1_1(1, ~0ULL >> i,
+                                                   &no_memory_mapper);
     EXPECT_EQ(8ULL, no_memory_mapper.last_request_buffer_size);
 
     // Verify the packing ratio, the counter is expected to be packed into the
     // closest power of 2 bits.
-    NoMemoryPackedCounterArray counters(64, 1ULL << i, &no_memory_mapper);
+    Allocator64::PackedCounterArray counters(64, 1ULL << i, &no_memory_mapper);
     EXPECT_EQ(8ULL * RoundUpToPowerOfTwo(i + 1),
               no_memory_mapper.last_request_buffer_size);
   }
 
   RedZoneMemoryMapper memory_mapper;
-  typedef Allocator64::PackedCounterArray<RedZoneMemoryMapper>
-      RedZonePackedCounterArray;
   // Go through 1, 2, 4, 8, .. 64 bits per counter.
   for (int i = 0; i < 7; i++) {
     // Make sure counters request one memory page for the buffer.
     const u64 kNumCounters = (GetPageSize() / 8) * (64 >> i);
-    RedZonePackedCounterArray counters(kNumCounters,
-                                       1ULL << ((1 << i) - 1),
-                                       &memory_mapper);
+    Allocator64::PackedCounterArray counters(
+        kNumCounters, 1ULL << ((1 << i) - 1), &memory_mapper);
     counters.Inc(0);
     for (u64 c = 1; c < kNumCounters - 1; c++) {
       ASSERT_EQ(0ULL, counters.Get(c));
@@ -1243,7 +1234,7 @@ class RangeRecorder {
             Log2(GetPageSizeCached() >> Allocator64::kCompactPtrScale)),
         last_page_reported(0) {}
 
-  void ReleasePageRangeToOS(u32 from, u32 to) {
+  void ReleasePageRangeToOS(u32 class_id, u32 from, u32 to) {
     from >>= page_size_scaled_log;
     to >>= page_size_scaled_log;
     ASSERT_LT(from, to);
@@ -1253,6 +1244,7 @@ class RangeRecorder {
     reported_pages.append(to - from, 'x');
     last_page_reported = to;
   }
+
  private:
   const uptr page_size_scaled_log;
   u32 last_page_reported;
@@ -1282,7 +1274,7 @@ TEST(SanitizerCommon, SizeClassAllocator64FreePagesRangeTracker) {
 
   for (auto test_case : test_cases) {
     RangeRecorder range_recorder;
-    RangeTracker tracker(&range_recorder);
+    RangeTracker tracker(&range_recorder, 1);
     for (int i = 0; test_case[i] != 0; i++)
       tracker.NextPage(test_case[i] == 'x');
     tracker.Done();
@@ -1299,16 +1291,14 @@ TEST(SanitizerCommon, SizeClassAllocator64FreePagesRangeTracker) {
 class ReleasedPagesTrackingMemoryMapper {
  public:
   std::set<u32> reported_pages;
+  std::vector<u64> buffer;
 
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
     reported_pages.clear();
-    return calloc(1, buffer_size);
+    buffer.assign(buffer_size, 0);
+    return buffer.data();
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {
-    free(buffer);
-  }
-
-  void ReleasePageRangeToOS(u32 from, u32 to) {
+  void ReleasePageRangeToOS(u32 class_id, u32 from, u32 to) {
     uptr page_size_scaled =
         GetPageSizeCached() >> Allocator64::kCompactPtrScale;
     for (u32 i = from; i < to; i += page_size_scaled)
@@ -1352,7 +1342,7 @@ void TestReleaseFreeMemoryToOS() {
 
     Allocator::ReleaseFreeMemoryToOS(&free_array[0], free_array.size(),
                                      chunk_size, kAllocatedPagesCount,
-                                     &memory_mapper);
+                                     &memory_mapper, class_id);
 
     // Verify that there are no released pages touched by used chunks and all
     // ranges of free chunks big enough to contain the entire memory pages had

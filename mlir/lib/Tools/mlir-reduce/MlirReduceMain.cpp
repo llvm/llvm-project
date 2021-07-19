@@ -28,7 +28,8 @@
 using namespace mlir;
 
 // Parse and verify the input MLIR file.
-static LogicalResult loadModule(MLIRContext &context, OwningModuleRef &module,
+static LogicalResult loadModule(MLIRContext &context,
+                                OwningOpRef<ModuleOp> &module,
                                 StringRef inputFilename) {
   module = parseSourceFile(inputFilename, &context);
   if (!module)
@@ -75,7 +76,7 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
   if (!output)
     return failure();
 
-  mlir::OwningModuleRef moduleRef;
+  OwningOpRef<ModuleOp> moduleRef;
   if (failed(loadModule(context, moduleRef, inputFilename)))
     return failure();
 
@@ -88,12 +89,12 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
   if (failed(parser.addToPipeline(pm, errorHandler)))
     return failure();
 
-  ModuleOp m = moduleRef.get().clone();
+  OwningOpRef<ModuleOp> m = moduleRef.get().clone();
 
-  if (failed(pm.run(m)))
+  if (failed(pm.run(m.get())))
     return failure();
 
-  m.print(output->os());
+  m->print(output->os());
   output->keep();
 
   return success();

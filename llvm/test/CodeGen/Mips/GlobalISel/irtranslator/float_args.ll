@@ -156,7 +156,7 @@ define float @call_float_in_gpr(i32 %a, float %b) {
   ; FP32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP32:   $a0 = COPY [[COPY]](s32)
   ; FP32:   $a1 = COPY [[COPY1]](s32)
-  ; FP32:   JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
+  ; FP32:   JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
   ; FP32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
   ; FP32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32:   $f0 = COPY [[COPY2]](s32)
@@ -169,7 +169,7 @@ define float @call_float_in_gpr(i32 %a, float %b) {
   ; FP64:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP64:   $a0 = COPY [[COPY]](s32)
   ; FP64:   $a1 = COPY [[COPY1]](s32)
-  ; FP64:   JAL @float_in_gpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
+  ; FP64:   JAL @float_in_gpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
   ; FP64:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
   ; FP64:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP64:   $f0 = COPY [[COPY2]](s32)

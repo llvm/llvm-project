@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -passes='unswitch<nontrivial>' -disable-output
+; RUN: opt < %s -passes='simple-loop-unswitch<nontrivial>' -disable-output
 ; RUN: opt < %s -simple-loop-unswitch -enable-nontrivial-unswitch -disable-output
 
 

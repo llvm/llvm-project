@@ -17,11 +17,11 @@
 // clang-format off
 template<class F, class T, class U>
 requires std::relation<F, T, U>
-[[nodiscard]] constexpr bool check_subsumption() { return false; }
+constexpr bool check_subsumption() { return false; }
 
 template<class F, class T, class U>
 requires std::strict_weak_order<F, T, U> && true
-[[nodiscard]] constexpr bool check_subsumption() { return true; }
+constexpr bool check_subsumption() { return true; }
 // clang-format on
 
 static_assert(check_subsumption<int (*)(int, double), int, double>());

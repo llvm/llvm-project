@@ -67,8 +67,12 @@ if (NOT COMPILER_RT_ASAN_SHADOW_SCALE STREQUAL "")
       -D${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
 endif()
 
-set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS ON CACHE BOOL
-    "Enable libc interceptors in HWASan (testing mode)")
+if(FUCHSIA)
+  set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS_DEFAULT OFF)
+else()
+  set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS_DEFAULT ON)
+endif()
+set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS ${COMPILER_RT_HWASAN_WITH_INTERCEPTORS_DEFAULT} CACHE BOOL "Enable libc interceptors in HWASan (testing mode)")
 
 set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOL
   "Build for a bare-metal target.")
@@ -354,6 +358,17 @@ if(MSVC)
 endif()
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
+  list(APPEND THREAD_SAFETY_FLAGS
+      "-Werror=thread-safety"
+      "-Werror=thread-safety-reference"
+      "-Werror=thread-safety-beta"
+  )
+  list(APPEND SANITIZER_COMMON_CFLAGS ${THREAD_SAFETY_FLAGS})
+  string(REPLACE ";" " " thread_safety_flags_space_sep "${THREAD_SAFETY_FLAGS}")
+  string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${thread_safety_flags_space_sep}")
+endif()
 
 # If we're using MSVC,
 # always respect the optimization flags set by CMAKE_BUILD_TYPE instead.

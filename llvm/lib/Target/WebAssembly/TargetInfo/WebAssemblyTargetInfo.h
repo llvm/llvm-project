@@ -24,6 +24,7 @@ Target &getTheWebAssemblyTarget64();
 namespace WebAssembly {
 
 int getStackOpcode(unsigned short Opcode);
+int getRegisterOpcode(unsigned short Opcode);
 int getWasm64Opcode(unsigned short Opcode);
 
 } // namespace WebAssembly

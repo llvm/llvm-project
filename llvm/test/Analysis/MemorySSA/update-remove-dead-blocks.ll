@@ -1,7 +1,7 @@
 ; RUN: opt -loop-unswitch -loop-reduce -loop-simplifycfg -verify-memoryssa -S %s | FileCheck %s
 
 ; TODO: also run with NPM, but currently LSR does not preserve LCSSA, causing a verification failure on the test.
-;   opt -passes='loop-mssa(unswitch<nontrivial>,loop-reduce,simplify-cfg)' -verify-memoryssa -S %s | FileCheck %s
+;   opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>,loop-reduce,simplifycfg)' -verify-memoryssa -S %s | FileCheck %s
 
 ; Test case for PR47557.
 

@@ -1,4 +1,7 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -stress-regalloc=1 -start-before=greedy -stop-after=stack-slot-coloring -o - %s | FileCheck  %s
+# Note we are NOT using the normal register allocator pipeline. We are
+# forcing allocating VGPRs and SGPRs at the same time.
+# RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -stress-regalloc=1 -run-pass=greedy,virtregrewriter,stack-slot-coloring -o - %s | FileCheck  %s
+
 ---
 
 # CHECK-LABEL: name: no_merge_sgpr_vgpr_spill_slot{{$}}

@@ -870,7 +870,6 @@ func @dont_merge_affine_max_if_not_single_dim(%i0: index, %i1: index, %i2: index
   return %1: index
 }
 
-
 // -----
 
 // CHECK-LABEL: func @dont_merge_affine_max_if_not_single_sym
@@ -936,3 +935,21 @@ func @no_fold_of_store(%arg : memref<32xi8>, %holder: memref<memref<?xi8>>) {
   return
 }
 
+// -----
+
+// CHECK-DAG: #[[$MAP0:.+]] = affine_map<()[s0] -> (s0 + 16)>
+// CHECK-DAG: #[[$MAP1:.+]] = affine_map<()[s0] -> (s0 * 4)>
+
+// CHECK: func @canonicalize_single_min_max
+// CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
+func @canonicalize_single_min_max(%i0: index, %i1: index) -> (index, index) {
+  // CHECK-NOT: affine.min
+  // CHECK-NEXT: affine.apply #[[$MAP0]]()[%[[I0]]]
+  %0 = affine.min affine_map<()[s0] -> (s0 + 16)> ()[%i0]
+
+  // CHECK-NOT: affine.max
+  // CHECK-NEXT: affine.apply #[[$MAP1]]()[%[[I1]]]
+  %1 = affine.min affine_map<()[s0] -> (s0 * 4)> ()[%i1]
+
+  return %0, %1: index, index
+}

@@ -7,7 +7,8 @@ define  signext i8 @sext_arg_i8(i8 signext %a) {
   ; MIPS32: bb.1.entry:
   ; MIPS32:   liveins: $a0
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+  ; MIPS32:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
+  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; MIPS32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
   ; MIPS32:   $v0 = COPY [[SEXT]](s32)
   ; MIPS32:   RetRA implicit $v0
@@ -20,7 +21,8 @@ define zeroext i8 @zext_arg_i8(i8 zeroext %a) {
   ; MIPS32: bb.1.entry:
   ; MIPS32:   liveins: $a0
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+  ; MIPS32:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
+  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; MIPS32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
   ; MIPS32:   $v0 = COPY [[ZEXT]](s32)
   ; MIPS32:   RetRA implicit $v0
@@ -55,20 +57,22 @@ define signext i8 @call_sext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
-  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD]](s32)
+  ; MIPS32:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[LOAD]], 8
+  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; MIPS32:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   $a0 = COPY [[COPY]](s32)
   ; MIPS32:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
+  ; MIPS32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
-  ; MIPS32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
   ; MIPS32:   G_STORE [[SEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
   ; MIPS32:   JAL @sext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
-  ; MIPS32:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY5]](s32)
+  ; MIPS32:   [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY5]], 8
+  ; MIPS32:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s32)
   ; MIPS32:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC1]](s8)
   ; MIPS32:   $v0 = COPY [[SEXT1]](s32)
@@ -88,20 +92,22 @@ define zeroext i8 @call_zext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
-  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD]](s32)
+  ; MIPS32:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 8
+  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; MIPS32:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   $a0 = COPY [[COPY]](s32)
   ; MIPS32:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
+  ; MIPS32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
-  ; MIPS32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
   ; MIPS32:   G_STORE [[ZEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
   ; MIPS32:   JAL @zext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
-  ; MIPS32:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY5]](s32)
+  ; MIPS32:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY5]], 8
+  ; MIPS32:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT1]](s32)
   ; MIPS32:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC1]](s8)
   ; MIPS32:   $v0 = COPY [[ZEXT1]](s32)
@@ -127,10 +133,10 @@ define i8 @call_aext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8 %a) {
   ; MIPS32:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
+  ; MIPS32:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
-  ; MIPS32:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
   ; MIPS32:   G_STORE [[ANYEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
   ; MIPS32:   JAL @aext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
@@ -150,7 +156,8 @@ define  signext i16 @sext_arg_i16(i16 signext %a) {
   ; MIPS32: bb.1.entry:
   ; MIPS32:   liveins: $a0
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; MIPS32:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
+  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; MIPS32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
   ; MIPS32:   $v0 = COPY [[SEXT]](s32)
   ; MIPS32:   RetRA implicit $v0
@@ -163,7 +170,8 @@ define zeroext i16 @zext_arg_i16(i16 zeroext %a) {
   ; MIPS32: bb.1.entry:
   ; MIPS32:   liveins: $a0
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; MIPS32:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
+  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; MIPS32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
   ; MIPS32:   $v0 = COPY [[ZEXT]](s32)
   ; MIPS32:   RetRA implicit $v0
@@ -198,20 +206,22 @@ define signext i16 @call_sext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, 
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
-  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+  ; MIPS32:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[LOAD]], 16
+  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; MIPS32:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   $a0 = COPY [[COPY]](s32)
   ; MIPS32:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
+  ; MIPS32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
-  ; MIPS32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
   ; MIPS32:   G_STORE [[SEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
   ; MIPS32:   JAL @sext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
-  ; MIPS32:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY5]](s32)
+  ; MIPS32:   [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY5]], 16
+  ; MIPS32:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT1]](s32)
   ; MIPS32:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC1]](s16)
   ; MIPS32:   $v0 = COPY [[SEXT1]](s32)
@@ -231,20 +241,22 @@ define zeroext i16 @call_zext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, 
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
-  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
+  ; MIPS32:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 16
+  ; MIPS32:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; MIPS32:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   $a0 = COPY [[COPY]](s32)
   ; MIPS32:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
+  ; MIPS32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
-  ; MIPS32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
   ; MIPS32:   G_STORE [[ZEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
   ; MIPS32:   JAL @zext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
-  ; MIPS32:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY5]](s32)
+  ; MIPS32:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY5]], 16
+  ; MIPS32:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
   ; MIPS32:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC1]](s16)
   ; MIPS32:   $v0 = COPY [[ZEXT1]](s32)
@@ -270,10 +282,10 @@ define i16 @call_aext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i16 %a) 
   ; MIPS32:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
+  ; MIPS32:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
-  ; MIPS32:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; MIPS32:   G_STORE [[ANYEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
   ; MIPS32:   JAL @aext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
   ; MIPS32:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0

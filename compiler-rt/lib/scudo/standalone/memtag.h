@@ -18,7 +18,7 @@
 
 namespace scudo {
 
-#if defined(__aarch64__) || defined(SCUDO_FUZZ)
+#if (__clang_major__ >= 12 && defined(__aarch64__)) || defined(SCUDO_FUZZ)
 
 // We assume that Top-Byte Ignore is enabled if the architecture supports memory
 // tagging. Not all operating systems enable TBI, so we only claim architectural
@@ -55,7 +55,7 @@ inline uint8_t extractTag(uptr Ptr) {
 
 #endif
 
-#if defined(__aarch64__)
+#if __clang_major__ >= 12 && defined(__aarch64__)
 
 #if SCUDO_LINUX
 
@@ -319,7 +319,8 @@ inline void *addFixedTag(void *Ptr, uptr Tag) {
 
 template <typename Config>
 inline constexpr bool allocatorSupportsMemoryTagging() {
-  return archSupportsMemoryTagging() && Config::MaySupportMemoryTagging;
+  return archSupportsMemoryTagging() && Config::MaySupportMemoryTagging &&
+         (1 << SCUDO_MIN_ALIGNMENT_LOG) >= archMemoryTagGranuleSize();
 }
 
 } // namespace scudo

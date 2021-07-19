@@ -40,6 +40,7 @@
 #if LLDB_ENABLE_CURSES
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
@@ -67,7 +68,6 @@
 #include <cassert>
 #include <cctype>
 #include <cerrno>
-#include <clocale>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -608,9 +608,19 @@ public:
       m_delete = del;
     }
   }
-  //
+
   // Get the rectangle in our parent window
   Rect GetBounds() const { return Rect(GetParentOrigin(), GetSize()); }
+
+  Rect GetCenteredRect(int width, int height) {
+    Size size = GetSize();
+    width = std::min(size.width, width);
+    height = std::min(size.height, height);
+    int x = (size.width - width) / 2;
+    int y = (size.height - height) / 2;
+    return Rect(Point(x, y), Size(width, height));
+  }
+
   int GetChar() { return ::wgetch(m_window); }
   Point GetParentOrigin() const { return Point(GetParentX(), GetParentY()); }
   int GetParentX() const { return getparx(m_window); }
@@ -1050,9 +1060,18 @@ public:
 
   // Select the last element in the field if multiple elements exists.
   virtual void FieldDelegateSelectLastElement() { return; }
+
+  bool FieldDelegateIsVisible() { return m_is_visible; }
+
+  void FieldDelegateHide() { m_is_visible = false; }
+
+  void FieldDelegateShow() { m_is_visible = true; }
+
+protected:
+  bool m_is_visible = true;
 };
 
-typedef std::shared_ptr<FieldDelegate> FieldDelegateSP;
+typedef std::unique_ptr<FieldDelegate> FieldDelegateUP;
 
 class TextFieldDelegate : public FieldDelegate {
 public:
@@ -1227,7 +1246,6 @@ public:
 
   void SetError(const char *error) { m_error = error; }
 
-  // Returns the text content of the field.
   const std::string &GetText() { return m_content; }
 
 protected:
@@ -1634,7 +1652,7 @@ public:
       m_selection_type = SelectionType::NewButton;
   }
 
-  HandleCharResult SelecteNext(int key) {
+  HandleCharResult SelectNext(int key) {
     if (m_selection_type == SelectionType::NewButton)
       return eKeyNotHandled;
 
@@ -1707,7 +1725,7 @@ public:
       }
       break;
     case '\t':
-      SelecteNext(key);
+      SelectNext(key);
       return eKeyHandled;
     case KEY_SHIFT_TAB:
       SelectPrevious(key);
@@ -1812,7 +1830,15 @@ public:
 
   virtual ~FormDelegate() = default;
 
-  FieldDelegateSP &GetField(int field_index) { return m_fields[field_index]; }
+  virtual std::string GetName() = 0;
+
+  virtual void UpdateFieldsVisibility() { return; }
+
+  FieldDelegate *GetField(uint32_t field_index) {
+    if (field_index < m_fields.size())
+      return m_fields[field_index].get();
+    return nullptr;
+  }
 
   FormAction &GetAction(int action_index) { return m_actions[action_index]; }
 
@@ -1832,8 +1858,7 @@ public:
 
   TextFieldDelegate *AddTextField(const char *label, const char *content) {
     TextFieldDelegate *delegate = new TextFieldDelegate(label, content);
-    FieldDelegateSP delegate_sp = FieldDelegateSP(delegate);
-    m_fields.push_back(delegate_sp);
+    m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
 
@@ -1841,8 +1866,7 @@ public:
                                   bool need_to_exist = true) {
     FileFieldDelegate *delegate =
         new FileFieldDelegate(label, content, need_to_exist);
-    FieldDelegateSP delegate_sp = FieldDelegateSP(delegate);
-    m_fields.push_back(delegate_sp);
+    m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
 
@@ -1851,22 +1875,19 @@ public:
                                             bool need_to_exist = true) {
     DirectoryFieldDelegate *delegate =
         new DirectoryFieldDelegate(label, content, need_to_exist);
-    FieldDelegateSP delegate_sp = FieldDelegateSP(delegate);
-    m_fields.push_back(delegate_sp);
+    m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
 
   IntegerFieldDelegate *AddIntegerField(const char *label, int content) {
     IntegerFieldDelegate *delegate = new IntegerFieldDelegate(label, content);
-    FieldDelegateSP delegate_sp = FieldDelegateSP(delegate);
-    m_fields.push_back(delegate_sp);
+    m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
 
   BooleanFieldDelegate *AddBooleanField(const char *label, bool content) {
     BooleanFieldDelegate *delegate = new BooleanFieldDelegate(label, content);
-    FieldDelegateSP delegate_sp = FieldDelegateSP(delegate);
-    m_fields.push_back(delegate_sp);
+    m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
 
@@ -1874,8 +1895,7 @@ public:
                                         std::vector<std::string> choices) {
     ChoicesFieldDelegate *delegate =
         new ChoicesFieldDelegate(label, height, choices);
-    FieldDelegateSP delegate_sp = FieldDelegateSP(delegate);
-    m_fields.push_back(delegate_sp);
+    m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
 
@@ -1883,8 +1903,7 @@ public:
   ListFieldDelegate<T> *AddListField(const char *label, T default_field) {
     ListFieldDelegate<T> *delegate =
         new ListFieldDelegate<T>(label, default_field);
-    FieldDelegateSP delegate_sp = FieldDelegateSP(delegate);
-    m_fields.push_back(delegate_sp);
+    m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
 
@@ -1895,7 +1914,7 @@ public:
   }
 
 protected:
-  std::vector<FieldDelegateSP> m_fields;
+  std::vector<FieldDelegateUP> m_fields;
   std::vector<FormAction> m_actions;
   // Optional error message. If empty, form is considered to have no error.
   std::string m_error;
@@ -1907,7 +1926,13 @@ class FormWindowDelegate : public WindowDelegate {
 public:
   FormWindowDelegate(FormDelegateSP &delegate_sp)
       : m_delegate_sp(delegate_sp), m_selection_index(0),
-        m_selection_type(SelectionType::Field), m_first_visible_line(0) {}
+        m_first_visible_line(0) {
+    assert(m_delegate_sp->GetNumberOfActions() > 0);
+    if (m_delegate_sp->GetNumberOfFields() > 0)
+      m_selection_type = SelectionType::Field;
+    else
+      m_selection_type = SelectionType::Action;
+  }
 
   // Signify which element is selected. If a field or an action is selected,
   // then m_selection_index signifies the particular field or action that is
@@ -1948,6 +1973,8 @@ public:
     int height = 0;
     height += GetErrorHeight();
     for (int i = 0; i < m_delegate_sp->GetNumberOfFields(); i++) {
+      if (!m_delegate_sp->GetField(i)->FieldDelegateIsVisible())
+        continue;
       height += m_delegate_sp->GetField(i)->FieldDelegateGetHeight();
     }
     height += GetActionsHeight();
@@ -1958,11 +1985,13 @@ public:
     if (m_selection_type == SelectionType::Action)
       return ScrollContext(GetContentHeight() - 1);
 
-    FieldDelegateSP &field = m_delegate_sp->GetField(m_selection_index);
+    FieldDelegate *field = m_delegate_sp->GetField(m_selection_index);
     ScrollContext context = field->FieldDelegateGetScrollContext();
 
     int offset = GetErrorHeight();
     for (int i = 0; i < m_selection_index; i++) {
+      if (!m_delegate_sp->GetField(i)->FieldDelegateIsVisible())
+        continue;
       offset += m_delegate_sp->GetField(i)->FieldDelegateGetHeight();
     }
     context.Offset(offset);
@@ -2018,8 +2047,10 @@ public:
     int width = surface.GetWidth();
     bool a_field_is_selected = m_selection_type == SelectionType::Field;
     for (int i = 0; i < m_delegate_sp->GetNumberOfFields(); i++) {
+      FieldDelegate *field = m_delegate_sp->GetField(i);
+      if (!field->FieldDelegateIsVisible())
+        continue;
       bool is_field_selected = a_field_is_selected && m_selection_index == i;
-      FieldDelegateSP &field = m_delegate_sp->GetField(i);
       int height = field->FieldDelegateGetHeight();
       Rect bounds = Rect(Point(0, line), Size(width, height));
       SubPad field_surface = SubPad(surface, bounds);
@@ -2080,10 +2111,12 @@ public:
   }
 
   bool WindowDelegateDraw(Window &window, bool force) override {
+    m_delegate_sp->UpdateFieldsVisibility();
 
     window.Erase();
 
-    window.DrawTitleBox(window.GetName(), "Press Esc to cancel");
+    window.DrawTitleBox(m_delegate_sp->GetName().c_str(),
+                        "Press Esc to cancel");
 
     Rect content_bounds = window.GetFrame();
     content_bounds.Inset(2, 2);
@@ -2093,7 +2126,22 @@ public:
     return true;
   }
 
-  HandleCharResult SelecteNext(int key) {
+  void SkipNextHiddenFields() {
+    while (true) {
+      if (m_delegate_sp->GetField(m_selection_index)->FieldDelegateIsVisible())
+        return;
+
+      if (m_selection_index == m_delegate_sp->GetNumberOfFields() - 1) {
+        m_selection_type = SelectionType::Action;
+        m_selection_index = 0;
+        return;
+      }
+
+      m_selection_index++;
+    }
+  }
+
+  HandleCharResult SelectNext(int key) {
     if (m_selection_type == SelectionType::Action) {
       if (m_selection_index < m_delegate_sp->GetNumberOfActions() - 1) {
         m_selection_index++;
@@ -2102,12 +2150,15 @@ public:
 
       m_selection_index = 0;
       m_selection_type = SelectionType::Field;
-      FieldDelegateSP &next_field = m_delegate_sp->GetField(m_selection_index);
-      next_field->FieldDelegateSelectFirstElement();
+      SkipNextHiddenFields();
+      if (m_selection_type == SelectionType::Field) {
+        FieldDelegate *next_field = m_delegate_sp->GetField(m_selection_index);
+        next_field->FieldDelegateSelectFirstElement();
+      }
       return eKeyHandled;
     }
 
-    FieldDelegateSP &field = m_delegate_sp->GetField(m_selection_index);
+    FieldDelegate *field = m_delegate_sp->GetField(m_selection_index);
     if (!field->FieldDelegateOnLastOrOnlyElement()) {
       return field->FieldDelegateHandleChar(key);
     }
@@ -2121,14 +2172,32 @@ public:
     }
 
     m_selection_index++;
+    SkipNextHiddenFields();
 
-    FieldDelegateSP &next_field = m_delegate_sp->GetField(m_selection_index);
-    next_field->FieldDelegateSelectFirstElement();
+    if (m_selection_type == SelectionType::Field) {
+      FieldDelegate *next_field = m_delegate_sp->GetField(m_selection_index);
+      next_field->FieldDelegateSelectFirstElement();
+    }
 
     return eKeyHandled;
   }
 
-  HandleCharResult SelectePrevious(int key) {
+  void SkipPreviousHiddenFields() {
+    while (true) {
+      if (m_delegate_sp->GetField(m_selection_index)->FieldDelegateIsVisible())
+        return;
+
+      if (m_selection_index == 0) {
+        m_selection_type = SelectionType::Action;
+        m_selection_index = 0;
+        return;
+      }
+
+      m_selection_index--;
+    }
+  }
+
+  HandleCharResult SelectPrevious(int key) {
     if (m_selection_type == SelectionType::Action) {
       if (m_selection_index > 0) {
         m_selection_index--;
@@ -2136,13 +2205,16 @@ public:
       }
       m_selection_index = m_delegate_sp->GetNumberOfFields() - 1;
       m_selection_type = SelectionType::Field;
-      FieldDelegateSP &previous_field =
-          m_delegate_sp->GetField(m_selection_index);
-      previous_field->FieldDelegateSelectLastElement();
+      SkipPreviousHiddenFields();
+      if (m_selection_type == SelectionType::Field) {
+        FieldDelegate *previous_field =
+            m_delegate_sp->GetField(m_selection_index);
+        previous_field->FieldDelegateSelectLastElement();
+      }
       return eKeyHandled;
     }
 
-    FieldDelegateSP &field = m_delegate_sp->GetField(m_selection_index);
+    FieldDelegate *field = m_delegate_sp->GetField(m_selection_index);
     if (!field->FieldDelegateOnFirstOrOnlyElement()) {
       return field->FieldDelegateHandleChar(key);
     }
@@ -2156,10 +2228,13 @@ public:
     }
 
     m_selection_index--;
+    SkipPreviousHiddenFields();
 
-    FieldDelegateSP &previous_field =
-        m_delegate_sp->GetField(m_selection_index);
-    previous_field->FieldDelegateSelectLastElement();
+    if (m_selection_type == SelectionType::Field) {
+      FieldDelegate *previous_field =
+          m_delegate_sp->GetField(m_selection_index);
+      previous_field->FieldDelegateSelectLastElement();
+    }
 
     return eKeyHandled;
   }
@@ -2167,9 +2242,11 @@ public:
   void ExecuteAction(Window &window) {
     FormAction &action = m_delegate_sp->GetAction(m_selection_index);
     action.Execute(window);
-    m_first_visible_line = 0;
-    m_selection_index = 0;
-    m_selection_type = SelectionType::Field;
+    if (m_delegate_sp->HasError()) {
+      m_first_visible_line = 0;
+      m_selection_index = 0;
+      m_selection_type = SelectionType::Field;
+    }
   }
 
   HandleCharResult WindowDelegateHandleChar(Window &window, int key) override {
@@ -2183,9 +2260,9 @@ public:
       }
       break;
     case '\t':
-      return SelecteNext(key);
+      return SelectNext(key);
     case KEY_SHIFT_TAB:
-      return SelectePrevious(key);
+      return SelectPrevious(key);
     case KEY_ESCAPE:
       window.GetParent()->RemoveSubWindow(&window);
       return eKeyHandled;
@@ -2196,7 +2273,7 @@ public:
     // If the key wasn't handled and one of the fields is selected, pass the key
     // to that field.
     if (m_selection_type == SelectionType::Field) {
-      FieldDelegateSP &field = m_delegate_sp->GetField(m_selection_index);
+      FieldDelegate *field = m_delegate_sp->GetField(m_selection_index);
       return field->FieldDelegateHandleChar(key);
     }
 
@@ -2211,6 +2288,223 @@ protected:
   SelectionType m_selection_type;
   // The first visible line from the pad.
   int m_first_visible_line;
+};
+
+///////////////////////////
+// Form Delegate Instances
+///////////////////////////
+
+class DetachOrKillProcessFormDelegate : public FormDelegate {
+public:
+  DetachOrKillProcessFormDelegate(Process *process) : m_process(process) {
+    SetError("There is a running process, either detach or kill it.");
+
+    m_keep_stopped_field =
+        AddBooleanField("Keep process stopped when detaching.", false);
+
+    AddAction("Detach", [this](Window &window) { Detach(window); });
+    AddAction("Kill", [this](Window &window) { Kill(window); });
+  }
+
+  std::string GetName() override { return "Detach/Kill Process"; }
+
+  void Kill(Window &window) {
+    Status destroy_status(m_process->Destroy(false));
+    if (destroy_status.Fail()) {
+      SetError("Failed to kill process.");
+      return;
+    }
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+  void Detach(Window &window) {
+    Status detach_status(m_process->Detach(m_keep_stopped_field->GetBoolean()));
+    if (detach_status.Fail()) {
+      SetError("Failed to detach from process.");
+      return;
+    }
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+protected:
+  Process *m_process;
+  BooleanFieldDelegate *m_keep_stopped_field;
+};
+
+class ProcessAttachFormDelegate : public FormDelegate {
+public:
+  ProcessAttachFormDelegate(Debugger &debugger, WindowSP main_window_sp)
+      : m_debugger(debugger), m_main_window_sp(main_window_sp) {
+    std::vector<std::string> types;
+    types.push_back(std::string("Name"));
+    types.push_back(std::string("PID"));
+    m_type_field = AddChoicesField("Attach By", 2, types);
+    m_pid_field = AddIntegerField("PID", 0);
+    m_name_field =
+        AddTextField("Process Name", GetDefaultProcessName().c_str());
+    m_continue_field = AddBooleanField("Continue once attached.", false);
+    m_wait_for_field = AddBooleanField("Wait for process to launch.", false);
+    m_include_existing_field =
+        AddBooleanField("Include existing processes.", false);
+    m_show_advanced_field = AddBooleanField("Show advanced settings.", false);
+    m_plugin_field =
+        AddChoicesField("Plugin Name", 3, GetPossiblePluginNames());
+
+    AddAction("Attach", [this](Window &window) { Attach(window); });
+  }
+
+  std::string GetName() override { return "Attach Process"; }
+
+  void UpdateFieldsVisibility() override {
+    if (m_type_field->GetChoiceContent() == "Name") {
+      m_pid_field->FieldDelegateHide();
+      m_name_field->FieldDelegateShow();
+      m_wait_for_field->FieldDelegateShow();
+      if (m_wait_for_field->GetBoolean())
+        m_include_existing_field->FieldDelegateShow();
+      else
+        m_include_existing_field->FieldDelegateHide();
+    } else {
+      m_pid_field->FieldDelegateShow();
+      m_name_field->FieldDelegateHide();
+      m_wait_for_field->FieldDelegateHide();
+      m_include_existing_field->FieldDelegateHide();
+    }
+    if (m_show_advanced_field->GetBoolean())
+      m_plugin_field->FieldDelegateShow();
+    else
+      m_plugin_field->FieldDelegateHide();
+  }
+
+  // Get the basename of the target's main executable if available, empty string
+  // otherwise.
+  std::string GetDefaultProcessName() {
+    Target *target = m_debugger.GetSelectedTarget().get();
+    if (target == nullptr)
+      return "";
+
+    ModuleSP module_sp = target->GetExecutableModule();
+    if (!module_sp->IsExecutable())
+      return "";
+
+    return module_sp->GetFileSpec().GetFilename().AsCString();
+  }
+
+  std::vector<std::string> GetPossiblePluginNames() {
+    std::vector<std::string> names;
+    names.push_back("<default>");
+
+    size_t i = 0;
+    while (auto name = PluginManager::GetProcessPluginNameAtIndex(i++))
+      names.push_back(name);
+    return names;
+  }
+
+  bool StopRunningProcess() {
+    ExecutionContext exe_ctx =
+        m_debugger.GetCommandInterpreter().GetExecutionContext();
+
+    if (!exe_ctx.HasProcessScope())
+      return false;
+
+    Process *process = exe_ctx.GetProcessPtr();
+    if (!(process && process->IsAlive()))
+      return false;
+
+    FormDelegateSP form_delegate_sp =
+        FormDelegateSP(new DetachOrKillProcessFormDelegate(process));
+    Rect bounds = m_main_window_sp->GetCenteredRect(85, 8);
+    WindowSP form_window_sp = m_main_window_sp->CreateSubWindow(
+        form_delegate_sp->GetName().c_str(), bounds, true);
+    WindowDelegateSP window_delegate_sp =
+        WindowDelegateSP(new FormWindowDelegate(form_delegate_sp));
+    form_window_sp->SetDelegate(window_delegate_sp);
+
+    return true;
+  }
+
+  Target *GetTarget() {
+    Target *target = m_debugger.GetSelectedTarget().get();
+
+    if (target != nullptr)
+      return target;
+
+    TargetSP new_target_sp;
+    m_debugger.GetTargetList().CreateTarget(
+        m_debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
+
+    target = new_target_sp.get();
+
+    if (target == nullptr)
+      SetError("Failed to create target.");
+
+    m_debugger.GetTargetList().SetSelectedTarget(new_target_sp);
+
+    return target;
+  }
+
+  ProcessAttachInfo GetAttachInfo() {
+    ProcessAttachInfo attach_info;
+    attach_info.SetContinueOnceAttached(m_continue_field->GetBoolean());
+    if (m_type_field->GetChoiceContent() == "Name") {
+      attach_info.GetExecutableFile().SetFile(m_name_field->GetText(),
+                                              FileSpec::Style::native);
+      attach_info.SetWaitForLaunch(m_wait_for_field->GetBoolean());
+      if (m_wait_for_field->GetBoolean())
+        attach_info.SetIgnoreExisting(!m_include_existing_field->GetBoolean());
+    } else {
+      attach_info.SetProcessID(m_pid_field->GetInteger());
+    }
+    if (m_plugin_field->GetChoiceContent() != "<default>")
+      attach_info.SetProcessPluginName(m_plugin_field->GetChoiceContent());
+
+    return attach_info;
+  }
+
+  void Attach(Window &window) {
+    ClearError();
+
+    bool process_is_running = StopRunningProcess();
+    if (process_is_running)
+      return;
+
+    Target *target = GetTarget();
+    if (HasError())
+      return;
+
+    StreamString stream;
+    ProcessAttachInfo attach_info = GetAttachInfo();
+    Status status = target->Attach(attach_info, &stream);
+
+    if (status.Fail()) {
+      SetError(status.AsCString());
+      return;
+    }
+
+    ProcessSP process_sp(target->GetProcessSP());
+    if (!process_sp) {
+      SetError("Attached sucessfully but target has no process.");
+      return;
+    }
+
+    if (attach_info.GetContinueOnceAttached())
+      process_sp->Resume();
+
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+protected:
+  Debugger &m_debugger;
+  WindowSP m_main_window_sp;
+
+  ChoicesFieldDelegate *m_type_field;
+  IntegerFieldDelegate *m_pid_field;
+  TextFieldDelegate *m_name_field;
+  BooleanFieldDelegate *m_continue_field;
+  BooleanFieldDelegate *m_wait_for_field;
+  BooleanFieldDelegate *m_include_existing_field;
+  BooleanFieldDelegate *m_show_advanced_field;
+  ChoicesFieldDelegate *m_plugin_field;
 };
 
 class MenuDelegate {
@@ -2627,8 +2921,6 @@ public:
   }
 
   void Initialize() {
-    ::setlocale(LC_ALL, "");
-    ::setlocale(LC_CTYPE, "");
     m_screen = ::newterm(nullptr, m_out, m_in);
     ::start_color();
     ::curs_set(0);
@@ -4461,6 +4753,19 @@ public:
       }
     }
       return MenuActionResult::Handled;
+
+    case eMenuID_ProcessAttach: {
+      WindowSP main_window_sp = m_app.GetMainWindow();
+      FormDelegateSP form_delegate_sp = FormDelegateSP(
+          new ProcessAttachFormDelegate(m_debugger, main_window_sp));
+      Rect bounds = main_window_sp->GetCenteredRect(80, 22);
+      WindowSP form_window_sp = main_window_sp->CreateSubWindow(
+          form_delegate_sp->GetName().c_str(), bounds, true);
+      WindowDelegateSP window_delegate_sp =
+          WindowDelegateSP(new FormWindowDelegate(form_delegate_sp));
+      form_window_sp->SetDelegate(window_delegate_sp);
+      return MenuActionResult::Handled;
+    }
 
     case eMenuID_ProcessContinue: {
       ExecutionContext exe_ctx =

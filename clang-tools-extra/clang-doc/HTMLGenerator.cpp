@@ -579,8 +579,8 @@ genHTML(const Index &Index, StringRef InfoPath, bool IsOutermostList) {
     if (!Index.JumpToSection)
       SpanBody->Children.emplace_back(genReference(Index, InfoPath));
     else
-      SpanBody->Children.emplace_back(genReference(
-          Index, InfoPath, StringRef{Index.JumpToSection.getValue()}));
+      SpanBody->Children.emplace_back(
+          genReference(Index, InfoPath, Index.JumpToSection.getValue().str()));
   }
   if (Index.Children.empty())
     return Out;

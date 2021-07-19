@@ -1,5 +1,5 @@
 ; Tests that allocas escaped through function calls will live on the frame.
-; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f() "coroutine.presplit"="1" {
 entry:

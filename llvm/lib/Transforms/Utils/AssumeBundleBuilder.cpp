@@ -152,7 +152,7 @@ struct AssumeBuilderState {
     }
     if (auto *Arg = dyn_cast<Argument>(RK.WasOn)) {
       if (Arg->hasAttribute(RK.AttrKind) &&
-          (!Attribute::doesAttrKindHaveArgument(RK.AttrKind) ||
+          (!Attribute::isIntAttrKind(RK.AttrKind) ||
            Arg->getAttribute(RK.AttrKind).getValueAsInt() >= RK.ArgValue))
         return false;
       return true;
@@ -422,7 +422,7 @@ struct AssumeSimplify {
           if (auto *Arg = dyn_cast_or_null<Argument>(RK.WasOn)) {
             bool HasSameKindAttr = Arg->hasAttribute(RK.AttrKind);
             if (HasSameKindAttr)
-              if (!Attribute::doesAttrKindHaveArgument(RK.AttrKind) ||
+              if (!Attribute::isIntAttrKind(RK.AttrKind) ||
                   Arg->getAttribute(RK.AttrKind).getValueAsInt() >=
                       RK.ArgValue) {
                 RemoveFromAssume();

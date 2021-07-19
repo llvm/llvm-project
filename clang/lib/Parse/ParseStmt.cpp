@@ -401,7 +401,12 @@ Retry:
     return HandlePragmaCaptured();
 
   case tok::annot_pragma_openmp:
+    // Prohibit attributes that are not OpenMP attributes, but only before
+    // processing a #pragma omp clause.
     ProhibitAttributes(Attrs);
+    LLVM_FALLTHROUGH;
+  case tok::annot_attr_openmp:
+    // Do not prohibit attributes if they were OpenMP attributes.
     return ParseOpenMPDeclarativeOrExecutableDirective(StmtCtx);
 
   case tok::annot_pragma_ms_pointers_to_members:

@@ -2,21 +2,11 @@
 ## all other combinations are identical.
 # RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-readelf --file-header --hex-dump=.shstrtab %t > %t.hexdump.out
-# RUN: llvm-readelf -h --hex-dump .shstrtab %t > %t.hexdump.1
-# RUN: llvm-readelf -h -x .shstrtab %t > %t.hexdump.2
-# RUN: llvm-readelf -h -x=.shstrtab %t > %t.hexdump.3
-# RUN: llvm-readelf -h -x.shstrtab %t > %t.hexdump.4
-# RUN: llvm-readelf -hx .shstrtab %t > %t.hexdump.5
-# RUN: llvm-readelf -hx=.shstrtab %t > %t.hexdump.6
-# RUN: llvm-readelf -hx.shstrtab %t > %t.hexdump.7
-
-# RUN: cmp %t.hexdump.out %t.hexdump.1
-# RUN: cmp %t.hexdump.out %t.hexdump.2
-# RUN: cmp %t.hexdump.out %t.hexdump.3
-# RUN: cmp %t.hexdump.out %t.hexdump.4
-# RUN: cmp %t.hexdump.out %t.hexdump.5
-# RUN: cmp %t.hexdump.out %t.hexdump.6
-# RUN: cmp %t.hexdump.out %t.hexdump.7
+# RUN: llvm-readelf -h --hex-dump .shstrtab %t | cmp %t.hexdump.out -
+# RUN: llvm-readelf -h -x .shstrtab %t | cmp %t.hexdump.out -
+# RUN: llvm-readelf -h -x.shstrtab %t | cmp %t.hexdump.out -
+# RUN: llvm-readelf -hx .shstrtab %t | cmp %t.hexdump.out -
+# RUN: llvm-readelf -hx.shstrtab %t | cmp %t.hexdump.out -
 
 ## A sanity check to verify that the .shstrtab section has index 2.
 # RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=ELF-SEC

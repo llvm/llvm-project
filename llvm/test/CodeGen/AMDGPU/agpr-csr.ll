@@ -35,11 +35,11 @@ define void @func_areg_32() #0 {
 
 ; GCN-LABEL: {{^}}func_areg_33:
 ; GCN-NOT: a32
-; GFX90A: buffer_store_dword a32, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A: v_accvgpr_read_b32 v0, a32 ; Reload Reuse
 ; GCN-NOT: a32
 ; GCN:        use agpr32
 ; GCN-NOT: a32
-; GFX90A: buffer_load_dword a32, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX90A: v_accvgpr_write_b32 a32, v0 ; Reload Reuse
 ; GCN-NOT: a32
 ; GCN:        s_setpc_b64
 define void @func_areg_33() #0 {
@@ -50,9 +50,9 @@ define void @func_areg_33() #0 {
 ; GCN-LABEL: {{^}}func_areg_64:
 ; GFX908-NOT: buffer_
 ; GCN-NOT:    v_accvgpr
-; GFX90A:     buffer_store_dword a63,
+; GFX90A: v_accvgpr_read_b32 v0, a63 ; Reload Reuse
 ; GCN:        use agpr63
-; GFX90A:     buffer_load_dword a63,
+; GFX90A: v_accvgpr_write_b32 a63, v0 ; Reload Reuse
 ; GCN-NOT:    v_accvgpr
 ; GCN:        s_setpc_b64
 define void @func_areg_64() #0 {
@@ -62,12 +62,13 @@ define void @func_areg_64() #0 {
 
 ; GCN-LABEL: {{^}}func_areg_31_63:
 ; GFX908-NOT: buffer_
-; GCN-NOT:    v_accvgpr
-; GFX90A:     buffer_store_dword a63,
+; GFX908-NOT: v_accvgpr
+; GFX908-NOT: buffer
+; GFX90A:     v_accvgpr_read_b32 v0, a63 ; Reload Reuse
 ; GCN:        use agpr31, agpr63
-; GFX90A:     buffer_load_dword a63,
-; GCN-NOT:    buffer_
-; GCN-NOT:    v_accvgpr
+; GFX90A: v_accvgpr_write_b32 a63, v0 ; Reload Reuse
+; GFX908-NOT: v_accvgpr
+; GFX908-NOT: buffer
 ; GCN:        s_setpc_b64
 define void @func_areg_31_63() #0 {
   call void asm sideeffect "; use agpr31, agpr63", "~{a31},~{a63}" ()

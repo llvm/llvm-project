@@ -193,6 +193,7 @@ protected:
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class IncrementalParser;
 
   Redeclarable(const ASTContext &Ctx)
       : RedeclLink(LatestDeclLink(Ctx)),

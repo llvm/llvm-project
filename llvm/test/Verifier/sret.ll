@@ -6,6 +6,6 @@ declare void @a(i32* sret(i32) %a, i32* sret(i32) %b)
 declare void @b(i32* %a, i32* %b, i32* sret(i32) %c)
 ; CHECK: Attribute 'sret' is not on first or second parameter!
 
-; CHECK: Wrong types for attribute:
+; CHECK: Attribute 'sret(i32)' applied to incompatible type!
 ; CHECK-NEXT: void (i32)* @not_ptr
 declare void @not_ptr(i32 sret(i32) %x)

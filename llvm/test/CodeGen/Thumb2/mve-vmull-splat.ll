@@ -712,7 +712,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i32> @sext16_02461357_0ext(<16 x i16> %src1, i16 %src2) {
 ; CHECK-LABEL: sext16_02461357_0ext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q2, r0
+; CHECK-NEXT:    vdup.16 q2, r0
 ; CHECK-NEXT:    vrev32.16 q1, q0
 ; CHECK-NEXT:    vmullb.s16 q1, q1, q2
 ; CHECK-NEXT:    vmullb.s16 q0, q0, q2
@@ -731,7 +731,7 @@ define arm_aapcs_vfpcc <8 x i32> @sext16_0ext_02461357(<16 x i16> %src1, i16 %sr
 ; CHECK-LABEL: sext16_0ext_02461357:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vrev32.16 q1, q0
-; CHECK-NEXT:    vdup.32 q2, r0
+; CHECK-NEXT:    vdup.16 q2, r0
 ; CHECK-NEXT:    vmullb.s16 q1, q2, q1
 ; CHECK-NEXT:    vmullb.s16 q0, q2, q0
 ; CHECK-NEXT:    bx lr
@@ -922,7 +922,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i32> @zext16_02461357_0ext(<16 x i16> %src1, i16 %src2) {
 ; CHECK-LABEL: zext16_02461357_0ext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q2, r0
+; CHECK-NEXT:    vdup.16 q2, r0
 ; CHECK-NEXT:    vrev32.16 q1, q0
 ; CHECK-NEXT:    vmullb.u16 q1, q1, q2
 ; CHECK-NEXT:    vmullb.u16 q0, q0, q2
@@ -941,7 +941,7 @@ define arm_aapcs_vfpcc <8 x i32> @zext16_0ext_02461357(<16 x i16> %src1, i16 %sr
 ; CHECK-LABEL: zext16_0ext_02461357:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vrev32.16 q1, q0
-; CHECK-NEXT:    vdup.32 q2, r0
+; CHECK-NEXT:    vdup.16 q2, r0
 ; CHECK-NEXT:    vmullb.u16 q1, q2, q1
 ; CHECK-NEXT:    vmullb.u16 q0, q2, q0
 ; CHECK-NEXT:    bx lr
@@ -1132,7 +1132,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i16> @sext8_0246810121413579111315_0ext(<32 x i8> %src1, i8 %src2) {
 ; CHECK-LABEL: sext8_0246810121413579111315_0ext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.16 q2, r0
+; CHECK-NEXT:    vdup.8 q2, r0
 ; CHECK-NEXT:    vrev16.8 q1, q0
 ; CHECK-NEXT:    vmullb.s8 q1, q1, q2
 ; CHECK-NEXT:    vmullb.s8 q0, q0, q2
@@ -1151,7 +1151,7 @@ define arm_aapcs_vfpcc <16 x i16> @sext8_0ext_0246810121413579111315(<32 x i8> %
 ; CHECK-LABEL: sext8_0ext_0246810121413579111315:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vrev16.8 q1, q0
-; CHECK-NEXT:    vdup.16 q2, r0
+; CHECK-NEXT:    vdup.8 q2, r0
 ; CHECK-NEXT:    vmullb.s8 q1, q2, q1
 ; CHECK-NEXT:    vmullb.s8 q0, q2, q0
 ; CHECK-NEXT:    bx lr
@@ -1342,7 +1342,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i16> @zext8_0246810121413579111315_0ext(<32 x i8> %src1, i8 %src2) {
 ; CHECK-LABEL: zext8_0246810121413579111315_0ext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.16 q2, r0
+; CHECK-NEXT:    vdup.8 q2, r0
 ; CHECK-NEXT:    vrev16.8 q1, q0
 ; CHECK-NEXT:    vmullb.u8 q1, q1, q2
 ; CHECK-NEXT:    vmullb.u8 q0, q0, q2
@@ -1361,7 +1361,7 @@ define arm_aapcs_vfpcc <16 x i16> @zext8_0ext_0246810121413579111315(<32 x i8> %
 ; CHECK-LABEL: zext8_0ext_0246810121413579111315:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vrev16.8 q1, q0
-; CHECK-NEXT:    vdup.16 q2, r0
+; CHECK-NEXT:    vdup.8 q2, r0
 ; CHECK-NEXT:    vmullb.u8 q1, q2, q1
 ; CHECK-NEXT:    vmullb.u8 q0, q2, q0
 ; CHECK-NEXT:    bx lr

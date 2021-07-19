@@ -30,13 +30,10 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
   return new (mem) ThreadContext(tid);
 }
 
-static const uptr kMaxThreads = 1 << 22;  // 4M
-static const uptr kThreadQuarantineSize = 64;
-
 void InitializeThreadRegistry() {
   static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
-  thread_registry = new (thread_registry_placeholder)
-      ThreadRegistry(CreateThreadContext, kMaxThreads, kThreadQuarantineSize);
+  thread_registry =
+      new (thread_registry_placeholder) ThreadRegistry(CreateThreadContext);
 }
 
 ThreadContextLsanBase::ThreadContextLsanBase(int tid)

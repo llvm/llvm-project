@@ -189,6 +189,23 @@ func @generalize_fill_rng_2d_i32(%min: f64, %max: f64, %seed: i32, %O: tensor<16
 // CHECK-NEXT: -> tensor<16x32xi32>
 
 // -----
+
+func @generalize_soft_plus_2d_f32(%input: tensor<16x32xf32>, %output: tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.soft_plus_2d ins(%input: tensor<16x32xf32>) outs(%output: tensor<16x32xf32>) -> tensor<16x32xf32>
+  return %0: tensor<16x32xf32>
+}
+
+// CHECK-LABEL: @generalize_soft_plus_2d_f32
+//      CHECK: %[[C1:.+]] = constant 1.000000e+00 : f64
+//      CHECK: ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32
+// CHECK-NEXT:   %[[C1_CAST:.+]] = fptrunc %[[C1]] : f64 to f32
+// CHECK-NEXT:   %[[EXP:.+]] = math.exp %[[IN]] : f32
+// CHECK-NEXT:   %[[SUM:.+]] = addf %[[C1_CAST]], %[[EXP]] : f32
+// CHECK-NEXT:   %[[LOG:.+]] = math.log %[[SUM]] : f32
+// CHECK-NEXT:   linalg.yield %[[LOG]] : f32
+// CHECK-NEXT: -> tensor<16x32xf32>
+
+// -----
 // Verifies floating point to integer cast.
 func @generalize_matmul_tensor_f32_f32_i16(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>, %C: tensor<16x32xi16>) -> tensor<16x32xi16> {
   %0 = linalg.matmul ins(%A, %B: tensor<16x8xf32>, tensor<8x32xf32>)

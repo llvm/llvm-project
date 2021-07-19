@@ -8,6 +8,8 @@
 # function was seen first and the defined function was referenced within the
 # the defining file (see %S/Inputs/sig_mismatch.s).
 
+.functype foo (i32, i64, i32) -> (i32)
+
 .globl _start
 _start:
   .functype _start () -> ()
@@ -15,9 +17,8 @@ _start:
   i64.const 2
   i32.const 3
   call foo
+  drop
   end_function
-
-.functype foo (i32, i64, i32) -> (i32)
 
 #      CHECK:  - Type:            CUSTOM
 # CHECK-NEXT:    Name:            linking

@@ -135,6 +135,7 @@ isl_bool isl_union_set_every_set(__isl_keep isl_union_set *uset,
 	isl_bool (*test)(__isl_keep isl_set *set, void *user), void *user);
 __isl_give isl_basic_set_list *isl_union_set_get_basic_set_list(
 	__isl_keep isl_union_set *uset);
+__isl_export
 __isl_give isl_set_list *isl_union_set_get_set_list(
 	__isl_keep isl_union_set *uset);
 isl_bool isl_union_set_contains(__isl_keep isl_union_set *uset,

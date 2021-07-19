@@ -239,7 +239,7 @@ public:
                       << ") zero\n");
     Value *Ptr = BasePtr;
     if (Offset)
-      Ptr = IRB.CreateConstGEP1_32(Ptr, Offset);
+      Ptr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), Ptr, Offset);
     IRB.CreateCall(SetTagZeroFn,
                    {Ptr, ConstantInt::get(IRB.getInt64Ty(), Size)});
   }
@@ -249,7 +249,7 @@ public:
                       << ") undef\n");
     Value *Ptr = BasePtr;
     if (Offset)
-      Ptr = IRB.CreateConstGEP1_32(Ptr, Offset);
+      Ptr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), Ptr, Offset);
     IRB.CreateCall(SetTagFn, {Ptr, ConstantInt::get(IRB.getInt64Ty(), Size)});
   }
 
@@ -258,7 +258,7 @@ public:
     LLVM_DEBUG(dbgs() << "    " << *A << "\n    " << *B << "\n");
     Value *Ptr = BasePtr;
     if (Offset)
-      Ptr = IRB.CreateConstGEP1_32(Ptr, Offset);
+      Ptr = IRB.CreateConstGEP1_32(IRB.getInt8Ty(), Ptr, Offset);
     IRB.CreateCall(StgpFn, {Ptr, A, B});
   }
 
@@ -548,7 +548,9 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(I)) {
         for (Value *V : DVI->location_ops())
           if (auto *AI = dyn_cast_or_null<AllocaInst>(V))
-            Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
+            if (Allocas[AI].DbgVariableIntrinsics.empty() ||
+                Allocas[AI].DbgVariableIntrinsics.back() != DVI)
+              Allocas[AI].DbgVariableIntrinsics.push_back(DVI);
         continue;
       }
 

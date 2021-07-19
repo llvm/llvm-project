@@ -25,10 +25,6 @@ define amdgpu_kernel void @vector_clause(<4 x i32> addrspace(1)* noalias nocaptu
 ;
 ; GCN-SCRATCH-LABEL: vector_clause:
 ; GCN-SCRATCH:       ; %bb.0: ; %bb
-; GCN-SCRATCH-NEXT:    s_add_u32 s2, s2, s5
-; GCN-SCRATCH-NEXT:    s_addc_u32 s3, s3, 0
-; GCN-SCRATCH-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GCN-SCRATCH-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GCN-SCRATCH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-SCRATCH-NEXT:    v_lshlrev_b32_e32 v16, 4, v0
 ; GCN-SCRATCH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
@@ -108,10 +104,6 @@ define amdgpu_kernel void @scalar_clause(<4 x i32> addrspace(1)* noalias nocaptu
 ;
 ; GCN-SCRATCH-LABEL: scalar_clause:
 ; GCN-SCRATCH:       ; %bb.0: ; %bb
-; GCN-SCRATCH-NEXT:    s_add_u32 s2, s2, s5
-; GCN-SCRATCH-NEXT:    s_addc_u32 s3, s3, 0
-; GCN-SCRATCH-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GCN-SCRATCH-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GCN-SCRATCH-NEXT:    s_clause 0x1
 ; GCN-SCRATCH-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x24
 ; GCN-SCRATCH-NEXT:    s_load_dwordx2 s[16:17], s[0:1], 0x2c
@@ -277,10 +269,6 @@ define amdgpu_kernel void @vector_clause_indirect(i64 addrspace(1)* noalias noca
 ;
 ; GCN-SCRATCH-LABEL: vector_clause_indirect:
 ; GCN-SCRATCH:       ; %bb.0: ; %bb
-; GCN-SCRATCH-NEXT:    s_add_u32 s2, s2, s5
-; GCN-SCRATCH-NEXT:    s_addc_u32 s3, s3, 0
-; GCN-SCRATCH-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GCN-SCRATCH-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GCN-SCRATCH-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-SCRATCH-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-SCRATCH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34

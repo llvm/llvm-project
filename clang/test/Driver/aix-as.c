@@ -63,3 +63,18 @@
 // CHECK-AS32-MultiInput: "{{.*}}as{{(.exe)?}}"
 // CHECK-AS32-MultiInput: "-a32"
 // CHECK-AS32-MultiInput: "-many"
+
+// Check not passing no-integrated-as flag by default.
+// RUN: %clang -no-canonical-prefixes %s -### -c -o %t.o 2>&1 \
+// RUN:         -target powerpc64-ibm-aix7.1.0.0 \
+// RUN:   | FileCheck --check-prefix=CHECK-IAS --implicit-check-not=-no-integrated-as %s
+// CHECK-IAS: InstalledDir
+// CHECK-IAS: "-a64"
+
+// Check passing no-integrated-as flag if specified by user.
+// RUN: %clang -no-canonical-prefixes %s -### -c -o %t.o 2>&1 \
+// RUN:         -target powerpc64-ibm-aix7.1.0.0 -fno-integrated-as \
+// RUN:   | FileCheck --check-prefix=CHECK-NOIAS %s
+// CHECK-NOIAS: InstalledDir
+// CHECK-NOIAS: -no-integrated-as
+// CHECK-NOIAS: "-a64"

@@ -47,7 +47,7 @@ entry:
 ; COMMON-NEXT:  .byte   0x60                            # -IsInterruptHandler, +IsFunctionNamePresent, +IsAllocaUsed
 ; COMMON-NEXT:                                        # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
 ; COMMON-NEXT:  .byte   0x85                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 5
-; COMMON-NEXT:  .byte   0x04                            # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 4
+; COMMON-NEXT:  .byte   0x04                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 4
 ; COMMON-NEXT:  .byte   0x00                            # NumberOfFixedParms = 0
 ; COMMON-NEXT:  .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; CHECK-ASM-NEXT:   .vbyte  4, L..bar0-.bar                 # Function size
@@ -69,7 +69,7 @@ entry:
 ; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
 ; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; COMMON-NEXT:  .byte   0xc0                            # +HasVectorInfo, +HasExtensionTable, NumOfGPRsSaved = 0
+; COMMON-NEXT:  .byte   0xc0                            # +HasExtensionTable, +HasVectorInfo, NumOfGPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x00                            # NumberOfFixedParms = 0
 ; COMMON-NEXT:  .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; CHECK-ASM-NEXT:   .vbyte  4, L..foov0-.foov               # Function size

@@ -42,16 +42,16 @@ EXTERN int32_t __kmpc_cancel_barrier(kmp_Ident *loc_ref, int32_t tid) {
 }
 
 EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
-  if (checkRuntimeUninitialized(loc_ref)) {
-    ASSERT0(LT_FUSSY, checkSPMDMode(loc_ref),
+  if (isRuntimeUninitialized()) {
+    ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(),
             "Expected SPMD mode with uninitialized runtime.");
     __kmpc_barrier_simple_spmd(loc_ref, tid);
   } else {
-    tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc_ref));
+    tid = GetLogicalThreadIdInBlock();
     int numberOfActiveOMPThreads =
-        GetNumberOfOmpThreads(checkSPMDMode(loc_ref));
+        GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode());
     if (numberOfActiveOMPThreads > 1) {
-      if (checkSPMDMode(loc_ref)) {
+      if (__kmpc_is_spmd_exec_mode()) {
         __kmpc_barrier_simple_spmd(loc_ref, tid);
       } else {
         // The #threads parameter must be rounded up to the WARPSIZE.

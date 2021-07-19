@@ -1,5 +1,5 @@
-; RUN: opt -passes='loop(loop-instsimplify,loop-simplifycfg,unswitch),verify<loops>' -S < %s | FileCheck %s
-; RUN: opt -verify-memoryssa -passes='loop-mssa(loop-instsimplify,loop-simplifycfg,unswitch),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -passes='loop(loop-instsimplify,loop-simplifycfg,simple-loop-unswitch),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -verify-memoryssa -passes='loop-mssa(loop-instsimplify,loop-simplifycfg,simple-loop-unswitch),verify<loops>' -S < %s | FileCheck %s
 
 declare void @some_func() noreturn
 

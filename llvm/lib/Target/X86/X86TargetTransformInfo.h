@@ -181,13 +181,13 @@ public:
                                         TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticReductionCost(
-      unsigned Opcode, VectorType *Ty, bool IsPairwiseForm,
+      unsigned Opcode, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
 
   InstructionCost getMinMaxCost(Type *Ty, Type *CondTy, bool IsUnsigned);
 
   InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                         bool IsPairwiseForm, bool IsUnsigned,
+                                         bool IsUnsigned,
                                          TTI::TargetCostKind CostKind);
 
   InstructionCost getInterleavedMemoryOpCost(

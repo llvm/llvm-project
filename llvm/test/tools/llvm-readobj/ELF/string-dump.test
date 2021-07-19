@@ -8,17 +8,9 @@
 # Also test the different ways --string-dump can be specified, i.e. as a short
 # flag (-p), with different prefix modes (-p .foo, -p=.foo, -p.foo), and with
 # the value being a index section number instead of a section name.
-# RUN: llvm-readobj -p=.strings -p=.not_null_terminated %t > %t.readobj.1
-# RUN: llvm-readobj -p.strings -p.strings -p.not_null_terminated %t > %t.readobj.2
-# RUN: llvm-readobj --string-dump=1 --string-dump=2 %t > %t.readobj.3
-# RUN: llvm-readobj -p1 -p1 -p2 %t > %t.readobj.4
-# RUN: llvm-readobj -p=1 -p=2 %t > %t.readobj.5
-
-# RUN: cmp %t.readobj.out %t.readobj.1
-# RUN: cmp %t.readobj.out %t.readobj.2
-# RUN: cmp %t.readobj.out %t.readobj.3
-# RUN: cmp %t.readobj.out %t.readobj.4
-# RUN: cmp %t.readobj.out %t.readobj.5
+# RUN: llvm-readobj -p.strings -p.strings -p.not_null_terminated %t | cmp %t.readobj.out -
+# RUN: llvm-readobj --string-dump=1 --string-dump=2 %t | cmp %t.readobj.out -
+# RUN: llvm-readobj -p1 -p1 -p2 %t | cmp %t.readobj.out -
 
 # Run readelf flag tests with an additional flag, --file-header, so we can test
 # -p grouped with something.
@@ -26,19 +18,10 @@
 # RUN:   --string-dump=.not_null_terminated %t > %t.readelf.out
 # RUN: FileCheck %s --input-file=%t.readelf.out
 
-# RUN: llvm-readelf -h -p=.strings -p=.not_null_terminated %t > %t.readelf.1
-# RUN: llvm-readelf -p.strings -hp.not_null_terminated %t > %t.readelf.2
-# RUN: llvm-readelf -h --string-dump=1 --string-dump=2 %t > %t.readelf.3
-# RUN: llvm-readelf -hp1 -p2 %t > %t.readelf.4
-# RUN: llvm-readelf -hp 1 -p.not_null_terminated %t > %t.readelf.5
-# RUN: llvm-readelf -p=1 -hp=2 %t > %t.readelf.6
-
-# RUN: cmp %t.readelf.out %t.readelf.1
-# RUN: cmp %t.readelf.out %t.readelf.2
-# RUN: cmp %t.readelf.out %t.readelf.3
-# RUN: cmp %t.readelf.out %t.readelf.4
-# RUN: cmp %t.readelf.out %t.readelf.5
-# RUN: cmp %t.readelf.out %t.readelf.6
+# RUN: llvm-readelf -h -p .strings -p .not_null_terminated %t | cmp %t.readelf.out -
+# RUN: llvm-readelf -p.strings -hp.not_null_terminated %t  | cmp %t.readelf.out -
+# RUN: llvm-readelf -hp1 -p2 %t | cmp %t.readelf.out -
+# RUN: llvm-readelf -hp 1 -p.not_null_terminated %t | cmp %t.readelf.out -
 
 # CHECK:      String dump of section '.strings':
 # CHECK-NEXT: [ 0] here

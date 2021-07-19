@@ -193,7 +193,7 @@ void DereferenceChecker::reportBug(DerefKind K, ProgramStateRef State,
   }
 
   auto report = std::make_unique<PathSensitiveBugReport>(
-      *BT, buf.empty() ? BT->getDescription() : StringRef(buf), N);
+      *BT, buf.empty() ? BT->getDescription() : buf.str(), N);
 
   bugreporter::trackExpressionValue(N, bugreporter::getDerefExpr(S), *report);
 

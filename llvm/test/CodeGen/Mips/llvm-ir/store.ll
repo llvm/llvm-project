@@ -285,65 +285,57 @@ define void @f3(i32 %a) {
 ;
 ; MIPS4-LABEL: f3:
 ; MIPS4:       # %bb.0:
-; MIPS4-NEXT:    sll $1, $4, 0 # <MCInst #{{[0-9]+}} SLL
-; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
-; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
-; MIPS4-NEXT:    # <MCOperand Imm:0>>
-; MIPS4-NEXT:    lui $2, %highest(c) # <MCInst #{{[0-9]+}} LUi64
+; MIPS4-NEXT:    lui $1, %highest(c) # <MCInst #{{[0-9]+}} LUi64
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Expr:(%highest(c))>>
-; MIPS4-NEXT:    daddiu $2, $2, %higher(c) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS4-NEXT:    daddiu $1, $1, %higher(c) # <MCInst #{{[0-9]+}} DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Expr:(%higher(c))>>
-; MIPS4-NEXT:    dsll $2, $2, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Imm:16>>
-; MIPS4-NEXT:    daddiu $2, $2, %hi(c) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS4-NEXT:    daddiu $1, $1, %hi(c) # <MCInst #{{[0-9]+}} DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Expr:(%hi(c))>>
-; MIPS4-NEXT:    dsll $2, $2, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Imm:16>>
 ; MIPS4-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JR
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
-; MIPS4-NEXT:    sw $1, %lo(c)($2) # <MCInst #{{[0-9]+}} SW
+; MIPS4-NEXT:    sw $4, %lo(c)($1) # <MCInst #{{[0-9]+}} SW
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS4-NEXT:    # <MCOperand Expr:(%lo(c))>>
 ;
 ; MIPS64R6-LABEL: f3:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    sll $1, $4, 0 # <MCInst #{{[0-9]+}} SLL
-; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
-; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
-; MIPS64R6-NEXT:    # <MCOperand Imm:0>>
-; MIPS64R6-NEXT:    lui $2, %highest(c) # <MCInst #{{[0-9]+}} LUi64
+; MIPS64R6-NEXT:    lui $1, %highest(c) # <MCInst #{{[0-9]+}} LUi64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%highest(c))>>
-; MIPS64R6-NEXT:    daddiu $2, $2, %higher(c) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64R6-NEXT:    daddiu $1, $1, %higher(c) # <MCInst #{{[0-9]+}} DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%higher(c))>>
-; MIPS64R6-NEXT:    dsll $2, $2, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Imm:16>>
-; MIPS64R6-NEXT:    daddiu $2, $2, %hi(c) # <MCInst #{{[0-9]+}} DADDiu
+; MIPS64R6-NEXT:    daddiu $1, $1, %hi(c) # <MCInst #{{[0-9]+}} DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%hi(c))>>
-; MIPS64R6-NEXT:    dsll $2, $2, 16 # <MCInst #{{[0-9]+}} DSLL
+; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #{{[0-9]+}} DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Imm:16>>
 ; MIPS64R6-NEXT:    jr $ra # <MCInst #{{[0-9]+}} JALR64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>>
-; MIPS64R6-NEXT:    sw $1, %lo(c)($2) # <MCInst #{{[0-9]+}} SW
+; MIPS64R6-NEXT:    sw $4, %lo(c)($1) # <MCInst #{{[0-9]+}} SW
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:(%lo(c))>>

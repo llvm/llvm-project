@@ -25,15 +25,17 @@
 # CHECK:       [[#%x,SR]]    g   F __TEXT,__text _sr2
 # CHECK:       [[#%x,MR:]]   g   F __TEXT,__text _mr1
 # CHECK:       [[#%x,MR]]    g   F __TEXT,__text _mr2
+# CHECK:       [[#%x,K1:]]   g   O __TEXT,__foo  _k1
+# CHECK:       [[#%x,A:]]    g   F __TEXT,__text _k2
 ### FIXME: Mutually-recursive functions with identical bodies (see below)
 # COM:         [[#%x,XR:]]   g   F __TEXT,__text _xr1
 # COM:         [[#%x,XR]]    g   F __TEXT,__text _xr2
 
 # CHECK-LABEL: Disassembly of section __TEXT,__text:
 # CHECK:       [[#%x,MAIN]] <_main>:
-# CHECK-NEXT:  callq 0x[[#%x,A]]  <_a3>
-# CHECK-NEXT:  callq 0x[[#%x,A]]  <_a3>
-# CHECK-NEXT:  callq 0x[[#%x,A]]  <_a3>
+# CHECK-NEXT:  callq 0x[[#%x,A]]  <_k2>
+# CHECK-NEXT:  callq 0x[[#%x,A]]  <_k2>
+# CHECK-NEXT:  callq 0x[[#%x,A]]  <_k2>
 # CHECK-NEXT:  callq 0x[[#%x,B]]  <_b>
 # CHECK-NEXT:  callq 0x[[#%x,B2]] <_b2>
 # CHECK-NEXT:  callq 0x[[#%x,C]]  <_c>
@@ -44,6 +46,8 @@
 # CHECK-NEXT:  callq 0x[[#%x,H]]  <_h>
 # CHECK-NEXT:  callq 0x[[#%x,I]]  <_i>
 # CHECK-NEXT:  callq 0x[[#%x,J]]  <_j>
+# CHECK-NEXT:  callq 0x[[#%x,K1]] <_k1>
+# CHECK-NEXT:  callq 0x[[#%x,A]]  <_k2>
 # CHECK-NEXT:  callq 0x[[#%x,SR]] <_sr2>
 # CHECK-NEXT:  callq 0x[[#%x,SR]] <_sr2>
 # CHECK-NEXT:  callq 0x[[#%x,MR]] <_mr2>
@@ -232,8 +236,38 @@ _j:
   ret
   .cfi_endproc
 
+### No fold: _k1 is in a different section from _a1
+.section __TEXT,__foo
+.globl _k1
+.p2align 2
+_k1:
+  callq _d
+  mov ___nan@GOTPCREL(%rip), %rax
+  callq ___isnan
+  movabs $_abs1a, %rdx
+  movl $0, %eax
+  ret
+  nopl (%rax)
+
+### Fold: _k2 is in a section that gets renamed and output as __text
+.section __TEXT,__StaticInit
+.globl _k2
+.p2align 2
+_k2:
+  callq _d
+  mov ___nan@GOTPCREL(%rip), %rax
+  callq ___isnan
+  movabs $_abs1a, %rdx
+  movl $0, %eax
+  ret
+## For some reason, llvm-mc generates different nop encodings when adding
+## padding for __StaticInit vs __text functions. So we explicitly specify the
+## nop here to make sure this function can be folded with _a1.
+  nopl (%rax)
+
 ### Fold: Simple recursion
 
+.text
 .globl _sr1
 .p2align 2
 _sr1:
@@ -311,6 +345,8 @@ _main:
   callq _h
   callq _i
   callq _j
+  callq _k1
+  callq _k2
   callq _sr1
   callq _sr2
   callq _mr1

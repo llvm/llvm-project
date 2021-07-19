@@ -34,14 +34,14 @@ inline isl::pw_aff operator+(isl::pw_aff Left, isl::val ValRight) {
 }
 
 inline isl::pw_aff operator+(long IntLeft, isl::pw_aff Right) {
-  isl::ctx Ctx = Right.get_ctx();
+  isl::ctx Ctx = Right.ctx();
   isl::val ValLeft(Ctx, IntLeft);
   isl::pw_aff Left(Right.domain(), ValLeft);
   return Left.add(Right);
 }
 
 inline isl::pw_aff operator+(isl::pw_aff Left, long IntRight) {
-  isl::ctx Ctx = Left.get_ctx();
+  isl::ctx Ctx = Left.ctx();
   isl::val ValRight(Ctx, IntRight);
   isl::pw_aff Right(Left.domain(), ValRight);
   return Left.add(Right);
@@ -65,14 +65,14 @@ inline isl::pw_aff operator*(isl::pw_aff Left, isl::val ValRight) {
 }
 
 inline isl::pw_aff operator*(long IntLeft, isl::pw_aff Right) {
-  isl::ctx Ctx = Right.get_ctx();
+  isl::ctx Ctx = Right.ctx();
   isl::val ValLeft(Ctx, IntLeft);
   isl::pw_aff Left(Right.domain(), ValLeft);
   return Left.mul(Right);
 }
 
 inline isl::pw_aff operator*(isl::pw_aff Left, long IntRight) {
-  isl::ctx Ctx = Left.get_ctx();
+  isl::ctx Ctx = Left.ctx();
   isl::val ValRight(Ctx, IntRight);
   isl::pw_aff Right(Left.domain(), ValRight);
   return Left.mul(Right);
@@ -96,14 +96,14 @@ inline isl::pw_aff operator-(isl::pw_aff Left, isl::val ValRight) {
 }
 
 inline isl::pw_aff operator-(long IntLeft, isl::pw_aff Right) {
-  isl::ctx Ctx = Right.get_ctx();
+  isl::ctx Ctx = Right.ctx();
   isl::val ValLeft(Ctx, IntLeft);
   isl::pw_aff Left(Right.domain(), ValLeft);
   return Left.sub(Right);
 }
 
 inline isl::pw_aff operator-(isl::pw_aff Left, long IntRight) {
-  isl::ctx Ctx = Left.get_ctx();
+  isl::ctx Ctx = Left.ctx();
   isl::val ValRight(Ctx, IntRight);
   isl::pw_aff Right(Left.domain(), ValRight);
   return Left.sub(Right);
@@ -130,14 +130,14 @@ inline isl::pw_aff operator/(isl::pw_aff Left, isl::val ValRight) {
 }
 
 inline isl::pw_aff operator/(long IntLeft, isl::pw_aff Right) {
-  isl::ctx Ctx = Right.get_ctx();
+  isl::ctx Ctx = Right.ctx();
   isl::val ValLeft(Ctx, IntLeft);
   isl::pw_aff Left(Right.domain(), ValLeft);
   return Left.tdiv_q(Right);
 }
 
 inline isl::pw_aff operator/(isl::pw_aff Left, long IntRight) {
-  isl::ctx Ctx = Left.get_ctx();
+  isl::ctx Ctx = Left.ctx();
   isl::val ValRight(Ctx, IntRight);
   isl::pw_aff Right(Left.domain(), ValRight);
   return Left.tdiv_q(Right);
@@ -165,14 +165,14 @@ inline isl::pw_aff operator%(isl::pw_aff Left, isl::val ValRight) {
 }
 
 inline isl::pw_aff operator%(long IntLeft, isl::pw_aff Right) {
-  isl::ctx Ctx = Right.get_ctx();
+  isl::ctx Ctx = Right.ctx();
   isl::val ValLeft(Ctx, IntLeft);
   isl::pw_aff Left(Right.domain(), ValLeft);
   return Left.tdiv_r(Right);
 }
 
 inline isl::pw_aff operator%(isl::pw_aff Left, long IntRight) {
-  isl::ctx Ctx = Left.get_ctx();
+  isl::ctx Ctx = Left.ctx();
   isl::val ValRight(Ctx, IntRight);
   isl::pw_aff Right(Left.domain(), ValRight);
   return Left.tdiv_r(Right);

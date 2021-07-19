@@ -382,7 +382,7 @@ ScopArrayInfo *MaximalStaticExpander::expandAccess(Scop &S, MemoryAccess *MA) {
     assert(!UpperBound.is_null() && UpperBound.is_pos() &&
            !UpperBound.is_nan() &&
            "The upper bound is not a positive integer.");
-    assert(UpperBound.le(isl::val(CurrentAccessMap.get_ctx(),
+    assert(UpperBound.le(isl::val(CurrentAccessMap.ctx(),
                                   std::numeric_limits<int>::max() - 1)) &&
            "The upper bound overflow a int.");
     Sizes.push_back(UpperBound.get_num_si() + 1);

@@ -1139,6 +1139,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
     Value *Y;
     if (ShAmt == BitWidth - 1) {
+      // lshr i32 or(X,-X), 31 --> zext (X != 0)
+      if (match(Op0, m_OneUse(m_c_Or(m_Neg(m_Value(X)), m_Deferred(X)))))
+        return new ZExtInst(Builder.CreateIsNotNull(X), Ty);
+
       // lshr i32 (X -nsw Y), 31 --> zext (X < Y)
       if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
         return new ZExtInst(Builder.CreateICmpSLT(X, Y), Ty);
@@ -1323,11 +1327,16 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       return new SExtInst(NewSh, Ty);
     }
 
-    // ashr i32 (X -nsw Y), 31 --> sext (X < Y)
-    Value *Y;
-    if (ShAmt == BitWidth - 1 &&
-        match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
-      return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+    if (ShAmt == BitWidth - 1) {
+      // ashr i32 or(X,-X), 31 --> sext (X != 0)
+      if (match(Op0, m_OneUse(m_c_Or(m_Neg(m_Value(X)), m_Deferred(X)))))
+        return new SExtInst(Builder.CreateIsNotNull(X), Ty);
+
+      // ashr i32 (X -nsw Y), 31 --> sext (X < Y)
+      Value *Y;
+      if (match(Op0, m_OneUse(m_NSWSub(m_Value(X), m_Value(Y)))))
+        return new SExtInst(Builder.CreateICmpSLT(X, Y), Ty);
+    }
 
     // If the shifted-out value is known-zero, then this is an exact shift.
     if (!I.isExact() &&

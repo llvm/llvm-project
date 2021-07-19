@@ -18,6 +18,8 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX10-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX10-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX10-NEXT:    buffer_load_format_d16_xyz v[5:6], v4, s[4:7], 0 idxen
+; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX10-NEXT:    ; implicit-def: $vgpr4
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:    s_cbranch_execnz BB0_1
@@ -44,6 +46,8 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX9-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_format_d16_xyz v[5:6], v4, s[4:7], 0 idxen
+; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr4
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX9-NEXT:    s_cbranch_execnz BB0_1
 ; GFX9-NEXT:  ; %bb.2:
@@ -68,6 +72,8 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX8-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX8-NEXT:    s_nop 0
 ; GFX8-NEXT:    buffer_load_format_d16_xyz v[5:6], v4, s[4:7], 0 idxen
+; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX8-NEXT:    ; implicit-def: $vgpr4
 ; GFX8-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX8-NEXT:    s_cbranch_execnz BB0_1
 ; GFX8-NEXT:  ; %bb.2:

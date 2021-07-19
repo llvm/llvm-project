@@ -34,6 +34,7 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -192,6 +193,17 @@ RelType AArch64::getDynRel(RelType type) const {
   if (type == R_AARCH64_ABS64)
     return type;
   return R_AARCH64_NONE;
+}
+
+int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  case R_AARCH64_TLSDESC:
+    return read64(buf + 8);
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
+  }
 }
 
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
@@ -466,6 +478,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12:
     or32AArch64Imm(loc, val);
+    break;
+  case R_AARCH64_TLSDESC:
+    // For R_AARCH64_TLSDESC the addend is stored in the second 64-bit word.
+    write64(loc + 8, val);
     break;
   default:
     llvm_unreachable("unknown relocation");

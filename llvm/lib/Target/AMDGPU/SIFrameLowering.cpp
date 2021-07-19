@@ -20,6 +20,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "frame-info"
 
+static cl::opt<bool> EnableSpillVGPRToAGPR(
+  "amdgpu-spill-vgpr-to-agpr",
+  cl::desc("Enable spilling VGPRs to AGPRs"),
+  cl::ReallyHidden,
+  cl::init(true));
+
 // Find a scratch register that we can use in the prologue. We avoid using
 // callee-save registers since they may appear to be free when this is called
 // from canUseAsPrologue (during shrink wrapping), but then no longer be free
@@ -407,6 +413,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   assert(MFI->isEntryFunction());
 
@@ -484,7 +491,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
-        .addImm(MF.getFrameInfo().getStackSize() * getScratchScaleFactor(ST));
+        .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
   }
 
   if (hasFP(MF)) {
@@ -493,13 +500,18 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
   }
 
-  if ((MFI->hasFlatScratchInit() || ScratchRsrcReg) &&
+  bool NeedsFlatScratchInit =
+      MFI->hasFlatScratchInit() &&
+      (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
+       (!allStackObjectsAreDead(FrameInfo) && ST.enableFlatScratch()));
+
+  if ((NeedsFlatScratchInit || ScratchRsrcReg) &&
       !ST.flatScratchIsArchitected()) {
     MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
     MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
   }
 
-  if (MFI->hasFlatScratchInit()) {
+  if (NeedsFlatScratchInit) {
     emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
   }
 
@@ -1127,8 +1139,72 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
+  const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
+                               && EnableSpillVGPRToAGPR;
+
+  if (SpillVGPRToAGPR) {
+    // To track the spill frame indices handled in this pass.
+    BitVector SpillFIs(MFI.getObjectIndexEnd(), false);
+
+    bool SeenDbgInstr = false;
+
+    for (MachineBasicBlock &MBB : MF) {
+      MachineBasicBlock::iterator Next;
+      for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
+        MachineInstr &MI = *I;
+        Next = std::next(I);
+
+        if (MI.isDebugInstr())
+          SeenDbgInstr = true;
+
+        if (TII->isVGPRSpill(MI)) {
+          // Try to eliminate stack used by VGPR spills before frame
+          // finalization.
+          unsigned FIOp = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                                     AMDGPU::OpName::vaddr);
+          int FI = MI.getOperand(FIOp).getIndex();
+          Register VReg =
+            TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+          if (FuncInfo->allocateVGPRSpillToAGPR(MF, FI,
+                                                TRI->isAGPR(MRI, VReg))) {
+            // FIXME: change to enterBasicBlockEnd()
+            RS->enterBasicBlock(MBB);
+            TRI->eliminateFrameIndex(MI, 0, FIOp, RS);
+            SpillFIs.set(FI);
+            continue;
+          }
+        }
+      }
+    }
+
+    for (MachineBasicBlock &MBB : MF) {
+      for (MCPhysReg Reg : FuncInfo->getVGPRSpillAGPRs())
+        MBB.addLiveIn(Reg);
+
+      for (MCPhysReg Reg : FuncInfo->getAGPRSpillVGPRs())
+        MBB.addLiveIn(Reg);
+
+      MBB.sortUniqueLiveIns();
+
+      if (!SpillFIs.empty() && SeenDbgInstr) {
+        // FIXME: The dead frame indices are replaced with a null register from
+        // the debug value instructions. We should instead, update it with the
+        // correct register value. But not sure the register value alone is
+        for (MachineInstr &MI : MBB) {
+          if (MI.isDebugValue() && MI.getOperand(0).isFI() &&
+              SpillFIs[MI.getOperand(0).getIndex()]) {
+            MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
+            MI.getOperand(0).setIsDebug();
+          }
+        }
+      }
+    }
+  }
 
   FuncInfo->removeDeadFrameIndices(MFI);
   assert(allSGPRSpillsAreDead(MF) &&

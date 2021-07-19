@@ -3,7 +3,6 @@
 
 ; Test that basic bulk memory codegen works correctly
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm64-unknown-unknown"
 
 declare void @llvm.memcpy.p0i8.p0i8.i8(i8*, i8*, i8, i1)

@@ -38,7 +38,7 @@ define dso_local i32 @bpf_prog(%union.sk_buff*) local_unnamed_addr #0 !dbg !15 {
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %3) #4, !dbg !35
   %4 = tail call %union.sk_buff* @llvm.preserve.union.access.index.p0s_union.sk_buffs.p0s_union.sk_buffs(%union.sk_buff* %0, i32 1), !dbg !36, !llvm.preserve.access.index !19
   %5 = getelementptr inbounds %union.sk_buff, %union.sk_buff* %4, i64 0, i32 0, !dbg !36
-  %6 = tail call %union.anon* @llvm.preserve.struct.access.index.p0s_union.anons.p0s_struct.anons(%struct.anon* %5, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !23
+  %6 = tail call %union.anon* @llvm.preserve.struct.access.index.p0s_union.anons.p0s_struct.anons(%struct.anon* elementtype(%struct.anon) %5, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !23
   %7 = tail call %union.anon* @llvm.preserve.union.access.index.p0s_union.anons.p0s_union.anons(%union.anon* %6, i32 0), !dbg !36, !llvm.preserve.access.index !27
   %8 = bitcast %union.anon* %7 to i8*, !dbg !36
   %9 = call i32 inttoptr (i64 4 to i32 (i8*, i32, i8*)*)(i8* nonnull %3, i32 4, i8* %8) #4, !dbg !37

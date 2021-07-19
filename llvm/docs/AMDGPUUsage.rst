@@ -1187,6 +1187,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1100``    0x041      ``gfx1100``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1013``    0x042      ``gfx1013``
      *reserved*                           0x043      Reserved.
+     *reserved*                           0x044      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1101``    0x0f2      ``gfx1101``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1102``    0x0f3      ``gfx1102``
      ==================================== ========== =============================
@@ -1599,6 +1600,7 @@ The following relocation types are supported:
      ``R_AMDGPU_REL32_HI``      Static  11     ``word32``  (S + A - P) >> 32
      *reserved*                         12
      ``R_AMDGPU_RELATIVE64``    Dynamic 13     ``word64``  B + A
+     ``R_AMDGPU_REL16``         Static  14     ``word16``  ((S + A - P) - 4) / 4
      ========================== ======= =====  ==========  ==============================
 
 ``R_AMDGPU_ABS32_LO`` and ``R_AMDGPU_ABS32_HI`` are only supported by
@@ -12253,8 +12255,23 @@ Here is an example of a minimal assembly source file, defining one HSA kernel:
        .sgpr_count: 2
        .vgpr_count: 3
        .max_flat_workgroup_size: 256
-   ...
+       .args:
+         - .size: 8
+           .offset: 0
+           .value_kind: global_buffer
+           .address_space: global
+           .actual_access: write_only
+   //...
    .end_amdgpu_metadata
+
+This kernel is equivalent to the following HIP program:
+
+.. code::
+   :number-lines:
+
+   __global__ void hello_world(float *p) {
+       *p = 3.14159f;
+   }
 
 If an assembly source file contains multiple kernels and/or functions, the
 :ref:`amdgpu-amdhsa-assembler-symbol-next_free_vgpr` and

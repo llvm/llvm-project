@@ -66,7 +66,7 @@ entry:
 ; ASM32-NEXT:          .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; ASM32-NEXT:                                          # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
 ; ASM32-NEXT:          .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; ASM32-NEXT:          .byte   0x00                            # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; ASM32-NEXT:          .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
 ; ASM32-NEXT:          .byte   0x00                            # NumberOfFixedParms = 0
 ; ASM32-NEXT:          .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; ASM32-NEXT:          .vbyte  4, L..main0-.main               # Function size
@@ -267,7 +267,7 @@ entry:
 ; ASM64-NEXT:          .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; ASM64-NEXT:                                          # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
 ; ASM64-NEXT:          .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; ASM64-NEXT:          .byte   0x00                            # -HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; ASM64-NEXT:          .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
 ; ASM64-NEXT:          .byte   0x00                            # NumberOfFixedParms = 0
 ; ASM64-NEXT:          .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; ASM64-NEXT:          .vbyte  4, L..main0-.main               # Function size

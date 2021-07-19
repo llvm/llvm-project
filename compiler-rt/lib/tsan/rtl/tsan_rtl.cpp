@@ -77,7 +77,7 @@ void OnInitialize() {
 }
 #endif
 
-static char thread_registry_placeholder[sizeof(ThreadRegistry)];
+static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
   // Map thread trace when context is created.
@@ -531,9 +531,10 @@ int Finalize(ThreadState *thr) {
 }
 
 #if !SANITIZER_GO
-void ForkBefore(ThreadState *thr, uptr pc) {
+void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   ctx->thread_registry->Lock();
   ctx->report_mtx.Lock();
+  ScopedErrorReportLock::Lock();
   // Suppress all reports in the pthread_atfork callbacks.
   // Reports will deadlock on the report_mtx.
   // We could ignore sync operations as well,
@@ -545,16 +546,18 @@ void ForkBefore(ThreadState *thr, uptr pc) {
   thr->ignore_interceptors++;
 }
 
-void ForkParentAfter(ThreadState *thr, uptr pc) {
+void ForkParentAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
+  ScopedErrorReportLock::Unlock();
   ctx->report_mtx.Unlock();
   ctx->thread_registry->Unlock();
 }
 
-void ForkChildAfter(ThreadState *thr, uptr pc) {
+void ForkChildAfter(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
+  ScopedErrorReportLock::Unlock();
   ctx->report_mtx.Unlock();
   ctx->thread_registry->Unlock();
 

@@ -55,23 +55,23 @@ TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
   auto CI = llvm::cantFail(IncrementalCompilerBuilder::create(ClangArgv));
   auto Interp = llvm::cantFail(Interpreter::create(std::move(CI)));
 
-  std::array<clang::Transaction *, 2> Transactions;
+  std::array<clang::PartialTranslationUnit *, 2> PTUs;
 
-  Transactions[0] = &llvm::cantFail(Interp->Parse(TestProgram1));
-  ASSERT_TRUE(Transactions[0]->TheModule);
-  ASSERT_TRUE(Transactions[0]->TheModule->getFunction("funcForProg1"));
+  PTUs[0] = &llvm::cantFail(Interp->Parse(TestProgram1));
+  ASSERT_TRUE(PTUs[0]->TheModule);
+  ASSERT_TRUE(PTUs[0]->TheModule->getFunction("funcForProg1"));
 
-  Transactions[1] = &llvm::cantFail(Interp->Parse(TestProgram2));
-  ASSERT_TRUE(Transactions[1]->TheModule);
-  ASSERT_TRUE(Transactions[1]->TheModule->getFunction("funcForProg2"));
+  PTUs[1] = &llvm::cantFail(Interp->Parse(TestProgram2));
+  ASSERT_TRUE(PTUs[1]->TheModule);
+  ASSERT_TRUE(PTUs[1]->TheModule->getFunction("funcForProg2"));
   // First code should not end up in second module:
-  ASSERT_FALSE(Transactions[1]->TheModule->getFunction("funcForProg1"));
+  ASSERT_FALSE(PTUs[1]->TheModule->getFunction("funcForProg1"));
 
   // Make sure global inits exist and are unique:
-  const Function *GlobalInit1 = getGlobalInit(Transactions[0]->TheModule.get());
+  const Function *GlobalInit1 = getGlobalInit(PTUs[0]->TheModule.get());
   ASSERT_TRUE(GlobalInit1);
 
-  const Function *GlobalInit2 = getGlobalInit(Transactions[1]->TheModule.get());
+  const Function *GlobalInit2 = getGlobalInit(PTUs[1]->TheModule.get());
   ASSERT_TRUE(GlobalInit2);
 
   ASSERT_FALSE(GlobalInit1->getName() == GlobalInit2->getName());

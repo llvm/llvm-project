@@ -47,12 +47,17 @@ memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
   DynamicMemRefType<char> dst(*dstArg);
 
   int64_t rank = src.rank;
+  char *srcPtr = src.data + src.offset * elemSize;
+  char *dstPtr = dst.data + dst.offset * elemSize;
+
+  if (rank == 0) {
+    memcpy(dstPtr, srcPtr, elemSize);
+    return;
+  }
+
   int64_t *indices = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
   int64_t *srcStrides = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
   int64_t *dstStrides = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
-
-  char *srcPtr = src.data + src.offset * elemSize;
-  char *dstPtr = dst.data + dst.offset * elemSize;
 
   // Initialize index and scale strides.
   for (int rankp = 0; rankp < rank; ++rankp) {

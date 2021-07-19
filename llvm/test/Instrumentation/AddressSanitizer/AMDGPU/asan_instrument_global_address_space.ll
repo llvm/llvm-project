@@ -10,7 +10,7 @@ entry:
 ;
 ; CHECK:   %[[STORE_ADDR:[^ ]*]] = ptrtoint i32 addrspace(1)* %p to i64
 ; CHECK:   lshr i64 %[[STORE_ADDR]], 3
-; CHECK:   or
+; CHECK:   add i64 %{{.*}}, 2147450880
 ; CHECK:   %[[STORE_SHADOW_PTR:[^ ]*]] = inttoptr
 ; CHECK:   %[[STORE_SHADOW:[^ ]*]] = load i8, i8* %[[STORE_SHADOW_PTR]]
 ; CHECK:   icmp ne i8
@@ -40,7 +40,7 @@ entry:
 ;
 ; CHECK:   %[[LOAD_ADDR:[^ ]*]] = ptrtoint i32 addrspace(1)* %p to i64
 ; CHECK:   lshr i64 %[[LOAD_ADDR]], 3
-; CHECK:   {{add|or}}
+; CHECK:   add i64 %{{.*}}, 2147450880
 ; CHECK:   %[[LOAD_SHADOW_PTR:[^ ]*]] = inttoptr
 ; CHECK:   %[[LOAD_SHADOW:[^ ]*]] = load i8, i8* %[[LOAD_SHADOW_PTR]]
 ; CHECK:   icmp ne i8

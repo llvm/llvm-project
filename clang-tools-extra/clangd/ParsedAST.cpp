@@ -15,6 +15,7 @@
 #include "Config.h"
 #include "Diagnostics.h"
 #include "FeatureModule.h"
+#include "Features.h"
 #include "Headers.h"
 #include "HeuristicResolver.h"
 #include "IncludeFixer.h"
@@ -60,8 +61,10 @@
 
 // Force the linker to link in Clang-tidy modules.
 // clangd doesn't support the static analyzer.
+#if CLANGD_TIDY_CHECKS
 #define CLANG_TIDY_DISABLE_STATIC_ANALYZER_CHECKS
 #include "../clang-tidy/ClangTidyForceLinker.h"
+#endif
 
 namespace clang {
 namespace clangd {

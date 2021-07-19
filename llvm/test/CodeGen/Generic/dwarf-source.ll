@@ -9,9 +9,9 @@
 ; RUN: %llc_dwarf -dwarf-version 5 -filetype=obj -o %t5.o %s
 ; RUN: llvm-dwarfdump -debug-line %t5.o | FileCheck %s --check-prefixes=OBJ,OBJ-5
 
-; ASM-4: .file 1 "/test{{.*[/\\]}}t1.h" source "11111111111111111111111111111111"
-; ASM-4: .file 2 "/test{{.*[/\\]}}t2.h" source "22222222222222222222222222222222"
-; ASM-5: .file 0 "/test{{.*[/\\]}}t.c" source "00000000000000000000000000000000"
+; ASM-4: .file 1 "/test" "t1.h" source "11111111111111111111111111111111"
+; ASM-4: .file 2 "/test" "t2.h" source "22222222222222222222222222222222"
+; ASM-5: .file 0 "/test" "t.c" source "00000000000000000000000000000000"
 ; ASM-5: .file 1 "t1.h" source "11111111111111111111111111111111"
 ; ASM-5: .file 2 "t2.h" source "22222222222222222222222222222222"
 

@@ -1,15 +1,10 @@
 ## Show that help text is printed correctly when requested.
 
-RUN: llvm-size -h | FileCheck %s --check-prefixes=CHECK,CATEG
-RUN: llvm-size --help | FileCheck %s --check-prefixes=CHECK,CATEG
-RUN: llvm-size --help-list \
-RUN:   | FileCheck %s --check-prefixes=CHECK,LIST
+RUN: llvm-size -h | FileCheck %s
+RUN: llvm-size --help | FileCheck %s
 
-CHECK: OVERVIEW: llvm object size dumper
-CHECK: USAGE: llvm-size{{(.exe)?}} [options] <input files>{{$}}
+CHECK: OVERVIEW: LLVM object size dumper
+CHECK: USAGE: {{.*}}llvm-size{{(.exe)?}} [options] <input object files>{{$}}
 CHECK: OPTIONS:
-CATEG:    Generic Options:
-LIST-NOT: Generic Options:
-CATEG:    llvm-size Options:
-LIST-NOT: llvm-size Options:
+CHECK: OPTIONS (Mach-O specific):
 CHECK: @FILE

@@ -52,7 +52,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
         Collects all of the operation's effects into `effects`.
       }],
       "void", "getEffects",
-         (ins "SmallVectorImpl<::mlir::SideEffects::EffectInstance<"
+         (ins "::mlir::SmallVectorImpl<::mlir::SideEffects::EffectInstance<"
               # baseEffect # ">> &":$effects)
     >,
   ];

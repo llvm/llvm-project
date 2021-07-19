@@ -28,8 +28,7 @@ static int getUsedListSize(Module &M, StringRef Name) {
   auto *UsedList = M.getGlobalVariable(Name);
   if (!UsedList)
     return 0;
-  auto *UsedListBaseArrayType =
-      cast<ArrayType>(UsedList->getType()->getElementType());
+  auto *UsedListBaseArrayType = cast<ArrayType>(UsedList->getValueType());
   return UsedListBaseArrayType->getNumElements();
 }
 

@@ -21,3 +21,13 @@ int main (int argc, char const *argv[])
     return 0; // Set break point at this line and check variable 'my_char'.
               // Use lldb Python API to set memory content for my_int and check the result.
 }
+
+char test_read (char *ptr)
+{
+    return *ptr;
+}
+
+void test_write (char *ptr, char c)
+{
+    *ptr = c;
+}

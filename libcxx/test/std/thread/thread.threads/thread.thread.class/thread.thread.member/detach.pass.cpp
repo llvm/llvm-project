@@ -60,7 +60,7 @@ public:
 int G::n_alive = 0;
 bool G::op_run = false;
 
-void foo() {}
+void foo() { done = true; }
 
 int main(int, char**)
 {
@@ -75,6 +75,7 @@ int main(int, char**)
         assert(G::n_alive == 1);
     }
     assert(G::n_alive == 0);
+    done = false;
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::thread t0 = support::make_test_thread(foo);
@@ -85,6 +86,11 @@ int main(int, char**)
             t0.detach();
         } catch (std::system_error const&) {
         }
+        // Wait to make sure that the detached thread has started up.
+        // Without this, we could exit main and start destructing global
+        // resources that are needed when the thread starts up, while the
+        // detached thread would start up only later.
+        while (!done) {}
     }
 #endif
 

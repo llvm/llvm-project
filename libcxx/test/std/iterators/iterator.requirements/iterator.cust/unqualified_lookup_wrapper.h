@@ -20,7 +20,7 @@ public:
 
   constexpr explicit unqualified_lookup_wrapper(I i) noexcept : base_(std::move(i)) {}
 
-  [[nodiscard]] constexpr decltype(auto) operator*() const noexcept { return *base_; }
+  constexpr decltype(auto) operator*() const noexcept { return *base_; }
 
   constexpr unqualified_lookup_wrapper& operator++() noexcept {
     ++base_;
@@ -29,13 +29,13 @@ public:
 
   constexpr void operator++(int) noexcept { ++base_; }
 
-  [[nodiscard]] constexpr bool operator==(unqualified_lookup_wrapper const& other) const noexcept {
+  constexpr bool operator==(unqualified_lookup_wrapper const& other) const noexcept {
     return base_ == other.base_;
   }
 
   // Delegates `std::ranges::iter_move` for the underlying iterator. `noexcept(false)` will be used
   // to ensure that the unqualified-lookup overload is chosen.
-  [[nodiscard]] friend constexpr decltype(auto) iter_move(unqualified_lookup_wrapper& i) noexcept(false) {
+  friend constexpr decltype(auto) iter_move(unqualified_lookup_wrapper& i) noexcept(false) {
     return std::ranges::iter_move(i.base_);
   }
 

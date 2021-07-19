@@ -50,6 +50,11 @@ bool hwasan_init_is_running;
 
 int hwasan_report_count = 0;
 
+uptr kLowShadowStart;
+uptr kLowShadowEnd;
+uptr kHighShadowStart;
+uptr kHighShadowEnd;
+
 void Flags::SetDefaults() {
 #define HWASAN_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
 #include "hwasan_flags.inc"
@@ -275,7 +280,7 @@ static void InitLoadedGlobals() {
 static void InitInstrumentation() {
   if (hwasan_instrumentation_inited) return;
 
-  InitPrctl();
+  InitializeOsSupport();
 
   if (!InitShadow()) {
     Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
@@ -574,4 +579,12 @@ void __sanitizer_print_stack_trace() {
   GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME());
   stack.Print();
 }
+
+// Entry point for interoperability between __hwasan_tag_mismatch (ASM) and the
+// rest of the mismatch handling code (C++).
+void __hwasan_tag_mismatch4(uptr addr, uptr access_info, uptr *registers_frame,
+                            size_t outsize) {
+  __hwasan::HwasanTagMismatch(addr, access_info, registers_frame, outsize);
+}
+
 } // extern "C"

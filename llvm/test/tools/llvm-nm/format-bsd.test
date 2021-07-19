@@ -3,7 +3,7 @@
 
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-nm %t.o --format=bsd > %t.formatbsd.txt
-# RUN: llvm-nm %t.o -f=bsd > %t.fbsd.txt
+# RUN: llvm-nm %t.o -f bsd > %t.fbsd.txt
 # RUN: llvm-nm %t.o -B > %t.b.txt
 # RUN: llvm-nm %t.o > %t.default.txt
 

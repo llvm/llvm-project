@@ -1654,33 +1654,26 @@ public:
     }
     case Intrinsic::vector_reduce_add:
       return thisT()->getArithmeticReductionCost(Instruction::Add, VecOpTy,
-                                                 /*IsPairwiseForm=*/false,
                                                  CostKind);
     case Intrinsic::vector_reduce_mul:
       return thisT()->getArithmeticReductionCost(Instruction::Mul, VecOpTy,
-                                                 /*IsPairwiseForm=*/false,
                                                  CostKind);
     case Intrinsic::vector_reduce_and:
       return thisT()->getArithmeticReductionCost(Instruction::And, VecOpTy,
-                                                 /*IsPairwiseForm=*/false,
                                                  CostKind);
     case Intrinsic::vector_reduce_or:
       return thisT()->getArithmeticReductionCost(Instruction::Or, VecOpTy,
-                                                 /*IsPairwiseForm=*/false,
                                                  CostKind);
     case Intrinsic::vector_reduce_xor:
       return thisT()->getArithmeticReductionCost(Instruction::Xor, VecOpTy,
-                                                 /*IsPairwiseForm=*/false,
                                                  CostKind);
     case Intrinsic::vector_reduce_fadd:
       // FIXME: Add new flag for cost of strict reductions.
       return thisT()->getArithmeticReductionCost(Instruction::FAdd, VecOpTy,
-                                                 /*IsPairwiseForm=*/false,
                                                  CostKind);
     case Intrinsic::vector_reduce_fmul:
       // FIXME: Add new flag for cost of strict reductions.
       return thisT()->getArithmeticReductionCost(Instruction::FMul, VecOpTy,
-                                                 /*IsPairwiseForm=*/false,
                                                  CostKind);
     case Intrinsic::vector_reduce_smax:
     case Intrinsic::vector_reduce_smin:
@@ -1688,13 +1681,11 @@ public:
     case Intrinsic::vector_reduce_fmin:
       return thisT()->getMinMaxReductionCost(
           VecOpTy, cast<VectorType>(CmpInst::makeCmpResultType(VecOpTy)),
-          /*IsPairwiseForm=*/false,
           /*IsUnsigned=*/false, CostKind);
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin:
       return thisT()->getMinMaxReductionCost(
           VecOpTy, cast<VectorType>(CmpInst::makeCmpResultType(VecOpTy)),
-          /*IsPairwiseForm=*/false,
           /*IsUnsigned=*/true, CostKind);
     case Intrinsic::abs:
     case Intrinsic::smax:
@@ -1998,9 +1989,9 @@ public:
     return 0;
   }
 
-  /// Try to calculate arithmetic and shuffle op costs for reduction operations.
+  /// Try to calculate arithmetic and shuffle op costs for reduction intrinsics.
   /// We're assuming that reduction operation are performing the following way:
-  /// 1. Non-pairwise reduction
+  ///
   /// %val1 = shufflevector<n x t> %val, <n x t> %undef,
   /// <n x i32> <i32 n/2, i32 n/2 + 1, ..., i32 n, i32 undef, ..., i32 undef>
   ///            \----------------v-------------/  \----------v------------/
@@ -2016,25 +2007,10 @@ public:
   ///                            n/4 elements               3*n/4 elements
   /// %red2 = op <n x t> %red1, <n x t> val2  - working with the vector of
   /// length n/2, the resulting vector has length n/4 etc.
-  /// 2. Pairwise reduction:
-  /// Everything is the same except for an additional shuffle operation which
-  /// is used to produce operands for pairwise kind of reductions.
-  /// %val1 = shufflevector<n x t> %val, <n x t> %undef,
-  /// <n x i32> <i32 0, i32 2, ..., i32 n-2, i32 undef, ..., i32 undef>
-  ///            \-------------v----------/  \----------v------------/
-  ///                   n/2 elements               n/2 elements
-  /// %val2 = shufflevector<n x t> %val, <n x t> %undef,
-  /// <n x i32> <i32 1, i32 3, ..., i32 n-1, i32 undef, ..., i32 undef>
-  ///            \-------------v----------/  \----------v------------/
-  ///                   n/2 elements               n/2 elements
-  /// %red1 = op <n x t> %val1, <n x t> val2
-  /// Again, the operation is performed on <n x t> vector, but the resulting
-  /// vector %red1 is <n/2 x t> vector.
   ///
   /// The cost model should take into account that the actual length of the
   /// vector is reduced on each iteration.
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                             bool IsPairwise,
                                              TTI::TargetCostKind CostKind) {
     Type *ScalarTy = Ty->getElementType();
     unsigned NumVecElts = cast<FixedVectorType>(Ty)->getNumElements();
@@ -2065,9 +2041,7 @@ public:
     while (NumVecElts > MVTLen) {
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
-      // Assume the pairwise shuffles add a cost.
-      ShuffleCost += (IsPairwise + 1) *
-                     thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, None,
+      ShuffleCost += thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, None,
                                              NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
@@ -2081,13 +2055,8 @@ public:
     // reduction operations are performed on the vectors with the same
     // architecture-dependent length.
 
-    // Non pairwise reductions need one shuffle per reduction level. Pairwise
-    // reductions need two shuffles on every level, but the last one. On that
-    // level one of the shuffles is <0, u, u, ...> which is identity.
-    unsigned NumShuffles = NumReduxLevels;
-    if (IsPairwise && NumReduxLevels >= 1)
-      NumShuffles += NumReduxLevels - 1;
-    ShuffleCost += NumShuffles * thisT()->getShuffleCost(
+    // By default reductions need one shuffle per reduction level.
+    ShuffleCost += NumReduxLevels * thisT()->getShuffleCost(
                                      TTI::SK_PermuteSingleSrc, Ty, None, 0, Ty);
     ArithCost += NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty);
     return ShuffleCost + ArithCost +
@@ -2097,7 +2066,7 @@ public:
   /// Try to calculate op costs for min/max reduction operations.
   /// \param CondTy Conditional type for the Select instruction.
   InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                         bool IsPairwise, bool IsUnsigned,
+                                         bool IsUnsigned,
                                          TTI::TargetCostKind CostKind) {
     Type *ScalarTy = Ty->getElementType();
     Type *ScalarCondTy = CondTy->getElementType();
@@ -2123,9 +2092,7 @@ public:
       auto *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
       CondTy = FixedVectorType::get(ScalarCondTy, NumVecElts);
 
-      // Assume the pairwise shuffles add a cost.
-      ShuffleCost += (IsPairwise + 1) *
-                     thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, None,
+      ShuffleCost += thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, None,
                                              NumVecElts, SubTy);
       MinMaxCost +=
           thisT()->getCmpSelInstrCost(CmpOpcode, SubTy, CondTy,
@@ -2142,14 +2109,7 @@ public:
     // operations performed on the current platform. That's why several final
     // reduction opertions are perfomed on the vectors with the same
     // architecture-dependent length.
-
-    // Non pairwise reductions need one shuffle per reduction level. Pairwise
-    // reductions need two shuffles on every level, but the last one. On that
-    // level one of the shuffles is <0, u, u, ...> which is identity.
-    unsigned NumShuffles = NumReduxLevels;
-    if (IsPairwise && NumReduxLevels >= 1)
-      NumShuffles += NumReduxLevels - 1;
-    ShuffleCost += NumShuffles * thisT()->getShuffleCost(
+    ShuffleCost += NumReduxLevels * thisT()->getShuffleCost(
                                      TTI::SK_PermuteSingleSrc, Ty, None, 0, Ty);
     MinMaxCost +=
         NumReduxLevels *
@@ -2169,8 +2129,8 @@ public:
     // Without any native support, this is equivalent to the cost of
     // vecreduce.add(ext) or if IsMLA vecreduce.add(mul(ext, ext))
     VectorType *ExtTy = VectorType::get(ResTy, Ty);
-    InstructionCost RedCost = thisT()->getArithmeticReductionCost(
-        Instruction::Add, ExtTy, false, CostKind);
+    InstructionCost RedCost =
+        thisT()->getArithmeticReductionCost(Instruction::Add, ExtTy, CostKind);
     InstructionCost MulCost = 0;
     InstructionCost ExtCost = thisT()->getCastInstrCost(
         IsUnsigned ? Instruction::ZExt : Instruction::SExt, ExtTy, Ty,

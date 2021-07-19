@@ -389,9 +389,9 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
     Register RetRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                           OriginalResult};
-    auto Status = createLibcall(MIRBuilder, Libcall, {RetRegs, RetTy},
-                                {{MI.getOperand(1).getReg(), ArgTy},
-                                 {MI.getOperand(2).getReg(), ArgTy}});
+    auto Status = createLibcall(MIRBuilder, Libcall, {RetRegs, RetTy, 0},
+                                {{MI.getOperand(1).getReg(), ArgTy, 0},
+                                 {MI.getOperand(2).getReg(), ArgTy, 0}});
     if (Status != LegalizerHelper::Legalized)
       return false;
     break;
@@ -424,10 +424,10 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     SmallVector<Register, 2> Results;
     for (auto Libcall : Libcalls) {
       auto LibcallResult = MRI.createGenericVirtualRegister(LLT::scalar(32));
-      auto Status =
-          createLibcall(MIRBuilder, Libcall.LibcallID, {LibcallResult, RetTy},
-                        {{MI.getOperand(2).getReg(), ArgTy},
-                         {MI.getOperand(3).getReg(), ArgTy}});
+      auto Status = createLibcall(MIRBuilder, Libcall.LibcallID,
+                                  {LibcallResult, RetTy, 0},
+                                  {{MI.getOperand(2).getReg(), ArgTy, 0},
+                                   {MI.getOperand(3).getReg(), ArgTy, 0}});
 
       if (Status != LegalizerHelper::Legalized)
         return false;

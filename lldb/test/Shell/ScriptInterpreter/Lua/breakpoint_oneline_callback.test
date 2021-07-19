@@ -1,4 +1,3 @@
-# REQUIRES: lua
 # RUN: echo "int main() { return 0; }" | %clang_host -x c - -o %t
 # RUN: %lldb -s %s --script-language lua %t 2>&1 | FileCheck %s
 b main

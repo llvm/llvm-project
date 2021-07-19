@@ -36,10 +36,7 @@ define void @masked_gather_v2i8(<2 x i8>* %a, <2 x i8*>* %b) #0 {
 ; CHECK-NEXT: cmpne [[MASK:p[0-9]+]].s, [[PG0]]/z, z[[CMP]].s, #0
 ; CHECK-NEXT: ld1sb { z[[RES:[0-9]+]].d }, [[MASK]]/z, [z[[PTRS]].d]
 ; CHECK-NEXT: xtn v[[XTN:[0-9]+]].2s, v[[RES]].2d
-; CHECK-NEXT: mov [[RES_HI:w[0-9]+]], v[[XTN]].s[1]
-; CHECK-NEXT: fmov [[RES_LO:w[0-9]+]], s[[XTN]]
-; CHECK-NEXT: strb [[RES_LO]], [x0]
-; CHECK-NEXT: strb [[RES_HI]], [x0, #1]
+; CHECK-NEXT: st1b { z[[XTN]].s }, [[PG0]],  [x0]
 ; CHECK-NEXT: ret
   %cval = load <2 x i8>, <2 x i8>* %a
   %ptrs = load <2 x i8*>, <2 x i8*>* %b
@@ -61,8 +58,7 @@ define void @masked_gather_v4i8(<4 x i8>* %a, <4 x i8*>* %b) #0 {
 ; CHECK-NEXT: ld1sb { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; CHECK-NEXT: uzp1 [[UZP1:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; CHECK-NEXT: uzp1 z[[UZP2:[0-9]+]].h, [[UZP1]].h, [[UZP1]].h
-; CHECK-NEXT: uzp1 v[[UZP3:[0-9]+]].8b, v[[UZP2]].8b, v[[UZP2]].8b
-; CHECK-NEXT: str s[[UZP3]], [x0]
+; CHECK-NEXT: st1b { z[[UZP2]].h }, [[PG0]], [x0]
 ; CHECK-NEXT: ret
   %cval = load <4 x i8>, <4 x i8>* %a
   %ptrs = load <4 x i8*>, <4 x i8*>* %b
@@ -178,10 +174,7 @@ define void @masked_gather_v2i16(<2 x i16>* %a, <2 x i16*>* %b) #0 {
 ; CHECK-NEXT: cmpne [[MASK:p[0-9]+]].s, [[PG0]]/z, z[[CMP]].s, #0
 ; CHECK-NEXT: ld1sh { z[[RES:[0-9]+]].d }, [[MASK]]/z, [z[[PTRS]].d]
 ; CHECK-NEXT: xtn v[[XTN:[0-9]+]].2s, v[[RES]].2d
-; CHECK-NEXT: mov [[RES_HI:w[0-9]+]], v[[XTN]].s[1]
-; CHECK-NEXT: fmov [[RES_LO:w[0-9]+]], s[[XTN]]
-; CHECK-NEXT: strh [[RES_LO]], [x0]
-; CHECK-NEXT: strh [[RES_HI]], [x0, #2]
+; CHECK-NEXT: st1h { z[[RES]].s }, [[PG0]], [x0]
 ; CHECK-NEXT: ret
   %cval = load <2 x i16>, <2 x i16>* %a
   %ptrs = load <2 x i16*>, <2 x i16*>* %b
@@ -617,8 +610,7 @@ define void @masked_gather_v16f16(<16 x half>* %a, <16 x half*>* %b) #0 {
 ; VBITS_GE_1024-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ptrue [[PG1:p[0-9]+]].d, vl16
 ; VBITS_GE_1024-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov [[ZERO:z[0-9]+]].h, #0
-; VBITS_GE_1024-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, [[ZERO]].h
+; VBITS_GE_1024-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_1024-NEXT: ld1h { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_1024-NEXT: uzp1 [[UZP1:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_1024-NEXT: uzp1 [[UZP2:z[0-9]+]].h, [[UZP1]].h, [[UZP1]].h
@@ -638,8 +630,7 @@ define void @masked_gather_v32f16(<32 x half>* %a, <32 x half*>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].h, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, [[ZERO]].h
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: ld1h { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP1:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP2:z[0-9]+]].h, [[UZP1]].h, [[UZP1]].h
@@ -702,8 +693,7 @@ define void @masked_gather_v8f32(<8 x float>* %a, <8 x float*>* %b) #0 {
 ; VBITS_GE_512-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_512-NEXT: ptrue [[PG1:p[0-9]+]].d, vl8
 ; VBITS_GE_512-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_512-NEXT: mov [[ZERO:z[0-9]+]].s, #0
-; VBITS_GE_512-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]].s
+; VBITS_GE_512-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_512-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_512-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_512-NEXT: st1w { [[UZP]].s }, [[PG0]], [x0]
@@ -722,8 +712,7 @@ define void @masked_gather_v16f32(<16 x float>* %a, <16 x float*>* %b) #0 {
 ; VBITS_GE_1024-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ptrue [[PG1:p[0-9]+]].d, vl16
 ; VBITS_GE_1024-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov [[ZERO:z[0-9]+]].s, #0
-; VBITS_GE_1024-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]].s
+; VBITS_GE_1024-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_1024-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_1024-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_1024-NEXT: st1w { [[UZP]].s }, [[PG0]], [x0]
@@ -742,8 +731,7 @@ define void @masked_gather_v32f32(<32 x float>* %a, <32 x float*>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].s, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]].s
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_2048-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_2048-NEXT: st1w { [[UZP]].s }, [[PG0]], [x0]
@@ -795,8 +783,7 @@ define void @masked_gather_v4f64(<4 x double>* %a, <4 x double*>* %b) #0 {
 ; CHECK: ptrue [[PG0:p[0-9]+]].d, vl4
 ; CHECK-NEXT: ld1d { [[VALS:z[0-9]+]].d }, [[PG0]]/z, [x0]
 ; CHECK-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG0]]/z, [x1]
-; CHECK-NEXT: mov [[ZERO:z[0-9]+]].d, #0
-; CHECK-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, [[ZERO]].d
+; CHECK-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, #0.0
 ; CHECK-NEXT: ld1d { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; CHECK-NEXT: st1d { [[RES]].d }, [[PG0]], [x0]
 ; CHECK-NEXT: ret
@@ -813,8 +800,7 @@ define void @masked_gather_v8f64(<8 x double>* %a, <8 x double*>* %b) #0 {
 ; VBITS_GE_512: ptrue [[PG0:p[0-9]+]].d, vl8
 ; VBITS_GE_512-NEXT: ld1d { [[VALS:z[0-9]+]].d }, [[PG0]]/z, [x0]
 ; VBITS_GE_512-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG0]]/z, [x1]
-; VBITS_GE_512-NEXT: mov [[ZERO:z[0-9]+]].d, #0
-; VBITS_GE_512-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, [[ZERO]].d
+; VBITS_GE_512-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, #0.0
 ; VBITS_GE_512-NEXT: ld1d { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_512-NEXT: st1d { [[RES]].d }, [[PG0]], [x0]
 ; VBITS_GE_512-NEXT: ret
@@ -831,8 +817,7 @@ define void @masked_gather_v16f64(<16 x double>* %a, <16 x double*>* %b) #0 {
 ; VBITS_GE_1024: ptrue [[PG0:p[0-9]+]].d, vl16
 ; VBITS_GE_1024-NEXT: ld1d { [[VALS:z[0-9]+]].d }, [[PG0]]/z, [x0]
 ; VBITS_GE_1024-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG0]]/z, [x1]
-; VBITS_GE_1024-NEXT: mov [[ZERO:z[0-9]+]].d, #0
-; VBITS_GE_1024-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, [[ZERO]].d
+; VBITS_GE_1024-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, #0.0
 ; VBITS_GE_1024-NEXT: ld1d { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_1024-NEXT: st1d { [[RES]].d }, [[PG0]], [x0]
 ; VBITS_GE_1024-NEXT: ret
@@ -849,8 +834,7 @@ define void @masked_gather_v32f64(<32 x double>* %a, <32 x double*>* %b) #0 {
 ; VBITS_GE_2048: ptrue [[PG0:p[0-9]+]].d, vl32
 ; VBITS_GE_2048-NEXT: ld1d { [[VALS:z[0-9]+]].d }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG0]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].d, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, [[ZERO]].d
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].d, [[PG0]]/z, [[VALS]].d, #0.0
 ; VBITS_GE_2048-NEXT: ld1d { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_2048-NEXT: st1d { [[RES]].d }, [[PG0]], [x0]
 ; VBITS_GE_2048-NEXT: ret
@@ -871,8 +855,7 @@ define void @masked_gather_32b_scaled_sext(<32 x half>* %a, <32 x i32>* %b, half
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
 ; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].h, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: ld1h { [[RES:z[0-9]+]].s }, [[MASK]]/z, [x2, [[PTRS]].s, sxtw #1]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].h, [[RES]].h, [[RES]].h
 ; VBITS_GE_2048-NEXT: st1h { [[UZP]].h }, [[PG0]], [x0]
@@ -893,8 +876,7 @@ define void @masked_gather_32b_scaled_zext(<32 x half>* %a, <32 x i32>* %b, half
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
 ; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].h, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: ld1h { [[RES:z[0-9]+]].s }, [[MASK]]/z, [x2, [[PTRS]].s, uxtw #1]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].h, [[RES]].h, [[RES]].h
 ; VBITS_GE_2048-NEXT: st1h { [[UZP]].h }, [[PG0]], [x0]
@@ -915,8 +897,7 @@ define void @masked_gather_32b_unscaled_sext(<32 x half>* %a, <32 x i32>* %b, i8
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
 ; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].h, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: ld1h { [[RES:z[0-9]+]].s }, [[MASK]]/z, [x2, [[PTRS]].s, sxtw]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].h, [[RES]].h, [[RES]].h
 ; VBITS_GE_2048-NEXT: st1h { [[UZP]].h }, [[PG0]], [x0]
@@ -938,8 +919,7 @@ define void @masked_gather_32b_unscaled_zext(<32 x half>* %a, <32 x i32>* %b, i8
 ; VBITS_GE_2048-NEXT: ld1h { [[VALS:z[0-9]+]].h }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].s, vl32
 ; VBITS_GE_2048-NEXT: ld1w { [[PTRS:z[0-9]+]].s }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].h, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].h, [[PG0]]/z, [[VALS]].h, #0.0
 ; VBITS_GE_2048-NEXT: ld1h { [[RES:z[0-9]+]].s }, [[MASK]]/z, [x2, [[PTRS]].s, uxtw]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].h, [[RES]].h, [[RES]].h
 ; VBITS_GE_2048-NEXT: st1h { [[UZP]].h }, [[PG0]], [x0]
@@ -961,8 +941,7 @@ define void @masked_gather_64b_scaled(<32 x float>* %a, <32 x i64>* %b, float* %
 ; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].s, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_2048-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, [x2, [[PTRS]].d, lsl #2]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_2048-NEXT: st1w { [[UZP]].s }, [[PG0]], [x0]
@@ -982,8 +961,7 @@ define void @masked_gather_64b_unscaled(<32 x float>* %a, <32 x i64>* %b, i8* %b
 ; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].s, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_2048-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, [x2, [[PTRS]].d]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_2048-NEXT: st1w { [[UZP]].s }, [[PG0]], [x0]
@@ -1006,9 +984,8 @@ define void @masked_gather_vec_plus_reg(<32 x float>* %a, <32 x i8*>* %b, i64 %o
 ; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
 ; VBITS_GE_2048-NEXT: mov [[OFF:z[0-9]+]].d, x2
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].s, #0
 ; VBITS_GE_2048-NEXT: add [[PTRS_ADD:z[0-9]+]].d, [[PG1]]/m, [[PTRS]].d, [[OFF]].d
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_2048-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS_ADD]].d]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_2048-NEXT: st1w { [[UZP]].s }, [[PG0]], [x0]
@@ -1031,9 +1008,8 @@ define void @masked_gather_vec_plus_imm(<32 x float>* %a, <32 x i8*>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
 ; VBITS_GE_2048-NEXT: mov [[OFF:z[0-9]+]].d, #4
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].s, #0
 ; VBITS_GE_2048-NEXT: add [[PTRS_ADD:z[0-9]+]].d, [[PG1]]/m, [[PTRS]].d, [[OFF]].d
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_2048-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS_ADD]].d]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_2048-NEXT: st1w { [[UZP]].s }, [[PG0]], [x0]
@@ -1054,9 +1030,8 @@ define void @masked_gather_passthru(<32 x float>* %a, <32 x float*>* %b, <32 x f
 ; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].s, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]]
 ; VBITS_GE_2048-NEXT: ld1w { [[PT:z[0-9]+]].s }, [[PG0]]/z, [x2]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_2048-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_2048-NEXT: sel [[SEL:z[0-9]+]].s, [[PG1]], [[UZP]].s, [[PT]].s
@@ -1077,8 +1052,7 @@ define void @masked_gather_passthru_0(<32 x float>* %a, <32 x float*>* %b) #0 {
 ; VBITS_GE_2048-NEXT: ld1w { [[VALS:z[0-9]+]].s }, [[PG0]]/z, [x0]
 ; VBITS_GE_2048-NEXT: ptrue [[PG1:p[0-9]+]].d, vl32
 ; VBITS_GE_2048-NEXT: ld1d { [[PTRS:z[0-9]+]].d }, [[PG1]]/z, [x1]
-; VBITS_GE_2048-NEXT: mov [[ZERO:z[0-9]+]].s, #0
-; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, [[ZERO]]
+; VBITS_GE_2048-NEXT: fcmeq [[MASK:p[0-9]+]].s, [[PG0]]/z, [[VALS]].s, #0.0
 ; VBITS_GE_2048-NEXT: ld1w { [[RES:z[0-9]+]].d }, [[MASK]]/z, {{\[}}[[PTRS]].d]
 ; VBITS_GE_2048-NEXT: uzp1 [[UZP:z[0-9]+]].s, [[RES]].s, [[RES]].s
 ; VBITS_GE_2048-NEXT: st1w { [[UZP]].s }, [[PG0]], [x0]

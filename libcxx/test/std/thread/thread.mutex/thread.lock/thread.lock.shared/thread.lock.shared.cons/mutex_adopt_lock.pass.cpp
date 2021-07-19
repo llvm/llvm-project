@@ -20,6 +20,7 @@
 
 #include <shared_mutex>
 #include <cassert>
+#include <mutex>
 #include "nasty_containers.h"
 
 #include "test_macros.h"

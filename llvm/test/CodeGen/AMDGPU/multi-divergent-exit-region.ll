@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-- -mcpu=gfx600 -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefixes=IR,IR-GFX6 %s
-; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefixes=IR,IR-GFX11 %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx600 -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
 ; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; Add an extra verifier runs. There were some cases where invalid IR
@@ -725,25 +725,16 @@ bb5:                                              ; preds = %bb3
 
 ; IR-LABEL: @uniformly_reached_export
 ; IR-NEXT: .entry:
-; IR: br i1 [[CND:%.*]], label %[[EXP:.*]], label %[[FLOW:.*]]
-
-; IR: [[FLOW]]:
-; IR-NEXT: phi
-; IR-NEXT: br i1 [[CND2:%.*]], label %[[LOOP:.*]], label %UnifiedReturnBlock
+; IR: br i1 [[CND:%.*]], label %[[LOOP:.*]], label %[[EXP:.*]]
 
 ; IR: [[LOOP]]:
-; IR-NEXT: br i1 false, label %[[FLOW1:.*]], label %[[LOOP]]
+; IR-NEXT: br i1 false, label %DummyReturnBlock, label %[[LOOP]]
 
 ; IR: [[EXP]]:
-; IR-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 immarg false, i1 immarg true)
-; IR-NEXT: br label %[[FLOW]]
+; IR-NEXT: call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> <half 0xH3C00, half 0xH0000>, <2 x half> <half 0xH0000, half 0xH3C00>, i1 immarg true, i1 immarg true)
+; IR-NEXT: ret void
 
-; IR: [[FLOW1]]:
-; IR-NEXT: br label %UnifiedReturnBlock
-
-; IR: UnifiedReturnBlock:
-; IR-GFX6-NEXT: call void @llvm.amdgcn.exp.f32(i32 9, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 true)
-; IR-GFX11-NEXT: call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 true)
+; IR: DummyReturnBlock:
 ; IR-NEXT: ret void
 
 define amdgpu_ps void @uniformly_reached_export(float inreg %tmp25) {

@@ -9,13 +9,13 @@
 #define MLIR_CONVERSION_COMPLEXTOLLVM_COMPLEXTOLLVM_H_
 
 #include "mlir/Conversion/LLVMCommon/StructBuilder.h"
-#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 class LLVMTypeConverter;
 class ModuleOp;
 template <typename T>
 class OperationPass;
+class RewritePatternSet;
 
 class ComplexStructBuilder : public StructBuilder {
 public:

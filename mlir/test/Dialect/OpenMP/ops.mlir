@@ -133,35 +133,35 @@ func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memref<i32
   "omp.wsloop" (%lb, %ub, %step, %data_var, %data_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,2,0,0,0,0,0]> : vector<9xi32>, collapse_val = 2, ordered_val = 1} :
+  }) {operand_segment_sizes = dense<[1,1,1,2,0,0,0,0,0,0]> : vector<10xi32>, collapse_val = 2, ordered_val = 1} :
     (index, index, index, memref<i32>, memref<i32>) -> ()
 
   // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(static)
   "omp.wsloop" (%lb, %ub, %step, %data_var, %linear_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,0,0,0,1,1,0]> : vector<9xi32>, schedule_val = "Static"} :
+  }) {operand_segment_sizes = dense<[1,1,1,0,0,0,1,1,0,0]> : vector<10xi32>, schedule_val = "Static"} :
     (index, index, index, memref<i32>, i32) -> ()
 
   // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) linear(%{{.*}} = %{{.*}} : memref<i32>, %{{.*}} = %{{.*}} : memref<i32>) schedule(static)
   "omp.wsloop" (%lb, %ub, %step, %data_var, %data_var, %linear_var, %linear_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,0,0,0,2,2,0]> : vector<9xi32>, schedule_val = "Static"} :
+  }) {operand_segment_sizes = dense<[1,1,1,0,0,0,2,2,0,0]> : vector<10xi32>, schedule_val = "Static"} :
     (index, index, index, memref<i32>, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) private(%{{.*}} : memref<i32>) firstprivate(%{{.*}} : memref<i32>) lastprivate(%{{.*}} : memref<i32>) linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(dynamic = %{{.*}}) collapse(3) ordered(2)
   "omp.wsloop" (%lb, %ub, %step, %data_var, %data_var, %data_var, %data_var, %linear_var, %chunk_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,1,1,1,1,1,1]> : vector<9xi32>, schedule_val = "Dynamic", collapse_val = 3, ordered_val = 2} :
+  }) {operand_segment_sizes = dense<[1,1,1,1,1,1,1,1,0,1]> : vector<10xi32>, schedule_val = "Dynamic", collapse_val = 3, ordered_val = 2} :
     (index, index, index, memref<i32>, memref<i32>, memref<i32>, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) private(%{{.*}} : memref<i32>) schedule(auto) nowait
   "omp.wsloop" (%lb, %ub, %step, %data_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = dense<[1,1,1,1,0,0,0,0,0]> : vector<9xi32>, nowait, schedule_val = "Auto"} :
+  }) {operand_segment_sizes = dense<[1,1,1,1,0,0,0,0,0,0]> : vector<10xi32>, nowait, schedule_val = "Auto"} :
     (index, index, index, memref<i32>) -> ()
 
   return
@@ -294,3 +294,78 @@ func @omp_target(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
 
     return
 }
+
+// CHECK: omp.reduction.declare
+// CHECK-LABEL: @add_f32
+// CHECK: : f32
+// CHECK: init
+// CHECK: ^{{.+}}(%{{.+}}: f32):
+// CHECK:   omp.yield
+// CHECK: combiner
+// CHECK: ^{{.+}}(%{{.+}}: f32, %{{.+}}: f32):
+// CHECK:   omp.yield
+// CHECK: atomic
+// CHECK: ^{{.+}}(%{{.+}}: !llvm.ptr<f32>, %{{.+}}: !llvm.ptr<f32>):
+// CHECK:  omp.yield
+omp.reduction.declare @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr<f32>, %arg3: !llvm.ptr<f32>):
+  %2 = llvm.load %arg3 : !llvm.ptr<f32>
+  llvm.atomicrmw fadd %arg2, %2 monotonic : f32
+  omp.yield
+}
+
+func @reduction(%lb : index, %ub : index, %step : index) {
+  %c1 = constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  // CHECK: reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>)
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step)
+  reduction(@add_f32 -> %0 : !llvm.ptr<f32>) {
+    %1 = constant 2.0 : f32
+    // CHECK: omp.reduction %{{.+}}, %{{.+}}
+    omp.reduction %1, %0 : !llvm.ptr<f32>
+    omp.yield
+  }
+  return
+}
+
+// CHECK: omp.reduction.declare
+// CHECK-LABEL: @add2_f32
+omp.reduction.declare @add2_f32 : f32
+// CHECK: init
+init {
+^bb0(%arg: f32):
+  %0 = constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+// CHECK: combiner
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+// CHECK-NOT: atomic
+
+func @reduction2(%lb : index, %ub : index, %step : index) {
+  %0 = memref.alloca() : memref<1xf32>
+  // CHECK: reduction
+  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step)
+  reduction(@add2_f32 -> %0 : memref<1xf32>) {
+    %1 = constant 2.0 : f32
+    // CHECK: omp.reduction
+    omp.reduction %1, %0 : memref<1xf32>
+    omp.yield
+  }
+  return
+}
+

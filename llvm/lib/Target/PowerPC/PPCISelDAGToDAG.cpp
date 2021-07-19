@@ -504,11 +504,7 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
          "GlobalVariables with an alignment requirement stricter then 4-bytes "
          "not supported by the toc data transformation.");
 
-  Type *PtrType = GV->getType();
-  assert(PtrType->isPointerTy() &&
-         "GlobalVariables always have pointer type!.");
-
-  Type *GVType = dyn_cast<PointerType>(PtrType)->getElementType();
+  Type *GVType = GV->getValueType();
 
   assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
                               "supported by the toc data transformation.");

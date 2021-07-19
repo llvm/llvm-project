@@ -29,6 +29,18 @@ entry:
   ret <4 x i32> %gather
 }
 
+define arm_aapcs_vfpcc <4 x i32> @ptr_v4i32_opaque(<4 x ptr>* %offptr) {
+; CHECK-LABEL: ptr_v4i32_opaque:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x ptr>, <4 x ptr>* %offptr, align 4
+  %gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %offs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  ret <4 x i32> %gather
+}
+
 define arm_aapcs_vfpcc <8 x i32> @ptr_v8i32(<8 x i32*>* %offptr) {
 ; CHECK-LABEL: ptr_v8i32:
 ; CHECK:       @ %bb.0: @ %entry
@@ -131,6 +143,18 @@ define arm_aapcs_vfpcc <4 x float> @ptr_v4f32(<4 x float*>* %offptr) {
 entry:
   %offs = load <4 x float*>, <4 x float*>* %offptr, align 4
   %gather = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %offs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
+  ret <4 x float> %gather
+}
+
+define arm_aapcs_vfpcc <4 x float> @ptr_v4f32_opaque(<4 x ptr>* %offptr) {
+; CHECK-LABEL: ptr_v4f32_opaque:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x ptr>, <4 x ptr>* %offptr, align 4
+  %gather = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %offs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
   ret <4 x float> %gather
 }
 
@@ -259,18 +283,40 @@ entry:
   ret <4 x i32> %ext
 }
 
+define arm_aapcs_vfpcc <4 x i32> @ptr_v4i16_sext_opaque(<4 x ptr>* %offptr) {
+; CHECK-LABEL: ptr_v4i16_sext_opaque:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrh.s32 q0, [r1, q1]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x ptr>, <4 x ptr>* %offptr, align 4
+  %gather = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %offs, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i16> undef)
+  %ext = sext <4 x i16> %gather to <4 x i32>
+  ret <4 x i32> %ext
+}
+
+define arm_aapcs_vfpcc <4 x i32> @ptr_v4i16_zext_opaque(<4 x ptr>* %offptr) {
+; CHECK-LABEL: ptr_v4i16_zext_opaque:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrh.u32 q0, [r1, q1]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x ptr>, <4 x ptr>* %offptr, align 4
+  %gather = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %offs, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i16> undef)
+  %ext = zext <4 x i16> %gather to <4 x i32>
+  ret <4 x i32> %ext
+}
+
 define arm_aapcs_vfpcc <4 x i16> @ptr_v4i16(<4 x i16*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    ldrh r3, [r3]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrh.u32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16*>, <4 x i16*>* %offptr, align 4
@@ -283,26 +329,35 @@ define arm_aapcs_vfpcc <8 x i32> @ptr_v8i16_sext(<8 x i16*>* %offptr) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    vmov r1, r2, d1
-; CHECK-NEXT:    vmov r12, r3, d0
+; CHECK-NEXT:    vmov r3, r1, d1
+; CHECK-NEXT:    vmov r12, r2, d0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    vmov r0, lr, d1
-; CHECK-NEXT:    ldrh r7, [r2]
-; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    ldrh.w r2, [r12]
-; CHECK-NEXT:    ldrh r4, [r4]
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r1
-; CHECK-NEXT:    ldrh r3, [r3]
+; CHECK-NEXT:    vmov lr, r0, d1
+; CHECK-NEXT:    ldrh r7, [r1]
+; CHECK-NEXT:    ldrh.w r1, [r12]
+; CHECK-NEXT:    ldrh r2, [r2]
+; CHECK-NEXT:    ldrh r4, [r0]
+; CHECK-NEXT:    vmov r0, r5, d0
 ; CHECK-NEXT:    ldrh.w r6, [lr]
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r0
+; CHECK-NEXT:    ldrh r3, [r3]
+; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    ldrh r5, [r5]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r7
-; CHECK-NEXT:    vmovlb.s16 q1, q1
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r6
-; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    vmov.16 q0[0], r0
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vmov.16 q0[1], r5
+; CHECK-NEXT:    vmov.16 q0[2], r6
+; CHECK-NEXT:    vmov.16 q0[3], r4
+; CHECK-NEXT:    vmov.16 q0[4], r1
+; CHECK-NEXT:    vmov.16 q0[5], r2
+; CHECK-NEXT:    vmov.16 q0[6], r3
+; CHECK-NEXT:    vmov.16 q0[7], r7
+; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    vldrh.s32 q0, [r0]
+; CHECK-NEXT:    vldrh.s32 q1, [r0, #8]
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %offs = load <8 x i16*>, <8 x i16*>* %offptr, align 4
@@ -316,26 +371,35 @@ define arm_aapcs_vfpcc <8 x i32> @ptr_v8i16_zext(<8 x i16*>* %offptr) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    vmov r1, r2, d1
-; CHECK-NEXT:    vmov r12, r3, d0
+; CHECK-NEXT:    vmov r3, r1, d1
+; CHECK-NEXT:    vmov r12, r2, d0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    vmov r0, lr, d1
-; CHECK-NEXT:    ldrh r7, [r2]
-; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    ldrh.w r2, [r12]
-; CHECK-NEXT:    ldrh r4, [r4]
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r1
-; CHECK-NEXT:    ldrh r3, [r3]
+; CHECK-NEXT:    vmov lr, r0, d1
+; CHECK-NEXT:    ldrh r7, [r1]
+; CHECK-NEXT:    ldrh.w r1, [r12]
+; CHECK-NEXT:    ldrh r2, [r2]
+; CHECK-NEXT:    ldrh r4, [r0]
+; CHECK-NEXT:    vmov r0, r5, d0
 ; CHECK-NEXT:    ldrh.w r6, [lr]
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r0
+; CHECK-NEXT:    ldrh r3, [r3]
+; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    ldrh r5, [r5]
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r7
-; CHECK-NEXT:    vmovlb.u16 q1, q1
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r6
-; CHECK-NEXT:    vmovlb.u16 q0, q0
+; CHECK-NEXT:    vmov.16 q0[0], r0
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vmov.16 q0[1], r5
+; CHECK-NEXT:    vmov.16 q0[2], r6
+; CHECK-NEXT:    vmov.16 q0[3], r4
+; CHECK-NEXT:    vmov.16 q0[4], r1
+; CHECK-NEXT:    vmov.16 q0[5], r2
+; CHECK-NEXT:    vmov.16 q0[6], r3
+; CHECK-NEXT:    vmov.16 q0[7], r7
+; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    vldrh.u32 q0, [r0]
+; CHECK-NEXT:    vldrh.u32 q1, [r0, #8]
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %offs = load <8 x i16*>, <8 x i16*>* %offptr, align 4
@@ -588,15 +652,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i8> @ptr_v4i8(<4 x i8*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrb.u32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8*>, <4 x i8*>* %offptr, align 4
@@ -684,17 +742,17 @@ define void @foo_ptr_p_int32_t(i32* %dest, i32** %src, i32 %n) {
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB26_1: @ %vector.body.preheader
+; CHECK-NEXT:  .LBB30_1: @ %vector.body.preheader
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:  .LBB26_2: @ %vector.body
+; CHECK-NEXT:  .LBB30_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [q0]
 ; CHECK-NEXT:    vstrwt.32 q1, [r0], #16
-; CHECK-NEXT:    le lr, .LBB26_2
+; CHECK-NEXT:    le lr, .LBB30_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.end
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -720,6 +778,51 @@ for.end:                                          ; preds = %vector.body, %entry
   ret void
 }
 
+define void @foo_ptr_p_int32_t_opaque(ptr %dest, ptr %src, i32 %n) {
+; CHECK-LABEL: foo_ptr_p_int32_t_opaque:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    bic r2, r2, #15
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    poplt {r7, pc}
+; CHECK-NEXT:  .LBB31_1: @ %vector.body.preheader
+; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    movs r3, #1
+; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
+; CHECK-NEXT:  .LBB31_2: @ %vector.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
+; CHECK-NEXT:    vptt.i32 ne, q0, zr
+; CHECK-NEXT:    vldrwt.u32 q1, [q0]
+; CHECK-NEXT:    vstrwt.32 q1, [r0], #16
+; CHECK-NEXT:    le lr, .LBB31_2
+; CHECK-NEXT:  @ %bb.3: @ %for.end
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %and = and i32 %n, -16
+  %cmp11 = icmp sgt i32 %and, 0
+  br i1 %cmp11, label %vector.body, label %for.end
+
+vector.body:                                      ; preds = %entry, %vector.body
+  %index = phi i32 [ %index.next, %vector.body ], [ 0, %entry ]
+  %0 = getelementptr inbounds ptr, ptr %src, i32 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <4 x ptr>, ptr %1, align 4
+  %2 = icmp ne <4 x ptr> %wide.load, zeroinitializer
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %wide.load, i32 4, <4 x i1> %2, <4 x i32> undef)
+  %3 = getelementptr inbounds i32, ptr %dest, i32 %index
+  %4 = bitcast ptr %3 to ptr
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %wide.masked.gather, ptr %4, i32 4, <4 x i1> %2)
+  %index.next = add i32 %index, 4
+  %5 = icmp eq i32 %index.next, %and
+  br i1 %5, label %for.end, label %vector.body
+
+for.end:                                          ; preds = %vector.body, %entry
+  ret void
+}
+
 define void @foo_ptr_p_float(float* %dest, float** %src, i32 %n) {
 ; CHECK-LABEL: foo_ptr_p_float:
 ; CHECK:       @ %bb.0: @ %entry
@@ -729,17 +832,17 @@ define void @foo_ptr_p_float(float* %dest, float** %src, i32 %n) {
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB27_1: @ %vector.body.preheader
+; CHECK-NEXT:  .LBB32_1: @ %vector.body.preheader
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:  .LBB27_2: @ %vector.body
+; CHECK-NEXT:  .LBB32_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [q0]
 ; CHECK-NEXT:    vstrwt.32 q1, [r0], #16
-; CHECK-NEXT:    le lr, .LBB27_2
+; CHECK-NEXT:    le lr, .LBB32_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.end
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -782,33 +885,25 @@ entry:
 define arm_aapcs_vfpcc <8 x i32> @sext_unsigned_unscaled_i8_i8_toi64(i8* %base, <8 x i8>* %offptr) {
 ; CHECK-LABEL: sext_unsigned_unscaled_i8_i8_toi64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vldrb.u32 q0, [r1, #4]
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vmov r2, r12, d1
-; CHECK-NEXT:    vmov r3, lr, d0
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    ldrb r6, [r2]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    ldrb.w r12, [r12]
-; CHECK-NEXT:    ldrb.w r2, [lr]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, r6
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    ldrb r4, [r4]
-; CHECK-NEXT:    vmov q1[3], q1[1], r2, r12
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    vmovlb.s8 q1, q1
-; CHECK-NEXT:    ldrb r5, [r5]
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r0
-; CHECK-NEXT:    vmovlb.s16 q1, q1
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r1
+; CHECK-NEXT:    vldrb.u16 q0, [r1]
+; CHECK-NEXT:    vldrb.u16 q1, [r0, q0]
+; CHECK-NEXT:    vmov.u16 r0, q1[2]
+; CHECK-NEXT:    vmov.u16 r1, q1[0]
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov.u16 r0, q1[3]
+; CHECK-NEXT:    vmov.u16 r1, q1[1]
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    vmov.u16 r0, q1[6]
+; CHECK-NEXT:    vmov.u16 r1, q1[4]
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
+; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
+; CHECK-NEXT:    vmov.u16 r0, q1[7]
+; CHECK-NEXT:    vmov.u16 r1, q1[5]
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
+; CHECK-NEXT:    vmovlb.s8 q1, q2
+; CHECK-NEXT:    vmovlb.s16 q1, q1
+; CHECK-NEXT:    bx lr
 entry:
   %offs = load <8 x i8>, <8 x i8>* %offptr, align 1
   %offs.zext = zext <8 x i8> %offs to <8 x i32>
@@ -837,3 +932,8 @@ declare <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*>, i32, <8 x i1>, <8 x 
 declare <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*>, i32, <16 x i1>, <16 x i8>)
 declare <32 x i8> @llvm.masked.gather.v32i8.v32p0i8(<32 x i8*>, i32, <32 x i1>, <32 x i8>)
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
+
+declare <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x float>)
+declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
+declare <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i16>)
+declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)

@@ -982,8 +982,24 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
   MachineInstr &MI = *I;
   unsigned STReturns = 0;
 
+  bool ClobbersFPStack = false;
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &Op = MI.getOperand(i);
+    // Check if this call clobbers the FP stack.
+    // is sufficient.
+    if (Op.isRegMask()) {
+      bool ClobbersFP0 = Op.clobbersPhysReg(X86::FP0);
+#ifndef NDEBUG
+      static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");
+      for (unsigned i = 1; i != 8; ++i)
+        assert(Op.clobbersPhysReg(X86::FP0 + i) == ClobbersFP0 &&
+               "Inconsistent FP register clobber");
+#endif
+
+      if (ClobbersFP0)
+        ClobbersFPStack = true;
+    }
+
     if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
       continue;
 
@@ -997,6 +1013,14 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
     --i;
     --e;
   }
+
+  // Most calls should have a regmask that clobbers the FP registers. If it
+  // isn't present then the register allocator didn't spill the FP registers
+  // so they are still on the stack.
+  assert((ClobbersFPStack || STReturns == 0) &&
+         "ST returns without FP stack clobber");
+  if (!ClobbersFPStack)
+    return;
 
   unsigned N = countTrailingOnes(STReturns);
 

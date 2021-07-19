@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -convert-linalg-to-loops \
 // RUN:             -convert-scf-to-std      \
 // RUN:             -convert-linalg-to-llvm  \
+// RUN:             -convert-memref-to-llvm  \
 // RUN:             -convert-std-to-llvm |   \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s

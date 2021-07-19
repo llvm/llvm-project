@@ -78,19 +78,19 @@ void foo()
 }
 
 // SUITABLE-NOT: attributes [[NOHINT_ATTR]] = { {{.*}}noinline{{.*}} }
-//   HINTED-DAG: attributes [[NOHINT_ATTR]] = { noinline{{.*}} }
-// NOINLINE-DAG: attributes [[NOHINT_ATTR]] = { noinline{{.*}} }
+//   HINTED-DAG: attributes [[NOHINT_ATTR]] = { {{.*}}noinline{{.*}} }
+// NOINLINE-DAG: attributes [[NOHINT_ATTR]] = { {{.*}}noinline{{.*}} }
 
 // SUITABLE-NOT: attributes [[IMPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
 //   HINTED-NOT: attributes [[IMPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
-// NOINLINE-DAG: attributes [[IMPLICIT_ATTR]] = { noinline{{.*}} }
+// NOINLINE-DAG: attributes [[IMPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
 
 // SUITABLE-NOT: attributes [[IMPLICIT_CONSTR_ATTR]] = { {{.*}}noinline{{.*}} }
 //   HINTED-NOT: attributes [[IMPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
-// NOINLINE-DAG: attributes [[IMPLICIT_CONSTR_ATTR]] = { noinline{{.*}} }
+// NOINLINE-DAG: attributes [[IMPLICIT_CONSTR_ATTR]] = { {{.*}}noinline{{.*}} }
 
 // SUITABLE-NOT: attributes [[EXPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
 //   HINTED-NOT: attributes [[IMPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
-// NOINLINE-DAG: attributes [[EXPLICIT_ATTR]] = { noinline{{.*}} }
+// NOINLINE-DAG: attributes [[EXPLICIT_ATTR]] = { {{.*}}noinline{{.*}} }
 
-// CHECK-DAG: attributes [[OPTNONE_ATTR]] = { noinline{{.*}} }
+// CHECK-DAG: attributes [[OPTNONE_ATTR]] = { {{.*}}noinline{{.*}} }

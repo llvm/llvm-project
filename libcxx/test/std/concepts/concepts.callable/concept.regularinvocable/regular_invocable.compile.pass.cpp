@@ -19,7 +19,7 @@
 #include <type_traits>
 
 template <class R, class... Args>
-[[nodiscard]] constexpr bool check_invocable() {
+constexpr bool check_invocable() {
   constexpr bool result = std::regular_invocable<R(Args...), Args...>;
   static_assert(std::regular_invocable<R(Args...) noexcept, Args...> == result);
   static_assert(std::regular_invocable<R (*)(Args...), Args...> == result);
@@ -265,7 +265,7 @@ static_assert(!std::regular_invocable<multiple_overloads, multiple_overloads::O>
 namespace pointer_to_member_functions {
 // clang-format off
   template<class Member, class T, class... Args>
-  [[nodiscard]] constexpr bool check_member_is_invocable()
+  constexpr bool check_member_is_invocable()
   {
     constexpr bool result = std::regular_invocable<Member, T, Args...>;
     using uncv_t = std::remove_cvref_t<T>;

@@ -1947,7 +1947,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // happy with whatever the cloner can do.
     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
                               /*ModuleLevelChanges=*/false, Returns, ".i",
-                              &InlinedFunctionInfo, &CB);
+                              &InlinedFunctionInfo);
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;
 
@@ -2189,7 +2189,11 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   // Leave lifetime markers for the static alloca's, scoping them to the
   // function we just inlined.
-  if (InsertLifetime && !IFI.StaticAllocas.empty()) {
+  // We need to insert lifetime intrinsics even at O0 to avoid invalid
+  // access caused by multithreaded coroutines. The check
+  // `Caller->isPresplitCoroutine()` would affect AlwaysInliner at O0 only.
+  if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
+      !IFI.StaticAllocas.empty()) {
     IRBuilder<> builder(&FirstNewBlock->front());
     for (unsigned ai = 0, ae = IFI.StaticAllocas.size(); ai != ae; ++ai) {
       AllocaInst *AI = IFI.StaticAllocas[ai];
@@ -2438,14 +2442,17 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // before we splice the inlined code into the CFG and lose track of which
   // blocks were actually inlined, collect the call sites. We only do this if
   // call graph updates weren't requested, as those provide value handle based
-  // tracking of inlined call sites instead.
+  // tracking of inlined call sites instead. Calls to intrinsics are not
+  // collected because they are not inlineable.
   if (InlinedFunctionInfo.ContainsCalls && !IFI.CG) {
     // Otherwise just collect the raw call sites that were inlined.
     for (BasicBlock &NewBB :
          make_range(FirstNewBlock->getIterator(), Caller->end()))
       for (Instruction &I : NewBB)
         if (auto *CB = dyn_cast<CallBase>(&I))
-          IFI.InlinedCallSites.push_back(CB);
+          if (!(CB->getCalledFunction() &&
+                CB->getCalledFunction()->isIntrinsic()))
+            IFI.InlinedCallSites.push_back(CB);
   }
 
   // If we cloned in _exactly one_ basic block, and if that block ends in a

@@ -16,6 +16,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
@@ -1206,6 +1207,10 @@ void IRLinker::linkNamedMDNodes() {
   for (const NamedMDNode &NMD : SrcM->named_metadata()) {
     // Don't link module flags here. Do them separately.
     if (&NMD == SrcModFlags)
+      continue;
+    // Don't import pseudo probe descriptors here for thinLTO. They will be
+    // emitted by the originating module.
+    if (IsPerformingImport && NMD.getName() == PseudoProbeDescMetadataName)
       continue;
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.

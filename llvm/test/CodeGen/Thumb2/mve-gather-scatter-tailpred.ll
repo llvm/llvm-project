@@ -8,25 +8,19 @@ define dso_local void @mve_gather_qi_wb(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
 ; CHECK-NEXT:    adr r0, .LCPI0_0
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    movw r12, #1250
-; CHECK-NEXT:    vadd.i32 q0, q0, r1
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vadd.i32 q1, q1, r1
 ; CHECK-NEXT:    adds r1, r3, #4
-; CHECK-NEXT:    dls lr, r12
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    vmov q2, q1
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q1, [r4], #16
-; CHECK-NEXT:    vldrwt.u32 q3, [q0, #80]!
-; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vmul.i32 q1, q3, q1
-; CHECK-NEXT:    vadd.i32 q1, q2, q1
-; CHECK-NEXT:    le lr, .LBB0_1
+; CHECK-NEXT:    vldrw.u32 q2, [r4], #16
+; CHECK-NEXT:    vldrw.u32 q3, [q1, #80]!
+; CHECK-NEXT:    vmul.i32 q2, q3, q2
+; CHECK-NEXT:    vadd.i32 q0, q0, q2
+; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    str.w r0, [r2, r1, lsl #2]
 ; CHECK-NEXT:    pop {r4, pc}
@@ -62,7 +56,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   br i1 %8, label %middle.block, label %vector.body
 middle.block:                                     ; preds = %vector.body
   %9 = select <4 x i1> %active.lane.mask, <4 x i32> %7, <4 x i32> %vec.phi
-  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
+  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
   store i32 %10, i32* %arrayidx.us.us, align 4
   %inc21.us.us = add nuw i32 4, 1
   %exitcond81.not = icmp eq i32 %inc21.us.us, %n
@@ -80,27 +74,21 @@ define dso_local void @mve_gatherscatter_offset(i32* noalias nocapture readonly 
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
 ; CHECK-NEXT:    adr r0, .LCPI1_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    add.w r12, r3, #4
-; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    vmov.i32 q0, #0x14
-; CHECK-NEXT:    movw lr, #1250
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    vmov.i32 q1, #0x14
+; CHECK-NEXT:    dlstp.32 lr, r3
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrwt.u32 q2, [r1, q1, uxtw #2]
-; CHECK-NEXT:    vldrwt.u32 q4, [r4], #16
-; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vmul.i32 q2, q2, q4
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q2, [r1, q1, uxtw #2]
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vadd.i32 q2, q3, q2
-; CHECK-NEXT:    le lr, .LBB1_1
+; CHECK-NEXT:    vldrw.u32 q3, [r1, q2, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q4, [r4], #16
+; CHECK-NEXT:    vmul.i32 q3, q3, q4
+; CHECK-NEXT:    vstrw.32 q3, [r1, q2, uxtw #2]
+; CHECK-NEXT:    vadd.i32 q2, q2, q1
+; CHECK-NEXT:    vadd.i32 q0, q0, q3
+; CHECK-NEXT:    letp lr, .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q2, q3
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    str.w r0, [r2, r12, lsl #2]
 ; CHECK-NEXT:    vpop {d8, d9}
@@ -138,7 +126,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   br i1 %8, label %middle.block, label %vector.body
 middle.block:                                     ; preds = %vector.body
   %9 = select <4 x i1> %active.lane.mask, <4 x i32> %7, <4 x i32> %vec.phi
-  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
+  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
   store i32 %10, i32* %arrayidx.us.us, align 4
   %inc21.us.us = add nuw i32 4, 1
   %exitcond81.not = icmp eq i32 %inc21.us.us, %n
@@ -146,6 +134,7 @@ middle.block:                                     ; preds = %vector.body
 end:                                 ; preds = %middle.block
   ret void
 }
+
 define dso_local void @mve_scatter_qi(i32* noalias nocapture readonly %A, i32* noalias nocapture readonly %B, i32* noalias nocapture %C, i32 %n, i32 %m, i32 %l) {
 ; CHECK-LABEL: mve_scatter_qi:
 ; CHECK:       @ %bb.0: @ %entry
@@ -153,27 +142,25 @@ define dso_local void @mve_scatter_qi(i32* noalias nocapture readonly %A, i32* n
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
 ; CHECK-NEXT:    adr r0, .LCPI2_0
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    movw r12, #1250
 ; CHECK-NEXT:    vmov.i32 q2, #0x3
-; CHECK-NEXT:    vadd.i32 q0, q0, r1
+; CHECK-NEXT:    vadd.i32 q1, q1, r1
 ; CHECK-NEXT:    adds r1, r3, #4
 ; CHECK-NEXT:    dls lr, r12
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r3
-; CHECK-NEXT:    vmov q3, q1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q1, [r4], #16
+; CHECK-NEXT:    vldrwt.u32 q3, [r4], #16
+; CHECK-NEXT:    vmul.i32 q3, q3, q2
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vmul.i32 q1, q1, q2
+; CHECK-NEXT:    vadd.i32 q0, q0, q3
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q1, [q0, #80]!
-; CHECK-NEXT:    vadd.i32 q1, q3, q1
+; CHECK-NEXT:    vstrwt.32 q3, [q1, #80]!
 ; CHECK-NEXT:    le lr, .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
-; CHECK-NEXT:    vpsel q0, q1, q3
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    str.w r0, [r2, r1, lsl #2]
 ; CHECK-NEXT:    pop {r4, pc}
@@ -209,7 +196,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   br i1 %8, label %middle.block, label %vector.body
 middle.block:                                     ; preds = %vector.body
   %9 = select <4 x i1> %active.lane.mask, <4 x i32> %7, <4 x i32> %vec.phi
-  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
+  %10 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
   store i32 %10, i32* %arrayidx.us.us, align 4
   %inc21.us.us = add nuw i32 4, 1
   %exitcond81.not = icmp eq i32 %inc21.us.us, %n

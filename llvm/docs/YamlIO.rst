@@ -555,7 +555,7 @@ you can specialize on the class pointer.  Examples:
 No Normalization
 ----------------
 
-The mapping() method is responsible, if needed, for normalizing and 
+The ``mapping()`` method is responsible, if needed, for normalizing and 
 denormalizing. In a simple case where the native data structure requires no 
 normalization, the mapping method just uses mapOptional() or mapRequired() to 
 bind the struct's fields to YAML key names.  For example:
@@ -739,15 +739,15 @@ what the tag should be.  This will also add that tag when writing yaml.
 Validation
 ----------
 
-Sometimes in a yaml map, each key/value pair is valid, but the combination is
+Sometimes in a YAML map, each key/value pair is valid, but the combination is
 not.  This is similar to something having no syntax errors, but still having
 semantic errors.  To support semantic level checking, YAML I/O allows
 an optional ``validate()`` method in a MappingTraits template specialization.  
 
-When parsing yaml, the ``validate()`` method is call *after* all key/values in 
+When parsing YAML, the ``validate()`` method is call *after* all key/values in 
 the map have been processed. Any error message returned by the ``validate()`` 
 method during input will be printed just a like a syntax error would be printed.
-When writing yaml, the ``validate()`` method is called *before* the yaml 
+When writing YAML, the ``validate()`` method is called *before* the YAML 
 key/values  are written.  Any error during output will trigger an ``assert()`` 
 because it is a programming error to have invalid struct values.
 
@@ -766,11 +766,11 @@ because it is a programming error to have invalid struct values.
       static void mapping(IO &io, Stuff &stuff) {
       ...
       }
-      static StringRef validate(IO &io, Stuff &stuff) {
+      static std::string validate(IO &io, Stuff &stuff) {
         // Look at all fields in 'stuff' and if there
         // are any bad values return a string describing
         // the error.  Otherwise return an empty string.
-        return StringRef();
+        return std::string{};
       }
     };
 

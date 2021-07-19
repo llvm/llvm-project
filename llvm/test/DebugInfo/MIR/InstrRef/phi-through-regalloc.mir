@@ -103,9 +103,7 @@ body:             |
     DBG_VALUE $edi, $noreg, !11, !DIExpression(), debug-location !12
     DBG_VALUE $esi, $noreg, !13, !DIExpression(), debug-location !12
     %2:gr32 = COPY killed $esi
-    DBG_VALUE %2, $noreg, !13, !DIExpression(), debug-location !12
     %1:gr32 = COPY killed $edi
-    DBG_VALUE %1, $noreg, !11, !DIExpression(), debug-location !12
     DBG_VALUE 0, $noreg, !14, !DIExpression(), debug-location !12
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
     %3:gr32 = MOV32r0 implicit-def dead $eflags
@@ -118,7 +116,6 @@ body:             |
     JMP_1 %bb.1, debug-location !17
 
   bb.1.if.else:
-    DBG_VALUE %2, $noreg, !14, !DIExpression(), debug-location !12
 
     ; CHECK-LABEL: bb.2.if.end:
   bb.2.if.end:

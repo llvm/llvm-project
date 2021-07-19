@@ -37,6 +37,18 @@ std::vector<std::string> elements = {
     "error_occurred", "error_message"};
 }  // namespace
 
+std::string CsvEscape(const std::string & s) {
+  std::string tmp;
+  tmp.reserve(s.size() + 2);
+  for (char c : s) {
+    switch (c) {
+    case '"' : tmp += "\"\""; break;
+    default  : tmp += c; break;
+    }
+  }
+  return '"' + tmp + '"';
+}
+
 bool CSVReporter::ReportContext(const Context& context) {
   PrintBasicContext(&GetErrorStream(), context);
   return true;
@@ -89,18 +101,11 @@ void CSVReporter::ReportRuns(const std::vector<Run>& reports) {
 
 void CSVReporter::PrintRunData(const Run& run) {
   std::ostream& Out = GetOutputStream();
-
-  // Field with embedded double-quote characters must be doubled and the field
-  // delimited with double-quotes.
-  std::string name = run.benchmark_name();
-  ReplaceAll(&name, "\"", "\"\"");
-  Out << '"' << name << "\",";
+  Out << CsvEscape(run.benchmark_name()) << ",";
   if (run.error_occurred) {
     Out << std::string(elements.size() - 3, ',');
     Out << "true,";
-    std::string msg = run.error_message;
-    ReplaceAll(&msg, "\"", "\"\"");
-    Out << '"' << msg << "\"\n";
+    Out << CsvEscape(run.error_message) << "\n";
     return;
   }
 
@@ -130,11 +135,7 @@ void CSVReporter::PrintRunData(const Run& run) {
   }
   Out << ",";
   if (!run.report_label.empty()) {
-    // Field with embedded double-quote characters must be doubled and the field
-    // delimited with double-quotes.
-    std::string label = run.report_label;
-    ReplaceAll(&label, "\"", "\"\"");
-    Out << "\"" << label << "\"";
+    Out << CsvEscape(run.report_label);
   }
   Out << ",,";  // for error_occurred and error_message
 

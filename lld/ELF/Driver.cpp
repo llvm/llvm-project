@@ -855,22 +855,64 @@ static void readCallGraph(MemoryBufferRef mb) {
   }
 }
 
-template <class ELFT> static void readCallGraphsFromObjectFiles() {
-  auto getIndex = [&](ObjFile<ELFT> *obj, uint32_t index) {
-    const Elf_Rel_Impl<ELFT, false> &rel = obj->cgProfileRel[index];
-    return rel.getSymbol(config->isMips64EL);
-  };
+// If SHT_LLVM_CALL_GRAPH_PROFILE and its relocation section exist, returns
+// true and populates cgProfile and symbolIndices.
+template <class ELFT>
+static bool
+processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
+                            ArrayRef<typename ELFT::CGProfile> &cgProfile,
+                            ObjFile<ELFT> *inputObj) {
+  symbolIndices.clear();
+  const ELFFile<ELFT> &obj = inputObj->getObj();
+  ArrayRef<Elf_Shdr_Impl<ELFT>> objSections =
+      CHECK(obj.sections(), "could not retrieve object sections");
 
+  if (inputObj->cgProfileSectionIndex == SHN_UNDEF)
+    return false;
+
+  cgProfile =
+      check(obj.template getSectionContentsAsArray<typename ELFT::CGProfile>(
+          objSections[inputObj->cgProfileSectionIndex]));
+
+  for (size_t i = 0, e = objSections.size(); i < e; ++i) {
+    const Elf_Shdr_Impl<ELFT> &sec = objSections[i];
+    if (sec.sh_info == inputObj->cgProfileSectionIndex) {
+      if (sec.sh_type == SHT_RELA) {
+        ArrayRef<typename ELFT::Rela> relas =
+            CHECK(obj.relas(sec), "could not retrieve cg profile rela section");
+        for (const typename ELFT::Rela &rel : relas)
+          symbolIndices.push_back(rel.getSymbol(config->isMips64EL));
+        break;
+      }
+      if (sec.sh_type == SHT_REL) {
+        ArrayRef<typename ELFT::Rel> rels =
+            CHECK(obj.rels(sec), "could not retrieve cg profile rel section");
+        for (const typename ELFT::Rel &rel : rels)
+          symbolIndices.push_back(rel.getSymbol(config->isMips64EL));
+        break;
+      }
+    }
+  }
+  if (symbolIndices.empty())
+    warn("SHT_LLVM_CALL_GRAPH_PROFILE exists, but relocation section doesn't");
+  return !symbolIndices.empty();
+}
+
+template <class ELFT> static void readCallGraphsFromObjectFiles() {
+  SmallVector<uint32_t, 32> symbolIndices;
+  ArrayRef<typename ELFT::CGProfile> cgProfile;
   for (auto file : objectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file);
-    if (obj->cgProfileRel.empty())
+    if (!processCallGraphRelocations(symbolIndices, cgProfile, obj))
       continue;
-    if (obj->cgProfileRel.size() != obj->cgProfile.size() * 2)
+
+    if (symbolIndices.size() != cgProfile.size() * 2)
       fatal("number of relocations doesn't match Weights");
-    for (uint32_t i = 0, size = obj->cgProfile.size(); i < size; ++i) {
-      const Elf_CGProfile_Impl<ELFT> &cgpe = obj->cgProfile[i];
-      uint32_t fromIndex = getIndex(obj, i * 2);
-      uint32_t toIndex = getIndex(obj, i * 2 + 1);
+
+    for (uint32_t i = 0, size = cgProfile.size(); i < size; ++i) {
+      const Elf_CGProfile_Impl<ELFT> &cgpe = cgProfile[i];
+      uint32_t fromIndex = symbolIndices[i * 2];
+      uint32_t toIndex = symbolIndices[i * 2 + 1];
       auto *fromSym = dyn_cast<Defined>(&obj->getSymbol(fromIndex));
       auto *toSym = dyn_cast<Defined>(&obj->getSymbol(toIndex));
       if (!fromSym || !toSym)
@@ -1395,7 +1437,19 @@ static void setConfigs(opt::InputArgList &args) {
   config->writeAddends = args.hasFlag(OPT_apply_dynamic_relocs,
                                       OPT_no_apply_dynamic_relocs, false) ||
                          !config->isRela;
-
+  // Validation of dynamic relocation addends is on by default for assertions
+  // builds (for supported targets) and disabled otherwise. Ideally we would
+  // enable the debug checks for all targets, but currently not all targets
+  // have support for reading Elf_Rel addends, so we only enable for a subset.
+#ifndef NDEBUG
+  bool checkDynamicRelocsDefault = m == EM_ARM || m == EM_386 || m == EM_MIPS ||
+                                   m == EM_X86_64 || m == EM_RISCV;
+#else
+  bool checkDynamicRelocsDefault = false;
+#endif
+  config->checkDynamicRelocs =
+      args.hasFlag(OPT_check_dynamic_relocations,
+                   OPT_no_check_dynamic_relocations, checkDynamicRelocsDefault);
   config->tocOptimize =
       args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
   config->pcRelOptimize =

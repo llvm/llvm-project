@@ -24,11 +24,12 @@ ISL_DECLARE_LIST_TYPE(basic_set)
 #ifndef isl_set
 struct __isl_subclass(isl_union_set) isl_set;
 typedef struct isl_set isl_set;
-ISL_DECLARE_LIST_TYPE(set)
+ISL_DECLARE_EXPORTED_LIST_TYPE(set)
 #endif
 
 ISL_DECLARE_LIST_FN(basic_set)
-ISL_DECLARE_LIST_FN(set)
+ISL_DECLARE_EXPORTED_LIST_FN(set)
+ISL_DECLARE_EXPORTED_LIST_FN_READ(set)
 
 #if defined(__cplusplus)
 }

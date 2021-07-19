@@ -150,6 +150,18 @@ TEST(Transformational, Spread) {
     EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(j), 1 + j % 3);
   }
   result.Destroy();
+
+  auto scalar{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{}, std::vector<std::int32_t>{1})};
+  RTNAME(Spread)(result, *scalar, 1, 2, __FILE__, __LINE__);
+  EXPECT_EQ(result.type(), array->type());
+  EXPECT_EQ(result.rank(), 1);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 2);
+  for (int j{0}; j < 2; ++j) {
+    EXPECT_EQ(*result.ZeroBasedIndexedElement<std::int32_t>(j), 1);
+  }
+  result.Destroy();
 }
 
 TEST(Transformational, Transpose) {

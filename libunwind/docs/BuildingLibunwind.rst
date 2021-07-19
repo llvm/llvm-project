@@ -159,3 +159,10 @@ libunwind specific options
 .. option:: LIBUNWIND_SYSROOT
 
   Sysroot for cross compiling
+
+.. option:: LIBUNWIND_INSTALL_LIBRARY_DIR:PATH
+
+  **Default**: ``lib${LIBUNWIND_LIBDIR_SUFFIX}``
+
+  Path where built libunwind libraries should be installed. If a relative path,
+  relative to ``CMAKE_INSTALL_PREFIX``.

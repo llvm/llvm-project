@@ -10,11 +10,11 @@ namespace {
 
 class TestReporter : public benchmark::ConsoleReporter {
  public:
-  virtual bool ReportContext(const Context& context) {
+  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
     return ConsoleReporter::ReportContext(context);
   };
 
-  virtual void ReportRuns(const std::vector<Run>& report) {
+  virtual void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
     all_runs_.insert(all_runs_.end(), begin(report), end(report));
     ConsoleReporter::ReportRuns(report);
   }
@@ -60,6 +60,12 @@ int AddCases(const char* base_name, std::initializer_list<TestCase> const& v) {
 #define ADD_CASES(...) int CONCAT(dummy, __LINE__) = AddCases(__VA_ARGS__)
 
 }  // end namespace
+
+void BM_error_no_running(benchmark::State& state) {
+  state.SkipWithError("error message");
+}
+BENCHMARK(BM_error_no_running);
+ADD_CASES("BM_error_no_running", {{"", true, "error message"}});
 
 void BM_error_before_running(benchmark::State& state) {
   state.SkipWithError("error message");

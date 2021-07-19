@@ -383,8 +383,8 @@ multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
 }
 
 let SubtargetPredicate = HasDot8Insts  in {
-defm V_DOT4_I32_IU8 : VOP3PDOTIUInst<"v_dot4_i32_iu8", int_amdgcn_iudot4>;
-defm V_DOT8_I32_IU4 : VOP3PDOTIUInst<"v_dot8_i32_iu4", int_amdgcn_iudot8>;
+defm V_DOT4_I32_IU8 : VOP3PDOTIUInst<"v_dot4_i32_iu8", int_amdgcn_sudot4>;
+defm V_DOT8_I32_IU4 : VOP3PDOTIUInst<"v_dot8_i32_iu4", int_amdgcn_sudot8>;
 } // End SubtargetPredicate = HasDot8Insts
 
 def : UDot2Pat<V_DOT2_U32_U16>;

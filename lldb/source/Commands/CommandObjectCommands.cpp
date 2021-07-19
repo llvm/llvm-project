@@ -1242,6 +1242,9 @@ protected:
       case 'c':
         relative_to_command_file = true;
         break;
+      case 's':
+        silent = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1257,6 +1260,7 @@ protected:
       return llvm::makeArrayRef(g_script_import_options);
     }
     bool relative_to_command_file = false;
+    bool silent = false;
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1278,7 +1282,10 @@ protected:
     for (auto &entry : command.entries()) {
       Status error;
 
-      const bool init_session = true;
+      LoadScriptOptions options;
+      options.SetInitSession(true);
+      options.SetSilent(m_options.silent);
+
       // FIXME: this is necessary because CommandObject::CheckRequirements()
       // assumes that commands won't ever be recursively invoked, but it's
       // actually possible to craft a Python script that does other "command
@@ -1289,7 +1296,8 @@ protected:
       // more)
       m_exe_ctx.Clear();
       if (GetDebugger().GetScriptInterpreter()->LoadScriptingModule(
-              entry.c_str(), init_session, error, nullptr, source_dir)) {
+              entry.c_str(), options, error, /*module_sp=*/nullptr,
+              source_dir)) {
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendErrorWithFormat("module importing failed: %s",

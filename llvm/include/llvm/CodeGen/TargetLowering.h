@@ -290,8 +290,7 @@ public:
     bool IsSwiftError : 1;
     bool IsCFGuardTarget : 1;
     MaybeAlign Alignment = None;
-    Type *ByValType = nullptr;
-    Type *PreallocatedType = nullptr;
+    Type *IndirectType = nullptr;
 
     ArgListEntry()
         : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
@@ -1270,6 +1269,14 @@ public:
     return isTypeLegal(ValVT) &&
       (getTruncStoreAction(ValVT, MemVT) == Legal ||
        getTruncStoreAction(ValVT, MemVT) == Custom);
+  }
+
+  virtual bool canCombineTruncStore(EVT ValVT, EVT MemVT,
+                                    bool LegalOnly) const {
+    if (LegalOnly)
+      return isTruncStoreLegal(ValVT, MemVT);
+
+    return isTruncStoreLegalOrCustom(ValVT, MemVT);
   }
 
   /// Return how the indexed load should be treated: either it is legal, needs

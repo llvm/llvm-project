@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/OpenCLOptions.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 
@@ -102,6 +104,45 @@ void OpenCLOptions::addSupport(const llvm::StringMap<bool> &FeaturesMap,
 void OpenCLOptions::disableAll() {
   for (auto &Opt : OptMap)
     Opt.getValue().Enabled = false;
+}
+
+bool OpenCLOptions::diagnoseUnsupportedFeatureDependencies(
+    const TargetInfo &TI, DiagnosticsEngine &Diags) {
+  // Feature pairs. First feature in a pair requires the second one to be
+  // supported.
+  static const llvm::StringMap<llvm::StringRef> DependentFeaturesMap = {
+      {"__opencl_c_read_write_images", "__opencl_c_images"}};
+
+  auto OpenCLFeaturesMap = TI.getSupportedOpenCLOpts();
+
+  bool IsValid = true;
+  for (auto &FeaturePair : DependentFeaturesMap)
+    if (TI.hasFeatureEnabled(OpenCLFeaturesMap, FeaturePair.getKey()) &&
+        !TI.hasFeatureEnabled(OpenCLFeaturesMap, FeaturePair.getValue())) {
+      IsValid = false;
+      Diags.Report(diag::err_opencl_feature_requires)
+          << FeaturePair.getKey() << FeaturePair.getValue();
+    }
+  return IsValid;
+}
+
+bool OpenCLOptions::diagnoseFeatureExtensionDifferences(
+    const TargetInfo &TI, DiagnosticsEngine &Diags) {
+  // Extensions and equivalent feature pairs.
+  static const llvm::StringMap<llvm::StringRef> FeatureExtensionMap = {
+      {"cl_khr_fp64", "__opencl_c_fp64"}};
+
+  auto OpenCLFeaturesMap = TI.getSupportedOpenCLOpts();
+
+  bool IsValid = true;
+  for (auto &ExtAndFeat : FeatureExtensionMap)
+    if (TI.hasFeatureEnabled(OpenCLFeaturesMap, ExtAndFeat.getKey()) !=
+        TI.hasFeatureEnabled(OpenCLFeaturesMap, ExtAndFeat.getValue())) {
+      IsValid = false;
+      Diags.Report(diag::err_opencl_extension_and_feature_differs)
+          << ExtAndFeat.getKey() << ExtAndFeat.getValue();
+    }
+  return IsValid;
 }
 
 } // end namespace clang

@@ -73,8 +73,8 @@ void ThreadPool::wait() {
 }
 
 bool ThreadPool::isWorkerThread() const {
-  std::thread::id CurrentThreadId = std::this_thread::get_id();
-  for (const std::thread &Thread : Threads)
+  llvm::thread::id CurrentThreadId = llvm::this_thread::get_id();
+  for (const llvm::thread &Thread : Threads)
     if (CurrentThreadId == Thread.get_id())
       return true;
   return false;

@@ -310,7 +310,8 @@ define void @test7(i8 zeroext %c, i32 %x) nounwind ssp noredzone {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 32
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i8 99, label [[IF_THEN]]
@@ -345,7 +346,8 @@ define i32 @test8(i8 zeroext %c, i32 %x, i1 %C) nounwind ssp noredzone {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[N:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       N:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 32
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i8 99, label [[IF_THEN]]
@@ -384,7 +386,8 @@ define i32 @test9(i8 zeroext %c) nounwind ssp noredzone {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[C:%.*]], 33
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOR_END:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[CMP]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOR_END:%.*]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C]], label [[LOR_RHS:%.*]] [
 ; CHECK-NEXT:    i8 92, label [[LOR_END]]
@@ -400,8 +403,8 @@ define i32 @test9(i8 zeroext %c) nounwind ssp noredzone {
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[SWITCH_EARLY_TEST]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY:%.*]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ]
-; CHECK-NEXT:    [[CONV46:%.*]] = zext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ true, [[SWITCH_EARLY_TEST]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY:%.*]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ], [ true, [[SWITCH_EARLY_TEST]] ]
+; CHECK-NEXT:    [[CONV46:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV46]]
 ;
 entry:
@@ -454,7 +457,8 @@ lor.end:                                          ; preds = %lor.rhs, %lor.lhs.f
 
 define i32 @test10(i32 %mode, i1 %Cond) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[COND:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
 ; CHECK-NEXT:    i32 51, label [[F]]
@@ -486,7 +490,8 @@ F:
 
 define i32 @test10_select(i32 %mode, i1 %Cond) {
 ; CHECK-LABEL: @test10_select(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[COND:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
 ; CHECK-NEXT:    i32 51, label [[F]]
@@ -519,7 +524,8 @@ F:
 ; TODO: %Cond doesn't need freeze
 define i32 @test10_select_and(i32 %mode, i1 %Cond) {
 ; CHECK-LABEL: @test10_select_and(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[COND:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[SWITCH_EARLY_TEST:%.*]], label [[F:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i32 [[MODE:%.*]], label [[T:%.*]] [
 ; CHECK-NEXT:    i32 51, label [[F]]

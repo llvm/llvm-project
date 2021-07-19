@@ -8,7 +8,22 @@
 
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "AMDGPUSubtarget.h"
+#include "SIRegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
+#include <cassert>
+#include <vector>
 
 #define MAX_LANES 64
 
@@ -163,14 +178,14 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (UseFixedABI || F.hasFnAttribute("amdgpu-kernarg-segment-ptr"))
     KernargSegmentPtr = true;
 
+  // TODO: This could be refined a lot. The attribute is a poor way of
+  // detecting calls or stack objects that may require it before argument
+  // lowering.
   if (ST.hasFlatAddressSpace() && isEntryFunction() &&
       (isAmdHsaOrMesa || ST.enableFlatScratch()) &&
+      (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
       !ST.flatScratchIsArchitected()) {
-    // TODO: This could be refined a lot. The attribute is a poor way of
-    // detecting calls or stack objects that may require it before argument
-    // lowering.
-    if (HasCalls || HasStackObjects || ST.enableFlatScratch())
-      FlatScratchInit = true;
+    FlatScratchInit = true;
   }
 
   Attribute A = F.getFnAttribute("amdgpu-git-ptr-high");
@@ -315,6 +330,13 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
         // partially spill the SGPR to VGPRs.
         SGPRToVGPRSpills.erase(FI);
         NumVGPRSpillLanes -= I;
+
+#if 0
+        DiagnosticInfoResourceLimit DiagOutOfRegs(MF.getFunction(),
+                                                  "VGPRs for SGPR spilling",
+                                                  0, DS_Error);
+        MF.getFunction().getContext().diagnose(DiagOutOfRegs);
+#endif
         return false;
       }
 

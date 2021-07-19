@@ -17,7 +17,7 @@
 ; more than 16 calls in them.
 ;
 ; This test is extracted from the following C++ program compiled with Clang.
-; The IR is simplified with SROA, instcombine, and simplify-cfg. Then C++
+; The IR is simplified with SROA, instcombine, and simplifycfg. Then C++
 ; linkage stuff, attributes, target specific things, metadata and comments were
 ; removed. The order of the fuctions is also made more predictable than Clang's
 ; output order.

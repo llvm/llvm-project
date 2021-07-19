@@ -15,6 +15,7 @@
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "Target.h"
+#include "Writer.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"

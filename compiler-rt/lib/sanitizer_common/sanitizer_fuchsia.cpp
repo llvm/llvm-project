@@ -36,14 +36,9 @@ uptr internal_sched_yield() {
   return 0;  // Why doesn't this return void?
 }
 
-static void internal_nanosleep(zx_time_t ns) {
-  zx_status_t status = _zx_nanosleep(_zx_deadline_after(ns));
+void internal_usleep(u64 useconds) {
+  zx_status_t status = _zx_nanosleep(_zx_deadline_after(ZX_USEC(useconds)));
   CHECK_EQ(status, ZX_OK);
-}
-
-unsigned int internal_sleep(unsigned int seconds) {
-  internal_nanosleep(ZX_SEC(seconds));
-  return 0;
 }
 
 u64 NanoTime() {
@@ -78,10 +73,6 @@ void Abort() { abort(); }
 
 int Atexit(void (*function)(void)) { return atexit(function); }
 
-void SleepForSeconds(int seconds) { internal_sleep(seconds); }
-
-void SleepForMillis(int millis) { internal_nanosleep(ZX_MSEC(millis)); }
-
 void GetThreadStackTopAndBottom(bool, uptr *stack_top, uptr *stack_bottom) {
   pthread_attr_t attr;
   CHECK_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
@@ -108,6 +99,18 @@ void InitTlsSize() {}
 bool SignalContext::IsStackOverflow() const { return false; }
 void SignalContext::DumpAllRegisters(void *context) { UNIMPLEMENTED(); }
 const char *SignalContext::Describe() const { UNIMPLEMENTED(); }
+
+void FutexWait(atomic_uint32_t *p, u32 cmp) {
+  zx_status_t status = _zx_futex_wait(reinterpret_cast<zx_futex_t *>(p), cmp,
+                                      ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+  if (status != ZX_ERR_BAD_STATE)  // Normal race.
+    CHECK_EQ(status, ZX_OK);
+}
+
+void FutexWake(atomic_uint32_t *p, u32 count) {
+  zx_status_t status = _zx_futex_wake(reinterpret_cast<zx_futex_t *>(p), count);
+  CHECK_EQ(status, ZX_OK);
+}
 
 enum MutexState : int { MtxUnlocked = 0, MtxLocked = 1, MtxSleeping = 2 };
 
@@ -145,8 +148,8 @@ void BlockingMutex::Unlock() {
   }
 }
 
-void BlockingMutex::CheckLocked() {
-  atomic_uint32_t *m = reinterpret_cast<atomic_uint32_t *>(&opaque_storage_);
+void BlockingMutex::CheckLocked() const {
+  auto m = reinterpret_cast<atomic_uint32_t const *>(&opaque_storage_);
   CHECK_NE(MtxUnlocked, atomic_load(m, memory_order_relaxed));
 }
 
@@ -156,8 +159,10 @@ uptr GetMmapGranularity() { return _zx_system_get_page_size(); }
 
 sanitizer_shadow_bounds_t ShadowBounds;
 
+void InitShadowBounds() { ShadowBounds = __sanitizer_shadow_bounds(); }
+
 uptr GetMaxUserVirtualAddress() {
-  ShadowBounds = __sanitizer_shadow_bounds();
+  InitShadowBounds();
   return ShadowBounds.memory_limit - 1;
 }
 

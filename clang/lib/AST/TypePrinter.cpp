@@ -976,6 +976,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_Swift:
       OS << " __attribute__((swiftcall))";
       break;
+    case CC_SwiftAsync:
+      OS << "__attribute__((swiftasynccall))";
+      break;
     case CC_PreserveMost:
       OS << " __attribute__((preserve_most))";
       break;
@@ -1706,6 +1709,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::StdCall: OS << "stdcall"; break;
   case attr::ThisCall: OS << "thiscall"; break;
   case attr::SwiftCall: OS << "swiftcall"; break;
+  case attr::SwiftAsyncCall: OS << "swiftasynccall"; break;
   case attr::VectorCall: OS << "vectorcall"; break;
   case attr::Pascal: OS << "pascal"; break;
   case attr::MSABI: OS << "ms_abi"; break;

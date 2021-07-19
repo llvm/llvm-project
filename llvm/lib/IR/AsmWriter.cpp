@@ -4416,20 +4416,7 @@ void AssemblyWriter::writeAttribute(const Attribute &Attr, bool InAttrGroup) {
     return;
   }
 
-  if (Attr.hasAttribute(Attribute::ByVal)) {
-    Out << "byval";
-  } else if (Attr.hasAttribute(Attribute::StructRet)) {
-    Out << "sret";
-  } else if (Attr.hasAttribute(Attribute::ByRef)) {
-    Out << "byref";
-  } else if (Attr.hasAttribute(Attribute::Preallocated)) {
-    Out << "preallocated";
-  } else if (Attr.hasAttribute(Attribute::InAlloca)) {
-    Out << "inalloca";
-  } else {
-    llvm_unreachable("unexpected type attr");
-  }
-
+  Out << Attribute::getNameFromAttrKind(Attr.getKindAsEnum());
   if (Type *Ty = Attr.getValueAsType()) {
     Out << '(';
     TypePrinter.print(Ty, Out);

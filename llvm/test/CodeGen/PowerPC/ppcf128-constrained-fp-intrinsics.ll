@@ -1293,8 +1293,8 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI31_0@toc@ha
 ; PC64LE-NEXT:    xxlxor 3, 3, 3
 ; PC64LE-NEXT:    lfs 0, .LCPI31_0@toc@l(3)
-; PC64LE-NEXT:    fcmpo 0, 2, 3
 ; PC64LE-NEXT:    lis 3, -32768
+; PC64LE-NEXT:    fcmpo 0, 2, 3
 ; PC64LE-NEXT:    xxlxor 3, 3, 3
 ; PC64LE-NEXT:    fcmpo 1, 1, 0
 ; PC64LE-NEXT:    crand 20, 6, 0
@@ -1428,12 +1428,12 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64LE-NEXT:    xxlxor 2, 2, 2
 ; PC64LE-NEXT:    li 3, 0
 ; PC64LE-NEXT:    mr 30, 4
-; PC64LE-NEXT:    lfsx 31, 0, 29
+; PC64LE-NEXT:    lfs 31, 0(29)
 ; PC64LE-NEXT:    xxlxor 4, 4, 4
 ; PC64LE-NEXT:    std 3, 8(4)
 ; PC64LE-NEXT:    fmr 1, 31
 ; PC64LE-NEXT:    fmr 3, 31
-; PC64LE-NEXT:    stfdx 31, 0, 4
+; PC64LE-NEXT:    stfd 31, 0(4)
 ; PC64LE-NEXT:    bl __gcc_qadd
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    fmr 3, 1
@@ -1452,7 +1452,7 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64LE-NEXT:    bl __powitf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xsrsp 0, 1
-; PC64LE-NEXT:    stfsx 0, 0, 29
+; PC64LE-NEXT:    stfs 0, 0(29)
 ; PC64LE-NEXT:    stfd 1, -16(30)
 ; PC64LE-NEXT:    stfd 2, -8(30)
 ; PC64LE-NEXT:    addi 1, 1, 80
@@ -1727,8 +1727,8 @@ define ppc_fp128 @u64_to_ppcq(i64 %m) #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI36_0@toc@ha
 ; PC64LE-NEXT:    xxlxor 4, 4, 4
 ; PC64LE-NEXT:    fmr 30, 1
-; PC64LE-NEXT:    fmr 31, 2
 ; PC64LE-NEXT:    lfs 3, .LCPI36_0@toc@l(3)
+; PC64LE-NEXT:    fmr 31, 2
 ; PC64LE-NEXT:    bl __gcc_qadd
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    cmpdi 30, 0
@@ -1879,8 +1879,8 @@ define ppc_fp128 @u128_to_ppcq(i128 %m) #0 {
 ; PC64LE-NEXT:    addis 3, 2, .LCPI38_0@toc@ha
 ; PC64LE-NEXT:    xxlxor 4, 4, 4
 ; PC64LE-NEXT:    fmr 30, 1
-; PC64LE-NEXT:    fmr 31, 2
 ; PC64LE-NEXT:    lfd 3, .LCPI38_0@toc@l(3)
+; PC64LE-NEXT:    fmr 31, 2
 ; PC64LE-NEXT:    bl __gcc_qadd
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    cmpdi 30, 0

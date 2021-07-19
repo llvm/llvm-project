@@ -4,7 +4,6 @@
 ; Test that compilation units with call_indirect but without any
 ; function pointer declarations still get a table.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: call_indirect_void:

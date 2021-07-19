@@ -475,7 +475,7 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
   // Visit all instructions reading li->reg().
   Register Reg = li->reg();
   for (MachineInstr &UseMI : MRI->reg_instructions(Reg)) {
-    if (UseMI.isDebugValue() || !UseMI.readsVirtualRegister(Reg))
+    if (UseMI.isDebugInstr() || !UseMI.readsVirtualRegister(Reg))
       continue;
     SlotIndex Idx = getInstructionIndex(UseMI).getRegSlot();
     LiveQueryResult LRQ = li->Query(Idx);
@@ -713,10 +713,15 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     if (LI.empty())
       continue;
 
+    // Target may have not allocated this yet.
+    Register PhysReg = VRM->getPhys(Reg);
+    if (!PhysReg)
+      continue;
+
     // Find the regunit intervals for the assigned register. They may overlap
     // the virtual register live range, cancelling any kills.
     RU.clear();
-    for (MCRegUnitIterator Unit(VRM->getPhys(Reg), TRI); Unit.isValid();
+    for (MCRegUnitIterator Unit(PhysReg, TRI); Unit.isValid();
          ++Unit) {
       const LiveRange &RURange = getRegUnit(*Unit);
       if (RURange.empty())

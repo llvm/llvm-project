@@ -1,5 +1,5 @@
-; RUN: opt -loop-unswitch-memoryssa-threshold=0 -memssa-check-limit=1 -passes='loop-mssa(unswitch<nontrivial>),verify<loops>' -S < %s | FileCheck --check-prefix=THRESHOLD-0 %s
-; RUN: opt -memssa-check-limit=1 -passes='loop-mssa(unswitch<nontrivial>),verify<loops>' -S < %s | FileCheck --check-prefix=THRESHOLD-DEFAULT %s
+; RUN: opt -loop-unswitch-memoryssa-threshold=0 -memssa-check-limit=1 -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -S < %s | FileCheck --check-prefix=THRESHOLD-0 %s
+; RUN: opt -memssa-check-limit=1 -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -S < %s | FileCheck --check-prefix=THRESHOLD-DEFAULT %s
 
 ; Make sure -loop-unswitch-memoryssa-threshold works. The test uses
 ; -memssa-check-limit=1 to effectively disable any MemorySSA optimizations

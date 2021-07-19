@@ -49,6 +49,9 @@ void getEnclosingAffineForAndIfOps(Operation &op,
 /// surrounding this operation.
 unsigned getNestingDepth(Operation *op);
 
+/// Returns whether a loop is a parallel loop and contains a reduction loop.
+bool isLoopParallelAndContainsReduction(AffineForOp forOp);
+
 /// Returns in 'sequentialLoops' all sequential loops in loop nest rooted
 /// at 'forOp'.
 void getSequentialLoops(AffineForOp forOp,
@@ -183,6 +186,18 @@ void getComputationSliceState(Operation *depSourceOp, Operation *depSinkOp,
                               FlatAffineConstraints *dependenceConstraints,
                               unsigned loopDepth, bool isBackwardSlice,
                               ComputationSliceState *sliceState);
+
+/// Return the number of iterations for the `slicetripCountMap` provided.
+uint64_t getSliceIterationCount(
+    const llvm::SmallDenseMap<Operation *, uint64_t, 8> &sliceTripCountMap);
+
+/// Builds a map 'tripCountMap' from AffineForOp to constant trip count for
+/// loop nest surrounding represented by slice loop bounds in 'slice'. Returns
+/// true on success, false otherwise (if a non-constant trip count was
+/// encountered).
+bool buildSliceTripCountMap(
+    const ComputationSliceState &slice,
+    llvm::SmallDenseMap<Operation *, uint64_t, 8> *tripCountMap);
 
 /// Computes in 'sliceUnion' the union of all slice bounds computed at
 /// 'loopDepth' between all dependent pairs of ops in 'opsA' and 'opsB', and

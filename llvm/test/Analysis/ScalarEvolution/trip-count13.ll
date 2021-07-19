@@ -80,3 +80,22 @@ loop:
 leave:
   ret void
 }
+
+define void @s_2(i8 %start) {
+entry:
+  %rhs = add i8 %start, -100
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i8 %iv, -1
+  %iv.cmp = icmp sgt i8 %iv, %rhs
+  br i1 %iv.cmp, label %loop, label %leave
+
+; CHECK-LABEL: Determining loop execution counts for: @s_2
+; CHECK-NEXT: Loop %loop: backedge-taken count is ((-1 * ((-100 + %start) smin %start)) + %start)
+; CHECK-NEXT: Loop %loop: max backedge-taken count is -1
+
+leave:
+  ret void
+}

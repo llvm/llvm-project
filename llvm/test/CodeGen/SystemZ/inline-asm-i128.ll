@@ -135,3 +135,24 @@ entry:
   %Res = tail call i64 asm "\09lgr\09$0,${1:N}", "=d,d"(i128 %Ins)
   ret i64 %Res
 }
+
+; Test 'N' with multiple accesses to the same operand and i128 result.
+@V128 = global i128 0, align 16
+define i32 @fun6() {
+; CHECK-LABEL: fun6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lgrl %r1, V128@GOT
+; CHECK-NEXT:    lg %r3, 8(%r1)
+; CHECK-NEXT:    lg %r2, 0(%r1)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    ltgr %r3,%r3
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    stg %r2, 0(%r1)
+; CHECK-NEXT:    stg %r3, 8(%r1)
+; CHECK-NEXT:    br %r14
+entry:
+  %0 = load i128, i128* @V128
+  %1 = tail call i128 asm "ltgr ${0:N},${0:N}", "=&d,0"(i128 %0)
+  store i128 %1, i128* @V128
+  ret i32 undef
+}

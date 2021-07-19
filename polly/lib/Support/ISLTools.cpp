@@ -548,7 +548,7 @@ isl::val polly::getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
         // TODO: If Min/Max, we can also determine a minimum/maximum value if
         // Set is constant-bounded.
         if (!Aff.is_cst()) {
-          Result = isl::val::nan(Aff.get_ctx());
+          Result = isl::val::nan(Aff.ctx());
           return isl::stat::error();
         }
 
@@ -572,7 +572,7 @@ isl::val polly::getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
         }
 
         // Not compatible
-        Result = isl::val::nan(Aff.get_ctx());
+        Result = isl::val::nan(Aff.ctx());
         return isl::stat::error();
       });
 

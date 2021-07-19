@@ -571,19 +571,14 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       CHECK(obj.getSectionStringTable(objSections), this);
 
   std::vector<ArrayRef<Elf_Word>> selectedGroups;
-  // SHT_LLVM_CALL_GRAPH_PROFILE Section Index.
-  size_t cgProfileSectionIndex = 0;
 
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE) {
-      cgProfile =
-          check(obj.template getSectionContentsAsArray<Elf_CGProfile>(sec));
+    if (sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
       cgProfileSectionIndex = i;
-    }
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
@@ -669,13 +664,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA) {
+    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
       this->sections[i] = createInputSection(sec);
-      if (cgProfileSectionIndex && sec.sh_info == cgProfileSectionIndex) {
-        if (sec.sh_type == SHT_REL)
-          cgProfileRel = CHECK(getObj().rels(sec), this);
-      }
-    }
 
     // A SHF_LINK_ORDER section with sh_link=0 is handled as if it did not have
     // the flag.
@@ -1272,7 +1262,7 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
 //
 // 2) Consider the tentative definition as still undefined (ie the promotion to
 //    a real definition happens only after all symbol resolution is done).
-//    The linker searches archive members for global or weak definitions to
+//    The linker searches archive members for STB_GLOBAL definitions to
 //    replace the tentative definition with. This is the behavior used by
 //    GNU ld.
 //
@@ -1288,7 +1278,7 @@ static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
   for (const irsymtab::Reader::SymbolRef &sym :
        symtabFile.TheReader.symbols()) {
     if (sym.isGlobal() && sym.getName() == symName)
-      return !sym.isUndefined() && !sym.isCommon();
+      return !sym.isUndefined() && !sym.isWeak() && !sym.isCommon();
   }
   return false;
 }
@@ -1302,7 +1292,8 @@ static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
   for (auto sym : obj->template getGlobalELFSyms<ELFT>()) {
     Expected<StringRef> name = sym.getName(stringtable);
     if (name && name.get() == symName)
-      return sym.isDefined() && !sym.isCommon();
+      return sym.isDefined() && sym.getBinding() == STB_GLOBAL &&
+             !sym.isCommon();
   }
   return false;
 }

@@ -8,7 +8,7 @@
 #ifndef MLIR_CONVERSION_OPENACCTOLLVM_CONVERTOPENACCTOLLVM_H
 #define MLIR_CONVERSION_OPENACCTOLLVM_CONVERTOPENACCTOLLVM_H
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/StructBuilder.h"
 #include <memory>
 
 namespace mlir {

@@ -66,16 +66,76 @@ MemoryTagManagerAArch64MTE::ExpandToGranule(TagRange range) const {
   return TagRange(new_start, new_len);
 }
 
-llvm::Expected<std::vector<lldb::addr_t>>
-MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
-                                           size_t granules) const {
-  size_t num_tags = tags.size() / GetTagSizeInBytes();
-  if (num_tags != granules) {
+llvm::Expected<MemoryTagManager::TagRange>
+MemoryTagManagerAArch64MTE::MakeTaggedRange(
+    lldb::addr_t addr, lldb::addr_t end_addr,
+    const lldb_private::MemoryRegionInfos &memory_regions) const {
+  // First check that the range is not inverted.
+  // We must remove tags here otherwise an address with a higher
+  // tag value will always be > the other.
+  ptrdiff_t len = AddressDiff(end_addr, addr);
+  if (len <= 0) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
-        "Packed tag data size does not match expected number of tags. "
-        "Expected %zu tag(s) for %zu granules, got %zu tag(s).",
-        granules, granules, num_tags);
+        "End address (0x%" PRIx64
+        ") must be greater than the start address (0x%" PRIx64 ")",
+        end_addr, addr);
+  }
+
+  // Region addresses will not have memory tags. So when searching
+  // we must use an untagged address.
+  MemoryRegionInfo::RangeType tag_range(RemoveNonAddressBits(addr), len);
+  tag_range = ExpandToGranule(tag_range);
+
+  // Make a copy so we can use the original for errors and the final return.
+  MemoryRegionInfo::RangeType remaining_range(tag_range);
+
+  // While there are parts of the range that don't have a matching tagged memory
+  // region
+  while (remaining_range.IsValid()) {
+    // Search for a region that contains the start of the range
+    MemoryRegionInfos::const_iterator region = std::find_if(
+        memory_regions.cbegin(), memory_regions.cend(),
+        [&remaining_range](const MemoryRegionInfo &region) {
+          return region.GetRange().Contains(remaining_range.GetRangeBase());
+        });
+
+    if (region == memory_regions.cend() ||
+        region->GetMemoryTagged() != MemoryRegionInfo::eYes) {
+      // Some part of this range is untagged (or unmapped) so error
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Address range 0x%" PRIx64 ":0x%" PRIx64
+                                     " is not in a memory tagged region",
+                                     tag_range.GetRangeBase(),
+                                     tag_range.GetRangeEnd());
+    }
+
+    // We've found some part of the range so remove that part and continue
+    // searching for the rest. Moving the base "slides" the range so we need to
+    // save/restore the original end. If old_end is less than the new base, the
+    // range will be set to have 0 size and we'll exit the while.
+    lldb::addr_t old_end = remaining_range.GetRangeEnd();
+    remaining_range.SetRangeBase(region->GetRange().GetRangeEnd());
+    remaining_range.SetRangeEnd(old_end);
+  }
+
+  // Every part of the range is contained within a tagged memory region.
+  return tag_range;
+}
+
+llvm::Expected<std::vector<lldb::addr_t>>
+MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
+                                           size_t granules /*=0*/) const {
+  // 0 means don't check the number of tags before unpacking
+  if (granules) {
+    size_t num_tags = tags.size() / GetTagSizeInBytes();
+    if (num_tags != granules) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Packed tag data size does not match expected number of tags. "
+          "Expected %zu tag(s) for %zu granule(s), got %zu tag(s).",
+          granules, granules, num_tags);
+    }
   }
 
   // (if bytes per tag was not 1, we would reconstruct them here)
@@ -94,4 +154,47 @@ MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
   }
 
   return unpacked;
+}
+
+llvm::Expected<std::vector<uint8_t>> MemoryTagManagerAArch64MTE::PackTags(
+    const std::vector<lldb::addr_t> &tags) const {
+  std::vector<uint8_t> packed;
+  packed.reserve(tags.size() * GetTagSizeInBytes());
+
+  for (auto tag : tags) {
+    if (tag > MTE_TAG_MAX) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Found tag 0x%" PRIx64
+                                     " which is > max MTE tag value of 0x%x.",
+                                     tag, MTE_TAG_MAX);
+    }
+    packed.push_back(static_cast<uint8_t>(tag));
+  }
+
+  return packed;
+}
+
+llvm::Expected<std::vector<lldb::addr_t>>
+MemoryTagManagerAArch64MTE::RepeatTagsForRange(
+    const std::vector<lldb::addr_t> &tags, TagRange range) const {
+  std::vector<lldb::addr_t> new_tags;
+
+  // If the range is not empty
+  if (range.IsValid()) {
+    if (tags.empty()) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Expected some tags to cover given range, got zero.");
+    }
+
+    // We assume that this range has already been expanded/aligned to granules
+    size_t granules = range.GetByteSize() / GetGranuleSize();
+    new_tags.reserve(granules);
+    for (size_t to_copy = 0; granules > 0; granules -= to_copy) {
+      to_copy = granules > tags.size() ? tags.size() : granules;
+      new_tags.insert(new_tags.end(), tags.begin(), tags.begin() + to_copy);
+    }
+  }
+
+  return new_tags;
 }

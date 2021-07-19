@@ -925,10 +925,11 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
   IvarSize = TInfo.Width;
   IvarAlignment = TInfo.Align;
 
-  // If we have a copy property, we always have to use getProperty/setProperty.
-  // TODO: we could actually use setProperty and an expression for non-atomics.
+  // If we have a copy property, we always have to use setProperty.
+  // If the property is atomic we need to use getProperty, but in
+  // the nonatomic case we can just use expression.
   if (IsCopy) {
-    Kind = GetSetProperty;
+    Kind = IsAtomic ? GetSetProperty : SetPropertyAndExpressionGet;
     return;
   }
 
@@ -1903,8 +1904,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     Builder.CreateLoad(StateItemsPtr, "stateitems");
 
   // Fetch the value at the current index from the buffer.
-  llvm::Value *CurrentItemPtr =
-    Builder.CreateGEP(EnumStateItems, index, "currentitem.ptr");
+  llvm::Value *CurrentItemPtr = Builder.CreateGEP(
+      EnumStateItems->getType()->getPointerElementType(), EnumStateItems, index,
+      "currentitem.ptr");
   llvm::Value *CurrentItem =
     Builder.CreateAlignedLoad(ObjCIdType, CurrentItemPtr, getPointerAlign());
 

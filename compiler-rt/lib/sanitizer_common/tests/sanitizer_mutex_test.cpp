@@ -133,4 +133,34 @@ TEST(SanitizerCommon, BlockingMutex) {
   check_locked(mtx);
 }
 
+struct SemaphoreData {
+  Semaphore *sem;
+  bool done;
+};
+
+void *SemaphoreThread(void *arg) {
+  auto data = static_cast<SemaphoreData *>(arg);
+  data->sem->Wait();
+  data->done = true;
+  return nullptr;
+}
+
+TEST(SanitizerCommon, Semaphore) {
+  Semaphore sem;
+  sem.Post(1);
+  sem.Wait();
+  sem.Post(3);
+  sem.Wait();
+  sem.Wait();
+  sem.Wait();
+
+  SemaphoreData data = {&sem, false};
+  pthread_t thread;
+  PTHREAD_CREATE(&thread, nullptr, SemaphoreThread, &data);
+  internal_sleep(1);
+  CHECK(!data.done);
+  sem.Post(1);
+  PTHREAD_JOIN(thread, nullptr);
+}
+
 }  // namespace __sanitizer

@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -check-prefixes=CHECK,GFX6 %s
-; RUN: llc -regalloc=basic -march=amdgcn -mcpu=tonga -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -sgpr-regalloc=basic -vgpr-regalloc=basic -march=amdgcn -mcpu=tonga -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -march=amdgcn -mattr=-xnack -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX9-FLATSCR,FLATSCR %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX10-FLATSCR,FLATSCR %s
 ;
@@ -45,7 +45,7 @@ entry:
 }
 
 ; CHECK-LABEL: test_limited_sgpr
-; GFX6: s_mov_b32 s0, 0x80400
+; GFX6: s_mov_b32 s0, 0x80800
 ; GFX6-NEXT: s_waitcnt expcnt(2)
 ; GFX6-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9:]+}}], s0
 ; GFX6: NumSgprs: 48

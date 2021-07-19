@@ -187,6 +187,15 @@ protected:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printSVEPattern(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+
+  template <bool IsVertical>
+  void printMatrixTileVector(const MCInst *MI, unsigned OpNum,
+                             const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixTile(const MCInst *MI, unsigned OpNum,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  template <int EltSize>
+  void printMatrix(const MCInst *MI, unsigned OpNum, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
   template <char = 0>
   void printSVERegOp(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);

@@ -13,6 +13,8 @@ add_mlir_conversion_library(MLIRVectorToROCDL
 
   LINK_LIBS PUBLIC
   MLIRROCDLIR
+  MLIRLLVMCommonConversion
+  MLIRMemRefToLLVM
   MLIRStandardToLLVM
   MLIRVector
   MLIRTransforms

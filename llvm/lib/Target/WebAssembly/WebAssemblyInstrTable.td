@@ -13,10 +13,10 @@
 
 
 multiclass TABLE<WebAssemblyRegClass rt> {
-  defm TABLE_GET_#rt : I<(outs rt:$res), (ins table32_op:$table),
+  defm TABLE_GET_#rt : I<(outs rt:$res), (ins table32_op:$table, I32:$i),
                          (outs), (ins table32_op:$table),
                          [],
-                         "table.get\t$res, $table",
+                         "table.get\t$res, $table, $i",
                          "table.get\t$table",
                          0x25>;
 

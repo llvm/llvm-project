@@ -766,8 +766,10 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
                             BBName);
   }
   BasicBlock::iterator SplitIt = SplitPt->getIterator();
-  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
+  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad()) {
     ++SplitIt;
+    assert(SplitIt != SplitPt->getParent()->end());
+  }
   std::string Name = BBName.str();
   BasicBlock *New = Old->splitBasicBlock(
       SplitIt, Name.empty() ? Old->getName() + ".split" : Name);

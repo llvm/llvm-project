@@ -95,6 +95,7 @@ public:
   bool GetWarningsUnsupportedLanguage() const;
   bool GetStopOnExec() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
+  std::chrono::seconds GetInterruptTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
@@ -1708,30 +1709,19 @@ public:
   lldb::addr_t CallocateMemory(size_t size, uint32_t permissions,
                                Status &error);
 
-  /// If the address range given is in a memory tagged range and this
-  /// architecture and process supports memory tagging, return a tag
+  /// If this architecture and process supports memory tagging, return a tag
   /// manager that can be used to maniupulate those memory tags.
-  /// Tags present in the addresses given are ignored.
-  ///
-  /// \param[in] addr
-  ///     Start of memory range.
-  ///
-  /// \param[in] end_addr
-  ///     End of the memory range. Where end is one beyond the last byte to be
-  ///     included.
   ///
   /// \return
   ///     Either a valid pointer to a tag manager or an error describing why one
   ///     could not be provided.
-  llvm::Expected<const MemoryTagManager *>
-  GetMemoryTagManager(lldb::addr_t addr, lldb::addr_t end_addr);
+  llvm::Expected<const MemoryTagManager *> GetMemoryTagManager();
 
-  /// Expands the range addr to addr+len to align with granule boundaries and
-  /// then calls DoReadMemoryTags to do the target specific operations.
-  /// Tags are returned unpacked so can be used without conversion.
+  /// Read memory tags for the range addr to addr+len. It is assumed
+  /// that this range has already been granule aligned.
+  /// (see MemoryTagManager::MakeTaggedRange)
   ///
-  /// \param[in] tag_manager
-  ///     The tag manager to get memory tagging information from.
+  /// This calls DoReadMemoryTags to do the target specific operations.
   ///
   /// \param[in] addr
   ///     Start of memory range to read tags for.
@@ -1740,11 +1730,12 @@ public:
   ///     Length of memory range to read tags for (in bytes).
   ///
   /// \return
-  ///     Either the unpacked tags or an error describing a failure to read
-  ///     or unpack them.
-  llvm::Expected<std::vector<lldb::addr_t>>
-  ReadMemoryTags(const MemoryTagManager *tag_manager, lldb::addr_t addr,
-                 size_t len);
+  ///     If this architecture or process does not support memory tagging,
+  ///     an error saying so.
+  ///     If it does, either the memory tags or an error describing a
+  ///     failure to read or unpack them.
+  llvm::Expected<std::vector<lldb::addr_t>> ReadMemoryTags(lldb::addr_t addr,
+                                                           size_t len);
 
   /// Resolve dynamically loaded indirect functions.
   ///

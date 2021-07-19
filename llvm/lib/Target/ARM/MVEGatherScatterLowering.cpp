@@ -17,6 +17,7 @@
 #include "ARMSubtarget.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -487,27 +488,44 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
   // The size of the gather was already checked in isLegalTypeAndAlignment;
   // if it was not a full vector width an appropriate extend should follow.
   auto *Extend = Root;
+  bool TruncResult = false;
   if (MemoryTy->getPrimitiveSizeInBits() < 128) {
-    // Only transform gathers with exactly one use
-    if (!I->hasOneUse())
-      return nullptr;
-
-    // The correct root to replace is not the CallInst itself, but the
-    // instruction which extends it
-    Extend = cast<Instruction>(*I->users().begin());
-    if (isa<SExtInst>(Extend)) {
-      Unsigned = 0;
-    } else if (!isa<ZExtInst>(Extend)) {
-      LLVM_DEBUG(dbgs() << "masked gathers: extend needed but not provided. "
-                        << "Expanding\n");
-      return nullptr;
+    if (I->hasOneUse()) {
+      // If the gather has a single extend of the correct type, use an extending
+      // gather and replace the ext. In which case the correct root to replace
+      // is not the CallInst itself, but the instruction which extends it.
+      Instruction* User = cast<Instruction>(*I->users().begin());
+      if (isa<SExtInst>(User) &&
+          User->getType()->getPrimitiveSizeInBits() == 128) {
+        LLVM_DEBUG(dbgs() << "masked gathers: Incorporating extend: "
+                          << *User << "\n");
+        Extend = User;
+        ResultTy = User->getType();
+        Unsigned = 0;
+      } else if (isa<ZExtInst>(User) &&
+                 User->getType()->getPrimitiveSizeInBits() == 128) {
+        LLVM_DEBUG(dbgs() << "masked gathers: Incorporating extend: "
+                          << *ResultTy << "\n");
+        Extend = User;
+        ResultTy = User->getType();
+      }
     }
-    LLVM_DEBUG(dbgs() << "masked gathers: found an extending gather\n");
-    ResultTy = Extend->getType();
+
+    // If an extend hasn't been found and the type is an integer, create an
+    // extending gather and truncate back to the original type.
+    if (ResultTy->getPrimitiveSizeInBits() < 128 &&
+        ResultTy->isIntOrIntVectorTy()) {
+      ResultTy = ResultTy->getWithNewBitWidth(
+          128 / cast<FixedVectorType>(ResultTy)->getNumElements());
+      TruncResult = true;
+      LLVM_DEBUG(dbgs() << "masked gathers: Small input type, truncing to: "
+                        << *ResultTy << "\n");
+    }
+
     // The final size of the gather must be a full vector width
     if (ResultTy->getPrimitiveSizeInBits() != 128) {
-      LLVM_DEBUG(dbgs() << "masked gathers: extending from the wrong type. "
-                        << "Expanding\n");
+      LLVM_DEBUG(dbgs() << "masked gathers: Extend needed but not provided "
+                           "from the correct type. Expanding\n");
       return nullptr;
     }
   }
@@ -521,18 +539,25 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
 
   Root = Extend;
   Value *Mask = I->getArgOperand(2);
+  Instruction *Load = nullptr;
   if (!match(Mask, m_One()))
-    return Builder.CreateIntrinsic(
+    Load = Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_offset_predicated,
         {ResultTy, BasePtr->getType(), Offsets->getType(), Mask->getType()},
         {BasePtr, Offsets, Builder.getInt32(MemoryTy->getScalarSizeInBits()),
          Builder.getInt32(Scale), Builder.getInt32(Unsigned), Mask});
   else
-    return Builder.CreateIntrinsic(
+    Load = Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_offset,
         {ResultTy, BasePtr->getType(), Offsets->getType()},
         {BasePtr, Offsets, Builder.getInt32(MemoryTy->getScalarSizeInBits()),
          Builder.getInt32(Scale), Builder.getInt32(Unsigned)});
+
+  if (TruncResult) {
+    Load = TruncInst::Create(Instruction::Trunc, Load, MemoryTy);
+    Builder.Insert(Load);
+  }
+  return Load;
 }
 
 Instruction *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
@@ -972,30 +997,18 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     }
   }
   // A phi node we want to perform this function on should be from the
-  // loop header, and shouldn't have more than 2 incoming values
-  if (Phi->getParent() != L->getHeader() ||
-      Phi->getNumIncomingValues() != 2)
+  // loop header.
+  if (Phi->getParent() != L->getHeader())
     return false;
 
-  // The phi must be an induction variable
-  int IncrementingBlock = -1;
-
-  for (int i = 0; i < 2; i++)
-    if (auto *Op = dyn_cast<Instruction>(Phi->getIncomingValue(i)))
-      if (Op->getOpcode() == Instruction::Add &&
-          (Op->getOperand(0) == Phi || Op->getOperand(1) == Phi))
-        IncrementingBlock = i;
-  if (IncrementingBlock == -1)
+  // We're looking for a simple add recurrence.
+  BinaryOperator *IncInstruction;
+  Value *Start, *IncrementPerRound;
+  if (!matchSimpleRecurrence(Phi, IncInstruction, Start, IncrementPerRound) ||
+      IncInstruction->getOpcode() != Instruction::Add)
     return false;
 
-  Instruction *IncInstruction =
-      cast<Instruction>(Phi->getIncomingValue(IncrementingBlock));
-
-  // If the phi is not used by anything else, we can just adapt it when
-  // replacing the instruction; if it is, we'll have to duplicate it
-  PHINode *NewPhi;
-  Value *IncrementPerRound = IncInstruction->getOperand(
-      (IncInstruction->getOperand(0) == Phi) ? 1 : 0);
+  int IncrementingBlock = Phi->getIncomingValue(0) == IncInstruction ? 0 : 1;
 
   // Get the value that is added to/multiplied with the phi
   Value *OffsSecondOperand = Offs->getOperand(OffsSecondOp);
@@ -1012,6 +1025,9 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
         !L->contains(cast<Instruction>(IncrementPerRound))))
     return false;
 
+  // If the phi is not used by anything else, we can just adapt it when
+  // replacing the instruction; if it is, we'll have to duplicate it
+  PHINode *NewPhi;
   if (Phi->getNumUses() == 2) {
     // No other users -> reuse existing phi (One user is the instruction
     // we're looking at, the other is the phi increment)
@@ -1026,8 +1042,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     NewPhi = Phi;
   } else {
     // There are other users -> create a new phi
-    NewPhi = PHINode::Create(Phi->getType(), 0, "NewPhi", Phi);
-    std::vector<Value *> Increases;
+    NewPhi = PHINode::Create(Phi->getType(), 2, "NewPhi", Phi);
     // Copy the incoming values of the old phi
     NewPhi->addIncoming(Phi->getIncomingValue(IncrementingBlock == 1 ? 0 : 1),
                         Phi->getIncomingBlock(IncrementingBlock == 1 ? 0 : 1));

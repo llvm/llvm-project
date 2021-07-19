@@ -194,6 +194,7 @@ set(files
   __ranges/ref_view.h
   __ranges/size.h
   __ranges/subrange.h
+  __ranges/transform_view.h
   __ranges/view_interface.h
   __split_buffer
   __std_stream
@@ -237,6 +238,7 @@ set(files
   __utility/rel_ops.h
   __utility/swap.h
   __utility/to_underlying.h
+  __variant/monostate.h
   algorithm
   any
   array

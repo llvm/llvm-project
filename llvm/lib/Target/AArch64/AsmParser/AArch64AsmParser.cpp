@@ -66,8 +66,11 @@ enum class RegKind {
   Scalar,
   NeonVector,
   SVEDataVector,
-  SVEPredicateVector
+  SVEPredicateVector,
+  Matrix
 };
+
+enum class MatrixKind { Array, Tile, Row, Col };
 
 enum RegConstraintEqualityTy {
   EqualsReg,
@@ -229,6 +232,7 @@ private:
   OperandMatchResultTy tryParseScalarRegister(unsigned &Reg);
   OperandMatchResultTy tryParseVectorRegister(unsigned &Reg, StringRef &Kind,
                                               RegKind MatchKind);
+  OperandMatchResultTy tryParseMatrixRegister(OperandVector &Operands);
   OperandMatchResultTy tryParseOptionalShiftExtend(OperandVector &Operands);
   OperandMatchResultTy tryParseBarrierOperand(OperandVector &Operands);
   OperandMatchResultTy tryParseBarriernXSOperand(OperandVector &Operands);
@@ -316,6 +320,7 @@ private:
     k_ShiftedImm,
     k_CondCode,
     k_Register,
+    k_MatrixRegister,
     k_VectorList,
     k_VectorIndex,
     k_Token,
@@ -368,6 +373,12 @@ private:
     // The default is 'lsl #0' (HasExplicitAmount = false) if no
     // ShiftExtend is specified.
     ShiftExtendOp ShiftExtend;
+  };
+
+  struct MatrixRegOp {
+    unsigned RegNum;
+    unsigned ElementWidth;
+    MatrixKind Kind;
   };
 
   struct VectorListOp {
@@ -440,6 +451,7 @@ private:
   union {
     struct TokOp Tok;
     struct RegOp Reg;
+    struct MatrixRegOp MatrixReg;
     struct VectorListOp VectorList;
     struct VectorIndexOp VectorIndex;
     struct ImmOp Imm;
@@ -487,6 +499,9 @@ public:
       break;
     case k_Register:
       Reg = o.Reg;
+      break;
+    case k_MatrixRegister:
+      MatrixReg = o.MatrixReg;
       break;
     case k_VectorList:
       VectorList = o.VectorList;
@@ -578,6 +593,21 @@ public:
   unsigned getReg() const override {
     assert(Kind == k_Register && "Invalid access!");
     return Reg.RegNum;
+  }
+
+  unsigned getMatrixReg() const {
+    assert(Kind == k_MatrixRegister && "Invalid access!");
+    return MatrixReg.RegNum;
+  }
+
+  unsigned getMatrixElementWidth() const {
+    assert(Kind == k_MatrixRegister && "Invalid access!");
+    return MatrixReg.ElementWidth;
+  }
+
+  MatrixKind getMatrixKind() const {
+    assert(Kind == k_MatrixRegister && "Invalid access!");
+    return MatrixReg.Kind;
   }
 
   RegConstraintEqualityTy getRegEqualityTy() const {
@@ -1089,6 +1119,8 @@ public:
                 Reg.RegNum));
   }
 
+  bool isMatrix() const { return Kind == k_MatrixRegister; }
+
   template <unsigned Class> bool isSVEVectorReg() const {
     RegKind RK;
     switch (Class) {
@@ -1470,6 +1502,17 @@ public:
     return true;
   }
 
+  template <MatrixKind Kind, unsigned EltSize, unsigned RegClass>
+  DiagnosticPredicate isMatrixRegOperand() const {
+    if (!isMatrix())
+      return DiagnosticPredicateTy::NoMatch;
+    if (getMatrixKind() != Kind ||
+        !AArch64MCRegisterClasses[RegClass].contains(getMatrixReg()) ||
+        EltSize != getMatrixElementWidth())
+      return DiagnosticPredicateTy::NearMatch;
+    return DiagnosticPredicateTy::Match;
+  }
+
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
     // Add as immediates when possible.  Null MCExpr = 0.
     if (!Expr)
@@ -1483,6 +1526,11 @@ public:
   void addRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(getReg()));
+  }
+
+  void addMatrixOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getMatrixReg()));
   }
 
   void addGPR32as64Operands(MCInst &Inst, unsigned N) const {
@@ -2055,6 +2103,18 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
+  CreateMatrixRegister(unsigned RegNum, unsigned ElementWidth, MatrixKind Kind,
+                       SMLoc S, SMLoc E, MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_MatrixRegister, Ctx);
+    Op->MatrixReg.RegNum = RegNum;
+    Op->MatrixReg.ElementWidth = ElementWidth;
+    Op->MatrixReg.Kind = Kind;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<AArch64Operand>
   CreateShiftExtend(AArch64_AM::ShiftExtendType ShOp, unsigned Val,
                     bool HasExplicitAmount, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_ShiftExtend, Ctx);
@@ -2131,6 +2191,9 @@ void AArch64Operand::print(raw_ostream &OS) const {
     break;
   case k_BTIHint:
     OS << getBTIHintName();
+    break;
+  case k_MatrixRegister:
+    OS << "<matrix " << getMatrixReg() << ">";
     break;
   case k_Register:
     OS << "<register " << getReg() << ">";
@@ -2229,6 +2292,7 @@ static Optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
     break;
   case RegKind::SVEPredicateVector:
   case RegKind::SVEDataVector:
+  case RegKind::Matrix:
     Res = StringSwitch<std::pair<int, int>>(Suffix.lower())
               .Case("", {0, 0})
               .Case(".b", {0, 8})
@@ -2310,6 +2374,105 @@ static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
       .Default(0);
 }
 
+static unsigned matchMatrixRegName(StringRef Name) {
+  return StringSwitch<unsigned>(Name.lower())
+      .Case("za", AArch64::ZA)
+      .Case("za0.q", AArch64::ZAQ0)
+      .Case("za1.q", AArch64::ZAQ1)
+      .Case("za2.q", AArch64::ZAQ2)
+      .Case("za3.q", AArch64::ZAQ3)
+      .Case("za4.q", AArch64::ZAQ4)
+      .Case("za5.q", AArch64::ZAQ5)
+      .Case("za6.q", AArch64::ZAQ6)
+      .Case("za7.q", AArch64::ZAQ7)
+      .Case("za8.q", AArch64::ZAQ8)
+      .Case("za9.q", AArch64::ZAQ9)
+      .Case("za10.q", AArch64::ZAQ10)
+      .Case("za11.q", AArch64::ZAQ11)
+      .Case("za12.q", AArch64::ZAQ12)
+      .Case("za13.q", AArch64::ZAQ13)
+      .Case("za14.q", AArch64::ZAQ14)
+      .Case("za15.q", AArch64::ZAQ15)
+      .Case("za0.d", AArch64::ZAD0)
+      .Case("za1.d", AArch64::ZAD1)
+      .Case("za2.d", AArch64::ZAD2)
+      .Case("za3.d", AArch64::ZAD3)
+      .Case("za4.d", AArch64::ZAD4)
+      .Case("za5.d", AArch64::ZAD5)
+      .Case("za6.d", AArch64::ZAD6)
+      .Case("za7.d", AArch64::ZAD7)
+      .Case("za0.s", AArch64::ZAS0)
+      .Case("za1.s", AArch64::ZAS1)
+      .Case("za2.s", AArch64::ZAS2)
+      .Case("za3.s", AArch64::ZAS3)
+      .Case("za0.h", AArch64::ZAH0)
+      .Case("za1.h", AArch64::ZAH1)
+      .Case("za0.b", AArch64::ZAB0)
+      .Case("za0h.q", AArch64::ZAQ0)
+      .Case("za1h.q", AArch64::ZAQ1)
+      .Case("za2h.q", AArch64::ZAQ2)
+      .Case("za3h.q", AArch64::ZAQ3)
+      .Case("za4h.q", AArch64::ZAQ4)
+      .Case("za5h.q", AArch64::ZAQ5)
+      .Case("za6h.q", AArch64::ZAQ6)
+      .Case("za7h.q", AArch64::ZAQ7)
+      .Case("za8h.q", AArch64::ZAQ8)
+      .Case("za9h.q", AArch64::ZAQ9)
+      .Case("za10h.q", AArch64::ZAQ10)
+      .Case("za11h.q", AArch64::ZAQ11)
+      .Case("za12h.q", AArch64::ZAQ12)
+      .Case("za13h.q", AArch64::ZAQ13)
+      .Case("za14h.q", AArch64::ZAQ14)
+      .Case("za15h.q", AArch64::ZAQ15)
+      .Case("za0h.d", AArch64::ZAD0)
+      .Case("za1h.d", AArch64::ZAD1)
+      .Case("za2h.d", AArch64::ZAD2)
+      .Case("za3h.d", AArch64::ZAD3)
+      .Case("za4h.d", AArch64::ZAD4)
+      .Case("za5h.d", AArch64::ZAD5)
+      .Case("za6h.d", AArch64::ZAD6)
+      .Case("za7h.d", AArch64::ZAD7)
+      .Case("za0h.s", AArch64::ZAS0)
+      .Case("za1h.s", AArch64::ZAS1)
+      .Case("za2h.s", AArch64::ZAS2)
+      .Case("za3h.s", AArch64::ZAS3)
+      .Case("za0h.h", AArch64::ZAH0)
+      .Case("za1h.h", AArch64::ZAH1)
+      .Case("za0h.b", AArch64::ZAB0)
+      .Case("za0v.q", AArch64::ZAQ0)
+      .Case("za1v.q", AArch64::ZAQ1)
+      .Case("za2v.q", AArch64::ZAQ2)
+      .Case("za3v.q", AArch64::ZAQ3)
+      .Case("za4v.q", AArch64::ZAQ4)
+      .Case("za5v.q", AArch64::ZAQ5)
+      .Case("za6v.q", AArch64::ZAQ6)
+      .Case("za7v.q", AArch64::ZAQ7)
+      .Case("za8v.q", AArch64::ZAQ8)
+      .Case("za9v.q", AArch64::ZAQ9)
+      .Case("za10v.q", AArch64::ZAQ10)
+      .Case("za11v.q", AArch64::ZAQ11)
+      .Case("za12v.q", AArch64::ZAQ12)
+      .Case("za13v.q", AArch64::ZAQ13)
+      .Case("za14v.q", AArch64::ZAQ14)
+      .Case("za15v.q", AArch64::ZAQ15)
+      .Case("za0v.d", AArch64::ZAD0)
+      .Case("za1v.d", AArch64::ZAD1)
+      .Case("za2v.d", AArch64::ZAD2)
+      .Case("za3v.d", AArch64::ZAD3)
+      .Case("za4v.d", AArch64::ZAD4)
+      .Case("za5v.d", AArch64::ZAD5)
+      .Case("za6v.d", AArch64::ZAD6)
+      .Case("za7v.d", AArch64::ZAD7)
+      .Case("za0v.s", AArch64::ZAS0)
+      .Case("za1v.s", AArch64::ZAS1)
+      .Case("za2v.s", AArch64::ZAS2)
+      .Case("za3v.s", AArch64::ZAS3)
+      .Case("za0v.h", AArch64::ZAH0)
+      .Case("za1v.h", AArch64::ZAH1)
+      .Case("za0v.b", AArch64::ZAB0)
+      .Default(0);
+}
+
 bool AArch64AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
   return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
@@ -2336,6 +2499,9 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
 
   if ((RegNum = MatchNeonVectorRegName(Name)))
     return Kind == RegKind::NeonVector ? RegNum : 0;
+
+  if ((RegNum = matchMatrixRegName(Name)))
+    return Kind == RegKind::Matrix ? RegNum : 0;
 
   // The parsed register must be of RegKind Scalar
   if ((RegNum = MatchRegisterName(Name)))
@@ -2807,6 +2973,67 @@ bool AArch64AsmParser::parseCondCode(OperandVector &Operands,
   Operands.push_back(
       AArch64Operand::CreateCondCode(CC, S, getLoc(), getContext()));
   return false;
+}
+
+OperandMatchResultTy
+AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
+  MCAsmParser &Parser = getParser();
+  const AsmToken &Tok = Parser.getTok();
+  SMLoc S = getLoc();
+
+  StringRef Name = Tok.getString();
+
+  if (Name.equals_insensitive("za")) {
+    Parser.Lex(); // eat "za"
+    Operands.push_back(AArch64Operand::CreateMatrixRegister(
+        AArch64::ZA, /*ElementWidth=*/0, MatrixKind::Array, S, getLoc(),
+        getContext()));
+    if (getLexer().is(AsmToken::LBrac)) {
+      // There's no comma after matrix operand, so we can parse the next operand
+      // immediately.
+      if (parseOperand(Operands, false, false))
+        return MatchOperand_NoMatch;
+    }
+    return MatchOperand_Success;
+  }
+
+  // Try to parse matrix register.
+  unsigned Reg = matchRegisterNameAlias(Name, RegKind::Matrix);
+  if (!Reg)
+    return MatchOperand_NoMatch;
+
+  size_t DotPosition = Name.find('.');
+  assert(DotPosition != StringRef::npos && "Unexpected register");
+
+  StringRef Head = Name.take_front(DotPosition);
+  StringRef Tail = Name.drop_front(DotPosition);
+  StringRef RowOrColumn = Head.take_back();
+
+  MatrixKind Kind = StringSwitch<MatrixKind>(RowOrColumn)
+                        .Case("h", MatrixKind::Row)
+                        .Case("v", MatrixKind::Col)
+                        .Default(MatrixKind::Tile);
+
+  // Next up, parsing the suffix
+  const auto &KindRes = parseVectorKind(Tail, RegKind::Matrix);
+  if (!KindRes) {
+    TokError("Expected the register to be followed by element width suffix");
+    return MatchOperand_ParseFail;
+  }
+  unsigned ElementWidth = KindRes->second;
+
+  Parser.Lex();
+
+  Operands.push_back(AArch64Operand::CreateMatrixRegister(
+      Reg, ElementWidth, Kind, S, getLoc(), getContext()));
+
+  if (getLexer().is(AsmToken::LBrac)) {
+    // There's no comma after matrix operand, so we can parse the next operand
+    // immediately.
+    if (parseOperand(Operands, false, false))
+      return MatchOperand_NoMatch;
+  }
+  return MatchOperand_Success;
 }
 
 /// tryParseOptionalShift - Some operands take an optional shift argument. Parse
@@ -3486,7 +3713,8 @@ AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
 
     if (RegTok.isNot(AsmToken::Identifier) ||
         ParseRes == MatchOperand_ParseFail ||
-        (ParseRes == MatchOperand_NoMatch && NoMatchIsError)) {
+        (ParseRes == MatchOperand_NoMatch && NoMatchIsError &&
+         !RegTok.getString().startswith_insensitive("za"))) {
       Error(Loc, "vector register expected");
       return MatchOperand_ParseFail;
     }
@@ -3759,8 +3987,19 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     // immediately.
     return parseOperand(Operands, false, false);
   }
-  case AsmToken::LCurly:
-    return parseNeonVectorList(Operands);
+  case AsmToken::LCurly: {
+    if (!parseNeonVectorList(Operands))
+      return false;
+
+    SMLoc Loc = Parser.getTok().getLoc();
+    Operands.push_back(
+        AArch64Operand::CreateToken("{", false, Loc, getContext()));
+    Parser.Lex(); // Eat '{'
+
+    // There's no comma after a '{', so we can parse the next operand
+    // immediately.
+    return parseOperand(Operands, false, false);
+  }
   case AsmToken::Identifier: {
     // If we're expecting a Condition Code operand, then just parse that.
     if (isCondCode)
@@ -4086,23 +4325,29 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
         return true;
       }
 
-      // After successfully parsing some operands there are two special cases to
-      // consider (i.e. notional operands not separated by commas). Both are due
-      // to memory specifiers:
+      // After successfully parsing some operands there are three special cases
+      // to consider (i.e. notional operands not separated by commas). Two are
+      // due to memory specifiers:
       //  + An RBrac will end an address for load/store/prefetch
       //  + An '!' will indicate a pre-indexed operation.
+      //
+      // And a further case is '}', which ends a group of tokens specifying the
+      // SME accumulator array 'ZA' or tile vector, i.e.
+      //
+      //   '{ ZA }' or '{ <ZAt><HV>.<BHSDQ>[<Wv>, #<imm>] }'
       //
       // It's someone else's responsibility to make sure these tokens are sane
       // in the given context!
 
-      SMLoc RLoc = Parser.getTok().getLoc();
       if (parseOptionalToken(AsmToken::RBrac))
         Operands.push_back(
-            AArch64Operand::CreateToken("]", false, RLoc, getContext()));
-      SMLoc ELoc = Parser.getTok().getLoc();
+            AArch64Operand::CreateToken("]", false, getLoc(), getContext()));
       if (parseOptionalToken(AsmToken::Exclaim))
         Operands.push_back(
-            AArch64Operand::CreateToken("!", false, ELoc, getContext()));
+            AArch64Operand::CreateToken("!", false, getLoc(), getContext()));
+      if (parseOptionalToken(AsmToken::RCurly))
+        Operands.push_back(
+            AArch64Operand::CreateToken("}", false, getLoc(), getContext()));
 
       ++N;
     } while (parseOptionalToken(AsmToken::Comma));
@@ -4557,6 +4802,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 16 in range [0, 65520].");
   case Match_InvalidImm0_1:
     return Error(Loc, "immediate must be an integer in range [0, 1].");
+  case Match_InvalidImm0_3:
+    return Error(Loc, "immediate must be an integer in range [0, 3].");
   case Match_InvalidImm0_7:
     return Error(Loc, "immediate must be an integer in range [0, 7].");
   case Match_InvalidImm0_15:
@@ -4641,6 +4888,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "register must be x0..x30 or xzr, with required shift 'lsl #2'");
   case Match_InvalidGPR64shifted64:
     return Error(Loc, "register must be x0..x30 or xzr, with required shift 'lsl #3'");
+  case Match_InvalidGPR64shifted128:
+    return Error(
+        Loc, "register must be x0..x30 or xzr, with required shift 'lsl #4'");
   case Match_InvalidGPR64NoXZRshifted8:
     return Error(Loc, "register must be x0..x30 without shift");
   case Match_InvalidGPR64NoXZRshifted16:
@@ -4649,6 +4899,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "register must be x0..x30 with required shift 'lsl #2'");
   case Match_InvalidGPR64NoXZRshifted64:
     return Error(Loc, "register must be x0..x30 with required shift 'lsl #3'");
+  case Match_InvalidGPR64NoXZRshifted128:
+    return Error(Loc, "register must be x0..x30 with required shift 'lsl #4'");
   case Match_InvalidZPR32UXTW8:
   case Match_InvalidZPR32SXTW8:
     return Error(Loc, "invalid shift/extend specified, expected 'z[0..31].s, (uxtw|sxtw)'");
@@ -4733,6 +4985,31 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "Invalid floating point constant, expected 0.5 or 2.0.");
   case Match_InvalidSVEExactFPImmOperandZeroOne:
     return Error(Loc, "Invalid floating point constant, expected 0.0 or 1.0.");
+  case Match_InvalidMatrixTileVectorH8:
+  case Match_InvalidMatrixTileVectorV8:
+    return Error(Loc, "invalid matrix operand, expected za0h.b or za0v.b");
+  case Match_InvalidMatrixTileVectorH16:
+  case Match_InvalidMatrixTileVectorV16:
+    return Error(Loc,
+                 "invalid matrix operand, expected za[0-1]h.h or za[0-1]v.h");
+  case Match_InvalidMatrixTileVectorH32:
+  case Match_InvalidMatrixTileVectorV32:
+    return Error(Loc,
+                 "invalid matrix operand, expected za[0-3]h.s or za[0-3]v.s");
+  case Match_InvalidMatrixTileVectorH64:
+  case Match_InvalidMatrixTileVectorV64:
+    return Error(Loc,
+                 "invalid matrix operand, expected za[0-7]h.d or za[0-7]v.d");
+  case Match_InvalidMatrixTileVectorH128:
+  case Match_InvalidMatrixTileVectorV128:
+    return Error(Loc,
+                 "invalid matrix operand, expected za[0-15]h.q or za[0-15]v.q");
+  case Match_InvalidMatrixTile32:
+    return Error(Loc, "invalid matrix operand, expected za[0-3].s");
+  case Match_InvalidMatrixTile64:
+    return Error(Loc, "invalid matrix operand, expected za[0-7].d");
+  case Match_InvalidMatrix:
+    return Error(Loc, "invalid matrix operand, expected za");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -5161,6 +5438,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed16SImm9:
   case Match_InvalidMemoryIndexed8SImm10:
   case Match_InvalidImm0_1:
+  case Match_InvalidImm0_3:
   case Match_InvalidImm0_7:
   case Match_InvalidImm0_15:
   case Match_InvalidImm0_31:
@@ -5197,10 +5475,12 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidGPR64shifted16:
   case Match_InvalidGPR64shifted32:
   case Match_InvalidGPR64shifted64:
+  case Match_InvalidGPR64shifted128:
   case Match_InvalidGPR64NoXZRshifted8:
   case Match_InvalidGPR64NoXZRshifted16:
   case Match_InvalidGPR64NoXZRshifted32:
   case Match_InvalidGPR64NoXZRshifted64:
+  case Match_InvalidGPR64NoXZRshifted128:
   case Match_InvalidZPR32UXTW8:
   case Match_InvalidZPR32UXTW16:
   case Match_InvalidZPR32UXTW32:
@@ -5251,6 +5531,19 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEExactFPImmOperandHalfOne:
   case Match_InvalidSVEExactFPImmOperandHalfTwo:
   case Match_InvalidSVEExactFPImmOperandZeroOne:
+  case Match_InvalidMatrixTile32:
+  case Match_InvalidMatrixTile64:
+  case Match_InvalidMatrix:
+  case Match_InvalidMatrixTileVectorH8:
+  case Match_InvalidMatrixTileVectorH16:
+  case Match_InvalidMatrixTileVectorH32:
+  case Match_InvalidMatrixTileVectorH64:
+  case Match_InvalidMatrixTileVectorH128:
+  case Match_InvalidMatrixTileVectorV8:
+  case Match_InvalidMatrixTileVectorV16:
+  case Match_InvalidMatrixTileVectorV32:
+  case Match_InvalidMatrixTileVectorV64:
+  case Match_InvalidMatrixTileVectorV128:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
@@ -5801,14 +6094,14 @@ bool AArch64AsmParser::parseDirectiveSEHAllocStack(SMLoc L) {
   int64_t Size;
   if (parseImmExpr(Size))
     return true;
-  getTargetStreamer().EmitARM64WinCFIAllocStack(Size);
+  getTargetStreamer().emitARM64WinCFIAllocStack(Size);
   return false;
 }
 
 /// parseDirectiveSEHPrologEnd
 /// ::= .seh_endprologue
 bool AArch64AsmParser::parseDirectiveSEHPrologEnd(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFIPrologEnd();
+  getTargetStreamer().emitARM64WinCFIPrologEnd();
   return false;
 }
 
@@ -5818,7 +6111,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveR19R20X(SMLoc L) {
   int64_t Offset;
   if (parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveR19R20X(Offset);
+  getTargetStreamer().emitARM64WinCFISaveR19R20X(Offset);
   return false;
 }
 
@@ -5828,7 +6121,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveFPLR(SMLoc L) {
   int64_t Offset;
   if (parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveFPLR(Offset);
+  getTargetStreamer().emitARM64WinCFISaveFPLR(Offset);
   return false;
 }
 
@@ -5838,7 +6131,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveFPLRX(SMLoc L) {
   int64_t Offset;
   if (parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveFPLRX(Offset);
+  getTargetStreamer().emitARM64WinCFISaveFPLRX(Offset);
   return false;
 }
 
@@ -5850,7 +6143,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveReg(SMLoc L) {
   if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::LR) ||
       parseComma() || parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveReg(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveReg(Reg, Offset);
   return false;
 }
 
@@ -5862,7 +6155,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveRegX(SMLoc L) {
   if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::LR) ||
       parseComma() || parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveRegX(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveRegX(Reg, Offset);
   return false;
 }
 
@@ -5874,7 +6167,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveRegP(SMLoc L) {
   if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::FP) ||
       parseComma() || parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveRegP(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveRegP(Reg, Offset);
   return false;
 }
 
@@ -5886,7 +6179,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveRegPX(SMLoc L) {
   if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::FP) ||
       parseComma() || parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveRegPX(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveRegPX(Reg, Offset);
   return false;
 }
 
@@ -5902,7 +6195,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveLRPair(SMLoc L) {
   if (check(((Reg - 19) % 2 != 0), L,
             "expected register with even offset from x19"))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveLRPair(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveLRPair(Reg, Offset);
   return false;
 }
 
@@ -5914,7 +6207,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveFReg(SMLoc L) {
   if (parseRegisterInRange(Reg, AArch64::D0, AArch64::D8, AArch64::D15) ||
       parseComma() || parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveFReg(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveFReg(Reg, Offset);
   return false;
 }
 
@@ -5926,7 +6219,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveFRegX(SMLoc L) {
   if (parseRegisterInRange(Reg, AArch64::D0, AArch64::D8, AArch64::D15) ||
       parseComma() || parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveFRegX(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveFRegX(Reg, Offset);
   return false;
 }
 
@@ -5938,7 +6231,7 @@ bool AArch64AsmParser::parseDirectiveSEHSaveFRegP(SMLoc L) {
   if (parseRegisterInRange(Reg, AArch64::D0, AArch64::D8, AArch64::D14) ||
       parseComma() || parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveFRegP(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveFRegP(Reg, Offset);
   return false;
 }
 
@@ -5950,14 +6243,14 @@ bool AArch64AsmParser::parseDirectiveSEHSaveFRegPX(SMLoc L) {
   if (parseRegisterInRange(Reg, AArch64::D0, AArch64::D8, AArch64::D14) ||
       parseComma() || parseImmExpr(Offset))
     return true;
-  getTargetStreamer().EmitARM64WinCFISaveFRegPX(Reg, Offset);
+  getTargetStreamer().emitARM64WinCFISaveFRegPX(Reg, Offset);
   return false;
 }
 
 /// parseDirectiveSEHSetFP
 /// ::= .seh_set_fp
 bool AArch64AsmParser::parseDirectiveSEHSetFP(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFISetFP();
+  getTargetStreamer().emitARM64WinCFISetFP();
   return false;
 }
 
@@ -5967,63 +6260,63 @@ bool AArch64AsmParser::parseDirectiveSEHAddFP(SMLoc L) {
   int64_t Size;
   if (parseImmExpr(Size))
     return true;
-  getTargetStreamer().EmitARM64WinCFIAddFP(Size);
+  getTargetStreamer().emitARM64WinCFIAddFP(Size);
   return false;
 }
 
 /// parseDirectiveSEHNop
 /// ::= .seh_nop
 bool AArch64AsmParser::parseDirectiveSEHNop(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFINop();
+  getTargetStreamer().emitARM64WinCFINop();
   return false;
 }
 
 /// parseDirectiveSEHSaveNext
 /// ::= .seh_save_next
 bool AArch64AsmParser::parseDirectiveSEHSaveNext(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFISaveNext();
+  getTargetStreamer().emitARM64WinCFISaveNext();
   return false;
 }
 
 /// parseDirectiveSEHEpilogStart
 /// ::= .seh_startepilogue
 bool AArch64AsmParser::parseDirectiveSEHEpilogStart(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFIEpilogStart();
+  getTargetStreamer().emitARM64WinCFIEpilogStart();
   return false;
 }
 
 /// parseDirectiveSEHEpilogEnd
 /// ::= .seh_endepilogue
 bool AArch64AsmParser::parseDirectiveSEHEpilogEnd(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFIEpilogEnd();
+  getTargetStreamer().emitARM64WinCFIEpilogEnd();
   return false;
 }
 
 /// parseDirectiveSEHTrapFrame
 /// ::= .seh_trap_frame
 bool AArch64AsmParser::parseDirectiveSEHTrapFrame(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFITrapFrame();
+  getTargetStreamer().emitARM64WinCFITrapFrame();
   return false;
 }
 
 /// parseDirectiveSEHMachineFrame
 /// ::= .seh_pushframe
 bool AArch64AsmParser::parseDirectiveSEHMachineFrame(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFIMachineFrame();
+  getTargetStreamer().emitARM64WinCFIMachineFrame();
   return false;
 }
 
 /// parseDirectiveSEHContext
 /// ::= .seh_context
 bool AArch64AsmParser::parseDirectiveSEHContext(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFIContext();
+  getTargetStreamer().emitARM64WinCFIContext();
   return false;
 }
 
 /// parseDirectiveSEHClearUnwoundToCall
 /// ::= .seh_clear_unwound_to_call
 bool AArch64AsmParser::parseDirectiveSEHClearUnwoundToCall(SMLoc L) {
-  getTargetStreamer().EmitARM64WinCFIClearUnwoundToCall();
+  getTargetStreamer().emitARM64WinCFIClearUnwoundToCall();
   return false;
 }
 

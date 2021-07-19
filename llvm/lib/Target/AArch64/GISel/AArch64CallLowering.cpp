@@ -146,8 +146,8 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  LLT getStackValueStoreType(const DataLayout &,
-                             const CCValAssign &VA) const override {
+  LLT getStackValueStoreType(const DataLayout &, const CCValAssign &VA,
+                             ISD::ArgFlagsTy Flags) const override {
     return getStackValueStoreTypeHack(VA);
   }
 
@@ -262,8 +262,8 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   /// we invert the interpretation of ValVT and LocVT in certain cases. This is
   /// for compatability with the DAG call lowering implementation, which we're
   /// currently building on top of.
-  LLT getStackValueStoreType(const DataLayout &,
-                             const CCValAssign &VA) const override {
+  LLT getStackValueStoreType(const DataLayout &, const CCValAssign &VA,
+                             ISD::ArgFlagsTy Flags) const override {
     return getStackValueStoreTypeHack(VA);
   }
 
@@ -370,7 +370,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       }
 
       Register CurVReg = VRegs[i];
-      ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVTs[i].getTypeForEVT(Ctx)};
+      ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVTs[i].getTypeForEVT(Ctx), 0};
       setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
 
       // i1 is a special case because SDAG i1 true is naturally zero extended
@@ -533,7 +533,7 @@ bool AArch64CallLowering::lowerFormalArguments(
     if (DL.getTypeStoreSize(Arg.getType()).isZero())
       continue;
 
-    ArgInfo OrigArg{VRegs[i], Arg};
+    ArgInfo OrigArg{VRegs[i], Arg, i};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
 
     if (Arg.hasAttribute(Attribute::SwiftAsync))

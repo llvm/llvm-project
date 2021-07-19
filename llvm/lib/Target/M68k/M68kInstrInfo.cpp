@@ -442,8 +442,8 @@ bool M68kInstrInfo::ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
   // We need the subreg of Dst to make instruction verifier happy because the
   // real machine instruction consumes and produces values of the same size and
   // the registers the will be used here fall into different classes and this
-  // makes IV cry. We could of course use bigger operation but this will put
-  // some pressure on cache and memory so no.
+  // makes IV cry. We could use a bigger operation, but this will put some
+  // pressure on cache and memory, so no.
   unsigned SubDst =
       RI.getSubReg(Dst, MVTSrc == MVT::i8 ? M68k::MxSubRegIndex8Lo
                                           : M68k::MxSubRegIndex16Lo);

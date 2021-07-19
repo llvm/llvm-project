@@ -28,5 +28,5 @@ entry:
 attributes #0 = { argmemonly }
 attributes #1 = { inaccessiblememonly }
 attributes #2 = { inaccessiblemem_or_argmemonly }
-; CHECK: attributes #0 = { nofree norecurse nosync nounwind readnone willreturn mustprogress }
+; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn }
 ; CHECK-NOT: attributes

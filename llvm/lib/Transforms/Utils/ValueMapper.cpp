@@ -1032,8 +1032,8 @@ void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
     Elements.push_back(NewV);
   }
 
-  GV.setInitializer(ConstantArray::get(
-      cast<ArrayType>(GV.getType()->getElementType()), Elements));
+  GV.setInitializer(
+      ConstantArray::get(cast<ArrayType>(GV.getValueType()), Elements));
 }
 
 void Mapper::scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,

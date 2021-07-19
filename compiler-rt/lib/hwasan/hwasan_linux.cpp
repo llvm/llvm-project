@@ -69,14 +69,8 @@ static void ProtectGap(uptr addr, uptr size) {
 
 uptr kLowMemStart;
 uptr kLowMemEnd;
-uptr kLowShadowEnd;
-uptr kLowShadowStart;
-uptr kHighShadowStart;
-uptr kHighShadowEnd;
 uptr kHighMemStart;
 uptr kHighMemEnd;
-
-uptr kAliasRegionStart;  // Always 0 when aliases aren't used.
 
 static void PrintRange(uptr start, uptr end, const char *name) {
   Printf("|| [%p, %p] || %.*s ||\n", (void *)start, (void *)end, 10, name);
@@ -116,7 +110,7 @@ static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
       FindDynamicShadowStart(shadow_size_bytes);
 }
 
-void InitPrctl() {
+void InitializeOsSupport() {
 #define PR_SET_TAGGED_ADDR_CTRL 55
 #define PR_GET_TAGGED_ADDR_CTRL 56
 #define PR_TAGGED_ADDR_ENABLE (1UL << 0)
@@ -197,18 +191,6 @@ bool InitShadow() {
 
   // High memory starts where allocated shadow allows.
   kHighMemStart = ShadowToMem(kHighShadowStart);
-
-#  if defined(HWASAN_ALIASING_MODE)
-  constexpr uptr kAliasRegionOffset = 1ULL << (kTaggableRegionCheckShift - 1);
-  kAliasRegionStart =
-      __hwasan_shadow_memory_dynamic_address + kAliasRegionOffset;
-
-  CHECK_EQ(kAliasRegionStart >> kTaggableRegionCheckShift,
-           __hwasan_shadow_memory_dynamic_address >> kTaggableRegionCheckShift);
-  CHECK_EQ(
-      (kAliasRegionStart + kAliasRegionOffset - 1) >> kTaggableRegionCheckShift,
-      __hwasan_shadow_memory_dynamic_address >> kTaggableRegionCheckShift);
-#  endif
 
   // Check the sanity of the defined memory ranges (there might be gaps).
   CHECK_EQ(kHighMemStart % GetMmapGranularity(), 0);
@@ -429,13 +411,30 @@ void Thread::InitStackAndTls(const InitState *) {
   tls_end_ = tls_begin_ + tls_size;
 }
 
-} // namespace __hwasan
+uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
+  CHECK(IsAligned(p, kShadowAlignment));
+  CHECK(IsAligned(size, kShadowAlignment));
+  uptr shadow_start = MemToShadow(p);
+  uptr shadow_size = MemToShadowSize(size);
 
-// Entry point for interoperability between __hwasan_tag_mismatch (ASM) and the
-// rest of the mismatch handling code (C++).
-void __hwasan_tag_mismatch4(uptr addr, uptr access_info, uptr *registers_frame,
-                            size_t outsize) {
-  __hwasan::HwasanTagMismatch(addr, access_info, registers_frame, outsize);
+  uptr page_size = GetPageSizeCached();
+  uptr page_start = RoundUpTo(shadow_start, page_size);
+  uptr page_end = RoundDownTo(shadow_start + shadow_size, page_size);
+  uptr threshold = common_flags()->clear_shadow_mmap_threshold;
+  if (SANITIZER_LINUX &&
+      UNLIKELY(page_end >= page_start + threshold && tag == 0)) {
+    internal_memset((void *)shadow_start, tag, page_start - shadow_start);
+    internal_memset((void *)page_end, tag,
+                    shadow_start + shadow_size - page_end);
+    // For an anonymous private mapping MADV_DONTNEED will return a zero page on
+    // Linux.
+    ReleaseMemoryPagesToOSAndZeroFill(page_start, page_end);
+  } else {
+    internal_memset((void *)shadow_start, tag, shadow_size);
+  }
+  return AddTagToPointer(p, tag);
 }
+
+} // namespace __hwasan
 
 #endif // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD

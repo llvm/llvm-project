@@ -1,4 +1,4 @@
-//===----------------------- InstrucionView.h -----------------------------*- C++ -*-===//
+//===----------------------- InstructionView.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,9 +16,8 @@
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTIONVIEW_H
 
 #include "Views/View.h"
-#include "llvm/MC/MCInstPrinter.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace mca {
@@ -28,7 +27,6 @@ class InstructionView : public View {
   const llvm::MCSubtargetInfo &STI;
   llvm::MCInstPrinter &MCIP;
   llvm::ArrayRef<llvm::MCInst> Source;
-  StringRef MCPU;
 
   mutable std::string InstructionString;
   mutable raw_string_ostream InstrStream;
@@ -36,17 +34,13 @@ class InstructionView : public View {
 public:
   void printView(llvm::raw_ostream &) const override {}
   InstructionView(const llvm::MCSubtargetInfo &STI,
-                  llvm::MCInstPrinter &Printer,
-                  llvm::ArrayRef<llvm::MCInst> S,
-                  StringRef MCPU = StringRef())
-      : STI(STI), MCIP(Printer), Source(S), MCPU(MCPU),
-        InstrStream(InstructionString) {}
+                  llvm::MCInstPrinter &Printer, llvm::ArrayRef<llvm::MCInst> S)
+      : STI(STI), MCIP(Printer), Source(S), InstrStream(InstructionString) {}
 
-  virtual ~InstructionView() = default;
+  virtual ~InstructionView();
 
-  StringRef getNameAsString() const override {
-    return "Instructions and CPU resources";
-  }
+  StringRef getNameAsString() const override { return "Instructions"; }
+
   // Return a reference to a string representing a given machine instruction.
   // The result should be used or copied before the next call to
   // printInstructionString() as it will overwrite the previous result.
@@ -55,12 +49,10 @@ public:
 
   llvm::MCInstPrinter &getInstPrinter() const { return MCIP; }
   llvm::ArrayRef<llvm::MCInst> getSource() const { return Source; }
+
   json::Value toJSON() const override;
-  virtual void printViewJSON(llvm::raw_ostream &OS) override {
-    json::Value JV = toJSON();
-    OS << formatv("{0:2}", JV) << "\n";
-  }
 };
+
 } // namespace mca
 } // namespace llvm
 

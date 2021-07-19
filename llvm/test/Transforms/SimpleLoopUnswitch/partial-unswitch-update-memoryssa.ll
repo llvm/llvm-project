@@ -1,5 +1,5 @@
-; RUN: opt -passes='loop-mssa(unswitch<nontrivial>),verify<loops>' -verify-dom-info -verify-memoryssa -S %s | FileCheck %s
-; RUN: opt -passes='loop-mssa(unswitch<nontrivial>),verify<loops>' -memssa-check-limit=3 -verify-dom-info -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -verify-dom-info -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -memssa-check-limit=3 -verify-dom-info -verify-memoryssa -S %s | FileCheck %s
 
 declare void @clobber()
 

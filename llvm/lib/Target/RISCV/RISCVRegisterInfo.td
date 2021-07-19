@@ -51,20 +51,20 @@ class RISCVRegWithSubRegs<bits<5> Enc, string n, list<Register> subregs,
 
 def ABIRegAltName : RegAltNameIndex;
 
-def sub_vrm1_0 : SubRegIndex<64,  -1>;
-def sub_vrm1_1 : SubRegIndex<64,  -1>;
-def sub_vrm1_2 : SubRegIndex<64,  -1>;
-def sub_vrm1_3 : SubRegIndex<64,  -1>;
-def sub_vrm1_4 : SubRegIndex<64,  -1>;
-def sub_vrm1_5 : SubRegIndex<64,  -1>;
-def sub_vrm1_6 : SubRegIndex<64,  -1>;
-def sub_vrm1_7 : SubRegIndex<64,  -1>;
-def sub_vrm2_0 : SubRegIndex<128, -1>;
-def sub_vrm2_1 : SubRegIndex<128, -1>;
-def sub_vrm2_2 : SubRegIndex<128, -1>;
-def sub_vrm2_3 : SubRegIndex<128, -1>;
-def sub_vrm4_0 : SubRegIndex<256, -1>;
-def sub_vrm4_1 : SubRegIndex<256, -1>;
+def sub_vrm4_0 : SubRegIndex<256>;
+def sub_vrm4_1 : SubRegIndex<256, 256>;
+def sub_vrm2_0 : SubRegIndex<128>;
+def sub_vrm2_1 : SubRegIndex<128, 128>;
+def sub_vrm2_2 : ComposedSubRegIndex<sub_vrm4_1, sub_vrm2_0>;
+def sub_vrm2_3 : ComposedSubRegIndex<sub_vrm4_1, sub_vrm2_1>;
+def sub_vrm1_0 : SubRegIndex<64>;
+def sub_vrm1_1 : SubRegIndex<64, 64>;
+def sub_vrm1_2 : ComposedSubRegIndex<sub_vrm2_1, sub_vrm1_0>;
+def sub_vrm1_3 : ComposedSubRegIndex<sub_vrm2_1, sub_vrm1_1>;
+def sub_vrm1_4 : ComposedSubRegIndex<sub_vrm2_2, sub_vrm1_0>;
+def sub_vrm1_5 : ComposedSubRegIndex<sub_vrm2_2, sub_vrm1_1>;
+def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
+def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
 } // Namespace = "RISCV"
 
@@ -162,6 +162,20 @@ def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (add
   let RegInfos = XLenRI;
 }
 
+// Don't use X1 or X5 for JALR since that is a hint to pop the return address
+// stack on some microarchitectures. Also remove the reserved registers X0, X2,
+// X3, and X4 as it reduces the number of register classes that get synthesized
+// by tablegen.
+def GPRJALR : RegisterClass<"RISCV", [XLenVT], 32, (add
+    (sequence "X%u", 10, 17),
+    (sequence "X%u", 6, 7),
+    (sequence "X%u", 28, 31),
+    (sequence "X%u", 8, 9),
+    (sequence "X%u", 18, 27)
+  )> {
+  let RegInfos = XLenRI;
+}
+
 def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 10, 15),
     (sequence "X%u", 8, 9)
@@ -171,9 +185,10 @@ def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
 
 // For indirect tail calls, we can't use callee-saved registers, as they are
 // restored to the saved value before the tail call, which would clobber a call
-// address.
+// address. We shouldn't use x5 since that is a hint for to pop the return
+// address stack on some microarchitectures.
 def GPRTC : RegisterClass<"RISCV", [XLenVT], 32, (add
-    (sequence "X%u", 5, 7),
+    (sequence "X%u", 6, 7),
     (sequence "X%u", 10, 17),
     (sequence "X%u", 28, 31)
   )> {
@@ -270,8 +285,7 @@ def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
 
 // Vector type mapping to LLVM types.
 //
-// Though the V extension allows that VLEN be as small as 8,
-// this approach assumes that VLEN>=64.
+// The V vector extension requires that VLEN >= 128 and <= 65536.
 // Additionally, the only supported ELEN values are 32 and 64,
 // thus `vscale` can be defined as VLEN/64,
 // allowing the same types with either ELEN value.

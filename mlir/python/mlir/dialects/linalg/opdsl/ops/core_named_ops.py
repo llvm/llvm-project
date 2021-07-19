@@ -185,6 +185,62 @@ def pooling_nhwc_min_poly(
 
 
 @linalg_structured_op
+def pooling_ndhwc_sum(
+    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
+    O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
+    strides=AttributeDef(S.SD, S.SH, S.SW),
+    dilations=AttributeDef(S.DD, S.DH, S.DW)):
+  """Performs 3D sum pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.c)
+  O[D.n, D.od, D.oh, D.ow, D.c] += cast(
+      U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
+           D.ow * S.SW + D.kw * S.DW, D.c])
+
+
+@linalg_structured_op
+def pooling_ndhwc_max(
+    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
+    O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
+    strides=AttributeDef(S.SD, S.SH, S.SW),
+    dilations=AttributeDef(S.DD, S.DH, S.DW)):
+  """Performs 3D max pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.c)
+  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.max(D.kd, D.kh, D.kw)(
+      cast(
+          U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
+               D.ow * S.SW + D.kw * S.DW, D.c]))
+
+
+@linalg_structured_op
+def pooling_ndhwc_min(
+    I=TensorDef(T1, S.N, S.D, S.H, S.W, S.C),
+    K=TensorDef(T2, S.KD, S.KH, S.KW, index_dims=[D.kd, D.kh, D.kw]),
+    O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.C, output=True),
+    strides=AttributeDef(S.SD, S.SH, S.SW),
+    dilations=AttributeDef(S.DD, S.DH, S.DW)):
+  """Performs 3D min pooling.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.c)
+  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.min(D.kd, D.kh, D.kw)(
+      cast(
+          U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
+               D.ow * S.SW + D.kw * S.DW, D.c]))
+
+
+@linalg_structured_op
 def fill_rng_2d(
     min=ScalarDef(F64),
     max=ScalarDef(F64),
@@ -209,3 +265,16 @@ def fill_rng_2d(
   offset = cast(F64, const(2147483647))
   scaling = (max - min) * inv_range
   O[D.m, D.n] = cast(T, (offset + cast(F64, rand2)) * scaling + min)
+
+
+@linalg_structured_op
+def soft_plus_2d(
+    I=TensorDef(T, S.M, S.N), O=TensorDef(U, S.M, S.N, output=True)):
+  """Implements the soft plus operator.
+
+  Numeric casting is performed on the input operand, promoting it to the same
+  data type as the accumulator/output.
+  """
+  domain(D.m, D.n)
+  O[D.m, D.n] = \
+      PrimFn.log(cast(U, const(1.0)) + PrimFn.exp(cast(U, I[D.m, D.n])))

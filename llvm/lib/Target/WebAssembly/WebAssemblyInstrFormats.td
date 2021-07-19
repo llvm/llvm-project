@@ -15,7 +15,7 @@
 // We instantiate 2 of these for every actual instruction (register based
 // and stack based), see below.
 class WebAssemblyInst<bits<32> inst, string asmstr, string stack, string is64>
-  : StackRel, Wasm64Rel, Instruction {
+  : StackRel, RegisterRel, Wasm64Rel, Instruction {
   bits<32> Inst = inst; // Instruction encoding.
   string StackBased = stack;
   string BaseName = NAME;

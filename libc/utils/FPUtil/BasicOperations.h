@@ -20,7 +20,7 @@ template <typename T,
           cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
 static inline T abs(T x) {
   FPBits<T> bits(x);
-  bits.encoding.sign = 0;
+  bits.setSign(0);
   return T(bits);
 }
 
@@ -33,11 +33,11 @@ static inline T fmin(T x, T y) {
     return y;
   } else if (bity.isNaN()) {
     return x;
-  } else if (bitx.encoding.sign != bity.encoding.sign) {
+  } else if (bitx.getSign() != bity.getSign()) {
     // To make sure that fmin(+0, -0) == -0 == fmin(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with negative sign.
-    return (bitx.encoding.sign ? x : y);
+    return (bitx.getSign() ? x : y);
   } else {
     return (x < y ? x : y);
   }
@@ -52,11 +52,11 @@ static inline T fmax(T x, T y) {
     return y;
   } else if (bity.isNaN()) {
     return x;
-  } else if (bitx.encoding.sign != bity.encoding.sign) {
+  } else if (bitx.getSign() != bity.getSign()) {
     // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with positive sign.
-    return (bitx.encoding.sign ? y : x);
+    return (bitx.getSign() ? y : x);
   } else {
     return (x > y ? x : y);
   }

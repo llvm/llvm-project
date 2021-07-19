@@ -125,10 +125,6 @@ OPTIONS
 
  Display a summary of command line options.
 
-.. option:: --help-list
-
- Display an uncategorized summary of command line options.
-
 .. option:: -m
 
  Equivalent to :option:`--format` with a value of ``darwin``.

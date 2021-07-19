@@ -1,6 +1,6 @@
-# This test checks that both grouped and ungrouped options (-S -x and -Sx)
-# produce exactly the same result given the same input.
-#
+## This test checks that both grouped and ungrouped options (-S -x and -Sx)
+## produce exactly the same result given the same input.
+
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-strip -S -x -o %t-strip-separated %t
 # RUN: llvm-strip -Sx -o %t-strip-grouped %t

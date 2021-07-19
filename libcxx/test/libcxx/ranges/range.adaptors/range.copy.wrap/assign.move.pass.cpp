@@ -14,7 +14,7 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-self-move
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 
 #include <cassert>
 #include <type_traits>

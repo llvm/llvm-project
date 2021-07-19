@@ -111,6 +111,8 @@ def err_module_cycle : Error<"cyclic dependency in module '%0': %1">,
   DefaultFatal;
 def err_module_prebuilt : Error<
   "error in loading module '%0' from prebuilt module path">, DefaultFatal;
+def err_module_rebuild_finalized : Error<
+  "cannot rebuild module '%0' as it is already finalized">, DefaultFatal;
 def note_pragma_entered_here : Note<"#pragma entered here">;
 def note_decl_hiding_tag_type : Note<
   "%1 %0 is hidden by a non-type declaration of %0 here">;
@@ -367,4 +369,6 @@ def warn_opencl_unsupported_core_feature : Warning<
 
 def err_opencl_extension_and_feature_differs : Error<
   "options %0 and %1 are set to different values">;
+def err_opencl_feature_requires : Error<
+  "feature %0 requires support of %1 feature">;
 }

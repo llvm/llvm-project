@@ -9,7 +9,7 @@
 ; Partial Vector Loads - PR16739
 ;
 
-define <4 x float> @load_float4_float3(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <4 x float> @load_float4_float3(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -31,7 +31,7 @@ define <4 x float> @load_float4_float3(<4 x float>* nocapture readonly dereferen
   ret <4 x float> %r2
 }
 
-define <4 x float> @load_float4_float3_0122(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <4 x float> @load_float4_float3_0122(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_0122:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -58,7 +58,7 @@ define <4 x float> @load_float4_float3_0122(<4 x float>* nocapture readonly dere
   ret <4 x float> %r3
 }
 
-define <8 x float> @load_float8_float3(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <8 x float> @load_float8_float3(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float8_float3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -80,7 +80,7 @@ define <8 x float> @load_float8_float3(<4 x float>* nocapture readonly dereferen
   ret <8 x float> %r2
 }
 
-define <8 x float> @load_float8_float3_0122(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <8 x float> @load_float8_float3_0122(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float8_float3_0122:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -107,7 +107,7 @@ define <8 x float> @load_float8_float3_0122(<4 x float>* nocapture readonly dere
   ret <8 x float> %r3
 }
 
-define <4 x float> @load_float4_float3_as_float2_float(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <4 x float> @load_float4_float3_as_float2_float(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_as_float2_float:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -129,7 +129,7 @@ define <4 x float> @load_float4_float3_as_float2_float(<4 x float>* nocapture re
   ret <4 x float> %10
 }
 
-define <4 x float> @load_float4_float3_as_float2_float_0122(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <4 x float> @load_float4_float3_as_float2_float_0122(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_as_float2_float_0122:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -184,7 +184,7 @@ define <4 x float> @load_float4_float3_trunc(<4 x float>* nocapture readonly der
   ret <4 x float> %16
 }
 
-define <4 x float> @load_float4_float3_trunc_0122(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <4 x float> @load_float4_float3_trunc_0122(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_trunc_0122:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -217,7 +217,7 @@ define <4 x float> @load_float4_float3_trunc_0122(<4 x float>* nocapture readonl
   ret <4 x float> %17
 }
 
-define <4 x float> @load_float4_float3_trunc_0123(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <4 x float> @load_float4_float3_trunc_0123(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE2-LABEL: load_float4_float3_trunc_0123:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -266,7 +266,7 @@ define <4 x float> @load_float4_float3_trunc_0123(<4 x float>* nocapture readonl
 }
 
 ; PR21780
-define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceable(32)) {
+define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceable(32)) nofree nosync {
 ; SSE2-LABEL: load_double4_0u2u:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -302,7 +302,7 @@ define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceabl
 
 ; Test case identified in rL366501
 @h = dso_local local_unnamed_addr global i8 0, align 1
-define dso_local i32 @load_partial_illegal_type() {
+define dso_local i32 @load_partial_illegal_type()  {
 ; SSE2-LABEL: load_partial_illegal_type:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl h(%rip), %eax

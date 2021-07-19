@@ -1,5 +1,5 @@
 ; Verifies that phi and invoke definitions before CoroBegin are spilled properly.
-; RUN: opt < %s -passes='cgscc(coro-split),simplify-cfg,early-cse,simplify-cfg' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 define i8* @f(i1 %n) "coroutine.presplit"="1" personality i32 0 {
 entry:

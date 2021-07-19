@@ -889,7 +889,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_masked_atomicrmw_min_i32:
   case Intrinsic::riscv_masked_atomicrmw_umax_i32:
   case Intrinsic::riscv_masked_atomicrmw_umin_i32:
-  case Intrinsic::riscv_masked_cmpxchg_i32:
+  case Intrinsic::riscv_masked_cmpxchg_i32: {
     PointerType *PtrTy = cast<PointerType>(I.getArgOperand(0)->getType());
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(PtrTy->getElementType());
@@ -899,6 +899,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
     return true;
+  }
   }
 }
 
@@ -1826,14 +1827,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ InvertMask;
     MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     if (!IsSelect) {
-      bool IsLHS = MaskIndex < (int)NumElts;
-      // For "undef" elements of -1, shuffle in element 0 instead.
-      GatherIndicesLHS.push_back(
-          DAG.getConstant(IsLHS ? std::max(MaskIndex, 0) : 0, DL, XLenVT));
-      // TODO: If we're masking out unused elements anyway, it might produce
-      // better code if we use the most-common element index instead of 0.
+      bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
+      GatherIndicesLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
+                                     ? DAG.getConstant(MaskIndex, DL, XLenVT)
+                                     : DAG.getUNDEF(XLenVT));
       GatherIndicesRHS.push_back(
-          DAG.getConstant(IsLHS ? 0 : MaskIndex - NumElts, DL, XLenVT));
+          IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
+                            : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
     }
   }
 
@@ -2163,6 +2163,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // minimum size. e.g. <vscale x 2 x i32>. VLENB is in bytes so we calculate
     // vscale as VLENB / 8.
     assert(RISCV::RVVBitsPerBlock == 64 && "Unexpected bits per block!");
+    if (isa<ConstantSDNode>(Op.getOperand(0))) {
+      // We assume VLENB is a multiple of 8. We manually choose the best shift
+      // here because SimplifyDemandedBits isn't always able to simplify it.
+      uint64_t Val = Op.getConstantOperandVal(0);
+      if (isPowerOf2_64(Val)) {
+        uint64_t Log2 = Log2_64(Val);
+        if (Log2 < 3)
+          return DAG.getNode(ISD::SRL, DL, VT, VLENB,
+                             DAG.getConstant(3 - Log2, DL, VT));
+        if (Log2 > 3)
+          return DAG.getNode(ISD::SHL, DL, VT, VLENB,
+                             DAG.getConstant(Log2 - 3, DL, VT));
+        return VLENB;
+      }
+      // If the multiplier is a multiple of 8, scale it down to avoid needing
+      // to shift the VLENB value.
+      if ((Val % 8) == 0)
+        return DAG.getNode(ISD::MUL, DL, VT, VLENB,
+                           DAG.getConstant(Val / 8, DL, VT));
+    }
+
     SDValue VScale = DAG.getNode(ISD::SRL, DL, VT, VLENB,
                                  DAG.getConstant(3, DL, VT));
     return DAG.getNode(ISD::MUL, DL, VT, VScale, Op.getOperand(0));
@@ -3719,7 +3740,7 @@ getRVVFPReductionOpAndOperands(SDValue Op, SelectionDAG &DAG, EVT EltVT) {
     llvm_unreachable("Unhandled reduction");
   case ISD::VECREDUCE_FADD:
     return std::make_tuple(RISCVISD::VECREDUCE_FADD_VL, Op.getOperand(0),
-                           DAG.getConstantFP(0.0, DL, EltVT));
+                           DAG.getNeutralElement(BaseOpcode, DL, EltVT, Flags));
   case ISD::VECREDUCE_SEQ_FADD:
     return std::make_tuple(RISCVISD::VECREDUCE_SEQ_FADD_VL, Op.getOperand(1),
                            Op.getOperand(0));
@@ -4705,17 +4726,18 @@ static RISCVISD::NodeType getRISCVWOpcode(unsigned Opcode) {
   }
 }
 
-// Converts the given 32-bit operation to a target-specific SelectionDAG node.
-// Because i32 isn't a legal type for RV64, these operations would otherwise
-// be promoted to i64, making it difficult to select the SLLW/DIVUW/.../*W
-// later one because the fact the operation was originally of type i32 is
-// lost.
+// Converts the given i8/i16/i32 operation to a target-specific SelectionDAG
+// node. Because i8/i16/i32 isn't a legal type for RV64, these operations would
+// otherwise be promoted to i64, making it difficult to select the
+// SLLW/DIVUW/.../*W later one because the fact the operation was originally of
+// type i8/i16/i32 is lost.
 static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG,
-                                   unsigned ExtOpc = ISD::ANY_EXTEND) {
+                                   unsigned ExtOpc0 = ISD::ANY_EXTEND,
+                                   unsigned ExtOpc1 = ISD::ANY_EXTEND) {
   SDLoc DL(N);
   RISCVISD::NodeType WOpcode = getRISCVWOpcode(N->getOpcode());
-  SDValue NewOp0 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(0));
-  SDValue NewOp1 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(1));
+  SDValue NewOp0 = DAG.getNode(ExtOpc0, DL, MVT::i64, N->getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ExtOpc1, DL, MVT::i64, N->getOperand(1));
   SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
   // ReplaceNodeResults requires we maintain the same type for the return value.
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
@@ -4871,19 +4893,26 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert((VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32) &&
            Subtarget.is64Bit() && Subtarget.hasStdExtM() &&
            "Unexpected custom legalisation");
-    if (N->getOperand(0).getOpcode() == ISD::Constant ||
-        N->getOperand(1).getOpcode() == ISD::Constant)
+    // Don't promote division/remainder by constant since we should expand those
+    // to multiply by magic constant.
+    // FIXME: What if the expansion is disabled for minsize.
+    if (N->getOperand(1).getOpcode() == ISD::Constant)
       return;
 
     // If the input is i32, use ANY_EXTEND since the W instructions don't read
     // the upper 32 bits. For other types we need to sign or zero extend
     // based on the opcode.
-    unsigned ExtOpc = ISD::ANY_EXTEND;
-    if (VT != MVT::i32)
-      ExtOpc = N->getOpcode() == ISD::SDIV ? ISD::SIGN_EXTEND
-                                           : ISD::ZERO_EXTEND;
+    unsigned ExtOpc0 = ISD::ANY_EXTEND, ExtOpc1 = ISD::ANY_EXTEND;
+    if (VT != MVT::i32) {
+      ExtOpc0 = N->getOpcode() == ISD::SDIV ? ISD::SIGN_EXTEND
+                                            : ISD::ZERO_EXTEND;
+      ExtOpc1 = ExtOpc0;
+    } else if (N->getOperand(0).getOpcode() == ISD::Constant) {
+      // Sign extend i32 constants to improve materialization.
+      ExtOpc0 = ISD::SIGN_EXTEND;
+    }
 
-    Results.push_back(customLegalizeToWOp(N, DAG, ExtOpc));
+    Results.push_back(customLegalizeToWOp(N, DAG, ExtOpc0, ExtOpc1));
     break;
   }
   case ISD::UADDO:
@@ -6231,9 +6260,9 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // Neither constant will fit into an immediate, so find materialisation
       // costs.
       int C1Cost = RISCVMatInt::getIntMatCost(C1Int, Ty.getSizeInBits(),
-                                              Subtarget.is64Bit());
+                                              Subtarget.getFeatureBits());
       int ShiftedC1Cost = RISCVMatInt::getIntMatCost(
-          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.is64Bit());
+          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.getFeatureBits());
 
       // Materialising `c1` is cheaper than materialising `c1 << c2`, so the
       // combine should be prevented.
@@ -6423,6 +6452,8 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case RISCVISD::READ_VLENB:
     // We assume VLENB is at least 16 bytes.
     Known.Zero.setLowBits(4);
+    // We assume VLENB is no more than 65536 / 8 bytes.
+    Known.Zero.setBitsFrom(14);
     break;
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = Op.getConstantOperandVal(1);
@@ -8295,6 +8326,8 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_Immediate;
     case 'A':
       return C_Memory;
+    case 'S': // A symbolic address
+      return C_Other;
     }
   }
   return TargetLowering::getConstraintType(Constraint);
@@ -8522,6 +8555,15 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
         if (isUInt<5>(CVal))
           Ops.push_back(
               DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getXLenVT()));
+      }
+      return;
+    case 'S':
+      if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
+        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
+                                                 GA->getValueType(0)));
+      } else if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op)) {
+        Ops.push_back(DAG.getTargetBlockAddress(BA->getBlockAddress(),
+                                                BA->getValueType(0)));
       }
       return;
     default:

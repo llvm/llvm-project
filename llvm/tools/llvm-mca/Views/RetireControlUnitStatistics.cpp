@@ -71,7 +71,8 @@ void RetireControlUnitStatistics::printView(raw_ostream &OS) const {
   }
 
   unsigned AvgUsage = (double)SumOfUsedEntries / NumCycles;
-  double MaxUsagePercentage = ((double)MaxUsedEntries / TotalROBEntries) * 100.0;
+  double MaxUsagePercentage =
+      ((double)MaxUsedEntries / TotalROBEntries) * 100.0;
   double NormalizedMaxPercentage = floor((MaxUsagePercentage * 10) + 0.5) / 10;
   double AvgUsagePercentage = ((double)AvgUsage / TotalROBEntries) * 100.0;
   double NormalizedAvgPercentage = floor((AvgUsagePercentage * 10) + 0.5) / 10;

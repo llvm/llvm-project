@@ -12,3 +12,16 @@ int v_3_0() {
        v_2_0(v_195,  // expected-error {{use of undeclared identifier 'v_195'}}
              v_231);  // expected-error {{use of undeclared identifier 'v_231'}}
 }
+
+// Test: no typo-correction diagnostics are emitted for ambiguous typos.
+struct a {
+  int xxx;
+};
+
+int g_107;
+int g_108;
+int g_109;
+
+struct a g_999;
+struct a g_998;
+void PR50797() { (g_910.xxx = g_910.xxx); } //expected-error 2{{use of undeclared identifier 'g_910'}}

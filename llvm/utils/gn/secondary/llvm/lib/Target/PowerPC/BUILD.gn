@@ -65,6 +65,7 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCCTRLoops.cpp",
     "PPCCallingConv.cpp",
     "PPCEarlyReturn.cpp",
+    "PPCExpandAtomicPseudoInsts.cpp",
     "PPCExpandISEL.cpp",
     "PPCFastISel.cpp",
     "PPCFrameLowering.cpp",

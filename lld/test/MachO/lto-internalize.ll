@@ -33,6 +33,7 @@
 ; SYMTAB-NEXT:  g     F __TEXT,__text _main
 ; SYMTAB-NEXT:  g     F __TEXT,__text _used_in_regular_obj
 ; SYMTAB-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMTAB-NEXT:          *UND* dyld_stub_binder
 ; SYMTAB-EMPTY:
 
 ;--- test.s

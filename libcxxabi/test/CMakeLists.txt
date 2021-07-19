@@ -86,13 +86,19 @@ if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
 endif()
 
-if (TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${TARGET_TRIPLE}\"")
+if (LIBCXXABI_TARGET_TRIPLE)
+  serialize_lit_param(target_triple "\"${LIBCXXABI_TARGET_TRIPLE}\"")
 endif()
 
 if (LIBCXXABI_BUILD_32_BITS)
   serialize_lit_param(enable_32bit True)
 endif()
+
+foreach(param IN LISTS LIBCXXABI_TEST_PARAMS)
+  string(REGEX REPLACE "(.+)=(.+)" "\\1" name "${param}")
+  string(REGEX REPLACE "(.+)=(.+)" "\\2" value "${param}")
+  serialize_lit_param("${name}" "\"${value}\"")
+endforeach()
 
 configure_lit_site_cfg(
   "${LIBCXXABI_TEST_CONFIG}"
@@ -101,5 +107,4 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-cxxabi "Running libcxxabi tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${LIBCXXABI_TEST_DEPS}
-  PARAMS "${LIBCXXABI_TEST_PARAMS}")
+  DEPENDS ${LIBCXXABI_TEST_DEPS})

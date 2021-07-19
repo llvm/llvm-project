@@ -139,7 +139,9 @@ class VectorType;
     PREDICATE_CAST,  // Predicate cast for MVE i1 types
     VECTOR_REG_CAST, // Reinterpret the current contents of a vector register
 
-    MVETRUNC,     // Legalization aid for truncating two vectors into one.
+    MVESEXT,  // Legalization aids for extending a vector into two/four vectors.
+    MVEZEXT,  //  or truncating two/four vectors into one. Eventually becomes
+    MVETRUNC, //  stack store/load sequence, if not optimized to anything else.
 
     VCMP,  // Vector compare.
     VCMPZ, // Vector compare to zero.
@@ -279,6 +281,10 @@ class VectorType;
     QSUB8b,
     QADD16b,
     QSUB16b,
+    UQADD8b,
+    UQSUB8b,
+    UQADD16b,
+    UQSUB16b,
 
     // Operands of the standard BUILD_VECTOR node are not legalized, which
     // is fine if BUILD_VECTORs are always lowered to shuffles or other
@@ -419,6 +425,7 @@ class VectorType;
     SDValue PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformCMOVToBFICombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformIntrinsicCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue PerformMVEExtCombine(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue PerformMVETruncCombine(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 

@@ -261,7 +261,7 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
       NewName.resize(Name.size());
       raw_svector_ostream(NewName) << NextUniqueID++;
     }
-    auto NameEntry = UsedNames.insert(std::make_pair(NewName, true));
+    auto NameEntry = UsedNames.insert(std::make_pair(NewName.str(), true));
     if (NameEntry.second || !NameEntry.first->second) {
       // Ok, we found a name.
       // Mark it as used for a non-section symbol.
@@ -394,7 +394,7 @@ MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
   else
     ValidName.append(InvalidName);
 
-  auto NameEntry = UsedNames.insert(std::make_pair(ValidName, true));
+  auto NameEntry = UsedNames.insert(std::make_pair(ValidName.str(), true));
   assert((NameEntry.second || !NameEntry.first->second) &&
          "This name is used somewhere else.");
   // Mark the name as used for a non-section symbol.

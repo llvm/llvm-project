@@ -91,6 +91,7 @@ struct InvalidPass : Pass {
 
 TEST(PassManagerTest, InvalidPass) {
   MLIRContext context;
+  context.allowUnregisteredDialects();
 
   // Create a module
   OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));

@@ -9880,6 +9880,18 @@ class union_set(object):
         res = isl.isl_union_set_sample_point(isl.isl_union_set_copy(arg0.ptr))
         obj = point(ctx=ctx, ptr=res)
         return obj
+    def set_list(arg0):
+        try:
+            if not arg0.__class__ is union_set:
+                arg0 = union_set(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_union_set_get_set_list(arg0.ptr)
+        obj = set_list(ctx=ctx, ptr=res)
+        return obj
+    def get_set_list(arg0):
+        return arg0.set_list()
     def space(arg0):
         try:
             if not arg0.__class__ is union_set:
@@ -10010,6 +10022,8 @@ isl.isl_union_set_preimage_union_pw_multi_aff.restype = c_void_p
 isl.isl_union_set_preimage_union_pw_multi_aff.argtypes = [c_void_p, c_void_p]
 isl.isl_union_set_sample_point.restype = c_void_p
 isl.isl_union_set_sample_point.argtypes = [c_void_p]
+isl.isl_union_set_get_set_list.restype = c_void_p
+isl.isl_union_set_get_set_list.argtypes = [c_void_p]
 isl.isl_union_set_get_space.restype = c_void_p
 isl.isl_union_set_get_space.argtypes = [c_void_p]
 isl.isl_union_set_subtract.restype = c_void_p
@@ -10694,6 +10708,16 @@ class set(union_set):
         res = isl.isl_set_subtract(isl.isl_set_copy(arg0.ptr), isl.isl_set_copy(arg1.ptr))
         obj = set(ctx=ctx, ptr=res)
         return obj
+    def to_list(arg0):
+        try:
+            if not arg0.__class__ is set:
+                arg0 = set(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_to_list(isl.isl_set_copy(arg0.ptr))
+        obj = set_list(ctx=ctx, ptr=res)
+        return obj
     def to_union_set(arg0):
         try:
             if not arg0.__class__ is set:
@@ -10918,6 +10942,8 @@ isl.isl_set_get_stride.restype = c_void_p
 isl.isl_set_get_stride.argtypes = [c_void_p, c_int]
 isl.isl_set_subtract.restype = c_void_p
 isl.isl_set_subtract.argtypes = [c_void_p, c_void_p]
+isl.isl_set_to_list.restype = c_void_p
+isl.isl_set_to_list.argtypes = [c_void_p]
 isl.isl_set_to_union_set.restype = c_void_p
 isl.isl_set_to_union_set.argtypes = [c_void_p]
 isl.isl_set_translation.restype = c_void_p
@@ -14567,6 +14593,183 @@ isl.isl_schedule_node_free.restype = c_void_p
 isl.isl_schedule_node_free.argtypes = [c_void_p]
 isl.isl_schedule_node_to_str.restype = POINTER(c_char)
 isl.isl_schedule_node_to_str.argtypes = [c_void_p]
+
+class set_list(object):
+    def __init__(self, *args, **keywords):
+        if "ptr" in keywords:
+            self.ctx = keywords["ctx"]
+            self.ptr = keywords["ptr"]
+            return
+        if len(args) == 1 and type(args[0]) == int:
+            self.ctx = Context.getDefaultInstance()
+            self.ptr = isl.isl_set_list_alloc(self.ctx, args[0])
+            return
+        if len(args) == 1 and args[0].__class__ is set:
+            self.ctx = Context.getDefaultInstance()
+            self.ptr = isl.isl_set_list_from_set(isl.isl_set_copy(args[0].ptr))
+            return
+        if len(args) == 1 and type(args[0]) == str:
+            self.ctx = Context.getDefaultInstance()
+            self.ptr = isl.isl_set_list_read_from_str(self.ctx, args[0].encode('ascii'))
+            return
+        raise Error
+    def __del__(self):
+        if hasattr(self, 'ptr'):
+            isl.isl_set_list_free(self.ptr)
+    def __str__(arg0):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        ptr = isl.isl_set_list_to_str(arg0.ptr)
+        res = cast(ptr, c_char_p).value.decode('ascii')
+        libc.free(ptr)
+        return res
+    def __repr__(self):
+        s = str(self)
+        if '"' in s:
+            return 'isl.set_list("""%s""")' % s
+        else:
+            return 'isl.set_list("%s")' % s
+    def add(arg0, arg1):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        try:
+            if not arg1.__class__ is set:
+                arg1 = set(arg1)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_list_add(isl.isl_set_list_copy(arg0.ptr), isl.isl_set_copy(arg1.ptr))
+        obj = set_list(ctx=ctx, ptr=res)
+        return obj
+    def at(arg0, arg1):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_list_get_at(arg0.ptr, arg1)
+        obj = set(ctx=ctx, ptr=res)
+        return obj
+    def get_at(arg0, arg1):
+        return arg0.at(arg1)
+    def clear(arg0):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_list_clear(isl.isl_set_list_copy(arg0.ptr))
+        obj = set_list(ctx=ctx, ptr=res)
+        return obj
+    def concat(arg0, arg1):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        try:
+            if not arg1.__class__ is set_list:
+                arg1 = set_list(arg1)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_list_concat(isl.isl_set_list_copy(arg0.ptr), isl.isl_set_list_copy(arg1.ptr))
+        obj = set_list(ctx=ctx, ptr=res)
+        return obj
+    def drop(arg0, arg1, arg2):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_list_drop(isl.isl_set_list_copy(arg0.ptr), arg1, arg2)
+        obj = set_list(ctx=ctx, ptr=res)
+        return obj
+    def foreach(arg0, arg1):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        exc_info = [None]
+        fn = CFUNCTYPE(c_int, c_void_p, c_void_p)
+        def cb_func(cb_arg0, cb_arg1):
+            cb_arg0 = set(ctx=arg0.ctx, ptr=(cb_arg0))
+            try:
+                arg1(cb_arg0)
+            except BaseException as e:
+                exc_info[0] = e
+                return -1
+            return 0
+        cb = fn(cb_func)
+        ctx = arg0.ctx
+        res = isl.isl_set_list_foreach(arg0.ptr, cb, None)
+        if exc_info[0] is not None:
+            raise exc_info[0]
+        if res < 0:
+            raise
+    def insert(arg0, arg1, arg2):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        try:
+            if not arg2.__class__ is set:
+                arg2 = set(arg2)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_list_insert(isl.isl_set_list_copy(arg0.ptr), arg1, isl.isl_set_copy(arg2.ptr))
+        obj = set_list(ctx=ctx, ptr=res)
+        return obj
+    def size(arg0):
+        try:
+            if not arg0.__class__ is set_list:
+                arg0 = set_list(arg0)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_set_list_size(arg0.ptr)
+        if res < 0:
+            raise
+        return int(res)
+
+isl.isl_set_list_alloc.restype = c_void_p
+isl.isl_set_list_alloc.argtypes = [Context, c_int]
+isl.isl_set_list_from_set.restype = c_void_p
+isl.isl_set_list_from_set.argtypes = [c_void_p]
+isl.isl_set_list_read_from_str.restype = c_void_p
+isl.isl_set_list_read_from_str.argtypes = [Context, c_char_p]
+isl.isl_set_list_add.restype = c_void_p
+isl.isl_set_list_add.argtypes = [c_void_p, c_void_p]
+isl.isl_set_list_get_at.restype = c_void_p
+isl.isl_set_list_get_at.argtypes = [c_void_p, c_int]
+isl.isl_set_list_clear.restype = c_void_p
+isl.isl_set_list_clear.argtypes = [c_void_p]
+isl.isl_set_list_concat.restype = c_void_p
+isl.isl_set_list_concat.argtypes = [c_void_p, c_void_p]
+isl.isl_set_list_drop.restype = c_void_p
+isl.isl_set_list_drop.argtypes = [c_void_p, c_int, c_int]
+isl.isl_set_list_foreach.argtypes = [c_void_p, c_void_p, c_void_p]
+isl.isl_set_list_insert.restype = c_void_p
+isl.isl_set_list_insert.argtypes = [c_void_p, c_int, c_void_p]
+isl.isl_set_list_size.argtypes = [c_void_p]
+isl.isl_set_list_copy.restype = c_void_p
+isl.isl_set_list_copy.argtypes = [c_void_p]
+isl.isl_set_list_free.restype = c_void_p
+isl.isl_set_list_free.argtypes = [c_void_p]
+isl.isl_set_list_to_str.restype = POINTER(c_char)
+isl.isl_set_list_to_str.argtypes = [c_void_p]
 
 class space(object):
     def __init__(self, *args, **keywords):

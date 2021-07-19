@@ -19,7 +19,8 @@ define void @test_no_msan() {
 ; CHECK-NEXT:    [[C_NOT_10_OR_13:%.*]] = xor i1 [[C_10_OR_13]], true
 ; CHECK-NEXT:    br i1 [[C_NOT_10_OR_13]], label [[WHILE_BODY_I]], label [[WHILE_BODY_I_BREAK:%.*]]
 ; CHECK:       while.body.i.break:
-; CHECK-NEXT:    br i1 [[MAYBE_UNDEF]], label [[WHILE_BODY]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[MAYBE_UNDEF]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[WHILE_BODY]], label [[SWITCH_EARLY_TEST:%.*]]
 ; CHECK:       switch.early.test:
 ; CHECK-NEXT:    switch i8 [[C]], label [[RETURN:%.*]] [
 ; CHECK-NEXT:    i8 13, label [[WHILE_BODY]]
@@ -71,7 +72,13 @@ define void @test_msan() sanitize_memory {
 ; CHECK-NEXT:    [[C_NOT_10_OR_13:%.*]] = xor i1 [[C_10_OR_13]], true
 ; CHECK-NEXT:    br i1 [[C_NOT_10_OR_13]], label [[WHILE_BODY_I]], label [[WHILE_BODY_I_BREAK:%.*]]
 ; CHECK:       while.body.i.break:
-; CHECK-NEXT:    br i1 [[NEXT_MAYBE_UNDEF]], label [[WHILE_BODY]], label [[RETURN:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i1 [[MAYBE_UNDEF]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[WHILE_BODY]], label [[SWITCH_EARLY_TEST:%.*]]
+; CHECK:       switch.early.test:
+; CHECK-NEXT:    switch i8 [[C]], label [[RETURN:%.*]] [
+; CHECK-NEXT:    i8 13, label [[WHILE_BODY]]
+; CHECK-NEXT:    i8 10, label [[WHILE_BODY]]
+; CHECK-NEXT:    ]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
