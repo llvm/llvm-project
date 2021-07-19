@@ -1705,7 +1705,7 @@ ChangeStatus Attributor::cleanupIR() {
       if (!isRunOn(*I->getFunction()))
         continue;
       CGModifiedFunctions.insert(I->getFunction());
-      changeToUnreachable(I, /* UseLLVMTrap */ false);
+      changeToUnreachable(I);
     }
 
   for (auto &V : ToBeDeletedInsts) {

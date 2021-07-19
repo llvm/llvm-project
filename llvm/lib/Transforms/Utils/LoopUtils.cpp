@@ -723,8 +723,8 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   auto *BackedgeBB = SplitEdge(Latch, Header, &DT, &LI, MSSAU.get());
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
-  (void)changeToUnreachable(BackedgeBB->getTerminator(), /*UseTrap*/false,
-                            /*PreserveLCSSA*/true, &DTU, MSSAU.get());
+  (void)changeToUnreachable(BackedgeBB->getTerminator(),
+                            /*PreserveLCSSA*/ true, &DTU, MSSAU.get());
 
   // Erase (and destroy) this loop instance.  Handles relinking sub-loops
   // and blocks within the loop as needed.
