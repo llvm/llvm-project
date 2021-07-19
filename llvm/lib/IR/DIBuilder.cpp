@@ -739,7 +739,7 @@ static DILocalVariable *createLocalVariable(
     DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> &PreservedVariables,
     DIScope *Scope, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
-    uint32_t AlignInBits) {
+    uint32_t AlignInBits, DINodeArray Annotations = nullptr) {
   // FIXME: Why getNonCompileUnitScope()?
   // FIXME: Why is "!Context" okay here?
   // FIXME: Why doesn't this check for a subprogram or lexical block (AFAICT
@@ -748,7 +748,8 @@ static DILocalVariable *createLocalVariable(
 
   auto *Node =
       DILocalVariable::get(VMContext, cast_or_null<DILocalScope>(Context), Name,
-                           File, LineNo, Ty, ArgNo, Flags, AlignInBits);
+                           File, LineNo, Ty, ArgNo, Flags, AlignInBits,
+                           Annotations);
   if (AlwaysPreserve) {
     // The optimizer may remove local variables. If there is an interest
     // to preserve variable info in such situation then stash it in a
@@ -772,11 +773,12 @@ DILocalVariable *DIBuilder::createAutoVariable(DIScope *Scope, StringRef Name,
 
 DILocalVariable *DIBuilder::createParameterVariable(
     DIScope *Scope, StringRef Name, unsigned ArgNo, DIFile *File,
-    unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags) {
+    unsigned LineNo, DIType *Ty, bool AlwaysPreserve, DINode::DIFlags Flags,
+    DINodeArray Annotations) {
   assert(ArgNo && "Expected non-zero argument number for parameter");
   return createLocalVariable(VMContext, PreservedVariables, Scope, Name, ArgNo,
                              File, LineNo, Ty, AlwaysPreserve, Flags,
-                             /* AlignInBits */0);
+                             /* AlignInBits */0, Annotations);
 }
 
 DILabel *DIBuilder::createLabel(

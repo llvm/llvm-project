@@ -2316,6 +2316,7 @@ static void writeDILocalVariable(raw_ostream &Out, const DILocalVariable *N,
   Printer.printMetadata("type", N->getRawType());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printInt("align", N->getAlignInBits());
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 

@@ -688,7 +688,8 @@ namespace llvm {
     createParameterVariable(DIScope *Scope, StringRef Name, unsigned ArgNo,
                             DIFile *File, unsigned LineNo, DIType *Ty,
                             bool AlwaysPreserve = false,
-                            DINode::DIFlags Flags = DINode::FlagZero);
+                            DINode::DIFlags Flags = DINode::FlagZero,
+                            DINodeArray Annotations = nullptr);
 
     /// Create a new descriptor for the specified
     /// variable which has a complex address expression for its address.

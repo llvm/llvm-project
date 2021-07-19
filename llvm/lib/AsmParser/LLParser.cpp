@@ -4976,13 +4976,15 @@ bool LLParser::parseDILocalVariable(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(type, MDField, );                                                   \
   OPTIONAL(flags, DIFlagField, );                                              \
-  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DILocalVariable,
                            (Context, scope.Val, name.Val, file.Val, line.Val,
-                            type.Val, arg.Val, flags.Val, align.Val));
+                            type.Val, arg.Val, flags.Val, align.Val,
+                            annotations.Val));
   return false;
 }
 

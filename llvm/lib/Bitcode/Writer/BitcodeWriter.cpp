@@ -1994,6 +1994,7 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   Record.push_back(N->getArg());
   Record.push_back(N->getFlags());
   Record.push_back(N->getAlignInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
 
   Stream.EmitRecord(bitc::METADATA_LOCAL_VAR, Record, Abbrev);
   Record.clear();

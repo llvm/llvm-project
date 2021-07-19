@@ -1042,22 +1042,25 @@ template <> struct MDNodeKeyImpl<DILocalVariable> {
   unsigned Arg;
   unsigned Flags;
   uint32_t AlignInBits;
+  Metadata *Annotations;
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Type, unsigned Arg, unsigned Flags,
-                uint32_t AlignInBits)
+                uint32_t AlignInBits, Metadata *Annotations)
       : Scope(Scope), Name(Name), File(File), Line(Line), Type(Type), Arg(Arg),
-        Flags(Flags), AlignInBits(AlignInBits) {}
+        Flags(Flags), AlignInBits(AlignInBits), Annotations(Annotations) {}
   MDNodeKeyImpl(const DILocalVariable *N)
       : Scope(N->getRawScope()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Type(N->getRawType()), Arg(N->getArg()),
-        Flags(N->getFlags()), AlignInBits(N->getAlignInBits()) {}
+        Flags(N->getFlags()), AlignInBits(N->getAlignInBits()),
+        Annotations(N->getRawAnnotations()) {}
 
   bool isKeyOf(const DILocalVariable *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
            File == RHS->getRawFile() && Line == RHS->getLine() &&
            Type == RHS->getRawType() && Arg == RHS->getArg() &&
-           Flags == RHS->getFlags() && AlignInBits == RHS->getAlignInBits();
+           Flags == RHS->getFlags() && AlignInBits == RHS->getAlignInBits() &&
+           Annotations == RHS->getRawAnnotations();
   }
 
   unsigned getHashValue() const {
@@ -1068,7 +1071,7 @@ template <> struct MDNodeKeyImpl<DILocalVariable> {
     // clang/test/CodeGen/debug-info-257-args.c is an example of this problem,
     // generated IR is random for each run and test fails with Align included.
     // TODO: make hashing work fine with such situations
-    return hash_combine(Scope, Name, File, Line, Type, Arg, Flags);
+    return hash_combine(Scope, Name, File, Line, Type, Arg, Flags, Annotations);
   }
 };
 
