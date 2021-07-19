@@ -524,8 +524,8 @@ structured_op: !LinalgStructuredOpConfig
                   scalar_arg: K
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: pooling_nhwc_sum_poly
-  cpp_class_name: PoolingNhwcSumPolyOp
+  name: pooling_nhwc_sum
+  cpp_class_name: PoolingNhwcSumOp
   doc: |-
     Performs sum pooling.
 
@@ -595,8 +595,8 @@ structured_op: !LinalgStructuredOpConfig
               scalar_arg: I
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: pooling_nhwc_max_poly
-  cpp_class_name: PoolingNhwcMaxPolyOp
+  name: pooling_nhwc_max
+  cpp_class_name: PoolingNhwcMaxOp
   doc: |-
     Performs max pooling.
 
@@ -666,8 +666,8 @@ structured_op: !LinalgStructuredOpConfig
               scalar_arg: I
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
-  name: pooling_nhwc_min_poly
-  cpp_class_name: PoolingNhwcMinPolyOp
+  name: pooling_nhwc_min
+  cpp_class_name: PoolingNhwcMinOp
   doc: |-
     Performs min pooling.
 
