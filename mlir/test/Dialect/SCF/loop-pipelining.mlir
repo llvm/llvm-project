@@ -171,3 +171,118 @@ func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
   } { __test_pipelining_loop__ }
   return
 }
+
+// -----
+
+// CHECK-LABEL: loop_carried(
+//  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
+//   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG:   %[[C3:.*]] = constant 3 : index
+//   CHECK-DAG:   %[[CSTF:.*]] = constant 1.000000e+00 : f32
+// Prologue:
+//       CHECK:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
+// Kernel:
+//  CHECK-NEXT:   %[[LR:.*]]:2 = scf.for %[[IV:.*]] = %[[C0]] to %[[C3]]
+//  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
+//  CHECK-SAME:     %[[LARG:.*]] = %[[L0]]) -> (f32, f32) {
+//  CHECK-NEXT:     %[[ADD0:.*]] = addf %[[LARG]], %[[C]] : f32
+//  CHECK-NEXT:     %[[IV1:.*]] = addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[L1:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
+//  CHECK-NEXT:     scf.yield %[[ADD0]], %[[L1]] : f32, f32
+//  CHECK-NEXT:   }
+// Epilogue:
+//  CHECK-NEXT:   %[[ADD1:.*]] = addf %[[LR]]#1, %[[LR]]#0 : f32
+//  CHECK-NEXT:   memref.store %[[ADD1]], %[[R]][%[[C0]]] : memref<?xf32>
+func @loop_carried(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %cf = constant 1.0 : f32
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 1 } : memref<?xf32>
+    %A1_elem = addf %A_elem, %arg0 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : f32
+    scf.yield %A1_elem : f32
+  }  { __test_pipelining_loop__ }
+  memref.store %r, %result[%c0] : memref<?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: backedge_different_stage
+//  CHECK-SAME:   (%[[A:.*]]: memref<?xf32>) -> f32 {
+//   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG:   %[[C2:.*]] = constant 2 : index
+//   CHECK-DAG:   %[[CSTF:.*]] = constant 1.000000e+00 : f32
+// Prologue:
+//       CHECK:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
+//  CHECK-NEXT:   %[[ADD0:.*]] = addf %[[L0]], %[[CSTF]] : f32
+//  CHECK-NEXT:   %[[L1:.*]] = memref.load %[[A]][%[[C1]]] : memref<?xf32>
+// Kernel:
+//  CHECK-NEXT:   %[[R:.*]]:3 = scf.for %[[IV:.*]] = %[[C0]] to %[[C2]]
+//  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
+//  CHECK-SAME:     %[[ADDARG:.*]] = %[[ADD0]], %[[LARG:.*]] = %[[L1]]) -> (f32, f32, f32) {
+//  CHECK-NEXT:     %[[MUL0:.*]] = mulf %[[CSTF]], %[[ADDARG]] : f32
+//  CHECK-NEXT:     %[[ADD1:.*]] = addf %[[LARG]], %[[MUL0]] : f32
+//  CHECK-NEXT:     %[[IV2:.*]] = addi %[[IV]], %[[C2]] : index
+//  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
+//  CHECK-NEXT:     scf.yield %[[MUL0]], %[[ADD1]], %[[L2]] : f32, f32, f32
+//  CHECK-NEXT:   }
+// Epilogue:
+//  CHECK-NEXT:   %[[MUL1:.*]] = mulf %[[CSTF]], %[[R]]#1 : f32
+//  CHECK-NEXT:   %[[ADD2:.*]] = addf %[[R]]#2, %[[MUL1]] : f32
+//  CHECK-NEXT:   %[[MUL2:.*]] = mulf %[[CSTF]], %[[ADD2]] : f32
+//  CHECK-NEXT:   return %[[MUL2]] : f32
+func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %cf = constant 1.0 : f32
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %A1_elem = addf %A_elem, %arg0 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    %A2_elem = mulf %cf, %A1_elem { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 0 } : f32
+    scf.yield %A2_elem : f32
+  }  { __test_pipelining_loop__ }
+  return %r : f32
+}
+
+// -----
+
+// CHECK-LABEL: backedge_same_stage
+//  CHECK-SAME:   (%[[A:.*]]: memref<?xf32>) -> f32 {
+//   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG:   %[[C3:.*]] = constant 3 : index
+//   CHECK-DAG:   %[[CSTF:.*]] = constant 1.000000e+00 : f32
+// Prologue:
+//       CHECK:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
+// Kernel:
+//  CHECK-NEXT:   %[[R:.*]]:2 = scf.for %[[IV:.*]] = %[[C0]] to %[[C3]]
+//  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
+//  CHECK-SAME:     %[[LARG:.*]] = %[[L0]]) -> (f32, f32) {
+//  CHECK-NEXT:     %[[ADD0:.*]] = addf %[[LARG]], %[[C]] : f32
+//  CHECK-NEXT:     %[[MUL0:.*]] = mulf %[[CSTF]], %[[ADD0]] : f32
+//  CHECK-NEXT:     %[[IV1:.*]] = addi %[[IV]], %[[C1]] : index
+//  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
+//  CHECK-NEXT:     scf.yield %[[MUL0]], %[[L2]] : f32, f32
+//  CHECK-NEXT:   }
+// Epilogue:
+//  CHECK-NEXT:   %[[ADD1:.*]] = addf %[[R]]#1, %[[R]]#0 : f32
+//  CHECK-NEXT:   %[[MUL1:.*]] = mulf %[[CSTF]], %[[ADD1]] : f32
+//  CHECK-NEXT:   return %[[MUL1]] : f32
+func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %cf = constant 1.0 : f32
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %A1_elem = addf %A_elem, %arg0 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : f32
+    %A2_elem = mulf %cf, %A1_elem { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
+    scf.yield %A2_elem : f32
+  }  { __test_pipelining_loop__ }
+  return %r : f32
+}
