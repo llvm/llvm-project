@@ -226,7 +226,7 @@ bool ContainsAnyImpliedDoIndex(const ExtentExpr &expr) {
 
 // Determines lower bound on a dimension.  This can be other than 1 only
 // for a reference to a whole array object or component. (See LBOUND, 16.9.109).
-// ASSOCIATE construct entities may require tranversal of their referents.
+// ASSOCIATE construct entities may require traversal of their referents.
 class GetLowerBoundHelper : public Traverse<GetLowerBoundHelper, ExtentExpr> {
 public:
   using Result = ExtentExpr;

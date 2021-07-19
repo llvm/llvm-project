@@ -39,6 +39,7 @@ add_flang_library(FortranRuntime
   character.cpp
   connection.cpp
   derived.cpp
+  derived-api.cpp
   descriptor.cpp
   descriptor-io.cpp
   dot-product.cpp
