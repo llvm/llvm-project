@@ -2717,16 +2717,6 @@ namespace ISD {
       St->getAddressingMode() == ISD::UNINDEXED;
   }
 
-  /// Returns true if the specified node is a non-truncating store.
-  inline bool isNON_TRUNCStore(const SDNode *N) {
-    return isa<StoreSDNode>(N) && !cast<StoreSDNode>(N)->isTruncatingStore();
-  }
-
-  /// Returns true if the specified node is a truncating store.
-  inline bool isTRUNCStore(const SDNode *N) {
-    return isa<StoreSDNode>(N) && cast<StoreSDNode>(N)->isTruncatingStore();
-  }
-
   /// Returns true if the specified node is an unindexed store.
   inline bool isUNINDEXEDStore(const SDNode *N) {
     return isa<StoreSDNode>(N) &&

@@ -4526,7 +4526,7 @@ body: |
 
     ; SI-LABEL: name: test_load_private_v2s8_align2
     ; SI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (<2 x s8>), addrspace 5)
+    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s16), addrspace 5)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -4547,7 +4547,7 @@ body: |
     ; SI: $vgpr0 = COPY [[ANYEXT]](s32)
     ; CI-LABEL: name: test_load_private_v2s8_align2
     ; CI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (<2 x s8>), addrspace 5)
+    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s16), addrspace 5)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -4568,7 +4568,7 @@ body: |
     ; CI: $vgpr0 = COPY [[ANYEXT]](s32)
     ; VI-LABEL: name: test_load_private_v2s8_align2
     ; VI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (<2 x s8>), addrspace 5)
+    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s16), addrspace 5)
     ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
     ; VI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -4587,7 +4587,7 @@ body: |
     ; VI: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX9-LABEL: name: test_load_private_v2s8_align2
     ; GFX9: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (<2 x s8>), addrspace 5)
+    ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s16), addrspace 5)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -4857,7 +4857,7 @@ body: |
 
     ; SI-LABEL: name: test_load_private_v4s8_align4
     ; SI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (<4 x s8>), addrspace 5)
+    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), addrspace 5)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -4873,7 +4873,7 @@ body: |
     ; SI: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
     ; CI-LABEL: name: test_load_private_v4s8_align4
     ; CI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (<4 x s8>), addrspace 5)
+    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), addrspace 5)
     ; CI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -4889,7 +4889,7 @@ body: |
     ; CI: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
     ; VI-LABEL: name: test_load_private_v4s8_align4
     ; VI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (<4 x s8>), addrspace 5)
+    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), addrspace 5)
     ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
     ; VI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -4905,7 +4905,7 @@ body: |
     ; VI: $vgpr0 = COPY [[TRUNC]](<4 x s8>)
     ; GFX9-LABEL: name: test_load_private_v4s8_align4
     ; GFX9: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (<4 x s8>), addrspace 5)
+    ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), addrspace 5)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16

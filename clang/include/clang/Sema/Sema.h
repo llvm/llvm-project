@@ -6090,6 +6090,12 @@ public:
   void CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
                                       bool IsDereference, SourceRange Range);
 
+  // Checks that the vector type should be initialized from a scalar
+  // by splatting the value rather than populating a single element.
+  // This is the case for AltiVecVector types as well as with
+  // AltiVecPixel and AltiVecBool when -faltivec-src-compat=xl is specified.
+  bool ShouldSplatAltivecScalarInCast(const VectorType *VecTy);
+
   /// ActOnCXXNamedCast - Parse
   /// {dynamic,static,reinterpret,const,addrspace}_cast's.
   ExprResult ActOnCXXNamedCast(SourceLocation OpLoc,
