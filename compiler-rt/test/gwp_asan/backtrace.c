@@ -7,6 +7,9 @@
 // RUN: %clang_gwp_asan -fomit-frame-pointer -momit-leaf-frame-pointer %s -g -o %t
 // RUN: %expect_crash %t
 
+// Incomplete backtrace on Armv7
+// UNSUPPORTED: armhf-linux
+
 #include <stdlib.h>
 
 __attribute__((noinline)) void *allocate_mem() { return malloc(1); }
