@@ -579,16 +579,7 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
 
 def OpWithResultShapePerDimInterfaceOp :
     TEST_Op<"op_with_result_shape_per_dim_interface",
-        [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-             ["reifyReturnTypeShapesPerResultDim"]>]> {
-  let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
-  let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
-}
-
-def OpWithResultShapeAndPerDimInterfaceOp :
-    TEST_Op<"op_with_result_shape_and_per_dim_interface",
-        [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-             ["reifyReturnTypeShapes", "reifyReturnTypeShapesPerResultDim"]>]> {
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
   let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
 }

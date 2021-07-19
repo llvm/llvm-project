@@ -274,8 +274,9 @@ private:
   llvm::SmallSet<unsigned, 4> positions;
 };
 
-LogicalResult LinalgOp::reifyReturnTypeShapesPerResultDim(
-    OpBuilder &b, SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
+LogicalResult
+LinalgOp::reifyResultShapes(OpBuilder &b,
+                            ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   // An example that helps understand the logic below.
   // Consider the following expression O(i+j, j) += A(i,k) * B(k, j)
   // We want to express the shape of dim 0 of O in terms of shape of the inputs.

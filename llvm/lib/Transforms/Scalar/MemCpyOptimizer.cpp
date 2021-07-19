@@ -26,6 +26,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -280,6 +281,7 @@ private:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     if (!EnableMemorySSA)
       AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addPreserved<MemoryDependenceWrapperPass>();
@@ -1546,6 +1548,9 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
 /// Transforms memmove calls to memcpy calls when the src/dst are guaranteed
 /// not to alias.
 bool MemCpyOptPass::processMemMove(MemMoveInst *M) {
+  if (!TLI->has(LibFunc_memmove))
+    return false;
+
   // See if the pointers alias.
   if (!AA->isNoAlias(MemoryLocation::getForDest(M),
                      MemoryLocation::getForSource(M)))
@@ -1715,6 +1720,7 @@ bool MemCpyOptPass::iterateOnFunction(Function &F) {
 PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *MD = !EnableMemorySSA ? &AM.getResult<MemoryDependenceAnalysis>(F)
                               : AM.getCachedResult<MemoryDependenceAnalysis>(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto *AA = &AM.getResult<AAManager>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
@@ -1722,7 +1728,7 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
                                : AM.getCachedResult<MemorySSAAnalysis>(F);
 
   bool MadeChange =
-      runImpl(F, MD, AA, AC, DT, MSSA ? &MSSA->getMSSA() : nullptr);
+      runImpl(F, MD, &TLI, AA, AC, DT, MSSA ? &MSSA->getMSSA() : nullptr);
   if (!MadeChange)
     return PreservedAnalyses::all();
 
@@ -1736,16 +1742,23 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 bool MemCpyOptPass::runImpl(Function &F, MemoryDependenceResults *MD_,
-                            AliasAnalysis *AA_, AssumptionCache *AC_,
-                            DominatorTree *DT_, MemorySSA *MSSA_) {
+                            TargetLibraryInfo *TLI_, AliasAnalysis *AA_,
+                            AssumptionCache *AC_, DominatorTree *DT_,
+                            MemorySSA *MSSA_) {
   bool MadeChange = false;
   MD = MD_;
+  TLI = TLI_;
   AA = AA_;
   AC = AC_;
   DT = DT_;
   MSSA = MSSA_;
   MemorySSAUpdater MSSAU_(MSSA_);
   MSSAU = MSSA_ ? &MSSAU_ : nullptr;
+  // If we don't have at least memset and memcpy, there is little point of doing
+  // anything here.  These are required by a freestanding implementation, so if
+  // even they are disabled, there is no point in trying hard.
+  if (!TLI->has(LibFunc_memset) || !TLI->has(LibFunc_memcpy))
+    return false;
 
   while (true) {
     if (!iterateOnFunction(F))
@@ -1768,6 +1781,7 @@ bool MemCpyOptLegacyPass::runOnFunction(Function &F) {
   auto *MDWP = !EnableMemorySSA
       ? &getAnalysis<MemoryDependenceWrapperPass>()
       : getAnalysisIfAvailable<MemoryDependenceWrapperPass>();
+  auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -1775,6 +1789,6 @@ bool MemCpyOptLegacyPass::runOnFunction(Function &F) {
       ? &getAnalysis<MemorySSAWrapperPass>()
       : getAnalysisIfAvailable<MemorySSAWrapperPass>();
 
-  return Impl.runImpl(F, MDWP ? &MDWP->getMemDep() : nullptr, AA, AC, DT,
+  return Impl.runImpl(F, MDWP ? & MDWP->getMemDep() : nullptr, TLI, AA, AC, DT,
                       MSSAWP ? &MSSAWP->getMSSA() : nullptr);
 }
