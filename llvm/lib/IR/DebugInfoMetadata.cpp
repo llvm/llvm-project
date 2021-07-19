@@ -984,13 +984,15 @@ DIGlobalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                           Metadata *Type, bool IsLocalToUnit, bool IsDefinition,
                           Metadata *StaticDataMemberDeclaration,
                           Metadata *TemplateParams, uint32_t AlignInBits,
-                          StorageType Storage, bool ShouldCreate) {
+                          Metadata *Annotations, StorageType Storage,
+                          bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIGlobalVariable, (Scope, Name, LinkageName, File, Line,
                                            Type, IsLocalToUnit, IsDefinition,
                                            StaticDataMemberDeclaration,
-                                           TemplateParams, AlignInBits));
+                                           TemplateParams, AlignInBits,
+                                           Annotations));
   Metadata *Ops[] = {Scope,
                      Name,
                      File,
@@ -998,7 +1000,8 @@ DIGlobalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                      Name,
                      LinkageName,
                      StaticDataMemberDeclaration,
-                     TemplateParams};
+                     TemplateParams,
+                     Annotations};
   DEFINE_GETIMPL_STORE(DIGlobalVariable,
                        (Line, IsLocalToUnit, IsDefinition, AlignInBits), Ops);
 }

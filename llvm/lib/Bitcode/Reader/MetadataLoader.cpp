@@ -1873,13 +1873,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     unsigned Version = Record[0] >> 1;
 
     if (Version == 2) {
+      Metadata *Annotations = nullptr;
+      if (Record.size() > 12)
+        Annotations = getMDOrNull(Record[12]);
+
       MetadataList.assignValue(
           GET_OR_DISTINCT(
               DIGlobalVariable,
               (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
                getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
                getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-               getMDOrNull(Record[9]), getMDOrNull(Record[10]), Record[11])),
+               getMDOrNull(Record[9]), getMDOrNull(Record[10]), Record[11],
+               Annotations)),
           NextMetadataNo);
 
       NextMetadataNo++;
@@ -1892,7 +1897,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                            getMDString(Record[2]), getMDString(Record[3]),
                            getMDOrNull(Record[4]), Record[5],
                            getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                           getMDOrNull(Record[10]), nullptr, Record[11])),
+                           getMDOrNull(Record[10]), nullptr, Record[11],
+                           nullptr)),
           NextMetadataNo);
 
       NextMetadataNo++;
@@ -1925,7 +1931,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
           (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
            getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
            getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-           getMDOrNull(Record[10]), nullptr, AlignInBits));
+           getMDOrNull(Record[10]), nullptr, AlignInBits, nullptr));
 
       DIGlobalVariableExpression *DGVE = nullptr;
       if (Attach || Expr)
