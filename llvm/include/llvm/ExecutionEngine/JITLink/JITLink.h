@@ -916,6 +916,12 @@ public:
 
   const char *getEdgeKindName(Edge::Kind K) const { return GetEdgeKindName(K); }
 
+  /// Allocate a mutable buffer of the given size using the LinkGraph's
+  /// allocator.
+  MutableArrayRef<char> allocateBuffer(size_t Size) {
+    return {Allocator.Allocate<char>(Size), Size};
+  }
+
   /// Allocate a copy of the given string using the LinkGraph's allocator.
   /// This can be useful when renaming symbols or adding new content to the
   /// graph.

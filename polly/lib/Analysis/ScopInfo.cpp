@@ -2314,7 +2314,7 @@ isl::pw_aff Scop::getPwAffOnly(const SCEV *E, BasicBlock *BB,
 
 isl::union_map
 Scop::getAccessesOfType(std::function<bool(MemoryAccess &)> Predicate) {
-  isl::union_map Accesses = isl::union_map::empty(getParamSpace());
+  isl::union_map Accesses = isl::union_map::empty(getIslCtx());
 
   for (ScopStmt &Stmt : *this) {
     for (MemoryAccess *MA : Stmt) {
@@ -2324,7 +2324,7 @@ Scop::getAccessesOfType(std::function<bool(MemoryAccess &)> Predicate) {
       isl::set Domain = Stmt.getDomain();
       isl::map AccessDomain = MA->getAccessRelation();
       AccessDomain = AccessDomain.intersect_domain(Domain);
-      Accesses = Accesses.add_map(AccessDomain);
+      Accesses = Accesses.unite(AccessDomain);
     }
   }
 

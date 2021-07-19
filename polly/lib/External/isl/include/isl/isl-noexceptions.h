@@ -5,6 +5,8 @@
 /// polyhedral compilation, ranging from dependence analysis over scheduling
 /// to AST generation.
 
+// clang-format off
+
 #ifndef ISL_CPP_CHECKED
 #define ISL_CPP_CHECKED
 
@@ -3209,7 +3211,6 @@ public:
   inline isl::ctx ctx() const;
   inline void dump() const;
 
-  inline isl::union_map add_map(isl::map map) const;
   inline isl::union_map affine_hull() const;
   inline isl::union_map align_params(isl::space model) const;
   inline isl::union_map apply_domain(isl::union_map umap2) const;
@@ -3228,9 +3229,7 @@ public:
   inline isl::union_map domain_map() const;
   inline isl::union_pw_multi_aff domain_map_union_pw_multi_aff() const;
   inline isl::union_map domain_product(isl::union_map umap2) const;
-  static inline isl::union_map empty(isl::space space);
   static inline isl::union_map empty(isl::ctx ctx);
-  static inline isl::union_map empty_space(isl::space space);
   inline isl::union_map eq_at(isl::multi_union_pw_aff mupa) const;
   inline isl::map extract_map(isl::space space) const;
   inline isl::union_map factor_domain() const;
@@ -3708,9 +3707,7 @@ public:
   inline boolean contains(const isl::space &space) const;
   inline isl::union_set detect_equalities() const;
   inline isl_size dim(isl::dim type) const;
-  static inline isl::union_set empty(isl::space space);
   static inline isl::union_set empty(isl::ctx ctx);
-  static inline isl::union_set empty_space(isl::space space);
   inline isl::set extract_set(isl::space space) const;
   inline stat foreach_point(const std::function<stat(point)> &fn) const;
   inline stat foreach_set(const std::function<stat(set)> &fn) const;
@@ -17465,12 +17462,6 @@ void union_map::dump() const {
 }
 
 
-isl::union_map union_map::add_map(isl::map map) const
-{
-  auto res = isl_union_map_add_map(copy(), map.release());
-  return manage(res);
-}
-
 isl::union_map union_map::affine_hull() const
 {
   auto res = isl_union_map_affine_hull(copy());
@@ -17579,21 +17570,9 @@ isl::union_map union_map::domain_product(isl::union_map umap2) const
   return manage(res);
 }
 
-isl::union_map union_map::empty(isl::space space)
-{
-  auto res = isl_union_map_empty(space.release());
-  return manage(res);
-}
-
 isl::union_map union_map::empty(isl::ctx ctx)
 {
   auto res = isl_union_map_empty_ctx(ctx.release());
-  return manage(res);
-}
-
-isl::union_map union_map::empty_space(isl::space space)
-{
-  auto res = isl_union_map_empty_space(space.release());
   return manage(res);
 }
 
@@ -19793,21 +19772,9 @@ isl_size union_set::dim(isl::dim type) const
   return res;
 }
 
-isl::union_set union_set::empty(isl::space space)
-{
-  auto res = isl_union_set_empty(space.release());
-  return manage(res);
-}
-
 isl::union_set union_set::empty(isl::ctx ctx)
 {
   auto res = isl_union_set_empty_ctx(ctx.release());
-  return manage(res);
-}
-
-isl::union_set union_set::empty_space(isl::space space)
-{
-  auto res = isl_union_set_empty_space(space.release());
   return manage(res);
 }
 

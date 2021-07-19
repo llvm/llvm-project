@@ -124,19 +124,12 @@ static bool findLoopComponents(
   // Find the induction PHI. If there is no induction PHI, we can't do the
   // transformation. TODO: could other variables trigger this? Do we have to
   // search for the best one?
-  InductionPHI = nullptr;
-  for (PHINode &PHI : L->getHeader()->phis()) {
-    InductionDescriptor ID;
-    if (InductionDescriptor::isInductionPHI(&PHI, L, SE, ID)) {
-      InductionPHI = &PHI;
-      LLVM_DEBUG(dbgs() << "Found induction PHI: "; InductionPHI->dump());
-      break;
-    }
-  }
+  InductionPHI = L->getInductionVariable(*SE);
   if (!InductionPHI) {
     LLVM_DEBUG(dbgs() << "Could not find induction PHI\n");
     return false;
   }
+  LLVM_DEBUG(dbgs() << "Found induction PHI: "; InductionPHI->dump());
 
   auto IsValidPredicate = [&](ICmpInst::Predicate Pred) {
     if (ContinueOnTrue)

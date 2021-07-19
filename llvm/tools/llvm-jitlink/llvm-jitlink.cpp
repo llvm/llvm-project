@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -159,12 +160,29 @@ static cl::opt<std::string> OutOfProcessExecutorConnect(
     "oop-executor-connect",
     cl::desc("Connect to an out-of-process executor via TCP"));
 
+// TODO: Default to false if compiler-rt is not built.
+static cl::opt<bool> UseOrcRuntime("use-orc-runtime",
+                                   cl::desc("Do not required/load ORC runtime"),
+                                   cl::init(true));
+
+static cl::opt<std::string>
+    OrcRuntimePath("orc-runtime-path", cl::desc("Add orc runtime to session"),
+                   cl::init(""));
+
 ExitOnError ExitOnErr;
 
 LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
          << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper;
+}
+
+static bool UseTestResultOverride = false;
+static int64_t TestResultOverride = 0;
+
+extern "C" void llvm_jitlink_setTestResultOverride(int64_t Value) {
+  TestResultOverride = Value;
+  UseTestResultOverride = true;
 }
 
 namespace llvm {
@@ -588,6 +606,31 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
   return JD.define(std::move(MU), std::move(RT));
 }
 
+static Error loadProcessSymbols(Session &S) {
+  auto FilterMainEntryPoint =
+      [EPName = S.ES.intern(EntryPointName)](SymbolStringPtr Name) {
+        return Name != EPName;
+      };
+  S.MainJD->addGenerator(
+      ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
+          *S.EPC, std::move(FilterMainEntryPoint))));
+
+  return Error::success();
+}
+
+static Error loadDylibs(Session &S) {
+  LLVM_DEBUG(dbgs() << "Loading dylibs...\n");
+  for (const auto &Dylib : Dylibs) {
+    LLVM_DEBUG(dbgs() << "  " << Dylib << "\n");
+    auto G = orc::EPCDynamicLibrarySearchGenerator::Load(*S.EPC, Dylib.c_str());
+    if (!G)
+      return G.takeError();
+    S.MainJD->addGenerator(std::move(*G));
+  }
+
+  return Error::success();
+}
+
 Expected<std::unique_ptr<ExecutorProcessControl>>
 LLVMJITLinkRemoteExecutorProcessControl::LaunchExecutor() {
 #ifndef LLVM_ON_UNIX
@@ -796,40 +839,46 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   if (!PageSize)
     return PageSize.takeError();
 
-  /// If -oop-executor is passed then launch the executor.
   std::unique_ptr<ExecutorProcessControl> EPC;
   if (OutOfProcessExecutor.getNumOccurrences()) {
+    /// If -oop-executor is passed then launch the executor.
     if (auto REPC = LLVMJITLinkRemoteExecutorProcessControl::LaunchExecutor())
       EPC = std::move(*REPC);
     else
       return REPC.takeError();
   } else if (OutOfProcessExecutorConnect.getNumOccurrences()) {
+    /// If -oop-executor-connect is passed then connect to the executor.
     if (auto REPC =
             LLVMJITLinkRemoteExecutorProcessControl::ConnectToExecutor())
       EPC = std::move(*REPC);
     else
       return REPC.takeError();
-  } else
+  } else {
+    /// Otherwise use SelfExecutorProcessControl to target the current process.
     EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(), std::move(TT), *PageSize,
         createMemoryManager());
+  }
 
   Error Err = Error::success();
   std::unique_ptr<Session> S(new Session(std::move(EPC), Err));
-  if (Err)
-    return std::move(Err);
-  return std::move(S);
+
+  // FIXME: Errors destroy the session, leaving the SymbolStringPtrs dangling,
+  // so just exit here. We could fix this by having errors keep the pool alive.
+  ExitOnErr(std::move(Err));
+  return S;
 }
 
 Session::~Session() {
   if (auto Err = ES.endSession())
     ES.reportError(std::move(Err));
+  if (auto Err = EPC->disconnect())
+    ES.reportError(std::move(Err));
 }
 
-// FIXME: Move to createJITDylib if/when we start using Platform support in
-// llvm-jitlink.
 Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
-    : EPC(std::move(EPC)), ObjLayer(*this, this->EPC->getMemMgr()) {
+    : EPC(std::move(EPC)), ES(this->EPC->getSymbolStringPool()),
+      ObjLayer(*this, this->EPC->getMemMgr()) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -863,7 +912,21 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     return;
   }
 
-  if (!NoExec && !this->EPC->getTargetTriple().isOSWindows()) {
+  if (!NoProcessSymbols)
+    ExitOnErr(loadProcessSymbols(*this));
+  ExitOnErr(loadDylibs(*this));
+
+  // Set up the platform.
+  if (this->EPC->getTargetTriple().isOSBinFormatMachO() && UseOrcRuntime) {
+    if (auto P = MachOPlatform::Create(ES, ObjLayer, *this->EPC, *MainJD,
+                                       OrcRuntimePath.c_str()))
+      ES.setPlatform(std::move(*P));
+    else {
+      Err = P.takeError();
+      return;
+    }
+  } else if (!NoExec && !this->EPC->getTargetTriple().isOSWindows() &&
+             !this->EPC->getTargetTriple().isOSBinFormatMachO()) {
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
         ES, ExitOnErr(EPCEHFrameRegistrar::Create(*this->EPC))));
     ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
@@ -1044,18 +1107,41 @@ static Triple getFirstFileTriple() {
   return FirstTT;
 }
 
-static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
-  // Set the entry point name if not specified.
-  if (EntryPointName.empty()) {
-    if (TT.getObjectFormat() == Triple::MachO)
-      EntryPointName = "_main";
-    else
-      EntryPointName = "main";
+static bool isOrcRuntimeSupported(const Triple &TT) {
+  switch (TT.getObjectFormat()) {
+  case Triple::MachO:
+    switch (TT.getArch()) {
+    case Triple::x86_64:
+      return true;
+    default:
+      return false;
+    }
+  default:
+    return false;
   }
+}
+
+static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
+
+  // If we're in noexec mode and the user didn't explicitly specify
+  // -use-orc-runtime then don't use it.
+  if (NoExec && UseOrcRuntime.getNumOccurrences() == 0)
+    UseOrcRuntime = false;
 
   // -noexec and --args should not be used together.
   if (NoExec && !InputArgv.empty())
-    outs() << "Warning: --args passed to -noexec run will be ignored.\n";
+    errs() << "Warning: --args passed to -noexec run will be ignored.\n";
+
+  // Turn off UseOrcRuntime on platforms where it's not supported.
+  if (UseOrcRuntime && !isOrcRuntimeSupported(TT)) {
+    errs() << "Warning: Orc runtime not available for target platform. "
+              "Use -use-orc-runtime=false to suppress this warning.\n";
+    UseOrcRuntime = false;
+  }
+
+  // Set the entry point name if not specified.
+  if (EntryPointName.empty())
+    EntryPointName = TT.getObjectFormat() == Triple::MachO ? "_main" : "main";
 
   // If -slab-address is passed, require -slab-allocate and -noexec
   if (SlabAddress != ~0ULL) {
@@ -1080,35 +1166,27 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
     SmallString<256> OOPExecutorPath(sys::fs::getMainExecutable(
         ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
     sys::path::remove_filename(OOPExecutorPath);
-    if (OOPExecutorPath.back() != '/')
-      OOPExecutorPath += '/';
-    OOPExecutorPath += "llvm-jitlink-executor";
+    sys::path::append(OOPExecutorPath, "llvm-jitlink-executor");
     OutOfProcessExecutor = OOPExecutorPath.str().str();
   }
 
-  return Error::success();
-}
-
-static Error loadProcessSymbols(Session &S) {
-  auto FilterMainEntryPoint =
-      [EPName = S.ES.intern(EntryPointName)](SymbolStringPtr Name) {
-        return Name != EPName;
-      };
-  S.MainJD->addGenerator(
-      ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
-          *S.EPC, std::move(FilterMainEntryPoint))));
-
-  return Error::success();
-}
-
-static Error loadDylibs(Session &S) {
-  for (const auto &Dylib : Dylibs) {
-    auto G = orc::EPCDynamicLibrarySearchGenerator::Load(*S.EPC, Dylib.c_str());
-    if (!G)
-      return G.takeError();
-    S.MainJD->addGenerator(std::move(*G));
+  // If we're loading the Orc runtime then determine the path for it.
+  if (UseOrcRuntime) {
+    if (OrcRuntimePath.empty()) {
+      SmallString<256> DefaultOrcRuntimePath(sys::fs::getMainExecutable(
+          ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
+      sys::path::remove_filename(
+          DefaultOrcRuntimePath); // remove 'llvm-jitlink'
+      while (!DefaultOrcRuntimePath.empty() &&
+             DefaultOrcRuntimePath.back() == '/')
+        DefaultOrcRuntimePath.pop_back();
+      if (DefaultOrcRuntimePath.endswith("bin"))
+        sys::path::remove_filename(DefaultOrcRuntimePath); // remove 'bin'
+      sys::path::append(DefaultOrcRuntimePath,
+                        "lib/clang/13.0.0/lib/darwin/libclang_rt.orc_osx.a");
+      OrcRuntimePath = DefaultOrcRuntimePath.str().str();
+    }
   }
-
   return Error::success();
 }
 
@@ -1227,6 +1305,11 @@ static Error loadObjects(Session &S) {
 
 static Error runChecks(Session &S) {
 
+  if (CheckFiles.empty())
+    return Error::success();
+
+  LLVM_DEBUG(dbgs() << "Running checks...\n");
+
   auto TripleName = S.EPC->getTargetTriple().str();
   std::string ErrorStr;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
@@ -1310,14 +1393,48 @@ static Error runChecks(Session &S) {
 }
 
 static void dumpSessionStats(Session &S) {
+  if (!ShowSizes)
+    return;
+  if (UseOrcRuntime)
+    outs() << "Note: Session stats include runtime and entry point lookup, but "
+              "not JITDylib initialization/deinitialization.\n";
   if (ShowSizes)
-    outs() << "Total size of all blocks before pruning: " << S.SizeBeforePruning
-           << "\nTotal size of all blocks after fixups: " << S.SizeAfterFixups
+    outs() << "  Total size of all blocks before pruning: "
+           << S.SizeBeforePruning
+           << "\n  Total size of all blocks after fixups: " << S.SizeAfterFixups
            << "\n";
 }
 
 static Expected<JITEvaluatedSymbol> getMainEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, EntryPointName);
+}
+
+static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
+  std::string RuntimeEntryPoint = "__orc_rt_run_program_wrapper";
+  if (S.EPC->getTargetTriple().getObjectFormat() == Triple::MachO)
+    RuntimeEntryPoint = '_' + RuntimeEntryPoint;
+  return S.ES.lookup(S.JDSearchOrder, RuntimeEntryPoint);
+}
+
+static Expected<int> runWithRuntime(Session &S,
+                                    JITTargetAddress EntryPointAddress) {
+  StringRef DemangledEntryPoint = EntryPointName;
+  if (S.EPC->getTargetTriple().getObjectFormat() == Triple::MachO &&
+      DemangledEntryPoint.front() == '_')
+    DemangledEntryPoint = DemangledEntryPoint.drop_front();
+  using SPSRunProgramSig =
+      int64_t(SPSString, SPSString, SPSSequence<SPSString>);
+  int64_t Result;
+  if (auto Err = S.EPC->runSPSWrapper<SPSRunProgramSig>(
+          EntryPointAddress, Result, S.MainJD->getName(), DemangledEntryPoint,
+          static_cast<std::vector<std::string> &>(InputArgv)))
+    return std::move(Err);
+  return Result;
+}
+
+static Expected<int> runWithoutRuntime(Session &S,
+                                       JITTargetAddress EntryPointAddress) {
+  return S.EPC->runAsMain(EntryPointAddress, InputArgv);
 }
 
 namespace {
@@ -1352,13 +1469,8 @@ int main(int argc, char *argv[]) {
     ExitOnErr(loadObjects(*S));
   }
 
-  if (!NoProcessSymbols)
-    ExitOnErr(loadProcessSymbols(*S));
-  ExitOnErr(loadDylibs(*S));
-
   if (PhonyExternals)
     addPhonyExternalsGenerator(*S);
-
 
   if (ShowInitialExecutionSessionState)
     S->ES.dump(outs());
@@ -1366,7 +1478,14 @@ int main(int argc, char *argv[]) {
   JITEvaluatedSymbol EntryPoint = 0;
   {
     TimeRegion TR(Timers ? &Timers->LinkTimer : nullptr);
+    // Find the entry-point function unconditionally, since we want to force
+    // it to be materialized to collect stats.
     EntryPoint = ExitOnErr(getMainEntryPoint(*S));
+
+    // If we're running with the ORC runtime then replace the entry-point
+    // with the __orc_rt_run_program symbol.
+    if (UseOrcRuntime)
+      EntryPoint = ExitOnErr(getOrcRuntimeEntryPoint(*S));
   }
 
   if (ShowAddrs)
@@ -1381,12 +1500,20 @@ int main(int argc, char *argv[]) {
 
   int Result = 0;
   {
+    LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
-    Result = ExitOnErr(S->EPC->runAsMain(EntryPoint.getAddress(), InputArgv));
+    if (UseOrcRuntime)
+      Result = ExitOnErr(runWithRuntime(*S, EntryPoint.getAddress()));
+    else
+      Result = ExitOnErr(runWithoutRuntime(*S, EntryPoint.getAddress()));
   }
 
-  ExitOnErr(S->ES.endSession());
-  ExitOnErr(S->EPC->disconnect());
+  // Destroy the session.
+  S.reset();
+
+  // If the executing code set a test result override then use that.
+  if (UseTestResultOverride)
+    Result = TestResultOverride;
 
   return Result;
 }
