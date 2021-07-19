@@ -3228,7 +3228,7 @@ Status Process::DestroyImpl(bool force_kill) {
       error = StopForDestroyOrDetach(exit_event_sp);
     }
 
-    if (m_public_state.GetValue() != eStateRunning) {
+    if (m_public_state.GetValue() == eStateStopped) {
       // Ditch all thread plans, and remove all our breakpoints: in case we
       // have to restart the target to kill it, we don't want it hitting a
       // breakpoint... Only do this if we've stopped, however, since if we
