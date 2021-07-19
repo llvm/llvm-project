@@ -363,44 +363,38 @@ struct ErrorInvalidPointerPair : ErrorBase {
   void Print();
 };
 
-struct ErrorGeneric : ErrorBase {
+struct ErrorGenericBase : ErrorBase {
   AddressDescription addr_description;
-  uptr pc, bp, sp;
   uptr access_size;
   bool is_write;
   u8 shadow_val;
-  char bug_desc[512];
+  const char *bug_descr;
+  ErrorGenericBase() = default;  // (*)
+  ErrorGenericBase(u32 tid, uptr addr_, bool is_write_, uptr access_size_);
+};
+
+struct ErrorGeneric : ErrorGenericBase {
+  uptr pc, bp, sp;
   ErrorGeneric() = default;  // (*)
   ErrorGeneric(u32 tid, uptr addr, uptr pc_, uptr bp_, uptr sp_, bool is_write_,
                uptr access_size_);
   void Print();
 };
 
-// Common data shared by non-self error types.
-struct NonSelfCommonData {
-  struct codeobject_location {
-    int fd;
-    s64 vma_adjust;
-    u64 offset, size;
-    codeobject_location() = default;
-    codeobject_location(int fd_, s64 vma_adjust_, u64 offset_, u64 size_)
-        : fd(fd_), vma_adjust(vma_adjust_), offset(offset_), size(size_) {}
-  } cb_loc;
-  u32 access_size;
-  bool is_write;
-
-  NonSelfCommonData() = default;
-  NonSelfCommonData(int fd_, s64 vm_adj, u64 off_, u64 sz_, u32 acc_size,
-                    bool is_write_)
-      : cb_loc(fd_, vm_adj, off_, sz_),
-        access_size(acc_size),
-        is_write(is_write_) {}
+// codeobject location for non-self error types.
+struct CodeObjectLocation {
+  int fd;
+  s64 vma_adjust;
+  u64 offset, size;
+  CodeObjectLocation() = default;
+  CodeObjectLocation(int fd_, s64 vma_adjust_, u64 offset_, u64 size_)
+      : fd(fd_), vma_adjust(vma_adjust_), offset(offset_), size(size_) {}
 };
 
 // NonSelf Generic Error can be used to report
 // an error triggered by cpu thread that compiler-rt is not aware of
-struct ErrorNonSelfGeneric : ErrorBase {
-  NonSelfCommonData data;
+struct ErrorNonSelfGeneric : ErrorGenericBase {
+  CodeObjectLocation cb_loc;
   // At present, we assume one thread triggered the error
   static constexpr u32 threads_count = 1;
   static constexpr u32 addr_count = 1;
@@ -409,9 +403,6 @@ struct ErrorNonSelfGeneric : ErrorBase {
   uptr addresses[addr_count];
   u64 thread_id[threads_count];
   uptr callstack[maxcs_depth];
-
-  char bug_desc[512];
-  u8 shadow_val;
 
   ErrorNonSelfGeneric() = default;
   ErrorNonSelfGeneric(uptr *callstack_, u32 n_callstack, uptr *addrs,
@@ -424,8 +415,8 @@ struct ErrorNonSelfGeneric : ErrorBase {
 // Represents an invaid memory access made by a single amdgpu wave-front
 // Todo: abstract amdgpu related info into a base classes in case of
 // multiple error types for AMDGPU
-struct ErrorNonSelfAMDGPU : ErrorBase {
-  NonSelfCommonData data;
+struct ErrorNonSelfAMDGPU : ErrorGenericBase {
+  CodeObjectLocation cb_loc;
   // amdgpu wave-front can have atmost 64 active threads
   static constexpr u32 wavesize = 64;
   uptr device_address[wavesize];
@@ -442,9 +433,6 @@ struct ErrorNonSelfAMDGPU : ErrorBase {
   u64 workitem_ids[wavesize];
   u32 nactive_threads;
   int device_id;
-  u8 shadow_val;
-  char bug_desc[512];
-  AddressDescription addr_description;
 
   ErrorNonSelfAMDGPU() = default;
   ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack, uptr *dev_address,

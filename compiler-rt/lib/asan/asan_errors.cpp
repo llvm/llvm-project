@@ -384,9 +384,13 @@ static bool AdjacentShadowValuesAreFullyPoisoned(u8 *s) {
   return s[-1] > 127 && s[1] > 127;
 }
 
-static void getBugDescAndScariness(ScarinessScoreBase &scariness, uptr addr,
-                                   uptr access_size, bool is_write,
-                                   char *bug_desc_data, u8 &shadow_val) {
+ErrorGenericBase::ErrorGenericBase(u32 tid, uptr addr, bool is_write_,
+                                   uptr access_size_)
+    : ErrorBase(tid),
+      addr_description(addr, access_size_, /*shouldLockThreadRegistry=*/false),
+      access_size(access_size_),
+      is_write(is_write_),
+      shadow_val(0) {
   scariness.Clear();
   if (access_size) {
     if (access_size <= 9) {
@@ -399,7 +403,7 @@ static void getBugDescAndScariness(ScarinessScoreBase &scariness, uptr addr,
     is_write ? scariness.Scare(20, "write") : scariness.Scare(1, "read");
 
     // Determine the error type.
-    const char *bug_descr = "unknown-crash";
+    bug_descr = "unknown-crash";
     if (AddrIsInMem(addr)) {
       u8 *shadow_addr = (u8 *)MemToShadow(addr);
       // If we are accessing 16 bytes, look at the second shadow byte.
@@ -474,26 +478,15 @@ static void getBugDescAndScariness(ScarinessScoreBase &scariness, uptr addr,
       scariness.Scare(bug_type_score + read_after_free_bonus, bug_descr);
       if (far_from_bounds) scariness.Scare(10, "far-from-bounds");
     }
-    // note: bug_desc_data is large(512 bytes) enough
-    internal_strncpy(bug_desc_data, bug_descr,
-                     internal_strlen(bug_descr) + 1 /*append null character*/);
   }
 }
 
 ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
                            bool is_write_, uptr access_size_)
-    : ErrorBase(tid),
-      addr_description(addr, access_size_, /*shouldLockThreadRegistry=*/false),
+    : ErrorGenericBase(tid, addr, is_write_, access_size_),
       pc(pc_),
       bp(bp_),
-      sp(sp_),
-      access_size(access_size_),
-      is_write(is_write_),
-      shadow_val(0) {
-  bug_desc[0] = '\0';
-  getBugDescAndScariness(scariness, addr, access_size, is_write, bug_desc,
-                         shadow_val);
-}
+      sp(sp_) {}
 
 static void PrintContainerOverflowHint() {
   Printf("HINT: if you don't care about these errors you may set "
@@ -586,7 +579,7 @@ void ErrorGeneric::Print() {
   Printf("%s", d.Error());
   uptr addr = addr_description.Address();
   Report("ERROR: AddressSanitizer: %s on address %p at pc %p bp %p sp %p\n",
-         bug_desc, (void *)addr, pc, bp, sp);
+         bug_descr, (void *)addr, pc, bp, sp);
   Printf("%s", d.Default());
 
   Printf("%s%s of size %zu at %p thread %s%s\n", d.Access(),
@@ -599,10 +592,10 @@ void ErrorGeneric::Print() {
 
   // Pass bug_descr because we have a special case for
   // initialization-order-fiasco
-  addr_description.Print(bug_desc);
+  addr_description.Print(bug_descr);
   if (shadow_val == kAsanContiguousContainerOOBMagic)
     PrintContainerOverflowHint();
-  ReportErrorSummary(bug_desc, &stack);
+  ReportErrorSummary(bug_descr, &stack);
   PrintShadowMemoryForAddress(addr);
 }
 
@@ -611,26 +604,24 @@ ErrorNonSelfGeneric::ErrorNonSelfGeneric(uptr *callstack_, u32 n_callstack,
                                          u64 *threadids, u32 n_threads,
                                          bool is_write, u32 access_size,
                                          int fd_, s64 vm_adj, u64 off_, u64 sz_)
-    : ErrorBase(kInvalidTid),
-      data(fd_, vm_adj, off_, sz_, access_size, is_write) {
+    : ErrorGenericBase(kInvalidTid, addrs[0], is_write, access_size),
+      cb_loc(fd_, vm_adj, off_, sz_) {
   for (u64 i = 0; i < Min(addr_count, n_addrs); i++) addresses[i] = addrs[i];
   for (u64 i = 0; i < Min(threads_count, n_threads); i++)
     thread_id[i] = threadids[i];
   for (u64 i = 0; i < Min(maxcs_depth, n_callstack); i++)
     callstack[i] = callstack_[i];
-  getBugDescAndScariness(scariness, addresses[0], access_size, is_write,
-                         bug_desc, shadow_val);
 }
 
 void ErrorNonSelfGeneric::Print() {
   Decorator d;
   Printf("%s", d.Error());
-  Report("ERROR: AddressSanitizer: %s on address %p at pc %p\n", bug_desc,
+  Report("ERROR: AddressSanitizer: %s on address %p at pc %p\n", bug_descr,
          (void *)addresses[0], callstack[0]);
 
   Printf("%s%s of size %zu at %p thread id %zu\n", d.Access(),
-         data.access_size ? (data.is_write ? "WRITE" : "READ") : "ACCESS",
-         data.access_size, (void *)addresses[0], thread_id[0]);
+         access_size ? (is_write ? "WRITE" : "READ") : "ACCESS", access_size,
+         (void *)addresses[0], thread_id[0]);
 
   // todo: perform symbolization for the given callstack
   // can be done by creating in-memory object file or by writing
@@ -646,14 +637,11 @@ ErrorNonSelfAMDGPU::ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack,
                                        u64 *wi_ids, u32 n_wi, bool is_write_,
                                        u32 access_size_, int fd_, s64 vm_adj,
                                        u64 file_start_, u64 file_size_)
-    : ErrorBase(kInvalidTid),
-      data(fd_, vm_adj, file_start_, file_size_, access_size_, is_write_),
+    : ErrorGenericBase(kInvalidTid, dev_address[0], is_write_, access_size_),
+      cb_loc(fd_, vm_adj, file_start_, file_size_),
       wg(),
       nactive_threads(n_addrs),
-      device_id(0),
-      shadow_val(0),
-      // describe only a single device address.
-      addr_description(dev_address[0], (uptr)access_size_, false) {
+      device_id(0) {
   if (nactive_threads > wavesize)
     nactive_threads = wavesize;
 
@@ -667,9 +655,6 @@ ErrorNonSelfAMDGPU::ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack,
     device_address[i] = dev_address[i];
     workitem_ids[i] = wi_ids[i];
   }
-  bug_desc[0] = '\0';
-  getBugDescAndScariness(scariness, device_address[0], access_size_, is_write_,
-                         bug_desc, shadow_val);
 }
 
 void ErrorNonSelfAMDGPU::PrintThreadsAndAddresses() {
@@ -692,14 +677,13 @@ void ErrorNonSelfAMDGPU::Print() {
   Decorator d;
   Printf("%s", d.Error());
   Report("ERROR: AddressSanitizer: %s on amdgpu device %zu at pc %p\n",
-         bug_desc, device_id, callstack[0]);
+         bug_descr, device_id, callstack[0]);
   Printf("%s", d.Default());
   Printf("%s%s of size %zu in workgroup id (%zu,%zu,%zu)\n", d.Access(),
-         (data.is_write ? "WRITE" : "READ"), data.access_size, wg.idx, wg.idy,
-         wg.idz);
+         (is_write ? "WRITE" : "READ"), access_size, wg.idx, wg.idy, wg.idz);
   Printf("%s", d.Location());
   PrintThreadsAndAddresses();
-  addr_description.Print(bug_desc, true);
+  addr_description.Print(bug_descr, true);
   Printf("%s", d.Default());
 
   // print shadow memory region for single address

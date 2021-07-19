@@ -580,7 +580,7 @@ uptr __asan_get_report_access_size() {
 
 const char *__asan_get_report_description() {
   if (ScopedInErrorReport::CurrentError().kind == kErrorKindGeneric)
-    return ScopedInErrorReport::CurrentError().Generic.bug_desc;
+    return ScopedInErrorReport::CurrentError().Generic.bug_descr;
   return ScopedInErrorReport::CurrentError().Base.scariness.GetDescription();
 }
 
