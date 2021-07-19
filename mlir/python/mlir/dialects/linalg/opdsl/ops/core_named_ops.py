@@ -132,7 +132,7 @@ def depthwise_conv_2d_input_nhwc_filter_hwc_poly(
 
 
 @linalg_structured_op
-def pooling_nhwc_sum_poly(
+def pooling_nhwc_sum(
     I=TensorDef(T1, S.N, S.H, S.W, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
@@ -149,7 +149,7 @@ def pooling_nhwc_sum_poly(
 
 
 @linalg_structured_op
-def pooling_nhwc_max_poly(
+def pooling_nhwc_max(
     I=TensorDef(T1, S.N, S.H, S.W, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
@@ -167,7 +167,7 @@ def pooling_nhwc_max_poly(
 
 
 @linalg_structured_op
-def pooling_nhwc_min_poly(
+def pooling_nhwc_min(
     I=TensorDef(T1, S.N, S.H, S.W, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
