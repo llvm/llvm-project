@@ -54,6 +54,7 @@ namespace __data {
   struct __fn {
     template <__member_data _Tp>
       requires __can_borrow<_Tp>
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __ptr_to_object auto operator()(_Tp&& __t) const
         noexcept(noexcept(__t.data())) {
       return __t.data();
@@ -61,6 +62,7 @@ namespace __data {
 
     template<__ranges_begin_invocable _Tp>
       requires __can_borrow<_Tp>
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __ptr_to_object auto operator()(_Tp&& __t) const
         noexcept(noexcept(_VSTD::to_address(ranges::begin(_VSTD::forward<_Tp>(__t))))) {
       return _VSTD::to_address(ranges::begin(_VSTD::forward<_Tp>(__t)));

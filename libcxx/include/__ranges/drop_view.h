@@ -57,6 +57,7 @@ namespace ranges {
 public:
     drop_view() requires default_initializable<_View> = default;
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr drop_view(_View __base, range_difference_t<_View> __count)
       : __cached_begin_()
       , __count_(__count)
@@ -65,18 +66,21 @@ public:
       _LIBCPP_ASSERT(__count_ >= 0, "count must be greater than or equal to zero.");
     }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr drop_view(drop_view const& __other)
       : __cached_begin_() // Intentionally not propagating the cached begin iterator.
       , __count_(__other.__count_)
       , __base_(__other.__base_)
     { }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr drop_view(drop_view&& __other)
       : __cached_begin_() // Intentionally not propagating the cached begin iterator.
       , __count_(_VSTD::move(__other.__count_))
       , __base_(_VSTD::move(__other.__base_))
     { }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr drop_view& operator=(drop_view const& __other) {
       if constexpr (_UseCache) {
         __cached_begin_.reset();
@@ -86,6 +90,7 @@ public:
       return *this;
     }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr drop_view& operator=(drop_view&& __other) {
       if constexpr (_UseCache) {
         __cached_begin_.reset();
@@ -96,9 +101,10 @@ public:
       return *this;
     }
 
-    constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
-    constexpr _View base() && { return _VSTD::move(__base_); }
+    _LIBCPP_HIDE_FROM_ABI constexpr _View base() const& requires copy_constructible<_View> { return __base_; }
+    _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return _VSTD::move(__base_); }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin()
       requires (!(__simple_view<_View> &&
                   random_access_range<const _View> && sized_range<const _View>))
@@ -113,30 +119,36 @@ public:
       return __tmp;
     }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr auto begin() const
       requires random_access_range<const _View> && sized_range<const _View>
     {
       return ranges::next(ranges::begin(__base_), __count_, ranges::end(__base_));
     }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr auto end()
       requires (!__simple_view<_View>)
     { return ranges::end(__base_); }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr auto end() const
       requires range<const _View>
     { return ranges::end(__base_); }
 
+    _LIBCPP_HIDE_FROM_ABI
     static constexpr auto __size(auto& __self) {
       const auto __s = ranges::size(__self.__base_);
       const auto __c = static_cast<decltype(__s)>(__self.__count_);
       return __s < __c ? 0 : __s - __c;
     }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr auto size()
       requires sized_range<_View>
     { return __size(*this); }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr auto size() const
       requires sized_range<const _View>
     { return __size(*this); }
@@ -147,7 +159,6 @@ public:
 
   template<class _Tp>
   inline constexpr bool enable_borrowed_range<drop_view<_Tp>> = enable_borrowed_range<_Tp>;
-
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

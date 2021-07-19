@@ -69,7 +69,10 @@ namespace ranges {
     _Iter __begin_ = _Iter();
     _Sent __end_ = _Sent();
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __subrange_base() = default;
+
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __subrange_base(_Iter __iter, _Sent __sent, make_unsigned_t<iter_difference_t<_Iter>> = 0)
       : __begin_(_VSTD::move(__iter)), __end_(__sent) { }
   };
@@ -81,7 +84,10 @@ namespace ranges {
     _Sent __end_ = _Sent();
     make_unsigned_t<iter_difference_t<_Iter>> __size_ = 0;
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __subrange_base() = default;
+
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __subrange_base(_Iter __iter, _Sent __sent, decltype(__size_) __size)
       : __begin_(_VSTD::move(__iter)), __end_(__sent), __size_(__size) { }
   };
@@ -97,12 +103,15 @@ namespace ranges {
 
     using _Base = __subrange_base<_Iter, _Sent, _Kind == subrange_kind::sized && !sized_sentinel_for<_Sent, _Iter>>;
 
+    _LIBCPP_HIDE_FROM_ABI
     subrange() requires default_initializable<_Iter> = default;
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(__convertible_to_non_slicing<_Iter> auto __iter, _Sent __sent)
       requires (!_Base::__store_size)
       : _Base(_VSTD::move(__iter), __sent) {}
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(__convertible_to_non_slicing<_Iter> auto __iter, _Sent __sent,
                        make_unsigned_t<iter_difference_t<_Iter>> __n)
       requires (_Kind == subrange_kind::sized)
@@ -112,6 +121,7 @@ namespace ranges {
       requires borrowed_range<_Range> &&
                __convertible_to_non_slicing<iterator_t<_Range>, _Iter> &&
                convertible_to<sentinel_t<_Range>, _Sent>
+    _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(_Range&& __range)
       requires (!_Base::__store_size)
       : subrange(ranges::begin(__range), ranges::end(__range)) { }
@@ -120,6 +130,7 @@ namespace ranges {
       requires borrowed_range<_Range> &&
                __convertible_to_non_slicing<iterator_t<_Range>, _Iter> &&
                convertible_to<sentinel_t<_Range>, _Sent>
+    _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(_Range&& __range)
       requires _Base::__store_size && sized_range<_Range>
       : subrange(__range, ranges::size(__range)) { }
@@ -128,26 +139,31 @@ namespace ranges {
     template<borrowed_range _Range>
       requires __convertible_to_non_slicing<iterator_t<_Range>, _Iter> &&
                convertible_to<sentinel_t<_Range>, _Sent>
+    _LIBCPP_HIDE_FROM_ABI
     constexpr subrange(_Range&& __range, make_unsigned_t<iter_difference_t<_Iter>> __n)
       requires (_Kind == subrange_kind::sized)
       : subrange(ranges::begin(__range), ranges::end(__range), __n) { }
 
     template<__different_from<subrange> _Pair>
       requires __pair_like_convertible_from<_Pair, const _Iter&, const _Sent&>
+    _LIBCPP_HIDE_FROM_ABI
     constexpr operator _Pair() const { return _Pair(this->__begin_, this->__end_); }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr _Iter begin() const requires copyable<_Iter> {
       return this->__begin_;
     }
 
-    [[nodiscard]] constexpr _Iter begin() requires (!copyable<_Iter>) {
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Iter begin() requires (!copyable<_Iter>) {
       return _VSTD::move(this->__begin_);
     }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr _Sent end() const { return this->__end_; }
 
-    [[nodiscard]] constexpr bool empty() const { return this->__begin_ == this->__end_; }
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const { return this->__begin_ == this->__end_; }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr make_unsigned_t<iter_difference_t<_Iter>> size() const
       requires (_Kind == subrange_kind::sized)
     {
@@ -157,25 +173,26 @@ namespace ranges {
         return __to_unsigned_like(this->__end_ - this->__begin_);
     }
 
-    [[nodiscard]] constexpr subrange next(iter_difference_t<_Iter> __n = 1) const&
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange next(iter_difference_t<_Iter> __n = 1) const&
       requires forward_iterator<_Iter> {
       auto __tmp = *this;
       __tmp.advance(__n);
       return __tmp;
     }
 
-    [[nodiscard]] constexpr subrange next(iter_difference_t<_Iter> __n = 1) && {
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange next(iter_difference_t<_Iter> __n = 1) && {
       advance(__n);
       return _VSTD::move(*this);
     }
 
-    [[nodiscard]] constexpr subrange prev(iter_difference_t<_Iter> __n = 1) const
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange prev(iter_difference_t<_Iter> __n = 1) const
       requires bidirectional_iterator<_Iter> {
       auto __tmp = *this;
       __tmp.advance(-__n);
       return __tmp;
     }
 
+    _LIBCPP_HIDE_FROM_ABI
     constexpr subrange& advance(iter_difference_t<_Iter> __n) {
       if constexpr (bidirectional_iterator<_Iter>) {
         if (__n < 0) {
@@ -211,6 +228,7 @@ namespace ranges {
 
   template<size_t _Index, class _Iter, class _Sent, subrange_kind _Kind>
     requires (_Index < 2)
+  _LIBCPP_HIDE_FROM_ABI
   constexpr auto get(const subrange<_Iter, _Sent, _Kind>& __subrange) {
     if constexpr (_Index == 0)
       return __subrange.begin();
@@ -220,6 +238,7 @@ namespace ranges {
 
   template<size_t _Index, class _Iter, class _Sent, subrange_kind _Kind>
     requires (_Index < 2)
+  _LIBCPP_HIDE_FROM_ABI
   constexpr auto get(subrange<_Iter, _Sent, _Kind>&& __subrange) {
     if constexpr (_Index == 0)
       return __subrange.begin();
