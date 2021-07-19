@@ -52,7 +52,7 @@ cl::opt<std::string>
                    cl::value_desc("filename"));
 } // namespace llvm
 
-enum class DebugLogging { None, Normal, Verbose };
+enum class DebugLogging { None, Normal, Verbose, Quiet };
 
 static cl::opt<DebugLogging> DebugPM(
     "debug-pass-manager", cl::Hidden, cl::ValueOptional,
@@ -60,6 +60,8 @@ static cl::opt<DebugLogging> DebugPM(
     cl::init(DebugLogging::None),
     cl::values(
         clEnumValN(DebugLogging::Normal, "", ""),
+        clEnumValN(DebugLogging::Quiet, "quiet",
+                   "Skip printing info about analyses"),
         clEnumValN(
             DebugLogging::Verbose, "verbose",
             "Print extra information about adaptors and pass managers")));
@@ -293,6 +295,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   PassInstrumentationCallbacks PIC;
   PrintPassOptions PrintPassOpts;
   PrintPassOpts.Verbose = DebugPM == DebugLogging::Verbose;
+  PrintPassOpts.SkipAnalyses = DebugPM == DebugLogging::Quiet;
   StandardInstrumentations SI(DebugPM != DebugLogging::None, VerifyEachPass,
                               PrintPassOpts);
   SI.registerCallbacks(PIC, &FAM);
