@@ -2039,6 +2039,7 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   if (const auto &DWARFAddressSpace = N->getDWARFAddressSpace())
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
+  Printer.printMetadata("annotations", N->getRawAnnotations());
   Out << ")";
 }
 
