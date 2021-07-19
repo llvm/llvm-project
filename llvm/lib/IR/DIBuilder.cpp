@@ -628,12 +628,14 @@ DIBuilder::createForwardDecl(unsigned Tag, StringRef Name, DIScope *Scope,
 DICompositeType *DIBuilder::createReplaceableCompositeType(
     unsigned Tag, StringRef Name, DIScope *Scope, DIFile *F, unsigned Line,
     unsigned RuntimeLang, uint64_t SizeInBits, uint32_t AlignInBits,
-    DINode::DIFlags Flags, StringRef UniqueIdentifier) {
+    DINode::DIFlags Flags, StringRef UniqueIdentifier,
+    DINodeArray Annotations) {
   auto *RetTy =
       DICompositeType::getTemporary(
           VMContext, Tag, Name, F, Line, getNonCompileUnitScope(Scope), nullptr,
           SizeInBits, AlignInBits, 0, Flags, nullptr, RuntimeLang, nullptr,
-          nullptr, UniqueIdentifier)
+          nullptr, UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
+          Annotations)
           .release();
   trackIfUnresolved(RetTy);
   return RetTy;
