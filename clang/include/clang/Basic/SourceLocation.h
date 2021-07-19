@@ -16,7 +16,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -508,20 +507,6 @@ namespace llvm {
   // Allow calling FoldingSetNodeID::Add with SourceLocation object as parameter
   template <> struct FoldingSetTrait<clang::SourceLocation> {
     static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
-  };
-
-  // Teach SmallPtrSet how to handle SourceLocation.
-  template<>
-  struct PointerLikeTypeTraits<clang::SourceLocation> {
-    static constexpr int NumLowBitsAvailable = 0;
-
-    static void *getAsVoidPointer(clang::SourceLocation L) {
-      return L.getPtrEncoding();
-    }
-
-    static clang::SourceLocation getFromVoidPointer(void *P) {
-      return clang::SourceLocation::getFromRawEncoding((unsigned)(uintptr_t)P);
-    }
   };
 
 } // namespace llvm
