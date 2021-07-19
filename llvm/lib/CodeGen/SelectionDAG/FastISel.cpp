@@ -1256,9 +1256,21 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
              "Expected inlined-at fields to agree");
       // A dbg.declare describes the address of a source variable, so lower it
       // into an indirect DBG_VALUE.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true,
-              *Op, DI->getVariable(), DI->getExpression());
+      auto Builder =
+          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                  TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true, *Op,
+                  DI->getVariable(), DI->getExpression());
+
+      // If using instruction referencing, mutate this into a DBG_INSTR_REF,
+      // to be later patched up by finalizeDebugInstrRefs. Tack a deref onto
+      // the expression, we don't have an "indirect" flag in DBG_INSTR_REF.
+      if (TM.Options.ValueTrackingVariableLocations && Op->isReg()) {
+        Builder->setDesc(TII.get(TargetOpcode::DBG_INSTR_REF));
+        Builder->getOperand(1).ChangeToImmediate(0);
+        auto *NewExpr =
+           DIExpression::prepend(DI->getExpression(), DIExpression::DerefBefore);
+        Builder->getOperand(3).setMetadata(NewExpr);
+      }
     } else {
       // We can't yet handle anything else here because it would require
       // generating code, thus altering codegen because of debug info.
@@ -1301,8 +1313,16 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     } else if (Register Reg = lookUpRegForValue(V)) {
       // FIXME: This does not handle register-indirect values at offset 0.
       bool IsIndirect = false;
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, IsIndirect, Reg,
-              DI->getVariable(), DI->getExpression());
+      auto Builder =
+          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II, IsIndirect, Reg,
+                  DI->getVariable(), DI->getExpression());
+
+      // If using instruction referencing, mutate this into a DBG_INSTR_REF,
+      // to be later patched up by finalizeDebugInstrRefs.
+      if (TM.Options.ValueTrackingVariableLocations) {
+        Builder->setDesc(TII.get(TargetOpcode::DBG_INSTR_REF));
+        Builder->getOperand(1).ChangeToImmediate(0);
+      }
     } else {
       // We don't know how to handle other cases, so we drop.
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");

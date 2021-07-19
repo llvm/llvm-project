@@ -8,6 +8,7 @@
 
 #include "CommandObjectThread.h"
 
+#include <memory>
 #include <sstream>
 
 #include "CommandObjectThreadUtil.h"
@@ -32,6 +33,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Target/TraceInstructionDumper.h"
 #include "lldb/Utility/State.h"
 
 using namespace lldb;
@@ -2004,19 +2006,22 @@ public:
           m_count = count;
         break;
       }
-      case 'p': {
-        int32_t position;
-        if (option_arg.empty() || option_arg.getAsInteger(0, position) ||
-            position < 0)
+      case 's': {
+        int32_t skip;
+        if (option_arg.empty() || option_arg.getAsInteger(0, skip) || skip < 0)
           error.SetErrorStringWithFormat(
               "invalid integer value for option '%s'",
               option_arg.str().c_str());
         else
-          m_position = position;
+          m_skip = skip;
         break;
       }
       case 'r': {
         m_raw = true;
+        break;
+      }
+      case 'f': {
+        m_forwards = true;
         break;
       }
       default:
@@ -2027,8 +2032,9 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_count = kDefaultCount;
-      m_position = llvm::None;
+      m_skip = 0;
       m_raw = false;
+      m_forwards = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2039,14 +2045,15 @@ public:
 
     // Instance variables to hold the values for command options.
     size_t m_count;
-    llvm::Optional<ssize_t> m_position;
+    size_t m_skip;
     bool m_raw;
+    bool m_forwards;
   };
 
   CommandObjectTraceDumpInstructions(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread trace dump instructions",
-            "Dump the traced instructions for one or more threads.  If no "
+            "Dump the traced instructions for one or more threads. If no "
             "threads are specified, show the current thread.  Use the "
             "thread-index \"all\" to see all threads.",
             nullptr,
@@ -2063,14 +2070,14 @@ public:
                                uint32_t index) override {
     current_command_args.GetCommandString(m_repeat_command);
     m_create_repeat_command_just_invoked = true;
-    m_consecutive_repetitions = 0;
     return m_repeat_command.c_str();
   }
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    if (IsRepeatCommand())
-      m_consecutive_repetitions++;
+    if (!IsRepeatCommand())
+      m_dumpers.clear();
+
     bool status = CommandObjectIterateOverThreads::DoExecute(args, result);
 
     m_create_repeat_command_just_invoked = false;
@@ -2082,24 +2089,37 @@ protected:
   }
 
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
+    Stream &s = result.GetOutputStream();
+
     const TraceSP &trace_sp = m_exe_ctx.GetTargetSP()->GetTrace();
     ThreadSP thread_sp =
         m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
 
-    if (llvm::Optional<size_t> insn_count =
-            trace_sp->GetInstructionCount(*thread_sp)) {
-      size_t count = m_options.m_count;
-      ssize_t position =
-          m_options.m_position.getValueOr((ssize_t)*insn_count - 1) -
-          m_consecutive_repetitions * count;
-      if (position < 0)
-        result.AppendError("error: no more data");
-      else
-        trace_sp->DumpTraceInstructions(*thread_sp, result.GetOutputStream(),
-                                        count, position, m_options.m_raw);
-    } else {
-      result.AppendError("error: not traced");
+    if (!m_dumpers.count(thread_sp->GetID())) {
+      lldb::TraceCursorUP cursor_up = trace_sp->GetCursor(*thread_sp);
+      // Set up the cursor and return the presentation index of the first
+      // instruction to dump after skipping instructions.
+      auto setUpCursor = [&]() {
+        cursor_up->SetForwards(m_options.m_forwards);
+        if (m_options.m_forwards)
+          return cursor_up->Seek(m_options.m_skip, TraceCursor::SeekType::Set);
+        return -cursor_up->Seek(-m_options.m_skip, TraceCursor::SeekType::End);
+      };
+
+      int initial_index = setUpCursor();
+
+      auto dumper = std::make_unique<TraceInstructionDumper>(
+          std::move(cursor_up), initial_index, m_options.m_raw);
+
+      // This happens when the seek value was more than the number of available
+      // instructions.
+      if (std::abs(initial_index) < (int)m_options.m_skip)
+        dumper->SetNoMoreData();
+
+      m_dumpers[thread_sp->GetID()] = std::move(dumper);
     }
+
+    m_dumpers[thread_sp->GetID()]->DumpInstructions(s, m_options.m_count);
     return true;
   }
 
@@ -2108,7 +2128,7 @@ protected:
   // Repeat command helpers
   std::string m_repeat_command;
   bool m_create_repeat_command_just_invoked;
-  size_t m_consecutive_repetitions = 0;
+  std::map<lldb::tid_t, std::unique_ptr<TraceInstructionDumper>> m_dumpers;
 };
 
 // CommandObjectMultiwordTraceDump

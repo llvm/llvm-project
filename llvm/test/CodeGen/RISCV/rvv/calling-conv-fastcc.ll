@@ -70,12 +70,11 @@ define fastcc <vscale x 64 x i32> @ret_split_nxv64i32(<vscale x 64 x i32>* %x) {
 ; CHECK-LABEL: ret_split_nxv64i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a2, a2, 3
-; CHECK-NEXT:    slli a3, a2, 6
+; CHECK-NEXT:    slli a3, a2, 3
 ; CHECK-NEXT:    add a4, a1, a3
 ; CHECK-NEXT:    vl8re32.v v8, (a4)
-; CHECK-NEXT:    slli a4, a2, 7
-; CHECK-NEXT:    addi a5, zero, 192
+; CHECK-NEXT:    slli a4, a2, 4
+; CHECK-NEXT:    addi a5, zero, 24
 ; CHECK-NEXT:    mul a2, a2, a5
 ; CHECK-NEXT:    add a5, a1, a4
 ; CHECK-NEXT:    vl8re32.v v16, (a1)
@@ -104,8 +103,7 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(<vscale x 128 x i32>* %x
 ; CHECK-NEXT:    slli a2, a2, 5
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a2, a2, 3
-; CHECK-NEXT:    slli a6, a2, 6
+; CHECK-NEXT:    slli a6, a2, 3
 ; CHECK-NEXT:    add a4, a1, a6
 ; CHECK-NEXT:    vl8re32.v v8, (a4)
 ; CHECK-NEXT:    csrr a3, vlenb
@@ -114,7 +112,7 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(<vscale x 128 x i32>* %x
 ; CHECK-NEXT:    add a3, sp, a3
 ; CHECK-NEXT:    addi a3, a3, 16
 ; CHECK-NEXT:    vs8r.v v8, (a3) # Unknown-size Folded Spill
-; CHECK-NEXT:    slli a7, a2, 7
+; CHECK-NEXT:    slli a7, a2, 4
 ; CHECK-NEXT:    add a5, a1, a7
 ; CHECK-NEXT:    vl8re32.v v8, (a5)
 ; CHECK-NEXT:    csrr a3, vlenb
@@ -122,7 +120,7 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(<vscale x 128 x i32>* %x
 ; CHECK-NEXT:    add a3, sp, a3
 ; CHECK-NEXT:    addi a3, a3, 16
 ; CHECK-NEXT:    vs8r.v v8, (a3) # Unknown-size Folded Spill
-; CHECK-NEXT:    addi a5, zero, 192
+; CHECK-NEXT:    addi a5, zero, 24
 ; CHECK-NEXT:    mul t1, a2, a5
 ; CHECK-NEXT:    add a3, a1, t1
 ; CHECK-NEXT:    vl8re32.v v8, (a3)
@@ -131,18 +129,18 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(<vscale x 128 x i32>* %x
 ; CHECK-NEXT:    add a3, sp, a3
 ; CHECK-NEXT:    addi a3, a3, 16
 ; CHECK-NEXT:    vs8r.v v8, (a3) # Unknown-size Folded Spill
-; CHECK-NEXT:    slli t3, a2, 8
+; CHECK-NEXT:    slli t3, a2, 5
 ; CHECK-NEXT:    add a4, a1, t3
 ; CHECK-NEXT:    vl8re32.v v8, (a4)
 ; CHECK-NEXT:    addi a3, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a3) # Unknown-size Folded Spill
-; CHECK-NEXT:    addi a4, zero, 320
+; CHECK-NEXT:    addi a4, zero, 40
 ; CHECK-NEXT:    mul a4, a2, a4
 ; CHECK-NEXT:    add t0, a1, a4
-; CHECK-NEXT:    addi a5, zero, 384
+; CHECK-NEXT:    addi a5, zero, 48
 ; CHECK-NEXT:    mul a5, a2, a5
 ; CHECK-NEXT:    add t2, a1, a5
-; CHECK-NEXT:    addi a3, zero, 448
+; CHECK-NEXT:    addi a3, zero, 56
 ; CHECK-NEXT:    mul a2, a2, a3
 ; CHECK-NEXT:    add a3, a1, a2
 ; CHECK-NEXT:    vl8re32.v v8, (a1)

@@ -91,9 +91,11 @@ declare <16 x i16> @llvm.experimental.stepvector.v16i16()
 define <16 x i16> @stepvector_v16i16() {
 ; LMULMAX1-LABEL: stepvector_v16i16:
 ; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    lui a0, %hi(.LCPI7_0)
+; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI7_0)
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; LMULMAX1-NEXT:    vle16.v v9, (a0)
 ; LMULMAX1-NEXT:    vid.v v8
-; LMULMAX1-NEXT:    vadd.vi v9, v8, 8
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: stepvector_v16i16:
@@ -134,9 +136,11 @@ declare <8 x i32> @llvm.experimental.stepvector.v8i32()
 define <8 x i32> @stepvector_v8i32() {
 ; LMULMAX1-LABEL: stepvector_v8i32:
 ; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    lui a0, %hi(.LCPI10_0)
+; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI10_0)
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; LMULMAX1-NEXT:    vle32.v v9, (a0)
 ; LMULMAX1-NEXT:    vid.v v8
-; LMULMAX1-NEXT:    vadd.vi v9, v8, 4
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: stepvector_v8i32:
@@ -153,18 +157,26 @@ declare <16 x i32> @llvm.experimental.stepvector.v16i32()
 define <16 x i32> @stepvector_v16i32() {
 ; LMULMAX1-LABEL: stepvector_v16i32:
 ; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    lui a0, %hi(.LCPI11_0)
+; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI11_0)
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; LMULMAX1-NEXT:    vle32.v v9, (a0)
+; LMULMAX1-NEXT:    lui a0, %hi(.LCPI11_1)
+; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI11_1)
+; LMULMAX1-NEXT:    vle32.v v10, (a0)
+; LMULMAX1-NEXT:    lui a0, %hi(.LCPI11_2)
+; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI11_2)
+; LMULMAX1-NEXT:    vle32.v v11, (a0)
 ; LMULMAX1-NEXT:    vid.v v8
-; LMULMAX1-NEXT:    vadd.vi v9, v8, 4
-; LMULMAX1-NEXT:    vadd.vi v10, v8, 8
-; LMULMAX1-NEXT:    vadd.vi v11, v8, 12
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: stepvector_v16i32:
 ; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    lui a0, %hi(.LCPI11_0)
+; LMULMAX2-NEXT:    addi a0, a0, %lo(.LCPI11_0)
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; LMULMAX2-NEXT:    vle32.v v10, (a0)
 ; LMULMAX2-NEXT:    vid.v v8
-; LMULMAX2-NEXT:    vadd.vi v10, v8, 8
 ; LMULMAX2-NEXT:    ret
   %v = call <16 x i32> @llvm.experimental.stepvector.v16i32()
   ret <16 x i32> %v
@@ -188,8 +200,12 @@ define <4 x i64> @stepvector_v4i64() {
 ; LMULMAX1-LABEL: stepvector_v4i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v9, 3
+; LMULMAX1-NEXT:    addi a0, zero, 2
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v9, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX1-NEXT:    vid.v v8
-; LMULMAX1-NEXT:    vadd.vi v9, v8, 2
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: stepvector_v4i64:
@@ -207,17 +223,31 @@ define <8 x i64> @stepvector_v8i64() {
 ; LMULMAX1-LABEL: stepvector_v8i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v9, 3
+; LMULMAX1-NEXT:    addi a0, zero, 2
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v9, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v10, 5
+; LMULMAX1-NEXT:    addi a0, zero, 4
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v10, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v11, 7
+; LMULMAX1-NEXT:    addi a0, zero, 6
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v11, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX1-NEXT:    vid.v v8
-; LMULMAX1-NEXT:    vadd.vi v9, v8, 2
-; LMULMAX1-NEXT:    vadd.vi v10, v8, 4
-; LMULMAX1-NEXT:    vadd.vi v11, v8, 6
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: stepvector_v8i64:
 ; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    lui a0, %hi(.LCPI14_0)
+; LMULMAX2-NEXT:    addi a0, a0, %lo(.LCPI14_0)
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; LMULMAX2-NEXT:    vle64.v v10, (a0)
 ; LMULMAX2-NEXT:    vid.v v8
-; LMULMAX2-NEXT:    vadd.vi v10, v8, 4
 ; LMULMAX2-NEXT:    ret
   %v = call <8 x i64> @llvm.experimental.stepvector.v8i64()
   ret <8 x i64> %v
@@ -229,23 +259,57 @@ define <16 x i64> @stepvector_v16i64() {
 ; LMULMAX1-LABEL: stepvector_v16i64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v9, 3
+; LMULMAX1-NEXT:    addi a0, zero, 2
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v9, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v10, 5
+; LMULMAX1-NEXT:    addi a0, zero, 4
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v10, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v11, 7
+; LMULMAX1-NEXT:    addi a0, zero, 6
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v11, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v12, 9
+; LMULMAX1-NEXT:    addi a0, zero, 8
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v12, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v13, 11
+; LMULMAX1-NEXT:    addi a0, zero, 10
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v13, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v14, 13
+; LMULMAX1-NEXT:    addi a0, zero, 12
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v14, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; LMULMAX1-NEXT:    vmv.v.i v15, 15
+; LMULMAX1-NEXT:    addi a0, zero, 14
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; LMULMAX1-NEXT:    vmv.s.x v15, a0
+; LMULMAX1-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; LMULMAX1-NEXT:    vid.v v8
-; LMULMAX1-NEXT:    vadd.vi v9, v8, 2
-; LMULMAX1-NEXT:    vadd.vi v10, v8, 4
-; LMULMAX1-NEXT:    vadd.vi v11, v8, 6
-; LMULMAX1-NEXT:    vadd.vi v12, v8, 8
-; LMULMAX1-NEXT:    vadd.vi v13, v8, 10
-; LMULMAX1-NEXT:    vadd.vi v14, v8, 12
-; LMULMAX1-NEXT:    vadd.vi v15, v8, 14
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: stepvector_v16i64:
 ; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    lui a0, %hi(.LCPI15_0)
+; LMULMAX2-NEXT:    addi a0, a0, %lo(.LCPI15_0)
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; LMULMAX2-NEXT:    vle64.v v10, (a0)
+; LMULMAX2-NEXT:    lui a0, %hi(.LCPI15_1)
+; LMULMAX2-NEXT:    addi a0, a0, %lo(.LCPI15_1)
+; LMULMAX2-NEXT:    vle64.v v12, (a0)
+; LMULMAX2-NEXT:    lui a0, %hi(.LCPI15_2)
+; LMULMAX2-NEXT:    addi a0, a0, %lo(.LCPI15_2)
+; LMULMAX2-NEXT:    vle64.v v14, (a0)
 ; LMULMAX2-NEXT:    vid.v v8
-; LMULMAX2-NEXT:    vadd.vi v10, v8, 4
-; LMULMAX2-NEXT:    vadd.vi v12, v8, 8
-; LMULMAX2-NEXT:    vadd.vi v14, v8, 12
 ; LMULMAX2-NEXT:    ret
   %v = call <16 x i64> @llvm.experimental.stepvector.v16i64()
   ret <16 x i64> %v

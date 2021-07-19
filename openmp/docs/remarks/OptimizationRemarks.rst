@@ -15,41 +15,95 @@ features of the remark system the clang documentation should be consulted:
   <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-fsave-optimization-record>`_
 
 
-.. _ompXXX:
+OpenMP Remarks
+--------------
 
-Some OpenMP remarks start with a "tag", like `[OMP100]`, which indicates that
-there is further information about them on this page. To directly jump to the
-respective entry, navigate to
-`https://openmp.llvm.org/docs/remarks/OptimizationRemarks.html#ompXXX <https://openmp.llvm.org/docs/remarks/OptimizationRemarks.html#ompXXX>`_ where `XXX` is
-the three digit code shown in the tag.
+.. toctree::
+   :hidden:
+   :maxdepth: 1
 
+   OMP100
+   OMP101
+   OMP102
+   OMP110
+   OMP111
+   OMP112
+   OMP113
+   OMP120
+   OMP121
+   OMP130
+   OMP131
+   OMP132
+   OMP133
+   OMP140
+   OMP150
+   OMP160
+   OMP170
 
-----
+.. list-table::
+   :widths: 15 15 70
+   :header-rows: 1
 
-
-.. _omp100:
-.. _omp_no_external_caller_in_target_region:
-
-`[OMP100]` Potentially unknown OpenMP target region caller
-----------------------------------------------------------
-
-A function remark that indicates the function, when compiled for a GPU, is
-potentially called from outside the translation unit. Note that a remark is
-only issued if we tried to perform an optimization which would require us to
-know all callers on the GPU.
-
-To facilitate OpenMP semantics on GPUs we provide a runtime mechanism through
-which the code that makes up the body of a parallel region is shared with the
-threads in the team. Generally we use the address of the outlined parallel
-region to identify the code that needs to be executed. If we know all target
-regions that reach the parallel region we can avoid this function pointer
-passing scheme and often improve the register usage on the GPU. However, If a
-parallel region on the GPU is in a function with external linkage we may not
-know all callers statically. If there are outside callers within target
-regions, this remark is to be ignored. If there are no such callers, users can
-modify the linkage and thereby help optimization with a `static` or
-`__attribute__((internal))` function annotation. If changing the linkage is
-impossible, e.g., because there are outside callers on the host, one can split
-the function into an external visible interface which is not compiled for
-the target and an internal implementation which is compiled for the target
-and should be called from within the target region.
+   * - Diagnostics Number
+     - Diagnostics Kind
+     - Diagnostics Description
+   * - :ref:`OMP100 <omp100>`
+     - Analysis
+     - Potentially unknown OpenMP target region caller.
+   * - :ref:`OMP101 <omp101>`
+     - Analysis
+     - Parallel region is used in unknown / unexpected ways. Will not attempt to
+       rewrite the state machine.
+   * - :ref:`OMP102 <omp102>`
+     - Analysis
+     - Parallel region is not called from a unique kernel. Will not attempt to
+       rewrite the state machine.
+   * - :ref:`OMP110 <omp110>`
+     - Optimization
+     - Moving globalized variable to the stack.
+   * - :ref:`OMP111 <omp111>`
+     - Optimization
+     - Replaced globalized variable with X bytes of shared memory.
+   * - :ref:`OMP112 <omp112>`
+     - Missed
+     - Found thread data sharing on the GPU. Expect degraded performance due to
+       data globalization.
+   * - :ref:`OMP113 <omp113>`
+     - Missed
+     - Could not move globalized variable to the stack. Variable is potentially
+       captured in call. Mark parameter as `__attribute__((noescape))` to
+       override.
+   * - :ref:`OMP120 <omp120>`
+     - Optimization
+     - Transformed generic-mode kernel to SPMD-mode.
+   * - :ref:`OMP121 <omp121>`
+     - Analysis
+     - Value has potential side effects preventing SPMD-mode execution. Add
+       `__attribute__((assume(\"ompx_spmd_amenable\")))` to the called function
+       to override.
+   * - :ref:`OMP130 <omp130>`
+     - Optimization
+     - Removing unused state machine from generic-mode kernel.
+   * - :ref:`OMP131 <omp131>`
+     - Optimization
+     - Rewriting generic-mode kernel with a customized state machine.
+   * - :ref:`OMP132 <omp132>`
+     - Analysis
+     - Generic-mode kernel is executed with a customized state machine that
+       requires a fallback.
+   * - :ref:`OMP133 <omp133>`
+     - Analysis
+     - Call may contain unknown parallel regions. Use
+       `__attribute__((assume("omp_no_parallelism")))` to override.
+   * - :ref:`OMP140 <omp140>`
+     - Analysis
+     - Could not internalize function. Some optimizations may not be possible.
+   * - :ref:`OMP150 <omp150>`
+     - Optimization
+     - Parallel region merged with parallel region at <location>.
+   * - :ref:`OMP160 <omp160>`
+     - Optimization
+     - Removing parallel region with no side-effects.
+   * - :ref:`OMP170 <omp170>`
+     - Optimization
+     - OpenMP runtime call <call> deduplicated.

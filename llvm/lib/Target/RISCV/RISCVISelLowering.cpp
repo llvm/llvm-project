@@ -889,7 +889,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_masked_atomicrmw_min_i32:
   case Intrinsic::riscv_masked_atomicrmw_umax_i32:
   case Intrinsic::riscv_masked_atomicrmw_umin_i32:
-  case Intrinsic::riscv_masked_cmpxchg_i32:
+  case Intrinsic::riscv_masked_cmpxchg_i32: {
     PointerType *PtrTy = cast<PointerType>(I.getArgOperand(0)->getType());
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(PtrTy->getElementType());
@@ -899,6 +899,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
     return true;
+  }
   }
 }
 
@@ -1384,70 +1385,6 @@ static SDValue lowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG,
   return convertFromScalableVector(VT, Splat, DAG, Subtarget);
 }
 
-// Try to match an arithmetic-sequence BUILD_VECTOR [X,X+S,X+2*S,...,X+(N-1)*S]
-// to the (non-zero) step S and start value X. This can be then lowered as the
-// RVV sequence (VID * S) + X, for example.
-// Note that this method will also match potentially unappealing index
-// sequences, like <i32 0, i32 50939494>, however it is left to the caller to
-// determine whether this is worth generating code for.
-static Optional<std::pair<int64_t, int64_t>> isSimpleVIDSequence(SDValue Op) {
-  unsigned NumElts = Op.getNumOperands();
-  assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Unexpected BUILD_VECTOR");
-  if (!Op.getValueType().isInteger())
-    return None;
-
-  Optional<int64_t> SeqStep, SeqAddend;
-  Optional<std::pair<int64_t, unsigned>> PrevElt;
-  unsigned EltSizeInBits = Op.getValueType().getScalarSizeInBits();
-  for (unsigned Idx = 0; Idx < NumElts; Idx++) {
-    // Assume undef elements match the sequence; we just have to be careful
-    // when interpolating across them.
-    if (Op.getOperand(Idx).isUndef())
-      continue;
-    // The BUILD_VECTOR must be all constants.
-    if (!isa<ConstantSDNode>(Op.getOperand(Idx)))
-      return None;
-
-    int64_t Val = SignExtend64(Op.getConstantOperandVal(Idx), EltSizeInBits);
-
-    if (PrevElt) {
-      // Calculate the step since the last non-undef element, and ensure
-      // it's consistent across the entire sequence.
-      int64_t Diff = Val - PrevElt->first;
-      // The difference must cleanly divide the element span.
-      if (Diff % (Idx - PrevElt->second) != 0)
-        return None;
-      int64_t Step = Diff / (Idx - PrevElt->second);
-      // A zero step indicates we're either a not an index sequence, or we
-      // have a fractional step. This must be handled by a more complex
-      // pattern recognition (undefs complicate things here).
-      if (Step == 0)
-        return None;
-      if (!SeqStep)
-        SeqStep = Step;
-      else if (Step != SeqStep)
-        return None;
-    }
-
-    // Record and/or check any addend.
-    if (SeqStep) {
-      int64_t Addend = Val - (Idx * *SeqStep);
-      if (!SeqAddend)
-        SeqAddend = Addend;
-      else if (SeqAddend != Addend)
-        return None;
-    }
-
-    // Record this non-undef element for later.
-    PrevElt = std::make_pair(Val, Idx);
-  }
-  // We need to have logged both a step and an addend for this to count as
-  // a legal index sequence.
-  if (!SeqStep || !SeqAddend)
-    return None;
-  return std::make_pair(*SeqStep, *SeqAddend);
-}
-
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -1575,41 +1512,18 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     return convertFromScalableVector(VT, Splat, DAG, Subtarget);
   }
 
-  // Try and match index sequences, which we can lower to the vid instruction
-  // with optional modifications. An all-undef vector is matched by
-  // getSplatValue, above.
-  if (auto SimpleVID = isSimpleVIDSequence(Op)) {
-    // Only emit VIDs with suitably-small steps/addends. We use imm5 is a
-    // threshold since it's the immediate value many RVV instructions accept.
-    if (isInt<5>(SimpleVID->first) && isInt<5>(SimpleVID->second)) {
+  // Try and match an index sequence, which we can lower directly to the vid
+  // instruction. An all-undef vector is matched by getSplatValue, above.
+  if (VT.isInteger()) {
+    bool IsVID = true;
+    for (unsigned I = 0; I < NumElts && IsVID; I++)
+      IsVID &= Op.getOperand(I).isUndef() ||
+               (isa<ConstantSDNode>(Op.getOperand(I)) &&
+                Op.getConstantOperandVal(I) == I);
+
+    if (IsVID) {
       SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
-      // Convert right out of the scalable type so we can use standard ISD
-      // nodes for the rest of the computation. If we used scalable types with
-      // these, we'd lose the fixed-length vector info and generate worse
-      // vsetvli code.
-      VID = convertFromScalableVector(VT, VID, DAG, Subtarget);
-      int64_t Step = SimpleVID->first;
-      int64_t Addend = SimpleVID->second;
-      assert(Step != 0 && "Invalid step");
-      bool Negate = false;
-      if (Step != 1) {
-        int64_t SplatStepVal = Step;
-        unsigned Opcode = ISD::MUL;
-        if (isPowerOf2_64(std::abs(Step))) {
-          Negate = Step < 0;
-          Opcode = ISD::SHL;
-          SplatStepVal = Log2_64(std::abs(Step));
-        }
-        SDValue SplatStep = DAG.getSplatVector(
-            VT, DL, DAG.getConstant(SplatStepVal, DL, XLenVT));
-        VID = DAG.getNode(Opcode, DL, VT, VID, SplatStep);
-      }
-      if (Addend != 0 || Negate) {
-        SDValue SplatAddend =
-            DAG.getSplatVector(VT, DL, DAG.getConstant(Addend, DL, XLenVT));
-        VID = DAG.getNode(Negate ? ISD::SUB : ISD::ADD, DL, VT, SplatAddend, VID);
-      }
-      return VID;
+      return convertFromScalableVector(VT, VID, DAG, Subtarget);
     }
   }
 
@@ -2249,6 +2163,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // minimum size. e.g. <vscale x 2 x i32>. VLENB is in bytes so we calculate
     // vscale as VLENB / 8.
     assert(RISCV::RVVBitsPerBlock == 64 && "Unexpected bits per block!");
+    if (isa<ConstantSDNode>(Op.getOperand(0))) {
+      // We assume VLENB is a multiple of 8. We manually choose the best shift
+      // here because SimplifyDemandedBits isn't always able to simplify it.
+      uint64_t Val = Op.getConstantOperandVal(0);
+      if (isPowerOf2_64(Val)) {
+        uint64_t Log2 = Log2_64(Val);
+        if (Log2 < 3)
+          return DAG.getNode(ISD::SRL, DL, VT, VLENB,
+                             DAG.getConstant(3 - Log2, DL, VT));
+        if (Log2 > 3)
+          return DAG.getNode(ISD::SHL, DL, VT, VLENB,
+                             DAG.getConstant(Log2 - 3, DL, VT));
+        return VLENB;
+      }
+      // If the multiplier is a multiple of 8, scale it down to avoid needing
+      // to shift the VLENB value.
+      if ((Val % 8) == 0)
+        return DAG.getNode(ISD::MUL, DL, VT, VLENB,
+                           DAG.getConstant(Val / 8, DL, VT));
+    }
+
     SDValue VScale = DAG.getNode(ISD::SRL, DL, VT, VLENB,
                                  DAG.getConstant(3, DL, VT));
     return DAG.getNode(ISD::MUL, DL, VT, VScale, Op.getOperand(0));
@@ -6325,9 +6260,9 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // Neither constant will fit into an immediate, so find materialisation
       // costs.
       int C1Cost = RISCVMatInt::getIntMatCost(C1Int, Ty.getSizeInBits(),
-                                              Subtarget.is64Bit());
+                                              Subtarget.getFeatureBits());
       int ShiftedC1Cost = RISCVMatInt::getIntMatCost(
-          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.is64Bit());
+          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.getFeatureBits());
 
       // Materialising `c1` is cheaper than materialising `c1 << c2`, so the
       // combine should be prevented.
@@ -6517,6 +6452,8 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case RISCVISD::READ_VLENB:
     // We assume VLENB is at least 16 bytes.
     Known.Zero.setLowBits(4);
+    // We assume VLENB is no more than 65536 / 8 bytes.
+    Known.Zero.setBitsFrom(14);
     break;
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = Op.getConstantOperandVal(1);

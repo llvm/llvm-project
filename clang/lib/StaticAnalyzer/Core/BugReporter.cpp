@@ -2263,6 +2263,8 @@ void PathSensitiveBugReport::markNotInteresting(SymbolRef sym) {
   // The metadata part of markInteresting is not reversed here.
   // Just making the same region not interesting is incorrect
   // in specific cases.
+  if (const auto *meta = dyn_cast<SymbolMetadata>(sym))
+    markNotInteresting(meta->getRegion());
 }
 
 void PathSensitiveBugReport::markInteresting(const MemRegion *R,

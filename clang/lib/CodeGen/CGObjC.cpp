@@ -1904,8 +1904,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     Builder.CreateLoad(StateItemsPtr, "stateitems");
 
   // Fetch the value at the current index from the buffer.
-  llvm::Value *CurrentItemPtr =
-    Builder.CreateGEP(EnumStateItems, index, "currentitem.ptr");
+  llvm::Value *CurrentItemPtr = Builder.CreateGEP(
+      EnumStateItems->getType()->getPointerElementType(), EnumStateItems, index,
+      "currentitem.ptr");
   llvm::Value *CurrentItem =
     Builder.CreateAlignedLoad(ObjCIdType, CurrentItemPtr, getPointerAlign());
 

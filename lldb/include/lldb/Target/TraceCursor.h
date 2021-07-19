@@ -11,6 +11,8 @@
 
 #include "lldb/lldb-private.h"
 
+#include "lldb/Target/ExecutionContext.h"
+
 namespace lldb_private {
 
 /// Class used for iterating over the instructions of a thread's trace.
@@ -36,73 +38,133 @@ namespace lldb_private {
 ///  A \a TraceCursor always points to a specific instruction or error in the
 ///  trace.
 ///
-///  The Trace initially points to the last item in the trace.
+/// Defaults:
+///   By default, the cursor points at the end item of the trace, moves
+///   backwards, has a move granularity of \a
+///   eTraceInstructionControlFlowTypeInstruction (i.e. visit every instruction)
+///   and stops at every error (the "ignore errors" flag is \b false). See the
+///   \a TraceCursor::Next() method for more documentation.
 ///
 /// Sample usage:
 ///
 ///  TraceCursorUP cursor = trace.GetTrace(thread);
 ///
-///  auto granularity = eTraceInstructionControlFlowTypeCall |
-///  eTraceInstructionControlFlowTypeReturn;
+///  cursor->SetGranularity(eTraceInstructionControlFlowTypeCall |
+///    eTraceInstructionControlFlowTypeReturn);
 ///
 ///  do {
 ///     if (llvm::Error error = cursor->GetError())
 ///       cout << "error found at: " << llvm::toString(error) << endl;
 ///     else if (cursor->GetInstructionControlFlowType() &
-///     eTraceInstructionControlFlowTypeCall)
+///         eTraceInstructionControlFlowTypeCall)
 ///       std::cout << "call found at " << cursor->GetLoadAddress() <<
 ///       std::endl;
 ///     else if (cursor->GetInstructionControlFlowType() &
-///     eTraceInstructionControlFlowTypeReturn)
+///         eTraceInstructionControlFlowTypeReturn)
 ///       std::cout << "return found at " << cursor->GetLoadAddress() <<
 ///       std::endl;
-///  } while(cursor->Prev(granularity));
+///  } while(cursor->Next());
+///
+/// Low level traversal:
+///   Unlike the \a TraceCursor::Next() API, which uses a given granularity and
+///   direction to advance the cursor, the \a TraceCursor::Seek() method can be
+///   used to reposition the cursor to an offset of the end, beginning, or
+///   current position of the trace.
 class TraceCursor {
 public:
+  /// Helper enum to indicate the reference point when invoking
+  /// \a TraceCursor::Seek().
+  enum class SeekType {
+    /// The beginning of the trace, i.e the oldest item.
+    Set = 0,
+    /// The current position in the trace.
+    Current,
+    /// The end of the trace, i.e the most recent item.
+    End
+  };
+
+  /// Create a cursor that initially points to the end of the trace, i.e. the
+  /// most recent item.
+  TraceCursor(lldb::ThreadSP thread_sp);
+
   virtual ~TraceCursor() = default;
 
-  /// Move the cursor to the next instruction more recent chronologically in the
-  /// trace given the provided granularity. If such instruction is not found,
-  /// the cursor doesn't move.
+  /// Set the granularity to use in the \a TraceCursor::Next() method.
+  void SetGranularity(lldb::TraceInstructionControlFlowType granularity);
+
+  /// Set the "ignore errors" flag to use in the \a TraceCursor::Next() method.
+  void SetIgnoreErrors(bool ignore_errors);
+
+  /// Set the direction to use in the \a TraceCursor::Next() method.
   ///
-  /// \param[in] granularity
-  ///     Bitmask granularity filter. The cursor stops at the next
-  ///     instruction that matches the specified granularity.
-  ///
-  /// \param[in] ignore_errors
-  ///     If \b false, the cursor stops as soon as it finds a failure in the
-  ///     trace and points at it.
+  /// \param[in] forwards
+  ///     If \b true, then the traversal will be forwards, otherwise backwards.
+  void SetForwards(bool forwards);
+
+  /// Check if the direction to use in the \a TraceCursor::Next() method is
+  /// forwards.
   ///
   /// \return
-  ///     \b true if the cursor effectively moved and now points to a different
-  ///     item in the trace, including errors when \b ignore_errors is \b false.
-  ///     In other words, if \b false is returned, then the trace is pointing at
-  ///     the same item in the trace as before.
-  virtual bool Next(lldb::TraceInstructionControlFlowType granularity =
-                        lldb::eTraceInstructionControlFlowTypeInstruction,
-                    bool ignore_errors = false) = 0;
+  ///     \b true if the current direction is forwards, \b false if backwards.
+  bool IsForwards() const;
 
-  /// Similar to \a TraceCursor::Next(), but moves backwards chronologically.
-  virtual bool Prev(lldb::TraceInstructionControlFlowType granularity =
-                        lldb::eTraceInstructionControlFlowTypeInstruction,
-                    bool ignore_errors = false) = 0;
+  /// Move the cursor to the next instruction that matches the current
+  /// granularity.
+  ///
+  /// Direction:
+  ///     The traversal is done following the current direction of the trace. If
+  ///     it is forwards, the instructions are visited forwards
+  ///     chronologically. Otherwise, the traversal is done in
+  ///     the opposite direction. By default, a cursor moves backwards unless
+  ///     changed with \a TraceCursor::SetForwards().
+  ///
+  /// Granularity:
+  ///     The cursor will traverse the trace looking for the first instruction
+  ///     that matches the current granularity. If there aren't any matching
+  ///     instructions, the cursor won't move, to give the opportunity of
+  ///     changing granularities.
+  ///
+  /// Ignore errors:
+  ///     If the "ignore errors" flags is \b false, the traversal will stop as
+  ///     soon as it finds an error in the trace and the cursor will point at
+  ///     it.
+  ///
+  /// \return
+  ///     \b true if the cursor effectively moved, \b false otherwise.
+  virtual bool Next() = 0;
 
-  /// Force the cursor to point to the end of the trace, i.e. the most recent
-  /// item.
-  virtual void SeekToEnd() = 0;
-
-  /// Force the cursor to point to the beginning of the trace, i.e. the oldest
-  /// item.
-  virtual void SeekToBegin() = 0;
+  /// Make the cursor point to an item in the trace based on an origin point and
+  /// an offset. This API doesn't distinguishes instruction types nor errors in
+  /// the trace, unlike the \a TraceCursor::Next() method.
+  ///
+  /// The resulting position of the trace is
+  ///     origin + offset
+  ///
+  /// If this resulting position would be out of bounds, it will be adjusted to
+  /// the last or first item in the trace correspondingly.
+  ///
+  /// \param[in] offset
+  ///     How many items to move forwards (if positive) or backwards (if
+  ///     negative) from the given origin point.
+  ///
+  /// \param[in] origin
+  ///     The reference point to use when moving the cursor.
+  ///
+  /// \return
+  ///     The number of trace items moved from the origin.
+  virtual size_t Seek(ssize_t offset, SeekType origin) = 0;
 
   /// \return
-  ///   \b true if the trace corresponds to a live process who has resumed after
-  ///   the trace cursor was created. Otherwise, including the case in which the
-  ///   process is a post-mortem one, return \b false.
-  bool IsStale();
+  ///   The \a ExecutionContextRef of the backing thread from the creation time
+  ///   of this cursor.
+  ExecutionContextRef &GetExecutionContextRef();
 
   /// Instruction or error information
   /// \{
+
+  /// \return
+  ///     Whether the cursor points to an error or not.
+  virtual bool IsError() = 0;
 
   /// Get the corresponding error message if the cursor points to an error in
   /// the trace.
@@ -124,14 +186,15 @@ public:
   ///     to an error in the trace, return \b 0.
   virtual lldb::TraceInstructionControlFlowType
   GetInstructionControlFlowType() = 0;
-
   /// \}
 
-private:
-  /// The stop ID when the cursor was created.
-  uint32_t m_stop_id = 0;
-  /// The trace that owns this cursor.
-  lldb::TraceSP m_trace_sp;
+protected:
+  ExecutionContextRef m_exe_ctx_ref;
+
+  lldb::TraceInstructionControlFlowType m_granularity =
+      lldb::eTraceInstructionControlFlowTypeInstruction;
+  bool m_ignore_errors = false;
+  bool m_forwards = false;
 };
 
 } // namespace lldb_private

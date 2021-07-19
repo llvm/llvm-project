@@ -9,7 +9,7 @@
 #ifndef TEST_LIBCXX_RANGES_RANGE_ADAPTORS_RANGE_COPY_WRAP_TYPES_H
 #define TEST_LIBCXX_RANGES_RANGE_ADAPTORS_RANGE_COPY_WRAP_TYPES_H
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 #include <cassert>
 #include <concepts>
 #include <type_traits>

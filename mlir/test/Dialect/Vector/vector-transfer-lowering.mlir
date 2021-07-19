@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-vector-transfer-lowering-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-transfer-lowering-patterns -canonicalize -split-input-file | FileCheck %s
 
 // transfer_read/write are lowered to vector.load/store
 // CHECK-LABEL:   func @transfer_to_load(
@@ -114,14 +114,11 @@ func @transfer_not_inbounds(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32>
 
 // -----
 
-// TODO: transfer_read/write cannot be lowered to vector.load/store because the
-// memref has a non-default layout.
 // CHECK-LABEL:   func @transfer_nondefault_layout(
 // CHECK-SAME:                                          %[[MEM:.*]]: memref<8x8xf32, #{{.*}}>,
 // CHECK-SAME:                                          %[[IDX:.*]]: index) -> vector<4xf32> {
-// CHECK-NEXT:      %[[CF0:.*]] = constant 0.000000e+00 : f32
-// CHECK-NEXT:      %[[RES:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]]], %[[CF0]] {in_bounds = [true]} : memref<8x8xf32, #{{.*}}>, vector<4xf32>
-// CHECK-NEXT:      vector.transfer_write %[[RES]], %[[MEM]][%[[IDX]], %[[IDX]]] {in_bounds = [true]} : vector<4xf32>, memref<8x8xf32, #{{.*}}>
+// CHECK-NEXT:      %[[RES:.*]] = vector.load %[[MEM]][%[[IDX]], %[[IDX]]] : memref<8x8xf32, #{{.*}}>, vector<4xf32>
+// CHECK-NEXT:      vector.store %[[RES]], %[[MEM]][%[[IDX]], %[[IDX]]] : memref<8x8xf32, #{{.*}}>,  vector<4xf32>
 // CHECK-NEXT:      return %[[RES]] : vector<4xf32>
 // CHECK-NEXT:    }
 
@@ -170,6 +167,21 @@ func @transfer_broadcasting(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32>
   %cf0 = constant 0.0 : f32
   %res = vector.transfer_read %mem[%i, %i], %cf0 {in_bounds = [true], permutation_map = #broadcast} : memref<8x8xf32>, vector<4xf32>
   return %res : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func @transfer_scalar(
+// CHECK-SAME:                          %[[MEM:.*]]: memref<?x?xf32>,
+// CHECK-SAME:                          %[[IDX:.*]]: index) -> vector<1xf32> {
+// CHECK-NEXT:      %[[LOAD:.*]] = memref.load %[[MEM]][%[[IDX]], %[[IDX]]] : memref<?x?xf32>
+// CHECK-NEXT:      %[[RES:.*]] = vector.broadcast %[[LOAD]] : f32 to vector<1xf32>
+// CHECK-NEXT:      return %[[RES]] : vector<1xf32>
+// CHECK-NEXT:    }
+func @transfer_scalar(%mem : memref<?x?xf32>, %i : index) -> vector<1xf32> {
+  %cf0 = constant 0.0 : f32
+  %res = vector.transfer_read %mem[%i, %i], %cf0 {in_bounds = [true]} : memref<?x?xf32>, vector<1xf32>
+  return %res : vector<1xf32>
 }
 
 // -----

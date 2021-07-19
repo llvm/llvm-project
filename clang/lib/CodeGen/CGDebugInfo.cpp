@@ -249,26 +249,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
 }
 
 StringRef CGDebugInfo::getFunctionName(const FunctionDecl *FD) {
-  assert(FD && "Invalid FunctionDecl!");
-  IdentifierInfo *FII = FD->getIdentifier();
-  FunctionTemplateSpecializationInfo *Info =
-      FD->getTemplateSpecializationInfo();
-
-  if (!Info && FII)
-    return FII->getName();
-
-  SmallString<128> NS;
-  llvm::raw_svector_ostream OS(NS);
-  FD->printName(OS);
-
-  // Add any template specialization args.
-  if (Info) {
-    const TemplateArgumentList *TArgs = Info->TemplateArguments;
-    printTemplateArgumentList(OS, TArgs->asArray(), getPrintingPolicy());
-  }
-
-  // Copy this name on the side and use its reference.
-  return internString(OS.str());
+  return internString(GetName(FD));
 }
 
 StringRef CGDebugInfo::getObjCMethodName(const ObjCMethodDecl *OMD) {
@@ -301,16 +282,8 @@ StringRef CGDebugInfo::getSelectorName(Selector S) {
 
 StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
   if (isa<ClassTemplateSpecializationDecl>(RD)) {
-    SmallString<128> Name;
-    llvm::raw_svector_ostream OS(Name);
-    PrintingPolicy PP = getPrintingPolicy();
-    PP.PrintCanonicalTypes = true;
-    PP.SuppressInlineNamespace = false;
-    RD->getNameForDiagnostic(OS, PP,
-                             /*Qualified*/ false);
-
     // Copy this name on the side and use its reference.
-    return internString(Name);
+    return internString(GetName(RD));
   }
 
   // quick optimization to avoid having to intern strings that are already
@@ -4003,12 +3976,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     return;
 
   llvm::TimeTraceScope TimeScope("DebugFunction", [&]() {
-    std::string Name;
-    llvm::raw_string_ostream OS(Name);
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-      ND->getNameForDiagnostic(OS, getPrintingPolicy(),
-                               /*Qualified=*/true);
-    return Name;
+    return GetName(D, true);
   });
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
@@ -4776,6 +4744,18 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
   return GVE;
 }
 
+std::string CGDebugInfo::GetName(const Decl *D, bool Qualified) const {
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+  if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
+    PrintingPolicy PP = getPrintingPolicy();
+    PP.PrintCanonicalTypes = true;
+    PP.SuppressInlineNamespace = false;
+    ND->getNameForDiagnostic(OS, PP, Qualified);
+  }
+  return Name;
+}
+
 void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
                                      const VarDecl *D) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
@@ -4783,11 +4763,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
     return;
 
   llvm::TimeTraceScope TimeScope("DebugGlobalVariable", [&]() {
-    std::string Name;
-    llvm::raw_string_ostream OS(Name);
-    D->getNameForDiagnostic(OS, getPrintingPolicy(),
-                            /*Qualified=*/true);
-    return Name;
+    return GetName(D, true);
   });
 
   // If we already created a DIGlobalVariable for this declaration, just attach
@@ -4851,11 +4827,7 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   if (VD->hasAttr<NoDebugAttr>())
     return;
   llvm::TimeTraceScope TimeScope("DebugConstGlobalVariable", [&]() {
-    std::string Name;
-    llvm::raw_string_ostream OS(Name);
-    VD->getNameForDiagnostic(OS, getPrintingPolicy(),
-                             /*Qualified=*/true);
-    return Name;
+    return GetName(VD, true);
   });
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());

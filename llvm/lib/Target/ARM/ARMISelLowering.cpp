@@ -16063,7 +16063,7 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
       return false;
     SDValue ExtA = Mul->getOperand(0);
     SDValue ExtB = Mul->getOperand(1);
-    if (ExtA->getOpcode() != ExtendCode && ExtB->getOpcode() != ExtendCode)
+    if (ExtA->getOpcode() != ExtendCode || ExtB->getOpcode() != ExtendCode)
       return false;
     A = ExtA->getOperand(0);
     B = ExtB->getOperand(0);
@@ -16097,7 +16097,7 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
       return false;
     SDValue ExtA = Mul->getOperand(0);
     SDValue ExtB = Mul->getOperand(1);
-    if (ExtA->getOpcode() != ExtendCode && ExtB->getOpcode() != ExtendCode)
+    if (ExtA->getOpcode() != ExtendCode || ExtB->getOpcode() != ExtendCode)
       return false;
     A = ExtA->getOperand(0);
     B = ExtB->getOperand(0);

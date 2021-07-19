@@ -13,7 +13,7 @@
 // T& <copyable-box>::operator*()
 // T const& <copyable-box>::operator*() const
 
-#include <__ranges/copyable_box.h>
+#include <ranges>
 
 #include <cassert>
 #include <type_traits>

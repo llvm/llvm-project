@@ -164,7 +164,7 @@ set(bc_flags -S -x c++ -O1 -std=c++14
              -I${devicertl_nvptx_directory}/src)
 
 if(${LIBOMPTARGET_NVPTX_DEBUG})
-  list(APPEND bc_flags -DOMPTARGET_NVPTX_DEBUG=-1)
+  list(APPEND bc_flags -DOMPTARGET_NVPTX_DEBUG=-1 -g)
 else()
   list(APPEND bc_flags -DOMPTARGET_NVPTX_DEBUG=0)
 endif()

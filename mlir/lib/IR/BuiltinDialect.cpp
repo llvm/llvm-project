@@ -284,13 +284,19 @@ LogicalResult
 UnrealizedConversionCastOp::fold(ArrayRef<Attribute> attrOperands,
                                  SmallVectorImpl<OpFoldResult> &foldResults) {
   OperandRange operands = inputs();
+  ResultRange results = outputs();
+
+  if (operands.getType() == results.getType()) {
+    foldResults.append(operands.begin(), operands.end());
+    return success();
+  }
+
   if (operands.empty())
     return failure();
 
   // Check that the input is a cast with results that all feed into this
   // operation, and operand types that directly match the result types of this
   // operation.
-  ResultRange results = outputs();
   Value firstInput = operands.front();
   auto inputOp = firstInput.getDefiningOp<UnrealizedConversionCastOp>();
   if (!inputOp || inputOp.getResults() != operands ||

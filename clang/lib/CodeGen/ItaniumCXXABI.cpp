@@ -720,7 +720,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
     }
 
     if (ShouldEmitVFEInfo) {
-      llvm::Value *VFPAddr = Builder.CreateGEP(VTable, VTableOffset);
+      llvm::Value *VFPAddr =
+          Builder.CreateGEP(CGF.Int8Ty, VTable, VTableOffset);
 
       // If doing VFE, load from the vtable with a type.checked.load intrinsic
       // call. Note that we use the GEP to calculate the address to load from
@@ -738,7 +739,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
       // When not doing VFE, emit a normal load, as it allows more
       // optimisations than type.checked.load.
       if (ShouldEmitCFICheck || ShouldEmitWPDInfo) {
-        llvm::Value *VFPAddr = Builder.CreateGEP(VTable, VTableOffset);
+        llvm::Value *VFPAddr =
+            Builder.CreateGEP(CGF.Int8Ty, VTable, VTableOffset);
         CheckResult = Builder.CreateCall(
             CGM.getIntrinsic(llvm::Intrinsic::type_test),
             {Builder.CreateBitCast(VFPAddr, CGF.Int8PtrTy), TypeId});
@@ -751,7 +753,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
             {VTable, VTableOffset});
         VirtualFn = CGF.Builder.CreateBitCast(VirtualFn, FTy->getPointerTo());
       } else {
-        llvm::Value *VFPAddr = CGF.Builder.CreateGEP(VTable, VTableOffset);
+        llvm::Value *VFPAddr =
+            CGF.Builder.CreateGEP(CGF.Int8Ty, VTable, VTableOffset);
         VFPAddr = CGF.Builder.CreateBitCast(
             VFPAddr, FTy->getPointerTo()->getPointerTo());
         VirtualFn = CGF.Builder.CreateAlignedLoad(
@@ -1254,7 +1257,7 @@ void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
 
     // Track back to entry -2 and pull out the offset there.
     llvm::Value *OffsetPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
-        VTable, -2, "complete-offset.ptr");
+        CGF.IntPtrTy, VTable, -2, "complete-offset.ptr");
     llvm::Value *Offset = CGF.Builder.CreateAlignedLoad(CGF.IntPtrTy, OffsetPtr,                                                        CGF.getPointerAlign());
 
     // Apply the offset.
@@ -1466,7 +1469,8 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
     Value = CGF.Builder.CreateBitCast(Value, StdTypeInfoPtrTy->getPointerTo());
   } else {
     // Load the type info.
-    Value = CGF.Builder.CreateConstInBoundsGEP1_64(Value, -1ULL);
+    Value =
+        CGF.Builder.CreateConstInBoundsGEP1_64(StdTypeInfoPtrTy, Value, -1ULL);
   }
   return CGF.Builder.CreateAlignedLoad(StdTypeInfoPtrTy, Value,
                                        CGF.getPointerAlign());
@@ -1547,7 +1551,8 @@ llvm::Value *ItaniumCXXABI::EmitDynamicCastToVoid(CodeGenFunction &CGF,
         CGF.GetVTablePtr(ThisAddr, PtrDiffLTy->getPointerTo(), ClassDecl);
 
     // Get the offset-to-top from the vtable.
-    OffsetToTop = CGF.Builder.CreateConstInBoundsGEP1_64(VTable, -2ULL);
+    OffsetToTop =
+        CGF.Builder.CreateConstInBoundsGEP1_64(PtrDiffLTy, VTable, -2ULL);
     OffsetToTop = CGF.Builder.CreateAlignedLoad(
         PtrDiffLTy, OffsetToTop, CGF.getPointerAlign(), "offset.to.top");
   }
@@ -1576,8 +1581,9 @@ ItaniumCXXABI::GetVirtualBaseClassOffset(CodeGenFunction &CGF,
       CGM.getItaniumVTableContext().getVirtualBaseOffsetOffset(ClassDecl,
                                                                BaseClassDecl);
   llvm::Value *VBaseOffsetPtr =
-    CGF.Builder.CreateConstGEP1_64(VTablePtr, VBaseOffsetOffset.getQuantity(),
-                                   "vbase.offset.ptr");
+    CGF.Builder.CreateConstGEP1_64(
+        CGF.Int8Ty, VTablePtr, VBaseOffsetOffset.getQuantity(),
+        "vbase.offset.ptr");
 
   llvm::Value *VBaseOffset;
   if (CGM.getItaniumVTableContext().isRelativeLayout()) {
@@ -1871,7 +1877,8 @@ llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
   /// Load the VTT.
   llvm::Value *VTT = CGF.LoadCXXVTT();
   if (VirtualPointerIndex)
-    VTT = CGF.Builder.CreateConstInBoundsGEP1_64(VTT, VirtualPointerIndex);
+    VTT = CGF.Builder.CreateConstInBoundsGEP1_64(
+        CGF.VoidPtrTy, VTT, VirtualPointerIndex);
 
   // And load the address point from the VTT.
   return CGF.Builder.CreateAlignedLoad(CGF.VoidPtrTy, VTT,
@@ -1942,9 +1949,10 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
                                                   Address This,
                                                   llvm::Type *Ty,
                                                   SourceLocation Loc) {
+  llvm::Type *TyPtr = Ty->getPointerTo();
   auto *MethodDecl = cast<CXXMethodDecl>(GD.getDecl());
   llvm::Value *VTable = CGF.GetVTablePtr(
-      This, Ty->getPointerTo()->getPointerTo(), MethodDecl->getParent());
+      This, TyPtr->getPointerTo(), MethodDecl->getParent());
 
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
   llvm::Value *VFunc;
@@ -1961,14 +1969,14 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
       llvm::Value *Load = CGF.Builder.CreateCall(
           CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
           {VTable, llvm::ConstantInt::get(CGM.Int32Ty, 4 * VTableIndex)});
-      VFuncLoad = CGF.Builder.CreateBitCast(Load, Ty->getPointerTo());
+      VFuncLoad = CGF.Builder.CreateBitCast(Load, TyPtr);
     } else {
       VTable =
-          CGF.Builder.CreateBitCast(VTable, Ty->getPointerTo()->getPointerTo());
-      llvm::Value *VTableSlotPtr =
-          CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfn");
+          CGF.Builder.CreateBitCast(VTable, TyPtr->getPointerTo());
+      llvm::Value *VTableSlotPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
+          TyPtr, VTable, VTableIndex, "vfn");
       VFuncLoad =
-          CGF.Builder.CreateAlignedLoad(Ty->getPointerTo(), VTableSlotPtr,
+          CGF.Builder.CreateAlignedLoad(TyPtr, VTableSlotPtr,
                                         CGF.getPointerAlign());
     }
 
@@ -2107,8 +2115,8 @@ static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
     llvm::Value *VTablePtr = CGF.Builder.CreateLoad(VTablePtrPtr);
 
     llvm::Value *Offset;
-    llvm::Value *OffsetPtr =
-        CGF.Builder.CreateConstInBoundsGEP1_64(VTablePtr, VirtualAdjustment);
+    llvm::Value *OffsetPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
+        CGF.Int8Ty, VTablePtr, VirtualAdjustment);
     if (CGF.CGM.getItaniumVTableContext().isRelativeLayout()) {
       // Load the adjustment offset from the vtable as a 32-bit int.
       OffsetPtr =
@@ -2137,7 +2145,7 @@ static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
   // In a derived-to-base conversion, the non-virtual adjustment is
   // applied second.
   if (NonVirtualAdjustment && IsReturnAdjustment) {
-    ResultPtr = CGF.Builder.CreateConstInBoundsGEP1_64(ResultPtr,
+    ResultPtr = CGF.Builder.CreateConstInBoundsGEP1_64(CGF.Int8Ty, ResultPtr,
                                                        NonVirtualAdjustment);
   }
 
@@ -4444,7 +4452,8 @@ static void InitCatchParam(CodeGenFunction &CGF,
         // we have to skip past in order to reach the exception data.
         unsigned HeaderSize =
           CGF.CGM.getTargetCodeGenInfo().getSizeOfUnwindException();
-        AdjustedExn = CGF.Builder.CreateConstGEP1_32(Exn, HeaderSize);
+        AdjustedExn =
+            CGF.Builder.CreateConstGEP1_32(CGF.Int8Ty, Exn, HeaderSize);
 
       // However, if we're catching a pointer-to-record type that won't
       // work, because the personality function might have adjusted

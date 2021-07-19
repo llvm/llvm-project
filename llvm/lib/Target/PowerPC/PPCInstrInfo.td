@@ -3089,17 +3089,22 @@ let Uses = [RM], mayRaiseFPException = 1 in {
 
 // When FM is 30/31, we are setting the 62/63 bit of FPSCR, the implicit-def
 // RM should be set.
+let hasSideEffects = 1 in {
 def MTFSB0 : XForm_43<63, 70, (outs), (ins u5imm:$FM),
-                      "mtfsb0 $FM", IIC_IntMTFSB0, []>,
+                      "mtfsb0 $FM", IIC_IntMTFSB0,
+                      [(int_ppc_mtfsb0 timm:$FM)]>,
              PPC970_DGroup_Single, PPC970_Unit_FPU;
 def MTFSB1 : XForm_43<63, 38, (outs), (ins u5imm:$FM),
-                      "mtfsb1 $FM", IIC_IntMTFSB0, []>,
+                      "mtfsb1 $FM", IIC_IntMTFSB0,
+                      [(int_ppc_mtfsb1 timm:$FM)]>,
              PPC970_DGroup_Single, PPC970_Unit_FPU;
+}
 
 let Defs = [RM] in {
   let isCodeGenOnly = 1 in
   def MTFSFb  : XFLForm<63, 711, (outs), (ins i32imm:$FM, f8rc:$rT),
-                        "mtfsf $FM, $rT", IIC_IntMTFSB0, []>,
+                        "mtfsf $FM, $rT", IIC_IntMTFSB0,
+                        [(int_ppc_mtfsf timm:$FM, f64:$rT)]>,
                 PPC970_DGroup_Single, PPC970_Unit_FPU;
 }
 let Uses = [RM] in {
@@ -3646,6 +3651,16 @@ def : Pat<(fcopysign f64:$frB, f32:$frA),
 def : Pat<(fcopysign f32:$frB, f64:$frA),
           (FCPSGNS (COPY_TO_REGCLASS $frA, F4RC), $frB)>;
 }
+
+// XL Compat intrinsics.
+def : Pat<(int_ppc_fmsub f64:$A, f64:$B, f64:$C), (FMSUB $A, $B, $C)>;
+def : Pat<(int_ppc_fmsubs f32:$A, f32:$B, f32:$C), (FMSUBS $A, $B, $C)>;
+def : Pat<(int_ppc_fnmsub f64:$A, f64:$B, f64:$C), (FNMSUB $A, $B, $C)>;
+def : Pat<(int_ppc_fnmsubs f32:$A, f32:$B, f32:$C), (FNMSUBS $A, $B, $C)>;
+def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (FNMADD $A, $B, $C)>;
+def : Pat<(int_ppc_fnmadds f32:$A, f32:$B, f32:$C), (FNMADDS $A, $B, $C)>;
+def : Pat<(int_ppc_fre f64:$A), (FRE $A)>;
+def : Pat<(int_ppc_fres f32:$A), (FRES $A)>;
 
 include "PPCInstrAltivec.td"
 include "PPCInstrSPE.td"
@@ -4469,19 +4484,20 @@ def MTMSRD : XForm_mtmsr<31, 178, (outs), (ins gprc:$RS, u1imm:$L),
 def MCRFS : XLForm_3<63, 64, (outs crrc:$BF), (ins crrc:$BFA),
                      "mcrfs $BF, $BFA", IIC_BrMCR>;
 
-// If W is 0 and BF is 7, the 60:63 bits will be set, we should set the
-// implicit-def RM.
-def MTFSFI : XLForm_4<63, 134, (outs crrc:$BF), (ins i32imm:$U, i32imm:$W),
-                      "mtfsfi $BF, $U, $W", IIC_IntMFFS>;
-let Defs = [CR1] in
-def MTFSFI_rec : XLForm_4<63, 134, (outs crrc:$BF), (ins i32imm:$U, i32imm:$W),
-                       "mtfsfi. $BF, $U, $W", IIC_IntMFFS>, isRecordForm;
-
-def : InstAlias<"mtfsfi $BF, $U", (MTFSFI crrc:$BF, i32imm:$U, 0)>;
-def : InstAlias<"mtfsfi. $BF, $U", (MTFSFI_rec crrc:$BF, i32imm:$U, 0)>;
-
+// All MTFSF variants may change the rounding mode so conservatively set it
+// as an implicit def for all of them.
 let Predicates = [HasFPU] in {
 let Defs = [RM] in {
+let isCodeGenOnly = 1,
+    Pattern = [(int_ppc_mtfsfi timm:$BF, timm:$U)], W = 0 in
+def MTFSFIb : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U),
+                       "mtfsfi $BF, $U", IIC_IntMFFS>;
+def MTFSFI : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U, i32imm:$W),
+                      "mtfsfi $BF, $U, $W", IIC_IntMFFS>;
+let Defs = [CR1] in
+def MTFSFI_rec : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U, u1imm:$W),
+                       "mtfsfi. $BF, $U, $W", IIC_IntMFFS>, isRecordForm;
+
 def MTFSF : XFLForm_1<63, 711, (outs),
                       (ins i32imm:$FLM, f8rc:$FRB, u1imm:$L, i32imm:$W),
                       "mtfsf $FLM, $FRB, $L, $W", IIC_IntMFFS, []>;
@@ -4491,6 +4507,8 @@ def MTFSF_rec : XFLForm_1<63, 711, (outs),
                        "mtfsf. $FLM, $FRB, $L, $W", IIC_IntMFFS, []>, isRecordForm;
 }
 
+def : InstAlias<"mtfsfi $BF, $U", (MTFSFI u3imm:$BF, u4imm:$U, 0)>;
+def : InstAlias<"mtfsfi. $BF, $U", (MTFSFI_rec u3imm:$BF, u4imm:$U, 0)>;
 def : InstAlias<"mtfsf $FLM, $FRB", (MTFSF i32imm:$FLM, f8rc:$FRB, 0, 0)>;
 def : InstAlias<"mtfsf. $FLM, $FRB", (MTFSF_rec i32imm:$FLM, f8rc:$FRB, 0, 0)>;
 }

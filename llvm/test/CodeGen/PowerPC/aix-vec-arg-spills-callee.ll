@@ -41,10 +41,8 @@ entry:
 ; MIR32:       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
 ; MIR32:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 
-; MIR32:  renamable $[[GPR1:r[0-9]+]] = ADDI %fixed-stack.2, 0
-; MIR32:  renamable $[[GPR2:r[0-9]+]] = ADDI %fixed-stack.0, 0
-; MIR32:  renamable $f{{[0-9]+}} = XFLOADf64 $zero, killed renamable $[[GPR1]]
-; MIR32:  renamable $f{{[0-9]+}} = XFLOADf64 $zero, killed renamable $[[GPR2]]
+; MIR32:  renamable $f{{[0-9]+}} = LFD 0, %fixed-stack.2
+; MIR32:  renamable $f{{[0-9]+}} = LFD 0, %fixed-stack.0
 
 ; 64BIT-LABEL: .test:
 ; 64BIT-DAG:     lfd {{[0-9]+}}, 80(1)
@@ -62,7 +60,5 @@ entry:
 ; MIR64:       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
 ; MIR64:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 
-; MIR64:   renamable $[[GPR1:x[0-9]+]] = ADDI8 %fixed-stack.2, 0
-; MIR64:   renamable $[[GPR2:x[0-9]+]] = ADDI8 %fixed-stack.0, 0
-; MIR64:   renamable $f{{[0-9]+}} = XFLOADf64 $zero8, killed renamable $[[GPR1]]
-; MIR64:   renamable $f{{[0-9]+}} = XFLOADf64 $zero8, killed renamable $[[GPR2]]
+; MIR64:  renamable $f{{[0-9]+}} = LFD 0, %fixed-stack.2
+; MIR64:  renamable $f{{[0-9]+}} = LFD 0, %fixed-stack.0

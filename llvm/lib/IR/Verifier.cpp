@@ -3064,11 +3064,12 @@ void Verifier::visitCallBase(CallBase &Call) {
   Assert(verifyAttributeCount(Attrs, Call.arg_size()),
          "Attribute after last parameter!", Call);
 
-  bool IsIntrinsic = Call.getCalledFunction() &&
-                     Call.getCalledFunction()->isIntrinsic();
-
   Function *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
+  bool IsIntrinsic = Callee && Callee->isIntrinsic();
+  if (IsIntrinsic)
+    Assert(Callee->getValueType() == FTy,
+           "Intrinsic called with incompatible signature", Call);
 
   if (Attrs.hasFnAttribute(Attribute::Speculatable)) {
     // Don't allow speculatable on call sites, unless the underlying function
@@ -5289,6 +5290,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::experimental_noalias_scope_decl: {
     NoAliasScopeDecls.push_back(cast<IntrinsicInst>(&Call));
+    break;
+  }
+  case Intrinsic::preserve_array_access_index:
+  case Intrinsic::preserve_struct_access_index: {
+    Type *ElemTy = Call.getAttributes().getParamElementType(0);
+    Assert(ElemTy,
+           "Intrinsic requires elementtype attribute on first argument.",
+           &Call);
     break;
   }
   };

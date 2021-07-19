@@ -698,7 +698,8 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
     SrcBegin = SrcAddr.getPointer();
   llvm::Value *DestBegin = DestAddr.getPointer();
   // Cast from pointer to array type to pointer to single element.
-  llvm::Value *DestEnd = CGF.Builder.CreateGEP(DestBegin, NumElements);
+  llvm::Value *DestEnd =
+      CGF.Builder.CreateGEP(DestAddr.getElementType(), DestBegin, NumElements);
   // The basic structure here is a while-do loop.
   llvm::BasicBlock *BodyBB = CGF.createBasicBlock("omp.arrayinit.body");
   llvm::BasicBlock *DoneBB = CGF.createBasicBlock("omp.arrayinit.done");
@@ -743,13 +744,15 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   if (DRD) {
     // Shift the address forward by one element.
     llvm::Value *SrcElementNext = CGF.Builder.CreateConstGEP1_32(
-        SrcElementPHI, /*Idx0=*/1, "omp.arraycpy.dest.element");
+        SrcAddr.getElementType(), SrcElementPHI, /*Idx0=*/1,
+        "omp.arraycpy.dest.element");
     SrcElementPHI->addIncoming(SrcElementNext, CGF.Builder.GetInsertBlock());
   }
 
   // Shift the address forward by one element.
   llvm::Value *DestElementNext = CGF.Builder.CreateConstGEP1_32(
-      DestElementPHI, /*Idx0=*/1, "omp.arraycpy.dest.element");
+      DestAddr.getElementType(), DestElementPHI, /*Idx0=*/1,
+      "omp.arraycpy.dest.element");
   // Check whether we've reached the end.
   llvm::Value *Done =
       CGF.Builder.CreateICmpEQ(DestElementNext, DestEnd, "omp.arraycpy.done");
@@ -1010,13 +1013,14 @@ Address ReductionCodeGen::adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
     LValue BaseLValue =
         loadToBegin(CGF, OrigVD->getType(), SharedAddresses[N].first.getType(),
                     OriginalBaseLValue);
+    Address SharedAddr = SharedAddresses[N].first.getAddress(CGF);
     llvm::Value *Adjustment = CGF.Builder.CreatePtrDiff(
-        BaseLValue.getPointer(CGF), SharedAddresses[N].first.getPointer(CGF));
+        BaseLValue.getPointer(CGF), SharedAddr.getPointer());
     llvm::Value *PrivatePointer =
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            PrivateAddr.getPointer(),
-            SharedAddresses[N].first.getAddress(CGF).getType());
-    llvm::Value *Ptr = CGF.Builder.CreateGEP(PrivatePointer, Adjustment);
+            PrivateAddr.getPointer(), SharedAddr.getType());
+    llvm::Value *Ptr = CGF.Builder.CreateGEP(
+        SharedAddr.getElementType(), PrivatePointer, Adjustment);
     return castToBase(CGF, OrigVD->getType(),
                       SharedAddresses[N].first.getType(),
                       OriginalBaseLValue.getAddress(CGF).getType(),
@@ -1280,7 +1284,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D.getBeginLoc());
+  return CGF.GenerateOpenMPCapturedStmtFunctionAggregate(*CS, D.getBeginLoc());
 }
 
 llvm::Function *CGOpenMPRuntime::emitParallelOutlinedFunction(
@@ -4155,8 +4159,9 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
                  dyn_cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts())) {
     LValue UpAddrLVal =
         CGF.EmitOMPArraySectionExpr(ASE, /*IsLowerBound=*/false);
-    llvm::Value *UpAddr =
-        CGF.Builder.CreateConstGEP1_32(UpAddrLVal.getPointer(CGF), /*Idx0=*/1);
+    Address UpAddrAddress = UpAddrLVal.getAddress(CGF);
+    llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
+        UpAddrAddress.getElementType(), UpAddrAddress.getPointer(), /*Idx0=*/1);
     llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGF.SizeTy);
     llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGF.SizeTy);
     SizeVal = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
@@ -4471,7 +4476,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
         std::tie(Addr, Size) = getPointerAndSize(CGF, E);
         llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
         LValue Base = CGF.MakeAddrLValue(
-            Address(CGF.Builder.CreateGEP(AffinitiesArray.getPointer(), Idx),
+            Address(CGF.Builder.CreateGEP(AffinitiesArray.getElementType(),
+                                          AffinitiesArray.getPointer(), Idx),
                     AffinitiesArray.getAlignment()),
             KmpTaskAffinityInfoTy);
         // affs[i].base_addr = &<Affinities[i].second>;
@@ -4638,7 +4644,7 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
   Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
                             Base.getTBAAInfo());
   llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
-      Addr.getPointer(),
+      Addr.getElementType(), Addr.getPointer(),
       llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
   LValue NumDepsBase = CGF.MakeAddrLValue(
       Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
@@ -4678,7 +4684,8 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
       LValue &PosLVal = *Pos.get<LValue *>();
       llvm::Value *Idx = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
       Base = CGF.MakeAddrLValue(
-          Address(CGF.Builder.CreateGEP(DependenciesArray.getPointer(), Idx),
+          Address(CGF.Builder.CreateGEP(DependenciesArray.getElementType(),
+                                        DependenciesArray.getPointer(), Idx),
                   DependenciesArray.getAlignment()),
           KmpDependInfoTy);
     }
@@ -4738,7 +4745,7 @@ emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
       Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
                                 Base.getTBAAInfo());
       llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
-          Addr.getPointer(),
+          Addr.getElementType(), Addr.getPointer(),
           llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
       LValue NumDepsBase = CGF.MakeAddrLValue(
           Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
@@ -4799,7 +4806,7 @@ static void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
 
       // Get number of elements in a single depobj.
       llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
-          Addr.getPointer(),
+          Addr.getElementType(), Addr.getPointer(),
           llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
       LValue NumDepsBase = CGF.MakeAddrLValue(
           Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
@@ -4816,7 +4823,8 @@ static void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
           CGF.Builder.CreateIntCast(NumDeps, CGF.SizeTy, /*isSigned=*/false));
       llvm::Value *Pos = CGF.EmitLoadOfScalar(PosLVal, E->getExprLoc());
       Address DepAddr =
-          Address(CGF.Builder.CreateGEP(DependenciesArray.getPointer(), Pos),
+          Address(CGF.Builder.CreateGEP(DependenciesArray.getElementType(),
+                                        DependenciesArray.getPointer(), Pos),
                   DependenciesArray.getAlignment());
       CGF.Builder.CreateMemCpy(DepAddr, Base.getAddress(CGF), Size);
 
@@ -5044,7 +5052,7 @@ void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
   Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       Base.getAddress(CGF), CGF.ConvertTypeForMem(KmpDependInfoPtrTy));
   llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
-      Addr.getPointer(),
+      Addr.getElementType(), Addr.getPointer(),
       llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
   DepObjAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(DepObjAddr,
                                                                CGF.VoidPtrTy);
@@ -5074,7 +5082,8 @@ void CGOpenMPRuntime::emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
 
   Address Begin = Base.getAddress(CGF);
   // Cast from pointer to array type to pointer to single element.
-  llvm::Value *End = CGF.Builder.CreateGEP(Begin.getPointer(), NumDeps);
+  llvm::Value *End = CGF.Builder.CreateGEP(
+      Begin.getElementType(), Begin.getPointer(), NumDeps);
   // The basic structure here is a while-do loop.
   llvm::BasicBlock *BodyBB = CGF.createBasicBlock("omp.body");
   llvm::BasicBlock *DoneBB = CGF.createBasicBlock("omp.done");
@@ -5337,7 +5346,8 @@ static void EmitOMPAggregateReduction(
   llvm::Value *RHSBegin = RHSAddr.getPointer();
   llvm::Value *LHSBegin = LHSAddr.getPointer();
   // Cast from pointer to array type to pointer to single element.
-  llvm::Value *LHSEnd = CGF.Builder.CreateGEP(LHSBegin, NumElements);
+  llvm::Value *LHSEnd =
+      CGF.Builder.CreateGEP(LHSAddr.getElementType(), LHSBegin, NumElements);
   // The basic structure here is a while-do loop.
   llvm::BasicBlock *BodyBB = CGF.createBasicBlock("omp.arraycpy.body");
   llvm::BasicBlock *DoneBB = CGF.createBasicBlock("omp.arraycpy.done");
@@ -5375,9 +5385,11 @@ static void EmitOMPAggregateReduction(
 
   // Shift the address forward by one element.
   llvm::Value *LHSElementNext = CGF.Builder.CreateConstGEP1_32(
-      LHSElementPHI, /*Idx0=*/1, "omp.arraycpy.dest.element");
+      LHSAddr.getElementType(), LHSElementPHI, /*Idx0=*/1,
+      "omp.arraycpy.dest.element");
   llvm::Value *RHSElementNext = CGF.Builder.CreateConstGEP1_32(
-      RHSElementPHI, /*Idx0=*/1, "omp.arraycpy.src.element");
+      RHSAddr.getElementType(), RHSElementPHI, /*Idx0=*/1,
+      "omp.arraycpy.src.element");
   // Check whether we've reached the end.
   llvm::Value *Done =
       CGF.Builder.CreateICmpEQ(LHSElementNext, LHSEnd, "omp.arraycpy.done");
@@ -8728,7 +8740,8 @@ public:
     CombinedInfo.Mappers.push_back(nullptr);
     // Size is (addr of {highest+1} element) - (addr of lowest element)
     llvm::Value *HB = HBAddr.getPointer();
-    llvm::Value *HAddr = CGF.Builder.CreateConstGEP1_32(HB, /*Idx0=*/1);
+    llvm::Value *HAddr =
+        CGF.Builder.CreateConstGEP1_32(HBAddr.getElementType(), HB, /*Idx0=*/1);
     llvm::Value *CLAddr = CGF.Builder.CreatePointerCast(LB, CGF.VoidPtrTy);
     llvm::Value *CHAddr = CGF.Builder.CreatePointerCast(HAddr, CGF.VoidPtrTy);
     llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CHAddr, CLAddr);
@@ -9741,7 +9754,8 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
       Size, MapperCGF.Builder.getInt64(ElementSize.getQuantity()));
   llvm::Value *PtrBegin = MapperCGF.Builder.CreateBitCast(
       BeginIn, CGM.getTypes().ConvertTypeForMem(PtrTy));
-  llvm::Value *PtrEnd = MapperCGF.Builder.CreateGEP(PtrBegin, Size);
+  llvm::Value *PtrEnd = MapperCGF.Builder.CreateGEP(
+      PtrBegin->getType()->getPointerElementType(), PtrBegin, Size);
   llvm::Value *MapType = MapperCGF.EmitLoadOfScalar(
       MapperCGF.GetAddrOfLocalVar(&TypeArg), /*Volatile=*/false,
       C.getPointerType(Int64Ty), Loc);
@@ -9898,8 +9912,9 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
 
   // Update the pointer to point to the next element that needs to be mapped,
   // and check whether we have mapped all elements.
+  llvm::Type *ElemTy = PtrPHI->getType()->getPointerElementType();
   llvm::Value *PtrNext = MapperCGF.Builder.CreateConstGEP1_32(
-      PtrPHI, /*Idx0=*/1, "omp.arraymap.next");
+      ElemTy, PtrPHI, /*Idx0=*/1, "omp.arraymap.next");
   PtrPHI->addIncoming(PtrNext, LastBB);
   llvm::Value *IsDone =
       MapperCGF.Builder.CreateICmpEQ(PtrNext, PtrEnd, "omp.arraymap.isdone");

@@ -31,7 +31,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    stxv vs0, 48(r3)
 ; CHECK-NEXT:    stxv vs1, 32(r3)
 ; CHECK-NEXT:    stxv vs2, 16(r3)
-; CHECK-NEXT:    stxvx vs3, 0, r3
+; CHECK-NEXT:    stxv vs3, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: intrinsics1:
@@ -54,7 +54,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    pmxvf64gernp acc0, vsp34, v0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
-; CHECK-BE-NEXT:    stxvx vs0, 0, r3
+; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    blr

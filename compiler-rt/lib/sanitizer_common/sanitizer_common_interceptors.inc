@@ -957,6 +957,7 @@ INTERCEPTOR(double, frexp, double x, int *exp) {
   // Assuming frexp() always writes to |exp|.
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, exp, sizeof(*exp));
   double res = REAL(frexp)(x, exp);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(exp, sizeof(*exp));
   return res;
 }
 
@@ -969,22 +970,18 @@ INTERCEPTOR(double, frexp, double x, int *exp) {
 INTERCEPTOR(float, frexpf, float x, int *exp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, frexpf, x, exp);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  float res = REAL(frexpf)(x, exp);
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, exp, sizeof(*exp));
+  float res = REAL(frexpf)(x, exp);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(exp, sizeof(*exp));
   return res;
 }
 
 INTERCEPTOR(long double, frexpl, long double x, int *exp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, frexpl, x, exp);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  long double res = REAL(frexpl)(x, exp);
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, exp, sizeof(*exp));
+  long double res = REAL(frexpl)(x, exp);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(exp, sizeof(*exp));
   return res;
 }
 

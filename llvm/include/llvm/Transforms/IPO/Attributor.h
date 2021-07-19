@@ -1587,7 +1587,13 @@ public:
     Function *F = I->getFunction();
     auto &ORE = OREGetter.getValue()(F);
 
-    ORE.emit([&]() { return RemarkCB(RemarkKind(PassName, RemarkName, I)); });
+    if (RemarkName.startswith("OMP"))
+      ORE.emit([&]() {
+        return RemarkCB(RemarkKind(PassName, RemarkName, I))
+               << " [" << RemarkName << "]";
+      });
+    else
+      ORE.emit([&]() { return RemarkCB(RemarkKind(PassName, RemarkName, I)); });
   }
 
   /// Emit a remark on a function.
@@ -1599,7 +1605,13 @@ public:
 
     auto &ORE = OREGetter.getValue()(F);
 
-    ORE.emit([&]() { return RemarkCB(RemarkKind(PassName, RemarkName, F)); });
+    if (RemarkName.startswith("OMP"))
+      ORE.emit([&]() {
+        return RemarkCB(RemarkKind(PassName, RemarkName, F))
+               << " [" << RemarkName << "]";
+      });
+    else
+      ORE.emit([&]() { return RemarkCB(RemarkKind(PassName, RemarkName, F)); });
   }
 
   /// Helper struct used in the communication between an abstract attribute (AA)

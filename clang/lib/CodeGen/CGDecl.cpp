@@ -2246,8 +2246,9 @@ void CodeGenFunction::emitArrayDestroy(llvm::Value *begin,
 
   // Shift the address back by one element.
   llvm::Value *negativeOne = llvm::ConstantInt::get(SizeTy, -1, true);
-  llvm::Value *element = Builder.CreateInBoundsGEP(elementPast, negativeOne,
-                                                   "arraydestroy.element");
+  llvm::Value *element = Builder.CreateInBoundsGEP(
+      elementPast->getType()->getPointerElementType(), elementPast, negativeOne,
+      "arraydestroy.element");
 
   if (useEHCleanup)
     pushRegularPartialArrayCleanup(begin, element, elementType, elementAlign,
@@ -2287,8 +2288,11 @@ static void emitPartialArrayDestroy(CodeGenFunction &CGF,
     llvm::Value *zero = llvm::ConstantInt::get(CGF.SizeTy, 0);
 
     SmallVector<llvm::Value*,4> gepIndices(arrayDepth+1, zero);
-    begin = CGF.Builder.CreateInBoundsGEP(begin, gepIndices, "pad.arraybegin");
-    end = CGF.Builder.CreateInBoundsGEP(end, gepIndices, "pad.arrayend");
+    llvm::Type *elemTy = begin->getType()->getPointerElementType();
+    begin = CGF.Builder.CreateInBoundsGEP(
+        elemTy, begin, gepIndices, "pad.arraybegin");
+    end = CGF.Builder.CreateInBoundsGEP(
+        elemTy, end, gepIndices, "pad.arrayend");
   }
 
   // Destroy the array.  We don't ever need an EH cleanup because we

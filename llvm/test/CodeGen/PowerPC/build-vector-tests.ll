@@ -858,14 +858,14 @@ define <4 x i32> @fromDiffConstsi() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsi:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsi:
@@ -927,7 +927,7 @@ define <4 x i32> @fromDiffMemConsDi(i32* nocapture readonly %arr) {
 ; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI7_0@toc@l
-; P9BE-NEXT:    lxvx v3, 0, r3
+; P9BE-NEXT:    lxv v3, 0(r3)
 ; P9BE-NEXT:    vperm v2, v2, v2, v3
 ; P9BE-NEXT:    blr
 ;
@@ -1022,11 +1022,11 @@ define <4 x i32> @fromDiffMemVarDi(i32* nocapture readonly %arr, i32 signext %el
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
 ; P9BE-NEXT:    add r3, r3, r4
-; P9BE-NEXT:    addi r3, r3, -12
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    li r4, -12
+; P9BE-NEXT:    lxvx v2, r3, r4
 ; P9BE-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI9_0@toc@l
-; P9BE-NEXT:    lxvx v3, 0, r3
+; P9BE-NEXT:    lxv v3, 0(r3)
 ; P9BE-NEXT:    vperm v2, v2, v2, v3
 ; P9BE-NEXT:    blr
 ;
@@ -1034,11 +1034,11 @@ define <4 x i32> @fromDiffMemVarDi(i32* nocapture readonly %arr, i32 signext %el
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r4, 2
 ; P9LE-NEXT:    add r3, r3, r4
-; P9LE-NEXT:    addi r3, r3, -12
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    li r4, -12
+; P9LE-NEXT:    lxvx v2, r3, r4
 ; P9LE-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI9_0@toc@l
-; P9LE-NEXT:    lxvx v3, 0, r3
+; P9LE-NEXT:    lxv v3, 0(r3)
 ; P9LE-NEXT:    vperm v2, v2, v2, v3
 ; P9LE-NEXT:    blr
 ;
@@ -1383,14 +1383,14 @@ define <4 x i32> @fromDiffConstsConvftoi() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI16_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsConvftoi:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI16_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsConvftoi:
@@ -1448,7 +1448,7 @@ define <4 x i32> @fromDiffMemConsDConvftoi(float* nocapture readonly %ptr) {
 ; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    addis r3, r2, .LCPI18_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI18_0@toc@l
-; P9BE-NEXT:    lxvx v3, 0, r3
+; P9BE-NEXT:    lxv v3, 0(r3)
 ; P9BE-NEXT:    vperm v2, v2, v2, v3
 ; P9BE-NEXT:    xvcvspsxws v2, v2
 ; P9BE-NEXT:    blr
@@ -1458,7 +1458,7 @@ define <4 x i32> @fromDiffMemConsDConvftoi(float* nocapture readonly %ptr) {
 ; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    addis r3, r2, .LCPI18_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI18_0@toc@l
-; P9LE-NEXT:    lxvx v3, 0, r3
+; P9LE-NEXT:    lxv v3, 0(r3)
 ; P9LE-NEXT:    vperm v2, v2, v2, v3
 ; P9LE-NEXT:    xvcvspsxws v2, v2
 ; P9LE-NEXT:    blr
@@ -1837,14 +1837,14 @@ define <4 x i32> @fromDiffConstsConvdtoi() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI25_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI25_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsConvdtoi:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI25_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI25_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsConvdtoi:
@@ -1953,23 +1953,23 @@ define <4 x i32> @fromDiffMemConsDConvdtoi(double* nocapture readonly %ptr) {
 ;
 ; P8BE-LABEL: fromDiffMemConsDConvdtoi:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    lfdx f3, 0, r3
-; P8BE-NEXT:    lfd f0, 24(r3)
-; P8BE-NEXT:    lfd f1, 8(r3)
-; P8BE-NEXT:    lfd f2, 16(r3)
+; P8BE-NEXT:    lfd f0, 16(r3)
+; P8BE-NEXT:    lfd f1, 0(r3)
+; P8BE-NEXT:    lfd f2, 24(r3)
+; P8BE-NEXT:    lfd f3, 8(r3)
 ; P8BE-NEXT:    xxmrghd vs0, vs0, vs1
 ; P8BE-NEXT:    xxmrghd vs1, vs2, vs3
 ; P8BE-NEXT:    xvcvdpsxws v2, vs0
 ; P8BE-NEXT:    xvcvdpsxws v3, vs1
-; P8BE-NEXT:    vmrgew v2, v2, v3
+; P8BE-NEXT:    vmrgew v2, v3, v2
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: fromDiffMemConsDConvdtoi:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lfdx f3, 0, r3
 ; P8LE-NEXT:    lfd f0, 24(r3)
 ; P8LE-NEXT:    lfd f1, 8(r3)
 ; P8LE-NEXT:    lfd f2, 16(r3)
+; P8LE-NEXT:    lfd f3, 0(r3)
 ; P8LE-NEXT:    xxmrghd vs0, vs1, vs0
 ; P8LE-NEXT:    xxmrghd vs1, vs3, vs2
 ; P8LE-NEXT:    xvcvdpsxws v2, vs0
@@ -2377,14 +2377,14 @@ define <4 x i32> @fromDiffConstsui() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI37_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI37_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsui:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI37_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI37_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsui:
@@ -2446,7 +2446,7 @@ define <4 x i32> @fromDiffMemConsDui(i32* nocapture readonly %arr) {
 ; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    addis r3, r2, .LCPI39_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI39_0@toc@l
-; P9BE-NEXT:    lxvx v3, 0, r3
+; P9BE-NEXT:    lxv v3, 0(r3)
 ; P9BE-NEXT:    vperm v2, v2, v2, v3
 ; P9BE-NEXT:    blr
 ;
@@ -2541,11 +2541,11 @@ define <4 x i32> @fromDiffMemVarDui(i32* nocapture readonly %arr, i32 signext %e
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    sldi r4, r4, 2
 ; P9BE-NEXT:    add r3, r3, r4
-; P9BE-NEXT:    addi r3, r3, -12
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    li r4, -12
+; P9BE-NEXT:    lxvx v2, r3, r4
 ; P9BE-NEXT:    addis r3, r2, .LCPI41_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI41_0@toc@l
-; P9BE-NEXT:    lxvx v3, 0, r3
+; P9BE-NEXT:    lxv v3, 0(r3)
 ; P9BE-NEXT:    vperm v2, v2, v2, v3
 ; P9BE-NEXT:    blr
 ;
@@ -2553,11 +2553,11 @@ define <4 x i32> @fromDiffMemVarDui(i32* nocapture readonly %arr, i32 signext %e
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r4, 2
 ; P9LE-NEXT:    add r3, r3, r4
-; P9LE-NEXT:    addi r3, r3, -12
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    li r4, -12
+; P9LE-NEXT:    lxvx v2, r3, r4
 ; P9LE-NEXT:    addis r3, r2, .LCPI41_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI41_0@toc@l
-; P9LE-NEXT:    lxvx v3, 0, r3
+; P9LE-NEXT:    lxv v3, 0(r3)
 ; P9LE-NEXT:    vperm v2, v2, v2, v3
 ; P9LE-NEXT:    blr
 ;
@@ -2902,14 +2902,14 @@ define <4 x i32> @fromDiffConstsConvftoui() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI48_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI48_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsConvftoui:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI48_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI48_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsConvftoui:
@@ -2967,7 +2967,7 @@ define <4 x i32> @fromDiffMemConsDConvftoui(float* nocapture readonly %ptr) {
 ; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    addis r3, r2, .LCPI50_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI50_0@toc@l
-; P9BE-NEXT:    lxvx v3, 0, r3
+; P9BE-NEXT:    lxv v3, 0(r3)
 ; P9BE-NEXT:    vperm v2, v2, v2, v3
 ; P9BE-NEXT:    xvcvspuxws v2, v2
 ; P9BE-NEXT:    blr
@@ -2977,7 +2977,7 @@ define <4 x i32> @fromDiffMemConsDConvftoui(float* nocapture readonly %ptr) {
 ; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    addis r3, r2, .LCPI50_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI50_0@toc@l
-; P9LE-NEXT:    lxvx v3, 0, r3
+; P9LE-NEXT:    lxv v3, 0(r3)
 ; P9LE-NEXT:    vperm v2, v2, v2, v3
 ; P9LE-NEXT:    xvcvspuxws v2, v2
 ; P9LE-NEXT:    blr
@@ -3357,14 +3357,14 @@ define <4 x i32> @fromDiffConstsConvdtoui() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI57_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI57_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsConvdtoui:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI57_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI57_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsConvdtoui:
@@ -3473,23 +3473,23 @@ define <4 x i32> @fromDiffMemConsDConvdtoui(double* nocapture readonly %ptr) {
 ;
 ; P8BE-LABEL: fromDiffMemConsDConvdtoui:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    lfdx f3, 0, r3
-; P8BE-NEXT:    lfd f0, 24(r3)
-; P8BE-NEXT:    lfd f1, 8(r3)
-; P8BE-NEXT:    lfd f2, 16(r3)
+; P8BE-NEXT:    lfd f0, 16(r3)
+; P8BE-NEXT:    lfd f1, 0(r3)
+; P8BE-NEXT:    lfd f2, 24(r3)
+; P8BE-NEXT:    lfd f3, 8(r3)
 ; P8BE-NEXT:    xxmrghd vs0, vs0, vs1
 ; P8BE-NEXT:    xxmrghd vs1, vs2, vs3
 ; P8BE-NEXT:    xvcvdpuxws v2, vs0
 ; P8BE-NEXT:    xvcvdpuxws v3, vs1
-; P8BE-NEXT:    vmrgew v2, v2, v3
+; P8BE-NEXT:    vmrgew v2, v3, v2
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: fromDiffMemConsDConvdtoui:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lfdx f3, 0, r3
 ; P8LE-NEXT:    lfd f0, 24(r3)
 ; P8LE-NEXT:    lfd f1, 8(r3)
 ; P8LE-NEXT:    lfd f2, 16(r3)
+; P8LE-NEXT:    lfd f3, 0(r3)
 ; P8LE-NEXT:    xxmrghd vs0, vs1, vs0
 ; P8LE-NEXT:    xxmrghd vs1, vs3, vs2
 ; P8LE-NEXT:    xvcvdpuxws v2, vs0
@@ -3777,14 +3777,14 @@ define <2 x i64> @spltConst1ll() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltConst1ll:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltConst1ll:
@@ -3810,14 +3810,14 @@ define <2 x i64> @spltConst16kll() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI66_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI66_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltConst16kll:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI66_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI66_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltConst16kll:
@@ -3843,14 +3843,14 @@ define <2 x i64> @spltConst32kll() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI67_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI67_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltConst32kll:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI67_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI67_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltConst32kll:
@@ -3906,14 +3906,14 @@ define <2 x i64> @fromDiffConstsll() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI69_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI69_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsll:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI69_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI69_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsll:
@@ -4240,14 +4240,14 @@ define <2 x i64> @spltCnstConvftoll() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI78_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI78_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltCnstConvftoll:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI78_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI78_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltCnstConvftoll:
@@ -4313,14 +4313,14 @@ define <2 x i64> @fromDiffConstsConvftoll() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI80_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI80_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsConvftoll:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI80_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI80_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsConvftoll:
@@ -4360,7 +4360,7 @@ define <2 x i64> @fromDiffMemConsAConvftoll(float* nocapture readonly %ptr) {
 ;
 ; P8BE-LABEL: fromDiffMemConsAConvftoll:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    lfsx f0, 0, r3
+; P8BE-NEXT:    lfs f0, 0(r3)
 ; P8BE-NEXT:    lfs f1, 4(r3)
 ; P8BE-NEXT:    xxmrghd vs0, vs0, vs1
 ; P8BE-NEXT:    xvcvdpsxds v2, vs0
@@ -4368,7 +4368,7 @@ define <2 x i64> @fromDiffMemConsAConvftoll(float* nocapture readonly %ptr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsAConvftoll:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lfsx f0, 0, r3
+; P8LE-NEXT:    lfs f0, 0(r3)
 ; P8LE-NEXT:    lfs f1, 4(r3)
 ; P8LE-NEXT:    xxmrghd vs0, vs1, vs0
 ; P8LE-NEXT:    xvcvdpsxds v2, vs0
@@ -4602,14 +4602,14 @@ define <2 x i64> @spltCnstConvdtoll() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI87_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI87_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltCnstConvdtoll:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI87_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI87_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltCnstConvdtoll:
@@ -4675,14 +4675,14 @@ define <2 x i64> @fromDiffConstsConvdtoll() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI89_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI89_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsConvdtoll:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI89_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI89_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsConvdtoll:
@@ -4965,14 +4965,14 @@ define <2 x i64> @spltConst1ull() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI97_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI97_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltConst1ull:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI97_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI97_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltConst1ull:
@@ -4998,14 +4998,14 @@ define <2 x i64> @spltConst16kull() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI98_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI98_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltConst16kull:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI98_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI98_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltConst16kull:
@@ -5031,14 +5031,14 @@ define <2 x i64> @spltConst32kull() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI99_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI99_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltConst32kull:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI99_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI99_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltConst32kull:
@@ -5094,14 +5094,14 @@ define <2 x i64> @fromDiffConstsull() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI101_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI101_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsull:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI101_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI101_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsull:
@@ -5428,14 +5428,14 @@ define <2 x i64> @spltCnstConvftoull() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI110_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI110_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltCnstConvftoull:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI110_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI110_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltCnstConvftoull:
@@ -5501,14 +5501,14 @@ define <2 x i64> @fromDiffConstsConvftoull() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI112_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI112_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsConvftoull:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI112_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI112_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsConvftoull:
@@ -5548,7 +5548,7 @@ define <2 x i64> @fromDiffMemConsAConvftoull(float* nocapture readonly %ptr) {
 ;
 ; P8BE-LABEL: fromDiffMemConsAConvftoull:
 ; P8BE:       # %bb.0: # %entry
-; P8BE-NEXT:    lfsx f0, 0, r3
+; P8BE-NEXT:    lfs f0, 0(r3)
 ; P8BE-NEXT:    lfs f1, 4(r3)
 ; P8BE-NEXT:    xxmrghd vs0, vs0, vs1
 ; P8BE-NEXT:    xvcvdpuxds v2, vs0
@@ -5556,7 +5556,7 @@ define <2 x i64> @fromDiffMemConsAConvftoull(float* nocapture readonly %ptr) {
 ;
 ; P8LE-LABEL: fromDiffMemConsAConvftoull:
 ; P8LE:       # %bb.0: # %entry
-; P8LE-NEXT:    lfsx f0, 0, r3
+; P8LE-NEXT:    lfs f0, 0(r3)
 ; P8LE-NEXT:    lfs f1, 4(r3)
 ; P8LE-NEXT:    xxmrghd vs0, vs1, vs0
 ; P8LE-NEXT:    xvcvdpuxds v2, vs0
@@ -5790,14 +5790,14 @@ define <2 x i64> @spltCnstConvdtoull() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI119_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI119_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: spltCnstConvdtoull:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI119_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI119_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: spltCnstConvdtoull:
@@ -5863,14 +5863,14 @@ define <2 x i64> @fromDiffConstsConvdtoull() {
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    addis r3, r2, .LCPI121_0@toc@ha
 ; P9BE-NEXT:    addi r3, r3, .LCPI121_0@toc@l
-; P9BE-NEXT:    lxvx v2, 0, r3
+; P9BE-NEXT:    lxv v2, 0(r3)
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromDiffConstsConvdtoull:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addis r3, r2, .LCPI121_0@toc@ha
 ; P9LE-NEXT:    addi r3, r3, .LCPI121_0@toc@l
-; P9LE-NEXT:    lxvx v2, 0, r3
+; P9LE-NEXT:    lxv v2, 0(r3)
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromDiffConstsConvdtoull:

@@ -23,7 +23,7 @@ target triple = "bpf"
 define dso_local i32 @test(%struct.__s* %arg) local_unnamed_addr #0 !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata %struct.__s* %arg, metadata !21, metadata !DIExpression()), !dbg !22
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.__ss(%struct.__s* %arg, i32 1, i32 1), !dbg !23, !llvm.preserve.access.index !14
+  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.__ss(%struct.__s* elementtype(%struct.__s) %arg, i32 1, i32 1), !dbg !23, !llvm.preserve.access.index !14
   %1 = bitcast i32* %0 to i8*, !dbg !23
   %call = tail call i32 @get_value(i8* %1) #4, !dbg !24
   ret i32 %call, !dbg !25

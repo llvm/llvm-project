@@ -21,7 +21,7 @@ TEST(MemoryTagManagerAArch64MTETest, UnpackTagsData) {
       manager.UnpackTagsData(input, 2),
       llvm::FailedWithMessage(
           "Packed tag data size does not match expected number of tags. "
-          "Expected 2 tag(s) for 2 granules, got 0 tag(s)."));
+          "Expected 2 tag(s) for 2 granule(s), got 0 tag(s)."));
 
   // This is out of the valid tag range
   input.push_back(0x1f);
@@ -41,6 +41,43 @@ TEST(MemoryTagManagerAArch64MTETest, UnpackTagsData) {
       manager.UnpackTagsData(input, 2);
   ASSERT_THAT_EXPECTED(got, llvm::Succeeded());
   ASSERT_THAT(expected, testing::ContainerEq(*got));
+
+  // Error for too much tag data
+  ASSERT_THAT_EXPECTED(
+      manager.UnpackTagsData(input, 1),
+      llvm::FailedWithMessage(
+          "Packed tag data size does not match expected number of tags. "
+          "Expected 1 tag(s) for 1 granule(s), got 2 tag(s)."));
+
+  // By default, we don't check number of tags
+  llvm::Expected<std::vector<lldb::addr_t>> got_zero =
+      manager.UnpackTagsData(input);
+  ASSERT_THAT_EXPECTED(got_zero, llvm::Succeeded());
+  ASSERT_THAT(expected, testing::ContainerEq(*got));
+
+  // Which is the same as granules=0
+  got_zero = manager.UnpackTagsData(input, 0);
+  ASSERT_THAT_EXPECTED(got_zero, llvm::Succeeded());
+  ASSERT_THAT(expected, testing::ContainerEq(*got));
+}
+
+TEST(MemoryTagManagerAArch64MTETest, PackTags) {
+  MemoryTagManagerAArch64MTE manager;
+
+  // Error for tag out of range
+  llvm::Expected<std::vector<uint8_t>> invalid_tag_err =
+      manager.PackTags({0x10});
+  ASSERT_THAT_EXPECTED(
+      invalid_tag_err,
+      llvm::FailedWithMessage(
+          "Found tag 0x10 which is > max MTE tag value of 0xf."));
+
+  // 0xf here is the max tag value that we can pack
+  std::vector<lldb::addr_t> tags{0, 1, 0xf};
+  std::vector<uint8_t> expected{0, 1, 0xf};
+  llvm::Expected<std::vector<uint8_t>> packed = manager.PackTags(tags);
+  ASSERT_THAT_EXPECTED(packed, llvm::Succeeded());
+  ASSERT_THAT(expected, testing::ContainerEq(*packed));
 }
 
 TEST(MemoryTagManagerAArch64MTETest, GetLogicalTag) {
@@ -232,4 +269,54 @@ TEST(MemoryTagManagerAArch64MTETest, AddressDiff) {
   ASSERT_EQ(0, manager.AddressDiff(0x2211222233334444, 0x3311222233334444));
   ASSERT_EQ(-32, manager.AddressDiff(0x5511222233334400, 0x4411222233334420));
   ASSERT_EQ(65, manager.AddressDiff(0x9911222233334441, 0x6611222233334400));
+}
+
+// Helper to check that repeating "tags" over "range" gives you
+// "expected_tags".
+static void
+test_repeating_tags(const std::vector<lldb::addr_t> &tags,
+                    MemoryTagManagerAArch64MTE::TagRange range,
+                    const std::vector<lldb::addr_t> &expected_tags) {
+  MemoryTagManagerAArch64MTE manager;
+  llvm::Expected<std::vector<lldb::addr_t>> tags_or_err =
+      manager.RepeatTagsForRange(tags, range);
+  ASSERT_THAT_EXPECTED(tags_or_err, llvm::Succeeded());
+  ASSERT_THAT(expected_tags, testing::ContainerEq(*tags_or_err));
+}
+
+TEST(MemoryTagManagerAArch64MTETest, RepeatTagsForRange) {
+  MemoryTagManagerAArch64MTE manager;
+
+  // Must have some tags if your range is not empty
+  llvm::Expected<std::vector<lldb::addr_t>> no_tags_err =
+      manager.RepeatTagsForRange({},
+                                 MemoryTagManagerAArch64MTE::TagRange{0, 16});
+  ASSERT_THAT_EXPECTED(
+      no_tags_err, llvm::FailedWithMessage(
+                       "Expected some tags to cover given range, got zero."));
+
+  // If the range is empty, you get no tags back
+  test_repeating_tags({1, 2, 3}, MemoryTagManagerAArch64MTE::TagRange{0, 0},
+                      {});
+  // And you don't need tags for an empty range
+  test_repeating_tags({}, MemoryTagManagerAArch64MTE::TagRange{0, 0}, {});
+
+  // A single tag will just be multiplied as many times as needed
+  test_repeating_tags({5}, MemoryTagManagerAArch64MTE::TagRange{0, 16}, {5});
+  test_repeating_tags({6}, MemoryTagManagerAArch64MTE::TagRange{0, 32}, {6, 6});
+
+  // If you've got as many tags as granules, it's a roundtrip
+  test_repeating_tags({7, 8}, MemoryTagManagerAArch64MTE::TagRange{0, 32},
+                      {7, 8});
+
+  // If you've got fewer tags than granules, they repeat. Exactly or partially
+  // as needed.
+  test_repeating_tags({7, 8}, MemoryTagManagerAArch64MTE::TagRange{0, 64},
+                      {7, 8, 7, 8});
+  test_repeating_tags({7, 8}, MemoryTagManagerAArch64MTE::TagRange{0, 48},
+                      {7, 8, 7});
+
+  // If you've got more tags than granules you get back only those needed
+  test_repeating_tags({1, 2, 3, 4}, MemoryTagManagerAArch64MTE::TagRange{0, 32},
+                      {1, 2});
 }

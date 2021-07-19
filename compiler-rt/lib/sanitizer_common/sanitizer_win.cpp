@@ -44,6 +44,9 @@ TRACELOGGING_DEFINE_PROVIDER(g_asan_provider, "AddressSanitizerLoggingProvider",
 #define TraceLoggingUnregister(x)
 #endif
 
+// For WaitOnAddress
+#  pragma comment(lib, "synchronization.lib")
+
 // A macro to tell the compiler that this part of the code cannot be reached,
 // if the compiler supports this feature. Since we're using this in
 // code that is called when terminating the process, the expansion of the
@@ -812,6 +815,17 @@ uptr GetRSS() {
 
 void *internal_start_thread(void *(*func)(void *arg), void *arg) { return 0; }
 void internal_join_thread(void *th) { }
+
+void FutexWait(atomic_uint32_t *p, u32 cmp) {
+  WaitOnAddress(p, &cmp, sizeof(cmp), INFINITE);
+}
+
+void FutexWake(atomic_uint32_t *p, u32 count) {
+  if (count == 1)
+    WakeByAddressSingle(p);
+  else
+    WakeByAddressAll(p);
+}
 
 // ---------------------- BlockingMutex ---------------- {{{1
 

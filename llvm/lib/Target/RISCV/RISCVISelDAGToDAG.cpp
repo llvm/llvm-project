@@ -112,8 +112,10 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 }
 
 static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
-                         MVT XLenVT) {
-  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, XLenVT == MVT::i64);
+                         const RISCVSubtarget &Subtarget) {
+  MVT XLenVT = Subtarget.getXLenVT();
+  RISCVMatInt::InstSeq Seq =
+      RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
 
   SDNode *Result = nullptr;
   SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);
@@ -121,6 +123,9 @@ static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
     SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, XLenVT);
     if (Inst.Opc == RISCV::LUI)
       Result = CurDAG->getMachineNode(RISCV::LUI, DL, XLenVT, SDImm);
+    else if (Inst.Opc == RISCV::ADDUW)
+      Result = CurDAG->getMachineNode(RISCV::ADDUW, DL, XLenVT, SrcReg,
+                                      CurDAG->getRegister(RISCV::X0, XLenVT));
     else
       Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg, SDImm);
 
@@ -454,7 +459,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, New.getNode());
       return;
     }
-    ReplaceNode(Node, selectImm(CurDAG, DL, ConstNode->getSExtValue(), XLenVT));
+    ReplaceNode(Node,
+                selectImm(CurDAG, DL, ConstNode->getSExtValue(), *Subtarget));
     return;
   }
   case ISD::FrameIndex: {

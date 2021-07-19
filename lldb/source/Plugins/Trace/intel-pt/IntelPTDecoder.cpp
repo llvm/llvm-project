@@ -222,7 +222,7 @@ DecodeLiveThread(Thread &thread, TraceIntelPT &trace) {
     return cpu_info.takeError();
 }
 
-const DecodedThread &ThreadDecoder::Decode() {
+DecodedThreadSP ThreadDecoder::Decode() {
   if (!m_decoded_thread.hasValue())
     m_decoded_thread = DoDecode();
   return *m_decoded_thread;
@@ -232,22 +232,26 @@ PostMortemThreadDecoder::PostMortemThreadDecoder(
     const lldb::ThreadPostMortemTraceSP &trace_thread, TraceIntelPT &trace)
     : m_trace_thread(trace_thread), m_trace(trace) {}
 
-DecodedThread PostMortemThreadDecoder::DoDecode() {
+DecodedThreadSP PostMortemThreadDecoder::DoDecode() {
   if (Expected<std::vector<IntelPTInstruction>> instructions =
           DecodeTraceFile(*m_trace_thread->GetProcess(), m_trace,
                           m_trace_thread->GetTraceFile()))
-    return DecodedThread(std::move(*instructions));
+    return std::make_shared<DecodedThread>(m_trace_thread->shared_from_this(),
+                                           std::move(*instructions));
   else
-    return DecodedThread(instructions.takeError());
+    return std::make_shared<DecodedThread>(m_trace_thread->shared_from_this(),
+                                           instructions.takeError());
 }
 
 LiveThreadDecoder::LiveThreadDecoder(Thread &thread, TraceIntelPT &trace)
     : m_thread_sp(thread.shared_from_this()), m_trace(trace) {}
 
-DecodedThread LiveThreadDecoder::DoDecode() {
+DecodedThreadSP LiveThreadDecoder::DoDecode() {
   if (Expected<std::vector<IntelPTInstruction>> instructions =
           DecodeLiveThread(*m_thread_sp, m_trace))
-    return DecodedThread(std::move(*instructions));
+    return std::make_shared<DecodedThread>(m_thread_sp,
+                                           std::move(*instructions));
   else
-    return DecodedThread(instructions.takeError());
+    return std::make_shared<DecodedThread>(m_thread_sp,
+                                           instructions.takeError());
 }

@@ -22,7 +22,8 @@ OPTIONS
 
 .. option:: --all
 
- Equivalent to specifying all the main display options.
+ Equivalent to specifying all the main display options relevant to the file
+ format.
 
 .. option:: --addrsig
 
@@ -57,7 +58,7 @@ OPTIONS
 
  Display the callgraph profile section.
 
-.. option:: --elf-hash-histogram, --histogram, -I
+.. option:: --histogram, -I
 
  Display a bucket list histogram for dynamic symbol hash tables.
 
@@ -71,7 +72,7 @@ OPTIONS
  ``GNU``. ``LLVM`` output is an expanded and structured format, whilst ``GNU``
  (the default) output mimics the equivalent GNU :program:`readelf` output.
 
-.. option:: --elf-section-groups, --section-groups, -g
+.. option:: --section-groups, -g
 
  Display section groups.
 

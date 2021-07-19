@@ -1083,6 +1083,9 @@ def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
 // A warning group for warnings about code that clang accepts but gcc doesn't.
 def GccCompat : DiagGroup<"gcc-compat">;
 
+// A warning group for warnings about code that may be incompatible on AIX.
+def AIXCompat : DiagGroup<"aix-compat">;
+
 // Warnings for Microsoft extensions.
 def MicrosoftCharize : DiagGroup<"microsoft-charize">;
 def MicrosoftDrectveSection : DiagGroup<"microsoft-drectve-section">;

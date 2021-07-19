@@ -82,8 +82,9 @@ StringRef PPCLowerMASSVEntries::getCPUSuffix(const PPCSubtarget *Subtarget) {
   if (Subtarget->hasP8Vector())
     return "P8";
 
-  report_fatal_error("Unsupported Subtarget: MASSV is supported only on "
-                     "Power8 and Power9 subtargets.");
+  report_fatal_error(
+      "-vector-library=MASSV option is supported only on Power8 and later "
+      "subtargets when vectorization is not disabled.");
 }
 
 /// Creates PowerPC subtarget-specific name corresponding to the specified

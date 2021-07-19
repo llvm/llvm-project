@@ -16,6 +16,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_linux.cpp
   sanitizer_linux_s390.cpp
   sanitizer_mac.cpp
+  sanitizer_mutex.cpp
   sanitizer_netbsd.cpp
   sanitizer_persistent_allocator.cpp
   sanitizer_platform_limits_freebsd.cpp

@@ -12,7 +12,7 @@ define <4 x i32> @vextsb2wLE(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    vextsb2w 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -43,7 +43,7 @@ define <2 x i64> @vextsb2dLE(<16 x i8> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI1_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    vextsb2d 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -68,7 +68,7 @@ define <4 x i32> @vextsh2wLE(<8 x i16> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI2_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    vextsh2w 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -99,7 +99,7 @@ define <2 x i64> @vextsh2dLE(<8 x i16> %a) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI3_0@toc@l
-; CHECK-BE-NEXT:    lxvx 35, 0, 3
+; CHECK-BE-NEXT:    lxv 35, 0(3)
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    vextsh2d 2, 2
 ; CHECK-BE-NEXT:    blr
@@ -361,7 +361,7 @@ define <8 x i16> @testInvalidExtend(<16 x i8> %a) {
 ; CHECK-BE-NEXT:    extsb 6, 6
 ; CHECK-BE-NEXT:    mtvsrwz 32, 3
 ; CHECK-BE-NEXT:    addi 9, 9, .LCPI11_0@toc@l
-; CHECK-BE-NEXT:    lxvx 36, 0, 9
+; CHECK-BE-NEXT:    lxv 36, 0(9)
 ; CHECK-BE-NEXT:    vperm 2, 3, 2, 4
 ; CHECK-BE-NEXT:    mtvsrwz 35, 8
 ; CHECK-BE-NEXT:    vperm 3, 5, 3, 4

@@ -101,9 +101,9 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
               originalDataOperand.getType().dyn_cast<MemRefType>()) {
         Type structType = converter->convertType(memRefType);
         Value memRefDescriptor = builder
-                                     .create<LLVM::DialectCastOp>(
+                                     .create<UnrealizedConversionCastOp>(
                                          loc, structType, originalDataOperand)
-                                     .getResult();
+                                     .getResult(0);
 
         // Calculate the size of the memref and get the pointer to the allocated
         // buffer.
@@ -164,6 +164,7 @@ void ConvertOpenACCToLLVMPass::runOnOperation() {
 
   ConversionTarget target(*context);
   target.addLegalDialect<LLVM::LLVMDialect>();
+  target.addLegalOp<UnrealizedConversionCastOp>();
 
   auto allDataOperandsAreConverted = [](ValueRange operands) {
     for (Value operand : operands) {
