@@ -119,7 +119,7 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
   auto Result = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     auto Outprojected = Map.project_out(isl::dim::out, first, n);
-    Result = Result.add_map(Outprojected);
+    Result = Result.unite(Outprojected);
   }
   return Result;
 }
@@ -147,7 +147,7 @@ isl::union_pw_aff scheduleExtractDimAff(isl::union_map UMap, unsigned pos) {
     unsigned MapDims = Map.range_tuple_dim();
     isl::map SingleMap = Map.project_out(isl::dim::out, 0, pos);
     SingleMap = SingleMap.project_out(isl::dim::out, 1, MapDims - pos - 1);
-    SingleUMap = SingleUMap.add_map(SingleMap);
+    SingleUMap = SingleUMap.unite(SingleMap);
   };
 
   auto UAff = isl::union_pw_multi_aff(SingleUMap);

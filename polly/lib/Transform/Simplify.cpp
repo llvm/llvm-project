@@ -81,7 +81,7 @@ static bool isImplicitWrite(MemoryAccess *MA) {
   return MA->isWrite() && MA->isOriginalScalarKind();
 }
 
-/// Like isl::union_map::add_map, but may also return an underapproximated
+/// Like isl::union_map::unite, but may also return an underapproximated
 /// result if getting too complex.
 ///
 /// This is implemented by adding disjuncts to the results until the limit is
@@ -97,7 +97,7 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
   // them.
   if (isl_map_n_basic_map(PrevMap.get()) + isl_map_n_basic_map(Map.get()) <=
       SimplifyMaxDisjuncts)
-    return UMap.add_map(Map);
+    return UMap.unite(Map);
 
   isl::map Result = isl::map::empty(PrevMap.get_space());
   for (isl::basic_map BMap : PrevMap.get_basic_map_list()) {
@@ -113,7 +113,7 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
 
   isl::union_map UResult =
       UMap.subtract(isl::map::universe(PrevMap.get_space()));
-  UResult.add_map(Result);
+  UResult.unite(Result);
 
   return UResult;
 }
@@ -451,7 +451,7 @@ void SimplifyImpl::coalesceWrites() {
                                .get_tuple_id(isl::dim::out)
                                .get_user();
         if (!TouchedAccesses.count(MA))
-          NewFutureWrites = NewFutureWrites.add_map(FutureWrite);
+          NewFutureWrites = NewFutureWrites.unite(FutureWrite);
       }
       FutureWrites = NewFutureWrites;
 
@@ -467,7 +467,7 @@ void SimplifyImpl::coalesceWrites() {
         // { [Domain[] -> Element[]] -> [Value[] -> MemoryAccess[]] }
         isl::map AccRelValAcc =
             isl::map::from_domain_and_range(AccRelWrapped, ValAccSet.wrap());
-        FutureWrites = FutureWrites.add_map(AccRelValAcc);
+        FutureWrites = FutureWrites.unite(AccRelValAcc);
       }
     }
   }
@@ -551,7 +551,7 @@ void SimplifyImpl::removeRedundantWrites() {
           isl::map AccRelVal = isl::map::from_domain_and_range(
               AccRelWrapped, makeValueSet(LoadedVal));
 
-          Known = Known.add_map(AccRelVal);
+          Known = Known.unite(AccRelVal);
         }
       } else if (MA->isWrite()) {
         // Remove (possibly) overwritten values from the known elements set.

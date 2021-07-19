@@ -2324,7 +2324,7 @@ Scop::getAccessesOfType(std::function<bool(MemoryAccess &)> Predicate) {
       isl::set Domain = Stmt.getDomain();
       isl::map AccessDomain = MA->getAccessRelation();
       AccessDomain = AccessDomain.intersect_domain(Domain);
-      Accesses = Accesses.add_map(AccessDomain);
+      Accesses = Accesses.unite(AccessDomain);
     }
   }
 

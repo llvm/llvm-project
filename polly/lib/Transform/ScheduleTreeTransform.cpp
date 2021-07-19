@@ -248,7 +248,7 @@ struct ExtensionNodeRewriter
       if (OuterDims > 0) {
         isl::map OuterSched =
             Ext.project_out(isl::dim::in, OuterDims, BandDims);
-        OuterExtensions = OuterExtensions.add_map(OuterSched);
+        OuterExtensions = OuterExtensions.unite(OuterSched);
       }
     }
     isl::multi_union_pw_aff NewPartialSchedAsAsMultiUnionPwAff =
