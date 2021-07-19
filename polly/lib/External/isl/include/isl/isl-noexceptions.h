@@ -2869,7 +2869,6 @@ public:
   inline boolean is_wrapping() const;
   inline isl::map lex_ge_set(isl::set set2) const;
   inline isl::map lex_gt_set(isl::set set2) const;
-  inline isl::map lex_le_set(isl::set set2) const;
   inline isl::map lex_lt_set(isl::set set2) const;
   inline isl::set lexmax() const;
   inline isl::pw_multi_aff lexmax_pw_multi_aff() const;
@@ -16004,12 +16003,6 @@ isl::map set::lex_ge_set(isl::set set2) const
 isl::map set::lex_gt_set(isl::set set2) const
 {
   auto res = isl_set_lex_gt_set(copy(), set2.release());
-  return manage(res);
-}
-
-isl::map set::lex_le_set(isl::set set2) const
-{
-  auto res = isl_set_lex_le_set(copy(), set2.release());
   return manage(res);
 }
 

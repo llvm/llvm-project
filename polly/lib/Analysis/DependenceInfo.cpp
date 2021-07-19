@@ -673,7 +673,13 @@ bool Dependences::isValidSchedule(
   isl::union_set UDeltas = Dependences.deltas();
   isl::set Deltas = singleton(UDeltas, ScheduleSpace);
 
-  isl::map NonPositive = Deltas.lex_le_set(Zero);
+  isl::space Space = Deltas.get_space();
+  isl::map NonPositive = isl::map::universe(Space.map_from_set());
+  NonPositive =
+      NonPositive.lex_le_at(isl::multi_pw_aff::identity_on_domain(Space));
+  NonPositive = NonPositive.intersect_domain(Deltas);
+  NonPositive = NonPositive.intersect_range(Zero);
+
   return NonPositive.is_empty();
 }
 
