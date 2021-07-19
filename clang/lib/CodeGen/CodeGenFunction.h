@@ -4369,6 +4369,11 @@ public:
   llvm::Function *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
                                    llvm::Constant *Addr);
 
+  llvm::Function *createTLSAtExitStub(const VarDecl &VD,
+                                      llvm::FunctionCallee Dtor,
+                                      llvm::Constant *Addr,
+                                      llvm::FunctionCallee &AtExit);
+
   /// Call atexit() with a function that passes the given argument to
   /// the given function.
   void registerGlobalDtorWithAtExit(const VarDecl &D, llvm::FunctionCallee fn,

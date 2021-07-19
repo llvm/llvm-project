@@ -337,14 +337,20 @@ public:
   /// Determine whether we will definitely emit this variable with a constant
   /// initializer, either because the language semantics demand it or because
   /// we know that the initializer is a constant.
-  bool isEmittedWithConstantInitializer(const VarDecl *VD) const {
+  // For weak definitions, any initializer available in the current translation
+  // is not necessarily reflective of the initializer used; such initializers
+  // are ignored unless if InspectInitForWeakDef is true.
+  bool
+  isEmittedWithConstantInitializer(const VarDecl *VD,
+                                   bool InspectInitForWeakDef = false) const {
     VD = VD->getMostRecentDecl();
     if (VD->hasAttr<ConstInitAttr>())
       return true;
 
     // All later checks examine the initializer specified on the variable. If
     // the variable is weak, such examination would not be correct.
-    if (VD->isWeak() || VD->hasAttr<SelectAnyAttr>())
+    if (!InspectInitForWeakDef &&
+        (VD->isWeak() || VD->hasAttr<SelectAnyAttr>()))
       return false;
 
     const VarDecl *InitDecl = VD->getInitializingDeclaration();
@@ -2559,6 +2565,8 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
 static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
                                         llvm::FunctionCallee dtor,
                                         llvm::Constant *addr, bool TLS) {
+  assert(!CGF.getTarget().getTriple().isOSAIX() &&
+         "unexpected call to emitGlobalDtorWithCXAAtExit");
   assert((TLS || CGF.getTypes().getCodeGenOpts().CXAAtExit) &&
          "__cxa_atexit is disabled");
   const char *Name = "__cxa_atexit";
@@ -2952,6 +2960,33 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     }
 
     llvm::LLVMContext &Context = CGM.getModule().getContext();
+
+    // The linker on AIX is not happy with missing weak symbols.  However,
+    // other TUs will not know whether the initialization routine exists
+    // so create an empty, init function to satisfy the linker.
+    // This is needed whenever a thread wrapper function is not used, and
+    // also when the symbol is weak.
+    if (CGM.getTriple().isOSAIX() && VD->hasDefinition() &&
+        isEmittedWithConstantInitializer(VD, true) &&
+        !VD->needsDestruction(getContext())) {
+      // Init should be null.  If it were non-null, then the logic above would
+      // either be defining the function to be an alias or declaring the
+      // function with the expectation that the definition of the variable
+      // is elsewhere.
+      assert(Init == nullptr && "Expected Init to be null.");
+
+      llvm::Function *Func = llvm::Function::Create(
+          InitFnTy, Var->getLinkage(), InitFnName.str(), &CGM.getModule());
+      const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
+      CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI,
+                                    cast<llvm::Function>(Func),
+                                    /*IsThunk=*/false);
+      // Create a function body that just returns
+      llvm::BasicBlock *Entry = llvm::BasicBlock::Create(Context, "", Func);
+      CGBuilderTy Builder(CGM, Entry);
+      Builder.CreateRetVoid();
+    }
+
     llvm::BasicBlock *Entry = llvm::BasicBlock::Create(Context, "", Wrapper);
     CGBuilderTy Builder(CGM, Entry);
     if (HasConstantInitialization) {
@@ -2966,6 +3001,15 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
           Fn->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
         }
       }
+    } else if (CGM.getTriple().isOSAIX()) {
+      // On AIX, except if constinit and also neither of class type or of
+      // (possibly multi-dimensional) array of class type, thread_local vars
+      // will have init routines regardless of whether they are
+      // const-initialized.  Since the routine is guaranteed to exist, we can
+      // unconditionally call it without testing for its existance.  This
+      // avoids potentially unresolved weak symbols which the AIX linker
+      // isn't happy with.
+      Builder.CreateCall(InitFnTy, Init);
     } else {
       // Don't know whether we have an init function. Call it if it exists.
       llvm::Value *Have = Builder.CreateIsNotNull(Init);
@@ -4728,20 +4772,43 @@ WebAssemblyCXXABI::emitTerminateForUnexpectedException(CodeGenFunction &CGF,
 
 /// Register a global destructor as best as we know how.
 void XLCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
-                                  llvm::FunctionCallee dtor,
-                                  llvm::Constant *addr) {
-  if (D.getTLSKind() != VarDecl::TLS_None)
-    llvm::report_fatal_error("thread local storage not yet implemented on AIX");
+                                  llvm::FunctionCallee Dtor,
+                                  llvm::Constant *Addr) {
+  if (D.getTLSKind() != VarDecl::TLS_None) {
+    // atexit routine expects "int(*)(int,...)"
+    llvm::FunctionType *FTy =
+        llvm::FunctionType::get(CGM.IntTy, CGM.IntTy, true);
+    llvm::PointerType *FpTy = FTy->getPointerTo();
+
+    // extern "C" int __pt_atexit_np(int flags, int(*)(int,...), ...);
+    llvm::FunctionType *AtExitTy =
+        llvm::FunctionType::get(CGM.IntTy, {CGM.IntTy, FpTy}, true);
+
+    // Fetch the actual function.
+    llvm::FunctionCallee AtExit =
+        CGM.CreateRuntimeFunction(AtExitTy, "__pt_atexit_np");
+
+    // Create __dtor function for the var decl.
+    llvm::Function *DtorStub = CGF.createTLSAtExitStub(D, Dtor, Addr, AtExit);
+
+    // Register above __dtor with atexit().
+    // First param is flags and must be 0, second param is function ptr
+    llvm::Value *NV = llvm::Constant::getNullValue(CGM.IntTy);
+    CGF.EmitNounwindRuntimeCall(AtExit, {NV, DtorStub});
+
+    // Cannot unregister TLS __dtor so done
+    return;
+  }
 
   // Create __dtor function for the var decl.
-  llvm::Function *dtorStub = CGF.createAtExitStub(D, dtor, addr);
+  llvm::Function *DtorStub = CGF.createAtExitStub(D, Dtor, Addr);
 
   // Register above __dtor with atexit().
-  CGF.registerGlobalDtorWithAtExit(dtorStub);
+  CGF.registerGlobalDtorWithAtExit(DtorStub);
 
   // Emit __finalize function to unregister __dtor and (as appropriate) call
   // __dtor.
-  emitCXXStermFinalizer(D, dtorStub, addr);
+  emitCXXStermFinalizer(D, DtorStub, Addr);
 }
 
 void XLCXXABI::emitCXXStermFinalizer(const VarDecl &D, llvm::Function *dtorStub,
