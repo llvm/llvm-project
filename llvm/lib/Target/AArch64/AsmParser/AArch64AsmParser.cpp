@@ -3567,6 +3567,13 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
       RegNum, RegKind::SVEPredicateVector, ElementWidth, S,
       getLoc(), getContext()));
 
+  if (getLexer().is(AsmToken::LBrac)) {
+    // Indexed predicate, there's no comma so try parse the next operand
+    // immediately.
+    if (parseOperand(Operands, false, false))
+      return MatchOperand_NoMatch;
+  }
+
   // Not all predicates are followed by a '/m' or '/z'.
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::Slash))
