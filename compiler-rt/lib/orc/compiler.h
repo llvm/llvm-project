@@ -18,6 +18,10 @@
 #define ORC_RT_INTERFACE extern "C" __attribute__((visibility("default")))
 #define ORC_RT_HIDDEN __attribute__((visibility("hidden")))
 
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
 // C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
 #ifndef ORC_RT_HAS_CPP_ATTRIBUTE
