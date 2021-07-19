@@ -23,6 +23,8 @@
 
 namespace mlir {
 
+using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<Value>>;
+
 /// ShapedTypeComponents that represents the components of a ShapedType.
 /// The components consist of
 ///  - A ranked or unranked shape with the dimension specification match those
