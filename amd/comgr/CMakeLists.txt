@@ -158,16 +158,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS _HAS_EXCEPTIONS=0)
 endif()
 
-if (ROCM_FOUND)
-  get_filename_component(ROCM_INSTALL_PATH "${ROCM_DIR}/../../.." ABSOLUTE)
-  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
-    ROCM_INSTALL_PATH=\"${ROCM_INSTALL_PATH}\")
-else()
-  message("ROCM not FOUND")
-  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
-    ROCM_INSTALL_PATH=\"\")
-endif()
-
 # Windows is strict about visibility of exports in shared libraries, so we ask
 # GCC/Clang to also be strict, and then explicitly mark each exported symbol in
 # the shared header.
