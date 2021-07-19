@@ -413,7 +413,7 @@ public:
     Target &target(m_process.GetTarget());
     Address addr(address.getAddressData());
     Status error;
-    if (size > target.ReadMemory(addr, false, dest, size, error)) {
+    if (size > target.ReadMemory(addr, dest, size, error)) {
       LLDB_LOGV(log, "[MemoryReader] memory read returned fewer bytes than asked for");
       return false;
     }
@@ -2801,7 +2801,7 @@ lldb::addr_t SwiftLanguageRuntimeImpl::FixupAddress(lldb::addr_t addr,
     Target &target = m_process.GetTarget();
     size_t ptr_size = m_process.GetAddressByteSize();
     lldb::addr_t refd_addr = LLDB_INVALID_ADDRESS;
-    target.ReadMemory(addr, false, &refd_addr, ptr_size, error);
+    target.ReadMemory(addr, &refd_addr, ptr_size, error);
     if (error.Success()) {
       bool extra_deref;
       std::tie(refd_addr, extra_deref) = FixupPointerValue(refd_addr, type);
