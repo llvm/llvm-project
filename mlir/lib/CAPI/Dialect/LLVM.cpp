@@ -19,3 +19,28 @@ MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(LLVM, llvm, LLVMDialect)
 MlirType mlirLLVMPointerTypeGet(MlirType pointee, unsigned addressSpace) {
   return wrap(LLVMPointerType::get(unwrap(pointee), addressSpace));
 }
+
+MlirType mlirLLVMVoidTypeGet(MlirContext ctx) {
+  return wrap(LLVMVoidType::get(unwrap(ctx)));
+}
+
+MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
+  return wrap(LLVMArrayType::get(unwrap(elementType), numElements));
+}
+
+MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
+                                 MlirType const *argumentTypes, bool isVarArg) {
+  SmallVector<Type, 2> argumentStorage;
+  return wrap(LLVMFunctionType::get(
+      unwrap(resultType),
+      unwrapList(nArgumentTypes, argumentTypes, argumentStorage), isVarArg));
+}
+
+MlirType mlirLLVMStructTypeLiteralGet(MlirContext ctx, intptr_t nFieldTypes,
+                                      MlirType const *fieldTypes,
+                                      bool isPacked) {
+  SmallVector<Type, 2> fieldStorage;
+  return wrap(LLVMStructType::getLiteral(
+      unwrap(ctx), unwrapList(nFieldTypes, fieldTypes, fieldStorage),
+      isPacked));
+}
