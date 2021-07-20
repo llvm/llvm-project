@@ -642,8 +642,7 @@ bool Dependences::isValidSchedule(
     return true;
 
   isl::union_map Dependences = getDependences(TYPE_RAW | TYPE_WAW | TYPE_WAR);
-  isl::space Space = S.getParamSpace();
-  isl::union_map Schedule = isl::union_map::empty(Space);
+  isl::union_map Schedule = isl::union_map::empty(S.getIslCtx());
 
   isl::space ScheduleSpace;
 
@@ -778,7 +777,7 @@ void Dependences::releaseMemory() {
 isl::union_map Dependences::getDependences(int Kinds) const {
   assert(hasValidDependences() && "No valid dependences available");
   isl::space Space = isl::manage_copy(RAW).get_space();
-  isl::union_map Deps = Deps.empty(Space);
+  isl::union_map Deps = Deps.empty(Space.ctx());
 
   if (Kinds & TYPE_RAW)
     Deps = Deps.unite(isl::manage_copy(RAW));

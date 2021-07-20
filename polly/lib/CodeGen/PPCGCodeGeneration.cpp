@@ -219,8 +219,8 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
       KillMemIds.push_back(isl::manage(SAI->getBasePtrId().release()));
   }
 
-  Info.TaggedMustKills = isl::union_map::empty(ParamSpace);
-  Info.MustKills = isl::union_map::empty(ParamSpace);
+  Info.TaggedMustKills = isl::union_map::empty(ParamSpace.ctx());
+  Info.MustKills = isl::union_map::empty(ParamSpace.ctx());
 
   // Initialising KillsSchedule to `isl_set_empty` creates an empty node in the
   // schedule:

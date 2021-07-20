@@ -250,7 +250,7 @@ static bool isMapToUnknown(const isl::map &Map) {
 }
 
 isl::union_map polly::filterKnownValInst(const isl::union_map &UMap) {
-  isl::union_map Result = isl::union_map::empty(UMap.get_space());
+  isl::union_map Result = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     if (!isMapToUnknown(Map))
       Result = Result.add_map(Map);
@@ -587,11 +587,11 @@ isl::union_map ZoneAlgorithm::computePerPHI(const ScopArrayInfo *SAI) {
 }
 
 isl::union_set ZoneAlgorithm::makeEmptyUnionSet() const {
-  return isl::union_set::empty(ParamSpace);
+  return isl::union_set::empty(ParamSpace.ctx());
 }
 
 isl::union_map ZoneAlgorithm::makeEmptyUnionMap() const {
-  return isl::union_map::empty(ParamSpace);
+  return isl::union_map::empty(ParamSpace.ctx());
 }
 
 void ZoneAlgorithm::collectCompatibleElts() {
@@ -845,7 +845,7 @@ isl::map ZoneAlgorithm::makeValInst(Value *Val, ScopStmt *UserStmt, Loop *Scope,
 static isl::union_map normalizeValInst(isl::union_map Input,
                                        const DenseSet<PHINode *> &ComputedPHIs,
                                        isl::union_map NormalizeMap) {
-  isl::union_map Result = isl::union_map::empty(Input.get_space());
+  isl::union_map Result = isl::union_map::empty(Input.ctx());
   for (isl::map Map : Input.get_map_list()) {
     isl::space Space = Map.get_space();
     isl::space RangeSpace = Space.range();

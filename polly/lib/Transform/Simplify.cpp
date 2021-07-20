@@ -248,8 +248,7 @@ void SimplifyImpl::removeEmptyDomainStmts() {
 void SimplifyImpl::removeOverwrites() {
   for (auto &Stmt : *S) {
     isl::set Domain = Stmt.getDomain();
-    isl::union_map WillBeOverwritten =
-        isl::union_map::empty(S->getParamSpace());
+    isl::union_map WillBeOverwritten = isl::union_map::empty(S->getIslCtx());
 
     SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
 
@@ -330,7 +329,7 @@ void SimplifyImpl::coalesceWrites() {
 
     // List of all eligible (for coalescing) writes of the future.
     // { [Domain[] -> Element[]] -> [Value[] -> MemoryAccess[]] }
-    isl::union_map FutureWrites = isl::union_map::empty(S->getParamSpace());
+    isl::union_map FutureWrites = isl::union_map::empty(S->getIslCtx());
 
     // Iterate over accesses from the last to the first.
     SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
@@ -444,7 +443,7 @@ void SimplifyImpl::coalesceWrites() {
         TouchedAccesses.insert(MA);
       }
       isl::union_map NewFutureWrites =
-          isl::union_map::empty(FutureWrites.get_space());
+          isl::union_map::empty(FutureWrites.ctx());
       for (isl::map FutureWrite : FutureWrites.get_map_list()) {
         MemoryAccess *MA = (MemoryAccess *)FutureWrite.get_space()
                                .range()
@@ -499,7 +498,7 @@ void SimplifyImpl::removeRedundantWrites() {
     // List of element reads that still have the same value while iterating
     // through the MemoryAccesses.
     // { [Domain[] -> Element[]] -> Val[] }
-    isl::union_map Known = isl::union_map::empty(S->getParamSpace());
+    isl::union_map Known = isl::union_map::empty(S->getIslCtx());
 
     SmallVector<MemoryAccess *, 32> Accesses(getAccessesInOrder(Stmt));
     for (MemoryAccess *MA : Accesses) {
