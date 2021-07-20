@@ -832,9 +832,7 @@ void BlockingMutex::Unlock() {
   ReleaseSRWLockExclusive((PSRWLOCK)opaque_storage_);
 }
 
-void BlockingMutex::CheckLocked() {
-  CHECK_EQ(owner_, GetThreadSelf());
-}
+void BlockingMutex::CheckLocked() const { CHECK_EQ(owner_, GetThreadSelf()); }
 
 uptr GetTlsSize() {
   return 0;

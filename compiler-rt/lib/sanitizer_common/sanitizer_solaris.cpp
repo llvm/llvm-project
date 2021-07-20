@@ -231,9 +231,7 @@ void BlockingMutex::Unlock() {
   CHECK_EQ(mutex_unlock((mutex_t *)&opaque_storage_), 0);
 }
 
-void BlockingMutex::CheckLocked() {
-  CHECK_EQ((uptr)thr_self(), owner_);
-}
+void BlockingMutex::CheckLocked() const { CHECK_EQ((uptr)thr_self(), owner_); }
 
 }  // namespace __sanitizer
 
