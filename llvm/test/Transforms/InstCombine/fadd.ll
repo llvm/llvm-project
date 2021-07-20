@@ -3,6 +3,7 @@
 
 declare void @use(float)
 declare void @use_vec(<2 x float>)
+declare float @llvm.vector.reduce.fadd.v4f32(float, <4 x float>)
 
 ; -x + y => y - x
 
@@ -386,4 +387,74 @@ define float @fmul_fneg2_extra_use3(float %x, float %py, float %z) {
   call void @use(float %mul)
   %r = fadd float %mul, %z
   ret float %r
+}
+
+define float @fadd_rdx(float %x, <4 x float> %v) {
+; CHECK-LABEL: @fadd_rdx(
+; CHECK-NEXT:    [[RDX:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[V:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[RDX]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %rdx = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> %v)
+  %add = fadd fast float %rdx, %x
+  ret float %add
+}
+
+define float @fadd_rdx_commute(float %x, <4 x float> %v) {
+; CHECK-LABEL: @fadd_rdx_commute(
+; CHECK-NEXT:    [[D:%.*]] = fdiv float 4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[RDX:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[V:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[D]], [[RDX]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %d = fdiv float 42.0, %x
+  %rdx = call float @llvm.vector.reduce.fadd.v4f32(float -0.0, <4 x float> %v)
+  %add = fadd reassoc nsz float %d, %rdx
+  ret float %add
+}
+
+define float @fadd_rdx_fmf(float %x, <4 x float> %v) {
+; CHECK-LABEL: @fadd_rdx_fmf(
+; CHECK-NEXT:    [[RDX:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[V:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc float [[RDX]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %rdx = call float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> %v)
+  %add = fadd reassoc float %rdx, %x
+  ret float %add
+}
+
+define float @fadd_rdx_extra_use(float %x, <4 x float> %v) {
+; CHECK-LABEL: @fadd_rdx_extra_use(
+; CHECK-NEXT:    [[RDX:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[V:%.*]])
+; CHECK-NEXT:    call void @use(float [[RDX]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[RDX]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %rdx = call float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> %v)
+  call void @use(float %rdx)
+  %add = fadd fast float %rdx, %x
+  ret float %add
+}
+
+define float @fadd_rdx_nonzero_start_const_op(<4 x float> %v) {
+; CHECK-LABEL: @fadd_rdx_nonzero_start_const_op(
+; CHECK-NEXT:    [[RDX:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float 4.200000e+01, <4 x float> [[V:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc ninf nsz float [[RDX]], -9.000000e+00
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %rdx = call float @llvm.vector.reduce.fadd.v4f32(float 42.0, <4 x float> %v)
+  %add = fadd reassoc nsz ninf float %rdx, -9.0
+  ret float %add
+}
+
+define float @fadd_rdx_nonzero_start_variable_op(float %x, <4 x float> %v) {
+; CHECK-LABEL: @fadd_rdx_nonzero_start_variable_op(
+; CHECK-NEXT:    [[RDX:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float 4.200000e+01, <4 x float> [[V:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[RDX]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %rdx = call float @llvm.vector.reduce.fadd.v4f32(float 42.0, <4 x float> %v)
+  %add = fadd fast float %rdx, %x
+  ret float %add
 }
