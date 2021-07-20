@@ -14,7 +14,7 @@ func @distribute_for_gpu(%A: tensor<64x64xf32>,
       distribution ["block_x", "block_y"] {
     %0 = call @foo(%A_, %B_)
       : (tensor<64x64xf32>, tensor<64x64xf32>) -> tensor<64x64xf32>
-    linalg.tiled_yield %0 in %B_ : tensor<64x64xf32>
+    linalg.yield %0 : tensor<64x64xf32>
   }
   return %0 : tensor<64x64xf32>
 }

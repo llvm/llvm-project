@@ -1497,6 +1497,30 @@ static LogicalResult verify(linalg::YieldOp op) {
     return success();
   }
 
+  if (auto tiledLoopOp = dyn_cast<linalg::TiledLoopOp>(parentOp)) {
+    // Check if output args with tensor types match results types.
+    SmallVector<Value, 2> tensorOuts;
+    llvm::copy_if(
+        tiledLoopOp.outputs(), std::back_inserter(tensorOuts),
+        [&](Value out) { return out.getType().isa<RankedTensorType>(); });
+    if (tensorOuts.size() != op.values().size())
+      return op.emitOpError("expected number of tensor output args = ")
+             << tensorOuts.size() << " to match the number of yield operands = "
+             << op.values().size();
+
+    TypeRange tensorTypes(llvm::makeArrayRef(tensorOuts));
+    for (auto &item :
+         llvm::enumerate(llvm::zip(tensorTypes, op.getOperandTypes()))) {
+      Type outType, resultType;
+      unsigned index = item.index();
+      std::tie(outType, resultType) = item.value();
+      if (outType != resultType)
+        return op.emitOpError("expected yield operand ")
+               << index << " with type = " << resultType
+               << " to match output arg type = " << outType;
+    }
+    return success();
+  }
   return op.emitOpError("expected parent op with LinalgOp interface");
 }
 
@@ -1868,11 +1892,11 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
       return failure();
 
     Block *block = tiledLoop.getBody();
-    auto yieldOp = cast<linalg::TiledYieldOp>(block->getTerminator());
+    auto yieldOp = cast<linalg::YieldOp>(block->getTerminator());
 
     // Match the pattern and collect output buffers that will replace the output
     // tensors and also the ops that will be ignored when cloning the body.
-    SmallVector<Value, 2> newOutputOperands, newYieldTileArgs, newYieldOutArgs;
+    SmallVector<Value, 2> newOutputOperands, newYieldArgs;
     int resultId = 0;
     // Store ids of the corresponding old and new output operands.
     SmallVector<int64_t, 2> oldOutputIdToNew(tiledLoop.outputs().size(),
@@ -1893,15 +1917,13 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
         continue;
       }
       Value result = tiledLoop.getResult(resultId);
-      Value yieldTileArg = yieldOp.tiles()[resultId];
-      Value yieldOutArg = yieldOp.outputs()[resultId];
-      if (yieldTileArg != outRegionArg || !result.use_empty()) {
+      Value yieldArg = yieldOp.getOperand(resultId);
+      if (yieldArg != outRegionArg || !result.use_empty()) {
         oldOutputIdToNew[index] = newOutputOperands.size();
-        oldResultIdToNew[resultId] = newYieldTileArgs.size();
+        oldResultIdToNew[resultId] = newYieldArgs.size();
         resultReplacement[resultId] = out;
         newOutputOperands.push_back(out);
-        newYieldTileArgs.push_back(yieldTileArg);
-        newYieldOutArgs.push_back(yieldOutArg);
+        newYieldArgs.push_back(yieldArg);
       }
       ++resultId;
     }
@@ -1930,12 +1952,9 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
         OpBuilder::atBlockEnd(newTiledLoop.getBody(), rewriter.getListener());
     for (auto &op : tiledLoop.getBody()->without_terminator())
       innerBuilder.clone(op, bvm);
-    innerBuilder.create<linalg::TiledYieldOp>(
-        loc,
-        llvm::to_vector<2>(llvm::map_range(
-            newYieldTileArgs, [&](Value arg) { return bvm.lookup(arg); })),
-        llvm::to_vector<2>(llvm::map_range(
-            newYieldOutArgs, [&](Value arg) { return bvm.lookup(arg); })));
+    innerBuilder.create<linalg::YieldOp>(
+        loc, llvm::to_vector<2>(llvm::map_range(
+                 newYieldArgs, [&](Value arg) { return bvm.lookup(arg); })));
 
     for (const auto &en : llvm::enumerate(oldResultIdToNew))
       if (en.value() != kNoMatch)
@@ -1955,92 +1974,6 @@ void TiledLoopOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 LogicalResult TiledLoopOp::fold(ArrayRef<Attribute>,
                                 SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCastInTiledLoopOp(*this);
-}
-
-//===----------------------------------------------------------------------===//
-// TiledYieldOp
-//===----------------------------------------------------------------------===//
-
-static void print(OpAsmPrinter &p, TiledYieldOp op) {
-  p << op.getOperationName();
-
-  if (!op.tiles().empty()) {
-    llvm::interleaveComma(llvm::zip(op.tiles(), op.outputs()), p, [&](auto it) {
-      p << ' ' << std::get<0>(it) << " in " << std::get<1>(it) << " : "
-        << std::get<1>(it).getType();
-    });
-  }
-  p.printOptionalAttrDict(op->getAttrs());
-}
-
-static ParseResult parseTiledYieldOp(OpAsmParser &parser,
-                                     OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 4> tiles, outputs;
-  SmallVector<Type, 4> types;
-
-  OpAsmParser::OperandType tile;
-  while (parser.parseOptionalOperand(tile).hasValue()) {
-    Type type;
-    OpAsmParser::OperandType output;
-    if (parser.parseKeyword("in") || parser.parseOperand(output) ||
-        parser.parseColon() || parser.parseType(type))
-      return failure();
-    tiles.push_back(tile);
-    outputs.push_back(output);
-    types.push_back(type);
-    parser.parseOptionalComma();
-  }
-  llvm::SMLoc loc = parser.getCurrentLocation();
-  if (parser.resolveOperands(tiles, types, loc, result.operands) ||
-      parser.resolveOperands(outputs, types, loc, result.operands))
-    return failure();
-
-  // Parse optional attributes.
-  parser.parseOptionalAttrDict(result.attributes);
-
-  return success();
-}
-
-static LogicalResult verify(TiledYieldOp op) {
-  // Check if output args with tensor types match results types.
-  auto loop = op->getParentOfType<TiledLoopOp>();
-  SmallVector<Value, 2> loopTensorOuts;
-  llvm::copy_if(
-      loop.outputs(), std::back_inserter(loopTensorOuts),
-      [&](Value out) { return out.getType().isa<RankedTensorType>(); });
-  if (loopTensorOuts.size() != op.tiles().size())
-    return op.emitOpError("expected number of tensor output args = ")
-           << loopTensorOuts.size()
-           << " to match the number of yield operands = " << op.tiles().size();
-
-  // Check if the `tiles` args types match the `outputs` args types.
-  SmallVector<Value, 2> loopTensorOutsBlockArgs;
-  llvm::copy_if(
-      loop.getRegionOutputArgs(), std::back_inserter(loopTensorOutsBlockArgs),
-      [&](Value out) { return out.getType().isa<RankedTensorType>(); });
-  for (auto en : llvm::enumerate(
-           llvm::zip(op.tiles(), op.outputs(), loopTensorOutsBlockArgs))) {
-    size_t index = en.index();
-    Type tileType = std::get<0>(en.value()).getType();
-    Value yieldOut = std::get<1>(en.value());
-    Type yieldOutType = yieldOut.getType();
-
-    if (tileType != yieldOutType)
-      return op.emitOpError("expected tile operand with type = ")
-             << tileType << " to match output type = " << yieldOutType;
-
-    // Check if yieldOut is either an output bbArg or a slice of it.
-    Value src = yieldOut;
-    if (auto extractSlice = llvm::dyn_cast_or_null<tensor::ExtractSliceOp>(
-            yieldOut.getDefiningOp()))
-      src = extractSlice.source();
-
-    Value loopBlockArg = std::get<2>(en.value());
-    if (src != loopBlockArg)
-      return op.emitOpError("expected output ")
-             << index << " to be a subset of the corresponding block argument";
-  }
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

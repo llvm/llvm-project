@@ -58,7 +58,8 @@ func @matmul_tensors(
 // TLOOP: %[[PROD:.*]] = linalg.matmul ins(%[[SUB_ARG_0]], %[[SUB_ARG_1]]
 // TLOOP-SE: outs(%[[SUB_ARG_2]] : [[TY]]) -> [[TY]]
 
-// TLOOP: linalg.tiled_yield %[[PROD]] in %[[SUB_ARG_2]] : [[TY]]
+// TLOOP: %[[O:.*]] = tensor.insert_slice %[[PROD]] into %[[A2]][%[[I]], %[[J]]]
+// TLOOP: linalg.yield %[[O]] : [[TY]]
 
 // -----
 

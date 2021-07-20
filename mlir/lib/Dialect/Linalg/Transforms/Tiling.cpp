@@ -165,47 +165,6 @@ static Value insertSliceIntoTensor(OpBuilder &b, Location loc,
 }
 
 template <typename LoopTy>
-static SmallVector<Value, 4>
-collectLoopYieldArgs(OpBuilder &b, LinalgOp clonedOp,
-                     ArrayRef<Value> tiledOperands,
-                     SmallVectorImpl<Value> &tensorResults) {
-
-  Location loc = clonedOp.getLoc();
-  SmallVector<Value, 4> yieldArgs;
-  unsigned resultIdx = 0;
-  for (OpOperand *opOperand : clonedOp.getOutputTensorOperands()) {
-    // TODO: use an interface/adaptor to avoid leaking position in
-    // `tiledOperands`.
-    Value outputTensor = tiledOperands[opOperand->getOperandNumber()];
-    // Insert a insert_slice for each output tensor.
-    if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
-      yieldArgs.push_back(insertSliceIntoTensor(
-          b, loc, sliceOp, clonedOp->getResult(resultIdx), sliceOp.source()));
-    } else {
-      yieldArgs.push_back(clonedOp->getResult(resultIdx));
-    }
-    ++resultIdx;
-  }
-  tensorResults = yieldArgs;
-  return yieldArgs;
-}
-
-template <>
-SmallVector<Value, 4>
-collectLoopYieldArgs<TiledLoopOp>(OpBuilder &b, LinalgOp clonedOp,
-                                  ArrayRef<Value> tiledOperands,
-                                  SmallVectorImpl<Value> &tensorResults) {
-  auto outputTensorOperands = clonedOp.getOutputTensorOperands();
-  size_t numOutputTensors = outputTensorOperands.size();
-
-  SmallVector<Value, 4> yieldArgs(clonedOp->getResults());
-  auto tiledOutputOperands = tiledOperands.take_back(numOutputTensors);
-  yieldArgs.append(tiledOutputOperands.begin(), tiledOutputOperands.end());
-
-  return yieldArgs;
-}
-
-template <typename LoopTy>
 static Optional<TiledLinalgOp>
 tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
                  const LinalgTilingOptions &options) {
@@ -265,7 +224,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   }
 
   // 2. Create the tiled loops.
-  LinalgOp clonedOp = op;
+  LinalgOp res = op;
   SmallVector<Value, 4> ivs, tensorResults;
   auto tiledLoopBodyBuilder = [&](OpBuilder &b, Location loc,
                                   ValueRange localIvs,
@@ -303,18 +262,30 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
       resultTensorTypes.push_back(
           tiledOperands[opOperand->getOperandNumber()].getType());
 
-    clonedOp = op.clone(b, loc, resultTensorTypes, tiledOperands);
+    res = op.clone(b, loc, resultTensorTypes, tiledOperands);
 
-    auto yieldArgs =
-        collectLoopYieldArgs<LoopTy>(b, clonedOp, tiledOperands, tensorResults);
-    return {yieldArgs.begin(), yieldArgs.end()};
+    // Insert a insert_slice for each output tensor.
+    unsigned resultIdx = 0;
+    for (OpOperand *opOperand : op.getOutputTensorOperands()) {
+      // TODO: use an interface/adaptor to avoid leaking position in
+      // `tiledOperands`.
+      Value outputTensor = tiledOperands[opOperand->getOperandNumber()];
+      if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
+        tensorResults.push_back(insertSliceIntoTensor(
+            b, loc, sliceOp, res->getResult(resultIdx), sliceOp.source()));
+      } else {
+        tensorResults.push_back(res->getResult(resultIdx));
+      }
+      ++resultIdx;
+    }
+    return scf::ValueVector(tensorResults.begin(), tensorResults.end());
   };
   GenerateLoopNest<LoopTy>::doit(b, op.getLoc(), loopRanges, op, iteratorTypes,
                                  tiledLoopBodyBuilder, options.distribution,
                                  options.distributionTypes);
 
   // 3. Transform IndexOp results w.r.t. the tiling.
-  transformIndexOps(b, clonedOp, ivs, loopIndexToRangeIndex);
+  transformIndexOps(b, res, ivs, loopIndexToRangeIndex);
 
   // 4. Gather the newly created loops and return them with the new op.
   SmallVector<Operation *, 8> loops;
@@ -337,9 +308,8 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
     if ((outermostLoop = loop))
       break;
 
-  return TiledLinalgOp{clonedOp, loops,
-                       outermostLoop ? outermostLoop->getResults()
-                                     : tensorResults};
+  return TiledLinalgOp{
+      res, loops, outermostLoop ? outermostLoop->getResults() : tensorResults};
 }
 
 template <typename LoopTy>

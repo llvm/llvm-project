@@ -36,7 +36,7 @@ func @memref_cast_into_tiled_loop(%arg0: memref<192xf32>)  {
     %16 = memref.subview %out[%arg3] [%14] [1]
       : memref<192xf32, #map> to memref<?xf32, #map>
     linalg.fill(%cst, %16) : f32, memref<?xf32, #map>
-    linalg.tiled_yield
+    linalg.yield
   }
   return
 }
@@ -706,9 +706,8 @@ func @fold_tiled_loop_results(%A: memref<48xf32>, %B: tensor<48xf32>,
             %CT_ = %C_tensor: tensor<48xf32>,
             %C_ = %C: memref<48xf32>) {
         %result = call @foo(%A_, %B_, %C_)
-          : (memref<48xf32>, tensor<48xf32>, memref<48xf32>) -> (tensor<48xf32>)
-        linalg.tiled_yield %result in %B_ : tensor<48xf32>,
-                           %CT_ in %CT_ :  tensor<48xf32>
+          : (memref<48xf32>, tensor<48xf32>, memref<48xf32>)-> (tensor<48xf32>)
+    linalg.yield %result, %CT_ : tensor<48xf32>, tensor<48xf32>
   }
   return %useful : tensor<48xf32>
 }
@@ -727,7 +726,7 @@ func @fold_tiled_loop_results(%A: memref<48xf32>, %B: tensor<48xf32>,
 // CHECK-SAME: ins (%[[A_:.*]] = %[[A]]: [[BUF_TY]])
 // CHECK-SAME: outs (%[[B_:.*]] = %[[B]]: [[TY]], %[[C_:.*]] = %[[C]]: [[BUF_TY]]) {
 // CHECK-NEXT:   %[[RES:.*]] = call @foo(%[[A_]], %[[B_]], %[[C_]])
-// CHECK-NEXT:   linalg.tiled_yield %[[RES]] in %[[B_]]
+// CHECK-NEXT:   linalg.yield %[[RES]] :
 
 // CHECK: return %[[RESULT]]
 
@@ -744,7 +743,7 @@ func @fold_tiled_loop_inputs(%A: memref<192xf32>, %A_tensor: tensor<192xf32>,
       ins (%A_ = %A: memref<192xf32>, %AT_ = %A_tensor: tensor<192xf32>)
       outs (%BT_ = %B_tensor: tensor<192xf32>) {
     %0 = call @foo(%A_, %BT_) : (memref<192xf32>, tensor<192xf32>) -> tensor<192xf32>
-    linalg.tiled_yield %0 in %BT_ : tensor<192xf32>
+    linalg.yield %0 : tensor<192xf32>
   }
   return %result : tensor<192xf32>
 }

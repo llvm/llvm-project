@@ -648,7 +648,9 @@ func @tiled_loop(%lhs: tensor<24x64xi8>, %rhs: tensor<24x64xi8>,
         linalg.yield %s : i8
       } -> tensor<?x?xi8>
 
-    linalg.tiled_yield %sum in %out_sub : tensor<?x?xi8>
+    %sum_sub = tensor.insert_slice %sum into %out_[%i, 0][%c4, %c64][1, 1]
+      : tensor<?x?xi8> into tensor<24x64xi8>
+    linalg.yield %sum_sub : tensor<24x64xi8>
   }
   return %prod : tensor<24x64xi8>
 }
@@ -709,7 +711,9 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
       linalg.yield %1 : f32
     } -> tensor<4xf32>
 
-    linalg.tiled_yield %acc in %sub_out : tensor<4xf32>
+    %sum_sub = tensor.insert_slice %acc into %o_[%j][%c4][1]
+      : tensor<4xf32> into tensor<24xf32>
+    linalg.yield %sum_sub : tensor<24xf32>
   }
   return %result : tensor<24xf32>
 }
@@ -769,7 +773,7 @@ func @tiled_loop_on_buffers(%input_3d: memref<16x24x32xf32>,
       %1 = addf %0, %i1d : f32
       linalg.yield %1 : f32
     }
-    linalg.tiled_yield
+    linalg.yield
   }
   return
 }
