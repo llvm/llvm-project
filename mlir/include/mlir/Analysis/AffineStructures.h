@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_AFFINE_STRUCTURES_H
-#define MLIR_ANALYSIS_AFFINE_STRUCTURES_H
+#ifndef MLIR_ANALYSIS_AFFINESTRUCTURES_H
+#define MLIR_ANALYSIS_AFFINESTRUCTURES_H
 
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
@@ -609,7 +609,7 @@ private:
   /// set to true, a potential under approximation (subset) of the rational
   /// shadow / exact integer shadow is computed.
   // See implementation comments for more details.
-  void FourierMotzkinEliminate(unsigned pos, bool darkShadow = false,
+  void fourierMotzkinEliminate(unsigned pos, bool darkShadow = false,
                                bool *isResultIntegerExact = nullptr);
 
   /// Tightens inequalities given that we are dealing with integer spaces. This
@@ -618,7 +618,7 @@ private:
   /// i.e.,
   ///  64*i - 100 >= 0  =>  64*i - 128 >= 0 (since 'i' is an integer). This is a
   /// fast method (linear in the number of coefficients).
-  void GCDTightenInequalities();
+  void gcdTightenInequalities();
 
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
@@ -696,4 +696,4 @@ getFlattenedAffineExprs(IntegerSet set,
 
 } // end namespace mlir.
 
-#endif // MLIR_ANALYSIS_AFFINE_STRUCTURES_H
+#endif // MLIR_ANALYSIS_AFFINESTRUCTURES_H
