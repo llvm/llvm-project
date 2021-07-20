@@ -203,9 +203,9 @@ define i32* @checkAndAdvance(i32* align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoFree] for CtxI '  %6 = call i32* @checkAndAdvance(i32* %5)' at position {cs_arg: [@0]} with state nofree
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAValueConstantRange] for CtxI '  %3 = icmp eq i32 %2, 0' at position {flt: [@-1]} with state range(1)<full-set / full-set>
-; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAValueSimplify] for CtxI <<null inst>> at position {flt: [@-1]} with state not-simple
+; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAValueConstantRange] for CtxI '  %3 = icmp eq i32 %2, 0' at position {flt: [@-1]} with state range(1)<full-set / full-set>
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAValueConstantRange] for CtxI <<null inst>> at position {flt: [@-1]} with state range(32)<[0,1) / [0,1)>
 ; GRAPH-EMPTY:

@@ -192,25 +192,25 @@ define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
 define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
 ; IS__CGSCC_OPM: Function Attrs: noinline nounwind uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f2
-; IS__CGSCC_OPM-SAME: (i8* nonnull readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
-; IS__CGSCC_OPM-NEXT:    br label [[TMP2:%.*]]
+; IS__CGSCC_OPM-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+; IS__CGSCC_OPM-NEXT:    unreachable
 ; IS__CGSCC_OPM:       2:
-; IS__CGSCC_OPM-NEXT:    br label [[TMP4:%.*]]
+; IS__CGSCC_OPM-NEXT:    unreachable
 ; IS__CGSCC_OPM:       3:
 ; IS__CGSCC_OPM-NEXT:    unreachable
 ; IS__CGSCC_OPM:       4:
-; IS__CGSCC_OPM-NEXT:    ret i8* undef
+; IS__CGSCC_OPM-NEXT:    unreachable
 ;
 ; IS__CGSCC_NPM: Function Attrs: noinline nounwind uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f2
-; IS__CGSCC_NPM-SAME: (i8* nonnull readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    br label [[TMP2:%.*]]
+; IS__CGSCC_NPM-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    unreachable
 ; IS__CGSCC_NPM:       2:
-; IS__CGSCC_NPM-NEXT:    br label [[TMP4:%.*]]
+; IS__CGSCC_NPM-NEXT:    unreachable
 ; IS__CGSCC_NPM:       3:
 ; IS__CGSCC_NPM-NEXT:    unreachable
 ; IS__CGSCC_NPM:       4:
-; IS__CGSCC_NPM-NEXT:    ret i8* undef
+; IS__CGSCC_NPM-NEXT:    unreachable
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
@@ -318,25 +318,25 @@ define internal i8* @f2b(i8* readnone %0) local_unnamed_addr #0 {
 ;
 ; IS__CGSCC_OPM: Function Attrs: noinline nounwind uwtable
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f2b
-; IS__CGSCC_OPM-SAME: (i8* nonnull readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3]] {
-; IS__CGSCC_OPM-NEXT:    br label [[TMP2:%.*]]
+; IS__CGSCC_OPM-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; IS__CGSCC_OPM-NEXT:    unreachable
 ; IS__CGSCC_OPM:       2:
-; IS__CGSCC_OPM-NEXT:    br label [[TMP4:%.*]]
+; IS__CGSCC_OPM-NEXT:    unreachable
 ; IS__CGSCC_OPM:       3:
 ; IS__CGSCC_OPM-NEXT:    unreachable
 ; IS__CGSCC_OPM:       4:
-; IS__CGSCC_OPM-NEXT:    ret i8* undef
+; IS__CGSCC_OPM-NEXT:    unreachable
 ;
 ; IS__CGSCC_NPM: Function Attrs: noinline nounwind uwtable
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f2b
-; IS__CGSCC_NPM-SAME: (i8* nonnull readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
-; IS__CGSCC_NPM-NEXT:    br label [[TMP2:%.*]]
+; IS__CGSCC_NPM-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; IS__CGSCC_NPM-NEXT:    unreachable
 ; IS__CGSCC_NPM:       2:
-; IS__CGSCC_NPM-NEXT:    br label [[TMP4:%.*]]
+; IS__CGSCC_NPM-NEXT:    unreachable
 ; IS__CGSCC_NPM:       3:
 ; IS__CGSCC_NPM-NEXT:    unreachable
 ; IS__CGSCC_NPM:       4:
-; IS__CGSCC_NPM-NEXT:    ret i8* undef
+; IS__CGSCC_NPM-NEXT:    unreachable
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
