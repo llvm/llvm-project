@@ -1534,7 +1534,6 @@ let TargetPrefix = "ppc" in {
     [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
   def int_ppc_dcbz  : GCCBuiltin<"__builtin_ppc_dcbz">,
                       Intrinsic<[], [llvm_ptr_ty], []>;
-// FIXME: __icbt is only valid for pwr8 and up.
   def int_ppc_icbt : GCCBuiltin<"__builtin_ppc_icbt">,
                      Intrinsic<[], [llvm_ptr_ty], []>;
   

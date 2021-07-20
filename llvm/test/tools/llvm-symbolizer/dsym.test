@@ -1,7 +1,7 @@
 RUN: echo "%p/Inputs/dsym-test-exe 0x0000000100000f90" > %t.input
 RUN: echo "%p/Inputs/dsym-test-exe-second 0x0000000100000f90" >> %t.input
 RUN: llvm-symbolizer < %t.input | FileCheck %s --check-prefix=CHECK-NOHINT
-RUN: llvm-symbolizer -dsym-hint=%p/Inputs/dsym-test-exe-differentname.dSYM < %t.input | FileCheck %s --check-prefix=CHECK-HINT
+RUN: llvm-symbolizer --dsym-hint=%p/Inputs/dsym-test-exe-differentname.dSYM < %t.input | FileCheck %s --check-prefix=CHECK-HINT
 
 CHECK-NOHINT: main
 CHECK-NOHINT: dsym-test.c

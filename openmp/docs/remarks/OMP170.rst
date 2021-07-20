@@ -1,7 +1,7 @@
+.. _omp170:
+
 OpenMP runtime call <call> deduplicated. [OMP170]
 ====================================================================
-
-.. _omp170:
 
 This optimization remark indicates that a call to an OpenMP runtime call was
 replaced with the result of an existing one. This occurs when the compiler knows

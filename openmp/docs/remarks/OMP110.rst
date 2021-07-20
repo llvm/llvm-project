@@ -1,7 +1,7 @@
+.. _omp110:
+
 Moving globalized variable to the stack. [OMP110]
 =================================================
-
-.. _omp110:
 
 This optimization remark indicates that a globalized variable was moved back to
 thread-local stack memory on the device. This occurs when the optimization pass

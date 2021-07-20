@@ -1796,6 +1796,14 @@ class PredTrait<string descr, Pred pred> : Trait {
 // TODO: Remove this class in favor of using Trait.
 class OpTrait;
 
+// Define a OpTrait corresponding to a list of OpTraits, this allows for
+// specifying a list of traits as trait. Avoids needing to do
+// `[Traits, ...] # ListOfTraits # [Others, ...]` while still allowing providing
+// convenient groupings.
+class OpTraitList<list<OpTrait> props> : OpTrait {
+  list<OpTrait> traits = props;
+}
+
 // These classes are used to define operation specific traits.
 class NativeOpTrait<string name> : NativeTrait<name, "Op">, OpTrait;
 class ParamNativeOpTrait<string prop, string params>

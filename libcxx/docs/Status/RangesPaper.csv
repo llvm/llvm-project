@@ -77,7 +77,7 @@ Section,Description,Dependencies,Assignee,Complete
 [move.sentinel],,[predef.iterators],Unassigned,Not started
 [common.iterator],,"| [iterator.concepts]
 | [iterator.cust.swap]
-| [iterator.cust.move]",Zoe Carver,In Progress
+| [iterator.cust.move]",Zoe Carver,✅
 [default.sentinels],std::default_sentinel_t.,No dependencies,Zoe Carver,✅
 [counted.iterator],,"| [iterator.concepts]
 | [iterator.cust.swap]
