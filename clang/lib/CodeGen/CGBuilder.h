@@ -261,7 +261,8 @@ public:
   Address CreateConstByteGEP(Address Addr, CharUnits Offset,
                              const llvm::Twine &Name = "") {
     assert(Addr.getElementType() == TypeCache.Int8Ty);
-    return Address(CreateGEP(Addr.getPointer(), getSize(Offset), Name),
+    return Address(CreateGEP(Addr.getElementType(), Addr.getPointer(),
+                             getSize(Offset), Name),
                    Addr.getAlignment().alignmentAtOffset(Offset));
   }
 
