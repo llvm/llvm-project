@@ -51,20 +51,20 @@ class RISCVRegWithSubRegs<bits<5> Enc, string n, list<Register> subregs,
 
 def ABIRegAltName : RegAltNameIndex;
 
-def sub_vrm1_0 : SubRegIndex<64,  -1>;
-def sub_vrm1_1 : SubRegIndex<64,  -1>;
-def sub_vrm1_2 : SubRegIndex<64,  -1>;
-def sub_vrm1_3 : SubRegIndex<64,  -1>;
-def sub_vrm1_4 : SubRegIndex<64,  -1>;
-def sub_vrm1_5 : SubRegIndex<64,  -1>;
-def sub_vrm1_6 : SubRegIndex<64,  -1>;
-def sub_vrm1_7 : SubRegIndex<64,  -1>;
-def sub_vrm2_0 : SubRegIndex<128, -1>;
-def sub_vrm2_1 : SubRegIndex<128, -1>;
-def sub_vrm2_2 : SubRegIndex<128, -1>;
-def sub_vrm2_3 : SubRegIndex<128, -1>;
-def sub_vrm4_0 : SubRegIndex<256, -1>;
-def sub_vrm4_1 : SubRegIndex<256, -1>;
+def sub_vrm4_0 : SubRegIndex<256>;
+def sub_vrm4_1 : SubRegIndex<256, 256>;
+def sub_vrm2_0 : SubRegIndex<128>;
+def sub_vrm2_1 : SubRegIndex<128, 128>;
+def sub_vrm2_2 : ComposedSubRegIndex<sub_vrm4_1, sub_vrm2_0>;
+def sub_vrm2_3 : ComposedSubRegIndex<sub_vrm4_1, sub_vrm2_1>;
+def sub_vrm1_0 : SubRegIndex<64>;
+def sub_vrm1_1 : SubRegIndex<64, 64>;
+def sub_vrm1_2 : ComposedSubRegIndex<sub_vrm2_1, sub_vrm1_0>;
+def sub_vrm1_3 : ComposedSubRegIndex<sub_vrm2_1, sub_vrm1_1>;
+def sub_vrm1_4 : ComposedSubRegIndex<sub_vrm2_2, sub_vrm1_0>;
+def sub_vrm1_5 : ComposedSubRegIndex<sub_vrm2_2, sub_vrm1_1>;
+def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
+def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
 } // Namespace = "RISCV"
 
