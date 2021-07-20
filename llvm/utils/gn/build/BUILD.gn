@@ -233,6 +233,14 @@ config("compiler_defaults") {
       "-fprofile-instr-generate=" +
           rebase_path("$root_build_dir/profiles/%4m.profraw"),
     ]
+    if (use_goma) {
+      # goma has a bug where it writes the server-side absolute path.
+      # Work around that.
+      # FIXME: Instead, set this to `.` for deterministic builds and pass
+      # the build dir to prepare-code-coverage-artifact.py instead.
+      cflags += [ "-fcoverage-compilation-dir=" + rebase_path(root_build_dir) ]
+    }
+
     if (host_os != "win") {
       ldflags += [ "-fprofile-instr-generate" ]
     }
