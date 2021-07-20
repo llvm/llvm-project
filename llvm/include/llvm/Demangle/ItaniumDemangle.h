@@ -3883,7 +3883,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     //                ::= Dh   # IEEE 754r half-precision floating point (16 bits)
     case 'h':
       First += 2;
-      return make<NameType>("decimal16");
+      return make<NameType>("half");
     //                ::= Di   # char32_t
     case 'i':
       First += 2;
