@@ -1253,6 +1253,7 @@ class RangeRecorder {
     reported_pages.append(to - from, 'x');
     last_page_reported = to;
   }
+
  private:
   const uptr page_size_scaled_log;
   u32 last_page_reported;

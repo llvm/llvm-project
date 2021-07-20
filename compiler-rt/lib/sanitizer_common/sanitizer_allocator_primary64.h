@@ -362,7 +362,7 @@ class SizeClassAllocator64 {
   // For the performance sake, none of the accessors check the validity of the
   // arguments, it is assumed that index is always in [0, n) range and the value
   // is not incremented past max_value.
-  template<class MemoryMapperT>
+  template <class MemoryMapperT>
   class PackedCounterArray {
    public:
     PackedCounterArray(u64 num_counters, u64 max_value, MemoryMapperT *mapper)
@@ -430,18 +430,20 @@ class SizeClassAllocator64 {
     u64 packing_ratio_log;
     u64 bit_offset_mask;
 
-    MemoryMapperT* const memory_mapper;
+    MemoryMapperT *const memory_mapper;
     u64 buffer_size;
     u64* buffer;
   };
 
-  template<class MemoryMapperT>
+  template <class MemoryMapperT>
   class FreePagesRangeTracker {
    public:
-    explicit FreePagesRangeTracker(MemoryMapperT* mapper)
+    explicit FreePagesRangeTracker(MemoryMapperT *mapper)
         : memory_mapper(mapper),
           page_size_scaled_log(Log2(GetPageSizeCached() >> kCompactPtrScale)),
-          in_the_range(false), current_page(0), current_range_start_page(0) {}
+          in_the_range(false),
+          current_page(0),
+          current_range_start_page(0) {}
 
     void NextPage(bool freed) {
       if (freed) {
@@ -469,7 +471,7 @@ class SizeClassAllocator64 {
       }
     }
 
-    MemoryMapperT* const memory_mapper;
+    MemoryMapperT *const memory_mapper;
     const uptr page_size_scaled_log;
     bool in_the_range;
     uptr current_page;
@@ -480,7 +482,7 @@ class SizeClassAllocator64 {
   // chunks only and returns these pages back to OS.
   // allocated_pages_count is the total number of pages allocated for the
   // current bucket.
-  template<class MemoryMapperT>
+  template <class MemoryMapperT>
   static void ReleaseFreeMemoryToOS(CompactPtrT *free_array,
                                     uptr free_array_count, uptr chunk_size,
                                     uptr allocated_pages_count,
@@ -520,9 +522,8 @@ class SizeClassAllocator64 {
       UNREACHABLE("All chunk_size/page_size ratios must be handled.");
     }
 
-    PackedCounterArray<MemoryMapperT> counters(allocated_pages_count,
-                                               full_pages_chunk_count_max,
-                                               memory_mapper);
+    PackedCounterArray<MemoryMapperT> counters(
+        allocated_pages_count, full_pages_chunk_count_max, memory_mapper);
     if (!counters.IsAllocated())
       return;
 
@@ -822,20 +823,15 @@ class SizeClassAllocator64 {
 
   class MemoryMapper {
    public:
-    MemoryMapper(const ThisT& base_allocator, uptr class_id)
+    MemoryMapper(const ThisT &base_allocator, uptr class_id)
         : allocator(base_allocator),
           region_base(base_allocator.GetRegionBeginBySizeClass(class_id)),
           released_ranges_count(0),
-          released_bytes(0) {
-    }
+          released_bytes(0) {}
 
-    uptr GetReleasedRangesCount() const {
-      return released_ranges_count;
-    }
+    uptr GetReleasedRangesCount() const { return released_ranges_count; }
 
-    uptr GetReleasedBytes() const {
-      return released_bytes;
-    }
+    uptr GetReleasedBytes() const { return released_bytes; }
 
     void *MapPackedCounterArrayBuffer(uptr buffer_size) {
       // TODO(alekseyshl): The idea to explore is to check if we have enough
@@ -859,7 +855,7 @@ class SizeClassAllocator64 {
     }
 
    private:
-    const ThisT& allocator;
+    const ThisT &allocator;
     const uptr region_base;
     uptr released_ranges_count;
     uptr released_bytes;
