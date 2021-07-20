@@ -4489,9 +4489,9 @@ struct AAPointerInfo : public AbstractAttribute {
   /// Call \p CB on all accesses that might interfere with \p LI and return true
   /// if all such accesses were known and the callback returned true for all of
   /// them, false otherwise.
-  virtual bool forallInterfearingAccesses(
+  virtual bool forallInterferingAccesses(
       LoadInst &LI, function_ref<bool(const Access &, bool)> CB) const = 0;
-  virtual bool forallInterfearingAccesses(
+  virtual bool forallInterferingAccesses(
       StoreInst &SI, function_ref<bool(const Access &, bool)> CB) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
