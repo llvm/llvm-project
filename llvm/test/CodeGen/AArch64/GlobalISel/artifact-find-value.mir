@@ -21,9 +21,9 @@ body:             |
     ; CHECK: %v2s64_val:_(<2 x s64>) = G_BUILD_VECTOR [[COPY5]](s64), [[COPY6]](s64)
     ; CHECK: %v2s64_val2:_(<2 x s64>) = G_BUILD_VECTOR [[COPY6]](s64), [[COPY8]](s64)
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (s128))
-    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (s128))
-    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (s128))
+    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
+    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
+    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
     ; CHECK: RET_ReallyLR
   %0:_(s64)  = COPY $x0
   %1:_(s64)  = COPY $x1
@@ -45,9 +45,9 @@ body:             |
   %unmerge1:_(<6 x s64>), %deaddef1:_(<6 x s64>), %deaddef2:_(<6 x s64>), %deaddef3:_(<6 x s64>) = G_UNMERGE_VALUES %bigconcat:_(<24 x s64>)
   %val1:_(<2 x s64>), %val2:_(<2 x s64>), %val3:_(<2 x s64>) = G_UNMERGE_VALUES %unmerge1:_(<6 x s64>)
 
-  G_STORE %val1:_(<2 x s64>), %2:_(p0) :: (store 16)
-  G_STORE %val2:_(<2 x s64>), %2:_(p0) :: (store 16)
-  G_STORE %val3:_(<2 x s64>), %2:_(p0) :: (store 16)
+  G_STORE %val1:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
+  G_STORE %val2:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
+  G_STORE %val3:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
   RET_ReallyLR
 
 ...
@@ -73,9 +73,9 @@ body:             |
     ; CHECK: %v2s64_val:_(<2 x s64>) = G_BUILD_VECTOR [[COPY5]](s64), [[COPY6]](s64)
     ; CHECK: %v2s64_val2:_(<2 x s64>) = G_BUILD_VECTOR [[COPY6]](s64), [[COPY8]](s64)
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (s128))
-    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (s128))
-    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (s128))
+    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
+    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
+    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
     ; CHECK: RET_ReallyLR
   %0:_(s64)  = COPY $x0
   %1:_(s64)  = COPY $x1
@@ -97,9 +97,9 @@ body:             |
   %deaddef1:_(<6 x s64>), %deaddef2:_(<6 x s64>), %deaddef3:_(<6 x s64>), %unmerge1:_(<6 x s64>) = G_UNMERGE_VALUES %bigconcat:_(<24 x s64>)
   %val1:_(<2 x s64>), %val2:_(<2 x s64>), %val3:_(<2 x s64>) = G_UNMERGE_VALUES %unmerge1:_(<6 x s64>)
 
-  G_STORE %val1:_(<2 x s64>), %2:_(p0) :: (store 16)
-  G_STORE %val2:_(<2 x s64>), %2:_(p0) :: (store 16)
-  G_STORE %val3:_(<2 x s64>), %2:_(p0) :: (store 16)
+  G_STORE %val1:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
+  G_STORE %val2:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
+  G_STORE %val3:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
   RET_ReallyLR
 
 ...
@@ -124,8 +124,8 @@ body:             |
     ; CHECK: %v2s64_val:_(<2 x s64>) = G_BUILD_VECTOR [[COPY5]](s64), [[COPY6]](s64)
     ; CHECK: %v2s64_val2:_(<2 x s64>) = G_BUILD_VECTOR [[COPY6]](s64), [[COPY8]](s64)
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (s128))
-    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (s128))
+    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
+    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
     ; CHECK: RET_ReallyLR
   %0:_(s64)  = COPY $x0
   %1:_(s64)  = COPY $x1
@@ -144,9 +144,9 @@ body:             |
   %val1:_(<2 x s64>), %val2:_(<2 x s64>), %val3:_(<2 x s64>), %val4:_(<2 x s64>) = G_UNMERGE_VALUES %insert:_(<8 x s64>)
 
   ; val1 should be <%5, %6>
-  G_STORE %val1:_(<2 x s64>), %2:_(p0) :: (store 16)
+  G_STORE %val1:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
   ; val2 should be <%6, %8>
-  G_STORE %val2:_(<2 x s64>), %2:_(p0) :: (store 16)
+  G_STORE %val2:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
   RET_ReallyLR
 
 ...
@@ -171,8 +171,8 @@ body:             |
     ; CHECK: %v2s64_val:_(<2 x s64>) = G_BUILD_VECTOR [[COPY5]](s64), [[COPY6]](s64)
     ; CHECK: %v2s64_val2:_(<2 x s64>) = G_BUILD_VECTOR [[COPY6]](s64), [[COPY8]](s64)
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (s128))
-    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (s128))
+    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
+    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
     ; CHECK: RET_ReallyLR
   %0:_(s64)  = COPY $x0
   %1:_(s64)  = COPY $x1
@@ -191,9 +191,9 @@ body:             |
   %val1:_(<2 x s64>), %val2:_(<2 x s64>), %val3:_(<2 x s64>), %val4:_(<2 x s64>) = G_UNMERGE_VALUES %insert:_(<8 x s64>)
 
   ; val3 should be <%5, %6>
-  G_STORE %val3:_(<2 x s64>), %2:_(p0) :: (store 16)
+  G_STORE %val3:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
   ; val4 should be <%6, %8>
-  G_STORE %val4:_(<2 x s64>), %2:_(p0) :: (store 16)
+  G_STORE %val4:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
   RET_ReallyLR
 
 ...
@@ -218,8 +218,8 @@ body:             |
     ; CHECK: %v2s64_val:_(<2 x s64>) = G_BUILD_VECTOR [[COPY5]](s64), [[COPY6]](s64)
     ; CHECK: %v2s64_val2:_(<2 x s64>) = G_BUILD_VECTOR [[COPY6]](s64), [[COPY8]](s64)
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (s128))
-    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (s128))
+    ; CHECK: G_STORE %v2s64_val(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
+    ; CHECK: G_STORE %v2s64_val2(<2 x s64>), [[COPY2]](p0) :: (store (<2 x s64>))
     ; CHECK: RET_ReallyLR
   %0:_(s64)  = COPY $x0
   %1:_(s64)  = COPY $x1
@@ -240,9 +240,9 @@ body:             |
   %val1:_(<2 x s64>), %val2:_(<2 x s64>), %val3:_(<2 x s64>), %val4:_(<2 x s64>) = G_UNMERGE_VALUES %insert:_(<8 x s64>)
 
   ; val3 should be <%5, %6>
-  G_STORE %val3:_(<2 x s64>), %2:_(p0) :: (store 16)
+  G_STORE %val3:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
   ; val4 should be <%6, %8>
-  G_STORE %val4:_(<2 x s64>), %2:_(p0) :: (store 16)
+  G_STORE %val4:_(<2 x s64>), %2:_(p0) :: (store (<2 x s64>))
   RET_ReallyLR
 
 ...
