@@ -11,7 +11,7 @@
 #}
 #Build as : clang -gmlt -fdebug-info-for-profiling -O2 discrim.c -o discrim
 
-RUN: llvm-symbolizer -verbose -print-address -obj=%p/Inputs/discrim < %p/Inputs/discrim.inp | FileCheck %s
+RUN: llvm-symbolizer --verbose --print-address --obj=%p/Inputs/discrim < %p/Inputs/discrim.inp | FileCheck %s
 
 #CHECK: some text
 
