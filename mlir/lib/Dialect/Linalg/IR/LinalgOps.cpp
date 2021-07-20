@@ -779,9 +779,8 @@ struct FoldInitTensorWithTensorReshapeOp
     if (!reshapeOp.src().template getDefiningOp<InitTensorOp>())
       return failure();
     Location loc = reshapeOp.getLoc();
-    SmallVector<SmallVector<Value>, 4> resultShapes;
-    if (failed(reshapeOp.reifyReturnTypeShapesPerResultDim(rewriter,
-                                                           resultShapes)) ||
+    ReifiedRankedShapedTypeDims resultShapes;
+    if (failed(reshapeOp.reifyResultShapes(rewriter, resultShapes)) ||
         !llvm::hasSingleElement(resultShapes))
       return failure();
     Value initTensor = rewriter.create<InitTensorOp>(
@@ -825,9 +824,8 @@ void InitTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ReplaceStaticShapeDims>(context);
 }
 
-LogicalResult InitTensorOp::reifyReturnTypeShapesPerResultDim(
-    OpBuilder &builder,
-    SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
+LogicalResult InitTensorOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   auto shapes = llvm::to_vector<4>(llvm::map_range(
       llvm::seq<int64_t>(0, getType().getRank()), [&](int64_t dim) -> Value {
         if (isDynamicSize(dim))
@@ -1003,8 +1001,8 @@ PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
                                         builder);
 }
 
-LogicalResult PadTensorOp::reifyReturnTypeShapesPerResultDim(
-    OpBuilder &b, SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
+LogicalResult PadTensorOp::reifyResultShapes(
+    OpBuilder &b, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   Location loc = getLoc();
   auto lowPad = getMixedLowPad();
   auto highPad = getMixedHighPad();
@@ -1429,8 +1427,8 @@ void TensorCollapseShapeOp::getCanonicalizationPatterns(
            FoldReshapeWithConstant<TensorCollapseShapeOp>>(context);
 }
 
-LogicalResult TensorExpandShapeOp::reifyReturnTypeShapesPerResultDim(
-    OpBuilder &b, SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
+LogicalResult TensorExpandShapeOp::reifyResultShapes(
+    OpBuilder &b, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   auto resultShape =
       getAsValues(b, getLoc(),
                   getReshapeOutputShapeFromInputShape(
@@ -1440,8 +1438,8 @@ LogicalResult TensorExpandShapeOp::reifyReturnTypeShapesPerResultDim(
   return success();
 }
 
-LogicalResult TensorCollapseShapeOp::reifyReturnTypeShapesPerResultDim(
-    OpBuilder &b, SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
+LogicalResult TensorCollapseShapeOp::reifyResultShapes(
+    OpBuilder &b, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   auto resultShape =
       getAsValues(b, getLoc(),
                   getReshapeOutputShapeFromInputShape(
