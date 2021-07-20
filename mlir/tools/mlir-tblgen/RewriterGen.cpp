@@ -454,7 +454,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
         op.arg_begin(), op.arg_begin() + argIndex,
         [](const Argument &arg) { return arg.is<NamedAttribute *>(); });
 
-    auto res = symbolInfoMap.findBoundSymbol(name, op, argIndex);
+    auto res = symbolInfoMap.findBoundSymbol(name, tree, op, argIndex);
     os << formatv("{0} = {1}.getODSOperands({2});\n",
                   res->second.getVarName(name), opName,
                   argIndex - numPrevAttrs);
