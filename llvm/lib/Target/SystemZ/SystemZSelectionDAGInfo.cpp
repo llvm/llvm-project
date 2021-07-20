@@ -45,6 +45,17 @@ static SDValue emitMemMem(SelectionDAG &DAG, const SDLoc &DL, unsigned Sequence,
                      DAG.getConstant(Size, DL, PtrVT));
 }
 
+static SDValue emitMemMemVarLen(SelectionDAG &DAG, const SDLoc &DL,
+                                unsigned Loop, SDValue Chain, SDValue Dst,
+                                SDValue Src, SDValue Size) {
+  SDValue LenMinus1 = DAG.getNode(ISD::ADD, DL, MVT::i64,
+                                  DAG.getZExtOrTrunc(Size, DL, MVT::i64),
+                                  DAG.getConstant(-1, DL, MVT::i64));
+  SDValue TripC = DAG.getNode(ISD::SRL, DL, MVT::i64, LenMinus1,
+                              DAG.getConstant(8, DL, MVT::i64));
+  return DAG.getNode(Loop, DL, MVT::Other, Chain, Dst, Src, LenMinus1, TripC);
+}
+
 SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
@@ -55,7 +66,8 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size))
     return emitMemMem(DAG, DL, SystemZISD::MVC, SystemZISD::MVC_LOOP,
                       Chain, Dst, Src, CSize->getZExtValue());
-  return SDValue();
+
+  return emitMemMemVarLen(DAG, DL, SystemZISD::MVC_LOOP, Chain, Dst, Src, Size);
 }
 
 // Handle a memset of 1, 2, 4 or 8 bytes with the operands given by
@@ -140,16 +152,10 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
   }
 
   // Variable length
-  if (CByte && CByte->getZExtValue() == 0) {
+  if (CByte && CByte->getZExtValue() == 0)
     // Handle the special case of a variable length memset of 0 with XC.
-    SDValue LenMinus1 = DAG.getNode(ISD::ADD, DL, MVT::i64,
-                                    DAG.getZExtOrTrunc(Size, DL, MVT::i64),
-                                    DAG.getConstant(-1, DL, MVT::i64));
-    SDValue TripC = DAG.getNode(ISD::SRL, DL, MVT::i64, LenMinus1,
-                                DAG.getConstant(8, DL, MVT::i64));
-    return DAG.getNode(SystemZISD::XC_LOOP, DL, MVT::Other, Chain, Dst, Dst,
-                       LenMinus1, TripC);
-  }
+    return emitMemMemVarLen(DAG, DL, SystemZISD::XC_LOOP, Chain, Dst, Dst, Size);
+
   return SDValue();
 }
 
