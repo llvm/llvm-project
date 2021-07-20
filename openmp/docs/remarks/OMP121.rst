@@ -1,7 +1,7 @@
+.. _omp121:
+
 Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume(\"ompx_spmd_amenable\")))` to the called function to override. [OMP121]
 ===================================================================================================================================================================
-
-.. _omp121:
 
 This analysis remarks indicates that a potential side-effect that cannot be
 guarded prevents the target region from executing in SPMD-mode. SPMD-mode

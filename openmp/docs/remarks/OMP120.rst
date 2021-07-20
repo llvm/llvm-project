@@ -1,7 +1,7 @@
+.. _omp120:
+
 Transformed generic-mode kernel to SPMD-mode [OMP120]
 =====================================================
-
-.. _omp120:
 
 This optimization remark indicates that the execution strategy for the OpenMP
 target offloading kernel was changed. Generic-mode kernels execute by using a
