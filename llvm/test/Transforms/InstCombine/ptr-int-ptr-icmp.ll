@@ -8,9 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i1 @func(i8* %X, i8* %Y) {
 ; CHECK-LABEL: @func(
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint i8* [[X:%.*]] to i64
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[I]] to i8*
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[P]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i = ptrtoint i8* %X to i64
@@ -21,9 +19,8 @@ define i1 @func(i8* %X, i8* %Y) {
 
 define i1 @func_pointer_different_types(i16* %X, i8* %Y) {
 ; CHECK-LABEL: @func_pointer_different_types(
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint i16* [[X:%.*]] to i64
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[I]] to i8*
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[P]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[X:%.*]] to i8*
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i = ptrtoint i16* %X to i64
@@ -37,9 +34,8 @@ declare i8* @gen8ptr()
 define i1 @func_commutative(i16* %X) {
 ; CHECK-LABEL: @func_commutative(
 ; CHECK-NEXT:    [[Y:%.*]] = call i8* @gen8ptr()
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint i16* [[X:%.*]] to i64
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[I]] to i8*
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[Y]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[X:%.*]] to i8*
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %Y = call i8* @gen8ptr() ; thwart complexity-based canonicalization
