@@ -794,6 +794,16 @@ define i1 @ugt_wrong_offset(i8 %a) {
   ret i1 %ov
 }
 
+define i1 @ugt_offset_nuw(i8 %a) {
+; CHECK-LABEL: @ugt_offset_nuw(
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i8 [[A:%.*]], -124
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add nuw i8 %a, 124
+  %ov = icmp ugt i8 %t, 251
+  ret i1 %ov
+}
+
 define i1 @ult_offset(i8 %a) {
 ; CHECK-LABEL: @ult_offset(
 ; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[A:%.*]], 5
@@ -837,6 +847,16 @@ define i1 @ult_wrong_offset(i8 %a) {
 ;
   %t = add i8 %a, 250
   %ov = icmp ult i8 %t, 123
+  ret i1 %ov
+}
+
+define i1 @ult_offset_nuw(i8 %a) {
+; CHECK-LABEL: @ult_offset_nuw(
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[A:%.*]], -43
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add nuw i8 %a, 42
+  %ov = icmp ult i8 %t, 170
   ret i1 %ov
 }
 
@@ -886,6 +906,16 @@ define i1 @sgt_wrong_offset(i8 %a) {
   ret i1 %ov
 }
 
+define i1 @sgt_offset_nsw(i8 %a, i8 %c) {
+; CHECK-LABEL: @sgt_offset_nsw(
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[A:%.*]], 86
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add nsw i8 %a, 42
+  %ov = icmp sgt i8 %t, 41
+  ret i1 %ov
+}
+
 define i1 @slt_offset(i8 %a) {
 ; CHECK-LABEL: @slt_offset(
 ; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i8 [[A:%.*]], -123
@@ -929,5 +959,15 @@ define i1 @slt_wrong_offset(i8 %a) {
 ;
   %t = add i8 %a, -6
   %ov = icmp slt i8 %t, -7
+  ret i1 %ov
+}
+
+define i1 @slt_offset_nsw(i8 %a, i8 %c) {
+; CHECK-LABEL: @slt_offset_nsw(
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i8 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add nsw i8 %a, 42
+  %ov = icmp slt i8 %t, 42
   ret i1 %ov
 }
