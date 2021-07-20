@@ -276,6 +276,18 @@ library name in the symbolized stack trace of the leak report. See
 <https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer#suppressions>`_
 for more details.
 
+Code generation control
+=======================
+
+Instrumentation code outlining
+------------------------------
+
+By default AddressSanitizer inlines the instumentation code to improve the
+run-time performance, which leads to increased binary size. Using the
+(clang flag ``-fsanitize-address-outline-instrumentation` default: ``false``)
+flag forces all code instumentation to be outlined, which reduces the size
+of the binary, but also reduces the run-time performace.
+
 Limitations
 ===========
 
