@@ -1112,92 +1112,6 @@ static void print(OpAsmPrinter &p, linalg::TensorCollapseShapeOp op) {
   ::mlir::printReshapeOp<linalg::TensorCollapseShapeOp>(p, op);
 }
 
-/// Detect whether memref dims [dim, dim + extent) can be reshaped without
-/// copies.
-static bool isReshapableDimBand(unsigned dim, unsigned extent,
-                                ArrayRef<int64_t> sizes,
-                                ArrayRef<AffineExpr> strides) {
-  assert(sizes.size() == strides.size() && "mismatched ranks");
-  // off by 1 indexing to avoid out of bounds
-  //                       V
-  for (auto idx = dim, e = dim + extent; idx + 1 < e; ++idx) {
-    // Only bands of static shapes are reshapable. This is due to the fact that
-    // there is no relation between dynamic sizes and dynamic strides: we do not
-    // have enough information to know whether a "-1" size corresponds to the
-    // proper symbol in the AffineExpr of a stride.
-    if (ShapedType::isDynamic(sizes[dim + 1]))
-      return false;
-    // TODO: Refine this by passing the proper nDims and nSymbols so we can
-    // simplify on the fly and catch more reshapable cases.
-    if (strides[idx] != strides[idx + 1] * sizes[idx + 1])
-      return false;
-  }
-  return true;
-}
-
-/// Compute the MemRefType obtained by applying the `reassociation` (which is
-/// expected to be valid) to `type`.
-/// If `type` is Contiguous MemRefType, this always produce a contiguous
-/// MemRefType.
-static MemRefType
-computeReshapeCollapsedType(MemRefType type,
-                            ArrayRef<AffineMap> reassociation) {
-  auto sizes = type.getShape();
-  AffineExpr offset;
-  SmallVector<AffineExpr, 4> strides;
-  auto status = getStridesAndOffset(type, strides, offset);
-  (void)status;
-  assert(succeeded(status) && "expected strided memref");
-
-  SmallVector<int64_t, 4> newSizes;
-  newSizes.reserve(reassociation.size());
-  SmallVector<AffineExpr, 4> newStrides;
-  newStrides.reserve(reassociation.size());
-
-  // Use the fact that reassociation is valid to simplify the logic: only use
-  // each map's rank.
-  assert(isReassociationValid(reassociation) && "invalid reassociation");
-  unsigned currentDim = 0;
-  for (AffineMap m : reassociation) {
-    unsigned dim = m.getNumResults();
-    int64_t size = 1;
-    AffineExpr stride = strides[currentDim + dim - 1];
-    if (!isReshapableDimBand(currentDim, dim, sizes, strides)) {
-      size = ShapedType::kDynamicSize;
-      stride = AffineExpr();
-    } else {
-      for (unsigned d = 0; d < dim; ++d)
-        size *= sizes[currentDim + d];
-    }
-    newSizes.push_back(size);
-    newStrides.push_back(stride);
-    currentDim += dim;
-  }
-
-  // Early-exit: if `type` is contiguous, the result must be contiguous.
-  if (canonicalizeStridedLayout(type).getAffineMaps().empty())
-    return MemRefType::Builder(type).setShape(newSizes).setAffineMaps({});
-
-  // Convert back to int64_t because we don't have enough information to create
-  // new strided layouts from AffineExpr only. This corresponds to a case where
-  // copies may be necessary.
-  int64_t intOffset = ShapedType::kDynamicStrideOrOffset;
-  if (auto o = offset.dyn_cast<AffineConstantExpr>())
-    intOffset = o.getValue();
-  SmallVector<int64_t, 4> intStrides;
-  intStrides.reserve(strides.size());
-  for (auto stride : newStrides) {
-    if (auto cst = stride.dyn_cast_or_null<AffineConstantExpr>())
-      intStrides.push_back(cst.getValue());
-    else
-      intStrides.push_back(ShapedType::kDynamicStrideOrOffset);
-  }
-  auto layout =
-      makeStridedLinearLayoutMap(intStrides, intOffset, type.getContext());
-  return canonicalizeStridedLayout(
-      MemRefType::Builder(type).setShape(newSizes).setAffineMaps({layout}));
-}
-
 template <typename AffineExprTy>
 unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
   unsigned pos = 0;
@@ -1211,48 +1125,6 @@ unsigned getMaxPosOfType(ArrayRef<ReassociationExprs> exprArrays) {
   }
   return pos;
 }
-
-static SmallVector<AffineMap, 4>
-getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation) {
-  unsigned maxDim = getMaxPosOfType<AffineDimExpr>(reassociation);
-  assert(getMaxPosOfType<AffineSymbolExpr>(reassociation) == 0 &&
-         "Expected symbol-less expressions");
-  SmallVector<AffineMap, 4> maps;
-  maps.reserve(reassociation.size());
-  for (const auto &exprs : reassociation) {
-    assert(!exprs.empty());
-    maps.push_back(AffineMap::get(maxDim + 1, 0, exprs, exprs[0].getContext()));
-  }
-  return maps;
-}
-
-static SmallVector<ReassociationIndices, 2> convertReassociationMapsToIndices(
-    OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs) {
-  SmallVector<ReassociationIndices, 2> reassociationIndices;
-  for (const auto &exprs : reassociationExprs) {
-    ReassociationIndices indices;
-    indices.reserve(exprs.size());
-    for (const auto &expr : exprs)
-      indices.push_back(expr.cast<AffineDimExpr>().getPosition());
-    reassociationIndices.push_back(indices);
-  }
-  return reassociationIndices;
-}
-
-static SmallVector<SmallVector<AffineExpr, 2>, 2>
-convertReassociationIndicesToExprs(
-    OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices) {
-  SmallVector<SmallVector<AffineExpr, 2>, 2> reassociationMaps;
-  for (const auto &indices : reassociationIndices) {
-    SmallVector<AffineExpr, 2> reassociationMap;
-    reassociationMap.reserve(indices.size());
-    for (int64_t index : indices)
-      reassociationMap.push_back(b.getAffineDimExpr(index));
-    reassociationMaps.push_back(std::move(reassociationMap));
-  }
-  return reassociationMaps;
-}
-
 
 SmallVector<AffineMap, 4> TensorCollapseShapeOp::getReassociationMaps() {
   return getSymbolLessAffineMaps(getReassociationExprs());
@@ -1388,17 +1260,6 @@ getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                    builder, loc, src, dstStaticShape, reassocation)
              : getCollapsedOutputShapeFromInputShape(
                    builder, loc, src, dstStaticShape, reassocation);
-}
-
-static ArrayAttr
-getReassociationIndicesAttribute(OpBuilder &b,
-                                 ArrayRef<ReassociationIndices> reassociation) {
-  SmallVector<Attribute, 4> reassociationAttr =
-      llvm::to_vector<4>(llvm::map_range(
-          reassociation, [&](ReassociationIndices indices) -> Attribute {
-            return b.getI64ArrayAttr(indices).cast<Attribute>();
-          }));
-  return b.getArrayAttr(reassociationAttr);
 }
 
 //===----------------------------------------------------------------------===//
