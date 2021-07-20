@@ -1459,6 +1459,7 @@ cc_library(
         ":SCFDialect",
         ":SCFPassIncGen",
         ":StandardOps",
+        ":Support",
         ":Transforms",
         "//llvm:Support",
     ],
