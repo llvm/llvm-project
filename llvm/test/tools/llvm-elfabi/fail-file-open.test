@@ -1,4 +1,4 @@
-# RUN: not llvm-elfabi %s.NotAFileInTestingDir --emit-tbe=%t 2>&1 | FileCheck %s
+# RUN: not llvm-elfabi --output-format=TBE --output=%t.tbe %s.NotAFileInTestingDir 2>&1 | FileCheck %s
 
 This file will not be read. An invalid file path is fed to llvm-elfabi.
 

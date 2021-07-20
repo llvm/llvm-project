@@ -30,33 +30,50 @@ using namespace llvm;
 using namespace llvm::elfabi;
 
 // Command line flags:
-cl::opt<FileFormat> InputFileFormat(
-    cl::desc("Force input file format:"),
-    cl::values(clEnumValN(FileFormat::TBE, "tbe",
-                          "Read `input` as text-based ELF stub"),
-               clEnumValN(FileFormat::ELF, "elf",
-                          "Read `input` as ELF binary")));
 cl::opt<std::string> InputFilePath(cl::Positional, cl::desc("input"),
                                    cl::Required);
-cl::opt<std::string>
-    EmitTBE("emit-tbe",
-            cl::desc("Emit a text-based ELF stub (.tbe) from the input file"),
-            cl::value_desc("path"));
+cl::opt<FileFormat> InputFormat(
+    "input-format", cl::desc("Specify the input file format"),
+    cl::values(clEnumValN(FileFormat::TBE, "TBE", "Text based ELF stub file"),
+               clEnumValN(FileFormat::ELF, "ELF", "ELF object file")));
+cl::opt<FileFormat> OutputFormat(
+    "output-format", cl::desc("Specify the output file format"),
+    cl::values(clEnumValN(FileFormat::TBE, "TBE", "Text based ELF stub file"),
+               clEnumValN(FileFormat::ELF, "ELF", "ELF stub file")),
+    cl::Required);
+cl::opt<std::string> OptArch("arch",
+                             cl::desc("Specify the architecture, e.g. x86_64"));
+cl::opt<ELFBitWidthType> OptBitWidth(
+    "bitwidth", cl::desc("Specify the bit width"),
+    cl::values(clEnumValN(ELFBitWidthType::ELF32, "32", "32 bits"),
+               clEnumValN(ELFBitWidthType::ELF64, "64", "64 bits")));
+cl::opt<ELFEndiannessType> OptEndianness(
+    "endianness", cl::desc("Specify the endianness"),
+    cl::values(clEnumValN(ELFEndiannessType::Little, "little", "Little Endian"),
+               clEnumValN(ELFEndiannessType::Big, "big", "Big Endian")));
+cl::opt<std::string> OptTargetTriple(
+    "target", cl::desc("Specify the target triple, e.g. x86_64-linux-gnu"));
+cl::opt<std::string> OptTargetTripleHint(
+    "hint-ifs-target",
+    cl::desc("When --output-format is 'TBE', this flag will hint the expected "
+             "target triple for IFS output"));
+cl::opt<bool> StripIFSArch(
+    "strip-ifs-arch",
+    cl::desc("Strip target architecture information away from IFS output"));
+cl::opt<bool> StripIFSBitWidth(
+    "strip-ifs-bitwidth",
+    cl::desc("Strip target bit width information away from IFS output"));
+cl::opt<bool> StripIFSEndiannessWidth(
+    "strip-ifs-endianness",
+    cl::desc("Strip target endianness information away from IFS output"));
+cl::opt<bool> StripIFSTarget(
+    "strip-ifs-target",
+    cl::desc("Strip all target information away from IFS output"));
 cl::opt<std::string>
     SOName("soname",
            cl::desc("Manually set the DT_SONAME entry of any emitted files"),
            cl::value_desc("name"));
-cl::opt<ELFTarget> BinaryOutputTarget(
-    "output-target", cl::desc("Create a binary stub for the specified target"),
-    cl::values(clEnumValN(ELFTarget::ELF32LE, "elf32-little",
-                          "32-bit little-endian ELF stub"),
-               clEnumValN(ELFTarget::ELF32BE, "elf32-big",
-                          "32-bit big-endian ELF stub"),
-               clEnumValN(ELFTarget::ELF64LE, "elf64-little",
-                          "64-bit little-endian ELF stub"),
-               clEnumValN(ELFTarget::ELF64BE, "elf64-big",
-                          "64-bit big-endian ELF stub")));
-cl::opt<std::string> BinaryOutputFilePath(cl::Positional, cl::desc("output"));
+cl::opt<std::string> OutputFilePath("output", cl::desc("Output file"));
 cl::opt<bool> WriteIfChanged(
     "write-if-changed",
     cl::desc("Write the output file only if it is new or has changed."));
@@ -106,8 +123,7 @@ static Expected<std::unique_ptr<ELFStub>> readInputFile(StringRef FilePath) {
   ErrorCollector EC(/*UseFatalErrors=*/false);
 
   // First try to read as a binary (fails fast if not binary).
-  if (InputFileFormat.getNumOccurrences() == 0 ||
-      InputFileFormat == FileFormat::ELF) {
+  if (InputFormat.getNumOccurrences() == 0 || InputFormat == FileFormat::ELF) {
     Expected<std::unique_ptr<ELFStub>> StubFromELF =
         readELFFile(FileReadBuffer->getMemBufferRef());
     if (StubFromELF) {
@@ -117,8 +133,7 @@ static Expected<std::unique_ptr<ELFStub>> readInputFile(StringRef FilePath) {
   }
 
   // Fall back to reading as a tbe.
-  if (InputFileFormat.getNumOccurrences() == 0 ||
-      InputFileFormat == FileFormat::TBE) {
+  if (InputFormat.getNumOccurrences() == 0 || InputFormat == FileFormat::TBE) {
     Expected<std::unique_ptr<ELFStub>> StubFromTBE =
         readTBEFromBuffer(FileReadBuffer->getBuffer());
     if (StubFromTBE) {
@@ -145,7 +160,6 @@ static void fatalError(Error Err) {
 int main(int argc, char *argv[]) {
   // Parse arguments.
   cl::ParseCommandLineOptions(argc, argv);
-
   Expected<std::unique_ptr<ELFStub>> StubOrErr = readInputFile(InputFilePath);
   if (!StubOrErr)
     fatalError(StubOrErr.takeError());
@@ -155,22 +169,65 @@ int main(int argc, char *argv[]) {
   // Change SoName before emitting stubs.
   if (SOName.getNumOccurrences() == 1)
     TargetStub->SoName = SOName;
-
-  if (EmitTBE.getNumOccurrences() == 1) {
+  Optional<ELFArch> OverrideArch;
+  Optional<ELFEndiannessType> OverrideEndianness;
+  Optional<ELFBitWidthType> OverrideBitWidth;
+  Optional<std::string> OverrideTriple;
+  if (OptArch.getNumOccurrences() == 1) {
+    OverrideArch = ELF::convertArchNameToEMachine(OptArch.getValue());
+  }
+  if (OptEndianness.getNumOccurrences() == 1)
+    OverrideEndianness = OptEndianness.getValue();
+  if (OptBitWidth.getNumOccurrences() == 1)
+    OverrideBitWidth = OptBitWidth.getValue();
+  if (OptTargetTriple.getNumOccurrences() == 1)
+    OverrideTriple = OptTargetTriple.getValue();
+  Error OverrideError =
+      overrideTBETarget(*TargetStub, OverrideArch, OverrideEndianness,
+                        OverrideBitWidth, OverrideTriple);
+  if (OverrideError)
+    fatalError(std::move(OverrideError));
+  switch (OutputFormat.getValue()) {
+  case FileFormat::TBE: {
     TargetStub->TbeVersion = TBEVersionCurrent;
-    Error TBEWriteError = writeTBE(EmitTBE, *TargetStub);
+    if (InputFormat.getValue() == FileFormat::ELF &&
+        OptTargetTripleHint.getNumOccurrences() == 1) {
+      std::error_code HintEC(1, std::generic_category());
+      IFSTarget HintTarget = parseTriple(OptTargetTripleHint);
+      if (TargetStub->Target.Arch.getValue() != HintTarget.Arch.getValue()) {
+        fatalError(make_error<StringError>(
+            "Triple hint does not match the actual architecture", HintEC));
+      }
+      if (TargetStub->Target.Endianness.getValue() !=
+          HintTarget.Endianness.getValue()) {
+        fatalError(make_error<StringError>(
+            "Triple hint does not match the actual endianness", HintEC));
+      }
+      if (TargetStub->Target.BitWidth.getValue() !=
+          HintTarget.BitWidth.getValue()) {
+        fatalError(make_error<StringError>(
+            "Triple hint does not match the actual bit width", HintEC));
+      }
+      stripTBETarget(*TargetStub, true, false, false, false);
+      TargetStub->Target.Triple = OptTargetTripleHint.getValue();
+    } else {
+      stripTBETarget(*TargetStub, StripIFSTarget, StripIFSArch,
+                     StripIFSEndiannessWidth, StripIFSBitWidth);
+    }
+    Error TBEWriteError = writeTBE(OutputFilePath.getValue(), *TargetStub);
     if (TBEWriteError)
       fatalError(std::move(TBEWriteError));
+    break;
   }
-
-  // Write out binary ELF stub.
-  if (BinaryOutputFilePath.getNumOccurrences() == 1) {
-    if (BinaryOutputTarget.getNumOccurrences() == 0)
-      fatalError(createStringError(errc::not_supported,
-                                   "no binary output target specified."));
-    Error BinaryWriteError = writeBinaryStub(
-        BinaryOutputFilePath, *TargetStub, BinaryOutputTarget, WriteIfChanged);
+  case FileFormat::ELF: {
+    Error TargetError = validateTBETarget(*TargetStub, true);
+    if (TargetError)
+      fatalError(std::move(TargetError));
+    Error BinaryWriteError =
+        writeBinaryStub(OutputFilePath, *TargetStub, WriteIfChanged);
     if (BinaryWriteError)
       fatalError(std::move(BinaryWriteError));
+    break;
+  }
   }
 }

@@ -34,19 +34,21 @@ void compareByLine(StringRef LHS, StringRef RHS) {
 }
 
 TEST(ElfYamlTextAPI, YAMLReadableTBE) {
-  const char Data[] = "--- !tapi-tbe\n"
+  const char Data[] = "--- !ifs-v1\n"
                       "TbeVersion: 1.0\n"
-                      "Arch: x86_64\n"
+                      "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: "
+                      "little, BitWidth: 64 }\n"
                       "NeededLibs: [libc.so, libfoo.so, libbar.so]\n"
                       "Symbols:\n"
-                      "  foo: { Type: Func, Undefined: true }\n"
+                      "  - { Name: foo, Type: Func, Undefined: true }\n"
                       "...\n";
   Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
   std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
   EXPECT_FALSE(Stub->SoName.hasValue());
-  EXPECT_EQ(Stub->Arch, (uint16_t)llvm::ELF::EM_X86_64);
+  EXPECT_TRUE(Stub->Target.Arch.hasValue());
+  EXPECT_EQ(Stub->Target.Arch.getValue(), (uint16_t)llvm::ELF::EM_X86_64);
   EXPECT_EQ(Stub->NeededLibs.size(), 3u);
   EXPECT_STREQ(Stub->NeededLibs[0].c_str(), "libc.so");
   EXPECT_STREQ(Stub->NeededLibs[1].c_str(), "libfoo.so");
@@ -54,18 +56,20 @@ TEST(ElfYamlTextAPI, YAMLReadableTBE) {
 }
 
 TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
-  const char Data[] = "--- !tapi-tbe\n"
-                      "TbeVersion: 1.0\n"
-                      "SoName: test.so\n"
-                      "Arch: x86_64\n"
-                      "Symbols:\n"
-                      "  bar: { Type: Object, Size: 42 }\n"
-                      "  baz: { Type: TLS, Size: 3 }\n"
-                      "  foo: { Type: Func, Warning: \"Deprecated!\" }\n"
-                      "  nor: { Type: NoType, Undefined: true }\n"
-                      "  not: { Type: File, Undefined: true, Size: 111, "
-                      "Weak: true, Warning: \'All fields populated!\' }\n"
-                      "...\n";
+  const char Data[] =
+      "--- !ifs-v1\n"
+      "TbeVersion: 1.0\n"
+      "SoName: test.so\n"
+      "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, "
+      "BitWidth: 64 }\n"
+      "Symbols:\n"
+      "  - { Name: bar, Type: Object, Size: 42 }\n"
+      "  - { Name: baz, Type: TLS, Size: 3 }\n"
+      "  - { Name: foo, Type: Func, Warning: \"Deprecated!\" }\n"
+      "  - { Name: nor, Type: NoType, Undefined: true }\n"
+      "  - { Name: not, Type: File, Undefined: true, Size: 111, "
+      "Weak: true, Warning: \'All fields populated!\' }\n"
+      "...\n";
   Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
   std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
@@ -119,11 +123,12 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
 }
 
 TEST(ElfYamlTextAPI, YAMLReadsNoTBESyms) {
-  const char Data[] = "--- !tapi-tbe\n"
+  const char Data[] = "--- !ifs-v1\n"
                       "TbeVersion: 1.0\n"
                       "SoName: test.so\n"
-                      "Arch: x86_64\n"
-                      "Symbols: {}\n"
+                      "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: "
+                      "little, BitWidth: 64 }\n"
+                      "Symbols: []\n"
                       "...\n";
   Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
@@ -137,7 +142,8 @@ TEST(ElfYamlTextAPI, YAMLUnreadableTBE) {
   const char Data[] = "--- !tapi-tbz\n"
                       "TbeVersion: z.3\n"
                       "SoName: test.so\n"
-                      "Arch: x86_64\n"
+                      "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: "
+                      "little, BitWidth: 64 }\n"
                       "Symbols:\n"
                       "  foo: { Type: Func, Undefined: true }\n";
   Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
@@ -145,11 +151,12 @@ TEST(ElfYamlTextAPI, YAMLUnreadableTBE) {
 }
 
 TEST(ElfYamlTextAPI, YAMLUnsupportedVersion) {
-  const char Data[] = "--- !tapi-tbe\n"
+  const char Data[] = "--- !ifs-v1\n"
                       "TbeVersion: 9.9.9\n"
                       "SoName: test.so\n"
-                      "Arch: x86_64\n"
-                      "Symbols: {}\n"
+                      "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: "
+                      "little, BitWidth: 64 }\n"
+                      "Symbols: []\n"
                       "...\n";
   Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
   std::string ErrorMessage = toString(StubOrErr.takeError());
@@ -158,18 +165,28 @@ TEST(ElfYamlTextAPI, YAMLUnsupportedVersion) {
 
 TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   const char Expected[] =
-      "--- !tapi-tbe\n"
+      "--- !ifs-v1\n"
       "TbeVersion:      1.0\n"
-      "Arch:            AArch64\n"
+      "Target:          { ObjectFormat: ELF, Arch: AArch64, Endianness: "
+      "little, BitWidth: 64 }\n"
       "Symbols:\n"
-      "  bar:             { Type: Func, Weak: true }\n"
-      "  foo:             { Type: NoType, Size: 99, Warning: Does nothing }\n"
-      "  nor:             { Type: Func, Undefined: true }\n"
-      "  not:             { Type: Unknown, Size: 12345678901234 }\n"
+      "  - { Name: bar, Type: Func, Weak: true }\n"
+      "  - { Name: foo, Type: NoType, Size: 99, Warning: Does nothing }\n"
+      "  - { Name: nor, Type: Func, Undefined: true }\n"
+      "  - { Name: not, Type: Unknown, Size: 12345678901234 }\n"
       "...\n";
   ELFStub Stub;
   Stub.TbeVersion = VersionTuple(1, 0);
-  Stub.Arch = ELF::EM_AARCH64;
+  Stub.Target.Arch = ELF::EM_AARCH64;
+  Stub.Target.BitWidth = ELFBitWidthType::ELF64;
+  Stub.Target.Endianness = ELFEndiannessType::Little;
+  Stub.Target.ObjectFormat = "ELF";
+
+  ELFSymbol SymBar("bar");
+  SymBar.Size = 128u;
+  SymBar.Type = ELFSymbolType::Func;
+  SymBar.Undefined = false;
+  SymBar.Weak = true;
 
   ELFSymbol SymFoo("foo");
   SymFoo.Size = 99u;
@@ -177,12 +194,6 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   SymFoo.Undefined = false;
   SymFoo.Weak = false;
   SymFoo.Warning = "Does nothing";
-
-  ELFSymbol SymBar("bar");
-  SymBar.Size = 128u;
-  SymBar.Type = ELFSymbolType::Func;
-  SymBar.Undefined = false;
-  SymBar.Weak = true;
 
   ELFSymbol SymNor("nor");
   SymNor.Size = 1234u;
@@ -196,11 +207,11 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   SymNot.Undefined = false;
   SymNot.Weak = false;
 
-  // Deliberately not in order to check that result is sorted.
-  Stub.Symbols.insert(SymNot);
-  Stub.Symbols.insert(SymBar);
-  Stub.Symbols.insert(SymFoo);
-  Stub.Symbols.insert(SymNor);
+  // Symbol order is preserved instead of being sorted.
+  Stub.Symbols.push_back(SymBar);
+  Stub.Symbols.push_back(SymFoo);
+  Stub.Symbols.push_back(SymNor);
+  Stub.Symbols.push_back(SymNot);
 
   // Ensure move constructor works as expected.
   ELFStub Moved = std::move(Stub);
@@ -213,20 +224,24 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
 }
 
 TEST(ElfYamlTextAPI, YAMLWritesNoTBESyms) {
-  const char Expected[] = "--- !tapi-tbe\n"
+  const char Expected[] = "--- !ifs-v1\n"
                           "TbeVersion:      1.0\n"
                           "SoName:          nosyms.so\n"
-                          "Arch:            x86_64\n"
+                          "Target:          { ObjectFormat: ELF, Arch: x86_64, "
+                          "Endianness: little, BitWidth: 64 }\n"
                           "NeededLibs:\n"
                           "  - libc.so\n"
                           "  - libfoo.so\n"
                           "  - libbar.so\n"
-                          "Symbols:         {}\n"
+                          "Symbols:         []\n"
                           "...\n";
   ELFStub Stub;
   Stub.TbeVersion = VersionTuple(1, 0);
   Stub.SoName = "nosyms.so";
-  Stub.Arch = ELF::EM_X86_64;
+  Stub.Target.Arch = ELF::EM_X86_64;
+  Stub.Target.BitWidth = ELFBitWidthType::ELF64;
+  Stub.Target.Endianness = ELFEndiannessType::Little;
+  Stub.Target.ObjectFormat = "ELF";
   Stub.NeededLibs.push_back("libc.so");
   Stub.NeededLibs.push_back("libfoo.so");
   Stub.NeededLibs.push_back("libbar.so");

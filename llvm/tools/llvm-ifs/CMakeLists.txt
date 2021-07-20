@@ -1,5 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  InterfaceStub
+  InterfaceStub  
   Object
   Support
   TextAPI

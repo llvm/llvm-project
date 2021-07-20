@@ -1,14 +1,14 @@
 ## Test writing stub elf when symbol table contains no non-local symbol.
 
-# RUN: llvm-elfabi %s --output-target=elf64-little %t
+# RUN: llvm-elfabi --output-format=ELF --output=%t %s
 # RUN: llvm-readobj -S %t | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="LittleEndian (0x1)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
 
---- !tapi-tbe
+--- !ifs-v1
 TbeVersion: 1.0
-Arch: x86_64
+Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
 NeededLibs:
   - libc.so.6
-Symbols: {}
+Symbols: []
 ...
 
 # CHECK:      Section {

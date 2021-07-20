@@ -1,13 +1,13 @@
-# RUN: llvm-elfabi %s --emit-tbe=- | FileCheck %s
+# RUN: llvm-elfabi --output-format=TBE --output=- %s | FileCheck %s
 
---- !tapi-tbe
+--- !ifs-v1
 TbeVersion: 1.0
-Arch: AArch64
-Symbols: {}
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Symbols: []
 ...
 
 # As the tbe reader/writer is updated, update this check to ensure --emit-tbe
 # uses the latest tbe writer by default.
 
-# CHECK:      --- !tapi-tbe
+# CHECK:      --- !ifs-v1
 # CHECK-NEXT: TbeVersion: 1.0
