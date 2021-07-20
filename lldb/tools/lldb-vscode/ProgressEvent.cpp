@@ -47,6 +47,7 @@ ProgressEvent::ProgressEvent(uint64_t progress_id, Optional<StringRef> message,
       m_percentage = 100;
   } else {
     // Update event
+    m_event_type = progressUpdate;
     m_percentage = std::min(
         (uint32_t)((double)completed / (double)total * 100.0), (uint32_t)99);
     if (prev_event->Reported()) {
