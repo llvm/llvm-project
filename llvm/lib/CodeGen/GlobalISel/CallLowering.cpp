@@ -484,24 +484,32 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   LLT DstTy = MRI.getType(DstRegs[0]);
   LLT LCMTy = getLCMType(SrcTy, PartTy);
 
-  const unsigned LCMSize = LCMTy.getSizeInBits();
   const unsigned DstSize = DstTy.getSizeInBits();
   const unsigned SrcSize = SrcTy.getSizeInBits();
+  unsigned CoveringSize = LCMTy.getSizeInBits();
 
   Register UnmergeSrc = SrcReg;
-  if (LCMSize != SrcSize) {
-    // Widen to the common type.
-    Register Undef = B.buildUndef(SrcTy).getReg(0);
-    SmallVector<Register, 8> MergeParts(1, SrcReg);
-    for (unsigned Size = SrcSize; Size != LCMSize; Size += SrcSize)
-      MergeParts.push_back(Undef);
 
-    UnmergeSrc = B.buildMerge(LCMTy, MergeParts).getReg(0);
+  if (CoveringSize != SrcSize) {
+    // For scalars, it's common to be able to use a simple extension.
+    if (SrcTy.isScalar() && DstTy.isScalar()) {
+      CoveringSize = alignTo(SrcSize, DstSize);
+      LLT CoverTy = LLT::scalar(CoveringSize);
+      UnmergeSrc = B.buildInstr(ExtendOp, {CoverTy}, {SrcReg}).getReg(0);
+    } else {
+      // Widen to the common type.
+      // FIXME: This should respect the extend type
+      Register Undef = B.buildUndef(SrcTy).getReg(0);
+      SmallVector<Register, 8> MergeParts(1, SrcReg);
+      for (unsigned Size = SrcSize; Size != CoveringSize; Size += SrcSize)
+        MergeParts.push_back(Undef);
+      UnmergeSrc = B.buildMerge(LCMTy, MergeParts).getReg(0);
+    }
   }
 
   // Unmerge to the original registers and pad with dead defs.
   SmallVector<Register, 8> UnmergeResults(DstRegs.begin(), DstRegs.end());
-  for (unsigned Size = DstSize * DstRegs.size(); Size != LCMSize;
+  for (unsigned Size = DstSize * DstRegs.size(); Size != CoveringSize;
        Size += DstSize) {
     UnmergeResults.push_back(MRI.createGenericVirtualRegister(DstTy));
   }

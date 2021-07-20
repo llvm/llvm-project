@@ -1121,9 +1121,8 @@ define amdgpu_kernel void @test_call_external_void_func_i48(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
-  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s48)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -1181,9 +1180,8 @@ define amdgpu_kernel void @test_call_external_void_func_i48_signext(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
-  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
+  ; CHECK:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s48)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
@@ -1241,9 +1239,8 @@ define amdgpu_kernel void @test_call_external_void_func_i48_zeroext(i32) #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY19]], [[C2]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[OR]], [[SHL1]]
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s48) = G_IMPLICIT_DEF
-  ; CHECK:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[LOAD]](s48), [[DEF1]](s48)
-  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s96)
+  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s48)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ZEXT]](s64)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
   ; CHECK:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
