@@ -24,7 +24,7 @@ entry:
 ; CHECK: Cannot have multiple 'swifterror' parameters!
 declare void @a(i32** swifterror %a, i32** swifterror %b)
 
-; CHECK: Attribute 'swifterror' only applies to parameters with pointer type!
+; CHECK: Attribute 'swifterror' applied to incompatible type!
 declare void @b(i32 swifterror %a)
 
 ; CHECK: Attribute 'swifterror' only applies to parameters with pointer to pointer type!

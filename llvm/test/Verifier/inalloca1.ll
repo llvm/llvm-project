@@ -27,8 +27,8 @@ define void @inalloca_mismatched_pointee_type0(i32* inalloca(i8)) {
   ret void
 }
 
-; CHECK: Wrong types for attribute:
+; CHECK: Attribute 'inalloca(i8)' applied to incompatible type!
 ; CHECK-NEXT: void (i8)* @inalloca_not_pointer
-define void @inalloca_not_pointer(i8 byref(i8)) {
+define void @inalloca_not_pointer(i8 inalloca(i8)) {
   ret void
 }
