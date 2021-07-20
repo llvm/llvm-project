@@ -33,6 +33,7 @@ class TestData {
     Lock l(mtx_);
     T v0 = data_[0];
     for (int i = 0; i < kSize; i++) {
+      mtx_->CheckLocked();
       CHECK_EQ(data_[i], v0);
       data_[i]++;
     }
@@ -43,10 +44,20 @@ class TestData {
       return;
     T v0 = data_[0];
     for (int i = 0; i < kSize; i++) {
+      mtx_->CheckLocked();
       CHECK_EQ(data_[i], v0);
       data_[i]++;
     }
     mtx_->Unlock();
+  }
+
+  void Read() {
+    ReadLock l(mtx_);
+    T v0 = data_[0];
+    for (int i = 0; i < kSize; i++) {
+      mtx_->CheckReadLocked();
+      CHECK_EQ(data_[i], v0);
+    }
   }
 
   void Backoff() {
@@ -59,6 +70,7 @@ class TestData {
 
  private:
   typedef GenericScopedLock<MutexType> Lock;
+  typedef GenericScopedReadLock<MutexType> ReadLock;
   static const int kSize = 64;
   typedef u64 T;
   MutexType *mtx_;
@@ -88,6 +100,19 @@ static void *try_thread(void *param) {
   TestData<MutexType> *data = (TestData<MutexType>*)param;
   for (int i = 0; i < kIters; i++) {
     data->TryWrite();
+    data->Backoff();
+  }
+  return 0;
+}
+
+template <typename MutexType>
+static void *read_write_thread(void *param) {
+  TestData<MutexType> *data = (TestData<MutexType> *)param;
+  for (int i = 0; i < kIters; i++) {
+    if ((i % 10) == 0)
+      data->Write();
+    else
+      data->Read();
     data->Backoff();
   }
   return 0;
@@ -131,6 +156,15 @@ TEST(SanitizerCommon, BlockingMutex) {
   for (int i = 0; i < kThreads; i++)
     PTHREAD_JOIN(threads[i], 0);
   check_locked(mtx);
+}
+
+TEST(SanitizerCommon, Mutex2) {
+  Mutex2 mtx;
+  TestData<Mutex2> data(&mtx);
+  pthread_t threads[kThreads];
+  for (int i = 0; i < kThreads; i++)
+    PTHREAD_CREATE(&threads[i], 0, read_write_thread<Mutex2>, &data);
+  for (int i = 0; i < kThreads; i++) PTHREAD_JOIN(threads[i], 0);
 }
 
 struct SemaphoreData {
