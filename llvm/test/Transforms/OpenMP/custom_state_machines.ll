@@ -131,7 +131,8 @@ target triple = "nvptx64"
 @3 = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @0, i32 0, i32 0) }, align 8
 @llvm.compiler.used = appending global [8 x i8*] [i8* @__omp_offloading_2c_389eb_no_state_machine_needed_l14_exec_mode, i8* @__omp_offloading_2c_389eb_simple_state_machine_l19_exec_mode, i8* @__omp_offloading_2c_389eb_simple_state_machine_interprocedural_l35_exec_mode, i8* @__omp_offloading_2c_389eb_simple_state_machine_with_fallback_l50_exec_mode, i8* @__omp_offloading_2c_389eb_simple_state_machine_no_openmp_attr_l61_exec_mode, i8* @__omp_offloading_2c_389eb_simple_state_machine_pure_l72_exec_mode, i8* @__omp_offloading_2c_389eb_simple_state_machine_interprocedural_nested_recursive_l86_exec_mode, i8* @__omp_offloading_2c_389eb_no_state_machine_weak_callee_l106_exec_mode], section "llvm.metadata"
 
-; The second to last argument of __kmpc_target_init is is set to false to indicate we do not need the generic runtime state machine.
+; The second to last argument of __kmpc_target_init is set to false to indicate we do not need the generic runtime state machine.
+; The last argument is also set to false due to SPMDization.
 ; No user code state machine is build because we do not need one.
 define weak void @__omp_offloading_2c_389eb_no_state_machine_needed_l14() #0 {
 entry:
@@ -1525,14 +1526,14 @@ attributes #10 = { convergent nounwind readonly willreturn }
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noalias noundef nonnull readnone align 8 dereferenceable(24) @[[GLOB1]], i1 noundef true, i1 noundef false, i1 noundef true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* noalias noundef nonnull readnone align 8 dereferenceable(24) @[[GLOB1]], i1 noundef true, i1 noundef false, i1 noundef false)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
 ; CHECK-NEXT:    call void @__omp_outlined__12(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 true)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
 ; CHECK-NEXT:    ret void
