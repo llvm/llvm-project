@@ -16,9 +16,9 @@ define void @can_sink_after_store(i32 %x, i32* %ptr, i64 %tc) local_unnamed_addr
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, i32* [[IDX_PHI_TRANS]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -100,9 +100,9 @@ define void @sink_sdiv(i32 %x, i32* %ptr, i64 %tc) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, i32* [[IDX_PHI_TRANS]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -183,9 +183,9 @@ define void @can_sink_with_additional_user(i32 %x, i32* %ptr, i64 %tc) {
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, i32* [[IDX_PHI_TRANS]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -502,7 +502,7 @@ define i16 @multiple_exit(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
@@ -523,7 +523,7 @@ define i16 @multiple_exit(i16* %p, i32 %n) {
 ; CHECK-NEXT:    store i16 [[SCALAR_RECUR]], i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[REC_LCSSA:%.*]] = phi i16 [ [[SCALAR_RECUR]], [[FOR_BODY]] ], [ [[SCALAR_RECUR]], [[FOR_COND]] ]
 ; CHECK-NEXT:    ret i16 [[REC_LCSSA]]
@@ -586,7 +586,7 @@ define i16 @multiple_exit2(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
@@ -607,7 +607,7 @@ define i16 @multiple_exit2(i16* %p, i32 %n) {
 ; CHECK-NEXT:    store i16 [[SCALAR_RECUR]], i16* [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[REC_LCSSA:%.*]] = phi i16 [ [[SCALAR_RECUR]], [[FOR_COND]] ], [ 10, [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i16 [[REC_LCSSA]]
