@@ -53,7 +53,7 @@ void completeLifetime(isl::union_set Universe, isl::union_map OccupiedAndKnown,
     for (isl::map Map : OccupiedAndKnown.get_map_list()) {
       if (!Map.has_tuple_name(isl::dim::out))
         continue;
-      Known = Known.add_map(Map);
+      Known = Known.unite(Map);
     }
   }
 

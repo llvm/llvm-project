@@ -161,7 +161,7 @@ isl::union_map MaximalStaticExpander::filterDependences(
       continue;
 
     // Add the corresponding map to MapDependences.
-    MapDependences = MapDependences.add_map(NewMap);
+    MapDependences = MapDependences.unite(NewMap);
   }
 
   return MapDependences;

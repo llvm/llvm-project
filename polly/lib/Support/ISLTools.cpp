@@ -94,7 +94,7 @@ isl::union_map polly::beforeScatter(isl::union_map UMap, bool Strict) {
 
   for (isl::map Map : UMap.get_map_list()) {
     isl::map After = beforeScatter(Map, Strict);
-    Result = Result.add_map(After);
+    Result = Result.unite(After);
   }
 
   return Result;
@@ -111,7 +111,7 @@ isl::union_map polly::afterScatter(const isl::union_map &UMap, bool Strict) {
   isl::union_map Result = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     isl::map After = afterScatter(Map, Strict);
-    Result = Result.add_map(After);
+    Result = Result.unite(After);
   }
   return Result;
 }
@@ -191,7 +191,7 @@ isl::union_map polly::makeIdentityMap(const isl::union_set &USet,
   isl::union_map Result = isl::union_map::empty(USet.ctx());
   for (isl::set Set : USet.get_set_list()) {
     isl::map IdentityMap = makeIdentityMap(Set, RestrictDomain);
-    Result = Result.add_map(IdentityMap);
+    Result = Result.unite(IdentityMap);
   }
   return Result;
 }
@@ -208,7 +208,7 @@ isl::union_map polly::reverseDomain(const isl::union_map &UMap) {
   isl::union_map Result = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     auto Reversed = reverseDomain(std::move(Map));
-    Result = Result.add_map(Reversed);
+    Result = Result.unite(Reversed);
   }
   return Result;
 }
@@ -269,7 +269,7 @@ isl::union_map polly::shiftDim(isl::union_map UMap, isl::dim Dim, int Pos,
 
   for (isl::map Map : UMap.get_map_list()) {
     isl::map Shifted = shiftDim(Map, Dim, Pos, Amount);
-    Result = Result.add_map(Shifted);
+    Result = Result.unite(Shifted);
   }
   return Result;
 }
@@ -489,7 +489,7 @@ isl::union_map polly::distributeDomain(isl::union_map UMap) {
   isl::union_map Result = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     auto Distributed = distributeDomain(Map);
-    Result = Result.add_map(Distributed);
+    Result = Result.unite(Distributed);
   }
   return Result;
 }

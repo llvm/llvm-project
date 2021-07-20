@@ -3211,7 +3211,6 @@ public:
   inline isl::ctx ctx() const;
   inline void dump() const;
 
-  inline isl::union_map add_map(isl::map map) const;
   inline isl::union_map affine_hull() const;
   inline isl::union_map align_params(isl::space model) const;
   inline isl::union_map apply_domain(isl::union_map umap2) const;
@@ -17462,12 +17461,6 @@ void union_map::dump() const {
   isl_union_map_dump(get());
 }
 
-
-isl::union_map union_map::add_map(isl::map map) const
-{
-  auto res = isl_union_map_add_map(copy(), map.release());
-  return manage(res);
-}
 
 isl::union_map union_map::affine_hull() const
 {

@@ -324,9 +324,9 @@ static bool importSchedule(Scop &S, const json::Object &JScop,
   auto ScheduleMap = isl::union_map::empty(S.getIslCtx());
   for (ScopStmt &Stmt : S) {
     if (NewSchedule.find(&Stmt) != NewSchedule.end())
-      ScheduleMap = ScheduleMap.add_map(NewSchedule[&Stmt]);
+      ScheduleMap = ScheduleMap.unite(NewSchedule[&Stmt]);
     else
-      ScheduleMap = ScheduleMap.add_map(Stmt.getSchedule());
+      ScheduleMap = ScheduleMap.unite(Stmt.getSchedule());
   }
 
   S.setSchedule(ScheduleMap);

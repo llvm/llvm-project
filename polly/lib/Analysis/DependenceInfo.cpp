@@ -660,7 +660,7 @@ bool Dependences::isValidSchedule(
     if (ScheduleSpace.is_null())
       ScheduleSpace = StmtScat.get_space().range();
 
-    Schedule = Schedule.add_map(StmtScat);
+    Schedule = Schedule.unite(StmtScat);
   }
 
   Dependences = Dependences.apply_domain(Schedule);
