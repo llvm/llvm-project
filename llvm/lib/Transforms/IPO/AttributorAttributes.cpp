@@ -5144,7 +5144,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       if (isa<ConstantPointerNull>(Obj)) {
         // A null pointer access can be undefined but any offset from null may
         // be OK. We do not try to optimize the latter.
-        bool UsedAssumedInformation;
+        bool UsedAssumedInformation = false;
         if (!NullPointerIsDefined(L.getFunction(),
                                   Ptr.getType()->getPointerAddressSpace()) &&
             A.getAssumedSimplified(Ptr, AA, UsedAssumedInformation) == Obj)
