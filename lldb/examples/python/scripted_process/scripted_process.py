@@ -138,6 +138,24 @@ class ScriptedProcess:
         return lldb.SBError()
 
     @abstractmethod
+    def should_stop(self):
+        """ Check if the scripted process plugin should produce the stop event.
+
+        Returns:
+            bool: True if scripted process should broadcast a stop event.
+                  False otherwise.
+        """
+        pass
+
+    def stop(self):
+        """ Trigger the scripted process stop.
+
+        Returns:
+            lldb.SBError: An `lldb.SBError` with error code 0.
+        """
+        return lldb.SBError()
+
+    @abstractmethod
     def is_alive(self):
         """ Check if the scripted process is alive.
 

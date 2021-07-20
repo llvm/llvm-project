@@ -30,6 +30,10 @@ public:
 
   Status Resume() override;
 
+  bool ShouldStop() override;
+
+  Status Stop() override;
+
   lldb::MemoryRegionInfoSP
   GetMemoryRegionContainingAddress(lldb::addr_t address) override;
 
@@ -48,7 +52,7 @@ public:
 
 protected:
   size_t GetGenericInteger(llvm::StringRef method_name);
-  Status LaunchOrResume(llvm::StringRef method_name);
+  Status GetStatusFromMethod(llvm::StringRef method_name);
 
 private:
   // The lifetime is managed by the ScriptInterpreter
