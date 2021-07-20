@@ -6111,10 +6111,15 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
 
   // Emit a report of VFs with invalid costs in the loop.
   if (!InvalidCosts.empty()) {
-    // Sort/group per instruction
+    // Sort/group per instruction (lexicographically within basic blocks).
     llvm::sort(InvalidCosts, [](InstructionVFPair &A, InstructionVFPair &B) {
+      const Instruction *AI = A.first, *BI = B.first;
+      if (AI->getParent() != BI->getParent())
+        return AI->getParent() < BI->getParent();
       ElementCountComparator ECC;
-      return A.first->comesBefore(B.first) || ECC(A.second, B.second);
+      if (AI != BI)
+        return AI->comesBefore(BI);
+      return ECC(A.second, B.second);
     });
 
     // For a list of ordered instruction-vf pairs:

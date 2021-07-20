@@ -125,6 +125,42 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
 ; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:40: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
+; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+define void @vec_sin_no_mapping_ite(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
+; CHECK: @vec_sin_no_mapping_ite
+; CHECK-NOT: <vscale x
+; CHECK: ret
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %if.end
+  %i.07 = phi i64 [ %inc, %if.end ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, float* %src, i64 %i.07
+  %0 = load float, float* %arrayidx, align 4, !dbg !11
+  %cmp = fcmp ugt float %0, 0.0000
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  %1 = tail call fast float @llvm.sin.f32(float %0), !dbg !12
+  br label %if.end
+if.else:
+  %2 = tail call fast float @llvm.sin.f32(float 0.0), !dbg !13
+  br label %if.end
+if.end:
+  %3 = phi float [%1, %if.then], [%2, %if.else]
+  %arrayidx1 = getelementptr inbounds float, float* %dst, i64 %i.07
+  store float %3, float* %arrayidx1, align 4, !dbg !14
+  %inc = add nuw nsw i64 %i.07, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !1
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+}
+
+; CHECK-REMARKS: UserVF ignored because of invalid costs.
+; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
 ; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
 ; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_fixed_mapping(float* noalias nocapture %dst, float* noalias nocapture readonly %src, i64 %n) {
@@ -208,3 +244,4 @@ attributes #3 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(sin_
 !11 = !DILocation(line: 3, column: 10, scope: !9)
 !12 = !DILocation(line: 3, column: 20, scope: !9)
 !13 = !DILocation(line: 3, column: 30, scope: !9)
+!14 = !DILocation(line: 3, column: 40, scope: !9)
