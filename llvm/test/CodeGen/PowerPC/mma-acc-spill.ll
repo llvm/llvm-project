@@ -46,7 +46,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    stxv vs0, 48(r30)
 ; CHECK-NEXT:    stxv vs1, 32(r30)
 ; CHECK-NEXT:    stxv vs2, 16(r30)
-; CHECK-NEXT:    stxvx vs3, 0, r30
+; CHECK-NEXT:    stxv vs3, 0(r30)
 ; CHECK-NEXT:    addi r1, r1, 176
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -88,7 +88,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v4
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r30)
-; CHECK-BE-NEXT:    stxvx vs0, 0, r30
+; CHECK-BE-NEXT:    stxv vs0, 0(r30)
 ; CHECK-BE-NEXT:    stxv vs3, 48(r30)
 ; CHECK-BE-NEXT:    stxv vs2, 32(r30)
 ; CHECK-BE-NEXT:    ld r30, 240(r1) # 8-byte Folded Reload

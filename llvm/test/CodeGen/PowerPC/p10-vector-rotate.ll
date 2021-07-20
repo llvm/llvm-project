@@ -34,7 +34,7 @@ define <1 x i128> @test_vrlq_cost_mult8(<1 x i128> %x) {
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-BE-NEXT:    lxv v3, 0(r3)
 ; CHECK-BE-NEXT:    vrlq v2, v3, v2
 ; CHECK-BE-NEXT:    blr
   %shl.i = shl <1 x i128> <i128 16>, %x
@@ -55,7 +55,7 @@ define <1 x i128> @test_vrlq_cost_non_mult8(<1 x i128> %x) {
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; CHECK-BE-NEXT:    lxvx v3, 0, r3
+; CHECK-BE-NEXT:    lxv v3, 0(r3)
 ; CHECK-BE-NEXT:    vrlq v2, v3, v2
 ; CHECK-BE-NEXT:    blr
   %shl.i = shl <1 x i128> <i128 4>, %x
@@ -90,7 +90,7 @@ define <1 x i128> @test_vrlqnm(<1 x i128> %a, <1 x i128> %b, <1 x i128> %c) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-BE-NEXT:    lxvx v5, 0, r3
+; CHECK-BE-NEXT:    lxv v5, 0(r3)
 ; CHECK-BE-NEXT:    vperm v3, v3, v4, v5
 ; CHECK-BE-NEXT:    vrlqnm v2, v2, v3
 ; CHECK-BE-NEXT:    blr

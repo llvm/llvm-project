@@ -392,7 +392,7 @@ define void @qpConv2udw_testXForm(i64* nocapture %res, i32 signext %idx) {
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sldi r4, r4, 3
 ; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
-; CHECK-NEXT:    lxvx v2, 0, r5
+; CHECK-NEXT:    lxv v2, 0(r5)
 ; CHECK-NEXT:    xscvqpudz v2, v2
 ; CHECK-NEXT:    stxsdx v2, r3, r4
 ; CHECK-NEXT:    blr

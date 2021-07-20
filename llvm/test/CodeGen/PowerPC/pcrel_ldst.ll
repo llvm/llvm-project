@@ -1715,20 +1715,20 @@ define dso_local void @testGlob11PtrPlus0() {
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd11@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd11@toc@l
-; CHECK-P10-BE-NEXT:    lxvx vs0, 0, r3
+; CHECK-P10-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt11@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt11@toc@l
-; CHECK-P10-BE-NEXT:    stxvx vs0, 0, r3
+; CHECK-P10-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testGlob11PtrPlus0:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, GlobLd11@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, GlobLd11@toc@l
-; CHECK-P9-NEXT:    lxvx vs0, 0, r3
+; CHECK-P9-NEXT:    lxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    addis r3, r2, GlobSt11@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, GlobSt11@toc@l
-; CHECK-P9-NEXT:    stxvx vs0, 0, r3
+; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LE-LABEL: testGlob11PtrPlus0:
@@ -1999,20 +1999,20 @@ define dso_local void @testGlob12PtrPlus0() {
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobLd12@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobLd12@toc@l
-; CHECK-P10-BE-NEXT:    lxvx vs0, 0, r3
+; CHECK-P10-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-P10-BE-NEXT:    addis r3, r2, GlobSt12@toc@ha
 ; CHECK-P10-BE-NEXT:    addi r3, r3, GlobSt12@toc@l
-; CHECK-P10-BE-NEXT:    stxvx vs0, 0, r3
+; CHECK-P10-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testGlob12PtrPlus0:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r3, r2, GlobLd12@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, GlobLd12@toc@l
-; CHECK-P9-NEXT:    lxvx vs0, 0, r3
+; CHECK-P9-NEXT:    lxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    addis r3, r2, GlobSt12@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, GlobSt12@toc@l
-; CHECK-P9-NEXT:    stxvx vs0, 0, r3
+; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LE-LABEL: testGlob12PtrPlus0:
