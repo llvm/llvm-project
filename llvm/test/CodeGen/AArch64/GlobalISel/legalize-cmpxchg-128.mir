@@ -23,7 +23,7 @@ body:             |
     ; CHECK: [[COPY6:%[0-9]+]]:gpr64(s64) = COPY [[COPY2]](s64)
     ; CHECK: [[COPY7:%[0-9]+]]:gpr64(s64) = COPY [[COPY3]](s64)
     ; CHECK: [[COPY8:%[0-9]+]]:gpr64(s64) = COPY [[COPY4]](s64)
-    ; CHECK: early-clobber %13:gpr64(s64), early-clobber %14:gpr64(s64), early-clobber %16:gpr32 = CMP_SWAP_128 [[COPY]](p0), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64) :: (load store acquire acquire 16)
+    ; CHECK: early-clobber %13:gpr64(s64), early-clobber %14:gpr64(s64), early-clobber %16:gpr32common = CMP_SWAP_128_ACQUIRE [[COPY]](p0), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64) :: (load store acquire acquire 16)
     ; CHECK: [[COPY9:%[0-9]+]]:gpr64 = COPY %16
     ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES %13(s64), %14(s64)
     ; CHECK: G_STORE [[MV]](s128), [[COPY]](p0) :: (store 16)
@@ -39,7 +39,7 @@ body:             |
     ; CHECK-NOLSE: [[COPY6:%[0-9]+]]:gpr64(s64) = COPY [[COPY2]](s64)
     ; CHECK-NOLSE: [[COPY7:%[0-9]+]]:gpr64(s64) = COPY [[COPY3]](s64)
     ; CHECK-NOLSE: [[COPY8:%[0-9]+]]:gpr64(s64) = COPY [[COPY4]](s64)
-    ; CHECK-NOLSE: early-clobber %13:gpr64(s64), early-clobber %14:gpr64(s64), early-clobber %16:gpr32 = CMP_SWAP_128 [[COPY]](p0), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64) :: (load store acquire acquire (s128))
+    ; CHECK-NOLSE: early-clobber %13:gpr64(s64), early-clobber %14:gpr64(s64), early-clobber %16:gpr32common = CMP_SWAP_128_ACQUIRE [[COPY]](p0), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64) :: (load store acquire acquire (s128))
     ; CHECK-NOLSE: [[COPY9:%[0-9]+]]:gpr64 = COPY %16
     ; CHECK-NOLSE: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES %13(s64), %14(s64)
     ; CHECK-NOLSE: G_STORE [[MV]](s128), [[COPY]](p0) :: (store (s128))
