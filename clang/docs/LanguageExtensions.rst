@@ -3415,6 +3415,9 @@ to the same code size limit as with ``unroll(enable)``.
 
 Unrolling of a loop can be prevented by specifying ``unroll(disable)``.
 
+Loop unroll parameters can be controlled by options
+`-mllvm -unroll-count=n` and `-mllvm -pragma-unroll-threshold=n`.
+
 Loop Distribution
 -----------------
 
