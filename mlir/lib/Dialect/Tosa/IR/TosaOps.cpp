@@ -887,6 +887,140 @@ static LogicalResult poolingInferReturnTypes(
   return success();
 }
 
+LogicalResult Conv2DOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamicSize);
+  Conv2DOp::Adaptor adaptor(operands);
+
+  int32_t inputWidth = ShapedType::kDynamicSize;
+  int32_t inputHeight = ShapedType::kDynamicSize;
+  int32_t weightWidth = ShapedType::kDynamicSize;
+  int32_t weightHeight = ShapedType::kDynamicSize;
+
+  // Input shape describes input width/height and batch.
+  if (auto inputTy = adaptor.input().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[0] = inputTy.getDimSize(0);
+    inputHeight = inputTy.getDimSize(1);
+    inputWidth = inputTy.getDimSize(2);
+  }
+
+  // Weight shapes describes the filter width/height and the output channels.
+  if (auto weightTy = adaptor.weight().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[3] = weightTy.getDimSize(0);
+    weightHeight = weightTy.getDimSize(1);
+    weightWidth = weightTy.getDimSize(2);
+  }
+
+  // Bias shape can describe the output channels.
+  if (auto biasTy = adaptor.bias().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[3] = ShapedType::isDynamic(outputShape[3])
+                         ? biasTy.getDimSize(0)
+                         : outputShape[3];
+  }
+
+  llvm::SmallVector<int64_t> dilation;
+  llvm::SmallVector<int64_t> padding;
+  llvm::SmallVector<int64_t> stride;
+
+  getI64Values(attributes.get("dilation").cast<ArrayAttr>(), dilation);
+  getI64Values(attributes.get("pad").cast<ArrayAttr>(), padding);
+  getI64Values(attributes.get("stride").cast<ArrayAttr>(), stride);
+
+  if (!ShapedType::isDynamic(inputHeight) &&
+      !ShapedType::isDynamic(weightHeight)) {
+    int32_t inputSize = inputHeight + padding[0] + padding[1];
+    int32_t filterSize = (weightHeight - 1) * dilation[0] + 1;
+    int32_t unstridedResult = inputSize - filterSize + 1;
+    outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
+  }
+
+  if (!ShapedType::isDynamic(inputWidth) &&
+      !ShapedType::isDynamic(weightWidth)) {
+    int32_t inputSize = inputWidth + padding[2] + padding[3];
+    int32_t filterSize = (weightWidth - 1) * dilation[1] + 1;
+    int32_t unstridedResult = inputSize - filterSize + 1;
+    outputShape[2] = (unstridedResult - 1) / stride[1] + 1;
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult Conv3DOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<int64_t> outputShape(5, ShapedType::kDynamicSize);
+  Conv2DOp::Adaptor adaptor(operands);
+
+  int32_t inputWidth = ShapedType::kDynamicSize;
+  int32_t inputHeight = ShapedType::kDynamicSize;
+  int32_t inputDepth = ShapedType::kDynamicSize;
+
+  int32_t weightWidth = ShapedType::kDynamicSize;
+  int32_t weightHeight = ShapedType::kDynamicSize;
+  int32_t weightDepth = ShapedType::kDynamicSize;
+
+  // Input shape describes input width/height and batch.
+  if (auto inputTy = adaptor.input().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[0] = inputTy.getDimSize(0);
+    inputHeight = inputTy.getDimSize(1);
+    inputWidth = inputTy.getDimSize(2);
+    inputDepth = inputTy.getDimSize(3);
+  }
+
+  // Weight shapes describes the filter width/height and the output channels.
+  if (auto weightTy = adaptor.weight().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[4] = weightTy.getDimSize(0);
+    weightHeight = weightTy.getDimSize(1);
+    weightWidth = weightTy.getDimSize(2);
+    weightDepth = weightTy.getDimSize(3);
+  }
+
+  // Bias shape can describe the output channels.
+  if (auto biasTy = adaptor.bias().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[4] =
+        (outputShape[4] == -1) ? biasTy.getDimSize(0) : outputShape[4];
+  }
+
+  llvm::SmallVector<int64_t> dilation;
+  llvm::SmallVector<int64_t> padding;
+  llvm::SmallVector<int64_t> stride;
+
+  getI64Values(attributes.get("dilation").cast<ArrayAttr>(), dilation);
+  getI64Values(attributes.get("pad").cast<ArrayAttr>(), padding);
+  getI64Values(attributes.get("stride").cast<ArrayAttr>(), stride);
+
+  if (!ShapedType::isDynamic(inputHeight) &&
+      !ShapedType::isDynamic(weightHeight)) {
+    int32_t inputSize = inputHeight + padding[0] + padding[1];
+    int32_t filterSize = (weightHeight - 1) * dilation[0] + 1;
+    int32_t unstridedResult = inputSize - filterSize + 1;
+    outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
+  }
+
+  if (!ShapedType::isDynamic(inputWidth) &&
+      !ShapedType::isDynamic(weightWidth)) {
+    int32_t inputSize = inputWidth + padding[2] + padding[3];
+    int32_t filterSize = (weightWidth - 1) * dilation[1] + 1;
+    int32_t unstridedResult = inputSize - filterSize + 1;
+    outputShape[2] = (unstridedResult - 1) / stride[1] + 1;
+  }
+
+  if (!ShapedType::isDynamic(inputDepth) &&
+      !ShapedType::isDynamic(weightDepth)) {
+    int32_t inputSize = inputDepth + padding[4] + padding[5];
+    int32_t filterSize = (weightDepth - 1) * dilation[2] + 1;
+    int32_t unstridedResult = inputSize - filterSize + 1;
+    outputShape[3] = (unstridedResult - 1) / stride[2] + 1;
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
 LogicalResult AvgPool2dOp::inferReturnTypeComponents(
     MLIRContext *context, ::llvm::Optional<Location> location,
     ValueRange operands, DictionaryAttr attributes, RegionRange regions,
@@ -899,6 +1033,146 @@ LogicalResult MaxPool2dOp::inferReturnTypeComponents(
     ValueRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
+}
+
+LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamicSize);
+  DepthwiseConv2DOp::Adaptor adaptor(operands);
+
+  int32_t inputWidth = ShapedType::kDynamicSize;
+  int32_t inputHeight = ShapedType::kDynamicSize;
+  int32_t inputChannels = ShapedType::kDynamicSize;
+
+  int32_t weightWidth = ShapedType::kDynamicSize;
+  int32_t weightHeight = ShapedType::kDynamicSize;
+  int32_t depthChannels = ShapedType::kDynamicSize;
+
+  // Input shape describes input width/height and batch.
+  if (auto inputTy = adaptor.input().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[0] = inputTy.getDimSize(0);
+    inputHeight = inputTy.getDimSize(1);
+    inputWidth = inputTy.getDimSize(2);
+    inputChannels = inputTy.getDimSize(3);
+  }
+
+  // Weight shapes describes the filter width/height and the output channels.
+  if (auto weightTy = adaptor.weight().getType().dyn_cast<RankedTensorType>()) {
+    weightHeight = weightTy.getDimSize(0);
+    weightWidth = weightTy.getDimSize(1);
+    inputChannels = ShapedType::isDynamic(inputChannels)
+                        ? weightTy.getDimSize(2)
+                        : inputChannels;
+    depthChannels = weightTy.getDimSize(3);
+  }
+
+  // If both inputChannels and depthChannels are available we can determine
+  // the output channels.
+  if (!ShapedType::isDynamic(inputChannels) &&
+      !ShapedType::isDynamic(depthChannels)) {
+    outputShape[3] = inputChannels * depthChannels;
+  }
+
+  // Bias shape can describe the output channels.
+  if (auto biasTy = adaptor.bias().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[3] = ShapedType::isDynamic(outputShape[3])
+                         ? biasTy.getDimSize(0)
+                         : outputShape[3];
+  }
+
+  llvm::SmallVector<int64_t> dilation;
+  llvm::SmallVector<int64_t> padding;
+  llvm::SmallVector<int64_t> stride;
+
+  getI64Values(attributes.get("dilation").cast<ArrayAttr>(), dilation);
+  getI64Values(attributes.get("pad").cast<ArrayAttr>(), padding);
+  getI64Values(attributes.get("stride").cast<ArrayAttr>(), stride);
+
+  if (!ShapedType::isDynamic(inputHeight) &&
+      !ShapedType::isDynamic(weightHeight)) {
+    int32_t inputSize = inputHeight + padding[0] + padding[1];
+    int32_t filterSize = (weightHeight - 1) * dilation[0] + 1;
+    int32_t unstridedResult = inputSize - filterSize + 1;
+    outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
+  }
+
+  if (!ShapedType::isDynamic(inputWidth) &&
+      !ShapedType::isDynamic(weightWidth)) {
+    int32_t inputSize = inputWidth + padding[2] + padding[3];
+    int32_t filterSize = (weightWidth - 1) * dilation[1] + 1;
+    int32_t unstridedResult = inputSize - filterSize + 1;
+    outputShape[2] = (unstridedResult - 1) / stride[1] + 1;
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
+}
+
+LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  TransposeConv2DOp::Adaptor adaptor(operands);
+  llvm::SmallVector<int64_t> outputShape;
+  getI64Values(attributes.get("out_shape").cast<ArrayAttr>(), outputShape);
+
+  int32_t inputWidth = ShapedType::kDynamicSize;
+  int32_t inputHeight = ShapedType::kDynamicSize;
+  int32_t weightWidth = ShapedType::kDynamicSize;
+  int32_t weightHeight = ShapedType::kDynamicSize;
+
+  // Input shape describes input width/height and batch.
+  if (auto inputTy = adaptor.input().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[0] = ShapedType::isDynamic(outputShape[0])
+                         ? inputTy.getDimSize(0)
+                         : outputShape[0];
+    inputHeight = inputTy.getDimSize(1);
+    inputWidth = inputTy.getDimSize(2);
+  }
+
+  // Weight shapes describes the filter width/height and the output channels.
+  if (auto weightTy = adaptor.filter().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[3] = ShapedType::isDynamic(outputShape[3])
+                         ? weightTy.getDimSize(0)
+                         : outputShape[3];
+    weightHeight = weightTy.getDimSize(1);
+    weightWidth = weightTy.getDimSize(2);
+  }
+
+  // Bias shape can describe the output channels.
+  if (auto biasTy = adaptor.bias().getType().dyn_cast<RankedTensorType>()) {
+    outputShape[3] = ShapedType::isDynamic(outputShape[3])
+                         ? biasTy.getDimSize(0)
+                         : outputShape[3];
+  }
+
+  llvm::SmallVector<int64_t> dilation;
+  llvm::SmallVector<int64_t> padding;
+  llvm::SmallVector<int64_t> stride;
+
+  getI64Values(attributes.get("dilation").cast<ArrayAttr>(), dilation);
+  getI64Values(attributes.get("out_pad").cast<ArrayAttr>(), padding);
+  getI64Values(attributes.get("stride").cast<ArrayAttr>(), stride);
+
+  if (!ShapedType::isDynamic(inputHeight) &&
+      !ShapedType::isDynamic(weightHeight)) {
+    int32_t dilated = (weightHeight - 1) * dilation[0] + 1;
+    int32_t calculateSize =
+        (inputHeight - 1) * stride[0] - padding[0] + dilated;
+    outputShape[1] = outputShape[1] == -1 ? calculateSize : outputShape[1];
+  }
+
+  if (!ShapedType::isDynamic(inputWidth) &&
+      !ShapedType::isDynamic(weightWidth)) {
+    int32_t dilated = (weightWidth - 1) * dilation[1] + 1;
+    int32_t calculateSize = (inputWidth - 1) * stride[1] - padding[1] + dilated;
+    outputShape[2] = outputShape[2] == -1 ? calculateSize : outputShape[2];
+  }
+
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
