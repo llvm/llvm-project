@@ -487,6 +487,7 @@ def ClassVarargs : DiagGroup<"class-varargs", [NonPODVarargs]>;
 def : DiagGroup<"nonportable-cfstrings">;
 def NonVirtualDtor : DiagGroup<"non-virtual-dtor">;
 def NullPointerArithmetic : DiagGroup<"null-pointer-arithmetic">;
+def NullPointerSubtraction : DiagGroup<"null-pointer-subtraction">;
 def : DiagGroup<"effc++", [NonVirtualDtor]>;
 def OveralignedType : DiagGroup<"over-aligned">;
 def OldStyleCast : DiagGroup<"old-style-cast">;
@@ -932,6 +933,7 @@ def Extra : DiagGroup<"extra", [
     UnusedParameter,
     UnusedButSetParameter,
     NullPointerArithmetic,
+    NullPointerSubtraction,
     EmptyInitStatement,
     StringConcatation,
     FUseLdPath,

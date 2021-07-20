@@ -10432,6 +10432,22 @@ static void diagnoseArithmeticOnNullPointer(Sema &S, SourceLocation Loc,
       << S.getLangOpts().CPlusPlus << Pointer->getSourceRange();
 }
 
+/// Diagnose invalid subraction on a null pointer.
+///
+static void diagnoseSubtractionOnNullPointer(Sema &S, SourceLocation Loc,
+                                             Expr *Pointer, bool BothNull) {
+  // Null - null is valid in C++ [expr.add]p7
+  if (BothNull && S.getLangOpts().CPlusPlus)
+    return;
+
+  // Is this s a macro from a system header?
+  if (S.Diags.getSuppressSystemWarnings() && S.SourceMgr.isInSystemMacro(Loc))
+    return;
+
+  S.Diag(Loc, diag::warn_pointer_sub_null_ptr)
+      << S.getLangOpts().CPlusPlus << Pointer->getSourceRange();
+}
+
 /// Diagnose invalid arithmetic on two function pointers.
 static void diagnoseArithmeticOnTwoFunctionPointers(Sema &S, SourceLocation Loc,
                                                     Expr *LHS, Expr *RHS) {
@@ -10863,7 +10879,16 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                                LHS.get(), RHS.get()))
         return QualType();
 
-      // FIXME: Add warnings for nullptr - ptr.
+      bool LHSIsNullPtr = LHS.get()->IgnoreParenCasts()->isNullPointerConstant(
+          Context, Expr::NPC_ValueDependentIsNotNull);
+      bool RHSIsNullPtr = RHS.get()->IgnoreParenCasts()->isNullPointerConstant(
+          Context, Expr::NPC_ValueDependentIsNotNull);
+
+      // Subtracting nullptr or from nullptr is suspect
+      if (LHSIsNullPtr)
+        diagnoseSubtractionOnNullPointer(*this, Loc, LHS.get(), RHSIsNullPtr);
+      if (RHSIsNullPtr)
+        diagnoseSubtractionOnNullPointer(*this, Loc, RHS.get(), LHSIsNullPtr);
 
       // The pointee type may have zero size.  As an extension, a structure or
       // union may have zero size or an array may have zero length.  In this
