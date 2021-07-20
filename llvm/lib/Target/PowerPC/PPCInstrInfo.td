@@ -5291,6 +5291,8 @@ def : Pat<(i32 (int_ppc_mulhw gprc:$a, gprc:$b)),
           (i32 (MULHW $a, $b))>;
 def : Pat<(i32 (int_ppc_mulhwu gprc:$a, gprc:$b)),
           (i32 (MULHWU $a, $b))>;
+def : Pat<(i32 (int_ppc_cmpb gprc:$a, gprc:$b)),
+          (i32 (CMPB $a, $b))>;
 
 def : Pat<(int_ppc_load2r ForceXForm:$ptr),
           (LHBRX ForceXForm:$ptr)>;

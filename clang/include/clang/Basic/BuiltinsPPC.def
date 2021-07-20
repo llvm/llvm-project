@@ -81,6 +81,7 @@ BUILTIN(__builtin_ppc_rdlam, "UWiUWiUWiUWIi", "nc")
 BUILTIN(__builtin_ppc_cmpeqb, "LLiLLiLLi", "")
 BUILTIN(__builtin_ppc_cmprb, "iCIiii", "")
 BUILTIN(__builtin_ppc_setb, "LLiLLiLLi", "")
+BUILTIN(__builtin_ppc_cmpb, "LLiLLiLLi", "")
 // Multiply
 BUILTIN(__builtin_ppc_mulhd, "LLiLiLi", "")
 BUILTIN(__builtin_ppc_mulhdu, "ULLiULiULi", "")
