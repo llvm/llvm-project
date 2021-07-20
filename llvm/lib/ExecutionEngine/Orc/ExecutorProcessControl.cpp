@@ -14,6 +14,8 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Process.h"
 
+#define DEBUG_TYPE "orc"
+
 namespace llvm {
 namespace orc {
 
@@ -47,6 +49,10 @@ Error ExecutorProcessControl::associateJITSideWrapperFunctions(
            "AsyncWrapperFunction implementation missing");
     TagToFunc[KV.second.getAddress()] =
         std::make_shared<AsyncWrapperFunction>(std::move(I->second));
+    LLVM_DEBUG({
+      dbgs() << "Associated function tag \"" << *KV.first << "\" ("
+             << formatv("{0:x}", KV.second.getAddress()) << ") with handler\n";
+    });
   }
   return Error::success();
 }
@@ -84,6 +90,8 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
   this->MemAccess = this;
+  this->JDI = {ExecutorAddress::fromPtr(jitDispatchViaWrapperFunctionManager),
+               ExecutorAddress::fromPtr(this)};
   if (this->TargetTriple.isOSBinFormatMachO())
     GlobalManglingPrefix = '_';
 }
@@ -196,6 +204,27 @@ void SelfExecutorProcessControl::writeBuffers(
     memcpy(jitTargetAddressToPointer<char *>(W.Address), W.Buffer.data(),
            W.Buffer.size());
   OnWriteComplete(Error::success());
+}
+
+shared::detail::CWrapperFunctionResult
+SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
+    void *Ctx, const void *FnTag, const char *Data, size_t Size) {
+
+  LLVM_DEBUG({
+    dbgs() << "jit-dispatch call with tag " << FnTag << " and " << Size
+           << " byte payload.\n";
+  });
+
+  std::promise<shared::WrapperFunctionResult> ResultP;
+  auto ResultF = ResultP.get_future();
+  static_cast<SelfExecutorProcessControl *>(Ctx)->runJITSideWrapperFunction(
+      [ResultP =
+           std::move(ResultP)](shared::WrapperFunctionResult Result) mutable {
+        ResultP.set_value(std::move(Result));
+      },
+      pointerToJITTargetAddress(FnTag), {Data, Size});
+
+  return ResultF.get().release();
 }
 
 } // end namespace orc

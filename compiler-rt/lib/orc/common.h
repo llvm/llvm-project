@@ -40,22 +40,4 @@ __orc_rt_jit_dispatch(__orc_rt_Opaque *DispatchCtx, const void *FnTag,
                       const char *Data, size_t Size)
   __attribute__((weak_import));
 
-namespace __orc_rt {
-
-/// Must be kept in sync with JITSymbol.h
-using JITTargetAddress = uint64_t;
-
-/// Cast from JITTargetAddress to pointer.
-template <typename T> T jitTargetAddressToPointer(JITTargetAddress Addr) {
-  static_assert(std::is_pointer<T>::value, "T must be a pointer type");
-  return reinterpret_cast<T>(static_cast<uintptr_t>(Addr));
-}
-
-/// Cast from pointer to JITTargetAddress.
-template <typename T> JITTargetAddress pointerToJITTargetAddress(T *Ptr) {
-  return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(Ptr));
-}
-
-} // end namespace __orc_rt
-
 #endif // ORC_RT_COMMON_H
