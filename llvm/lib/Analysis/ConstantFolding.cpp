@@ -3041,10 +3041,18 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
     return nullptr;
   if (!F->hasName())
     return nullptr;
+
+  // If this is not an intrinsic and not recognized as a library call, bail out.
+  if (F->getIntrinsicID() == Intrinsic::not_intrinsic) {
+    if (!TLI)
+      return nullptr;
+    LibFunc LibF;
+    if (!TLI->getLibFunc(*F, LibF))
+      return nullptr;
+  }
+
   StringRef Name = F->getName();
-
   Type *Ty = F->getReturnType();
-
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
     return ConstantFoldFixedVectorCall(
         Name, F->getIntrinsicID(), FVTy, Operands,
@@ -3055,6 +3063,9 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
         Name, F->getIntrinsicID(), SVTy, Operands,
         F->getParent()->getDataLayout(), TLI, Call);
 
+  // TODO: If this is a library function, we already discovered that above,
+  //       so we should pass the LibFunc, not the name (and it might be better
+  //       still to separate intrinsic handling from libcalls).
   return ConstantFoldScalarCall(Name, F->getIntrinsicID(), Ty, Operands, TLI,
                                 Call);
 }
