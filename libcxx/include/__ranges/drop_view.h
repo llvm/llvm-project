@@ -15,6 +15,9 @@
 #include <__iterator/next.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
+#include <__ranges/concepts.h>
+#include <__ranges/enable_borrowed_range.h>
+#include <__ranges/size.h>
 #include <__ranges/view_interface.h>
 #include <optional>
 #include <type_traits>
