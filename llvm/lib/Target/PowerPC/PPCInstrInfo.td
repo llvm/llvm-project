@@ -5483,6 +5483,12 @@ def : Pat<(int_ppc_fctuwz f64:$A),
 
 def : Pat<(int_ppc_mfmsr), (MFMSR)>;
 def : Pat<(int_ppc_mftbu), (MFTB 269)>;
+def : Pat<(i32 (int_ppc_mfspr timm:$SPR)),
+          (MFSPR $SPR)>;
+def : Pat<(int_ppc_mtspr timm:$SPR, gprc:$RT),
+          (MTSPR $SPR, $RT)>;
+def : Pat<(int_ppc_mtmsr gprc:$RS),
+          (MTMSR $RS, 0)>;
 
 let Predicates = [IsISA2_07] in {
   def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),

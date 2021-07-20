@@ -15690,6 +15690,20 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   case PPC::BI__builtin_ppc_lharx:
   case PPC::BI__builtin_ppc_lbarx:
     return emitPPCLoadReserveIntrinsic(*this, BuiltinID, E);
+  case PPC::BI__builtin_ppc_mfspr: {
+    llvm::Type *RetType = CGM.getDataLayout().getTypeSizeInBits(VoidPtrTy) == 32
+                              ? Int32Ty
+                              : Int64Ty;
+    Function *F = CGM.getIntrinsic(Intrinsic::ppc_mfspr, RetType);
+    return Builder.CreateCall(F, Ops);
+  }
+  case PPC::BI__builtin_ppc_mtspr: {
+    llvm::Type *RetType = CGM.getDataLayout().getTypeSizeInBits(VoidPtrTy) == 32
+                              ? Int32Ty
+                              : Int64Ty;
+    Function *F = CGM.getIntrinsic(Intrinsic::ppc_mtspr, RetType);
+    return Builder.CreateCall(F, Ops);
+  }
   case PPC::BI__builtin_ppc_popcntb: {
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     llvm::Type *ArgType = ArgValue->getType();
