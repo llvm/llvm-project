@@ -39,7 +39,7 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT7]], <16 x i32>* [[TMP2]], align 4, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> [[BROADCAST_SPLAT]], i32 4, <16 x i1> [[TMP1]], <16 x i32> undef), !alias.scope !3
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP1]], <16 x i32> [[WIDE_MASKED_GATHER]], <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 1>
@@ -67,7 +67,7 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT19]], <8 x i32>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX12]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT13]], [[N_VEC11]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP7:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER20:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[BROADCAST_SPLAT17]], i32 4, <8 x i1> [[TMP6]], <8 x i32> undef)
 ; CHECK-NEXT:    [[PREDPHI21:%.*]] = select <8 x i1> [[TMP6]], <8 x i32> [[WIDE_MASKED_GATHER20]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 1>
@@ -79,9 +79,9 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[I]]
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32* [[A]], null
-; CHECK-NEXT:    store i32 [[NTRUNC]], i32* [[TMP1]], align 4
+; CHECK-NEXT:    store i32 [[NTRUNC]], i32* [[I1]], align 4
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[LATCH]], label [[COND_LOAD:%.*]]
 ; CHECK:       cond_load:
 ; CHECK-NEXT:    [[ALOAD:%.*]] = load i32, i32* [[A]], align 4
@@ -90,7 +90,7 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi i32 [ [[ALOAD]], [[COND_LOAD]] ], [ 1, [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], [[LOOP9:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[A_LCSSA_LCSSA8:%.*]] = phi i32 [ [[A_LCSSA]], [[LATCH]] ], [ [[TMP9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_END]]
@@ -104,10 +104,10 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i = phi i64 [ %i.next, %latch ], [ 0, %entry ]
-  %tmp1 = getelementptr inbounds i32, i32* %b, i64 %i
-  %tmp2 = load i32, i32* %tmp1, align 8
+  %i1 = getelementptr inbounds i32, i32* %b, i64 %i
+  %i2 = load i32, i32* %i1, align 8
   %cmp = icmp ne i32* %a, null
-  store i32 %ntrunc, i32* %tmp1
+  store i32 %ntrunc, i32* %i1
   br i1 %cmp, label %cond_load, label %latch
 
 cond_load:

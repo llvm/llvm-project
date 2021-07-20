@@ -7,14 +7,6 @@ define void @m(i32* nocapture %p, i32* nocapture %p2, i32 %q) {
 ; CHECK-LABEL: @m(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* @k, align 4
-; CHECK-NEXT:    [[CMP32:%.*]] = icmp slt i32 [[I]], [[Q:%.*]]
-; CHECK-NEXT:    br i1 [[CMP32]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND2_PREHEADER:%.*]]
-; CHECK:       for.body.preheader:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.cond2.preheader.loopexit:
-; CHECK-NEXT:    br label [[FOR_COND2_PREHEADER]]
-; CHECK:       for.cond2.preheader:
 ; CHECK-NEXT:    [[ARRAYIDX9_1:%.*]] = getelementptr inbounds i32, i32* [[P2:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX9_2:%.*]] = getelementptr inbounds i32, i32* [[P2]], i64 2
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
@@ -58,20 +50,10 @@ define void @m(i32* nocapture %p, i32* nocapture %p2, i32 %q) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 63, 60
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END17:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 60, [[MIDDLE_BLOCK]] ], [ 0, [[FOR_COND2_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[I1:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[I]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I1]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[P2]], i64 [[IDXPROM]]
-; CHECK-NEXT:    store i32 2, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[I2:%.*]] = load i32, i32* @k, align 4
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I2]], 1
-; CHECK-NEXT:    store i32 [[INC]], i32* @k, align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[Q]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND2_PREHEADER_LOOPEXIT:%.*]]
-; CHECK:       for.cond5.preheader:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND5_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 60, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label [[FOR_COND5:%.*]]
+; CHECK:       for.cond5:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_COND5]] ]
 ; CHECK-NEXT:    [[I3:%.*]] = load i32, i32* [[P2]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[I3]]
 ; CHECK-NEXT:    [[I4:%.*]] = load i32, i32* [[ARRAYIDX9_1]], align 4
@@ -82,39 +64,17 @@ define void @m(i32* nocapture %p, i32* nocapture %p2, i32 %q) {
 ; CHECK-NEXT:    store i32 [[SUB_2]], i32* [[ARRAYIDX14]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 63
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END17]], label [[FOR_COND5_PREHEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END17]], label [[FOR_COND5]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       for.end17:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %i = load i32, i32* @k, align 4
-  %cmp32 = icmp slt i32 %i, %q
-  br i1 %cmp32, label %for.body.preheader, label %for.cond2.preheader
-
-for.body.preheader:                               ; preds = %entry
-  br label %for.body
-
-for.cond2.preheader.loopexit:                     ; preds = %for.body
-  br label %for.cond2.preheader
-
-for.cond2.preheader:                              ; preds = %for.cond2.preheader.loopexit, %entry
   %arrayidx9.1 = getelementptr inbounds i32, i32* %p2, i64 1
   %arrayidx9.2 = getelementptr inbounds i32, i32* %p2, i64 2
-  br label %for.cond5.preheader
+  br label %for.cond5
 
-for.body:                                         ; preds = %for.body, %for.body.preheader
-  %i1 = phi i32 [ %inc, %for.body ], [ %i, %for.body.preheader ]
-  %idxprom = sext i32 %i1 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %p2, i64 %idxprom
-  store i32 2, i32* %arrayidx, align 4
-  %i2 = load i32, i32* @k, align 4
-  %inc = add nsw i32 %i2, 1
-  store i32 %inc, i32* @k, align 4
-  %cmp = icmp slt i32 %inc, %q
-  br i1 %cmp, label %for.body, label %for.cond2.preheader.loopexit
-
-for.cond5.preheader:                              ; preds = %for.cond5.preheader, %for.cond2.preheader
-  %indvars.iv = phi i64 [ 0, %for.cond2.preheader ], [ %indvars.iv.next, %for.cond5.preheader ]
+for.cond5:                              ; preds = %entry, %for.cond5
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.cond5 ]
   %i3 = load i32, i32* %p2, align 4
   %sub = sub nsw i32 0, %i3
   %i4 = load i32, i32* %arrayidx9.1, align 4
@@ -125,8 +85,8 @@ for.cond5.preheader:                              ; preds = %for.cond5.preheader
   store i32 %sub.2, i32* %arrayidx14, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 63
-  br i1 %exitcond, label %for.end17, label %for.cond5.preheader
+  br i1 %exitcond, label %for.end17, label %for.cond5
 
-for.end17:                                        ; preds = %for.cond5.preheader
+for.end17:                                        ; preds = %for.cond5
   ret void
 }
