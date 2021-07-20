@@ -20,11 +20,11 @@ target triple = "bpf"
 define dso_local i32 @test(%struct.v3* %arg) local_unnamed_addr #0 !dbg !23 {
 entry:
   call void @llvm.dbg.value(metadata %struct.v3* %arg, metadata !27, metadata !DIExpression()), !dbg !28
-  %0 = tail call %struct.v3* @llvm.preserve.array.access.index.p0s_struct.v3s.p0s_struct.v3s(%struct.v3* %arg, i32 0, i32 1), !dbg !29, !llvm.preserve.access.index !4
-  %1 = tail call [4 x [4 x [4 x i32]]]* @llvm.preserve.struct.access.index.p0a4a4a4i32.p0s_struct.v3s(%struct.v3* %0, i32 1, i32 1), !dbg !29, !llvm.preserve.access.index !6
-  %2 = tail call [4 x [4 x i32]]* @llvm.preserve.array.access.index.p0a4a4i32.p0a4a4a4i32([4 x [4 x [4 x i32]]]* %1, i32 1, i32 2), !dbg !29, !llvm.preserve.access.index !11
-  %3 = tail call [4 x i32]* @llvm.preserve.array.access.index.p0a4i32.p0a4a4i32([4 x [4 x i32]]* %2, i32 1, i32 3), !dbg !29, !llvm.preserve.access.index !15
-  %4 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]* %3, i32 1, i32 2), !dbg !29, !llvm.preserve.access.index !17
+  %0 = tail call %struct.v3* @llvm.preserve.array.access.index.p0s_struct.v3s.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %arg, i32 0, i32 1), !dbg !29, !llvm.preserve.access.index !4
+  %1 = tail call [4 x [4 x [4 x i32]]]* @llvm.preserve.struct.access.index.p0a4a4a4i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %0, i32 1, i32 1), !dbg !29, !llvm.preserve.access.index !6
+  %2 = tail call [4 x [4 x i32]]* @llvm.preserve.array.access.index.p0a4a4i32.p0a4a4a4i32([4 x [4 x [4 x i32]]]* elementtype([4 x [4 x [4 x i32]]]) %1, i32 1, i32 2), !dbg !29, !llvm.preserve.access.index !11
+  %3 = tail call [4 x i32]* @llvm.preserve.array.access.index.p0a4i32.p0a4a4i32([4 x [4 x i32]]* elementtype([4 x [4 x i32]]) %2, i32 1, i32 3), !dbg !29, !llvm.preserve.access.index !15
+  %4 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0a4i32([4 x i32]* elementtype([4 x i32]) %3, i32 1, i32 2), !dbg !29, !llvm.preserve.access.index !17
   %call = tail call i32 @get_value(i32* %4) #4, !dbg !30
   ret i32 %call, !dbg !31
 }
