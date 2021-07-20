@@ -1,4 +1,4 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compilexx-and-run-generic
 
 #include <cmath>
 #include <cstdlib>
