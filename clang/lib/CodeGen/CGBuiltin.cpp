@@ -15352,6 +15352,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   case PPC::BI__builtin_ppc_recipdivd:
   case PPC::BI__builtin_ppc_rsqrtf:
   case PPC::BI__builtin_ppc_rsqrtd: {
+    FastMathFlags FMF = Builder.getFastMathFlags();
     Builder.getFastMathFlags().setFast();
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
@@ -15359,11 +15360,15 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     if (BuiltinID == PPC::BI__builtin_ppc_recipdivf ||
         BuiltinID == PPC::BI__builtin_ppc_recipdivd) {
       Value *Y = EmitScalarExpr(E->getArg(1));
-      return Builder.CreateFDiv(X, Y, "recipdiv");
+      Value *FDiv = Builder.CreateFDiv(X, Y, "recipdiv");
+      Builder.getFastMathFlags() &= (FMF);
+      return FDiv;
     }
     auto *One = ConstantFP::get(ResultType, 1.0);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::sqrt, ResultType);
-    return Builder.CreateFDiv(One, Builder.CreateCall(F, X), "rsqrt");
+    Value *FDiv = Builder.CreateFDiv(One, Builder.CreateCall(F, X), "rsqrt");
+    Builder.getFastMathFlags() &= (FMF);
+    return FDiv;
   }
   case PPC::BI__builtin_ppc_alignx: {
     ConstantInt *AlignmentCI = cast<ConstantInt>(Ops[0]);
