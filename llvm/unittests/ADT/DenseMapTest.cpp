@@ -547,6 +547,15 @@ TEST(DenseMapCustomTest, FindAsTest) {
   EXPECT_TRUE(map.find_as("d") == map.end());
 }
 
+TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
+  SmallDenseMap<int, int> M = {{0, 0}, {0, 1}, {1, 2}};
+  EXPECT_EQ(2u, M.size());
+  EXPECT_EQ(1u, M.count(0));
+  EXPECT_EQ(0, M[0]);
+  EXPECT_EQ(1u, M.count(1));
+  EXPECT_EQ(2, M[1]);
+}
+
 struct ContiguousDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
   static inline unsigned getTombstoneKey() { return ~0U - 1; }
