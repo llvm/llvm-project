@@ -203,12 +203,6 @@ void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
   build(builder, result, source, indexValue);
 }
 
-void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
-                  Value index) {
-  auto indexTy = builder.getIndexType();
-  build(builder, result, indexTy, source, index);
-}
-
 Optional<int64_t> DimOp::getConstantIndex() {
   if (auto constantOp = index().getDefiningOp<ConstantOp>())
     return constantOp.getValue().cast<IntegerAttr>().getInt();
@@ -1046,6 +1040,17 @@ OpFoldResult InsertSliceOp::fold(ArrayRef<Attribute>) {
       succeeded(foldIdentityOffsetSizeAndStrideOpInterface(*this, getType())))
     return this->source();
   return OpFoldResult();
+}
+
+LogicalResult InsertSliceOp::reifyReturnTypeShapesPerResultDim(
+    OpBuilder &builder,
+    SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<Value>(getType().getRank()));
+  for (auto dim : llvm::seq<int64_t>(0, getType().getRank())) {
+    reifiedReturnShapes[0][dim] =
+        builder.createOrFold<tensor::DimOp>(getLoc(), dest(), dim);
+  }
+  return success();
 }
 
 namespace {
