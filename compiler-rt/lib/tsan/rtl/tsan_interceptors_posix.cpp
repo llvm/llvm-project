@@ -267,7 +267,7 @@ ScopedInterceptor::~ScopedInterceptor() {
   if (!thr_->ignore_interceptors) {
     ProcessPendingSignals(thr_);
     FuncExit(thr_);
-    CheckNoLocks(thr_);
+    CheckedMutex::CheckNoLocks();
   }
 }
 

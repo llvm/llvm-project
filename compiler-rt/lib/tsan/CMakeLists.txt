@@ -39,7 +39,6 @@ set(TSAN_SOURCES
   rtl/tsan_malloc_mac.cpp
   rtl/tsan_md5.cpp
   rtl/tsan_mman.cpp
-  rtl/tsan_mutex.cpp
   rtl/tsan_mutexset.cpp
   rtl/tsan_preinit.cpp
   rtl/tsan_report.cpp
@@ -94,7 +93,6 @@ set(TSAN_HEADERS
   rtl/tsan_interface_inl.h
   rtl/tsan_interface_java.h
   rtl/tsan_mman.h
-  rtl/tsan_mutex.h
   rtl/tsan_mutexset.h
   rtl/tsan_platform.h
   rtl/tsan_ppc_regs.h

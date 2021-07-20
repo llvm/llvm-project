@@ -149,9 +149,9 @@ class CheckedMutex {
 };
 
 // Reader-writer mutex.
-class MUTEX Mutex2 {
+class MUTEX Mutex {
  public:
-  constexpr Mutex2(MutexType type = MutexUnchecked) : checked_(type) {}
+  constexpr Mutex(MutexType type = MutexUnchecked) : checked_(type) {}
 
   void Lock() ACQUIRE() {
     checked_.Lock();
@@ -329,8 +329,8 @@ class MUTEX Mutex2 {
   static constexpr u64 kWriterLock = 1ull << (3 * kCounterWidth);
   static constexpr u64 kWriterSpinWait = 1ull << (3 * kCounterWidth + 1);
 
-  Mutex2(const Mutex2 &) = delete;
-  void operator=(const Mutex2 &) = delete;
+  Mutex(const Mutex &) = delete;
+  void operator=(const Mutex &) = delete;
 };
 
 void FutexWait(atomic_uint32_t *p, u32 cmp);
@@ -477,6 +477,8 @@ typedef GenericScopedLock<StaticSpinMutex> SpinMutexLock;
 typedef GenericScopedLock<BlockingMutex> BlockingMutexLock;
 typedef GenericScopedLock<RWMutex> RWMutexLock;
 typedef GenericScopedReadLock<RWMutex> RWMutexReadLock;
+typedef GenericScopedLock<Mutex> Lock;
+typedef GenericScopedReadLock<Mutex> ReadLock;
 
 }  // namespace __sanitizer
 
