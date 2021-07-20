@@ -73,6 +73,12 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasROPProtect = true;
     } else if (Feature == "+privileged") {
       HasPrivileged = true;
+    } else if (Feature == "+isa-v207-instructions") {
+      IsISA2_07 = true;
+    } else if (Feature == "+isa-v30-instructions") {
+      IsISA3_0 = true;
+    } else if (Feature == "+isa-v31-instructions") {
+      IsISA3_1 = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -390,6 +396,15 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("e500", true)
                         .Default(false);
 
+  Features["isa-v207-instructions"] = llvm::StringSwitch<bool>(CPU)
+                                          .Case("ppc64le", true)
+                                          .Case("pwr9", true)
+                                          .Case("pwr8", true)
+                                          .Default(false);
+
+  Features["isa-v30-instructions"] =
+      llvm::StringSwitch<bool>(CPU).Case("pwr9", true).Default(false);
+
   // Power10 includes all the same features as Power9 plus any features specific
   // to the Power10 core.
   if (CPU == "pwr10" || CPU == "power10") {
@@ -446,6 +461,7 @@ void PPCTargetInfo::addP10SpecificFeatures(
   Features["power10-vector"] = true;
   Features["pcrelative-memops"] = true;
   Features["prefix-instrs"] = true;
+  Features["isa-v31-instructions"] = true;
   return;
 }
 
@@ -476,6 +492,9 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mma", HasMMA)
       .Case("rop-protect", HasROPProtect)
       .Case("privileged", HasPrivileged)
+      .Case("isa-v207-instructions", IsISA2_07)
+      .Case("isa-v30-instructions", IsISA3_0)
+      .Case("isa-v31-instructions", IsISA3_1)
       .Default(false);
 }
 

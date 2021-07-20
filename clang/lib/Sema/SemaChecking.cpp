@@ -3601,10 +3601,18 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
 }
 
 static bool SemaFeatureCheck(Sema &S, CallExpr *TheCall,
-                             StringRef FeatureToCheck, unsigned DiagID) {
-  if (!S.Context.getTargetInfo().hasFeature(FeatureToCheck))
-    return S.Diag(TheCall->getBeginLoc(), DiagID) << TheCall->getSourceRange();
-  return false;
+                             StringRef FeatureToCheck, unsigned DiagID,
+                             StringRef DiagArg = "") {
+  if (S.Context.getTargetInfo().hasFeature(FeatureToCheck))
+    return false;
+
+  if (DiagArg.empty())
+    S.Diag(TheCall->getBeginLoc(), DiagID) << TheCall->getSourceRange();
+  else
+    S.Diag(TheCall->getBeginLoc(), DiagID)
+        << DiagArg << TheCall->getSourceRange();
+
+  return true;
 }
 
 bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
@@ -3646,17 +3654,17 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_divde:
   case PPC::BI__builtin_divdeu:
     return SemaFeatureCheck(*this, TheCall, "extdiv",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_bpermd:
     return SemaFeatureCheck(*this, TheCall, "bpermd",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_unpack_vector_int128:
     return SemaFeatureCheck(*this, TheCall, "vsx",
-                            diag::err_ppc_builtin_only_on_pwr7) ||
+                            diag::err_ppc_builtin_only_on_arch, "7") ||
            SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_pack_vector_int128:
     return SemaFeatureCheck(*this, TheCall, "vsx",
-                            diag::err_ppc_builtin_only_on_pwr7);
+                            diag::err_ppc_builtin_only_on_arch, "7");
   case PPC::BI__builtin_altivec_vgnb:
      return SemaBuiltinConstantArgRange(TheCall, 1, 2, 7);
   case PPC::BI__builtin_altivec_vec_replace_elt:
