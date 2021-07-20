@@ -1280,6 +1280,8 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
         B.addAlignmentAttr(1ULL << ((A >> 16) - 1));
       else if (I == Attribute::StackAlignment)
         B.addStackAlignmentAttr(1ULL << ((A >> 26)-1));
+      else if (Attribute::isTypeAttrKind(I))
+        B.addTypeAttr(I, nullptr); // Type will be auto-upgraded.
       else
         B.addAttribute(I);
     }
