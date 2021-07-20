@@ -3196,8 +3196,8 @@ private:
 
       assert(Caller && "Caller is nullptr");
 
-      auto &CAA =
-          A.getOrCreateAAFor<AAKernelInfo>(IRPosition::function(*Caller));
+      auto &CAA = A.getOrCreateAAFor<AAKernelInfo>(
+          IRPosition::function(*Caller), this, DepClassTy::REQUIRED);
       if (CAA.ReachingKernelEntries.isValidState()) {
         ReachingKernelEntries ^= CAA.ReachingKernelEntries;
         return true;
@@ -3521,12 +3521,17 @@ private:
       // All reaching kernels are in SPMD mode. Update all function calls to
       // __kmpc_is_spmd_exec_mode to 1.
       SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), true);
-    } else {
+    } else if (KnownNonSPMDCount || AssumedNonSPMDCount) {
       assert(KnownSPMDCount == 0 && AssumedSPMDCount == 0 &&
              "Expected only non-SPMD kernels!");
       // All reaching kernels are in non-SPMD mode. Update all function
       // calls to __kmpc_is_spmd_exec_mode to 0.
       SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), false);
+    } else {
+      // We have empty reaching kernels, therefore we cannot tell if the
+      // associated call site can be folded. At this moment, SimplifiedValue
+      // must be none.
+      assert(!SimplifiedValue.hasValue() && "SimplifiedValue should be none");
     }
 
     return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
