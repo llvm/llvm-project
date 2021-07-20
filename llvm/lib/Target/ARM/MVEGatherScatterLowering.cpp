@@ -488,27 +488,44 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
   // The size of the gather was already checked in isLegalTypeAndAlignment;
   // if it was not a full vector width an appropriate extend should follow.
   auto *Extend = Root;
+  bool TruncResult = false;
   if (MemoryTy->getPrimitiveSizeInBits() < 128) {
-    // Only transform gathers with exactly one use
-    if (!I->hasOneUse())
-      return nullptr;
-
-    // The correct root to replace is not the CallInst itself, but the
-    // instruction which extends it
-    Extend = cast<Instruction>(*I->users().begin());
-    if (isa<SExtInst>(Extend)) {
-      Unsigned = 0;
-    } else if (!isa<ZExtInst>(Extend)) {
-      LLVM_DEBUG(dbgs() << "masked gathers: extend needed but not provided. "
-                        << "Expanding\n");
-      return nullptr;
+    if (I->hasOneUse()) {
+      // If the gather has a single extend of the correct type, use an extending
+      // gather and replace the ext. In which case the correct root to replace
+      // is not the CallInst itself, but the instruction which extends it.
+      Instruction* User = cast<Instruction>(*I->users().begin());
+      if (isa<SExtInst>(User) &&
+          User->getType()->getPrimitiveSizeInBits() == 128) {
+        LLVM_DEBUG(dbgs() << "masked gathers: Incorporating extend: "
+                          << *User << "\n");
+        Extend = User;
+        ResultTy = User->getType();
+        Unsigned = 0;
+      } else if (isa<ZExtInst>(User) &&
+                 User->getType()->getPrimitiveSizeInBits() == 128) {
+        LLVM_DEBUG(dbgs() << "masked gathers: Incorporating extend: "
+                          << *ResultTy << "\n");
+        Extend = User;
+        ResultTy = User->getType();
+      }
     }
-    LLVM_DEBUG(dbgs() << "masked gathers: found an extending gather\n");
-    ResultTy = Extend->getType();
+
+    // If an extend hasn't been found and the type is an integer, create an
+    // extending gather and truncate back to the original type.
+    if (ResultTy->getPrimitiveSizeInBits() < 128 &&
+        ResultTy->isIntOrIntVectorTy()) {
+      ResultTy = ResultTy->getWithNewBitWidth(
+          128 / cast<FixedVectorType>(ResultTy)->getNumElements());
+      TruncResult = true;
+      LLVM_DEBUG(dbgs() << "masked gathers: Small input type, truncing to: "
+                        << *ResultTy << "\n");
+    }
+
     // The final size of the gather must be a full vector width
     if (ResultTy->getPrimitiveSizeInBits() != 128) {
-      LLVM_DEBUG(dbgs() << "masked gathers: extending from the wrong type. "
-                        << "Expanding\n");
+      LLVM_DEBUG(dbgs() << "masked gathers: Extend needed but not provided "
+                           "from the correct type. Expanding\n");
       return nullptr;
     }
   }
@@ -522,18 +539,25 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
 
   Root = Extend;
   Value *Mask = I->getArgOperand(2);
+  Instruction *Load = nullptr;
   if (!match(Mask, m_One()))
-    return Builder.CreateIntrinsic(
+    Load = Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_offset_predicated,
         {ResultTy, BasePtr->getType(), Offsets->getType(), Mask->getType()},
         {BasePtr, Offsets, Builder.getInt32(MemoryTy->getScalarSizeInBits()),
          Builder.getInt32(Scale), Builder.getInt32(Unsigned), Mask});
   else
-    return Builder.CreateIntrinsic(
+    Load = Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_offset,
         {ResultTy, BasePtr->getType(), Offsets->getType()},
         {BasePtr, Offsets, Builder.getInt32(MemoryTy->getScalarSizeInBits()),
          Builder.getInt32(Scale), Builder.getInt32(Unsigned)});
+
+  if (TruncResult) {
+    Load = TruncInst::Create(Instruction::Trunc, Load, MemoryTy);
+    Builder.Insert(Load);
+  }
+  return Load;
 }
 
 Instruction *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
