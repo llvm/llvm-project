@@ -539,12 +539,12 @@ public:
 
   template <typename PassT>
   std::enable_if_t<!std::is_same<PassT, PassManager>::value>
-  addPass(PassT Pass) {
+  addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, PreservedAnalyses, AnalysisManagerT,
                           ExtraArgTs...>;
 
-    Passes.emplace_back(new PassModelT(std::move(Pass)));
+    Passes.emplace_back(new PassModelT(std::forward<PassT>(Pass)));
   }
 
   /// When adding a pass manager pass that has the same type as this pass
@@ -1206,13 +1206,13 @@ private:
 /// templated adaptor.
 template <typename FunctionPassT>
 ModuleToFunctionPassAdaptor
-createModuleToFunctionPassAdaptor(FunctionPassT Pass) {
+createModuleToFunctionPassAdaptor(FunctionPassT &&Pass) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
                         FunctionAnalysisManager>;
 
   return ModuleToFunctionPassAdaptor(
-      std::make_unique<PassModelT>(std::move(Pass)));
+      std::make_unique<PassModelT>(std::forward<FunctionPassT>(Pass)));
 }
 
 /// A utility pass template to force an analysis result to be available.
@@ -1284,7 +1284,8 @@ struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
 template <typename PassT>
 class RepeatedPass : public PassInfoMixin<RepeatedPass<PassT>> {
 public:
-  RepeatedPass(int Count, PassT P) : Count(Count), P(std::move(P)) {}
+  RepeatedPass(int Count, PassT &&P)
+      : Count(Count), P(std::forward<PassT>(P)) {}
 
   template <typename IRUnitT, typename AnalysisManagerT, typename... Ts>
   PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM, Ts &&... Args) {
@@ -1317,8 +1318,8 @@ private:
 };
 
 template <typename PassT>
-RepeatedPass<PassT> createRepeatedPass(int Count, PassT P) {
-  return RepeatedPass<PassT>(Count, std::move(P));
+RepeatedPass<PassT> createRepeatedPass(int Count, PassT &&P) {
+  return RepeatedPass<PassT>(Count, std::forward<PassT>(P));
 }
 
 } // end namespace llvm
