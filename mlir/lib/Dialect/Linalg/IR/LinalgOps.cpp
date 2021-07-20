@@ -1063,11 +1063,29 @@ struct FoldToDimOfOutputOperand : public OpRewritePattern<tensor::DimOp> {
     return success();
   }
 };
+
+// Fold CastOp into PadTensorOp when adding static information.
+struct FoldSourceTensorCast : public OpRewritePattern<PadTensorOp> {
+  using OpRewritePattern<PadTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadTensorOp padTensorOp,
+                                PatternRewriter &rewriter) const override {
+    auto castOp = padTensorOp.source().getDefiningOp<tensor::CastOp>();
+    if (!tensor::canFoldIntoConsumerOp(castOp))
+      return failure();
+
+    rewriter.updateRootInPlace(padTensorOp, [&]() {
+      padTensorOp.sourceMutable().assign(castOp.source());
+    });
+    return success();
+  }
+};
 } // namespace
 
 void PadTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<FoldStaticZeroPadding, FoldToDimOfOutputOperand>(context);
+  results.add<FoldStaticZeroPadding, FoldToDimOfOutputOperand,
+              FoldSourceTensorCast>(context);
 }
 
 /// Return the padding value of the PadTensorOp if it constant. In this context,
