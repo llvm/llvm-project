@@ -58,6 +58,16 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
                                  ValueRange inputs,
                                  Location loc) -> Optional<Value> {
+    // Explicit "this" is necessary here because otherwise "options" resolves to
+    // the argument of the parent function (constructor), which is a reference
+    // and not a copy. This can lead to UB when the lambda is actually called.
+    if (this->options.useBarePtrCallConv) {
+      if (!resultType.hasStaticShape())
+        return llvm::None;
+      Value v = MemRefDescriptor::fromStaticShape(builder, loc, *this,
+                                                  resultType, inputs[0]);
+      return v;
+    }
     if (inputs.size() == 1)
       return llvm::None;
     return MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
@@ -69,20 +79,18 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                Location loc) -> Optional<Value> {
     if (inputs.size() != 1)
       return llvm::None;
-    // FIXME: These should check LLVM::DialectCastOp can actually be constructed
-    // from the input and result.
-    return builder.create<LLVM::DialectCastOp>(loc, resultType, inputs[0])
-        .getResult();
+
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        .getResult(0);
   });
   addTargetMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs,
                                Location loc) -> Optional<Value> {
     if (inputs.size() != 1)
       return llvm::None;
-    // FIXME: These should check LLVM::DialectCastOp can actually be constructed
-    // from the input and result.
-    return builder.create<LLVM::DialectCastOp>(loc, resultType, inputs[0])
-        .getResult();
+
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        .getResult(0);
   });
 }
 

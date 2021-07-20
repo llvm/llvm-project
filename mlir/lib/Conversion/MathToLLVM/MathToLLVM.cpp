@@ -201,7 +201,6 @@ struct ConvertMathToLLVMPass
     LLVMTypeConverter converter(&getContext());
     populateMathToLLVMConversionPatterns(converter, patterns);
     LLVMConversionTarget target(getContext());
-    target.addLegalOp<LLVM::DialectCastOp>();
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
