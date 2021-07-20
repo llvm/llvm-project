@@ -57,10 +57,10 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		"
 	if [ "`uname -a | grep ppc64le`" != "" ]; then
 		SUFFIX="linux_ppc64le"
-		ARCHCFLAGS="-m64"
+		ARCHCFLAGS="-m64 -mcpu=power8 -fno-function-sections"
 	elif [ "`uname -a | grep x86_64`" != "" ]; then
 		SUFFIX="linux_amd64"
-		ARCHCFLAGS="-m64"
+		ARCHCFLAGS="-m64 -msse3"
 		OSCFLAGS="$OSCFLAGS -ffreestanding -Wno-unused-const-variable -Werror -Wno-unknown-warning-option"
 	elif [ "`uname -a | grep aarch64`" != "" ]; then
 		SUFFIX="linux_arm64"
@@ -179,11 +179,6 @@ done
 FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++14 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS $EXTRA_CFLAGS"
 DEBUG_FLAGS="$FLAGS -DSANITIZER_DEBUG=1 -g"
 FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -fomit-frame-pointer"
-if [ "$SUFFIX" = "linux_ppc64le" ]; then
-	FLAGS="$FLAGS -mcpu=power8 -fno-function-sections"
-elif [ "$SUFFIX" = "linux_amd64" ]; then
-	FLAGS="$FLAGS -msse3"
-fi
 
 if [ "$DEBUG" = "" ]; then
 	# Do a build test with debug flags.
