@@ -1,13 +1,11 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: cd %t
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux-gnu %s -o ranges.o -split-dwarf-file ranges.dwo
-# UN: llvm-mc -filetype=obj -triple x86_64-unknown-linux-gnu %s -o ranges.dwo --defsym DWO=1
 # RUN: llvm-dwarfdump --statistics ranges.o | FileCheck %s
 
 # CHECK: "#bytes within functions": 30,
 
 
-# .ifndef DWO
 	.text
 	.file	"ranges.cpp"
 	.section	.text._Z2f3v,"ax",@progbits
@@ -134,7 +132,7 @@ _Z2f3v.__part.2:                        # %if.end
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Lskel_string0:
-	.asciz	"/usr/local/google/home/blaikie/dev/scratch" # string offset=0
+	.asciz	"." # string offset=0
 .Lskel_string1:
 	.asciz	"ranges.dwo"                    # string offset=43
 	.section	.debug_str_offsets,"",@progbits
@@ -179,7 +177,6 @@ _Z2f3v.__part.2:                        # %if.end
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
 
-# .else
 
 	.section	.debug_str_offsets.dwo,"e",@progbits
 	.long	24                              # Length of String Offsets Set
@@ -282,4 +279,3 @@ _Z2f3v.__part.2:                        # %if.end
 	.byte	0                               # DW_RLE_end_of_list
 .Ldebug_list_header_end1:
 
-# .endif
