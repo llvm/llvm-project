@@ -59,7 +59,7 @@ json::Object PipelinePrinter::getJSONTargetInfo() const {
     for (unsigned J = 0; J < NumUnits; ++J) {
       std::string ResourceName = ProcResource.Name;
       if (NumUnits > 1) {
-        ResourceName +=  ".";
+        ResourceName += ".";
         ResourceName += J;
       }
 
