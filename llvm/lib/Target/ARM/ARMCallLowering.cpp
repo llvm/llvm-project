@@ -129,7 +129,7 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 
-  unsigned assignCustomValue(const CallLowering::ArgInfo &Arg,
+  unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
                              ArrayRef<CCValAssign> VAs) override {
     assert(Arg.Regs.size() == 1 && "Can't handle multple regs yet");
 
@@ -297,7 +297,7 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
     }
   }
 
-  unsigned assignCustomValue(const ARMCallLowering::ArgInfo &Arg,
+  unsigned assignCustomValue(ARMCallLowering::ArgInfo &Arg,
                              ArrayRef<CCValAssign> VAs) override {
     assert(Arg.Regs.size() == 1 && "Can't handle multple regs yet");
 
