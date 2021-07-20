@@ -8792,7 +8792,7 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
         if (C2->getType()->isPointerTy())
           return nullptr;
 
-        if (PointerType *PTy = dyn_cast<PointerType>(C->getType())) {
+        if (C->getType()->isPointerTy()) {
           C = ConstantExpr::getGetElementPtr(Type::getInt8Ty(C->getContext()),
                                              C, C2);
         } else {
