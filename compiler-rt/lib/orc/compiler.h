@@ -56,4 +56,10 @@
 #define ORC_RT_UNLIKELY(EXPR) (EXPR)
 #endif
 
+#ifdef __APPLE__
+#define WEAK_IMPORT __attribute__((weak_import))
+#else
+#define WEAK_IMPORT __attribute__((weak))
+#endif
+
 #endif // ORC_RT_COMPILER_H
