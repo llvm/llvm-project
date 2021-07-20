@@ -146,6 +146,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
            dimension, i.e `low`.
     * high: A list contains the padding along the end of each
            dimension, i.e. `high`.
+    * output: An optional output operand.
 
     The result tensor dimensions are `low` + `dim` + `high` along that
     dimension. The number of elements of `low` and `high` must match
@@ -194,16 +195,21 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     Variadic<Index>:$low,
     Variadic<Index>:$high,
     I64ArrayAttr:$static_low,
-    I64ArrayAttr:$static_high);
+    I64ArrayAttr:$static_high,
+    Optional<AnyTensor>:$output);
 
   let regions = (region SizedRegion<1>:$region);
 
   let results = (outs AnyTensor:$result);
 
+  // TODO: Remove custom<InferType> when AllTypesMatch supports opt. operands.
   let assemblyFormat = [{
-    $source `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
+    $source
+    `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
     `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
+    (`into` $output^ )?
     $region attr-dict `:` type($source) `to` type($result)
+    custom<InferType>(ref($output), type($output), ref(type($result)))
   }];
 
   let extraClassDeclaration = [{
@@ -292,7 +298,12 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
     // result type. If the type passed is nullptr, it is inferred.
     OpBuilder<(ins "Type":$resultType, "Value":$source,
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a PadTensorOp with mixed static and dynamic entries and custom
+    // result type.
+    OpBuilder<(ins "Type":$resultType, "Value":$source,
+      "ArrayRef<Value>":$low, "ArrayRef<Value>":$high, "ArrayAttr":$staticLow,
+      "ArrayAttr":$staticHigh)>
   ];
 
   let hasCanonicalizer = 1;
