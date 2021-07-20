@@ -20,7 +20,7 @@
 
 # RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=DISASM
 # RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s --check-prefix=DWARF
-# RUN: llvm-readelf -sections %t | FileCheck %s --check-prefix=SECTION
+# RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SECTION
 
 # DISASM:       Disassembly of section .text:
 # DISASM-EMPTY:
