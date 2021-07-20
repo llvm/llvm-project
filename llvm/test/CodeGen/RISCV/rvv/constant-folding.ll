@@ -28,9 +28,8 @@ define <2 x i16> @fixedlen(<2 x i32> %x) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV64-NEXT:    vsrl.vi v25, v8, 16
-; RV64-NEXT:    lui a0, 32
-; RV64-NEXT:    addiw a0, a0, -1
-; RV64-NEXT:    slli a0, a0, 15
+; RV64-NEXT:    lui a0, 131071
+; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    vand.vx v25, v25, a0
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; RV64-NEXT:    vnsrl.wi v8, v25, 0

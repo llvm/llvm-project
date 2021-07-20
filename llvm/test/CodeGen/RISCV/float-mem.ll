@@ -112,9 +112,8 @@ define dso_local float @flw_fsw_constant(float %a) nounwind {
 ;
 ; RV64IF-LABEL: flw_fsw_constant:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    lui a1, 56
-; RV64IF-NEXT:    addiw a1, a1, -1353
-; RV64IF-NEXT:    slli a1, a1, 14
+; RV64IF-NEXT:    lui a1, 228023
+; RV64IF-NEXT:    slli a1, a1, 2
 ; RV64IF-NEXT:    flw ft0, -273(a1)
 ; RV64IF-NEXT:    fmv.w.x ft1, a0
 ; RV64IF-NEXT:    fadd.s ft0, ft1, ft0

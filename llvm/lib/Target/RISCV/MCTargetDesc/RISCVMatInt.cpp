@@ -12,6 +12,41 @@
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
+static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
+  if (!HasRVC)
+    return Res.size();
+
+  int Cost = 0;
+  for (auto Instr : Res) {
+    bool Compressed;
+    switch (Instr.Opc) {
+    default: llvm_unreachable("Unexpected opcode");
+    case RISCV::SLLI:
+    case RISCV::SRLI:
+      Compressed = true;
+      break;
+    case RISCV::ADDI:
+    case RISCV::ADDIW:
+    case RISCV::LUI:
+      Compressed = isInt<6>(Instr.Imm);
+      break;
+    case RISCV::ADDUW:
+      Compressed = false;
+      break;
+    }
+    // Two RVC instructions take the same space as one RVI instruction, but
+    // can take longer to execute than the single RVI instruction. Thus, we
+    // consider that two RVC instruction are slightly more costly than one
+    // RVI instruction. For longer sequences of RVC instructions the space
+    // savings can be worth it, though. The costs below try to model that.
+    if (!Compressed)
+      Cost += 100; // Baseline cost of one RVI instruction: 100%.
+    else
+      Cost += 70; // 70% cost of baseline.
+  }
+  return Cost;
+}
+
 // Recursively generate a sequence for materializing an integer.
 static void generateInstSeqImpl(int64_t Val,
                                 const FeatureBitset &ActiveFeatures,
@@ -68,6 +103,14 @@ static void generateInstSeqImpl(int64_t Val,
   int64_t Hi52 = ((uint64_t)Val + 0x800ull) >> 12;
   int ShiftAmount = 12 + findFirstSet((uint64_t)Hi52);
   Hi52 = SignExtend64(Hi52 >> (ShiftAmount - 12), 64 - ShiftAmount);
+
+  // If the remaining bits don't fit in 12 bits, we might be able to reduce the
+  // shift amount in order to use LUI which will zero the lower 12 bits.
+  if (ShiftAmount > 12 && !isInt<12>(Hi52) && isInt<32>((uint64_t)Hi52 << 12)) {
+    // Reduce the shift amount and add zeros to the LSBs so it will match LUI.
+    ShiftAmount -= 12;
+    Hi52 = (uint64_t)Hi52 << 12;
+  }
 
   generateInstSeqImpl(Hi52, ActiveFeatures, Res);
 
@@ -143,8 +186,10 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 }
 
 int getIntMatCost(const APInt &Val, unsigned Size,
-                  const FeatureBitset &ActiveFeatures) {
+                  const FeatureBitset &ActiveFeatures,
+                  bool CompressionCost) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
+  bool HasRVC = CompressionCost && ActiveFeatures[RISCV::FeatureStdExtC];
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost
@@ -153,7 +198,7 @@ int getIntMatCost(const APInt &Val, unsigned Size,
   for (unsigned ShiftVal = 0; ShiftVal < Size; ShiftVal += PlatRegSize) {
     APInt Chunk = Val.ashr(ShiftVal).sextOrTrunc(PlatRegSize);
     InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), ActiveFeatures);
-    Cost += MatSeq.size();
+    Cost += getInstSeqCost(MatSeq, HasRVC);
   }
   return std::max(1, Cost);
 }
