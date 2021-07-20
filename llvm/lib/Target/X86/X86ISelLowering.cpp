@@ -8477,7 +8477,7 @@ static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
 static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                                         const SDLoc &DL, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget,
-                                        bool isAfterLegalize) {
+                                        bool IsAfterLegalize) {
   if ((VT.getScalarSizeInBits() % 8) != 0)
     return SDValue();
 
@@ -8607,7 +8607,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   if (FirstLoadedElt == 0 &&
       (NumLoadedElts == (int)NumElems || IsDereferenceable) &&
       (IsConsecutiveLoad || IsConsecutiveLoadWithZeros)) {
-    if (isAfterLegalize && !TLI.isOperationLegal(ISD::LOAD, VT))
+    if (IsAfterLegalize && !TLI.isOperationLegal(ISD::LOAD, VT))
       return SDValue();
 
     // Don't create 256-bit non-temporal aligned loads without AVX2 as these
@@ -8624,7 +8624,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
     // IsConsecutiveLoadWithZeros - we need to create a shuffle of the loaded
     // vector and a zero vector to clear out the zero elements.
-    if (!isAfterLegalize && VT.isVector()) {
+    if (!IsAfterLegalize && VT.isVector()) {
       unsigned NumMaskElts = VT.getVectorNumElements();
       if ((NumMaskElts % NumElems) == 0) {
         unsigned Scale = NumMaskElts / NumElems;
@@ -8652,7 +8652,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), HalfNumElems);
       SDValue HalfLD =
           EltsFromConsecutiveLoads(HalfVT, Elts.drop_back(HalfNumElems), DL,
-                                   DAG, Subtarget, isAfterLegalize);
+                                   DAG, Subtarget, IsAfterLegalize);
       if (HalfLD)
         return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
                            HalfLD, DAG.getIntPtrConstant(0, DL));
@@ -8728,7 +8728,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                            VT.getSizeInBits() / ScalarSize);
       if (TLI.isTypeLegal(BroadcastVT)) {
         if (SDValue RepeatLoad = EltsFromConsecutiveLoads(
-                RepeatVT, RepeatedLoads, DL, DAG, Subtarget, isAfterLegalize)) {
+                RepeatVT, RepeatedLoads, DL, DAG, Subtarget, IsAfterLegalize)) {
           SDValue Broadcast = RepeatLoad;
           if (RepeatSize > ScalarSize) {
             while (Broadcast.getValueSizeInBits() < VT.getSizeInBits())
@@ -8752,7 +8752,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
                                          SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget,
-                                         bool isAfterLegalize) {
+                                         bool IsAfterLegalize) {
   SmallVector<SDValue, 64> Elts;
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
     if (SDValue Elt = getShuffleScalarElt(Op, i, DAG, 0)) {
@@ -8763,7 +8763,7 @@ static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
   }
   assert(Elts.size() == VT.getVectorNumElements());
   return EltsFromConsecutiveLoads(VT, Elts, DL, DAG, Subtarget,
-                                  isAfterLegalize);
+                                  IsAfterLegalize);
 }
 
 static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
@@ -38466,8 +38466,8 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       return AddSub;
 
   // Attempt to combine into a vector load/broadcast.
-  if (SDValue LD = combineToConsecutiveLoads(VT, SDValue(N, 0), dl, DAG,
-                                             Subtarget, true))
+  if (SDValue LD = combineToConsecutiveLoads(
+          VT, SDValue(N, 0), dl, DAG, Subtarget, /*IsAfterLegalize*/ true))
     return LD;
 
   // For AVX2, we sometimes want to combine
