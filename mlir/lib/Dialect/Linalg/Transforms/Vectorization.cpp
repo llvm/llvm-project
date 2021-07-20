@@ -870,6 +870,9 @@ struct PadTensorOpVectorizationWithTransferWritePattern
     // trimPadding must remove the amount of padding that was added earlier.
     if (!hasSameTensorSize(padOp.source(), trimPadding)) return failure();
 
+    // Insert the new TransferWriteOp at position of the old TransferWriteOp.
+    rewriter.setInsertionPoint(xferOp);
+
     SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
     auto newXferOp = rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         xferOp, padOp.source().getType(), xferOp.vector(), padOp.source(),
@@ -1013,6 +1016,10 @@ struct PadTensorOpVectorizationWithInsertSlicePattern
               return getConstantIntValue(std::get<0>(it)) == std::get<1>(it);
             }))
       return failure();
+
+    // Insert the TransferReadOp and TransferWriteOp at the position of the
+    // InsertSliceOp.
+    rewriter.setInsertionPoint(insertOp);
 
     // Generate TransferReadOp: Read entire source tensor and add high padding.
     SmallVector<Value> readIndices(
