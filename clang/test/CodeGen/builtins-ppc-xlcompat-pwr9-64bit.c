@@ -1,3 +1,4 @@
+// REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -target-cpu pwr9 -o - | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -emit-llvm %s \

@@ -1,3 +1,4 @@
+// REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -O2 -triple powerpc64-unknown-unknown \
 // RUN:   -emit-llvm %s -o - -target-cpu pwr7 | \
 // RUN:  FileCheck %s --check-prefixes=CHECK64
