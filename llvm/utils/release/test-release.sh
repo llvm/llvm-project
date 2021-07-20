@@ -41,7 +41,7 @@ do_lld="yes"
 do_lldb="yes"
 do_polly="yes"
 do_mlir="yes"
-do_flang="no"
+do_flang="yes"
 BuildDir="`pwd`"
 ExtraConfigureFlags=""
 ExportBranch=""
@@ -75,6 +75,7 @@ function usage() {
     echo " -no-lldb             Disable check-out & build lldb (default)"
     echo " -no-polly            Disable check-out & build Polly"
     echo " -no-mlir             Disable check-out & build MLIR"
+    echo " -no-flang            Disable check-out & build Flang"
 }
 
 while [ $# -gt 0 ]; do
@@ -173,8 +174,8 @@ while [ $# -gt 0 ]; do
         -no-mlir )
             do_mlir="no"
             ;;
-        -flang )
-            do_flang="yes"
+        -no-flang )
+            do_flang="no"
             ;;
         -help | --help | -h | --h | -\? )
             usage
@@ -188,6 +189,11 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+if [ $do_mlir = "no" ] && [ $do_flang = "yes" ]; then
+  echo "error: cannot build Flang without MLIR"
+  exit 1
+fi
 
 # Check required arguments.
 if [ -z "$Release" ]; then
