@@ -2634,6 +2634,19 @@ void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
   }
 }
 
+bool Sema::ShouldSplatAltivecScalarInCast(const VectorType *VecTy) {
+  bool SrcCompatXL = this->getLangOpts().getAltivecSrcCompat() ==
+                     LangOptions::AltivecSrcCompatKind::XL;
+  VectorType::VectorKind VKind = VecTy->getVectorKind();
+
+  if ((VKind == VectorType::AltiVecVector) ||
+      (SrcCompatXL && ((VKind == VectorType::AltiVecBool) ||
+                       (VKind == VectorType::AltiVecPixel)))) {
+    return true;
+  }
+  return false;
+}
+
 void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
                                        bool ListInitialization) {
   assert(Self.getLangOpts().CPlusPlus);
@@ -2688,9 +2701,9 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
 
   // AltiVec vector initialization with a single literal.
   if (const VectorType *vecTy = DestType->getAs<VectorType>())
-    if (vecTy->getVectorKind() == VectorType::AltiVecVector
-        && (SrcExpr.get()->getType()->isIntegerType()
-            || SrcExpr.get()->getType()->isFloatingType())) {
+    if (Self.ShouldSplatAltivecScalarInCast(vecTy) &&
+        (SrcExpr.get()->getType()->isIntegerType() ||
+         SrcExpr.get()->getType()->isFloatingType())) {
       Kind = CK_VectorSplat;
       SrcExpr = Self.prepareVectorSplat(DestType, SrcExpr.get());
       return;
@@ -2973,8 +2986,8 @@ void CastOperation::CheckCStyleCast() {
   }
 
   if (const VectorType *DestVecTy = DestType->getAs<VectorType>()) {
-    if (DestVecTy->getVectorKind() == VectorType::AltiVecVector &&
-          (SrcType->isIntegerType() || SrcType->isFloatingType())) {
+    if (Self.ShouldSplatAltivecScalarInCast(DestVecTy) &&
+        (SrcType->isIntegerType() || SrcType->isFloatingType())) {
       Kind = CK_VectorSplat;
       SrcExpr = Self.prepareVectorSplat(DestType, SrcExpr.get());
     } else if (Self.CheckVectorCast(OpRange, DestType, SrcType, Kind)) {
