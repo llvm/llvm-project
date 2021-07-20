@@ -10,7 +10,7 @@ namespace {
 
 class TestReporter : public benchmark::ConsoleReporter {
  public:
-  virtual void ReportRuns(const std::vector<Run>& report) {
+  virtual void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
     all_runs_.insert(all_runs_.end(), begin(report), end(report));
     ConsoleReporter::ReportRuns(report);
   }
