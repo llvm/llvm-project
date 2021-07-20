@@ -1988,7 +1988,9 @@ public:
     return CreateConstInBoundsGEP2_32(Ty, Ptr, 0, Idx, Name);
   }
 
-  Value *CreateStructGEP(Value *Ptr, unsigned Idx, const Twine &Name = "") {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      Value *CreateStructGEP(Value *Ptr, unsigned Idx, const Twine &Name = ""),
+      "Use the version with explicit element type instead") {
     return CreateConstInBoundsGEP2_32(
         Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, 0, Idx,
         Name);
