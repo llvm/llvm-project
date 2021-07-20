@@ -76,7 +76,7 @@ class RABasic : public MachineFunctionPass,
   void LRE_WillShrinkVirtReg(Register) override;
 
 public:
-  RABasic();
+  RABasic(const RegClassFilterFunc F = allocateAllRegClasses);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Basic Register Allocator"; }
@@ -88,7 +88,7 @@ public:
 
   Spiller &spiller() override { return *SpillerInstance; }
 
-  void enqueue(LiveInterval *LI) override {
+  void enqueueImpl(LiveInterval *LI) override {
     Queue.push(LI);
   }
 
@@ -171,7 +171,9 @@ void RABasic::LRE_WillShrinkVirtReg(Register VirtReg) {
   enqueue(&LI);
 }
 
-RABasic::RABasic(): MachineFunctionPass(ID) {
+RABasic::RABasic(RegClassFilterFunc F):
+  MachineFunctionPass(ID),
+  RegAllocBase(F) {
 }
 
 void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -332,7 +334,10 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   return true;
 }
 
-FunctionPass* llvm::createBasicRegisterAllocator()
-{
+FunctionPass* llvm::createBasicRegisterAllocator() {
   return new RABasic();
+}
+
+FunctionPass* llvm::createBasicRegisterAllocator(RegClassFilterFunc F) {
+  return new RABasic(F);
 }

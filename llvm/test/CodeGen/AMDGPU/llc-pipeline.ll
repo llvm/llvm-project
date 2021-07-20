@@ -123,8 +123,9 @@
 ; GCN-O0-NEXT:         Live Register Matrix
 ; GCN-O0-NEXT:         SI Pre-allocate WWM Registers
 ; GCN-O0-NEXT:         Fast Register Allocator
-; GCN-O0-NEXT:         SI Fix VGPR copies
 ; GCN-O0-NEXT:         SI lower SGPR spill instructions
+; GCN-O0-NEXT:         Fast Register Allocator
+; GCN-O0-NEXT:         SI Fix VGPR copies
 ; GCN-O0-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O0-NEXT:         Lazy Machine Block Frequency Analysis
 ; GCN-O0-NEXT:         Machine Optimization Remark Emitter
@@ -344,6 +345,12 @@
 ; GCN-O1-NEXT:         Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:         Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:         Greedy Register Allocator
+; GCN-O1-NEXT:         Virtual Register Rewriter
+; GCN-O1-NEXT:         SI lower SGPR spill instructions
+; GCN-O1-NEXT:         Virtual Register Map
+; GCN-O1-NEXT:         Live Register Matrix
+; GCN-O1-NEXT:         Machine Optimization Remark Emitter
+; GCN-O1-NEXT:         Greedy Register Allocator
 ; GCN-O1-NEXT:         GCN NSA Reassign
 ; GCN-O1-NEXT:         Virtual Register Rewriter
 ; GCN-O1-NEXT:         Stack Slot Coloring
@@ -351,7 +358,6 @@
 ; GCN-O1-NEXT:         Machine Loop Invariant Code Motion
 ; GCN-O1-NEXT:         SI Fix VGPR copies
 ; GCN-O1-NEXT:         SI optimize exec mask operations
-; GCN-O1-NEXT:         SI lower SGPR spill instructions
 ; GCN-O1-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O1-NEXT:         PostRA Machine Sink
 ; GCN-O1-NEXT:         MachineDominator Tree Construction
@@ -622,6 +628,12 @@
 ; GCN-O1-OPTS-NEXT:         Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:         Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:         Greedy Register Allocator
+; GCN-O1-OPTS-NEXT:         Virtual Register Rewriter
+; GCN-O1-OPTS-NEXT:         SI lower SGPR spill instructions
+; GCN-O1-OPTS-NEXT:         Virtual Register Map
+; GCN-O1-OPTS-NEXT:         Live Register Matrix
+; GCN-O1-OPTS-NEXT:         Machine Optimization Remark Emitter
+; GCN-O1-OPTS-NEXT:         Greedy Register Allocator
 ; GCN-O1-OPTS-NEXT:         GCN NSA Reassign
 ; GCN-O1-OPTS-NEXT:         Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:         Stack Slot Coloring
@@ -629,7 +641,6 @@
 ; GCN-O1-OPTS-NEXT:         Machine Loop Invariant Code Motion
 ; GCN-O1-OPTS-NEXT:         SI Fix VGPR copies
 ; GCN-O1-OPTS-NEXT:         SI optimize exec mask operations
-; GCN-O1-OPTS-NEXT:         SI lower SGPR spill instructions
 ; GCN-O1-OPTS-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O1-OPTS-NEXT:         PostRA Machine Sink
 ; GCN-O1-OPTS-NEXT:         MachineDominator Tree Construction
@@ -901,6 +912,12 @@
 ; GCN-O2-NEXT:         Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:         Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:         Greedy Register Allocator
+; GCN-O2-NEXT:         Virtual Register Rewriter
+; GCN-O2-NEXT:         SI lower SGPR spill instructions
+; GCN-O2-NEXT:         Virtual Register Map
+; GCN-O2-NEXT:         Live Register Matrix
+; GCN-O2-NEXT:         Machine Optimization Remark Emitter
+; GCN-O2-NEXT:         Greedy Register Allocator
 ; GCN-O2-NEXT:         GCN NSA Reassign
 ; GCN-O2-NEXT:         Virtual Register Rewriter
 ; GCN-O2-NEXT:         Stack Slot Coloring
@@ -908,7 +925,6 @@
 ; GCN-O2-NEXT:         Machine Loop Invariant Code Motion
 ; GCN-O2-NEXT:         SI Fix VGPR copies
 ; GCN-O2-NEXT:         SI optimize exec mask operations
-; GCN-O2-NEXT:         SI lower SGPR spill instructions
 ; GCN-O2-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O2-NEXT:         PostRA Machine Sink
 ; GCN-O2-NEXT:         MachineDominator Tree Construction
@@ -1193,6 +1209,12 @@
 ; GCN-O3-NEXT:         Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:         Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:         Greedy Register Allocator
+; GCN-O3-NEXT:         Virtual Register Rewriter
+; GCN-O3-NEXT:         SI lower SGPR spill instructions
+; GCN-O3-NEXT:         Virtual Register Map
+; GCN-O3-NEXT:         Live Register Matrix
+; GCN-O3-NEXT:         Machine Optimization Remark Emitter
+; GCN-O3-NEXT:         Greedy Register Allocator
 ; GCN-O3-NEXT:         GCN NSA Reassign
 ; GCN-O3-NEXT:         Virtual Register Rewriter
 ; GCN-O3-NEXT:         Stack Slot Coloring
@@ -1200,7 +1222,6 @@
 ; GCN-O3-NEXT:         Machine Loop Invariant Code Motion
 ; GCN-O3-NEXT:         SI Fix VGPR copies
 ; GCN-O3-NEXT:         SI optimize exec mask operations
-; GCN-O3-NEXT:         SI lower SGPR spill instructions
 ; GCN-O3-NEXT:         Fixup Statepoint Caller Saved
 ; GCN-O3-NEXT:         PostRA Machine Sink
 ; GCN-O3-NEXT:         MachineDominator Tree Construction
