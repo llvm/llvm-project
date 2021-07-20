@@ -7,8 +7,9 @@
 //===-----------------------------------------------------------------------===/
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/InterfaceStub/ELFStub.h"
-#include "llvm/InterfaceStub/TBEHandler.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/InterfaceStub/IFSHandler.h"
+#include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -35,16 +36,16 @@ void compareByLine(StringRef LHS, StringRef RHS) {
 
 TEST(ElfYamlTextAPI, YAMLReadableTBE) {
   const char Data[] = "--- !ifs-v1\n"
-                      "TbeVersion: 1.0\n"
+                      "IfsVersion: 1.0\n"
                       "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: "
                       "little, BitWidth: 64 }\n"
                       "NeededLibs: [libc.so, libfoo.so, libbar.so]\n"
                       "Symbols:\n"
                       "  - { Name: foo, Type: Func, Undefined: true }\n"
                       "...\n";
-  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  Expected<std::unique_ptr<IFSStub>> StubOrErr = readIFSFromBuffer(Data);
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
-  std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
+  std::unique_ptr<IFSStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
   EXPECT_FALSE(Stub->SoName.hasValue());
   EXPECT_TRUE(Stub->Target.Arch.hasValue());
@@ -58,7 +59,7 @@ TEST(ElfYamlTextAPI, YAMLReadableTBE) {
 TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   const char Data[] =
       "--- !ifs-v1\n"
-      "TbeVersion: 1.0\n"
+      "IfsVersion: 1.0\n"
       "SoName: test.so\n"
       "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, "
       "BitWidth: 64 }\n"
@@ -70,52 +71,52 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
       "  - { Name: not, Type: File, Undefined: true, Size: 111, "
       "Weak: true, Warning: \'All fields populated!\' }\n"
       "...\n";
-  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  Expected<std::unique_ptr<IFSStub>> StubOrErr = readIFSFromBuffer(Data);
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
-  std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
+  std::unique_ptr<IFSStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
   EXPECT_TRUE(Stub->SoName.hasValue());
   EXPECT_STREQ(Stub->SoName->c_str(), "test.so");
   EXPECT_EQ(Stub->Symbols.size(), 5u);
 
   auto Iterator = Stub->Symbols.begin();
-  ELFSymbol const &SymBar = *Iterator++;
+  IFSSymbol const &SymBar = *Iterator++;
   EXPECT_STREQ(SymBar.Name.c_str(), "bar");
   EXPECT_EQ(SymBar.Size, 42u);
-  EXPECT_EQ(SymBar.Type, ELFSymbolType::Object);
+  EXPECT_EQ(SymBar.Type, IFSSymbolType::Object);
   EXPECT_FALSE(SymBar.Undefined);
   EXPECT_FALSE(SymBar.Weak);
   EXPECT_FALSE(SymBar.Warning.hasValue());
 
-  ELFSymbol const &SymBaz = *Iterator++;
+  IFSSymbol const &SymBaz = *Iterator++;
   EXPECT_STREQ(SymBaz.Name.c_str(), "baz");
   EXPECT_EQ(SymBaz.Size, 3u);
-  EXPECT_EQ(SymBaz.Type, ELFSymbolType::TLS);
+  EXPECT_EQ(SymBaz.Type, IFSSymbolType::TLS);
   EXPECT_FALSE(SymBaz.Undefined);
   EXPECT_FALSE(SymBaz.Weak);
   EXPECT_FALSE(SymBaz.Warning.hasValue());
 
-  ELFSymbol const &SymFoo = *Iterator++;
+  IFSSymbol const &SymFoo = *Iterator++;
   EXPECT_STREQ(SymFoo.Name.c_str(), "foo");
   EXPECT_EQ(SymFoo.Size, 0u);
-  EXPECT_EQ(SymFoo.Type, ELFSymbolType::Func);
+  EXPECT_EQ(SymFoo.Type, IFSSymbolType::Func);
   EXPECT_FALSE(SymFoo.Undefined);
   EXPECT_FALSE(SymFoo.Weak);
   EXPECT_TRUE(SymFoo.Warning.hasValue());
   EXPECT_STREQ(SymFoo.Warning->c_str(), "Deprecated!");
 
-  ELFSymbol const &SymNor = *Iterator++;
+  IFSSymbol const &SymNor = *Iterator++;
   EXPECT_STREQ(SymNor.Name.c_str(), "nor");
   EXPECT_EQ(SymNor.Size, 0u);
-  EXPECT_EQ(SymNor.Type, ELFSymbolType::NoType);
+  EXPECT_EQ(SymNor.Type, IFSSymbolType::NoType);
   EXPECT_TRUE(SymNor.Undefined);
   EXPECT_FALSE(SymNor.Weak);
   EXPECT_FALSE(SymNor.Warning.hasValue());
 
-  ELFSymbol const &SymNot = *Iterator++;
+  IFSSymbol const &SymNot = *Iterator++;
   EXPECT_STREQ(SymNot.Name.c_str(), "not");
   EXPECT_EQ(SymNot.Size, 111u);
-  EXPECT_EQ(SymNot.Type, ELFSymbolType::Unknown);
+  EXPECT_EQ(SymNot.Type, IFSSymbolType::Unknown);
   EXPECT_TRUE(SymNot.Undefined);
   EXPECT_TRUE(SymNot.Weak);
   EXPECT_TRUE(SymNot.Warning.hasValue());
@@ -124,15 +125,15 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
 
 TEST(ElfYamlTextAPI, YAMLReadsNoTBESyms) {
   const char Data[] = "--- !ifs-v1\n"
-                      "TbeVersion: 1.0\n"
+                      "IfsVersion: 1.0\n"
                       "SoName: test.so\n"
                       "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: "
                       "little, BitWidth: 64 }\n"
                       "Symbols: []\n"
                       "...\n";
-  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  Expected<std::unique_ptr<IFSStub>> StubOrErr = readIFSFromBuffer(Data);
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
-  std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
+  std::unique_ptr<IFSStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
   EXPECT_EQ(0u, Stub->Symbols.size());
 }
@@ -140,33 +141,33 @@ TEST(ElfYamlTextAPI, YAMLReadsNoTBESyms) {
 TEST(ElfYamlTextAPI, YAMLUnreadableTBE) {
   // Can't read: wrong format/version.
   const char Data[] = "--- !tapi-tbz\n"
-                      "TbeVersion: z.3\n"
+                      "IfsVersion: z.3\n"
                       "SoName: test.so\n"
                       "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: "
                       "little, BitWidth: 64 }\n"
                       "Symbols:\n"
                       "  foo: { Type: Func, Undefined: true }\n";
-  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  Expected<std::unique_ptr<IFSStub>> StubOrErr = readIFSFromBuffer(Data);
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Failed());
 }
 
 TEST(ElfYamlTextAPI, YAMLUnsupportedVersion) {
   const char Data[] = "--- !ifs-v1\n"
-                      "TbeVersion: 9.9.9\n"
+                      "IfsVersion: 9.9.9\n"
                       "SoName: test.so\n"
                       "Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: "
                       "little, BitWidth: 64 }\n"
                       "Symbols: []\n"
                       "...\n";
-  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  Expected<std::unique_ptr<IFSStub>> StubOrErr = readIFSFromBuffer(Data);
   std::string ErrorMessage = toString(StubOrErr.takeError());
-  EXPECT_EQ("TBE version 9.9.9 is unsupported.", ErrorMessage);
+  EXPECT_EQ("IFS version 9.9.9 is unsupported.", ErrorMessage);
 }
 
 TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   const char Expected[] =
       "--- !ifs-v1\n"
-      "TbeVersion:      1.0\n"
+      "IfsVersion:      1.0\n"
       "Target:          { ObjectFormat: ELF, Arch: AArch64, Endianness: "
       "little, BitWidth: 64 }\n"
       "Symbols:\n"
@@ -175,35 +176,35 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
       "  - { Name: nor, Type: Func, Undefined: true }\n"
       "  - { Name: not, Type: Unknown, Size: 12345678901234 }\n"
       "...\n";
-  ELFStub Stub;
-  Stub.TbeVersion = VersionTuple(1, 0);
+  IFSStub Stub;
+  Stub.IfsVersion = VersionTuple(1, 0);
   Stub.Target.Arch = ELF::EM_AARCH64;
-  Stub.Target.BitWidth = ELFBitWidthType::ELF64;
-  Stub.Target.Endianness = ELFEndiannessType::Little;
+  Stub.Target.BitWidth = IFSBitWidthType::IFS64;
+  Stub.Target.Endianness = IFSEndiannessType::Little;
   Stub.Target.ObjectFormat = "ELF";
 
-  ELFSymbol SymBar("bar");
+  IFSSymbol SymBar("bar");
   SymBar.Size = 128u;
-  SymBar.Type = ELFSymbolType::Func;
+  SymBar.Type = IFSSymbolType::Func;
   SymBar.Undefined = false;
   SymBar.Weak = true;
 
-  ELFSymbol SymFoo("foo");
+  IFSSymbol SymFoo("foo");
   SymFoo.Size = 99u;
-  SymFoo.Type = ELFSymbolType::NoType;
+  SymFoo.Type = IFSSymbolType::NoType;
   SymFoo.Undefined = false;
   SymFoo.Weak = false;
   SymFoo.Warning = "Does nothing";
 
-  ELFSymbol SymNor("nor");
+  IFSSymbol SymNor("nor");
   SymNor.Size = 1234u;
-  SymNor.Type = ELFSymbolType::Func;
+  SymNor.Type = IFSSymbolType::Func;
   SymNor.Undefined = true;
   SymNor.Weak = false;
 
-  ELFSymbol SymNot("not");
+  IFSSymbol SymNot("not");
   SymNot.Size = 12345678901234u;
-  SymNot.Type = ELFSymbolType::Unknown;
+  SymNot.Type = IFSSymbolType::Unknown;
   SymNot.Undefined = false;
   SymNot.Weak = false;
 
@@ -214,18 +215,18 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   Stub.Symbols.push_back(SymNot);
 
   // Ensure move constructor works as expected.
-  ELFStub Moved = std::move(Stub);
+  IFSStub Moved = std::move(Stub);
 
   std::string Result;
   raw_string_ostream OS(Result);
-  ASSERT_THAT_ERROR(writeTBEToOutputStream(OS, Moved), Succeeded());
+  ASSERT_THAT_ERROR(writeIFSToOutputStream(OS, Moved), Succeeded());
   Result = OS.str();
   compareByLine(Result.c_str(), Expected);
 }
 
 TEST(ElfYamlTextAPI, YAMLWritesNoTBESyms) {
   const char Expected[] = "--- !ifs-v1\n"
-                          "TbeVersion:      1.0\n"
+                          "IfsVersion:      1.0\n"
                           "SoName:          nosyms.so\n"
                           "Target:          { ObjectFormat: ELF, Arch: x86_64, "
                           "Endianness: little, BitWidth: 64 }\n"
@@ -235,12 +236,12 @@ TEST(ElfYamlTextAPI, YAMLWritesNoTBESyms) {
                           "  - libbar.so\n"
                           "Symbols:         []\n"
                           "...\n";
-  ELFStub Stub;
-  Stub.TbeVersion = VersionTuple(1, 0);
+  IFSStub Stub;
+  Stub.IfsVersion = VersionTuple(1, 0);
   Stub.SoName = "nosyms.so";
   Stub.Target.Arch = ELF::EM_X86_64;
-  Stub.Target.BitWidth = ELFBitWidthType::ELF64;
-  Stub.Target.Endianness = ELFEndiannessType::Little;
+  Stub.Target.BitWidth = IFSBitWidthType::IFS64;
+  Stub.Target.Endianness = IFSEndiannessType::Little;
   Stub.Target.ObjectFormat = "ELF";
   Stub.NeededLibs.push_back("libc.so");
   Stub.NeededLibs.push_back("libfoo.so");
@@ -248,7 +249,7 @@ TEST(ElfYamlTextAPI, YAMLWritesNoTBESyms) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  ASSERT_THAT_ERROR(writeTBEToOutputStream(OS, Stub), Succeeded());
+  ASSERT_THAT_ERROR(writeIFSToOutputStream(OS, Stub), Succeeded());
   Result = OS.str();
   compareByLine(Result.c_str(), Expected);
 }

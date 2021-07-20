@@ -10,8 +10,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/InterfaceStub/ELFObjHandler.h"
-#include "llvm/InterfaceStub/ELFStub.h"
-#include "llvm/InterfaceStub/TBEHandler.h"
+#include "llvm/InterfaceStub/IFSHandler.h"
+#include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -38,7 +38,7 @@ using namespace llvm::MachO;
 #define DEBUG_TYPE "llvm-ifs"
 
 namespace {
-const VersionTuple IFSVersionCurrent(2, 0);
+const VersionTuple IFSVersionCurrent(3, 0);
 } // end anonymous namespace
 
 static cl::opt<std::string> Action("action", cl::desc("<llvm-ifs action>"),
@@ -164,14 +164,13 @@ namespace yaml {
 /// YAML traits for IFSStub objects.
 template <> struct MappingTraits<IFSStub> {
   static void mapping(IO &IO, IFSStub &Stub) {
-    if (!IO.mapTag("!experimental-ifs-v2", true))
+    if (!IO.mapTag("!ifs-v1", true))
       IO.setError("Not a .ifs YAML file.");
 
     auto OldContext = IO.getContext();
     IO.setContext(&Stub);
     IO.mapRequired("IfsVersion", Stub.IfsVersion);
-    IO.mapOptional("Triple", Stub.Triple);
-    IO.mapOptional("ObjectFileFormat", Stub.ObjectFileFormat);
+    IO.mapOptional("Target", Stub.Triple);
     IO.mapOptional("SOName", Stub.SOName);
     IO.mapOptional("NeededLibs", Stub.NeededLibs);
     IO.mapRequired("Symbols", Stub.Symbols);
@@ -350,25 +349,25 @@ static int writeElfStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
   return convertYAML(YIn, Out, ErrHandler) ? 0 : 1;
 }
 
-static Error convertIFSStub(const IFSStub &IfsStub, elfabi::ELFStub &ElfStub) {
-  ElfStub.TbeVersion = IfsStub.IfsVersion;
+static Error convertIFSStub(const IFSStub &IfsStub, elfabi::IFSStub &ElfStub) {
+  ElfStub.IfsVersion = IfsStub.IfsVersion;
   ElfStub.SoName = IfsStub.SOName;
   ElfStub.Target.Triple = IfsStub.Triple;
   ElfStub.NeededLibs = IfsStub.NeededLibs;
   for (const IFSSymbol &IfsSymbol : IfsStub.Symbols) {
-    elfabi::ELFSymbol ElfSymbol(IfsSymbol.Name);
+    elfabi::IFSSymbol ElfSymbol(IfsSymbol.Name);
     switch (IfsSymbol.Type) {
     case IFSSymbolType::Func:
-      ElfSymbol.Type = elfabi::ELFSymbolType::Func;
+      ElfSymbol.Type = elfabi::IFSSymbolType::Func;
       break;
     case IFSSymbolType::NoType:
-      ElfSymbol.Type = elfabi::ELFSymbolType::NoType;
+      ElfSymbol.Type = elfabi::IFSSymbolType::NoType;
       break;
     case IFSSymbolType::Object:
-      ElfSymbol.Type = elfabi::ELFSymbolType::Object;
+      ElfSymbol.Type = elfabi::IFSSymbolType::Object;
       break;
     default:
-      ElfSymbol.Type = elfabi::ELFSymbolType::Unknown;
+      ElfSymbol.Type = elfabi::IFSSymbolType::Unknown;
       break;
       // TODO: Add support for TLS?
     }
@@ -378,22 +377,22 @@ static Error convertIFSStub(const IFSStub &IfsStub, elfabi::ELFStub &ElfStub) {
     ElfSymbol.Warning = IfsSymbol.Warning;
     ElfStub.Symbols.push_back(ElfSymbol);
   }
-  return llvm::elfabi::validateTBETarget(ElfStub, true);
+  return llvm::elfabi::validateIFSTarget(ElfStub, true);
 }
 
 static int writeIfso(const IFSStub &Stub, bool IsWriteIfs) {
   std::string ObjectFileFormat =
-      ForceFormat.empty() ? Stub.ObjectFileFormat : ForceFormat;
+      ForceFormat.empty() ? std::string("ELF") : ForceFormat;
 
   // Use InterfaceStub library if the option is enabled and output
   // format is ELF.
   if (UseInterfaceStub && (!IsWriteIfs) && ObjectFileFormat != "TBD") {
-    elfabi::ELFStub ElfStub;
-    Error ConvertError = convertIFSStub(Stub, ElfStub);
+    elfabi::IFSStub IfsStub;
+    Error ConvertError = convertIFSStub(Stub, IfsStub);
     if (ConvertError) {
       return -1;
     }
-    Error BinaryWriteError = elfabi::writeBinaryStub(OutputFilename, ElfStub);
+    Error BinaryWriteError = elfabi::writeBinaryStub(OutputFilename, IfsStub);
     if (BinaryWriteError) {
       return -1;
     }
