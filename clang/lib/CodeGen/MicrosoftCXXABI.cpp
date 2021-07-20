@@ -1228,7 +1228,7 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
     llvm::Value *VtorDispPtr =
         Builder.CreateInBoundsGEP(CGF.Int8Ty, Int8This, VBaseOffset);
     // vtorDisp is always the 32-bits before the vbase in the class layout.
-    VtorDispPtr = Builder.CreateConstGEP1_32(VtorDispPtr, -4);
+    VtorDispPtr = Builder.CreateConstGEP1_32(CGF.Int8Ty, VtorDispPtr, -4);
     VtorDispPtr = Builder.CreateBitCast(
         VtorDispPtr, CGF.Int32Ty->getPointerTo(AS), "vtordisp.ptr");
 
@@ -2227,7 +2227,7 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
     // Non-virtual adjustment might result in a pointer outside the allocated
     // object, e.g. if the final overrider class is laid out after the virtual
     // base that declares a method in the most derived class.
-    V = CGF.Builder.CreateConstGEP1_32(V, TA.NonVirtual);
+    V = CGF.Builder.CreateConstGEP1_32(CGF.Int8Ty, V, TA.NonVirtual);
   }
 
   // Don't need to bitcast back, the call CodeGen will handle this.
