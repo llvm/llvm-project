@@ -1887,8 +1887,16 @@ multiclass VPseudoTernary<VReg RetClass,
 }
 
 multiclass VPseudoTernaryV_VV<string Constraint = ""> {
-  foreach m = MxList.m in
+  foreach m = MxList.m in {
     defm _VV : VPseudoTernary<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
+
+    // Add a commutable version for use by IR mul+add.
+    let isCommutable = 1, ForceTailAgnostic = true, VLMul = m.value in
+    def "_VV_" # m.MX # "_COMMUTABLE" : VPseudoTernaryNoMask<m.vrclass,
+                                                             m.vrclass,
+                                                             m.vrclass,
+                                                             Constraint>;
+  }
 }
 
 multiclass VPseudoTernaryV_VX<string Constraint = ""> {
@@ -1897,15 +1905,28 @@ multiclass VPseudoTernaryV_VX<string Constraint = ""> {
 }
 
 multiclass VPseudoTernaryV_VX_AAXA<string Constraint = ""> {
-  foreach m = MxList.m in
+  foreach m = MxList.m in {
     defm "_VX" : VPseudoTernary<m.vrclass, GPR, m.vrclass, m, Constraint>;
+
+    // Add a commutable version for use by IR mul+add.
+    let isCommutable = 1, ForceTailAgnostic = true, VLMul = m.value in
+    def "_VX_" # m.MX # "_COMMUTABLE" :
+       VPseudoTernaryNoMask<m.vrclass, GPR, m.vrclass, Constraint>;
+  }
 }
 
 multiclass VPseudoTernaryV_VF_AAXA<string Constraint = ""> {
-  foreach m = MxList.m in
-    foreach f = FPList.fpinfo in
+  foreach m = MxList.m in {
+    foreach f = FPList.fpinfo in {
       defm "_V" # f.FX : VPseudoTernary<m.vrclass, f.fprclass, m.vrclass,
                                         m, Constraint>;
+
+      // Add a commutable version for use by IR mul+add.
+      let isCommutable = 1, ForceTailAgnostic = true, VLMul = m.value in
+      def "_V" # f.FX # "_" # m.MX # "_COMMUTABLE" :
+         VPseudoTernaryNoMask<m.vrclass, f.fprclass, m.vrclass, Constraint>;
+    }
+  }
 }
 
 multiclass VPseudoTernaryW_VV {
@@ -1936,44 +1957,11 @@ multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
 multiclass VPseudoTernaryV_VV_VX_AAXA<string Constraint = ""> {
   defm "" : VPseudoTernaryV_VV<Constraint>;
   defm "" : VPseudoTernaryV_VX_AAXA<Constraint>;
-
-  foreach m = MxList.m in {
-    // Add a commutable version for use by IR mul+add.
-    // NOTE: We need this because we use a tail undisturbed policy on the
-    // intrinsic version so we can't commute those instructions since it would
-    // change which input operand is tied to the destination. That would
-    // remove user control of the tail elements.
-    let isCommutable = 1, ForceTailAgnostic = true, VLMul = m.value in {
-      def "_VV_" # m.MX # "_COMMUTABLE" : VPseudoTernaryNoMask<m.vrclass,
-                                                               m.vrclass,
-                                                               m.vrclass,
-                                                               Constraint>;
-      def "_VX_" # m.MX # "_COMMUTABLE" :
-         VPseudoTernaryNoMask<m.vrclass, GPR, m.vrclass, Constraint>;
-    }
-  }
 }
 
 multiclass VPseudoTernaryV_VV_VF_AAXA<string Constraint = ""> {
   defm "" : VPseudoTernaryV_VV<Constraint>;
   defm "" : VPseudoTernaryV_VF_AAXA<Constraint>;
-
-  foreach m = MxList.m in {
-    // Add a commutable version for use by IR mul+add.
-    // NOTE: We need this because we use a tail undisturbed policy on the
-    // intrinsic version so we can't commute those instructions since it would
-    // change which input operand is tied to the destination. That would
-    // remove user control of the tail elements.
-    let isCommutable = 1, ForceTailAgnostic = true, VLMul = m.value in {
-      def "_VV_" # m.MX # "_COMMUTABLE" : VPseudoTernaryNoMask<m.vrclass,
-                                                               m.vrclass,
-                                                               m.vrclass,
-                                                               Constraint>;
-      foreach f = FPList.fpinfo in
-        def "_V" # f.FX # "_" # m.MX # "_COMMUTABLE" :
-           VPseudoTernaryNoMask<m.vrclass, f.fprclass, m.vrclass, Constraint>;
-    }
-  }
 }
 
 multiclass VPseudoTernaryV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
