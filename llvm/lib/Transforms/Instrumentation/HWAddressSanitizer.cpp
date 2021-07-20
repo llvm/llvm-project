@@ -192,6 +192,24 @@ static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
 
 namespace {
 
+bool shouldUsePageAliases(const Triple &TargetTriple) {
+  return ClUsePageAliases && TargetTriple.getArch() == Triple::x86_64;
+// No one should use the option directly.
+#pragma GCC poison ClUsePageAliases
+}
+
+bool shouldInstrumentStack(const Triple &TargetTriple) {
+  return shouldUsePageAliases(TargetTriple) ? false : ClInstrumentStack;
+// No one should use the option directly.
+#pragma GCC poison ClInstrumentStack
+}
+
+bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
+  return ClInstrumentWithCalls || TargetTriple.getArch() == Triple::x86_64;
+// No one should use the option directly.
+#pragma GCC poison ClInstrumentWithCalls
+}
+
 /// An instrumentation pass implementing detection of addressability bugs
 /// using tagged pointers.
 class HWAddressSanitizer {
@@ -503,9 +521,9 @@ void HWAddressSanitizer::initializeModule() {
   // - Intel LAM (default)
   // - pointer aliasing (heap only)
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
-  UsePageAliases = ClUsePageAliases && IsX86_64;
-  InstrumentWithCalls = IsX86_64 ? true : ClInstrumentWithCalls;
-  InstrumentStack = UsePageAliases ? false : ClInstrumentStack;
+  UsePageAliases = shouldUsePageAliases(TargetTriple);
+  InstrumentWithCalls = shouldInstrumentWithCalls(TargetTriple);
+  InstrumentStack = shouldInstrumentStack(TargetTriple);
   PointerTagShift = IsX86_64 ? 57 : 56;
   TagMaskByte = IsX86_64 ? 0x3F : 0xFF;
 
