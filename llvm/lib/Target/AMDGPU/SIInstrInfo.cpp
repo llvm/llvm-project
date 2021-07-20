@@ -122,6 +122,12 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   return false;
 }
 
+bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
+  // Any implicit use of exec by VALU is not a real register read.
+  return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
+         isVALU(*MO.getParent());
+}
+
 bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
                                           int64_t &Offset0,
                                           int64_t &Offset1) const {
