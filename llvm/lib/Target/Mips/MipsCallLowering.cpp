@@ -411,15 +411,16 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
     for (unsigned I = Idx; I < ArgRegs.size(); ++I, VaArgOffset += RegSize) {
       MIRBuilder.getMBB().addLiveIn(ArgRegs[I]);
-
+      LLT RegTy = LLT::scalar(RegSize * 8);
       MachineInstrBuilder Copy =
-          MIRBuilder.buildCopy(LLT::scalar(RegSize * 8), Register(ArgRegs[I]));
+          MIRBuilder.buildCopy(RegTy, Register(ArgRegs[I]));
       FI = MFI.CreateFixedObject(RegSize, VaArgOffset, true);
       MachinePointerInfo MPO = MachinePointerInfo::getFixedStack(MF, FI);
-      MachineInstrBuilder FrameIndex =
-          MIRBuilder.buildFrameIndex(LLT::pointer(MPO.getAddrSpace(), 32), FI);
+
+      const LLT PtrTy = LLT::pointer(MPO.getAddrSpace(), 32);
+      auto FrameIndex = MIRBuilder.buildFrameIndex(PtrTy, FI);
       MachineMemOperand *MMO = MF.getMachineMemOperand(
-          MPO, MachineMemOperand::MOStore, RegSize, Align(RegSize));
+          MPO, MachineMemOperand::MOStore, RegTy, Align(RegSize));
       MIRBuilder.buildStore(Copy, FrameIndex, *MMO);
     }
   }
