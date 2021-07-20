@@ -8440,8 +8440,10 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
             DomTreeNodeBase<BasicBlock> *NodeI1 = DT->getNode(I1->getParent());
             DomTreeNodeBase<BasicBlock> *NodeI2 = DT->getNode(I2->getParent());
-            assert(NodeI1 && "Should only process reachable instructions");
-            assert(NodeI2 && "Should only process reachable instructions");
+            if (!NodeI1)
+              return NodeI2 != nullptr;
+            if (!NodeI2)
+              return false;
             assert((NodeI1 == NodeI2) ==
                        (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
                    "Different nodes should have different DFS numbers");
