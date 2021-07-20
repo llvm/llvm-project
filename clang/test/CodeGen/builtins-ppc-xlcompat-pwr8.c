@@ -8,11 +8,11 @@
 // RUN: %clang_cc1 -triple powerpc-unknown-aix %s -emit-llvm %s \
 // RUN:   -target-cpu pwr8 -o - | FileCheck %s -check-prefix=CHECK-PWR8
 // RUN: not %clang_cc1 -triple powerpc64-unknown-unknown -emit-llvm %s \
-// RUN:   -target-cpu pwr7 2>&1 | FileCheck %s -check-prefix=CHECK-NOPWR8
+// RUN:   -target-cpu pwr7 -o - 2>&1 | FileCheck %s -check-prefix=CHECK-NOPWR8
 // RUN: not %clang_cc1 -triple powerpc64-unknown-aix -emit-llvm %s \
-// RUN:   -target-cpu pwr7 2>&1 | FileCheck %s -check-prefix=CHECK-NOPWR8
+// RUN:   -target-cpu pwr7 -o - 2>&1 | FileCheck %s -check-prefix=CHECK-NOPWR8
 // RUN: not %clang_cc1 -triple powerpc-unknown-aix %s -emit-llvm %s \
-// RUN:   -target-cpu pwr7 2>&1 | FileCheck %s -check-prefix=CHECK-NOPWR8
+// RUN:   -target-cpu pwr7 -o - 2>&1 | FileCheck %s -check-prefix=CHECK-NOPWR8
 
 extern void *a;
 
