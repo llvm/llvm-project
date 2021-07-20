@@ -2,6 +2,8 @@
 ; RUN: llvm-modextract -b -n 0 -o - %t | llvm-dis | FileCheck --check-prefix=M0 %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck --check-prefix=M1 %s
 
+target triple = "x86_64-unknown-linux-gnu"
+
 define [1 x i8*]* @source() {
   ret [1 x i8*]* @g
 }
