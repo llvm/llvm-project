@@ -33,6 +33,7 @@ namespace macho {
 
 struct MachOPerObjectSectionsToRegister {
   ExecutorAddressRange EHFrameSection;
+  ExecutorAddressRange ThreadDataSection;
 };
 
 struct MachOJITDylibInitializers {
@@ -66,7 +67,8 @@ enum dlopen_mode : int {
 
 } // end namespace macho
 
-using SPSMachOPerObjectSectionsToRegister = SPSTuple<SPSExecutorAddressRange>;
+using SPSMachOPerObjectSectionsToRegister =
+    SPSTuple<SPSExecutorAddressRange, SPSExecutorAddressRange>;
 
 template <>
 class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
@@ -75,19 +77,19 @@ class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
 public:
   static size_t size(const macho::MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::size(
-        MOPOSR.EHFrameSection);
+        MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const macho::MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::serialize(
-        OB, MOPOSR.EHFrameSection);
+        OB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
                           macho::MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::deserialize(
-        IB, MOPOSR.EHFrameSection);
+        IB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 };
 
