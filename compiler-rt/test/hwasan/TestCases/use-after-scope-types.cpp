@@ -18,7 +18,8 @@
 #include <string>
 #include <vector>
 
-template <class T> struct Ptr {
+template <class T>
+struct Ptr {
   void Store(T *ptr) { t = ptr; }
 
   void Access() { *t = {}; }
@@ -26,7 +27,8 @@ template <class T> struct Ptr {
   T *t;
 };
 
-template <class T, size_t N> struct Ptr<T[N]> {
+template <class T, size_t N>
+struct Ptr<T[N]> {
   using Type = T[N];
   void Store(Type *ptr) { t = *ptr; }
 
@@ -35,7 +37,8 @@ template <class T, size_t N> struct Ptr<T[N]> {
   T *t;
 };
 
-template <class T> __attribute__((noinline)) void test() {
+template <class T>
+__attribute__((noinline)) void test() {
   Ptr<T> ptr;
   {
     T x;
@@ -52,17 +55,17 @@ template <class T> __attribute__((noinline)) void test() {
 int main(int argc, char **argv) {
   using Tests = void (*)();
   Tests tests[] = {
-    &test<bool>,
-    &test<char>,
-    &test<int>,
-    &test<double>,
-    &test<float>,
-    &test<void*>,
-    &test<std::vector<std::string>>,
-    &test<int[3]>,
-    &test<int[1000]>,
-    &test<char[3]>,
-    &test<char[1000]>,
+      &test<bool>,
+      &test<char>,
+      &test<int>,
+      &test<double>,
+      &test<float>,
+      &test<void *>,
+      &test<std::vector<std::string>>,
+      &test<int[3]>,
+      &test<int[1000]>,
+      &test<char[3]>,
+      &test<char[1000]>,
   };
 
   int n = atoi(argv[1]);

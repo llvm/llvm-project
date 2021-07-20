@@ -7,9 +7,9 @@
 #include <stdio.h>
 
 struct IntHolder {
-  explicit IntHolder(int *val = 0) : val_(val) { }
+  explicit IntHolder(int *val = 0) : val_(val) {}
   __attribute__((noinline)) ~IntHolder() {
-    printf("Value: %d\n", *val_);  // BOOM
+    printf("Value: %d\n", *val_); // BOOM
     // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
     // CHECK:  #0 0x{{.*}} in IntHolder::~IntHolder{{.*}}.cpp:[[@LINE-2]]
   }
