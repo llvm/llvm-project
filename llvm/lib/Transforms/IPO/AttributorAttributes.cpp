@@ -143,6 +143,7 @@ PIPE_OPERATOR(AAPotentialValues)
 PIPE_OPERATOR(AANoUndef)
 PIPE_OPERATOR(AACallEdges)
 PIPE_OPERATOR(AAFunctionReachability)
+PIPE_OPERATOR(AAPointerInfo)
 
 #undef PIPE_OPERATOR
 } // namespace llvm
@@ -767,6 +768,616 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
     S += ParentState;
   }
 }
+
+/// ------------------------ PointerInfo ---------------------------------------
+
+namespace llvm {
+namespace AA {
+namespace PointerInfo {
+
+/// An access kind description as used by AAPointerInfo.
+struct OffsetAndSize;
+
+struct State;
+
+} // namespace PointerInfo
+} // namespace AA
+
+/// Helper for AA::PointerInfo::Acccess DenseMap/Set usage.
+template <>
+struct DenseMapInfo<AAPointerInfo::Access> : DenseMapInfo<Instruction *> {
+  using Access = AAPointerInfo::Access;
+  static inline Access getEmptyKey();
+  static inline Access getTombstoneKey();
+  static unsigned getHashValue(const Access &A);
+  static bool isEqual(const Access &LHS, const Access &RHS);
+};
+
+/// Helper that allows OffsetAndSize as a key in a DenseMap.
+template <>
+struct DenseMapInfo<AA::PointerInfo ::OffsetAndSize>
+    : DenseMapInfo<std::pair<int64_t, int64_t>> {};
+
+/// Helper for AA::PointerInfo::Acccess DenseMap/Set usage ignoring everythign
+/// but the instruction
+struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
+  using Base = DenseMapInfo<Instruction *>;
+  using Access = AAPointerInfo::Access;
+  static inline Access getEmptyKey();
+  static inline Access getTombstoneKey();
+  static unsigned getHashValue(const Access &A);
+  static bool isEqual(const Access &LHS, const Access &RHS);
+};
+
+} // namespace llvm
+
+/// Helper to represent an access offset and size, with logic to deal with
+/// uncertainty and check for overlapping accesses.
+struct AA::PointerInfo::OffsetAndSize : public std::pair<int64_t, int64_t> {
+  using BaseTy = std::pair<int64_t, int64_t>;
+  OffsetAndSize(int64_t Offset, int64_t Size) : BaseTy(Offset, Size) {}
+  OffsetAndSize(const BaseTy &P) : BaseTy(P) {}
+  int64_t getOffset() const { return first; }
+  int64_t getSize() const { return second; }
+  static OffsetAndSize getUnknown() { return OffsetAndSize(Unknown, Unknown); }
+
+  /// Return true if this offset and size pair might describe an address that
+  /// overlaps with \p OAS.
+  bool mayOverlap(const OffsetAndSize &OAS) const {
+    // Any unknown value and we are giving up -> overlap.
+    if (OAS.getOffset() == OffsetAndSize::Unknown ||
+        OAS.getSize() == OffsetAndSize::Unknown ||
+        getOffset() == OffsetAndSize::Unknown ||
+        getSize() == OffsetAndSize::Unknown)
+      return true;
+
+    // Check if one offset point is in the other interval [offset, offset+size].
+    return OAS.getOffset() + OAS.getSize() > getOffset() &&
+           OAS.getOffset() < getOffset() + getSize();
+  }
+
+  /// Constant used to represent unknown offset or sizes.
+  static constexpr int64_t Unknown = 1 << 31;
+};
+
+/// Implementation of the DenseMapInfo.
+///
+///{
+inline llvm::AccessAsInstructionInfo::Access
+llvm::AccessAsInstructionInfo::getEmptyKey() {
+  return Access(Base::getEmptyKey(), nullptr, AAPointerInfo::AK_READ, nullptr);
+}
+inline llvm::AccessAsInstructionInfo::Access
+llvm::AccessAsInstructionInfo::getTombstoneKey() {
+  return Access(Base::getTombstoneKey(), nullptr, AAPointerInfo::AK_READ,
+                nullptr);
+}
+unsigned llvm::AccessAsInstructionInfo::getHashValue(
+    const llvm::AccessAsInstructionInfo::Access &A) {
+  return Base::getHashValue(A.getRemoteInst());
+}
+bool llvm::AccessAsInstructionInfo::isEqual(
+    const llvm::AccessAsInstructionInfo::Access &LHS,
+    const llvm::AccessAsInstructionInfo::Access &RHS) {
+  return LHS.getRemoteInst() == RHS.getRemoteInst();
+}
+inline llvm::DenseMapInfo<AAPointerInfo::Access>::Access
+llvm::DenseMapInfo<AAPointerInfo::Access>::getEmptyKey() {
+  return AAPointerInfo::Access(nullptr, nullptr, AAPointerInfo::AK_READ,
+                               nullptr);
+}
+inline llvm::DenseMapInfo<AAPointerInfo::Access>::Access
+llvm::DenseMapInfo<AAPointerInfo::Access>::getTombstoneKey() {
+  return AAPointerInfo::Access(nullptr, nullptr, AAPointerInfo::AK_WRITE,
+                               nullptr);
+}
+
+unsigned llvm::DenseMapInfo<AAPointerInfo::Access>::getHashValue(
+    const llvm::DenseMapInfo<AAPointerInfo::Access>::Access &A) {
+  return detail::combineHashValue(
+             DenseMapInfo<Instruction *>::getHashValue(A.getRemoteInst()),
+             (A.isWrittenValueYetUndetermined()
+                  ? ~0
+                  : DenseMapInfo<Value *>::getHashValue(A.getWrittenValue()))) +
+         A.getKind();
+}
+
+bool llvm::DenseMapInfo<AAPointerInfo::Access>::isEqual(
+    const llvm::DenseMapInfo<AAPointerInfo::Access>::Access &LHS,
+    const llvm::DenseMapInfo<AAPointerInfo::Access>::Access &RHS) {
+  return LHS == RHS;
+}
+///}
+
+/// A type to track pointer/struct usage and accesses for AAPointerInfo.
+struct AA::PointerInfo::State : public AbstractState {
+
+  /// Return the best possible representable state.
+  static State getBestState(const State &SIS) { return State(); }
+
+  /// Return the worst possible representable state.
+  static State getWorstState(const State &SIS) {
+    State R;
+    R.indicatePessimisticFixpoint();
+    return R;
+  }
+
+  State() {}
+  State(const State &SIS) : AccessBins(SIS.AccessBins) {}
+  State(State &&SIS) : AccessBins(std::move(SIS.AccessBins)) {}
+
+  const State &getAssumed() const { return *this; }
+
+  /// See AbstractState::isValidState().
+  bool isValidState() const override { return BS.isValidState(); }
+
+  /// See AbstractState::isAtFixpoint().
+  bool isAtFixpoint() const override { return BS.isAtFixpoint(); }
+
+  /// See AbstractState::indicateOptimisticFixpoint().
+  ChangeStatus indicateOptimisticFixpoint() override {
+    BS.indicateOptimisticFixpoint();
+    return ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractState::indicatePessimisticFixpoint().
+  ChangeStatus indicatePessimisticFixpoint() override {
+    BS.indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  State &operator=(const State &R) {
+    if (this == &R)
+      return *this;
+    BS = R.BS;
+    AccessBins = R.AccessBins;
+    return *this;
+  }
+
+  State &operator=(State &&R) {
+    if (this == &R)
+      return *this;
+    std::swap(BS, R.BS);
+    std::swap(AccessBins, R.AccessBins);
+    return *this;
+  }
+
+  bool operator==(const State &R) const {
+    if (BS != R.BS)
+      return false;
+    if (AccessBins.size() != R.AccessBins.size())
+      return false;
+    auto It = begin(), RIt = R.begin(), E = end();
+    while (It != E) {
+      if (It->getFirst() != RIt->getFirst())
+        return false;
+      auto &Accs = It->getSecond();
+      auto &RAccs = RIt->getSecond();
+      if (Accs.size() != RAccs.size())
+        return false;
+      auto AccIt = Accs.begin(), RAccIt = RAccs.begin(), AccE = Accs.end();
+      while (AccIt != AccE) {
+        if (*AccIt != *RAccIt)
+          return false;
+        ++AccIt;
+        ++RAccIt;
+      }
+      ++It;
+      ++RIt;
+    }
+    return true;
+  }
+  bool operator!=(const State &R) const { return !(*this == R); }
+
+  /// We store accesses in a set with the instruction as key.
+  using Accesses = DenseSet<AAPointerInfo::Access, AccessAsInstructionInfo>;
+
+  /// We store all accesses in bins denoted by their offset and size.
+  using AccessBinsTy = DenseMap<OffsetAndSize, Accesses>;
+
+  AccessBinsTy::const_iterator begin() const { return AccessBins.begin(); }
+  AccessBinsTy::const_iterator end() const { return AccessBins.end(); }
+
+protected:
+  /// The bins with all the accesses for the associated pointer.
+  DenseMap<OffsetAndSize, Accesses> AccessBins;
+
+  /// Add a new access to the state at offset \p Offset and with size \p Size.
+  /// The access is associated with \p I, writes \p Content (if anything), and
+  /// is of kind \p Kind.
+  /// \Returns CHANGED, if the state changed, UNCHANGED otherwise.
+  ChangeStatus addAccess(int64_t Offset, int64_t Size, Instruction &I,
+                         Optional<Value *> Content,
+                         AAPointerInfo::AccessKind Kind, Type *Ty,
+                         Instruction *RemoteI = nullptr,
+                         Accesses *BinPtr = nullptr) {
+    OffsetAndSize Key{Offset, Size};
+    Accesses &Bin = BinPtr ? *BinPtr : AccessBins[Key];
+    AAPointerInfo::Access Acc(&I, RemoteI ? RemoteI : &I, Content, Kind, Ty);
+    // Check if we have an access for this instruction in this bin, if not,
+    // simply add it.
+    auto It = Bin.find(Acc);
+    if (It == Bin.end()) {
+      Bin.insert(Acc);
+      return ChangeStatus::CHANGED;
+    }
+    // If the existing access is the same as then new one, nothing changed.
+    AAPointerInfo::Access Before = *It;
+    // The new one will be combined with the existing one.
+    *It &= Acc;
+    return *It == Before ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
+  }
+
+  /// See AAPointerInfo::forallInterfearingAccesses.
+  bool forallInterfearingAccesses(
+      Instruction &I,
+      function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
+    if (!isValidState())
+      return false;
+    // First find the offset and size of I.
+    OffsetAndSize OAS(-1, -1);
+    for (auto &It : AccessBins) {
+      for (auto &Access : It.getSecond()) {
+        if (Access.getRemoteInst() == &I) {
+          OAS = It.getFirst();
+          break;
+        }
+      }
+      if (OAS.getSize() != -1)
+        break;
+    }
+    if (OAS.getSize() == -1)
+      return true;
+
+    // Now that we have an offset and size, find all overlapping ones and use
+    // the callback on the accesses.
+    for (auto &It : AccessBins) {
+      OffsetAndSize ItOAS = It.getFirst();
+      if (!OAS.mayOverlap(ItOAS))
+        continue;
+      for (auto &Access : It.getSecond())
+        if (!CB(Access, OAS == ItOAS))
+          return false;
+    }
+    return true;
+  }
+
+private:
+  /// State to track fixpoint and validity.
+  BooleanState BS;
+};
+
+struct AAPointerInfoImpl
+    : public StateWrapper<AA::PointerInfo::State, AAPointerInfo> {
+  using BaseTy = StateWrapper<AA::PointerInfo::State, AAPointerInfo>;
+  AAPointerInfoImpl(const IRPosition &IRP, Attributor &A) : BaseTy(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override { AAPointerInfo::initialize(A); }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return std::string("PointerInfo ") +
+           (isValidState() ? (std::string("#") +
+                              std::to_string(AccessBins.size()) + " bins")
+                           : "<invalid>");
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    return AAPointerInfo::manifest(A);
+  }
+
+  bool forallInterfearingAccesses(
+      LoadInst &LI, function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
+      const override {
+    return State::forallInterfearingAccesses(LI, CB);
+  }
+  bool forallInterfearingAccesses(
+      StoreInst &SI, function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
+      const override {
+    return State::forallInterfearingAccesses(SI, CB);
+  }
+
+  ChangeStatus translateAndAddCalleeState(Attributor &A,
+                                          const AAPointerInfo &CalleeAA,
+                                          int64_t CallArgOffset, CallBase &CB) {
+    using namespace AA::PointerInfo;
+    if (!CalleeAA.getState().isValidState() || !isValidState())
+      return indicatePessimisticFixpoint();
+
+    const auto &CalleeImplAA = static_cast<const AAPointerInfoImpl &>(CalleeAA);
+    bool IsByval = CalleeImplAA.getAssociatedArgument()->hasByValAttr();
+
+    // Combine the accesses bin by bin.
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    for (auto &It : CalleeImplAA.getState()) {
+      OffsetAndSize OAS = OffsetAndSize::getUnknown();
+      if (CallArgOffset != OffsetAndSize::Unknown)
+        OAS = OffsetAndSize(It.first.getOffset() + CallArgOffset,
+                            It.first.getSize());
+      Accesses &Bin = AccessBins[OAS];
+      for (const AAPointerInfo::Access &RAcc : It.second) {
+        if (IsByval && !RAcc.isRead())
+          continue;
+        bool UsedAssumedInformation = false;
+        Optional<Value *> Content = A.translateArgumentToCallSiteContent(
+            RAcc.getContent(), CB, *this, UsedAssumedInformation);
+        AccessKind AK =
+            AccessKind(RAcc.getKind() & (IsByval ? AccessKind::AK_READ
+                                                 : AccessKind::AK_READ_WRITE));
+        Changed =
+            Changed | addAccess(OAS.getOffset(), OAS.getSize(), CB, Content, AK,
+                                RAcc.getType(), RAcc.getRemoteInst(), &Bin);
+      }
+    }
+    return Changed;
+  }
+
+  /// Statistic tracking for all AAPointerInfo implementations.
+  /// See AbstractAttribute::trackStatistics().
+  void trackPointerInfoStatistics(const IRPosition &IRP) const {}
+};
+
+struct AAPointerInfoFloating : public AAPointerInfoImpl {
+  using AccessKind = AAPointerInfo::AccessKind;
+  AAPointerInfoFloating(const IRPosition &IRP, Attributor &A)
+      : AAPointerInfoImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override { AAPointerInfoImpl::initialize(A); }
+
+  /// Deal with an access and signal if it was handled successfully.
+  bool handleAccess(Attributor &A, Instruction &I, Value &Ptr,
+                    Optional<Value *> Content, AccessKind Kind, int64_t Offset,
+                    ChangeStatus &Changed, Type *Ty,
+                    int64_t Size = AA::PointerInfo::OffsetAndSize::Unknown) {
+    using namespace AA::PointerInfo;
+    // No need to find a size if one is given or the offset is unknown.
+    if (Offset != OffsetAndSize::Unknown && Size == OffsetAndSize::Unknown &&
+        Ty) {
+      const DataLayout &DL = A.getDataLayout();
+      TypeSize AccessSize = DL.getTypeStoreSize(Ty);
+      if (!AccessSize.isScalable())
+        Size = AccessSize.getFixedSize();
+    }
+    Changed = Changed | addAccess(Offset, Size, I, Content, Kind, Ty);
+    return true;
+  };
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    using namespace AA::PointerInfo;
+    State S = getState();
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    Value &AssociatedValue = getAssociatedValue();
+    struct OffsetInfo {
+      int64_t Offset = 0;
+    };
+
+    const DataLayout &DL = A.getDataLayout();
+    DenseMap<Value *, OffsetInfo> OffsetInfoMap;
+    OffsetInfoMap[&AssociatedValue] = {};
+
+    auto HandlePassthroughUser = [&](Value *Usr, OffsetInfo &PtrOI,
+                                     bool &Follow) {
+      OffsetInfo &UsrOI = OffsetInfoMap[Usr];
+      UsrOI = PtrOI;
+      Follow = true;
+      return true;
+    };
+
+    auto UsePred = [&](const Use &U, bool &Follow) -> bool {
+      Value *CurPtr = U.get();
+      User *Usr = U.getUser();
+      LLVM_DEBUG(dbgs() << "[AAPointerInfo] Analyze " << *CurPtr << " in "
+                        << *Usr << "\n");
+
+      OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
+
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
+        if (CE->isCast())
+          return HandlePassthroughUser(Usr, PtrOI, Follow);
+        if (CE->isCompare())
+          return true;
+        if (!CE->isGEPWithNoNotionalOverIndexing()) {
+          LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
+                            << "\n");
+          return false;
+        }
+      }
+      if (auto *GEP = dyn_cast<GEPOperator>(Usr)) {
+        OffsetInfo &UsrOI = OffsetInfoMap[Usr];
+        UsrOI = PtrOI;
+
+        // TODO: Use range information.
+        if (PtrOI.Offset == OffsetAndSize::Unknown ||
+            !GEP->hasAllConstantIndices()) {
+          UsrOI.Offset = OffsetAndSize::Unknown;
+          Follow = true;
+          return true;
+        }
+
+        SmallVector<Value *, 8> Indices;
+        for (Use &Idx : llvm::make_range(GEP->idx_begin(), GEP->idx_end())) {
+          if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
+            Indices.push_back(CIdx);
+            continue;
+          }
+
+          LLVM_DEBUG(dbgs() << "[AAPointerInfo] Non constant GEP index " << *GEP
+                            << " : " << *Idx << "\n");
+          return false;
+        }
+        UsrOI.Offset = PtrOI.Offset +
+                       DL.getIndexedOffsetInType(
+                           CurPtr->getType()->getPointerElementType(), Indices);
+        Follow = true;
+        return true;
+      }
+      if (isa<CastInst>(Usr) || isa<PHINode>(Usr) || isa<SelectInst>(Usr))
+        return HandlePassthroughUser(Usr, PtrOI, Follow);
+      if (auto *LoadI = dyn_cast<LoadInst>(Usr))
+        return handleAccess(A, *LoadI, *CurPtr, /* Content */ nullptr,
+                            AccessKind::AK_READ, PtrOI.Offset, Changed,
+                            LoadI->getType());
+      if (auto *StoreI = dyn_cast<StoreInst>(Usr)) {
+        if (StoreI->getValueOperand() == CurPtr) {
+          LLVM_DEBUG(dbgs() << "[AAPointerInfo] Escaping use in store "
+                            << *StoreI << "\n");
+          return false;
+        }
+        bool UsedAssumedInformation = false;
+        Optional<Value *> Content = A.getAssumedSimplified(
+            *StoreI->getValueOperand(), *this, UsedAssumedInformation);
+        return handleAccess(A, *StoreI, *CurPtr, Content, AccessKind::AK_WRITE,
+                            PtrOI.Offset, Changed,
+                            StoreI->getValueOperand()->getType());
+      }
+      if (auto *CB = dyn_cast<CallBase>(Usr)) {
+        if (CB->isLifetimeStartOrEnd())
+          return true;
+        if (CB->isArgOperand(&U)) {
+          unsigned ArgNo = CB->getArgOperandNo(&U);
+          const auto &CSArgPI = A.getAAFor<AAPointerInfo>(
+              *this, IRPosition::callsite_argument(*CB, ArgNo),
+              DepClassTy::REQUIRED);
+          Changed = translateAndAddCalleeState(A, CSArgPI, PtrOI.Offset, *CB) |
+                    Changed;
+          return true;
+        }
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Call user not handled " << *CB
+                          << "\n");
+        // TODO: Allow some call uses
+        return false;
+      }
+
+      LLVM_DEBUG(dbgs() << "[AAPointerInfo] User not handled " << *Usr << "\n");
+      return false;
+    };
+    if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
+                           /* CheckBBLivenessOnly */ true))
+      return indicatePessimisticFixpoint();
+
+    LLVM_DEBUG({
+      dbgs() << "Accesses by bin after update:\n";
+      for (auto &It : AccessBins) {
+        dbgs() << "[" << It.first.getOffset() << "-"
+               << It.first.getOffset() + It.first.getSize()
+               << "] : " << It.getSecond().size() << "\n";
+        for (auto &Acc : It.getSecond()) {
+          dbgs() << "     - " << Acc.getKind() << " - " << *Acc.getLocalInst()
+                 << "\n";
+          if (Acc.getLocalInst() != Acc.getRemoteInst())
+            dbgs() << "     -->                         "
+                   << *Acc.getRemoteInst() << "\n";
+          if (!Acc.isWrittenValueYetUndetermined())
+            dbgs() << "     - " << Acc.getWrittenValue() << "\n";
+        }
+      }
+    });
+
+    return Changed;
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
+  }
+};
+
+struct AAPointerInfoReturned final : AAPointerInfoImpl {
+  AAPointerInfoReturned(const IRPosition &IRP, Attributor &A)
+      : AAPointerInfoImpl(IRP, A) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    return indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
+  }
+};
+
+struct AAPointerInfoArgument final : AAPointerInfoFloating {
+  AAPointerInfoArgument(const IRPosition &IRP, Attributor &A)
+      : AAPointerInfoFloating(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AAPointerInfoFloating::initialize(A);
+    if (getAnchorScope()->isDeclaration())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
+  }
+};
+
+struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
+  AAPointerInfoCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AAPointerInfoFloating(IRP, A) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    using namespace AA::PointerInfo;
+    // We handle memory intrinsics explicitly, at least the first (=
+    // destination) and second (=source) arguments as we know how they are
+    // accessed.
+    if (auto *MI = dyn_cast_or_null<MemIntrinsic>(getCtxI())) {
+      ConstantInt *Length = dyn_cast<ConstantInt>(MI->getLength());
+      int64_t LengthVal = OffsetAndSize::Unknown;
+      if (Length)
+        LengthVal = Length->getSExtValue();
+      Value &Ptr = getAssociatedValue();
+      unsigned ArgNo = getIRPosition().getCallSiteArgNo();
+      ChangeStatus Changed;
+      if (ArgNo == 0) {
+        handleAccess(A, *MI, Ptr, nullptr, AccessKind::AK_WRITE, 0, Changed,
+                     nullptr, LengthVal);
+      } else if (ArgNo == 1) {
+        handleAccess(A, *MI, Ptr, nullptr, AccessKind::AK_READ, 0, Changed,
+                     nullptr, LengthVal);
+      } else {
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled memory intrinsic "
+                          << *MI << "\n");
+        return indicatePessimisticFixpoint();
+      }
+      return Changed;
+    }
+
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Argument *Arg = getAssociatedArgument();
+    if (!Arg)
+      return indicatePessimisticFixpoint();
+    const IRPosition &ArgPos = IRPosition::argument(*Arg);
+    auto &ArgAA =
+        A.getAAFor<AAPointerInfo>(*this, ArgPos, DepClassTy::REQUIRED);
+    return translateAndAddCalleeState(A, ArgAA, 0, *cast<CallBase>(getCtxI()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
+  }
+};
+
+struct AAPointerInfoCallSiteReturned final : AAPointerInfoFloating {
+  AAPointerInfoCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AAPointerInfoFloating(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    AAPointerInfoImpl::trackPointerInfoStatistics(getIRPosition());
+  }
+};
 
 /// -----------------------NoUnwind Function Attribute--------------------------
 
@@ -2681,7 +3292,8 @@ struct AAIsDeadValueImpl : public AAIsDead {
     // chain of N dependent instructions to be considered live as soon as one is
     // without going through N update cycles. This is not required for
     // correctness.
-    return A.checkForAllUses(UsePred, *this, V, DepClassTy::REQUIRED);
+    return A.checkForAllUses(UsePred, *this, V, /* CheckBBLivenessOnly */ false,
+                             DepClassTy::REQUIRED);
   }
 
   /// Determine if \p I is assumed to be side-effect free.
@@ -4532,24 +5144,47 @@ struct AAValueSimplifyImpl : AAValueSimplify {
         // be OK. We do not try to optimize the latter.
         bool UsedAssumedInformation;
         if (!NullPointerIsDefined(L.getFunction(),
-                                  Ptr.getType()->getPointerAddressSpace())) {
-          const auto &SimplePtr =
-              A.getAssumedSimplified(Ptr, AA, UsedAssumedInformation);
-          if (!SimplePtr.hasValue() || *SimplePtr == Obj)
-            continue;
-        }
+                                  Ptr.getType()->getPointerAddressSpace()) &&
+            A.getAssumedSimplified(Ptr, AA, UsedAssumedInformation) == Obj)
+          continue;
+        return false;
       }
-      // If the object is only loaded from by this one load, we can try to
-      // propagate the initializer.
-      // TODO: This is only to test the load simplification, will be replaced.
-      if (Obj->getNumUses() == 1 && *Obj->user_begin() == &L)
-        if (Value *InitialV = AA::getInitialValueForObj(*Obj, *L.getType()))
-          if (Union(*InitialV))
-            continue;
+      if (!isa<AllocaInst>(Obj) && !isa<GlobalVariable>(Obj))
+        return false;
+      Constant *InitialVal = AA::getInitialValueForObj(*Obj, *L.getType());
+      if (!InitialVal || !Union(*InitialVal))
+        return false;
 
-      return false;
+      LLVM_DEBUG(dbgs() << "Underlying object amenable to load-store "
+                           "propagation, checking accesses next.\n");
+
+      auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
+        LLVM_DEBUG(dbgs() << " - visit access " << Acc << "\n");
+        if (!Acc.isWrite())
+          return true;
+        if (Acc.isWrittenValueYetUndetermined())
+          return true;
+        Value *Content = Acc.getWrittenValue();
+        if (!Content)
+          return false;
+        Value *CastedContent =
+            AA::getWithType(*Content, *AA.getAssociatedType());
+        if (!CastedContent)
+          return false;
+        if (IsExact)
+          return Union(*CastedContent);
+        if (auto *C = dyn_cast<Constant>(CastedContent))
+          if (C->isNullValue() || C->isAllOnesValue() || isa<UndefValue>(C))
+            return Union(*CastedContent);
+        return false;
+      };
+
+      auto &PI = A.getAAFor<AAPointerInfo>(AA, IRPosition::value(*Obj),
+                                           DepClassTy::REQUIRED);
+      if (!PI.forallInterfearingAccesses(L, CheckAccess))
+        return false;
     }
-    return Union(*UndefValue::get(AA.getAssociatedType()));
+    return true;
   }
 };
 
@@ -8779,6 +9414,7 @@ const char AAPotentialValues::ID = 0;
 const char AANoUndef::ID = 0;
 const char AACallEdges::ID = 0;
 const char AAFunctionReachability::ID = 0;
+const char AAPointerInfo::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -8890,6 +9526,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueConstantRange)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)

@@ -155,6 +155,11 @@ static cl::opt<bool>
                    cl::desc("Print Attributor's internal call graph"),
                    cl::init(false));
 
+static cl::opt<bool> SimplifyAllLoads("attributor-simplify-all-loads",
+                                      cl::Hidden,
+                                      cl::desc("Try to simplify all loads."),
+                                      cl::init(true));
+
 /// Logic operators for the change status enum class.
 ///
 ///{
@@ -872,7 +877,9 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
 
 bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
                                  const AbstractAttribute &QueryingAA,
-                                 const Value &V, DepClassTy LivenessDepClass) {
+                                 const Value &V,
+                                 bool CheckBBLivenessOnly,
+                                 DepClassTy LivenessDepClass) {
 
   // Check the trivial case first as it catches void values.
   if (V.use_empty())
@@ -902,7 +909,7 @@ bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
                       << *U->getUser() << "\n");
     bool UsedAssumedInformation = false;
     if (isAssumedDead(*U, &QueryingAA, LivenessAA, UsedAssumedInformation,
-                      /* CheckBBLivenessOnly */ false, LivenessDepClass)) {
+                      CheckBBLivenessOnly, LivenessDepClass)) {
       LLVM_DEBUG(dbgs() << "[Attributor] Dead use, skip!\n");
       continue;
     }
@@ -2448,10 +2455,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   assert(Success && "Expected the check call to be successful!");
 
   auto LoadStorePred = [&](Instruction &I) -> bool {
-    if (isa<LoadInst>(I))
+    if (isa<LoadInst>(I)) {
       getOrCreateAAFor<AAAlign>(
           IRPosition::value(*cast<LoadInst>(I).getPointerOperand()));
-    else
+      if (SimplifyAllLoads)
+        getOrCreateAAFor<AAValueSimplify>(IRPosition::value(I));
+    } else
       getOrCreateAAFor<AAAlign>(
           IRPosition::value(*cast<StoreInst>(I).getPointerOperand()));
     return true;
@@ -2564,6 +2573,13 @@ void AbstractAttribute::printWithDeps(raw_ostream &OS) const {
   }
 
   OS << '\n';
+}
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, const AAPointerInfo::Access &Acc) {
+  OS << " ["<< Acc.getKind() << "] " << *Acc.getRemoteInst();
+  if (Acc.getLocalInst() != Acc.getRemoteInst())
+    OS << " via " << *Acc.getLocalInst() << "\n";
+  return OS;
 }
 ///}
 
