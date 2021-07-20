@@ -394,3 +394,108 @@ multiclass sme_mem_st_ss<string mnemonic> {
   defm _V : sme_mem_st_v_ss<mnemonic, /*is_col=*/0b1>;
 }
 
+//===----------------------------------------------------------------------===//
+// SVE2 Instructions
+//===----------------------------------------------------------------------===//
+
+class sve2_int_perm_revd<string asm>
+    : I<(outs ZPR128:$Zd), (ins ZPR128:$_Zd, PPR3bAny:$Pg, ZPR128:$Zn),
+        asm, "\t$Zd, $Pg/m, $Zn", "", []>,
+      Sched<[]> {
+  bits<5> Zd;
+  bits<3> Pg;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = 0b00; // size
+  let Inst{21-13} = 0b101110100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+  let DestructiveInstType = DestructiveUnary;
+  let ElementSize = ZPR128.ElementSize;
+}
+
+class sve2_clamp<string asm, bits<2> sz, bit U, ZPRRegOp zpr_ty>
+    : I<(outs zpr_ty:$Zd), (ins zpr_ty:$Zn, zpr_ty:$Zm, zpr_ty:$_Zd),
+        asm, "\t$Zd, $Zn, $Zm", "", []>,
+      Sched<[]> {
+  bits<5> Zm;
+  bits<5> Zn;
+  bits<5> Zd;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15-11} = 0b11000;
+  let Inst{10}    = U;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = zpr_ty.ElementSize;
+}
+
+multiclass sve2_clamp<string asm, bit U> {
+  def _B : sve2_clamp<asm, 0b00, U, ZPR8>;
+  def _H : sve2_clamp<asm, 0b01, U, ZPR16>;
+  def _S : sve2_clamp<asm, 0b10, U, ZPR32>;
+  def _D : sve2_clamp<asm, 0b11, U, ZPR64>;
+}
+
+class sve2_int_perm_dup_p<string asm, PPRRegOp ppr_ty, Operand imm_ty>
+    : I<(outs ppr_ty:$Pd), (ins PPRAny:$Pg, ppr_ty:$Pn,
+                                MatrixIndexGPR32Op12_15:$Rm, imm_ty:$imm),
+        asm, "\t$Pd, $Pg/z, $Pn[$Rm, $imm]", "", []>,
+      Sched<[]> {
+  bits<2> Rm;
+  bits<4> Pg;
+  bits<4> Pn;
+  bits<4> Pd;
+  let Inst{31-24} = 0b00100101;
+  let Inst{21}    = 0b1;
+  let Inst{17-16} = Rm;
+  let Inst{15-14} = 0b01;
+  let Inst{13-10} = Pg;
+  let Inst{9}     = 0b0;
+  let Inst{8-5}   = Pn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = Pd;
+}
+
+multiclass sve2_int_perm_dup_p<string asm> {
+  def _B : sve2_int_perm_dup_p<asm, PPR8, imm0_15> {
+    bits<4> imm;
+    let Inst{23-22} = imm{3-2};
+    let Inst{20-19} = imm{1-0};
+    let Inst{18}    = 0b1;
+  }
+  def _H : sve2_int_perm_dup_p<asm, PPR16, imm0_7> {
+    bits<3> imm;
+    let Inst{23-22} = imm{2-1};
+    let Inst{20}    = imm{0};
+    let Inst{19-18} = 0b10;
+  }
+  def _S : sve2_int_perm_dup_p<asm, PPR32, imm0_3> {
+    bits<2> imm;
+    let Inst{23-22} = imm{1-0};
+    let Inst{20-18} = 0b100;
+  }
+  def _D : sve2_int_perm_dup_p<asm, PPR64, imm0_1> {
+    bits<1> imm;
+    let Inst{23}    = imm;
+    let Inst{22}    = 0b1;
+    let Inst{20-18} = 0b000;
+  }
+
+  def : InstAlias<"dup\t$Pd, $Pg/z, $Pn[$Rm]",
+                  (!cast<Instruction>(NAME # _B) PPR8:$Pd, PPRAny:$Pg, PPR8:$Pn, MatrixIndexGPR32Op12_15:$Rm, 0), 1>;
+  def : InstAlias<"dup\t$Pd, $Pg/z, $Pn[$Rm]",
+                  (!cast<Instruction>(NAME # _H) PPR16:$Pd, PPRAny:$Pg, PPR16:$Pn, MatrixIndexGPR32Op12_15:$Rm, 0), 1>;
+  def : InstAlias<"dup\t$Pd, $Pg/z, $Pn[$Rm]",
+                  (!cast<Instruction>(NAME # _S) PPR32:$Pd, PPRAny:$Pg, PPR32:$Pn, MatrixIndexGPR32Op12_15:$Rm, 0), 1>;
+  def : InstAlias<"dup\t$Pd, $Pg/z, $Pn[$Rm]",
+                  (!cast<Instruction>(NAME # _D) PPR64:$Pd, PPRAny:$Pg, PPR64:$Pn, MatrixIndexGPR32Op12_15:$Rm, 0), 1>;
+}

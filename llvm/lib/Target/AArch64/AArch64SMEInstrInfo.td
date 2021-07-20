@@ -74,4 +74,15 @@ let Predicates = [HasSME] in {
 defm LD1_MXIPXX : sme_mem_ld_ss<"ld1">;
 defm ST1_MXIPXX : sme_mem_st_ss<"st1">;
 
+//===----------------------------------------------------------------------===//
+// SVE2 instructions
+//===----------------------------------------------------------------------===//
+
+def REVD_ZPmZ : sve2_int_perm_revd<"revd">;
+
+defm SCLAMP_ZZZ : sve2_clamp<"sclamp", 0b0>;
+defm UCLAMP_ZZZ : sve2_clamp<"uclamp", 0b1>;
+
+defm DUP_PPzPRI : sve2_int_perm_dup_p<"dup">;
+
 } // End let Predicates = [HasSME]
