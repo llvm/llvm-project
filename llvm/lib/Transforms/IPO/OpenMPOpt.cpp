@@ -719,6 +719,9 @@ struct OpenMPOpt {
       // Recollect uses, in case Attributor deleted any.
       OMPInfoCache.recollectUses();
 
+      // TODO: This should be folded into buildCustomStateMachine.
+      Changed |= rewriteDeviceCodeStateMachine();
+
       if (remarksEnabled())
         analysisGlobalization();
     } else {
@@ -733,7 +736,6 @@ struct OpenMPOpt {
       OMPInfoCache.recollectUses();
 
       Changed |= deleteParallelRegions();
-      Changed |= rewriteDeviceCodeStateMachine();
 
       if (HideMemoryTransferLatency)
         Changed |= hideMemTransfersLatency();
