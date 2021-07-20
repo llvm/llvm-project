@@ -31,8 +31,8 @@ entry:
   ret void
 }
 
-; CHECK:      $Vanilla = comdat noduplicates
-; ELF:        $LinkOnceOdr = comdat noduplicates
+; CHECK:      $Vanilla = comdat nodeduplicate
+; ELF:        $LinkOnceOdr = comdat nodeduplicate
 ; COFF:       $LinkOnceOdr = comdat any
 ; CHECK:      @__sancov_gen_ = private global [1 x i32] zeroinitializer, section {{.*}}, comdat($Vanilla), align 4{{$}}
 ; CHECK-NEXT: @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section {{.*}}, align 4{{$}}
