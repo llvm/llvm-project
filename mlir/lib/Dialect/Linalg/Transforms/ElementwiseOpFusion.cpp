@@ -1,4 +1,4 @@
-//===- Fusion.cpp - Implementation of linalg Fusion -----------------------===//
+//===- ElementwiseOpFusion.cpp - Implementation of linalg Fusion ---------===///
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1281,8 +1281,8 @@ private:
 };
 
 /// Pass that fuses generic ops on tensors. Used only for testing.
-struct FusionOfTensorOpsPass
-    : public LinalgFusionOfTensorOpsBase<FusionOfTensorOpsPass> {
+struct LinalgElementwiseOpFusionPass
+    : public LinalgElementwiseOpFusionBase<LinalgElementwiseOpFusionPass> {
   void runOnOperation() override {
     Operation *op = getOperation();
     RewritePatternSet patterns(op->getContext());
@@ -1410,8 +1410,8 @@ void mlir::linalg::populatePushReshapeOpsPatterns(RewritePatternSet &patterns) {
   patterns.add<PushExpandingReshape>(context);
 }
 
-std::unique_ptr<Pass> mlir::createLinalgFusionOfTensorOpsPass() {
-  return std::make_unique<FusionOfTensorOpsPass>();
+std::unique_ptr<Pass> mlir::createLinalgElementwiseOpFusionPass() {
+  return std::make_unique<LinalgElementwiseOpFusionPass>();
 }
 
 std::unique_ptr<Pass> mlir::createFoldReshapeOpsByLinearizationPass() {
