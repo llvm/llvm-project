@@ -100,7 +100,7 @@ class ProfiledBinary {
   // The target triple.
   Triple TheTriple;
   // The runtime base address that the first executable segment is loaded at.
-  uint64_t BaseAddress;
+  uint64_t BaseAddress = 0;
   // The preferred load address of each executable segment.
   std::vector<uint64_t> PreferredTextSegmentAddresses;
   // The file offset of each executable segment.
