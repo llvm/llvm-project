@@ -1097,9 +1097,9 @@ private:
     set(InlineCostFeatureIndex::SROASavings, SROACostSavingOpportunities);
 
     if (NumVectorInstructions <= NumInstructions / 10)
-      increment(InlineCostFeatureIndex::Threshold, -1 * VectorBonus);
+      Threshold -= VectorBonus;
     else if (NumVectorInstructions <= NumInstructions / 2)
-      increment(InlineCostFeatureIndex::Threshold, -1 * (VectorBonus / 2));
+      Threshold -= VectorBonus / 2;
 
     set(InlineCostFeatureIndex::Threshold, Threshold);
 
