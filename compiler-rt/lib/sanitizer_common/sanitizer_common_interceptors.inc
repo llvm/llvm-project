@@ -6104,6 +6104,40 @@ INTERCEPTOR(__sanitizer_FILE *, freopen, const char *path, const char *mode,
 #define INIT_FOPEN
 #endif
 
+#if SANITIZER_INTERCEPT_FLOPEN
+INTERCEPTOR(int, flopen, const char *path, int flags, ...) {
+  void *ctx;
+  va_list ap;
+  va_start(ap, flags);
+  u16 mode = static_cast<u16>(va_arg(ap, u32));
+  va_end(ap);
+  COMMON_INTERCEPTOR_ENTER(ctx, flopen, path, flags, mode);
+  if (path) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  }
+  return REAL(flopen)(path, flags, mode);
+}
+
+INTERCEPTOR(int, flopenat, int dirfd, const char *path, int flags, ...) {
+  void *ctx;
+  va_list ap;
+  va_start(ap, flags);
+  u16 mode = static_cast<u16>(va_arg(ap, u32));
+  va_end(ap);
+  COMMON_INTERCEPTOR_ENTER(ctx, flopen, path, flags, mode);
+  if (path) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  }
+  return REAL(flopenat)(dirfd, path, flags, mode);
+}
+
+#define INIT_FLOPEN    \
+  COMMON_INTERCEPT_FUNCTION(flopen); \
+  COMMON_INTERCEPT_FUNCTION(flopenat);
+#else
+#define INIT_FLOPEN
+#endif
+
 #if SANITIZER_INTERCEPT_FOPEN64
 INTERCEPTOR(__sanitizer_FILE *, fopen64, const char *path, const char *mode) {
   void *ctx;
@@ -10269,6 +10303,7 @@ static void InitializeCommonInterceptors() {
   INIT_LIBIO_INTERNALS;
   INIT_FOPEN;
   INIT_FOPEN64;
+  INIT_FLOPEN;
   INIT_OPEN_MEMSTREAM;
   INIT_OBSTACK;
   INIT_FFLUSH;
