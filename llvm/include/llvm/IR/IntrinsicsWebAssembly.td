@@ -263,11 +263,6 @@ def int_wasm_extadd_pairwise_unsigned :
             [LLVMSubdivide2VectorType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
-// TODO: Remove this if possible.
-def int_wasm_demote_zero :
-  Intrinsic<[llvm_v4f32_ty], [llvm_v2f64_ty],
-            [IntrNoMem, IntrSpeculatable]>;
-
 //===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics
 //===----------------------------------------------------------------------===//

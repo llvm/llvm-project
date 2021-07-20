@@ -156,7 +156,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTargetDAGCombine(ISD::FP_EXTEND);
     setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
 
-    // Combine concat of {s,u}int_to_fp_sat to i32x4.trunc_sat_f64x2_zero_{s,u}
+    // Combine fp_to_{s,u}int_sat or fp_round of concat_vectors or vice versa
+    // into conversion ops
+    setTargetDAGCombine(ISD::FP_TO_SINT_SAT);
+    setTargetDAGCombine(ISD::FP_TO_UINT_SAT);
+    setTargetDAGCombine(ISD::FP_ROUND);
     setTargetDAGCombine(ISD::CONCAT_VECTORS);
 
     // Support saturating add for i8x16 and i16x8
@@ -2294,45 +2298,121 @@ performVectorConvertLowCombine(SDNode *N,
 }
 
 static SDValue
-performVectorTruncSatLowCombine(SDNode *N,
-                                TargetLowering::DAGCombinerInfo &DCI) {
+performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
-  assert(N->getOpcode() == ISD::CONCAT_VECTORS);
+
+  auto GetWasmConversionOp = [](unsigned Op) {
+    switch (Op) {
+    case ISD::FP_TO_SINT_SAT:
+      return WebAssemblyISD::TRUNC_SAT_ZERO_S;
+    case ISD::FP_TO_UINT_SAT:
+      return WebAssemblyISD::TRUNC_SAT_ZERO_U;
+    case ISD::FP_ROUND:
+      return WebAssemblyISD::DEMOTE_ZERO;
+    }
+    llvm_unreachable("unexpected op");
+  };
+
+  auto IsZeroSplat = [](SDValue SplatVal) {
+    auto *Splat = dyn_cast<BuildVectorSDNode>(SplatVal.getNode());
+    APInt SplatValue, SplatUndef;
+    unsigned SplatBitSize;
+    bool HasAnyUndefs;
+    return Splat &&
+           Splat->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                                  HasAnyUndefs) &&
+           SplatValue == 0;
+  };
+
+  if (N->getOpcode() == ISD::CONCAT_VECTORS) {
+    // Combine this:
+    //
+    //   (concat_vectors (v2i32 (fp_to_{s,u}int_sat $x, 32)), (v2i32 (splat 0)))
+    //
+    // into (i32x4.trunc_sat_f64x2_zero_{s,u} $x).
+    //
+    // Or this:
+    //
+    //   (concat_vectors (v2f32 (fp_round (v2f64 $x))), (v2f32 (splat 0)))
+    //
+    // into (f32x4.demote_zero_f64x2 $x).
+    EVT ResVT;
+    EVT ExpectedConversionType;
+    auto Conversion = N->getOperand(0);
+    auto ConversionOp = Conversion.getOpcode();
+    switch (ConversionOp) {
+    case ISD::FP_TO_SINT_SAT:
+    case ISD::FP_TO_UINT_SAT:
+      ResVT = MVT::v4i32;
+      ExpectedConversionType = MVT::v2i32;
+      break;
+    case ISD::FP_ROUND:
+      ResVT = MVT::v4f32;
+      ExpectedConversionType = MVT::v2f32;
+      break;
+    default:
+      return SDValue();
+    }
+
+    if (N->getValueType(0) != ResVT)
+      return SDValue();
+
+    if (Conversion.getValueType() != ExpectedConversionType)
+      return SDValue();
+
+    auto Source = Conversion.getOperand(0);
+    if (Source.getValueType() != MVT::v2f64)
+      return SDValue();
+
+    if (!IsZeroSplat(N->getOperand(1)) ||
+        N->getOperand(1).getValueType() != ExpectedConversionType)
+      return SDValue();
+
+    unsigned Op = GetWasmConversionOp(ConversionOp);
+    return DAG.getNode(Op, SDLoc(N), ResVT, Source);
+  }
 
   // Combine this:
   //
-  //   (concat_vectors (v2i32 (fp_to_{s,u}int_sat $x, 32)), (v2i32 (splat 0)))
+  //   (fp_to_{s,u}int_sat (concat_vectors $x, (v2f64 (splat 0))), 32)
   //
   // into (i32x4.trunc_sat_f64x2_zero_{s,u} $x).
-  EVT ResVT = N->getValueType(0);
-  if (ResVT != MVT::v4i32)
+  //
+  // Or this:
+  //
+  //   (v4f32 (fp_round (concat_vectors $x, (v2f64 (splat 0)))))
+  //
+  // into (f32x4.demote_zero_f64x2 $x).
+  EVT ResVT;
+  auto ConversionOp = N->getOpcode();
+  switch (ConversionOp) {
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    ResVT = MVT::v4i32;
+    break;
+  case ISD::FP_ROUND:
+    ResVT = MVT::v4f32;
+    break;
+  default:
+    llvm_unreachable("unexpected op");
+  }
+
+  if (N->getValueType(0) != ResVT)
     return SDValue();
 
-  auto FPToInt = N->getOperand(0);
-  auto FPToIntOp = FPToInt.getOpcode();
-  if (FPToIntOp != ISD::FP_TO_SINT_SAT && FPToIntOp != ISD::FP_TO_UINT_SAT)
-    return SDValue();
-  if (cast<VTSDNode>(FPToInt.getOperand(1))->getVT() != MVT::i32)
+  auto Concat = N->getOperand(0);
+  if (Concat.getValueType() != MVT::v4f64)
     return SDValue();
 
-  auto Source = FPToInt.getOperand(0);
+  auto Source = Concat.getOperand(0);
   if (Source.getValueType() != MVT::v2f64)
     return SDValue();
 
-  auto *Splat = dyn_cast<BuildVectorSDNode>(N->getOperand(1));
-  APInt SplatValue, SplatUndef;
-  unsigned SplatBitSize;
-  bool HasAnyUndefs;
-  if (!Splat || !Splat->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
-                                        HasAnyUndefs))
-    return SDValue();
-  if (SplatValue != 0)
+  if (!IsZeroSplat(Concat.getOperand(1)) ||
+      Concat.getOperand(1).getValueType() != MVT::v2f64)
     return SDValue();
 
-  unsigned Op = FPToIntOp == ISD::FP_TO_SINT_SAT
-                    ? WebAssemblyISD::TRUNC_SAT_ZERO_S
-                    : WebAssemblyISD::TRUNC_SAT_ZERO_U;
-
+  unsigned Op = GetWasmConversionOp(ConversionOp);
   return DAG.getNode(Op, SDLoc(N), ResVT, Source);
 }
 
@@ -2352,7 +2432,10 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_EXTEND:
   case ISD::EXTRACT_SUBVECTOR:
     return performVectorConvertLowCombine(N, DCI);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+  case ISD::FP_ROUND:
   case ISD::CONCAT_VECTORS:
-    return performVectorTruncSatLowCombine(N, DCI);
+    return performVectorTruncZeroCombine(N, DCI);
   }
 }

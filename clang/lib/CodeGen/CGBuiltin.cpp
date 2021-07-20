@@ -17795,11 +17795,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
                                    Builder.getInt32(2), Builder.getInt32(3)});
     return Builder.CreateShuffleVector(Trunc, Splat, ConcatMask);
   }
-  case WebAssembly::BI__builtin_wasm_demote_zero_f64x2_f32x4: {
-    Value *Vec = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_demote_zero);
-    return Builder.CreateCall(Callee, Vec);
-  }
   case WebAssembly::BI__builtin_wasm_load32_zero: {
     Value *Ptr = EmitScalarExpr(E->getArg(0));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_load32_zero);

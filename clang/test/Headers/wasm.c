@@ -2465,9 +2465,10 @@ v128_t test_u32x4_trunc_sat_f64x2_zero(v128_t a) {
 // CHECK-LABEL: @test_f32x4_demote_f64x2_zero(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.wasm.demote.zero(<2 x double> [[TMP0]]) #[[ATTR10]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
-// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-NEXT:    [[CONV_I:%.*]] = fptrunc <4 x double> [[SHUFFLE_I]] to <4 x float>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[CONV_I]] to <4 x i32>
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_f32x4_demote_f64x2_zero(v128_t a) {
   return wasm_f32x4_demote_f64x2_zero(a);
