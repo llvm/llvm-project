@@ -1115,7 +1115,8 @@ public:
     return getOperand(1);
   }
 
-  /// Returns the backedge value as a recipe. The backedge value is guaranteed to be a recipe.
+  /// Returns the backedge value as a recipe. The backedge value is guaranteed
+  /// to be a recipe.
   VPRecipeBase *getBackedgeRecipe() {
     return cast<VPRecipeBase>(getBackedgeValue()->getDef());
   }
