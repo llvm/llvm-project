@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMInterfaceStub
   TBEHandler.cpp
 
   LINK_COMPONENTS
+  BinaryFormat
   MC
   Object
   Support

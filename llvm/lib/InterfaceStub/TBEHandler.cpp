@@ -9,14 +9,16 @@
 #include "llvm/InterfaceStub/TBEHandler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/InterfaceStub/ELFStub.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/YAMLTraits.h"
 
 using namespace llvm;
 using namespace llvm::elfabi;
 
-LLVM_YAML_STRONG_TYPEDEF(ELFArch, ELFArchMapper)
+LLVM_YAML_IS_SEQUENCE_VECTOR(ELFSymbol)
 
 namespace llvm {
 namespace yaml {
@@ -35,43 +37,80 @@ template <> struct ScalarEnumerationTraits<ELFSymbolType> {
   }
 };
 
-/// YAML traits for ELFArch.
-template <> struct ScalarTraits<ELFArchMapper> {
-  static void output(const ELFArchMapper &Value, void *,
+template <> struct ScalarTraits<ELFEndiannessType> {
+  static void output(const ELFEndiannessType &Value, void *,
                      llvm::raw_ostream &Out) {
-    // Map from integer to architecture string.
     switch (Value) {
-    case (ELFArch)ELF::EM_X86_64:
-      Out << "x86_64";
+    case ELFEndiannessType::Big:
+      Out << "big";
       break;
-    case (ELFArch)ELF::EM_AARCH64:
-      Out << "AArch64";
+    case ELFEndiannessType::Little:
+      Out << "little";
       break;
-    case (ELFArch)ELF::EM_NONE:
     default:
-      Out << "Unknown";
+      llvm_unreachable("Unsupported endianness");
     }
   }
 
-  static StringRef input(StringRef Scalar, void *, ELFArchMapper &Value) {
-    // Map from architecture string to integer.
-    Value = StringSwitch<ELFArch>(Scalar)
-                .Case("x86_64", ELF::EM_X86_64)
-                .Case("AArch64", ELF::EM_AARCH64)
-                .Case("Unknown", ELF::EM_NONE)
-                .Default(ELF::EM_NONE);
-
-    // Returning empty StringRef indicates successful parse.
+  static StringRef input(StringRef Scalar, void *, ELFEndiannessType &Value) {
+    Value = StringSwitch<ELFEndiannessType>(Scalar)
+                .Case("big", ELFEndiannessType::Big)
+                .Case("little", ELFEndiannessType::Little)
+                .Default(ELFEndiannessType::Unknown);
+    if (Value == ELFEndiannessType::Unknown) {
+      return "Unsupported endianness";
+    }
     return StringRef();
   }
 
-  // Don't place quotation marks around architecture value.
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
+template <> struct ScalarTraits<ELFBitWidthType> {
+  static void output(const ELFBitWidthType &Value, void *,
+                     llvm::raw_ostream &Out) {
+    switch (Value) {
+    case ELFBitWidthType::ELF32:
+      Out << "32";
+      break;
+    case ELFBitWidthType::ELF64:
+      Out << "64";
+      break;
+    default:
+      llvm_unreachable("Unsupported bit width");
+    }
+  }
+
+  static StringRef input(StringRef Scalar, void *, ELFBitWidthType &Value) {
+    Value = StringSwitch<ELFBitWidthType>(Scalar)
+                .Case("32", ELFBitWidthType::ELF32)
+                .Case("64", ELFBitWidthType::ELF64)
+                .Default(ELFBitWidthType::Unknown);
+    if (Value == ELFBitWidthType::Unknown) {
+      return "Unsupported bit width";
+    }
+    return StringRef();
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
+template <> struct MappingTraits<IFSTarget> {
+  static void mapping(IO &IO, IFSTarget &Target) {
+    IO.mapOptional("ObjectFormat", Target.ObjectFormat);
+    IO.mapOptional("Arch", Target.ArchString);
+    IO.mapOptional("Endianness", Target.Endianness);
+    IO.mapOptional("BitWidth", Target.BitWidth);
+  }
+
+  // Compacts symbol information into a single line.
+  static const bool flow = true; // NOLINT(readability-identifier-naming)
 };
 
 /// YAML traits for ELFSymbol.
 template <> struct MappingTraits<ELFSymbol> {
   static void mapping(IO &IO, ELFSymbol &Symbol) {
+    IO.mapRequired("Name", Symbol.Name);
     IO.mapRequired("Type", Symbol.Type);
     // The need for symbol size depends on the symbol type.
     if (Symbol.Type == ELFSymbolType::NoType) {
@@ -87,57 +126,203 @@ template <> struct MappingTraits<ELFSymbol> {
   }
 
   // Compacts symbol information into a single line.
-  static const bool flow = true;
-};
-
-/// YAML traits for set of ELFSymbols.
-template <> struct CustomMappingTraits<std::set<ELFSymbol>> {
-  static void inputOne(IO &IO, StringRef Key, std::set<ELFSymbol> &Set) {
-    ELFSymbol Sym(Key.str());
-    IO.mapRequired(Key.str().c_str(), Sym);
-    Set.insert(Sym);
-  }
-
-  static void output(IO &IO, std::set<ELFSymbol> &Set) {
-    for (auto &Sym : Set)
-      IO.mapRequired(Sym.Name.c_str(), const_cast<ELFSymbol &>(Sym));
-  }
+  static const bool flow = true; // NOLINT(readability-identifier-naming)
 };
 
 /// YAML traits for ELFStub objects.
 template <> struct MappingTraits<ELFStub> {
   static void mapping(IO &IO, ELFStub &Stub) {
-    if (!IO.mapTag("!tapi-tbe", true))
+    if (!IO.mapTag("!ifs-v1", true))
       IO.setError("Not a .tbe YAML file.");
     IO.mapRequired("TbeVersion", Stub.TbeVersion);
     IO.mapOptional("SoName", Stub.SoName);
-    IO.mapRequired("Arch", (ELFArchMapper &)Stub.Arch);
+    IO.mapOptional("Target", Stub.Target);
     IO.mapOptional("NeededLibs", Stub.NeededLibs);
     IO.mapRequired("Symbols", Stub.Symbols);
   }
 };
 
+/// YAML traits for ELFStubTriple objects.
+template <> struct MappingTraits<ELFStubTriple> {
+  static void mapping(IO &IO, ELFStubTriple &Stub) {
+    if (!IO.mapTag("!ifs-v1", true))
+      IO.setError("Not a .tbe YAML file.");
+    IO.mapRequired("TbeVersion", Stub.TbeVersion);
+    IO.mapOptional("SoName", Stub.SoName);
+    IO.mapOptional("Target", Stub.Target.Triple);
+    IO.mapOptional("NeededLibs", Stub.NeededLibs);
+    IO.mapRequired("Symbols", Stub.Symbols);
+  }
+};
 } // end namespace yaml
 } // end namespace llvm
 
+/// Attempt to determine if a Text stub uses target triple.
+bool usesTriple(StringRef Buf) {
+  for (line_iterator I(MemoryBufferRef(Buf, "ELFStub")); !I.is_at_eof(); ++I) {
+    StringRef Line = (*I).trim();
+    if (Line.startswith("Target:")) {
+      if (Line == "Target:" || (Line.find("{") != Line.npos)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 Expected<std::unique_ptr<ELFStub>> elfabi::readTBEFromBuffer(StringRef Buf) {
   yaml::Input YamlIn(Buf);
-  std::unique_ptr<ELFStub> Stub(new ELFStub());
-  YamlIn >> *Stub;
-  if (std::error_code Err = YamlIn.error())
+  std::unique_ptr<ELFStubTriple> Stub(new ELFStubTriple());
+  if (usesTriple(Buf)) {
+    YamlIn >> *Stub;
+  } else {
+    YamlIn >> *static_cast<ELFStub *>(Stub.get());
+  }
+  if (std::error_code Err = YamlIn.error()) {
     return createStringError(Err, "YAML failed reading as TBE");
+  }
 
   if (Stub->TbeVersion > elfabi::TBEVersionCurrent)
     return make_error<StringError>(
         "TBE version " + Stub->TbeVersion.getAsString() + " is unsupported.",
         std::make_error_code(std::errc::invalid_argument));
-
+  if (Stub->Target.ArchString) {
+    Stub->Target.Arch =
+        ELF::convertArchNameToEMachine(Stub->Target.ArchString.getValue());
+  }
   return std::move(Stub);
 }
 
 Error elfabi::writeTBEToOutputStream(raw_ostream &OS, const ELFStub &Stub) {
   yaml::Output YamlOut(OS, NULL, /*WrapColumn =*/0);
+  std::unique_ptr<ELFStubTriple> CopyStub(new ELFStubTriple(Stub));
+  if (Stub.Target.Arch) {
+    CopyStub->Target.ArchString = std::string(
+        ELF::convertEMachineToArchName(Stub.Target.Arch.getValue()));
+  }
+  IFSTarget Target = Stub.Target;
 
-  YamlOut << const_cast<ELFStub &>(Stub);
+  if (CopyStub->Target.Triple ||
+      (!CopyStub->Target.ArchString && !CopyStub->Target.Endianness &&
+       !CopyStub->Target.BitWidth))
+    YamlOut << *CopyStub;
+  else
+    YamlOut << *static_cast<ELFStub *>(CopyStub.get());
   return Error::success();
+}
+
+Error elfabi::overrideTBETarget(ELFStub &Stub, Optional<ELFArch> OverrideArch,
+                                Optional<ELFEndiannessType> OverrideEndianness,
+                                Optional<ELFBitWidthType> OverrideBitWidth,
+                                Optional<std::string> OverrideTriple) {
+  std::error_code OverrideEC(1, std::generic_category());
+  if (OverrideArch) {
+    if (Stub.Target.Arch &&
+        Stub.Target.Arch.getValue() != OverrideArch.getValue()) {
+      return make_error<StringError>(
+          "Supplied Arch conflicts with the text stub", OverrideEC);
+    }
+    Stub.Target.Arch = OverrideArch.getValue();
+  }
+  if (OverrideEndianness) {
+    if (Stub.Target.Endianness &&
+        Stub.Target.Endianness.getValue() != OverrideEndianness.getValue()) {
+      return make_error<StringError>(
+          "Supplied Endianness conflicts with the text stub", OverrideEC);
+    }
+    Stub.Target.Endianness = OverrideEndianness.getValue();
+  }
+  if (OverrideBitWidth) {
+    if (Stub.Target.BitWidth &&
+        Stub.Target.BitWidth.getValue() != OverrideBitWidth.getValue()) {
+      return make_error<StringError>(
+          "Supplied BitWidth conflicts with the text stub", OverrideEC);
+    }
+    Stub.Target.BitWidth = OverrideBitWidth.getValue();
+  }
+  if (OverrideTriple) {
+    if (Stub.Target.Triple &&
+        Stub.Target.Triple.getValue() != OverrideTriple.getValue()) {
+      return make_error<StringError>(
+          "Supplied Triple conflicts with the text stub", OverrideEC);
+    }
+    Stub.Target.Triple = OverrideTriple.getValue();
+  }
+  return Error::success();
+}
+
+Error elfabi::validateTBETarget(ELFStub &Stub, bool ParseTriple) {
+  std::error_code ValidationEC(1, std::generic_category());
+  if (Stub.Target.Triple) {
+    if (Stub.Target.Arch || Stub.Target.BitWidth || Stub.Target.Endianness ||
+        Stub.Target.ObjectFormat) {
+      return make_error<StringError>(
+          "Target triple cannot be used simultaneously with ELF target format",
+          ValidationEC);
+    }
+    if (ParseTriple) {
+      IFSTarget TargetFromTriple = parseTriple(Stub.Target.Triple.getValue());
+      Stub.Target.Arch = TargetFromTriple.Arch;
+      Stub.Target.BitWidth = TargetFromTriple.BitWidth;
+      Stub.Target.Endianness = TargetFromTriple.Endianness;
+    }
+    return Error::success();
+  }
+  if (!Stub.Target.Arch || !Stub.Target.BitWidth || !Stub.Target.Endianness) {
+    // TODO: unify the error message.
+    if (!Stub.Target.Arch) {
+      return make_error<StringError>("Arch is not defined in the text stub",
+                                     ValidationEC);
+    }
+    if (!Stub.Target.BitWidth) {
+      return make_error<StringError>("BitWidth is not defined in the text stub",
+                                     ValidationEC);
+    }
+    if (!Stub.Target.Endianness) {
+      return make_error<StringError>(
+          "Endianness is not defined in the text stub", ValidationEC);
+    }
+  }
+  return Error::success();
+}
+
+IFSTarget elfabi::parseTriple(StringRef TripleStr) {
+  Triple IFSTriple(TripleStr);
+  IFSTarget RetTarget;
+  // TODO: Implement a Triple Arch enum to e_machine map.
+  switch (IFSTriple.getArch()) {
+  case Triple::ArchType::aarch64:
+    RetTarget.Arch = (ELFArch)ELF::EM_AARCH64;
+    break;
+  case Triple::ArchType::x86_64:
+    RetTarget.Arch = (ELFArch)ELF::EM_X86_64;
+    break;
+  default:
+    RetTarget.Arch = (ELFArch)ELF::EM_NONE;
+  }
+  RetTarget.Endianness = IFSTriple.isLittleEndian() ? ELFEndiannessType::Little
+                                                    : ELFEndiannessType::Big;
+  RetTarget.BitWidth =
+      IFSTriple.isArch64Bit() ? ELFBitWidthType::ELF64 : ELFBitWidthType::ELF32;
+  return RetTarget;
+}
+
+void elfabi::stripTBETarget(ELFStub &Stub, bool StripTriple, bool StripArch,
+                            bool StripEndianness, bool StripBitWidth) {
+  if (StripTriple || StripArch) {
+    Stub.Target.Arch.reset();
+    Stub.Target.ArchString.reset();
+  }
+  if (StripTriple || StripEndianness) {
+    Stub.Target.Endianness.reset();
+  }
+  if (StripTriple || StripBitWidth) {
+    Stub.Target.BitWidth.reset();
+  }
+  if (StripTriple) {
+    Stub.Target.Triple.reset();
+  }
+  if (!Stub.Target.Arch && !Stub.Target.BitWidth && !Stub.Target.Endianness) {
+    Stub.Target.ObjectFormat.reset();
+  }
 }

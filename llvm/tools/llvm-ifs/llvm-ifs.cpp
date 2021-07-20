@@ -10,6 +10,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/InterfaceStub/ELFObjHandler.h"
+#include "llvm/InterfaceStub/ELFStub.h"
+#include "llvm/InterfaceStub/TBEHandler.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -348,23 +350,10 @@ static int writeElfStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
   return convertYAML(YIn, Out, ErrHandler) ? 0 : 1;
 }
 
-static elfabi::ELFTarget convertIFSStub(const IFSStub &IfsStub,
-                                        elfabi::ELFStub &ElfStub) {
+static Error convertIFSStub(const IFSStub &IfsStub, elfabi::ELFStub &ElfStub) {
   ElfStub.TbeVersion = IfsStub.IfsVersion;
   ElfStub.SoName = IfsStub.SOName;
-  // TODO: Support more archs and targets.
-  Triple IFSTriple(IfsStub.Triple);
-  elfabi::ELFTarget Target = elfabi::ELFTarget::ELF64LE;
-  switch (IFSTriple.getArch()) {
-  case Triple::ArchType::aarch64:
-    ElfStub.Arch = (elfabi::ELFArch)ELF::EM_AARCH64;
-    break;
-  case Triple::ArchType::x86_64:
-    ElfStub.Arch = (elfabi::ELFArch)ELF::EM_X86_64;
-    break;
-  default:
-    ElfStub.Arch = (elfabi::ELFArch)ELF::EM_NONE;
-  }
+  ElfStub.Target.Triple = IfsStub.Triple;
   ElfStub.NeededLibs = IfsStub.NeededLibs;
   for (const IFSSymbol &IfsSymbol : IfsStub.Symbols) {
     elfabi::ELFSymbol ElfSymbol(IfsSymbol.Name);
@@ -387,9 +376,9 @@ static elfabi::ELFTarget convertIFSStub(const IFSStub &IfsStub,
     ElfSymbol.Undefined = false;
     ElfSymbol.Weak = IfsSymbol.Weak;
     ElfSymbol.Warning = IfsSymbol.Warning;
-    ElfStub.Symbols.insert(ElfSymbol);
+    ElfStub.Symbols.push_back(ElfSymbol);
   }
-  return Target;
+  return llvm::elfabi::validateTBETarget(ElfStub, true);
 }
 
 static int writeIfso(const IFSStub &Stub, bool IsWriteIfs) {
@@ -400,9 +389,11 @@ static int writeIfso(const IFSStub &Stub, bool IsWriteIfs) {
   // format is ELF.
   if (UseInterfaceStub && (!IsWriteIfs) && ObjectFileFormat != "TBD") {
     elfabi::ELFStub ElfStub;
-    elfabi::ELFTarget Target = convertIFSStub(Stub, ElfStub);
-    Error BinaryWriteError =
-        elfabi::writeBinaryStub(OutputFilename, ElfStub, Target);
+    Error ConvertError = convertIFSStub(Stub, ElfStub);
+    if (ConvertError) {
+      return -1;
+    }
+    Error BinaryWriteError = elfabi::writeBinaryStub(OutputFilename, ElfStub);
     if (BinaryWriteError) {
       return -1;
     }
