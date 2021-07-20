@@ -20,7 +20,6 @@
 ; DEFAULT-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-NEXT: Virtual Register Map
 ; DEFAULT-NEXT: Live Register Matrix
-; DEFAULT-NEXT: Machine Optimization Remark Emitter
 ; DEFAULT-NEXT: Greedy Register Allocator
 ; DEFAULT-NEXT: GCN NSA Reassign
 ; DEFAULT-NEXT: Virtual Register Rewriter
