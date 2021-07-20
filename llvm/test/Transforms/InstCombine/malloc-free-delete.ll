@@ -440,11 +440,6 @@ declare i8* @llvm.strip.invariant.group(i8*)
 
 define void @test17() {
 ; CHECK-LABEL: @test17(
-; CHECK-NEXT:    [[NW1:%.*]] = call dereferenceable(32) i8* @_Znwm(i64 32) #[[ATTR10]]
-; CHECK-NEXT:    [[NW2:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nonnull [[NW1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull [[NW1]])
-; CHECK-NEXT:    store i8 1, i8* [[TMP1]], align 1
-; CHECK-NEXT:    call void @_ZdlPv(i8* [[NW2]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
   %nw1 = call i8* @_Znwm(i64 32) builtin
