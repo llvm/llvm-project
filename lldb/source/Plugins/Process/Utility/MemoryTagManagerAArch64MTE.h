@@ -38,7 +38,14 @@ public:
 
   llvm::Expected<std::vector<lldb::addr_t>>
   UnpackTagsData(const std::vector<uint8_t> &tags,
-                 size_t granules) const override;
+                 size_t granules = 0) const override;
+
+  llvm::Expected<std::vector<uint8_t>>
+  PackTags(const std::vector<lldb::addr_t> &tags) const override;
+
+  llvm::Expected<std::vector<lldb::addr_t>>
+  RepeatTagsForRange(const std::vector<lldb::addr_t> &tags,
+                     TagRange range) const override;
 };
 
 } // namespace lldb_private
