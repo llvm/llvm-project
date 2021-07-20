@@ -2563,7 +2563,8 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 
     if (!taskdata->td_flags.team_serial ||
         (thread->th.th_task_team != NULL &&
-         thread->th.th_task_team->tt.tt_found_proxy_tasks)) {
+         (thread->th.th_task_team->tt.tt_found_proxy_tasks ||
+          thread->th.th_task_team->tt.tt_hidden_helper_task_encountered))) {
       kmp_flag_32<false, false> flag(
           RCAST(std::atomic<kmp_uint32> *, &(taskgroup->count)), 0U);
       while (KMP_ATOMIC_LD_ACQ(&taskgroup->count) != 0) {
