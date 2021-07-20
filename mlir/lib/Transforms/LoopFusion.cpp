@@ -1682,6 +1682,7 @@ public:
   // Visits each node in the graph, and for each node, attempts to fuse it with
   // its sibling nodes (nodes which share a parent, but no dependence edges).
   void fuseSiblingNodes() {
+    LLVM_DEBUG(llvm::dbgs() << "--- Sibling Fusion ---\n");
     init();
     while (!worklist.empty()) {
       unsigned dstId = worklist.back();
@@ -1773,10 +1774,14 @@ public:
       assert(bestDstLoopDepth > 0 && "Unexpected loop fusion depth");
       assert(!depthSliceUnions[bestDstLoopDepth - 1].isEmpty() &&
              "Fusion depth has no computed slice union");
-
+      // Check if source loop is being inserted in the innermost
+      // destination loop. Based on this, the fused loop may be optimized
+      // further inside `fuseLoops`.
+      bool isInnermostInsertion = (bestDstLoopDepth == dstLoopDepthTest);
       // Fuse computation slice of 'sibLoopNest' into 'dstLoopNest'.
       mlir::fuseLoops(sibAffineForOp, dstAffineForOp,
-                      depthSliceUnions[bestDstLoopDepth - 1]);
+                      depthSliceUnions[bestDstLoopDepth - 1],
+                      isInnermostInsertion);
 
       auto dstForInst = cast<AffineForOp>(dstNode->op);
       // Update operation position of fused loop nest (if needed).

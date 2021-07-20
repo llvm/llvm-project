@@ -1883,6 +1883,49 @@ void mlir::buildAffineLoopNest(
                           buildAffineLoopFromValues);
 }
 
+AffineForOp mlir::replaceForOpWithNewYields(OpBuilder &b, AffineForOp loop,
+                                            ValueRange newIterOperands,
+                                            ValueRange newYieldedValues,
+                                            ValueRange newIterArgs,
+                                            bool replaceLoopResults) {
+  assert(newIterOperands.size() == newYieldedValues.size() &&
+         "newIterOperands must be of the same size as newYieldedValues");
+  // Create a new loop before the existing one, with the extra operands.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(loop);
+  auto operands = llvm::to_vector<4>(loop.getIterOperands());
+  operands.append(newIterOperands.begin(), newIterOperands.end());
+  SmallVector<Value, 4> lbOperands(loop.getLowerBoundOperands());
+  SmallVector<Value, 4> ubOperands(loop.getUpperBoundOperands());
+  SmallVector<Value, 4> steps(loop.getStep());
+  auto lbMap = loop.getLowerBoundMap();
+  auto ubMap = loop.getUpperBoundMap();
+  AffineForOp newLoop =
+      b.create<AffineForOp>(loop.getLoc(), lbOperands, lbMap, ubOperands, ubMap,
+                            loop.getStep(), operands);
+  // Take the body of the original parent loop.
+  newLoop.getLoopBody().takeBody(loop.getLoopBody());
+  for (Value val : newIterArgs)
+    newLoop.getLoopBody().addArgument(val.getType());
+
+  // Update yield operation with new values to be added.
+  if (!newYieldedValues.empty()) {
+    auto yield = cast<AffineYieldOp>(newLoop.getBody()->getTerminator());
+    b.setInsertionPoint(yield);
+    auto yieldOperands = llvm::to_vector<4>(yield.getOperands());
+    yieldOperands.append(newYieldedValues.begin(), newYieldedValues.end());
+    b.create<AffineYieldOp>(yield.getLoc(), yieldOperands);
+    yield.erase();
+  }
+  if (replaceLoopResults) {
+    for (auto it : llvm::zip(loop.getResults(), newLoop.getResults().take_front(
+                                                    loop.getNumResults()))) {
+      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
+    }
+  }
+  return newLoop;
+}
+
 //===----------------------------------------------------------------------===//
 // AffineIfOp
 //===----------------------------------------------------------------------===//
