@@ -2446,19 +2446,6 @@ bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
   return Mask.isSubsetOf(computeKnownBits(V, DemandedElts, Depth).Zero);
 }
 
-/// Return true if the DemandedElts of the vector Op are all zero.  We
-/// use this predicate to simplify operations downstream.
-bool SelectionDAG::MaskedElementsAreZero(SDValue Op, const APInt &DemandedElts,
-                                         unsigned Depth) const {
-  assert(Op.getValueType().isFixedLengthVector() &&
-         Op.getValueType().getVectorNumElements() ==
-             DemandedElts.getBitWidth() &&
-         "MaskedElementsAreZero vector size mismatch");
-  unsigned BitWidth = Op.getScalarValueSizeInBits();
-  APInt DemandedBits = APInt::getAllOnesValue(BitWidth);
-  return MaskedValueIsZero(Op, DemandedBits, DemandedElts, Depth);
-}
-
 /// MaskedValueIsAllOnes - Return true if '(Op & Mask) == Mask'.
 bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
                                         unsigned Depth) const {

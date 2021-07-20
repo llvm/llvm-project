@@ -278,8 +278,8 @@ Value *BlockGenerator::generateLocationAccessed(
     // the newly generated pointer.
     auto OldPtrTy = ExpectedType->getPointerTo();
     auto NewPtrTy = Address->getType();
-    OldPtrTy = PointerType::get(OldPtrTy->getElementType(),
-                                NewPtrTy->getPointerAddressSpace());
+    OldPtrTy = PointerType::getWithSamePointeeType(
+        OldPtrTy, NewPtrTy->getPointerAddressSpace());
 
     if (OldPtrTy != NewPtrTy)
       Address = Builder.CreateBitOrPointerCast(Address, OldPtrTy);
@@ -801,9 +801,9 @@ void BlockGenerator::generateScalarStores(
 
           // The new Val might have a different type than the old Val due to
           // ScalarEvolution looking through bitcasts.
-          if (Val->getType() != Address->getType()->getPointerElementType())
-            Address = Builder.CreateBitOrPointerCast(
-                Address, Val->getType()->getPointerTo());
+          Address = Builder.CreateBitOrPointerCast(
+              Address, Val->getType()->getPointerTo(
+                           Address->getType()->getPointerAddressSpace()));
 
           Builder.CreateStore(Val, Address);
         });
