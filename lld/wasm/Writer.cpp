@@ -562,8 +562,12 @@ static bool shouldImport(Symbol *sym) {
     return true;
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
     return true;
-  if (sym->isUndefined())
-    return sym->importName.hasValue();
+  if (auto *g = dyn_cast<UndefinedGlobal>(sym))
+    return g->importName.hasValue();
+  if (auto *f = dyn_cast<UndefinedFunction>(sym))
+    return f->importName.hasValue();
+  if (auto *t = dyn_cast<UndefinedTable>(sym))
+    return t->importName.hasValue();
 
   return false;
 }
