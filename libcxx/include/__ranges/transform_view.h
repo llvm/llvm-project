@@ -10,10 +10,11 @@
 #define _LIBCPP___RANGES_TRANSFORM_VIEW_H
 
 #include <__config>
-#include <__iterator/iterator_traits.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iter_swap.h>
+#include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
+#include <__ranges/all.h>
 #include <__ranges/concepts.h>
 #include <__ranges/copyable_box.h>
 #include <__ranges/empty.h>
@@ -93,10 +94,8 @@ public:
   constexpr auto size() const requires sized_range<const _View> { return ranges::size(__base_); }
 };
 
-// TODO: replace the decltype with all_t when that's implemented.
 template<class _Range, class _Fn>
-transform_view(_Range&&, _Fn)
-  -> transform_view<decltype(views::all(std::declval<_Range>())), _Fn>;
+transform_view(_Range&&, _Fn) -> transform_view<views::all_t<_Range>, _Fn>;
 
 template<class _View>
 struct __transform_view_iterator_concept { using type = input_iterator_tag; };
