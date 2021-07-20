@@ -1340,13 +1340,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   if (flags->proxy == TASK_FULL)
     copy_icvs(&taskdata->td_icvs, &taskdata->td_parent->td_icvs);
 
-  taskdata->td_flags.tiedness = flags->tiedness;
-  taskdata->td_flags.final = flags->final;
-  taskdata->td_flags.merged_if0 = flags->merged_if0;
-  taskdata->td_flags.destructors_thunk = flags->destructors_thunk;
-  taskdata->td_flags.proxy = flags->proxy;
-  taskdata->td_flags.detachable = flags->detachable;
-  taskdata->td_flags.hidden_helper = flags->hidden_helper;
+  taskdata->td_flags = *flags;
   taskdata->encountering_gtid = gtid;
   taskdata->td_task_team = thread->th.th_task_team;
   taskdata->td_size_alloc = shareds_offset + sizeof_shareds;
@@ -1370,8 +1364,6 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   taskdata->td_flags.executing = 0;
   taskdata->td_flags.complete = 0;
   taskdata->td_flags.freed = 0;
-
-  taskdata->td_flags.native = flags->native;
 
   KMP_ATOMIC_ST_RLX(&taskdata->td_incomplete_child_tasks, 0);
   // start at one because counts current task and children
@@ -1402,12 +1394,11 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
     if (taskdata->td_parent->td_flags.tasktype == TASK_EXPLICIT) {
       KMP_ATOMIC_INC(&taskdata->td_parent->td_allocated_child_tasks);
     }
-  }
-
-  if (flags->hidden_helper) {
-    taskdata->td_flags.task_serial = FALSE;
-    // Increment the number of hidden helper tasks to be executed
-    KMP_ATOMIC_INC(&__kmp_unexecuted_hidden_helper_tasks);
+    if (flags->hidden_helper) {
+      taskdata->td_flags.task_serial = FALSE;
+      // Increment the number of hidden helper tasks to be executed
+      KMP_ATOMIC_INC(&__kmp_unexecuted_hidden_helper_tasks);
+    }
   }
 
   KA_TRACE(20, ("__kmp_task_alloc(exit): T#%d created task %p parent=%p\n",
