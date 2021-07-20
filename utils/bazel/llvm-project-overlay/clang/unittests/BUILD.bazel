@@ -213,8 +213,8 @@ cc_test(
     size = "small",
     srcs = glob(
         [
-          "Lex/*.cpp",
-          "Lex/*.h",
+            "Lex/*.cpp",
+            "Lex/*.h",
         ],
         allow_empty = False,
     ),
@@ -383,6 +383,7 @@ cc_test(
         "//clang:rewrite",
         "//clang:tooling",
         "//clang:tooling_core",
+        "//clang:tooling_dependency_scanning",
         "//clang:tooling_inclusions",
         "//clang:tooling_refactoring",
         "//clang:transformer",
