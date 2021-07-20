@@ -310,6 +310,12 @@ OPTIONS
  specified). When N=0, llvm-cov auto-detects an appropriate number of threads to
  use. This is the default.
 
+.. option:: -compilation-dir=<dir>
+
+ Directory used as a base for relative coverage mapping paths. Only applicable
+ when binaries have been compiled with one of `-fcoverage-prefix-map`
+ `-fcoverage-compilation-dir`, or `-ffile-compilation-dir`.
+
 .. option:: -line-coverage-gt=<N>
 
  Show code coverage only for functions with line coverage greater than the
@@ -399,6 +405,12 @@ OPTIONS
 
  Skip source code files with file paths that match the given regular expression.
 
+.. option:: -compilation-dir=<dir>
+
+ Directory used as a base for relative coverage mapping paths. Only applicable
+ when binaries have been compiled with one of `-fcoverage-prefix-map`
+ `-fcoverage-compilation-dir`, or `-ffile-compilation-dir`.
+
 .. program:: llvm-cov export
 
 .. _llvm-cov-export:
@@ -467,3 +479,9 @@ OPTIONS
 
  Use N threads to export coverage data. When N=0, llvm-cov auto-detects an
  appropriate number of threads to use. This is the default.
+
+.. option:: -compilation-dir=<dir>
+
+ Directory used as a base for relative coverage mapping paths. Only applicable
+ when binaries have been compiled with one of `-fcoverage-prefix-map`
+ `-fcoverage-compilation-dir`, or `-ffile-compilation-dir`.
