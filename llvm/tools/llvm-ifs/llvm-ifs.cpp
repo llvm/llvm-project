@@ -45,58 +45,72 @@ const VersionTuple IfsVersionCurrent(3, 0);
 enum class FileFormat { IFS, ELF, TBD };
 } // end anonymous namespace
 
+cl::OptionCategory IfsCategory("Ifs Options");
+
 // TODO: Use OptTable for option parsing in the future.
 // Command line flags:
 cl::list<std::string> InputFilePaths(cl::Positional, cl::desc("input"),
-                                     cl::ZeroOrMore);
+                                     cl::ZeroOrMore, cl::cat(IfsCategory));
 cl::opt<FileFormat> InputFormat(
     "input-format", cl::desc("Specify the input file format"),
     cl::values(clEnumValN(FileFormat::IFS, "IFS", "Text based ELF stub file"),
-               clEnumValN(FileFormat::ELF, "ELF", "ELF object file")));
+               clEnumValN(FileFormat::ELF, "ELF", "ELF object file")),
+    cl::cat(IfsCategory));
 cl::opt<FileFormat> OutputFormat(
     "output-format", cl::desc("Specify the output file format"),
     cl::values(clEnumValN(FileFormat::IFS, "IFS", "Text based ELF stub file"),
                clEnumValN(FileFormat::ELF, "ELF", "ELF stub file"),
                clEnumValN(FileFormat::TBD, "TBD", "Apple TBD text stub file")),
-    cl::Required);
+    cl::Required, cl::cat(IfsCategory));
 cl::opt<std::string> OptArch("arch",
-                             cl::desc("Specify the architecture, e.g. x86_64"));
-cl::opt<IFSBitWidthType> OptBitWidth(
-    "bitwidth", cl::desc("Specify the bit width"),
-    cl::values(clEnumValN(IFSBitWidthType::IFS32, "32", "32 bits"),
-               clEnumValN(IFSBitWidthType::IFS64, "64", "64 bits")));
+                             cl::desc("Specify the architecture, e.g. x86_64"),
+                             cl::cat(IfsCategory));
+cl::opt<IFSBitWidthType>
+    OptBitWidth("bitwidth", cl::desc("Specify the bit width"),
+                cl::values(clEnumValN(IFSBitWidthType::IFS32, "32", "32 bits"),
+                           clEnumValN(IFSBitWidthType::IFS64, "64", "64 bits")),
+                cl::cat(IfsCategory));
 cl::opt<IFSEndiannessType> OptEndianness(
     "endianness", cl::desc("Specify the endianness"),
     cl::values(clEnumValN(IFSEndiannessType::Little, "little", "Little Endian"),
-               clEnumValN(IFSEndiannessType::Big, "big", "Big Endian")));
+               clEnumValN(IFSEndiannessType::Big, "big", "Big Endian")),
+    cl::cat(IfsCategory));
 cl::opt<std::string> OptTargetTriple(
-    "target", cl::desc("Specify the target triple, e.g. x86_64-linux-gnu"));
+    "target", cl::desc("Specify the target triple, e.g. x86_64-linux-gnu"),
+    cl::cat(IfsCategory));
 cl::opt<std::string> OptTargetTripleHint(
     "hint-ifs-target",
     cl::desc("When --output-format is 'IFS', this flag will hint the expected "
-             "target triple for IFS output"));
+             "target triple for IFS output"),
+    cl::cat(IfsCategory));
 cl::opt<bool> StripIFSArch(
     "strip-ifs-arch",
-    cl::desc("Strip target architecture information away from IFS output"));
+    cl::desc("Strip target architecture information away from IFS output"),
+    cl::cat(IfsCategory));
 cl::opt<bool> StripIFSBitWidth(
     "strip-ifs-bitwidth",
-    cl::desc("Strip target bit width information away from IFS output"));
+    cl::desc("Strip target bit width information away from IFS output"),
+    cl::cat(IfsCategory));
 cl::opt<bool> StripIFSEndiannessWidth(
     "strip-ifs-endianness",
-    cl::desc("Strip target endianness information away from IFS output"));
+    cl::desc("Strip target endianness information away from IFS output"),
+    cl::cat(IfsCategory));
 cl::opt<bool> StripIFSTarget(
     "strip-ifs-target",
-    cl::desc("Strip all target information away from IFS output"));
+    cl::desc("Strip all target information away from IFS output"),
+    cl::cat(IfsCategory));
 cl::opt<std::string>
     SoName("soname",
            cl::desc("Manually set the DT_SONAME entry of any emitted files"),
-           cl::value_desc("name"));
-cl::opt<std::string> OutputFilePath("output", cl::desc("Output file"));
+           cl::value_desc("name"), cl::cat(IfsCategory));
+cl::opt<std::string> OutputFilePath("output", cl::desc("Output file"),
+                                    cl::cat(IfsCategory));
 cl::alias OutputFilePathA("o", cl::desc("Alias for --output"),
-                          cl::aliasopt(OutputFilePath));
+                          cl::aliasopt(OutputFilePath), cl::cat(IfsCategory));
 cl::opt<bool> WriteIfChanged(
     "write-if-changed",
-    cl::desc("Write the output file only if it is new or has changed."));
+    cl::desc("Write the output file only if it is new or has changed."),
+    cl::cat(IfsCategory));
 
 static std::string getTypeName(IFSSymbolType Type) {
   switch (Type) {
@@ -259,6 +273,7 @@ static Error writeIFS(StringRef FilePath, IFSStub &Stub) {
 
 int main(int argc, char *argv[]) {
   // Parse arguments.
+  cl::HideUnrelatedOptions({&IfsCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv);
 
   if (InputFilePaths.empty())
