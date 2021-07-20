@@ -1575,6 +1575,9 @@ let TargetPrefix = "ppc" in {
   def int_ppc_setb
       : GCCBuiltin<"__builtin_ppc_setb">,
         Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_cmpb
+      : Intrinsic<[llvm_anyint_ty], [llvm_anyint_ty, llvm_anyint_ty],
+                  [IntrNoMem]>;
   // multiply
   def int_ppc_mulhd
       : GCCBuiltin<"__builtin_ppc_mulhd">,
