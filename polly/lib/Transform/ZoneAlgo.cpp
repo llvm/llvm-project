@@ -253,7 +253,7 @@ isl::union_map polly::filterKnownValInst(const isl::union_map &UMap) {
   isl::union_map Result = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     if (!isMapToUnknown(Map))
-      Result = Result.add_map(Map);
+      Result = Result.unite(Map);
   }
   return Result;
 }
@@ -394,7 +394,7 @@ void ZoneAlgorithm::addArrayReadAccess(MemoryAccess *MA) {
 
   // { DomainRead[] -> Element[] }
   auto AccRel = intersectRange(getAccessRelationFor(MA), CompatibleElts);
-  AllReads = AllReads.add_map(AccRel);
+  AllReads = AllReads.unite(AccRel);
 
   if (LoadInst *Load = dyn_cast_or_null<LoadInst>(MA->getAccessInstruction())) {
     // { DomainRead[] -> ValInst[] }
@@ -407,7 +407,7 @@ void ZoneAlgorithm::addArrayReadAccess(MemoryAccess *MA) {
     // { [Element[] -> DomainRead[]] -> ValInst[] }
     isl::map EltLoadValInst = LoadValInst.apply_domain(IncludeElement);
 
-    AllReadValInst = AllReadValInst.add_map(EltLoadValInst);
+    AllReadValInst = AllReadValInst.unite(EltLoadValInst);
   }
 }
 
@@ -452,10 +452,10 @@ void ZoneAlgorithm::addArrayWriteAccess(MemoryAccess *MA) {
   isl::map AccRel = intersectRange(getAccessRelationFor(MA), CompatibleElts);
 
   if (MA->isMustWrite())
-    AllMustWrites = AllMustWrites.add_map(AccRel);
+    AllMustWrites = AllMustWrites.unite(AccRel);
 
   if (MA->isMayWrite())
-    AllMayWrites = AllMayWrites.add_map(AccRel);
+    AllMayWrites = AllMayWrites.unite(AccRel);
 
   // { Domain[] -> ValInst[] }
   isl::union_map WriteValInstance = getWrittenValue(MA, AccRel);
@@ -556,7 +556,7 @@ isl::union_map ZoneAlgorithm::computePerPHI(const ScopArrayInfo *SAI) {
   // Collect all incoming block timepoints.
   for (MemoryAccess *MA : S->getPHIIncomings(SAI)) {
     isl::map Scatter = getScatterFor(MA);
-    PHIWriteScatter = PHIWriteScatter.add_map(Scatter);
+    PHIWriteScatter = PHIWriteScatter.unite(Scatter);
   }
 
   // { DomainPHIRead[] -> Scatter[] }
@@ -853,7 +853,7 @@ static isl::union_map normalizeValInst(isl::union_map Input,
     // Instructions within the SCoP are always wrapped. Non-wrapped tuples
     // are therefore invariant in the SCoP and don't need normalization.
     if (!RangeSpace.is_wrapping()) {
-      Result = Result.add_map(Map);
+      Result = Result.unite(Map);
       continue;
     }
 
@@ -862,7 +862,7 @@ static isl::union_map normalizeValInst(isl::union_map Input,
 
     // If no normalization is necessary, then the ValInst stands for itself.
     if (!ComputedPHIs.count(PHI)) {
-      Result = Result.add_map(Map);
+      Result = Result.unite(Map);
       continue;
     }
 
@@ -1057,7 +1057,7 @@ void ZoneAlgorithm::computeNormalizedPHIs() {
         isl::map IncomingValInst = makeValInst(
             IncomingVal, IncomingStmt, IncomingStmt->getSurroundingLoop());
 
-        IncomingValInsts = IncomingValInsts.add_map(IncomingValInst);
+        IncomingValInsts = IncomingValInsts.unite(IncomingValInst);
       }
 
       // { PHIValInst[] -> IncomingValInst[] }
