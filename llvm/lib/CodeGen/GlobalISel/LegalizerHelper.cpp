@@ -2983,9 +2983,15 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
   case TargetOpcode::G_LOAD: {
     if (TypeIdx != 0)
       return UnableToLegalize;
+    MachineMemOperand &MMO = **MI.memoperands_begin();
+
+    // Not sure how to interpret a bitcast of an extending load.
+    if (MMO.getMemoryType().getSizeInBits() != CastTy.getSizeInBits())
+      return UnableToLegalize;
 
     Observer.changingInstr(MI);
     bitcastDst(MI, CastTy, 0);
+    MMO.setType(CastTy);
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -2993,8 +2999,15 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     if (TypeIdx != 0)
       return UnableToLegalize;
 
+    MachineMemOperand &MMO = **MI.memoperands_begin();
+
+    // Not sure how to interpret a bitcast of a truncating store.
+    if (MMO.getMemoryType().getSizeInBits() != CastTy.getSizeInBits())
+      return UnableToLegalize;
+
     Observer.changingInstr(MI);
     bitcastSrc(MI, CastTy, 0);
+    MMO.setType(CastTy);
     Observer.changedInstr(MI);
     return Legalized;
   }
