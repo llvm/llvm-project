@@ -670,7 +670,7 @@ TEST(ParsedASTTest, HeaderGuards) {
   EXPECT_FALSE(mainIsGuarded(TU.build())); // FIXME: true
 
   TU.Code = once(";");
-  EXPECT_FALSE(mainIsGuarded(TU.build())); // FIXME: true
+  EXPECT_TRUE(mainIsGuarded(TU.build()));
 
   TU.Code = R"cpp(
     ;
@@ -727,7 +727,7 @@ TEST(ParsedASTTest, HeaderGuardsSelfInclude) {
   )cpp";
   AST = TU.build();
   EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
-  EXPECT_FALSE(mainIsGuarded(AST)); // FIXME: true
+  EXPECT_TRUE(mainIsGuarded(AST));
 
   TU.Code = R"cpp(
     #pragma once
@@ -757,7 +757,7 @@ TEST(ParsedASTTest, HeaderGuardsSelfInclude) {
   AST = TU.build();
   EXPECT_THAT(*AST.getDiagnostics(),
               ElementsAre(Diag("recursively when building a preamble")));
-  EXPECT_FALSE(mainIsGuarded(AST)); // FIXME: true
+  EXPECT_TRUE(mainIsGuarded(AST));
 
   TU.Code = R"cpp(
     #ifndef GUARD
@@ -814,7 +814,7 @@ TEST(ParsedASTTest, HeaderGuardsSelfInclude) {
   AST = TU.build();
   EXPECT_THAT(*AST.getDiagnostics(),
               ElementsAre(Diag("recursively when building a preamble")));
-  EXPECT_FALSE(mainIsGuarded(AST)); // FIXME: true
+  EXPECT_TRUE(mainIsGuarded(AST));
 
   TU.Code = R"cpp(
     #include "self.h" // error-ok
@@ -863,9 +863,7 @@ TEST(ParsedASTTest, HeaderGuardsImplIface) {
   // need to transfer it to the main file's HeaderFileInfo.
   TU.Code = once(Interface);
   AST = TU.build();
-  // FIXME: empty
-  EXPECT_THAT(*AST.getDiagnostics(),
-              ElementsAre(Diag("in included file: redefinition of 'Traits'")));
+  EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
   EXPECT_TRUE(mainIsGuarded(AST));
 
   // Editing the implementation file, which is not include guarded.

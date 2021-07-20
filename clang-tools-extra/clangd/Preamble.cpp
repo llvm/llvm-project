@@ -75,11 +75,20 @@ public:
 
   CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
+  bool isMainFileIncludeGuarded() const { return IsMainFileIncludeGuarded; }
+
   void AfterExecute(CompilerInstance &CI) override {
-    if (!ParsedCallback)
-      return;
-    trace::Span Tracer("Running PreambleCallback");
-    ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr(), CanonIncludes);
+    if (ParsedCallback) {
+      trace::Span Tracer("Running PreambleCallback");
+      ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr(),
+                     CanonIncludes);
+    }
+
+    const SourceManager &SM = CI.getSourceManager();
+    const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
+    IsMainFileIncludeGuarded =
+        CI.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
+            MainFE);
   }
 
   void BeforeExecute(CompilerInstance &CI) override {
@@ -121,6 +130,7 @@ private:
   IncludeStructure Includes;
   CanonicalIncludes CanonIncludes;
   MainFileMacros Macros;
+  bool IsMainFileIncludeGuarded = false;
   std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
@@ -365,7 +375,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // to read back. We rely on dynamic index for the comments instead.
   CI.getPreprocessorOpts().WriteCommentListToPCH = false;
 
-  CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
+  CppFilePreambleCallbacks CapturedInfo(FileName, PreambleCallback);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::SmallString<32> AbsFileName(FileName);
   VFS->makeAbsolute(AbsFileName);
@@ -373,8 +383,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
       StatCache->getProducingFS(VFS),
-      std::make_shared<PCHContainerOperations>(), StoreInMemory,
-      SerializedDeclsCollector);
+      std::make_shared<PCHContainerOperations>(), StoreInMemory, CapturedInfo);
 
   // When building the AST for the main file, we do want the function
   // bodies.
@@ -384,16 +393,17 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     vlog("Built preamble of size {0} for file {1} version {2}",
          BuiltPreamble->getSize(), FileName, Inputs.Version);
     std::vector<Diag> Diags = PreambleDiagnostics.take();
-    return std::make_shared<PreambleData>(
+    auto Result = std::make_shared<PreambleData>(
         Inputs, std::move(*BuiltPreamble), std::move(Diags),
-        SerializedDeclsCollector.takeIncludes(),
-        SerializedDeclsCollector.takeMacros(), std::move(StatCache),
-        SerializedDeclsCollector.takeCanonicalIncludes());
-  } else {
-    elog("Could not build a preamble for file {0} version {1}: {2}", FileName,
-         Inputs.Version, BuiltPreamble.getError().message());
-    return nullptr;
+        CapturedInfo.takeIncludes(), CapturedInfo.takeMacros(),
+        std::move(StatCache), CapturedInfo.takeCanonicalIncludes());
+    Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
+    return Result;
   }
+
+  elog("Could not build a preamble for file {0} version {1}: {2}", FileName,
+       Inputs.Version, BuiltPreamble.getError().message());
+  return nullptr;
 }
 
 bool isPreambleCompatible(const PreambleData &Preamble,
