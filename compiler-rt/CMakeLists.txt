@@ -360,11 +360,13 @@ endif()
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
-  list(APPEND SANITIZER_COMMON_CFLAGS
+  list(APPEND THREAD_SAFETY_FLAGS
       "-Werror=thread-safety"
       "-Werror=thread-safety-reference"
       "-Werror=thread-safety-beta"
-)
+  )
+  list(APPEND SANITIZER_COMMON_CFLAGS ${THREAD_SAFETY_FLAGS})
+  list(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS ${THREAD_SAFETY_FLAGS})
 endif()
 
 # If we're using MSVC,
