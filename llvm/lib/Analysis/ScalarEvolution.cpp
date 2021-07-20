@@ -533,8 +533,7 @@ bool SCEVUnknown::isSizeOf(Type *&AllocTy) const {
             CE->getNumOperands() == 2)
           if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(1)))
             if (CI->isOne()) {
-              AllocTy = cast<PointerType>(CE->getOperand(0)->getType())
-                                 ->getElementType();
+              AllocTy = cast<GEPOperator>(CE)->getSourceElementType();
               return true;
             }
 
@@ -547,8 +546,7 @@ bool SCEVUnknown::isAlignOf(Type *&AllocTy) const {
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(VCE->getOperand(0)))
         if (CE->getOpcode() == Instruction::GetElementPtr &&
             CE->getOperand(0)->isNullValue()) {
-          Type *Ty =
-            cast<PointerType>(CE->getOperand(0)->getType())->getElementType();
+          Type *Ty = cast<GEPOperator>(CE)->getSourceElementType();
           if (StructType *STy = dyn_cast<StructType>(Ty))
             if (!STy->isPacked() &&
                 CE->getNumOperands() == 3 &&
@@ -574,8 +572,7 @@ bool SCEVUnknown::isOffsetOf(Type *&CTy, Constant *&FieldNo) const {
             CE->getNumOperands() == 3 &&
             CE->getOperand(0)->isNullValue() &&
             CE->getOperand(1)->isNullValue()) {
-          Type *Ty =
-            cast<PointerType>(CE->getOperand(0)->getType())->getElementType();
+          Type *Ty = cast<GEPOperator>(CE)->getSourceElementType();
           // Ignore vector types here so that ScalarEvolutionExpander doesn't
           // emit getelementptrs that index into vectors.
           if (Ty->isStructTy() || Ty->isArrayTy()) {
@@ -8796,12 +8793,11 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
           return nullptr;
 
         if (PointerType *PTy = dyn_cast<PointerType>(C->getType())) {
-          if (PTy->getElementType()->isStructTy())
-            C2 = ConstantExpr::getIntegerCast(
-                C2, Type::getInt32Ty(C->getContext()), true);
-          C = ConstantExpr::getGetElementPtr(PTy->getElementType(), C, C2);
-        } else
+          C = ConstantExpr::getGetElementPtr(Type::getInt8Ty(C->getContext()),
+                                             C, C2);
+        } else {
           C = ConstantExpr::getAdd(C, C2);
+        }
       }
       return C;
     }
@@ -12587,20 +12583,12 @@ bool ScalarEvolution::getIndexExpressionsFromGEP(
   assert(Subscripts.empty() && Sizes.empty() &&
          "Expected output lists to be empty on entry to this function.");
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
-  Type *Ty = GEP->getPointerOperandType();
+  Type *Ty = nullptr;
   bool DroppedFirstDim = false;
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
     const SCEV *Expr = getSCEV(GEP->getOperand(i));
     if (i == 1) {
-      if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
-        Ty = PtrTy->getElementType();
-      } else if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
-        Ty = ArrayTy->getElementType();
-      } else {
-        Subscripts.clear();
-        Sizes.clear();
-        return false;
-      }
+      Ty = GEP->getSourceElementType();
       if (auto *Const = dyn_cast<SCEVConstant>(Expr))
         if (Const->getValue()->isZero()) {
           DroppedFirstDim = true;
