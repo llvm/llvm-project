@@ -27,6 +27,7 @@ target triple = "nvptx64"
 @llvm.compiler.used = appending global [1 x i8*] [i8* @__omp_offloading_2c_38c77_sequential_loop_l4_exec_mode], section "llvm.metadata"
 
 ; The second argument of __kmpc_target_init and deinit is is set to true to indicate that we can run in SPMD mode.
+; The last argument is set to false since full runtime support is not needed in SPMDization.
 ; We also adjusted the global __omp_offloading_2c_38c77_sequential_loop_l4_exec_mode to have a zero initializer (which indicates SPMD mode to the runtime).
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
@@ -41,14 +42,14 @@ define weak void @__omp_offloading_2c_38c77_sequential_loop_l4() #0 {
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 true, i1 false, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 true, i1 false, i1 false)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
 ; CHECK-NEXT:    call void @__omp_outlined__(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 true)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
 ; CHECK-NEXT:    ret void
