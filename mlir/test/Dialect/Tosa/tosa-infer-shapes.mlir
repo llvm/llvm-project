@@ -660,3 +660,51 @@ func @scatter_minimum_static(%arg0 : tensor<?x4x?xi32>, %arg1 : tensor<3x?xi32>,
   %0 = "tosa.scatter"(%arg0, %arg1, %arg2) : (tensor<?x4x?xi32>, tensor<3x?xi32>, tensor<?x?x5xi32>)  -> (tensor<?x?x?xi32>)
   return
 }
+
+// -----
+
+// CHECK-LABEL: @test_pool_static
+func @test_pool_static(%arg0: tensor<3x5x6x7xf32>) {
+  // CHECK: -> tensor<3x2x4x7xf32>
+  %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 3], pad = [0, 0, 0, 0], stride = [1, 1]} : (tensor<3x5x6x7xf32>) -> tensor<?x?x?x?xf32>
+
+  // CHECK: -> tensor<3x2x4x7xf32>
+  %1 = "tosa.max_pool2d"(%arg0) {kernel = [4, 3], pad = [0, 0, 0, 0], stride = [1, 1]} : (tensor<3x5x6x7xf32>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_pool_dynamic_input
+func @test_pool_dynamic_input(%arg0: tensor<?x?x?x?xf32>) {
+  // CHECK: -> tensor<?x?x?x?xf32>
+  %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 3], pad = [0, 0, 0, 0], stride = [1, 1]} : (tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+
+  // CHECK: -> tensor<?x?x?x?xf32>
+  %1 = "tosa.max_pool2d"(%arg0) {kernel = [4, 3], pad = [0, 0, 0, 0], stride = [1, 1]} : (tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_pool_padded
+func @test_pool_padded(%arg0: tensor<3x5x6x7xf32>) {
+  // CHECK: -> tensor<3x5x11x7xf32>
+  %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 3], pad = [1, 2, 3, 4], stride = [1, 1]} : (tensor<3x5x6x7xf32>) -> tensor<?x?x?x?xf32>
+
+  // CHECK: -> tensor<3x5x11x7xf32>
+  %1 = "tosa.max_pool2d"(%arg0) {kernel = [4, 3], pad = [1, 2, 3, 4], stride = [1, 1]} : (tensor<3x5x6x7xf32>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_pool_stride
+func @test_pool_stride(%arg0: tensor<3x11x12x7xf32>) {
+  // CHECK: -> tensor<3x4x4x7xf32>
+  %0 = "tosa.avg_pool2d"(%arg0) {kernel = [4, 3], pad = [0, 0, 0, 0], stride = [2, 3]} : (tensor<3x11x12x7xf32>) -> tensor<?x?x?x?xf32>
+
+  // CHECK: -> tensor<3x4x4x7xf32>
+  %1 = "tosa.max_pool2d"(%arg0) {kernel = [4, 3], pad = [0, 0, 0, 0], stride = [2, 3]} : (tensor<3x11x12x7xf32>) -> tensor<?x?x?x?xf32>
+  return
+}
