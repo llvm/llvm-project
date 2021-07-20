@@ -12,5 +12,8 @@ unittest("SerializationTests") {
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Support",
   ]
-  sources = [ "InMemoryModuleCacheTest.cpp" ]
+  sources = [
+    "InMemoryModuleCacheTest.cpp",
+    "ModuleCacheTest.cpp",
+  ]
 }
