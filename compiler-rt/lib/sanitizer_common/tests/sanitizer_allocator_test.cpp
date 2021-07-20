@@ -1149,15 +1149,12 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
 
 class NoMemoryMapper {
  public:
-  uptr last_request_buffer_size;
+  uptr last_request_buffer_size = 0;
 
-  NoMemoryMapper() : last_request_buffer_size(0) {}
-
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
-    last_request_buffer_size = buffer_size;
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    last_request_buffer_size = buffer_size * sizeof(u64);
     return nullptr;
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 };
 
 class RedZoneMemoryMapper {
@@ -1168,19 +1165,17 @@ class RedZoneMemoryMapper {
     MprotectNoAccess(reinterpret_cast<uptr>(buffer), page_size);
     MprotectNoAccess(reinterpret_cast<uptr>(buffer) + page_size * 2, page_size);
   }
-  ~RedZoneMemoryMapper() {
-    UnmapOrDie(buffer, 3 * GetPageSize());
-  }
+  ~RedZoneMemoryMapper() { UnmapOrDie(buffer, 3 * GetPageSize()); }
 
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
+    buffer_size *= sizeof(u64);
     const auto page_size = GetPageSize();
     CHECK_EQ(buffer_size, page_size);
-    void *p =
-        reinterpret_cast<void *>(reinterpret_cast<uptr>(buffer) + page_size);
+    u64 *p =
+        reinterpret_cast<u64 *>(reinterpret_cast<uptr>(buffer) + page_size);
     memset(p, 0, page_size);
     return p;
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {}
 
  private:
   void *buffer;
@@ -1296,15 +1291,13 @@ TEST(SanitizerCommon, SizeClassAllocator64FreePagesRangeTracker) {
 class ReleasedPagesTrackingMemoryMapper {
  public:
   std::set<u32> reported_pages;
+  std::vector<u64> buffer;
 
-  void *MapPackedCounterArrayBuffer(uptr buffer_size) {
+  u64 *MapPackedCounterArrayBuffer(uptr buffer_size) {
     reported_pages.clear();
-    return calloc(1, buffer_size);
+    buffer.assign(buffer_size, 0);
+    return buffer.data();
   }
-  void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {
-    free(buffer);
-  }
-
   void ReleasePageRangeToOS(u32 class_id, u32 from, u32 to) {
     uptr page_size_scaled =
         GetPageSizeCached() >> Allocator64::kCompactPtrScale;
