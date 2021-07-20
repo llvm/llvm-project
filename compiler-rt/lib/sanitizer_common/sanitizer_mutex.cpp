@@ -16,6 +16,18 @@
 
 namespace __sanitizer {
 
+void StaticSpinMutex::LockSlow() {
+  for (int i = 0;; i++) {
+    if (i < 100)
+      proc_yield(1);
+    else
+      internal_sched_yield();
+    if (atomic_load(&state_, memory_order_relaxed) == 0 &&
+        atomic_exchange(&state_, 1, memory_order_acquire) == 0)
+      return;
+  }
+}
+
 void Semaphore::Wait() {
   u32 count = atomic_load(&state_, memory_order_relaxed);
   for (;;) {

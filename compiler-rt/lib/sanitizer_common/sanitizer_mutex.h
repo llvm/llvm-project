@@ -22,12 +22,14 @@ namespace __sanitizer {
 
 class MUTEX StaticSpinMutex {
  public:
+  StaticSpinMutex() = default;
+
   void Init() {
     atomic_store(&state_, 0, memory_order_relaxed);
   }
 
   void Lock() ACQUIRE() {
-    if (TryLock())
+    if (LIKELY(TryLock()))
       return;
     LockSlow();
   }
@@ -45,17 +47,10 @@ class MUTEX StaticSpinMutex {
  private:
   atomic_uint8_t state_;
 
-  void NOINLINE LockSlow() {
-    for (int i = 0;; i++) {
-      if (i < 10)
-        proc_yield(10);
-      else
-        internal_sched_yield();
-      if (atomic_load(&state_, memory_order_relaxed) == 0
-          && atomic_exchange(&state_, 1, memory_order_acquire) == 0)
-        return;
-    }
-  }
+  void LockSlow();
+
+  StaticSpinMutex(const StaticSpinMutex &) = delete;
+  void operator=(const StaticSpinMutex &) = delete;
 };
 
 class MUTEX SpinMutex : public StaticSpinMutex {
@@ -63,10 +58,6 @@ class MUTEX SpinMutex : public StaticSpinMutex {
   SpinMutex() {
     Init();
   }
-
- private:
-  SpinMutex(const SpinMutex &) = delete;
-  void operator=(const SpinMutex &) = delete;
 };
 
 // Semaphore provides an OS-dependent way to park/unpark threads.
