@@ -136,9 +136,8 @@ define dso_local double @fld_fsd_constant(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: fld_fsd_constant:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lui a1, 56
-; RV64IFD-NEXT:    addiw a1, a1, -1353
-; RV64IFD-NEXT:    slli a1, a1, 14
+; RV64IFD-NEXT:    lui a1, 228023
+; RV64IFD-NEXT:    slli a1, a1, 2
 ; RV64IFD-NEXT:    fld ft0, -273(a1)
 ; RV64IFD-NEXT:    fmv.d.x ft1, a0
 ; RV64IFD-NEXT:    fadd.d ft0, ft1, ft0
