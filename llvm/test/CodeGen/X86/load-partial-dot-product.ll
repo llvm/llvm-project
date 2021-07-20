@@ -71,8 +71,9 @@ define float @dot3_float4(float* dereferenceable(16) %a0, float* dereferenceable
 define float @dot3_float4_as_float3(float* dereferenceable(16) %a0, float* dereferenceable(16) %a1) {
 ; SSE2-LABEL: dot3_float4_as_float3:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movups (%rdi), %xmm1
-; SSE2-NEXT:    mulps %xmm1, %xmm1
+; SSE2-NEXT:    movups (%rdi), %xmm0
+; SSE2-NEXT:    movups (%rsi), %xmm1
+; SSE2-NEXT:    mulps %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
@@ -82,8 +83,9 @@ define float @dot3_float4_as_float3(float* dereferenceable(16) %a0, float* deref
 ;
 ; SSSE3-LABEL: dot3_float4_as_float3:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movups (%rdi), %xmm1
-; SSSE3-NEXT:    mulps %xmm1, %xmm1
+; SSSE3-NEXT:    movups (%rdi), %xmm0
+; SSSE3-NEXT:    movups (%rsi), %xmm1
+; SSSE3-NEXT:    mulps %xmm0, %xmm1
 ; SSSE3-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; SSSE3-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
@@ -92,8 +94,9 @@ define float @dot3_float4_as_float3(float* dereferenceable(16) %a0, float* deref
 ;
 ; SSE41-LABEL: dot3_float4_as_float3:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movups (%rdi), %xmm1
-; SSE41-NEXT:    mulps %xmm1, %xmm1
+; SSE41-NEXT:    movups (%rdi), %xmm0
+; SSE41-NEXT:    movups (%rsi), %xmm1
+; SSE41-NEXT:    mulps %xmm0, %xmm1
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; SSE41-NEXT:    addss %xmm1, %xmm0
 ; SSE41-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
@@ -103,7 +106,7 @@ define float @dot3_float4_as_float3(float* dereferenceable(16) %a0, float* deref
 ; AVX-LABEL: dot3_float4_as_float3:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
-; AVX-NEXT:    vmulps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmulps (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -114,7 +117,7 @@ define float @dot3_float4_as_float3(float* dereferenceable(16) %a0, float* deref
   %x0123 = load <4 x float>, <4 x float>* %bcx0123, align 4
   %y0123 = load <4 x float>, <4 x float>* %bcy0123, align 4
   %x012 = shufflevector <4 x float> %x0123, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
-  %y012 = shufflevector <4 x float> %x0123, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %y012 = shufflevector <4 x float> %y0123, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
   %mul012 = fmul <3 x float> %x012, %y012
   %mul0 = extractelement <3 x float> %mul012, i32 0
   %mul1 = extractelement <3 x float> %mul012, i32 1
