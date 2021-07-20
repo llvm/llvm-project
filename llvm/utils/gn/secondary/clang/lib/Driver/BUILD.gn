@@ -30,7 +30,6 @@ static_library("Driver") {
   sources = [
     "Action.cpp",
     "Compilation.cpp",
-    "DarwinSDKInfo.cpp",
     "Distro.cpp",
     "Driver.cpp",
     "DriverOptions.cpp",
