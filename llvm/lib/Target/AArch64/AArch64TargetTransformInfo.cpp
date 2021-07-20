@@ -551,6 +551,10 @@ static Optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   Value *Vec = II.getArgOperand(1);
   bool IsAfter = II.getIntrinsicID() == Intrinsic::aarch64_sve_lasta;
 
+  // lastX(splat(X)) --> X
+  if (auto *SplatVal = getSplatValue(Vec))
+    return IC.replaceInstUsesWith(II, SplatVal);
+
   auto *C = dyn_cast<Constant>(Pg);
   if (IsAfter && C && C->isNullValue()) {
     // The intrinsic is extracting lane 0 so use an extract instead.

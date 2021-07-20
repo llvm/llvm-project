@@ -346,6 +346,14 @@ struct SysAliasImm : SysAlias {
       : SysAlias(N, E, F), ImmValue(I) {}
 };
 
+namespace AArch64SVCR {
+  struct SVCR : SysAlias{
+    using SysAlias::SysAlias;
+  };
+  #define GET_SVCR_DECL
+  #include "AArch64GenSystemOperands.inc"
+}
+
 namespace AArch64AT{
   struct AT : SysAlias {
     using SysAlias::SysAlias;

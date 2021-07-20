@@ -18,10 +18,7 @@ namespace __tsan {
 
 void DDMutexInit(ThreadState *thr, uptr pc, SyncVar *s);
 
-SyncVar::SyncVar()
-    : mtx(MutexTypeSyncVar, StatMtxSyncVar) {
-  Reset(0);
-}
+SyncVar::SyncVar() : mtx(MutexTypeSyncVar) { Reset(0); }
 
 void SyncVar::Init(ThreadState *thr, uptr pc, uptr addr, u64 uid) {
   this->addr = addr;

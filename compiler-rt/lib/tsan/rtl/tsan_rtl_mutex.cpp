@@ -65,7 +65,6 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
 
 void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexCreate %zx flagz=0x%x\n", thr->tid, addr, flagz);
-  StatInc(thr, StatMutexCreate);
   if (!(flagz & MutexFlagLinkerInit) && IsAppMem(addr)) {
     CHECK(!thr->is_freeing);
     thr->is_freeing = true;
@@ -81,7 +80,6 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 
 void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexDestroy %zx\n", thr->tid, addr);
-  StatInc(thr, StatMutexDestroy);
   SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
   if (s == 0)
     return;
@@ -183,11 +181,9 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
   const bool first = s->recursion == 0;
   s->recursion += rec;
   if (first) {
-    StatInc(thr, StatMutexLock);
     AcquireImpl(thr, pc, &s->clock);
     AcquireImpl(thr, pc, &s->read_clock);
   } else if (!s->IsFlagSet(MutexFlagWriteReentrant)) {
-    StatInc(thr, StatMutexRecLock);
   }
   thr->mset.Add(s->GetId(), true, thr->fast_state.epoch());
   bool pre_lock = false;
@@ -229,11 +225,9 @@ int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
     rec = (flagz & MutexFlagRecursiveUnlock) ? s->recursion : 1;
     s->recursion -= rec;
     if (s->recursion == 0) {
-      StatInc(thr, StatMutexUnlock);
       s->owner_tid = kInvalidTid;
       ReleaseStoreImpl(thr, pc, &s->clock);
     } else {
-      StatInc(thr, StatMutexRecUnlock);
     }
   }
   thr->mset.Del(s->GetId(), true);
@@ -268,7 +262,6 @@ void MutexPreReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 
 void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexPostReadLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
-  StatInc(thr, StatMutexReadLock);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
   SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, false);
@@ -308,7 +301,6 @@ void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 
 void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexReadUnlock %zx\n", thr->tid, addr);
-  StatInc(thr, StatMutexReadUnlock);
   if (IsAppMem(addr))
     MemoryReadAtomic(thr, pc, addr, kSizeLog1);
   SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
@@ -348,7 +340,6 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
   if (s->owner_tid == kInvalidTid) {
     // Seems to be read unlock.
     write = false;
-    StatInc(thr, StatMutexReadUnlock);
     thr->fast_state.IncrementEpoch();
     TraceAddEvent(thr, thr->fast_state, EventTypeRUnlock, s->GetId());
     ReleaseImpl(thr, pc, &s->read_clock);
@@ -359,11 +350,9 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
     CHECK_GT(s->recursion, 0);
     s->recursion--;
     if (s->recursion == 0) {
-      StatInc(thr, StatMutexUnlock);
       s->owner_tid = kInvalidTid;
       ReleaseStoreImpl(thr, pc, &s->clock);
     } else {
-      StatInc(thr, StatMutexRecUnlock);
     }
   } else if (!s->IsFlagSet(MutexFlagBroken)) {
     s->SetFlags(MutexFlagBroken);
@@ -494,7 +483,6 @@ void AcquireImpl(ThreadState *thr, uptr pc, SyncClock *c) {
     return;
   thr->clock.set(thr->fast_state.epoch());
   thr->clock.acquire(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncAcquire);
 }
 
 void ReleaseStoreAcquireImpl(ThreadState *thr, uptr pc, SyncClock *c) {
@@ -503,7 +491,6 @@ void ReleaseStoreAcquireImpl(ThreadState *thr, uptr pc, SyncClock *c) {
   thr->clock.set(thr->fast_state.epoch());
   thr->fast_synch_epoch = thr->fast_state.epoch();
   thr->clock.releaseStoreAcquire(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncReleaseStoreAcquire);
 }
 
 void ReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
@@ -512,7 +499,6 @@ void ReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
   thr->clock.set(thr->fast_state.epoch());
   thr->fast_synch_epoch = thr->fast_state.epoch();
   thr->clock.release(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncRelease);
 }
 
 void ReleaseStoreImpl(ThreadState *thr, uptr pc, SyncClock *c) {
@@ -521,7 +507,6 @@ void ReleaseStoreImpl(ThreadState *thr, uptr pc, SyncClock *c) {
   thr->clock.set(thr->fast_state.epoch());
   thr->fast_synch_epoch = thr->fast_state.epoch();
   thr->clock.ReleaseStore(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncRelease);
 }
 
 void AcquireReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
@@ -530,8 +515,6 @@ void AcquireReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
   thr->clock.set(thr->fast_state.epoch());
   thr->fast_synch_epoch = thr->fast_state.epoch();
   thr->clock.acq_rel(&thr->proc()->clock_cache, c);
-  StatInc(thr, StatSyncAcquire);
-  StatInc(thr, StatSyncRelease);
 }
 
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {

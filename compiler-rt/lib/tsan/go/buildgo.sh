@@ -17,7 +17,6 @@ SRCS="
 	../rtl/tsan_rtl_thread.cpp
 	../rtl/tsan_rtl_proc.cpp
 	../rtl/tsan_stack_trace.cpp
-	../rtl/tsan_stat.cpp
 	../rtl/tsan_suppressions.cpp
 	../rtl/tsan_sync.cpp
 	../../sanitizer_common/sanitizer_allocator.cpp
@@ -170,11 +169,10 @@ else
 fi
 
 SRCS="$SRCS $ADD_SRCS"
-
-rm -f $DIR/gotsan.cpp
 for F in $SRCS; do
-	cat $F >> $DIR/gotsan.cpp
-done
+	echo "#line 1 \"$F\""
+	cat $F
+done > $DIR/gotsan.cpp
 
 FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++14 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS $EXTRA_CFLAGS"
 DEBUG_FLAGS="$FLAGS -DSANITIZER_DEBUG=1 -g"

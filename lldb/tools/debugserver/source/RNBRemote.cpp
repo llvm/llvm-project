@@ -35,8 +35,6 @@
 #include "DNBDataRef.h"
 #include "DNBLog.h"
 #include "DNBThreadResumeActions.h"
-#include "DarwinLogCollector.h"
-#include "DarwinLogEvent.h"
 #include "JSON.h"
 #include "JSONGenerator.h"
 #include "JSONGenerator.h"
@@ -62,8 +60,6 @@
 
 static const std::string OS_LOG_EVENTS_KEY_NAME("events");
 static const std::string JSON_ASYNC_TYPE_KEY_NAME("type");
-static const DarwinLogEventVector::size_type DARWIN_LOG_MAX_EVENTS_PER_PACKET =
-    10;
 
 // std::iostream formatting macros
 #define RAW_HEXBASE std::setfill('0') << std::hex << std::right
@@ -499,15 +495,6 @@ void RNBRemote::CreatePacketTable() {
       "Test the maximum speed at which packet can be sent/received."));
   t.push_back(Packet(query_transfer, &RNBRemote::HandlePacket_qXfer, NULL,
                      "qXfer:", "Support the qXfer packet."));
-  t.push_back(
-      Packet(query_supported_async_json_packets,
-             &RNBRemote::HandlePacket_qStructuredDataPlugins, NULL,
-             "qStructuredDataPlugins",
-             "Query for the structured data plugins supported by the remote."));
-  t.push_back(
-      Packet(configure_darwin_log, &RNBRemote::HandlePacket_QConfigureDarwinLog,
-             NULL, "QConfigureDarwinLog:",
-             "Configure the DarwinLog structured data plugin support."));
 }
 
 void RNBRemote::FlushSTDIO() {
@@ -543,77 +530,6 @@ void RNBRemote::SendAsyncProfileData() {
       }
     } while (count > 0);
   }
-}
-
-void RNBRemote::SendAsyncDarwinLogData() {
-  DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): enter", __FUNCTION__);
-
-  if (!m_ctx.HasValidProcessID()) {
-    DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): ignoring due to"
-                                     "invalid process id",
-                     __FUNCTION__);
-    return;
-  }
-
-  nub_process_t pid = m_ctx.ProcessID();
-  DarwinLogEventVector::size_type entry_count = 0;
-
-  // NOTE: the current looping structure here does nothing
-  // to guarantee that we can send off async packets faster
-  // than we generate them.  It will keep sending as long
-  // as there's data to send.
-  do {
-    DarwinLogEventVector events = DNBProcessGetAvailableDarwinLogEvents(pid);
-    entry_count = events.size();
-
-    DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): outer loop enter",
-                     __FUNCTION__);
-
-    for (DarwinLogEventVector::size_type base_entry = 0;
-         base_entry < entry_count;
-         base_entry += DARWIN_LOG_MAX_EVENTS_PER_PACKET) {
-      DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): inner loop enter",
-                       __FUNCTION__);
-
-      // We limit the total number of entries we pack
-      // into a single JSON async packet just so it
-      // doesn't get too large.
-      JSONGenerator::Dictionary async_dictionary;
-
-      // Specify the type of the JSON async data we're sending.
-      async_dictionary.AddStringItem(JSON_ASYNC_TYPE_KEY_NAME, "DarwinLog");
-
-      // Create an array entry in the dictionary to hold all
-      // the events going in this packet.
-      JSONGenerator::ArraySP events_array(new JSONGenerator::Array());
-      async_dictionary.AddItem(OS_LOG_EVENTS_KEY_NAME, events_array);
-
-      // We bundle up to DARWIN_LOG_MAX_EVENTS_PER_PACKET events in
-      // a single packet.
-      const auto inner_loop_bound =
-          std::min(base_entry + DARWIN_LOG_MAX_EVENTS_PER_PACKET, entry_count);
-      for (DarwinLogEventVector::size_type i = base_entry; i < inner_loop_bound;
-           ++i) {
-        DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): adding "
-                                         "entry index %lu to the JSON packet",
-                         __FUNCTION__, i);
-        events_array->AddItem(events[i]);
-      }
-
-      // Send off the packet.
-      DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): sending JSON "
-                                       "packet, %lu entries remain",
-                       __FUNCTION__, entry_count - inner_loop_bound);
-      SendAsyncJSONPacket(async_dictionary);
-    }
-
-    DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): outer loop exit",
-                     __FUNCTION__);
-
-  } while (entry_count > 0);
-
-  DNBLogThreadedIf(LOG_DARWIN_LOG, "RNBRemote::%s(): exit",
-                   __PRETTY_FUNCTION__);
 }
 
 rnb_err_t RNBRemote::SendHexEncodedBytePacket(const char *header,
@@ -2433,89 +2349,6 @@ rnb_err_t RNBRemote::HandlePacket_QSetDetachOnError(const char *p) {
   }
 
   m_ctx.SetDetachOnError(should_detach);
-  return SendPacket("OK");
-}
-
-rnb_err_t RNBRemote::HandlePacket_qStructuredDataPlugins(const char *p) {
-  // We'll return a JSON array of supported packet types.
-  // The type is significant.  For each of the supported
-  // packet types that have been enabled, there will be a
-  // 'J' async packet sent to the client with payload data.
-  // This payload data will be a JSON dictionary, and the
-  // top level dictionary will contain a string field with
-  // its value set to the relevant packet type from this list.
-  JSONGenerator::Array supported_json_packets;
-
-  // Check for DarwinLog (libtrace os_log/activity support).
-  if (DarwinLogCollector::IsSupported())
-    supported_json_packets.AddItem(
-        JSONGenerator::StringSP(new JSONGenerator::String("DarwinLog")));
-
-  // Send back the array.
-  std::ostringstream stream;
-  supported_json_packets.Dump(stream);
-  return SendPacket(stream.str());
-}
-
-rnb_err_t RNBRemote::HandlePacket_QConfigureDarwinLog(const char *p) {
-  if (!DarwinLogCollector::IsSupported()) {
-    // We should never have been given this request.
-    return SendPacket("E89");
-  }
-
-  // Ensure we have a process.  We expect a separate configure request for
-  // each process launched/attached.
-  const nub_process_t pid = m_ctx.ProcessID();
-  if (pid == INVALID_NUB_PROCESS)
-    return SendPacket("E94");
-
-  // Get the configuration dictionary.
-  p += strlen("QConfigureDarwinLog:");
-
-  // The configuration dictionary is binary encoded.
-  std::vector<uint8_t> unescaped_config_data = decode_binary_data(p, -1);
-  std::string unescaped_config_string((const char *)&unescaped_config_data[0],
-                                      unescaped_config_data.size());
-  DNBLogThreadedIf(LOG_DARWIN_LOG, "DarwinLog: received config data: \"%s\"",
-                   unescaped_config_string.c_str());
-  auto configuration_sp =
-      JSONParser(unescaped_config_string.c_str()).ParseJSONValue();
-  if (!configuration_sp) {
-    // Malformed request - we require configuration data
-    // indicating whether we're enabling or disabling.
-    return SendPacket("E90");
-  }
-
-  if (!JSONObject::classof(configuration_sp.get())) {
-    // Configuration data is not of the right type.
-    return SendPacket("E91");
-  }
-  JSONObject &config_dict = *static_cast<JSONObject *>(configuration_sp.get());
-
-  // Check if we're enabling or disabling.
-  auto enabled_sp = config_dict.GetObject("enabled");
-  if (!enabled_sp) {
-    // Missing required "enabled" field.
-    return SendPacket("E92");
-  }
-  if (!JSONTrue::classof(enabled_sp.get()) &&
-      !JSONFalse::classof(enabled_sp.get())) {
-    // Should be a boolean type, but wasn't.
-    return SendPacket("E93");
-  }
-  const bool enabling = JSONTrue::classof(enabled_sp.get());
-
-  // TODO - handle other configuration parameters here.
-
-  // Shut down any active activity stream for the process.
-  DarwinLogCollector::CancelStreamForProcess(pid);
-
-  if (enabling) {
-    // Look up the procecess.
-    if (!DarwinLogCollector::StartCollectingForProcess(pid, config_dict))
-      return SendPacket("E95");
-  }
-
   return SendPacket("OK");
 }
 

@@ -942,6 +942,7 @@ static Expected<Triple> readTargetTriple(StringRef FileName) {
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
+  cl::HideUnrelatedOptions({&DwpCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "merge split dwarf (.dwo) files\n");
 
   llvm::InitializeAllTargetInfos();
