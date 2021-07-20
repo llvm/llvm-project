@@ -1,7 +1,7 @@
-## Test running llvm-elfabi without specifying a valid target.
+## Test running llvm-ifs without specifying a valid target.
 
-# RUN: not llvm-elfabi --output=%t %s 2>&1 | FileCheck %s --check-prefix=MISSING
-# RUN: not llvm-elfabi --output-format=nope --output=%t %s 2>&1 | FileCheck %s --check-prefix=INVALID
+# RUN: not llvm-ifs --output=%t %s 2>&1 | FileCheck %s --check-prefix=MISSING
+# RUN: not llvm-ifs  --output-format=nope --output=%t %s 2>&1 | FileCheck %s --check-prefix=INVALID
 
 --- !ifs-v1
 SoName: somelib.so
@@ -10,6 +10,6 @@ Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
 Symbols: []
 ...
 
-# MISSING: llvm-elfabi: for the --output-format option: must be specified at least once!
+# MISSING: {{llvm-ifs(\.exe)?}}: for the --output-format option: must be specified at least once!
 
-# INVALID: llvm-elfabi: for the --output-format option: Cannot find option named 'nope'!
+# INVALID: {{llvm-ifs(\.exe)?}}: for the --output-format option: Cannot find option named 'nope'!

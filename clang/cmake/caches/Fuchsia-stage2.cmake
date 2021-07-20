@@ -246,7 +246,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-dlltool
   llvm-dwarfdump
   llvm-dwp
-  llvm-elfabi
+  llvm-ifs
   llvm-gsymutil
   llvm-lib
   llvm-lipo

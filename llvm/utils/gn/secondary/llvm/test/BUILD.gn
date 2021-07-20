@@ -246,7 +246,6 @@ group("test") {
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
     "//llvm/tools/llvm-dwp",
-    "//llvm/tools/llvm-elfabi",
     "//llvm/tools/llvm-exegesis",
     "//llvm/tools/llvm-extract",
     "//llvm/tools/llvm-gsymutil:llvm-gsymutil",
