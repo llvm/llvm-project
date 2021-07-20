@@ -13,6 +13,15 @@
   doc = "x(i) = a(i) OP b(i)"
 }
 
+#traitc = {
+  indexing_maps = [
+    affine_map<(i) -> (i)>,  // a
+    affine_map<(i) -> (i)>   // x (out)
+  ],
+  iterator_types = ["parallel"],
+  doc = "x(i) = a(i) OP c"
+}
+
 // CHECK-LABEL:   func @add(
 // CHECK-SAME:              %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:              %[[VAL_1:.*]]: tensor<32xi64>,
@@ -167,6 +176,74 @@ func @mul(%arga: tensor<32xi64, #SV>,
     outs(%argx: tensor<32xi64>) {
       ^bb(%a: i64, %b: i64, %x: i64):
         %0 = muli %a, %b : i64
+        linalg.yield %0 : i64
+  } -> tensor<32xi64>
+  return %0 : tensor<32xi64>
+}
+
+// CHECK-LABEL:   func @divsbyc(
+// CHECK-SAME:                  %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:                  %[[VAL_1:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
+// CHECK:           %[[VAL_2:.*]] = constant 2 : i64
+// CHECK:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32xi64>
+// CHECK:           %[[VAL_9:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<?xindex>
+// CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_9]] to %[[VAL_10]] step %[[VAL_4]] {
+// CHECK:             %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
+// CHECK:             %[[VAL_13:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xi64>
+// CHECK:             %[[VAL_14:.*]] = divi_signed %[[VAL_13]], %[[VAL_2]] : i64
+// CHECK:             memref.store %[[VAL_14]], %[[VAL_8]]{{\[}}%[[VAL_12]]] : memref<32xi64>
+// CHECK:           }
+// CHECK:           %[[VAL_15:.*]] = memref.tensor_load %[[VAL_8]] : memref<32xi64>
+// CHECK:           return %[[VAL_15]] : tensor<32xi64>
+// CHECK:         }
+func @divsbyc(%arga: tensor<32xi64, #SV>,
+              %argx: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
+  %c = constant 2 : i64
+  %0 = linalg.generic #traitc
+     ins(%arga: tensor<32xi64, #SV>)
+    outs(%argx: tensor<32xi64>) {
+      ^bb(%a: i64, %x: i64):
+        %0 = divi_signed %a, %c : i64
+        linalg.yield %0 : i64
+  } -> tensor<32xi64>
+  return %0 : tensor<32xi64>
+}
+
+// CHECK-LABEL:   func @divubyc(
+// CHECK-SAME:                  %[[VAL_0:.*]]: tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:                  %[[VAL_1:.*]]: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
+// CHECK:           %[[VAL_2:.*]] = constant 2 : i64
+// CHECK:           %[[VAL_3:.*]] = constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{.*}}}>>
+// CHECK:           %[[VAL_6:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xi64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_8:.*]] = memref.buffer_cast %[[VAL_1]] : memref<32xi64>
+// CHECK:           %[[VAL_9:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<?xindex>
+// CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_9]] to %[[VAL_10]] step %[[VAL_4]] {
+// CHECK:             %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
+// CHECK:             %[[VAL_13:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xi64>
+// CHECK:             %[[VAL_14:.*]] = divi_unsigned %[[VAL_13]], %[[VAL_2]] : i64
+// CHECK:             memref.store %[[VAL_14]], %[[VAL_8]]{{\[}}%[[VAL_12]]] : memref<32xi64>
+// CHECK:           }
+// CHECK:           %[[VAL_15:.*]] = memref.tensor_load %[[VAL_8]] : memref<32xi64>
+// CHECK:           return %[[VAL_15]] : tensor<32xi64>
+// CHECK:         }
+func @divubyc(%arga: tensor<32xi64, #SV>,
+              %argx: tensor<32xi64> {linalg.inplaceable = true}) -> tensor<32xi64> {
+  %c = constant 2 : i64
+  %0 = linalg.generic #traitc
+     ins(%arga: tensor<32xi64, #SV>)
+    outs(%argx: tensor<32xi64>) {
+      ^bb(%a: i64, %x: i64):
+        %0 = divi_unsigned %a, %c : i64
         linalg.yield %0 : i64
   } -> tensor<32xi64>
   return %0 : tensor<32xi64>
