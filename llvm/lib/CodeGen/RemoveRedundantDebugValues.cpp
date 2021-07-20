@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
@@ -27,6 +30,7 @@
 using namespace llvm;
 
 STATISTIC(NumRemovedBackward, "Number of DBG_VALUEs removed (backward scan)");
+STATISTIC(NumRemovedForward, "Number of DBG_VALUEs removed (forward scan)");
 
 namespace {
 
@@ -64,6 +68,81 @@ INITIALIZE_PASS(RemoveRedundantDebugValues, DEBUG_TYPE,
 RemoveRedundantDebugValues::RemoveRedundantDebugValues()
     : MachineFunctionPass(ID) {
   initializeRemoveRedundantDebugValuesPass(*PassRegistry::getPassRegistry());
+}
+
+// This analysis aims to remove redundant DBG_VALUEs by going forward
+// in the basic block by considering the first DBG_VALUE as a valid
+// until its first (location) operand is not clobbered/modified.
+// For example:
+//   (1) DBG_VALUE $edi, !"var1", ...
+//   (2) <block of code that does affect $edi>
+//   (3) DBG_VALUE $edi, !"var1", ...
+//   ...
+// in this case, we can remove (3).
+// TODO: Support DBG_VALUE_LIST and other debug instructions.
+static bool reduceDbgValsForwardScan(MachineBasicBlock &MBB) {
+  LLVM_DEBUG(dbgs() << "\n == Forward Scan == \n");
+
+  SmallVector<MachineInstr *, 8> DbgValsToBeRemoved;
+  DenseMap<DebugVariable, std::pair<MachineOperand *, const DIExpression *>>
+      VariableMap;
+  const auto *TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+
+  for (auto &MI : MBB) {
+    if (MI.isDebugValue()) {
+      DebugVariable Var(MI.getDebugVariable(), NoneType(),
+                        MI.getDebugLoc()->getInlinedAt());
+      auto VMI = VariableMap.find(Var);
+      // Just stop tracking this variable, until we cover DBG_VALUE_LIST.
+      // 1  DBG_VALUE $rax, "x", DIExpression()
+      // ...
+      // 2  DBG_VALUE_LIST "x", DIExpression(...), $rax, $rbx
+      // ...
+      // 3  DBG_VALUE $rax, "x", DIExpression()
+      if (MI.isDebugValueList() && VMI != VariableMap.end()) {
+        VariableMap.erase(VMI);
+        continue;
+      }
+
+      MachineOperand &Loc = MI.getDebugOperand(0);
+      if (!Loc.isReg()) {
+        // If it it's not a register, just stop tracking such variable.
+        if (VMI != VariableMap.end())
+          VariableMap.erase(VMI);
+        continue;
+      }
+
+      // We have found a new value for a variable.
+      if (VMI == VariableMap.end() ||
+          VMI->second.first->getReg() != Loc.getReg() ||
+          VMI->second.second != MI.getDebugExpression()) {
+        VariableMap[Var] = {&Loc, MI.getDebugExpression()};
+        continue;
+      }
+
+      // Found an identical DBG_VALUE, so it can be considered
+      // for later removal.
+      DbgValsToBeRemoved.push_back(&MI);
+    }
+
+    if (MI.isMetaInstruction())
+      continue;
+
+    // Stop tracking any location that is clobbered by this instruction.
+    for (auto &Var : VariableMap) {
+      auto &LocOp = Var.second.first;
+      if (MI.modifiesRegister(LocOp->getReg(), TRI))
+        VariableMap.erase(Var.first);
+    }
+  }
+
+  for (auto &Instr : DbgValsToBeRemoved) {
+    LLVM_DEBUG(dbgs() << "removing "; Instr->dump());
+    Instr->eraseFromParent();
+    ++NumRemovedForward;
+  }
+
+  return !DbgValsToBeRemoved.empty();
 }
 
 // This analysis aims to remove redundant DBG_VALUEs by going backward
@@ -129,8 +208,10 @@ bool RemoveRedundantDebugValues::reduceDbgValues(MachineFunction &MF) {
 
   bool Changed = false;
 
-  for (auto &MBB : MF)
+  for (auto &MBB : MF) {
     Changed |= reduceDbgValsBackwardScan(MBB);
+    Changed |= reduceDbgValsForwardScan(MBB);
+  }
 
   return Changed;
 }
