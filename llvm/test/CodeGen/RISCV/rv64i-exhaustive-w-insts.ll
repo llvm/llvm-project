@@ -1652,8 +1652,7 @@ define zeroext i32 @zext_sraiw_aext(i32 %a) nounwind {
 ; RV64I-LABEL: zext_sraiw_aext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    srli a0, a0, 7
-; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    slli a0, a0, 25
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
   %1 = ashr i32 %a, 7
@@ -1663,8 +1662,7 @@ define zeroext i32 @zext_sraiw_aext(i32 %a) nounwind {
 define zeroext i32 @zext_sraiw_sext(i32 signext %a) nounwind {
 ; RV64I-LABEL: zext_sraiw_sext:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a0, a0, 8
-; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
   %1 = ashr i32 %a, 8
@@ -1678,8 +1676,7 @@ define zeroext i32 @zext_sraiw_zext(i32 zeroext %a) nounwind {
 ; RV64I-LABEL: zext_sraiw_zext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    srli a0, a0, 9
-; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    slli a0, a0, 23
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    ret
   %1 = ashr i32 %a, 9

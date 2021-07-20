@@ -885,13 +885,6 @@ def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 }]>;
 def zexti32 : ComplexPattern<i64, 1, "selectZExti32">;
 
-// Check that it is a SLLIUW (Shift Logical Left Immediate Unsigned i32
-// on RV64). Also used to optimize the same sequence without SLLIUW.
-def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
-                        (and (shl node:$A, node:$B), imm), [{
-  return MatchSLLIUW(N);
-}]>;
-
 def add_oneuse : PatFrag<(ops node:$A, node:$B), (add node:$A, node:$B), [{
   return N->hasOneUse();
 }]>;
@@ -1236,14 +1229,6 @@ def : Pat<(i64 (and GPR:$rs1, 0xffffffff)), (SRLI (SLLI GPR:$rs1, 32), 32)>;
 // shifts instead of 3. This can occur when unsigned is used to index an array.
 def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
-// shl/and can appear in the other order too.
-def : Pat<(i64 (SLLIUWPat GPR:$rs1, uimm5:$shamt)),
-          (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
-
-// If we're shifting a value left by 0-31 bits, and then masking to 32-bits,
-// use 2 shifts instead of 3.
-def : Pat<(i64 (and (shl GPR:$rs1, uimm5:$shamt), 0xffffffff)),
-          (SRLI (SLLI GPR:$rs1, (ImmPlus32 uimm5:$shamt)), 32)>;
 }
 
 let Predicates = [IsRV64] in {
