@@ -373,12 +373,12 @@ private:
 /// templated adaptor.
 template <typename CGSCCPassT>
 ModuleToPostOrderCGSCCPassAdaptor
-createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass) {
+createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT &&Pass) {
   using PassModelT = detail::PassModel<LazyCallGraph::SCC, CGSCCPassT,
                                        PreservedAnalyses, CGSCCAnalysisManager,
                                        LazyCallGraph &, CGSCCUpdateResult &>;
   return ModuleToPostOrderCGSCCPassAdaptor(
-      std::make_unique<PassModelT>(std::move(Pass)));
+      std::make_unique<PassModelT>(std::forward<CGSCCPassT>(Pass)));
 }
 
 /// A proxy from a \c FunctionAnalysisManager to an \c SCC.
@@ -491,12 +491,12 @@ private:
 /// templated adaptor.
 template <typename FunctionPassT>
 CGSCCToFunctionPassAdaptor
-createCGSCCToFunctionPassAdaptor(FunctionPassT Pass) {
+createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
                         FunctionAnalysisManager>;
   return CGSCCToFunctionPassAdaptor(
-      std::make_unique<PassModelT>(std::move(Pass)));
+      std::make_unique<PassModelT>(std::forward<FunctionPassT>(Pass)));
 }
 
 /// A helper that repeats an SCC pass each time an indirect call is refined to
@@ -536,13 +536,14 @@ private:
 /// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename CGSCCPassT>
-DevirtSCCRepeatedPass createDevirtSCCRepeatedPass(CGSCCPassT Pass,
+DevirtSCCRepeatedPass createDevirtSCCRepeatedPass(CGSCCPassT &&Pass,
                                                   int MaxIterations) {
   using PassModelT = detail::PassModel<LazyCallGraph::SCC, CGSCCPassT,
                                        PreservedAnalyses, CGSCCAnalysisManager,
                                        LazyCallGraph &, CGSCCUpdateResult &>;
-  return DevirtSCCRepeatedPass(std::make_unique<PassModelT>(std::move(Pass)),
-                               MaxIterations);
+  return DevirtSCCRepeatedPass(
+      std::make_unique<PassModelT>(std::forward<CGSCCPassT>(Pass)),
+      MaxIterations);
 }
 
 // Clear out the debug logging macro.
