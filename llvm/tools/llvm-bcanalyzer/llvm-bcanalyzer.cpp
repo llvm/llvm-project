@@ -97,7 +97,7 @@ static Expected<std::unique_ptr<MemoryBuffer>> openBitcodeFile(StringRef Path) {
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
-  cl::HideUnrelatedOptions({&BCAnalyzerCategory, &ColorCategory});
+  cl::HideUnrelatedOptions({&BCAnalyzerCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm-bcanalyzer file analyzer\n");
   ExitOnError ExitOnErr("llvm-bcanalyzer: ");
 

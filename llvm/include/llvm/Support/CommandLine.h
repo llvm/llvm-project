@@ -202,7 +202,7 @@ public:
 };
 
 // The general Option Category (used as default category).
-extern OptionCategory GeneralCategory;
+OptionCategory &getGeneralCategory();
 
 //===----------------------------------------------------------------------===//
 // SubCommand class
@@ -342,7 +342,7 @@ protected:
       : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
         HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
         FullyInitialized(false), Position(0), AdditionalVals(0) {
-    Categories.push_back(&GeneralCategory);
+    Categories.push_back(&getGeneralCategory());
   }
 
   inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
