@@ -2450,6 +2450,10 @@ bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
 /// use this predicate to simplify operations downstream.
 bool SelectionDAG::MaskedElementsAreZero(SDValue Op, const APInt &DemandedElts,
                                          unsigned Depth) const {
+  assert(Op.getValueType().isFixedLengthVector() &&
+         Op.getValueType().getVectorNumElements() ==
+             DemandedElts.getBitWidth() &&
+         "MaskedElementsAreZero vector size mismatch");
   unsigned BitWidth = Op.getScalarValueSizeInBits();
   APInt DemandedBits = APInt::getAllOnesValue(BitWidth);
   return MaskedValueIsZero(Op, DemandedBits, DemandedElts, Depth);
