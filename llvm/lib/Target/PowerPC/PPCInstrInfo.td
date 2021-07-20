@@ -2232,6 +2232,10 @@ def TDI : DForm_base<2, (outs), (ins u5imm:$to, g8rc:$rA, s16imm:$imm),
 def TD : XForm_1<31, 68, (outs), (ins u5imm:$to, g8rc:$rA, g8rc:$rB),
                  "td $to, $rA, $rB", IIC_IntTrapD, []>;
 
+def POPCNTB : XForm_11<31, 122, (outs gprc:$rA), (ins gprc:$rS),
+                       "popcntb $rA, $rS", IIC_IntGeneral,
+                       [(set i32:$rA, (int_ppc_popcntb i32:$rS))]>;
+
 //===----------------------------------------------------------------------===//
 // PPC32 Load Instructions.
 //
