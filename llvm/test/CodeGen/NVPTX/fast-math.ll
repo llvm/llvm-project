@@ -158,6 +158,16 @@ define float @repeated_div_recip_allowed(i1 %pred, float %a, float %b, float %di
   ret float %w
 }
 
+; CHECK-LABEL: repeated_div_recip_allowed_sel
+define float @repeated_div_recip_allowed_sel(i1 %pred, float %a, float %b, float %divisor) {
+; CHECK: selp.f32
+; CHECK: div.rn.f32
+  %x = fdiv arcp float %a, %divisor
+  %y = fdiv arcp float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
+}
+
 ; CHECK-LABEL: repeated_div_recip_allowed_ftz
 define float @repeated_div_recip_allowed_ftz(i1 %pred, float %a, float %b, float %divisor) #1 {
 ; CHECK: rcp.rn.ftz.f32
@@ -169,6 +179,16 @@ define float @repeated_div_recip_allowed_ftz(i1 %pred, float %a, float %b, float
   %y = fdiv arcp float %b, %divisor
   %z = fmul float %x, %y
   %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_recip_allowed_ftz_sel
+define float @repeated_div_recip_allowed_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #1 {
+; CHECK: selp.f32
+; CHECK: div.rn.ftz.f32
+  %x = fdiv arcp float %a, %divisor
+  %y = fdiv arcp float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
   ret float %w
 }
 
@@ -186,6 +206,16 @@ define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) #0
   ret float %w
 }
 
+; CHECK-LABEL: repeated_div_fast_sel
+define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor) #0 {
+; CHECK: selp.f32
+; CHECK: div.approx.f32
+  %x = fdiv float %a, %divisor
+  %y = fdiv float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
+}
+
 ; CHECK-LABEL: repeated_div_fast_ftz
 define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor) #0 #1 {
 ; CHECK: rcp.approx.ftz.f32
@@ -197,6 +227,16 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
   %y = fdiv float %b, %divisor
   %z = fmul float %x, %y
   %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_fast_ftz_sel
+define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #0 #1 {
+; CHECK: selp.f32
+; CHECK: div.approx.ftz.f32
+  %x = fdiv float %a, %divisor
+  %y = fdiv float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
   ret float %w
 }
 
