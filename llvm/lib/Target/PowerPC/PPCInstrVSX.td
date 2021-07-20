@@ -1539,10 +1539,10 @@ let Predicates = [HasVSX, HasP9Vector] in {
 
   // Insert Exponent DP/QP
   // XT NOTE: XT.dword[1] = 0xUUUU_UUUU_UUUU_UUUU
+  def XSIEXPDP : XX1Form <60, 918, (outs vsrc:$XT), (ins g8rc:$rA, g8rc:$rB),
+                          "xsiexpdp $XT, $rA, $rB", IIC_VecFP, []>;
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   let hasSideEffects = 1 in {
-    def XSIEXPDP : XX1Form <60, 918, (outs vsrc:$XT), (ins g8rc:$rA, g8rc:$rB),
-                            "xsiexpdp $XT, $rA, $rB", IIC_VecFP, []>;
     // vB NOTE: only vB.dword[0] is used, that's why we don't use
     //          X_VT5_VA5_VB5 form
     def XSIEXPQP : XForm_18<63, 868, (outs vrrc:$vT), (ins vrrc:$vA, vsfrc:$vB),
@@ -1550,11 +1550,11 @@ let Predicates = [HasVSX, HasP9Vector] in {
   }
 
   // Extract Exponent/Significand DP/QP
+  def XSXEXPDP : XX2_RT5_XO5_XB6<60,  0, 347, "xsxexpdp", []>;
+  def XSXSIGDP : XX2_RT5_XO5_XB6<60,  1, 347, "xsxsigdp", []>;
+
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   let hasSideEffects = 1 in {
-    def XSXEXPDP : XX2_RT5_XO5_XB6<60,  0, 347, "xsxexpdp", []>;
-    def XSXSIGDP : XX2_RT5_XO5_XB6<60,  1, 347, "xsxsigdp", []>;
-
     def XSXEXPQP : X_VT5_XO5_VB5  <63,  2, 804, "xsxexpqp", []>;
     def XSXSIGQP : X_VT5_XO5_VB5  <63, 18, 804, "xsxsigqp", []>;
   }
@@ -2851,6 +2851,12 @@ def : Pat<(v2i64 (PPCvcmp_rec v2i64:$vA, v2i64:$vB, 711)),
 def : Pat<(v2i64 (PPCvcmp_rec v2i64:$vA, v2i64:$vB, 199)),
           (VCMPGTUB_rec DblwdCmp.MRGEQ, (v2i64 (XXLXORz)))>;
 } // AddedComplexity = 0
+
+// XL Compat builtins.
+def : Pat<(int_ppc_fmsub f64:$A, f64:$B, f64:$C), (XSMSUBMDP $A, $B, $C)>;
+def : Pat<(int_ppc_fnmsub f64:$A, f64:$B, f64:$C), (XSNMSUBMDP $A, $B, $C)>;
+def : Pat<(int_ppc_fnmadd f64:$A, f64:$B, f64:$C), (XSNMADDMDP $A, $B, $C)>;
+def : Pat<(int_ppc_fre f64:$A), (XSREDP $A)>;
 } // HasVSX
 
 // Any big endian VSX subtarget.
@@ -3246,6 +3252,18 @@ def : Pat<(v8i16 (bitconvert (v16i8 immAllOnesV))),
           (v8i16 (COPY_TO_REGCLASS(XXLEQVOnes), VSRC))>;
 def : Pat<(v16i8 (bitconvert (v16i8 immAllOnesV))),
           (v16i8 (COPY_TO_REGCLASS(XXLEQVOnes), VSRC))>;
+
+// XL Compat builtins.
+def : Pat<(int_ppc_fmsubs f32:$A, f32:$B, f32:$C), (XSMSUBMSP $A, $B, $C)>;
+def : Pat<(int_ppc_fnmsubs f32:$A, f32:$B, f32:$C), (XSNMSUBMSP $A, $B, $C)>;
+def : Pat<(int_ppc_fnmadds f32:$A, f32:$B, f32:$C), (XSNMADDMSP $A, $B, $C)>;
+def : Pat<(int_ppc_fres f32:$A), (XSRESP $A)>;
+def : Pat<(i32 (int_ppc_extract_exp f64:$A)),
+          (EXTRACT_SUBREG (XSXEXPDP (COPY_TO_REGCLASS $A, VSFRC)), sub_32)>;
+def : Pat<(int_ppc_extract_sig f64:$A),
+          (XSXSIGDP (COPY_TO_REGCLASS $A, VSFRC))>;
+def : Pat<(f64 (int_ppc_insert_exp f64:$A, i64:$B)),
+          (COPY_TO_REGCLASS (XSIEXPDP (COPY_TO_REGCLASS $A, G8RC), $B), F8RC)>;
 } // HasVSX, HasP8Vector
 
 // Any big endian Power8 VSX subtarget.
