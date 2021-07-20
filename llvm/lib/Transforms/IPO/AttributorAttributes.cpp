@@ -1008,8 +1008,8 @@ protected:
     return *It == Before ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
   }
 
-  /// See AAPointerInfo::forallInterfearingAccesses.
-  bool forallInterfearingAccesses(
+  /// See AAPointerInfo::forallInterferingAccesses.
+  bool forallInterferingAccesses(
       Instruction &I,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
     if (!isValidState())
@@ -1068,15 +1068,15 @@ struct AAPointerInfoImpl
     return AAPointerInfo::manifest(A);
   }
 
-  bool forallInterfearingAccesses(
+  bool forallInterferingAccesses(
       LoadInst &LI, function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
       const override {
-    return State::forallInterfearingAccesses(LI, CB);
+    return State::forallInterferingAccesses(LI, CB);
   }
-  bool forallInterfearingAccesses(
+  bool forallInterferingAccesses(
       StoreInst &SI, function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
       const override {
-    return State::forallInterfearingAccesses(SI, CB);
+    return State::forallInterferingAccesses(SI, CB);
   }
 
   ChangeStatus translateAndAddCalleeState(Attributor &A,
@@ -5181,7 +5181,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
       auto &PI = A.getAAFor<AAPointerInfo>(AA, IRPosition::value(*Obj),
                                            DepClassTy::REQUIRED);
-      if (!PI.forallInterfearingAccesses(L, CheckAccess))
+      if (!PI.forallInterferingAccesses(L, CheckAccess))
         return false;
     }
     return true;
