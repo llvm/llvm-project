@@ -15,7 +15,6 @@
 
 #include "DNBDefs.h"
 #include "JSONGenerator.h"
-#include "MacOSX/DarwinLog/DarwinLogEvent.h"
 #include "MacOSX/Genealogy.h"
 #include "MacOSX/ThreadInfo.h"
 #include "RNBContext.h"
@@ -108,7 +107,6 @@ nub_bool_t
 DNBProcessSetEnableAsyncProfiling(nub_process_t pid, nub_bool_t enable,
                                   uint64_t interval_usec,
                                   DNBProfileDataScanType scan_type) DNB_EXPORT;
-DarwinLogEventVector DNBProcessGetAvailableDarwinLogEvents(nub_process_t pid);
 
 // Process status
 nub_bool_t DNBProcessIsAlive(nub_process_t pid) DNB_EXPORT;

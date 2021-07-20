@@ -30,7 +30,7 @@ categories_list = None
 # set to true if we are going to use categories for cherry-picking test cases
 use_categories = False
 # Categories we want to skip
-skip_categories = ["darwin-log", "frame-diagnose"]
+skip_categories = ["frame-diagnose"]
 if platform.system() == 'Linux':
     skip_categories.append('watchpoints')
 # Categories we expect to fail
