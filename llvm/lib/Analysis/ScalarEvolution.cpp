@@ -11529,9 +11529,11 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
                                                     const SCEV *End,
                                                     unsigned BitWidth,
                                                     bool IsSigned) {
+  // The logic in this function assumes we can represent a positive stride.
+  // If we can't, the backedge-taken count must be zero.
+  if (IsSigned && BitWidth == 1)
+    return getZero(Stride->getType());
 
-  assert(!isKnownNonPositive(Stride) &&
-         "Stride is expected strictly positive!");
   // Calculate the maximum backedge count based on the range of values
   // permitted by Start, End, and Stride.
   const SCEV *MaxBECount;
@@ -11541,13 +11543,11 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
   APInt StrideForMaxBECount =
       IsSigned ? getSignedRangeMin(Stride) : getUnsignedRangeMin(Stride);
 
-  // We already know that the stride is positive, so we paper over conservatism
-  // in our range computation by forcing StrideForMaxBECount to be at least one.
-  // In theory this is unnecessary, but we expect MaxBECount to be a
-  // SCEVConstant, and (udiv <constant> 0) is not constant folded by SCEV (there
-  // is nothing to constant fold it to).
-  APInt One(BitWidth, 1, IsSigned);
-  StrideForMaxBECount = APIntOps::smax(One, StrideForMaxBECount);
+  // We assume either the stride is positive, or the backedge-taken count
+  // is zero. So force StrideForMaxBECount to be at least one.
+  APInt One(BitWidth, 1);
+  StrideForMaxBECount = IsSigned ? APIntOps::smax(One, StrideForMaxBECount)
+                                 : APIntOps::umax(One, StrideForMaxBECount);
 
   APInt MaxValue = IsSigned ? APInt::getSignedMaxValue(BitWidth)
                             : APInt::getMaxValue(BitWidth);
@@ -11559,6 +11559,10 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
   // taken count.
   APInt MaxEnd = IsSigned ? APIntOps::smin(getSignedRangeMax(End), Limit)
                           : APIntOps::umin(getUnsignedRangeMax(End), Limit);
+
+  // MaxBECount = ceil((max(MaxEnd, MinStart) - MinStart) / Stride)
+  MaxEnd = IsSigned ? APIntOps::smax(MaxEnd, MinStart)
+                    : APIntOps::umax(MaxEnd, MinStart);
 
   MaxBECount = getUDivCeilSCEV(getConstant(MaxEnd - MinStart) /* Delta */,
                                getConstant(StrideForMaxBECount) /* Step */);
