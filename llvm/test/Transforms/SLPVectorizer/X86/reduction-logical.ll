@@ -168,6 +168,10 @@ define i1 @mixed_logical_icmp(<4 x i32> %x) {
   ret i1 %s3
 }
 
+; TODO: This is better than all-scalar and still safe,
+;       but we want this to be 2 reductions with glue
+;       logic...or a wide reduction?
+
 define i1 @logical_and_icmp_clamp(<4 x i32> %x) {
 ; CHECK-LABEL: @logical_and_icmp_clamp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 3
@@ -181,10 +185,10 @@ define i1 @logical_and_icmp_clamp(<4 x i32> %x) {
 ; CHECK-NEXT:    [[D3:%.*]] = icmp sgt i32 [[TMP1]], 17
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP7]], [[D0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = and i1 [[TMP8]], [[D1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and i1 [[TMP9]], [[D2]]
-; CHECK-NEXT:    [[S7:%.*]] = select i1 [[TMP10]], i1 [[D3]], i1 false
+; CHECK-NEXT:    [[S4:%.*]] = select i1 [[TMP7]], i1 [[D0]], i1 false
+; CHECK-NEXT:    [[S5:%.*]] = select i1 [[S4]], i1 [[D1]], i1 false
+; CHECK-NEXT:    [[S6:%.*]] = select i1 [[S5]], i1 [[D2]], i1 false
+; CHECK-NEXT:    [[S7:%.*]] = select i1 [[S6]], i1 [[D3]], i1 false
 ; CHECK-NEXT:    ret i1 [[S7]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
