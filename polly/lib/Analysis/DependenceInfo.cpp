@@ -667,7 +667,7 @@ bool Dependences::isValidSchedule(
   Dependences = Dependences.apply_range(Schedule);
 
   isl::set Zero = isl::set::universe(ScheduleSpace);
-  for (auto i : seq<isl_size>(0, Zero.dim(isl::dim::set)))
+  for (auto i : seq<isl_size>(0, Zero.tuple_dim()))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
 
   isl::union_set UDeltas = Dependences.deltas();
