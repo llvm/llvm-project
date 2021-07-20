@@ -426,34 +426,6 @@ static void truncateCurrentFile(void) {
   fclose(File);
 }
 
-static int writeMMappedFile(FILE *OutputFile, char **Profile) {
-  if (!OutputFile)
-    return -1;
-
-  /* Write the data into a file. */
-  setupIOBuffer();
-  ProfDataWriter fileWriter;
-  initFileWriter(&fileWriter, OutputFile);
-  if (lprofWriteData(&fileWriter, NULL, 0)) {
-    PROF_ERR("Failed to write profile: %s\n", strerror(errno));
-    return -1;
-  }
-  fflush(OutputFile);
-
-  /* Get the file size. */
-  uint64_t FileSize = ftell(OutputFile);
-
-  /* Map the profile. */
-  *Profile = (char *)mmap(
-      NULL, FileSize, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(OutputFile), 0);
-  if (*Profile == MAP_FAILED) {
-    PROF_ERR("Unable to mmap profile: %s\n", strerror(errno));
-    return -1;
-  }
-
-  return 0;
-}
-
 // TODO: Move these functions into InstrProfilingPlatform* files.
 #if defined(__APPLE__)
 static void assertIsZero(int *i) {
@@ -630,6 +602,34 @@ COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR
     __attribute__((weak, alias(INSTR_PROF_QUOTE(
                              INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))));
 #endif
+
+static int writeMMappedFile(FILE *OutputFile, char **Profile) {
+  if (!OutputFile)
+    return -1;
+
+  /* Write the data into a file. */
+  setupIOBuffer();
+  ProfDataWriter fileWriter;
+  initFileWriter(&fileWriter, OutputFile);
+  if (lprofWriteData(&fileWriter, NULL, 0)) {
+    PROF_ERR("Failed to write profile: %s\n", strerror(errno));
+    return -1;
+  }
+  fflush(OutputFile);
+
+  /* Get the file size. */
+  uint64_t FileSize = ftell(OutputFile);
+
+  /* Map the profile. */
+  *Profile = (char *)mmap(
+      NULL, FileSize, PROT_READ | PROT_WRITE, MAP_SHARED, fileno(OutputFile), 0);
+  if (*Profile == MAP_FAILED) {
+    PROF_ERR("Unable to mmap profile: %s\n", strerror(errno));
+    return -1;
+  }
+
+  return 0;
+}
 
 static void initializeProfileForContinuousMode(void) {
   if (!__llvm_profile_is_continuous_mode_enabled())
