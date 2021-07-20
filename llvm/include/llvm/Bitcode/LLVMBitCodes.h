@@ -670,6 +670,7 @@ enum AttributeKindCodes {
   ATTR_KIND_VSCALE_RANGE = 74,
   ATTR_KIND_SWIFT_ASYNC = 75,
   ATTR_KIND_NO_SANITIZE_COVERAGE = 76,
+  ATTR_KIND_ELEMENTTYPE = 77,
 };
 
 enum ComdatSelectionKindCodes {

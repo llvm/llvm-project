@@ -708,6 +708,10 @@ Type *AttributeSet::getInAllocaType() const {
   return SetNode ? SetNode->getAttributeType(Attribute::InAlloca) : nullptr;
 }
 
+Type *AttributeSet::getElementType() const {
+  return SetNode ? SetNode->getAttributeType(Attribute::ElementType) : nullptr;
+}
+
 std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
   return SetNode ? SetNode->getAllocSizeArgs()
                  : std::pair<unsigned, Optional<unsigned>>(0, 0);
@@ -1909,7 +1913,8 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
         .addInAllocaAttr(Ty)
         .addByValAttr(Ty)
         .addStructRetAttr(Ty)
-        .addByRefAttr(Ty);
+        .addByRefAttr(Ty)
+        .addTypeAttr(Attribute::ElementType, Ty);
 
   // Some attributes can apply to all "values" but there are no `void` values.
   if (Ty->isVoidTy())
