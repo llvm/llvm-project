@@ -563,7 +563,7 @@ Sections:
 ##        2) '.bar1' ends at 0x79, which is the starting file offset of both '.empty.bar2'
 ##           and '.empty.zed'. We should only include '.empty.bar2', because the VA of the
 ##           '.empty.zed' section is outside the segment's virtual space.
-# RUN: llvm-readelf -sections %t7 | FileCheck %s --check-prefix=ZERO-SIZE-MAPPING
+# RUN: llvm-readelf -S %t7 | FileCheck %s --check-prefix=ZERO-SIZE-MAPPING
 
 # ZERO-SIZE-MAPPING:      Section Headers:
 # ZERO-SIZE-MAPPING-NEXT:   [Nr] Name        Type     Address          Off    Size

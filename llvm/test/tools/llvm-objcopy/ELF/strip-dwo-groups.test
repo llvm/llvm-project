@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-dwo %t
-# RUN: llvm-readobj --symbols -S --elf-section-groups %t | FileCheck %s
+# RUN: llvm-readobj --symbols -S --section-groups %t | FileCheck %s
 
 ## `llvm-objcopy --strip-dwo` strips out dwo sections, as a result, the index of 
 ## the symbol table, the indices of the symbols and the indices of the sections
