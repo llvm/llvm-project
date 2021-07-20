@@ -17,7 +17,6 @@ SRCS="
 	../rtl/tsan_rtl_thread.cpp
 	../rtl/tsan_rtl_proc.cpp
 	../rtl/tsan_stack_trace.cpp
-	../rtl/tsan_stat.cpp
 	../rtl/tsan_suppressions.cpp
 	../rtl/tsan_sync.cpp
 	../../sanitizer_common/sanitizer_allocator.cpp
