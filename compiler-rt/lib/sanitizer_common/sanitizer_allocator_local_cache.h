@@ -63,9 +63,10 @@ struct SizeClassAllocator64LocalCache {
   }
 
   void Drain(SizeClassAllocator *allocator) {
+    MemoryMapperT memory_mapper(*allocator);
     for (uptr i = 1; i < kNumClasses; i++) {
       PerClass *c = &per_class_[i];
-      while (c->count > 0) Drain(c, allocator, i, c->count);
+      while (c->count > 0) Drain(&memory_mapper, c, allocator, i, c->count);
     }
   }
 
@@ -105,17 +106,19 @@ struct SizeClassAllocator64LocalCache {
     c->count = num_requested_chunks;
     return true;
   }
+
   NOINLINE void DrainHalfMax(PerClass *c, SizeClassAllocator *allocator,
                              uptr class_id) {
-    Drain(c, allocator, class_id, c->max_count / 2);
+    MemoryMapperT memory_mapper(*allocator);
+    Drain(&memory_mapper, c, allocator, class_id, c->max_count / 2);
   }
 
-  NOINLINE void Drain(PerClass *c, SizeClassAllocator *allocator, uptr class_id,
-                      uptr count) {
+  void Drain(MemoryMapperT *memory_mapper, PerClass *c,
+             SizeClassAllocator *allocator, uptr class_id, uptr count) {
     CHECK_GE(c->count, count);
     const uptr first_idx_to_drain = c->count - count;
     c->count -= count;
-    allocator->ReturnToAllocator(&stats_, class_id,
+    allocator->ReturnToAllocator(memory_mapper, &stats_, class_id,
                                  &c->chunks[first_idx_to_drain], count);
   }
 };
