@@ -1143,7 +1143,7 @@ define <33 x i32> @v33i32_func_void() #0 {
   ; CHECK:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile load (p1) from `<33 x i32> addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<33 x s32>) from %ir.ptr, align 256, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD1]](<33 x s32>), [[COPY]](p5) :: (store (s1056), align 256, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD1]](<33 x s32>), [[COPY]](p5) :: (store (<33 x s32>), align 256, addrspace 5)
   ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
   ; CHECK:   S_SETPC_B64_return [[COPY2]]
   %ptr = load volatile <33 x i32> addrspace(1)*, <33 x i32> addrspace(1)* addrspace(4)* undef
@@ -1167,7 +1167,7 @@ define <33 x i32> @v33i32_func_v33i32_i32(<33 x i32> addrspace(1)* %p, i32 %idx)
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[MV]], [[MUL]](s64)
   ; CHECK:   [[COPY5:%[0-9]+]]:_(p1) = COPY [[PTR_ADD]](p1)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[COPY5]](p1) :: (load (<33 x s32>) from %ir.gep, align 256, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD]](<33 x s32>), [[COPY]](p5) :: (store (s1056), align 256, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD]](<33 x s32>), [[COPY]](p5) :: (store (<33 x s32>), align 256, addrspace 5)
   ; CHECK:   [[COPY6:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY4]]
   ; CHECK:   S_SETPC_B64_return [[COPY6]]
   %gep = getelementptr inbounds <33 x i32>, <33 x i32> addrspace(1)* %p, i32 %idx
@@ -1187,7 +1187,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p1) :: (load (s32) from %ir.ptr + 128, align 128, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD1]](<32 x s32>), [[COPY]](p5) :: (store (s1024), addrspace 5)
+  ; CHECK:   G_STORE [[LOAD1]](<32 x s32>), [[COPY]](p5) :: (store (<32 x s32>), addrspace 5)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
   ; CHECK:   G_STORE [[LOAD2]](s32), [[PTR_ADD1]](p5) :: (store (s32), align 128, addrspace 5)
@@ -1213,7 +1213,7 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
   ; CHECK:   G_STORE [[LOAD1]](s32), [[COPY]](p5) :: (store (s32), align 128, addrspace 5)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
   ; CHECK:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
-  ; CHECK:   G_STORE [[LOAD2]](<32 x s32>), [[PTR_ADD1]](p5) :: (store (s1024), addrspace 5)
+  ; CHECK:   G_STORE [[LOAD2]](<32 x s32>), [[PTR_ADD1]](p5) :: (store (<32 x s32>), addrspace 5)
   ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
   ; CHECK:   S_SETPC_B64_return [[COPY2]]
   %ptr = load volatile { i32, <32 x i32> } addrspace(1)*, { i32, <32 x i32> } addrspace(1)* addrspace(4)* undef
@@ -1490,16 +1490,16 @@ define %struct.with.ptrs @ptr_in_struct_func_void() #0 {
   ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 144
   ; CHECK:   [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; CHECK:   [[LOAD3:%[0-9]+]]:_(<2 x p1>) = G_LOAD [[PTR_ADD2]](p1) :: (volatile load (<2 x p1>) from `%struct.with.ptrs addrspace(1)* undef` + 144, addrspace 1)
-  ; CHECK:   G_STORE [[LOAD]](<32 x s32>), [[COPY]](p5) :: (store (s1024), addrspace 5)
+  ; CHECK:   G_STORE [[LOAD]](<32 x s32>), [[COPY]](p5) :: (store (<32 x s32>), addrspace 5)
   ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
   ; CHECK:   [[PTR_ADD3:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C3]](s32)
-  ; CHECK:   G_STORE [[LOAD1]](p3), [[PTR_ADD3]](p5) :: (store (s32), align 128, addrspace 5)
+  ; CHECK:   G_STORE [[LOAD1]](p3), [[PTR_ADD3]](p5) :: (store (p3), align 128, addrspace 5)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 136
   ; CHECK:   [[PTR_ADD4:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C4]](s32)
-  ; CHECK:   G_STORE [[LOAD2]](p1), [[PTR_ADD4]](p5) :: (store (s64), addrspace 5)
+  ; CHECK:   G_STORE [[LOAD2]](p1), [[PTR_ADD4]](p5) :: (store (p1), addrspace 5)
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 144
   ; CHECK:   [[PTR_ADD5:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C5]](s32)
-  ; CHECK:   G_STORE [[LOAD3]](<2 x p1>), [[PTR_ADD5]](p5) :: (store (s128), addrspace 5)
+  ; CHECK:   G_STORE [[LOAD3]](<2 x p1>), [[PTR_ADD5]](p5) :: (store (<2 x p1>), addrspace 5)
   ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
   ; CHECK:   S_SETPC_B64_return [[COPY2]]
   %val = load volatile %struct.with.ptrs, %struct.with.ptrs addrspace(1)* undef

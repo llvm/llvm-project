@@ -173,6 +173,9 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
     proc = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = proc.communicate()
     if proc.returncode != 0:
+      if proc.returncode < 0:
+        msg = "%s: terminated by signal %d\n" % (name, -proc.returncode)
+        err += msg.encode('utf-8')
       failed_files.append(name)
     with lock:
       sys.stdout.write(' '.join(invocation) + '\n' + output.decode('utf-8'))

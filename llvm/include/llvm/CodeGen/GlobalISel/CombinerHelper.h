@@ -596,8 +596,10 @@ private:
   /// at to the index of the load.
   /// \param [in] MemSizeInBits - The number of bits each load should produce.
   ///
-  /// \returns The lowest-index load found and the lowest index on success.
-  Optional<std::pair<GZExtLoad *, int64_t>> findLoadOffsetsForLoadOrCombine(
+  /// \returns On success, a 3-tuple containing lowest-index load found, the
+  /// lowest index, and the last load in the sequence.
+  Optional<std::tuple<GZExtLoad *, int64_t, GZExtLoad *>>
+  findLoadOffsetsForLoadOrCombine(
       SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
       const SmallVector<Register, 8> &RegsToVisit,
       const unsigned MemSizeInBits);

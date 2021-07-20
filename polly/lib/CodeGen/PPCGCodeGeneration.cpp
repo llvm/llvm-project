@@ -219,8 +219,8 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
       KillMemIds.push_back(isl::manage(SAI->getBasePtrId().release()));
   }
 
-  Info.TaggedMustKills = isl::union_map::empty(ParamSpace);
-  Info.MustKills = isl::union_map::empty(ParamSpace);
+  Info.TaggedMustKills = isl::union_map::empty(ParamSpace.ctx());
+  Info.MustKills = isl::union_map::empty(ParamSpace.ctx());
 
   // Initialising KillsSchedule to `isl_set_empty` creates an empty node in the
   // schedule:
@@ -847,7 +847,7 @@ void GPUNodeBuilder::prepareManagedDeviceArrays() {
     if (Offset) {
       HostPtr = Builder.CreatePointerCast(
           HostPtr, ScopArray->getElementType()->getPointerTo());
-      HostPtr = Builder.CreateGEP(HostPtr, Offset);
+      HostPtr = Builder.CreateGEP(ScopArray->getElementType(), HostPtr, Offset);
     }
 
     HostPtr = Builder.CreatePointerCast(HostPtr, Builder.getInt8PtrTy());
@@ -1211,7 +1211,7 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
   if (Offset) {
     HostPtr = Builder.CreatePointerCast(
         HostPtr, ScopArray->getElementType()->getPointerTo());
-    HostPtr = Builder.CreateGEP(HostPtr, Offset);
+    HostPtr = Builder.CreateGEP(ScopArray->getElementType(), HostPtr, Offset);
   }
 
   HostPtr = Builder.CreatePointerCast(HostPtr, Builder.getInt8PtrTy());
@@ -1627,7 +1627,8 @@ GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
 void GPUNodeBuilder::insertStoreParameter(Instruction *Parameters,
                                           Instruction *Param, int Index) {
   Value *Slot = Builder.CreateGEP(
-      Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+      Parameters->getType()->getPointerElementType(), Parameters,
+      {Builder.getInt64(0), Builder.getInt64(Index)});
   Value *ParamTyped = Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
   Builder.CreateStore(ParamTyped, Slot);
 }
@@ -1681,11 +1682,12 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     if (Offset) {
       DevArray = Builder.CreatePointerCast(
           DevArray, SAI->getElementType()->getPointerTo());
-      DevArray = Builder.CreateGEP(DevArray, Builder.CreateNeg(Offset));
+      DevArray = Builder.CreateGEP(SAI->getElementType(), DevArray,
+                                   Builder.CreateNeg(Offset));
       DevArray = Builder.CreatePointerCast(DevArray, Builder.getInt8PtrTy());
     }
     Value *Slot = Builder.CreateGEP(
-        Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
+        ArrayTy, Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
 
     if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
       Value *ValPtr = nullptr;

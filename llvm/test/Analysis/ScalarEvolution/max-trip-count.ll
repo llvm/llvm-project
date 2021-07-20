@@ -455,3 +455,38 @@ loop:
 loop.exit:
   ret void
 }
+
+define void @max_overflow(i8 %n) mustprogress {
+; CHECK-LABEL: Determining loop execution counts for: @max_overflow
+; CHECK: Loop %loop: backedge-taken count is (-126 + (126 smax %n))<nsw>
+; CHECK: Loop %loop: max backedge-taken count is 0
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ 63, %entry ], [ %i.next, %loop ]
+  %i.next = add nsw i8 %i, 63
+  %t = icmp slt i8 %i.next, %n
+  br i1 %t, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Max backedge-taken count is zero.
+define void @bool_stride(i1 %s, i1 %n) mustprogress {
+; CHECK-LABEL: Determining loop execution counts for: @bool_stride
+; CHECK: Loop %loop: Unpredictable backedge-taken count.
+; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+entry:
+  br label %loop
+
+loop:
+  %i = phi i1 [ -1, %entry ], [ %i.next, %loop ]
+  %i.next = add nsw i1 %i, %s
+  %t = icmp slt i1 %i.next, %n
+  br i1 %t, label %loop, label %exit
+
+exit:
+  ret void
+}

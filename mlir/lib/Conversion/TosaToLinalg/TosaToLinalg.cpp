@@ -2291,48 +2291,20 @@ public:
     Value fakeWindowDims =
         rewriter.create<linalg::InitTensorOp>(loc, kernel, outElementTy);
 
-    auto createOp = [&](auto *typePtr) -> linalg::LinalgOp {
-      return cast<linalg::LinalgOp>(
-          rewriter
-              .create<std::remove_pointer_t<decltype(typePtr)>>(
-                  loc, ArrayRef<Type>{resultTy},
-                  ValueRange{paddedInput, fakeWindowDims}, filledInitTensor,
-                  dilationAttr, strideAttr)
-              .getOperation());
-    };
-
-    if (isa<tosa::MaxPool2dOp>(op) && inElementTy.isF32()) {
-      linalg::LinalgOp poolingOp =
-          createOp(static_cast<linalg::PoolingNHWCMaxFOp *>(nullptr));
-      rewriter.replaceOp(op, poolingOp->getResult(0));
-      return success();
-    }
-
-    if (isa<tosa::MaxPool2dOp>(op) && inElementTy.isInteger(8)) {
-      linalg::LinalgOp poolingOp =
-          createOp(static_cast<linalg::PoolingNHWCMaxI8Op *>(nullptr));
-      rewriter.replaceOp(op, poolingOp->getResult(0));
-      return success();
-    }
-
-    if (isa<tosa::MaxPool2dOp>(op) && inElementTy.isInteger(16)) {
-      linalg::LinalgOp poolingOp =
-          createOp(static_cast<linalg::PoolingNHWCMaxI16Op *>(nullptr));
-      rewriter.replaceOp(op, poolingOp->getResult(0));
-      return success();
-    }
-
-    if (isa<tosa::MaxPool2dOp>(op) && inElementTy.isInteger(32)) {
-      linalg::LinalgOp poolingOp =
-          createOp(static_cast<linalg::PoolingNHWCMaxI32Op *>(nullptr));
-      rewriter.replaceOp(op, poolingOp->getResult(0));
+    if (isa<tosa::MaxPool2dOp>(op)) {
+      rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxOp>(
+          op, ArrayRef<Type>{resultTy}, ValueRange{paddedInput, fakeWindowDims},
+          filledInitTensor, strideAttr, dilationAttr);
       return success();
     }
 
     if (isa<tosa::AvgPool2dOp>(op) && inElementTy.isF32()) {
-      Value poolingOp =
-          createOp(static_cast<linalg::PoolingNHWCSumFOp *>(nullptr))
-              ->getResult(0);
+      Value poolingOp = rewriter
+                            .create<linalg::PoolingNhwcSumOp>(
+                                loc, ArrayRef<Type>{resultTy},
+                                ValueRange{paddedInput, fakeWindowDims},
+                                filledInitTensor, strideAttr, dilationAttr)
+                            .getResult(0);
       auto poolingOpTy = poolingOp.getType().cast<ShapedType>();
       auto affineMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
       auto genericOp = rewriter.create<linalg::GenericOp>(

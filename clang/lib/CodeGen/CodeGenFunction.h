@@ -3283,13 +3283,8 @@ public:
   llvm::Function *EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K);
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
-  llvm::Function *
-  GenerateOpenMPCapturedStmtFunctionAggregate(const CapturedStmt &S,
-                                              SourceLocation Loc);
   llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
                                                      SourceLocation Loc);
-  void GenerateOpenMPCapturedVarsAggregate(
-      const CapturedStmt &S, SmallVectorImpl<llvm::Value *> &CapturedVars);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
@@ -4368,6 +4363,11 @@ public:
 
   llvm::Function *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
                                    llvm::Constant *Addr);
+
+  llvm::Function *createTLSAtExitStub(const VarDecl &VD,
+                                      llvm::FunctionCallee Dtor,
+                                      llvm::Constant *Addr,
+                                      llvm::FunctionCallee &AtExit);
 
   /// Call atexit() with a function that passes the given argument to
   /// the given function.

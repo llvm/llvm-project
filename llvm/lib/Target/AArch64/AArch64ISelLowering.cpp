@@ -1194,7 +1194,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // Legalize unpacked bitcasts to REINTERPRET_CAST.
-    for (auto VT : {MVT::nxv2i32, MVT::nxv2f32})
+    for (auto VT : {MVT::nxv2i16, MVT::nxv4i16, MVT::nxv2i32, MVT::nxv2bf16,
+                    MVT::nxv2f16, MVT::nxv4f16, MVT::nxv2f32})
       setOperationAction(ISD::BITCAST, VT, Custom);
 
     for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1}) {
@@ -1239,13 +1240,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Expand);
       }
     }
-
-    // SVE supports truncating stores of 64 and 128-bit vectors
-    setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
-    setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
-    setTruncStoreAction(MVT::v2i64, MVT::v2i32, Custom);
-    setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
-    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
                     MVT::nxv4f32, MVT::nxv2f64}) {
@@ -1387,7 +1381,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
 }
 
-void AArch64TargetLowering::addTypeForNEON(MVT VT, MVT PromotedBitwiseVT) {
+void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   assert(VT.isVector() && "VT should be a vector type");
 
   if (VT.isFloatingPoint()) {
@@ -1493,16 +1487,6 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
     setCondCodeAction(ISD::SETUNE, VT, Expand);
   }
 
-  // Mark integer truncating stores as having custom lowering
-  if (VT.isInteger()) {
-    MVT InnerVT = VT.changeVectorElementType(MVT::i8);
-    while (InnerVT != VT) {
-      setTruncStoreAction(VT, InnerVT, Custom);
-      InnerVT = InnerVT.changeVectorElementType(
-          MVT::getIntegerVT(2 * InnerVT.getScalarSizeInBits()));
-    }
-  }
-
   // Lower fixed length vector operations to scalable equivalents.
   setOperationAction(ISD::ABS, VT, Custom);
   setOperationAction(ISD::ADD, VT, Custom);
@@ -1588,12 +1572,12 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
 
 void AArch64TargetLowering::addDRTypeForNEON(MVT VT) {
   addRegisterClass(VT, &AArch64::FPR64RegClass);
-  addTypeForNEON(VT, MVT::v2i32);
+  addTypeForNEON(VT);
 }
 
 void AArch64TargetLowering::addQRTypeForNEON(MVT VT) {
   addRegisterClass(VT, &AArch64::FPR128RegClass);
-  addTypeForNEON(VT, MVT::v4i32);
+  addTypeForNEON(VT);
 }
 
 EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &,
@@ -3520,14 +3504,16 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
   if (useSVEForFixedLengthVectorVT(OpVT))
     return LowerFixedLengthBitcastToSVE(Op, DAG);
 
-  if (OpVT == MVT::nxv2f32) {
-    if (ArgVT.isInteger()) {
+  if (OpVT.isScalableVector()) {
+    if (isTypeLegal(OpVT) && !isTypeLegal(ArgVT)) {
+      assert(OpVT.isFloatingPoint() && !ArgVT.isFloatingPoint() &&
+             "Expected int->fp bitcast!");
       SDValue ExtResult =
           DAG.getNode(ISD::ANY_EXTEND, SDLoc(Op), getSVEContainerType(ArgVT),
                       Op.getOperand(0));
-      return getSVESafeBitCast(MVT::nxv2f32, ExtResult, DAG);
+      return getSVESafeBitCast(OpVT, ExtResult, DAG);
     }
-    return getSVESafeBitCast(MVT::nxv2f32, Op.getOperand(0), DAG);
+    return getSVESafeBitCast(OpVT, Op.getOperand(0), DAG);
   }
 
   if (OpVT != MVT::f16 && OpVT != MVT::bf16)
@@ -4544,7 +4530,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT MemVT = StoreNode->getMemoryVT();
 
   if (VT.isVector()) {
-    if (useSVEForFixedLengthVectorVT(VT, true))
+    if (useSVEForFixedLengthVectorVT(VT))
       return LowerFixedLengthVectorStoreToSVE(Op, DAG);
 
     unsigned AS = StoreNode->getAddressSpace();
@@ -4556,8 +4542,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
       return scalarizeVectorStore(StoreNode, DAG);
     }
 
-    if (StoreNode->isTruncatingStore() && VT == MVT::v4i16 &&
-        MemVT == MVT::v4i8) {
+    if (StoreNode->isTruncatingStore()) {
       return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
     }
     // 256 bit non-temporal stores can be lowered to STNP. Do this as part of
@@ -15137,29 +15122,6 @@ static bool performTBISimplification(SDValue Addr,
   return false;
 }
 
-static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
-  assert((N->getOpcode() == ISD::STORE || N->getOpcode() == ISD::MSTORE) &&
-         "Expected STORE dag node in input!");
-
-  if (auto Store = dyn_cast<StoreSDNode>(N)) {
-    if (!Store->isTruncatingStore())
-      return SDValue();
-    SDValue Ext = Store->getValue();
-    auto ExtOpCode = Ext.getOpcode();
-    if (ExtOpCode != ISD::ZERO_EXTEND && ExtOpCode != ISD::SIGN_EXTEND &&
-        ExtOpCode != ISD::ANY_EXTEND)
-      return SDValue();
-    SDValue Orig = Ext->getOperand(0);
-    if (Store->getMemoryVT() != Orig->getValueType(0))
-      return SDValue();
-    return DAG.getStore(Store->getChain(), SDLoc(Store), Orig,
-                        Store->getBasePtr(), Store->getPointerInfo(),
-                        Store->getAlign());
-  }
-
-  return SDValue();
-}
-
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -15170,9 +15132,6 @@ static SDValue performSTORECombine(SDNode *N,
   if (Subtarget->supportsAddressTopByteIgnored() &&
       performTBISimplification(N->getOperand(2), DCI, DAG))
     return SDValue(N, 0);
-
-  if (SDValue Store = foldTruncStoreOfExt(DAG, N))
-    return Store;
 
   return SDValue();
 }
@@ -16944,16 +16903,18 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   SDLoc DL(N);
   SDValue Op = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT SrcVT = Op.getValueType();
 
-  if (N->getValueType(0) == MVT::nxv2i32 &&
-      Op.getValueType().isFloatingPoint()) {
-    SDValue CastResult = getSVESafeBitCast(MVT::nxv2i64, Op, DAG);
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::nxv2i32, CastResult));
+  if (VT.isScalableVector() && !isTypeLegal(VT) && isTypeLegal(SrcVT)) {
+    assert(!VT.isFloatingPoint() && SrcVT.isFloatingPoint() &&
+           "Expected fp->int bitcast!");
+    SDValue CastResult = getSVESafeBitCast(getSVEContainerType(VT), Op, DAG);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, CastResult));
     return;
   }
 
-  if (N->getValueType(0) != MVT::i16 ||
-      (Op.getValueType() != MVT::f16 && Op.getValueType() != MVT::bf16))
+  if (VT != MVT::i16 || (SrcVT != MVT::f16 && SrcVT != MVT::bf16))
     return;
 
   Op = SDValue(

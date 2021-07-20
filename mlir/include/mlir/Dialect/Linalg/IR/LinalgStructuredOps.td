@@ -26,7 +26,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // depending on the specific Linalg op.
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   : Op<Linalg_Dialect, mnemonic, !listconcat(props, [
-       LinalgStructuredInterface, InferShapedTypeOpInterface])> {
+       LinalgStructuredInterface, ReifyRankedShapedTypeOpInterface])> {
   code structuredOpsBaseDecls = [{
     // Return whether the op accesses the iteration indices.
     bool hasIndexSemantics() {
@@ -36,9 +36,9 @@ class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
       return !op->getRegion(0).front().getOps<IndexOp>().empty();
     }
 
-    LogicalResult reifyReturnTypeShapesPerResultDim(OpBuilder &b,
-        SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
-      return cast<LinalgOp>(getOperation()).reifyReturnTypeShapesPerResultDim(b,
+    LogicalResult reifyResultShapes(OpBuilder &b,
+        ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+      return cast<LinalgOp>(getOperation()).reifyResultShapes(b,
           reifiedReturnShapes);
     }
   }];

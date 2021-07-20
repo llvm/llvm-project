@@ -19,8 +19,10 @@
 #ifndef LLVM_BINARYFORMAT_ELF_H
 #define LLVM_BINARYFORMAT_ELF_H
 
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <cstring>
+#include <string>
 
 namespace llvm {
 namespace ELF {
@@ -745,6 +747,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1013       = 0x042,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X43 = 0x043,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X44 = 0x044,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X45 = 0x045,
   EF_AMDGPU_MACH_AMDGCN_GFX1101       = 0x0f2, // Temporary ELF number
   EF_AMDGPU_MACH_AMDGCN_GFX1102       = 0x0f3, // Temporary ELF number
 
@@ -1674,6 +1677,12 @@ enum {
   ELFCOMPRESS_LOPROC = 0x70000000, // Start of processor-specific.
   ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
+
+/// Convert an architecture name into ELF's e_machine value.
+uint16_t convertArchNameToEMachine(StringRef Arch);
+
+/// Convert an ELF's e_machine value into an architecture name.
+StringRef convertEMachineToArchName(uint16_t EMachine);
 
 } // end namespace ELF
 } // end namespace llvm

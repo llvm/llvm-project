@@ -756,7 +756,7 @@ class VectorType;
 
     bool HasStandaloneRem = true;
 
-    void addTypeForNEON(MVT VT, MVT PromotedLdStVT, MVT PromotedBitwiseVT);
+    void addTypeForNEON(MVT VT, MVT PromotedLdStVT);
     void addDRTypeForNEON(MVT VT);
     void addQRTypeForNEON(MVT VT);
     std::pair<SDValue, SDValue> getARMXALUOOp(SDValue Op, SelectionDAG &DAG, SDValue &ARMcc) const;

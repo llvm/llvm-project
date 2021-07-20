@@ -15629,6 +15629,15 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_mtfsf);
     return Builder.CreateCall(F, {Ops[0], Cast}, "");
   }
+
+  case PPC::BI__builtin_ppc_swdiv_nochk:
+  case PPC::BI__builtin_ppc_swdivs_nochk: {
+    FastMathFlags FMF = Builder.getFastMathFlags();
+    Builder.getFastMathFlags().setFast();
+    Value *FDiv = Builder.CreateFDiv(Ops[0], Ops[1], "swdiv_nochk");
+    Builder.getFastMathFlags() &= (FMF);
+    return FDiv;
+  }
   }
 }
 

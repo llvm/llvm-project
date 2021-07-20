@@ -1224,9 +1224,19 @@ public:
 
   /// A utility function for looking up initializer symbols. Performs a blocking
   /// lookup for the given symbols in each of the given JITDylibs.
+  ///
+  /// Note: This function is deprecated and will be removed in the near future.
   static Expected<DenseMap<JITDylib *, SymbolMap>>
   lookupInitSymbols(ExecutionSession &ES,
                     const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
+
+  /// Performs an async lookup for the the given symbols in each of the given
+  /// JITDylibs, calling the given handler with the compound result map once
+  /// all lookups have completed.
+  static void
+  lookupInitSymbolsAsync(unique_function<void(Error)> OnComplete,
+                         ExecutionSession &ES,
+                         const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
 };
 
 /// Represents an abstract task for ORC to run.

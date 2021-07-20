@@ -217,8 +217,7 @@ struct ExtensionNodeRewriter
   isl::schedule visitLeaf(const isl::schedule_node &Leaf,
                           const isl::union_set &Domain,
                           isl::union_map &Extensions) {
-    isl::ctx Ctx = Leaf.ctx();
-    Extensions = isl::union_map::empty(isl::space::params_alloc(Ctx, 0));
+    Extensions = isl::union_map::empty(Leaf.ctx());
     return isl::schedule::from_domain(Domain);
   }
 
@@ -233,7 +232,7 @@ struct ExtensionNodeRewriter
     isl::schedule NewChild = visit(OldChild, Domain, NewChildExtensions);
 
     // Add the extensions to the partial schedule.
-    OuterExtensions = isl::union_map::empty(NewChildExtensions.get_space());
+    OuterExtensions = isl::union_map::empty(NewChildExtensions.ctx());
     isl::union_map NewPartialSchedMap = isl::union_map::from(PartialSched);
     unsigned BandDims = isl_schedule_node_band_n_member(OldNode.get());
     for (isl::map Ext : NewChildExtensions.get_map_list()) {
@@ -249,7 +248,7 @@ struct ExtensionNodeRewriter
       if (OuterDims > 0) {
         isl::map OuterSched =
             Ext.project_out(isl::dim::in, OuterDims, BandDims);
-        OuterExtensions = OuterExtensions.add_map(OuterSched);
+        OuterExtensions = OuterExtensions.unite(OuterSched);
       }
     }
     isl::multi_union_pw_aff NewPartialSchedAsAsMultiUnionPwAff =

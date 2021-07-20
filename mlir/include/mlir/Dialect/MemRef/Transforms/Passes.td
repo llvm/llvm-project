@@ -23,12 +23,28 @@ def FoldSubViewOps : Pass<"fold-memref-subview-ops"> {
   ];
 }
 
+def ResolveRankedShapeTypeResultDims :
+    Pass<"resolve-ranked-shaped-type-result-dims"> {
+  let summary = "Resolve memref.dim of result values of ranked shape type";
+  let description = [{
+    The pass resolves memref.dim of result of operations that
+    implement the `ReifyRankedShapedTypeOpInterface` in terms of
+    shapes of its operands.
+  }];
+  let constructor =
+      "mlir::memref::createResolveRankedShapeTypeResultDimsPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect", "tensor::TensorDialect"
+  ];
+}
+
 def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
   let summary = "Resolve memref.dim of result values";
   let description = [{
     The pass resolves memref.dim of result of operations that
-    implement the `InferShapedTypeOpInterface` in terms of shapes of
-    its operands.
+    implement the `InferShapedTypeOpInterface` or
+    `ReifyRankedShapedTypeOpInterface` in terms of shapes of its
+    operands.
   }];
   let constructor = "mlir::memref::createResolveShapedTypeResultDimsPass()";
   let dependentDialects = [

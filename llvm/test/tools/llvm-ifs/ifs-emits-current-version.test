@@ -1,0 +1,13 @@
+# RUN: llvm-ifs --output-format=IFS --output=- %s | FileCheck %s
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Symbols: []
+...
+
+# As the tbe reader/writer is updated, update this check to ensure --emit-tbe
+# uses the latest tbe writer by default.
+
+# CHECK:      --- !ifs-v1
+# CHECK-NEXT: IfsVersion: 3.0
