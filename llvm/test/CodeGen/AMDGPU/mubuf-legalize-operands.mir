@@ -30,7 +30,7 @@
 # W64: [[TMPEXEC:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, implicit $exec
 # W64: $exec = S_XOR_B64_term $exec, [[TMPEXEC]], implicit-def $scc
-# W64: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+# W64: SI_WATERFALL_LOOP %bb.1, implicit $exec
 # W64-LABEL:  bb.2:
 # W64: $exec = S_MOV_B64 [[SAVEEXEC]]
 
@@ -55,7 +55,7 @@
 # W32: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, implicit $exec
 # TODO: S_XOR_B32_term should be `implicit-def $scc`
 # W32: $exec_lo = S_XOR_B32_term $exec_lo, [[TMPEXEC]]
-# W32: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+# W32: SI_WATERFALL_LOOP %bb.1, implicit $exec
 # W32-LABEL:  bb.2:
 # W32: $exec_lo = S_MOV_B32 [[SAVEEXEC]]
 ---
@@ -103,7 +103,7 @@ body:             |
 # W64: [[TMPEXEC:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, implicit $exec
 # W64: $exec = S_XOR_B64_term $exec, [[TMPEXEC]], implicit-def $scc
-# W64: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+# W64: SI_WATERFALL_LOOP %bb.1, implicit $exec
 # W64-LABEL:  bb.2:
 # W64: $exec = S_MOV_B64 [[SAVEEXEC]]
 
@@ -128,7 +128,7 @@ body:             |
 # W32: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, implicit $exec
 # TODO: S_XOR_B32_term should be `implicit-def $scc`
 # W32: $exec_lo = S_XOR_B32_term $exec_lo, [[TMPEXEC]]
-# W32: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+# W32: SI_WATERFALL_LOOP %bb.1, implicit $exec
 # W32-LABEL:  bb.2:
 # W32: $exec_lo = S_MOV_B32 [[SAVEEXEC]]
 ---
@@ -176,7 +176,7 @@ body:             |
 # W64: [[TMPEXEC:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, implicit $exec
 # W64: $exec = S_XOR_B64_term $exec, [[TMPEXEC]], implicit-def $scc
-# W64: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+# W64: SI_WATERFALL_LOOP %bb.1, implicit $exec
 # W64-LABEL:  bb.2:
 # W64: $exec = S_MOV_B64 [[SAVEEXEC]]
 
@@ -201,7 +201,7 @@ body:             |
 # W32: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, implicit $exec
 # TODO: S_XOR_B32_term should be `implicit-def $scc`
 # W32: $exec_lo = S_XOR_B32_term $exec_lo, [[TMPEXEC]]
-# W32: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+# W32: SI_WATERFALL_LOOP %bb.1, implicit $exec
 # W32-LABEL:  bb.2:
 # W32: $exec_lo = S_MOV_B32 [[SAVEEXEC]]
 ---
@@ -286,7 +286,7 @@ body:             |
 # W64-NO-ADDR64: [[TMPEXEC:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W64-NO-ADDR64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed [[SRSRC]], 0, 0, 0, 0, 0, implicit $exec
 # W64-NO-ADDR64: $exec = S_XOR_B64_term $exec, [[TMPEXEC]], implicit-def $scc
-# W64-NO-ADDR64: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+# W64-NO-ADDR64: SI_WATERFALL_LOOP %bb.1, implicit $exec
 # W64-NO-ADDR64-LABEL:  bb.2:
 # W64-NO-ADDR64: $exec = S_MOV_B64 [[SAVEEXEC]]
 
@@ -309,7 +309,7 @@ body:             |
 # W32: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed [[SRSRC]], 0, 0, 0, 0, 0, implicit $exec
 # TODO: S_XOR_B32_term should be `implicit-def $scc`
 # W32: $exec_lo = S_XOR_B32_term $exec_lo, [[TMPEXEC]]
-# W32: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+# W32: SI_WATERFALL_LOOP %bb.1, implicit $exec
 # W32-LABEL:  bb.2:
 # W32: $exec_lo = S_MOV_B32 [[SAVEEXEC]]
 
