@@ -479,6 +479,7 @@ static int constructAndTraverseIr(MlirContext ctx) {
 /// block/operation-relative API and their final order is checked.
 static void buildWithInsertionsAndPrint(MlirContext ctx) {
   MlirLocation loc = mlirLocationUnknownGet(ctx);
+  mlirContextSetAllowUnregisteredDialects(ctx, true);
 
   MlirRegion owningRegion = mlirRegionCreate();
   MlirBlock nullBlock = mlirRegionGetFirstBlock(owningRegion);
@@ -542,6 +543,7 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
 
   mlirOperationDump(op);
   mlirOperationDestroy(op);
+  mlirContextSetAllowUnregisteredDialects(ctx, false);
   // clang-format off
   // CHECK-LABEL:  "insertion.order.test"
   // CHECK:      ^{{.*}}(%{{.*}}: i1
@@ -1561,6 +1563,8 @@ int testOperands() {
   // CHECK-LABEL: @testOperands
 
   MlirContext ctx = mlirContextCreate();
+  mlirRegisterAllDialects(ctx);
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("test"));
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   MlirType indexType = mlirIndexTypeGet(ctx);
 
@@ -1590,6 +1594,7 @@ int testOperands() {
   MlirValue constOneValue = mlirOperationGetResult(constOne, 0);
 
   // Create the operation under test.
+  mlirContextSetAllowUnregisteredDialects(ctx, true);
   MlirOperationState opState =
       mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op"), loc);
   MlirValue initialOperands[] = {constZeroValue};
@@ -1604,13 +1609,13 @@ int testOperands() {
   MlirValue opOperand = mlirOperationGetOperand(op, 0);
   fprintf(stderr, "Original operand: ");
   mlirValuePrint(opOperand, printToStderr, NULL);
-  // CHECK: Original operand: {{.+}} {value = 0 : index}
+  // CHECK: Original operand: {{.+}} constant 0 : index
 
   mlirOperationSetOperand(op, 0, constOneValue);
   opOperand = mlirOperationGetOperand(op, 0);
   fprintf(stderr, "Updated operand: ");
   mlirValuePrint(opOperand, printToStderr, NULL);
-  // CHECK: Updated operand: {{.+}} {value = 1 : index}
+  // CHECK: Updated operand: {{.+}} constant 1 : index
 
   mlirOperationDestroy(op);
   mlirOperationDestroy(constZero);
@@ -1626,6 +1631,8 @@ int testClone() {
   // CHECK-LABEL: @testClone
 
   MlirContext ctx = mlirContextCreate();
+  mlirRegisterAllDialects(ctx);
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("std"));
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   MlirType indexType = mlirIndexTypeGet(ctx);
   MlirStringRef valueStringRef =  mlirStringRefCreateFromCString("value");
@@ -1646,8 +1653,8 @@ int testClone() {
 
   mlirOperationPrint(constZero, printToStderr, NULL);
   mlirOperationPrint(constOne, printToStderr, NULL);
-  // CHECK: %0 = "std.constant"() {value = 0 : index} : () -> index
-  // CHECK: %0 = "std.constant"() {value = 1 : index} : () -> index
+  // CHECK: constant 0 : index
+  // CHECK: constant 1 : index
 
   return 0;
 }

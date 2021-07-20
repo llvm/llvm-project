@@ -653,7 +653,7 @@ Value OperationParser::resolveSSAUse(SSAUseInfo useInfo, Type type) {
 
   // Otherwise, this is a forward reference.  Create a placeholder and remember
   // that we did so.
-  auto result = createForwardRefPlaceholder(useInfo.loc, type);
+  Value result = createForwardRefPlaceholder(useInfo.loc, type);
   entries[useInfo.number] = {result, useInfo.loc};
   return maybeRecordUse(result);
 }
@@ -730,7 +730,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
   // We create these placeholders as having an empty name, which we know
   // cannot be created through normal user input, allowing us to distinguish
   // them.
-  auto name = OperationName("placeholder", getContext());
+  auto name = OperationName("unrealized_conversion_cast", getContext());
   auto *op = Operation::create(
       getEncodedSourceLocation(loc), name, type, /*operands=*/{},
       /*attributes=*/llvm::None, /*successors=*/{}, /*numRegions=*/0);
