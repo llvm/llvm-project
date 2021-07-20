@@ -234,7 +234,12 @@ define i128 @test_rmw_add_128(i128* %dst)   {
 ; NOLSE-NEXT:    // in Loop: Header=BB4_2 Depth=2
 ; NOLSE-NEXT:    stlxp w12, x14, x15, [x13]
 ; NOLSE-NEXT:    cbnz w12, .LBB4_2
+; NOLSE-NEXT:    b .LBB4_5
 ; NOLSE-NEXT:  .LBB4_4: // %atomicrmw.start
+; NOLSE-NEXT:    // in Loop: Header=BB4_2 Depth=2
+; NOLSE-NEXT:    stlxp w12, x10, x9, [x13]
+; NOLSE-NEXT:    cbnz w12, .LBB4_2
+; NOLSE-NEXT:  .LBB4_5: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB4_1 Depth=1
 ; NOLSE-NEXT:    eor x11, x9, x11
 ; NOLSE-NEXT:    eor x8, x10, x8
@@ -244,8 +249,8 @@ define i128 @test_rmw_add_128(i128* %dst)   {
 ; NOLSE-NEXT:    str x10, [sp, #32] // 8-byte Folded Spill
 ; NOLSE-NEXT:    str x9, [sp, #40] // 8-byte Folded Spill
 ; NOLSE-NEXT:    cbnz x8, .LBB4_1
-; NOLSE-NEXT:    b .LBB4_5
-; NOLSE-NEXT:  .LBB4_5: // %atomicrmw.end
+; NOLSE-NEXT:    b .LBB4_6
+; NOLSE-NEXT:  .LBB4_6: // %atomicrmw.end
 ; NOLSE-NEXT:    ldr x1, [sp, #8] // 8-byte Folded Reload
 ; NOLSE-NEXT:    ldr x0, [sp, #16] // 8-byte Folded Reload
 ; NOLSE-NEXT:    add sp, sp, #48 // =48
@@ -630,7 +635,12 @@ define i128 @test_rmw_nand_128(i128* %dst)   {
 ; NOLSE-NEXT:    // in Loop: Header=BB9_2 Depth=2
 ; NOLSE-NEXT:    stlxp w12, x14, x15, [x13]
 ; NOLSE-NEXT:    cbnz w12, .LBB9_2
+; NOLSE-NEXT:    b .LBB9_5
 ; NOLSE-NEXT:  .LBB9_4: // %atomicrmw.start
+; NOLSE-NEXT:    // in Loop: Header=BB9_2 Depth=2
+; NOLSE-NEXT:    stlxp w12, x10, x9, [x13]
+; NOLSE-NEXT:    cbnz w12, .LBB9_2
+; NOLSE-NEXT:  .LBB9_5: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB9_1 Depth=1
 ; NOLSE-NEXT:    eor x11, x9, x11
 ; NOLSE-NEXT:    eor x8, x10, x8
@@ -640,8 +650,8 @@ define i128 @test_rmw_nand_128(i128* %dst)   {
 ; NOLSE-NEXT:    str x10, [sp, #32] // 8-byte Folded Spill
 ; NOLSE-NEXT:    str x9, [sp, #40] // 8-byte Folded Spill
 ; NOLSE-NEXT:    cbnz x8, .LBB9_1
-; NOLSE-NEXT:    b .LBB9_5
-; NOLSE-NEXT:  .LBB9_5: // %atomicrmw.end
+; NOLSE-NEXT:    b .LBB9_6
+; NOLSE-NEXT:  .LBB9_6: // %atomicrmw.end
 ; NOLSE-NEXT:    ldr x1, [sp, #8] // 8-byte Folded Reload
 ; NOLSE-NEXT:    ldr x0, [sp, #16] // 8-byte Folded Reload
 ; NOLSE-NEXT:    add sp, sp, #48 // =48

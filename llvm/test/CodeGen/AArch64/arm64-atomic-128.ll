@@ -8,11 +8,16 @@ define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-LABEL: val_compare_and_swap:
 ; CHECK: [[LABEL:.?LBB[0-9]+_[0-9]+]]:
 ; CHECK: ldaxp   [[RESULTLO:x[0-9]+]], [[RESULTHI:x[0-9]+]], [x[[ADDR:[0-9]+]]]
-; CHECK-DAG: eor     [[MISMATCH_LO:x[0-9]+]], [[RESULTLO]], x2
-; CHECK-DAG: eor     [[MISMATCH_HI:x[0-9]+]], [[RESULTHI]], x3
-; CHECK: orr [[MISMATCH:x[0-9]+]], [[MISMATCH_LO]], [[MISMATCH_HI]]
-; CHECK: cbnz    [[MISMATCH]], [[DONE:.LBB[0-9]+_[0-9]+]]
-; CHECK: stxp   [[SCRATCH_RES:w[0-9]+]], x4, x5, [x[[ADDR]]]
+; CHECK: cmp
+; CHECK: cset
+; CHECK: cmp
+; CHECK: cinc   [[MISMATCH:w[0-9]+]]
+; CHECK: cbz    [[MISMATCH]], [[EQUAL:.LBB[0-9]+_[0-9]+]]
+; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[RESULTLO]], [[RESULTHI]], [x[[ADDR]]]
+; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
+; CHECK: b      [[DONE:.LBB[0-9]+_[0-9]+]]
+; CHECK: [[EQUAL]]:
+; CHECK: stlxp   [[SCRATCH_RES:w[0-9]+]], x4, x5, [x[[ADDR]]]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 ; CHECK: [[DONE]]:
   %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval acquire acquire
@@ -183,8 +188,8 @@ define i128 @atomic_load_relaxed(i64, i64, i128* %p) {
 ; CHECK-NEXT: stxp [[SUCCESS:w[0-9]+]], [[LO]], [[HI]], [x2]
 ; CHECK: cbnz [[SUCCESS]], [[LABEL]]
 ; CHECK-NOT: dmb
-   %r = load atomic i128, i128* %p monotonic, align 16
-   ret i128 %r
+    %r = load atomic i128, i128* %p monotonic, align 16
+    ret i128 %r
 }
 
 

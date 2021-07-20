@@ -24,7 +24,7 @@ define void @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-LLSC-O0:    cmp [[OLD_HI]], x3
 ; CHECK-LLSC-O0:    cinc [[EQUAL:w[0-9]+]], [[EQUAL_TMP]], ne
 ; CHECK-LLSC-O0:    cbnz [[EQUAL]], .LBB0_3
-; CHECK-LLSC-O0:    stlxp [[STATUS:w[0-9]+]], x4, x5, [x0]
+; CHECK-LLSC-O0:    stxp [[STATUS:w[0-9]+]], x4, x5, [x0]
 ; CHECK-LLSC-O0:    cbnz [[STATUS]], .LBB0_1
 ; CHECK-LLSC-O0:  .LBB0_3:
 ; CHECK-LLSC-O0:    mov v[[OLD:[0-9]+]].d[0], [[OLD_LO]]

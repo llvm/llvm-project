@@ -1210,8 +1210,26 @@ bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
     // The -O0 CMP_SWAP_128 is friendlier to generate code for because LDXP/STXP
     // can take arbitrary registers so it just has the normal GPR64 operands the
     // rest of AArch64 is expecting.
+    auto Ordering = (*MI.memoperands_begin())->getMergedOrdering();
+    unsigned Opcode;
+    switch (Ordering) {
+    case AtomicOrdering::Acquire:
+      Opcode = AArch64::CMP_SWAP_128_ACQUIRE;
+      break;
+    case AtomicOrdering::Release:
+      Opcode = AArch64::CMP_SWAP_128_RELEASE;
+      break;
+    case AtomicOrdering::AcquireRelease:
+    case AtomicOrdering::SequentiallyConsistent:
+      Opcode = AArch64::CMP_SWAP_128;
+      break;
+    default:
+      Opcode = AArch64::CMP_SWAP_128_MONOTONIC;
+      break;
+    }
+
     auto Scratch = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-    CAS = MIRBuilder.buildInstr(AArch64::CMP_SWAP_128, {DstLo, DstHi, Scratch},
+    CAS = MIRBuilder.buildInstr(Opcode, {DstLo, DstHi, Scratch},
                                 {Addr, DesiredI->getOperand(0),
                                  DesiredI->getOperand(1), NewI->getOperand(0),
                                  NewI->getOperand(1)});
