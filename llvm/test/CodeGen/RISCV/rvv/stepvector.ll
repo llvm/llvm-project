@@ -485,9 +485,8 @@ define <vscale x 16 x i64> @mul_stepvector_nxv16i64() {
 ; CHECK-NEXT:    addi a0, zero, 3
 ; CHECK-NEXT:    vmul.vx v8, v8, a0
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    addi a1, zero, 24
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    slli a1, a0, 1
+; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
 ; CHECK-NEXT:    ret
 entry:
