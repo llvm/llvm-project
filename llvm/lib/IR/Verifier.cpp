@@ -2336,11 +2336,10 @@ void Verifier::visitFunction(const Function &F) {
   Assert(verifyAttributeCount(Attrs, FT->getNumParams()),
          "Attribute after last parameter!", &F);
 
-  bool isLLVMdotName = F.getName().size() >= 5 &&
-                       F.getName().substr(0, 5) == "llvm.";
+  bool IsIntrinsic = F.isIntrinsic();
 
   // Check function attributes.
-  verifyFunctionAttrs(FT, Attrs, &F, isLLVMdotName);
+  verifyFunctionAttrs(FT, Attrs, &F, IsIntrinsic);
 
   // On function declarations/definitions, we do not support the builtin
   // attribute. We do not check this in VerifyFunctionAttrs since that is
@@ -2417,7 +2416,7 @@ void Verifier::visitFunction(const Function &F) {
            FT->getParamType(i));
     Assert(Arg.getType()->isFirstClassType(),
            "Function arguments must have first-class types!", &Arg);
-    if (!isLLVMdotName) {
+    if (!IsIntrinsic) {
       Assert(!Arg.getType()->isMetadataTy(),
              "Function takes metadata but isn't an intrinsic", &Arg, &F);
       Assert(!Arg.getType()->isTokenTy(),
@@ -2433,7 +2432,7 @@ void Verifier::visitFunction(const Function &F) {
     ++i;
   }
 
-  if (!isLLVMdotName) {
+  if (!IsIntrinsic) {
     Assert(!F.getReturnType()->isTokenTy(),
            "Function returns a token but isn't an intrinsic", &F);
     Assert(!F.getReturnType()->isX86_AMXTy(),
@@ -2477,7 +2476,7 @@ void Verifier::visitFunction(const Function &F) {
   } else {
     // Verify that this function (which has a body) is not named "llvm.*".  It
     // is not legal to define intrinsics.
-    Assert(!isLLVMdotName, "llvm intrinsics cannot be defined!", &F);
+    Assert(!IsIntrinsic, "llvm intrinsics cannot be defined!", &F);
 
     // Check the entry node
     const BasicBlock *Entry = &F.getEntryBlock();
@@ -3076,7 +3075,7 @@ void Verifier::visitCallBase(CallBase &Call) {
          "Attribute after last parameter!", Call);
 
   bool IsIntrinsic = Call.getCalledFunction() &&
-                     Call.getCalledFunction()->getName().startswith("llvm.");
+                     Call.getCalledFunction()->isIntrinsic();
 
   Function *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
