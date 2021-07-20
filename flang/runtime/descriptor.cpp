@@ -160,9 +160,6 @@ int Descriptor::Deallocate(bool finalize) {
 void Descriptor::Destroy(bool finalize) const {
   if (const DescriptorAddendum * addendum{Addendum()}) {
     if (const typeInfo::DerivedType * dt{addendum->derivedType()}) {
-      if (addendum->flags() & DescriptorAddendum::DoNotFinalize) {
-        finalize = false;
-      }
       runtime::Destroy(*this, finalize, *dt);
     }
   }
@@ -278,7 +275,6 @@ void Descriptor::Dump(FILE *f) const {
 DescriptorAddendum &DescriptorAddendum::operator=(
     const DescriptorAddendum &that) {
   derivedType_ = that.derivedType_;
-  flags_ = that.flags_;
   auto lenParms{that.LenParameters()};
   for (std::size_t j{0}; j < lenParms; ++j) {
     len_[j] = that.len_[j];
@@ -297,8 +293,10 @@ std::size_t DescriptorAddendum::LenParameters() const {
 
 void DescriptorAddendum::Dump(FILE *f) const {
   std::fprintf(
-      f, "  derivedType @ %p\n", reinterpret_cast<const void *>(derivedType_));
-  std::fprintf(f, "  flags 0x%jx\n", static_cast<std::intmax_t>(flags_));
-  // TODO: LEN parameter values
+      f, "  derivedType @ %p\n", reinterpret_cast<const void *>(derivedType()));
+  std::size_t lenParms{LenParameters()};
+  for (std::size_t j{0}; j < lenParms; ++j) {
+    std::fprintf(f, "  len[%zd] %jd\n", j, static_cast<std::intmax_t>(len_[j]));
+  }
 }
 } // namespace Fortran::runtime

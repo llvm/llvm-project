@@ -83,16 +83,8 @@ private:
 // array is determined by derivedType_->LenParameters().
 class DescriptorAddendum {
 public:
-  enum Flags {
-    StaticDescriptor = 0x001,
-    ImplicitAllocatable = 0x002, // compiler-created allocatable
-    DoNotFinalize = 0x004, // compiler temporary
-    Target = 0x008, // TARGET attribute
-  };
-
-  explicit DescriptorAddendum(
-      const typeInfo::DerivedType *dt = nullptr, std::uint64_t flags = 0)
-      : derivedType_{dt}, flags_{flags} {}
+  explicit DescriptorAddendum(const typeInfo::DerivedType *dt = nullptr)
+      : derivedType_{dt} {}
   DescriptorAddendum &operator=(const DescriptorAddendum &);
 
   const typeInfo::DerivedType *derivedType() const { return derivedType_; }
@@ -100,8 +92,6 @@ public:
     derivedType_ = dt;
     return *this;
   }
-  std::uint64_t &flags() { return flags_; }
-  const std::uint64_t &flags() const { return flags_; }
 
   std::size_t LenParameters() const;
 
@@ -123,7 +113,6 @@ public:
 
 private:
   const typeInfo::DerivedType *derivedType_;
-  std::uint64_t flags_{0};
   typeInfo::TypeParameterValue len_[1]; // must be the last component
   // The LEN type parameter values can also include captured values of
   // specification expressions that were used for bounds and for LEN type
@@ -145,12 +134,6 @@ public:
   // Create() static member functions otherwise to dynamically allocate a
   // descriptor.
 
-  Descriptor() {
-    // Minimal initialization to prevent the destructor from running amuck
-    // later if the descriptor is never established.
-    raw_.base_addr = nullptr;
-    raw_.f18Addendum = false;
-  }
   Descriptor(const Descriptor &);
   ~Descriptor();
   Descriptor &operator=(const Descriptor &);
@@ -359,8 +342,6 @@ public:
   static constexpr std::size_t byteSize{
       Descriptor::SizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters)};
 
-  StaticDescriptor() { new (storage_) Descriptor{}; }
-
   ~StaticDescriptor() { descriptor().~Descriptor(); }
 
   Descriptor &descriptor() { return *reinterpret_cast<Descriptor *>(storage_); }
@@ -382,7 +363,7 @@ public:
   }
 
 private:
-  char storage_[byteSize];
+  char storage_[byteSize]{};
 };
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_DESCRIPTOR_H_
