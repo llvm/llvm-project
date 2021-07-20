@@ -89,6 +89,7 @@
 ; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-O-NEXT: Running pass: CoroEarlyPass
 ; CHECK-O3-NEXT: Running pass: CallSiteSplittingPass
 ; CHECK-O-NEXT: Running pass: OpenMPOptPass
 ; CHECK-EP-PIPELINE-EARLY-SIMPLIFICATION-NEXT: Running pass: NoOpModulePass
@@ -183,6 +184,7 @@
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
+; CHECK-O1-NEXT: Running pass: CoroElidePass
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass
@@ -190,10 +192,12 @@
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass
+; CHECK-O23SZ-NEXT: Running pass: CoroElidePass
 ; CHECK-EP-SCALAR-LATE-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass
+; CHECK-O-NEXT: Running pass: CoroSplitPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-DEFAULT-NEXT: Running pass: EliminateAvailableExternallyPass
@@ -236,6 +240,7 @@
 ; CHECK-O-NEXT: Running pass: InstSimplifyPass
 ; CHECK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-EP-OPTIMIZER-LAST: Running pass: NoOpFunctionPass
 ; CHECK-O-NEXT: Running pass: CGProfilePass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass

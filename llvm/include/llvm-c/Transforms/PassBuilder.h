@@ -80,9 +80,6 @@ void LLVMPassBuilderOptionsSetLoopUnrolling(LLVMPassBuilderOptionsRef Options,
 void LLVMPassBuilderOptionsSetForgetAllSCEVInLoopUnroll(
     LLVMPassBuilderOptionsRef Options, LLVMBool ForgetAllSCEVInLoopUnroll);
 
-void LLVMPassBuilderOptionsSetCoroutines(LLVMPassBuilderOptionsRef Options,
-                                         LLVMBool Coroutines);
-
 void LLVMPassBuilderOptionsSetLicmMssaOptCap(LLVMPassBuilderOptionsRef Options,
                                              unsigned LicmMssaOptCap);
 
