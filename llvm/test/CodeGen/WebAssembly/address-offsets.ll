@@ -4,7 +4,6 @@
 ; Test folding constant offsets and symbols into load and store addresses under
 ; a variety of circumstances.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-emscripten"
 
 @g = external global [0 x i32], align 4

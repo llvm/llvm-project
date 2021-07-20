@@ -3,7 +3,6 @@
 
 ;; Check that masked shift counts are optimized out.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 define i32 @shl_i32(i32 %v, i32 %x) {

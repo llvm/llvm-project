@@ -4,7 +4,6 @@
 ; with SIMD and without sign-ext where ISel would crash if the index
 ; of the vector extract was not a constant.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32"
 
 ; CHECK-LABEL: foo:

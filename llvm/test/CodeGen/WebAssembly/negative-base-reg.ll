@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 @args = hidden local_unnamed_addr global [32 x i32] zeroinitializer, align 16
