@@ -1282,7 +1282,7 @@ getCollapsedOutputDimFromInputShape(OpBuilder &builder, Location loc,
   unsigned endPos = map.getResults().back().cast<AffineDimExpr>().getPosition();
   AffineExpr expr;
   SmallVector<Value, 2> dynamicDims;
-  for (auto dim : llvm::seq_inclusive(startPos, endPos)) {
+  for (auto dim : llvm::seq(startPos, endPos + 1)) {
     dynamicDims.push_back(builder.createOrFold<tensor::DimOp>(loc, src, dim));
     AffineExpr currExpr = builder.getAffineSymbolExpr(dim - startPos);
     expr = (expr ? expr * currExpr : currExpr);
@@ -1315,7 +1315,7 @@ getExpandedDimToCollapsedDimMap(ArrayRef<AffineMap> reassociation) {
         map.value().getResults().front().cast<AffineDimExpr>().getPosition();
     unsigned endPos =
         map.value().getResults().back().cast<AffineDimExpr>().getPosition();
-    for (auto dim : llvm::seq_inclusive(startPos, endPos)) {
+    for (auto dim : llvm::seq(startPos, endPos + 1)) {
       expandedDimToCollapsedDim[dim] = map.index();
     }
   }
