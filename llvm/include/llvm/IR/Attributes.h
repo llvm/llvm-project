@@ -80,6 +80,12 @@ public:
 
   static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
 
+  static bool isEnumAttrKind(AttrKind Kind) {
+    return Kind >= FirstEnumAttr && Kind <= LastEnumAttr;
+  }
+  static bool isIntAttrKind(AttrKind Kind) {
+    return Kind >= FirstIntAttr && Kind <= LastIntAttr;
+  }
   static bool isTypeAttrKind(AttrKind Kind) {
     return Kind >= FirstTypeAttr && Kind <= LastTypeAttr;
   }
