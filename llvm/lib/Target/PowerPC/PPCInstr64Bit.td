@@ -1790,6 +1790,10 @@ def : Pat<(i64 (int_ppc_mulhd g8rc:$a, g8rc:$b)),
           (i64 (MULHD $a, $b))>;
 def : Pat<(i64 (int_ppc_mulhdu g8rc:$a, g8rc:$b)),
           (i64 (MULHDU $a, $b))>;
+def : Pat<(int_ppc_load8r ForceXForm:$ptr),
+          (LDBRX ForceXForm:$ptr)>;
+def : Pat<(int_ppc_store8r g8rc:$a, ForceXForm:$ptr),
+          (STDBRX g8rc:$a, ForceXForm:$ptr)>;
 }
 
 let Predicates = [IsISA3_0] in {

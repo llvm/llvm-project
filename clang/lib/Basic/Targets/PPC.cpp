@@ -89,6 +89,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
 static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__popcntb", "__builtin_ppc_popcntb");
+  Builder.defineMacro("__poppar4", "__builtin_ppc_poppar4");
+  Builder.defineMacro("__poppar8", "__builtin_ppc_poppar8");
   Builder.defineMacro("__eieio", "__builtin_ppc_eieio");
   Builder.defineMacro("__iospace_eieio", "__builtin_ppc_iospace_eieio");
   Builder.defineMacro("__isync", "__builtin_ppc_isync");
@@ -143,6 +145,12 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__rlwnm", "__builtin_ppc_rlwnm");
   Builder.defineMacro("__rlwimi", "__builtin_ppc_rlwimi");
   Builder.defineMacro("__rldimi", "__builtin_ppc_rldimi");
+  Builder.defineMacro("__load2r", "__builtin_ppc_load2r");
+  Builder.defineMacro("__load4r", "__builtin_ppc_load4r");
+  Builder.defineMacro("__load8r", "__builtin_ppc_load8r");
+  Builder.defineMacro("__store2r", "__builtin_ppc_store2r");
+  Builder.defineMacro("__store4r", "__builtin_ppc_store4r");
+  Builder.defineMacro("__store8r", "__builtin_ppc_store8r");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific

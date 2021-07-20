@@ -5274,6 +5274,16 @@ def : Pat<(i32 (int_ppc_mulhw gprc:$a, gprc:$b)),
 def : Pat<(i32 (int_ppc_mulhwu gprc:$a, gprc:$b)),
           (i32 (MULHWU $a, $b))>;
 
+def : Pat<(int_ppc_load2r ForceXForm:$ptr),
+          (LHBRX ForceXForm:$ptr)>;
+def : Pat<(int_ppc_load4r ForceXForm:$ptr),
+          (LWBRX ForceXForm:$ptr)>;
+def : Pat<(int_ppc_store2r gprc:$a, ForceXForm:$ptr),
+          (STHBRX gprc:$a, ForceXForm:$ptr)>;
+def : Pat<(int_ppc_store4r gprc:$a, ForceXForm:$ptr),
+          (STWBRX gprc:$a, ForceXForm:$ptr)>;
+
+
 // Fast 32-bit reverse bits algorithm:
 // Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):
 // n = ((n >> 1) & 0x55555555) | ((n << 1) & 0xAAAAAAAA);

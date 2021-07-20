@@ -1598,6 +1598,26 @@ let TargetPrefix = "ppc" in {
   def int_ppc_maddld
       : GCCBuiltin<"__builtin_ppc_maddld">,
         Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  // load
+  def int_ppc_load2r
+      : GCCBuiltin<"__builtin_ppc_load2r">,
+        Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
+  def int_ppc_load4r
+      : GCCBuiltin<"__builtin_ppc_load4r">,
+        Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
+  def int_ppc_load8r
+      : GCCBuiltin<"__builtin_ppc_load8r">,
+        Intrinsic<[llvm_i64_ty], [llvm_ptr_ty], [IntrReadMem, IntrArgMemOnly]>;
+  // store
+  def int_ppc_store2r
+      : GCCBuiltin<"__builtin_ppc_store2r">,
+        Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty], [IntrWriteMem]>;
+  def int_ppc_store4r
+      : GCCBuiltin<"__builtin_ppc_store4r">,
+        Intrinsic<[], [llvm_i32_ty, llvm_ptr_ty], [IntrWriteMem]>;
+  def int_ppc_store8r
+      : GCCBuiltin<"__builtin_ppc_store8r">,
+        Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty], [IntrWriteMem]>;
 }
 
 //===----------------------------------------------------------------------===//

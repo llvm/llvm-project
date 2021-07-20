@@ -31,6 +31,8 @@
 
 // builtins for compatibility with the XL compiler
 BUILTIN(__builtin_ppc_popcntb, "ULiULi", "")
+BUILTIN(__builtin_ppc_poppar4, "iUi", "")
+BUILTIN(__builtin_ppc_poppar8, "iULLi", "")
 BUILTIN(__builtin_ppc_eieio, "v", "")
 BUILTIN(__builtin_ppc_iospace_eieio, "v", "")
 BUILTIN(__builtin_ppc_isync, "v", "")
@@ -87,6 +89,14 @@ BUILTIN(__builtin_ppc_maddld, "LLiLLiLLiLLi", "")
 BUILTIN(__builtin_ppc_rlwnm, "UiUiIUiIUi", "")
 BUILTIN(__builtin_ppc_rlwimi, "UiUiUiIUiIUi", "")
 BUILTIN(__builtin_ppc_rldimi, "ULLiULLiULLiIUiIULLi", "")
+// load
+BUILTIN(__builtin_ppc_load2r, "UiUs*", "")
+BUILTIN(__builtin_ppc_load4r, "UiUi*", "")
+BUILTIN(__builtin_ppc_load8r, "ULLiULLi*", "")
+// store
+BUILTIN(__builtin_ppc_store2r, "vUiUs*", "")
+BUILTIN(__builtin_ppc_store4r, "vUiUi*", "")
+BUILTIN(__builtin_ppc_store8r, "vULLiULLi*", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
