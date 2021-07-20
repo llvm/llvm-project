@@ -311,9 +311,12 @@ void GenerateLoopNest<TiledLoopOp>::doit(
                               ValueRange ivs, ValueRange inputs,
                               ValueRange outputs) {
     SmallVector<Value> outputTensors = linalgOp.getOutputTensorOperands();
-    scf::ValueVector results =
+    scf::ValueVector yieldArgs =
         bodyBuilderFn(nestedBuilder, nestedLoc, ivs, outputTensors);
-    nestedBuilder.create<linalg::YieldOp>(nestedLoc, results);
+    auto yieldArgsRef = llvm::makeArrayRef(yieldArgs);
+    nestedBuilder.create<linalg::TiledYieldOp>(
+        nestedLoc, yieldArgsRef.take_front(outputTensors.size()),
+        yieldArgsRef.drop_front(outputTensors.size()));
   };
 
   SmallVector<Value> inputOperands = linalgOp.getInputOperands();

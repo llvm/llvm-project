@@ -550,10 +550,11 @@ func @tiled_dot(%A: tensor<?xf32>, %B: tensor<?xf32>, %c: tensor<f32> {linalg.in
 
   //     CHECK: linalg.tiled_loop {{.*}} to (%[[M]]) {{.*}} %[[A]]{{.*}}%[[B]]{{.*}}outs{{.*}}%[[c]]
   %1 = linalg.tiled_loop (%arg3) = (%c0) to (%0) step (%c3)
-       ins (%arg4 = %A: tensor<?xf32>, %use = %effecting : memref<?xf32>, %arg5 = %B: tensor<?xf32>)
+       ins (%arg4 = %A: tensor<?xf32>,
+            %use = %effecting : memref<?xf32>,
+            %arg5 = %B: tensor<?xf32>)
       outs (%arg6 = %c: tensor<f32>)
-      iterators["reduction"]
-  {
+      iterators["reduction"] {
     // CHECK-NOT:   alloc
 
     %2 = tensor.dim %arg4, %c0 : tensor<?xf32>
@@ -573,8 +574,8 @@ func @tiled_dot(%A: tensor<?xf32>, %B: tensor<?xf32>, %c: tensor<f32> {linalg.in
     //     CHECK:   call @some_use(%{{.*}}) : (memref<?xf32>) -> ()
     call @some_use(%use) : (memref<?xf32>) -> ()
 
-    linalg.yield %8 : tensor<f32>
-    //     CHECK:   linalg.yield
+    linalg.tiled_yield %8 in %arg6 : tensor<f32>
+    //     CHECK:   linalg.tiled_yield
     // CHECK-NOT:   tensor
   }
 
