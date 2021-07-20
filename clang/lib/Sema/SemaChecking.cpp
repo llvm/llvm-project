@@ -3593,6 +3593,8 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_bpermd:
   case PPC::BI__builtin_ppc_ldarx:
   case PPC::BI__builtin_ppc_stdcx:
+  case PPC::BI__builtin_ppc_tdw:
+  case PPC::BI__builtin_ppc_trapd:
     return true;
   }
   return false;
@@ -3673,6 +3675,9 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
      return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
   case PPC::BI__builtin_vsx_xxpermx:
      return SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
+  case PPC::BI__builtin_ppc_tw:
+  case PPC::BI__builtin_ppc_tdw:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
 #define CUSTOM_BUILTIN(Name, Intr, Types, Acc) \
   case PPC::BI__builtin_##Name: \
     return SemaBuiltinPPCMMACall(TheCall, Types);
