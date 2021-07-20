@@ -39,7 +39,7 @@ protected:
     // physical cores, which is currently only supported/tested on
     // some systems.
     return (Host.isOSWindows() && llvm_is_multithreaded()) ||
-           (Host.isX86() && (Host.isOSDarwin() || Host.isOSLinux())) ||
+           Host.isOSDarwin() || (Host.isX86() && Host.isOSLinux()) ||
            (Host.isPPC64() && Host.isOSLinux()) ||
            (Host.isSystemZ() && (Host.isOSLinux() || Host.isOSzOS()));
   }
