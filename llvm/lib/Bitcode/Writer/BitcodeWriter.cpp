@@ -1132,7 +1132,7 @@ static unsigned getEncodedComdatSelectionKind(const Comdat &C) {
     return bitc::COMDAT_SELECTION_KIND_EXACT_MATCH;
   case Comdat::Largest:
     return bitc::COMDAT_SELECTION_KIND_LARGEST;
-  case Comdat::NoDuplicates:
+  case Comdat::NoDeduplicate:
     return bitc::COMDAT_SELECTION_KIND_NO_DUPLICATES;
   case Comdat::SameSize:
     return bitc::COMDAT_SELECTION_KIND_SAME_SIZE;

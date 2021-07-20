@@ -1128,7 +1128,7 @@ static Comdat::SelectionKind getDecodedComdatSelectionKind(unsigned Val) {
   case bitc::COMDAT_SELECTION_KIND_LARGEST:
     return Comdat::Largest;
   case bitc::COMDAT_SELECTION_KIND_NO_DUPLICATES:
-    return Comdat::NoDuplicates;
+    return Comdat::NoDeduplicate;
   case bitc::COMDAT_SELECTION_KIND_SAME_SIZE:
     return Comdat::SameSize;
   }

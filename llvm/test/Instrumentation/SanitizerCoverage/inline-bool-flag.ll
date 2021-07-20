@@ -2,7 +2,7 @@
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-inline-bool-flag=1  -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-inline-bool-flag=1  -S | FileCheck %s
 
-; CHECK:      $foo = comdat noduplicates
+; CHECK:      $foo = comdat nodeduplicate
 ; CHECK:      @__sancov_gen_ = private global [1 x i1] zeroinitializer, section "__sancov_bools", comdat($foo), align 1{{$}}
 ; CHECK:      @__start___sancov_bools = extern_weak hidden global i1
 ; CHECK-NEXT: @__stop___sancov_bools = extern_weak hidden global i1
