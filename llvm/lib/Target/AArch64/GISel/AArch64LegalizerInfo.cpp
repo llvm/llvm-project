@@ -967,6 +967,8 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   return true;
 }
 
+// FIXME: This should be removed and replaced with the generic bitcast legalize
+// action.
 bool AArch64LegalizerInfo::legalizeLoadStore(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &MIRBuilder,
     GISelChangeObserver &Observer) const {
@@ -993,6 +995,8 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
   unsigned PtrSize = ValTy.getElementType().getSizeInBits();
   const LLT NewTy = LLT::vector(ValTy.getElementCount(), PtrSize);
   auto &MMO = **MI.memoperands_begin();
+  MMO.setType(NewTy);
+
   if (MI.getOpcode() == TargetOpcode::G_STORE) {
     auto Bitcast = MIRBuilder.buildBitcast(NewTy, ValReg);
     MIRBuilder.buildStore(Bitcast.getReg(0), MI.getOperand(1), MMO);

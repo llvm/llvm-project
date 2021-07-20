@@ -265,7 +265,7 @@ extern void *EXTERN_SHARED(ReductionScratchpadPtr);
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef void *omptarget_nvptx_WorkFn;
-extern volatile omptarget_nvptx_WorkFn EXTERN_SHARED(omptarget_nvptx_workFn);
+extern omptarget_nvptx_WorkFn EXTERN_SHARED(omptarget_nvptx_workFn);
 
 ////////////////////////////////////////////////////////////////////////////////
 // get private data structures

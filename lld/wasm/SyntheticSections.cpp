@@ -109,42 +109,15 @@ void ImportSection::addGOTEntry(Symbol *sym) {
 
 void ImportSection::addImport(Symbol *sym) {
   assert(!isSealed);
-  StringRef module = sym->importModule.getValueOr(defaultModule);
-  StringRef name = sym->importName.getValueOr(sym->getName());
-  if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
-    ImportKey<WasmSignature> key(*(f->getSignature()), module, name);
-    auto entry = importedFunctions.try_emplace(key, numImportedFunctions);
-    if (entry.second) {
-      importedSymbols.emplace_back(sym);
-      f->setFunctionIndex(numImportedFunctions++);
-    } else {
-      f->setFunctionIndex(entry.first->second);
-    }
-  } else if (auto *g = dyn_cast<GlobalSymbol>(sym)) {
-    ImportKey<WasmGlobalType> key(*(g->getGlobalType()), module, name);
-    auto entry = importedGlobals.try_emplace(key, numImportedGlobals);
-    if (entry.second) {
-      importedSymbols.emplace_back(sym);
-      g->setGlobalIndex(numImportedGlobals++);
-    } else {
-      g->setGlobalIndex(entry.first->second);
-    }
-  } else if (auto *t = dyn_cast<TagSymbol>(sym)) {
-    // NB: There's currently only one possible kind of tag, and no
-    // `UndefinedTag`, so we don't bother de-duplicating tag imports.
-    importedSymbols.emplace_back(sym);
+  importedSymbols.emplace_back(sym);
+  if (auto *f = dyn_cast<FunctionSymbol>(sym))
+    f->setFunctionIndex(numImportedFunctions++);
+  else if (auto *g = dyn_cast<GlobalSymbol>(sym))
+    g->setGlobalIndex(numImportedGlobals++);
+  else if (auto *t = dyn_cast<TagSymbol>(sym))
     t->setTagIndex(numImportedTags++);
-  } else {
-    auto *table = cast<TableSymbol>(sym);
-    ImportKey<WasmTableType> key(*(table->getTableType()), module, name);
-    auto entry = importedTables.try_emplace(key, numImportedTables);
-    if (entry.second) {
-      importedSymbols.emplace_back(sym);
-      table->setTableNumber(numImportedTables++);
-    } else {
-      table->setTableNumber(entry.first->second);
-    }
-  }
+  else
+    cast<TableSymbol>(sym)->setTableNumber(numImportedTables++);
 }
 
 void ImportSection::writeBody() {
@@ -174,8 +147,19 @@ void ImportSection::writeBody() {
 
   for (const Symbol *sym : importedSymbols) {
     WasmImport import;
-    import.Field = sym->importName.getValueOr(sym->getName());
-    import.Module = sym->importModule.getValueOr(defaultModule);
+    if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
+      import.Field = f->importName ? *f->importName : sym->getName();
+      import.Module = f->importModule ? *f->importModule : defaultModule;
+    } else if (auto *g = dyn_cast<UndefinedGlobal>(sym)) {
+      import.Field = g->importName ? *g->importName : sym->getName();
+      import.Module = g->importModule ? *g->importModule : defaultModule;
+    } else if (auto *t = dyn_cast<UndefinedTable>(sym)) {
+      import.Field = t->importName ? *t->importName : sym->getName();
+      import.Module = t->importModule ? *t->importModule : defaultModule;
+    } else {
+      import.Field = sym->getName();
+      import.Module = defaultModule;
+    }
 
     if (auto *functionSym = dyn_cast<FunctionSymbol>(sym)) {
       import.Kind = WASM_EXTERNAL_FUNCTION;
