@@ -1804,8 +1804,10 @@ public:
     return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList), Name);
   }
 
-  Value *CreateInBoundsGEP(Value *Ptr, ArrayRef<Value *> IdxList,
-                           const Twine &Name = "") {
+  LLVM_ATTRIBUTE_DEPRECATED(
+      Value *CreateInBoundsGEP(Value *Ptr, ArrayRef<Value *> IdxList,
+                               const Twine &Name = ""),
+      "Use the version with explicit element type instead") {
     return CreateInBoundsGEP(
         Ptr->getType()->getScalarType()->getPointerElementType(), Ptr, IdxList,
         Name);
