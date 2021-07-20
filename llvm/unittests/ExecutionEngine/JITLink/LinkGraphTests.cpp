@@ -323,6 +323,125 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
   EXPECT_EQ(S1.getSize(), 16U) << "Size was not updated";
 }
 
+TEST(LinkGraphTest, TransferBlock) {
+  // Check that we can transfer a block (and all associated symbols) from one
+  // section to another.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec1 = G.createSection("__data.1", RWFlags);
+  auto &Sec2 = G.createSection("__data.2", RWFlags);
+
+  // Create an initial block.
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
+  auto &B2 = G.createContentBlock(Sec1, BlockContent, 0x2000, 8, 0);
+
+  // Add some symbols on B1...
+  G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong, Scope::Default,
+                     false, false);
+  G.addDefinedSymbol(B1, 1, "S2", B1.getSize() - 1, Linkage::Strong,
+                     Scope::Default, false, false);
+
+  // ... and on B2.
+  G.addDefinedSymbol(B2, 0, "S3", B2.getSize(), Linkage::Strong, Scope::Default,
+                     false, false);
+  G.addDefinedSymbol(B2, 1, "S4", B2.getSize() - 1, Linkage::Strong,
+                     Scope::Default, false, false);
+
+  EXPECT_EQ(Sec1.blocks_size(), 2U) << "Expected two blocks in Sec1 initially";
+  EXPECT_EQ(Sec1.symbols_size(), 4U)
+      << "Expected four symbols in Sec1 initially";
+  EXPECT_EQ(Sec2.blocks_size(), 0U) << "Expected zero blocks in Sec2 initially";
+  EXPECT_EQ(Sec2.symbols_size(), 0U)
+      << "Expected zero symbols in Sec2 initially";
+
+  // Transfer with zero offset, explicit size.
+  G.transferBlock(B1, Sec2);
+
+  EXPECT_EQ(Sec1.blocks_size(), 1U)
+      << "Expected one blocks in Sec1 after transfer";
+  EXPECT_EQ(Sec1.symbols_size(), 2U)
+      << "Expected two symbols in Sec1 after transfer";
+  EXPECT_EQ(Sec2.blocks_size(), 1U)
+      << "Expected one blocks in Sec2 after transfer";
+  EXPECT_EQ(Sec2.symbols_size(), 2U)
+      << "Expected two symbols in Sec2 after transfer";
+}
+
+TEST(LinkGraphTest, MergeSections) {
+  // Check that we can transfer a block (and all associated symbols) from one
+  // section to another.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec1 = G.createSection("__data.1", RWFlags);
+  auto &Sec2 = G.createSection("__data.2", RWFlags);
+  auto &Sec3 = G.createSection("__data.3", RWFlags);
+
+  // Create an initial block.
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
+  auto &B2 = G.createContentBlock(Sec2, BlockContent, 0x2000, 8, 0);
+  auto &B3 = G.createContentBlock(Sec3, BlockContent, 0x3000, 8, 0);
+
+  // Add a symbols for each block.
+  G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong, Scope::Default,
+                     false, false);
+  G.addDefinedSymbol(B2, 0, "S2", B2.getSize(), Linkage::Strong, Scope::Default,
+                     false, false);
+  G.addDefinedSymbol(B3, 0, "S3", B2.getSize(), Linkage::Strong, Scope::Default,
+                     false, false);
+
+  EXPECT_EQ(G.sections_size(), 3U) << "Expected three sections initially";
+  EXPECT_EQ(Sec1.blocks_size(), 1U) << "Expected one block in Sec1 initially";
+  EXPECT_EQ(Sec1.symbols_size(), 1U) << "Expected one symbol in Sec1 initially";
+  EXPECT_EQ(Sec2.blocks_size(), 1U) << "Expected one block in Sec2 initially";
+  EXPECT_EQ(Sec2.symbols_size(), 1U) << "Expected one symbol in Sec2 initially";
+  EXPECT_EQ(Sec3.blocks_size(), 1U) << "Expected one block in Sec3 initially";
+  EXPECT_EQ(Sec3.symbols_size(), 1U) << "Expected one symbol in Sec3 initially";
+
+  // Check that self-merge is a no-op.
+  G.mergeSections(Sec1, Sec1);
+
+  EXPECT_EQ(G.sections_size(), 3U)
+      << "Expected three sections after first merge";
+  EXPECT_EQ(Sec1.blocks_size(), 1U)
+      << "Expected one block in Sec1 after first merge";
+  EXPECT_EQ(Sec1.symbols_size(), 1U)
+      << "Expected one symbol in Sec1 after first merge";
+  EXPECT_EQ(Sec2.blocks_size(), 1U)
+      << "Expected one block in Sec2 after first merge";
+  EXPECT_EQ(Sec2.symbols_size(), 1U)
+      << "Expected one symbol in Sec2 after first merge";
+  EXPECT_EQ(Sec3.blocks_size(), 1U)
+      << "Expected one block in Sec3 after first merge";
+  EXPECT_EQ(Sec3.symbols_size(), 1U)
+      << "Expected one symbol in Sec3 after first merge";
+
+  // Merge Sec2 into Sec1, removing Sec2.
+  G.mergeSections(Sec1, Sec2);
+
+  EXPECT_EQ(G.sections_size(), 2U)
+      << "Expected two sections after section merge";
+  EXPECT_EQ(Sec1.blocks_size(), 2U)
+      << "Expected two blocks in Sec1 after section merge";
+  EXPECT_EQ(Sec1.symbols_size(), 2U)
+      << "Expected two symbols in Sec1 after section merge";
+  EXPECT_EQ(Sec3.blocks_size(), 1U)
+      << "Expected one block in Sec3 after section merge";
+  EXPECT_EQ(Sec3.symbols_size(), 1U)
+      << "Expected one symbol in Sec3 after section merge";
+
+  G.mergeSections(Sec1, Sec3, true);
+
+  EXPECT_EQ(G.sections_size(), 2U) << "Expected two sections after third merge";
+  EXPECT_EQ(Sec1.blocks_size(), 3U)
+      << "Expected three blocks in Sec1 after third merge";
+  EXPECT_EQ(Sec1.symbols_size(), 3U)
+      << "Expected three symbols in Sec1 after third merge";
+  EXPECT_EQ(Sec3.blocks_size(), 0U)
+      << "Expected one block in Sec3 after third merge";
+  EXPECT_EQ(Sec3.symbols_size(), 0U)
+      << "Expected one symbol in Sec3 after third merge";
+}
+
 TEST(LinkGraphTest, SplitBlock) {
   // Check that the LinkGraph::splitBlock test works as expected.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
