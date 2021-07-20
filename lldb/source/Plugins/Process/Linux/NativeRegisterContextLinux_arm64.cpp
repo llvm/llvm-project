@@ -892,4 +892,19 @@ NativeRegisterContextLinux_arm64::GetMemoryTaggingDetails(int32_t type) {
                                  "Unknown AArch64 memory tag type %d", type);
 }
 
+lldb::addr_t NativeRegisterContextLinux_arm64::FixWatchpointHitAddress(
+    lldb::addr_t hit_addr) {
+  // Linux configures user-space virtual addresses with top byte ignored.
+  // We set default value of mask such that top byte is masked out.
+  lldb::addr_t mask = ~((1ULL << 56) - 1);
+
+  // Try to read pointer authentication data_mask register and calculate a
+  // consolidated data address mask after ignoring the top byte.
+  if (ReadPAuthMask().Success())
+    mask |= m_pac_mask.data_mask;
+
+  return hit_addr & ~mask;
+  ;
+}
+
 #endif // defined (__arm64__) || defined (__aarch64__)

@@ -421,6 +421,9 @@ Status NativeRegisterContextDBReg_arm64::GetWatchpointHitIndex(
   if (error)
     return Status(std::move(error));
 
+  // Mask off ignored bits from watchpoint trap address.
+  trap_addr = FixWatchpointHitAddress(trap_addr);
+
   uint32_t watch_size;
   lldb::addr_t watch_addr;
 
