@@ -60,18 +60,3 @@ entry:
   ret void
 }
 declare void @llvm.ppc.iospace.sync()
-
-; FIXME: __icbt is only valid for pwr8 and up.
-define dso_local void @test_builtin_ppc_icbt() {
-; CHECK-LABEL: test_builtin_ppc_icbt:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz 3, -8(1)
-; CHECK-NEXT:    icbt 0, 0, 3
-; CHECK-NEXT:    blr
-entry:
-  %a = alloca i8*, align 8
-  %0 = load i8*, i8** %a, align 8
-  call void @llvm.ppc.icbt(i8* %0)
-  ret void
-}
-declare void @llvm.ppc.icbt(i8*)
