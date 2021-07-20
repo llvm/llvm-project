@@ -1695,9 +1695,9 @@ private:
 
   /// Return the cost of instructions in an inloop reduction pattern, if I is
   /// part of that pattern.
-  InstructionCost getReductionPatternCost(Instruction *I, ElementCount VF,
-                                          Type *VectorTy,
-                                          TTI::TargetCostKind CostKind);
+  Optional<InstructionCost>
+  getReductionPatternCost(Instruction *I, ElementCount VF, Type *VectorTy,
+                          TTI::TargetCostKind CostKind);
 
   /// Calculate vectorization cost of memory instruction \p I.
   InstructionCost getMemoryInstructionCost(Instruction *I, ElementCount VF);
@@ -7125,11 +7125,11 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   return Cost;
 }
 
-InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
+Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
     Instruction *I, ElementCount VF, Type *Ty, TTI::TargetCostKind CostKind) {
   // Early exit for no inloop reductions
   if (InLoopReductionChains.empty() || VF.isScalar() || !isa<VectorType>(Ty))
-    return InstructionCost::getInvalid();
+    return None;
   auto *VectorTy = cast<VectorType>(Ty);
 
   // We are looking for a pattern of, and finding the minimal acceptable cost:
@@ -7148,20 +7148,20 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
   if ((RetI->getOpcode() == Instruction::SExt ||
        RetI->getOpcode() == Instruction::ZExt)) {
     if (!RetI->hasOneUser())
-      return InstructionCost::getInvalid();
+      return None;
     RetI = RetI->user_back();
   }
   if (RetI->getOpcode() == Instruction::Mul &&
       RetI->user_back()->getOpcode() == Instruction::Add) {
     if (!RetI->hasOneUser())
-      return InstructionCost::getInvalid();
+      return None;
     RetI = RetI->user_back();
   }
 
   // Test if the found instruction is a reduction, and if not return an invalid
   // cost specifying the parent to use the original cost modelling.
   if (!InLoopReductionImmediateChains.count(RetI))
-    return InstructionCost::getInvalid();
+    return None;
 
   // Find the reduction this chain is a part of and calculate the basic cost of
   // the reduction on its own.
@@ -7195,7 +7195,7 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
         TTI.getCastInstrCost(RedOp->getOpcode(), VectorTy, ExtType,
                              TTI::CastContextHint::None, CostKind, RedOp);
     if (RedCost.isValid() && RedCost < BaseCost + ExtCost)
-      return I == RetI ? *RedCost.getValue() : 0;
+      return I == RetI ? RedCost : 0;
   } else if (RedOp && RedOp->getOpcode() == Instruction::Mul) {
     Instruction *Mul = RedOp;
     Instruction *Op0 = dyn_cast<Instruction>(Mul->getOperand(0));
@@ -7218,7 +7218,7 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
           CostKind);
 
       if (RedCost.isValid() && RedCost < ExtCost * 2 + MulCost + BaseCost)
-        return I == RetI ? *RedCost.getValue() : 0;
+        return I == RetI ? RedCost : 0;
     } else {
       InstructionCost MulCost =
           TTI.getArithmeticInstrCost(Mul->getOpcode(), VectorTy, CostKind);
@@ -7228,11 +7228,11 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
           CostKind);
 
       if (RedCost.isValid() && RedCost < MulCost + BaseCost)
-        return I == RetI ? *RedCost.getValue() : 0;
+        return I == RetI ? RedCost : 0;
     }
   }
 
-  return I == RetI ? BaseCost : InstructionCost::getInvalid();
+  return I == RetI ? Optional<InstructionCost>(BaseCost) : None;
 }
 
 InstructionCost
@@ -7637,10 +7637,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       return 0;
 
     // Detect reduction patterns
-    InstructionCost RedCost;
-    if ((RedCost = getReductionPatternCost(I, VF, VectorTy, CostKind))
-            .isValid())
-      return RedCost;
+    if (auto RedCost = getReductionPatternCost(I, VF, VectorTy, CostKind))
+      return *RedCost;
 
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
@@ -7781,10 +7779,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     }
 
     // Detect reduction patterns
-    InstructionCost RedCost;
-    if ((RedCost = getReductionPatternCost(I, VF, VectorTy, CostKind))
-            .isValid())
-      return RedCost;
+    if (auto RedCost = getReductionPatternCost(I, VF, VectorTy, CostKind))
+      return *RedCost;
 
     Type *SrcScalarTy = I->getOperand(0)->getType();
     Type *SrcVecTy =
