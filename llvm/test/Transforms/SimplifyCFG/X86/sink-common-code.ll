@@ -71,10 +71,9 @@ declare i32 @foo(i32, i32) nounwind readnone
 define i32 @test3(i1 zeroext %flag, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y_SINK1:%.*]] = select i1 [[FLAG:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
-; CHECK-NEXT:    [[Y_SINK:%.*]] = select i1 [[FLAG]], i32 [[X]], i32 [[Y]]
-; CHECK-NEXT:    [[X1:%.*]] = call i32 @foo(i32 [[Y_SINK1]], i32 0) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[Y1:%.*]] = call i32 @foo(i32 [[Y_SINK]], i32 1) #[[ATTR0]]
+; CHECK-NEXT:    [[X_Y:%.*]] = select i1 [[FLAG:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = call i32 @foo(i32 [[X_Y]], i32 0) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[Y1:%.*]] = call i32 @foo(i32 [[X_Y]], i32 1) #[[ATTR0]]
 ; CHECK-NEXT:    [[RET:%.*]] = add i32 [[X1]], [[Y1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -102,8 +101,8 @@ if.end:
 define i32 @test4(i1 zeroext %flag, i32 %x, i32* %y) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[FLAG:%.*]], i32 5, i32 7
-; CHECK-NEXT:    [[B:%.*]] = add i32 [[X:%.*]], [[DOTSINK]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 5, i32 7
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[X:%.*]], [[DOT]]
 ; CHECK-NEXT:    store i32 [[B]], i32* [[Y:%.*]], align 4
 ; CHECK-NEXT:    ret i32 1
 ;
@@ -161,8 +160,8 @@ if.end:
 define i32 @test6(i1 zeroext %flag, i32 %x, i32* %y) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[FLAG:%.*]], i32 5, i32 7
-; CHECK-NEXT:    [[B:%.*]] = add i32 [[X:%.*]], [[DOTSINK]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 5, i32 7
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[X:%.*]], [[DOT]]
 ; CHECK-NEXT:    store volatile i32 [[B]], i32* [[Y:%.*]], align 4
 ; CHECK-NEXT:    ret i32 1
 ;
@@ -187,9 +186,9 @@ if.end:
 define i32 @test7(i1 zeroext %flag, i32 %x, i32* %y) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[FLAG:%.*]], i32 5, i32 7
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 5, i32 7
 ; CHECK-NEXT:    [[W:%.*]] = load volatile i32, i32* [[Y:%.*]], align 4
-; CHECK-NEXT:    [[B:%.*]] = add i32 [[W]], [[DOTSINK]]
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[W]], [[DOT]]
 ; CHECK-NEXT:    store volatile i32 [[B]], i32* [[Y]], align 4
 ; CHECK-NEXT:    ret i32 1
 ;
@@ -413,9 +412,9 @@ declare i32 @llvm.cttz.i32(i32 %x, i1 immarg) readnone
 define i32 @test13(i1 zeroext %flag, i32 %x, i32* %y) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[FLAG:%.*]], i32 5, i32 7
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 5, i32 7
 ; CHECK-NEXT:    [[W:%.*]] = load volatile i32, i32* [[Y:%.*]], align 4
-; CHECK-NEXT:    [[B:%.*]] = add i32 [[W]], [[DOTSINK]]
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[W]], [[DOT]]
 ; CHECK-NEXT:    store volatile i32 [[B]], i32* [[Y]], align 4, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    ret i32 1
 ;
@@ -449,8 +448,8 @@ if.end:
 define i32 @test13a(i1 zeroext %flag, i32 %w, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test13a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y_SINK:%.*]] = select i1 [[FLAG:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
-; CHECK-NEXT:    [[SV2:%.*]] = call i32 @bar(i32 [[Y_SINK]])
+; CHECK-NEXT:    [[X_Y:%.*]] = select i1 [[FLAG:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[SV2:%.*]] = call i32 @bar(i32 [[X_Y]])
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
@@ -475,12 +474,12 @@ declare i32 @bar(i32)
 define i32 @test14(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, %struct.anon* %s) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSINK1:%.*]] = select i1 [[FLAG:%.*]], i32 1, i32 4
-; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[FLAG]], i32 56, i32 57
-; CHECK-NEXT:    [[DUMMY2:%.*]] = add i32 [[X:%.*]], [[DOTSINK1]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 1, i32 4
+; CHECK-NEXT:    [[DOT2:%.*]] = select i1 [[FLAG]], i32 56, i32 57
+; CHECK-NEXT:    [[DUMMY2:%.*]] = add i32 [[X:%.*]], [[DOT]]
 ; CHECK-NEXT:    [[GEPB:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[S:%.*]], i32 0, i32 1
 ; CHECK-NEXT:    [[SV2:%.*]] = load i32, i32* [[GEPB]], align 4
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[SV2]], [[DOTSINK]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[SV2]], [[DOT2]]
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
@@ -959,10 +958,9 @@ if.end:
 define i32 @test_pr30373a(i1 zeroext %flag, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_pr30373a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y_SINK1:%.*]] = select i1 [[FLAG:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
-; CHECK-NEXT:    [[Y_SINK:%.*]] = select i1 [[FLAG]], i32 [[X]], i32 [[Y]]
-; CHECK-NEXT:    [[X1:%.*]] = call i32 @foo(i32 [[Y_SINK1]], i32 0) #[[ATTR0]]
-; CHECK-NEXT:    [[Y1:%.*]] = call i32 @foo(i32 [[Y_SINK]], i32 1) #[[ATTR0]]
+; CHECK-NEXT:    [[X_Y:%.*]] = select i1 [[FLAG:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = call i32 @foo(i32 [[X_Y]], i32 0) #[[ATTR0]]
+; CHECK-NEXT:    [[Y1:%.*]] = call i32 @foo(i32 [[X_Y]], i32 1) #[[ATTR0]]
 ; CHECK-NEXT:    [[Z1:%.*]] = lshr i32 [[Y1]], 8
 ; CHECK-NEXT:    [[RET:%.*]] = add i32 [[X1]], [[Z1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -993,10 +991,9 @@ if.end:
 define i32 @test_pr30373b(i1 zeroext %flag, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_pr30373b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y_SINK1:%.*]] = select i1 [[FLAG:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
-; CHECK-NEXT:    [[Y_SINK:%.*]] = select i1 [[FLAG]], i32 [[X]], i32 [[Y]]
-; CHECK-NEXT:    [[X1:%.*]] = call i32 @foo(i32 [[Y_SINK1]], i32 0) #[[ATTR0]]
-; CHECK-NEXT:    [[Y1:%.*]] = call i32 @foo(i32 [[Y_SINK]], i32 1) #[[ATTR0]]
+; CHECK-NEXT:    [[X_Y:%.*]] = select i1 [[FLAG:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = call i32 @foo(i32 [[X_Y]], i32 0) #[[ATTR0]]
+; CHECK-NEXT:    [[Y1:%.*]] = call i32 @foo(i32 [[X_Y]], i32 1) #[[ATTR0]]
 ; CHECK-NEXT:    [[Z1:%.*]] = lshr i32 [[Y1]], 8
 ; CHECK-NEXT:    [[RET:%.*]] = add i32 [[X1]], [[Z1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -1264,8 +1261,8 @@ merge:
 define i32 @test_insertvalue(i1 zeroext %flag, %T %P) {
 ; CHECK-LABEL: @test_insertvalue(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[FLAG:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[T2:%.*]] = insertvalue [[T:%.*]] [[P:%.*]], i32 [[DOTSINK]], 0
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[T2:%.*]] = insertvalue [[T:%.*]] [[P:%.*]], i32 [[DOT]], 0
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
@@ -1410,8 +1407,8 @@ end:
 define void @indirect_caller(i1 %c, i32 %v, void (i32)* %foo, void (i32)* %bar) {
 ; CHECK-LABEL: @indirect_caller(
 ; CHECK-NEXT:  end:
-; CHECK-NEXT:    [[BAR_SINK:%.*]] = select i1 [[C:%.*]], void (i32)* [[FOO:%.*]], void (i32)* [[BAR:%.*]]
-; CHECK-NEXT:    tail call void [[BAR_SINK]](i32 [[V:%.*]])
+; CHECK-NEXT:    [[FOO_BAR:%.*]] = select i1 [[C:%.*]], void (i32)* [[FOO:%.*]], void (i32)* [[BAR:%.*]]
+; CHECK-NEXT:    tail call void [[FOO_BAR]](i32 [[V:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   br i1 %c, label %call_foo, label %call_bar
