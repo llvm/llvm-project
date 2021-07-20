@@ -167,7 +167,6 @@ if(LLVM_BUILD_EXAMPLES)
     OrcV2CBindingsRemovableCode
     OrcV2CBindingsReflectProcessSymbols
     OrcV2CBindingsLazy
-    OrcV2CBindingsVeryLazy
     )
   if(CMAKE_HOST_UNIX)
     list(APPEND LLVM_TEST_DEPENDS
