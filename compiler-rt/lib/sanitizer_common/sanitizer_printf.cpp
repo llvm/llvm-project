@@ -132,7 +132,7 @@ static int AppendPointer(char **buff, const char *buff_end, u64 ptr_value) {
 int VSNPrintf(char *buff, int buff_length,
               const char *format, va_list args) {
   static const char *kPrintfFormatsHelp =
-      "Supported Printf formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; "
+      "Supported Printf formats: %([0-9]*)?(z|ll)?{d,u,x,X,V}; %p; "
       "%[-]([0-9]*)?(\\.\\*)?s; %c\n";
   RAW_CHECK(format);
   RAW_CHECK(buff_length > 0);
@@ -190,16 +190,13 @@ int VSNPrintf(char *buff, int buff_length,
                                  width, pad_with_zero, uppercase);
         break;
       }
-#if defined(__x86_64__)
       case 'V': {
-        __m128i v = va_arg(args, __m128i);
-        u8 x[sizeof(v)];
-        internal_memcpy(x, &v, sizeof(x));
-        for (uptr i = 0; i < sizeof(x); i++)
-          result += AppendUnsigned(&buff, buff_end, x[i], 16, 2, true, false);
+        for (uptr i = 0; i < 16; i++) {
+          unsigned x = va_arg(args, unsigned);
+          result += AppendUnsigned(&buff, buff_end, x, 16, 2, true, false);
+        }
         break;
       }
-#endif
       case 'p': {
         RAW_CHECK_MSG(!have_flags, kPrintfFormatsHelp);
         result += AppendPointer(&buff, buff_end, va_arg(args, uptr));
