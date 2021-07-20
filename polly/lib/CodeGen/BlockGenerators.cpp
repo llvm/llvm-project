@@ -802,7 +802,8 @@ void BlockGenerator::generateScalarStores(
           // The new Val might have a different type than the old Val due to
           // ScalarEvolution looking through bitcasts.
           Address = Builder.CreateBitOrPointerCast(
-              Address, Val->getType()->getPointerTo());
+              Address, Val->getType()->getPointerTo(
+                           Address->getType()->getPointerAddressSpace()));
 
           Builder.CreateStore(Val, Address);
         });
