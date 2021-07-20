@@ -17055,13 +17055,32 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
     return;
   }
 
+  unsigned Opcode;
+  switch (MemOp->getMergedOrdering()) {
+  case AtomicOrdering::Monotonic:
+    Opcode = AArch64::CMP_SWAP_128_MONOTONIC;
+    break;
+  case AtomicOrdering::Acquire:
+    Opcode = AArch64::CMP_SWAP_128_ACQUIRE;
+    break;
+  case AtomicOrdering::Release:
+    Opcode = AArch64::CMP_SWAP_128_RELEASE;
+    break;
+  case AtomicOrdering::AcquireRelease:
+  case AtomicOrdering::SequentiallyConsistent:
+    Opcode = AArch64::CMP_SWAP_128;
+    break;
+  default:
+    llvm_unreachable("Unexpected ordering!");
+  }
+
   auto Desired = splitInt128(N->getOperand(2), DAG);
   auto New = splitInt128(N->getOperand(3), DAG);
   SDValue Ops[] = {N->getOperand(1), Desired.first, Desired.second,
                    New.first,        New.second,    N->getOperand(0)};
   SDNode *CmpSwap = DAG.getMachineNode(
-      AArch64::CMP_SWAP_128, SDLoc(N),
-      DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other), Ops);
+      Opcode, SDLoc(N), DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other),
+      Ops);
   DAG.setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
 
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,
