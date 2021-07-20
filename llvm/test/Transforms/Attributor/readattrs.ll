@@ -139,9 +139,9 @@ entry:
 }
 
 define void @test8_2(i32* %p) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn writeonly
+; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test8_2
-; IS__TUNIT____-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR0]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    store i32 10, i32* [[P]], align 4
 ; IS__TUNIT____-NEXT:    ret void
