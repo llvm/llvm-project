@@ -3622,10 +3622,35 @@ static bool SemaFeatureCheck(Sema &S, CallExpr *TheCall,
   return true;
 }
 
+/// Returns true if the argument consists of one contiguous run of 1s with any
+/// number of 0s on either side. The 1s are allowed to wrap from LSB to MSB, so
+/// 0x000FFF0, 0x0000FFFF, 0xFF0000FF, 0x0 are all runs. 0x0F0F0000 is not,
+/// since all 1s are not contiguous.
+bool Sema::SemaValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum) {
+  llvm::APSInt Result;
+  // We can't check the value of a dependent argument.
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  // Check constant-ness first.
+  if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
+    return true;
+
+  // Check contiguous run of 1s, 0xFF0000FF is also a run of 1s.
+  if (Result.isShiftedMask() || (~Result).isShiftedMask())
+    return false;
+
+  return Diag(TheCall->getBeginLoc(),
+              diag::err_argument_not_contiguous_bit_field)
+         << ArgNum << Arg->getSourceRange();
+}
+
 bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                        CallExpr *TheCall) {
   unsigned i = 0, l = 0, u = 0;
   bool IsTarget64Bit = TI.getTypeWidth(TI.getIntPtrType()) == 64;
+  llvm::APSInt Result;
 
   if (isPPC_64Builtin(BuiltinID) && !IsTarget64Bit)
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
@@ -3704,6 +3729,15 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     return SemaFeatureCheck(*this, TheCall, "isa-v30-instructions",
                             diag::err_ppc_builtin_only_on_arch, "9") ||
            SemaBuiltinConstantArgRange(TheCall, 0, 0, 1);
+  // For __rlwnm, __rlwimi and __rldimi, the last parameter mask must
+  // be a constant that represents a contiguous bit field.
+  case PPC::BI__builtin_ppc_rlwnm:
+    return SemaBuiltinConstantArg(TheCall, 1, Result) ||
+           SemaValueIsRunOfOnes(TheCall, 2);
+  case PPC::BI__builtin_ppc_rlwimi:
+  case PPC::BI__builtin_ppc_rldimi:
+    return SemaBuiltinConstantArg(TheCall, 2, Result) ||
+           SemaValueIsRunOfOnes(TheCall, 3);
 #define CUSTOM_BUILTIN(Name, Intr, Types, Acc) \
   case PPC::BI__builtin_##Name: \
     return SemaBuiltinPPCMMACall(TheCall, Types);
