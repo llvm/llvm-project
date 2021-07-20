@@ -32,10 +32,10 @@ public:
   constexpr explicit iterator_wrapper(I i) noexcept : base_(std::move(i)) {}
 
   // `noexcept(false)` is used to check that this operator is called.
-  [[nodiscard]] constexpr decltype(auto) operator*() const& noexcept(false) { return *base_; }
+  constexpr decltype(auto) operator*() const& noexcept(false) { return *base_; }
 
   // `noexcept` is used to check that this operator is called.
-  [[nodiscard]] constexpr auto&& operator*() && noexcept { return std::move(*base_); }
+  constexpr auto&& operator*() && noexcept { return std::move(*base_); }
 
   constexpr iterator_wrapper& operator++() noexcept {
     ++base_;
@@ -44,7 +44,7 @@ public:
 
   constexpr void operator++(int) noexcept { ++base_; }
 
-  [[nodiscard]] constexpr bool operator==(iterator_wrapper const& other) const noexcept { return base_ == other.base_; }
+  constexpr bool operator==(iterator_wrapper const& other) const noexcept { return base_ == other.base_; }
 
 private:
   I base_ = I{};
