@@ -1583,7 +1583,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   const DataLayout &DL = CB.getCaller()->getParent()->getDataLayout();
   // Find out what feeds this byval argument.
   Value *ByValArg = CB.getArgOperand(ArgNo);
-  Type *ByValTy = cast<PointerType>(ByValArg->getType())->getElementType();
+  Type *ByValTy = CB.getParamByValType(ArgNo);
   uint64_t ByValSize = DL.getTypeAllocSize(ByValTy);
   MemoryLocation Loc(ByValArg, LocationSize::precise(ByValSize));
   MemCpyInst *MDep = nullptr;

@@ -1157,7 +1157,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     // instead of the pointer itself.
     if (const Argument *A = dyn_cast<Argument>(S.first))
       if (A->hasByValAttr())
-        FieldType = FieldType->getPointerElementType();
+        FieldType = A->getParamByValType();
     FieldIDType Id =
         B.addField(FieldType, None, false /*header*/, true /*IsSpillOfValue*/);
     FrameData.setFieldIndex(S.first, Id);
