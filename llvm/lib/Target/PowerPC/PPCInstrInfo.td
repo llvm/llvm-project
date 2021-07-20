@@ -5480,3 +5480,18 @@ def : Pat<(int_ppc_fctudz f64:$A),
         (XSCVDPUXDS $A)>;
 def : Pat<(int_ppc_fctuwz f64:$A),
         (XSCVDPUXWS $A)>;
+
+def : Pat<(int_ppc_mfmsr), (MFMSR)>;
+def : Pat<(int_ppc_mftbu), (MFTB 269)>;
+
+let Predicates = [IsISA2_07] in {
+  def : Pat<(int_ppc_sthcx ForceXForm:$dst, gprc:$A),
+          (STHCX gprc:$A, ForceXForm:$dst)>;
+}
+def : Pat<(int_ppc_dcbtstt ForceXForm:$dst),
+          (DCBTST 16, ForceXForm:$dst)>;
+def : Pat<(int_ppc_dcbtt ForceXForm:$dst),
+          (DCBT 16, ForceXForm:$dst)>;
+
+def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
+          (STFIWX f64:$XT, ForceXForm:$dst)>;

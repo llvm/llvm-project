@@ -50,3 +50,69 @@ entry:
   %1 = tail call i32 @llvm.ppc.stwcx(i8* %0, i32 %b)
   ret i32 %1
 }
+
+declare i32 @llvm.ppc.sthcx(i8*, i32)
+define dso_local signext i32 @test_sthcx(i16* %a, i16 signext %val) {
+; CHECK-64-LABEL: test_sthcx:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    sthcx. 4, 0, 3
+; CHECK-64-NEXT:    mfocrf 3, 128
+; CHECK-64-NEXT:    srwi 3, 3, 28
+; CHECK-64-NEXT:    extsw 3, 3
+; CHECK-64-NEXT:    blr
+;
+; CHECK-32-LABEL: test_sthcx:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    sthcx. 4, 0, 3
+; CHECK-32-NEXT:    mfocrf 3, 128
+; CHECK-32-NEXT:    srwi 3, 3, 28
+; CHECK-32-NEXT:    blr
+entry:
+  %0 = bitcast i16* %a to i8*
+  %1 = sext i16 %val to i32
+  %2 = tail call i32 @llvm.ppc.sthcx(i8* %0, i32 %1)
+  ret i32 %2
+}
+
+define dso_local signext i16 @test_lharx(i16* %a) {
+; CHECK-64-LABEL: test_lharx:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    #APP
+; CHECK-64-NEXT:    lharx 3, 0, 3
+; CHECK-64-NEXT:    #NO_APP
+; CHECK-64-NEXT:    extsh 3, 3
+; CHECK-64-NEXT:    blr
+;
+; CHECK-32-LABEL: test_lharx:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    #APP
+; CHECK-32-NEXT:    lharx 3, 0, 3
+; CHECK-32-NEXT:    #NO_APP
+; CHECK-32-NEXT:    extsh 3, 3
+; CHECK-32-NEXT:    blr
+entry:
+  %0 = tail call i16 asm sideeffect "lharx $0, ${1:y}", "=r,*Z,~{memory}"(i16* %a)
+  ret i16 %0
+}
+
+; Function Attrs: nounwind uwtable
+define dso_local zeroext i8 @test_lbarx(i8* %a) {
+; CHECK-64-LABEL: test_lbarx:
+; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    #APP
+; CHECK-64-NEXT:    lbarx 3, 0, 3
+; CHECK-64-NEXT:    #NO_APP
+; CHECK-64-NEXT:    clrldi 3, 3, 56
+; CHECK-64-NEXT:    blr
+;
+; CHECK-32-LABEL: test_lbarx:
+; CHECK-32:       # %bb.0: # %entry
+; CHECK-32-NEXT:    #APP
+; CHECK-32-NEXT:    lbarx 3, 0, 3
+; CHECK-32-NEXT:    #NO_APP
+; CHECK-32-NEXT:    clrlwi 3, 3, 24
+; CHECK-32-NEXT:    blr
+entry:
+  %0 = tail call i8 asm sideeffect "lbarx $0, ${1:y}", "=r,*Z,~{memory}"(i8* %a)
+  ret i8 %0
+}
