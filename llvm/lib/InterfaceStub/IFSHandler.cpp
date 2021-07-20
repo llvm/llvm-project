@@ -17,7 +17,7 @@
 #include "llvm/Support/YAMLTraits.h"
 
 using namespace llvm;
-using namespace llvm::elfabi;
+using namespace llvm::ifs;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(IFSSymbol)
 
@@ -171,7 +171,7 @@ bool usesTriple(StringRef Buf) {
   return true;
 }
 
-Expected<std::unique_ptr<IFSStub>> elfabi::readIFSFromBuffer(StringRef Buf) {
+Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
   yaml::Input YamlIn(Buf);
   std::unique_ptr<IFSStubTriple> Stub(new IFSStubTriple());
   if (usesTriple(Buf)) {
@@ -183,7 +183,7 @@ Expected<std::unique_ptr<IFSStub>> elfabi::readIFSFromBuffer(StringRef Buf) {
     return createStringError(Err, "YAML failed reading as IFS");
   }
 
-  if (Stub->IfsVersion > elfabi::IFSVersionCurrent)
+  if (Stub->IfsVersion > IFSVersionCurrent)
     return make_error<StringError>(
         "IFS version " + Stub->IfsVersion.getAsString() + " is unsupported.",
         std::make_error_code(std::errc::invalid_argument));
@@ -194,7 +194,7 @@ Expected<std::unique_ptr<IFSStub>> elfabi::readIFSFromBuffer(StringRef Buf) {
   return std::move(Stub);
 }
 
-Error elfabi::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
+Error ifs::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
   yaml::Output YamlOut(OS, NULL, /*WrapColumn =*/0);
   std::unique_ptr<IFSStubTriple> CopyStub(new IFSStubTriple(Stub));
   if (Stub.Target.Arch) {
@@ -212,10 +212,10 @@ Error elfabi::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
   return Error::success();
 }
 
-Error elfabi::overrideIFSTarget(IFSStub &Stub, Optional<IFSArch> OverrideArch,
-                                Optional<IFSEndiannessType> OverrideEndianness,
-                                Optional<IFSBitWidthType> OverrideBitWidth,
-                                Optional<std::string> OverrideTriple) {
+Error ifs::overrideIFSTarget(IFSStub &Stub, Optional<IFSArch> OverrideArch,
+                             Optional<IFSEndiannessType> OverrideEndianness,
+                             Optional<IFSBitWidthType> OverrideBitWidth,
+                             Optional<std::string> OverrideTriple) {
   std::error_code OverrideEC(1, std::generic_category());
   if (OverrideArch) {
     if (Stub.Target.Arch &&
@@ -252,7 +252,7 @@ Error elfabi::overrideIFSTarget(IFSStub &Stub, Optional<IFSArch> OverrideArch,
   return Error::success();
 }
 
-Error elfabi::validateIFSTarget(IFSStub &Stub, bool ParseTriple) {
+Error ifs::validateIFSTarget(IFSStub &Stub, bool ParseTriple) {
   std::error_code ValidationEC(1, std::generic_category());
   if (Stub.Target.Triple) {
     if (Stub.Target.Arch || Stub.Target.BitWidth || Stub.Target.Endianness ||
@@ -287,7 +287,7 @@ Error elfabi::validateIFSTarget(IFSStub &Stub, bool ParseTriple) {
   return Error::success();
 }
 
-IFSTarget elfabi::parseTriple(StringRef TripleStr) {
+IFSTarget ifs::parseTriple(StringRef TripleStr) {
   Triple IFSTriple(TripleStr);
   IFSTarget RetTarget;
   // TODO: Implement a Triple Arch enum to e_machine map.
@@ -308,8 +308,8 @@ IFSTarget elfabi::parseTriple(StringRef TripleStr) {
   return RetTarget;
 }
 
-void elfabi::stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
-                            bool StripEndianness, bool StripBitWidth) {
+void ifs::stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
+                         bool StripEndianness, bool StripBitWidth) {
   if (StripTriple || StripArch) {
     Stub.Target.Arch.reset();
     Stub.Target.ArchString.reset();

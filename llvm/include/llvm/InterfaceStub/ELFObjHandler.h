@@ -22,7 +22,7 @@ namespace llvm {
 
 class MemoryBuffer;
 
-namespace elfabi {
+namespace ifs {
 
 /// Attempt to read a binary ELF file from a MemoryBuffer.
 Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
@@ -38,7 +38,7 @@ Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
 Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
                       bool WriteIfChanged = false);
 
-} // end namespace elfabi
+} // end namespace ifs
 } // end namespace llvm
 
 #endif // LLVM_INTERFACESTUB_ELFOBJHANDLER_H

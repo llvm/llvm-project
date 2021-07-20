@@ -27,7 +27,7 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 
 namespace llvm {
-namespace elfabi {
+namespace ifs {
 
 // Simple struct to hold relevant .dynamic entries.
 struct DynamicEntries {
@@ -671,5 +671,5 @@ Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
   llvm_unreachable("invalid binary output target");
 }
 
-} // namespace elfabi
+} // end namespace ifs
 } // end namespace llvm

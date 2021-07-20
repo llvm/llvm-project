@@ -26,7 +26,7 @@ class raw_ostream;
 class Error;
 class StringRef;
 
-namespace elfabi {
+namespace ifs {
 
 struct IFSStub;
 
@@ -54,7 +54,7 @@ void stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
 /// Parse llvm triple string into a IFSTarget struct.
 IFSTarget parseTriple(StringRef TripleStr);
 
-} // end namespace elfabi
+} // end namespace ifs
 } // end namespace llvm
 
 #endif // LLVM_INTERFACESTUB_IFSHANDLER_H

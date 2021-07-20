@@ -1,4 +1,4 @@
-# RUN: llvm-elfabi --input-format=IFS --output-format=IFS --output=- %s | FileCheck %s
+# RUN: llvm-ifs --input-format=IFS --output-format=IFS --output=- %s | FileCheck %s
 
 --- !ifs-v1
 IfsVersion: 3.0

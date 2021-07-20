@@ -11,7 +11,7 @@
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
-using namespace llvm::elfabi;
+using namespace llvm::ifs;
 
 IFSStub::IFSStub(IFSStub const &Stub) {
   IfsVersion = Stub.IfsVersion;
@@ -58,7 +58,7 @@ bool IFSTarget::empty() {
          !BitWidth;
 }
 
-uint8_t elfabi::convertIFSBitWidthToELF(IFSBitWidthType BitWidth) {
+uint8_t ifs::convertIFSBitWidthToELF(IFSBitWidthType BitWidth) {
   switch (BitWidth) {
   case IFSBitWidthType::IFS32:
     return ELF::ELFCLASS32;
@@ -69,7 +69,7 @@ uint8_t elfabi::convertIFSBitWidthToELF(IFSBitWidthType BitWidth) {
   }
 }
 
-uint8_t elfabi::convertIFSEndiannessToELF(IFSEndiannessType Endianness) {
+uint8_t ifs::convertIFSEndiannessToELF(IFSEndiannessType Endianness) {
   switch (Endianness) {
   case IFSEndiannessType::Little:
     return ELF::ELFDATA2LSB;
@@ -80,7 +80,7 @@ uint8_t elfabi::convertIFSEndiannessToELF(IFSEndiannessType Endianness) {
   }
 }
 
-uint8_t elfabi::convertIFSSymbolTypeToELF(IFSSymbolType SymbolType) {
+uint8_t ifs::convertIFSSymbolTypeToELF(IFSSymbolType SymbolType) {
   switch (SymbolType) {
   case IFSSymbolType::Object:
     return ELF::STT_OBJECT;
@@ -94,7 +94,7 @@ uint8_t elfabi::convertIFSSymbolTypeToELF(IFSSymbolType SymbolType) {
   }
 }
 
-IFSBitWidthType elfabi::convertELFBitWidthToIFS(uint8_t BitWidth) {
+IFSBitWidthType ifs::convertELFBitWidthToIFS(uint8_t BitWidth) {
   switch (BitWidth) {
   case ELF::ELFCLASS32:
     return IFSBitWidthType::IFS32;
@@ -105,7 +105,7 @@ IFSBitWidthType elfabi::convertELFBitWidthToIFS(uint8_t BitWidth) {
   }
 }
 
-IFSEndiannessType elfabi::convertELFEndiannessToIFS(uint8_t Endianness) {
+IFSEndiannessType ifs::convertELFEndiannessToIFS(uint8_t Endianness) {
   switch (Endianness) {
   case ELF::ELFDATA2LSB:
     return IFSEndiannessType::Little;
@@ -116,7 +116,7 @@ IFSEndiannessType elfabi::convertELFEndiannessToIFS(uint8_t Endianness) {
   }
 }
 
-IFSSymbolType elfabi::convertELFSymbolTypeToIFS(uint8_t SymbolType) {
+IFSSymbolType ifs::convertELFSymbolTypeToIFS(uint8_t SymbolType) {
   SymbolType = SymbolType & 0xf;
   switch (SymbolType) {
   case ELF::STT_OBJECT:
