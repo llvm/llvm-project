@@ -48,7 +48,7 @@ class X
     int i_;
 public:
     constexpr explicit X(int i) : i_(i) {}
-    constexpr X(X&& x) : i_(std::exchange(x.i_, 0)) {}
+    constexpr X(X&& x) : i_(x.i_) { x.i_ = 0; }
     TEST_CONSTEXPR_CXX20 ~X() {i_ = 0;}
     friend constexpr bool operator==(const X& x, const X& y) {return x.i_ == y.i_;}
 };
