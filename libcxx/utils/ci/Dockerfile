@@ -51,12 +51,6 @@ RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION + 1)) # current ToT
 RUN ln -fs /usr/bin/clang++-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
 RUN ln -fs /usr/bin/clang-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
 
-# Temporarily keep the clang++ and clang++-tot symlinks around for backwards compatibility with builders
-RUN ln -s /usr/bin/clang++-$LLVM_LATEST_VERSION /usr/bin/clang++ && [ -e $(readlink /usr/bin/clang++) ]
-RUN ln -s /usr/bin/clang-$LLVM_LATEST_VERSION /usr/bin/clang && [ -e $(readlink /usr/bin/clang) ]
-RUN ln -s /usr/bin/clang++-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/clang++-tot && [ -e $(readlink /usr/bin/clang++-tot) ]
-RUN ln -s /usr/bin/clang-$(($LLVM_LATEST_VERSION + 1)) /usr/bin/clang-tot && [ -e $(readlink /usr/bin/clang-tot) ]
-
 # Install clang-format
 RUN apt-get install -y clang-format-$LLVM_LATEST_VERSION
 RUN ln -s /usr/bin/clang-format-$LLVM_LATEST_VERSION /usr/bin/clang-format && [ -e $(readlink /usr/bin/clang-format) ]
@@ -66,9 +60,6 @@ RUN ln -s /usr/bin/git-clang-format-$LLVM_LATEST_VERSION /usr/bin/git-clang-form
 ENV GCC_LATEST_VERSION=11
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
 RUN apt-get update && apt install -y gcc-$GCC_LATEST_VERSION g++-$GCC_LATEST_VERSION
-
-# Temporarily keep installing GCC 10 for backwards compatibility with build bots
-RUN apt-get update && apt install -y gcc-10 g++-10
 
 # Install a recent CMake
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2-Linux-x86_64.sh -O /tmp/install-cmake.sh
