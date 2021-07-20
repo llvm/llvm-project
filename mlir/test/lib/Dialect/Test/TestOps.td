@@ -716,6 +716,13 @@ def TestEqualArgsPattern : Pat<(OpN $a, $a), (OpO $a)>;
 def TestNestedOpEqualArgsPattern :
   Pat<(OpN $b, (OpP $a, $b, $c, $d, $e, $f)), (replaceWithValue $b)>;
 
+// Test when equality is enforced on same op and same operand but at different
+// depth. We only bound one of the $x to the second operand of outer OpN and
+// left another be the default value (which is the value of first operand of
+// outer OpN). As a result, it ended up comparing wrong values in some cases.
+def TestNestedSameOpAndSameArgEqualityPattern :
+  Pat<(OpN (OpN $_, $x), $x), (replaceWithValue $x)>;
+
 // Test multiple equal arguments check enforced.
 def TestMultipleEqualArgsPattern :
   Pat<(OpP $a, $b, $a, $a, $b, $c), (OpN $c, $b)>;
