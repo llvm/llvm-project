@@ -10,16 +10,16 @@
 
 int *arr;
 
-__attribute__((always_inline))
-void inlined(int arg) {
+__attribute__((always_inline)) void inlined(int arg) {
   int x[5];
-  for (int i = 0; i < arg; i++) x[i] = i;
+  for (int i = 0; i < arg; i++)
+    x[i] = i;
   arr = x;
 }
 
 int main(int argc, char *argv[]) {
   inlined(argc);
-  return arr[argc - 1];  // BOOM
+  return arr[argc - 1]; // BOOM
   // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
   // CHECK: READ of size 4 at 0x{{.*}} thread T0
   // CHECK:   #0 0x{{.*}} in main

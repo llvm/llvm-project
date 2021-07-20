@@ -4,7 +4,6 @@
 // Not expected to work yet with HWAsan.
 // XFAIL: *
 
-
 struct IntHolder {
   __attribute__((noinline)) const IntHolder &Self() const {
     return *this;
@@ -16,7 +15,7 @@ const IntHolder *saved;
 
 int main(int argc, char *argv[]) {
   saved = &IntHolder().Self();
-  int x = saved->val;  // BOOM
+  int x = saved->val; // BOOM
   // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
   // CHECK:  #0 0x{{.*}} in main {{.*}}use-after-scope-temp2.cpp:[[@LINE-2]]
   return x;

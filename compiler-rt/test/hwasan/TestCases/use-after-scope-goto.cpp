@@ -15,7 +15,7 @@ void f1(int cond) {
     goto label;
   int tmp;
 
- label:
+label:
   ptr = &tmp;
   *ptr = 5;
 }
@@ -45,7 +45,7 @@ void f3(int cond) {
 
     exit(0);
   }
- l2:
+l2:
   goto l1;
 }
 
@@ -59,11 +59,11 @@ void use(int *x) {
 void f4() {
   {
     int x;
- l2:
+  l2:
     use(&x);
     goto l1;
   }
- l1:
+l1:
   goto l2;
 }
 
