@@ -10,12 +10,12 @@ str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      12
-# CHECK-NEXT: Total Cycles:      23
+# CHECK-NEXT: Total Cycles:      17
 # CHECK-NEXT: Total uOps:        14
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.61
-# CHECK-NEXT: IPC:               0.52
+# CHECK-NEXT: uOps Per Cycle:    0.82
+# CHECK-NEXT: IPC:               0.71
 # CHECK-NEXT: Block RThroughput: 3.5
 
 # CHECK:      Instruction Info:
@@ -32,27 +32,28 @@ str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT:  1      4     1.00                        madd	w0, w5, w4, w0
 # CHECK-NEXT:  1      3     0.50                        add	x3, x3, x13
 # CHECK-NEXT:  1      3     0.50                        subs	x1, x1, #1
-# CHECK-NEXT:  1      4     1.00           *            str	w0, [x21, x18, lsl #2]
+# CHECK-NEXT:  1      1     1.00           *            str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
-# CHECK-NEXT: RAT     - Register unavailable:                      8  (34.8%)
+# CHECK-NEXT: RAT     - Register unavailable:                      8  (47.1%)
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
-# CHECK-NEXT:  0,              13  (56.5%)
-# CHECK-NEXT:  1,              6  (26.1%)
-# CHECK-NEXT:  2,              4  (17.4%)
+# CHECK-NEXT:  0,              7  (41.2%)
+# CHECK-NEXT:  1,              6  (35.3%)
+# CHECK-NEXT:  2,              4  (23.5%)
 
 # CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
-# CHECK-NEXT:  0,          13  (56.5%)
-# CHECK-NEXT:  1,          6  (26.1%)
-# CHECK-NEXT:  2,          4  (17.4%)
+# CHECK-NEXT:  0,          7  (41.2%)
+# CHECK-NEXT:  1,          6  (35.3%)
+# CHECK-NEXT:  2,          4  (23.5%)
 
 # CHECK:      Scheduler's queue usage:
 # CHECK-NEXT: No scheduler resources used.
@@ -89,21 +90,21 @@ str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00   str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0123456
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeE .    .    .    . .   ldr	w4, [x2], #4
-# CHECK-NEXT: [0,1]     .DeeE.    .    .    . .   ldr	w5, [x3]
-# CHECK-NEXT: [0,2]     .   DeeeE .    .    . .   madd	w0, w5, w4, w0
-# CHECK-NEXT: [0,3]     .    DeeE .    .    . .   add	x3, x3, x13
-# CHECK-NEXT: [0,4]     .    DeeE .    .    . .   subs	x1, x1, #1
-# CHECK-NEXT: [0,5]     .    . DeeeE   .    . .   str	w0, [x21, x18, lsl #2]
-# CHECK-NEXT: [1,0]     .    .    .DeeE.    . .   ldr	w4, [x2], #4
-# CHECK-NEXT: [1,1]     .    .    . DeeE    . .   ldr	w5, [x3]
-# CHECK-NEXT: [1,2]     .    .    .    DeeeE. .   madd	w0, w5, w4, w0
-# CHECK-NEXT: [1,3]     .    .    .    .DeeE. .   add	x3, x3, x13
-# CHECK-NEXT: [1,4]     .    .    .    .DeeE. .   subs	x1, x1, #1
-# CHECK-NEXT: [1,5]     .    .    .    .  DeeeE   str	w0, [x21, x18, lsl #2]
+# CHECK:      [0,0]     DeeE .    .    ..   ldr	w4, [x2], #4
+# CHECK-NEXT: [0,1]     .DeeE.    .    ..   ldr	w5, [x3]
+# CHECK-NEXT: [0,2]     .   DeeeE .    ..   madd	w0, w5, w4, w0
+# CHECK-NEXT: [0,3]     .    DeeE .    ..   add	x3, x3, x13
+# CHECK-NEXT: [0,4]     .    DeeE .    ..   subs	x1, x1, #1
+# CHECK-NEXT: [0,5]     .    . DE .    ..   str	w0, [x21, x18, lsl #2]
+# CHECK-NEXT: [1,0]     .    .  DeeE   ..   ldr	w4, [x2], #4
+# CHECK-NEXT: [1,1]     .    .   DeeE  ..   ldr	w5, [x3]
+# CHECK-NEXT: [1,2]     .    .    . DeeeE   madd	w0, w5, w4, w0
+# CHECK-NEXT: [1,3]     .    .    .  DeeE   add	x3, x3, x13
+# CHECK-NEXT: [1,4]     .    .    .  DeeE   subs	x1, x1, #1
+# CHECK-NEXT: [1,5]     .    .    .    DE   str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

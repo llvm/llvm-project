@@ -109,9 +109,11 @@ def CortexA55WriteVLD8 : SchedWriteRes<[CortexA55UnitLd]> { let Latency = 11;
 def : WriteRes<WriteAdr, []> { let Latency = 0; }
 
 // Store
-def : WriteRes<WriteST, [CortexA55UnitSt]> { let Latency = 4; }
-def : WriteRes<WriteSTP, [CortexA55UnitSt]> { let Latency = 4; }
-def : WriteRes<WriteSTIdx, [CortexA55UnitSt]> { let Latency = 4; }
+let RetireOOO = 1 in {
+def : WriteRes<WriteST, [CortexA55UnitSt]> { let Latency = 1; }
+def : WriteRes<WriteSTP, [CortexA55UnitSt]> { let Latency = 1; }
+def : WriteRes<WriteSTIdx, [CortexA55UnitSt]> { let Latency = 1; }
+}
 def : WriteRes<WriteSTX, [CortexA55UnitSt]> { let Latency = 4; }
 
 // Vector Store - Similar to vector loads, can take 1-3 cycles to issue.
