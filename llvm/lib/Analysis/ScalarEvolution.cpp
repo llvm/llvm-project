@@ -11587,6 +11587,16 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (!IV || IV->getLoop() != L || !IV->isAffine())
     return getCouldNotCompute();
 
+  // A precondition of this method is that the condition being analyzed
+  // reaches an exiting branch which dominates the latch.  Given that, we can
+  // assume that an increment which violates the nowrap specification and
+  // produces poison must cause undefined behavior when the resulting poison
+  // value is branched upon and thus we can conclude that the backedge is
+  // taken no more often than would be required to produce that poison value.
+  // Note that a well defined loop can exit on the iteration which violates
+  // the nowrap specification if there is another exit (either explicit or
+  // implicit/exceptional) which causes the loop to execute before the
+  // exiting instruction we're analyzing would trigger UB.
   auto WrapType = IsSigned ? SCEV::FlagNSW : SCEV::FlagNUW;
   bool NoWrap = ControlsExit && IV->getNoWrapFlags(WrapType);
   ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
