@@ -699,6 +699,16 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
       // checked.
       if (PHIs.insert(PN).second && !AllUsesOfValueWillTrapIfNull(PN, PHIs))
         return false;
+    } else if (isa<ICmpInst>(U) &&
+               !ICmpInst::isSigned(cast<ICmpInst>(U)->getPredicate()) &&
+               isa<LoadInst>(U->getOperand(0)) &&
+               isa<ConstantPointerNull>(U->getOperand(1))) {
+      assert(isa<GlobalValue>(
+                 cast<LoadInst>(U->getOperand(0))->getPointerOperand()) &&
+             "Should be GlobalVariable");
+      // This and only this kind of non-signed ICmpInst is to be replaced with
+      // the comparing of the value of the created global init bool later in
+      // optimizeGlobalAddressOfMalloc for the global variable.
     } else {
       //cerr << "NONTRAPPING USE: " << *U;
       return false;
@@ -940,9 +950,13 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
   // Loop over all uses of GV, processing them in turn.
   while (!GV->use_empty()) {
     if (StoreInst *SI = dyn_cast<StoreInst>(GV->user_back())) {
-      // The global is initialized when the store to it occurs.
-      new StoreInst(ConstantInt::getTrue(GV->getContext()), InitBool, false,
-                    Align(1), SI->getOrdering(), SI->getSyncScopeID(), SI);
+      // The global is initialized when the store to it occurs. If the stored
+      // value is null value, the global bool is set to false, otherwise true.
+      new StoreInst(ConstantInt::getBool(
+                        GV->getContext(),
+                        !isa<ConstantPointerNull>(SI->getValueOperand())),
+                    InitBool, false, Align(1), SI->getOrdering(),
+                    SI->getSyncScopeID(), SI);
       SI->eraseFromParent();
       continue;
     }
@@ -957,28 +971,24 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
       }
 
       // Replace the cmp X, 0 with a use of the bool value.
-      // Sink the load to where the compare was, if atomic rules allow us to.
       Value *LV = new LoadInst(InitBool->getValueType(), InitBool,
                                InitBool->getName() + ".val", false, Align(1),
-                               LI->getOrdering(), LI->getSyncScopeID(),
-                               LI->isUnordered() ? (Instruction *)ICI : LI);
+                               LI->getOrdering(), LI->getSyncScopeID(), LI);
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
-      case ICmpInst::ICMP_ULT:
-      case ICmpInst::ICMP_SLT:   // X < null -> always false
+      case ICmpInst::ICMP_ULT: // X < null -> always false
         LV = ConstantInt::getFalse(GV->getContext());
         break;
+      case ICmpInst::ICMP_UGE: // X >= null -> always true
+        LV = ConstantInt::getTrue(GV->getContext());
+        break;
       case ICmpInst::ICMP_ULE:
-      case ICmpInst::ICMP_SLE:
       case ICmpInst::ICMP_EQ:
         LV = BinaryOperator::CreateNot(LV, "notinit", ICI);
         break;
       case ICmpInst::ICMP_NE:
-      case ICmpInst::ICMP_UGE:
-      case ICmpInst::ICMP_SGE:
       case ICmpInst::ICMP_UGT:
-      case ICmpInst::ICMP_SGT:
         break;  // no change.
       }
       ICI->replaceAllUsesWith(LV);
