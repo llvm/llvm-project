@@ -229,7 +229,7 @@ MachOPlatform::requiredCXXAliases() {
   static const std::pair<const char *, const char *> RequiredCXXAliases[] = {
       {"___cxa_atexit", "___orc_rt_macho_cxa_atexit"}};
 
-  return RequiredCXXAliases;
+  return ArrayRef<std::pair<const char *, const char *>>(RequiredCXXAliases);
 }
 
 ArrayRef<std::pair<const char *, const char *>>
@@ -239,7 +239,8 @@ MachOPlatform::standardRuntimeUtilityAliases() {
           {"___orc_rt_run_program", "___orc_rt_macho_run_program"},
           {"___orc_rt_log_error", "___orc_rt_log_error_to_stderr"}};
 
-  return StandardRuntimeUtilityAliases;
+  return ArrayRef<std::pair<const char *, const char *>>(
+      StandardRuntimeUtilityAliases);
 }
 
 bool MachOPlatform::supportedTarget(const Triple &TT) {
