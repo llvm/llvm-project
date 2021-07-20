@@ -92,6 +92,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUPerfHintAnalysis.cpp
   AMDILCFGStructurizer.cpp
   AMDGPUPrintfRuntimeBinding.cpp
+  AMDGPUResourceUsageAnalysis.cpp
   GCNHazardRecognizer.cpp
   GCNIterativeScheduler.cpp
   GCNMinRegStrategy.cpp
