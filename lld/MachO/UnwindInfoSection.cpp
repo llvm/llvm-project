@@ -144,6 +144,7 @@ template <class Ptr>
 void UnwindInfoSectionImpl<Ptr>::addInput(ConcatInputSection *isec) {
   assert(isec->getSegName() == segment_names::ld &&
          isec->getName() == section_names::compactUnwind);
+  isec->parent = compactUnwindSection;
   compactUnwindSection->addInput(isec);
 }
 

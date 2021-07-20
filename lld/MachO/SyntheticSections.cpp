@@ -15,7 +15,6 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "Writer.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
@@ -596,6 +595,8 @@ void StubHelperSection::setup() {
 
   in.got->addEntry(stubBinder);
 
+  in.imageLoaderCache->parent =
+      ConcatOutputSection::getOrCreateForInput(in.imageLoaderCache);
   inputSections.push_back(in.imageLoaderCache);
   // Since this isn't in the symbol table or in any input file, the noDeadStrip
   // argument doesn't matter. It's kept alive by ImageLoaderCacheSection()
