@@ -380,11 +380,11 @@ template <typename... Types> using TypeList = internal::TypeList<Types...>;
   if (!EXPECT_DEATH(FUNC, EXIT))                                               \
   return
 
+#endif // ENABLE_SUBPROCESS_TESTS
+
 #define __CAT1(a, b) a##b
 #define __CAT(a, b) __CAT1(a, b)
 #define UNIQUE_VAR(prefix) __CAT(prefix, __LINE__)
-
-#endif // ENABLE_SUBPROCESS_TESTS
 
 #define EXPECT_THAT(MATCH, MATCHER)                                            \
   do {                                                                         \
