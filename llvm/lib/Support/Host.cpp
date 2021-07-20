@@ -299,17 +299,34 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 
 namespace {
 StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
-  if (Id >= 8561 && HaveVectorSupport)
-    return "z15";
-  if (Id >= 3906 && HaveVectorSupport)
-    return "z14";
-  if (Id >= 2964 && HaveVectorSupport)
-    return "z13";
-  if (Id >= 2827)
-    return "zEC12";
-  if (Id >= 2817)
-    return "z196";
-  return "generic";
+  switch (Id) {
+    case 2064:  // z900 not supported by LLVM
+    case 2066:
+    case 2084:  // z990 not supported by LLVM
+    case 2086:
+    case 2094:  // z9-109 not supported by LLVM
+    case 2096:
+      return "generic";
+    case 2097:
+    case 2098:
+      return "z10";
+    case 2817:
+    case 2818:
+      return "z196";
+    case 2827:
+    case 2828:
+      return "zEC12";
+    case 2964:
+    case 2965:
+      return HaveVectorSupport? "z13" : "zEC12";
+    case 3906:
+    case 3907:
+      return HaveVectorSupport? "z14" : "zEC12";
+    case 8561:
+    case 8562:
+    default:
+      return HaveVectorSupport? "z15" : "zEC12";
+  }
 }
 } // end anonymous namespace
 
