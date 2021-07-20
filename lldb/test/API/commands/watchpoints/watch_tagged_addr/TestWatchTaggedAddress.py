@@ -16,6 +16,10 @@ class TestWatchTaggedAddresses(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
+        # Skip this test if not running on AArch64 target that supports PAC
+        if not self.isAArch64PAuth():
+            self.skipTest('Target must support pointer authentication.')
+
         # Set source filename.
         self.source = 'main.c'
 
@@ -35,8 +39,6 @@ class TestWatchTaggedAddresses(TestBase):
         Test that LLDB hits watchpoint installed on an untagged address with
         memory access by a tagged pointer.
         """
-        if not self.isAArch64PAuth():
-            self.skipTest('Target must support pointer authentication.')
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
         lldbutil.run_break_set_by_symbol(self, 'main')
@@ -71,9 +73,6 @@ class TestWatchTaggedAddresses(TestBase):
     @skipIf(oslist=no_match(['linux']))
     def test_watch_set_on_tagged_ptr(self):
         """Test that LLDB can install and hit watchpoint on a tagged address"""
-
-        if not self.isAArch64PAuth():
-            self.skipTest('Target must support pointer authentication.')
 
         # Find the line number to break inside main().
         self.line = line_number(self.source, '// Set break point at this line.')
