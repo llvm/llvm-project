@@ -67,7 +67,6 @@
 #include <cassert>
 #include <cctype>
 #include <cerrno>
-#include <clocale>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -2627,8 +2626,6 @@ public:
   }
 
   void Initialize() {
-    ::setlocale(LC_ALL, "");
-    ::setlocale(LC_CTYPE, "");
     m_screen = ::newterm(nullptr, m_out, m_in);
     ::start_color();
     ::curs_set(0);
