@@ -8,7 +8,6 @@ define <2 x i16> @vwmaccu_v2i16(<2 x i8>* %x, <2 x i8>* %y, <2 x i16> %z) {
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, <2 x i8>* %x
@@ -26,7 +25,6 @@ define <4 x i16> @vwmaccu_v4i16(<4 x i8>* %x, <4 x i8>* %y, <4 x i16> %z) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, <4 x i8>* %x
@@ -44,7 +42,6 @@ define <2 x i32> @vwmaccu_v2i32(<2 x i16>* %x, <2 x i16>* %y, <2 x i32> %z) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, <2 x i16>* %x
@@ -62,7 +59,6 @@ define <8 x i16> @vwmaccu_v8i16(<8 x i8>* %x, <8 x i8>* %y, <8 x i16> %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, <8 x i8>* %x
@@ -80,7 +76,6 @@ define <4 x i32> @vwmaccu_v4i32(<4 x i16>* %x, <4 x i16>* %y, <4 x i32> %z) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, <4 x i16>* %x
@@ -98,7 +93,6 @@ define <2 x i64> @vwmaccu_v2i64(<2 x i32>* %x, <2 x i32>* %y, <2 x i64> %z) {
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
@@ -116,7 +110,6 @@ define <16 x i16> @vwmaccu_v16i16(<16 x i8>* %x, <16 x i8>* %y, <16 x i16> %z) {
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
 ; CHECK-NEXT:    vle8.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
@@ -134,7 +127,6 @@ define <8 x i32> @vwmaccu_v8i32(<8 x i16>* %x, <8 x i16>* %y, <8 x i32> %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vle16.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -152,7 +144,6 @@ define <4 x i64> @vwmaccu_v4i64(<4 x i32>* %x, <4 x i32>* %y, <4 x i64> %z) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
 ; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v25, v26
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -171,7 +162,6 @@ define <32 x i16> @vwmaccu_v32i16(<32 x i8>* %x, <32 x i8>* %y, <32 x i16> %z) {
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v26, (a0)
 ; CHECK-NEXT:    vle8.v v28, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v26, v28
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, <32 x i8>* %x
@@ -189,7 +179,6 @@ define <16 x i32> @vwmaccu_v16i32(<16 x i16>* %x, <16 x i16>* %y, <16 x i32> %z)
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vle16.v v28, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v26, v28
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, <16 x i16>* %x
@@ -207,7 +196,6 @@ define <8 x i64> @vwmaccu_v8i64(<8 x i32>* %x, <8 x i32>* %y, <8 x i64> %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
 ; CHECK-NEXT:    vle32.v v28, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v26, v28
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %x
@@ -226,7 +214,6 @@ define <64 x i16> @vwmaccu_v64i16(<64 x i8>* %x, <64 x i8>* %y, <64 x i16> %z) {
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v28, (a0)
 ; CHECK-NEXT:    vle8.v v16, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v28, v16
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, <64 x i8>* %x
@@ -245,7 +232,6 @@ define <32 x i32> @vwmaccu_v32i32(<32 x i16>* %x, <32 x i16>* %y, <32 x i32> %z)
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v28, (a0)
 ; CHECK-NEXT:    vle16.v v16, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v28, v16
 ; CHECK-NEXT:    ret
   %a = load <32 x i16>, <32 x i16>* %x
@@ -263,7 +249,6 @@ define <16 x i64> @vwmaccu_v16i64(<16 x i32>* %x, <16 x i32>* %y, <16 x i64> %z)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle32.v v28, (a0)
 ; CHECK-NEXT:    vle32.v v16, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vv v8, v28, v16
 ; CHECK-NEXT:    ret
   %a = load <16 x i32>, <16 x i32>* %x
@@ -280,7 +265,6 @@ define <2 x i16> @vwmaccu_vx_v2i16(<2 x i8>* %x, i8 %y, <2 x i16> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, <2 x i8>* %x
@@ -298,7 +282,6 @@ define <4 x i16> @vwmaccu_vx_v4i16(<4 x i8>* %x, i8 %y, <4 x i16> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, <4 x i8>* %x
@@ -316,7 +299,6 @@ define <2 x i32> @vwmaccu_vx_v2i32(<2 x i16>* %x, i16 %y, <2 x i32> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, <2 x i16>* %x
@@ -334,7 +316,6 @@ define <8 x i16> @vwmaccu_vx_v8i16(<8 x i8>* %x, i8 %y, <8 x i16> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, <8 x i8>* %x
@@ -352,7 +333,6 @@ define <4 x i32> @vwmaccu_vx_v4i32(<4 x i16>* %x, i16 %y, <4 x i32> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, <4 x i16>* %x
@@ -370,7 +350,6 @@ define <2 x i64> @vwmaccu_vx_v2i64(<2 x i32>* %x, i32 %y, <2 x i64> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, <2 x i32>* %x
@@ -388,7 +367,6 @@ define <16 x i16> @vwmaccu_vx_v16i16(<16 x i8>* %x, i8 %y, <16 x i16> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vle8.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
@@ -406,7 +384,6 @@ define <8 x i32> @vwmaccu_vx_v8i32(<8 x i16>* %x, i16 %y, <8 x i32> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -424,7 +401,6 @@ define <4 x i64> @vwmaccu_vx_v4i64(<4 x i32>* %x, i32 %y, <4 x i64> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v25, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v25
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -443,7 +419,6 @@ define <32 x i16> @vwmaccu_vx_v32i16(<32 x i8>* %x, i8 %y, <32 x i16> %z) {
 ; CHECK-NEXT:    addi a2, zero, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v26, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v26
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, <32 x i8>* %x
@@ -461,7 +436,6 @@ define <16 x i32> @vwmaccu_vx_v16i32(<16 x i16>* %x, i16 %y, <16 x i32> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vle16.v v26, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v26
 ; CHECK-NEXT:    ret
   %a = load <16 x i16>, <16 x i16>* %x
@@ -479,7 +453,6 @@ define <8 x i64> @vwmaccu_vx_v8i64(<8 x i32>* %x, i32 %y, <8 x i64> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v26, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v26
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %x
@@ -498,7 +471,6 @@ define <64 x i16> @vwmaccu_vx_v64i16(<64 x i8>* %x, i8 %y, <64 x i16> %z) {
 ; CHECK-NEXT:    addi a2, zero, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v28, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v28
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, <64 x i8>* %x
@@ -517,7 +489,6 @@ define <32 x i32> @vwmaccu_vx_v32i32(<32 x i16>* %x, i16 %y, <32 x i32> %z) {
 ; CHECK-NEXT:    addi a2, zero, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v28, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v28
 ; CHECK-NEXT:    ret
   %a = load <32 x i16>, <32 x i16>* %x
@@ -535,7 +506,6 @@ define <16 x i64> @vwmaccu_vx_v16i64(<16 x i32>* %x, i32 %y, <16 x i64> %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vle32.v v28, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, mu
 ; CHECK-NEXT:    vwmaccu.vx v8, a1, v28
 ; CHECK-NEXT:    ret
   %a = load <16 x i32>, <16 x i32>* %x
