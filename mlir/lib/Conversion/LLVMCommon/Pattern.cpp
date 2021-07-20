@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AffineMap.h"
@@ -222,6 +223,83 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
     memRefDescriptor.setStride(rewriter, loc, en.index(), en.value());
 
   return memRefDescriptor;
+}
+
+LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
+    OpBuilder &builder, Location loc, TypeRange origTypes,
+    SmallVectorImpl<Value> &operands, bool toDynamic) const {
+  assert(origTypes.size() == operands.size() &&
+         "expected as may original types as operands");
+
+  // Find operands of unranked memref type and store them.
+  SmallVector<UnrankedMemRefDescriptor, 4> unrankedMemrefs;
+  for (unsigned i = 0, e = operands.size(); i < e; ++i)
+    if (origTypes[i].isa<UnrankedMemRefType>())
+      unrankedMemrefs.emplace_back(operands[i]);
+
+  if (unrankedMemrefs.empty())
+    return success();
+
+  // Compute allocation sizes.
+  SmallVector<Value, 4> sizes;
+  UnrankedMemRefDescriptor::computeSizes(builder, loc, *getTypeConverter(),
+                                         unrankedMemrefs, sizes);
+
+  // Get frequently used types.
+  MLIRContext *context = builder.getContext();
+  Type voidPtrType = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+  auto i1Type = IntegerType::get(context, 1);
+  Type indexType = getTypeConverter()->getIndexType();
+
+  // Find the malloc and free, or declare them if necessary.
+  auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
+  LLVM::LLVMFuncOp freeFunc, mallocFunc;
+  if (toDynamic)
+    mallocFunc = LLVM::lookupOrCreateMallocFn(module, indexType);
+  if (!toDynamic)
+    freeFunc = LLVM::lookupOrCreateFreeFn(module);
+
+  // Initialize shared constants.
+  Value zero =
+      builder.create<LLVM::ConstantOp>(loc, i1Type, builder.getBoolAttr(false));
+
+  unsigned unrankedMemrefPos = 0;
+  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
+    Type type = origTypes[i];
+    if (!type.isa<UnrankedMemRefType>())
+      continue;
+    Value allocationSize = sizes[unrankedMemrefPos++];
+    UnrankedMemRefDescriptor desc(operands[i]);
+
+    // Allocate memory, copy, and free the source if necessary.
+    Value memory =
+        toDynamic
+            ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
+                  .getResult(0)
+            : builder.create<LLVM::AllocaOp>(loc, voidPtrType, allocationSize,
+                                             /*alignment=*/0);
+    Value source = desc.memRefDescPtr(builder, loc);
+    builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, zero);
+    if (!toDynamic)
+      builder.create<LLVM::CallOp>(loc, freeFunc, source);
+
+    // Create a new descriptor. The same descriptor can be returned multiple
+    // times, attempting to modify its pointer can lead to memory leaks
+    // (allocated twice and overwritten) or double frees (the caller does not
+    // know if the descriptor points to the same memory).
+    Type descriptorType = getTypeConverter()->convertType(type);
+    if (!descriptorType)
+      return failure();
+    auto updatedDesc =
+        UnrankedMemRefDescriptor::undef(builder, loc, descriptorType);
+    Value rank = desc.rank(builder, loc);
+    updatedDesc.setRank(builder, loc, rank);
+    updatedDesc.setMemRefDescPtr(builder, loc, memory);
+
+    operands[i] = updatedDesc;
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
