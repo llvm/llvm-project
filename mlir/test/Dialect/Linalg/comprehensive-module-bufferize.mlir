@@ -34,6 +34,19 @@ func @fill_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}) -> tensor<?xf
 
 // -----
 
+// CHECK-LABEL: func @tensor_extract(%{{.*}}: memref<?xf32, #{{.*}}>) -> f32 {
+func @tensor_extract(%A : tensor<?xf32>) -> (f32) {
+  %c0 = constant 0 : index
+
+//       CHECK: %[[RES:.*]] = memref.load {{.*}} : memref<?xf32, #{{.*}}>
+  %0 = tensor.extract %A[%c0] : tensor<?xf32>
+
+//       CHECK: return %[[RES]] : f32
+  return %0 : f32
+}
+
+// -----
+
 // CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
 /// No linalg.inplaceable flag, must allocate.
