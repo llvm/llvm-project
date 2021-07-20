@@ -233,6 +233,8 @@ static DecodeStatus DecodeImm8OptLsl(MCInst &Inst, unsigned Imm,
                                      uint64_t Addr, const void *Decoder);
 static DecodeStatus DecodeSVEIncDecImm(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr, const void *Decoder);
+static DecodeStatus DecodeSVCROp(MCInst &Inst, unsigned Imm, uint64_t Address,
+                                 const void *Decoder);
 
 static bool Check(DecodeStatus &Out, DecodeStatus In) {
   switch (In) {
@@ -1991,4 +1993,13 @@ static DecodeStatus DecodeSVEIncDecImm(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr, const void *Decoder) {
   Inst.addOperand(MCOperand::createImm(Imm + 1));
   return Success;
+}
+
+static DecodeStatus DecodeSVCROp(MCInst &Inst, unsigned Imm, uint64_t Address,
+                                 const void *Decoder) {
+  if (AArch64SVCR::lookupSVCRByEncoding(Imm)) {
+    Inst.addOperand(MCOperand::createImm(Imm));
+    return Success;
+  }
+  return Fail;
 }

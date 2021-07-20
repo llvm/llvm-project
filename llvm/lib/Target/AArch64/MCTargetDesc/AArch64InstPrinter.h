@@ -196,6 +196,8 @@ protected:
   template <int EltSize>
   void printMatrix(const MCInst *MI, unsigned OpNum, const MCSubtargetInfo &STI,
                    raw_ostream &O);
+  void printSVCROp(const MCInst *MI, unsigned OpNum, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
   template <char = 0>
   void printSVERegOp(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);
