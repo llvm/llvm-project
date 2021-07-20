@@ -166,8 +166,7 @@ bool DependencyScanningWorkerFilesystem::shouldIgnoreFile(
 llvm::ErrorOr<const CachedFileSystemEntry *>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     const StringRef Filename) {
-  bool ShouldMinimize =
-      !IgnoredFiles.count(Filename) && shouldMinimize(Filename);
+  bool ShouldMinimize = !shouldIgnoreFile(Filename) && shouldMinimize(Filename);
 
   if (const auto *Entry = Cache.getCachedEntry(Filename, ShouldMinimize))
     return Entry;
