@@ -110,7 +110,7 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   ASSERT_NE(Retrieved->Categories.end(),
             find_if(Retrieved->Categories,
                     [&](const llvm::cl::OptionCategory *Cat) {
-                      return Cat == &cl::getGeneralCategory();
+                      return Cat == &cl::GeneralCategory;
                     }))
       << "Incorrect default option category.";
 
@@ -152,10 +152,10 @@ TEST(CommandLineTest, UseOptionCategory) {
 
 TEST(CommandLineTest, UseMultipleCategories) {
   StackOption<int> TestOption2("test-option2", cl::cat(TestCategory),
-                               cl::cat(cl::getGeneralCategory()),
-                               cl::cat(cl::getGeneralCategory()));
+                               cl::cat(cl::GeneralCategory),
+                               cl::cat(cl::GeneralCategory));
 
-  // Make sure cl::getGeneralCategory() wasn't added twice.
+  // Make sure cl::GeneralCategory wasn't added twice.
   ASSERT_EQ(TestOption2.Categories.size(), 2U);
 
   ASSERT_NE(TestOption2.Categories.end(),
@@ -166,9 +166,9 @@ TEST(CommandLineTest, UseMultipleCategories) {
       << "Failed to assign Option Category.";
   ASSERT_NE(TestOption2.Categories.end(),
             find_if(TestOption2.Categories,
-                    [&](const llvm::cl::OptionCategory *Cat) {
-                      return Cat == &cl::getGeneralCategory();
-                    }))
+                         [&](const llvm::cl::OptionCategory *Cat) {
+                           return Cat == &cl::GeneralCategory;
+                         }))
       << "Failed to assign General Category.";
 
   cl::OptionCategory AnotherCategory("Additional test Options", "Description");
@@ -176,9 +176,9 @@ TEST(CommandLineTest, UseMultipleCategories) {
                               cl::cat(AnotherCategory));
   ASSERT_EQ(TestOption.Categories.end(),
             find_if(TestOption.Categories,
-                    [&](const llvm::cl::OptionCategory *Cat) {
-                      return Cat == &cl::getGeneralCategory();
-                    }))
+                         [&](const llvm::cl::OptionCategory *Cat) {
+                           return Cat == &cl::GeneralCategory;
+                         }))
       << "Failed to remove General Category.";
   ASSERT_NE(TestOption.Categories.end(),
             find_if(TestOption.Categories,

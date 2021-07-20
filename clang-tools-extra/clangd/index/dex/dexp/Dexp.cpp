@@ -91,7 +91,7 @@ class Command {
   // By resetting the parser options, we lost the standard -help flag.
   llvm::cl::opt<bool, false, llvm::cl::parser<bool>> Help{
       "help", llvm::cl::desc("Display available options"),
-      llvm::cl::ValueDisallowed, llvm::cl::cat(llvm::cl::getGeneralCategory())};
+      llvm::cl::ValueDisallowed, llvm::cl::cat(llvm::cl::GeneralCategory)};
   // FIXME: Allow commands to signal failure.
   virtual void run() = 0;
 
