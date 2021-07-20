@@ -82,7 +82,7 @@ TEST(Threading, RunOnThreadSync) {
 #if defined(__APPLE__)
 TEST(Threading, AppleStackSize) {
   llvm::thread Thread([] {
-    volatile unsigned char Var[8 * 1024 * 1024 - 1024];
+    volatile unsigned char Var[8 * 1024 * 1024 - 10240];
     Var[0] = 0xff;
     ASSERT_EQ(Var[0], 0xff);
   });
