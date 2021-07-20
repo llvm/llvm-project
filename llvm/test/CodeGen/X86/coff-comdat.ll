@@ -18,7 +18,7 @@ define void @f3() comdat($f3) {
   ret void
 }
 
-$f4 = comdat noduplicates
+$f4 = comdat nodeduplicate
 @v4 = global i32 0, comdat($f4)
 define void @f4() comdat($f4) {
   ret void

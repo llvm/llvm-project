@@ -532,10 +532,10 @@ static const Comdat *getELFComdat(const GlobalValue *GV) {
     return nullptr;
 
   if (C->getSelectionKind() != Comdat::Any &&
-      C->getSelectionKind() != Comdat::NoDuplicates)
+      C->getSelectionKind() != Comdat::NoDeduplicate)
     report_fatal_error("ELF COMDATs only support SelectionKind::Any and "
-                       "SelectionKind::NoDuplicates, '" + C->getName() +
-                       "' cannot be lowered.");
+                       "SelectionKind::NoDeduplicate, '" +
+                       C->getName() + "' cannot be lowered.");
 
   return C;
 }
@@ -1571,7 +1571,7 @@ static int getSelectionForCOFF(const GlobalValue *GV) {
         return COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH;
       case Comdat::Largest:
         return COFF::IMAGE_COMDAT_SELECT_LARGEST;
-      case Comdat::NoDuplicates:
+      case Comdat::NoDeduplicate:
         return COFF::IMAGE_COMDAT_SELECT_NODUPLICATES;
       case Comdat::SameSize:
         return COFF::IMAGE_COMDAT_SELECT_SAME_SIZE;

@@ -938,8 +938,8 @@ The selection kind must be one of the following:
     same data.
 ``largest``
     The linker will choose the section containing the largest COMDAT key.
-``noduplicates``
-    The linker requires that only section with this COMDAT key exist.
+``nodeduplicate``
+    No deduplication is performed.
 ``samesize``
     The linker may choose any COMDAT key but the sections must contain the
     same amount of data.

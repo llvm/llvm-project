@@ -13,8 +13,8 @@ $c5 = comdat any
 
 ; CHECK: $c1 = comdat any
 
-;; wasm doesn't support noduplicates.
-; NODUP: $c2 = comdat noduplicates
+;; wasm doesn't support nodeduplicate.
+; NODUP: $c2 = comdat nodeduplicate
 ; WASM:  $c2 = comdat any
 
 ; CHECK: $c3 = comdat any

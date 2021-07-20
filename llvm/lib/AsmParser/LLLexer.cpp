@@ -717,7 +717,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(any);
   KEYWORD(exactmatch);
   KEYWORD(largest);
-  KEYWORD(noduplicates);
+  KEYWORD(nodeduplicate);
   KEYWORD(samesize);
 
   KEYWORD(eq); KEYWORD(ne); KEYWORD(slt); KEYWORD(sgt); KEYWORD(sle);
