@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: libcpp-has-no-filesystem-library
 
+// std::filesystem is unavailable prior to macOS 10.15
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+
 // Make sure the various containers' iterators are not broken by the use of `std::rel_ops`.
 
 #include <utility> // for std::rel_ops
