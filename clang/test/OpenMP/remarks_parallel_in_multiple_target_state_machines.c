@@ -8,23 +8,23 @@ void baz(void) __attribute__((assume("omp_no_openmp")));
 
 void bar1(void) {
 #pragma omp parallel // #0
-                     // safe-remark@#0 {{Parallel region is used in unknown ways. Will not attempt to rewrite the state machine.}}
+                     // safe-remark@#0 {{Parallel region is used in unknown ways. Will not attempt to rewrite the state machine. [OMP101]}}
   {
   }
 }
 void bar2(void) {
 #pragma omp parallel // #1
-                     // safe-remark@#1 {{Parallel region is used in unknown ways. Will not attempt to rewrite the state machine.}}
+                     // safe-remark@#1 {{Parallel region is used in unknown ways. Will not attempt to rewrite the state machine. [OMP101]}}
   {
   }
 }
 
 void foo1(void) {
 #pragma omp target teams // #2
-                         // all-remark@#2 {{Rewriting generic-mode kernel with a customized state machine.}}
+                         // all-remark@#2 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
 
   {
-    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.}}
+    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
 #pragma omp parallel // #3
     {
     }
@@ -37,9 +37,9 @@ void foo1(void) {
 
 void foo2(void) {
 #pragma omp target teams // #5
-                         // all-remark@#5 {{Rewriting generic-mode kernel with a customized state machine.}}
+                         // all-remark@#5 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
   {
-    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.}}
+    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
 #pragma omp parallel // #6
     {
     }
@@ -55,9 +55,9 @@ void foo2(void) {
 
 void foo3(void) {
 #pragma omp target teams // #8
-                         // all-remark@#8 {{Rewriting generic-mode kernel with a customized state machine.}}
+                         // all-remark@#8 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
   {
-    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.}}
+    baz();           // all-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
 #pragma omp parallel // #9
     {
     }
@@ -83,4 +83,4 @@ void spmd(void) {
   }
 }
 
-// all-remark@* 9 {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
+// all-remark@* 9 {{OpenMP runtime call __kmpc_global_thread_num deduplicated. [OMP170]}}
