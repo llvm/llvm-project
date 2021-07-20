@@ -7,8 +7,6 @@ use omp_lib
 !    2.7.1 Loop construct
 !    ...
 
-! TODO: all the internal errors
-
   integer :: b = 128
   integer :: z, c = 32
   integer, parameter :: num = 16
@@ -87,7 +85,7 @@ use omp_lib
   do i = 1, N
      z = 2
   enddo
-   !$omp end target data
+  !$omp end target data
 
   !ERROR: SCHEDULE clause is not allowed on the PARALLEL directive
   !$omp parallel schedule(static)
@@ -177,7 +175,7 @@ use omp_lib
       exit outofparallel
     end do inner
   end do outer
-  !$end omp do
+  !$omp end do
   !$omp end parallel
   end do outofparallel
 
