@@ -17,6 +17,8 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
+#include "llvm/LTO/Caching.h"
+#include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -97,11 +99,28 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 std::vector<ObjFile *> BitcodeCompiler::compile() {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
+  files.resize(maxTasks);
 
-  checkError(ltoObj->run([&](size_t task) {
-    return std::make_unique<lto::NativeObjectStream>(
-        std::make_unique<raw_svector_ostream>(buf[task]));
-  }));
+  // The -cache_path_lto option specifies the path to a directory in which
+  // to cache native object files for ThinLTO incremental builds. If a path was
+  // specified, configure LTO to use it as the cache directory.
+  lto::NativeObjectCache cache;
+  if (!config->thinLTOCacheDir.empty())
+    cache = check(
+        lto::localCache(config->thinLTOCacheDir,
+                        [&](size_t task, std::unique_ptr<MemoryBuffer> mb) {
+                          files[task] = std::move(mb);
+                        }));
+
+  checkError(ltoObj->run(
+      [&](size_t task) {
+        return std::make_unique<lto::NativeObjectStream>(
+            std::make_unique<raw_svector_ostream>(buf[task]));
+      },
+      cache));
+
+  if (!config->thinLTOCacheDir.empty())
+    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy);
 
   if (config->saveTemps) {
     if (!buf[0].empty())
@@ -130,6 +149,8 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
     ret.push_back(make<ObjFile>(
         MemoryBufferRef(buf[i], saver.save(filePath.str())), modTime, ""));
   }
-
+  for (std::unique_ptr<MemoryBuffer> &file : files)
+    if (file)
+      ret.push_back(make<ObjFile>(*file, 0, ""));
   return ret;
 }
