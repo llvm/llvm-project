@@ -46,7 +46,7 @@ struct __fn {
   // well-formed expression when treated as an unevaluated operand, [...]
   template<class _Ip>
     requires __class_or_enum<remove_cvref_t<_Ip>> && __unqualified_iter_move<_Ip>
-  [[nodiscard]] constexpr decltype(auto) operator()(_Ip&& __i) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Ip&& __i) const
     noexcept(noexcept(iter_move(_VSTD::forward<_Ip>(__i))))
   {
     return iter_move(_VSTD::forward<_Ip>(__i));
@@ -59,7 +59,7 @@ struct __fn {
   template<class _Ip>
     requires (!(__class_or_enum<remove_cvref_t<_Ip>> && __unqualified_iter_move<_Ip>)) &&
     requires(_Ip&& __i) { *_VSTD::forward<_Ip>(__i); }
-  [[nodiscard]] constexpr decltype(auto) operator()(_Ip&& __i) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Ip&& __i) const
     noexcept(noexcept(*_VSTD::forward<_Ip>(__i)))
   {
     if constexpr (is_lvalue_reference_v<decltype(*_VSTD::forward<_Ip>(__i))>) {
