@@ -18097,11 +18097,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   // If this is an FP_ROUND or TRUNC followed by a store, fold this into a
   // truncating store.  We can do this even if this is already a truncstore.
-  if ((Value.getOpcode() == ISD::FP_ROUND ||
-       Value.getOpcode() == ISD::TRUNCATE) &&
-      Value.getNode()->hasOneUse() && ST->isUnindexed() &&
-      TLI.canCombineTruncStore(Value.getOperand(0).getValueType(),
-                               ST->getMemoryVT(), LegalOperations)) {
+  if ((Value.getOpcode() == ISD::FP_ROUND || Value.getOpcode() == ISD::TRUNCATE)
+      && Value.getNode()->hasOneUse() && ST->isUnindexed() &&
+      TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(),
+                            ST->getMemoryVT())) {
     return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0),
                              Ptr, ST->getMemoryVT(), ST->getMemOperand());
   }
