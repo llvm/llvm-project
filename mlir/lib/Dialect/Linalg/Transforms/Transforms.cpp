@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
@@ -798,14 +799,6 @@ static Value asValue(OpBuilder &builder, Location loc, OpFoldResult ofr) {
   return builder.create<ConstantIndexOp>(loc, *intVal);
 }
 
-/// Given a value, try to extract a constant index-type integer as an Attribute.
-/// If this fails, return the original value.
-static OpFoldResult asOpFoldResult(OpBuilder &builder, Value val) {
-  if (auto constInt = getConstantIntValue(val))
-    return builder.getIndexAttr(*constInt);
-  return val;
-}
-
 LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     tensor::ExtractSliceOp sliceOp, PatternRewriter &rewriter) const {
   auto padOp = sliceOp.source().getDefiningOp<PadTensorOp>();
@@ -895,7 +888,7 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     // ExtractSliceOp length will be zero in that case. (Effectively reading no
     // data from the source.)
     Value newOffset = min(max(sub(offset, low), zero), srcSize);
-    newOffsets.push_back(asOpFoldResult(rewriter, newOffset));
+    newOffsets.push_back(getAsOpFoldResult(newOffset));
 
     // The original ExtractSliceOp was reading until position `offset + length`.
     // Therefore, the corresponding position within the source tensor is:
@@ -915,7 +908,7 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     // The new ExtractSliceOp length is `endLoc - newOffset`.
     Value endLoc = min(max(add(sub(offset, low), length), zero), srcSize);
     Value newLength = sub(endLoc, newOffset);
-    newLengths.push_back(asOpFoldResult(rewriter, newLength));
+    newLengths.push_back(getAsOpFoldResult(newLength));
 
     // Check if newLength is zero. In that case, no SubTensorOp should be
     // executed.
