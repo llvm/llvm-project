@@ -774,7 +774,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 void llvm::CloneAndPruneFunctionInto(
     Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
     bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix, ClonedCodeInfo *CodeInfo, Instruction *TheCall) {
+    const char *NameSuffix, ClonedCodeInfo *CodeInfo) {
   CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo);
 }
