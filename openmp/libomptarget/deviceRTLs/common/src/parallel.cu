@@ -238,7 +238,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   currTaskDescr->RestoreLoopData();
 }
 
-EXTERN uint16_t __kmpc_parallel_level() {
+EXTERN uint8_t __kmpc_parallel_level() {
   return parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1);
 }
 
