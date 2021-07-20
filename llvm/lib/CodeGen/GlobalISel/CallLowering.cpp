@@ -156,10 +156,16 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   const AttributeList &Attrs = FuncInfo.getAttributes();
   addArgFlagsFromAttributes(Flags, Attrs, OpIdx);
 
+  PointerType *PtrTy = dyn_cast<PointerType>(Arg.Ty->getScalarType());
+  if (PtrTy) {
+    Flags.setPointer();
+    Flags.setPointerAddrSpace(PtrTy->getPointerAddressSpace());
+  }
+
   Align MemAlign = DL.getABITypeAlign(Arg.Ty);
   if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
     assert(OpIdx >= AttributeList::FirstArgIndex);
-    Type *ElementTy = cast<PointerType>(Arg.Ty)->getElementType();
+    Type *ElementTy = PtrTy->getElementType();
 
     auto Ty = Attrs.getAttribute(OpIdx, Attribute::ByVal).getValueAsType();
     Flags.setByValSize(DL.getTypeAllocSize(Ty ? Ty : ElementTy));
@@ -345,6 +351,14 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     } else if (Flags.isZExt()) {
       SrcReg = B.buildAssertZExt(LocTy, SrcReg, LLTy.getScalarSizeInBits())
                    .getReg(0);
+    }
+
+    // Sometimes pointers are passed zero extended.
+    LLT OrigTy = MRI.getType(OrigRegs[0]);
+    if (OrigTy.isPointer()) {
+      LLT IntPtrTy = LLT::scalar(OrigTy.getSizeInBits());
+      B.buildIntToPtr(OrigRegs[0], B.buildTrunc(IntPtrTy, SrcReg));
+      return;
     }
 
     B.buildTrunc(OrigRegs[0], SrcReg);
@@ -690,7 +704,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
 
         // TODO: The memory size may be larger than the value we need to
         // store. We may need to adjust the offset for big endian targets.
-        LLT MemTy = Handler.getStackValueStoreType(DL, VA);
+        LLT MemTy = Handler.getStackValueStoreType(DL, VA, Flags);
 
         MachinePointerInfo MPO;
         Register StackAddr = Handler.getStackAddress(
@@ -1026,13 +1040,26 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
 }
 
 LLT CallLowering::ValueHandler::getStackValueStoreType(
-    const DataLayout &DL, const CCValAssign &VA) const {
+    const DataLayout &DL, const CCValAssign &VA, ISD::ArgFlagsTy Flags) const {
   const MVT ValVT = VA.getValVT();
-  if (ValVT != MVT::iPTR)
-    return LLT(ValVT);
+  if (ValVT != MVT::iPTR) {
+    LLT ValTy(ValVT);
 
-  /// FIXME: We need to get the correct pointer address space.
-  return LLT::pointer(0, DL.getPointerSize(0));
+    // We lost the pointeriness going through CCValAssign, so try to restore it
+    // based on the flags.
+    if (Flags.isPointer()) {
+      LLT PtrTy = LLT::pointer(Flags.getPointerAddrSpace(),
+                               ValTy.getScalarSizeInBits());
+      if (ValVT.isVector())
+        return LLT::vector(ValTy.getElementCount(), PtrTy);
+      return PtrTy;
+    }
+
+    return ValTy;
+  }
+
+  unsigned AddrSpace = Flags.getPointerAddrSpace();
+  return LLT::pointer(AddrSpace, DL.getPointerSize(AddrSpace));
 }
 
 void CallLowering::ValueHandler::copyArgumentMemory(
@@ -1071,6 +1098,14 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     if (MaxSizeBits <= ValTy.getSizeInBits())
       return ValReg;
     LocTy = LLT::scalar(MaxSizeBits);
+  }
+
+  const LLT ValRegTy = MRI.getType(ValReg);
+  if (ValRegTy.isPointer()) {
+    // The x32 ABI wants to zero extend 32-bit pointers to 64-bit registers, so
+    // we have to cast to do the extension.
+    LLT IntPtrTy = LLT::scalar(ValRegTy.getSizeInBits());
+    ValReg = MIRBuilder.buildPtrToInt(IntPtrTy, ValReg).getReg(0);
   }
 
   switch (VA.getLocInfo()) {

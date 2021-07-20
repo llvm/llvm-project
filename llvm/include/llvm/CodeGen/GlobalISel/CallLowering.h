@@ -252,7 +252,8 @@ public:
     /// This is overridable primarily for targets to maintain compatibility with
     /// hacks around the existing DAG call lowering infrastructure.
     virtual LLT getStackValueStoreType(const DataLayout &DL,
-                                       const CCValAssign &VA) const;
+                                       const CCValAssign &VA,
+                                       ISD::ArgFlagsTy Flags) const;
 
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
