@@ -97,11 +97,6 @@ private:
   /// scanRemattable - Identify the Parent values that may rematerialize.
   void scanRemattable(AAResults *aa);
 
-  /// allUsesAvailableAt - Return true if all registers used by OrigMI at
-  /// OrigIdx are also available with the same value at UseIdx.
-  bool allUsesAvailableAt(const MachineInstr *OrigMI, SlotIndex OrigIdx,
-                          SlotIndex UseIdx) const;
-
   /// foldAsLoad - If LI has a single use and a single def that can be folded as
   /// a load, eliminate the register by folding the def into the use.
   bool foldAsLoad(LiveInterval *LI, SmallVectorImpl<MachineInstr *> &Dead);
@@ -206,6 +201,11 @@ public:
 
     explicit Remat(VNInfo *ParentVNI) : ParentVNI(ParentVNI) {}
   };
+
+  /// allUsesAvailableAt - Return true if all registers used by OrigMI at
+  /// OrigIdx are also available with the same value at UseIdx.
+  bool allUsesAvailableAt(const MachineInstr *OrigMI, SlotIndex OrigIdx,
+                          SlotIndex UseIdx) const;
 
   /// canRematerializeAt - Determine if ParentVNI can be rematerialized at
   /// UseIdx. It is assumed that parent_.getVNINfoAt(UseIdx) == ParentVNI.

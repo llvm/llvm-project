@@ -201,6 +201,11 @@ namespace {
     /// Recursively eliminate dead defs in DeadDefs.
     void eliminateDeadDefs();
 
+    /// allUsesAvailableAt - Return true if all registers used by OrigMI at
+    /// OrigIdx are also available with the same value at UseIdx.
+    bool allUsesAvailableAt(const MachineInstr *OrigMI, SlotIndex OrigIdx,
+                            SlotIndex UseIdx);
+
     /// LiveRangeEdit callback for eliminateDeadDefs().
     void LRE_WillEraseInstruction(MachineInstr *MI) override;
 
@@ -602,6 +607,14 @@ void RegisterCoalescer::eliminateDeadDefs() {
   SmallVector<Register, 8> NewRegs;
   LiveRangeEdit(nullptr, NewRegs, *MF, *LIS,
                 nullptr, this).eliminateDeadDefs(DeadDefs);
+}
+
+bool RegisterCoalescer::allUsesAvailableAt(const MachineInstr *OrigMI,
+                                           SlotIndex OrigIdx,
+                                           SlotIndex UseIdx) {
+  SmallVector<Register, 8> NewRegs;
+  return LiveRangeEdit(nullptr, NewRegs, *MF, *LIS, nullptr, this)
+      .allUsesAvailableAt(OrigMI, OrigIdx, UseIdx);
 }
 
 void RegisterCoalescer::LRE_WillEraseInstruction(MachineInstr *MI) {
@@ -1342,6 +1355,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
              "Only expect to deal with virtual or physical registers");
     }
   }
+
+  if (!allUsesAvailableAt(DefMI, ValNo->def, CopyIdx))
+    return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();
   MachineBasicBlock *MBB = CopyMI->getParent();
