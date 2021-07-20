@@ -105,8 +105,8 @@ if (NOT LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
   serialize_lit_param(enable_debug_tests False)
 endif()
 
-if (TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${TARGET_TRIPLE}\"")
+if (LIBCXX_TARGET_TRIPLE)
+  serialize_lit_param(target_triple "\"${LIBCXX_TARGET_TRIPLE}\"")
 endif()
 
 if (LLVM_USE_SANITIZER)
