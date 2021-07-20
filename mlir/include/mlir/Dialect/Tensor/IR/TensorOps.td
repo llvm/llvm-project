@@ -432,8 +432,7 @@ def Tensor_InsertOp : Tensor_Op<"insert",
 def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
     Tensor_Dialect, "insert_slice",
     [NoSideEffect, AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface,
-     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-         ["reifyReturnTypeShapesPerResultDim"]>,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
      TypesMatchWith<"expected result type to match dest type",
                     "dest", "result", "$_self">]> {
   let summary = "insert_slice operation";
