@@ -415,7 +415,7 @@ void RVVType::initBuiltinStr() {
   case ScalarTypeKind::Float:
     switch (ElementBitwidth) {
     case 16:
-      BuiltinStr += "h";
+      BuiltinStr += "x";
       break;
     case 32:
       BuiltinStr += "f";
@@ -516,8 +516,10 @@ void RVVType::initTypeStr() {
         Str += "double";
       else if (ElementBitwidth == 32)
         Str += "float";
-      assert((ElementBitwidth == 32 || ElementBitwidth == 64) &&
-             "Unhandled floating type");
+      else if (ElementBitwidth == 16)
+        Str += "_Float16";
+      else
+        llvm_unreachable("Unhandled floating type.");
     } else
       Str += getTypeString("float");
     break;
@@ -574,7 +576,7 @@ void RVVType::applyBasicType() {
     ElementBitwidth = 64;
     ScalarType = ScalarTypeKind::SignedInteger;
     break;
-  case 'h':
+  case 'x':
     ElementBitwidth = 16;
     ScalarType = ScalarTypeKind::Float;
     break;
@@ -946,7 +948,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   }
   OS << "#if defined(__riscv_zfh)\n";
   for (int Log2LMUL : Log2LMULs) {
-    auto T = computeType('h', Log2LMUL, "v");
+    auto T = computeType('x', Log2LMUL, "v");
     if (T.hasValue())
       printType(T.getValue());
   }

@@ -5341,6 +5341,29 @@ def  VORRd    : N3VDX<0, 0, 0b10, 0b0001, 1, IIC_VBINiD, "vorr",
 def  VORRq    : N3VQX<0, 0, 0b10, 0b0001, 1, IIC_VBINiQ, "vorr",
                       v4i32, v4i32, or, 1>;
 
+multiclass BitwisePatterns<string Name, SDPatternOperator OpNodeD,
+                           SDPatternOperator OpNodeQ> {
+  def : Pat<(v8i8 (OpNodeD DPR:$LHS, DPR:$RHS)),
+            (!cast<Instruction>(Name#"d") DPR:$LHS, DPR:$RHS)>;
+  def : Pat<(v4i16 (OpNodeD DPR:$LHS, DPR:$RHS)),
+            (!cast<Instruction>(Name#"d") DPR:$LHS, DPR:$RHS)>;
+  def : Pat<(v1i64 (OpNodeD DPR:$LHS, DPR:$RHS)),
+            (!cast<Instruction>(Name#"d") DPR:$LHS, DPR:$RHS)>;
+
+  def : Pat<(v16i8 (OpNodeQ QPR:$LHS, QPR:$RHS)),
+            (!cast<Instruction>(Name#"q") QPR:$LHS, QPR:$RHS)>;
+  def : Pat<(v8i16 (OpNodeQ QPR:$LHS, QPR:$RHS)),
+            (!cast<Instruction>(Name#"q") QPR:$LHS, QPR:$RHS)>;
+  def : Pat<(v2i64 (OpNodeQ QPR:$LHS, QPR:$RHS)),
+            (!cast<Instruction>(Name#"q") QPR:$LHS, QPR:$RHS)>;
+}
+
+let Predicates = [HasNEON] in {
+  defm : BitwisePatterns<"VAND", and, and>;
+  defm : BitwisePatterns<"VORR", or, or>;
+  defm : BitwisePatterns<"VEOR", xor, xor>;
+}
+
 def VORRiv4i16 : N1ModImm<1, 0b000, {1,0,?,1}, 0, 0, 0, 1,
                           (outs DPR:$Vd), (ins nImmSplatI16:$SIMM, DPR:$src),
                           IIC_VMOVImm,
@@ -5392,6 +5415,11 @@ def  VBICq    : N3VX<0, 0, 0b01, 0b0001, 1, 1, (outs QPR:$Vd),
                                                  (vnotq QPR:$Vm))))]>;
 }
 
+let Predicates = [HasNEON] in {
+  defm : BitwisePatterns<"VBIC", BinOpFrag<(and node:$LHS, (vnotd node:$RHS))>,
+                                 BinOpFrag<(and node:$LHS, (vnotq node:$RHS))>>;
+}
+
 def VBICiv4i16 : N1ModImm<1, 0b000, {1,0,?,1}, 0, 0, 1, 1,
                           (outs DPR:$Vd), (ins nImmSplatI16:$SIMM, DPR:$src),
                           IIC_VMOVImm,
@@ -5440,6 +5468,11 @@ def  VORNq    : N3VX<0, 0, 0b11, 0b0001, 1, 1, (outs QPR:$Vd),
                      [(set QPR:$Vd, (v4i32 (or QPR:$Vn,
                                                 (vnotq QPR:$Vm))))]>;
 
+let Predicates = [HasNEON] in {
+  defm : BitwisePatterns<"VORN", BinOpFrag<(or node:$LHS, (vnotd node:$RHS))>,
+                                 BinOpFrag<(or node:$LHS, (vnotq node:$RHS))>>;
+}
+
 //   VMVN     : Vector Bitwise NOT (Immediate)
 
 let isReMaterializable = 1 in {
@@ -5483,8 +5516,18 @@ def  VMVNq    : N2VX<0b11, 0b11, 0b00, 0b00, 0b01011, 1, 0,
                      "vmvn", "$Vd, $Vm", "",
                      [(set QPR:$Vd, (v4i32 (vnotq QPR:$Vm)))]>;
 let Predicates = [HasNEON] in {
-def : Pat<(v2i32 (vnotd DPR:$src)), (VMVNd DPR:$src)>;
-def : Pat<(v4i32 (vnotq QPR:$src)), (VMVNq QPR:$src)>;
+def : Pat<(v1i64 (vnotd DPR:$src)),
+          (VMVNd DPR:$src)>;
+def : Pat<(v4i16 (vnotd DPR:$src)),
+          (VMVNd DPR:$src)>;
+def : Pat<(v8i8 (vnotd DPR:$src)),
+          (VMVNd DPR:$src)>;
+def : Pat<(v2i64 (vnotq QPR:$src)),
+          (VMVNq QPR:$src)>;
+def : Pat<(v8i16 (vnotq QPR:$src)),
+          (VMVNq QPR:$src)>;
+def : Pat<(v16i8 (vnotq QPR:$src)),
+          (VMVNq QPR:$src)>;
 }
 
 // The TwoAddress pass will not go looking for equivalent operations
@@ -5513,10 +5556,15 @@ def : Pat<(v1i64 (int_arm_neon_vbsl (v1i64 DPR:$src1),
                                     (v1i64 DPR:$Vn), (v1i64 DPR:$Vm))),
           (VBSPd DPR:$src1, DPR:$Vn, DPR:$Vm)>;
 
+def : Pat<(v8i8 (or (and DPR:$Vn, DPR:$Vd),
+                    (and DPR:$Vm, (vnotd DPR:$Vd)))),
+          (VBSPd DPR:$Vd, DPR:$Vn, DPR:$Vm)>;
+def : Pat<(v4i16 (or (and DPR:$Vn, DPR:$Vd),
+                     (and DPR:$Vm, (vnotd DPR:$Vd)))),
+          (VBSPd DPR:$Vd, DPR:$Vn, DPR:$Vm)>;
 def : Pat<(v2i32 (or (and DPR:$Vn, DPR:$Vd),
                      (and DPR:$Vm, (vnotd DPR:$Vd)))),
           (VBSPd DPR:$Vd, DPR:$Vn, DPR:$Vm)>;
-
 def : Pat<(v1i64 (or (and DPR:$Vn, DPR:$Vd),
                      (and DPR:$Vm, (vnotd DPR:$Vd)))),
           (VBSPd DPR:$Vd, DPR:$Vn, DPR:$Vm)>;
@@ -5544,6 +5592,12 @@ def : Pat<(v2i64 (int_arm_neon_vbsl (v2i64 QPR:$src1),
                                     (v2i64 QPR:$Vn), (v2i64 QPR:$Vm))),
           (VBSPq QPR:$src1, QPR:$Vn, QPR:$Vm)>;
 
+def : Pat<(v16i8 (or (and QPR:$Vn, QPR:$Vd),
+                     (and QPR:$Vm, (vnotq QPR:$Vd)))),
+          (VBSPq QPR:$Vd, QPR:$Vn, QPR:$Vm)>;
+def : Pat<(v8i16 (or (and QPR:$Vn, QPR:$Vd),
+                     (and QPR:$Vm, (vnotq QPR:$Vd)))),
+          (VBSPq QPR:$Vd, QPR:$Vn, QPR:$Vm)>;
 def : Pat<(v4i32 (or (and QPR:$Vn, QPR:$Vd),
                      (and QPR:$Vm, (vnotq QPR:$Vd)))),
           (VBSPq QPR:$Vd, QPR:$Vn, QPR:$Vm)>;
@@ -5633,10 +5687,10 @@ def abd_shr :
                             (zext node:$in2)), (i32 $shift))>;
 
 let Predicates = [HasNEON] in {
-def : Pat<(xor (v4i32 (bitconvert (v2i64 (abd_shr (v2i32 DPR:$opA), (v2i32 DPR:$opB), 63)))),
-               (v4i32 (bitconvert (v2i64 (add (sub (zext (v2i32 DPR:$opA)),
-                                                   (zext (v2i32 DPR:$opB))),
-                                         (abd_shr (v2i32 DPR:$opA), (v2i32 DPR:$opB), 63)))))),
+def : Pat<(xor (v2i64 (abd_shr (v2i32 DPR:$opA), (v2i32 DPR:$opB), 63)),
+               (v2i64 (add (sub (zext (v2i32 DPR:$opA)),
+                                (zext (v2i32 DPR:$opB))),
+                           (abd_shr (v2i32 DPR:$opA), (v2i32 DPR:$opB), 63)))),
           (VABDLuv2i64 DPR:$opA, DPR:$opB)>;
 }
 

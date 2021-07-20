@@ -4605,8 +4605,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (C->isOpaque())
         break;
       LLVM_FALLTHROUGH;
-    case ISD::ANY_EXTEND:
     case ISD::ZERO_EXTEND:
+      return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
+                         C->isTargetOpcode(), C->isOpaque());
+    case ISD::ANY_EXTEND:
+      // Some targets like RISCV prefer to sign extend some types.
+      if (TLI->isSExtCheaperThanZExt(Operand.getValueType(), VT))
+        return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
+                           C->isTargetOpcode(), C->isOpaque());
       return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
                          C->isTargetOpcode(), C->isOpaque());
     case ISD::UINT_TO_FP:

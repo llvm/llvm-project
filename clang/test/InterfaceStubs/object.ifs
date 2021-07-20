@@ -4,10 +4,9 @@
 # RUN: %clang -emit-interface-stubs -o - %s | llvm-readelf --all - | \
 # RUN: FileCheck %s --check-prefixes=CHECK-ELF
 
-# CHECK-IFS: --- !experimental-ifs-v2
-# CHECK-IFS-NEXT: IfsVersion: 2.0
-# CHECK-IFS-NEXT: Triple: x86_64-linux-gnu
-# CHECK-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-IFS: --- !ifs-v1
+# CHECK-IFS-NEXT: IfsVersion: 3.0
+# CHECK-IFS-NEXT: Target: x86_64-linux-gnu
 # CHECK-IFS-NEXT: Symbols:
 # CHECK-IFS-NEXT:   - { Name: b, Type: Object, Size: 4 }
 # CHECK-IFS-NEXT: ...
@@ -19,10 +18,9 @@
 # CHECK-ELF-NOT:   FUNC    GLOBAL DEFAULT  1 a
 # CHECK-ELF:   OBJECT  GLOBAL DEFAULT  1 b
 
---- !experimental-ifs-v2
-IfsVersion: 2.0
-Triple: x86_64-linux-gnu
-ObjectFileFormat: ELF
+--- !ifs-v1
+IfsVersion: 3.0
+Target: x86_64-linux-gnu
 Symbols:
   - { Name: b, Type: Object, Size: 4 }
 ...

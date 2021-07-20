@@ -329,6 +329,11 @@ public:
   void setValue(const PseudoSourceValue *NewSV) { PtrInfo.V = NewSV; }
   void setOffset(int64_t NewOffset) { PtrInfo.Offset = NewOffset; }
 
+  /// Reset the tracked memory type.
+  void setType(LLT NewTy) {
+    MemoryType = NewTy;
+  }
+
   /// Profile - Gather unique data for the object.
   ///
   void Profile(FoldingSetNodeID &ID) const;

@@ -161,8 +161,6 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
-    // The reported memory location may be wider than the value.
-    const LLT RealRegTy = MRI.getType(ValVReg);
     LLT ValTy(VA.getValVT());
     LLT LocTy(VA.getLocVT());
 
@@ -173,15 +171,7 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
     auto MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, LocTy,
         inferAlignFromPtrInfo(MF, MPO));
-
-    if (RealRegTy.getSizeInBits() == ValTy.getSizeInBits()) {
-      // No extension information, or no extension necessary. Load into the
-      // incoming parameter type directly.
-      MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
-    } else {
-      auto Tmp = MIRBuilder.buildLoad(LocTy, Addr, *MMO);
-      MIRBuilder.buildTrunc(ValVReg, Tmp);
-    }
+    MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 
   /// How the physical register gets marked varies between formal
@@ -302,10 +292,6 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
       }
 
       ValVReg = extendRegister(ValVReg, VA, MaxSize);
-      const LLT RegTy = MRI.getType(ValVReg);
-
-      if (RegTy.getSizeInBits() < LocVT.getSizeInBits())
-        ValVReg = MIRBuilder.buildTrunc(RegTy, ValVReg).getReg(0);
     } else {
       // The store does not cover the full allocated stack slot.
       MemTy = LLT(VA.getValVT());

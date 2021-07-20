@@ -4235,7 +4235,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     CmpInstr.setDesc(get(NewOpcode));
     CmpInstr.RemoveOperand(0);
     // Mutating this instruction invalidates any debug data associated with it.
-    CmpInstr.setDebugInstrNum(0);
+    CmpInstr.dropDebugNumber();
     // Fall through to optimize Cmp if Cmp is CMPrr or CMPri.
     if (NewOpcode == X86::CMP64rm || NewOpcode == X86::CMP32rm ||
         NewOpcode == X86::CMP16rm || NewOpcode == X86::CMP8rm)

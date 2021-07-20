@@ -53,6 +53,20 @@ void RTNAME(AllocatableSetBounds)(Descriptor &descriptor, int zeroBasedDim,
   // The byte strides are computed when the object is allocated.
 }
 
+void RTNAME(AllocatableSetDerivedLength)(
+    Descriptor &descriptor, int which, SubscriptValue x) {
+  DescriptorAddendum *addendum{descriptor.Addendum()};
+  INTERNAL_CHECK(addendum != nullptr);
+  addendum->SetLenParameterValue(which, x);
+}
+
+void RTNAME(AllocatableApplyMold)(
+    Descriptor &descriptor, const Descriptor &mold) {
+  descriptor = mold;
+  descriptor.set_base_addr(nullptr);
+  descriptor.raw().attribute = CFI_attribute_allocatable;
+}
+
 int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -63,6 +77,7 @@ int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
     return ReturnError(terminator, StatBaseNotNull, errMsg, hasStat);
   }
   return ReturnError(terminator, descriptor.Allocate(), errMsg, hasStat);
+  // TODO: default component initialization
 }
 
 int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
@@ -76,5 +91,7 @@ int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
   }
   return ReturnError(terminator, descriptor.Deallocate(), errMsg, hasStat);
 }
+
+// TODO: AllocatableCheckLengthParameter, AllocatableAllocateSource
 }
 } // namespace Fortran::runtime

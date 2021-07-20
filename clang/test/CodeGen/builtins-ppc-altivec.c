@@ -1,12 +1,16 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc-unknown-unknown -emit-llvm %s \
-// RUN:            -flax-vector-conversions=none -o - | FileCheck %s
+// RUN:            -flax-vector-conversions=none  -faltivec-src-compat=mixed \
+// RUN:            -o - | FileCheck %s
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpcle-unknown-unknown -emit-llvm %s \
-// RUN:            -flax-vector-conversions=none -o - | FileCheck %s -check-prefix=CHECK-LE
+// RUN:            -flax-vector-conversions=none  -faltivec-src-compat=mixed \
+// RUN:            -o - | FileCheck %s -check-prefix=CHECK-LE
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown -emit-llvm %s \
-// RUN:            -flax-vector-conversions=none -o - | FileCheck %s
+// RUN:            -flax-vector-conversions=none  -faltivec-src-compat=mixed \
+// RUN:            -o - | FileCheck %s
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown -emit-llvm %s \
-// RUN:            -flax-vector-conversions=none -o - | FileCheck %s -check-prefix=CHECK-LE
+// RUN:            -flax-vector-conversions=none  -faltivec-src-compat=mixed \
+// RUN:            -o - | FileCheck %s -check-prefix=CHECK-LE
 // RUN: not %clang_cc1 -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:            -ferror-limit 0 -DNO_ALTIVEC -o - 2>&1 \
 // RUN:            | FileCheck %s -check-prefix=CHECK-NOALTIVEC

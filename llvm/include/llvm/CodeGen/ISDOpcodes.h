@@ -55,9 +55,16 @@ enum NodeType {
   /// value that has already been zero or sign extended from a narrower type.
   /// These nodes take two operands.  The first is the node that has already
   /// been extended, and the second is a value type node indicating the width
-  /// of the extension
+  /// of the extension.
+  /// NOTE: In case of the source value (or any vector element value) is
+  /// poisoned the assertion will not be true for that value.
   AssertSext,
   AssertZext,
+
+  /// AssertAlign - These nodes record if a register contains a value that
+  /// has a known alignment and the trailing bits are known to be zero.
+  /// NOTE: In case of the source value (or any vector element value) is
+  /// poisoned the assertion will not be true for that value.
   AssertAlign,
 
   /// Various leaf nodes.

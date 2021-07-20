@@ -43,6 +43,7 @@ bool relocIs64(uint8_t relocType) {
   case R_WASM_TABLE_INDEX_I64:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_TABLE_INDEX_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
     return true;
   default:
     return false;
@@ -140,6 +141,7 @@ void InputChunk::relocate(uint8_t *buf) const {
     case R_WASM_TABLE_INDEX_REL_SLEB64:
     case R_WASM_MEMORY_ADDR_SLEB64:
     case R_WASM_MEMORY_ADDR_REL_SLEB64:
+    case R_WASM_MEMORY_ADDR_TLS_SLEB64:
       encodeSLEB128(static_cast<int64_t>(value), loc, 10);
       break;
     case R_WASM_TABLE_INDEX_I32:
