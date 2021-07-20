@@ -89,9 +89,6 @@ public:
         std::string inputString = "VERIFIER_nondet";
         for(auto parent : parents){
             if(parent.get<Stmt>()){
-                if(isa<ParmVarDecl>(d)){
-                    std::cout<<"C"<<std::endl;
-                }
                 auto sPrime = parent.get<Stmt>();
                 std::cout <<"(AST,("<<sPrime<<","<<sPrime->getStmtClassName()<<")"<<","<<"("<<d<<","<<d->getDeclKindName()<<"))"<<std::endl;
             }
@@ -119,19 +116,19 @@ public:
             VarDecl* v = cast<VarDecl>(d);
 
             if(v->getType().getTypePtr()->isBuiltinType()){
-                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<"),(typePlaceholder,"<<v->getType().getAsString()<<"))"<<std::endl;
+                    std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<"),(typePlaceholder"<<placeholderVal++<<","<<v->getType().getDesugaredType(*Context).getAsString()<<"))"<<std::endl;
             }
             else if(v->getType().getTypePtr()->isStructureType()){
-                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder,struct))"<<std::endl;
+                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder"<<placeholderVal++<<",struct))"<<std::endl;
             }
             else if(v->getType().getTypePtr()->isArrayType()){
-                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder,array))"<<std::endl;
+                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder"<<placeholderVal++<<",array))"<<std::endl;
             }
             else if(v->getType().getTypePtr()->isPointerType()){
-                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder,pointer))"<<std::endl;
+                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder"<<placeholderVal++<<",pointer))"<<std::endl;
             }
             else{
-                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder,otherType))"<<std::endl;
+                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder"<<placeholderVal++<<",otherType))"<<std::endl;
             }
         }
 
@@ -140,6 +137,7 @@ public:
 
 private:
     clang::ASTContext *Context;
+    int placeholderVal = 0;
 };
 
 class CFGBuilderVisitor : public RecursiveASTVisitor<CFGBuilderVisitor>{
@@ -169,7 +167,6 @@ public:
             return DynTypedNode::create(*(parent->get<Decl>()));
         }
         else{
-            std::cout<<"That's Your problem right there. You got pools of blood in your stomach."<<std::endl;
             return DynTypedNode::create(*node);
         }     
     }
@@ -318,7 +315,7 @@ public:
                 prevChild = child;
             }
         }
-
+        
         return true;
     }
 
@@ -711,25 +708,66 @@ public:
         }
     }
 
-    void binaryOpHelper(Stmt *lhs, Stmt *child){
-        if(isa<CallExpr>(child)){  }
-        else{
-            printDFGPair(child, lhs);
-            if(!(child->children().empty())){
-                for(auto childPrime : child->children()){
-                    binaryOpHelper(lhs, childPrime);
+    void findReturnStmt(Decl *lhs, Stmt *s){
+        if(s){
+            if(isa<ReturnStmt>(s)){
+                std::cout<<"(DFG,("<<lhs<<","<<lhs->getDeclKindName()<<"),("<<s<<","<<s->getStmtClassName()<<"))"<<std::endl;
+                for(auto child : s->children()){
+                    binaryOpHelper(s, child);
+                }
+            }
+            else{
+                for(auto child : s->children()){
+                    findReturnStmt(lhs, child);
                 }
             }
         }
     }
 
+    void binaryOpHelper(Stmt *lhs, Stmt *child){
+        if(child){
+            if(isa<CallExpr>(child)){  }
+            else{
+                printDFGPair(child, lhs);
+                if(!(child->children().empty())){
+                    for(auto childPrime : child->children()){
+                        binaryOpHelper(lhs, childPrime);
+                    }
+                }
+            }
+        }
+    }
+
+
     void binaryOpHelper(Decl *lhs, Stmt *child){
-        if(isa<CallExpr>(child)){  }
-        else{
-            printDFGPair(child, lhs);
-            if(!(child->children().empty())){
-                for(auto childPrime : child->children()){
-                    binaryOpHelper(lhs, childPrime);
+        if(child){
+            if(isa<CallExpr>(child)){
+                
+                auto call = cast<CallExpr>(child); 
+                if(call->getCalleeDecl()){
+                    if(isa<FunctionDecl>(call->getCalleeDecl())){
+                        
+                        auto fd = cast<FunctionDecl>(call->getCalleeDecl()); 
+                        if(fd->hasBody()){
+                            findReturnStmt(lhs, fd->getBody());
+                        }
+                        else{
+                            if(fd->getNameAsString().find("__VERIFIER_nondet")!=std::string::npos){
+                                std::cout<<"(DFG,("<<lhs<<","<<lhs->getDeclKindName()<<"),("<<fd<<","<<"input "<<fd->getType().getAsString()<<"))"<<std::endl;
+                            }
+                            else{
+                                std::cout<<"(DFG,("<<lhs<<","<<lhs->getDeclKindName()<<"),("<<fd<<","<<fd->getType().getAsString()<<"))"<<std::endl;
+                            }
+                        }
+                    }
+                }
+            }
+            else{
+                printDFGPair(child, lhs);
+                if(!(child->children().empty())){
+                    for(auto childPrime : child->children()){
+                        binaryOpHelper(lhs, childPrime);
+                    }
                 }
             }
         }
@@ -738,6 +776,7 @@ public:
     bool VisitBinaryOperator(BinaryOperator *b){
         if(b->isCompoundAssignmentOp()){
             if(isa<DeclRefExpr>(b->getLHS())){
+                
                 auto c = cast<DeclRefExpr>(b->getLHS());
                 printDFGPair(c->getDecl(), c->getDecl());
                 binaryOpHelper(c->getDecl(), b->getRHS());
@@ -746,6 +785,7 @@ public:
         }
         else if(b->isAssignmentOp()){
             if(isa<DeclRefExpr>(b->getLHS())){
+                
                 auto c = cast<DeclRefExpr>(b->getLHS());
                 binaryOpHelper(c->getDecl(), b->getRHS());
             }
@@ -776,6 +816,19 @@ public:
         return true;
     }
 
+    bool VisitCallExpr(CallExpr *c){
+        auto d1 = c->getCalleeDecl();
+        
+        if(!isa<FunctionDecl>(d1)){
+            return true;
+        }
+        auto d2 = cast<FunctionDecl>(d1);
+        for(auto [param, arg] : zip(d2->parameters(),c->arguments())){
+            printDFGPair(arg, param);
+        }
+
+        return true;
+    }
 
 private:
     clang::ASTContext *Context;
