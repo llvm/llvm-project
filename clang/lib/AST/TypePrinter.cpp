@@ -1470,7 +1470,7 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
 void TypePrinter::printTemplateSpecializationBefore(
                                             const TemplateSpecializationType *T,
                                             raw_ostream &OS) {
-  printTemplateId(T, OS, false);
+  printTemplateId(T, OS, Policy.FullyQualifiedName);
 }
 
 void TypePrinter::printTemplateSpecializationAfter(
