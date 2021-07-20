@@ -10,7 +10,8 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
 
-// std::ranges::forward_range;
+// template<class R>
+// concept forward_range;
 
 #include <ranges>
 
