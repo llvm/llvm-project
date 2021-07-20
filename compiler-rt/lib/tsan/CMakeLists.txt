@@ -219,6 +219,10 @@ else()
       add_asm_sources(TSAN_ASM_SOURCES
         rtl/tsan_rtl_mips64.S
         )
+    elseif(arch MATCHES "s390x")
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_s390x.S
+        )
     else()
       set(TSAN_ASM_SOURCES)
     endif()
