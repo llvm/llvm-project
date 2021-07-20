@@ -455,12 +455,6 @@ public:
   bool addToDist(Distribution &Dist, const LoopData *OuterLoop,
                  const BlockNode &Pred, const BlockNode &Succ, uint64_t Weight);
 
-  LoopData &getLoopPackage(const BlockNode &Head) {
-    assert(Head.Index < Working.size());
-    assert(Working[Head.Index].isLoopHeader());
-    return *Working[Head.Index].Loop;
-  }
-
   /// Analyze irreducible SCCs.
   ///
   /// Separate irreducible SCCs from \c G, which is an explicit graph of \c
