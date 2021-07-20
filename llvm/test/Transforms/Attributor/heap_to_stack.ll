@@ -32,7 +32,7 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
 
 define void @h2s_value_simplify_interaction(i1 %c, i8* %A) {
 ; IS________OPM-LABEL: define {{[^@]+}}@h2s_value_simplify_interaction
-; IS________OPM-SAME: (i1 [[C:%.*]], i8* nocapture nofree [[A:%.*]]) {
+; IS________OPM-SAME: (i1 [[C:%.*]], i8* nocapture nofree readnone [[A:%.*]]) {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[M:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; IS________OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -55,7 +55,7 @@ define void @h2s_value_simplify_interaction(i1 %c, i8* %A) {
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@h2s_value_simplify_interaction
-; IS________NPM-SAME: (i1 [[C:%.*]], i8* nocapture nofree [[A:%.*]]) {
+; IS________NPM-SAME: (i1 [[C:%.*]], i8* nocapture nofree readnone [[A:%.*]]) {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
