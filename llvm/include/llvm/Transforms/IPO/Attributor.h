@@ -168,6 +168,17 @@ combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
 Constant *getInitialValueForObj(Value &Obj, Type &Ty);
 
+/// Collect all potential underlying objects of \p Ptr at position \p CtxI in
+/// \p Objects. Assumed information is used and dependences onto \p QueryingAA
+/// are added appropriately.
+///
+/// \returns True if \p Objects contains all assumed underlying objects, and
+///          false if something went wrong and the objects could not be
+///          determined.
+bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
+                                 SmallVectorImpl<Value *> &Objects,
+                                 const AbstractAttribute &QueryingAA,
+                                 const Instruction *CtxI);
 } // namespace AA
 
 /// The value passed to the line option that defines the maximal initialization

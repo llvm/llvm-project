@@ -375,10 +375,10 @@ static bool genericValueTraversal(
   return true;
 }
 
-static bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
-                                        SmallVectorImpl<Value *> &Objects,
-                                        const AbstractAttribute &QueryingAA,
-                                        const Instruction *CtxI) {
+bool AA::getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
+                                     SmallVectorImpl<Value *> &Objects,
+                                     const AbstractAttribute &QueryingAA,
+                                     const Instruction *CtxI) {
   auto StripCB = [&](Value *V) { return getUnderlyingObject(V); };
   SmallPtrSet<Value *, 8> SeenObjects;
   auto VisitValueCB = [&SeenObjects](Value &Val, const Instruction *,
@@ -5132,7 +5132,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
     Value &Ptr = *L.getPointerOperand();
     SmallVector<Value *, 8> Objects;
-    if (!getAssumedUnderlyingObjects(A, Ptr, Objects, AA, &L))
+    if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, AA, &L))
       return false;
 
     for (Value *Obj : Objects) {
@@ -5873,8 +5873,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       // Use the optimistic version to get the freed objects, ignoring dead
       // branches etc.
       SmallVector<Value *, 8> Objects;
-      if (!getAssumedUnderlyingObjects(A, *DI.CB->getArgOperand(0), Objects,
-                                       *this, DI.CB)) {
+      if (!AA::getAssumedUnderlyingObjects(A, *DI.CB->getArgOperand(0), Objects,
+                                           *this, DI.CB)) {
         LLVM_DEBUG(
             dbgs()
             << "[H2S] Unexpected failure in getAssumedUnderlyingObjects!\n");
@@ -7519,7 +7519,7 @@ void AAMemoryLocationImpl::categorizePtrValue(
                     << getMemoryLocationsAsStr(State.getAssumed()) << "]\n");
 
   SmallVector<Value *, 8> Objects;
-  if (!getAssumedUnderlyingObjects(A, Ptr, Objects, *this, &I)) {
+  if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, *this, &I)) {
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
     updateStateAndAccessesMap(State, NO_UNKOWN_MEM, &I, nullptr, Changed,
