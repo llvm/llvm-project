@@ -4541,7 +4541,7 @@ SDValue RISCVTargetLowering::lowerMGATHER(SDValue Op, SelectionDAG &DAG) const {
     VL = DAG.getRegister(RISCV::X0, XLenVT);
 
   unsigned IntID =
-      IsUnmasked ? Intrinsic::riscv_vloxei : Intrinsic::riscv_vloxei_mask;
+      IsUnmasked ? Intrinsic::riscv_vluxei : Intrinsic::riscv_vluxei_mask;
   SmallVector<SDValue, 8> Ops{MGN->getChain(),
                               DAG.getTargetConstant(IntID, DL, XLenVT)};
   if (!IsUnmasked)
