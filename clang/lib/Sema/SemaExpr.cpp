@@ -19888,16 +19888,26 @@ Sema::ActOnObjCBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind) {
 ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
     llvm::ArrayRef<AvailabilitySpec> AvailSpecs, SourceLocation AtLoc,
     SourceLocation RParen) {
-
-  StringRef Platform = getASTContext().getTargetInfo().getPlatformName();
-
-  auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
-    return Spec.getPlatform() == Platform;
-  });
+  auto FindSpecVersion = [&](StringRef Platform) -> Optional<VersionTuple> {
+    auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
+      return Spec.getPlatform() == Platform;
+    });
+    // Transcribe the "ios" availability check to "maccatalyst" when compiling
+    // for "maccatalyst" if "maccatalyst" is not specified.
+    if (Spec == AvailSpecs.end() && Platform == "maccatalyst") {
+      Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
+        return Spec.getPlatform() == "ios";
+      });
+    }
+    if (Spec == AvailSpecs.end())
+      return None;
+    return Spec->getVersion();
+  };
 
   VersionTuple Version;
-  if (Spec != AvailSpecs.end())
-    Version = Spec->getVersion();
+  if (auto MaybeVersion =
+          FindSpecVersion(Context.getTargetInfo().getPlatformName()))
+    Version = *MaybeVersion;
 
   // The use of `@available` in the enclosing context should be analyzed to
   // warn when it's used inappropriately (i.e. not if(@available)).
