@@ -164,6 +164,10 @@ Value *getWithType(Value &V, Type &Ty);
 Optional<Value *>
 combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
                                      const Optional<Value *> &B, Type *Ty);
+
+/// Return the initial value of \p Obj with type \p Ty if that is a constant.
+Constant *getInitialValueForObj(Value &Obj, Type &Ty);
+
 } // namespace AA
 
 /// The value passed to the line option that defines the maximal initialization
