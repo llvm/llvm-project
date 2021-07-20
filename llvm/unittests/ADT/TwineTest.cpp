@@ -77,7 +77,7 @@ TEST(TwineTest, Concat) {
   EXPECT_EQ("(Twine smallstring:\"hey\" cstring:\"there\")", 
             repr(Twine(SmallString<7>("hey")).concat(Twine("there"))));
 #if __cplusplus > 201402L
-  EXPECT_EQ("(Twine std::string_view:\"hey\" cstring:\"there\")",
+  EXPECT_EQ("(Twine ptrAndLength:\"hey\" cstring:\"there\")",
             repr(Twine(std::string_view("hey")).concat(Twine("there"))));
 #endif
 
