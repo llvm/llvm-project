@@ -432,12 +432,16 @@ public:
   void markInteresting(SymbolRef sym, bugreporter::TrackingKind TKind =
                                           bugreporter::TrackingKind::Thorough);
 
+  void markNotInteresting(SymbolRef sym);
+
   /// Marks a region as interesting. Different kinds of interestingness will
   /// be processed differently by visitors (e.g. if the tracking kind is
   /// condition, will append "will be used as a condition" to the message).
   void markInteresting(
       const MemRegion *R,
       bugreporter::TrackingKind TKind = bugreporter::TrackingKind::Thorough);
+
+  void markNotInteresting(const MemRegion *R);
 
   /// Marks a symbolic value as interesting. Different kinds of interestingness
   /// will be processed differently by visitors (e.g. if the tracking kind is
