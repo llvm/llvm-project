@@ -50,9 +50,9 @@ define i64 @vscale_uimmpow2xlen() nounwind {
 ;
 ; RV32-LABEL: vscale_uimmpow2xlen:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a0, a1, 3
-; RV32-NEXT:    srli a1, a1, 29
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 3
+; RV32-NEXT:    mv a1, zero
 ; RV32-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()
