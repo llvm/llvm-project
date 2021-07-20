@@ -39,10 +39,10 @@ public:
   /// Returns the end iterator that can be used in combination with find.
   ValueMapT::const_iterator end() const { return dependencies.end(); }
 
-  /// Find all immediate and indirect views upong this value. This will find all
+  /// Find all immediate and indirect views upon this value. This will find all
   /// dependencies on this value that can potentially be later in the execution
   /// of the program, but will not return values that this alias might have been
-  /// created from (such as if `value is created by a subview, this will not
+  /// created from (such as if the value is created by a subview, this will not
   /// return the parent view if there is no cyclic behavior). Note that the
   /// resulting set will also contain the value provided as it is an alias of
   /// itself.
