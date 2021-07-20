@@ -507,25 +507,25 @@ func @scf_for_deps(%A : tensor<?xf32> {linalg.inplaceable = true},
   // of %r3 is read.
   //      CHECK: linalg.tiled_loop
   // CHECK-NEXT: call
-  // CHECK-NEXT: linalg.tiled_yield
+  // CHECK-NEXT: linalg.yield
   // CHECK-NEXT: {__inplace_results_attr__ = ["false"]}
   %r2 = linalg.tiled_loop (%i) = (%lb) to (%ub) step (%step)
         ins()
         outs(%t = %B: tensor<?xf32>) {
     call @some_use(%t) : (tensor<?xf32>) -> ()
-    linalg.tiled_yield %t in %t : tensor<?xf32>
+    linalg.yield %t : tensor<?xf32>
   }
 
   // %r3 bufferizes inplace fine.
   //      CHECK: linalg.tiled_loop
   // CHECK-NEXT: call
-  // CHECK-NEXT: linalg.tiled_yield
+  // CHECK-NEXT: linalg.yield
   // CHECK-NEXT: {__inplace_results_attr__ = ["true"]}
   %r3 = linalg.tiled_loop (%i) = (%lb) to (%ub) step (%step)
         ins()
         outs(%t = %B: tensor<?xf32>) {
     call @some_use(%t) : (tensor<?xf32>) -> ()
-    linalg.tiled_yield %t in %t : tensor<?xf32>
+    linalg.yield %t : tensor<?xf32>
   }
 
   return %r1, %r3: tensor<?xf32>, tensor<?xf32>

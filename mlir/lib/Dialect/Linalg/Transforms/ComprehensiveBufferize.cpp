@@ -372,7 +372,6 @@ static bool hasKnownBufferizationAliasingBehavior(Operation *op) {
           ReturnOp,
           TiledLoopOp,
           VectorTransferOpInterface,
-          linalg::TiledYieldOp,
           linalg::YieldOp,
           scf::YieldOp>(op)
       // clang-format on
@@ -520,7 +519,7 @@ static Optional<OpResult> getAliasingOpResult(OpOperand &opOperand) {
     return None;
   return TypeSwitch<Operation *, OpResult>(opOperand.getOwner())
       // These terminators legitimately have no result.
-      .Case<ReturnOp, linalg::TiledYieldOp, linalg::YieldOp, scf::YieldOp>(
+      .Case<ReturnOp, linalg::YieldOp, scf::YieldOp>(
           [&](auto op) { return OpResult(); })
       // ConstantOp is never inplaceable.
       .Case([&](ConstantOp op) { return op->getResult(0); })
@@ -571,11 +570,6 @@ static bool bufferizesToMemoryRead(OpOperand &opOperand) {
   if (auto linalgOp = dyn_cast<LinalgOp>(opOperand.getOwner()))
     return linalgOp.isInputTensor(&opOperand) ||
            linalgOp.isInitTensor(&opOperand);
-  // This is questionable. Should we consider TiledYieldOp as an op that
-  // bufferizes to "read" for the `tile` args and to "write" for the `output`
-  // args?
-  if (isa<TiledYieldOp>(opOperand.getOwner()))
-    return false;
   // All other cases are considered to bufferize to memory reads.
   // In particular, terminators are often the last use and need to be considered
   // as reads to return the proper value and avoid WAW clobbers.
@@ -589,8 +583,7 @@ static bool
 bufferizesToMemoryWrite(OpOperand &opOperand,
                         InPlaceSpec inPlaceSpec = InPlaceSpec::None) {
   // These terminators are not writes.
-  if (isa<ReturnOp, linalg::TiledYieldOp, linalg::YieldOp, scf::YieldOp>(
-          opOperand.getOwner()))
+  if (isa<ReturnOp, linalg::YieldOp, scf::YieldOp>(opOperand.getOwner()))
     return false;
   // ExtractSliceOp alone doesn't bufferize to a memory write, one of its uses
   // may.
@@ -2117,6 +2110,9 @@ static LogicalResult bufferize(OpBuilder &b, linalg::YieldOp yieldOp,
   // No tensors -> success.
   if (!llvm::any_of(yieldOp.getOperandTypes(), isaTensor))
     return success();
+  // linalg::YieldOp nested under TiledLoop must just canonicalize.
+  if (yieldOp->getParentOfType<TiledLoopOp>())
+    return success();
   llvm_unreachable("unexpected yieldOp");
 }
 
@@ -2135,15 +2131,6 @@ static LogicalResult bufferize(OpBuilder &b, tensor::ExtractOp extractOp,
   extractOp.replaceAllUsesWith(l);
   return success();
 }
-
-/// Bufferization for linalg::TiledYieldOp just results in later
-/// canonicalization.
-static LogicalResult bufferize(OpBuilder &b, linalg::TiledYieldOp yieldOp,
-                               BlockAndValueMapping &bvm,
-                               BufferizationAliasInfo &aliasInfo) {
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // Bufferization analyses.
 //===----------------------------------------------------------------------===//
@@ -2345,7 +2332,6 @@ static LogicalResult bufferizeFuncOpInternals(
             TiledLoopOp,
             VectorTransferOpInterface,
             linalg::YieldOp,
-            linalg::TiledYieldOp,
             scf::YieldOp>([&](auto op) {
         LDBG("Begin bufferize:\n" << op << '\n');
         return bufferize(b, op, bvm, aliasInfo);
