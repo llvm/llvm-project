@@ -4685,7 +4685,7 @@ struct AACaptureUseTracker final : public CaptureTracker {
   /// conservatively set to true.
   AACaptureUseTracker(Attributor &A, AANoCapture &NoCaptureAA,
                       const AAIsDead &IsDeadAA, AANoCapture::StateType &State,
-                      SmallVectorImpl<const Value *> &PotentialCopies,
+                      SmallSetVector<Value *, 4> &PotentialCopies,
                       unsigned &RemainingUsesToExplore)
       : A(A), NoCaptureAA(NoCaptureAA), IsDeadAA(IsDeadAA), State(State),
         PotentialCopies(PotentialCopies),
@@ -4767,7 +4767,7 @@ struct AACaptureUseTracker final : public CaptureTracker {
   }
 
   /// Register \p CS as potential copy of the value we are checking.
-  void addPotentialCopy(CallBase &CB) { PotentialCopies.push_back(&CB); }
+  void addPotentialCopy(CallBase &CB) { PotentialCopies.insert(&CB); }
 
   /// See CaptureTracker::shouldExplore(...).
   bool shouldExplore(const Use *U) override {
@@ -4808,7 +4808,7 @@ private:
   AANoCapture::StateType &State;
 
   /// Set of potential copies of the tracked value.
-  SmallVectorImpl<const Value *> &PotentialCopies;
+  SmallSetVector<Value *, 4> &PotentialCopies;
 
   /// Global counter to limit the number of explored uses.
   unsigned &RemainingUsesToExplore;
@@ -4816,8 +4816,8 @@ private:
 
 ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   const IRPosition &IRP = getIRPosition();
-  const Value *V = isArgumentPosition() ? IRP.getAssociatedArgument()
-                                        : &IRP.getAssociatedValue();
+  Value *V = isArgumentPosition() ? IRP.getAssociatedArgument()
+                                  : &IRP.getAssociatedValue();
   if (!V)
     return indicatePessimisticFixpoint();
 
@@ -4883,7 +4883,7 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   // Use the CaptureTracker interface and logic with the specialized tracker,
   // defined in AACaptureUseTracker, that can look at in-flight abstract
   // attributes and directly updates the assumed state.
-  SmallVector<const Value *, 4> PotentialCopies;
+  SmallSetVector<Value *, 4> PotentialCopies;
   unsigned RemainingUsesToExplore =
       getDefaultMaxUsesToExploreForCaptureTracking();
   AACaptureUseTracker Tracker(A, *this, IsDeadAA, T, PotentialCopies,
@@ -4892,7 +4892,7 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   // Check all potential copies of the associated value until we can assume
   // none will be captured or we have to assume at least one might be.
   unsigned Idx = 0;
-  PotentialCopies.push_back(V);
+  PotentialCopies.insert(V);
   while (T.isAssumed(NO_CAPTURE_MAYBE_RETURNED) && Idx < PotentialCopies.size())
     Tracker.valueMayBeCaptured(PotentialCopies[Idx++]);
 
