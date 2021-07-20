@@ -25,14 +25,9 @@ using namespace __orc_rt;
 using namespace __orc_rt::macho;
 
 // Declare function tags for functions in the JIT process.
-extern "C" char __orc_rt_macho_get_initializers_tag;
-char __orc_rt_macho_get_initializers_tag = 0;
-
-extern "C" char __orc_rt_macho_get_deinitializers_tag;
-char __orc_rt_macho_get_deinitializers_tag = 0;
-
-extern "C" char __orc_rt_macho_symbol_lookup_tag;
-char __orc_rt_macho_symbol_lookup_tag = 0;
+ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_get_initializers_tag)
+ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_get_deinitializers_tag)
+ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_symbol_lookup_tag)
 
 // eh-frame registration functions.
 // We expect these to be available for all processes.
