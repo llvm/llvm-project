@@ -41,7 +41,6 @@ class Value;
 
 class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
   MemoryDependenceResults *MD = nullptr;
-  TargetLibraryInfo *TLI = nullptr;
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   DominatorTree *DT = nullptr;
@@ -54,9 +53,8 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for the old PM.
-  bool runImpl(Function &F, MemoryDependenceResults *MD, TargetLibraryInfo *TLI,
-               AAResults *AA, AssumptionCache *AC, DominatorTree *DT,
-               MemorySSA *MSSA);
+  bool runImpl(Function &F, MemoryDependenceResults *MD, AAResults *AA,
+               AssumptionCache *AC, DominatorTree *DT, MemorySSA *MSSA);
 
 private:
   // Helper functions
