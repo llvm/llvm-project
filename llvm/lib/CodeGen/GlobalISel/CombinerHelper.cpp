@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
+#include <tuple>
 
 #define DEBUG_TYPE "gi-combiner"
 
@@ -3455,7 +3456,7 @@ matchLoadAndBytePosition(Register Reg, unsigned MemSizeInBits,
   return std::make_pair(Load, Shift / MemSizeInBits);
 }
 
-Optional<std::pair<GZExtLoad *, int64_t>>
+Optional<std::tuple<GZExtLoad *, int64_t, GZExtLoad *>>
 CombinerHelper::findLoadOffsetsForLoadOrCombine(
     SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
     const SmallVector<Register, 8> &RegsToVisit, const unsigned MemSizeInBits) {
@@ -3478,10 +3479,10 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
   const MachineMemOperand *MMO = nullptr;
 
   // Earliest instruction-order load in the pattern.
-  MachineInstr *EarliestLoad = nullptr;
+  GZExtLoad *EarliestLoad = nullptr;
 
   // Latest instruction-order load in the pattern.
-  MachineInstr *LatestLoad = nullptr;
+  GZExtLoad *LatestLoad = nullptr;
 
   // Base pointer which every load should share.
   Register BasePtr;
@@ -3586,7 +3587,7 @@ CombinerHelper::findLoadOffsetsForLoadOrCombine(
       return None;
   }
 
-  return std::make_pair(LowestIdxLoad, LowestIdx);
+  return std::make_tuple(LowestIdxLoad, LowestIdx, LatestLoad);
 }
 
 bool CombinerHelper::matchLoadOrCombine(
@@ -3634,13 +3635,13 @@ bool CombinerHelper::matchLoadOrCombine(
   // Also verify that each of these ends up putting a[i] into the same memory
   // offset as a load into a wide type would.
   SmallDenseMap<int64_t, int64_t, 8> MemOffset2Idx;
-  GZExtLoad *LowestIdxLoad;
+  GZExtLoad *LowestIdxLoad, *LatestLoad;
   int64_t LowestIdx;
   auto MaybeLoadInfo = findLoadOffsetsForLoadOrCombine(
       MemOffset2Idx, *RegsToVisit, NarrowMemSizeInBits);
   if (!MaybeLoadInfo)
     return false;
-  std::tie(LowestIdxLoad, LowestIdx) = *MaybeLoadInfo;
+  std::tie(LowestIdxLoad, LowestIdx, LatestLoad) = *MaybeLoadInfo;
 
   // We have a bunch of loads being OR'd together. Using the addresses + offsets
   // we found before, check if this corresponds to a big or little endian byte
@@ -3695,6 +3696,7 @@ bool CombinerHelper::matchLoadOrCombine(
     return false;
 
   MatchInfo = [=](MachineIRBuilder &MIB) {
+    MIB.setInstrAndDebugLoc(*LatestLoad);
     Register LoadDst = NeedsBSwap ? MRI.cloneVirtualRegister(Dst) : Dst;
     MIB.buildLoad(LoadDst, Ptr, *NewMMO);
     if (NeedsBSwap)
