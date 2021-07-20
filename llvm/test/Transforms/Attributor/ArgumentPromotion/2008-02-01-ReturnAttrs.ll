@@ -77,8 +77,7 @@ define i32 @f(i32 %x) {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32 [[TMP0]]) #[[ATTR1:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32 [[X]]) #[[ATTR1:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
