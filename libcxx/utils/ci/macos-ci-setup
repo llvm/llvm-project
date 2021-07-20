@@ -4,6 +4,8 @@
 # An additional requirement that is *not* handled by this script is the
 # installation of Xcode, which requires manual intervention.
 
+set -e
+
 if [[ -z "${BUILDKITE_AGENT_TOKEN}" ]]; then
   echo "The BUILDKITE_AGENT_TOKEN environment variable must be set to a BuildKite Agent token when calling this script."
   exit 1
