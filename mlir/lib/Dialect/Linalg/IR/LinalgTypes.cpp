@@ -62,6 +62,10 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 constexpr const ::llvm::StringLiteral
     LinalgDialect::kMemoizedIndexingMapsAttrName;
 
+/// Attribute name used to mark the bufferization layout for region
+/// arguments during linalg comprehensive bufferization.
+constexpr const ::llvm::StringLiteral LinalgDialect::kBufferLayoutAttrName;
+
 /// Attribute name used to mark region arguments that can be bufferized
 /// in-place during linalg comprehensive bufferization.
 constexpr const ::llvm::StringLiteral LinalgDialect::kInplaceableAttrName;
@@ -147,6 +151,16 @@ LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
     if (!attr.second.isa<BoolAttr>()) {
       return op->emitError() << "'" << LinalgDialect::kInplaceableAttrName
                              << "' is expected to be a boolean attribute";
+    }
+    if (!op->hasTrait<OpTrait::FunctionLike>())
+      return op->emitError() << "expected " << attr.first
+                             << " to be used on function-like operations";
+    return success();
+  }
+  if (attr.first == LinalgDialect::kBufferLayoutAttrName) {
+    if (!attr.second.isa<AffineMapAttr>()) {
+      return op->emitError() << "'" << LinalgDialect::kBufferLayoutAttrName
+                             << "' is expected to be a affine map attribute";
     }
     if (!op->hasTrait<OpTrait::FunctionLike>())
       return op->emitError() << "expected " << attr.first
