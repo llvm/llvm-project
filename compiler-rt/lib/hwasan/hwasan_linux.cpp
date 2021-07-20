@@ -69,10 +69,6 @@ static void ProtectGap(uptr addr, uptr size) {
 
 uptr kLowMemStart;
 uptr kLowMemEnd;
-uptr kLowShadowEnd;
-uptr kLowShadowStart;
-uptr kHighShadowStart;
-uptr kHighShadowEnd;
 uptr kHighMemStart;
 uptr kHighMemEnd;
 
