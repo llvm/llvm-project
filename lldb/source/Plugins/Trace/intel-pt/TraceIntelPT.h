@@ -65,13 +65,6 @@ public:
 
   llvm::StringRef GetSchema() override;
 
-  void TraverseInstructions(
-      Thread &thread, size_t position, TraceDirection direction,
-      std::function<bool(size_t index, llvm::Expected<lldb::addr_t> load_addr)>
-          callback) override;
-
-  llvm::Optional<size_t> GetInstructionCount(Thread &thread) override;
-
   lldb::TraceCursorUP GetCursor(Thread &thread) override;
 
   void DoRefreshLiveProcessState(
@@ -145,24 +138,23 @@ private:
       : Trace(live_process), m_thread_decoders(){};
 
   /// Decode the trace of the given thread that, i.e. recontruct the traced
-  /// instructions. That trace must be managed by this class.
+  /// instructions.
   ///
   /// \param[in] thread
   ///     If \a thread is a \a ThreadTrace, then its internal trace file will be
   ///     decoded. Live threads are not currently supported.
   ///
   /// \return
-  ///     A \a DecodedThread instance if decoding was successful, or a \b
-  ///     nullptr if the thread's trace is not managed by this class.
-  const DecodedThread *Decode(Thread &thread);
+  ///     A \a DecodedThread shared pointer with the decoded instructions. Any
+  ///     errors are embedded in the instruction list.
+  DecodedThreadSP Decode(Thread &thread);
 
   /// It is provided by either a session file or a live process' "cpuInfo"
   /// binary data.
   llvm::Optional<pt_cpu> m_cpu_info;
   std::map<const Thread *, std::unique_ptr<ThreadDecoder>> m_thread_decoders;
-  /// Dummy DecodedThread used when decoding threads after there were errors
-  /// when refreshing the live process state.
-  llvm::Optional<DecodedThread> m_failed_live_threads_decoder;
+  /// Error gotten after a failed live process update, if any.
+  llvm::Optional<std::string> m_live_refresh_error;
 };
 
 } // namespace trace_intel_pt
