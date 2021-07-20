@@ -196,7 +196,8 @@ typedef unsigned short a16;
 typedef unsigned int       a32;
 typedef unsigned long long a64;
 #if !SANITIZER_GO && (defined(__SIZEOF_INT128__) \
-    || (__clang_major__ * 100 + __clang_minor__ >= 302)) && !defined(__mips64)
+    || (__clang_major__ * 100 + __clang_minor__ >= 302)) && \
+    !defined(__mips64) && !defined(__s390x__)
 __extension__ typedef __int128 a128;
 # define __TSAN_HAS_INT128 1
 #else
