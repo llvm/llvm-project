@@ -314,19 +314,14 @@ static void addHWAddressSanitizerPasses(const PassManagerBuilder &Builder,
       static_cast<const PassManagerBuilderWrapper &>(Builder);
   const CodeGenOptions &CGOpts = BuilderWrapper.getCGOpts();
   bool Recover = CGOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
-  PM.add(createHWAddressSanitizerLegacyPassPass(
-      /*CompileKernel*/ false, Recover,
-      /*DisableOptimization*/ CGOpts.OptimizationLevel == 0));
+  PM.add(
+      createHWAddressSanitizerLegacyPassPass(/*CompileKernel*/ false, Recover));
 }
 
 static void addKernelHWAddressSanitizerPasses(const PassManagerBuilder &Builder,
-                                              legacy::PassManagerBase &PM) {
-  const PassManagerBuilderWrapper &BuilderWrapper =
-      static_cast<const PassManagerBuilderWrapper &>(Builder);
-  const CodeGenOptions &CGOpts = BuilderWrapper.getCGOpts();
+                                            legacy::PassManagerBase &PM) {
   PM.add(createHWAddressSanitizerLegacyPassPass(
-      /*CompileKernel*/ true, /*Recover*/ true,
-      /*DisableOptimization*/ CGOpts.OptimizationLevel == 0));
+      /*CompileKernel*/ true, /*Recover*/ true));
 }
 
 static void addGeneralOptsForMemorySanitizer(const PassManagerBuilder &Builder,
@@ -1169,9 +1164,7 @@ static void addSanitizers(const Triple &TargetTriple,
     auto HWASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
         bool Recover = CodeGenOpts.SanitizeRecover.has(Mask);
-        MPM.addPass(HWAddressSanitizerPass(
-            CompileKernel, Recover,
-            /*DisableOptimization=*/CodeGenOpts.OptimizationLevel == 0));
+        MPM.addPass(HWAddressSanitizerPass(CompileKernel, Recover));
       }
     };
     HWASanPass(SanitizerKind::HWAddress, false);
