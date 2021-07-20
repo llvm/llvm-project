@@ -81,6 +81,7 @@ source_set("sources") {
     "sanitizer_mac.cpp",
     "sanitizer_mac.h",
     "sanitizer_mac_libcdep.cpp",
+    "sanitizer_mutex.cpp",
     "sanitizer_mutex.h",
     "sanitizer_netbsd.cpp",
     "sanitizer_persistent_allocator.cpp",
