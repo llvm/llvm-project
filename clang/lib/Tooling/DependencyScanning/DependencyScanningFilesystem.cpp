@@ -149,6 +149,19 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   return shouldMinimize(Filename); // Only cache stat failures on source files.
 }
 
+void DependencyScanningWorkerFilesystem::ignoreFile(StringRef RawFilename) {
+  llvm::SmallString<256> Filename;
+  llvm::sys::path::native(RawFilename, Filename);
+  IgnoredFiles.insert(Filename);
+}
+
+bool DependencyScanningWorkerFilesystem::shouldIgnoreFile(
+    StringRef RawFilename) {
+  llvm::SmallString<256> Filename;
+  llvm::sys::path::native(RawFilename, Filename);
+  return IgnoredFiles.contains(Filename);
+}
+
 llvm::ErrorOr<const CachedFileSystemEntry *>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     const StringRef Filename) {
@@ -159,7 +172,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
   // FIXME: Handle PCM/PCH files.
   // FIXME: Handle module map files.
 
-  bool KeepOriginalSource = IgnoredFiles.count(Filename) ||
+  bool KeepOriginalSource = shouldIgnoreFile(Filename) ||
                             !shouldMinimize(Filename);
   DependencyScanningFilesystemSharedCache::SharedFileSystemEntry
       &SharedCacheEntry = SharedCache.get(Filename);
