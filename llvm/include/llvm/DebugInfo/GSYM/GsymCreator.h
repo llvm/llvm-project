@@ -12,7 +12,6 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <string>
 #include <thread>
 
 #include "llvm/ADT/ArrayRef.h"
