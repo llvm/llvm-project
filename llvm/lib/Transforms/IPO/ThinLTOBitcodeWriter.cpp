@@ -71,7 +71,7 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       ImportGV->setVisibility(GlobalValue::HiddenVisibility);
     }
 
-    if (Function *F = dyn_cast<Function>(&ExportGV)) {
+    if (isa<Function>(&ExportGV)) {
       // Create a local alias with the original name to avoid breaking
       // references from inline assembly.
       std::string Alias = ".set " + OldName + "," + NewName + "\n";

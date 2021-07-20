@@ -135,6 +135,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__cmpeqb", "__builtin_ppc_cmpeqb");
   Builder.defineMacro("__cmprb", "__builtin_ppc_cmprb");
   Builder.defineMacro("__setb", "__builtin_ppc_setb");
+  Builder.defineMacro("__cmpb", "__builtin_ppc_cmpb");
   Builder.defineMacro("__mulhd", "__builtin_ppc_mulhd");
   Builder.defineMacro("__mulhdu", "__builtin_ppc_mulhdu");
   Builder.defineMacro("__mulhw", "__builtin_ppc_mulhw");

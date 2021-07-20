@@ -15212,7 +15212,42 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
                                      "cast");
     return Result;
   }
-
+  case PPC::BI__builtin_ppc_cmpb: {
+    if (getTarget().getTriple().isPPC64()) {
+      Function *F =
+          CGM.getIntrinsic(Intrinsic::ppc_cmpb, {Int64Ty, Int64Ty, Int64Ty});
+      return Builder.CreateCall(F, Ops, "cmpb");
+    }
+    // For 32 bit, emit the code as below:
+    // %conv = trunc i64 %a to i32
+    // %conv1 = trunc i64 %b to i32
+    // %shr = lshr i64 %a, 32
+    // %conv2 = trunc i64 %shr to i32
+    // %shr3 = lshr i64 %b, 32
+    // %conv4 = trunc i64 %shr3 to i32
+    // %0 = tail call i32 @llvm.ppc.cmpb32(i32 %conv, i32 %conv1)
+    // %conv5 = zext i32 %0 to i64
+    // %1 = tail call i32 @llvm.ppc.cmpb32(i32 %conv2, i32 %conv4)
+    // %conv614 = zext i32 %1 to i64
+    // %shl = shl nuw i64 %conv614, 32
+    // %or = or i64 %shl, %conv5
+    // ret i64 %or
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::ppc_cmpb, {Int32Ty, Int32Ty, Int32Ty});
+    Value *ArgOneLo = Builder.CreateTrunc(Ops[0], Int32Ty);
+    Value *ArgTwoLo = Builder.CreateTrunc(Ops[1], Int32Ty);
+    Constant *ShiftAmt = ConstantInt::get(Int64Ty, 32);
+    Value *ArgOneHi =
+        Builder.CreateTrunc(Builder.CreateLShr(Ops[0], ShiftAmt), Int32Ty);
+    Value *ArgTwoHi =
+        Builder.CreateTrunc(Builder.CreateLShr(Ops[1], ShiftAmt), Int32Ty);
+    Value *ResLo = Builder.CreateZExt(
+        Builder.CreateCall(F, {ArgOneLo, ArgTwoLo}, "cmpb"), Int64Ty);
+    Value *ResHiShift = Builder.CreateZExt(
+        Builder.CreateCall(F, {ArgOneHi, ArgTwoHi}, "cmpb"), Int64Ty);
+    Value *ResHi = Builder.CreateShl(ResHiShift, ShiftAmt);
+    return Builder.CreateOr(ResLo, ResHi);
+  }
   // Copy sign
   case PPC::BI__builtin_vsx_xvcpsgnsp:
   case PPC::BI__builtin_vsx_xvcpsgndp: {

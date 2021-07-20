@@ -3323,8 +3323,9 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
       Attribute::ByRef};
   AttrBuilder Copy;
   for (auto AK : ABIAttrs) {
-    if (Attrs.hasParamAttribute(I, AK))
-      Copy.addAttribute(AK);
+    Attribute Attr = Attrs.getParamAttributes(I).getAttribute(AK);
+    if (Attr.isValid())
+      Copy.addAttribute(Attr);
   }
 
   // `align` is ABI-affecting only in combination with `byval` or `byref`.

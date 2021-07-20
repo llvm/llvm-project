@@ -6,8 +6,8 @@
 
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc-guard -mtriple=x86_64-windows -S | FileCheck %s --check-prefixes=CHECK,COMDAT,WIN
 
-; COMDAT:     $foo = comdat noduplicates
-; COMDAT:     $CallViaVptr = comdat noduplicates
+; COMDAT:     $foo = comdat nodeduplicate
+; COMDAT:     $CallViaVptr = comdat nodeduplicate
 
 ; ELF:        @__sancov_gen_ = private global [3 x i32] zeroinitializer, section "__sancov_guards", comdat($foo), align 4{{$}}
 ; ELF-NEXT:   @__sancov_gen_.1 = private global [1 x i32] zeroinitializer, section "__sancov_guards", comdat($CallViaVptr), align 4{{$}}
