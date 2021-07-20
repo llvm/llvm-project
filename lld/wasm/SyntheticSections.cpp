@@ -107,17 +107,59 @@ void ImportSection::addGOTEntry(Symbol *sym) {
   gotSymbols.push_back(sym);
 }
 
+template <typename UndefinedT>
+static void getImportModuleAndName(Symbol *sym, StringRef *outModule,
+                                   StringRef *outName) {
+  if (auto *undef = dyn_cast<UndefinedT>(sym)) {
+    *outModule = undef->importModule ? *undef->importModule : defaultModule;
+    *outName = undef->importName ? *undef->importName : sym->getName();
+  } else {
+    *outModule = defaultModule;
+    *outName = sym->getName();
+  }
+}
+
 void ImportSection::addImport(Symbol *sym) {
   assert(!isSealed);
-  importedSymbols.emplace_back(sym);
-  if (auto *f = dyn_cast<FunctionSymbol>(sym))
-    f->setFunctionIndex(numImportedFunctions++);
-  else if (auto *g = dyn_cast<GlobalSymbol>(sym))
-    g->setGlobalIndex(numImportedGlobals++);
-  else if (auto *t = dyn_cast<TagSymbol>(sym))
+  StringRef module;
+  StringRef name;
+  if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
+    getImportModuleAndName<UndefinedFunction>(sym, &module, &name);
+    ImportKey<WasmSignature> key(*(f->getSignature()), module, name);
+    auto entry = importedFunctions.try_emplace(key, numImportedFunctions);
+    if (entry.second) {
+      importedSymbols.emplace_back(sym);
+      f->setFunctionIndex(numImportedFunctions++);
+    } else {
+      f->setFunctionIndex(entry.first->second);
+    }
+  } else if (auto *g = dyn_cast<GlobalSymbol>(sym)) {
+    getImportModuleAndName<UndefinedGlobal>(sym, &module, &name);
+    ImportKey<WasmGlobalType> key(*(g->getGlobalType()), module, name);
+    auto entry = importedGlobals.try_emplace(key, numImportedGlobals);
+    if (entry.second) {
+      importedSymbols.emplace_back(sym);
+      g->setGlobalIndex(numImportedGlobals++);
+    } else {
+      g->setGlobalIndex(entry.first->second);
+    }
+  } else if (auto *t = dyn_cast<TagSymbol>(sym)) {
+    // NB: There's currently only one possible kind of tag, and no
+    // `UndefinedTag`, so we don't bother de-duplicating tag imports.
+    importedSymbols.emplace_back(sym);
     t->setTagIndex(numImportedTags++);
-  else
-    cast<TableSymbol>(sym)->setTableNumber(numImportedTables++);
+  } else {
+    auto *table = cast<TableSymbol>(sym);
+    getImportModuleAndName<UndefinedTable>(sym, &module, &name);
+    ImportKey<WasmTableType> key(*(table->getTableType()), module, name);
+    auto entry = importedTables.try_emplace(key, numImportedTables);
+    if (entry.second) {
+      importedSymbols.emplace_back(sym);
+      table->setTableNumber(numImportedTables++);
+    } else {
+      table->setTableNumber(entry.first->second);
+    }
+  }
 }
 
 void ImportSection::writeBody() {
