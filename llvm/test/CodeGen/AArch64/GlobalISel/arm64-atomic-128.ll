@@ -96,3 +96,24 @@ define void @val_compare_and_swap_release_acquire(i128* %p, i128 %oldval, i128 %
   store i128 %val, i128* %p
   ret void
 }
+
+define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
+; CHECK-LLSC-O1-LABEL: atomic_load_relaxed
+; CHECK-LLSC-O1: ldxp
+; CHECK-LLSC-O1: stxp
+
+; CHECK-LLSC-O0-LABEL: atomic_load_relaxed
+; CHECK-LLSC-O0: ldxp
+; CHECK-LLSC-O0: stxp
+
+; CHECK-CAS-O1-LABEL: atomic_load_relaxed
+; CHECK-CAS-O1: ldxp
+; CHECK-CAS-O1: stxp
+
+; CHECK-CAS-O0-LABEL: atomic_load_relaxed
+; CHECK-CAS-O0: ldxp
+; CHECK-CAS-O0: stxp
+    %r = load atomic i128, i128* %p monotonic, align 16
+    store i128 %r, i128* %p2
+    ret void
+}
