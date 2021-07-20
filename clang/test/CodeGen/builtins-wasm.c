@@ -284,34 +284,6 @@ f64x2 replace_lane_f64x2(f64x2 v, double x) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-void store8_lane(signed char *p, i8x16 v) {
-  __builtin_wasm_store8_lane(p, v, 0);
-  // WEBASSEMBLY: call void @llvm.wasm.store8.lane(
-  // WEBASSEMBLY-SAME: i8* %p, <16 x i8> %v, i32 0)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-void store16_lane(short *p, i16x8 v) {
-  __builtin_wasm_store16_lane(p, v, 0);
-  // WEBASSEMBLY: call void @llvm.wasm.store16.lane(
-  // WEBASSEMBLY-SAME: i16* %p, <8 x i16> %v, i32 0)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-void store32_lane(int *p, i32x4 v) {
-  __builtin_wasm_store32_lane(p, v, 0);
-  // WEBASSEMBLY: call void @llvm.wasm.store32.lane(
-  // WEBASSEMBLY-SAME: i32* %p, <4 x i32> %v, i32 0)
-  // WEBASSEMBLY-NEXT: ret
-}
-
-void store64_lane(long long *p, i64x2 v) {
-  __builtin_wasm_store64_lane(p, v, 0);
-  // WEBASSEMBLY: call void @llvm.wasm.store64.lane(
-  // WEBASSEMBLY-SAME: i64* %p, <2 x i64> %v, i32 0)
-  // WEBASSEMBLY-NEXT: ret
-}
-
 i8x16 add_sat_s_i8x16(i8x16 x, i8x16 y) {
   return __builtin_wasm_add_sat_s_i8x16(x, y);
   // WEBASSEMBLY: call <16 x i8> @llvm.sadd.sat.v16i8(
