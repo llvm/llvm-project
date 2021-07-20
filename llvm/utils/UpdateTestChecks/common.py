@@ -38,10 +38,13 @@ def parse_commandline_args(parser):
                       help='Add a prefix to FileCheck IR value names to avoid conflicts with scripted names')
   parser.add_argument('--global-value-regex', nargs='+', default=[],
                       help='List of regular expressions that a global value declaration must match to generate a check (has no effect if checking globals is not enabled)')
+  parser.add_argument('--global-hex-value-regex', nargs='+', default=[],
+                      help='List of regular expressions such that, for matching global value declarations, literal integer values should be encoded in hex in the associated FileCheck directives')
   args = parser.parse_args()
-  global _verbose, _global_value_regex
+  global _verbose, _global_value_regex, _global_hex_value_regex
   _verbose = args.verbose
   _global_value_regex = args.global_value_regex
+  _global_hex_value_regex = args.global_hex_value_regex
   return args
 
 
@@ -607,6 +610,12 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
   for i, line in enumerate(lines):
     # An IR variable named '%.' matches the FileCheck regex string.
     line = line.replace('%.', '%dot')
+    for regex in _global_hex_value_regex:
+      if re.match('^@' + regex + ' = ', line):
+        line = re.sub(r'\bi([0-9]+) ([0-9]+)',
+            lambda m : 'i' + m.group(1) + ' [[#' + hex(int(m.group(2))) + ']]',
+            line)
+        break
     # Ignore any comments, since the check lines will too.
     scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r'', line)
     lines[i] = scrubbed_line
