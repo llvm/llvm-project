@@ -463,3 +463,23 @@ func @ldexp_wrong_type_vec_2(%arg0 : vector<3xf32>, %arg1 : vector<2xi32>) -> ()
   %0 = spv.GLSL.Ldexp %arg0 : vector<3xf32>, %arg1 : vector<2xi32> -> vector<3xf32>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.FMix
+//===----------------------------------------------------------------------===//
+
+func @fmix(%arg0 : f32, %arg1 : f32, %arg2 : f32) -> () {
+  // CHECK: {{%.*}} = spv.GLSL.FMix {{%.*}} : f32, {{%.*}} : f32, {{%.*}} : f32 -> f32
+  %0 = spv.GLSL.FMix %arg0 : f32, %arg1 : f32, %arg2 : f32 -> f32
+  return
+}
+
+// -----
+func @fmix_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) -> () {
+  // CHECK: {{%.*}} = spv.GLSL.FMix {{%.*}} : vector<3xf32>, {{%.*}} : vector<3xf32>, {{%.*}} : vector<3xf32> -> vector<3xf32>
+  %0 = spv.GLSL.FMix %arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : vector<3xf32> -> vector<3xf32>
+  return
+}
+
