@@ -7,8 +7,6 @@
 ; RUN: llvm-bcanalyzer -dump %t0 | FileCheck --check-prefix=BCA0 %s
 ; RUN: llvm-bcanalyzer -dump %t1 | FileCheck --check-prefix=BCA1 %s
 
-target triple = "x86_64-unknown-linux-gnu"
-
 ; ERROR: llvm-modextract: error: module index out of range; bitcode file contains 2 module(s)
 
 ; BCA0: <GLOBALVAL_SUMMARY_BLOCK
