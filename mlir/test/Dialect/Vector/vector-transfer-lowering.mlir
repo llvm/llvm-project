@@ -114,14 +114,11 @@ func @transfer_not_inbounds(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32>
 
 // -----
 
-// TODO: transfer_read/write cannot be lowered to vector.load/store because the
-// memref has a non-default layout.
 // CHECK-LABEL:   func @transfer_nondefault_layout(
 // CHECK-SAME:                                          %[[MEM:.*]]: memref<8x8xf32, #{{.*}}>,
 // CHECK-SAME:                                          %[[IDX:.*]]: index) -> vector<4xf32> {
-// CHECK-NEXT:      %[[CF0:.*]] = constant 0.000000e+00 : f32
-// CHECK-NEXT:      %[[RES:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]]], %[[CF0]] {in_bounds = [true]} : memref<8x8xf32, #{{.*}}>, vector<4xf32>
-// CHECK-NEXT:      vector.transfer_write %[[RES]], %[[MEM]][%[[IDX]], %[[IDX]]] {in_bounds = [true]} : vector<4xf32>, memref<8x8xf32, #{{.*}}>
+// CHECK-NEXT:      %[[RES:.*]] = vector.load %[[MEM]][%[[IDX]], %[[IDX]]] : memref<8x8xf32, #{{.*}}>, vector<4xf32>
+// CHECK-NEXT:      vector.store %[[RES]], %[[MEM]][%[[IDX]], %[[IDX]]] : memref<8x8xf32, #{{.*}}>,  vector<4xf32>
 // CHECK-NEXT:      return %[[RES]] : vector<4xf32>
 // CHECK-NEXT:    }
 

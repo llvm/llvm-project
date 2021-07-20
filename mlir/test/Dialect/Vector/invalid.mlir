@@ -1094,11 +1094,12 @@ func @type_cast_layout(%arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] ->
 
 // -----
 
-func @store_unsupported_layout(%memref : memref<200x100xf32, affine_map<(d0, d1) -> (d1, d0)>>,
+func @store_unsupported_layout(%memref : memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>>,
                                %i : index, %j : index, %value : vector<8xf32>) {
-  // expected-error@+1 {{'vector.store' op base memref should have a default identity layout}}
-  vector.store %value, %memref[%i, %j] : memref<200x100xf32, affine_map<(d0, d1) -> (d1, d0)>>,
+  // expected-error@+1 {{'vector.store' op most minor memref dim must have unit stride}}
+  vector.store %value, %memref[%i, %j] : memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>>,
                                          vector<8xf32>
+  return
 }
 
 // -----
