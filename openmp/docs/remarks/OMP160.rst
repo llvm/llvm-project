@@ -1,7 +1,7 @@
+.. _omp160:
+
 Removing parallel region with no side-effects. [OMP160]
 =======================================================
-
-.. _omp160:
 
 This optimization remark indicates that a parallel region was deleted because it
 was not found to have any side-effects. This can occur if the region does not

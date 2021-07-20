@@ -1,7 +1,7 @@
+.. _omp112:
+
 Found thread data sharing on the GPU. Expect degraded performance due to data globalization. [OMP112]
 =====================================================================================================
-
-.. _omp112:
 
 This missed remark indicates that a globalized value was found on the target
 device that was not either replaced with stack memory by :ref:`OMP110 <omp110>`

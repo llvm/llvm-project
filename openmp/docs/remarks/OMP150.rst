@@ -1,7 +1,7 @@
+.. _omp150:
+
 Parallel region merged with parallel region at <location>. [OMP150]
 ===================================================================
-
-.. _omp150:
 
 This optimization remark indicates that a parallel region was merged with others
 into a single parallel region. Parallel region merging fuses consecutive
