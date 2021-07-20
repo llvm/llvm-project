@@ -23,7 +23,6 @@
 // S390X:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // S390X:#define __FLT_DIG__ 6
 // S390X:#define __FLT_EPSILON__ 1.19209290e-7F
-// S390X:#define __FLT_EVAL_METHOD__ 0
 // S390X:#define __FLT_HAS_DENORM__ 1
 // S390X:#define __FLT_HAS_INFINITY__ 1
 // S390X:#define __FLT_HAS_QUIET_NAN__ 1
