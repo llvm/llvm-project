@@ -3882,10 +3882,8 @@ define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: packh_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    slli a1, a1, 8
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -256
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    slli a1, a1, 56
+; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -3909,10 +3907,8 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: packh_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    slli a1, a1, 8
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -256
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    slli a1, a1, 56
+; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
