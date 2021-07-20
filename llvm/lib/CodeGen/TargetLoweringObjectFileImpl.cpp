@@ -1480,11 +1480,10 @@ static bool canUsePrivateLabel(const MCAsmInfo &AsmInfo,
   if (!AsmInfo.isSectionAtomizableBySymbols(Section))
     return true;
 
-  // If it is not dead stripped, it is safe to use private labels.
-  const MCSectionMachO &SMO = cast<MCSectionMachO>(Section);
-  if (SMO.hasAttribute(MachO::S_ATTR_NO_DEAD_STRIP))
-    return true;
-
+  // FIXME: we should be able to use private labels for sections that can't be
+  // dead-stripped (there's no issue with blocking atomization there), but `ld
+  // -r` sometimes drops the no_dead_strip attribute from sections so for safety
+  // we don't allow it.
   return false;
 }
 
