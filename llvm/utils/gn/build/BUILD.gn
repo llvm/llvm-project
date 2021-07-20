@@ -9,7 +9,7 @@ declare_args() {
   # After building with this, run tests and then run
   #    llvm/utils/prepare-code-coverage-artifact.py  \
   #        .../llvm-profdata .../llvm-cov out/gn/profiles/ report/ \
-  #        out/gn/bin/llvm-undname ...`
+  #        out/gn/bin/llvm-undname ...
   # to generate a HTML report for the binaries passed in the last line.
   llvm_build_instrumented_coverage = false
 
