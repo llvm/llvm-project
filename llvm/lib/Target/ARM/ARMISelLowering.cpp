@@ -154,8 +154,7 @@ static const MCPhysReg GPRArgRegs[] = {
   ARM::R0, ARM::R1, ARM::R2, ARM::R3
 };
 
-void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT,
-                                       MVT PromotedBitwiseVT) {
+void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
   if (VT != PromotedLdStVT) {
     setOperationAction(ISD::LOAD, VT, Promote);
     AddPromotedToType (ISD::LOAD, VT, PromotedLdStVT);
@@ -194,16 +193,6 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT,
     setOperationAction(ISD::SRL, VT, Custom);
   }
 
-  // Promote all bit-wise operations.
-  if (VT.isInteger() && VT != PromotedBitwiseVT) {
-    setOperationAction(ISD::AND, VT, Promote);
-    AddPromotedToType (ISD::AND, VT, PromotedBitwiseVT);
-    setOperationAction(ISD::OR,  VT, Promote);
-    AddPromotedToType (ISD::OR,  VT, PromotedBitwiseVT);
-    setOperationAction(ISD::XOR, VT, Promote);
-    AddPromotedToType (ISD::XOR, VT, PromotedBitwiseVT);
-  }
-
   // Neon does not support vector divide/remainder operations.
   setOperationAction(ISD::SDIV, VT, Expand);
   setOperationAction(ISD::UDIV, VT, Expand);
@@ -225,12 +214,12 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT,
 
 void ARMTargetLowering::addDRTypeForNEON(MVT VT) {
   addRegisterClass(VT, &ARM::DPRRegClass);
-  addTypeForNEON(VT, MVT::f64, MVT::v2i32);
+  addTypeForNEON(VT, MVT::f64);
 }
 
 void ARMTargetLowering::addQRTypeForNEON(MVT VT) {
   addRegisterClass(VT, &ARM::DPairRegClass);
-  addTypeForNEON(VT, MVT::v2f64, MVT::v4i32);
+  addTypeForNEON(VT, MVT::v2f64);
 }
 
 void ARMTargetLowering::setAllExpand(MVT VT) {
