@@ -389,15 +389,15 @@ define void @uniform_copy(i32* %A, i32* %B) {
 ; CHECK-LABEL: @uniform_copy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
-; CHECK-NEXT:    [[A2:%.*]] = bitcast i32* [[A:%.*]] to i8*
+; CHECK-NEXT:    [[A3:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[B1]], i64 1
-; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, i8* [[A2]], i64 1
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i32* [[B]] to i8*
-; CHECK-NEXT:    [[BC4:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[BC]], [[UGLYGEP3]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[BC4]], [[UGLYGEP]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 1
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i32, i32* [[A]], i64 1
+; CHECK-NEXT:    [[SCEVGEP45:%.*]] = bitcast i32* [[SCEVGEP4]] to i8*
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[B1]], [[SCEVGEP45]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[A3]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[MEMCHECK_CONFLICT:%.*]] = and i1 [[FOUND_CONFLICT]], true
 ; CHECK-NEXT:    br i1 [[MEMCHECK_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
