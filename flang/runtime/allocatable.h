@@ -112,6 +112,10 @@ int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor &from,
 int RTNAME(AllocatableDeallocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
     int sourceLine = 0);
-}
+
+// Variant of above that does not finalize; for intermediate results
+void RTNAME(AllocatableDeallocateNoFinal)(
+    Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
+} // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_ALLOCATABLE_H_

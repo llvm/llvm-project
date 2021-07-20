@@ -13,11 +13,11 @@ define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK: cmp
 ; CHECK: cinc   [[MISMATCH:w[0-9]+]]
 ; CHECK: cbz    [[MISMATCH]], [[EQUAL:.LBB[0-9]+_[0-9]+]]
-; CHECK: stlxp  [[SCRATCH_RES:w[0-9]+]], [[RESULTLO]], [[RESULTHI]], [x[[ADDR]]]
+; CHECK: stxp   [[SCRATCH_RES:w[0-9]+]], [[RESULTLO]], [[RESULTHI]], [x[[ADDR]]]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 ; CHECK: b      [[DONE:.LBB[0-9]+_[0-9]+]]
 ; CHECK: [[EQUAL]]:
-; CHECK: stlxp   [[SCRATCH_RES:w[0-9]+]], x4, x5, [x[[ADDR]]]
+; CHECK: stxp   [[SCRATCH_RES:w[0-9]+]], x4, x5, [x[[ADDR]]]
 ; CHECK: cbnz   [[SCRATCH_RES]], [[LABEL]]
 ; CHECK: [[DONE]]:
   %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval acquire acquire

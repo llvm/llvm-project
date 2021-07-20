@@ -154,7 +154,7 @@ private:
   /// Create a zero-fill defined addressable.
   Block(Section &Parent, JITTargetAddress Size, JITTargetAddress Address,
         uint64_t Alignment, uint64_t AlignmentOffset)
-      : Addressable(Address, true), Parent(Parent), Size(Size) {
+      : Addressable(Address, true), Parent(&Parent), Size(Size) {
     assert(isPowerOf2_64(Alignment) && "Alignment must be power of 2");
     assert(AlignmentOffset < Alignment &&
            "Alignment offset cannot exceed alignment");
@@ -170,7 +170,7 @@ private:
   /// mutations are required.
   Block(Section &Parent, ArrayRef<char> Content, JITTargetAddress Address,
         uint64_t Alignment, uint64_t AlignmentOffset)
-      : Addressable(Address, true), Parent(Parent), Data(Content.data()),
+      : Addressable(Address, true), Parent(&Parent), Data(Content.data()),
         Size(Content.size()) {
     assert(isPowerOf2_64(Alignment) && "Alignment must be power of 2");
     assert(AlignmentOffset < Alignment &&
@@ -189,7 +189,7 @@ private:
   /// allocator.
   Block(Section &Parent, MutableArrayRef<char> Content,
         JITTargetAddress Address, uint64_t Alignment, uint64_t AlignmentOffset)
-      : Addressable(Address, true), Parent(Parent), Data(Content.data()),
+      : Addressable(Address, true), Parent(&Parent), Data(Content.data()),
         Size(Content.size()) {
     assert(isPowerOf2_64(Alignment) && "Alignment must be power of 2");
     assert(AlignmentOffset < Alignment &&
@@ -212,7 +212,7 @@ public:
   Block &operator=(Block &&) = delete;
 
   /// Return the parent section for this block.
-  Section &getSection() const { return Parent; }
+  Section &getSection() const { return *Parent; }
 
   /// Returns true if this is a zero-fill block.
   ///
@@ -331,7 +331,9 @@ public:
 private:
   static constexpr uint64_t MaxAlignmentOffset = (1ULL << 56) - 1;
 
-  Section &Parent;
+  void setSection(Section &Parent) { this->Parent = &Parent; }
+
+  Section *Parent;
   const char *Data = nullptr;
   size_t Size = 0;
   std::vector<Edge> Edges;
@@ -684,6 +686,8 @@ public:
     return make_range(Blocks.begin(), Blocks.end());
   }
 
+  BlockSet::size_type blocks_size() const { return Blocks.size(); }
+
   /// Returns an iterator over the symbols defined in this section.
   iterator_range<symbol_iterator> symbols() {
     return make_range(Symbols.begin(), Symbols.end());
@@ -695,7 +699,7 @@ public:
   }
 
   /// Return the number of symbols in this section.
-  SymbolSet::size_type symbols_size() { return Symbols.size(); }
+  SymbolSet::size_type symbols_size() const { return Symbols.size(); }
 
 private:
   void addSymbol(Symbol &Sym) {
@@ -716,6 +720,17 @@ private:
   void removeBlock(Block &B) {
     assert(Blocks.count(&B) && "Block is not in this section");
     Blocks.erase(&B);
+  }
+
+  void transferContentTo(Section &DstSection) {
+    if (&DstSection == this)
+      return;
+    for (auto *S : Symbols)
+      DstSection.addSymbol(*S);
+    for (auto *B : Blocks)
+      DstSection.addBlock(*B);
+    Symbols.clear();
+    Blocks.clear();
   }
 
   StringRef Name;
@@ -1102,6 +1117,8 @@ public:
                       section_iterator(Sections.end()));
   }
 
+  SectionList::size_type sections_size() const { return Sections.size(); }
+
   /// Returns the section with the given name if it exists, otherwise returns
   /// null.
   Section *findSectionByName(StringRef Name) {
@@ -1231,6 +1248,43 @@ public:
     }
   }
 
+  /// Transfers the given Block and all Symbols pointing to it to the given
+  /// Section.
+  ///
+  /// No attempt is made to check compatibility of the source and destination
+  /// sections. Blocks may be moved between sections with incompatible
+  /// permissions (e.g. from data to text). The client is responsible for
+  /// ensuring that this is safe.
+  void transferBlock(Block &B, Section &NewSection) {
+    auto &OldSection = B.getSection();
+    if (&OldSection == &NewSection)
+      return;
+    SmallVector<Symbol *> AttachedSymbols;
+    for (auto *S : OldSection.symbols())
+      if (&S->getBlock() == &B)
+        AttachedSymbols.push_back(S);
+    for (auto *S : AttachedSymbols) {
+      OldSection.removeSymbol(*S);
+      NewSection.addSymbol(*S);
+    }
+    OldSection.removeBlock(B);
+    NewSection.addBlock(B);
+  }
+
+  /// Move all blocks and symbols from the source section to the destination
+  /// section.
+  ///
+  /// If PreserveSrcSection is true (or SrcSection and DstSection are the same)
+  /// then SrcSection is preserved, otherwise it is removed (the default).
+  void mergeSections(Section &DstSection, Section &SrcSection,
+                     bool PreserveSrcSection = false) {
+    if (&DstSection == &SrcSection)
+      return;
+    SrcSection.transferContentTo(DstSection);
+    if (!PreserveSrcSection)
+      removeSection(SrcSection);
+  }
+
   /// Removes an external symbol. Also removes the underlying Addressable.
   void removeExternalSymbol(Symbol &Sym) {
     assert(!Sym.isDefined() && !Sym.isAbsolute() &&
@@ -1269,7 +1323,8 @@ public:
     destroySymbol(Sym);
   }
 
-  /// Remove a block.
+  /// Remove a block. The block reference is defunct after calling this
+  /// function and should no longer be used.
   void removeBlock(Block &B) {
     assert(llvm::none_of(B.getSection().symbols(),
                          [&](const Symbol *Sym) {
@@ -1278,6 +1333,16 @@ public:
            "Block still has symbols attached");
     B.getSection().removeBlock(B);
     destroyBlock(B);
+  }
+
+  /// Remove a section. The section reference is defunct after calling this
+  /// function and should no longer be used.
+  void removeSection(Section &Sec) {
+    auto I = llvm::find_if(Sections, [&Sec](const std::unique_ptr<Section> &S) {
+      return S.get() == &Sec;
+    });
+    assert(I != Sections.end() && "Section does not appear in this graph");
+    Sections.erase(I);
   }
 
   /// Dump the graph.

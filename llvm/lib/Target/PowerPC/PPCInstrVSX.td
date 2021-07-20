@@ -3264,6 +3264,9 @@ def : Pat<(int_ppc_extract_sig f64:$A),
           (XSXSIGDP (COPY_TO_REGCLASS $A, VSFRC))>;
 def : Pat<(f64 (int_ppc_insert_exp f64:$A, i64:$B)),
           (COPY_TO_REGCLASS (XSIEXPDP (COPY_TO_REGCLASS $A, G8RC), $B), F8RC)>;
+
+def : Pat<(int_ppc_stfiw ForceXForm:$dst, f64:$XT),
+          (STXSIWX f64:$XT, ForceXForm:$dst)>;
 } // HasVSX, HasP8Vector
 
 // Any big endian Power8 VSX subtarget.

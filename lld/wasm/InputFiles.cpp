@@ -758,8 +758,9 @@ void BitcodeFile::parse() {
   }
   checkArch(t.getArch());
   std::vector<bool> keptComdats;
-  for (StringRef s : obj->getComdatTable())
-    keptComdats.push_back(symtab->addComdat(s));
+  // TODO Support nodeduplicate https://bugs.llvm.org/show_bug.cgi?id=50531
+  for (std::pair<StringRef, Comdat::SelectionKind> s : obj->getComdatTable())
+    keptComdats.push_back(symtab->addComdat(s.first));
 
   for (const lto::InputFile::Symbol &objSym : obj->symbols())
     symbols.push_back(createBitcodeSymbol(keptComdats, objSym, *this));

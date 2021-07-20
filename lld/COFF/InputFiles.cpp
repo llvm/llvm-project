@@ -1067,9 +1067,9 @@ FakeSectionChunk ltoDataSectionChunk(&ltoDataSection.section);
 void BitcodeFile::parse() {
   std::vector<std::pair<Symbol *, bool>> comdat(obj->getComdatTable().size());
   for (size_t i = 0; i != obj->getComdatTable().size(); ++i)
-    // FIXME: lto::InputFile doesn't keep enough data to do correct comdat
-    // selection handling.
-    comdat[i] = symtab->addComdat(this, saver.save(obj->getComdatTable()[i]));
+    // FIXME: Check nodeduplicate
+    comdat[i] =
+        symtab->addComdat(this, saver.save(obj->getComdatTable()[i].first));
   for (const lto::InputFile::Symbol &objSym : obj->symbols()) {
     StringRef symName = saver.save(objSym.getName());
     int comdatIndex = objSym.getComdatIndex();
@@ -1090,7 +1090,7 @@ void BitcodeFile::parse() {
       Symbol *alias = symtab->addUndefined(saver.save(fallback));
       checkAndSetWeakAlias(symtab, this, sym, alias);
     } else if (comdatIndex != -1) {
-      if (symName == obj->getComdatTable()[comdatIndex]) {
+      if (symName == obj->getComdatTable()[comdatIndex].first) {
         sym = comdat[comdatIndex].first;
         if (cast<DefinedRegular>(sym)->data == nullptr)
           cast<DefinedRegular>(sym)->data = &fakeSC->repl;

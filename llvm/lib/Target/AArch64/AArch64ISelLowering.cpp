@@ -17079,8 +17079,8 @@ static void ReplaceCMP_SWAP_128Results(SDNode *N,
   SDValue Ops[] = {N->getOperand(1), Desired.first, Desired.second,
                    New.first,        New.second,    N->getOperand(0)};
   SDNode *CmpSwap = DAG.getMachineNode(
-      AArch64::CMP_SWAP_128, SDLoc(N),
-      DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other), Ops);
+      Opcode, SDLoc(N), DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other),
+      Ops);
   DAG.setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
 
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,

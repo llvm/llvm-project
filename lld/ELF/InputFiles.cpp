@@ -1744,9 +1744,12 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
 
 template <class ELFT> void BitcodeFile::parse() {
   std::vector<bool> keptComdats;
-  for (StringRef s : obj->getComdatTable())
+  for (std::pair<StringRef, Comdat::SelectionKind> s : obj->getComdatTable()) {
     keptComdats.push_back(
-        symtab->comdatGroups.try_emplace(CachedHashStringRef(s), this).second);
+        s.second == Comdat::NoDeduplicate ||
+        symtab->comdatGroups.try_emplace(CachedHashStringRef(s.first), this)
+            .second);
+  }
 
   for (const lto::InputFile::Symbol &objSym : obj->symbols())
     symbols.push_back(createBitcodeSymbol<ELFT>(keptComdats, objSym, *this));
