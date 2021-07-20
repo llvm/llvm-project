@@ -74,12 +74,87 @@ class Semaphore {
   atomic_uint32_t state_ = {0};
 };
 
+typedef int MutexType;
+
+enum {
+  // Used as sentinel and to catch unassigned types
+  // (should not be used as real Mutex type).
+  MutexInvalid = 0,
+  MutexThreadRegistry,
+  // Each tool own mutexes must start at this number.
+  MutexLastCommon,
+  // Type for legacy mutexes that are not checked for deadlocks.
+  MutexUnchecked = -1,
+  // Special marks that can be used in MutexMeta::can_lock table.
+  // The leaf mutexes can be locked under any other non-leaf mutex,
+  // but no other mutex can be locked while under a leaf mutex.
+  MutexLeaf = -1,
+  // Multiple mutexes of this type can be locked at the same time.
+  MutexMulti = -3,
+};
+
+// Go linker does not support THREADLOCAL variables,
+// so we can't use per-thread state.
+#define SANITIZER_CHECK_DEADLOCKS (SANITIZER_DEBUG && !SANITIZER_GO)
+
+#if SANITIZER_CHECK_DEADLOCKS
+struct MutexMeta {
+  MutexType type;
+  const char *name;
+  // The table fixes what mutexes can be locked under what mutexes.
+  // If the entry for MutexTypeFoo contains MutexTypeBar,
+  // then Bar mutex can be locked while under Foo mutex.
+  // Can also contain the special MutexLeaf/MutexMulti marks.
+  MutexType can_lock[10];
+};
+#endif
+
+class CheckedMutex {
+ public:
+  constexpr CheckedMutex(MutexType type)
+#if SANITIZER_CHECK_DEADLOCKS
+      : type_(type)
+#endif
+  {
+  }
+
+  ALWAYS_INLINE void Lock() {
+#if SANITIZER_CHECK_DEADLOCKS
+    LockImpl(GET_CALLER_PC());
+#endif
+  }
+
+  ALWAYS_INLINE void Unlock() {
+#if SANITIZER_CHECK_DEADLOCKS
+    UnlockImpl();
+#endif
+  }
+
+  // Checks that the current thread does not hold any mutexes
+  // (e.g. when returning from a runtime function to user code).
+  static void CheckNoLocks() {
+#if SANITIZER_CHECK_DEADLOCKS
+    CheckNoLocksImpl();
+#endif
+  }
+
+ private:
+#if SANITIZER_CHECK_DEADLOCKS
+  const MutexType type_;
+
+  void LockImpl(uptr pc);
+  void UnlockImpl();
+  static void CheckNoLocksImpl();
+#endif
+};
+
 // Reader-writer mutex.
 class MUTEX Mutex2 {
  public:
-  constexpr Mutex2() {}
+  constexpr Mutex2(MutexType type = MutexUnchecked) : checked_(type) {}
 
   void Lock() ACQUIRE() {
+    checked_.Lock();
     u64 reset_mask = ~0ull;
     u64 state = atomic_load_relaxed(&state_);
     const uptr kMaxSpinIters = 1500;
@@ -125,6 +200,7 @@ class MUTEX Mutex2 {
   }
 
   void Unlock() RELEASE() {
+    checked_.Unlock();
     bool wake_writer;
     u64 wake_readers;
     u64 new_state;
@@ -153,6 +229,7 @@ class MUTEX Mutex2 {
   }
 
   void ReadLock() ACQUIRE_SHARED() {
+    checked_.Lock();
     bool locked;
     u64 new_state;
     u64 state = atomic_load_relaxed(&state_);
@@ -173,6 +250,7 @@ class MUTEX Mutex2 {
   }
 
   void ReadUnlock() RELEASE_SHARED() {
+    checked_.Unlock();
     bool wake;
     u64 new_state;
     u64 state = atomic_load_relaxed(&state_);
@@ -207,6 +285,7 @@ class MUTEX Mutex2 {
   }
 
  private:
+  [[no_unique_address]] CheckedMutex checked_;
   atomic_uint64_t state_ = {0};
   Semaphore writers_;
   Semaphore readers_;
