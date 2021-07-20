@@ -996,7 +996,9 @@ struct InformationCache {
     if (Iter != PotentiallyReachableMap.end())
       return Iter->second;
     const Function &F = *From.getFunction();
-    bool Result = isPotentiallyReachable(
+    bool Result = true;
+    if (From.getFunction() == To.getFunction())
+      Result = isPotentiallyReachable(
         &From, &To, nullptr, AG.getAnalysis<DominatorTreeAnalysis>(F),
         AG.getAnalysis<LoopAnalysis>(F));
     PotentiallyReachableMap.insert(std::make_pair(KeyPair, Result));
