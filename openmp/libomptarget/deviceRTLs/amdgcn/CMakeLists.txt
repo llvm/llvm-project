@@ -54,7 +54,7 @@ set(optimization_level 2)
 
 # Activate RTL message dumps if requested by the user.
 if(LIBOMPTARGET_NVPTX_DEBUG)
-  set(CUDA_DEBUG -DOMPTARGET_NVPTX_DEBUG=-1)
+  set(CUDA_DEBUG -DOMPTARGET_NVPTX_DEBUG=-1 -g)
 endif()
 
 get_filename_component(devicertl_base_directory
