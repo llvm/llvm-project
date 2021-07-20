@@ -1000,6 +1000,139 @@ private:
   }
 };
 
+/// Helper function to convert a vector of `OpFoldResult`s into a vector of
+/// `Value`s.
+static SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
+                                      Type &llvmIndexType,
+                                      ArrayRef<OpFoldResult> valueOrAttrVec) {
+  return llvm::to_vector<4>(
+      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
+        if (auto attr = value.dyn_cast<Attribute>())
+          return b.create<LLVM::ConstantOp>(loc, llvmIndexType, attr);
+        return value.get<Value>();
+      }));
+}
+
+/// Compute a map that for a given dimension of the expanded type gives the
+/// dimension in the collapsed type it maps to. Essentially its the inverse of
+/// the `reassocation` maps.
+static DenseMap<int64_t, int64_t>
+getExpandedDimToCollapsedDimMap(ArrayRef<ReassociationIndices> reassociation) {
+  llvm::DenseMap<int64_t, int64_t> expandedDimToCollapsedDim;
+  for (auto &en : enumerate(reassociation)) {
+    for (auto dim : en.value())
+      expandedDimToCollapsedDim[dim] = en.index();
+  }
+  return expandedDimToCollapsedDim;
+}
+
+static OpFoldResult
+getExpandedOutputDimSize(OpBuilder &b, Location loc, Type &llvmIndexType,
+                         int64_t outDimIndex, ArrayRef<int64_t> outStaticShape,
+                         MemRefDescriptor &inDesc,
+                         ArrayRef<int64_t> inStaticShape,
+                         ArrayRef<ReassociationIndices> reassocation,
+                         DenseMap<int64_t, int64_t> &outDimToInDimMap) {
+  int64_t outDimSize = outStaticShape[outDimIndex];
+  if (!ShapedType::isDynamic(outDimSize))
+    return b.getIndexAttr(outDimSize);
+
+  // Calculate the multiplication of all the out dim sizes except the
+  // current dim.
+  int64_t inDimIndex = outDimToInDimMap[outDimIndex];
+  int64_t otherDimSizesMul = 1;
+  for (auto otherDimIndex : reassocation[inDimIndex]) {
+    if (otherDimIndex == static_cast<unsigned>(outDimIndex))
+      continue;
+    int64_t otherDimSize = outStaticShape[otherDimIndex];
+    assert(!ShapedType::isDynamic(otherDimSize) &&
+           "single dimension cannot be expanded into multiple dynamic "
+           "dimensions");
+    otherDimSizesMul *= otherDimSize;
+  }
+
+  // outDimSize = inDimSize / otherOutDimSizesMul
+  int64_t inDimSize = inStaticShape[inDimIndex];
+  Value inDimSizeDynamic =
+      ShapedType::isDynamic(inDimSize)
+          ? inDesc.size(b, loc, inDimIndex)
+          : b.create<LLVM::ConstantOp>(loc, llvmIndexType,
+                                       b.getIndexAttr(inDimSize));
+  Value outDimSizeDynamic = b.create<LLVM::SDivOp>(
+      loc, inDimSizeDynamic,
+      b.create<LLVM::ConstantOp>(loc, llvmIndexType,
+                                 b.getIndexAttr(otherDimSizesMul)));
+  return outDimSizeDynamic;
+}
+
+static OpFoldResult getCollapsedOutputDimSize(
+    OpBuilder &b, Location loc, Type &llvmIndexType, int64_t outDimIndex,
+    int64_t outDimSize, ArrayRef<int64_t> inStaticShape,
+    MemRefDescriptor &inDesc, ArrayRef<ReassociationIndices> reassocation) {
+  if (!ShapedType::isDynamic(outDimSize))
+    return b.getIndexAttr(outDimSize);
+
+  Value c1 = b.create<LLVM::ConstantOp>(loc, llvmIndexType, b.getIndexAttr(1));
+  Value outDimSizeDynamic = c1;
+  for (auto inDimIndex : reassocation[outDimIndex]) {
+    int64_t inDimSize = inStaticShape[inDimIndex];
+    Value inDimSizeDynamic =
+        ShapedType::isDynamic(inDimSize)
+            ? inDesc.size(b, loc, inDimIndex)
+            : b.create<LLVM::ConstantOp>(loc, llvmIndexType,
+                                         b.getIndexAttr(inDimSize));
+    outDimSizeDynamic =
+        b.create<LLVM::MulOp>(loc, outDimSizeDynamic, inDimSizeDynamic);
+  }
+  return outDimSizeDynamic;
+}
+
+static SmallVector<OpFoldResult, 4>
+getCollapsedOutputShape(OpBuilder &b, Location loc, Type &llvmIndexType,
+                        ArrayRef<ReassociationIndices> reassocation,
+                        ArrayRef<int64_t> inStaticShape,
+                        MemRefDescriptor &inDesc,
+                        ArrayRef<int64_t> outStaticShape) {
+  return llvm::to_vector<4>(llvm::map_range(
+      llvm::seq<int64_t>(0, outStaticShape.size()), [&](int64_t outDimIndex) {
+        return getCollapsedOutputDimSize(b, loc, llvmIndexType, outDimIndex,
+                                         outStaticShape[outDimIndex],
+                                         inStaticShape, inDesc, reassocation);
+      }));
+}
+
+static SmallVector<OpFoldResult, 4>
+getExpandedOutputShape(OpBuilder &b, Location loc, Type &llvmIndexType,
+                       ArrayRef<ReassociationIndices> reassocation,
+                       ArrayRef<int64_t> inStaticShape,
+                       MemRefDescriptor &inDesc,
+                       ArrayRef<int64_t> outStaticShape) {
+  DenseMap<int64_t, int64_t> outDimToInDimMap =
+      getExpandedDimToCollapsedDimMap(reassocation);
+  return llvm::to_vector<4>(llvm::map_range(
+      llvm::seq<int64_t>(0, outStaticShape.size()), [&](int64_t outDimIndex) {
+        return getExpandedOutputDimSize(b, loc, llvmIndexType, outDimIndex,
+                                        outStaticShape, inDesc, inStaticShape,
+                                        reassocation, outDimToInDimMap);
+      }));
+}
+
+static SmallVector<Value>
+getDynamicOutputShape(OpBuilder &b, Location loc, Type &llvmIndexType,
+                      ArrayRef<ReassociationIndices> reassocation,
+                      ArrayRef<int64_t> inStaticShape, MemRefDescriptor &inDesc,
+                      ArrayRef<int64_t> outStaticShape) {
+  return outStaticShape.size() < inStaticShape.size()
+             ? getAsValues(b, loc, llvmIndexType,
+                           getCollapsedOutputShape(b, loc, llvmIndexType,
+                                                   reassocation, inStaticShape,
+                                                   inDesc, outStaticShape))
+             : getAsValues(b, loc, llvmIndexType,
+                           getExpandedOutputShape(b, loc, llvmIndexType,
+                                                  reassocation, inStaticShape,
+                                                  inDesc, outStaticShape));
+}
+
 // ReshapeOp creates a new view descriptor of the proper rank.
 // For now, the only conversion supported is for target MemRef with static sizes
 // and strides.
@@ -1014,35 +1147,59 @@ public:
   matchAndRewrite(ReshapeOp reshapeOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType dstType = reshapeOp.getResultType();
-
-    if (!dstType.hasStaticShape())
-      return failure();
+    MemRefType srcType = reshapeOp.getSrcType();
+    if (!srcType.getAffineMaps().empty() || !dstType.getAffineMaps().empty()) {
+      return rewriter.notifyMatchFailure(reshapeOp,
+                                         "only empty layout map is supported");
+    }
 
     int64_t offset;
     SmallVector<int64_t, 4> strides;
-    auto res = getStridesAndOffset(dstType, strides, offset);
-    if (failed(res) || llvm::any_of(strides, [](int64_t val) {
-          return ShapedType::isDynamicStrideOrOffset(val);
-        }))
-      return failure();
+    if (failed(getStridesAndOffset(dstType, strides, offset))) {
+      return rewriter.notifyMatchFailure(
+          reshapeOp, "failed to get stride and offset exprs");
+    }
 
     ReshapeOpAdaptor adaptor(operands);
-    MemRefDescriptor baseDesc(adaptor.src());
+    MemRefDescriptor srcDesc(adaptor.src());
     Location loc = reshapeOp->getLoc();
-    auto desc =
-        MemRefDescriptor::undef(rewriter, reshapeOp->getLoc(),
-                                this->typeConverter->convertType(dstType));
-    desc.setAllocatedPtr(rewriter, loc, baseDesc.allocatedPtr(rewriter, loc));
-    desc.setAlignedPtr(rewriter, loc, baseDesc.alignedPtr(rewriter, loc));
-    desc.setOffset(rewriter, loc, baseDesc.offset(rewriter, loc));
-    for (auto en : llvm::enumerate(dstType.getShape()))
-      desc.setConstantSize(rewriter, loc, en.index(), en.value());
-    for (auto en : llvm::enumerate(strides))
-      desc.setConstantStride(rewriter, loc, en.index(), en.value());
-    rewriter.replaceOp(reshapeOp, {desc});
+    auto dstDesc = MemRefDescriptor::undef(
+        rewriter, loc, this->typeConverter->convertType(dstType));
+    dstDesc.setAllocatedPtr(rewriter, loc, srcDesc.allocatedPtr(rewriter, loc));
+    dstDesc.setAlignedPtr(rewriter, loc, srcDesc.alignedPtr(rewriter, loc));
+    dstDesc.setOffset(rewriter, loc, srcDesc.offset(rewriter, loc));
+
+    ArrayRef<int64_t> srcStaticShape = srcType.getShape();
+    ArrayRef<int64_t> dstStaticShape = dstType.getShape();
+    Type llvmIndexType =
+        this->typeConverter->convertType(rewriter.getIndexType());
+    SmallVector<Value> dstShape = getDynamicOutputShape(
+        rewriter, loc, llvmIndexType, reshapeOp.getReassociationIndices(),
+        srcStaticShape, srcDesc, dstStaticShape);
+    for (auto &en : llvm::enumerate(dstShape))
+      dstDesc.setSize(rewriter, loc, en.index(), en.value());
+
+    auto isStaticStride = [](int64_t stride) {
+      return !ShapedType::isDynamicStrideOrOffset(stride);
+    };
+    if (llvm::all_of(strides, isStaticStride)) {
+      for (auto &en : llvm::enumerate(strides))
+        dstDesc.setConstantStride(rewriter, loc, en.index(), en.value());
+    } else {
+      Value c1 = rewriter.create<LLVM::ConstantOp>(loc, llvmIndexType,
+                                                   rewriter.getIndexAttr(1));
+      Value stride = c1;
+      for (auto dimIndex :
+           llvm::reverse(llvm::seq<int64_t>(0, dstShape.size()))) {
+        dstDesc.setStride(rewriter, loc, dimIndex, stride);
+        stride = rewriter.create<LLVM::MulOp>(loc, dstShape[dimIndex], stride);
+      }
+    }
+    rewriter.replaceOp(reshapeOp, {dstDesc});
     return success();
   }
 };
+
 /// Conversion pattern that transforms a subview op into:
 ///   1. An `llvm.mlir.undef` operation to create a memref descriptor
 ///   2. Updates to the descriptor to introduce the data ptr, offset, size
