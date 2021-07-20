@@ -415,9 +415,6 @@ protected:
   /// Name of the profile remapping file to load.
   std::string RemappingFilename;
 
-  /// Flag indicating whether the profile input loaded successfully.
-  bool ProfileIsValid = false;
-
   /// Flag indicating whether input profile is context-sensitive
   bool ProfileIsCS = false;
 
