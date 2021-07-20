@@ -5197,7 +5197,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     if (!getAnchorScope() || getAnchorScope()->isDeclaration())
       indicatePessimisticFixpoint();
     if (hasAttr({Attribute::InAlloca, Attribute::Preallocated,
-                 Attribute::StructRet, Attribute::Nest},
+                 Attribute::StructRet, Attribute::Nest, Attribute::ByVal},
                 /* IgnoreSubsumingPositions */ true))
       indicatePessimisticFixpoint();
 
