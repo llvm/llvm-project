@@ -211,7 +211,7 @@ define <16 x i8> @mashup_swizzle_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %spla
 ; CHECK-LABEL: mashup_const_i8x16:
 ; CHECK-NEXT:  .functype       mashup_const_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK:       v128.const      $push[[L0:[0-9]+]]=, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0
-; CHECK:       i8x16.replace_lane
+; CHECK:       v128.load8_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       return
@@ -234,7 +234,7 @@ define <16 x i8> @mashup_const_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %splatt
 ; CHECK-LABEL: mashup_splat_i8x16:
 ; CHECK-NEXT:  .functype       mashup_splat_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK:       i8x16.splat     $push[[L0:[0-9]+]]=, $2
-; CHECK:       i8x16.replace_lane
+; CHECK:       v128.load8_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       return
 define <16 x i8> @mashup_splat_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %splatted) {

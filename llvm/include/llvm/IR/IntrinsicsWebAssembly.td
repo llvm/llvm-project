@@ -191,26 +191,6 @@ def int_wasm_load64_zero :
 // ISD::TargetConstant, which would require extra complications in the ISel
 // tablegen patterns. TODO: Replace these intrinsic with normal ISel patterns
 // once the load_lane instructions are merged to the proposal.
-def int_wasm_load8_lane :
-  Intrinsic<[llvm_v16i8_ty],
-            [LLVMPointerType<llvm_i8_ty>, llvm_v16i8_ty, llvm_i32_ty],
-            [IntrReadMem, IntrArgMemOnly],
-            "", [SDNPMemOperand]>;
-def int_wasm_load16_lane :
-  Intrinsic<[llvm_v8i16_ty],
-            [LLVMPointerType<llvm_i16_ty>, llvm_v8i16_ty, llvm_i32_ty],
-            [IntrReadMem, IntrArgMemOnly],
-            "", [SDNPMemOperand]>;
-def int_wasm_load32_lane :
-  Intrinsic<[llvm_v4i32_ty],
-            [LLVMPointerType<llvm_i32_ty>, llvm_v4i32_ty, llvm_i32_ty],
-            [IntrReadMem, IntrArgMemOnly],
-            "", [SDNPMemOperand]>;
-def int_wasm_load64_lane :
-  Intrinsic<[llvm_v2i64_ty],
-            [LLVMPointerType<llvm_i64_ty>, llvm_v2i64_ty, llvm_i32_ty],
-            [IntrReadMem, IntrArgMemOnly],
-            "", [SDNPMemOperand]>;
 def int_wasm_store8_lane :
   Intrinsic<[],
             [LLVMPointerType<llvm_i8_ty>, llvm_v16i8_ty, llvm_i32_ty],
