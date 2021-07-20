@@ -1019,9 +1019,24 @@ public:
         loc, outputTy.getShape(), outputTy.getElementType());
     Value zeroTensor =
         rewriter.create<linalg::FillOp>(loc, zero, initTensor).getResult(0);
-    rewriter.replaceOpWithNewOp<linalg::BatchMatmulOp>(
-        op, TypeRange{op.getType()}, ValueRange{adaptor.a(), adaptor.b()},
-        ValueRange{zeroTensor});
+    if (!op.quantization_info()) {
+      rewriter.replaceOpWithNewOp<linalg::BatchMatmulOp>(
+          op, TypeRange{op.getType()}, ValueRange{adaptor.a(), adaptor.b()},
+          ValueRange{zeroTensor});
+      return success();
+    }
+
+    auto quantizationInfo = op.quantization_info().getValue();
+    auto aZp = rewriter.create<ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(
+                 quantizationInfo.a_zp().getValue().getSExtValue()));
+    auto bZp = rewriter.create<ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(
+                 quantizationInfo.b_zp().getValue().getSExtValue()));
+    rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
+        op, TypeRange{op.getType()},
+        ValueRange{adaptor.a(), adaptor.b(), aZp, bZp}, zeroTensor);
+
     return success();
   }
 };
@@ -1040,12 +1055,7 @@ public:
     auto bias = op.bias();
 
     auto weightTy = weight.getType().cast<ShapedType>();
-    auto biasTy = bias.getType().cast<ShapedType>();
-
     auto weightShape = weightTy.getShape();
-
-    if (op.quantization_info())
-      return failure();
 
     // Creating maps for the output of MatMul and the bias
     SmallVector<AffineMap, 4> indexingMaps;
@@ -1081,14 +1091,29 @@ public:
 
     SmallVector<int64_t> newWeightShape{weightShape[1], weightShape[0]};
     Type newWeightTy =
-        RankedTensorType::get(newWeightShape, biasTy.getElementType());
+        RankedTensorType::get(newWeightShape, weightTy.getElementType());
 
     Value transposedWeight = rewriter.create<tosa::TransposeOp>(
         loc, newWeightTy, weight, permutationValue);
 
-    rewriter.replaceOpWithNewOp<linalg::MatmulOp>(
-        op, TypeRange{op.getType()}, ValueRange{input, transposedWeight},
-        linalgOp);
+    if (!op.quantization_info()) {
+      rewriter.replaceOpWithNewOp<linalg::MatmulOp>(
+          op, TypeRange{op.getType()}, ValueRange{input, transposedWeight},
+          linalgOp);
+      return success();
+    }
+
+    auto quantizationInfo = op.quantization_info().getValue();
+    auto inputZp = rewriter.create<ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(
+                 quantizationInfo.input_zp().getValue().getSExtValue()));
+    auto outputZp = rewriter.create<ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(
+                 quantizationInfo.weight_zp().getValue().getSExtValue()));
+    rewriter.replaceOpWithNewOp<linalg::QuantizedMatmulOp>(
+        op, TypeRange{op.getType()},
+        ValueRange{input, transposedWeight, inputZp, outputZp}, linalgOp);
+
     return success();
   }
 };
