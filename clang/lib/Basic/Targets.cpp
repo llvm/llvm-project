@@ -748,15 +748,6 @@ bool TargetInfo::validateOpenCLTarget(const LangOptions &Opts,
   if (Opts.OpenCLCPlusPlus || Opts.OpenCLVersion < 300)
     return true;
 
-  // Feature and corresponding equivalent extension must be set
-  // simultaneously to the same value.
-  for (auto &ExtAndFeat : {std::make_pair("cl_khr_fp64", "__opencl_c_fp64")})
-    if (hasFeatureEnabled(OpenCLFeaturesMap, ExtAndFeat.first) !=
-        hasFeatureEnabled(OpenCLFeaturesMap, ExtAndFeat.second)) {
-      Diags.Report(diag::err_opencl_extension_and_feature_differs)
-          << ExtAndFeat.first << ExtAndFeat.second;
-      return false;
-    }
-
-  return true;
+  return OpenCLOptions::diagnoseUnsupportedFeatureDependencies(*this, Diags) &&
+         OpenCLOptions::diagnoseFeatureExtensionDifferences(*this, Diags);
 }

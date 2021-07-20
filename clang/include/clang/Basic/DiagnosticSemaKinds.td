@@ -10197,7 +10197,8 @@ def err_opencl_builtin_pipe_invalid_access_modifier : Error<
 def err_opencl_invalid_access_qualifier : Error<
   "access qualifier can only be used for pipe and image type">;
 def err_opencl_invalid_read_write : Error<
-  "access qualifier %0 can not be used for %1 %select{|prior to OpenCL version 2.0}2">;
+  "access qualifier %0 can not be used for %1 %select{|prior to OpenCL C version 2.0 or in version 3.0 "
+  "and without __opencl_c_read_write_images feature}2">;
 def err_opencl_multiple_access_qualifiers : Error<
   "multiple access qualifiers">;
 def note_opencl_typedef_access_qualifier : Note<
