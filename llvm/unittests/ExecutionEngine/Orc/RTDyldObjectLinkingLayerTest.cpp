@@ -15,6 +15,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"
+#include <string>
 
 using namespace llvm;
 using namespace llvm::orc;
