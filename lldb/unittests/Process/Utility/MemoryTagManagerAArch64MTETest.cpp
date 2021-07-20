@@ -94,6 +94,121 @@ TEST(MemoryTagManagerAArch64MTETest, ExpandToGranule) {
       manager.ExpandToGranule(MemoryTagManagerAArch64MTE::TagRange(18, 4)));
 }
 
+static MemoryRegionInfo MakeRegionInfo(lldb::addr_t base, lldb::addr_t size,
+                                       bool tagged) {
+  return MemoryRegionInfo(
+      MemoryRegionInfo::RangeType(base, size), MemoryRegionInfo::eYes,
+      MemoryRegionInfo::eYes, MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
+      ConstString(), MemoryRegionInfo::eNo, 0,
+      /*memory_tagged=*/
+      tagged ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+}
+
+TEST(MemoryTagManagerAArch64MTETest, MakeTaggedRange) {
+  MemoryTagManagerAArch64MTE manager;
+  MemoryRegionInfos memory_regions;
+
+  // No regions means no tagged regions, error
+  ASSERT_THAT_EXPECTED(
+      manager.MakeTaggedRange(0, 0x10, memory_regions),
+      llvm::FailedWithMessage(
+          "Address range 0x0:0x10 is not in a memory tagged region"));
+
+  // Alignment is done before checking regions.
+  // Here 1 is rounded up to the granule size of 0x10.
+  ASSERT_THAT_EXPECTED(
+      manager.MakeTaggedRange(0, 1, memory_regions),
+      llvm::FailedWithMessage(
+          "Address range 0x0:0x10 is not in a memory tagged region"));
+
+  // Range must not be inverted
+  ASSERT_THAT_EXPECTED(
+      manager.MakeTaggedRange(1, 0, memory_regions),
+      llvm::FailedWithMessage(
+          "End address (0x0) must be greater than the start address (0x1)"));
+
+  // Adding a single region to cover the whole range
+  memory_regions.push_back(MakeRegionInfo(0, 0x1000, true));
+
+  // Range can have different tags for begin and end
+  // (which would make it look inverted if we didn't remove them)
+  // Note that range comes back with an untagged base and alginment
+  // applied.
+  MemoryTagManagerAArch64MTE::TagRange expected_range(0x0, 0x10);
+  llvm::Expected<MemoryTagManagerAArch64MTE::TagRange> got =
+      manager.MakeTaggedRange(0x0f00000000000000, 0x0e00000000000001,
+                              memory_regions);
+  ASSERT_THAT_EXPECTED(got, llvm::Succeeded());
+  ASSERT_EQ(*got, expected_range);
+
+  // Error if the range isn't within any region
+  ASSERT_THAT_EXPECTED(
+      manager.MakeTaggedRange(0x1000, 0x1010, memory_regions),
+      llvm::FailedWithMessage(
+          "Address range 0x1000:0x1010 is not in a memory tagged region"));
+
+  // Error if the first part of a range isn't tagged
+  memory_regions.clear();
+  const char *err_msg =
+      "Address range 0x0:0x1000 is not in a memory tagged region";
+
+  // First because it has no region entry
+  memory_regions.push_back(MakeRegionInfo(0x10, 0x1000, true));
+  ASSERT_THAT_EXPECTED(manager.MakeTaggedRange(0, 0x1000, memory_regions),
+                       llvm::FailedWithMessage(err_msg));
+
+  // Then because the first region is untagged
+  memory_regions.push_back(MakeRegionInfo(0, 0x10, false));
+  ASSERT_THAT_EXPECTED(manager.MakeTaggedRange(0, 0x1000, memory_regions),
+                       llvm::FailedWithMessage(err_msg));
+
+  // If we tag that first part it succeeds
+  memory_regions.back().SetMemoryTagged(MemoryRegionInfo::eYes);
+  expected_range = MemoryTagManagerAArch64MTE::TagRange(0x0, 0x1000);
+  got = manager.MakeTaggedRange(0, 0x1000, memory_regions);
+  ASSERT_THAT_EXPECTED(got, llvm::Succeeded());
+  ASSERT_EQ(*got, expected_range);
+
+  // Error if the end of a range is untagged
+  memory_regions.clear();
+
+  // First because it has no region entry
+  memory_regions.push_back(MakeRegionInfo(0, 0xF00, true));
+  ASSERT_THAT_EXPECTED(manager.MakeTaggedRange(0, 0x1000, memory_regions),
+                       llvm::FailedWithMessage(err_msg));
+
+  // Then because the last region is untagged
+  memory_regions.push_back(MakeRegionInfo(0xF00, 0x100, false));
+  ASSERT_THAT_EXPECTED(manager.MakeTaggedRange(0, 0x1000, memory_regions),
+                       llvm::FailedWithMessage(err_msg));
+
+  // If we tag the last part it succeeds
+  memory_regions.back().SetMemoryTagged(MemoryRegionInfo::eYes);
+  got = manager.MakeTaggedRange(0, 0x1000, memory_regions);
+  ASSERT_THAT_EXPECTED(got, llvm::Succeeded());
+  ASSERT_EQ(*got, expected_range);
+
+  // Error if the middle of a range is untagged
+  memory_regions.clear();
+
+  // First because it has no entry
+  memory_regions.push_back(MakeRegionInfo(0, 0x500, true));
+  memory_regions.push_back(MakeRegionInfo(0x900, 0x700, true));
+  ASSERT_THAT_EXPECTED(manager.MakeTaggedRange(0, 0x1000, memory_regions),
+                       llvm::FailedWithMessage(err_msg));
+
+  // Then because it's untagged
+  memory_regions.push_back(MakeRegionInfo(0x500, 0x400, false));
+  ASSERT_THAT_EXPECTED(manager.MakeTaggedRange(0, 0x1000, memory_regions),
+                       llvm::FailedWithMessage(err_msg));
+
+  // If we tag the middle part it succeeds
+  memory_regions.back().SetMemoryTagged(MemoryRegionInfo::eYes);
+  got = manager.MakeTaggedRange(0, 0x1000, memory_regions);
+  ASSERT_THAT_EXPECTED(got, llvm::Succeeded());
+  ASSERT_EQ(*got, expected_range);
+}
+
 TEST(MemoryTagManagerAArch64MTETest, RemoveNonAddressBits) {
   MemoryTagManagerAArch64MTE manager;
 
