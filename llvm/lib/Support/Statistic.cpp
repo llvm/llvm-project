@@ -21,6 +21,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
+
+#include "DebugOptions.h"
+
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -38,17 +41,21 @@ using namespace llvm;
 /// -stats - Command line option to cause transformations to emit stats about
 /// what they did.
 ///
-static cl::opt<bool> EnableStats(
-    "stats",
-    cl::desc("Enable statistics output from program (available with Asserts)"),
-    cl::Hidden);
-
-static cl::opt<bool> StatsAsJSON("stats-json",
-                                 cl::desc("Display statistics as json data"),
-                                 cl::Hidden);
-
+static bool EnableStats;
+static bool StatsAsJSON;
 static bool Enabled;
 static bool PrintOnExit;
+
+void llvm::initStatisticOptions() {
+  static cl::opt<bool, true> registerEnableStats{
+      "stats",
+      cl::desc(
+          "Enable statistics output from program (available with Asserts)"),
+      cl::location(EnableStats), cl::Hidden};
+  static cl::opt<bool, true> registerStatsAsJson{
+      "stats-json", cl::desc("Display statistics as json data"),
+      cl::location(StatsAsJSON), cl::Hidden};
+}
 
 namespace {
 /// This class is used in a ManagedStatic so that it is created on demand (when
@@ -128,9 +135,7 @@ void llvm::EnableStatistics(bool DoPrintOnExit) {
   PrintOnExit = DoPrintOnExit;
 }
 
-bool llvm::AreStatisticsEnabled() {
-  return Enabled || EnableStats;
-}
+bool llvm::AreStatisticsEnabled() { return Enabled || EnableStats; }
 
 void StatisticInfo::sort() {
   llvm::stable_sort(
