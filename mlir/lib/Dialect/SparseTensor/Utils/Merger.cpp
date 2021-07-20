@@ -208,13 +208,16 @@ bool Merger::isConjunction(unsigned t, unsigned e) const {
   case kFloorF:
   case kNegF:
   case kNegI:
+  case Kind::kDivF: // note: x / c only
+  case Kind::kDivS:
+  case Kind::kDivU:
+  case Kind::kShrS: // note: x >> inv only
+  case Kind::kShrU:
+  case Kind::kShlI:
     return isConjunction(t, tensorExps[e].children.e0);
   case Kind::kMulF:
   case Kind::kMulI:
   case Kind::kAndI:
-  case Kind::kDivF: // note: x / c only
-  case Kind::kDivS:
-  case Kind::kDivU:
     return isConjunction(t, tensorExps[e].children.e0) ||
            isConjunction(t, tensorExps[e].children.e1);
   default:
@@ -228,9 +231,9 @@ bool Merger::isConjunction(unsigned t, unsigned e) const {
 // Print methods (for debugging).
 //
 
-static const char *kOpSymbols[] = {"",  "",  "abs", "ceil", "floor", "-",
-                                   "-", "*", "*",   "/",    "/",     "+",
-                                   "+", "-", "-",   "&",    "|",     "^"};
+static const char *kOpSymbols[] = {
+    "",  "",  "abs", "ceil", "floor", "-", "-", "*",   "*",  "/", "/",
+    "+", "+", "-",   "-",    "&",     "|", "^", "a>>", ">>", "<<"};
 
 void Merger::dumpExp(unsigned e) const {
   switch (tensorExps[e].kind) {
@@ -383,6 +386,15 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     return takeDisj(kind, // take binary disjunction
                     buildLattices(tensorExps[e].children.e0, i),
                     buildLattices(tensorExps[e].children.e1, i));
+  case Kind::kShrS:
+  case Kind::kShrU:
+  case Kind::kShlI:
+    // A shift operation by an invariant amount (viz. tensor expressions
+    // can only occur at the left-hand-side of the operator) can be handled
+    // with the conjuction rule.
+    return takeConj(kind, // take binary conjunction
+                    buildLattices(tensorExps[e].children.e0, i),
+                    buildLattices(tensorExps[e].children.e1, i));
   }
   llvm_unreachable("unexpected expression kind");
 }
@@ -392,7 +404,7 @@ Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   return buildTensorExp(op, yield->getOperand(0));
 }
 
-bool Merger::maybeZero(unsigned e) {
+bool Merger::maybeZero(unsigned e) const {
   if (tensorExps[e].kind == Kind::kInvariant) {
     if (auto c = tensorExps[e].val.getDefiningOp<ConstantIntOp>())
       return c.getValue() == 0;
@@ -400,6 +412,10 @@ bool Merger::maybeZero(unsigned e) {
       return c.getValue().isZero();
   }
   return true;
+}
+
+bool Merger::isInvariant(unsigned e) const {
+  return tensorExps[e].kind == Kind::kInvariant;
 }
 
 Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
@@ -470,6 +486,12 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(Kind::kOrI, e0, e1);
       if (isa<XOrOp>(def))
         return addExp(Kind::kXorI, e0, e1);
+      if (isa<SignedShiftRightOp>(def) && isInvariant(e1))
+        return addExp(Kind::kShrS, e0, e1);
+      if (isa<UnsignedShiftRightOp>(def) && isInvariant(e1))
+        return addExp(Kind::kShrU, e0, e1);
+      if (isa<ShiftLeftOp>(def) && isInvariant(e1))
+        return addExp(Kind::kShlI, e0, e1);
     }
   }
   // Cannot build.
@@ -517,6 +539,12 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
     return rewriter.create<OrOp>(loc, v0, v1);
   case Kind::kXorI:
     return rewriter.create<XOrOp>(loc, v0, v1);
+  case Kind::kShrS:
+    return rewriter.create<SignedShiftRightOp>(loc, v0, v1);
+  case Kind::kShrU:
+    return rewriter.create<UnsignedShiftRightOp>(loc, v0, v1);
+  case Kind::kShlI:
+    return rewriter.create<ShiftLeftOp>(loc, v0, v1);
   }
   llvm_unreachable("unexpected expression kind in build");
 }
