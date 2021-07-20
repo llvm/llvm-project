@@ -546,6 +546,7 @@ namespace {
     SDValue foldSignChangeInBitcast(SDNode *N);
     SDValue foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0, SDValue N1,
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
+    SDValue foldSelectOfBinops(SDNode *N);
     SDValue foldSextSetcc(SDNode *N);
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
@@ -9646,29 +9647,8 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     return SimplifySelect(DL, N0, N1, N2);
   }
 
-  if (N1.getOpcode() == N2.getOpcode() && TLI.isBinOp(N1.getOpcode()) &&
-      N->isOnlyUserOf(N0.getNode()) && N->isOnlyUserOf(N1.getNode())) {
-    // Fold select(cond, binop(x, y), binop(z, y))
-    //  --> binop(select(cond, x, z), y)
-    if (N1.getOperand(1) == N2.getOperand(1)) {
-      SDValue NewSel =
-          DAG.getSelect(DL, VT, N0, N1.getOperand(0), N2.getOperand(0));
-      return DAG.getNode(N1.getOpcode(), DL, VT, NewSel, N1.getOperand(1));
-    }
-
-    // Fold select(cond, binop(x, y), binop(x, z))
-    //  --> binop(x, select(cond, y, z))
-    // Second op VT might be different (e.g. shift amount type)
-    if (N1.getOperand(0) == N2.getOperand(0) &&
-        VT == N1.getOperand(1).getValueType() &&
-        VT == N2.getOperand(1).getValueType()) {
-      SDValue NewSel =
-          DAG.getSelect(DL, VT, N0, N1.getOperand(1), N2.getOperand(1));
-      return DAG.getNode(N1.getOpcode(), DL, VT, N1.getOperand(0), NewSel);
-    }
-
-    // TODO: Handle isCommutativeBinOp as well ?
-  }
+  if (SDValue BinOp = foldSelectOfBinops(N))
+    return BinOp;
 
   return SDValue();
 }
@@ -22386,6 +22366,44 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
     Shift = DAG.getNOT(DL, Shift, AType);
 
   return DAG.getNode(ISD::AND, DL, AType, Shift, N2);
+}
+
+// Fold select(cc, binop(), binop()) -> binop(select(), select()) etc.
+SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  unsigned BinOpc = N1.getOpcode();
+  if (!TLI.isBinOp(BinOpc) || (N2.getOpcode() != BinOpc))
+    return SDValue();
+
+  if (!N->isOnlyUserOf(N0.getNode()) || !N->isOnlyUserOf(N1.getNode()))
+    return SDValue();
+
+  // Fold select(cond, binop(x, y), binop(z, y))
+  //  --> binop(select(cond, x, z), y)
+  if (N1.getOperand(1) == N2.getOperand(1)) {
+    SDValue NewSel =
+        DAG.getSelect(DL, VT, N0, N1.getOperand(0), N2.getOperand(0));
+    return DAG.getNode(BinOpc, DL, VT, NewSel, N1.getOperand(1));
+  }
+
+  // Fold select(cond, binop(x, y), binop(x, z))
+  //  --> binop(x, select(cond, y, z))
+  // Second op VT might be different (e.g. shift amount type)
+  if (N1.getOperand(0) == N2.getOperand(0) &&
+      VT == N1.getOperand(1).getValueType() &&
+      VT == N2.getOperand(1).getValueType()) {
+    SDValue NewSel =
+        DAG.getSelect(DL, VT, N0, N1.getOperand(1), N2.getOperand(1));
+    return DAG.getNode(BinOpc, DL, VT, N1.getOperand(0), NewSel);
+  }
+
+  // TODO: Handle isCommutativeBinOp patterns as well?
+  return SDValue();
 }
 
 // Transform (fneg/fabs (bitconvert x)) to avoid loading constant pool values.
