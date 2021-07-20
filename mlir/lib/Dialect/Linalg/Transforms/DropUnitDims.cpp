@@ -352,7 +352,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
           convertAffineMapArrayToExprs(reassociationMap));
     }
     if (origResultType.isa<MemRefType>()) {
-      return rewriter.create<linalg::ExpandShapeOp>(
+      return rewriter.create<memref::ExpandShapeOp>(
           loc, origResultType, result,
           convertAffineMapArrayToExprs(reassociationMap));
     }
@@ -368,7 +368,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
     if (operandType == newInputOutputType)
       return operand;
     if (operandType.isa<MemRefType>()) {
-      return rewriter.create<linalg::CollapseShapeOp>(
+      return rewriter.create<memref::CollapseShapeOp>(
           loc, newInputOutputType, operand,
           convertAffineMapArrayToExprs(reassociationMap));
     }

@@ -1000,6 +1000,49 @@ private:
   }
 };
 
+// ReshapeOp creates a new view descriptor of the proper rank.
+// For now, the only conversion supported is for target MemRef with static sizes
+// and strides.
+template <typename ReshapeOp>
+class ReassociatingReshapeOpConversion
+    : public ConvertOpToLLVMPattern<ReshapeOp> {
+public:
+  using ConvertOpToLLVMPattern<ReshapeOp>::ConvertOpToLLVMPattern;
+  using ReshapeOpAdaptor = typename ReshapeOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ReshapeOp reshapeOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    MemRefType dstType = reshapeOp.getResultType();
+
+    if (!dstType.hasStaticShape())
+      return failure();
+
+    int64_t offset;
+    SmallVector<int64_t, 4> strides;
+    auto res = getStridesAndOffset(dstType, strides, offset);
+    if (failed(res) || llvm::any_of(strides, [](int64_t val) {
+          return ShapedType::isDynamicStrideOrOffset(val);
+        }))
+      return failure();
+
+    ReshapeOpAdaptor adaptor(operands);
+    MemRefDescriptor baseDesc(adaptor.src());
+    Location loc = reshapeOp->getLoc();
+    auto desc =
+        MemRefDescriptor::undef(rewriter, reshapeOp->getLoc(),
+                                this->typeConverter->convertType(dstType));
+    desc.setAllocatedPtr(rewriter, loc, baseDesc.allocatedPtr(rewriter, loc));
+    desc.setAlignedPtr(rewriter, loc, baseDesc.alignedPtr(rewriter, loc));
+    desc.setOffset(rewriter, loc, baseDesc.offset(rewriter, loc));
+    for (auto en : llvm::enumerate(dstType.getShape()))
+      desc.setConstantSize(rewriter, loc, en.index(), en.value());
+    for (auto en : llvm::enumerate(strides))
+      desc.setConstantStride(rewriter, loc, en.index(), en.value());
+    rewriter.replaceOp(reshapeOp, {desc});
+    return success();
+  }
+};
 /// Conversion pattern that transforms a subview op into:
 ///   1. An `llvm.mlir.undef` operation to create a memref descriptor
 ///   2. Updates to the descriptor to introduce the data ptr, offset, size
@@ -1355,6 +1398,8 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
       MemRefReinterpretCastOpLowering,
       MemRefReshapeOpLowering,
       PrefetchOpLowering,
+      ReassociatingReshapeOpConversion<memref::ExpandShapeOp>,
+      ReassociatingReshapeOpConversion<memref::CollapseShapeOp>,
       StoreOpLowering,
       SubViewOpLowering,
       TransposeOpLowering,
