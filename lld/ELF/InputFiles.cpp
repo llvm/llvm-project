@@ -1131,7 +1131,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   }
 
   // Symbol resolution of non-local symbols.
-  SmallVector<unsigned, 32> unds;
+  SmallVector<unsigned, 32> undefineds;
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
     uint8_t binding = eSym.getBinding();
@@ -1148,7 +1148,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
 
     // Handle global undefined symbols.
     if (eSym.st_shndx == SHN_UNDEF) {
-      unds.push_back(i);
+      undefineds.push_back(i);
       continue;
     }
 
@@ -1202,7 +1202,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
   // does not change the symbol resolution behavior. In addition, a set of
   // interconnected symbols will all be resolved to the same file, instead of
   // being resolved to different files.
-  for (unsigned i : unds) {
+  for (unsigned i : undefineds) {
     const Elf_Sym &eSym = eSyms[i];
     StringRefZ name = this->stringTable.data() + eSym.st_name;
     this->symbols[i]->resolve(Undefined{this, name, eSym.getBinding(),

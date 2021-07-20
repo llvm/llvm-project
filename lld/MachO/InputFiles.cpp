@@ -585,6 +585,11 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
   }
 }
 
+template <class NList>
+static bool isUndef(const NList &sym) {
+  return (sym.n_type & N_TYPE) == N_UNDF && sym.n_value == 0;
+}
+
 template <class LP>
 void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
                            ArrayRef<typename LP::nlist> nList,
@@ -594,6 +599,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   // Groups indices of the symbols by the sections that contain them.
   std::vector<std::vector<uint32_t>> symbolsBySection(subsections.size());
   symbols.resize(nList.size());
+  SmallVector<unsigned, 32> undefineds;
   for (uint32_t i = 0; i < nList.size(); ++i) {
     const NList &sym = nList[i];
 
@@ -609,6 +615,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       if (subsecMap.empty())
         continue;
       symbolsBySection[sym.n_sect - 1].push_back(i);
+    } else if (isUndef(sym)) {
+      undefineds.push_back(i);
     } else {
       symbols[i] = parseNonSectionSymbol(sym, name);
     }
@@ -702,6 +710,18 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       subsecMap.push_back({sym.n_value - sectionAddr, nextIsec});
       subsecEntry = subsecMap.back();
     }
+  }
+
+  // Undefined symbols can trigger recursive fetch from Archives due to
+  // LazySymbols. Process defined symbols first so that the relative order
+  // between a defined symbol and an undefined symbol does not change the
+  // symbol resolution behavior. In addition, a set of interconnected symbols
+  // will all be resolved to the same file, instead of being resolved to
+  // different files.
+  for (unsigned i : undefineds) {
+    const NList &sym = nList[i];
+    StringRef name = strtab + sym.n_strx;
+    symbols[i] = parseNonSectionSymbol(sym, name);
   }
 }
 
