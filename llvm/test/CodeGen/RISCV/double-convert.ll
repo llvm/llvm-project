@@ -139,6 +139,42 @@ define i32 @fcvt_wu_d(double %a) nounwind {
   ret i32 %1
 }
 
+; Test where the fptoui has multiple uses, one of which causes a sext to be
+; inserted on RV64.
+; FIXME: We should not have an fcvt.wu.d and an fcvt.lu.d.
+define i32 @fcvt_wu_d_multiple_use(double %x, i32* %y) {
+; RV32IFD-LABEL: fcvt_wu_d_multiple_use:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    fcvt.wu.d a1, ft0, rtz
+; RV32IFD-NEXT:    addi a0, zero, 1
+; RV32IFD-NEXT:    beqz a1, .LBB5_2
+; RV32IFD-NEXT:  # %bb.1:
+; RV32IFD-NEXT:    mv a0, a1
+; RV32IFD-NEXT:  .LBB5_2:
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: fcvt_wu_d_multiple_use:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    fmv.d.x ft0, a0
+; RV64IFD-NEXT:    fcvt.wu.d a1, ft0, rtz
+; RV64IFD-NEXT:    addi a0, zero, 1
+; RV64IFD-NEXT:    beqz a1, .LBB5_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fcvt.lu.d a0, ft0, rtz
+; RV64IFD-NEXT:  .LBB5_2:
+; RV64IFD-NEXT:    ret
+  %a = fptoui double %x to i32
+  %b = icmp eq i32 %a, 0
+  %c = select i1 %b, i32 1, i32 %a
+  ret i32 %c
+}
+
 define i32 @fcvt_wu_d_sat(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_wu_d_sat:
 ; RV32IFD:       # %bb.0: # %start
@@ -146,8 +182,8 @@ define i32 @fcvt_wu_d_sat(double %a) nounwind {
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI5_0)
-; RV32IFD-NEXT:    fld ft1, %lo(.LCPI5_0)(a0)
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI6_0)
+; RV32IFD-NEXT:    fld ft1, %lo(.LCPI6_0)(a0)
 ; RV32IFD-NEXT:    fcvt.d.w ft2, zero
 ; RV32IFD-NEXT:    fmax.d ft0, ft0, ft2
 ; RV32IFD-NEXT:    fmin.d ft0, ft0, ft1
@@ -157,8 +193,8 @@ define i32 @fcvt_wu_d_sat(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: fcvt_wu_d_sat:
 ; RV64IFD:       # %bb.0: # %start
-; RV64IFD-NEXT:    lui a1, %hi(.LCPI5_0)
-; RV64IFD-NEXT:    fld ft0, %lo(.LCPI5_0)(a1)
+; RV64IFD-NEXT:    lui a1, %hi(.LCPI6_0)
+; RV64IFD-NEXT:    fld ft0, %lo(.LCPI6_0)(a1)
 ; RV64IFD-NEXT:    fmv.d.x ft1, a0
 ; RV64IFD-NEXT:    fmv.d.x ft2, zero
 ; RV64IFD-NEXT:    fmax.d ft1, ft1, ft2
@@ -287,79 +323,79 @@ define i64 @fcvt_l_d_sat(double %a) nounwind {
 ; RV32IFD-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    call __fixdfdi@plt
 ; RV32IFD-NEXT:    fld ft1, 8(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    lui a2, %hi(.LCPI11_0)
-; RV32IFD-NEXT:    fld ft0, %lo(.LCPI11_0)(a2)
+; RV32IFD-NEXT:    lui a2, %hi(.LCPI12_0)
+; RV32IFD-NEXT:    fld ft0, %lo(.LCPI12_0)(a2)
 ; RV32IFD-NEXT:    fle.d a3, ft0, ft1
 ; RV32IFD-NEXT:    mv a2, a0
-; RV32IFD-NEXT:    bnez a3, .LBB11_2
+; RV32IFD-NEXT:    bnez a3, .LBB12_2
 ; RV32IFD-NEXT:  # %bb.1: # %start
 ; RV32IFD-NEXT:    mv a2, zero
-; RV32IFD-NEXT:  .LBB11_2: # %start
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI11_1)
-; RV32IFD-NEXT:    fld ft0, %lo(.LCPI11_1)(a0)
+; RV32IFD-NEXT:  .LBB12_2: # %start
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI12_1)
+; RV32IFD-NEXT:    fld ft0, %lo(.LCPI12_1)(a0)
 ; RV32IFD-NEXT:    flt.d a4, ft0, ft1
 ; RV32IFD-NEXT:    addi a0, zero, -1
-; RV32IFD-NEXT:    beqz a4, .LBB11_9
+; RV32IFD-NEXT:    beqz a4, .LBB12_9
 ; RV32IFD-NEXT:  # %bb.3: # %start
 ; RV32IFD-NEXT:    feq.d a2, ft1, ft1
-; RV32IFD-NEXT:    beqz a2, .LBB11_10
-; RV32IFD-NEXT:  .LBB11_4: # %start
+; RV32IFD-NEXT:    beqz a2, .LBB12_10
+; RV32IFD-NEXT:  .LBB12_4: # %start
 ; RV32IFD-NEXT:    lui a5, 524288
-; RV32IFD-NEXT:    beqz a3, .LBB11_11
-; RV32IFD-NEXT:  .LBB11_5: # %start
-; RV32IFD-NEXT:    bnez a4, .LBB11_12
-; RV32IFD-NEXT:  .LBB11_6: # %start
-; RV32IFD-NEXT:    bnez a2, .LBB11_8
-; RV32IFD-NEXT:  .LBB11_7: # %start
+; RV32IFD-NEXT:    beqz a3, .LBB12_11
+; RV32IFD-NEXT:  .LBB12_5: # %start
+; RV32IFD-NEXT:    bnez a4, .LBB12_12
+; RV32IFD-NEXT:  .LBB12_6: # %start
+; RV32IFD-NEXT:    bnez a2, .LBB12_8
+; RV32IFD-NEXT:  .LBB12_7: # %start
 ; RV32IFD-NEXT:    mv a1, zero
-; RV32IFD-NEXT:  .LBB11_8: # %start
+; RV32IFD-NEXT:  .LBB12_8: # %start
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
-; RV32IFD-NEXT:  .LBB11_9: # %start
+; RV32IFD-NEXT:  .LBB12_9: # %start
 ; RV32IFD-NEXT:    mv a0, a2
 ; RV32IFD-NEXT:    feq.d a2, ft1, ft1
-; RV32IFD-NEXT:    bnez a2, .LBB11_4
-; RV32IFD-NEXT:  .LBB11_10: # %start
+; RV32IFD-NEXT:    bnez a2, .LBB12_4
+; RV32IFD-NEXT:  .LBB12_10: # %start
 ; RV32IFD-NEXT:    mv a0, zero
 ; RV32IFD-NEXT:    lui a5, 524288
-; RV32IFD-NEXT:    bnez a3, .LBB11_5
-; RV32IFD-NEXT:  .LBB11_11: # %start
+; RV32IFD-NEXT:    bnez a3, .LBB12_5
+; RV32IFD-NEXT:  .LBB12_11: # %start
 ; RV32IFD-NEXT:    lui a1, 524288
-; RV32IFD-NEXT:    beqz a4, .LBB11_6
-; RV32IFD-NEXT:  .LBB11_12:
+; RV32IFD-NEXT:    beqz a4, .LBB12_6
+; RV32IFD-NEXT:  .LBB12_12:
 ; RV32IFD-NEXT:    addi a1, a5, -1
-; RV32IFD-NEXT:    beqz a2, .LBB11_7
-; RV32IFD-NEXT:    j .LBB11_8
+; RV32IFD-NEXT:    beqz a2, .LBB12_7
+; RV32IFD-NEXT:    j .LBB12_8
 ;
 ; RV64IFD-LABEL: fcvt_l_d_sat:
 ; RV64IFD:       # %bb.0: # %start
-; RV64IFD-NEXT:    lui a1, %hi(.LCPI11_0)
-; RV64IFD-NEXT:    fld ft1, %lo(.LCPI11_0)(a1)
+; RV64IFD-NEXT:    lui a1, %hi(.LCPI12_0)
+; RV64IFD-NEXT:    fld ft1, %lo(.LCPI12_0)(a1)
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
 ; RV64IFD-NEXT:    fle.d a0, ft1, ft0
 ; RV64IFD-NEXT:    addi a1, zero, -1
-; RV64IFD-NEXT:    bnez a0, .LBB11_2
+; RV64IFD-NEXT:    bnez a0, .LBB12_2
 ; RV64IFD-NEXT:  # %bb.1: # %start
 ; RV64IFD-NEXT:    slli a0, a1, 63
-; RV64IFD-NEXT:    j .LBB11_3
-; RV64IFD-NEXT:  .LBB11_2:
+; RV64IFD-NEXT:    j .LBB12_3
+; RV64IFD-NEXT:  .LBB12_2:
 ; RV64IFD-NEXT:    fcvt.l.d a0, ft0, rtz
-; RV64IFD-NEXT:  .LBB11_3: # %start
-; RV64IFD-NEXT:    lui a2, %hi(.LCPI11_1)
-; RV64IFD-NEXT:    fld ft1, %lo(.LCPI11_1)(a2)
+; RV64IFD-NEXT:  .LBB12_3: # %start
+; RV64IFD-NEXT:    lui a2, %hi(.LCPI12_1)
+; RV64IFD-NEXT:    fld ft1, %lo(.LCPI12_1)(a2)
 ; RV64IFD-NEXT:    flt.d a2, ft1, ft0
-; RV64IFD-NEXT:    bnez a2, .LBB11_6
+; RV64IFD-NEXT:    bnez a2, .LBB12_6
 ; RV64IFD-NEXT:  # %bb.4: # %start
 ; RV64IFD-NEXT:    feq.d a1, ft0, ft0
-; RV64IFD-NEXT:    beqz a1, .LBB11_7
-; RV64IFD-NEXT:  .LBB11_5: # %start
+; RV64IFD-NEXT:    beqz a1, .LBB12_7
+; RV64IFD-NEXT:  .LBB12_5: # %start
 ; RV64IFD-NEXT:    ret
-; RV64IFD-NEXT:  .LBB11_6:
+; RV64IFD-NEXT:  .LBB12_6:
 ; RV64IFD-NEXT:    srli a0, a1, 1
 ; RV64IFD-NEXT:    feq.d a1, ft0, ft0
-; RV64IFD-NEXT:    bnez a1, .LBB11_5
-; RV64IFD-NEXT:  .LBB11_7: # %start
+; RV64IFD-NEXT:    bnez a1, .LBB12_5
+; RV64IFD-NEXT:  .LBB12_7: # %start
 ; RV64IFD-NEXT:    mv a0, zero
 ; RV64IFD-NEXT:    ret
 start:
@@ -401,55 +437,55 @@ define i64 @fcvt_lu_d_sat(double %a) nounwind {
 ; RV32IFD-NEXT:    fcvt.d.w ft0, zero
 ; RV32IFD-NEXT:    fle.d a4, ft0, ft1
 ; RV32IFD-NEXT:    mv a3, a0
-; RV32IFD-NEXT:    bnez a4, .LBB13_2
+; RV32IFD-NEXT:    bnez a4, .LBB14_2
 ; RV32IFD-NEXT:  # %bb.1: # %start
 ; RV32IFD-NEXT:    mv a3, zero
-; RV32IFD-NEXT:  .LBB13_2: # %start
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI13_0)
-; RV32IFD-NEXT:    fld ft0, %lo(.LCPI13_0)(a0)
+; RV32IFD-NEXT:  .LBB14_2: # %start
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI14_0)
+; RV32IFD-NEXT:    fld ft0, %lo(.LCPI14_0)(a0)
 ; RV32IFD-NEXT:    flt.d a5, ft0, ft1
 ; RV32IFD-NEXT:    addi a2, zero, -1
 ; RV32IFD-NEXT:    addi a0, zero, -1
-; RV32IFD-NEXT:    beqz a5, .LBB13_7
+; RV32IFD-NEXT:    beqz a5, .LBB14_7
 ; RV32IFD-NEXT:  # %bb.3: # %start
-; RV32IFD-NEXT:    beqz a4, .LBB13_8
-; RV32IFD-NEXT:  .LBB13_4: # %start
-; RV32IFD-NEXT:    bnez a5, .LBB13_6
-; RV32IFD-NEXT:  .LBB13_5: # %start
+; RV32IFD-NEXT:    beqz a4, .LBB14_8
+; RV32IFD-NEXT:  .LBB14_4: # %start
+; RV32IFD-NEXT:    bnez a5, .LBB14_6
+; RV32IFD-NEXT:  .LBB14_5: # %start
 ; RV32IFD-NEXT:    mv a2, a1
-; RV32IFD-NEXT:  .LBB13_6: # %start
+; RV32IFD-NEXT:  .LBB14_6: # %start
 ; RV32IFD-NEXT:    mv a1, a2
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
-; RV32IFD-NEXT:  .LBB13_7: # %start
+; RV32IFD-NEXT:  .LBB14_7: # %start
 ; RV32IFD-NEXT:    mv a0, a3
-; RV32IFD-NEXT:    bnez a4, .LBB13_4
-; RV32IFD-NEXT:  .LBB13_8: # %start
+; RV32IFD-NEXT:    bnez a4, .LBB14_4
+; RV32IFD-NEXT:  .LBB14_8: # %start
 ; RV32IFD-NEXT:    mv a1, zero
-; RV32IFD-NEXT:    beqz a5, .LBB13_5
-; RV32IFD-NEXT:    j .LBB13_6
+; RV32IFD-NEXT:    beqz a5, .LBB14_5
+; RV32IFD-NEXT:    j .LBB14_6
 ;
 ; RV64IFD-LABEL: fcvt_lu_d_sat:
 ; RV64IFD:       # %bb.0: # %start
 ; RV64IFD-NEXT:    fmv.d.x ft0, a0
 ; RV64IFD-NEXT:    fmv.d.x ft1, zero
 ; RV64IFD-NEXT:    fle.d a0, ft1, ft0
-; RV64IFD-NEXT:    bnez a0, .LBB13_2
+; RV64IFD-NEXT:    bnez a0, .LBB14_2
 ; RV64IFD-NEXT:  # %bb.1: # %start
 ; RV64IFD-NEXT:    mv a1, zero
-; RV64IFD-NEXT:    j .LBB13_3
-; RV64IFD-NEXT:  .LBB13_2:
+; RV64IFD-NEXT:    j .LBB14_3
+; RV64IFD-NEXT:  .LBB14_2:
 ; RV64IFD-NEXT:    fcvt.lu.d a1, ft0, rtz
-; RV64IFD-NEXT:  .LBB13_3: # %start
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI13_0)
-; RV64IFD-NEXT:    fld ft1, %lo(.LCPI13_0)(a0)
+; RV64IFD-NEXT:  .LBB14_3: # %start
+; RV64IFD-NEXT:    lui a0, %hi(.LCPI14_0)
+; RV64IFD-NEXT:    fld ft1, %lo(.LCPI14_0)(a0)
 ; RV64IFD-NEXT:    flt.d a2, ft1, ft0
 ; RV64IFD-NEXT:    addi a0, zero, -1
-; RV64IFD-NEXT:    bnez a2, .LBB13_5
+; RV64IFD-NEXT:    bnez a2, .LBB14_5
 ; RV64IFD-NEXT:  # %bb.4: # %start
 ; RV64IFD-NEXT:    mv a0, a1
-; RV64IFD-NEXT:  .LBB13_5: # %start
+; RV64IFD-NEXT:  .LBB14_5: # %start
 ; RV64IFD-NEXT:    ret
 start:
   %0 = tail call i64 @llvm.fptoui.sat.i64.f64(double %a)
