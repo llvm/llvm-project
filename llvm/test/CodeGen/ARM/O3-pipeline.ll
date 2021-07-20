@@ -128,6 +128,7 @@
 ; CHECK-NEXT:      Stack Slot Coloring
 ; CHECK-NEXT:      Machine Copy Propagation Pass
 ; CHECK-NEXT:      Machine Loop Invariant Code Motion
+; CHECK-NEXT:      Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:      Fixup Statepoint Caller Saved
 ; CHECK-NEXT:      PostRA Machine Sink
 ; CHECK-NEXT:      Machine Block Frequency Analysis

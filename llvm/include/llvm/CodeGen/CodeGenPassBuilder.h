@@ -869,6 +869,8 @@ Error CodeGenPassBuilder<Derived>::addMachinePasses(
   // Run post-ra passes.
   derived().addPostRegAlloc(addPass);
 
+  addPass(RemoveRedundantDebugValuesPass());
+
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
   if (getOptLevel() != CodeGenOpt::None) {
     addPass(PostRAMachineSinkingPass());

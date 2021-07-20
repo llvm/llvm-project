@@ -114,7 +114,6 @@ body:             |
     liveins: $r0
 
     DBG_VALUE $r0, $noreg, !22, !DIExpression(), debug-location !23
-    DBG_VALUE $r0, $noreg, !22, !DIExpression(), debug-location !23
     BUNDLE implicit-def dead $p0, implicit-def $pc, implicit killed $r0, implicit killed $r31, debug-location !24 {
       renamable $p0 = C2_cmpeqi killed renamable $r0, 0, debug-location !24
       PS_jmprettnew internal killed $p0, killed $r31, implicit-def $pc, implicit-def $pc, implicit killed undef $r0, debug-location !27
