@@ -6239,9 +6239,9 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
       // Neither constant will fit into an immediate, so find materialisation
       // costs.
       int C1Cost = RISCVMatInt::getIntMatCost(C1Int, Ty.getSizeInBits(),
-                                              Subtarget.is64Bit());
+                                              Subtarget.getFeatureBits());
       int ShiftedC1Cost = RISCVMatInt::getIntMatCost(
-          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.is64Bit());
+          ShiftedC1Int, Ty.getSizeInBits(), Subtarget.getFeatureBits());
 
       // Materialising `c1` is cheaper than materialising `c1 << c2`, so the
       // combine should be prevented.

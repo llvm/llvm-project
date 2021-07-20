@@ -240,9 +240,8 @@ define signext i32 @rol_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ;
 ; RV64IB-LABEL: rol_i32_neg_constant_rhs:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 1
-; RV64IB-NEXT:    slli a1, a1, 32
-; RV64IB-NEXT:    addi a1, a1, -2
+; RV64IB-NEXT:    addi a1, zero, -2
+; RV64IB-NEXT:    zext.w a1, a1
 ; RV64IB-NEXT:    rolw a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;
@@ -370,9 +369,8 @@ define signext i32 @ror_i32_neg_constant_rhs(i32 signext %a) nounwind {
 ;
 ; RV64IB-LABEL: ror_i32_neg_constant_rhs:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    addi a1, zero, 1
-; RV64IB-NEXT:    slli a1, a1, 32
-; RV64IB-NEXT:    addi a1, a1, -2
+; RV64IB-NEXT:    addi a1, zero, -2
+; RV64IB-NEXT:    zext.w a1, a1
 ; RV64IB-NEXT:    rorw a0, a1, a0
 ; RV64IB-NEXT:    ret
 ;

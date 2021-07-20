@@ -432,16 +432,16 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             MachineInstr::MIFlag Flag) const {
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  bool IsRV64 = MF->getSubtarget<RISCVSubtarget>().is64Bit();
   Register SrcReg = RISCV::X0;
   Register Result = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   unsigned Num = 0;
 
-  if (!IsRV64 && !isInt<32>(Val))
+  if (!STI.is64Bit() && !isInt<32>(Val))
     report_fatal_error("Should only materialize 32-bit constants for RV32");
 
-  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Val, IsRV64);
-  assert(Seq.size() > 0);
+  RISCVMatInt::InstSeq Seq =
+      RISCVMatInt::generateInstSeq(Val, STI.getFeatureBits());
+  assert(!Seq.empty());
 
   for (RISCVMatInt::Inst &Inst : Seq) {
     // Write the final result to DstReg if it's the last instruction in the Seq.
@@ -452,6 +452,11 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
     if (Inst.Opc == RISCV::LUI) {
       BuildMI(MBB, MBBI, DL, get(RISCV::LUI), Result)
           .addImm(Inst.Imm)
+          .setMIFlag(Flag);
+    } else if (Inst.Opc == RISCV::ADDUW) {
+      BuildMI(MBB, MBBI, DL, get(RISCV::ADDUW), Result)
+          .addReg(SrcReg, RegState::Kill)
+          .addReg(RISCV::X0)
           .setMIFlag(Flag);
     } else {
       BuildMI(MBB, MBBI, DL, get(Inst.Opc), Result)
