@@ -846,9 +846,8 @@ public:
   AttrBuilder &addAttribute(Attribute::AttrKind Val) {
     assert((unsigned)Val < Attribute::EndAttrKinds &&
            "Attribute out of range!");
-    // TODO: This should really assert isEnumAttrKind().
-    assert(!Attribute::isIntAttrKind(Val) &&
-           "Adding integer attribute without adding a value!");
+    assert(Attribute::isEnumAttrKind(Val) &&
+           "Adding integer/type attribute without an argument!");
     Attrs[Val] = true;
     return *this;
   }
