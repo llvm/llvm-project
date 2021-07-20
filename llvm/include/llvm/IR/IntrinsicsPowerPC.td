@@ -1565,5 +1565,38 @@ let TargetPrefix = "ppc" in {
   def int_ppc_stwcx : GCCBuiltin<"__builtin_ppc_stwcx">,
                       Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
                                 [IntrWriteMem]>;
+  // compare
+  def int_ppc_cmpeqb
+      : GCCBuiltin<"__builtin_ppc_cmpeqb">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_cmprb
+      : GCCBuiltin<"__builtin_ppc_cmprb">,
+        Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                  [IntrNoMem, ImmArg<ArgIndex<0>>]>;
+  def int_ppc_setb
+      : GCCBuiltin<"__builtin_ppc_setb">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  // multiply
+  def int_ppc_mulhd
+      : GCCBuiltin<"__builtin_ppc_mulhd">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_mulhdu
+      : GCCBuiltin<"__builtin_ppc_mulhdu">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_mulhw
+      : GCCBuiltin<"__builtin_ppc_mulhw">,
+        Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+  def int_ppc_mulhwu
+      : GCCBuiltin<"__builtin_ppc_mulhwu">,
+        Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+  def int_ppc_maddhd
+      : GCCBuiltin<"__builtin_ppc_maddhd">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_maddhdu
+      : GCCBuiltin<"__builtin_ppc_maddhdu">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  def int_ppc_maddld
+      : GCCBuiltin<"__builtin_ppc_maddld">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 }
 
