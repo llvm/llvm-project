@@ -64,18 +64,18 @@
 using namespace mlir;
 
 /// Walks over all immediate return-like terminators in the given region.
-template <typename FuncT>
-static void walkReturnOperations(Region *region, const FuncT &func) {
-  for (Block &block : *region)
-    for (Operation &operation : block) {
-      // Skip non-return-like terminators.
-      if (operation.hasTrait<OpTrait::ReturnLike>())
-        func(&operation);
-    }
+static void walkReturnOperations(Region *region,
+                                 std::function<void(Operation *)> func) {
+  for (Block &block : *region) {
+    Operation *terminator = block.getTerminator();
+    // Skip non-return-like terminators.
+    if (terminator->hasTrait<OpTrait::ReturnLike>())
+      func(terminator);
+  }
 }
 
-/// Checks if all operations in a given region have at least one attached region
-/// that implements the RegionBranchOpInterface. This is not required in edge
+/// Checks if all operations in a given region that have at least one attached
+/// region implement the RegionBranchOpInterface. This is not required in edge
 /// cases, where we have a single attached region and the parent operation has
 /// no results.
 static bool validateSupportedControlFlow(Region &region) {
@@ -114,7 +114,7 @@ public:
 
 public:
   /// Constructs a new backedges analysis using the op provided.
-  Backedges(Operation *op) { recurse(op, op->getBlock()); }
+  Backedges(Operation *op) { recurse(op); }
 
   /// Returns the number of backedges formed by explicit control flow.
   size_t size() const { return edgeSet.size(); }
@@ -141,7 +141,7 @@ private:
 
   /// Recurses into the given operation while taking all attached regions into
   /// account.
-  void recurse(Operation *op, Block *predecessor) {
+  void recurse(Operation *op) {
     Block *current = op->getBlock();
     // If the current op implements the `BranchOpInterface`, there can be
     // cycles in the scope of all successor blocks.
@@ -167,7 +167,7 @@ private:
 
     // Recurse into all operations and successor blocks.
     for (Operation &op : block.getOperations())
-      recurse(&op, predecessor);
+      recurse(&op);
 
     // Leave the current block.
     exit(block);
@@ -436,7 +436,7 @@ private:
     for (const BufferPlacementAllocs::AllocEntry &entry : allocs) {
       Value alloc = std::get<0>(entry);
       auto aliasesSet = aliases.resolve(alloc);
-      assert(aliasesSet.size() > 0 && "must contain at least one alias");
+      assert(!aliasesSet.empty() && "must contain at least one alias");
 
       // Determine the actual block to place the dealloc and get liveness
       // information.
@@ -515,20 +515,20 @@ struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
 
   void runOnFunction() override {
     // Ensure that there are supported loops only.
-    Backedges backedges(getFunction());
+    FuncOp func = getFunction();
+    Backedges backedges(func);
     if (backedges.size()) {
-      getFunction().emitError(
-          "Structured control-flow loops are supported only.");
+      func.emitError("Only structured control-flow loops are supported.");
       return signalPassFailure();
     }
 
     // Check that the control flow structures are supported.
-    if (!validateSupportedControlFlow(getFunction().getRegion())) {
+    if (!validateSupportedControlFlow(func.getRegion())) {
       return signalPassFailure();
     }
 
     // Place all required temporary clone and dealloc nodes.
-    BufferDeallocation deallocation(getFunction());
+    BufferDeallocation deallocation(func);
     deallocation.deallocate();
   }
 };
