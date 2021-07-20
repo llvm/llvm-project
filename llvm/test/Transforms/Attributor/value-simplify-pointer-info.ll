@@ -11,6 +11,7 @@
 @Gint2 = global i32 zeroinitializer, align 4
 @Gstatic_int1 = internal global i32 zeroinitializer, align 4
 @Gstatic_int2 = internal global i32 zeroinitializer, align 4
+@Gstatic_int3 = internal global i32 zeroinitializer, align 4
 @Gstatic_undef_int1 = internal global i32 undef, align 4
 @Gstatic_undef_int2 = internal global i32 undef, align 4
 @GI1 = internal global i32 undef, align 4
@@ -29,6 +30,7 @@
 ; CHECK: @[[GINT2:[a-zA-Z0-9_$"\\.-]+]] = global i32 0, align 4
 ; CHECK: @[[GSTATIC_INT1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
 ; CHECK: @[[GSTATIC_INT2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
+; CHECK: @[[GSTATIC_INT3:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
 ; CHECK: @[[GSTATIC_UNDEF_INT1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
 ; CHECK: @[[GSTATIC_UNDEF_INT2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
 ; CHECK: @[[GI1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
@@ -819,16 +821,12 @@ define i32 @local_alloca_simplifiable_4() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@local_alloca_simplifiable_4
 ; IS__TUNIT____-SAME: () #[[ATTR3]] {
-; IS__TUNIT____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
-; IS__TUNIT____-NEXT:    ret i32 [[L]]
+; IS__TUNIT____-NEXT:    ret i32 undef
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@local_alloca_simplifiable_4
 ; IS__CGSCC____-SAME: () #[[ATTR2]] {
-; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
-; IS__CGSCC____-NEXT:    ret i32 [[L]]
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %A = alloca i32, align 4
   %l = load i32, i32* %A, align 4
@@ -2680,6 +2678,21 @@ define i32 @read_static_undef_global() {
 ; IS__CGSCC____-NEXT:    ret i32 [[L]]
 ;
   %l = load i32, i32* @Gstatic_undef_int2
+  ret i32 %l
+}
+
+define i32 @single_read_of_static_global() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@single_read_of_static_global
+; IS__TUNIT____-SAME: () #[[ATTR3]] {
+; IS__TUNIT____-NEXT:    ret i32 0
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@single_read_of_static_global
+; IS__CGSCC____-SAME: () #[[ATTR2]] {
+; IS__CGSCC____-NEXT:    ret i32 0
+;
+  %l = load i32, i32* @Gstatic_int3
   ret i32 %l
 }
 

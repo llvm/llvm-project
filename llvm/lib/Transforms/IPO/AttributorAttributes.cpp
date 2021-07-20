@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Constants.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -27,12 +26,14 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -4513,6 +4514,43 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     SimplifiedAssociatedValue = &getAssociatedValue();
     return AAValueSimplify::indicatePessimisticFixpoint();
   }
+
+  static bool handleLoad(Attributor &A, const AbstractAttribute &AA,
+                         LoadInst &L, function_ref<bool(Value &)> Union) {
+
+    Value &Ptr = *L.getPointerOperand();
+    SmallVector<Value *, 8> Objects;
+    if (!getAssumedUnderlyingObjects(A, Ptr, Objects, AA, &L))
+      return false;
+
+    for (Value *Obj : Objects) {
+      LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
+      if (isa<UndefValue>(Obj))
+        continue;
+      if (isa<ConstantPointerNull>(Obj)) {
+        // A null pointer access can be undefined but any offset from null may
+        // be OK. We do not try to optimize the latter.
+        bool UsedAssumedInformation;
+        if (!NullPointerIsDefined(L.getFunction(),
+                                  Ptr.getType()->getPointerAddressSpace())) {
+          const auto &SimplePtr =
+              A.getAssumedSimplified(Ptr, AA, UsedAssumedInformation);
+          if (!SimplePtr.hasValue() || *SimplePtr == Obj)
+            continue;
+        }
+      }
+      // If the object is only loaded from by this one load, we can try to
+      // propagate the initializer.
+      // TODO: This is only to test the load simplification, will be replaced.
+      if (Obj->getNumUses() == 1 && *Obj->user_begin() == &L)
+        if (Value *InitialV = AA::getInitialValueForObj(*Obj, *L.getType()))
+          if (Union(*InitialV))
+            continue;
+
+      return false;
+    }
+    return Union(*UndefValue::get(AA.getAssociatedType()));
+  }
 };
 
 struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
@@ -4753,6 +4791,15 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     return true;
   }
 
+  bool updateWithLoad(Attributor &A, LoadInst &L) {
+    auto Union = [&](Value &V) {
+      SimplifiedAssociatedValue = AA::combineOptionalValuesInAAValueLatice(
+          SimplifiedAssociatedValue, &V, L.getType());
+      return SimplifiedAssociatedValue != Optional<Value *>(nullptr);
+    };
+    return handleLoad(A, *this, L, Union);
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     auto Before = SimplifiedAssociatedValue;
@@ -4768,6 +4815,8 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
           *this, IRPosition::value(V, getCallBaseContext()),
           DepClassTy::REQUIRED);
       if (!Stripped && this == &AA) {
+        if (auto *LI = dyn_cast<LoadInst>(&V))
+          return updateWithLoad(A, *LI);
         // TODO: Look the instruction and check recursively.
 
         LLVM_DEBUG(dbgs() << "[ValueSimplify] Can't be stripped more : " << V
@@ -7784,7 +7833,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (isa<BinaryOperator>(&V) || isa<ICmpInst>(&V) || isa<CastInst>(&V))
       return;
 
-    if (isa<SelectInst>(V) || isa<PHINode>(V))
+    if (isa<SelectInst>(V) || isa<PHINode>(V) || isa<LoadInst>(V))
       return;
 
     indicatePessimisticFixpoint();
@@ -8191,6 +8240,30 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
                                          : ChangeStatus::CHANGED;
   }
 
+  ChangeStatus updateWithLoad(Attributor &A, LoadInst &L) {
+    if (!L.getType()->isIntegerTy())
+      return indicatePessimisticFixpoint();
+
+    auto Union = [&](Value &V) {
+      if (isa<UndefValue>(V)) {
+        unionAssumedWithUndef();
+        return true;
+      }
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(&V)) {
+        unionAssumed(CI->getValue());
+        return true;
+      }
+      return false;
+    };
+    auto AssumedBefore = getAssumed();
+
+    if (!AAValueSimplifyImpl::handleLoad(A, *this, L, Union))
+      return indicatePessimisticFixpoint();
+
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     Value &V = getAssociatedValue();
@@ -8210,6 +8283,9 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
     if (auto *PHI = dyn_cast<PHINode>(I))
       return updateWithPHINode(A, PHI);
+
+    if (auto *L = dyn_cast<LoadInst>(I))
+      return updateWithLoad(A, *L);
 
     return indicatePessimisticFixpoint();
   }

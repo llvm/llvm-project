@@ -2444,9 +2444,7 @@ define internal void @dead_with_blockaddress_users(i32* nocapture %pc) nounwind 
 ; IS__CGSCC____-NEXT:    ret void
 ; IS__CGSCC____:       indirectgoto:
 ; IS__CGSCC____-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; IS__CGSCC____-NEXT:    [[PC_ADDR_0:%.*]] = getelementptr i32, i32* undef, i32 [[INDVAR]]
-; IS__CGSCC____-NEXT:    [[TMP1_PN:%.*]] = load i32, i32* [[PC_ADDR_0]], align 4
-; IS__CGSCC____-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @dead_with_blockaddress_users.l, i32 0, i32 [[TMP1_PN]]
+; IS__CGSCC____-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @dead_with_blockaddress_users.l, i32 0, i32 undef
 ; IS__CGSCC____-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]], align 8
 ; IS__CGSCC____-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
 ;
