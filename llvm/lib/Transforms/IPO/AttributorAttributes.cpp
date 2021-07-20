@@ -8279,9 +8279,20 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       Instruction *I = dyn_cast<Instruction>(&V);
       if (!I || isa<CallBase>(I)) {
 
+        // Simplify the operand first.
+        bool UsedAssumedInformation = false;
+        const auto &SimplifiedOpV =
+            A.getAssumedSimplified(IRPosition::value(V, getCallBaseContext()),
+                                   *this, UsedAssumedInformation);
+        if (!SimplifiedOpV.hasValue())
+          return true;
+        Value *VPtr = &V;
+        if (*SimplifiedOpV)
+          VPtr = *SimplifiedOpV;
+
         // If the value is not instruction, we query AA to Attributor.
         const auto &AA = A.getAAFor<AAValueConstantRange>(
-            *this, IRPosition::value(V, getCallBaseContext()),
+            *this, IRPosition::value(*VPtr, getCallBaseContext()),
             DepClassTy::REQUIRED);
 
         // Clamp operator is not used to utilize a program point CtxI.
