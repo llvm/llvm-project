@@ -360,6 +360,23 @@ static void optimizeOpcodes(std::vector<BindIR> &opcodes) {
   if (i == opcodes.size())
     opcodes[pWrite] = opcodes[i - 1];
   opcodes.resize(pWrite + 1);
+
+  // Pass 3: Use immediate encodings
+  // Every binding is the size of one pointer. If the next binding is a
+  // multiple of wordSize away that is within BIND_IMMEDIATE_MASK, the
+  // opcode can be scaled by wordSize into a single byte and dyld will
+  // expand it to the correct address.
+  for (auto &p : opcodes) {
+    // It's unclear why the check needs to be less than BIND_IMMEDIATE_MASK,
+    // but ld64 currently does this. This could be a potential bug, but
+    // for now, perform the same behavior to prevent mysterious bugs.
+    if ((p.opcode == BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB) &&
+        ((p.data / target->wordSize) < BIND_IMMEDIATE_MASK) &&
+        ((p.data % target->wordSize) == 0)) {
+      p.opcode = BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED;
+      p.data /= target->wordSize;
+    }
+  }
 }
 
 static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
@@ -382,6 +399,9 @@ static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
     os << op.opcode;
     encodeULEB128(op.consecutiveCount, os);
     encodeULEB128(op.data, os);
+    break;
+  case BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED:
+    os << static_cast<uint8_t>(op.opcode | op.data);
     break;
   default:
     llvm_unreachable("cannot bind to an unrecognized symbol");
