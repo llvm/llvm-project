@@ -876,6 +876,23 @@ namespace llvm {
     Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                    AtomicOrdering Ord) const override;
 
+    TargetLowering::AtomicExpansionKind
+    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+
+    TargetLowering::AtomicExpansionKind
+    shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+
+    Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder,
+                                        AtomicRMWInst *AI, Value *AlignedAddr,
+                                        Value *Incr, Value *Mask,
+                                        Value *ShiftAmt,
+                                        AtomicOrdering Ord) const override;
+    Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilderBase &Builder,
+                                            AtomicCmpXchgInst *CI,
+                                            Value *AlignedAddr, Value *CmpVal,
+                                            Value *NewVal, Value *Mask,
+                                            AtomicOrdering Ord) const override;
+
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;

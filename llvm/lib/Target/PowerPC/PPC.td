@@ -161,6 +161,9 @@ def FeatureDirectMove :
 def FeaturePartwordAtomic : SubtargetFeature<"partword-atomics",
                                              "HasPartwordAtomics", "true",
                                              "Enable l[bh]arx and st[bh]cx.">;
+def FeatureQuadwordAtomic : SubtargetFeature<"quadword-atomics",
+                                             "HasQuadwordAtomics", "true",
+                                             "Enable lqarx and stqcx.">;
 def FeatureInvariantFunctionDescriptors :
   SubtargetFeature<"invariant-function-descriptors",
                    "HasInvariantFunctionDescriptors", "true",
@@ -331,6 +334,7 @@ def ProcessorFeatures {
      FeatureDirectMove,
      FeatureICBT,
      FeaturePartwordAtomic,
+     FeatureQuadwordAtomic,
      FeaturePredictableSelectIsExpensive
     ];
 

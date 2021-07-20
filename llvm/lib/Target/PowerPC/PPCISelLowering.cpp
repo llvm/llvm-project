@@ -121,6 +121,11 @@ cl::desc("don't always align innermost loop to 32 bytes on ppc"), cl::Hidden);
 static cl::opt<bool> UseAbsoluteJumpTables("ppc-use-absolute-jumptables",
 cl::desc("use absolute jump tables on ppc"), cl::Hidden);
 
+static cl::opt<bool> EnableQuadwordAtomics(
+    "ppc-quadword-atomics",
+    cl::desc("enable quadword lock-free atomic operations"), cl::init(false),
+    cl::Hidden);
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM, "Number of shuffles lowered to a VPERM");
@@ -1280,6 +1285,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD,  MVT::i64, Expand);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Expand);
   }
+
+  if (EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics())
+    setMaxAtomicSizeInBitsSupported(128);
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
@@ -12628,6 +12636,17 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   } else if (MI.getOpcode() == PPC::PROBED_ALLOCA_32 ||
              MI.getOpcode() == PPC::PROBED_ALLOCA_64) {
     return emitProbedAlloca(MI, BB);
+  } else if (MI.getOpcode() == PPC::SPLIT_QUADWORD) {
+    DebugLoc DL = MI.getDebugLoc();
+    Register Src = MI.getOperand(2).getReg();
+    Register Lo = MI.getOperand(0).getReg();
+    Register Hi = MI.getOperand(1).getReg();
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY))
+        .addDef(Lo)
+        .addUse(Src, 0, PPC::sub_gp8_x1);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY))
+        .addDef(Hi)
+        .addUse(Src, 0, PPC::sub_gp8_x0);
   } else {
     llvm_unreachable("Unexpected instr type to insert");
   }
@@ -16042,6 +16061,22 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                            MachineFunction &MF,
                                            unsigned Intrinsic) const {
   switch (Intrinsic) {
+  case Intrinsic::ppc_atomicrmw_xchg_i128:
+  case Intrinsic::ppc_atomicrmw_add_i128:
+  case Intrinsic::ppc_atomicrmw_sub_i128:
+  case Intrinsic::ppc_atomicrmw_nand_i128:
+  case Intrinsic::ppc_atomicrmw_and_i128:
+  case Intrinsic::ppc_atomicrmw_or_i128:
+  case Intrinsic::ppc_atomicrmw_xor_i128:
+  case Intrinsic::ppc_cmpxchg_i128:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i128;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = Align(16);
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+                 MachineMemOperand::MOVolatile;
+    return true;
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
   case Intrinsic::ppc_altivec_lvebx:
@@ -17456,4 +17491,103 @@ CCAssignFn *PPCTargetLowering::ccAssignFnForCall(CallingConv::ID CC,
   default:
     return CC_PPC64_ELF_FIS;
   }
+}
+
+TargetLowering::AtomicExpansionKind
+PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  if (AI->isFloatingPointOperation())
+    return AtomicExpansionKind::None;
+  unsigned Size = AI->getType()->getPrimitiveSizeInBits();
+  if (EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() && Size == 128)
+    return AtomicExpansionKind::MaskedIntrinsic;
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+  unsigned Size = AI->getPointerOperand()
+                      ->getType()
+                      ->getPointerElementType()
+                      ->getPrimitiveSizeInBits();
+  if (EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() && Size == 128)
+    return AtomicExpansionKind::MaskedIntrinsic;
+  return AtomicExpansionKind::None;
+}
+
+static Intrinsic::ID
+getIntrinsicForAtomicRMWBinOp128(AtomicRMWInst::BinOp BinOp) {
+  switch (BinOp) {
+  default:
+    llvm_unreachable("Unexpected AtomicRMW BinOp");
+  case AtomicRMWInst::Xchg:
+    return Intrinsic::ppc_atomicrmw_xchg_i128;
+  case AtomicRMWInst::Add:
+    return Intrinsic::ppc_atomicrmw_add_i128;
+  case AtomicRMWInst::Sub:
+    return Intrinsic::ppc_atomicrmw_sub_i128;
+  case AtomicRMWInst::And:
+    return Intrinsic::ppc_atomicrmw_and_i128;
+  case AtomicRMWInst::Or:
+    return Intrinsic::ppc_atomicrmw_or_i128;
+  case AtomicRMWInst::Xor:
+    return Intrinsic::ppc_atomicrmw_xor_i128;
+  case AtomicRMWInst::Nand:
+    return Intrinsic::ppc_atomicrmw_nand_i128;
+  }
+}
+
+Value *PPCTargetLowering::emitMaskedAtomicRMWIntrinsic(
+    IRBuilderBase &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
+    Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const {
+  assert(EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() &&
+         "Only support quadword now");
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Type *ValTy = cast<PointerType>(AlignedAddr->getType())->getElementType();
+  assert(ValTy->getPrimitiveSizeInBits() == 128);
+  Function *RMW = Intrinsic::getDeclaration(
+      M, getIntrinsicForAtomicRMWBinOp128(AI->getOperation()));
+  Type *Int64Ty = Type::getInt64Ty(M->getContext());
+  Value *IncrLo = Builder.CreateTrunc(Incr, Int64Ty, "incr_lo");
+  Value *IncrHi =
+      Builder.CreateTrunc(Builder.CreateLShr(Incr, 64), Int64Ty, "incr_hi");
+  Value *Addr =
+      Builder.CreateBitCast(AlignedAddr, Type::getInt8PtrTy(M->getContext()));
+  Value *LoHi = Builder.CreateCall(RMW, {Addr, IncrLo, IncrHi});
+  Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
+  Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
+  Lo = Builder.CreateZExt(Lo, ValTy, "lo64");
+  Hi = Builder.CreateZExt(Hi, ValTy, "hi64");
+  return Builder.CreateOr(
+      Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 64)), "val64");
+}
+
+Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
+    IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
+    Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
+  assert(EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() &&
+         "Only support quadword now");
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Type *ValTy = cast<PointerType>(AlignedAddr->getType())->getElementType();
+  assert(ValTy->getPrimitiveSizeInBits() == 128);
+  Function *IntCmpXchg =
+      Intrinsic::getDeclaration(M, Intrinsic::ppc_cmpxchg_i128);
+  Type *Int64Ty = Type::getInt64Ty(M->getContext());
+  Value *CmpLo = Builder.CreateTrunc(CmpVal, Int64Ty, "cmp_lo");
+  Value *CmpHi =
+      Builder.CreateTrunc(Builder.CreateLShr(CmpVal, 64), Int64Ty, "cmp_hi");
+  Value *NewLo = Builder.CreateTrunc(NewVal, Int64Ty, "new_lo");
+  Value *NewHi =
+      Builder.CreateTrunc(Builder.CreateLShr(NewVal, 64), Int64Ty, "new_hi");
+  Value *Addr =
+      Builder.CreateBitCast(AlignedAddr, Type::getInt8PtrTy(M->getContext()));
+  emitLeadingFence(Builder, CI, Ord);
+  Value *LoHi =
+      Builder.CreateCall(IntCmpXchg, {Addr, CmpLo, CmpHi, NewLo, NewHi});
+  emitTrailingFence(Builder, CI, Ord);
+  Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
+  Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
+  Lo = Builder.CreateZExt(Lo, ValTy, "lo64");
+  Hi = Builder.CreateZExt(Hi, ValTy, "hi64");
+  return Builder.CreateOr(
+      Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 64)), "val64");
 }
