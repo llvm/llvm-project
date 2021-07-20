@@ -8294,6 +8294,8 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
       return C_Immediate;
     case 'A':
       return C_Memory;
+    case 'S': // A symbolic address
+      return C_Other;
     }
   }
   return TargetLowering::getConstraintType(Constraint);
@@ -8521,6 +8523,15 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
         if (isUInt<5>(CVal))
           Ops.push_back(
               DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getXLenVT()));
+      }
+      return;
+    case 'S':
+      if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
+        Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
+                                                 GA->getValueType(0)));
+      } else if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op)) {
+        Ops.push_back(DAG.getTargetBlockAddress(BA->getBlockAddress(),
+                                                BA->getValueType(0)));
       }
       return;
     default:
