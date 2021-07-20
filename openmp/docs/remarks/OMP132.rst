@@ -1,0 +1,45 @@
+Generic-mode kernel is executed with a customized state machine that requires a fallback. [OMP132]
+==================================================================================================
+
+.. _omp132:
+
+This analysis remark indicates that a state machine rewrite occurred, but
+could not be done fully because of unknown calls to functions that may contain
+parallel regions. The state machine handles scheduling work between parallel
+worker threads on the device when operating in generic-mode. If there are
+unknown parallel regions it prevents the optimization from fully rewriting the
+state machine.
+
+Examples
+--------
+
+This will occur for any generic-mode kernel that may contain unknown parallel
+regions. This is typically coupled with the :ref:`OMP133 <omp133>` remark.
+
+.. code-block:: c++
+
+   extern void setup();
+
+   void foo() {
+   #pragma omp target
+   {
+     setup();
+     #pragma omp parallel
+     {
+       work();
+     }
+   }
+   }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-analysis=openmp-opt omp132.cpp
+   omp133.cpp:4:1: remark: Generic-mode kernel is executed with a customized state machine 
+   that requires a fallback. [OMP132]
+   #pragma omp target
+   ^
+
+Diagnostic Scope
+----------------
+
+OpenMP target offloading analysis remark.
