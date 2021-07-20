@@ -582,10 +582,6 @@ func @invalid_static_2d_conv(%input : memref<1x3x4x2xf32>, %filter: memref<3x2x2
 
 // -----
 
-#map0 = affine_map<(d0) -> (24, -d0 + 192)>
-#map1 = affine_map<(d0, d1)[s0] -> (d0 * 192 + s0 + d1)>
-#map2 = affine_map<(d0) -> (16, -d0 + 192)>
-
 func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
                   %C: memref<192x192xf32>) -> ()
 
@@ -603,10 +599,33 @@ func @tiled_loop_incorrent_num_yield_operands(%A: memref<192x192xf32>,
         call @foo(%A_, %B_, %C_)
           : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> ()
     // expected-error @+1 {{expected number of tensor output args = 1 to match the number of yield operands = 0}}
-    linalg.yield
+    linalg.tiled_yield
   }
   return
 }
+
+// -----
+
+func @tiled_loop_incorrect_destination_for_tile(%A: tensor<4xf32>,
+                                                %B: tensor<4xf32>) {
+  %c2 = constant 2 : index
+  %c4 = constant 2 : index
+  %c0 = constant 0 : index
+  %0 = linalg.tiled_loop (%i) = (%c0) to (%c4) step (%c2)
+      ins (%A_ = %A: tensor<4xf32>)
+      outs (%B_ = %B: tensor<4xf32>) {
+    %A_sub = tensor.extract_slice %A_[%i][2][1]
+      : tensor<4xf32> to tensor<2xf32>
+    %B_sub = tensor.extract_slice %B_[%i][2][1]
+      : tensor<4xf32> to tensor<2xf32>
+    %c0_f32 = constant 0.0 : f32
+    %tile = linalg.fill(%c0_f32, %A_sub) : f32, tensor<2xf32> -> tensor<2xf32>
+    // expected-error @+1 {{expected output 0 to be a subset of the corresponding block argument}}
+    linalg.tiled_yield %tile in %A_sub : tensor<2xf32>
+  }
+  return
+}
+
 
 // -----
 
@@ -630,8 +649,8 @@ func @tiled_loop_incorrent_yield_operand_type(%A: memref<192x192xf32>,
             %C_ = %C: memref<192x192xf32>) {
         %1 = call @foo(%A_, %B_, %C_)
           : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> tensor<f32>
-    // expected-error @+1 {{expected yield operand 0 with type = 'tensor<f32>' to match output arg type = 'tensor<192x192xf32>}}
-    linalg.yield %1 : tensor<f32>
+    // expected-error @+1 {{expected tile operand with type = 'tensor<f32>' to match output type = 'tensor<192x192xf32>}}
+    "linalg.tiled_yield" (%1, %CT_) : (tensor<f32>, tensor<192x192xf32>) -> ()
   }
   return
 }
@@ -639,7 +658,7 @@ func @tiled_loop_incorrent_yield_operand_type(%A: memref<192x192xf32>,
 // -----
 
 func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
-                  %C: memref<192x192xf32>) -> ()
+                  %C: memref<192x192xf32>) -> (tensor<192x192xf32>)
 
 func @tiled_loop_incorrent_iterator_types_count(%A: memref<192x192xf32>,
     %B: memref<192x192xf32>, %C: memref<192x192xf32>,
@@ -652,9 +671,10 @@ func @tiled_loop_incorrent_iterator_types_count(%A: memref<192x192xf32>,
     ^bb0(%arg4: index, %arg5: index, %A_: memref<192x192xf32>,
          %B_: memref<192x192xf32>, %CT_: tensor<192x192xf32>,
          %C_: memref<192x192xf32>):
-      call @foo(%A_, %B_, %C_)
-          : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> ()
-      linalg.yield %CT_ : tensor<192x192xf32>
+      %tile = call @foo(%A_, %B_, %C_)
+          : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)
+          -> (tensor<192x192xf32>)
+      linalg.tiled_yield %tile in %CT_ : tensor<192x192xf32>
     }) {
       iterator_types = ["parallel"],
       operand_segment_sizes = dense<2> : vector<5xi32>
@@ -676,7 +696,7 @@ func @tiled_loop_incorrent_block_arg_type(%A: memref<192xf32>) {
   "linalg.tiled_loop"(%c0, %c192, %c24, %A) ( {
     ^bb0(%arg4: index, %A_: memref<100xf32>):
       call @foo(%A_) : (memref<100xf32>)-> ()
-      linalg.yield
+      linalg.tiled_yield
     }) {
       iterator_types = ["parallel"],
       operand_segment_sizes = dense<[1, 1, 1, 0, 1]> : vector<5xi32>
