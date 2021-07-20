@@ -282,6 +282,7 @@ struct BindIR {
   // scream instead of accidentally writing "valid" values.
   uint8_t opcode = 0xF0;
   uint64_t data = 0;
+  uint64_t consecutiveCount = 0;
 };
 } // namespace
 
@@ -297,39 +298,69 @@ static void encodeBinding(const OutputSection *osec, uint64_t outSecOff,
   OutputSegment *seg = osec->parent;
   uint64_t offset = osec->getSegmentOffset() + outSecOff;
   if (lastBinding.segment != seg) {
-    BindIR op = {
-        static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
-                             seg->index), // opcode
-        offset                            // data
-    };
-    opcodes.push_back(op);
+    opcodes.push_back(
+        {static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
+                              seg->index),
+         offset});
     lastBinding.segment = seg;
     lastBinding.offset = offset;
   } else if (lastBinding.offset != offset) {
-    BindIR op = {
-        static_cast<uint8_t>(BIND_OPCODE_ADD_ADDR_ULEB), // opcode
-        offset - lastBinding.offset                      // data
-    };
-    opcodes.push_back(op);
+    opcodes.push_back({BIND_OPCODE_ADD_ADDR_ULEB, offset - lastBinding.offset});
     lastBinding.offset = offset;
   }
 
   if (lastBinding.addend != addend) {
-    BindIR op = {
-        static_cast<uint8_t>(BIND_OPCODE_SET_ADDEND_SLEB), // opcode
-        static_cast<uint64_t>(addend)                      // data
-    };
-    opcodes.push_back(op);
+    opcodes.push_back(
+        {BIND_OPCODE_SET_ADDEND_SLEB, static_cast<uint64_t>(addend)});
     lastBinding.addend = addend;
   }
 
-  BindIR op = {
-      static_cast<uint8_t>(BIND_OPCODE_DO_BIND), // opcode
-      0                                          // data
-  };
-  opcodes.push_back(op);
+  opcodes.push_back({BIND_OPCODE_DO_BIND, 0});
   // DO_BIND causes dyld to both perform the binding and increment the offset
   lastBinding.offset += target->wordSize;
+}
+
+static void optimizeOpcodes(std::vector<BindIR> &opcodes) {
+  // Pass 1: Combine bind/add pairs
+  size_t i;
+  int pWrite = 0;
+  for (i = 1; i < opcodes.size(); ++i, ++pWrite) {
+    if ((opcodes[i].opcode == BIND_OPCODE_ADD_ADDR_ULEB) &&
+        (opcodes[i - 1].opcode == BIND_OPCODE_DO_BIND)) {
+      opcodes[pWrite].opcode = BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB;
+      opcodes[pWrite].data = opcodes[i].data;
+      ++i;
+    } else {
+      opcodes[pWrite] = opcodes[i - 1];
+    }
+  }
+  if (i == opcodes.size())
+    opcodes[pWrite] = opcodes[i - 1];
+  opcodes.resize(pWrite + 1);
+
+  // Pass 2: Compress two or more bind_add opcodes
+  pWrite = 0;
+  for (i = 1; i < opcodes.size(); ++i, ++pWrite) {
+    if ((opcodes[i].opcode == BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB) &&
+        (opcodes[i - 1].opcode == BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB) &&
+        (opcodes[i].data == opcodes[i - 1].data)) {
+      opcodes[pWrite].opcode = BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB;
+      opcodes[pWrite].consecutiveCount = 2;
+      opcodes[pWrite].data = opcodes[i].data;
+      ++i;
+      while (i < opcodes.size() &&
+             (opcodes[i].opcode == BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB) &&
+             (opcodes[i].data == opcodes[i - 1].data)) {
+        opcodes[pWrite].consecutiveCount++;
+        ++i;
+      }
+    } else {
+      opcodes[pWrite] = opcodes[i - 1];
+    }
+  }
+  if (i == opcodes.size())
+    opcodes[pWrite] = opcodes[i - 1];
+  opcodes.resize(pWrite + 1);
 }
 
 static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
@@ -337,6 +368,7 @@ static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
   switch (opcode) {
   case BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB:
   case BIND_OPCODE_ADD_ADDR_ULEB:
+  case BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB:
     os << op.opcode;
     encodeULEB128(op.data, os);
     break;
@@ -346,6 +378,11 @@ static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
     break;
   case BIND_OPCODE_DO_BIND:
     os << op.opcode;
+    break;
+  case BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB:
+    os << op.opcode;
+    encodeULEB128(op.consecutiveCount, os);
+    encodeULEB128(op.data, os);
     break;
   default:
     llvm_unreachable("cannot bind to an unrecognized symbol");
@@ -446,6 +483,8 @@ void BindingSection::finalizeContents() {
       encodeBinding(b.target.isec->parent,
                     b.target.isec->getOffset(b.target.offset), b.addend,
                     lastBinding, opcodes);
+    if (config->optimize > 1)
+      optimizeOpcodes(opcodes);
     for (const auto &op : opcodes)
       flushOpcodes(op, os);
   }
@@ -478,6 +517,8 @@ void WeakBindingSection::finalizeContents() {
       encodeBinding(b.target.isec->parent,
                     b.target.isec->getOffset(b.target.offset), b.addend,
                     lastBinding, opcodes);
+    if (config->optimize > 1)
+      optimizeOpcodes(opcodes);
     for (const auto &op : opcodes)
       flushOpcodes(op, os);
   }

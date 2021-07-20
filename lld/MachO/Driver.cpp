@@ -1170,6 +1170,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     symtab->addDynamicLookup(arg->getValue());
 
   config->mapFile = args.getLastArgValue(OPT_map);
+  config->optimize = args::getInteger(args, OPT_O, 1);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->finalOutput =
       args.getLastArgValue(OPT_final_output, config->outputFile);
