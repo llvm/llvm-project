@@ -733,11 +733,11 @@ For more information about testing, see the :doc:`TestingGuide`.
 Cross compiling
 ===============
 
-See `this wiki page <http://www.vtk.org/Wiki/CMake_Cross_Compiling>`_ for
+See `this wiki page <https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/CrossCompiling>`_ for
 generic instructions on how to cross-compile with CMake. It goes into detailed
 explanations and may seem daunting, but it is not. On the wiki page there are
-several examples including toolchain files. Go directly to `this section
-<http://www.vtk.org/Wiki/CMake_Cross_Compiling#Information_how_to_set_up_various_cross_compiling_toolchains>`_
+several examples including toolchain files. Go directly to the
+``Information how to set up various cross compiling toolchains`` section
 for a quick solution.
 
 Also see the `LLVM-specific variables`_ section for variables used when
