@@ -369,21 +369,21 @@ define i32 @test_unsigned_i32_f32(float %f) nounwind {
 ; X86-SSE-LABEL: test_unsigned_i32_f32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movaps %xmm0, %xmm2
-; X86-SSE-NEXT:    subss %xmm1, %xmm2
-; X86-SSE-NEXT:    cvttss2si %xmm2, %eax
-; X86-SSE-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
-; X86-SSE-NEXT:    cvttss2si %xmm0, %ecx
-; X86-SSE-NEXT:    ucomiss %xmm0, %xmm1
-; X86-SSE-NEXT:    cmovbel %eax, %ecx
-; X86-SSE-NEXT:    xorl %edx, %edx
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    movl %eax, %ecx
+; X86-SSE-NEXT:    sarl $31, %ecx
+; X86-SSE-NEXT:    movaps %xmm0, %xmm1
+; X86-SSE-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE-NEXT:    cvttss2si %xmm1, %edx
+; X86-SSE-NEXT:    andl %ecx, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
-; X86-SSE-NEXT:    cmovael %ecx, %edx
+; X86-SSE-NEXT:    cmovael %edx, %ecx
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movl $-1, %eax
-; X86-SSE-NEXT:    cmovbel %edx, %eax
+; X86-SSE-NEXT:    cmovbel %ecx, %eax
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: test_unsigned_i32_f32:
@@ -636,19 +636,18 @@ define i64 @test_unsigned_i64_f32(float %f) nounwind {
 ;
 ; X64-LABEL: test_unsigned_i64_f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movaps %xmm0, %xmm2
-; X64-NEXT:    subss %xmm1, %xmm2
-; X64-NEXT:    cvttss2si %xmm2, %rax
-; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; X64-NEXT:    xorq %rax, %rcx
 ; X64-NEXT:    cvttss2si %xmm0, %rax
-; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    cmovaeq %rcx, %rax
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    sarq $63, %rcx
+; X64-NEXT:    movaps %xmm0, %xmm1
+; X64-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %rdx
+; X64-NEXT:    andq %rcx, %rdx
+; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    cmovaeq %rax, %rcx
+; X64-NEXT:    cmovaeq %rdx, %rcx
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movq $-1, %rax
 ; X64-NEXT:    cmovbeq %rcx, %rax
@@ -1309,13 +1308,12 @@ define i32 @test_unsigned_i32_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    maxsd %xmm1, %xmm0
 ; X86-SSE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvttsd2si %xmm0, %ecx
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X86-SSE-NEXT:    movapd %xmm0, %xmm2
-; X86-SSE-NEXT:    subsd %xmm1, %xmm2
-; X86-SSE-NEXT:    cvttsd2si %xmm2, %eax
-; X86-SSE-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
-; X86-SSE-NEXT:    ucomisd %xmm1, %xmm0
-; X86-SSE-NEXT:    cmovbl %ecx, %eax
+; X86-SSE-NEXT:    movl %ecx, %edx
+; X86-SSE-NEXT:    sarl $31, %edx
+; X86-SSE-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    cvttsd2si %xmm0, %eax
+; X86-SSE-NEXT:    andl %edx, %eax
+; X86-SSE-NEXT:    orl %ecx, %eax
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: test_unsigned_i32_f64:
@@ -1562,19 +1560,18 @@ define i64 @test_unsigned_i64_f64(double %f) nounwind {
 ;
 ; X64-LABEL: test_unsigned_i64_f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    movapd %xmm0, %xmm2
-; X64-NEXT:    subsd %xmm1, %xmm2
-; X64-NEXT:    cvttsd2si %xmm2, %rax
-; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; X64-NEXT:    xorq %rax, %rcx
 ; X64-NEXT:    cvttsd2si %xmm0, %rax
-; X64-NEXT:    ucomisd %xmm1, %xmm0
-; X64-NEXT:    cmovaeq %rcx, %rax
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    sarq $63, %rcx
+; X64-NEXT:    movapd %xmm0, %xmm1
+; X64-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %rdx
+; X64-NEXT:    andq %rcx, %rdx
+; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    xorpd %xmm1, %xmm1
 ; X64-NEXT:    ucomisd %xmm1, %xmm0
-; X64-NEXT:    cmovaeq %rax, %rcx
+; X64-NEXT:    cmovaeq %rdx, %rcx
 ; X64-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movq $-1, %rax
 ; X64-NEXT:    cmovbeq %rcx, %rax
@@ -2298,21 +2295,21 @@ define i32 @test_unsigned_i32_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    calll __gnu_h2f_ieee
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movaps %xmm0, %xmm2
-; X86-SSE-NEXT:    subss %xmm1, %xmm2
-; X86-SSE-NEXT:    cvttss2si %xmm2, %eax
-; X86-SSE-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
-; X86-SSE-NEXT:    cvttss2si %xmm0, %ecx
-; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
-; X86-SSE-NEXT:    cmovael %eax, %ecx
-; X86-SSE-NEXT:    xorl %edx, %edx
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    movl %eax, %ecx
+; X86-SSE-NEXT:    sarl $31, %ecx
+; X86-SSE-NEXT:    movaps %xmm0, %xmm1
+; X86-SSE-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE-NEXT:    cvttss2si %xmm1, %edx
+; X86-SSE-NEXT:    andl %ecx, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
-; X86-SSE-NEXT:    cmovael %ecx, %edx
+; X86-SSE-NEXT:    cmovael %edx, %ecx
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movl $-1, %eax
-; X86-SSE-NEXT:    cmovbel %edx, %eax
+; X86-SSE-NEXT:    cmovbel %ecx, %eax
 ; X86-SSE-NEXT:    addl $12, %esp
 ; X86-SSE-NEXT:    retl
 ;
@@ -2589,19 +2586,18 @@ define i64 @test_unsigned_i64_f16(half %f) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movzwl %di, %edi
 ; X64-NEXT:    callq __gnu_h2f_ieee@PLT
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    movaps %xmm0, %xmm2
-; X64-NEXT:    subss %xmm1, %xmm2
-; X64-NEXT:    cvttss2si %xmm2, %rax
-; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; X64-NEXT:    xorq %rax, %rcx
 ; X64-NEXT:    cvttss2si %xmm0, %rax
-; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    cmovaeq %rcx, %rax
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    sarq $63, %rcx
+; X64-NEXT:    movaps %xmm0, %xmm1
+; X64-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %rdx
+; X64-NEXT:    andq %rcx, %rdx
+; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    cmovaeq %rax, %rcx
+; X64-NEXT:    cmovaeq %rdx, %rcx
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movq $-1, %rax
 ; X64-NEXT:    cmovbeq %rcx, %rax
