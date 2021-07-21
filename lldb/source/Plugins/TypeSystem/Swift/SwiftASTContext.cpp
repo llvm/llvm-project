@@ -1469,6 +1469,15 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string>& source,
     if (clang_argument.startswith("-Werror"))
       continue;
 
+    // Drop `--`. This might be coming from the user-provided setting
+    // swift-extra-clang-flags (where users sometimes think a -- is necessary
+    // to separate the flags from the settings name). `--` indicates to Clang
+    // that all following arguments are file names instead of flags, so this
+    // should never be passed to Clang (which would otherwise either crash or
+    // cause Clang to look for files with the name '-Wflag-name`).
+    if (clang_argument == "--")
+      continue;
+
     if (clang_argument.empty())
       continue;
 
