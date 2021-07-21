@@ -194,26 +194,14 @@ namespace {
 
 bool shouldUsePageAliases(const Triple &TargetTriple) {
   return ClUsePageAliases && TargetTriple.getArch() == Triple::x86_64;
-#ifdef __GNUC__
-// No one should use the option directly.
-#pragma GCC poison ClUsePageAliases
-#endif
 }
 
 bool shouldInstrumentStack(const Triple &TargetTriple) {
   return !shouldUsePageAliases(TargetTriple) && ClInstrumentStack;
-#ifdef __GNUC__
-// No one should use the option directly.
-#pragma GCC poison ClInstrumentStack
-#endif
 }
 
 bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
   return ClInstrumentWithCalls || TargetTriple.getArch() == Triple::x86_64;
-#ifdef __GNUC__
-// No one should use the option directly.
-#pragma GCC poison ClInstrumentWithCalls
-#endif
 }
 
 /// An instrumentation pass implementing detection of addressability bugs
