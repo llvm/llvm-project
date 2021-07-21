@@ -105,7 +105,8 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn) {
 
   ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",
          (int)NumThreads);
-  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
+  ASSERT0(LT_FUSSY,
+          __kmpc_get_hardware_thread_id_in_block() == GetMasterThreadID(),
           "only team master can create parallel");
 
   // Set number of threads on work descriptor.
@@ -133,7 +134,7 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn) {
 
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
   // Set to true for workers participating in the parallel region.
   bool isActive = false;
@@ -166,7 +167,7 @@ EXTERN void __kmpc_kernel_end_parallel() {
 
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
-  int threadId = GetThreadIdInBlock();
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
