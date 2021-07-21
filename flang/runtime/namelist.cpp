@@ -260,6 +260,8 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   ConnectionState &connection{io.GetConnectionState()};
   connection.modes.inNamelist = true;
   IoErrorHandler &handler{io.GetIoErrorHandler()};
+  auto *listInput{io.get_if<ListDirectedStatementState<Direction::Input>>()};
+  RUNTIME_CHECK(handler, listInput != nullptr);
   // Check the group header
   std::optional<char32_t> next{io.GetNextNonBlank()};
   if (!next || *next != '&') {
@@ -331,6 +333,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
     io.HandleRelativePosition(1);
     // Read the values into the descriptor
+    listInput->ResetForNextNamelistItem();
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
     }
