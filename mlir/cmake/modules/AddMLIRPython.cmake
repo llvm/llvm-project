@@ -35,7 +35,8 @@ function(add_mlir_python_extension libname extname)
   # The actual extension library produces a shared-object or DLL and has
   # sources that must be compiled in accordance with pybind11 needs (RTTI and
   # exceptions).
-  add_library(${libname} ${PYEXT_LINK_MODE}
+  add_library(${libname}
+    ${PYEXT_LINK_MODE}
     ${ARG_SOURCES}
   )
 
@@ -99,8 +100,6 @@ function(add_mlir_python_extension libname extname)
   # if further dependencies are added explicitly.
   target_link_libraries(${libname}
     PRIVATE
-    MLIRPublicAPI
-    LLVMSupport
     ${ARG_LINK_LIBS}
     ${PYEXT_LIBADD}
   )
