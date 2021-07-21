@@ -283,16 +283,24 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
 #include "profile/InstrProfData.inc"
 
-  /* Write the data. */
-  ProfDataIOVec IOVec[] = {
-      {&Header, sizeof(__llvm_profile_header), 1, 0},
+  /* Write the profile header. */
+  ProfDataIOVec IOVec[] = {{&Header, sizeof(__llvm_profile_header), 1, 0}};
+  if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
+    return -1;
+
+  /* Write the binary id lengths and data. */
+  if (__llvm_write_binary_ids(Writer) == -1)
+    return -1;
+
+  /* Write the profile data. */
+  ProfDataIOVec IOVecData[] = {
       {DataBegin, sizeof(__llvm_profile_data), DataSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesBeforeCounters, 1},
       {CountersBegin, sizeof(uint64_t), CountersSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterCounters, 1},
       {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1}};
-  if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
+  if (Writer->Write(Writer, IOVecData, sizeof(IOVecData) / sizeof(*IOVecData)))
     return -1;
 
   /* Value profiling is not yet supported in continuous mode. */
