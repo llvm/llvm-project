@@ -42,6 +42,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include <ctime>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -130,8 +131,31 @@ static int AssembleInput(StringRef ProgName, const Target *TheTarget,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
                          MCInstrInfo &MCII, MCTargetOptions &MCOptions,
                          const opt::ArgList &InputArgs) {
+  struct tm TM;
+  time_t Timestamp;
+  if (InputArgs.hasArg(OPT_timestamp)) {
+    StringRef TimestampStr = InputArgs.getLastArgValue(OPT_timestamp);
+    int64_t IntTimestamp;
+    if (TimestampStr.getAsInteger(10, IntTimestamp)) {
+      WithColor::error(errs(), ProgName)
+          << "invalid timestamp '" << TimestampStr
+          << "'; must be expressed in seconds since the UNIX epoch.\n";
+      return 1;
+    }
+    Timestamp = IntTimestamp;
+  } else {
+    Timestamp = time(nullptr);
+  }
+  if (InputArgs.hasArg(OPT_utc)) {
+    // Not thread-safe.
+    TM = *gmtime(&Timestamp);
+  } else {
+    // Not thread-safe.
+    TM = *localtime(&Timestamp);
+  }
+
   std::unique_ptr<MCAsmParser> Parser(
-      createMCMasmParser(SrcMgr, Ctx, Str, MAI, 0));
+      createMCMasmParser(SrcMgr, Ctx, Str, MAI, TM, 0));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
 
