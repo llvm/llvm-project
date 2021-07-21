@@ -443,6 +443,217 @@ multiclass sme_fill<string opcodestr> {
 }
 
 //===----------------------------------------------------------------------===//
+// Move instructions
+//===----------------------------------------------------------------------===//
+
+class sme_vector_to_tile_base<bit Q, bit V, bits<2> sz, dag outs, dag ins,
+                              string mnemonic, string argstr>
+    : I<outs, ins, mnemonic, argstr, "", []>, Sched<[]> {
+  bits<2> Rv;
+  bits<3> Pg;
+  bits<5> Zn;
+  let Inst{31-24} = 0b11000000;
+  let Inst{23-22} = sz;
+  let Inst{21-17} = 0b00000;
+  let Inst{16}    = Q;
+  let Inst{15}    = V;
+  let Inst{14-13} = Rv;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4}     = 0b0;
+}
+
+class sme_vector_to_tile_inst<bits<2> sz, MatrixTileVectorOperand tile_ty,
+                              bit is_col, Operand imm_ty, ZPRRegOp zpr_ty,
+                              string mnemonic>
+    : sme_vector_to_tile_base<0b0, is_col, sz, (outs tile_ty:$ZAd),
+        (ins MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm, PPR3bAny:$Pg, zpr_ty:$Zn),
+        mnemonic, "\t$ZAd[$Rv, $imm], $Pg/m, $Zn">;
+
+class sme_vector_to_tile_inst_Q<MatrixTileVectorOperand tile_ty,
+                                bit is_col, string mnemonic>
+    : sme_vector_to_tile_base<0b1, is_col, 0b11, (outs tile_ty:$ZAd),
+        (ins MatrixIndexGPR32Op12_15:$Rv, PPR3bAny:$Pg, ZPR128:$Zn),
+        mnemonic, "\t$ZAd[$Rv], $Pg/m, $Zn">;
+
+multiclass sme_vector_to_tile_aliases<Instruction inst,
+                                      MatrixTileVectorOperand tile_ty,
+                                      ZPRRegOp zpr_ty, Operand imm_ty> {
+  def : InstAlias<"mov\t$ZAd[$Rv, $imm], $Pg/m, $Zn",
+                  (inst tile_ty:$ZAd, MatrixIndexGPR32Op12_15:$Rv, imm0_15:$imm, PPR3bAny:$Pg, zpr_ty:$Zn), 1>;
+}
+
+multiclass sme_vector_v_to_tile<string mnemonic, bit is_col> {
+  def _B : sme_vector_to_tile_inst<0b00, !if(is_col, TileVectorOpV8,
+                                                     TileVectorOpH8),
+                                   is_col, imm0_15, ZPR8, mnemonic> {
+    bits<4> imm;
+    let Inst{3-0} = imm;
+  }
+  def _H : sme_vector_to_tile_inst<0b01, !if(is_col, TileVectorOpV16,
+                                                     TileVectorOpH16),
+                                   is_col, imm0_7, ZPR16, mnemonic> {
+    bits<1> ZAd;
+    bits<3> imm;
+    let Inst{3}   = ZAd;
+    let Inst{2-0} = imm;
+  }
+  def _S : sme_vector_to_tile_inst<0b10, !if(is_col, TileVectorOpV32,
+                                                     TileVectorOpH32),
+                                   is_col, imm0_3, ZPR32, mnemonic> {
+    bits<2> ZAd;
+    bits<2> imm;
+    let Inst{3-2} = ZAd;
+    let Inst{1-0} = imm;
+  }
+  def _D : sme_vector_to_tile_inst<0b11, !if(is_col, TileVectorOpV64,
+                                                     TileVectorOpH64),
+                                   is_col, imm0_1, ZPR64, mnemonic> {
+    bits<3> ZAd;
+    bits<1> imm;
+    let Inst{3-1} = ZAd;
+    let Inst{0}   = imm;
+  }
+  def _Q : sme_vector_to_tile_inst_Q<!if(is_col, TileVectorOpV128,
+                                                 TileVectorOpH128),
+                                     is_col, mnemonic> {
+    bits<4> ZAd;
+    bits<1> imm;
+    let Inst{3-0} = ZAd;
+  }
+
+  defm : sme_vector_to_tile_aliases<!cast<Instruction>(NAME # _B),
+                                    !if(is_col, TileVectorOpV8,
+                                                TileVectorOpH8),
+                                    ZPR8, imm0_15>;
+  defm : sme_vector_to_tile_aliases<!cast<Instruction>(NAME # _H),
+                                    !if(is_col, TileVectorOpV16,
+                                                TileVectorOpH16),
+                                    ZPR16, imm0_7>;
+  defm : sme_vector_to_tile_aliases<!cast<Instruction>(NAME # _S),
+                                    !if(is_col, TileVectorOpV32,
+                                                TileVectorOpH32),
+                                    ZPR32, imm0_3>;
+  defm : sme_vector_to_tile_aliases<!cast<Instruction>(NAME # _D),
+                                    !if(is_col, TileVectorOpV64,
+                                                TileVectorOpH64),
+                                    ZPR64, imm0_1>;
+
+  def : InstAlias<"mov\t$ZAd[$Rv], $Pg/m, $Zn",
+                  (!cast<Instruction>(NAME # _Q) !if(is_col,
+                                                      TileVectorOpV128,
+                                                      TileVectorOpH128):$ZAd,
+                                                 MatrixIndexGPR32Op12_15:$Rv,
+                                                 PPR3bAny:$Pg, ZPR128:$Zn), 1>;
+}
+
+multiclass sme_vector_to_tile<string mnemonic> {
+  defm _H : sme_vector_v_to_tile<mnemonic, /*is_col=*/0b0>;
+  defm _V : sme_vector_v_to_tile<mnemonic, /*is_col=*/0b1>;
+}
+
+class sme_tile_to_vector_base<bit Q, bit V, bits<2> sz, dag outs, dag ins,
+                              string mnemonic, string argstr>
+    : I<outs, ins, mnemonic, argstr, "", []>, Sched<[]> {
+  bits<2> Rv;
+  bits<3> Pg;
+  bits<5> Zd;
+  let Inst{31-24} = 0b11000000;
+  let Inst{23-22} = sz;
+  let Inst{21-17} = 0b00001;
+  let Inst{16}    = Q;
+  let Inst{15}    = V;
+  let Inst{14-13} = Rv;
+  let Inst{12-10} = Pg;
+  let Inst{9}     = 0b0;
+  let Inst{4-0}   = Zd;
+}
+
+class sme_tile_to_vector_inst<bits<2> sz, ZPRRegOp zpr_ty,
+                              MatrixTileVectorOperand tile_ty,
+                              bit is_col, Operand imm_ty, string mnemonic>
+    : sme_tile_to_vector_base<0b0, is_col, sz, (outs zpr_ty:$Zd),
+        (ins PPR3bAny:$Pg, tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm),
+        mnemonic, "\t$Zd, $Pg/m, $ZAn[$Rv, $imm]">;
+
+class sme_tile_to_vector_inst_Q<MatrixTileVectorOperand tile_ty,
+                                bit is_col, string mnemonic>
+    : sme_tile_to_vector_base<0b1, is_col, 0b11, (outs ZPR128:$Zd),
+        (ins PPR3bAny:$Pg, tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rv),
+        mnemonic, "\t$Zd, $Pg/m, $ZAn[$Rv]">;
+
+multiclass sme_tile_to_vector_aliases<Instruction inst, ZPRRegOp zpr_ty,
+                                      MatrixTileVectorOperand tile_ty,
+                                      Operand imm_ty > {
+  def : InstAlias<"mov\t$Zd, $Pg/m, $ZAn[$Rv, $imm]",
+                  (inst zpr_ty:$Zd, PPR3bAny:$Pg, tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm), 1>;
+}
+
+multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
+  def _B : sme_tile_to_vector_inst<0b00, ZPR8, !if(is_col, TileVectorOpV8,
+                                                           TileVectorOpH8),
+                                   is_col, imm0_15, mnemonic> {
+    bits<4> imm;
+    let Inst{8-5} = imm;
+  }
+  def _H : sme_tile_to_vector_inst<0b01, ZPR16, !if(is_col, TileVectorOpV16,
+                                                            TileVectorOpH16),
+                                   is_col, imm0_7, mnemonic> {
+    bits<1> ZAn;
+    bits<3> imm;
+    let Inst{8}   = ZAn;
+    let Inst{7-5} = imm;
+  }
+  def _S : sme_tile_to_vector_inst<0b10, ZPR32, !if(is_col, TileVectorOpV32,
+                                                            TileVectorOpH32),
+                                   is_col, imm0_3, mnemonic> {
+    bits<2> ZAn;
+    bits<2> imm;
+    let Inst{8-7} = ZAn;
+    let Inst{6-5} = imm;
+  }
+  def _D : sme_tile_to_vector_inst<0b11, ZPR64, !if(is_col, TileVectorOpV64,
+                                                            TileVectorOpH64),
+                                   is_col, imm0_1, mnemonic> {
+    bits<3> ZAn;
+    bits<1> imm;
+    let Inst{8-6} = ZAn;
+    let Inst{5}   = imm;
+  }
+  def _Q : sme_tile_to_vector_inst_Q<!if(is_col, TileVectorOpV128,
+                                                 TileVectorOpH128),
+                                     is_col, mnemonic> {
+    bits<4> ZAn;
+    let Inst{8-5} = ZAn;
+  }
+
+  defm : sme_tile_to_vector_aliases<!cast<Instruction>(NAME # _B), ZPR8,
+                                    !if(is_col, TileVectorOpV8,
+                                                TileVectorOpH8), imm0_15>;
+  defm : sme_tile_to_vector_aliases<!cast<Instruction>(NAME # _H), ZPR16,
+                                    !if(is_col, TileVectorOpV16,
+                                                TileVectorOpH16), imm0_7>;
+  defm : sme_tile_to_vector_aliases<!cast<Instruction>(NAME # _S), ZPR32,
+                                    !if(is_col, TileVectorOpV32,
+                                                TileVectorOpH32), imm0_3>;
+  defm : sme_tile_to_vector_aliases<!cast<Instruction>(NAME # _D), ZPR64,
+                                    !if(is_col, TileVectorOpV64,
+                                                TileVectorOpH64), imm0_1>;
+
+  def : InstAlias<"mov\t$Zd, $Pg/m, $ZAn[$Rv]",
+                  (!cast<Instruction>(NAME # _Q) ZPR128:$Zd, PPR3bAny:$Pg,
+                                                 !if(is_col,
+                                                      TileVectorOpV128,
+                                                      TileVectorOpH128):$ZAn,
+                                                 MatrixIndexGPR32Op12_15:$Rv), 1>;
+}
+
+multiclass sme_tile_to_vector<string mnemonic> {
+  defm _H : sme_tile_to_vector_v<mnemonic, /*is_col=*/0b0>;
+  defm _V : sme_tile_to_vector_v<mnemonic, /*is_col=*/0b1>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE2 Instructions
 //===----------------------------------------------------------------------===//
 
