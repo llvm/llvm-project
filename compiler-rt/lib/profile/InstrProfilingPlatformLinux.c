@@ -157,8 +157,7 @@ int WriteBinaryIds(ProfDataWriter *Writer, const ElfW(Nhdr) * Note,
  * Return the total size of binary ids.
  * If an error happens while writing, return -1.
  */
-COMPILER_RT_VISIBILITY COMPILER_RT_WEAK int
-__llvm_write_binary_ids(ProfDataWriter *Writer) {
+COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
   extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
   const ElfW(Ehdr) *ElfHeader = &__ehdr_start;
   const ElfW(Phdr) *ProgramHeader =
