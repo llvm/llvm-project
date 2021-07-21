@@ -75,7 +75,7 @@ attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 !1 = !DIFile(filename: "<stdin>", directory: "/")
-!2 = !{i32 2, !"Debug Info Version", i32 3}
+!2 = !{i32 2, !"Debug Info Version", i32 4}
 !3 = distinct !DILifetime(object: !4, location: !DIExpr())
 !4 = distinct !DIFragment()
 !5 = !DILocation(line: 4, column: 1, scope: !6)

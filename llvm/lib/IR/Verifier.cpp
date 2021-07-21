@@ -308,6 +308,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Whether the current function has a DISubprogram attached to it.
   bool HasDebugInfo = false;
 
+  /// The Debug Info Version of the module being verified.
+  Optional<unsigned> DebugInfoVersion;
+
   /// The current source language.
   dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;
 
@@ -352,6 +355,8 @@ public:
       : VerifierSupport(OS, M), LandingPadResultTy(nullptr),
         SawFrameEscape(false), TBAAVerifyHelper(this) {
     TreatBrokenDebugInfoAsError = ShouldTreatBrokenDebugInfoAsError;
+    if (unsigned V = getDebugMetadataVersionFromModule(M))
+      DebugInfoVersion = V;
   }
 
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
@@ -844,6 +849,24 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
 
   Assert(&MD.getContext() == &Context,
          "MDNode context does not match Module context!", &MD);
+
+  if (DebugInfoVersion) {
+    unsigned V = *DebugInfoVersion;
+    switch (MD.getMetadataID()) {
+    default:
+      break;
+    case Metadata::DIExpressionKind:
+      AssertDI(V == DEBUG_METADATA_VERSION,
+               "MDNode incompatible with Debug Info Version", &MD, V);
+      break;
+    case Metadata::DIExprKind:
+    case Metadata::DIFragmentKind:
+    case Metadata::DILifetimeKind:
+      AssertDI(V == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF,
+               "MDNode incompatible with Debug Info Version", &MD, V);
+      break;
+    }
+  }
 
   switch (MD.getMetadataID()) {
   default:
@@ -5580,6 +5603,10 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 }
 
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
+  if (DebugInfoVersion)
+    AssertDI(*DebugInfoVersion == DEBUG_METADATA_VERSION,
+             "debug intrinsic incompatible with Debug Info Version", &DII,
+             *DebugInfoVersion);
   auto *MD = DII.getRawLocation();
   AssertDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
@@ -5695,6 +5722,10 @@ void Verifier::verifyFragmentExpression(const DIVariable &V,
 
 void Verifier::visitDbgDefKillIntrinsic(StringRef Kind,
                                         DbgDefKillIntrinsic &DDI) {
+  if (DebugInfoVersion)
+    AssertDI(*DebugInfoVersion == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF,
+             "debug intrinsic incompatible with Debug Info Version", &DDI,
+             *DebugInfoVersion);
   AssertDI(isa<DILifetime>(DDI.getRawLifetime()),
            "invalid llvm.dbg." + Kind + " intrinsic lifetime", &DDI,
            DDI.getRawLifetime());
