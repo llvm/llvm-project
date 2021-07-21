@@ -685,6 +685,10 @@ DIGenericSubrange *DIBuilder::getOrCreateGenericSubrange(
                                 ConvToMetadata(Stride));
 }
 
+DIFragment *DIBuilder::createFragment() {
+  return DIFragment::getDistinct(VMContext);
+}
+
 static void checkGlobalVariableScope(DIScope *Context) {
 #ifndef NDEBUG
   if (auto *CT =
@@ -692,6 +696,18 @@ static void checkGlobalVariableScope(DIScope *Context) {
     assert(CT->getIdentifier().empty() &&
            "Context of a global variable should not be a type with identifier");
 #endif
+}
+
+DIGlobalVariable *DIBuilder::createGlobalVariable(
+    DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
+    unsigned LineNumber, DIType *Ty, bool IsLocalToUnit,
+    bool isDefined, MDNode *Decl, MDTuple *TemplateParams,
+    uint32_t AlignInBits) {
+  checkGlobalVariableScope(Context);
+  return DIGlobalVariable::getDistinct(
+      VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
+      LineNumber, Ty, IsLocalToUnit, isDefined,
+      cast_or_null<DIDerivedType>(Decl), TemplateParams, AlignInBits);
 }
 
 DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
