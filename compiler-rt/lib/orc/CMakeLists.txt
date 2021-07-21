@@ -11,7 +11,7 @@ set(ORC_SOURCES
 # Implementation files for all ORC architectures.
 set(x86_64_SOURCES
 # x86-64 specific assembly files will go here.
-  macho_tlv.x86-64.s
+  macho_tlv.x86-64.S
 )
 
 set(ORC_IMPL_HEADERS
