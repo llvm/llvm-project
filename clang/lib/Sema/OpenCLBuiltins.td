@@ -72,6 +72,7 @@ def FuncExtKhrSubgroupNonUniformArithmetic: FunctionExtension<"cl_khr_subgroup_n
 def FuncExtKhrSubgroupShuffle            : FunctionExtension<"cl_khr_subgroup_shuffle">;
 def FuncExtKhrSubgroupShuffleRelative    : FunctionExtension<"cl_khr_subgroup_shuffle_relative">;
 def FuncExtKhrSubgroupClusteredReduce    : FunctionExtension<"cl_khr_subgroup_clustered_reduce">;
+def FuncExtKhrExtendedBitOps             : FunctionExtension<"cl_khr_extended_bit_ops">;
 def FuncExtKhrGlobalInt32BaseAtomics     : FunctionExtension<"cl_khr_global_int32_base_atomics">;
 def FuncExtKhrGlobalInt32ExtendedAtomics : FunctionExtension<"cl_khr_global_int32_extended_atomics">;
 def FuncExtKhrLocalInt32BaseAtomics      : FunctionExtension<"cl_khr_local_int32_base_atomics">;
@@ -1736,6 +1737,16 @@ let Extension = FuncExtKhrSubgroupClusteredReduce in {
   foreach op = ["and", "or", "xor"] in {
     def : Builtin<"sub_group_clustered_reduce_logical_" # op, [Int, Int, UInt]>;
   }
+}
+
+// Section 40.3.1 - cl_khr_extended_bit_ops
+let Extension = FuncExtKhrExtendedBitOps in {
+  def : Builtin<"bitfield_insert", [AIGenTypeN, AIGenTypeN, AIGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bitfield_extract_signed", [SGenTypeN, SGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bitfield_extract_signed", [SGenTypeN, UGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bitfield_extract_unsigned", [UGenTypeN, SGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bitfield_extract_unsigned", [UGenTypeN, UGenTypeN, UInt, UInt], Attr.Const>;
+  def : Builtin<"bit_reverse", [AIGenTypeN, AIGenTypeN], Attr.Const>;
 }
 
 //--------------------------------------------------------------------
