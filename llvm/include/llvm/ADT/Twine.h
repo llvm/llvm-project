@@ -99,15 +99,9 @@ namespace llvm {
       /// A pointer to an std::string instance.
       StdStringKind,
 
-      /// A pointer to a StringRef instance.
-      StringRefKind,
-
-      /// A pointer to a SmallString instance.
-      SmallStringKind,
-
-      /// A Pointer and Length representation. Used for std::string_view.
-      /// Can't use a StringRef here because they are not trivally
-      /// constructible.
+      /// A Pointer and Length representation. Used for std::string_view,
+      /// StringRef, and SmallString.  Can't use a StringRef here
+      /// because they are not trivally constructible.
       PtrAndLengthKind,
 
       /// A pointer to a formatv_object_base instance.
@@ -145,13 +139,11 @@ namespace llvm {
     {
       const Twine *twine;
       const char *cString;
+      const std::string *stdString;
       struct {
         const char *ptr;
         size_t length;
       } ptrAndLength;
-      const std::string *stdString;
-      const StringRef *stringRef;
-      const SmallVectorImpl<char> *smallString;
       const formatv_object_base *formatvObject;
       char character;
       unsigned int decUI;
@@ -309,15 +301,17 @@ namespace llvm {
 #endif
 
     /// Construct from a StringRef.
-    /*implicit*/ Twine(const StringRef &Str) : LHSKind(StringRefKind) {
-      LHS.stringRef = &Str;
+    /*implicit*/ Twine(const StringRef &Str) : LHSKind(PtrAndLengthKind) {
+      LHS.ptrAndLength.ptr = Str.data();
+      LHS.ptrAndLength.length = Str.size();
       assert(isValid() && "Invalid twine!");
     }
 
     /// Construct from a SmallString.
     /*implicit*/ Twine(const SmallVectorImpl<char> &Str)
-        : LHSKind(SmallStringKind) {
-      LHS.smallString = &Str;
+        : LHSKind(PtrAndLengthKind) {
+      LHS.ptrAndLength.ptr = Str.data();
+      LHS.ptrAndLength.length = Str.size();
       assert(isValid() && "Invalid twine!");
     }
 
@@ -380,16 +374,18 @@ namespace llvm {
 
     /// Construct as the concatenation of a C string and a StringRef.
     /*implicit*/ Twine(const char *LHS, const StringRef &RHS)
-        : LHSKind(CStringKind), RHSKind(StringRefKind) {
+        : LHSKind(CStringKind), RHSKind(PtrAndLengthKind) {
       this->LHS.cString = LHS;
-      this->RHS.stringRef = &RHS;
+      this->RHS.ptrAndLength.ptr = RHS.data();
+      this->RHS.ptrAndLength.length = RHS.size();
       assert(isValid() && "Invalid twine!");
     }
 
     /// Construct as the concatenation of a StringRef and a C string.
     /*implicit*/ Twine(const StringRef &LHS, const char *RHS)
-        : LHSKind(StringRefKind), RHSKind(CStringKind) {
-      this->LHS.stringRef = &LHS;
+        : LHSKind(PtrAndLengthKind), RHSKind(CStringKind) {
+      this->LHS.ptrAndLength.ptr = LHS.data();
+      this->LHS.ptrAndLength.length = LHS.size();
       this->RHS.cString = RHS;
       assert(isValid() && "Invalid twine!");
     }
@@ -435,8 +431,6 @@ namespace llvm {
       case EmptyKind:
       case CStringKind:
       case StdStringKind:
-      case StringRefKind:
-      case SmallStringKind:
       case PtrAndLengthKind:
         return true;
       default:
@@ -472,10 +466,6 @@ namespace llvm {
         return StringRef(LHS.cString);
       case StdStringKind:
         return StringRef(*LHS.stdString);
-      case StringRefKind:
-        return *LHS.stringRef;
-      case SmallStringKind:
-        return StringRef(LHS.smallString->data(), LHS.smallString->size());
       case PtrAndLengthKind:
         return StringRef(LHS.ptrAndLength.ptr, LHS.ptrAndLength.length);
       }
