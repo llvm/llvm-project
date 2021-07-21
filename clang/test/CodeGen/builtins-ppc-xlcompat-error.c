@@ -12,6 +12,8 @@ extern long long lla, llb;
 extern int ia, ib;
 extern unsigned int ui;
 extern unsigned long long ull;
+extern const int cia;
+extern unsigned long ula;
 
 void test_trap(void) {
 #ifdef __PPC64__
@@ -93,3 +95,11 @@ unsigned long long testdivdeu(unsigned long long dividend, unsigned long long di
   return __divdeu(dividend, divisor); //expected-error {{this builtin is only available on 64-bit targets}}
 }
 #endif
+
+unsigned long test_mfspr(void) {
+  return __mfspr(cia); //expected-error {{argument to '__builtin_ppc_mfspr' must be a constant integer}}
+}
+
+void test_mtspr(void) {
+   __mtspr(cia, ula); //expected-error {{argument to '__builtin_ppc_mtspr' must be a constant integer}}
+}
