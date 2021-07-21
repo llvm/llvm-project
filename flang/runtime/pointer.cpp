@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "pointer.h"
+#include "derived.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"
+#include "type-info.h"
 
 namespace Fortran::runtime {
 extern "C" {
@@ -115,8 +117,17 @@ int RTNAME(PointerAllocate)(Descriptor &pointer, bool hasStat,
   if (!pointer.IsPointer()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
   }
-  return ReturnError(terminator, pointer.Allocate(), errMsg, hasStat);
-  // TODO: default component initialization
+  int stat{ReturnError(terminator, pointer.Allocate(), errMsg, hasStat)};
+  if (stat == StatOk) {
+    if (const DescriptorAddendum * addendum{pointer.Addendum()}) {
+      if (const auto *derived{addendum->derivedType()}) {
+        if (!derived->noInitializationNeeded()) {
+          stat = Initialize(pointer, *derived, terminator, hasStat, errMsg);
+        }
+      }
+    }
+  }
+  return stat;
 }
 
 int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
@@ -128,7 +139,7 @@ int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   if (!pointer.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-  return ReturnError(terminator, pointer.Deallocate(), errMsg, hasStat);
+  return ReturnError(terminator, pointer.Destroy(true), errMsg, hasStat);
 }
 
 bool RTNAME(PointerIsAssociated)(const Descriptor &pointer) {

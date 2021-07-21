@@ -88,11 +88,11 @@ define internal { i32, i32 } @foo(i32 %A, i32 %B) {
 }
 
 define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
+; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR1]] personality i32 (...)* @__gxx_personality_v0 {
 ; IS__TUNIT_OPM-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__TUNIT_OPM-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2]]
+; IS__TUNIT_OPM-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR1]]
 ; IS__TUNIT_OPM-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
 ; IS__TUNIT_OPM-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR1]]
@@ -107,11 +107,11 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; IS__TUNIT_OPM:       RET:
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
+; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR1]] personality i32 (...)* @__gxx_personality_v0 {
 ; IS__TUNIT_NPM-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__TUNIT_NPM-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2]]
+; IS__TUNIT_NPM-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR1]]
 ; IS__TUNIT_NPM-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
 ; IS__TUNIT_NPM-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR1]]

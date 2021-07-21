@@ -30,8 +30,12 @@ public:
   /// \param[in] raw
   ///     Dump only instruction addresses without disassembly nor symbol
   ///     information.
+  ///
+  /// \param[in] show_tsc
+  ///     For each instruction, print the corresponding timestamp counter if
+  ///     available.
   TraceInstructionDumper(lldb::TraceCursorUP &&cursor_up, int initial_index = 0,
-                         bool raw = false);
+                         bool raw = false, bool show_tsc = false);
 
   /// Dump \a count instructions of the thread trace starting at the current
   /// cursor position.
@@ -63,6 +67,7 @@ private:
   lldb::TraceCursorUP m_cursor_up;
   int m_index;
   bool m_raw;
+  bool m_show_tsc;
   /// If \b true, all the instructions have been traversed.
   bool m_no_more_data = false;
 };

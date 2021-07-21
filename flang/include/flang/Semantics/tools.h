@@ -113,6 +113,8 @@ bool IsStaticallyInitialized(const Symbol &, bool ignoreDATAstatements = false);
 // Is the symbol explicitly or implicitly initialized in any way?
 bool IsInitialized(const Symbol &, bool ignoreDATAstatements = false,
     const Symbol *derivedType = nullptr);
+// Is the symbol a component subject to deallocation or finalization?
+bool IsDestructible(const Symbol &, const Symbol *derivedType = nullptr);
 bool HasIntrinsicTypeName(const Symbol &);
 bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool IsAutomatic(const Symbol &);

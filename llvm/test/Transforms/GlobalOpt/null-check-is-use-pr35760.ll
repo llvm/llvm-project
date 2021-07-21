@@ -3,10 +3,13 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+; CHECK: [[_ZL3G_I_INIT:@.*]] = internal unnamed_addr global i1 false
 @_ZL3g_i = internal global i32* null, align 8
 @.str = private unnamed_addr constant [2 x i8] c"0\00", align 1
 @.str.1 = private unnamed_addr constant [2 x i8] c"1\00", align 1
 
+; CHECK-LABEL: define {{.*}} @main(
+; CHECK-NEXT:    store i1 false, i1* [[_ZL3G_I_INIT]], align 1
 define dso_local i32 @main() {
   store i32* null, i32** @_ZL3g_i, align 8
   call void @_ZL13PutsSomethingv()
@@ -14,8 +17,11 @@ define dso_local i32 @main() {
 }
 
 ; CHECK-LABEL: define {{.*}} @_ZL13PutsSomethingv()
-; CHECK: [[gvLoad:%.*]] = load i32*, i32** @_ZL3g_i
-; CHECK-NEXT: icmp eq i32* [[gvLoad]], null
+; CHECK-NEXT:    [[_ZL3G_I_INIT_VAL:%.*]] = load i1, i1* [[_ZL3G_I_INIT]], align 1
+; CHECK-NEXT:    [[NOTINIT:%.*]] = xor i1 [[_ZL3G_I_INIT_VAL]], true
+; CHECK-NEXT:    br i1 [[NOTINIT]], label %[[TMP1:.*]], label %[[TMP3:.*]]
+; CHECK:       [[TMP1]]:
+; CHECK-NEXT:    store i1 true, i1* [[_ZL3G_I_INIT]], align 1
 define internal void @_ZL13PutsSomethingv() {
   %1 = load i32*, i32** @_ZL3g_i, align 8
   %2 = icmp eq i32* %1, null

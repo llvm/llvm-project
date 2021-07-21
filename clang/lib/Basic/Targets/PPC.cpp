@@ -118,8 +118,12 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__fetch_and_swaplp", "__builtin_ppc_fetch_and_swaplp");
   Builder.defineMacro("__ldarx", "__builtin_ppc_ldarx");
   Builder.defineMacro("__lwarx", "__builtin_ppc_lwarx");
+  Builder.defineMacro("__lharx", "__builtin_ppc_lharx");
+  Builder.defineMacro("__lbarx", "__builtin_ppc_lbarx");
+  Builder.defineMacro("__stfiw", "__builtin_ppc_stfiw");
   Builder.defineMacro("__stdcx", "__builtin_ppc_stdcx");
   Builder.defineMacro("__stwcx", "__builtin_ppc_stwcx");
+  Builder.defineMacro("__sthcx", "__builtin_ppc_sthcx");
   Builder.defineMacro("__tdw", "__builtin_ppc_tdw");
   Builder.defineMacro("__tw", "__builtin_ppc_tw");
   Builder.defineMacro("__trap", "__builtin_ppc_trap");
@@ -135,6 +139,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__cmpeqb", "__builtin_ppc_cmpeqb");
   Builder.defineMacro("__cmprb", "__builtin_ppc_cmprb");
   Builder.defineMacro("__setb", "__builtin_ppc_setb");
+  Builder.defineMacro("__cmpb", "__builtin_ppc_cmpb");
   Builder.defineMacro("__mulhd", "__builtin_ppc_mulhd");
   Builder.defineMacro("__mulhdu", "__builtin_ppc_mulhdu");
   Builder.defineMacro("__mulhw", "__builtin_ppc_mulhw");
@@ -168,6 +173,53 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__fres", "__builtin_ppc_fres");
   Builder.defineMacro("__swdiv_nochk", "__builtin_ppc_swdiv_nochk");
   Builder.defineMacro("__swdivs_nochk", "__builtin_ppc_swdivs_nochk");
+  Builder.defineMacro("__alloca", "__builtin_alloca");
+  Builder.defineMacro("__vcipher", "__builtin_altivec_crypto_vcipher");
+  Builder.defineMacro("__vcipherlast", "__builtin_altivec_crypto_vcipherlast");
+  Builder.defineMacro("__vncipher", "__builtin_altivec_crypto_vncipher");
+  Builder.defineMacro("__vncipherlast",
+                      "__builtin_altivec_crypto_vncipherlast");
+  Builder.defineMacro("__vpermxor", "__builtin_altivec_crypto_vpermxor");
+  Builder.defineMacro("__vpmsumb", "__builtin_altivec_crypto_vpmsumb");
+  Builder.defineMacro("__vpmsumd", "__builtin_altivec_crypto_vpmsumd");
+  Builder.defineMacro("__vpmsumh", "__builtin_altivec_crypto_vpmsumh");
+  Builder.defineMacro("__vpmsumw", "__builtin_altivec_crypto_vpmsumw");
+  Builder.defineMacro("__divde", "__builtin_divde");
+  Builder.defineMacro("__divwe", "__builtin_divwe");
+  Builder.defineMacro("__divdeu", "__builtin_divdeu");
+  Builder.defineMacro("__divweu", "__builtin_divweu");
+  Builder.defineMacro("__alignx", "__builtin_ppc_alignx");
+  Builder.defineMacro("__bcopy", "bcopy");
+  Builder.defineMacro("__bpermd", "__builtin_bpermd");
+  Builder.defineMacro("__cntlz4", "__builtin_clz");
+  Builder.defineMacro("__cntlz8", "__builtin_clzll");
+  Builder.defineMacro("__cmplx", "__builtin_complex");
+  Builder.defineMacro("__cmplxf", "__builtin_complex");
+  Builder.defineMacro("__cnttz4", "__builtin_ctz");
+  Builder.defineMacro("__cnttz8", "__builtin_ctzll");
+  Builder.defineMacro("__darn", "__builtin_darn");
+  Builder.defineMacro("__darn_32", "__builtin_darn_32");
+  Builder.defineMacro("__darn_raw", "__builtin_darn_raw");
+  Builder.defineMacro("__dcbf", "__builtin_dcbf");
+  Builder.defineMacro("__fmadd", "__builtin_fma");
+  Builder.defineMacro("__fmadds", "__builtin_fmaf");
+  Builder.defineMacro("__labs", "__builtin_labs");
+  Builder.defineMacro("__llabs", "__builtin_llabs");
+  Builder.defineMacro("__popcnt4", "__builtin_popcount");
+  Builder.defineMacro("__popcnt8", "__builtin_popcountll");
+  Builder.defineMacro("__readflm", "__builtin_readflm");
+  Builder.defineMacro("__rotatel4", "__builtin_rotateleft32");
+  Builder.defineMacro("__rotatel8", "__builtin_rotateleft64");
+  Builder.defineMacro("__rdlam", "__builtin_ppc_rdlam");
+  Builder.defineMacro("__setflm", "__builtin_setflm");
+  Builder.defineMacro("__setrnd", "__builtin_setrnd");
+  Builder.defineMacro("__dcbtstt", "__builtin_ppc_dcbtstt");
+  Builder.defineMacro("__dcbtt", "__builtin_ppc_dcbtt");
+  Builder.defineMacro("__mftbu", "__builtin_ppc_mftbu");
+  Builder.defineMacro("__mfmsr", "__builtin_ppc_mfmsr");
+  Builder.defineMacro("__mtmsr", "__builtin_ppc_mtmsr");
+  Builder.defineMacro("__mfspr", "__builtin_ppc_mfspr");
+  Builder.defineMacro("__mtspr", "__builtin_ppc_mtspr");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific

@@ -668,8 +668,8 @@ bool LLParser::parseComdat() {
   case lltok::kw_largest:
     SK = Comdat::Largest;
     break;
-  case lltok::kw_noduplicates:
-    SK = Comdat::NoDuplicates;
+  case lltok::kw_nodeduplicate:
+    SK = Comdat::NoDeduplicate;
     break;
   case lltok::kw_samesize:
     SK = Comdat::SameSize;

@@ -48,6 +48,10 @@ bool IntelPTInstruction::IsError() const { return (bool)m_error; }
 
 lldb::addr_t IntelPTInstruction::GetLoadAddress() const { return m_pt_insn.ip; }
 
+Optional<uint64_t> IntelPTInstruction::GetTimestampCounter() const {
+  return m_timestamp;
+}
+
 Error IntelPTInstruction::ToError() const {
   if (!IsError())
     return Error::success();

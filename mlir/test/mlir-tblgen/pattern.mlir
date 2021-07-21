@@ -158,6 +158,17 @@ func @verifyNestedOpEqualArgs(
   return
 }
 
+// CHECK-LABEL: verifyNestedSameOpAndSameArgEquality
+func @verifyNestedSameOpAndSameArgEquality(%arg0: i32, %arg1: i32) -> i32 {
+  // def TestNestedSameOpAndSameArgEqualityPattern:
+  //   Pat<(OpN (OpN $_, $x), $x), (replaceWithValue $x)>;
+
+  %0 = "test.op_n"(%arg1, %arg0) : (i32, i32) -> (i32)
+  %1 = "test.op_n"(%0, %arg0) : (i32, i32) -> (i32)
+  // CHECK: return %arg0 : i32
+  return %1 : i32
+}
+
 // CHECK-LABEL: verifyMultipleEqualArgs
 func @verifyMultipleEqualArgs(
   %arg0: i32, %arg1 : i32, %arg2 : i32, %arg3 : i32, %arg4 : i32) {

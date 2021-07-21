@@ -184,6 +184,9 @@ public:
   void print(raw_ostream &os) const;
 
 private:
+  friend class SymbolInfoMap;
+  const void *getAsOpaquePointer() const { return node; }
+
   const llvm::DagInit *node; // nullptr means null DagNode
 };
 
@@ -237,6 +240,10 @@ public:
     // Allow SymbolInfoMap to access private methods.
     friend class SymbolInfoMap;
 
+    // DagNode and DagLeaf are accessed by value which means it can't be used as
+    // identifier here. Use an opaque pointer type instead.
+    using DagAndIndex = std::pair<const void *, int>;
+
     // What kind of entity this symbol represents:
     // * Attr: op attribute
     // * Operand: op operand
@@ -244,19 +251,21 @@ public:
     // * Value: a value not attached to an op (e.g., from NativeCodeCall)
     enum class Kind : uint8_t { Attr, Operand, Result, Value };
 
-    // Creates a SymbolInfo instance. `index` is only used for `Attr` and
-    // `Operand` so should be negative for `Result` and `Value` kind.
-    SymbolInfo(const Operator *op, Kind kind, Optional<int> index);
+    // Creates a SymbolInfo instance. `dagAndIndex` is only used for `Attr` and
+    // `Operand` so should be llvm::None for `Result` and `Value` kind.
+    SymbolInfo(const Operator *op, Kind kind,
+               Optional<DagAndIndex> dagAndIndex);
 
     // Static methods for creating SymbolInfo.
     static SymbolInfo getAttr(const Operator *op, int index) {
-      return SymbolInfo(op, Kind::Attr, index);
+      return SymbolInfo(op, Kind::Attr, DagAndIndex(nullptr, index));
     }
     static SymbolInfo getAttr() {
       return SymbolInfo(nullptr, Kind::Attr, llvm::None);
     }
-    static SymbolInfo getOperand(const Operator *op, int index) {
-      return SymbolInfo(op, Kind::Operand, index);
+    static SymbolInfo getOperand(DagNode node, const Operator *op, int index) {
+      return SymbolInfo(op, Kind::Operand,
+                        DagAndIndex(node.getAsOpaquePointer(), index));
     }
     static SymbolInfo getResult(const Operator *op) {
       return SymbolInfo(op, Kind::Result, llvm::None);
@@ -291,8 +300,11 @@ public:
 
     const Operator *op; // The op where the bound entity belongs
     Kind kind;          // The kind of the bound entity
-    // The argument index (for `Attr` and `Operand` only)
-    Optional<int> argIndex;
+    // The pair of DagNode pointer and argument index (for `Attr` and `Operand`
+    // only). Note that operands may be bound to the same symbol, use the
+    // DagNode and index to distinguish them. For `Attr`, the Dag part will be
+    // nullptr.
+    Optional<DagAndIndex> dagAndIndex;
     // Alternative name for the symbol. It is used in case the name
     // is not unique. Applicable for `Operand` only.
     Optional<std::string> alternativeName;
@@ -312,7 +324,8 @@ public:
 
   // Binds the given `symbol` to the `argIndex`-th argument to the given `op`.
   // Returns false if `symbol` is already bound and symbols are not operands.
-  bool bindOpArgument(StringRef symbol, const Operator &op, int argIndex);
+  bool bindOpArgument(DagNode node, StringRef symbol, const Operator &op,
+                      int argIndex);
 
   // Binds the given `symbol` to the results the given `op`. Returns false if
   // `symbol` is already bound.
@@ -334,8 +347,8 @@ public:
 
   // Returns an iterator to the information of the given symbol named as `key`,
   // with index `argIndex` for operator `op`.
-  const_iterator findBoundSymbol(StringRef key, const Operator &op,
-                                 int argIndex) const;
+  const_iterator findBoundSymbol(StringRef key, DagNode node,
+                                 const Operator &op, int argIndex) const;
 
   // Returns the bounds of a range that includes all the elements which
   // bind to the `key`.

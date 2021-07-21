@@ -11,8 +11,8 @@
 
 #include "Cuda.h"
 #include "ROCm.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Driver/DarwinSDKInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/XRayArgs.h"

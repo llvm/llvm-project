@@ -2,7 +2,7 @@
 # RUN: mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 -dwarf-version=4 %s -o %t/test.o
 # RUN: cd %t
-# RUN: llvm-symbolizer -verbose 0x0 -obj=test.o | FileCheck --check-prefix=SYM %s
+# RUN: llvm-symbolizer --verbose 0x0 --obj=test.o | FileCheck --check-prefix=SYM %s
 # RUN: llvm-dwarfdump -lookup=0x1 test.o | FileCheck --check-prefix=LOOKUP %s
 
 # SYM: Filename: .{{[/\\]}}.{{[/\\]}}./test.h

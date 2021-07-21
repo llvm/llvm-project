@@ -61,8 +61,6 @@ void ThreadContext::OnCreated(void *arg) {
   TraceAddEvent(args->thr, args->thr->fast_state, EventTypeMop, 0);
   ReleaseImpl(args->thr, 0, &sync);
   creation_stack_id = CurrentStackId(args->thr, args->pc);
-  if (reuse_count == 0)
-    StatInc(args->thr, StatThreadMaxTid);
 }
 
 void ThreadContext::OnReset() {
@@ -115,7 +113,6 @@ void ThreadContext::OnStarted(void *arg) {
 
   thr->fast_synch_epoch = epoch0;
   AcquireImpl(thr, 0, &sync);
-  StatInc(thr, StatSyncAcquire);
   sync.Reset(&thr->proc()->clock_cache);
   thr->is_inited = true;
   DPrintf("#%d: ThreadStart epoch=%zu stk_addr=%zx stk_size=%zx "
@@ -149,9 +146,6 @@ void ThreadContext::OnFinished() {
   PlatformCleanUpThreadState(thr);
 #endif
   thr->~ThreadState();
-#if TSAN_COLLECT_STATS
-  StatAggregate(ctx->stat, thr->stat);
-#endif
   thr = 0;
 }
 
@@ -232,13 +226,11 @@ int ThreadCount(ThreadState *thr) {
 }
 
 int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached) {
-  StatInc(thr, StatThreadCreate);
   OnCreatedArgs args = { thr, pc };
   u32 parent_tid = thr ? thr->tid : kInvalidTid;  // No parent for GCD workers.
   int tid =
       ctx->thread_registry->CreateThread(uid, detached, parent_tid, &args);
   DPrintf("#%d: ThreadCreate tid=%d uid=%zu\n", parent_tid, tid, uid);
-  StatSet(thr, StatThreadMaxAlive, ctx->thread_registry->GetMaxAliveThreads());
   return tid;
 }
 
@@ -280,7 +272,6 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
 
 void ThreadFinish(ThreadState *thr) {
   ThreadCheckIgnore(thr);
-  StatInc(thr, StatThreadFinish);
   if (thr->stk_addr && thr->stk_size)
     DontNeedShadowFor(thr->stk_addr, thr->stk_size);
   if (thr->tls_addr && thr->tls_size)
@@ -372,13 +363,10 @@ void MemoryAccessRange(ThreadState *thr, uptr pc, uptr addr,
   }
 #endif
 
-  StatInc(thr, StatMopRange);
-
   if (*shadow_mem == kShadowRodata) {
     DCHECK(!is_write);
     // Access to .rodata section, no races here.
     // Measurements show that it can be 10-20% of all memory accesses.
-    StatInc(thr, StatMopRangeRodata);
     return;
   }
 

@@ -312,7 +312,7 @@ CPU revision    : 0
 
 TEST(getLinuxHostCPUName, s390x) {
   SmallVector<std::string> ModelIDs(
-      {"8561", "3906", "2964", "2827", "2817", "7"});
+      {"8561", "3906", "2964", "2827", "2817", "2097", "2064"});
   SmallVector<std::string> VectorSupport({"", "vx"});
   SmallVector<StringRef> ExpectedCPUs;
 
@@ -336,7 +336,11 @@ TEST(getLinuxHostCPUName, s390x) {
   ExpectedCPUs.push_back("z196");
   ExpectedCPUs.push_back("z196");
 
-  // Model Id: 7
+  // Model Id: 2097
+  ExpectedCPUs.push_back("z10");
+  ExpectedCPUs.push_back("z10");
+
+  // Model Id: 2064
   ExpectedCPUs.push_back("generic");
   ExpectedCPUs.push_back("generic");
 

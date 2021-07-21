@@ -69,6 +69,9 @@ struct PreambleData {
   // When reusing a preamble, this cache can be consumed to save IO.
   std::unique_ptr<PreambleFileStatusCache> StatCache;
   CanonicalIncludes CanonIncludes;
+  // Whether there was a (possibly-incomplete) include-guard on the main file.
+  // We need to propagate this information "by hand" to subsequent parses.
+  bool MainIsIncludeGuarded = false;
 };
 
 using PreambleParsedCallback =

@@ -75,6 +75,41 @@ defm LD1_MXIPXX : sme_mem_ld_ss<"ld1">;
 defm ST1_MXIPXX : sme_mem_st_ss<"st1">;
 
 //===----------------------------------------------------------------------===//
+// Mode selection and state access instructions
+//===----------------------------------------------------------------------===//
+
+// SME defines three pstate fields to set or clear PSTATE.SM, PSTATE.ZA, or
+// both fields:
+//
+//   MSR SVCRSM, #<imm1>
+//   MSR SVCRZA, #<imm1>
+//   MSR SVCRSMZA, #<imm1>
+//
+// It's tricky to using the existing pstate operand defined in
+// AArch64SystemOperands.td since it only encodes 5 bits including op1;op2,
+// when these fields are also encoded in CRm[3:1].
+class MSRpstatesvcrImm0_1
+  : PstateWriteSimple<(ins svcr_op:$pstatefield, imm0_1:$imm), "msr",
+                      "\t$pstatefield, $imm">,
+    Sched<[WriteSys]> {
+  bits<3> pstatefield;
+  bit imm;
+  let Inst{18-16} = 0b011; // op1
+  let Inst{11-9} = pstatefield;
+  let Inst{8} = imm;
+  let Inst{7-5} = 0b011; // op2
+}
+
+def MSRpstatesvcrImm1 : MSRpstatesvcrImm0_1;
+def : InstAlias<"smstart",    (MSRpstatesvcrImm1 0b011, 0b1)>;
+def : InstAlias<"smstart sm", (MSRpstatesvcrImm1 0b001, 0b1)>;
+def : InstAlias<"smstart za", (MSRpstatesvcrImm1 0b010, 0b1)>;
+
+def : InstAlias<"smstop",     (MSRpstatesvcrImm1 0b011, 0b0)>;
+def : InstAlias<"smstop sm",  (MSRpstatesvcrImm1 0b001, 0b0)>;
+def : InstAlias<"smstop za",  (MSRpstatesvcrImm1 0b010, 0b0)>;
+
+//===----------------------------------------------------------------------===//
 // SVE2 instructions
 //===----------------------------------------------------------------------===//
 

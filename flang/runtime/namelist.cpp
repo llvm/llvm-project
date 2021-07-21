@@ -233,7 +233,7 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
         type{addendum ? addendum->derivedType() : nullptr}) {
       if (const typeInfo::Component *
           comp{type->FindDataComponent(compName, std::strlen(compName))}) {
-        comp->EstablishDescriptor(desc, source, nullptr, handler);
+        comp->CreatePointerDescriptor(desc, source, nullptr, handler);
         return true;
       } else {
         handler.SignalError(

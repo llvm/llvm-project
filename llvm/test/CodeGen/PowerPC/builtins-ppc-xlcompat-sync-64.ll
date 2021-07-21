@@ -94,7 +94,6 @@ entry:
 }
 declare void @llvm.ppc.iospace.sync()
 
-; FIXME: __icbt is only valid for pwr8 and up.
 define dso_local void @test_builtin_ppc_icbt() {
 ; CHECK-LABEL: test_builtin_ppc_icbt:
 ; CHECK:       # %bb.0: # %entry

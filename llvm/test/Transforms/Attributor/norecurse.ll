@@ -227,8 +227,7 @@ define void @f(i32 %x)  {
 ; NOT_CGSCC_OPM-NEXT:  entry:
 ; NOT_CGSCC_OPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; NOT_CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; NOT_CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
-; NOT_CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
+; NOT_CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; NOT_CGSCC_OPM-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; NOT_CGSCC_OPM:       if.then:
 ; NOT_CGSCC_OPM-NEXT:    call void @g() #[[ATTR8:[0-9]+]]
@@ -242,8 +241,7 @@ define void @f(i32 %x)  {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; IS__CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X_ADDR]], align 4
-; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
+; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; IS__CGSCC_OPM-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; IS__CGSCC_OPM:       if.then:
 ; IS__CGSCC_OPM-NEXT:    call void @g() #[[ATTR9:[0-9]+]]

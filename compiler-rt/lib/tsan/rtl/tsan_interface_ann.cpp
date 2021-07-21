@@ -49,8 +49,6 @@ class ScopedAnnotation {
       return ret; \
     ThreadState *thr = cur_thread(); \
     const uptr caller_pc = (uptr)__builtin_return_address(0); \
-    StatInc(thr, StatAnnotation); \
-    StatInc(thr, Stat##typ); \
     ScopedAnnotation sa(thr, __func__, caller_pc); \
     const uptr pc = StackTrace::GetCurrentPc(); \
     (void)pc; \
@@ -77,9 +75,7 @@ struct DynamicAnnContext {
   ExpectRace expect;
   ExpectRace benign;
 
-  DynamicAnnContext()
-    : mtx(MutexTypeAnnotations, StatMtxAnnotations) {
-  }
+  DynamicAnnContext() : mtx(MutexTypeAnnotations) {}
 };
 
 static DynamicAnnContext *dyn_ann_ctx;

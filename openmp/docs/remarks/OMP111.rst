@@ -1,7 +1,7 @@
+.. _omp111:
+
 Replaced globalized variable with X bytes of shared memory. [OMP111]
 ====================================================================
-
-.. _omp111:
 
 This optimization occurs when a globalized variable's data is shared between
 multiple threads, but requires a static amount of memory that can be determined

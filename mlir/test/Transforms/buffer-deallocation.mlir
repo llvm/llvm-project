@@ -1096,7 +1096,7 @@ func @loop_nested_alloc(
 // The BufferDeallocation transformation should fail on this explicit
 // control-flow loop since they are not supported.
 
-// expected-error@+1 {{Structured control-flow loops are supported only}}
+// expected-error@+1 {{Only structured control-flow loops are supported}}
 func @loop_dynalloc(
   %arg0 : i32,
   %arg1 : i32,
@@ -1129,7 +1129,7 @@ func @loop_dynalloc(
 // The BufferDeallocation transformation should fail on this explicit
 // control-flow loop since they are not supported.
 
-// expected-error@+1 {{Structured control-flow loops are supported only}}
+// expected-error@+1 {{Only structured control-flow loops are supported}}
 func @do_loop_alloc(
   %arg0 : i32,
   %arg1 : i32,

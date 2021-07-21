@@ -460,6 +460,13 @@ let SubRegIndices = [sub_pair0, sub_pair1] in {
 }
 def ACCRC : RegisterClass<"PPC", [v512i1], 128, (add ACC0, ACC1, ACC2, ACC3,
                                                       ACC4, ACC5, ACC6, ACC7)> {
+  // The AllocationPriority is in the range [0, 63]. Assigned the ACC registers
+  // the highest possible priority in this range to force the register allocator
+  // to assign these registers first. This is done because the ACC registers
+  // must represent 4 advacent vector registers. For example ACC1 must be
+  // VS4 - VS7. The value here must be at least 32 as we want to allocate
+  // these registers even before we allocate global ranges.
+  let AllocationPriority = 63;
   let Size = 512;
 }
 
@@ -476,6 +483,11 @@ let SubRegIndices = [sub_pair0, sub_pair1] in {
 def UACCRC : RegisterClass<"PPC", [v512i1], 128,
                            (add UACC0, UACC1, UACC2, UACC3,
                                 UACC4, UACC5, UACC6, UACC7)> {
+  // The AllocationPriority for the UACC registers is still high and must be at
+  // least 32 as we want to allocate these registers before we allocate other
+  // global ranges. The value must be less than the AllocationPriority of the
+  // ACC registers.
+  let AllocationPriority = 36;
   let Size = 512;
 }
 
@@ -493,6 +505,12 @@ def VSRpRC :
                      VSRp29, VSRp28, VSRp27, VSRp26,
                      (sequence "VSRp%u", 0, 6),
                      (sequence "VSRp%u", 15, 7))> {
+  // Give the VSRp registers a non-zero AllocationPriority. The value is less
+  // than 32 as these registers should not always be allocated before global
+  // ranges and the value should be less than the AllocationPriority - 32 for
+  // the UACC registers. Even global VSRp registers should be allocated after
+  // the UACC registers have been chosen.
+  let AllocationPriority = 2;
   let Size = 256;
 }
 

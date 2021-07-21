@@ -197,11 +197,11 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   }
   assert((LogicalShift || !ShiftLeft) && "Only logical shifts can shift left");
 
-  auto Vec = II.getArgOperand(0);
-  auto Amt = II.getArgOperand(1);
-  auto VT = cast<FixedVectorType>(Vec->getType());
-  auto SVT = VT->getElementType();
-  auto AmtVT = Amt->getType();
+  Value *Vec = II.getArgOperand(0);
+  Value *Amt = II.getArgOperand(1);
+  auto *VT = cast<FixedVectorType>(Vec->getType());
+  Type *SVT = VT->getElementType();
+  Type *AmtVT = Amt->getType();
   unsigned VWidth = VT->getNumElements();
   unsigned BitWidth = SVT->getPrimitiveSizeInBits();
 
@@ -249,7 +249,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   }
 
   // Simplify if count is constant vector.
-  auto CDV = dyn_cast<ConstantDataVector>(Amt);
+  auto *CDV = dyn_cast<ConstantDataVector>(Amt);
   if (!CDV)
     return nullptr;
 
@@ -263,7 +263,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   APInt Count(64, 0);
   for (unsigned i = 0, NumSubElts = 64 / BitWidth; i != NumSubElts; ++i) {
     unsigned SubEltIdx = (NumSubElts - 1) - i;
-    auto SubElt = cast<ConstantInt>(CDV->getElementAsConstant(SubEltIdx));
+    auto *SubElt = cast<ConstantInt>(CDV->getElementAsConstant(SubEltIdx));
     Count <<= BitWidth;
     Count |= SubElt->getValue().zextOrTrunc(64);
   }
@@ -345,10 +345,10 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   }
   assert((LogicalShift || !ShiftLeft) && "Only logical shifts can shift left");
 
-  auto Vec = II.getArgOperand(0);
-  auto Amt = II.getArgOperand(1);
-  auto VT = cast<FixedVectorType>(II.getType());
-  auto SVT = VT->getElementType();
+  Value *Vec = II.getArgOperand(0);
+  Value *Amt = II.getArgOperand(1);
+  auto *VT = cast<FixedVectorType>(II.getType());
+  Type *SVT = VT->getElementType();
   int NumElts = VT->getNumElements();
   int BitWidth = SVT->getIntegerBitWidth();
 
@@ -628,8 +628,8 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
   };
 
   // See if we're dealing with constant values.
-  Constant *C0 = dyn_cast<Constant>(Op0);
-  ConstantInt *CI0 =
+  auto *C0 = dyn_cast<Constant>(Op0);
+  auto *CI0 =
       C0 ? dyn_cast_or_null<ConstantInt>(C0->getAggregateElement((unsigned)0))
          : nullptr;
 
@@ -761,12 +761,12 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
   }
 
   // See if we're dealing with constant values.
-  Constant *C0 = dyn_cast<Constant>(Op0);
-  Constant *C1 = dyn_cast<Constant>(Op1);
-  ConstantInt *CI00 =
+  auto *C0 = dyn_cast<Constant>(Op0);
+  auto *C1 = dyn_cast<Constant>(Op1);
+  auto *CI00 =
       C0 ? dyn_cast_or_null<ConstantInt>(C0->getAggregateElement((unsigned)0))
          : nullptr;
-  ConstantInt *CI10 =
+  auto *CI10 =
       C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)0))
          : nullptr;
 
@@ -803,7 +803,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
 /// Attempt to convert pshufb* to shufflevector if the mask is constant.
 static Value *simplifyX86pshufb(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
-  Constant *V = dyn_cast<Constant>(II.getArgOperand(1));
+  auto *V = dyn_cast<Constant>(II.getArgOperand(1));
   if (!V)
     return nullptr;
 
@@ -848,7 +848,7 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
 /// Attempt to convert vpermilvar* to shufflevector if the mask is constant.
 static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
                                     InstCombiner::BuilderTy &Builder) {
-  Constant *V = dyn_cast<Constant>(II.getArgOperand(1));
+  auto *V = dyn_cast<Constant>(II.getArgOperand(1));
   if (!V)
     return nullptr;
 
@@ -1472,11 +1472,11 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            VWidth1 == 16 && "Unexpected operand sizes");
 
     // See if we're dealing with constant values.
-    Constant *C1 = dyn_cast<Constant>(Op1);
-    ConstantInt *CILength =
+    auto *C1 = dyn_cast<Constant>(Op1);
+    auto *CILength =
         C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)0))
            : nullptr;
-    ConstantInt *CIIndex =
+    auto *CIIndex =
         C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)1))
            : nullptr;
 
@@ -1511,8 +1511,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            "Unexpected operand size");
 
     // See if we're dealing with constant values.
-    ConstantInt *CILength = dyn_cast<ConstantInt>(II.getArgOperand(1));
-    ConstantInt *CIIndex = dyn_cast<ConstantInt>(II.getArgOperand(2));
+    auto *CILength = dyn_cast<ConstantInt>(II.getArgOperand(1));
+    auto *CIIndex = dyn_cast<ConstantInt>(II.getArgOperand(2));
 
     // Attempt to simplify to a constant or shuffle vector.
     if (Value *V = simplifyX86extrq(II, Op0, CILength, CIIndex, IC.Builder)) {
@@ -1537,8 +1537,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            "Unexpected operand size");
 
     // See if we're dealing with constant values.
-    Constant *C1 = dyn_cast<Constant>(Op1);
-    ConstantInt *CI11 =
+    auto *C1 = dyn_cast<Constant>(Op1);
+    auto *CI11 =
         C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)1))
            : nullptr;
 
@@ -1573,8 +1573,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            VWidth1 == 2 && "Unexpected operand sizes");
 
     // See if we're dealing with constant values.
-    ConstantInt *CILength = dyn_cast<ConstantInt>(II.getArgOperand(2));
-    ConstantInt *CIIndex = dyn_cast<ConstantInt>(II.getArgOperand(3));
+    auto *CILength = dyn_cast<ConstantInt>(II.getArgOperand(2));
+    auto *CIIndex = dyn_cast<ConstantInt>(II.getArgOperand(3));
 
     // Attempt to simplify to a constant or shuffle vector.
     if (CILength && CIIndex) {
@@ -1756,8 +1756,7 @@ Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     if (II.getIntrinsicID() == Intrinsic::x86_mmx_pmovmskb) {
       ArgWidth = 8; // Arg is x86_mmx, but treated as <8 x i8>.
     } else {
-      auto Arg = II.getArgOperand(0);
-      auto ArgType = cast<FixedVectorType>(Arg->getType());
+      auto *ArgType = cast<FixedVectorType>(II.getArgOperand(0)->getType());
       ArgWidth = ArgType->getNumElements();
     }
 

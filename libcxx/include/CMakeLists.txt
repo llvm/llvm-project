@@ -133,6 +133,7 @@ set(files
   __iterator/access.h
   __iterator/advance.h
   __iterator/back_insert_iterator.h
+  __iterator/common_iterator.h
   __iterator/concepts.h
   __iterator/data.h
   __iterator/default_sentinel.h

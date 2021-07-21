@@ -19,8 +19,10 @@ using namespace lldb_private;
 using namespace llvm;
 
 TraceInstructionDumper::TraceInstructionDumper(lldb::TraceCursorUP &&cursor_up,
-                                               int initial_index, bool raw)
-    : m_cursor_up(std::move(cursor_up)), m_index(initial_index), m_raw(raw) {}
+                                               int initial_index, bool raw,
+                                               bool show_tsc)
+    : m_cursor_up(std::move(cursor_up)), m_index(initial_index), m_raw(raw),
+      m_show_tsc(show_tsc) {}
 
 /// \return
 ///     Return \b true if the cursor could move one step.
@@ -177,6 +179,17 @@ void TraceInstructionDumper::DumpInstructions(Stream &s, size_t count) {
 
   auto printInstructionIndex = [&]() {
     s.Printf("    [%*d] ", digits_count, m_index);
+
+    if (m_show_tsc) {
+      s.Printf("[tsc=");
+
+      if (Optional<uint64_t> timestamp = m_cursor_up->GetTimestampCounter())
+        s.Printf("0x%016" PRIx64, *timestamp);
+      else
+        s.Printf("unavailable");
+
+      s.Printf("] ");
+    }
   };
 
   InstructionSymbolInfo prev_insn_info;

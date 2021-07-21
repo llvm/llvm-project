@@ -61,7 +61,6 @@ private:
   /// Stack of Module description, enough to print the module after a given
   /// pass.
   SmallVector<PrintModuleDesc, 2> ModuleDescStack;
-  bool StoreModuleDesc = false;
 };
 
 class OptNoneInstrumentation {
