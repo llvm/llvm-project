@@ -312,18 +312,6 @@ bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
 
 } // namespace
 
-PreambleData::PreambleData(const ParseInputs &Inputs,
-                           PrecompiledPreamble Preamble,
-                           std::vector<Diag> Diags, IncludeStructure Includes,
-                           MainFileMacros Macros,
-                           std::unique_ptr<PreambleFileStatusCache> StatCache,
-                           CanonicalIncludes CanonIncludes)
-    : Version(Inputs.Version), CompileCommand(Inputs.CompileCommand),
-      Preamble(std::move(Preamble)), Diags(std::move(Diags)),
-      Includes(std::move(Includes)), Macros(std::move(Macros)),
-      StatCache(std::move(StatCache)), CanonIncludes(std::move(CanonIncludes)) {
-}
-
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation CI,
               const ParseInputs &Inputs, bool StoreInMemory,
@@ -393,10 +381,14 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     vlog("Built preamble of size {0} for file {1} version {2}",
          BuiltPreamble->getSize(), FileName, Inputs.Version);
     std::vector<Diag> Diags = PreambleDiagnostics.take();
-    auto Result = std::make_shared<PreambleData>(
-        Inputs, std::move(*BuiltPreamble), std::move(Diags),
-        CapturedInfo.takeIncludes(), CapturedInfo.takeMacros(),
-        std::move(StatCache), CapturedInfo.takeCanonicalIncludes());
+    auto Result = std::make_shared<PreambleData>(std::move(*BuiltPreamble));
+    Result->Version = Inputs.Version;
+    Result->CompileCommand = Inputs.CompileCommand;
+    Result->Diags = std::move(Diags);
+    Result->Includes = CapturedInfo.takeIncludes();
+    Result->Macros = CapturedInfo.takeMacros();
+    Result->CanonIncludes = CapturedInfo.takeCanonicalIncludes();
+    Result->StatCache = std::move(StatCache);
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
     return Result;
   }
