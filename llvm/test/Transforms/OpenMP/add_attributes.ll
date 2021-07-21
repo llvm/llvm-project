@@ -666,10 +666,10 @@ declare i8* @__kmpc_task_reduction_modifier_init(i8*, i32, i32, i32, i8*)
 
 declare void @__kmpc_proxy_task_completed_ooo(i8*)
 
-; Function Attrs: noinline
+; Function Attrs: noinline cold
 declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32) #0
 
-attributes #0 = { noinline }
+attributes #0 = { noinline cold }
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare dso_local void @omp_set_num_threads(i32)
@@ -1208,7 +1208,7 @@ attributes #0 = { noinline }
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare void @__kmpc_proxy_task_completed_ooo(i8*)
 
-; CHECK: ; Function Attrs: convergent noinline nounwind
+; CHECK: ; Function Attrs: cold convergent nounwind
 ; CHECK-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
@@ -1736,7 +1736,7 @@ attributes #0 = { noinline }
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_proxy_task_completed_ooo(i8*)
 
-; OPTIMISTIC: ; Function Attrs: convergent noinline nounwind 
+; OPTIMISTIC: ; Function Attrs: cold convergent nounwind 
 ; OPTIMISTIC-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
 
 !llvm.module.flags = !{!0}
