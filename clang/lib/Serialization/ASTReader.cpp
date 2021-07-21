@@ -1482,7 +1482,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   BitstreamCursor &SLocEntryCursor = F->SLocEntryCursor;
-  unsigned BaseOffset = F->SLocEntryBaseOffset;
+  SourceLocation::UIntTy BaseOffset = F->SLocEntryBaseOffset;
 
   ++NumSLocEntriesRead;
   Expected<llvm::BitstreamEntry> MaybeEntry = SLocEntryCursor.advance();
@@ -3401,7 +3401,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     case SOURCE_LOCATION_OFFSETS: {
       F.SLocEntryOffsets = (const uint32_t *)Blob.data();
       F.LocalNumSLocEntries = Record[0];
-      unsigned SLocSpaceSize = Record[1];
+      SourceLocation::UIntTy SLocSpaceSize = Record[1];
       F.SLocEntryOffsetsBase = Record[2] + F.SourceManagerBlockStartOffset;
       std::tie(F.SLocEntryBaseID, F.SLocEntryBaseOffset) =
           SourceMgr.AllocateLoadedSLocEntries(F.LocalNumSLocEntries,
@@ -3419,7 +3419,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       F.FirstLoc = SourceLocation::getFromRawEncoding(F.SLocEntryBaseOffset);
 
       // SLocEntryBaseOffset is lower than MaxLoadedOffset and decreasing.
-      assert((F.SLocEntryBaseOffset & (1U << 31U)) == 0);
+      assert((F.SLocEntryBaseOffset & SourceLocation::MacroIDBit) == 0);
       GlobalSLocOffsetMap.insert(
           std::make_pair(SourceManager::MaxLoadedOffset - F.SLocEntryBaseOffset
                            - SLocSpaceSize,&F));
@@ -3428,8 +3428,8 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       // Invalid stays invalid.
       F.SLocRemap.insertOrReplace(std::make_pair(0U, 0));
       // This module. Base was 2 when being compiled.
-      F.SLocRemap.insertOrReplace(std::make_pair(2U,
-                                  static_cast<int>(F.SLocEntryBaseOffset - 2)));
+      F.SLocRemap.insertOrReplace(std::make_pair(
+          2U, static_cast<SourceLocation::IntTy>(F.SLocEntryBaseOffset - 2)));
 
       TotalNumSLocEntries += F.LocalNumSLocEntries;
       break;
@@ -3812,8 +3812,11 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   }
 
   // Continuous range maps we may be updating in our module.
+  using SLocRemapBuilder =
+      ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy,
+                         2>::Builder;
   using RemapBuilder = ContinuousRangeMap<uint32_t, int, 2>::Builder;
-  RemapBuilder SLocRemap(F.SLocRemap);
+  SLocRemapBuilder SLocRemap(F.SLocRemap);
   RemapBuilder IdentifierRemap(F.IdentifierRemap);
   RemapBuilder MacroRemap(F.MacroRemap);
   RemapBuilder PreprocessedEntityRemap(F.PreprocessedEntityRemap);
@@ -3844,7 +3847,7 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
       return;
     }
 
-    uint32_t SLocOffset =
+    SourceLocation::UIntTy SLocOffset =
         endian::readNext<uint32_t, little, unaligned>(Data);
     uint32_t IdentifierIDOffset =
         endian::readNext<uint32_t, little, unaligned>(Data);
@@ -3861,15 +3864,21 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     uint32_t TypeIndexOffset =
         endian::readNext<uint32_t, little, unaligned>(Data);
 
-    uint32_t None = std::numeric_limits<uint32_t>::max();
-
     auto mapOffset = [&](uint32_t Offset, uint32_t BaseOffset,
                          RemapBuilder &Remap) {
+      constexpr uint32_t None = std::numeric_limits<uint32_t>::max();
       if (Offset != None)
         Remap.insert(std::make_pair(Offset,
                                     static_cast<int>(BaseOffset - Offset)));
     };
-    mapOffset(SLocOffset, OM->SLocEntryBaseOffset, SLocRemap);
+
+    constexpr SourceLocation::UIntTy SLocNone =
+        std::numeric_limits<SourceLocation::UIntTy>::max();
+    if (SLocOffset != SLocNone)
+      SLocRemap.insert(std::make_pair(
+          SLocOffset, static_cast<SourceLocation::IntTy>(
+                          OM->SLocEntryBaseOffset - SLocOffset)));
+
     mapOffset(IdentifierIDOffset, OM->BaseIdentifierID, IdentifierRemap);
     mapOffset(MacroIDOffset, OM->BaseMacroID, MacroRemap);
     mapOffset(PreprocessedEntityIDOffset, OM->BasePreprocessedEntityID,
