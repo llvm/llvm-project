@@ -220,6 +220,21 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__mtmsr", "__builtin_ppc_mtmsr");
   Builder.defineMacro("__mfspr", "__builtin_ppc_mfspr");
   Builder.defineMacro("__mtspr", "__builtin_ppc_mtspr");
+  Builder.defineMacro("__fric", "__builtin_ppc_fric");
+  Builder.defineMacro("__frim", "__builtin_ppc_frim");
+  Builder.defineMacro("__frims", "__builtin_ppc_frims");
+  Builder.defineMacro("__frin", "__builtin_ppc_frin");
+  Builder.defineMacro("__frins", "__builtin_ppc_frins");
+  Builder.defineMacro("__frip", "__builtin_ppc_frip");
+  Builder.defineMacro("__frips", "__builtin_ppc_frips");
+  Builder.defineMacro("__friz", "__builtin_ppc_friz");
+  Builder.defineMacro("__frizs", "__builtin_ppc_frizs");
+  Builder.defineMacro("__fsel", "__builtin_ppc_fsel");
+  Builder.defineMacro("__fsels", "__builtin_ppc_fsels");
+  Builder.defineMacro("__frsqrte", "__builtin_ppc_frsqrte");
+  Builder.defineMacro("__frsqrtes", "__builtin_ppc_frsqrtes");
+  Builder.defineMacro("__fsqrt", "__builtin_ppc_fsqrt");
+  Builder.defineMacro("__fsqrts", "__builtin_ppc_fsqrts");
 }
 
 /// PPCTargetInfo::getTargetDefines - Return a set of the PowerPC-specific
