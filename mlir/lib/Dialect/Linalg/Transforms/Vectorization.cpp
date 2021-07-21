@@ -191,7 +191,6 @@ getKindForOp(Operation *reductionOp) {
 static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
                             Value value, OpOperand *outputOperand) {
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
-  assert(targetVectorType.getShape() == linalgOp.getShape(outputOperand));
   auto vecType = value.getType().dyn_cast<VectorType>();
   if (!vecType || vecType.getShape() == targetVectorType.getShape())
     return value;
@@ -245,6 +244,9 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
     auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
     AffineMap map =
         reindexIndexingMap(linalgOp.getTiedIndexingMap(outputOperand));
+    SmallVector<int64_t> transposeShape =
+        applyPermuationMap(inversePermutation(map), vectorType.getShape());
+    vectorType = VectorType::get(transposeShape, vectorType.getElementType());
     SmallVector<Value> indices(linalgOp.getRank(outputOperand),
                                b.create<ConstantIndexOp>(loc, 0));
     value = broadcastIfNeeded(b, value, vectorType.getShape());
@@ -569,9 +571,16 @@ static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
       return VectorizationResult{VectorizationStatus::Failure, nullptr};
     ArrayRef<int64_t> outShape =
         linalgOp.getShape(linalgOp.getOutputOperand(0));
-    auto vType = outShape.empty()
-                     ? op->getResult(0).getType()
-                     : VectorType::get(outShape, op->getResult(0).getType());
+    Type vType;
+    if (outShape.empty()) {
+      vType = op->getResult(0).getType();
+    } else {
+      SmallVector<int64_t> resultShape = applyPermuationMap(
+          inversePermutation(reindexIndexingMap(
+              linalgOp.getTiedIndexingMap(linalgOp.getOutputOperand(0)))),
+          outShape);
+      vType = VectorType::get(resultShape, op->getResult(0).getType());
+    }
     auto zero = b.create<ConstantOp>(loc, vType, b.getZeroAttr(vType));
     // Indexing maps at the time of vector.transfer_read are adjusted to order
     // vector dimensions in the same order as the canonical linalg op iteration
