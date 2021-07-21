@@ -60,22 +60,21 @@ ModuleLoader &Sema::getModuleLoader() const { return PP.getModuleLoader(); }
 DarwinSDKInfo *
 Sema::getDarwinSDKInfoForAvailabilityChecking(SourceLocation Loc,
                                               StringRef Platform) {
-  if (!CachedDarwinSDKInfo) {
-    auto SDKInfo = parseDarwinSDKInfo(
-        PP.getFileManager().getVirtualFileSystem(),
-        PP.getHeaderSearchInfo().getHeaderSearchOpts().Sysroot);
-    if (SDKInfo && *SDKInfo)
-      CachedDarwinSDKInfo =
-          std::make_unique<DarwinSDKInfo>(std::move(**SDKInfo));
-    else {
-      if (!SDKInfo)
-        llvm::consumeError(SDKInfo.takeError());
-      Diag(Loc, diag::warn_missing_sdksettings_for_availability_checking)
-          << Platform;
-      CachedDarwinSDKInfo = std::unique_ptr<DarwinSDKInfo>();
-    }
+  if (CachedDarwinSDKInfo)
+    return CachedDarwinSDKInfo->get();
+  auto SDKInfo = parseDarwinSDKInfo(
+      PP.getFileManager().getVirtualFileSystem(),
+      PP.getHeaderSearchInfo().getHeaderSearchOpts().Sysroot);
+  if (SDKInfo && *SDKInfo) {
+    CachedDarwinSDKInfo = std::make_unique<DarwinSDKInfo>(std::move(**SDKInfo));
+    return CachedDarwinSDKInfo->get();
   }
-  return CachedDarwinSDKInfo->get();
+  if (!SDKInfo)
+    llvm::consumeError(SDKInfo.takeError());
+  Diag(Loc, diag::warn_missing_sdksettings_for_availability_checking)
+      << Platform;
+  CachedDarwinSDKInfo = std::unique_ptr<DarwinSDKInfo>();
+  return nullptr;
 }
 
 IdentifierInfo *
