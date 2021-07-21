@@ -37,6 +37,7 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OpenCLOptions.h"
@@ -115,7 +116,6 @@ namespace clang {
   class CodeCompletionTUInfo;
   class CodeCompletionResult;
   class CoroutineBodyStmt;
-  class DarwinSDKInfo;
   class Decl;
   class DeclAccessPair;
   class DeclContext;
