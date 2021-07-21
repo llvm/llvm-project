@@ -857,7 +857,7 @@ def OpNativeCodeCall3 : TEST_Op<"native_code_call3"> {
 // Test that NativeCodeCall is not ignored if it is not used to directly
 // replace the matched root op.
 def : Pattern<(OpNativeCodeCall3 $input),
-              [(NativeCodeCall<"createOpI($_builder, $_loc, $0)"> $input),
+              [(NativeCodeCallVoid<"createOpI($_builder, $_loc, $0)"> $input),
                (OpK)]>;
 
 def OpNativeCodeCall4 : TEST_Op<"native_code_call4"> {
@@ -873,6 +873,19 @@ def GetFirstI32Result : NativeCodeCall<"success(getFirstI32Result($_self, $0))">
 def BindNativeCodeCallResult : NativeCodeCall<"bindNativeCodeCallResult($0)">;
 def : Pat<(OpNativeCodeCall4 (GetFirstI32Result $ret)),
           (OpNativeCodeCall5 (BindNativeCodeCallResult:$native $ret), $native)>;
+
+def OpNativeCodeCall6 : TEST_Op<"native_code_call6"> {
+  let arguments = (ins I32:$input1, I32:$input2);
+  let results = (outs I32:$output1, I32:$output2);
+}
+def OpNativeCodeCall7 : TEST_Op<"native_code_call7"> {
+  let arguments = (ins I32:$input);
+  let results = (outs I32);
+}
+def BindMultipleNativeCodeCallResult : NativeCodeCall<"bindMultipleNativeCodeCallResult($0, $1)", 2>;
+def : Pattern<(OpNativeCodeCall6 $arg1, $arg2),
+              [(OpNativeCodeCall7 (BindMultipleNativeCodeCallResult:$native__0 $arg1, $arg2)),
+               (OpNativeCodeCall7 $native__1)]>;
 
 // Test AllAttrConstraintsOf.
 def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
@@ -1033,7 +1046,7 @@ def OpSymbolBindingNoResult : TEST_Op<"symbol_binding_no_result", []> {
 
 // Test that we can bind to an op without results and reference it later.
 def : Pat<(OpSymbolBindingNoResult:$op $operand),
-          (NativeCodeCall<"handleNoResultOp($_builder, $0)"> $op)>;
+          (NativeCodeCallVoid<"handleNoResultOp($_builder, $0)"> $op)>;
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Attributes)
