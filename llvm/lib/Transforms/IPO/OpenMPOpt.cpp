@@ -3043,6 +3043,14 @@ struct AAKernelInfoFunction : AAKernelInfo {
                            Kernel, UserCodeEntryBB);
     BasicBlock *StateMachineDoneBarrierBB = BasicBlock::Create(
         Ctx, "worker_state_machine.done.barrier", Kernel, UserCodeEntryBB);
+    A.registerManifestAddedBasicBlock(*InitBB);
+    A.registerManifestAddedBasicBlock(*UserCodeEntryBB);
+    A.registerManifestAddedBasicBlock(*StateMachineBeginBB);
+    A.registerManifestAddedBasicBlock(*StateMachineFinishedBB);
+    A.registerManifestAddedBasicBlock(*StateMachineIsActiveCheckBB);
+    A.registerManifestAddedBasicBlock(*StateMachineIfCascadeCurrentBB);
+    A.registerManifestAddedBasicBlock(*StateMachineEndParallelBB);
+    A.registerManifestAddedBasicBlock(*StateMachineDoneBarrierBB);
 
     const DebugLoc &DLoc = KernelInitCB->getDebugLoc();
     ReturnInst::Create(Ctx, StateMachineFinishedBB)->setDebugLoc(DLoc);

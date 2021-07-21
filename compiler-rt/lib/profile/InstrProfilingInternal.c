@@ -23,23 +23,4 @@ COMPILER_RT_VISIBILITY void lprofSetProfileDumped(unsigned Value) {
   ProfileDumped = Value;
 }
 
-static unsigned RuntimeCounterRelocation = 0;
-
-COMPILER_RT_VISIBILITY unsigned lprofRuntimeCounterRelocation(void) {
-  return RuntimeCounterRelocation;
-}
-
-COMPILER_RT_VISIBILITY void lprofSetRuntimeCounterRelocation(unsigned Value) {
-  RuntimeCounterRelocation = Value;
-}
-
-/*
- * The runtime provides the default definition of this function
- * for the platforms that do not support binary id.
- */
-COMPILER_RT_VISIBILITY COMPILER_RT_WEAK int
-__llvm_write_binary_ids(ProfDataWriter *Writer) {
-  return 0;
-}
-
 #endif

@@ -373,11 +373,8 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
 
   // Default to tail agnostic unless the destination is tied to a source.
   // Unless the source is undef. In that case the user would have some control
-  // over the tail values. The tail policy is also ignored on instructions
-  // that only update element 0 like vmv.s.x or reductions so use agnostic
-  // there to match the common case.
-  // FIXME: This is conservatively correct, but we might want to detect that
-  // the input is undefined.
+  // over the tail values. Some pseudo instructions force a tail agnostic policy
+  // despite having a tied def.
   bool ForceTailAgnostic = RISCVII::doesForceTailAgnostic(TSFlags);
   bool TailAgnostic = true;
   unsigned UseOpIdx;
