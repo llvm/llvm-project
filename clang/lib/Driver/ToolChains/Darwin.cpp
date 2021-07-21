@@ -1566,7 +1566,9 @@ struct DarwinPlatform {
     bool IsValid = !Version.tryParse(OSVersion);
     (void)IsValid;
     assert(IsValid && "invalid SDK version");
-    return DarwinSDKInfo(Version);
+    return DarwinSDKInfo(
+        Version,
+        /*MaximumDeploymentTarget=*/VersionTuple(Version.getMajor(), 0, 99));
   }
 
 private:
