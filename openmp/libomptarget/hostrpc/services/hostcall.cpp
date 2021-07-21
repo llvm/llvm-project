@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <atomic>
 #include <cstring>
-#include <dlfcn.h>
 #include <functional>
 #include <iostream>
 #include <mutex>
@@ -23,11 +22,6 @@ bool debug_mode;
 #else
 #define WHEN_DEBUG(xxx)
 #endif // NDEBUG
-
-#define GET_FUNCTION(ptr, name)                                                \
-  auto ptr = (decltype(name) *)dlsym(RTLD_DEFAULT, #name);
-
-GET_FUNCTION(my_hsa_signal_wait, hsa_signal_wait_acquire);
 
 enum { SIGNAL_INIT = UINT64_MAX, SIGNAL_DONE = UINT64_MAX - 1 };
 
@@ -64,12 +58,8 @@ static uintptr_t get_payload_start(uint32_t num_packets) {
 }
 
 static signal_t create_signal() {
-  GET_FUNCTION(hsc, hsa_signal_create);
-  if (!hsc) {
-    return {0};
-  }
   hsa_signal_t hs;
-  hsa_status_t status = hsc(SIGNAL_INIT, 0, NULL, &hs);
+  hsa_status_t status = hsa_signal_create(SIGNAL_INIT, 0, NULL, &hs);
   if (status != HSA_STATUS_SUCCESS)
     return {0};
   return {hs.handle};
@@ -215,7 +205,7 @@ void amd_hostcall_consumer_t::consume_packets() {
 
     hsa_signal_t hs{doorbell.handle};
     signal_value =
-        hsa_signal_wait_acquire(hs, HSA_SIGNAL_CONDITION_NE, signal_value,
+        hsa_signal_wait_scacquire(hs, HSA_SIGNAL_CONDITION_NE, signal_value,
                                 timeout, HSA_WAIT_STATE_BLOCKED);
 
     if (signal_value == SIGNAL_DONE) {
@@ -260,9 +250,7 @@ amd_hostcall_error_t amd_hostcall_consumer_t::terminate() {
   if (!thread.joinable())
     return AMD_HOSTCALL_ERROR_CONSUMER_INACTIVE;
   hsa_signal_t signal = {doorbell.handle};
-  GET_FUNCTION(hssr, hsa_signal_store_release);
-  assert(hssr);
-  hssr(signal, SIGNAL_DONE);
+  hsa_signal_store_screlease(signal, SIGNAL_DONE);
   thread.join();
   return AMD_HOSTCALL_SUCCESS;
 }
@@ -293,10 +281,8 @@ amd_hostcall_error_t amd_hostcall_consumer_t::deregister_buffer(void *b) {
 amd_hostcall_consumer_t::~amd_hostcall_consumer_t() {
   terminate();
   critical_data.buffers.clear();
-  GET_FUNCTION(hsd, hsa_signal_destroy);
-  assert(hsd);
   hsa_signal_t hs{doorbell.handle};
-  hsd(hs);
+  hsa_signal_destroy(hs);
 }
 
 amd_hostcall_consumer_t *amd_hostcall_consumer_t::create() {
