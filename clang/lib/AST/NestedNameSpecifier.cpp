@@ -356,7 +356,7 @@ NestedNameSpecifierLoc::getLocalDataLength(NestedNameSpecifier *Qualifier) {
   assert(Qualifier && "Expected a non-NULL qualifier");
 
   // Location of the trailing '::'.
-  unsigned Length = sizeof(unsigned);
+  unsigned Length = sizeof(SourceLocation::UIntTy);
 
   switch (Qualifier->getKind()) {
   case NestedNameSpecifier::Global:
@@ -368,7 +368,7 @@ NestedNameSpecifierLoc::getLocalDataLength(NestedNameSpecifier *Qualifier) {
   case NestedNameSpecifier::NamespaceAlias:
   case NestedNameSpecifier::Super:
     // The location of the identifier or namespace name.
-    Length += sizeof(unsigned);
+    Length += sizeof(SourceLocation::UIntTy);
     break;
 
   case NestedNameSpecifier::TypeSpecWithTemplate:
@@ -393,8 +393,8 @@ NestedNameSpecifierLoc::getDataLength(NestedNameSpecifier *Qualifier) {
 /// Load a (possibly unaligned) source location from a given address
 /// and offset.
 static SourceLocation LoadSourceLocation(void *Data, unsigned Offset) {
-  unsigned Raw;
-  memcpy(&Raw, static_cast<char *>(Data) + Offset, sizeof(unsigned));
+  SourceLocation::UIntTy Raw;
+  memcpy(&Raw, static_cast<char *>(Data) + Offset, sizeof(Raw));
   return SourceLocation::getFromRawEncoding(Raw);
 }
 
@@ -431,8 +431,9 @@ SourceRange NestedNameSpecifierLoc::getLocalSourceRange() const {
   case NestedNameSpecifier::Namespace:
   case NestedNameSpecifier::NamespaceAlias:
   case NestedNameSpecifier::Super:
-    return SourceRange(LoadSourceLocation(Data, Offset),
-                       LoadSourceLocation(Data, Offset + sizeof(unsigned)));
+    return SourceRange(
+        LoadSourceLocation(Data, Offset),
+        LoadSourceLocation(Data, Offset + sizeof(SourceLocation::UIntTy)));
 
   case NestedNameSpecifier::TypeSpecWithTemplate:
   case NestedNameSpecifier::TypeSpec: {
@@ -487,10 +488,10 @@ static void Append(char *Start, char *End, char *&Buffer, unsigned &BufferSize,
 /// Save a source location to the given buffer.
 static void SaveSourceLocation(SourceLocation Loc, char *&Buffer,
                                unsigned &BufferSize, unsigned &BufferCapacity) {
-  unsigned Raw = Loc.getRawEncoding();
+  SourceLocation::UIntTy Raw = Loc.getRawEncoding();
   Append(reinterpret_cast<char *>(&Raw),
-         reinterpret_cast<char *>(&Raw) + sizeof(unsigned),
-         Buffer, BufferSize, BufferCapacity);
+         reinterpret_cast<char *>(&Raw) + sizeof(Raw), Buffer, BufferSize,
+         BufferCapacity);
 }
 
 /// Save a pointer to the given buffer.

@@ -2041,7 +2041,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
       Record.push_back(Expansion.isExpansionTokenRange());
 
       // Compute the token length for this macro expansion.
-      unsigned NextOffset = SourceMgr.getNextLocalOffset();
+      SourceLocation::UIntTy NextOffset = SourceMgr.getNextLocalOffset();
       if (I + 1 != N)
         NextOffset = SourceMgr.getLocalSLocEntry(I + 1).getOffset();
       Record.push_back(NextOffset - SLoc->getOffset() - 1);
@@ -4640,7 +4640,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
         // another module after it or have more than one entity inside it.
         uint32_t None = std::numeric_limits<uint32_t>::max();
 
-        auto writeBaseIDOrNone = [&](uint32_t BaseID, bool ShouldWrite) {
+        auto writeBaseIDOrNone = [&](auto BaseID, bool ShouldWrite) {
           assert(BaseID < std::numeric_limits<uint32_t>::max() && "base id too high");
           if (ShouldWrite)
             LE.write<uint32_t>(BaseID);
@@ -5027,8 +5027,8 @@ void ASTWriter::AddAlignPackInfo(const Sema::AlignPackInfo &Info,
 }
 
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
-  uint32_t Raw = Loc.getRawEncoding();
-  Record.push_back((Raw << 1) | (Raw >> 31));
+  SourceLocation::UIntTy Raw = Loc.getRawEncoding();
+  Record.push_back((Raw << 1) | (Raw >> (8 * sizeof(Raw) - 1)));
 }
 
 void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record) {
