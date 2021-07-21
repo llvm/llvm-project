@@ -264,19 +264,19 @@ multiclass SIMDLoadZero<Vec vec, bits<32> simdop> {
   } // mayLoad = 1, UseNamedOperandTable = 1
 }
 
-// TODO: Also support v4f32 and v2f64 once the instructions are merged
-// to the proposal
 defm "" : SIMDLoadZero<I32x4, 0x5c>;
 defm "" : SIMDLoadZero<I64x2, 0x5d>;
 
+// TODO: f32x4 and f64x2 as well
 foreach vec = [I32x4, I64x2] in {
-defvar loadpat = !cast<Intrinsic>("int_wasm_load"#vec.lane_bits#"_zero");
-defvar inst = "LOAD_ZERO_"#vec;
-defm : LoadPatNoOffset<vec.vt, loadpat, inst>;
-defm : LoadPatImmOff<vec.vt, loadpat, regPlusImm, inst>;
-defm : LoadPatImmOff<vec.vt, loadpat, or_is_add, inst>;
-defm : LoadPatOffsetOnly<vec.vt, loadpat, inst>;
-defm : LoadPatGlobalAddrOffOnly<vec.vt, loadpat, inst>;
+  defvar inst = "LOAD_ZERO_"#vec;
+  defvar pat = PatFrag<(ops node:$ptr),
+    (vector_insert (vec.splat (vec.lane_vt 0)), (vec.lane_vt (load $ptr)), 0)>;
+  defm : LoadPatNoOffset<vec.vt, pat, inst>;
+  defm : LoadPatImmOff<vec.vt, pat, regPlusImm, inst>;
+  defm : LoadPatImmOff<vec.vt, pat, or_is_add, inst>;
+  defm : LoadPatOffsetOnly<vec.vt, pat, inst>;
+  defm : LoadPatGlobalAddrOffOnly<vec.vt, pat, inst>;
 }
 
 // Load lane
