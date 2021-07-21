@@ -892,30 +892,6 @@ convolutionMatchAndRewriterHelper(Operation *op,
 
   input = applyPad(loc, input, pad, zeroAttr, rewriter);
 
-  // We need to transpose the Conv2DOp kernel to line up the last input/output
-  // kernels.
-  // TODO(suderman): Eventually we will support specifying the filter channel
-  // ordering then we can avoid transposing the kernel.
-  if (isa<tosa::Conv2DOp>(op)) {
-    int32_t weightRank = weightTy.getRank();
-    SmallVector<int64_t> permutation, transposeWeightShape;
-    permutation.resize(weightRank, 0);
-    transposeWeightShape.resize(weightRank, 0);
-    for (int i = 0; i < weightRank; i++) {
-      permutation[i] = (i + 1) % weightRank;
-      transposeWeightShape[i] = weightShape[permutation[i]];
-    }
-
-    Value permutationValue = rewriter.create<ConstantOp>(
-        loc, DenseIntElementsAttr::get(
-                 RankedTensorType::get({weightRank}, rewriter.getI64Type()),
-                 permutation));
-    Type newWeightTy = RankedTensorType::get(transposeWeightShape, biasETy);
-
-    weight = rewriter.create<tosa::TransposeOp>(loc, newWeightTy, weight,
-                                                permutationValue);
-  }
-
   // Broadcast the initial value to the output tensor before convolving.
   SmallVector<AffineMap, 4> indexingMaps;
   indexingMaps.push_back(AffineMap::get(
@@ -949,9 +925,9 @@ convolutionMatchAndRewriterHelper(Operation *op,
       RankedTensorType::get({2}, rewriter.getI64Type()), dilation);
 
   if (isa<tosa::Conv2DOp>(op)) {
-    rewriter.replaceOpWithNewOp<linalg::ConvInputNHWCFilterHWCFOp>(
+    rewriter.replaceOpWithNewOp<linalg::Conv2DInputNhwcFilterOhwiPolyOp>(
         op, resultTy, ValueRange{input, weight}, ValueRange{biasBroadcast},
-        dilationAttr, strideAttr);
+        strideAttr, dilationAttr);
     return success();
   }
 
@@ -998,6 +974,84 @@ public:
   matchAndRewrite(T op, ArrayRef<Value> args,
                   ConversionPatternRewriter &rewriter) const final {
     return convolutionMatchAndRewriterHelper(op, rewriter);
+  }
+};
+
+class TransposeConvConverter
+    : public OpConversionPattern<tosa::TransposeConv2DOp> {
+public:
+  using OpConversionPattern<tosa::TransposeConv2DOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::TransposeConv2DOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    Location loc = op->getLoc();
+    Value input = op->getOperand(0);
+    Value weight = op->getOperand(1);
+    Value bias = op->getOperand(2);
+
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    ShapedType weightTy = weight.getType().cast<ShapedType>();
+    ShapedType biasTy = bias.getType().cast<ShapedType>();
+    ShapedType resultTy = op->getResult(0).getType().cast<ShapedType>();
+
+    llvm::SmallVector<int64_t> pad;
+    llvm::SmallVector<int64_t> stride;
+    llvm::SmallVector<int64_t> dilation;
+
+    getValuesFromIntArrayAttribute(op.out_pad().cast<ArrayAttr>(), pad);
+    getValuesFromIntArrayAttribute(op.stride().cast<ArrayAttr>(), stride);
+    getValuesFromIntArrayAttribute(op.dilation().cast<ArrayAttr>(), dilation);
+
+    // We have not solved for stride / dilation yet. Dilation should be
+    // straight forward but stride is more complicated. Linalg work is likely
+    // required for efficient implementation.
+    if (llvm::any_of(stride, [](int64_t v) { return v != 1; }))
+      return failure();
+    if (llvm::any_of(dilation, [](int64_t v) { return v != 1; }))
+      return failure();
+
+    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
+        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+      return failure();
+
+    int64_t inputHeight = inputTy.getDimSize(1);
+    int64_t inputWidth = inputTy.getDimSize(2);
+    int64_t kernelHeight = weightTy.getDimSize(1);
+    int64_t kernelWidth = weightTy.getDimSize(2);
+    int64_t outputHeight = resultTy.getDimSize(1);
+    int64_t outputWidth = resultTy.getDimSize(2);
+
+    int64_t requiredInputHeight = outputHeight + kernelHeight - 1;
+    int64_t requiredInputWidth = outputWidth + kernelWidth - 1;
+
+    llvm::SmallVector<int64_t> newPad(4, 0);
+    newPad[0] = kernelHeight - 1 - pad[0];
+    newPad[2] = kernelWidth - 1 - pad[1];
+
+    newPad[1] = requiredInputHeight - newPad[0] - inputHeight;
+    newPad[3] = requiredInputWidth - newPad[2] - inputWidth;
+
+    auto reverse1 = rewriter.create<tosa::ReverseOp>(
+        loc, weightTy, weight, rewriter.getI64IntegerAttr(1));
+    auto reverse2 = rewriter.create<tosa::ReverseOp>(
+        loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
+
+    Value conv2d;
+    if (op.quantization_info().hasValue()) {
+      conv2d = rewriter.create<tosa::Conv2DOp>(
+          loc, resultTy, input, reverse2, bias,
+          rewriter.getI64ArrayAttr(newPad), rewriter.getI64ArrayAttr(stride),
+          rewriter.getI64ArrayAttr(dilation),
+          op.quantization_info().getValue());
+    } else {
+      conv2d = rewriter.create<tosa::Conv2DOp>(
+          loc, resultTy, input, reverse2, bias,
+          rewriter.getI64ArrayAttr(newPad), rewriter.getI64ArrayAttr(stride),
+          rewriter.getI64ArrayAttr(dilation));
+    }
+
+    rewriter.replaceOp(op, conv2d);
+    return success();
   }
 };
 
@@ -2456,6 +2510,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       ConcatConverter,
       ConvConverter<tosa::Conv2DOp>,
       ConvConverter<tosa::DepthwiseConv2DOp>,
+      TransposeConvConverter,
       GatherConverter,
       PadConverter,
       ReshapeConverter,
