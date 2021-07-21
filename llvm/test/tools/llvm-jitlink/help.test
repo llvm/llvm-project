@@ -1,0 +1,7 @@
+# RUN: llvm-jitlink --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
+
+# HELP: OVERVIEW: llvm jitlink tool
+# HELP: USAGE
+# HELP: Color Options
+# HELP: Generic Options
+# HELP: JITLink Options
