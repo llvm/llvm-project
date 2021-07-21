@@ -28,6 +28,8 @@ public:
 
   lldb::addr_t GetLoadAddress() override;
 
+  llvm::Optional<uint64_t> GetTimestampCounter() override;
+
   lldb::TraceInstructionControlFlowType
   GetInstructionControlFlowType() override;
 

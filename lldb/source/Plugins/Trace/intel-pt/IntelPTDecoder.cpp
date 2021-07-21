@@ -9,6 +9,7 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "DecodedThread.h"
 #include "TraceIntelPT.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
@@ -136,7 +137,23 @@ DecodeInstructions(pt_insn_decoder &decoder) {
         break;
       }
 
-      instructions.emplace_back(insn);
+      uint64_t time;
+      int time_error = pt_insn_time(&decoder, &time, nullptr, nullptr);
+      if (time_error == -pte_invalid) {
+        // This happens if we invoke the pt_insn_time method incorrectly,
+        // but the instruction is good though.
+        instructions.emplace_back(
+            make_error<IntelPTError>(time_error, insn.ip));
+        instructions.emplace_back(insn);
+        break;
+      }
+      if (time_error == -pte_no_time) {
+        // We simply don't have time information, i.e. None of TSC, MTC or CYC
+        // was enabled.
+        instructions.emplace_back(insn);
+      } else {
+        instructions.emplace_back(insn, time);
+      }
     }
   }
 

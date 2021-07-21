@@ -1065,6 +1065,9 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instructions_raw : Option<"raw", "r">,
     Group<1>,
     Desc<"Dump only instruction address without disassembly nor symbol information.">;
+  def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">,
+    Group<1>,
+    Desc<"For each instruction, print the corresponding timestamp counter if available.">;
 }
 
 let Command = "type summary add" in {
