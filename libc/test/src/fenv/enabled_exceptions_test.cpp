@@ -40,10 +40,14 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
     ASSERT_EQ(__llvm_libc::feclearexcept(FE_ALL_EXCEPT), 0);
     // Raising all exceptions except |e| should not call the
     // SIGFPE handler. They should set the exception flag though,
-    // so we verify that.
-    int others = allExcepts & ~e;
-    ASSERT_EQ(__llvm_libc::feraiseexcept(others), 0);
-    ASSERT_EQ(__llvm_libc::fetestexcept(others), others);
+    // so we verify that. Since other exceptions like FE_DIVBYZERO
+    // can raise FE_INEXACT as well, we don't verify the other
+    // exception flags when FE_INEXACT is enabled.
+    if (e != FE_INEXACT) {
+      int others = allExcepts & ~e;
+      ASSERT_EQ(__llvm_libc::feraiseexcept(others), 0);
+      ASSERT_EQ(__llvm_libc::fetestexcept(others), others);
+    }
 
     ASSERT_RAISES_FP_EXCEPT([=] { __llvm_libc::feraiseexcept(e); });
   }
