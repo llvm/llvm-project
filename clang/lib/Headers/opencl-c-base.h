@@ -21,6 +21,7 @@
 #define cl_khr_subgroup_shuffle 1
 #define cl_khr_subgroup_shuffle_relative 1
 #define cl_khr_subgroup_clustered_reduce 1
+#define cl_khr_extended_bit_ops 1
 #endif // defined(__SPIR__)
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 
