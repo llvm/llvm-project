@@ -449,7 +449,6 @@ if config.android:
   # suppression-files, to device.
   config.substitutions.append( ('%device_rundir/', "/data/local/tmp/Output/") )
   config.substitutions.append( ('%push_to_device', "%s -s '%s' push " % (adb, env['ANDROID_SERIAL']) ) )
-  config.substitutions.append( ('%pull_from_device', "%s -s '%s' pull " % (adb, env['ANDROID_SERIAL']) ) )
   config.substitutions.append( ('%adb_shell ', "%s -s '%s' shell " % (adb, env['ANDROID_SERIAL']) ) )
   config.substitutions.append( ('%device_rm', "%s -s '%s' shell 'rm ' " % (adb, env['ANDROID_SERIAL']) ) )
 
@@ -478,7 +477,6 @@ if config.android:
 else:
   config.substitutions.append( ('%device_rundir/', "") )
   config.substitutions.append( ('%push_to_device', "echo ") )
-  config.substitutions.append( ('%pull_from_device', "echo ") )
   config.substitutions.append( ('%adb_shell', "echo ") )
 
 if config.host_os == 'Linux':
