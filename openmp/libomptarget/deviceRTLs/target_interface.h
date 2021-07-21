@@ -16,7 +16,7 @@
 #include "target_impl.h"
 
 // Calls to the NVPTX layer (assuming 1D layout)
-EXTERN int GetThreadIdInBlock();
+EXTERN int __kmpc_get_hardware_thread_id_in_block();
 EXTERN int GetBlockIdInKernel();
 EXTERN int GetNumberOfBlocksInKernel();
 EXTERN int GetNumberOfThreadsInBlock();
