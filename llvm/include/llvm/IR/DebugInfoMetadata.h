@@ -3208,6 +3208,12 @@ public:
     Iterator erase(Iterator I);
     Iterator erase(Iterator From, Iterator To);
 
+    /// Returns true if the expression being built contains DIOp of type T,
+    /// false otherwise.
+    template <typename T> bool contains() const {
+      return any_of(Elements, std::mem_fn(&DIOp::Variant::holdsAlternative<T>));
+    }
+
     /// Get the uniqued, immutable expression metadata from the current state
     /// of the builder.
     ///

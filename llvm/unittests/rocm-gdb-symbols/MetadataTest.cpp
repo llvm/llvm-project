@@ -131,6 +131,24 @@ TEST_F(DIExprBuilderTest, Erase) {
   ASSERT_EQ(I, BuilderA.end());
 }
 
+TEST_F(DIExprBuilderTest, Contains) {
+  DIExpr::Builder ExprBuilder0(Context);
+  EXPECT_EQ(ExprBuilder0.contains<DIOp::Add>(), false);
+
+  DIExpr::Builder ExprBuilder1(
+      Context, {DIOp::Variant{in_place_type<DIOp::Add>}});
+  EXPECT_EQ(ExprBuilder1.contains<DIOp::Add>(), true);
+  EXPECT_EQ(ExprBuilder1.contains<DIOp::Mul>(), false);
+
+  DIExpr::Builder ExprBuilder2(
+      Context, {DIOp::Variant{in_place_type<DIOp::Add>},
+                DIOp::Variant{in_place_type<DIOp::Mul>},
+                DIOp::Variant{in_place_type<DIOp::Add>}});
+  EXPECT_EQ(ExprBuilder2.contains<DIOp::Add>(), true);
+  EXPECT_EQ(ExprBuilder2.contains<DIOp::Mul>(), true);
+  EXPECT_EQ(ExprBuilder2.contains<DIOp::Select>(), false);
+}
+
 TEST_F(DIExprBuilderTest, Visitor) {
   DIOp::Variant Op(in_place_type<DIOp::Referrer>, Int32Ty);
   visit(makeVisitor([](DIOp::Referrer) {}, [](auto) { FAIL(); }), Op);
