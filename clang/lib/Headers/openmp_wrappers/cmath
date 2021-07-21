@@ -75,4 +75,19 @@ __DEVICE__ float tgamma(float __x) { return ::tgammaf(__x); }
 
 #pragma omp end declare variant
 
+#ifdef __AMDGCN__
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
+
+#pragma push_macro("__constant__")
+#define __constant__ __attribute__((constant))
+#define __OPENMP_AMDGCN__
+
+#include <__clang_hip_cmath.h>
+
+#pragma pop_macro("__constant__")
+#undef __OPENMP_AMDGCN__
+
+#pragma omp end declare variant
+#endif // __AMDGCN__
+
 #endif
