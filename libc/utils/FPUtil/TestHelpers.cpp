@@ -10,6 +10,10 @@
 
 #include "FPBits.h"
 
+#include <fenv.h>
+#include <memory>
+#include <setjmp.h>
+#include <signal.h>
 #include <string>
 
 namespace __llvm_libc {
@@ -69,6 +73,36 @@ template void describeValue<double>(const char *, double,
                                     testutils::StreamWrapper &);
 template void describeValue<long double>(const char *, long double,
                                          testutils::StreamWrapper &);
+
+#if defined(_WIN32) || defined(_WIN64)
+#define sigjmp_buf jmp_buf
+#define sigsetjmp(buf, save) setjmp(buf)
+#define siglongjmp(buf, val) longjmp(buf, val)
+#endif
+
+static thread_local sigjmp_buf jumpBuffer;
+static thread_local bool caughtExcept;
+
+static void sigfpeHandler(int sig) {
+  caughtExcept = true;
+  siglongjmp(jumpBuffer, -1);
+}
+
+FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
+  auto oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
+  std::unique_ptr<FunctionCaller> funcUP(func);
+
+  caughtExcept = false;
+  fenv_t oldEnv;
+  fegetenv(&oldEnv);
+  if (sigsetjmp(jumpBuffer, 1) == 0)
+    funcUP->call();
+  // We restore the previous floating point environment after
+  // the call to the function which can potentially raise SIGFPE.
+  fesetenv(&oldEnv);
+  signal(SIGFPE, oldSIGFPEHandler);
+  exceptionRaised = caughtExcept;
+}
 
 } // namespace testing
 } // namespace fputil

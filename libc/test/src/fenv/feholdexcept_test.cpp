@@ -9,10 +9,10 @@
 #include "src/fenv/feholdexcept.h"
 
 #include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>
-#include <signal.h>
 
 TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
   int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
@@ -31,7 +31,6 @@ TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
     // When we put back the saved env which has the exception enabled, it
     // should crash with SIGFPE.
     __llvm_libc::fputil::setEnv(&env);
-    ASSERT_DEATH([=] { __llvm_libc::fputil::raiseExcept(e); },
-                 WITH_SIGNAL(SIGFPE));
+    ASSERT_RAISES_FP_EXCEPT([=] { __llvm_libc::fputil::raiseExcept(e); });
   }
 }

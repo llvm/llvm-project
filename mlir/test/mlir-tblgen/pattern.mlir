@@ -102,6 +102,16 @@ func @verifyNativeCodeCallBinding(%arg0 : i32) -> (i32) {
   return %1 : i32
 }
 
+// CHECK-LABEL: verifyMultipleNativeCodeCallBinding
+func@verifyMultipleNativeCodeCallBinding(%arg0 : i32) -> (i32) {
+  %0 = "test.op_k"() : () -> (i32)
+  %1 = "test.op_k"() : () -> (i32)
+  // CHECK: %[[A:.*]] = "test.native_code_call7"(%1) : (i32) -> i32
+  // CHECK: %[[A:.*]] = "test.native_code_call7"(%0) : (i32) -> i32
+  %2, %3 = "test.native_code_call6"(%0, %1) : (i32, i32) -> (i32, i32)
+  return %2 : i32
+}
+
 // CHECK-LABEL: verifyAllAttrConstraintOf
 func @verifyAllAttrConstraintOf() -> (i32, i32, i32) {
   // CHECK: "test.all_attr_constraint_of2"

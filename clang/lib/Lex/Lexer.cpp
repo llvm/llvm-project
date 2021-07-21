@@ -588,7 +588,7 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
   // Create a lexer starting at the beginning of the file. Note that we use a
   // "fake" file source location at offset 1 so that the lexer will track our
   // position within the file.
-  const unsigned StartOffset = 1;
+  const SourceLocation::UIntTy StartOffset = 1;
   SourceLocation FileLoc = SourceLocation::getFromRawEncoding(StartOffset);
   Lexer TheLexer(FileLoc, LangOpts, Buffer.begin(), Buffer.begin(),
                  Buffer.end());
