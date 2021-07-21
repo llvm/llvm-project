@@ -66,6 +66,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nextafter
+    libc.src.math.nextafterf
+    libc.src.math.nextafterl
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
