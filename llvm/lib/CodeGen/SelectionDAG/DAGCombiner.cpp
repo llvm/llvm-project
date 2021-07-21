@@ -2526,8 +2526,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
       N1.getOpcode() == ISD::STEP_VECTOR) {
     const APInt &C0 = N0->getConstantOperandAPInt(0);
     const APInt &C1 = N1->getConstantOperandAPInt(0);
-    EVT SVT = N0.getOperand(0).getValueType();
-    SDValue NewStep = DAG.getConstant(C0 + C1, DL, SVT);
+    APInt NewStep = C0 + C1;
     return DAG.getStepVector(DL, VT, NewStep);
   }
 
@@ -2537,11 +2536,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
       (N1.getOpcode() == ISD::STEP_VECTOR)) {
     const APInt &SV0 = N0.getOperand(1)->getConstantOperandAPInt(0);
     const APInt &SV1 = N1->getConstantOperandAPInt(0);
-    EVT SVT = N1.getOperand(0).getValueType();
-    assert(N1.getOperand(0).getValueType() ==
-               N0.getOperand(1)->getOperand(0).getValueType() &&
-           "Different operand types of STEP_VECTOR.");
-    SDValue NewStep = DAG.getConstant(SV0 + SV1, DL, SVT);
+    APInt NewStep = SV0 + SV1;
     SDValue SV = DAG.getStepVector(DL, VT, NewStep);
     return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(0), SV);
   }
@@ -3576,8 +3571,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   // canonicalize (sub X, step_vector(C)) to (add X, step_vector(-C))
   if (N1.getOpcode() == ISD::STEP_VECTOR && N1.hasOneUse()) {
-    SDValue NewStep = DAG.getConstant(-N1.getConstantOperandAPInt(0), DL,
-                                      N1.getOperand(0).getValueType());
+    APInt NewStep = -N1.getConstantOperandAPInt(0);
     return DAG.getNode(ISD::ADD, DL, VT, N0,
                        DAG.getStepVector(DL, VT, NewStep));
   }
@@ -3961,9 +3955,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   if (N0.getOpcode() == ISD::STEP_VECTOR)
     if (ISD::isConstantSplatVector(N1.getNode(), MulVal)) {
       const APInt &C0 = N0.getConstantOperandAPInt(0);
-      EVT SVT = N0.getOperand(0).getValueType();
-      SDValue NewStep = DAG.getConstant(
-          C0 * MulVal.sextOrTrunc(SVT.getSizeInBits()), SDLoc(N), SVT);
+      APInt NewStep = C0 * MulVal;
       return DAG.getStepVector(SDLoc(N), VT, NewStep);
     }
 
@@ -8476,10 +8468,10 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   if (N0.getOpcode() == ISD::STEP_VECTOR)
     if (ISD::isConstantSplatVector(N1.getNode(), ShlVal)) {
       const APInt &C0 = N0.getConstantOperandAPInt(0);
-      EVT SVT = N0.getOperand(0).getValueType();
-      SDValue NewStep = DAG.getConstant(
-          C0 << ShlVal.sextOrTrunc(SVT.getSizeInBits()), SDLoc(N), SVT);
-      return DAG.getStepVector(SDLoc(N), VT, NewStep);
+      if (ShlVal.ult(C0.getBitWidth())) {
+        APInt NewStep = C0 << ShlVal;
+        return DAG.getStepVector(SDLoc(N), VT, NewStep);
+      }
     }
 
   return SDValue();
