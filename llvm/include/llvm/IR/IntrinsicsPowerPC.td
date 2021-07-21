@@ -1703,6 +1703,17 @@ let TargetPrefix = "ppc" in {
   def int_ppc_fres
       : GCCBuiltin<"__builtin_ppc_fres">,
         Intrinsic <[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+  
+  def int_ppc_fsel : GCCBuiltin<"__builtin_ppc_fsel">,
+                     Intrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty, 
+                                                  llvm_double_ty], [IntrNoMem]>;
+  def int_ppc_fsels : GCCBuiltin<"__builtin_ppc_fsels">,
+                      Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty,
+                                                  llvm_float_ty], [IntrNoMem]>;
+  def int_ppc_frsqrte : GCCBuiltin<"__builtin_ppc_frsqrte">,
+                        Intrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
+  def int_ppc_frsqrtes : GCCBuiltin<"__builtin_ppc_frsqrtes">,
+                         Intrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
 }
 
 //===----------------------------------------------------------------------===//
