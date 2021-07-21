@@ -8,7 +8,7 @@
 
 #include "src/fenv/feclearexcept.h"
 
-#include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/FEnvUtils.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>
