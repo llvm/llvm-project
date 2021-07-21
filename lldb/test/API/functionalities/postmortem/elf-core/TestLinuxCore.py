@@ -1008,7 +1008,8 @@ class LinuxCoreTestCase(TestBase):
         Test SBProcess::GetCoreFile() API can successfully get the core file.
         """
         core_file_name = "linux-x86_64.core"
-        target = self.dbg.CreateTarget("linux-x86_64.out")
+        self.runCmd("settings set use-module-list-dyld true")
+        target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_file_name)
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetCoreFile().GetFilename(), core_file_name)
@@ -1041,6 +1042,44 @@ class LinuxCoreTestCase(TestBase):
         # application binary.
         cstr = var.GetSummary()
         self.assertEqual(cstr, '"_start"')
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_module_list_dyld(self):
+        """
+        Test module list based dyld can successfully get images
+        list from NT_FILE without main executable
+        """
+        self.runCmd("settings set use-module-list-dyld true")
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # Core should have 2 modules: vdso and executable.
+        self.assertEqual(process.GetTarget().GetNumModules(), 2)
+        # Module load address magic value (0x400000) is manually parsed from
+        # linux-x86_64.core's NT_FILE note via readelf tool.
+        self.assertTrue(process.GetSelectedThread().IsValid())
+        exe_module = process.GetSelectedThread().GetFrameAtIndex(0).GetModule()
+        self.assertEqual(
+            exe_module.GetObjectFileHeaderAddress().GetLoadAddress(target), 0x400000
+        )
+        self.dbg.DeleteTarget(target)
+
+    def test_replace_placeholder_module(self):
+        """
+        Test module list based dyld can successfully get images list from
+        NT_FILE without main executable. And `target module replace`
+        command can replace the Placeholder object file with real one.
+        """
+        self.runCmd("settings set use-module-list-dyld true")
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        self.runCmd("target module replace linux-x86_64.out -s a.out")
+        self.check_all(process, self._x86_64_pid, self._x86_64_regions, "a.out")
+        self.dbg.DeleteTarget(target)
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
