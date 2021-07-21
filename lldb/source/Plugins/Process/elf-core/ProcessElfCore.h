@@ -19,6 +19,7 @@
 #include <list>
 #include <vector>
 
+#include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Target/PostMortemProcess.h"
 #include "lldb/Utility/Status.h"
 
@@ -73,6 +74,9 @@ public:
 
   // Process Queries
   bool IsAlive() override;
+
+  llvm::Expected<lldb_private::LoadedModuleInfoList>
+  GetLoadedModuleList() override;
 
   bool WarnBeforeDetach() const override { return false; }
 
@@ -151,6 +155,8 @@ private:
 
   // NT_FILE entries found from the NOTE segment
   std::vector<NT_FILE_Entry> m_nt_file_entries;
+
+  lldb_private::LoadedModuleInfoList m_module_info_list;
 
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(

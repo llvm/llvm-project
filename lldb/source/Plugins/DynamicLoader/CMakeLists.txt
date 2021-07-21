@@ -8,6 +8,7 @@ set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES
 add_subdirectory(Darwin-Kernel)
 add_subdirectory(FreeBSD-Kernel)
 add_subdirectory(MacOSX-DYLD)
+add_subdirectory(ModuleList-DYLD)
 add_subdirectory(POSIX-DYLD)
 add_subdirectory(Static)
 add_subdirectory(Hexagon-DYLD)
