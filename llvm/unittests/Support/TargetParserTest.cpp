@@ -1171,15 +1171,17 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_LSE | AArch64::AEK_RDM,
                          "8.2-A")));
 
-static constexpr unsigned NumAArch64CPUArchs = 49;
+static constexpr unsigned NumAArch64CPUArchs = 48;
+
+static constexpr unsigned AdditionalAArch64CPUArchs = 1;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
-  SmallVector<StringRef, NumAArch64CPUArchs> List;
+  SmallVector<StringRef, NumAArch64CPUArchs + AdditionalAArch64CPUArchs> List;
   AArch64::fillValidCPUArchList(List);
 
   // No list exists for these in this test suite, so ensure all are
   // valid, and match the expected 'magic' count.
-  EXPECT_EQ(List.size(), NumAArch64CPUArchs);
+  EXPECT_EQ(List.size(), NumAArch64CPUArchs + AdditionalAArch64CPUArchs);
   for(StringRef CPU : List) {
     EXPECT_NE(AArch64::parseCPUArch(CPU), AArch64::ArchKind::INVALID);
   }
