@@ -395,6 +395,54 @@ multiclass sme_mem_st_ss<string mnemonic> {
 }
 
 //===----------------------------------------------------------------------===//
+// SME Save and Restore Array
+//===----------------------------------------------------------------------===//
+
+class sme_spill_fill_inst<bit isStore, dag outs, dag ins, string opcodestr>
+    : I<outs, ins, opcodestr, "\t$ZAt[$Rv, $imm4], [$Rn, $offset, mul vl]", "",
+        []>,
+      Sched<[]> {
+  bits<2> Rv;
+  bits<5> Rn;
+  bits<4> imm4;
+  let Inst{31-22} = 0b1110000100;
+  let Inst{21}    = isStore;
+  let Inst{20-15} = 0b000000;
+  let Inst{14-13} = Rv;
+  let Inst{12-10} = 0b000;
+  let Inst{9-5}   = Rn;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = imm4;
+
+  let mayLoad = !not(isStore);
+  let mayStore = isStore;
+}
+
+multiclass sme_spill_fill<bit isStore, dag outs, dag ins, string opcodestr> {
+  def NAME : sme_spill_fill_inst<isStore, outs, ins, opcodestr>;
+
+  def : InstAlias<opcodestr # "\t$ZAt[$Rv, $imm4], [$Rn]",
+                  (!cast<Instruction>(NAME) MatrixOp:$ZAt,
+                   MatrixIndexGPR32Op12_15:$Rv, imm0_15:$imm4, GPR64sp:$Rn, 0), 1>;
+}
+
+multiclass sme_spill<string opcodestr> {
+  defm NAME : sme_spill_fill<0b1, (outs),
+                             (ins MatrixOp:$ZAt, MatrixIndexGPR32Op12_15:$Rv,
+                                  imm0_15:$imm4, GPR64sp:$Rn,
+                                  imm0_15:$offset),
+                             opcodestr>;
+}
+
+multiclass sme_fill<string opcodestr> {
+  defm NAME : sme_spill_fill<0b0, (outs MatrixOp:$ZAt),
+                             (ins MatrixIndexGPR32Op12_15:$Rv,
+                                  imm0_15:$imm4, GPR64sp:$Rn,
+                                  imm0_15:$offset),
+                             opcodestr>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE2 Instructions
 //===----------------------------------------------------------------------===//
 
