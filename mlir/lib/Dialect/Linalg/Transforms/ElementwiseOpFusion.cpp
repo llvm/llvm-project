@@ -1241,7 +1241,7 @@ fuseElementwiseOps(PatternRewriter &rewriter, OpOperand *consumerOpOperand,
 }
 
 bool mlir::linalg::skipUnitDimReshape(const OpResult &producer,
-                                      const OpOperand &consumer) {
+                                      OpOperand &consumer) {
   auto expandShapeOp = producer.getDefiningOp<linalg::TensorExpandShapeOp>();
   if (expandShapeOp)
     return !isUnitDimExpansionOnly(expandShapeOp);
