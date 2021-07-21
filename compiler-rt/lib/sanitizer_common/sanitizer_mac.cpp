@@ -532,7 +532,7 @@ void BlockingMutex::Unlock() {
 }
 
 void BlockingMutex::CheckLocked() const {
-  CHECK_NE(*(OSSpinLock*)&opaque_storage_, 0);
+  CHECK_NE(*(const OSSpinLock*)&opaque_storage_, 0);
 }
 
 u64 NanoTime() {
