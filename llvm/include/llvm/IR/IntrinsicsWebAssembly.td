@@ -172,11 +172,6 @@ def int_wasm_pmax :
             [LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
-// TODO: Replace this intrinsic with normal ISel patterns once popcnt is merged
-// to the proposal.
-def int_wasm_popcnt :
-  Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty], [IntrNoMem, IntrSpeculatable]>;
-
 def int_wasm_extmul_low_signed :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],

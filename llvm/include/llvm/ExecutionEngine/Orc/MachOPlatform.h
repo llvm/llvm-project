@@ -29,6 +29,7 @@ namespace orc {
 
 struct MachOPerObjectSectionsToRegister {
   ExecutorAddressRange EHFrameSection;
+  ExecutorAddressRange ThreadDataSection;
 };
 
 struct MachOJITDylibInitializers {
@@ -158,13 +159,15 @@ private:
     void addMachOHeaderSupportPasses(MaterializationResponsibility &MR,
                                      jitlink::PassConfiguration &Config);
 
-    void addEHSupportPasses(MaterializationResponsibility &MR,
-                            jitlink::PassConfiguration &Config);
+    void addEHAndTLVSupportPasses(MaterializationResponsibility &MR,
+                                  jitlink::PassConfiguration &Config);
 
     Error preserveInitSections(jitlink::LinkGraph &G,
                                MaterializationResponsibility &MR);
 
     Error registerInitSections(jitlink::LinkGraph &G, JITDylib &JD);
+
+    Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
     std::mutex PluginMutex;
     MachOPlatform &MP;
@@ -213,6 +216,8 @@ private:
 
   Error registerPerObjectSections(const MachOPerObjectSectionsToRegister &POSR);
 
+  Expected<uint64_t> createPThreadKey();
+
   ExecutionSession &ES;
   ObjectLinkingLayer &ObjLinkingLayer;
   ExecutorProcessControl &EPC;
@@ -223,6 +228,7 @@ private:
   ExecutorAddress orc_rt_macho_platform_bootstrap;
   ExecutorAddress orc_rt_macho_platform_shutdown;
   ExecutorAddress orc_rt_macho_register_object_sections;
+  ExecutorAddress orc_rt_macho_create_pthread_key;
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
@@ -233,11 +239,13 @@ private:
   std::vector<MachOPerObjectSectionsToRegister> BootstrapPOSRs;
 
   DenseMap<JITTargetAddress, JITDylib *> HeaderAddrToJITDylib;
+  DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
 };
 
 namespace shared {
 
-using SPSMachOPerObjectSectionsToRegister = SPSTuple<SPSExecutorAddressRange>;
+using SPSMachOPerObjectSectionsToRegister =
+    SPSTuple<SPSExecutorAddressRange, SPSExecutorAddressRange>;
 
 template <>
 class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
@@ -246,19 +254,19 @@ class SPSSerializationTraits<SPSMachOPerObjectSectionsToRegister,
 public:
   static size_t size(const MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::size(
-        MOPOSR.EHFrameSection);
+        MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 
   static bool serialize(SPSOutputBuffer &OB,
                         const MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::serialize(
-        OB, MOPOSR.EHFrameSection);
+        OB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 
   static bool deserialize(SPSInputBuffer &IB,
                           MachOPerObjectSectionsToRegister &MOPOSR) {
     return SPSMachOPerObjectSectionsToRegister::AsArgList::deserialize(
-        IB, MOPOSR.EHFrameSection);
+        IB, MOPOSR.EHFrameSection, MOPOSR.ThreadDataSection);
   }
 };
 

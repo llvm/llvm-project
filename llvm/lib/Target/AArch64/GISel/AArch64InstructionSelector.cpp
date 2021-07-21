@@ -5079,7 +5079,7 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
       Opc = AArch64::ST2Twov4s;
     else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
       Opc = AArch64::ST2Twov2d;
-    else if (Ty == S64 | Ty == P0)
+    else if (Ty == S64 || Ty == P0)
       Opc = AArch64::ST1Twov1d;
     else
       llvm_unreachable("Unexpected type for st2!");

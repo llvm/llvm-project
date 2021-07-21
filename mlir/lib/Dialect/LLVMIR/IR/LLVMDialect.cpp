@@ -970,6 +970,20 @@ static ParseResult parseExtractElementOp(OpAsmParser &parser,
   return success();
 }
 
+static LogicalResult verify(ExtractElementOp op) {
+  Type vectorType = op.vector().getType();
+  if (!LLVM::isCompatibleVectorType(vectorType))
+    return op->emitOpError("expected LLVM dialect-compatible vector type for "
+                           "operand #1, got")
+           << vectorType;
+  Type valueType = LLVM::getVectorElementType(vectorType);
+  if (valueType != op.res().getType())
+    return op.emitOpError() << "Type mismatch: extracting from " << vectorType
+                            << " should produce " << valueType
+                            << " but this op returns " << op.res().getType();
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::ExtractValueOp.
 //===----------------------------------------------------------------------===//
@@ -1024,6 +1038,52 @@ static Type getInsertExtractValueElementType(OpAsmParser &parser,
   return llvmType;
 }
 
+// Extract the type at `position` in the wrapped LLVM IR aggregate type
+// `containerType`. Returns null on failure.
+static Type getInsertExtractValueElementType(Type containerType,
+                                             ArrayAttr positionAttr,
+                                             Operation *op) {
+  Type llvmType = containerType;
+  if (!isCompatibleType(containerType)) {
+    op->emitError("expected LLVM IR Dialect type, got ") << containerType;
+    return {};
+  }
+
+  // Infer the element type from the structure type: iteratively step inside the
+  // type by taking the element type, indexed by the position attribute for
+  // structures.  Check the position index before accessing, it is supposed to
+  // be in bounds.
+  for (Attribute subAttr : positionAttr) {
+    auto positionElementAttr = subAttr.dyn_cast<IntegerAttr>();
+    if (!positionElementAttr) {
+      op->emitOpError("expected an array of integer literals, got: ")
+          << subAttr;
+      return {};
+    }
+    int position = positionElementAttr.getInt();
+    if (auto arrayType = llvmType.dyn_cast<LLVMArrayType>()) {
+      if (position < 0 ||
+          static_cast<unsigned>(position) >= arrayType.getNumElements()) {
+        op->emitOpError("position out of bounds: ") << position;
+        return {};
+      }
+      llvmType = arrayType.getElementType();
+    } else if (auto structType = llvmType.dyn_cast<LLVMStructType>()) {
+      if (position < 0 ||
+          static_cast<unsigned>(position) >= structType.getBody().size()) {
+        op->emitOpError("position out of bounds") << position;
+        return {};
+      }
+      llvmType = structType.getBody()[position];
+    } else {
+      op->emitOpError("expected LLVM IR structure/array type, got: ")
+          << llvmType;
+      return {};
+    }
+  }
+  return llvmType;
+}
+
 // <operation> ::= `llvm.extractvalue` ssa-use
 //                 `[` integer-literal (`,` integer-literal)* `]`
 //                 attribute-dict? `:` type
@@ -1060,6 +1120,20 @@ OpFoldResult LLVM::ExtractValueOp::fold(ArrayRef<Attribute> operands) {
     insertValueOp = insertValueOp.container().getDefiningOp<InsertValueOp>();
   }
   return {};
+}
+
+static LogicalResult verify(ExtractValueOp op) {
+  Type valueType = getInsertExtractValueElementType(op.container().getType(),
+                                                    op.positionAttr(), op);
+  if (!valueType)
+    return failure();
+
+  if (op.res().getType() != valueType)
+    return op.emitOpError()
+           << "Type mismatch: extracting from " << op.container().getType()
+           << " should produce " << valueType << " but this op returns "
+           << op.res().getType();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1104,6 +1178,14 @@ static ParseResult parseInsertElementOp(OpAsmParser &parser,
   return success();
 }
 
+static LogicalResult verify(InsertElementOp op) {
+  Type valueType = LLVM::getVectorElementType(op.vector().getType());
+  if (valueType != op.value().getType())
+    return op.emitOpError()
+           << "Type mismatch: cannot insert " << op.value().getType()
+           << " into " << op.vector().getType();
+  return success();
+}
 //===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::InsertValueOp.
 //===----------------------------------------------------------------------===//
@@ -1144,6 +1226,20 @@ static ParseResult parseInsertValueOp(OpAsmParser &parser,
     return failure();
 
   result.addTypes(containerType);
+  return success();
+}
+
+static LogicalResult verify(InsertValueOp op) {
+  Type valueType = getInsertExtractValueElementType(op.container().getType(),
+                                                    op.positionAttr(), op);
+  if (!valueType)
+    return failure();
+
+  if (op.value().getType() != valueType)
+    return op.emitOpError()
+           << "Type mismatch: cannot insert " << op.value().getType()
+           << " into " << op.container().getType();
+
   return success();
 }
 
