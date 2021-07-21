@@ -17815,7 +17815,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_popcnt_i8x16: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_popcnt);
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::ctpop, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {Vec});
   }
   case WebAssembly::BI__builtin_wasm_any_true_v128:

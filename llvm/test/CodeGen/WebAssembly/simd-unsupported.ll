@@ -10,7 +10,7 @@ target triple = "wasm32-unknown-unknown"
 ; ==============================================================================
 
 ; CHECK-LABEL: ctlz_v16i8:
-; CHECK: i32.clz
+; CHECK: i8x16.popcnt
 declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8>, i1)
 define <16 x i8> @ctlz_v16i8(<16 x i8> %x) {
   %v = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %x, i1 false)
@@ -18,14 +18,14 @@ define <16 x i8> @ctlz_v16i8(<16 x i8> %x) {
 }
 
 ; CHECK-LABEL: ctlz_v16i8_undef:
-; CHECK: i32.clz
+; CHECK: i8x16.popcnt
 define <16 x i8> @ctlz_v16i8_undef(<16 x i8> %x) {
   %v = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %x, i1 true)
   ret <16 x i8> %v
 }
 
 ; CHECK-LABEL: cttz_v16i8:
-; CHECK: i32.ctz
+; CHECK: i8x16.popcnt
 declare <16 x i8> @llvm.cttz.v16i8(<16 x i8>, i1)
 define <16 x i8> @cttz_v16i8(<16 x i8> %x) {
   %v = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> %x, i1 false)
@@ -33,18 +33,9 @@ define <16 x i8> @cttz_v16i8(<16 x i8> %x) {
 }
 
 ; CHECK-LABEL: cttz_v16i8_undef:
-; CHECK: i32.ctz
+; CHECK: i8x16.popcnt
 define <16 x i8> @cttz_v16i8_undef(<16 x i8> %x) {
   %v = call <16 x i8> @llvm.cttz.v16i8(<16 x i8> %x, i1 true)
-  ret <16 x i8> %v
-}
-
-; CHECK-LABEL: ctpop_v16i8:
-; Note: expansion does not use i32.popcnt
-; CHECK: v128.and
-declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>)
-define <16 x i8> @ctpop_v16i8(<16 x i8> %x) {
-  %v = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %x)
   ret <16 x i8> %v
 }
 

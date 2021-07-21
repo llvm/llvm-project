@@ -212,6 +212,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
         setOperationAction(Op, T, Legal);
 
+    // And we have popcnt for i8x16
+    setOperationAction(ISD::CTPOP, MVT::v16i8, Legal);
+
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
                     ISD::FEXP, ISD::FEXP2, ISD::FRINT})
