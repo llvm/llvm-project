@@ -13,7 +13,6 @@ endif()
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
-  DarwinSDKInfo.cpp
   Distro.cpp
   Driver.cpp
   DriverOptions.cpp
