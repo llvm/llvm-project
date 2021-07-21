@@ -151,12 +151,21 @@ Changes in existing checks
 
   Added an option to choose the set of allowed functions.
 
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines-init-variables>` check.
+
+  Removed generating fixes for enums because the code generated was broken,
+  trying to initialize the enum from an integer.
+
+  The check now also warns for uninitialized scoped enums.
+
 - Improved :doc:`readability-uniqueptr-delete-release
   <clang-tidy/checks/readability-uniqueptr-delete-release>` check.
 
   Added an option to choose whether to refactor by calling the ``reset`` member
   function or assignment to ``nullptr``.
   Added support for pointers to ``std::unique_ptr``.
+
 
 Removed checks
 ^^^^^^^^^^^^^^
