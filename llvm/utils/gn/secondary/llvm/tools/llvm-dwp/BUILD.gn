@@ -28,6 +28,7 @@ executable("llvm-dwp") {
     "//llvm/lib/Target:TargetsToBuild",
   ]
   sources = [
+    "DWP.cpp",
     "DWPError.cpp",
     "llvm-dwp.cpp",
   ]
