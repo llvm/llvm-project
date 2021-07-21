@@ -255,6 +255,8 @@ public:
 
   FormatEntity::Entry GetDisassemblyFormat() const;
 
+  bool GetUseModuleListDyld() const;
+
   FormatEntity::Entry GetFrameFormat() const;
 
   FormatEntity::Entry GetFrameFormatUnique() const;

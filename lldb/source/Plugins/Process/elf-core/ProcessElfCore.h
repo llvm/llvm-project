@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Target/PostMortemProcess.h"
 #include "lldb/Utility/Status.h"
 
@@ -74,6 +75,9 @@ public:
 
   // Process Queries
   bool IsAlive() override;
+
+  llvm::Expected<lldb_private::LoadedModuleInfoList>
+  GetLoadedModuleList() override;
 
   bool WarnBeforeDetach() const override { return false; }
 
@@ -154,6 +158,8 @@ private:
 
   // Executable name found from the ELF PRPSINFO
   std::string m_executable_name;
+
+  lldb_private::LoadedModuleInfoList m_module_info_list;
 
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(

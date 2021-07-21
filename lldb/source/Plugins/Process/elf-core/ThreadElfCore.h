@@ -105,8 +105,8 @@ struct ELFLinuxPrPsInfo {
   int32_t pr_ppid;
   int32_t pr_pgrp;
   int32_t pr_sid;
-  char pr_fname[16];
-  char pr_psargs[80];
+  char pr_fname[16];  // Filename of executable
+  char pr_psargs[80]; // Initial part of arg list
 
   ELFLinuxPrPsInfo();
 

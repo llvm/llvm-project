@@ -320,6 +320,7 @@ public:
   void IncreaseSourceMapDeduceCount();
   void IncreaseSourceRealpathAttemptCount(uint32_t count);
   void IncreaseSourceRealpathCompatibleCount(uint32_t count);
+  void SetMismatchedCoredumpModuleCount(int32_t mismatched_module_count);
 
   StatsDuration &GetCreateTime() { return m_create_time; }
   StatsDuration &GetLoadCoreTime() { return m_load_core_time; }
@@ -339,6 +340,14 @@ protected:
   uint32_t m_source_map_deduce_count = 0;
   uint32_t m_source_realpath_attempt_count = 0;
   uint32_t m_source_realpath_compatible_count = 0;
+  // The number of coredump modules with mismatched base address found
+  // in r_debug vs found in NT_FILE note.
+  //
+  // Value meaning:
+  // "-1:   only one module list is found (either via r_debug or NT_FILE).
+  // "0":   both module lists are available but no mismatch.
+  // ">0":  both module lists are available found mismatch count.
+  int32_t m_coredump_mismatch_module_count = -1;
   void CollectStats(Target &target);
 };
 

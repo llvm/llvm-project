@@ -216,6 +216,8 @@ TargetStats::ToJSON(Target &target,
                                   m_source_realpath_compatible_count);
   target_metrics_json.try_emplace("summaryProviderStatistics",
                                   target.GetSummaryStatisticsCache().ToJSON());
+  target_metrics_json.try_emplace("mismatchCoredumpModuleCount",
+                                  m_coredump_mismatch_module_count);
   return target_metrics_json;
 }
 
@@ -268,6 +270,11 @@ void TargetStats::IncreaseSourceRealpathAttemptCount(uint32_t count) {
 
 void TargetStats::IncreaseSourceRealpathCompatibleCount(uint32_t count) {
   m_source_realpath_compatible_count += count;
+}
+
+void TargetStats::SetMismatchedCoredumpModuleCount(
+    int32_t mismatched_module_count) {
+  m_coredump_mismatch_module_count = mismatched_module_count;
 }
 
 bool DebuggerStats::g_collecting_stats = false;

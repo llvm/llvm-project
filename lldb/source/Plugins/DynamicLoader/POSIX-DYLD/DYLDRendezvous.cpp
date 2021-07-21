@@ -80,7 +80,7 @@ addr_t DYLDRendezvous::ResolveRendezvousAddress() {
   // local object file can help us find it.
   if (info_location == LLDB_INVALID_ADDRESS) {
     Target *target = &m_process->GetTarget();
-    if (target) {
+    if (target && target->GetExecutableModule()) {
       ObjectFile *obj_file = target->GetExecutableModule()->GetObjectFile();
       Address addr = obj_file->GetImageInfoAddress(target);
 
