@@ -11,7 +11,7 @@
 
 #include "llvm/Support/JSON.h"
 
-#include "lldb/Target/ThreadPostMortemTrace.h"
+#include "ThreadPostMortemTrace.h"
 
 namespace lldb_private {
 

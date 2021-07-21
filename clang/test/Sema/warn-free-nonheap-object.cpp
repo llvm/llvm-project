@@ -10,23 +10,34 @@ void free(void *p);
 
 int GI;
 
+void free_reference(char &x) { ::free(&x); }
+void free_reference(char &&x) { ::free(&x); }
+void std_free_reference(char &x) { std::free(&x); }
+void std_free_reference(char &&x) { std::free(&x); }
+
 struct S {
-  operator char *() { return ptr; }
+  operator char *() { return ptr1; }
 
   void CFree() {
-    ::free(&ptr); // expected-warning {{attempt to call free on non-heap object 'ptr'}}
-    ::free(&I);   // expected-warning {{attempt to call free on non-heap object 'I'}}
-    ::free(ptr);
+    ::free(&ptr1); // expected-warning {{attempt to call free on non-heap object 'ptr1'}}
+    ::free(&I);    // expected-warning {{attempt to call free on non-heap object 'I'}}
+    ::free(ptr1);
+    free_reference(*ptr2);
+    free_reference(static_cast<char&&>(*ptr3));
   }
 
   void CXXFree() {
-    std::free(&ptr); // expected-warning {{attempt to call std::free on non-heap object 'ptr'}}
-    std::free(&I);   // expected-warning {{attempt to call std::free on non-heap object 'I'}}
-    std::free(ptr);
+    std::free(&ptr1); // expected-warning {{attempt to call std::free on non-heap object 'ptr1'}}
+    std::free(&I);    // expected-warning {{attempt to call std::free on non-heap object 'I'}}
+    std::free(ptr1);
+    std_free_reference(*ptr2);
+    std_free_reference(static_cast<char&&>(*ptr3));
   }
 
 private:
-  char *ptr = (char *)std::malloc(10);
+  char *ptr1 = (char *)std::malloc(10);
+  char *ptr2 = (char *)std::malloc(10);
+  char *ptr3 = (char *)std::malloc(10);
   static int I;
 };
 
@@ -92,6 +103,14 @@ void test2() {
   {
     void *P = std::malloc(8);
     std::free(P);
+  }
+  {
+    char* P = (char *)std::malloc(2);
+    std_free_reference(*P);
+  }
+  {
+    char* P = (char *)std::malloc(2);
+    std_free_reference(static_cast<char&&>(*P));
   }
   {
     int A[] = {0, 1, 2, 3};

@@ -60,6 +60,39 @@ TEST(Transformational, Shifts) {
   }
   result.Destroy();
 
+  // VECTOR  1 3 5 2 4 6
+  auto vector{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{6}, std::vector<std::int32_t>{1, 2, 3, 4, 5, 6})};
+  vector->GetDimension(0).SetLowerBound(0);
+  StaticDescriptor<1, true> vectorDesc;
+  Descriptor &vectorResult{vectorDesc.descriptor()};
+
+  RTNAME(CshiftVector)(vectorResult, *vector, 2, __FILE__, __LINE__);
+  EXPECT_EQ(vectorResult.type(), array->type());
+  EXPECT_EQ(vectorResult.rank(), 1);
+  EXPECT_EQ(vectorResult.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(vectorResult.GetDimension(0).Extent(), 6);
+  EXPECT_EQ(vectorResult.type(), (TypeCode{TypeCategory::Integer, 4}));
+  static std::int32_t cshiftExpect3[6]{3, 4, 5, 6, 1, 2};
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(*vectorResult.ZeroBasedIndexedElement<std::int32_t>(j),
+        cshiftExpect3[j]);
+  }
+  vectorResult.Destroy();
+
+  RTNAME(CshiftVector)(vectorResult, *vector, -2, __FILE__, __LINE__);
+  EXPECT_EQ(vectorResult.type(), array->type());
+  EXPECT_EQ(vectorResult.rank(), 1);
+  EXPECT_EQ(vectorResult.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(vectorResult.GetDimension(0).Extent(), 6);
+  EXPECT_EQ(vectorResult.type(), (TypeCode{TypeCategory::Integer, 4}));
+  static std::int32_t cshiftExpect4[6]{5, 6, 1, 2, 3, 4};
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(*vectorResult.ZeroBasedIndexedElement<std::int32_t>(j),
+        cshiftExpect4[j]);
+  }
+  vectorResult.Destroy();
+
   auto boundary{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{3}, std::vector<std::int32_t>{-1, -2, -3})};
   boundary->GetDimension(0).SetLowerBound(9); // shouldn't matter
