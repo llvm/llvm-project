@@ -201,7 +201,7 @@ bool shouldUsePageAliases(const Triple &TargetTriple) {
 }
 
 bool shouldInstrumentStack(const Triple &TargetTriple) {
-  return shouldUsePageAliases(TargetTriple) ? false : ClInstrumentStack;
+  return !shouldUsePageAliases(TargetTriple) && ClInstrumentStack;
 #ifdef __GNUC__
 // No one should use the option directly.
 #pragma GCC poison ClInstrumentStack
