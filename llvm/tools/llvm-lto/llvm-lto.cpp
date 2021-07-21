@@ -64,31 +64,38 @@ using namespace llvm;
 
 static codegen::RegisterCodeGenFlags CGF;
 
+static cl::OptionCategory LTOCategory("LTO Options");
+
 static cl::opt<char>
-    OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                           "(default = '-O2')"),
-             cl::Prefix, cl::ZeroOrMore, cl::init('2'));
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::ZeroOrMore, cl::init('2'), cl::cat(LTOCategory));
 
 static cl::opt<bool>
     IndexStats("thinlto-index-stats",
                cl::desc("Print statistic for the index in every input files"),
-               cl::init(false));
+               cl::init(false), cl::cat(LTOCategory));
 
 static cl::opt<bool> DisableVerify(
     "disable-verify", cl::init(false),
-    cl::desc("Do not run the verifier during the optimization pipeline"));
+    cl::desc("Do not run the verifier during the optimization pipeline"),
+    cl::cat(LTOCategory));
 
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding", cl::init(false),
-    cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"));
+    cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
+    cl::cat(LTOCategory));
 
 static cl::opt<bool> UseDiagnosticHandler(
     "use-diagnostic-handler", cl::init(false),
-    cl::desc("Use a diagnostic handler to test the handler interface"));
+    cl::desc("Use a diagnostic handler to test the handler interface"),
+    cl::cat(LTOCategory));
 
 static cl::opt<bool>
     ThinLTO("thinlto", cl::init(false),
-            cl::desc("Only write combined global index for ThinLTO backends"));
+            cl::desc("Only write combined global index for ThinLTO backends"),
+            cl::cat(LTOCategory));
 
 enum ThinLTOModes {
   THINLINK,
@@ -114,122 +121,144 @@ cl::opt<ThinLTOModes> ThinLTOMode(
                    "Emit imports files for distributed backends."),
         clEnumValN(THINPROMOTE, "promote",
                    "Perform pre-import promotion (requires -thinlto-index)."),
-        clEnumValN(THINIMPORT, "import", "Perform both promotion and "
-                                         "cross-module importing (requires "
-                                         "-thinlto-index)."),
+        clEnumValN(THINIMPORT, "import",
+                   "Perform both promotion and "
+                   "cross-module importing (requires "
+                   "-thinlto-index)."),
         clEnumValN(THININTERNALIZE, "internalize",
                    "Perform internalization driven by -exported-symbol "
                    "(requires -thinlto-index)."),
         clEnumValN(THINOPT, "optimize", "Perform ThinLTO optimizations."),
         clEnumValN(THINCODEGEN, "codegen", "CodeGen (expected to match llc)"),
-        clEnumValN(THINALL, "run", "Perform ThinLTO end-to-end")));
+        clEnumValN(THINALL, "run", "Perform ThinLTO end-to-end")),
+    cl::cat(LTOCategory));
 
 static cl::opt<std::string>
     ThinLTOIndex("thinlto-index",
                  cl::desc("Provide the index produced by a ThinLink, required "
-                          "to perform the promotion and/or importing."));
+                          "to perform the promotion and/or importing."),
+                 cl::cat(LTOCategory));
 
 static cl::opt<std::string> ThinLTOPrefixReplace(
     "thinlto-prefix-replace",
     cl::desc("Control where files for distributed backends are "
              "created. Expects 'oldprefix;newprefix' and if path "
              "prefix of output file is oldprefix it will be "
-             "replaced with newprefix."));
+             "replaced with newprefix."),
+    cl::cat(LTOCategory));
 
 static cl::opt<std::string> ThinLTOModuleId(
     "thinlto-module-id",
     cl::desc("For the module ID for the file to process, useful to "
-             "match what is in the index."));
+             "match what is in the index."),
+    cl::cat(LTOCategory));
 
-static cl::opt<std::string>
-    ThinLTOCacheDir("thinlto-cache-dir", cl::desc("Enable ThinLTO caching."));
+static cl::opt<std::string> ThinLTOCacheDir("thinlto-cache-dir",
+                                            cl::desc("Enable ThinLTO caching."),
+                                            cl::cat(LTOCategory));
 
-static cl::opt<int>
-    ThinLTOCachePruningInterval("thinlto-cache-pruning-interval",
-    cl::init(1200), cl::desc("Set ThinLTO cache pruning interval."));
+static cl::opt<int> ThinLTOCachePruningInterval(
+    "thinlto-cache-pruning-interval", cl::init(1200),
+    cl::desc("Set ThinLTO cache pruning interval."), cl::cat(LTOCategory));
 
 static cl::opt<uint64_t> ThinLTOCacheMaxSizeBytes(
     "thinlto-cache-max-size-bytes",
-    cl::desc("Set ThinLTO cache pruning directory maximum size in bytes."));
+    cl::desc("Set ThinLTO cache pruning directory maximum size in bytes."),
+    cl::cat(LTOCategory));
 
-static cl::opt<int>
-    ThinLTOCacheMaxSizeFiles("thinlto-cache-max-size-files", cl::init(1000000),
-    cl::desc("Set ThinLTO cache pruning directory maximum number of files."));
+static cl::opt<int> ThinLTOCacheMaxSizeFiles(
+    "thinlto-cache-max-size-files", cl::init(1000000),
+    cl::desc("Set ThinLTO cache pruning directory maximum number of files."),
+    cl::cat(LTOCategory));
 
-static cl::opt<unsigned>
-    ThinLTOCacheEntryExpiration("thinlto-cache-entry-expiration", cl::init(604800) /* 1w */,
-    cl::desc("Set ThinLTO cache entry expiration time."));
+static cl::opt<unsigned> ThinLTOCacheEntryExpiration(
+    "thinlto-cache-entry-expiration", cl::init(604800) /* 1w */,
+    cl::desc("Set ThinLTO cache entry expiration time."), cl::cat(LTOCategory));
 
 static cl::opt<std::string> ThinLTOSaveTempsPrefix(
     "thinlto-save-temps",
     cl::desc("Save ThinLTO temp files using filenames created by adding "
-             "suffixes to the given file path prefix."));
+             "suffixes to the given file path prefix."),
+    cl::cat(LTOCategory));
 
 static cl::opt<std::string> ThinLTOGeneratedObjectsDir(
     "thinlto-save-objects",
     cl::desc("Save ThinLTO generated object files using filenames created in "
-             "the given directory."));
+             "the given directory."),
+    cl::cat(LTOCategory));
 
 static cl::opt<bool> SaveLinkedModuleFile(
     "save-linked-module", cl::init(false),
-    cl::desc("Write linked LTO module to file before optimize"));
+    cl::desc("Write linked LTO module to file before optimize"),
+    cl::cat(LTOCategory));
 
 static cl::opt<bool>
     SaveModuleFile("save-merged-module", cl::init(false),
-                   cl::desc("Write merged LTO module to file before CodeGen"));
+                   cl::desc("Write merged LTO module to file before CodeGen"),
+                   cl::cat(LTOCategory));
 
 static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
-                                            cl::desc("<input bitcode files>"));
+                                            cl::desc("<input bitcode files>"),
+                                            cl::cat(LTOCategory));
 
 static cl::opt<std::string> OutputFilename("o", cl::init(""),
                                            cl::desc("Override output filename"),
-                                           cl::value_desc("filename"));
+                                           cl::value_desc("filename"),
+                                           cl::cat(LTOCategory));
 
 static cl::list<std::string> ExportedSymbols(
     "exported-symbol",
     cl::desc("List of symbols to export from the resulting object file"),
-    cl::ZeroOrMore);
+    cl::ZeroOrMore, cl::cat(LTOCategory));
 
 static cl::list<std::string>
     DSOSymbols("dso-symbol",
                cl::desc("Symbol to put in the symtab in the resulting dso"),
-               cl::ZeroOrMore);
+               cl::ZeroOrMore, cl::cat(LTOCategory));
 
 static cl::opt<bool> ListSymbolsOnly(
     "list-symbols-only", cl::init(false),
-    cl::desc("Instead of running LTO, list the symbols in each IR file"));
+    cl::desc("Instead of running LTO, list the symbols in each IR file"),
+    cl::cat(LTOCategory));
 
 static cl::opt<bool> ListDependentLibrariesOnly(
     "list-dependent-libraries-only", cl::init(false),
-    cl::desc("Instead of running LTO, list the dependent libraries in each IR file"));
+    cl::desc(
+        "Instead of running LTO, list the dependent libraries in each IR file"),
+    cl::cat(LTOCategory));
 
-static cl::opt<bool> SetMergedModule(
-    "set-merged-module", cl::init(false),
-    cl::desc("Use the first input module as the merged module"));
+static cl::opt<bool>
+    SetMergedModule("set-merged-module", cl::init(false),
+                    cl::desc("Use the first input module as the merged module"),
+                    cl::cat(LTOCategory));
 
 static cl::opt<unsigned> Parallelism("j", cl::Prefix, cl::init(1),
-                                     cl::desc("Number of backend threads"));
+                                     cl::desc("Number of backend threads"),
+                                     cl::cat(LTOCategory));
 
 static cl::opt<bool> RestoreGlobalsLinkage(
     "restore-linkage", cl::init(false),
-    cl::desc("Restore original linkage of globals prior to CodeGen"));
+    cl::desc("Restore original linkage of globals prior to CodeGen"),
+    cl::cat(LTOCategory));
 
 static cl::opt<bool> CheckHasObjC(
     "check-for-objc", cl::init(false),
-    cl::desc("Only check if the module has objective-C defined in it"));
+    cl::desc("Only check if the module has objective-C defined in it"),
+    cl::cat(LTOCategory));
 
 static cl::opt<bool> PrintMachOCPUOnly(
     "print-macho-cpu-only", cl::init(false),
-    cl::desc("Instead of running LTO, print the mach-o cpu in each IR file"));
+    cl::desc("Instead of running LTO, print the mach-o cpu in each IR file"),
+    cl::cat(LTOCategory));
 
-static cl::opt<bool>
-    UseNewPM("use-new-pm",
-             cl::desc("Run LTO passes using the new pass manager"),
-             cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden);
+static cl::opt<bool> UseNewPM(
+    "use-new-pm", cl::desc("Run LTO passes using the new pass manager"),
+    cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden, cl::cat(LTOCategory));
 
 static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
-                     cl::desc("Print pass management debugging information"));
+                     cl::desc("Print pass management debugging information"),
+                     cl::cat(LTOCategory));
 
 namespace {
 
@@ -895,6 +924,7 @@ private:
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
+  cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
 
   if (OptLevel < '0' || OptLevel > '3')
