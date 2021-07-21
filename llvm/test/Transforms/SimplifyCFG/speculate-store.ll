@@ -112,6 +112,27 @@ ret.end:
   ret void
 }
 
+define void @different_type(ptr %ptr, i1 %cmp) {
+; CHECK-LABEL: @different_type(
+; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF_THEN:%.*]], label [[RET_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i64 1, ptr [[PTR]], align 4
+; CHECK-NEXT:    br label [[RET_END]]
+; CHECK:       ret.end:
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %ptr
+  br i1 %cmp, label %if.then, label %ret.end
+
+if.then:
+  store i64 1, ptr %ptr
+  br label %ret.end
+
+ret.end:
+  ret void
+}
+
 ; CHECK: !0 = !{!"branch_weights", i32 3, i32 5}
 !0 = !{!"branch_weights", i32 3, i32 5}
 

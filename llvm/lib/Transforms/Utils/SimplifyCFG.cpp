@@ -2228,6 +2228,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
     return nullptr;
 
   Value *StorePtr = StoreToHoist->getPointerOperand();
+  Type *StoreTy = StoreToHoist->getValueOperand()->getType();
 
   // Look for a store to the same pointer in BrBB.
   unsigned MaxNumInstToLookAt = 9;
@@ -2244,7 +2245,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
 
     if (auto *SI = dyn_cast<StoreInst>(&CurI)) {
       // Found the previous store make sure it stores to the same location.
-      if (SI->getPointerOperand() == StorePtr)
+      if (SI->getPointerOperand() == StorePtr &&
+          SI->getValueOperand()->getType() == StoreTy)
         // Found the previous store, return its value operand.
         return SI->getValueOperand();
       return nullptr; // Unknown store.
