@@ -5707,7 +5707,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         ++BUILD_STAT_NAME(MallocCalls, Function);
   }
 
-  bool isAssumedHeapToStack(CallBase &CB) const override {
+  bool isAssumedHeapToStack(const CallBase &CB) const override {
     if (isValidState())
       if (AllocationInfo *AI = AllocationInfos.lookup(&CB))
         return AI->Status != AllocationInfo::INVALID;
