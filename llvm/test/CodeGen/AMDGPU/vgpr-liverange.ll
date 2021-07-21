@@ -157,15 +157,16 @@ for.end:
 define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, float(float)* %extern_func, float(float)* %extern_func2) #0 {
 ; SI-LABEL: loop:
 ; SI:       ; %bb.0: ; %main_body
+; SI-NEXT:    v_mov_b32_e32 v6, v0
 ; SI-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; SI-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s38, -1
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
-; SI-NEXT:    v_mov_b32_e32 v40, v1
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v6
 ; SI-NEXT:    s_mov_b32 s39, 0x31c16000
 ; SI-NEXT:    s_add_u32 s36, s36, s1
 ; SI-NEXT:    s_addc_u32 s37, s37, 0
-; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    ; implicit-def: $vgpr1
 ; SI-NEXT:    s_mov_b32 s32, 0
 ; SI-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; SI-NEXT:    s_xor_b32 s33, exec_lo, s0
@@ -177,15 +178,17 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, float(float)* %
 ; SI-NEXT:    v_readfirstlane_b32 s5, v5
 ; SI-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; SI-NEXT:    s_and_saveexec_b32 s35, vcc_lo
-; SI-NEXT:    v_mov_b32_e32 v0, v40
 ; SI-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; SI-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; SI-NEXT:    v_mov_b32_e32 v1, v0
 ; SI-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s35
 ; SI-NEXT:    s_cbranch_execnz BB3_2
 ; SI-NEXT:  ; %bb.3:
 ; SI-NEXT:    s_mov_b32 exec_lo, s34
+; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    ; implicit-def: $vgpr2
 ; SI-NEXT:  BB3_4: ; %Flow
 ; SI-NEXT:    s_or_saveexec_b32 s33, s33
@@ -198,18 +201,19 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, float(float)* %
 ; SI-NEXT:    v_readfirstlane_b32 s5, v3
 ; SI-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[2:3]
 ; SI-NEXT:    s_and_saveexec_b32 s35, vcc_lo
-; SI-NEXT:    v_mov_b32_e32 v0, v40
 ; SI-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; SI-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; SI-NEXT:    v_mov_b32_e32 v1, v0
 ; SI-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SI-NEXT:    ; implicit-def: $vgpr40
+; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_xor_b32 exec_lo, exec_lo, s35
 ; SI-NEXT:    s_cbranch_execnz BB3_6
 ; SI-NEXT:  ; %bb.7:
 ; SI-NEXT:    s_mov_b32 exec_lo, s34
 ; SI-NEXT:  BB3_8: ; %end
 ; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s33
+; SI-NEXT:    v_mov_b32_e32 v0, v1
 ; SI-NEXT:    ; return to shader part epilog
 main_body:
   %cc = icmp sgt i32 %z, 5

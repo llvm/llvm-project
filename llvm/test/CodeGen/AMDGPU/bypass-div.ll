@@ -136,8 +136,8 @@ define i64 @sdiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v1, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v0, v2, vcc
-; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:  BB0_2: ; %Flow
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], s[6:7]
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -289,8 +289,8 @@ define i64 @udiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v10, v8, s[4:5]
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
-; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:  BB1_2: ; %Flow
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], s[6:7]
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -455,8 +455,8 @@ define i64 @srem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_xor_b32_e32 v1, v1, v6
 ; GFX9-NEXT:    v_sub_co_u32_e32 v4, vcc, v0, v6
 ; GFX9-NEXT:    v_subb_co_u32_e32 v5, vcc, v1, v6, vcc
-; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:  BB2_2: ; %Flow
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], s[8:9]
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -605,8 +605,8 @@ define i64 @urem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v5, v1, v4, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, v6, v9, s[4:5]
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v0, v1, vcc
-; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:  BB3_2: ; %Flow
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], s[8:9]
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -908,8 +908,8 @@ define <2 x i64> @sdivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_xor_b32_e32 v1, v1, v7
 ; GFX9-NEXT:    v_sub_co_u32_e32 v6, vcc, v0, v7
 ; GFX9-NEXT:    v_subb_co_u32_e32 v7, vcc, v1, v7, vcc
-; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:  BB8_2: ; %Flow
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], s[10:11]
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -1077,8 +1077,8 @@ define <2 x i64> @udivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v6, v0, v1, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v5, v5, v10, vcc
-; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:  BB9_2: ; %Flow
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], s[8:9]
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
