@@ -4432,12 +4432,193 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   return D;
 }
 
+llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
+                                            llvm::Value *Storage,
+                                            llvm::Optional<unsigned> ArgNo,
+                                            CGBuilderTy &Builder,
+                                            const bool UsePointerValue) {
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo() &&
+         "Call to EmitDef below ReducedDebugInfo");
+  assert(CGM.getCodeGenOpts().HeterogeneousDwarf &&
+         "Call to EmitDef without HeterogeneousDwarf enabled");
+  assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+  if (VD->hasAttr<NoDebugAttr>())
+    return nullptr;
+
+  bool Unwritten =
+      VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
+                           cast<Decl>(VD->getDeclContext())->isImplicit());
+  llvm::DIFile *Unit = nullptr;
+  unsigned Line = 0;
+  unsigned Column = 0;
+  if (!Unwritten) {
+    Unit = getOrCreateFile(VD->getLocation());
+    // Get location information.
+    Line = getLineNumber(VD->getLocation());
+    Column = getColumnNumber(VD->getLocation());
+  }
+  llvm::DIType *Ty;
+  uint64_t XOffset = 0;
+  if (VD->hasAttr<BlocksAttr>())
+    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset).WrappedType;
+  else
+    Ty = getOrCreateType(VD->getType(), Unit);
+
+  // If there is no debug info for this type then do not emit debug info
+  // for this variable.
+  if (!Ty)
+    return nullptr;
+
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
+  if (Unwritten)
+    Flags |= llvm::DINode::FlagArtificial;
+
+  auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
+
+  llvm::DIExpr::Builder ExprBuilder(CGM.getLLVMContext());
+  ExprBuilder.append<llvm::DIOp::Referrer>(Storage->getType());
+  ExprBuilder.append<llvm::DIOp::Deref>();
+
+  // If this is implicit parameter of CXXThis or ObjCSelf kind, then give it an
+  // object pointer flag.
+  if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD)) {
+    if (IPD->getParameterKind() == ImplicitParamDecl::CXXThis ||
+        IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+      Flags |= llvm::DINode::FlagObjectPointer;
+  }
+
+  auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
+  StringRef Name = VD->getName();
+  if (!Name.empty()) {
+    // __block vars are stored on the heap if they are captured by a block that
+    // can escape the local scope.
+    if (VD->isEscapingByref()) {
+      // Here, we need an offset *into* the alloca.
+      CharUnits offset = CharUnits::fromQuantity(32);
+      // offset of __forwarding field
+      offset = CGM.getContext().toCharUnitsFromBits(
+          CGM.getTarget().getPointerWidth(0));
+      ExprBuilder.append<llvm::DIOp::Constant>(
+          llvm::ConstantInt::get(llvm::Type::getInt64Ty(CGM.getLLVMContext()),
+                                 offset.getQuantity()));
+      ExprBuilder.append<llvm::DIOp::ByteOffset>(
+          llvm::Type::getInt64Ty(CGM.getLLVMContext()));
+      ExprBuilder.append<llvm::DIOp::Deref>();
+      // offset of x field
+      offset = CGM.getContext().toCharUnitsFromBits(XOffset);
+      ExprBuilder.append<llvm::DIOp::Constant>(
+          llvm::ConstantInt::get(llvm::Type::getInt64Ty(CGM.getLLVMContext()),
+                                 offset.getQuantity()));
+      ExprBuilder.append<llvm::DIOp::ByteOffset>(
+          llvm::Type::getInt64Ty(CGM.getLLVMContext()));
+    }
+  } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
+    // If VD is an anonymous union then Storage represents value for
+    // all union fields.
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
+      // GDB has trouble finding local variables in anonymous unions, so we emit
+      // artificial local variables for each of the members.
+      //
+      // FIXME: Remove this code as soon as GDB supports this.
+      // The debug info verifier in LLVM operates based on the assumption that a
+      // variable has the same size as its storage and we had to disable the
+      // check for artificial variables.
+      for (const auto *Field : RD->fields()) {
+        llvm::DIType *FieldTy = getOrCreateType(Field->getType(), Unit);
+        StringRef FieldName = Field->getName();
+
+        // Ignore unnamed fields. Do not ignore unnamed records.
+        if (FieldName.empty() && !isa<RecordType>(Field->getType()))
+          continue;
+
+        // Use VarDecl's Tag, Scope and Line number.
+        auto FieldAlign = getDeclAlignIfRequired(Field, CGM.getContext());
+        auto *D = DBuilder.createAutoVariable(
+            Scope, FieldName, Unit, Line, FieldTy, CGM.getLangOpts().Optimize,
+            Flags | llvm::DINode::FlagArtificial, FieldAlign);
+
+        // Insert an llvm.dbg.def into the current block.
+        DBuilder.insertDef(DBuilder.createLifetime(D, ExprBuilder.intoExpr()),
+                           Storage, llvm::DILocation::get(CGM.getLLVMContext(),
+                                                          Line, Column, Scope,
+                                                          CurInlinedAt),
+                           Builder.GetInsertBlock());
+      }
+    }
+  }
+
+  // Clang stores the sret pointer provided by the caller in a static alloca.
+  // Use DW_OP_deref to tell the debugger to load the pointer and treat it as
+  // the address of the variable.
+  if (UsePointerValue)
+    ExprBuilder.append<llvm::DIOp::Deref>();
+
+  llvm::DILocalVariable *D = nullptr;
+  if (ArgNo) {
+    D = DBuilder.createParameterVariable(Scope, Name, *ArgNo, Unit, Line, Ty,
+                                         CGM.getLangOpts().Optimize, Flags);
+  } else {
+    // For normal local variable, we will try to find out whether 'VD' is the
+    // copy parameter of coroutine.
+    // If yes, we are going to use DIVariable of the origin parameter instead
+    // of creating the new one.
+    // If no, it might be a normal alloc, we just create a new one for it.
+
+    // Check whether the VD is move parameters.
+    auto RemapCoroArgToLocalVar = [&]() -> llvm::DILocalVariable * {
+      // The scope of parameter and move-parameter should be distinct
+      // DISubprogram.
+      if (!isa<llvm::DISubprogram>(Scope) || !Scope->isDistinct())
+        return nullptr;
+
+      auto Iter = llvm::find_if(CoroutineParameterMappings, [&](auto &Pair) {
+        Stmt *StmtPtr = const_cast<Stmt *>(Pair.second);
+        if (DeclStmt *DeclStmtPtr = dyn_cast<DeclStmt>(StmtPtr)) {
+          DeclGroupRef DeclGroup = DeclStmtPtr->getDeclGroup();
+          Decl *Decl = DeclGroup.getSingleDecl();
+          if (VD == dyn_cast_or_null<VarDecl>(Decl))
+            return true;
+        }
+        return false;
+      });
+
+      if (Iter != CoroutineParameterMappings.end()) {
+        ParmVarDecl *PD = const_cast<ParmVarDecl *>(Iter->first);
+        auto Iter2 = llvm::find_if(ParamDbgMappings, [&](auto &DbgPair) {
+          return DbgPair.first == PD && DbgPair.second->getScope() == Scope;
+        });
+        if (Iter2 != ParamDbgMappings.end())
+          return const_cast<llvm::DILocalVariable *>(Iter2->second);
+      }
+      return nullptr;
+    };
+
+    // If we couldn't find a move param DIVariable, create a new one.
+    D = RemapCoroArgToLocalVar();
+    // Or we will create a new DIVariable for this Decl if D dose not exists.
+    if (!D)
+      D = DBuilder.createAutoVariable(Scope, Name, Unit, Line, Ty,
+                                      CGM.getLangOpts().Optimize, Flags, Align);
+  }
+  // Insert an llvm.dbg.def into the current block.
+  DBuilder.insertDef(DBuilder.createLifetime(D, ExprBuilder.intoExpr()),
+                     Storage, llvm::DILocation::get(CGM.getLLVMContext(),
+                                                    Line, Column, Scope,
+                                                    CurInlinedAt),
+                     Builder.GetInsertBlock());
+
+  return D;
+}
+
 llvm::DILocalVariable *
 CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
                                        CGBuilderTy &Builder,
                                        const bool UsePointerValue) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  return EmitDeclare(VD, Storage, llvm::None, Builder, UsePointerValue);
+  return CGM.getCodeGenOpts().HeterogeneousDwarf ?
+      EmitDef(VD, Storage, llvm::None, Builder, UsePointerValue) :
+      EmitDeclare(VD, Storage, llvm::None, Builder, UsePointerValue);
 }
 
 void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
@@ -4551,7 +4732,9 @@ llvm::DILocalVariable *
 CGDebugInfo::EmitDeclareOfArgVariable(const VarDecl *VD, llvm::Value *AI,
                                       unsigned ArgNo, CGBuilderTy &Builder) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  return EmitDeclare(VD, AI, ArgNo, Builder);
+  return CGM.getCodeGenOpts().HeterogeneousDwarf ?
+      EmitDef(VD, AI, ArgNo, Builder) :
+      EmitDeclare(VD, AI, ArgNo, Builder);
 }
 
 namespace {
