@@ -172,20 +172,6 @@ def int_wasm_pmax :
             [LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
-// TODO: Replace these intrinsic with normal ISel patterns once the
-// load_zero instructions are merged to the proposal.
-def int_wasm_load32_zero :
-  Intrinsic<[llvm_v4i32_ty],
-            [LLVMPointerType<llvm_i32_ty>],
-            [IntrReadMem, IntrArgMemOnly],
-             "", [SDNPMemOperand]>;
-
-def int_wasm_load64_zero :
-  Intrinsic<[llvm_v2i64_ty],
-            [LLVMPointerType<llvm_i64_ty>],
-            [IntrReadMem, IntrArgMemOnly],
-             "", [SDNPMemOperand]>;
-
 // TODO: Replace this intrinsic with normal ISel patterns once popcnt is merged
 // to the proposal.
 def int_wasm_popcnt :
