@@ -18,6 +18,6 @@ public:
 private:
   std::string Info;
 };
-}
+} // namespace llvm
 
 #endif

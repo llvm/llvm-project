@@ -113,7 +113,6 @@ public:
 
 private:
   const typeInfo::DerivedType *derivedType_;
-  std::uint64_t __unused_flags_{0}; // TODO: delete
   typeInfo::TypeParameterValue len_[1]; // must be the last component
   // The LEN type parameter values can also include captured values of
   // specification expressions that were used for bounds and for LEN type
