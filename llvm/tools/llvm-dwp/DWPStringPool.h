@@ -51,6 +51,6 @@ public:
     return Pair.first->second;
   }
 };
-}
+} // namespace llvm
 
 #endif
