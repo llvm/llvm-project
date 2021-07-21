@@ -292,6 +292,17 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // For Scalable Matrix Extension (SME) instructions that have an implicit
     // operand for the accumulator (ZA) which isn't encoded, manually insert
     // operand.
+    case AArch64::LDR_ZA:
+    case AArch64::STR_ZA: {
+      MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZA));
+      // Spill and fill instructions have a single immediate used for both the
+      // vector select offset and optional memory offset. Replicate the decoded
+      // immediate.
+      const MCOperand &Imm4Op = MI.getOperand(2);
+      assert(Imm4Op.isImm() && "Unexpected operand type!");
+      MI.addOperand(Imm4Op);
+      break;
+    }
     case AArch64::LD1_MXIPXX_H_B:
     case AArch64::LD1_MXIPXX_V_B:
     case AArch64::ST1_MXIPXX_H_B:
