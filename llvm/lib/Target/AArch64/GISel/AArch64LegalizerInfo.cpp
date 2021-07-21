@@ -763,7 +763,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .customFor({{s32, s32}, {s64, s64}});
 
   // TODO: Custom legalization for s128
-  // TODO: v2s64, v2s32, v4s32, v4s16, v8s16
   // TODO: Use generic lowering when custom lowering is not possible.
   auto always = [=](const LegalityQuery &Q) { return true; };
   getActionDefinitionsBuilder(G_CTPOP)
@@ -772,7 +771,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0)
       .minScalarEltSameAsIf(always, 1, 0)
       .maxScalarEltSameAsIf(always, 1, 0)
-      .customFor({{s32, s32}, {s64, s64}});
+      .customFor({{s32, s32},
+                  {s64, s64},
+                  {v2s64, v2s64},
+                  {v2s32, v2s32},
+                  {v4s32, v4s32},
+                  {v4s16, v4s16},
+                  {v8s16, v8s16}});
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -1115,6 +1120,18 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   //  CNT     V0.8B, V0.8B  // 8xbyte pop-counts
   //  ADDV    B0, V0.8B     // sum 8xbyte pop-counts
   //  UMOV    X0, V0.B[0]   // copy byte result back to integer reg
+  //
+  // For 128 bit vector popcounts, we lower to the following sequence:
+  //  cnt.16b   v0, v0  // v8s16, v4s32, v2s64
+  //  uaddlp.8h v0, v0  // v8s16, v4s32, v2s64
+  //  uaddlp.4s v0, v0  //        v4s32, v2s64
+  //  uaddlp.2d v0, v0  //               v2s64
+  //
+  // For 64 bit vector popcounts, we lower to the following sequence:
+  //  cnt.8b    v0, v0  // v4s16, v2s32
+  //  uaddlp.4h v0, v0  // v4s16, v2s32
+  //  uaddlp.2s v0, v0  //        v2s32
+
   if (!ST->hasNEON() ||
       MI.getMF()->getFunction().hasFnAttribute(Attribute::NoImplicitFloat))
     return false;
@@ -1123,27 +1140,66 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   Register Val = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(Val);
 
-  // TODO: Handle vector types.
-  assert(!Ty.isVector() && "Vector types not handled yet!");
   assert(Ty == MRI.getType(Dst) &&
          "Expected src and dst to have the same type!");
-  // TODO: Handle s128.
   unsigned Size = Ty.getSizeInBits();
-  assert((Size == 32 || Size == 64) && "Expected only 32 or 64 bit scalars!");
-  if (Size == 32)
-    Val = MIRBuilder.buildZExt(LLT::scalar(64), Val).getReg(0);
-  const LLT V8S8 = LLT::fixed_vector(8, LLT::scalar(8));
-  Val = MIRBuilder.buildBitcast(V8S8, Val).getReg(0);
-  auto CTPOP = MIRBuilder.buildCTPOP(V8S8, Val);
-  auto UADDLV =
-      MIRBuilder
-          .buildIntrinsic(Intrinsic::aarch64_neon_uaddlv, {LLT::scalar(32)},
-                          /*HasSideEffects = */ false)
-          .addUse(CTPOP.getReg(0));
-  if (Size == 64)
-    MIRBuilder.buildZExt(Dst, UADDLV);
+
+  // Pre-conditioning: widen Val up to the nearest vector type.
+  // s32,s64,v4s16,v2s32 -> v8i8
+  // v8s16,v4s32,v2s64 -> v16i8
+  LLT VTy = Size == 128 ? LLT::fixed_vector(16, 8) : LLT::fixed_vector(8, 8);
+  if (Ty.isScalar()) {
+    // TODO: Handle s128.
+    assert((Size == 32 || Size == 64) && "Expected only 32 or 64 bit scalars!");
+    if (Size == 32) {
+      Val = MIRBuilder.buildZExt(LLT::scalar(64), Val).getReg(0);
+    }
+  }
+  Val = MIRBuilder.buildBitcast(VTy, Val).getReg(0);
+
+  // Count bits in each byte-sized lane.
+  auto CTPOP = MIRBuilder.buildCTPOP(VTy, Val);
+
+  // Sum across lanes.
+  Register HSum = CTPOP.getReg(0);
+  unsigned Opc;
+  SmallVector<LLT> HAddTys;
+  if (Ty.isScalar()) {
+    Opc = Intrinsic::aarch64_neon_uaddlv;
+    HAddTys.push_back(LLT::scalar(32));
+  } else if (Ty == LLT::fixed_vector(8, 16)) {
+    Opc = Intrinsic::aarch64_neon_uaddlp;
+    HAddTys.push_back(LLT::fixed_vector(8, 16));
+  } else if (Ty == LLT::fixed_vector(4, 32)) {
+    Opc = Intrinsic::aarch64_neon_uaddlp;
+    HAddTys.push_back(LLT::fixed_vector(8, 16));
+    HAddTys.push_back(LLT::fixed_vector(4, 32));
+  } else if (Ty == LLT::fixed_vector(2, 64)) {
+    Opc = Intrinsic::aarch64_neon_uaddlp;
+    HAddTys.push_back(LLT::fixed_vector(8, 16));
+    HAddTys.push_back(LLT::fixed_vector(4, 32));
+    HAddTys.push_back(LLT::fixed_vector(2, 64));
+  } else if (Ty == LLT::fixed_vector(4, 16)) {
+    Opc = Intrinsic::aarch64_neon_uaddlp;
+    HAddTys.push_back(LLT::fixed_vector(4, 16));
+  } else if (Ty == LLT::fixed_vector(2, 32)) {
+    Opc = Intrinsic::aarch64_neon_uaddlp;
+    HAddTys.push_back(LLT::fixed_vector(4, 16));
+    HAddTys.push_back(LLT::fixed_vector(2, 32));
+  } else
+    llvm_unreachable("unexpected vector shape");
+  MachineInstrBuilder UADD;
+  for (LLT HTy : HAddTys) {
+    UADD = MIRBuilder.buildIntrinsic(Opc, {HTy}, /*HasSideEffects =*/false)
+                     .addUse(HSum);
+    HSum = UADD.getReg(0);
+  }
+
+  // Post-conditioning.
+  if (Ty.isScalar() && Size == 64)
+    MIRBuilder.buildZExt(Dst, UADD);
   else
-    UADDLV->getOperand(0).setReg(Dst);
+    UADD->getOperand(0).setReg(Dst);
   MI.eraseFromParent();
   return true;
 }
