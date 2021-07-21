@@ -835,7 +835,7 @@ public:
 
   /// Returns a vector of type ResVT whose elements contain the linear sequence
   ///   <0, Step, Step * 2, Step * 3, ...>
-  SDValue getStepVector(const SDLoc &DL, EVT ResVT, SDValue Step);
+  SDValue getStepVector(const SDLoc &DL, EVT ResVT, APInt StepVal);
 
   /// Returns a vector of type ResVT whose elements contain the linear sequence
   ///   <0, 1, 2, 3, ...>
