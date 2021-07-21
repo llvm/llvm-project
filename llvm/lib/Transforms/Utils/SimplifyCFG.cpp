@@ -2240,13 +2240,15 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
     --MaxNumInstToLookAt;
 
     // Could be calling an instruction that affects memory like free().
-    if (CurI.mayHaveSideEffects() && !isa<StoreInst>(CurI))
+    if (CurI.mayWriteToMemory() && !isa<StoreInst>(CurI))
       return nullptr;
 
     if (auto *SI = dyn_cast<StoreInst>(&CurI)) {
-      // Found the previous store make sure it stores to the same location.
+      // Found the previous store to same location and type. Make sure it is
+      // simple, to avoid introducing a spurious non-atomic write after an
+      // atomic write.
       if (SI->getPointerOperand() == StorePtr &&
-          SI->getValueOperand()->getType() == StoreTy)
+          SI->getValueOperand()->getType() == StoreTy && SI->isSimple())
         // Found the previous store, return its value operand.
         return SI->getValueOperand();
       return nullptr; // Unknown store.
