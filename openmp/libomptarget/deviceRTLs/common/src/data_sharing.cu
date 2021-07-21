@@ -95,7 +95,7 @@ EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
   return __kmpc_alloc_for_warp(AllocGlobal, Bytes, WarpBytes);
 }
 
-EXTERN void __kmpc_free_shared(void *Ptr) {
+EXTERN void __kmpc_free_shared(void *Ptr, size_t /* Bytes */) {
   __kmpc_impl_lanemask_t CurActive = __kmpc_impl_activemask();
   unsigned LeaderID = __kmpc_impl_ffs(CurActive) - 1;
   bool IsWarpLeader =
