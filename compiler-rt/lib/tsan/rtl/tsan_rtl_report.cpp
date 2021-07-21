@@ -285,7 +285,7 @@ void ScopedReportBase::AddMutex(const SyncVar *s) {
   rm->stack = SymbolizeStackId(s->creation_stack_id);
 }
 
-u64 ScopedReportBase::AddMutex(u64 id) {
+u64 ScopedReportBase::AddMutex(u64 id) NO_THREAD_SAFETY_ANALYSIS {
   u64 uid = 0;
   u64 mid = id;
   uptr addr = SyncVar::SplitId(id, &uid);
