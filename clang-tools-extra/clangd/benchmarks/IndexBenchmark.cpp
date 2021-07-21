@@ -106,7 +106,7 @@ BENCHMARK(DexBuild);
 int main(int argc, char *argv[]) {
   if (argc < 3) {
     llvm::errs() << "Usage: " << argv[0]
-                 << " global-symbol-index.yaml requests.json "
+                 << " global-symbol-index.dex requests.json "
                     "BENCHMARK_OPTIONS...\n";
     return -1;
   }
