@@ -602,6 +602,23 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements,
   return false;
 }
 
+bool IsDestructible(const Symbol &symbol, const Symbol *derivedTypeSymbol) {
+  if (IsAllocatable(symbol) || IsAutomatic(symbol)) {
+    return true;
+  } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol) ||
+      IsPointer(symbol)) {
+    return false;
+  } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (!object->isDummy() && object->type()) {
+      if (const auto *derived{object->type()->AsDerived()}) {
+        return &derived->typeSymbol() != derivedTypeSymbol &&
+            derived->HasDestruction();
+      }
+    }
+  }
+  return false;
+}
+
 bool HasIntrinsicTypeName(const Symbol &symbol) {
   std::string name{symbol.name().ToString()};
   if (name == "doubleprecision") {

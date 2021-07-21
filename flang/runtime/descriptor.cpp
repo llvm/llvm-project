@@ -9,6 +9,7 @@
 #include "descriptor.h"
 #include "derived.h"
 #include "memory.h"
+#include "stat.h"
 #include "terminator.h"
 #include "type-info.h"
 #include <cassert>
@@ -18,12 +19,6 @@
 namespace Fortran::runtime {
 
 Descriptor::Descriptor(const Descriptor &that) { *this = that; }
-
-Descriptor::~Descriptor() {
-  if (raw_.attribute != CFI_attribute_pointer) {
-    Deallocate();
-  }
-}
 
 Descriptor &Descriptor::operator=(const Descriptor &that) {
   std::memcpy(this, &that, that.SizeInBytes());
@@ -139,7 +134,6 @@ int Descriptor::Allocate() {
     return CFI_ERROR_MEM_ALLOCATION;
   }
   // TODO: image synchronization
-  // TODO: derived type initialization
   raw_.base_addr = p;
   if (int dims{rank()}) {
     std::size_t stride{ElementBytes()};
@@ -152,18 +146,22 @@ int Descriptor::Allocate() {
   return 0;
 }
 
-int Descriptor::Deallocate(bool finalize) {
-  Destroy(finalize);
-  return ISO::CFI_deallocate(&raw_);
-}
-
-void Descriptor::Destroy(bool finalize) const {
-  if (const DescriptorAddendum * addendum{Addendum()}) {
-    if (const typeInfo::DerivedType * dt{addendum->derivedType()}) {
-      runtime::Destroy(*this, finalize, *dt);
+int Descriptor::Destroy(bool finalize) {
+  if (raw_.attribute == CFI_attribute_pointer) {
+    return StatOk;
+  } else {
+    if (auto *addendum{Addendum()}) {
+      if (const auto *derived{addendum->derivedType()}) {
+        if (!derived->noDestructionNeeded()) {
+          runtime::Destroy(*this, finalize, *derived);
+        }
+      }
     }
+    return Deallocate();
   }
 }
+
+int Descriptor::Deallocate() { return ISO::CFI_deallocate(&raw_); }
 
 bool Descriptor::IncrementSubscripts(
     SubscriptValue *subscript, const int *permutation) const {

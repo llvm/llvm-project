@@ -33,19 +33,22 @@ module __Fortran_type_info
     type(Binding), pointer, contiguous :: binding(:)
     character(len=:), pointer :: name
     integer(kind=int64) :: sizeInBytes
-    type(DerivedType), pointer :: parent
     ! Instances of parameterized derived types use the "uninstantiated"
     ! component to point to the pristine original definition.
     type(DerivedType), pointer :: uninstantiated
     integer(kind=int64) :: typeHash
     integer(kind=int64), pointer, contiguous :: kindParameter(:) ! values of instance
     integer(1), pointer, contiguous :: lenParameterKind(:) ! INTEGER kinds of LEN types
-    ! Data components appear in alphabetic order.
-    ! The parent component, if any, appears explicitly.
+    ! Data components appear in component order.
+    ! The parent component, if any, appears explicitly and first.
     type(Component), pointer, contiguous :: component(:) ! data components
     type(ProcPtrComponent), pointer, contiguous :: procptr(:) ! procedure pointers
     ! Special bindings of the ancestral types are not duplicated here.
     type(SpecialBinding), pointer, contiguous :: special(:)
+    integer(1) :: hasParent
+    integer(1) :: noInitializationNeeded ! 1 if no component w/ init
+    integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
+    integer(1) :: __padding0(5)
   end type
 
   type :: Binding
