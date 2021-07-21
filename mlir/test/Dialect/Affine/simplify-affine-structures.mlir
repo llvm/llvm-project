@@ -261,12 +261,12 @@ func @simplify_set(%a : index, %b : index) {
 // CHECK-DAG: -> (s0 * 2 + 1)
 
 // Test "op local" simplification on affine.apply. DCE on addi will not happen.
-func @affine.apply(%N : index) {
+func @affine.apply(%N : index) -> index {
   %v = affine.apply affine_map<(d0, d1) -> (d0 + d1 + 1)>(%N, %N)
-  addi %v, %v : index
+  %res = addi %v, %v : index
   // CHECK: affine.apply #map{{.*}}()[%arg0]
   // CHECK-NEXT: addi
-  return
+  return %res: index
 }
 
 // -----
