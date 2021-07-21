@@ -1,3 +1,6 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
+
 // Test C++ -gmodules debug info in the PCMs with local submodule visibility.
 // REQUIRES: asserts
 // RUN: rm -rf %t

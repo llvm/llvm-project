@@ -1,3 +1,6 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
+
 // REQUIRES: asserts
 
 // Modules:

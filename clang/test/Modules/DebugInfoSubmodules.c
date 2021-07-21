@@ -1,3 +1,6 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
+
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fmodule-format=obj -debug-info-kind=limited -dwarf-ext-refs \
 // RUN:     -fimplicit-module-maps -x c -fmodules-cache-path=%t -I %S/Inputs \

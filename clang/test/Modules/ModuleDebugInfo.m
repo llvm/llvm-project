@@ -1,6 +1,9 @@
 // Test that debug info is emitted for an Objective-C module and
 // a precompiled header.
 
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
+
 // REQUIRES: asserts
 
 // Modules:

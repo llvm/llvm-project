@@ -1,5 +1,8 @@
 // Tests that dwoIds in modules match the dwoIDs in the main file.
 
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
+
 // REQUIRES: asserts
 
 // RUN: rm -rf %t.cache

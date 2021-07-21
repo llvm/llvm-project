@@ -1,3 +1,6 @@
+// No object emitter on nanomips
+// UNSUPPORTED: nanomips
+
 // Check compiling a module interface to a .pcm file.
 //
 // RUN: %clang -fmodules-ts -x c++-module --precompile %s -o %t.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
