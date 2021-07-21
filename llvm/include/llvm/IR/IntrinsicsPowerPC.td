@@ -1564,6 +1564,21 @@ let TargetPrefix = "ppc" in {
   def int_ppc_stwcx : GCCBuiltin<"__builtin_ppc_stwcx">,
                       Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
                                 [IntrWriteMem]>;
+  def int_ppc_sthcx
+      : Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty ], [IntrWriteMem]>;
+  def int_ppc_dcbtstt : GCCBuiltin<"__builtin_ppc_dcbtstt">,
+                        Intrinsic<[], [llvm_ptr_ty],
+                                  [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_dcbtt : GCCBuiltin<"__builtin_ppc_dcbtt">,
+                      Intrinsic<[], [llvm_ptr_ty],
+                                [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_mftbu : GCCBuiltin<"__builtin_ppc_mftbu">,
+                      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+  def int_ppc_mfmsr : GCCBuiltin<"__builtin_ppc_mfmsr">,
+                      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+  def int_ppc_stfiw : GCCBuiltin<"__builtin_ppc_stfiw">,
+                      Intrinsic<[], [llvm_ptr_ty, llvm_double_ty],
+                                [IntrWriteMem]>;
   // compare
   def int_ppc_cmpeqb
       : GCCBuiltin<"__builtin_ppc_cmpeqb">,
