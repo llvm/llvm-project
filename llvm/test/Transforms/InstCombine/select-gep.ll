@@ -225,3 +225,22 @@ define <2 x i64*> @test5(i64* %p1, i64* %p2, <2 x i64> %idx, <2 x i1> %cc) {
   %select = select <2 x i1> %cc, <2 x i64*> %gep1, <2 x i64*> %gep2
   ret <2 x i64*> %select
 }
+
+; PR51069 - multiple uses
+define i32* @test6(i32* %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ugt i64 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL_IDX:%.*]] = select i1 [[ICMP]], i64 [[Y]], i64 0
+; CHECK-NEXT:    [[SEL:%.*]] = getelementptr i32, i32* [[GEP1]], i64 [[SEL_IDX]]
+; CHECK-NEXT:    call void @use_i32p(i32* [[GEP1]])
+; CHECK-NEXT:    ret i32* [[SEL]]
+;
+  %gep1 = getelementptr inbounds i32, i32* %p, i64 %x
+  %gep2 = getelementptr inbounds i32, i32* %gep1, i64 %y
+  %icmp = icmp ugt i64 %x, %y
+  %sel = select i1 %icmp, i32* %gep2, i32* %gep1
+  call void @use_i32p(i32* %gep1)
+  ret i32* %sel
+}
+declare void @use_i32p(i32*)
