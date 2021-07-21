@@ -11,11 +11,15 @@
 
 #include <cstddef>
 
+#include <llvm/ADT/Optional.h>
+
 namespace lldb_private {
 namespace trace_intel_pt {
 
-const size_t kThreadBufferSize = 4 * 1024;              // 4KB
-const size_t kProcessBufferSizeLimit = 5 * 1024 * 1024; // 500MB
+const size_t kDefaultThreadBufferSize = 4 * 1024;              // 4KB
+const size_t kDefaultProcessBufferSizeLimit = 5 * 1024 * 1024; // 500MB
+const bool kDefaultEnableTscValue = false;
+const llvm::Optional<size_t> kDefaultPsbPeriod = llvm::None;
 
 } // namespace trace_intel_pt
 } // namespace lldb_private

@@ -80,18 +80,23 @@ public:
   ///     Trace size per thread in bytes.
   ///
   /// \param[in] total_buffer_size_limit
-  ///     Maximum total trace size per process in bytes. This limit applies to
-  ///     the sum of the sizes of all thread traces of this process, excluding
-  ///     the threads traced explicitly.
+  ///     Maximum total trace size per process in bytes.
+  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
   ///
-  ///     Whenever a thread is attempted to be traced due to this operation and
-  ///     the limit would be reached, the process is stopped with a "tracing"
-  ///     reason, so that the user can retrace the process if needed.
+  /// \param[in] enable_tsc
+  ///     Whether to use enable TSC timestamps or not.
+  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
+  ///
+  /// \param[in] psb_period
+  ///
+  ///     This value defines the period in which PSB packets will be generated.
+  ///     More information in TraceIntelPT::GetStartConfigurationHelp();
   ///
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(size_t thread_buffer_size, size_t total_buffer_size_limit);
+  llvm::Error Start(size_t thread_buffer_size, size_t total_buffer_size_limit,
+                    bool enable_tsc, llvm::Optional<size_t> psb_period);
 
   /// \copydoc Trace::Start
   llvm::Error Start(StructuredData::ObjectSP configuration =
@@ -105,11 +110,20 @@ public:
   /// \param[in] thread_buffer_size
   ///     Trace size per thread in bytes.
   ///
+  /// \param[in] enable_tsc
+  ///     Whether to use enable TSC timestamps or not.
+  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
+  ///
+  /// \param[in] psb_period
+  ///
+  ///     This value defines the period in which PSB packets will be generated.
+  ///     More information in TraceIntelPT::GetStartConfigurationHelp().
+  ///
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,
-                    size_t thread_buffer_size);
+  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids, size_t thread_buffer_size,
+                    bool enable_tsc, llvm::Optional<size_t> psb_period);
 
   /// \copydoc Trace::Start
   llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,

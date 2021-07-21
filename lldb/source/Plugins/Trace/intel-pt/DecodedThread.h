@@ -61,6 +61,9 @@ private:
 /// As mentioned, any gap is represented as an error in this class.
 class IntelPTInstruction {
 public:
+  IntelPTInstruction(const pt_insn &pt_insn, uint64_t timestamp)
+      : m_pt_insn(pt_insn), m_timestamp(timestamp) {}
+
   IntelPTInstruction(const pt_insn &pt_insn) : m_pt_insn(pt_insn) {}
 
   /// Error constructor
@@ -84,6 +87,13 @@ public:
   ///     \a llvm::Error::success otherwise.
   llvm::Error ToError() const;
 
+  /// Get the timestamp associated with the current instruction. The timestamp
+  /// is similar to what a rdtsc instruction would return.
+  ///
+  /// \return
+  ///     The timestamp or \b llvm::None if not available.
+  llvm::Optional<uint64_t> GetTimestampCounter() const;
+
   /// Get the \a lldb::TraceInstructionControlFlowType categories of the
   /// instruction.
   ///
@@ -103,6 +113,7 @@ private:
   const IntelPTInstruction &operator=(const IntelPTInstruction &other) = delete;
 
   pt_insn m_pt_insn;
+  llvm::Optional<uint64_t> m_timestamp;
   std::unique_ptr<llvm::ErrorInfoBase> m_error;
 };
 
