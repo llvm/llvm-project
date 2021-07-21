@@ -6,9 +6,8 @@
 #ifndef SRC_RUNTIME_INCLUDE_MACHINE_H_
 #define SRC_RUNTIME_INCLUDE_MACHINE_H_
 #include "atmi.h"
+#include "hsa_api.h"
 #include "internal.h"
-#include <hsa.h>
-#include <hsa_ext_amd.h>
 #include <vector>
 
 class ATLMemory;

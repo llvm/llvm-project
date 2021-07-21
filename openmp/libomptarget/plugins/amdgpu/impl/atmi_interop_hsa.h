@@ -7,16 +7,14 @@
 #define INCLUDE_ATMI_INTEROP_HSA_H_
 
 #include "atmi_runtime.h"
-#include "hsa.h"
-#include "hsa_ext_amd.h"
+#include "hsa_api.h"
 #include "internal.h"
 
 #include <map>
 #include <string>
 
-#ifdef __cplusplus
 extern "C" {
-#endif
+
 /** \defgroup interop_hsa_functions ATMI-HSA Interop
  *  @{
  */
@@ -80,8 +78,6 @@ hsa_status_t atmi_interop_hsa_get_kernel_info(
 
 /** @} */
 
-#ifdef __cplusplus
 }
-#endif
 
 #endif // INCLUDE_ATMI_INTEROP_HSA_H_
