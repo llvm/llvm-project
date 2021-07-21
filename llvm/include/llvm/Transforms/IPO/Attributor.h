@@ -138,6 +138,12 @@ class Function;
 
 /// Abstract Attribute helper functions.
 namespace AA {
+
+/// Return true if \p V is dynamically unique, that is, there are no two
+/// "instances" of \p V at runtime with different values.
+bool isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
+                         const Value &V);
+
 /// Return true if \p V is a valid value in \p Scope, that is a constant or an
 /// instruction/argument of \p Scope.
 bool isValidInScope(const Value &V, const Function *Scope);
