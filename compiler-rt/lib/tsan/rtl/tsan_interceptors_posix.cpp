@@ -2422,6 +2422,10 @@ int sigaction_impl(int sig, const __sanitizer_sigaction *act,
   // the signal handler through rtl_sigaction, very bad things will happen.
   // The handler will run synchronously and corrupt tsan per-thread state.
   SCOPED_INTERCEPTOR_RAW(sigaction, sig, act, old);
+  if (sig <= 0 || sig >= kSigCount) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   __sanitizer_sigaction *sigactions = interceptor_ctx()->sigactions;
   __sanitizer_sigaction old_stored;
   if (old) internal_memcpy(&old_stored, &sigactions[sig], sizeof(old_stored));
