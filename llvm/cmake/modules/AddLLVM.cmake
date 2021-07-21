@@ -231,7 +231,7 @@ function(add_link_opts target_name)
       elseif(LINKER_IS_LLD_LINK)
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                       LINK_FLAGS " /opt:lldlto=0")
-      elseif(APPLE)
+      elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                       LINK_FLAGS " -Wl,-mllvm,-O0")
       endif()
@@ -1470,7 +1470,7 @@ function(add_unittest test_suite test_name)
     elseif(LINKER_IS_LLD_LINK)
       set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " /opt:lldlto=0")
-    elseif(APPLE)
+    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
       set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " -Wl,-mllvm,-O0")
     endif()
