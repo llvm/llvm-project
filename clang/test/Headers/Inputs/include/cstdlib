@@ -21,9 +21,13 @@ abs(long __i) { return __builtin_labs(__i); }
 inline long long
 abs(long long __x) { return __builtin_llabs (__x); }
 
+// amdgcn already provides definition of fabs
+#ifndef __AMDGCN__
 float fabs(float __x) { return __builtin_fabs(__x); }
+#endif
 
 float abs(float __x) { return fabs(__x); }
 double abs(double __x) { return fabs(__x); }
 
 }
+
