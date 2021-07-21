@@ -2866,6 +2866,150 @@ protected:
   }
 };
 
+class CommandObjectTargetModulesReplace : public CommandObjectParsed {
+public:
+  CommandObjectTargetModulesReplace(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target modules replace",
+            "Replace module's existing object file with a new object file.",
+            "target modules replace [<module>]", eCommandRequiresTarget),
+        m_file_to_replace(LLDB_OPT_SET_1, false, "shlib", 's',
+                          lldb::eModuleCompletion, eArgTypeShlibName,
+                          "File name of the shared library to replace.") {
+    m_option_group.Append(&m_uuid_option_group, LLDB_OPT_SET_ALL,
+                          LLDB_OPT_SET_1);
+    m_option_group.Append(&m_file_to_replace, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+    m_option_group.Finalize();
+    CommandArgumentData module_arg{eArgTypePath, eArgRepeatStar};
+    m_arguments.push_back({module_arg});
+  }
+
+  ~CommandObjectTargetModulesReplace() override = default;
+
+  Options *GetOptions() override { return &m_option_group; }
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+  }
+
+protected:
+  OptionGroupOptions m_option_group;
+  OptionGroupUUID m_uuid_option_group;
+  OptionGroupFile m_file_to_replace;
+
+  void DoExecute(Args &args, CommandReturnObject &result) override {
+    if (args.GetArgumentCount() == 0) {
+      result.AppendError(
+          "one or more executable image paths must be specified");
+      return;
+    }
+
+    Target &target = GetTarget();
+    bool flush = false;
+    // TODO: investigate if we should only allow one module. Similar for
+    // CommandObjectTargetModulesAdd and CommandObjectTargetSymbolsAdd.
+    for (auto &entry : args.entries()) {
+      if (entry.ref().empty())
+        continue;
+
+      FileSpec file_spec(entry.ref());
+      if (FileSystem::Instance().Exists(file_spec)) {
+        ModuleSpec module_spec(file_spec);
+        if (m_uuid_option_group.GetOptionValue().OptionWasSet())
+          module_spec.GetUUID() =
+              m_uuid_option_group.GetOptionValue().GetCurrentValue();
+        if (!module_spec.GetArchitecture().IsValid())
+          module_spec.GetArchitecture() = target.GetArchitecture();
+        if (m_file_to_replace.GetOptionValue().OptionWasSet())
+          module_spec.GetFileSpec().SetFilename(
+              m_file_to_replace.GetOptionValue()
+                  .GetCurrentValue()
+                  .GetFilename());
+
+        ModuleList matching_modules = findMatchingModules(module_spec);
+        if (matching_modules.IsEmpty()) {
+          result.AppendErrorWithFormat("can't find matching modules for '%s'",
+                                       entry.ref().str().c_str());
+          return;
+        }
+
+        if (matching_modules.GetSize() > 1) {
+          result.AppendErrorWithFormat(
+              "multiple modules match symbol file '%s', "
+              "use the --uuid option to resolve the "
+              "ambiguity.\n",
+              entry.ref().str().c_str());
+          return;
+        }
+
+        assert(matching_modules.GetSize() == 1);
+        auto module_sp = matching_modules.GetModuleAtIndex(0);
+        module_sp->ReplaceObjectFile(target, file_spec, /*object_offset=*/0);
+
+        if (target.GetPreloadSymbols())
+          module_sp->PreloadSymbols();
+
+        flush = true;
+        result.SetStatus(eReturnStatusSuccessFinishResult);
+      } else {
+        std::string resolved_path = file_spec.GetPath();
+        if (resolved_path != entry.ref()) {
+          result.AppendErrorWithFormat(
+              "invalid module path '%s' with resolved path '%s'\n",
+              entry.ref().str().c_str(), resolved_path.c_str());
+          break;
+        }
+        result.AppendErrorWithFormat("invalid module path '%s'\n",
+                                     entry.c_str());
+        break;
+      }
+    }
+
+    if (flush) {
+      ProcessSP process = target.GetProcessSP();
+      if (process)
+        process->Flush();
+    }
+    return;
+  }
+
+  ModuleList findMatchingModules(const ModuleSpec &module_spec) {
+    Target &target = GetTarget();
+    ModuleList matching_modules;
+    lldb_private::ModuleSpecList module_specs;
+    if (ObjectFile::GetModuleSpecifications(module_spec.GetFileSpec(), 0, 0,
+                                            module_specs)) {
+      // Now extract the module spec that matches the target architecture
+      ModuleSpec target_arch_module_spec;
+      ModuleSpec arch_matched_module_spec;
+      target_arch_module_spec.GetArchitecture() = target.GetArchitecture();
+      if (module_specs.FindMatchingModuleSpec(target_arch_module_spec,
+                                              arch_matched_module_spec)) {
+        if (arch_matched_module_spec.GetUUID().IsValid()) {
+          // It has a UUID, look for this UUID in the target modules
+          ModuleSpec uuid_module_spec;
+          uuid_module_spec.GetUUID() = arch_matched_module_spec.GetUUID();
+          target.GetImages().FindModules(uuid_module_spec, matching_modules);
+        }
+      }
+    }
+
+    // Just try to match up the file by basename if we have no matches at
+    // this point.
+    if (matching_modules.IsEmpty()) {
+      ModuleSpec filename_only_spec;
+      filename_only_spec.GetFileSpec().SetFilename(
+          module_spec.GetFileSpec().GetFilename());
+      target.GetImages().FindModules(filename_only_spec, matching_modules);
+    }
+
+    return matching_modules;
+  }
+};
+
 class CommandObjectTargetModulesLoad
     : public CommandObjectTargetModulesModuleAutoComplete {
 public:
@@ -3333,10 +3477,14 @@ protected:
         DumpModuleArchitecture(strm, module, true, width);
         break;
 
-      case 'f':
+      case 'f': {
         DumpFullpath(strm, &module->GetFileSpec(), width);
         dump_object_name = true;
-        break;
+
+        ObjectFile *objfile = module->GetObjectFile();
+        if (objfile && objfile->GetPluginName() == "placeholder")
+          strm.Printf("(*)");
+      } break;
 
       case 'd':
         DumpDirectory(strm, &module->GetFileSpec(), width);
@@ -4205,6 +4353,9 @@ public:
                                "target modules <sub-command> ...") {
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTargetModulesAdd(interpreter)));
+    LoadSubCommand(
+        "replace",
+        CommandObjectSP(new CommandObjectTargetModulesReplace(interpreter)));
     LoadSubCommand("load", CommandObjectSP(new CommandObjectTargetModulesLoad(
                                interpreter)));
     LoadSubCommand("dump", CommandObjectSP(new CommandObjectTargetModulesDump(

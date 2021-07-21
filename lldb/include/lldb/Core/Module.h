@@ -547,6 +547,22 @@ public:
   ///     remains valid as long as the object is around.
   virtual ObjectFile *GetObjectFile();
 
+  /// Replace existing backing object file with new \param object_file.
+  ///
+  /// The old object file being replaced will be kept alive to prevent from
+  /// dangling symbol references.
+  /// UUID and underlying symbol file will be reparsed during further access.
+  /// A common use case is to replace an Placeholder object file with a real
+  /// one during dump debugging.
+  ///
+  /// \param[in] target
+  ///    The target to update object file load address.
+  ///
+  /// \param[in] object_file
+  ///     The new object file spec to replace the existing one.
+  virtual void ReplaceObjectFile(Target &target, FileSpec object_file,
+                                 uint64_t object_offset);
+
   /// Get the unified section list for the module. This is the section list
   /// created by the module's object file and any debug info and symbol files
   /// created by the symbol vendor.
@@ -1032,6 +1048,9 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
                                    /// not be shared with the SymbolFile
+  lldb::ObjectFileSP m_old_objfile_sp; /// Strong reference to keep the old
+                                       /// object file being replaced alive.
+
   UnwindTable m_unwind_table;      ///< Table of FuncUnwinders
                                    /// objects created for this
                                    /// Module's functions
@@ -1092,6 +1111,8 @@ protected:
 
 private:
   Module(); // Only used internally by CreateJITModule ()
+
+  void LoadObjectFile();
 
   Module(const Module &) = delete;
   const Module &operator=(const Module &) = delete;
