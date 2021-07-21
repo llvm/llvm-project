@@ -43,9 +43,9 @@ int main(int argc, char** argv) {
       bail("mmap");
 
     // We're trying to make the first CounterPtr invalid.
-    // 11 64-bit words as header.
+    // 10 64-bit words as header.
     // CounterPtr is the third 64-bit word field.
-    memset(&Buf[11 * 8 + 2 * 8], 0xAB, 8);
+    memset(&Buf[10 * 8 + 2 * 8], 0xAB, 8);
 
     if (munmap(Buf, FileSize))
       bail("munmap");
