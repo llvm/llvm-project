@@ -135,6 +135,8 @@ struct InitializeRequestArguments {
   /// Source init files when initializing lldb::SBDebugger.
   std::optional<bool> lldbExtSourceInitFile;
 
+  std::optional<bool> singleStoppedEvent;
+
   /// @}
 };
 bool fromJSON(const llvm::json::Value &, InitializeRequestArguments &,
@@ -158,6 +160,10 @@ struct Configuration {
   /// a given type. This feature can cause performance delays in large projects
   /// when viewing variables.
   bool enableAutoVariableSummaries = false;
+
+  // Whether to send single stopped event when multiple stopped events
+  // occured at the same time (eg. breakpoints by threads simultanously)
+  bool singleStoppedEvent;
 
   /// If a variable is displayed using a synthetic children, also display the
   /// actual contents of the variable at the end under a [raw] entry. This is

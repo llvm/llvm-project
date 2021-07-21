@@ -34,6 +34,9 @@ ContinueRequestHandler::Run(const ContinueArguments &args) const {
   if (!SBDebugger::StateIsStoppedState(process.GetState()))
     return make_error<NotStoppedError>();
 
+  lldb::SBThread thread = dap.GetLLDBThread(args.threadId);
+  dap.focus_tid = thread.GetThreadID();
+  
   if (args.singleThread)
     dap.GetLLDBThread(args.threadId).Resume(error);
   else

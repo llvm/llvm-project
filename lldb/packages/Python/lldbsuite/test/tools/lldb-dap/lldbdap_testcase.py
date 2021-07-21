@@ -533,6 +533,7 @@ class DAPTestCaseBase(TestBase):
         self,
         program=None,
         *,
+        singleStoppedEvent=False,
         sourceInitFile=False,
         disconnectAutomatically=True,
         expectFailure=False,
@@ -551,7 +552,7 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
 
         # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.request_initialize(sourceInitFile, singleStoppedEvent)
         response = self.dap_server.request_launch(program, **kwargs)
         if expectFailure:
             return response

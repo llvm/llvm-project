@@ -224,6 +224,7 @@ class DebugCommunication(object):
 
         # debuggee state
         self.threads: Optional[dict] = None
+        self.thread_events_body = []
         self.thread_stop_reasons: Dict[str, Any] = {}
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
@@ -433,6 +434,8 @@ class DebugCommunication(object):
             self._process_stopped()
             tid = body["threadId"]
             self.thread_stop_reasons[tid] = body
+        elif event == "thread":
+            self.thread_events_body.append(body)
         elif event.startswith("progress"):
             # Progress events come in as 'progressStart', 'progressUpdate',
             # and 'progressEnd' events. Keep these around in case test
@@ -640,6 +643,14 @@ class DebugCommunication(object):
         if self.threads is None:
             self.request_threads()
         return self.threads
+
+    def get_thread_events(self, reason=None):
+        if reason == None:
+            return self.thread_events_body
+        else:
+            return [
+                body for body in self.thread_events_body if body["reason"] == reason
+            ]
 
     def get_thread_id(self, threadIndex=0):
         """Utility function to get the first thread ID in the thread list.
@@ -1006,7 +1017,7 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile=False):
+    def request_initialize(self, sourceInitFile=False, singleStoppedEvent=False):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -1025,6 +1036,7 @@ class DebugCommunication(object):
                 "supportsInvalidatedEvent": True,
                 "supportsMemoryEvent": True,
                 "$__lldb_sourceInitFile": sourceInitFile,
+                "singleStoppedEvent": singleStoppedEvent,
             },
         }
         response = self._send_recv(command_dict)

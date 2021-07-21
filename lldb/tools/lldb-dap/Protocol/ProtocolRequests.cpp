@@ -221,6 +221,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
          OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
          OM.mapOptional("pathFormat", IRA.pathFormat) &&
          OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
+         OM.mapOptional("singleStoppedEvent", IRA.singleStoppedEvent);
 }
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {

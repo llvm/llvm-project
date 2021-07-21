@@ -75,6 +75,11 @@ llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
   if (arguments.supportedFeatures.contains(eClientFeatureProgressReporting))
     dap.StartProgressEventThread();
 
+  // singleStoppedEvent option is not from formal DAP specification. It is an
+  // lldb specific option to experiment stopped events behaivor against
+  // application with multiple threads.
+  dap.configuration.singleStoppedEvent = arguments.singleStoppedEvent.value_or(false);
+
   // Start our event thread so we can receive events from the debugger, target,
   // process and more.
   dap.StartEventThread();
