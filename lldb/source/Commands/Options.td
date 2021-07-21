@@ -1070,6 +1070,11 @@ let Command = "thread trace dump instructions" in {
     Desc<"For each instruction, print the corresponding timestamp counter if available.">;
 }
 
+let Command = "thread trace dump info" in {
+  def thread_trace_dump_info_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"show verbose thread trace dump info">;
+}
+
 let Command = "type summary add" in {
   def type_summary_add_category : Option<"category", "w">, Arg<"Name">,
     Desc<"Add this to the given category instead of the default one.">;

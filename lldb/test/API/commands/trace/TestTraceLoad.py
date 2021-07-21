@@ -33,7 +33,10 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         # check that the Process and Thread objects were created correctly
         self.expect("thread info", substrs=["tid = 3842849"])
         self.expect("thread list", substrs=["Process 1234 stopped", "tid = 3842849"])
+        self.expect("thread trace dump info", substrs=['''Trace technology: intel-pt
 
+thread #1: tid = 3842849
+  Raw trace size: 4096 bytes'''])
 
     def testLoadInvalidTraces(self):
         src_dir = self.getSourceDir()
