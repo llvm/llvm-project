@@ -341,19 +341,22 @@ const char *ExternalFileUnit::FrameNextInput(
 bool ExternalFileUnit::SetSequentialVariableFormattedRecordLength() {
   if (recordLength || access != Access::Sequential) {
     return true;
-  }
-  if (FrameLength() > recordOffsetInFrame_) {
+  } else if (FrameLength() > recordOffsetInFrame_) {
     const char *record{Frame() + recordOffsetInFrame_};
-    if (const char *nl{reinterpret_cast<const char *>(
-            std::memchr(record, '\n', FrameLength() - recordOffsetInFrame_))}) {
+    std::size_t bytes{FrameLength() - recordOffsetInFrame_};
+    if (const char *nl{
+            reinterpret_cast<const char *>(std::memchr(record, '\n', bytes))}) {
       recordLength = nl - record;
       if (*recordLength > 0 && record[*recordLength - 1] == '\r') {
         --*recordLength;
       }
-      return true;
+    } else {
+      recordLength = bytes; // final record w/o \n
     }
+    return true;
+  } else {
+    return false;
   }
-  return false;
 }
 
 void ExternalFileUnit::SetLeftTabLimit() {
@@ -413,8 +416,10 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
         if (Frame()[recordOffsetInFrame_ + *recordLength] == '\r') {
           ++recordOffsetInFrame_;
         }
-        recordOffsetInFrame_ += *recordLength + 1;
-        RUNTIME_CHECK(handler, Frame()[recordOffsetInFrame_ - 1] == '\n');
+        if (Frame()[recordOffsetInFrame_ + *recordLength] == '\n') {
+          ++recordOffsetInFrame_;
+        }
+        recordOffsetInFrame_ += *recordLength;
         recordLength.reset();
       }
     }
