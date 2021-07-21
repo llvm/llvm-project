@@ -207,7 +207,6 @@ private:
     return OS;
   }
 
-  // FIXME(kbobyrev): Would storing Children in min-heap be faster?
   std::vector<std::unique_ptr<Iterator>> Children;
   friend Corpus; // For optimizations.
 };
