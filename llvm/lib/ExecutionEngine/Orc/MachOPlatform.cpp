@@ -128,9 +128,6 @@ constexpr MachOHeaderMaterializationUnit::HeaderSymbol
 
 StringRef EHFrameSectionName = "__TEXT,__eh_frame";
 StringRef ModInitFuncSectionName = "__DATA,__mod_init_func";
-StringRef ThreadBSSSectionName = "__DATA,__thread_bss";
-StringRef ThreadDataSectionName = "__DATA,__thread_data";
-StringRef ThreadVarsSectionName = "__DATA,__thread_vars";
 
 StringRef InitSectionNames[] = {ModInitFuncSectionName};
 
@@ -470,8 +467,7 @@ Error MachOPlatform::bootstrapMachORuntime(JITDylib &PlatformJD) {
       {"___orc_rt_macho_platform_bootstrap", &orc_rt_macho_platform_bootstrap},
       {"___orc_rt_macho_platform_shutdown", &orc_rt_macho_platform_shutdown},
       {"___orc_rt_macho_register_object_sections",
-       &orc_rt_macho_register_object_sections},
-      {"___orc_rt_macho_create_pthread_key", &orc_rt_macho_create_pthread_key}};
+       &orc_rt_macho_register_object_sections}};
 
   SymbolLookupSet RuntimeSymbols;
   std::vector<std::pair<SymbolStringPtr, ExecutorAddress *>> AddrsToRecord;
@@ -566,20 +562,6 @@ Error MachOPlatform::registerPerObjectSections(
   return ErrResult;
 }
 
-Expected<uint64_t> MachOPlatform::createPThreadKey() {
-  if (!orc_rt_macho_create_pthread_key)
-    return make_error<StringError>(
-        "Attempting to create pthread key in target, but runtime support has "
-        "not been loaded yet",
-        inconvertibleErrorCode());
-
-  Expected<uint64_t> Result(0);
-  if (auto Err = EPC.runSPSWrapper<SPSExpected<uint64_t>(void)>(
-          orc_rt_macho_create_pthread_key.getValue(), Result))
-    return std::move(Err);
-  return Result;
-}
-
 void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, jitlink::LinkGraph &LG,
     jitlink::PassConfiguration &Config) {
@@ -597,8 +579,8 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
   if (MR.getInitializerSymbol())
     addInitializerSupportPasses(MR, Config);
 
-  // Add passes for eh-frame and TLV support.
-  addEHAndTLVSupportPasses(MR, Config);
+  // Add passes for eh-frame support.
+  addEHSupportPasses(MR, Config);
 }
 
 ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
@@ -652,18 +634,10 @@ void MachOPlatform::MachOPlatformPlugin::addMachOHeaderSupportPasses(
   });
 }
 
-void MachOPlatform::MachOPlatformPlugin::addEHAndTLVSupportPasses(
+void MachOPlatform::MachOPlatformPlugin::addEHSupportPasses(
     MaterializationResponsibility &MR, jitlink::PassConfiguration &Config) {
 
-  // Insert TLV lowering at the start of the PostPrunePasses, since we want
-  // it to run before GOT/PLT lowering.
-  Config.PostPrunePasses.insert(
-      Config.PostPrunePasses.begin(),
-      [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
-        return fixTLVSectionsAndEdges(G, JD);
-      });
-
-  // Add a pass to register the final addresses of the eh-frame and TLV sections
+  // Add a pass to register the final addresses of the eh-frame sections
   // with the runtime.
   Config.PostFixupPasses.push_back([this](jitlink::LinkGraph &G) -> Error {
     MachOPerObjectSectionsToRegister POSR;
@@ -675,33 +649,7 @@ void MachOPlatform::MachOPlatformPlugin::addEHAndTLVSupportPasses(
                                ExecutorAddress(R.getEnd())};
     }
 
-    // Get a pointer to the thread data section if there is one. It will be used
-    // below.
-    jitlink::Section *ThreadDataSection =
-        G.findSectionByName(ThreadDataSectionName);
-
-    // Handle thread BSS section if there is one.
-    if (auto *ThreadBSSSection = G.findSectionByName(ThreadBSSSectionName)) {
-      // If there's already a thread data section in this graph then merge the
-      // thread BSS section content into it, otherwise just treat the thread
-      // BSS section as the thread data section.
-      if (ThreadDataSection)
-        G.mergeSections(*ThreadDataSection, *ThreadBSSSection);
-      else
-        ThreadDataSection = ThreadBSSSection;
-    }
-
-    // Having merged thread BSS (if present) and thread data (if present),
-    // record the resulting section range.
-    if (ThreadDataSection) {
-      jitlink::SectionRange R(*ThreadDataSection);
-      if (!R.empty())
-        POSR.ThreadDataSection = {ExecutorAddress(R.getStart()),
-                                  ExecutorAddress(R.getEnd())};
-    }
-
-    if (POSR.EHFrameSection.StartAddress ||
-        POSR.ThreadDataSection.StartAddress) {
+    if (POSR.EHFrameSection.StartAddress) {
 
       // If we're still bootstrapping the runtime then just record this
       // frame for now.
@@ -777,62 +725,6 @@ Error MachOPlatform::MachOPlatformPlugin::registerInitSections(
   });
 
   return MP.registerInitInfo(JD, InitSections);
-}
-
-Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
-    jitlink::LinkGraph &G, JITDylib &JD) {
-
-  // Rename external references to __tlv_bootstrap to ___orc_rt_tlv_get_addr.
-  for (auto *Sym : G.external_symbols())
-    if (Sym->getName() == "__tlv_bootstrap") {
-      Sym->setName("___orc_rt_macho_tlv_get_addr");
-      break;
-    }
-
-  // Store key in __thread_vars struct fields.
-  if (auto *ThreadDataSec = G.findSectionByName(ThreadVarsSectionName)) {
-    Optional<uint64_t> Key;
-    {
-      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-      auto I = MP.JITDylibToPThreadKey.find(&JD);
-      if (I != MP.JITDylibToPThreadKey.end())
-        Key = I->second;
-    }
-
-    if (!Key) {
-      if (auto KeyOrErr = MP.createPThreadKey())
-        Key = *KeyOrErr;
-      else
-        return KeyOrErr.takeError();
-    }
-
-    uint64_t PlatformKeyBits =
-        support::endian::byte_swap(*Key, G.getEndianness());
-
-    for (auto *B : ThreadDataSec->blocks()) {
-      if (B->getSize() != 3 * G.getPointerSize())
-        return make_error<StringError>("__thread_vars block at " +
-                                           formatv("{0:x}", B->getAddress()) +
-                                           " has unexpected size",
-                                       inconvertibleErrorCode());
-
-      auto NewBlockContent = G.allocateBuffer(B->getSize());
-      llvm::copy(B->getContent(), NewBlockContent.data());
-      memcpy(NewBlockContent.data() + G.getPointerSize(), &PlatformKeyBits,
-             G.getPointerSize());
-      B->setContent(NewBlockContent);
-    }
-  }
-
-  // Transform any TLV edges into GOT edges.
-  for (auto *B : G.blocks())
-    for (auto &E : B->edges())
-      if (E.getKind() ==
-          jitlink::x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadRelaxable)
-        E.setKind(
-            jitlink::x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable);
-
-  return Error::success();
 }
 
 } // End namespace orc.
