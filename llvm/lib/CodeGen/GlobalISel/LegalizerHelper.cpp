@@ -5622,7 +5622,15 @@ LegalizerHelper::narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
 
     auto LoCTPOP = MIRBuilder.buildCTPOP(DstTy, UnmergeSrc.getReg(0));
     auto HiCTPOP = MIRBuilder.buildCTPOP(DstTy, UnmergeSrc.getReg(1));
-    MIRBuilder.buildAdd(DstReg, HiCTPOP, LoCTPOP);
+
+    LLT CountTy = LLT::scalar(Log2_64_Ceil(SrcTy.getSizeInBits()));
+    if (CountTy.getSizeInBits() < DstTy.getSizeInBits()) {
+      LoCTPOP = MIRBuilder.buildTrunc(CountTy, LoCTPOP);
+      HiCTPOP = MIRBuilder.buildTrunc(CountTy, HiCTPOP);
+      auto Add = MIRBuilder.buildAdd(CountTy, HiCTPOP, LoCTPOP);
+      MIRBuilder.buildZExt(DstReg, Add);
+    } else
+      MIRBuilder.buildAdd(DstReg, HiCTPOP, LoCTPOP);
 
     MI.eraseFromParent();
     return Legalized;

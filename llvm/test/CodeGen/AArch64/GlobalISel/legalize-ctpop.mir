@@ -80,6 +80,30 @@ body:             |
 
 ...
 ---
+name:            s128_lower
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: s128_lower
+    ; CHECK: liveins: $q0
+    ; CHECK: %copy:_(s128) = COPY $q0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<16 x s8>) = G_BITCAST %copy(s128)
+    ; CHECK: [[CTPOP:%[0-9]+]]:_(<16 x s8>) = G_CTPOP [[BITCAST]](<16 x s8>)
+    ; CHECK: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), [[CTPOP]](<16 x s8>)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[INT]](s32), [[C]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: %ctpop:_(s128) = G_MERGE_VALUES [[MV]](s64), [[C1]](s64)
+    ; CHECK: $q0 = COPY %ctpop(s128)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %copy:_(s128) = COPY $q0
+    %ctpop:_(s128) = G_CTPOP %copy(s128)
+    $q0 = COPY %ctpop(s128)
+    RET_ReallyLR implicit $q0
+
+...
+---
 name:            widen_s16
 tracksRegLiveness: true
 body:             |
