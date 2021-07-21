@@ -140,6 +140,20 @@ public:
   ///     trace.
   virtual lldb::TraceCursorUP GetCursor(Thread &thread) = 0;
 
+  /// Dump general info about a given thread's trace. Each Trace plug-in
+  /// decides which data to show.
+  ///
+  /// \param[in] thread
+  ///     The thread that owns the trace in question.
+  ///
+  /// \param[in] s
+  ///     The stream object where the info will be printed printed.
+  ///
+  /// \param[in] verbose
+  ///     If \b true, print detailed info
+  ///     If \b false, print compact info
+  virtual void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) = 0;
+
   /// Check if a thread is currently traced by this object.
   ///
   /// \param[in] thread
