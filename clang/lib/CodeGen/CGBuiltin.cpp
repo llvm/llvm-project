@@ -17635,63 +17635,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_swizzle);
     return Builder.CreateCall(Callee, {Src, Indices});
   }
-  case WebAssembly::BI__builtin_wasm_extract_lane_s_i8x16:
-  case WebAssembly::BI__builtin_wasm_extract_lane_u_i8x16:
-  case WebAssembly::BI__builtin_wasm_extract_lane_s_i16x8:
-  case WebAssembly::BI__builtin_wasm_extract_lane_u_i16x8:
-  case WebAssembly::BI__builtin_wasm_extract_lane_i32x4:
-  case WebAssembly::BI__builtin_wasm_extract_lane_i64x2:
-  case WebAssembly::BI__builtin_wasm_extract_lane_f32x4:
-  case WebAssembly::BI__builtin_wasm_extract_lane_f64x2: {
-    llvm::APSInt LaneConst =
-        *E->getArg(1)->getIntegerConstantExpr(getContext());
-    Value *Vec = EmitScalarExpr(E->getArg(0));
-    Value *Lane = llvm::ConstantInt::get(getLLVMContext(), LaneConst);
-    Value *Extract = Builder.CreateExtractElement(Vec, Lane);
-    switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_extract_lane_s_i8x16:
-    case WebAssembly::BI__builtin_wasm_extract_lane_s_i16x8:
-      return Builder.CreateSExt(Extract, ConvertType(E->getType()));
-    case WebAssembly::BI__builtin_wasm_extract_lane_u_i8x16:
-    case WebAssembly::BI__builtin_wasm_extract_lane_u_i16x8:
-      return Builder.CreateZExt(Extract, ConvertType(E->getType()));
-    case WebAssembly::BI__builtin_wasm_extract_lane_i32x4:
-    case WebAssembly::BI__builtin_wasm_extract_lane_i64x2:
-    case WebAssembly::BI__builtin_wasm_extract_lane_f32x4:
-    case WebAssembly::BI__builtin_wasm_extract_lane_f64x2:
-      return Extract;
-    default:
-      llvm_unreachable("unexpected builtin ID");
-    }
-  }
-  case WebAssembly::BI__builtin_wasm_replace_lane_i8x16:
-  case WebAssembly::BI__builtin_wasm_replace_lane_i16x8:
-  case WebAssembly::BI__builtin_wasm_replace_lane_i32x4:
-  case WebAssembly::BI__builtin_wasm_replace_lane_i64x2:
-  case WebAssembly::BI__builtin_wasm_replace_lane_f32x4:
-  case WebAssembly::BI__builtin_wasm_replace_lane_f64x2: {
-    llvm::APSInt LaneConst =
-        *E->getArg(1)->getIntegerConstantExpr(getContext());
-    Value *Vec = EmitScalarExpr(E->getArg(0));
-    Value *Lane = llvm::ConstantInt::get(getLLVMContext(), LaneConst);
-    Value *Val = EmitScalarExpr(E->getArg(2));
-    switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_replace_lane_i8x16:
-    case WebAssembly::BI__builtin_wasm_replace_lane_i16x8: {
-      llvm::Type *ElemType =
-          cast<llvm::VectorType>(ConvertType(E->getType()))->getElementType();
-      Value *Trunc = Builder.CreateTrunc(Val, ElemType);
-      return Builder.CreateInsertElement(Vec, Trunc, Lane);
-    }
-    case WebAssembly::BI__builtin_wasm_replace_lane_i32x4:
-    case WebAssembly::BI__builtin_wasm_replace_lane_i64x2:
-    case WebAssembly::BI__builtin_wasm_replace_lane_f32x4:
-    case WebAssembly::BI__builtin_wasm_replace_lane_f64x2:
-      return Builder.CreateInsertElement(Vec, Val, Lane);
-    default:
-      llvm_unreachable("unexpected builtin ID");
-    }
-  }
   case WebAssembly::BI__builtin_wasm_add_sat_s_i8x16:
   case WebAssembly::BI__builtin_wasm_add_sat_u_i8x16:
   case WebAssembly::BI__builtin_wasm_add_sat_s_i16x8:
