@@ -26,7 +26,9 @@
 #ifdef __AMDGCN__
 #include <__clang_hip_libdevice_declares.h>
 #define __ARCHTYPES__ amdgcn
+#define __OPENMP_AMDGCN__
 #include <__clang_cuda_complex_builtins.h>
+#undef __OPENMP_AMDGCN__
 #endif // __AMDGCN__
 
 #endif //__CLANG_OPENMP_COMPLEX__

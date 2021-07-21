@@ -1,4 +1,3 @@
-// XFAIL: *
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \

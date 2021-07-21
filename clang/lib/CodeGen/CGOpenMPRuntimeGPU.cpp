@@ -4620,6 +4620,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1032:
       case CudaArch::GFX1033:
       case CudaArch::GFX1034:
+      case CudaArch::GFX1035:
       case CudaArch::UNUSED:
       case CudaArch::UNKNOWN:
         break;

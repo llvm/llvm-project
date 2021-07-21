@@ -101,17 +101,16 @@ typedef __SIZE_TYPE__ size_t;
 #include <__clang_hip_libdevice_declares.h>
 #include <__clang_hip_math.h>
 
-#if !defined(__HIPCC_RTC__)
-#if !_OPENMP || __HIP_ENABLE_CUDA_WRAPPER_FOR_OPENMP__
+#if defined(__HIPCC_RTC__)
+#include <__clang_hip_cmath.h>
+#else
 #include <__clang_cuda_math_forward_declares.h>
 #include <__clang_hip_cmath.h>
 #include <__clang_cuda_complex_builtins.h>
-
 #include <algorithm>
 #include <complex>
 #include <new>
 #endif // __HIPCC_RTC__
-#endif // !_OPENMP || __HIP_ENABLE_CUDA_WRAPPER_FOR_OPENMP__
 
 #define __CLANG_HIP_RUNTIME_WRAPPER_INCLUDED__ 1
 #if defined(__HIPCC_RTC__)
