@@ -4983,6 +4983,18 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     break;
 
   case ISD::INTRINSIC_WO_CHAIN: {
+    // We emit the PPC::FSELS instruction here because of type conflicts with
+    // the comparison operand. The FSELS instruction is defined to use an 8-byte
+    // comparison like the FSELD version. The fsels intrinsic takes a 4-byte
+    // value for the comparison. When selecting through a .td file, a type
+    // error is raised. Must check this first so we never break on the
+    // !Subtarget->isISA3_1() check.
+    if (N->getConstantOperandVal(0) == Intrinsic::ppc_fsels) {
+      SDValue Ops[] = {N->getOperand(1), N->getOperand(2), N->getOperand(3)};
+      CurDAG->SelectNodeTo(N, PPC::FSELS, MVT::f32, Ops);
+      return;
+    }
+
     if (!Subtarget->isISA3_1())
       break;
     unsigned Opcode = 0;
