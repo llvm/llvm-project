@@ -447,7 +447,7 @@ if config.android:
 
   # These are needed for tests to upload/download temp files, such as
   # suppression-files, to device.
-  config.substitutions.append( ('%device_rundir', "/data/local/tmp/Output") )
+  config.substitutions.append( ('%device_rundir/', "/data/local/tmp/Output/") )
   config.substitutions.append( ('%push_to_device', "%s -s '%s' push " % (adb, env['ANDROID_SERIAL']) ) )
   config.substitutions.append( ('%pull_from_device', "%s -s '%s' pull " % (adb, env['ANDROID_SERIAL']) ) )
   config.substitutions.append( ('%adb_shell ', "%s -s '%s' shell " % (adb, env['ANDROID_SERIAL']) ) )
@@ -476,7 +476,7 @@ if config.android:
   for file in config.android_files_to_push:
     subprocess.check_call([adb, "push", file, android_tmpdir], env=env)
 else:
-  config.substitutions.append( ('%device_rundir', "") )
+  config.substitutions.append( ('%device_rundir/', "") )
   config.substitutions.append( ('%push_to_device', "echo ") )
   config.substitutions.append( ('%pull_from_device', "echo ") )
   config.substitutions.append( ('%adb_shell', "echo ") )
