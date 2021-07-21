@@ -389,7 +389,6 @@ private:
     StringRef Name;
     RedefinableKind Redefinable = REDEFINABLE;
     bool IsText = false;
-    int64_t NumericValue = 0;
     std::string TextValue;
   };
   StringMap<Variable> Variables;
@@ -796,6 +795,34 @@ private:
   /// def_range types parsed by this class.
   StringMap<CVDefRangeType> CVDefRangeTypeMap;
 
+  // Generic (target and platform independent) directive parsing.
+  enum BuiltinSymbol {
+    BI_NO_SYMBOL, // Placeholder
+    BI_DATE,
+    BI_TIME,
+    BI_VERSION,
+    BI_FILECUR,
+    BI_FILENAME,
+    BI_LINE,
+    BI_CURSEG,
+    BI_CPU,
+    BI_INTERFACE,
+    BI_CODE,
+    BI_DATA,
+    BI_FARDATA,
+    BI_WORDSIZE,
+    BI_CODESIZE,
+    BI_DATASIZE,
+    BI_MODEL,
+    BI_STACK,
+  };
+
+  /// Maps builtin name --> BuiltinSymbol enum, for builtins handled by this
+  /// class.
+  StringMap<BuiltinSymbol> BuiltinSymbolMap;
+
+  const MCExpr *evaluateBuiltinValue(BuiltinSymbol Symbol, SMLoc StartLoc);
+
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
 
@@ -1019,6 +1046,7 @@ private:
 
   void initializeDirectiveKindMap();
   void initializeCVDefRangeTypeMap();
+  void initializeBuiltinSymbolMap();
 };
 
 } // end anonymous namespace
@@ -1057,6 +1085,7 @@ MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   initializeDirectiveKindMap();
   PlatformParser->Initialize(*this);
   initializeCVDefRangeTypeMap();
+  initializeBuiltinSymbolMap();
 
   NumOfMacroInstantiations = 0;
 }
@@ -1610,6 +1639,19 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
     if (!Sym) {
+      // If this is a built-in numeric value, treat it as a constant.
+      auto BuiltinIt = BuiltinSymbolMap.find(SymbolName.lower());
+      const BuiltinSymbol Symbol = (BuiltinIt == BuiltinSymbolMap.end())
+                                       ? BI_NO_SYMBOL
+                                       : BuiltinIt->getValue();
+      if (Symbol != BI_NO_SYMBOL) {
+        const MCExpr *Value = evaluateBuiltinValue(Symbol, FirstTokenLoc);
+        if (Value) {
+          Res = Value;
+          return false;
+        }
+      }
+
       // Variables use case-insensitive symbol names; if this is a variable, we
       // find the symbol using its canonical name.
       auto VarIt = Variables.find(SymbolName.lower());
@@ -1621,14 +1663,14 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
     if (Sym->isVariable()) {
-      auto V = Sym->getVariableValue(/*SetUsed*/ false);
+      auto V = Sym->getVariableValue(/*SetUsed=*/false);
       bool DoInline = isa<MCConstantExpr>(V) && !Variant;
       if (auto TV = dyn_cast<MCTargetExpr>(V))
         DoInline = TV->inlineAssignedExpr();
       if (DoInline) {
         if (Variant)
           return Error(EndLoc, "unexpected modifier on variable reference");
-        Res = Sym->getVariableValue(/*SetUsed*/ false);
+        Res = Sym->getVariableValue(/*SetUsed=*/false);
         return false;
       }
     }
@@ -3377,6 +3419,10 @@ bool MasmParser::parseIdentifier(StringRef &Res,
 ///    | name "textequ" text-list (redefinability unspecified)
 bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
                                       DirectiveKind DirKind, SMLoc NameLoc) {
+  auto BuiltinIt = BuiltinSymbolMap.find(Name.lower());
+  if (BuiltinIt != BuiltinSymbolMap.end())
+    return Error(NameLoc, "cannot redefine a built-in symbol");
+
   Variable &Var = Variables[Name.lower()];
   if (Var.Name.empty()) {
     Var.Name = Name;
@@ -3429,12 +3475,18 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   SMLoc EndLoc;
   if (parseExpression(Expr, EndLoc))
     return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+  StringRef ExprAsString = StringRef(
+      StartLoc.getPointer(), EndLoc.getPointer() - StartLoc.getPointer());
 
   int64_t Value;
   if (!Expr->evaluateAsAbsolute(Value, getStreamer().getAssemblerPtr())) {
+    if (DirKind == DK_ASSIGN)
+      return Error(
+          StartLoc,
+          "expected absolute expression; not all symbols have known values",
+          {StartLoc, EndLoc});
+
     // Not an absolute expression; define as a text replacement.
-    StringRef ExprAsString = StringRef(
-        StartLoc.getPointer(), EndLoc.getPointer() - StartLoc.getPointer());
     if (!Var.IsText || Var.TextValue != ExprAsString) {
       switch (Var.Redefinable) {
       case Variable::NOT_REDEFINABLE:
@@ -3449,29 +3501,40 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
         break;
       }
     }
+
     Var.IsText = true;
     Var.TextValue = ExprAsString.str();
-  } else {
-    if (Var.IsText || Var.NumericValue != Value) {
-      switch (Var.Redefinable) {
-      case Variable::NOT_REDEFINABLE:
-        return Error(getTok().getLoc(), "invalid variable redefinition");
-      case Variable::WARN_ON_REDEFINITION:
-        if (Warning(NameLoc, "redefining '" + Name +
-                                 "', already defined on the command line")) {
-          return true;
-        }
-        break;
-      default:
-        break;
-      }
-    }
-    Var.NumericValue = Value;
+    Var.Redefinable = Variable::REDEFINABLE;
+
+    return false;
   }
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
+
+  const MCConstantExpr *PrevValue =
+      Sym->isVariable() ? dyn_cast_or_null<MCConstantExpr>(
+                              Sym->getVariableValue(/*SetUsed=*/false))
+                        : nullptr;
+  if (Var.IsText || !PrevValue || PrevValue->getValue() != Value) {
+    switch (Var.Redefinable) {
+    case Variable::NOT_REDEFINABLE:
+      return Error(getTok().getLoc(), "invalid variable redefinition");
+    case Variable::WARN_ON_REDEFINITION:
+      if (Warning(NameLoc, "redefining '" + Name +
+                               "', already defined on the command line")) {
+        return true;
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
+  Var.IsText = false;
+  Var.TextValue.clear();
   Var.Redefinable = (DirKind == DK_ASSIGN) ? Variable::REDEFINABLE
                                            : Variable::NOT_REDEFINABLE;
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
   Sym->setRedefinable(Var.Redefinable != Variable::NOT_REDEFINABLE);
   Sym->setVariableValue(Expr);
   Sym->setExternal(false);
@@ -6181,7 +6244,9 @@ bool MasmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
           parseToken(AsmToken::EndOfStatement, "unexpected token in 'ifdef'"))
         return true;
 
-      if (Variables.find(Name.lower()) != Variables.end()) {
+      if (BuiltinSymbolMap.find(Name.lower()) != BuiltinSymbolMap.end()) {
+        is_defined = true;
+      } else if (Variables.find(Name.lower()) != Variables.end()) {
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name.lower());
@@ -6303,7 +6368,9 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
                      "unexpected token in 'elseifdef'"))
         return true;
 
-      if (Variables.find(Name.lower()) != Variables.end()) {
+      if (BuiltinSymbolMap.find(Name.lower()) != BuiltinSymbolMap.end()) {
+        is_defined = true;
+      } else if (Variables.find(Name.lower()) != Variables.end()) {
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name);
@@ -6473,7 +6540,9 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
     if (check(parseIdentifier(Name), "expected identifier after '.errdef'"))
       return true;
 
-    if (Variables.find(Name.lower()) != Variables.end()) {
+    if (BuiltinSymbolMap.find(Name.lower()) != BuiltinSymbolMap.end()) {
+      IsDefined = true;
+    } else if (Variables.find(Name.lower()) != Variables.end()) {
       IsDefined = true;
     } else {
       MCSymbol *Sym = getContext().lookupSymbol(Name);
@@ -7518,6 +7587,58 @@ bool MasmParser::parseMSInlineAsm(
 
   AsmString = OS.str();
   return false;
+}
+
+void MasmParser::initializeBuiltinSymbolMap() {
+  // Numeric built-ins (supported in all versions)
+  BuiltinSymbolMap["@version"] = BI_VERSION;
+  BuiltinSymbolMap["@line"] = BI_LINE;
+
+  // Text built-ins (supported in all versions)
+  // BuiltinSymbolMap["@date"] = BI_DATE;
+  // BuiltinSymbolMap["@time"] = BI_TIME;
+  // BuiltinSymbolMap["@filecur"] = BI_FILECUR;
+  // BuiltinSymbolMap["@filename"] = BI_FILENAME;
+  // BuiltinSymbolMap["@curseg"] = BI_CURSEG;
+
+  // Some built-ins exist only for MASM32 (32-bit x86)
+  if (getContext().getSubtargetInfo()->getTargetTriple().getArch() ==
+      Triple::x86) {
+    // Numeric built-ins
+    // BuiltinSymbolMap["@cpu"] = BI_CPU;
+    // BuiltinSymbolMap["@interface"] = BI_INTERFACE;
+    // BuiltinSymbolMap["@wordsize"] = BI_WORDSIZE;
+    // BuiltinSymbolMap["@codesize"] = BI_CODESIZE;
+    // BuiltinSymbolMap["@datasize"] = BI_DATASIZE;
+    // BuiltinSymbolMap["@model"] = BI_MODEL;
+
+    // Text built-ins
+    // BuiltinSymbolMap["@code"] = BI_CODE;
+    // BuiltinSymbolMap["@data"] = BI_DATA;
+    // BuiltinSymbolMap["@fardata?"] = BI_FARDATA;
+    // BuiltinSymbolMap["@stack"] = BI_STACK;
+  }
+}
+
+const MCExpr *MasmParser::evaluateBuiltinValue(BuiltinSymbol Symbol,
+                                               SMLoc StartLoc) {
+  switch (Symbol) {
+  default:
+    return nullptr;
+  case BI_VERSION:
+    // Match a recent version of ML.EXE.
+    return MCConstantExpr::create(1427, getContext());
+  case BI_LINE: {
+    int64_t Line;
+    if (ActiveMacros.empty())
+      Line = SrcMgr.FindLineNumber(StartLoc, CurBuffer);
+    else
+      Line = SrcMgr.FindLineNumber(ActiveMacros.front()->InstantiationLoc,
+                                   ActiveMacros.front()->ExitBuffer);
+    return MCConstantExpr::create(Line, getContext());
+  }
+  }
+  llvm_unreachable("unhandled built-in symbol");
 }
 
 /// Create an MCAsmParser instance.
