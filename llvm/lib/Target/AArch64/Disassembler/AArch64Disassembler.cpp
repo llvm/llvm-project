@@ -307,7 +307,18 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     case AArch64::LD1_MXIPXX_V_B:
     case AArch64::ST1_MXIPXX_H_B:
     case AArch64::ST1_MXIPXX_V_B:
+    case AArch64::INSERT_MXIPZ_H_B:
+    case AArch64::INSERT_MXIPZ_V_B:
+      // e.g.
+      // MOVA ZA0<HV>.B[<Ws>, <imm>], <Pg>/M, <Zn>.B
+      //      ^ insert implicit 8-bit element tile
       MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZAB0));
+      break;
+    case AArch64::EXTRACT_ZPMXI_H_B:
+    case AArch64::EXTRACT_ZPMXI_V_B:
+      // MOVA <Zd>.B, <Pg>/M, ZA0<HV>.B[<Ws>, <imm>]
+      //                      ^ insert implicit 8-bit element tile
+      MI.insert(MI.begin()+2, MCOperand::createReg(AArch64::ZAB0));
       break;
     }
 
