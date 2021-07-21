@@ -9,12 +9,12 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "../common/ThreadPostMortemTrace.h"
 #include "DecodedThread.h"
 #include "TraceIntelPT.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/ThreadPostMortemTrace.h"
 #include "lldb/Utility/StringExtractor.h"
 
 using namespace lldb;
