@@ -22,8 +22,6 @@ namespace __sanitizer {
 
 class MUTEX StaticSpinMutex {
  public:
-  StaticSpinMutex() = default;
-
   void Init() {
     atomic_store(&state_, 0, memory_order_relaxed);
   }
@@ -48,9 +46,6 @@ class MUTEX StaticSpinMutex {
   atomic_uint8_t state_;
 
   void LockSlow();
-
-  StaticSpinMutex(const StaticSpinMutex &) = delete;
-  void operator=(const StaticSpinMutex &) = delete;
 };
 
 class MUTEX SpinMutex : public StaticSpinMutex {
@@ -58,6 +53,9 @@ class MUTEX SpinMutex : public StaticSpinMutex {
   SpinMutex() {
     Init();
   }
+
+  SpinMutex(const SpinMutex &) = delete;
+  void operator=(const SpinMutex &) = delete;
 };
 
 // Semaphore provides an OS-dependent way to park/unpark threads.
