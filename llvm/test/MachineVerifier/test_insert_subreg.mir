@@ -10,7 +10,7 @@ tracksRegLiveness: true
 liveins:
 body:             |
   bb.0:
-    liveins: $s0, $h1
+    liveins: $s0, $h1, $q2
 
     %0:fpr32 = COPY $s0
 
@@ -27,5 +27,10 @@ body:             |
     ; CHECK-NOT: *** Bad machine code:
     %7:fpr128 = IMPLICIT_DEF
     %8:fpr128 = INSERT_SUBREG %7:fpr128, %0:fpr32, %subreg.ssub
+
+    ; CHECK-NOT: *** Bad machine code:
+    %9:fpr128 = COPY $q2
+    %10:fpr128 = IMPLICIT_DEF
+    %11:fpr128 = INSERT_SUBREG %10:fpr128, %9.ssub, %subreg.ssub
 
 ...
