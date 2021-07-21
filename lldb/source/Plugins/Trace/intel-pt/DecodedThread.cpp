@@ -61,6 +61,7 @@ Error IntelPTInstruction::ToError() const {
   return make_error<StringError>(m_error->message(),
                                  m_error->convertToErrorCode());
 }
+size_t DecodedThread::GetRawTraceSize() const { return m_raw_trace_size; }
 
 TraceInstructionControlFlowType
 IntelPTInstruction::GetControlFlowType(lldb::addr_t next_load_address) const {
@@ -103,8 +104,10 @@ DecodedThread::DecodedThread(ThreadSP thread_sp, Error error)
 }
 
 DecodedThread::DecodedThread(ThreadSP thread_sp,
-                             std::vector<IntelPTInstruction> &&instructions)
-    : m_thread_sp(thread_sp), m_instructions(std::move(instructions)) {
+                             std::vector<IntelPTInstruction> &&instructions,
+                             size_t raw_trace_size)
+    : m_thread_sp(thread_sp), m_instructions(std::move(instructions)),
+      m_raw_trace_size(raw_trace_size) {
   if (m_instructions.empty())
     m_instructions.emplace_back(
         createStringError(inconvertibleErrorCode(), "empty trace"));

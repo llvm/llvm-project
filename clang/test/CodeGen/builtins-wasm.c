@@ -836,18 +836,6 @@ u32x4 trunc_sat_zero_u_f64x2_i32x4(f64x2 x) {
   // WEBASSEMBLY: ret <4 x i32> %1
 }
 
-i32x4 load32_zero(const int *p) {
-  return __builtin_wasm_load32_zero(p);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.load32.zero(i32* %p)
-  // WEBASSEMBLY: ret
-}
-
-i64x2 load64_zero(const long long *p) {
-  return __builtin_wasm_load64_zero(p);
-  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.load64.zero(i64* %p)
-  // WEBASSEMBLY: ret
-}
-
 i8x16 swizzle_i8x16(i8x16 x, i8x16 y) {
   return __builtin_wasm_swizzle_i8x16(x, y);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %x, <16 x i8> %y)

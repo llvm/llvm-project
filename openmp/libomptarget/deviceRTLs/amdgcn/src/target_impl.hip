@@ -133,7 +133,7 @@ EXTERN int GetNumberOfThreadsInBlock() {
                            __builtin_amdgcn_workgroup_size_x());
 }
 
-EXTERN unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
+EXTERN unsigned GetWarpId() { return __kmpc_get_hardware_thread_id_in_block() / WARPSIZE; }
 EXTERN unsigned GetWarpSize() { return WARPSIZE; }
 EXTERN unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
@@ -212,7 +212,7 @@ EXTERN void __kmpc_impl_threadfence_system() {
 }
 
 // Calls to the AMDGCN layer (assuming 1D layout)
-EXTERN int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
+EXTERN int __kmpc_get_hardware_thread_id_in_block() { return __builtin_amdgcn_workitem_id_x(); }
 EXTERN int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 
 #pragma omp end declare target

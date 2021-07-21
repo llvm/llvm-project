@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_MACHINEVALUETYPE_H
 #define LLVM_SUPPORT_MACHINEVALUETYPE_H
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -1398,84 +1399,55 @@ namespace llvm {
     /// returned as Other, otherwise they are invalid.
     static MVT getVT(Type *Ty, bool HandleUnknown = false);
 
-  private:
-    /// A simple iterator over the MVT::SimpleValueType enum.
-    struct mvt_iterator {
-      SimpleValueType VT;
-
-      mvt_iterator(SimpleValueType VT) : VT(VT) {}
-
-      MVT operator*() const { return VT; }
-      bool operator!=(const mvt_iterator &LHS) const { return VT != LHS.VT; }
-
-      mvt_iterator& operator++() {
-        VT = (MVT::SimpleValueType)((int)VT + 1);
-        assert((int)VT <= MVT::MAX_ALLOWED_VALUETYPE &&
-               "MVT iterator overflowed.");
-        return *this;
-      }
-    };
-
-    /// A range of the MVT::SimpleValueType enum.
-    using mvt_range = iterator_range<mvt_iterator>;
-
   public:
     /// SimpleValueType Iteration
     /// @{
-    static mvt_range all_valuetypes() {
-      return mvt_range(MVT::FIRST_VALUETYPE,
-                       (MVT::SimpleValueType)(MVT::LAST_VALUETYPE + 1));
+    static auto all_valuetypes() {
+      return seq_inclusive(MVT::FIRST_VALUETYPE, MVT::LAST_VALUETYPE);
     }
 
-    static mvt_range integer_valuetypes() {
-      return mvt_range(MVT::FIRST_INTEGER_VALUETYPE,
-                       (MVT::SimpleValueType)(MVT::LAST_INTEGER_VALUETYPE + 1));
+    static auto integer_valuetypes() {
+      return seq_inclusive(MVT::FIRST_INTEGER_VALUETYPE,
+                           MVT::LAST_INTEGER_VALUETYPE);
     }
 
-    static mvt_range fp_valuetypes() {
-      return mvt_range(MVT::FIRST_FP_VALUETYPE,
-                       (MVT::SimpleValueType)(MVT::LAST_FP_VALUETYPE + 1));
+    static auto fp_valuetypes() {
+      return seq_inclusive(MVT::FIRST_FP_VALUETYPE, MVT::LAST_FP_VALUETYPE);
     }
 
-    static mvt_range vector_valuetypes() {
-      return mvt_range(MVT::FIRST_VECTOR_VALUETYPE,
-                       (MVT::SimpleValueType)(MVT::LAST_VECTOR_VALUETYPE + 1));
+    static auto vector_valuetypes() {
+      return seq_inclusive(MVT::FIRST_VECTOR_VALUETYPE,
+                           MVT::LAST_VECTOR_VALUETYPE);
     }
 
-    static mvt_range fixedlen_vector_valuetypes() {
-      return mvt_range(
-               MVT::FIRST_FIXEDLEN_VECTOR_VALUETYPE,
-               (MVT::SimpleValueType)(MVT::LAST_FIXEDLEN_VECTOR_VALUETYPE + 1));
+    static auto fixedlen_vector_valuetypes() {
+      return seq_inclusive(MVT::FIRST_FIXEDLEN_VECTOR_VALUETYPE,
+                           MVT::LAST_FIXEDLEN_VECTOR_VALUETYPE);
     }
 
-    static mvt_range scalable_vector_valuetypes() {
-      return mvt_range(
-               MVT::FIRST_SCALABLE_VECTOR_VALUETYPE,
-               (MVT::SimpleValueType)(MVT::LAST_SCALABLE_VECTOR_VALUETYPE + 1));
+    static auto scalable_vector_valuetypes() {
+      return seq_inclusive(MVT::FIRST_SCALABLE_VECTOR_VALUETYPE,
+                           MVT::LAST_SCALABLE_VECTOR_VALUETYPE);
     }
 
-    static mvt_range integer_fixedlen_vector_valuetypes() {
-      return mvt_range(
-       MVT::FIRST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE,
-       (MVT::SimpleValueType)(MVT::LAST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE + 1));
+    static auto integer_fixedlen_vector_valuetypes() {
+      return seq_inclusive(MVT::FIRST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE,
+                           MVT::LAST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE);
     }
 
-    static mvt_range fp_fixedlen_vector_valuetypes() {
-      return mvt_range(
-          MVT::FIRST_FP_FIXEDLEN_VECTOR_VALUETYPE,
-          (MVT::SimpleValueType)(MVT::LAST_FP_FIXEDLEN_VECTOR_VALUETYPE + 1));
+    static auto fp_fixedlen_vector_valuetypes() {
+      return seq_inclusive(MVT::FIRST_FP_FIXEDLEN_VECTOR_VALUETYPE,
+                           MVT::LAST_FP_FIXEDLEN_VECTOR_VALUETYPE);
     }
 
-    static mvt_range integer_scalable_vector_valuetypes() {
-      return mvt_range(
-       MVT::FIRST_INTEGER_SCALABLE_VECTOR_VALUETYPE,
-       (MVT::SimpleValueType)(MVT::LAST_INTEGER_SCALABLE_VECTOR_VALUETYPE + 1));
+    static auto integer_scalable_vector_valuetypes() {
+      return seq_inclusive(MVT::FIRST_INTEGER_SCALABLE_VECTOR_VALUETYPE,
+                           MVT::LAST_INTEGER_SCALABLE_VECTOR_VALUETYPE);
     }
 
-    static mvt_range fp_scalable_vector_valuetypes() {
-      return mvt_range(
-            MVT::FIRST_FP_SCALABLE_VECTOR_VALUETYPE,
-            (MVT::SimpleValueType)(MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE + 1));
+    static auto fp_scalable_vector_valuetypes() {
+      return seq_inclusive(MVT::FIRST_FP_SCALABLE_VECTOR_VALUETYPE,
+                           MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE);
     }
     /// @}
   };

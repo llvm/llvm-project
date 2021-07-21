@@ -108,6 +108,24 @@ lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
   return Decode(thread)->GetCursor();
 }
 
+void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
+  Optional<size_t> raw_size = GetRawTraceSize(thread);
+  s.Printf("\nthread #%u: tid = %" PRIu64, thread.GetIndexID(), thread.GetID());
+  if (!raw_size) {
+    s.Printf(", not traced\n");
+    return;
+  }
+  s.Printf("\n  Raw trace size: %zu bytes\n", *raw_size);
+  return;
+}
+
+Optional<size_t> TraceIntelPT::GetRawTraceSize(Thread &thread) {
+  if (IsTraced(thread))
+    return Decode(thread)->GetRawTraceSize();
+  else
+    return None;
+}
+
 Expected<pt_cpu> TraceIntelPT::GetCPUInfoForLiveProcess() {
   Expected<std::vector<uint8_t>> cpu_info = GetLiveProcessBinaryData("cpuInfo");
   if (!cpu_info)

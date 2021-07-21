@@ -51,6 +51,12 @@ def preserve_comments : LLVMFlag<"preserve-comments">,
                         HelpText<"Preserve comments in output assembly">;
 def save_temp_labels : LLVMFlag<"save-temp-labels">,
                        HelpText<"Don't discard temporary labels">;
+def timestamp : LLVMJoined<"timestamp=">,
+                HelpText<"Specify the assembly timestamp (used for @Date and "
+                         "@Time built-ins)">;
+def utc : LLVMFlag<"utc">,
+          HelpText<"Render @Date and @Time built-ins in GMT/UTC">;
+def gmtime : LLVMFlag<"gmtime">, Alias<utc>;
 
 def help : MLFlag<"?">,
            HelpText<"Display available options">;

@@ -469,6 +469,23 @@ func @fold_empty_loop() {
 }
 // CHECK: return
 
+// -----
+
+// CHECK-LABEL:  func @fold_zero_iter_loops
+// CHECK-SAME: %[[ARG:.*]]: index
+func @fold_zero_iter_loops(%in : index) -> index {
+  %c1 = constant 1 : index
+  affine.for %i = 0 to 0 {
+    affine.for %j = 0 to -1 {
+    }
+  }
+  %res = affine.for %i = 0 to 0 iter_args(%loop_arg = %in) -> index {
+    %yield = addi %loop_arg, %c1 : index
+    affine.yield %yield : index
+  }
+  // CHECK-NEXT: return %[[ARG]]
+  return %res : index
+}
 
 // -----
 

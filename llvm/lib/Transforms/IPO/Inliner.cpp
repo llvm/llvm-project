@@ -1127,6 +1127,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     UR.InvalidatedSCCs.insert(&DeadC);
     UR.InvalidatedRefSCCs.insert(&DeadRC);
 
+    // If the updated SCC was the one containing the deleted function, clear it.
+    if (&DeadC == UR.UpdatedC)
+      UR.UpdatedC = nullptr;
+
     // And delete the actual function from the module.
     // The Advisor may use Function pointers to efficiently index various
     // internal maps, e.g. for memoization. Function cleanup passes like

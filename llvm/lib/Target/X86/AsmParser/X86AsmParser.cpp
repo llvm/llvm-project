@@ -2594,9 +2594,9 @@ bool X86AsmParser::ParseIntelOperand(OperandVector &Operands) {
                                    End, Size, SM.getSymName(),
                                    SM.getIdentifierInfo(), Operands);
 
-  // When parsing x64 MS-style assembly, all memory operands default to
-  // RIP-relative when interpreted as non-absolute references.
-  if (Parser.isParsingMasm() && is64BitMode()) {
+  // When parsing x64 MS-style assembly, all non-absolute references to a named
+  // variable default to RIP-relative.
+  if (Parser.isParsingMasm() && is64BitMode() && SM.getElementSize() > 0) {
     Operands.push_back(X86Operand::CreateMem(getPointerWidth(), RegNo, Disp,
                                              BaseReg, IndexReg, Scale, Start,
                                              End, Size,

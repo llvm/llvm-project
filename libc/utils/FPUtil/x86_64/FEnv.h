@@ -91,12 +91,16 @@ struct X87StateDescriptor {
   uint16_t StatusWord;
   uint16_t Unused2;
   // TODO: Elaborate the remaining 20 bytes as required.
+#if !(defined(_WIN32))
   uint32_t _[5];
+#endif
 };
 
 struct FPState {
   X87StateDescriptor X87Status;
+#if !(defined(_WIN32))
   uint32_t MXCSR;
+#endif
 };
 
 static_assert(
@@ -346,6 +350,7 @@ static inline int setRound(int mode) {
   return 0;
 }
 
+#if !(defined(_WIN32))
 static inline int getEnv(fenv_t *envp) {
   internal::FPState *state = reinterpret_cast<internal::FPState *>(envp);
   internal::getX87StateDescriptor(state->X87Status);
@@ -360,6 +365,7 @@ static inline int setEnv(const fenv_t *envp) {
   internal::writeMXCSR(state->MXCSR);
   return 0;
 }
+#endif
 
 } // namespace fputil
 } // namespace __llvm_libc

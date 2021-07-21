@@ -248,9 +248,12 @@ bool isStdBasicOstream(const Expr *E) {
   return hasStdClassWithName(RD, BASIC_OSTREAM_NAMES);
 }
 
+static bool isStdFunctionCall(const CallEvent &Call) {
+  return Call.getDecl() && Call.getDecl()->getDeclContext()->isStdNamespace();
+}
+
 bool isStdOstreamOperatorCall(const CallEvent &Call) {
-  if (Call.getNumArgs() != 2 ||
-      !Call.getDecl()->getDeclContext()->isStdNamespace())
+  if (Call.getNumArgs() != 2 || !isStdFunctionCall(Call))
     return false;
   const auto *FC = dyn_cast<SimpleFunctionCall>(&Call);
   if (!FC)
@@ -265,6 +268,13 @@ bool isStdOstreamOperatorCall(const CallEvent &Call) {
          isStdBasicOstream(Call.getArgExpr(0));
 }
 
+static bool isPotentiallyComparisionOpCall(const CallEvent &Call) {
+  if (Call.getNumArgs() != 2 || !isStdFunctionCall(Call))
+    return false;
+  return smartptr::isStdSmartPtr(Call.getArgExpr(0)) ||
+         smartptr::isStdSmartPtr(Call.getArgExpr(1));
+}
+
 bool SmartPtrModeling::evalCall(const CallEvent &Call,
                                 CheckerContext &C) const {
 
@@ -272,14 +282,11 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
 
   // If any one of the arg is a unique_ptr, then
   // we can try this function
-  if (Call.getNumArgs() == 2 &&
-      Call.getDecl()->getDeclContext()->isStdNamespace())
-    if (smartptr::isStdSmartPtr(Call.getArgExpr(0)) ||
-        smartptr::isStdSmartPtr(Call.getArgExpr(1)))
-      if (handleComparisionOp(Call, C))
-        return true;
+  if (ModelSmartPtrDereference && isPotentiallyComparisionOpCall(Call))
+    if (handleComparisionOp(Call, C))
+      return true;
 
-  if (isStdOstreamOperatorCall(Call))
+  if (ModelSmartPtrDereference && isStdOstreamOperatorCall(Call))
     return handleOstreamOperator(Call, C);
 
   if (Call.isCalled(StdSwapCall)) {

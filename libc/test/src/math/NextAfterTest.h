@@ -22,12 +22,8 @@ class NextAfterTestTemplate : public __llvm_libc::testing::Test {
   using MantissaWidth = __llvm_libc::fputil::MantissaWidth<T>;
   using UIntType = typename FPBits::UIntType;
 
-#if (defined(__x86_64__) || defined(__i386__))
   static constexpr int bitWidthOfType =
-      __llvm_libc::cpp::IsSame<T, long double>::Value ? 80 : (sizeof(T) * 8);
-#else
-  static constexpr int bitWidthOfType = sizeof(T) * 8;
-#endif
+      __llvm_libc::fputil::FloatProperties<T>::bitWidth;
 
   const T zero = T(FPBits::zero());
   const T negZero = T(FPBits::negZero());

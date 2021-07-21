@@ -15726,6 +15726,41 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Builder.getFastMathFlags() &= (FMF);
     return FDiv;
   }
+  case PPC::BI__builtin_ppc_fric:
+    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
+                           *this, E, Intrinsic::rint,
+                           Intrinsic::experimental_constrained_rint))
+        .getScalarVal();
+  case PPC::BI__builtin_ppc_frim:
+  case PPC::BI__builtin_ppc_frims:
+    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
+                           *this, E, Intrinsic::floor,
+                           Intrinsic::experimental_constrained_floor))
+        .getScalarVal();
+  case PPC::BI__builtin_ppc_frin:
+  case PPC::BI__builtin_ppc_frins:
+    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
+                           *this, E, Intrinsic::round,
+                           Intrinsic::experimental_constrained_round))
+        .getScalarVal();
+  case PPC::BI__builtin_ppc_frip:
+  case PPC::BI__builtin_ppc_frips:
+    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
+                           *this, E, Intrinsic::ceil,
+                           Intrinsic::experimental_constrained_ceil))
+        .getScalarVal();
+  case PPC::BI__builtin_ppc_friz:
+  case PPC::BI__builtin_ppc_frizs:
+    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
+                           *this, E, Intrinsic::trunc,
+                           Intrinsic::experimental_constrained_trunc))
+        .getScalarVal();
+  case PPC::BI__builtin_ppc_fsqrt:
+  case PPC::BI__builtin_ppc_fsqrts:
+    return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
+                           *this, E, Intrinsic::sqrt,
+                           Intrinsic::experimental_constrained_sqrt))
+        .getScalarVal();
   }
 }
 
@@ -17931,16 +17966,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         llvm::ConstantVector::get({Builder.getInt32(0), Builder.getInt32(1),
                                    Builder.getInt32(2), Builder.getInt32(3)});
     return Builder.CreateShuffleVector(Trunc, Splat, ConcatMask);
-  }
-  case WebAssembly::BI__builtin_wasm_load32_zero: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_load32_zero);
-    return Builder.CreateCall(Callee, {Ptr});
-  }
-  case WebAssembly::BI__builtin_wasm_load64_zero: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_load64_zero);
-    return Builder.CreateCall(Callee, {Ptr});
   }
   case WebAssembly::BI__builtin_wasm_shuffle_i8x16: {
     Value *Ops[18];

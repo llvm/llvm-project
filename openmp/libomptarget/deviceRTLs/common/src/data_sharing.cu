@@ -48,7 +48,8 @@ static void *__kmpc_alloc_for_warp(AllocTy Alloc, unsigned Bytes,
   void *Ptr;
   __kmpc_impl_lanemask_t CurActive = __kmpc_impl_activemask();
   unsigned LeaderID = __kmpc_impl_ffs(CurActive) - 1;
-  bool IsWarpLeader = (GetThreadIdInBlock() % WARPSIZE) == LeaderID;
+  bool IsWarpLeader =
+      (__kmpc_get_hardware_thread_id_in_block() % WARPSIZE) == LeaderID;
   if (IsWarpLeader)
     Ptr = Alloc();
   // Get address from the first active lane.
@@ -61,7 +62,7 @@ static void *__kmpc_alloc_for_warp(AllocTy Alloc, unsigned Bytes,
 
 EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
   Bytes = Bytes + (Bytes % MinBytes);
-  int TID = GetThreadIdInBlock();
+  int TID = __kmpc_get_hardware_thread_id_in_block();
   if (__kmpc_is_generic_main_thread(TID)) {
     // Main thread alone, use shared memory if space is available.
     if (MainSharedStack.Usage[0] + Bytes <= MainSharedStack.MaxSize) {
@@ -97,7 +98,8 @@ EXTERN void *__kmpc_alloc_shared(size_t Bytes) {
 EXTERN void __kmpc_free_shared(void *Ptr) {
   __kmpc_impl_lanemask_t CurActive = __kmpc_impl_activemask();
   unsigned LeaderID = __kmpc_impl_ffs(CurActive) - 1;
-  bool IsWarpLeader = (GetThreadIdInBlock() % WARPSIZE) == LeaderID;
+  bool IsWarpLeader =
+      (__kmpc_get_hardware_thread_id_in_block() % WARPSIZE) == LeaderID;
   __kmpc_syncwarp(CurActive);
   if (IsWarpLeader) {
     if (Ptr >= &MainSharedStack.Data[0] &&
@@ -190,13 +192,14 @@ EXTERN void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
     return;
   }
   if (isSPMDExecutionMode) {
-    if (GetThreadIdInBlock() == 0) {
+    if (__kmpc_get_hardware_thread_id_in_block() == 0) {
       *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
     }
     __kmpc_impl_syncthreads();
     return;
   }
-  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
+  ASSERT0(LT_FUSSY,
+          __kmpc_get_hardware_thread_id_in_block() == GetMasterThreadID(),
           "Must be called only in the target master thread.");
   *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
   __kmpc_impl_threadfence();
@@ -208,13 +211,14 @@ EXTERN void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
     return;
   if (isSPMDExecutionMode) {
     __kmpc_impl_syncthreads();
-    if (GetThreadIdInBlock() == 0) {
+    if (__kmpc_get_hardware_thread_id_in_block() == 0) {
       omptarget_nvptx_simpleMemoryManager.Release();
     }
     return;
   }
   __kmpc_impl_threadfence();
-  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
+  ASSERT0(LT_FUSSY,
+          __kmpc_get_hardware_thread_id_in_block() == GetMasterThreadID(),
           "Must be called only in the target master thread.");
   omptarget_nvptx_simpleMemoryManager.Release();
 }
