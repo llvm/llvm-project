@@ -15,7 +15,7 @@ entry:
   ret i32 %call2
 }
 
-define internal i32 @wwrite(i64 %i) nounwind readnone {
+define internal i32 @wwrite(i64 %i) nounwind readnone willreturn {
 ; CHECK-LABEL: @wwrite(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[SW_DEFAULT:%.*]]
@@ -36,4 +36,4 @@ return:
 }
 
 ; CHECK: attributes #0 = { noreturn nounwind }
-; CHECK: attributes #1 = { nounwind readnone }
+; CHECK: attributes #1 = { nounwind readnone willreturn }
