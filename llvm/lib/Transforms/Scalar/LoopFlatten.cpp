@@ -111,15 +111,6 @@ static bool findLoopComponents(
     LLVM_DEBUG(dbgs() << "Exiting and latch block are different\n");
     return false;
   }
-  // Latch block must end in a conditional branch.
-  BackBranch = dyn_cast<BranchInst>(Latch->getTerminator());
-  if (!BackBranch || !BackBranch->isConditional()) {
-    LLVM_DEBUG(dbgs() << "Could not find back-branch\n");
-    return false;
-  }
-  IterationInstructions.insert(BackBranch);
-  LLVM_DEBUG(dbgs() << "Found back branch: "; BackBranch->dump());
-  bool ContinueOnTrue = L->contains(BackBranch->getSuccessor(0));
 
   // Find the induction PHI. If there is no induction PHI, we can't do the
   // transformation. TODO: could other variables trigger this? Do we have to
@@ -131,6 +122,7 @@ static bool findLoopComponents(
   }
   LLVM_DEBUG(dbgs() << "Found induction PHI: "; InductionPHI->dump());
 
+  bool ContinueOnTrue = L->contains(Latch->getTerminator()->getSuccessor(0));
   auto IsValidPredicate = [&](ICmpInst::Predicate Pred) {
     if (ContinueOnTrue)
       return Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_ULT;
@@ -138,13 +130,17 @@ static bool findLoopComponents(
       return Pred == CmpInst::ICMP_EQ;
   };
 
-  // Find Compare and make sure it is valid
-  ICmpInst *Compare = dyn_cast<ICmpInst>(BackBranch->getCondition());
+  // Find Compare and make sure it is valid. getLatchCmpInst checks that the
+  // back branch of the latch is conditional.
+  ICmpInst *Compare = L->getLatchCmpInst();
   if (!Compare || !IsValidPredicate(Compare->getUnsignedPredicate()) ||
       Compare->hasNUsesOrMore(2)) {
     LLVM_DEBUG(dbgs() << "Could not find valid comparison\n");
     return false;
   }
+  BackBranch = cast<BranchInst>(Latch->getTerminator());
+  IterationInstructions.insert(BackBranch);
+  LLVM_DEBUG(dbgs() << "Found back branch: "; BackBranch->dump());
   IterationInstructions.insert(Compare);
   LLVM_DEBUG(dbgs() << "Found comparison: "; Compare->dump());
 

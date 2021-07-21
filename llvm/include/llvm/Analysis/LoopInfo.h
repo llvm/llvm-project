@@ -589,6 +589,9 @@ public:
   ///
   PHINode *getCanonicalInductionVariable() const;
 
+  /// Get the latch condition instruction.
+  ICmpInst *getLatchCmpInst() const;
+
   /// Obtain the unique incoming and back edge. Return false if they are
   /// non-unique or the loop is dead; otherwise, return true.
   bool getIncomingAndBackEdge(BasicBlock *&Incoming,
