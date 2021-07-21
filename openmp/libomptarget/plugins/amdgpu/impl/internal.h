@@ -12,18 +12,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <atomic>
 #include <cstring>
-#include <deque>
 #include <map>
 #include <queue>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "hsa.h"
-#include "hsa_ext_amd.h"
-#include "hsa_ext_finalize.h"
+#include "hsa_api.h"
 
 #include "atmi.h"
 #include "atmi_runtime.h"
@@ -44,9 +40,7 @@ typedef struct atmi_implicit_args_s {
   unsigned long kernarg_template_ptr;
 } atmi_implicit_args_t;
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
 #ifdef DEBUG
 #define DEBUG_PRINT(fmt, ...)                                                  \
@@ -65,9 +59,7 @@ typedef struct hsa_signal_s {
 } hsa_signal_t;
 #endif
 
-#ifdef __cplusplus
 }
-#endif
 
 /* ---------------------------------------------------------------------------------
  * Simulated CPU Data Structures and API

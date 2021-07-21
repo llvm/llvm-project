@@ -7,16 +7,9 @@
 #define INCLUDE_ATMI_RUNTIME_H_
 
 #include "atmi.h"
-#include "hsa.h"
-#include <inttypes.h>
-#include <stdlib.h>
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
+#include "hsa_api.h"
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
 /** \defgroup module_functions ATMI Module
  * @{
@@ -68,8 +61,6 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t sig, void *hostDest,
 
 /** @} */
 
-#ifdef __cplusplus
 }
-#endif
 
 #endif // INCLUDE_ATMI_RUNTIME_H_
