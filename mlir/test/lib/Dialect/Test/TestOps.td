@@ -565,7 +565,7 @@ def OpWithInferTypeInterfaceOp : TEST_Op<"op_with_infer_type_if", [
 }
 
 def OpWithShapedTypeInferTypeInterfaceOp : TEST_Op<"op_with_shaped_type_infer_type_if",
-      InferTensorTypeWithReify.traits> {
+      [InferTensorTypeWithReify]> {
   let arguments = (ins AnyTensor, AnyTensor);
   let results = (outs AnyTensor);
 }
