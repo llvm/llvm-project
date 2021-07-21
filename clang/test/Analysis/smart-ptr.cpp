@@ -536,3 +536,10 @@ void testOstreamDoesntInvalidateGlobals(std::unique_ptr<int> P) {
 }
 
 #endif
+
+// The following test isn't really a "smart-ptr" test
+// It came up during a bug fix (D106296)
+void testCheckForFunctionsWithNoDecl(void (*bar)(bool, bool)) {
+  // This should NOT crash.
+  bar(true, false);
+}
