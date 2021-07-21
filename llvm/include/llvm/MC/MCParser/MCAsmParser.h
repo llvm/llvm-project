@@ -18,6 +18,7 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
+#include <ctime>
 #include <string>
 #include <utility>
 
@@ -348,7 +349,7 @@ MCAsmParser *createMCAsmParser(SourceMgr &, MCContext &, MCStreamer &,
 
 /// Create an MCAsmParser instance for parsing Microsoft MASM-style assembly
 MCAsmParser *createMCMasmParser(SourceMgr &, MCContext &, MCStreamer &,
-                                const MCAsmInfo &, unsigned CB = 0);
+                                const MCAsmInfo &, struct tm, unsigned CB = 0);
 
 } // end namespace llvm
 
