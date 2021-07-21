@@ -546,7 +546,6 @@ cc_test(
     tags = [
         "local",  # Not compatible with the sandbox on MacOS
     ],
-    visibility = ["//visibility:private"],
     deps = [
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
@@ -659,12 +658,12 @@ cc_test(
     deps = [
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
+        "//llvm:Exegesis",
         "//llvm:MC",
         "//llvm:MCDisassembler",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:gtest",
         "//llvm:gtest_main",
-        "//llvm:llvm-exegesis-lib",
     ],
 )
