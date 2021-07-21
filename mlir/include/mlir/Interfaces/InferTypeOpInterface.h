@@ -76,6 +76,10 @@ private:
   Attribute attr;
 };
 
+/// Range of values and shapes (corresponding effectively to Shapes dialect's
+/// ValueShape type concept).
+using ValueShapeRange = ValueRange;
+
 namespace detail {
 // Helper function to infer return tensor returns types given element and shape
 // inference function.
