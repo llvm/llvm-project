@@ -7,4 +7,6 @@ add_mlir_python_extension(MLIRConversionsBindingsPythonExtension _mlirConversion
     python
   SOURCES
   Conversions.cpp
+  LINK_LIBS PRIVATE
+    MLIRPythonCAPI
 )
