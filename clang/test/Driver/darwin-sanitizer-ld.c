@@ -93,7 +93,7 @@
 // CHECK-ASAN-WATCHOSSIM: "-rpath" "@executable_path"
 // CHECK-ASAN-WATCHOSSIM: "-rpath" "{{.*}}lib{{.*}}darwin"
 
-// RUN: %clang -no-canonical-prefixes -### -target x86_64-apple-ios13-macabi \
+// RUN: %clang -no-canonical-prefixes -### -target x86_64-apple-ios13.1-macabi \
 // RUN:   -stdlib=platform -fsanitize=address \
 // RUN:   -resource-dir %S/Inputs/resource_dir \
 // RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-MACCATALYST %s

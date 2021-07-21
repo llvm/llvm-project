@@ -140,10 +140,10 @@
 // LINK_VERSION_MIN: {{ld(.exe)?"}}
 // LINK_VERSION_MIN: "-macosx_version_min" "10.7.0"
 
-// RUN: %clang -target x86_64-apple-ios13-macabi -mlinker-version=400 -### %t.o 2>> %t.log
+// RUN: %clang -target x86_64-apple-ios13.1-macabi -mlinker-version=400 -### %t.o 2>> %t.log
 // RUN: FileCheck -check-prefix=LINK_VERSION_MIN_MACABI %s < %t.log
 // LINK_VERSION_MIN_MACABI: {{ld(.exe)?"}}
-// LINK_VERSION_MIN_MACABI: "-maccatalyst_version_min" "13.0.0"
+// LINK_VERSION_MIN_MACABI: "-maccatalyst_version_min" "13.1.0"
 // LINK_VERSION_MIN_MACABI-NOT: macosx_version_min
 // LINK_VERSION_MIN_MACABI-NOT: macos_version_min
 
