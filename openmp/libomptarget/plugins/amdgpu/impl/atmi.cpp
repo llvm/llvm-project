@@ -4,10 +4,9 @@
  * This file is distributed under the MIT License. See LICENSE.txt for details.
  *===------------------------------------------------------------------------*/
 #include "atmi_runtime.h"
+#include "hsa_api.h"
 #include "internal.h"
 #include "rt.h"
-#include <hsa.h>
-#include <hsa_ext_amd.h>
 #include <memory>
 
 /*
