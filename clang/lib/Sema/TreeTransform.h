@@ -15991,6 +15991,13 @@ TreeTransform<Derived>::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
   return E;
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  // Default behavior is to do nothing with this transformation.
+  return E;
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformMaterializeTemporaryExpr(

@@ -12726,11 +12726,15 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
 
   // Likewise, variables with tuple-like bindings are required if their
   // bindings have side-effects.
-  if (const auto *DD = dyn_cast<DecompositionDecl>(VD))
-    for (const auto *BD : DD->bindings())
-      if (const auto *BindingVD = BD->getHoldingVar())
-        if (DeclMustBeEmitted(BindingVD))
-          return true;
+  if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
+    bool BindingResult = false;
+    DD->VisitHoldingVars([&](VarDecl *BindingVD) {
+      if (DeclMustBeEmitted(BindingVD))
+        BindingResult = true;
+    });
+    if (BindingResult)
+      return true;
+  }
 
   return false;
 }

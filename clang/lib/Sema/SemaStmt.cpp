@@ -755,7 +755,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     return true;
   };
 
-  const auto *CallerDecl = dyn_cast<FunctionDecl>(CurContext);
+  const auto *CallerDecl = getCurFunctionDecl();
 
   // Find caller function signature.
   if (!CallerDecl) {
@@ -1010,8 +1010,7 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
     bool Immediate = ExprEvalContexts.back().Context ==
                      ExpressionEvaluationContext::ImmediateFunctionContext;
     if (CurContext->isFunctionOrMethod()) {
-      const auto *FD =
-          dyn_cast<FunctionDecl>(Decl::castFromDeclContext(CurContext));
+      const auto *FD = getCurFunctionDecl();
       if (FD && FD->isImmediateFunction())
         Immediate = true;
     }
@@ -2670,8 +2669,11 @@ StmtResult Sema::BuildCXXForRangeStmt(
     // them in properly when we instantiate the loop.
     if (!LoopVar->isInvalidDecl() && Kind != BFRK_Check) {
       if (auto *DD = dyn_cast<DecompositionDecl>(LoopVar))
-        for (auto *Binding : DD->bindings())
-          Binding->setType(Context.DependentTy);
+        for (auto *Binding : DD->bindings()) {
+          if (!Binding->isParameterPack()) {
+            Binding->setType(Context.DependentTy);
+          }
+        }
       LoopVar->setType(SubstAutoTypeDependent(LoopVar->getType()));
     }
   } else if (!BeginDeclStmt.get()) {
@@ -3916,7 +3918,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   // deduction.
   if (getLangOpts().CPlusPlus14) {
     if (AutoType *AT = FnRetType->getContainedAutoType()) {
-      FunctionDecl *FD = cast<FunctionDecl>(CurContext);
+      FunctionDecl *FD = getCurFunctionDecl();
       // If we've already decided this function is invalid, e.g. because
       // we saw a `return` whose expression had an error, don't keep
       // trying to deduce its return type.

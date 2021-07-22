@@ -1068,9 +1068,9 @@ static CanThrowResult canVarDeclThrow(Sema &Self, const VarDecl *VD) {
 
   // If this is a decomposition declaration, bindings might throw.
   if (auto *DD = dyn_cast<DecompositionDecl>(VD))
-    for (auto *B : DD->bindings())
-      if (auto *HD = B->getHoldingVar())
-        CT = mergeCanThrow(CT, canVarDeclThrow(Self, HD));
+    DD->VisitHoldingVars([&](VarDecl *HD) {
+      CT = mergeCanThrow(CT, canVarDeclThrow(Self, HD));
+    });
 
   return CT;
 }
@@ -1278,6 +1278,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::ConvertVectorExprClass:
   case Expr::VAArgExprClass:
   case Expr::CXXParenListInitExprClass:
+  case Expr::ResolvedUnexpandedPackExprClass:
     return canSubStmtsThrow(*this, S);
 
   case Expr::CompoundLiteralExprClass:

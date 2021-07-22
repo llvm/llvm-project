@@ -3656,6 +3656,11 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     // These never have a side-effect.
     return false;
 
+  // ResolvedUnexpandedPackExpr is currently only used for
+  // structed bindings which have no side effects
+  case ResolvedUnexpandedPackExprClass:
+    return false;
+
   case ConstantExprClass:
     // FIXME: Move this into the "return false;" block above.
     return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(

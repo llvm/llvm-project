@@ -2659,10 +2659,6 @@ bool VarDecl::checkForConstantInitialization(
   return Eval->HasConstantInitialization;
 }
 
-bool VarDecl::isParameterPack() const {
-  return isa<PackExpansionType>(getType());
-}
-
 template<typename DeclT>
 static DeclT *getDefinitionOrSelf(DeclT *D) {
   assert(D);
@@ -5395,6 +5391,13 @@ bool ValueDecl::isInitCapture() const {
   if (auto *Var = llvm::dyn_cast<VarDecl>(this))
     return Var->isInitCapture();
   return false;
+}
+
+bool ValueDecl::isParameterPack() const {
+  if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(this))
+    return NTTP->isParameterPack();
+
+  return isa_and_nonnull<PackExpansionType>(getType().getTypePtrOrNull());
 }
 
 void ImplicitParamDecl::anchor() {}

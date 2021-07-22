@@ -44,9 +44,11 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2554,6 +2556,15 @@ void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   OS << "...[";
   PrintExpr(E->getIndexExpr());
   OS << "]";
+}
+
+void StmtPrinter::VisitResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  OS << "<<resolved pack(";
+  llvm::interleave(
+      E->getExprs(), E->getExprs() + E->getNumExprs(),
+      [this](auto *X) { PrintExpr(X); }, [this] { OS << ", "; });
+  OS << ")>>";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(

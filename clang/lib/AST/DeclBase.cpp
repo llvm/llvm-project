@@ -237,10 +237,12 @@ bool Decl::isTemplateParameterPack() const {
 }
 
 bool Decl::isParameterPack() const {
-  if (const auto *Var = dyn_cast<VarDecl>(this))
+  if (isTemplateParameterPack())
+    return true;
+  if (const auto *Var = dyn_cast<ValueDecl>(this))
     return Var->isParameterPack();
 
-  return isTemplateParameterPack();
+  return false;
 }
 
 FunctionDecl *Decl::getAsFunction() {
