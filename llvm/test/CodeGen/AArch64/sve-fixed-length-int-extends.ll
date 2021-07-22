@@ -139,13 +139,13 @@ define void @sext_v8i8_v8i32(<8 x i8> %a, <8 x i32>* %out) #0 {
 define void @sext_v16i8_v16i32(<16 x i8> %a, <16 x i32>* %out) #0 {
 ; CHECK-LABEL: sext_v16i8_v16i32:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
+; VBITS_GE_512-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, z0.b
 ; VBITS_GE_512-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_512-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256: ext v[[A_HI:[0-9]+]].16b, v0.16b, v0.16b, #8
+; VBITS_EQ_256-DAG: ext v[[A_HI:[0-9]+]].16b, v0.16b, v0.16b, #8
 ; VBITS_EQ_256-DAG: sunpklo [[A_HALFS_LO:z[0-9]+]].h, z0.b
 ; VBITS_EQ_256-DAG: sunpklo [[A_HALFS_HI:z[0-9]+]].h, z[[A_HI]].b
 ; VBITS_EQ_256-DAG: sunpklo [[A_WORDS_LO:z[0-9]+]].s, [[A_HALFS_LO]].h
@@ -213,7 +213,7 @@ define void @sext_v4i8_v4i64(<4 x i8> %a, <4 x i64>* %out) #0 {
 define void @sext_v8i8_v8i64(<8 x i8> %a, <8 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v8i8_v8i64:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
+; VBITS_GE_512-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, z0.b
 ; VBITS_GE_512-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_512-NEXT: sunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_512-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x0]
@@ -226,7 +226,7 @@ define void @sext_v8i8_v8i64(<8 x i8> %a, <8 x i64>* %out) #0 {
 define void @sext_v16i8_v16i64(<16 x i8> %a, <16 x i64>* %out) #0 {
 ; CHECK-LABEL: sext_v16i8_v16i64:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
+; VBITS_GE_1024-NEXT: sunpklo [[A_HALFS:z[0-9]+]].h, z0.b
 ; VBITS_GE_1024-NEXT: sunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_1024-NEXT: sunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_1024-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x0]
@@ -501,13 +501,13 @@ define void @zext_v8i8_v8i32(<8 x i8> %a, <8 x i32>* %out) #0 {
 define void @zext_v16i8_v16i32(<16 x i8> %a, <16 x i32>* %out) #0 {
 ; CHECK-LABEL: zext_v16i8_v16i32:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
-; VBITS_GE_512-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
+; VBITS_GE_512-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, z0.b
 ; VBITS_GE_512-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_512-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x0]
 ; VBITS_GE_512-NEXT: ret
 
 ; Ensure sensible type legalisation.
-; VBITS_EQ_256: ext v[[A_HI:[0-9]+]].16b, v0.16b, v0.16b, #8
+; VBITS_EQ_256-DAG: ext v[[A_HI:[0-9]+]].16b, v0.16b, v0.16b, #8
 ; VBITS_EQ_256-DAG: uunpklo [[A_HALFS_LO:z[0-9]+]].h, z0.b
 ; VBITS_EQ_256-DAG: uunpklo [[A_HALFS_HI:z[0-9]+]].h, z[[A_HI]].b
 ; VBITS_EQ_256-DAG: uunpklo [[A_WORDS_LO:z[0-9]+]].s, [[A_HALFS_LO]].h
@@ -575,7 +575,7 @@ define void @zext_v4i8_v4i64(<4 x i8> %a, <4 x i64>* %out) #0 {
 define void @zext_v8i8_v8i64(<8 x i8> %a, <8 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v8i8_v8i64:
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
-; VBITS_GE_512-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
+; VBITS_GE_512-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, z0.b
 ; VBITS_GE_512-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_512-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_512-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x0]
@@ -588,7 +588,7 @@ define void @zext_v8i8_v8i64(<8 x i8> %a, <8 x i64>* %out) #0 {
 define void @zext_v16i8_v16i64(<16 x i8> %a, <16 x i64>* %out) #0 {
 ; CHECK-LABEL: zext_v16i8_v16i64:
 ; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
-; VBITS_GE_1024-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, [[A_BYTES]].b
+; VBITS_GE_1024-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, z0.b
 ; VBITS_GE_1024-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
 ; VBITS_GE_1024-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
 ; VBITS_GE_1024-NEXT: st1d { [[A_DWORDS]].d }, [[PG]], [x0]
