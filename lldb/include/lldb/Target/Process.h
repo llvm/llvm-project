@@ -2899,7 +2899,8 @@ protected:
   std::atomic<bool> m_finalizing;
 
   /// Mask for code an data addresses. The default value (0) means no mask is
-  /// set.
+  /// set.  The bits set to 1 indicate bits that are NOT significant for
+  /// addressing.
   /// @{
   lldb::addr_t m_code_address_mask = 0;
   lldb::addr_t m_data_address_mask = 0;
