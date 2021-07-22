@@ -666,8 +666,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
         // Blocks have a __FuncPtr inside them which is a pointer to a
         // function of the proper type.
 
-        for (DWARFDIE child_die = target_die.GetFirstChild();
-             child_die.IsValid(); child_die = child_die.GetSibling()) {
+        for (DWARFDIE child_die : target_die.children()) {
           if (!strcmp(child_die.GetAttributeValueAsString(DW_AT_name, ""),
                       "__FuncPtr")) {
             DWARFDIE function_pointer_type =
@@ -1827,8 +1826,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
   case DW_TAG_GNU_template_parameter_pack: {
     template_param_infos.packed_args =
         std::make_unique<TypeSystemClang::TemplateParameterInfos>();
-    for (DWARFDIE child_die = die.GetFirstChild(); child_die.IsValid();
-         child_die = child_die.GetSibling()) {
+    for (DWARFDIE child_die : die.children()) {
       if (!ParseTemplateDIE(child_die, *template_param_infos.packed_args))
         return false;
     }
@@ -1933,8 +1931,7 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
   if (!parent_die)
     return false;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
 
     switch (tag) {
@@ -2108,8 +2105,7 @@ void DWARFASTParserClang::EnsureAllDIEsInDeclContextHaveBeenParsed(
   for (auto it = m_decl_ctx_to_die.find(opaque_decl_ctx);
        it != m_decl_ctx_to_die.end() && it->first == opaque_decl_ctx;
        it = m_decl_ctx_to_die.erase(it))
-    for (DWARFDIE decl = it->second.GetFirstChild(); decl;
-         decl = decl.GetSibling())
+    for (DWARFDIE decl : it->second.children())
       GetClangDeclForDIE(decl);
 }
 
@@ -2145,8 +2141,7 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
 
   size_t enumerators_added = 0;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
     if (tag == DW_TAG_enumerator) {
       DWARFAttributes attributes;
@@ -2751,8 +2746,7 @@ bool DWARFASTParserClang::ParseChildMembers(
   if (ast == nullptr)
     return false;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     dw_tag_t tag = die.Tag();
 
     switch (tag) {
@@ -2898,8 +2892,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
     return 0;
 
   size_t arg_idx = 0;
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
     switch (tag) {
     case DW_TAG_formal_parameter: {
@@ -3018,8 +3011,7 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
   if (!parent_die)
     return llvm::None;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
     if (tag != DW_TAG_subrange_type)
       continue;
@@ -3321,8 +3313,7 @@ static DWARFDIE GetContainingFunctionWithAbstractOrigin(const DWARFDIE &die) {
 }
 
 static DWARFDIE FindAnyChildWithAbstractOrigin(const DWARFDIE &context) {
-  for (DWARFDIE candidate = context.GetFirstChild(); candidate.IsValid();
-       candidate = candidate.GetSibling()) {
+  for (DWARFDIE candidate : context.children()) {
     if (candidate.GetReferencedDIE(DW_AT_abstract_origin)) {
       return candidate;
     }
@@ -3486,8 +3477,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   UniqueCStringMap<DWARFDIE> dst_name_to_die;
   UniqueCStringMap<DWARFDIE> src_name_to_die_artificial;
   UniqueCStringMap<DWARFDIE> dst_name_to_die_artificial;
-  for (src_die = src_class_die.GetFirstChild(); src_die.IsValid();
-       src_die = src_die.GetSibling()) {
+  for (DWARFDIE src_die : src_class_die.children()) {
     if (src_die.Tag() == DW_TAG_subprogram) {
       // Make sure this is a declaration and not a concrete instance by looking
       // for DW_AT_declaration set to 1. Sometimes concrete function instances
@@ -3505,8 +3495,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       }
     }
   }
-  for (dst_die = dst_class_die.GetFirstChild(); dst_die.IsValid();
-       dst_die = dst_die.GetSibling()) {
+  for (DWARFDIE dst_die : dst_class_die.children()) {
     if (dst_die.Tag() == DW_TAG_subprogram) {
       // Make sure this is a declaration and not a concrete instance by looking
       // for DW_AT_declaration set to 1. Sometimes concrete function instances
