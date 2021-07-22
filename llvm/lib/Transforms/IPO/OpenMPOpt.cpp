@@ -3514,6 +3514,9 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
     case OMPRTL___kmpc_is_spmd_exec_mode:
       Changed |= foldIsSPMDExecMode(A);
       break;
+    case OMPRTL___kmpc_is_generic_main_thread_id:
+      Changed |= foldIsGenericMainThread(A);
+      break;
     default:
       llvm_unreachable("Unhandled OpenMP runtime function!");
     }
@@ -3528,6 +3531,10 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
       Instruction &CB = *getCtxI();
       A.changeValueAfterManifest(CB, **SimplifiedValue);
       A.deleteAfterManifest(CB);
+
+      LLVM_DEBUG(dbgs() << TAG << "Folding runtime call: " << CB << " with "
+                        << **SimplifiedValue << "\n");
+
       Changed = ChangeStatus::CHANGED;
     }
 
@@ -3604,6 +3611,28 @@ private:
                                                     : ChangeStatus::CHANGED;
   }
 
+  /// Fold __kmpc_is_generic_main_thread_id into a constant if possible.
+  ChangeStatus foldIsGenericMainThread(Attributor &A) {
+    Optional<Value *> SimplifiedValueBefore = SimplifiedValue;
+
+    CallBase &CB = cast<CallBase>(getAssociatedValue());
+    Function *F = CB.getFunction();
+    const auto &ExecutionDomainAA = A.getAAFor<AAExecutionDomain>(
+        *this, IRPosition::function(*F), DepClassTy::REQUIRED);
+
+    if (!ExecutionDomainAA.isValidState())
+      return indicatePessimisticFixpoint();
+
+    auto &Ctx = getAnchorValue().getContext();
+    if (ExecutionDomainAA.isExecutedByInitialThreadOnly(CB))
+      SimplifiedValue = ConstantInt::get(Type::getInt8Ty(Ctx), true);
+    else
+      return indicatePessimisticFixpoint();
+
+    return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
+                                                    : ChangeStatus::CHANGED;
+  }
+
   /// An optional value the associated value is assumed to fold to. That is, we
   /// assume the associated value (which is a call) can be replaced by this
   /// simplified value.
@@ -3629,6 +3658,19 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
           IRPosition::function(*Kernel), /* QueryingAA */ nullptr,
           DepClassTy::NONE, /* ForceUpdate */ false,
           /* UpdateAfterInit */ false);
+
+    auto &IsMainRFI =
+        OMPInfoCache.RFIs[OMPRTL___kmpc_is_generic_main_thread_id];
+    IsMainRFI.foreachUse(SCC, [&](Use &U, Function &F) {
+      CallInst *CI = OpenMPOpt::getCallIfRegularCall(U, &IsMainRFI);
+      if (!CI)
+        return false;
+      A.getOrCreateAAFor<AAFoldRuntimeCall>(
+          IRPosition::callsite_returned(*CI), /* QueryingAA */ nullptr,
+          DepClassTy::NONE, /* ForceUpdate */ false,
+          /* UpdateAfterInit */ false);
+      return false;
+    });
 
     auto &IsSPMDRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_is_spmd_exec_mode];
     IsSPMDRFI.foreachUse(SCC, [&](Use &U, Function &) {
