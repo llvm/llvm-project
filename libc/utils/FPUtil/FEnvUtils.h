@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_FENV_H
-#define LLVM_LIBC_UTILS_FPUTIL_FENV_H
+#ifndef LLVM_LIBC_UTILS_FPUTIL_FENVUTILS_H
+#define LLVM_LIBC_UTILS_FPUTIL_FENVUTILS_H
 
 #ifdef __x86_64__
-#include "x86_64/FEnv.h"
+#include "x86_64/FEnvImpl.h"
 #elif defined(__aarch64__)
-#include "aarch64/FEnv.h"
+#include "aarch64/FEnvImpl.h"
 #else
-#include "DummyFEnv.h"
+#include "DummyFEnvImpl.h"
 #endif
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_FP_BITS_H
+#endif // LLVM_LIBC_UTILS_FPUTIL_FENVUTILS_H

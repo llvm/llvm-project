@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENV_H
-#define LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENV_H
+#ifndef LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENVIMPL_H
+#define LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENVIMPL_H
 
 #include <arm_acle.h>
 #include <fenv.h>
@@ -232,4 +232,4 @@ static inline int setEnv(const fenv_t *envp) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENV_H
+#endif // LLVM_LIBC_UTILS_FPUTIL_AARCH64_FENVIMPL_H

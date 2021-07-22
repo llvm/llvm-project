@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 
-#include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/FEnvUtils.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"

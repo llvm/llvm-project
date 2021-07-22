@@ -9,7 +9,7 @@
 #include "src/fenv/fegetexceptflag.h"
 #include "src/fenv/fesetexceptflag.h"
 
-#include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/FEnvUtils.h"
 #include "utils/UnitTest/Test.h"
 
 #include <fenv.h>

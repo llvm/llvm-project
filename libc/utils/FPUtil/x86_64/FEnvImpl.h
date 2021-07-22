@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_FPUTIL_X86_64_FENV_H
-#define LLVM_LIBC_UTILS_FPUTIL_X86_64_FENV_H
+#ifndef LLVM_LIBC_UTILS_FPUTIL_X86_64_FENVIMPL_H
+#define LLVM_LIBC_UTILS_FPUTIL_X86_64_FENVIMPL_H
 
 #include <fenv.h>
 #include <stdint.h>
@@ -370,4 +370,4 @@ static inline int setEnv(const fenv_t *envp) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_UTILS_FPUTIL_X86_64_FENV_H
+#endif // LLVM_LIBC_UTILS_FPUTIL_X86_64_FENVIMPL_H
