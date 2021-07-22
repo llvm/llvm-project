@@ -3434,9 +3434,8 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_ppc_rdlam:
     return SemaValueIsRunOfOnes(TheCall, 2);
   case PPC::BI__builtin_ppc_icbt:
-    return SemaFeatureCheck(*this, TheCall, "isa-v207-instructions",
-                            diag::err_ppc_builtin_only_on_arch, "8");
   case PPC::BI__builtin_ppc_sthcx:
+  case PPC::BI__builtin_ppc_stbcx:
   case PPC::BI__builtin_ppc_lharx:
   case PPC::BI__builtin_ppc_lbarx:
     return SemaFeatureCheck(*this, TheCall, "isa-v207-instructions",
