@@ -52,13 +52,16 @@ define i32 @test3(i1 %C0, i1 %C1, i32 %v0, i32 %v1, i32 %v2) {
 ; NODUPRET-NEXT:  entry:
 ; NODUPRET-NEXT:    call void @sideeffect0()
 ; NODUPRET-NEXT:    br i1 [[C0:%.*]], label [[T:%.*]], label [[F:%.*]]
+; NODUPRET:       end:
+; NODUPRET-NEXT:    [[R:%.*]] = phi i32 [ [[V2:%.*]], [[F]] ], [ [[SPEC_SELECT:%.*]], [[T]] ]
+; NODUPRET-NEXT:    ret i32 [[R]]
 ; NODUPRET:       T:
 ; NODUPRET-NEXT:    call void @sideeffect1()
-; NODUPRET-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C1:%.*]], i32 [[V0:%.*]], i32 [[V1:%.*]]
-; NODUPRET-NEXT:    ret i32 [[SPEC_SELECT]]
+; NODUPRET-NEXT:    [[SPEC_SELECT]] = select i1 [[C1:%.*]], i32 [[V0:%.*]], i32 [[V1:%.*]]
+; NODUPRET-NEXT:    br label [[END:%.*]]
 ; NODUPRET:       F:
 ; NODUPRET-NEXT:    call void @sideeffect2()
-; NODUPRET-NEXT:    ret i32 [[V2:%.*]]
+; NODUPRET-NEXT:    br label [[END]]
 ;
 ; DUPRET-LABEL: @test3(
 ; DUPRET-NEXT:  entry:
@@ -76,14 +79,17 @@ define i32 @test3(i1 %C0, i1 %C1, i32 %v0, i32 %v1, i32 %v2) {
 ; DBGINFO-NEXT:  entry:
 ; DBGINFO-NEXT:    call void @sideeffect0(), !dbg [[DBG21:![0-9]+]]
 ; DBGINFO-NEXT:    br i1 [[C0:%.*]], label [[T:%.*]], label [[F:%.*]], !dbg [[DBG22:![0-9]+]]
+; DBGINFO:       end:
+; DBGINFO-NEXT:    [[R:%.*]] = phi i32 [ [[V2:%.*]], [[F]] ], [ [[SPEC_SELECT:%.*]], [[T]] ], !dbg [[DBG23:![0-9]+]]
+; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[R]], metadata [[META20:![0-9]+]], metadata !DIExpression()), !dbg [[DBG23]]
+; DBGINFO-NEXT:    ret i32 [[R]], !dbg [[DBG24:![0-9]+]]
 ; DBGINFO:       T:
-; DBGINFO-NEXT:    call void @sideeffect1(), !dbg [[DBG23:![0-9]+]]
-; DBGINFO-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C1:%.*]], i32 [[V0:%.*]], i32 [[V1:%.*]], !dbg [[DBG24:![0-9]+]]
-; DBGINFO-NEXT:    ret i32 [[SPEC_SELECT]], !dbg [[DBG24]]
+; DBGINFO-NEXT:    call void @sideeffect1(), !dbg [[DBG25:![0-9]+]]
+; DBGINFO-NEXT:    [[SPEC_SELECT]] = select i1 [[C1:%.*]], i32 [[V0:%.*]], i32 [[V1:%.*]], !dbg [[DBG26:![0-9]+]]
+; DBGINFO-NEXT:    br label [[END:%.*]], !dbg [[DBG26]]
 ; DBGINFO:       F:
-; DBGINFO-NEXT:    call void @sideeffect2(), !dbg [[DBG25:![0-9]+]]
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[V2:%.*]], metadata [[META20:![0-9]+]], metadata !DIExpression()), !dbg [[DBG26:![0-9]+]]
-; DBGINFO-NEXT:    ret i32 [[V2]], !dbg [[DBG27:![0-9]+]]
+; DBGINFO-NEXT:    call void @sideeffect2(), !dbg [[DBG27:![0-9]+]]
+; DBGINFO-NEXT:    br label [[END]], !dbg [[DBG28:![0-9]+]]
 ;
 entry:
   call void @sideeffect0()
