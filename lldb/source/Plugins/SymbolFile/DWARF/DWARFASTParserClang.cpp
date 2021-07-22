@@ -1983,15 +1983,12 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     }
 
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
-    std::vector<int> member_accessibilities;
-    bool is_a_class = false;
     // Parse members and base classes first
     std::vector<DWARFDIE> member_function_dies;
 
     DelayedPropertyList delayed_properties;
-    ParseChildMembers(die, clang_type, bases, member_accessibilities,
-                      member_function_dies, delayed_properties,
-                      default_accessibility, is_a_class, layout_info);
+    ParseChildMembers(die, clang_type, bases, member_function_dies,
+                      delayed_properties, default_accessibility, layout_info);
 
     // Now parse any methods if there were any...
     for (const DWARFDIE &die : member_function_dies)
@@ -2010,31 +2007,6 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
              pi != pe; ++pi)
           pi->Finalize();
       }
-    }
-
-    // If we have a DW_TAG_structure_type instead of a DW_TAG_class_type we
-    // need to tell the clang type it is actually a class.
-    if (!type_is_objc_object_or_interface) {
-      if (is_a_class && tag_decl_kind != clang::TTK_Class)
-        m_ast.SetTagTypeKind(ClangUtil::GetQualType(clang_type),
-                             clang::TTK_Class);
-    }
-
-    // Since DW_TAG_structure_type gets used for both classes and
-    // structures, we may need to set any DW_TAG_member fields to have a
-    // "private" access if none was specified. When we parsed the child
-    // members we tracked that actual accessibility value for each
-    // DW_TAG_member in the "member_accessibilities" array. If the value
-    // for the member is zero, then it was set to the
-    // "default_accessibility" which for structs was "public". Below we
-    // correct this by setting any fields to "private" that weren't
-    // correctly set.
-    if (is_a_class && !member_accessibilities.empty()) {
-      // This is a class and all members that didn't have their access
-      // specified are private.
-      m_ast.SetDefaultAccessForRecordFields(
-          m_ast.GetAsRecordDecl(clang_type), eAccessPrivate,
-          &member_accessibilities.front(), member_accessibilities.size());
     }
 
     if (!bases.empty()) {
@@ -2349,7 +2321,6 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 void DWARFASTParserClang::ParseSingleMember(
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
-    std::vector<int> &member_accessibilities,
     lldb::AccessType default_accessibility,
     DelayedPropertyList &delayed_properties,
     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
@@ -2557,7 +2528,6 @@ void DWARFASTParserClang::ParseSingleMember(
 
         if (accessibility == eAccessNone)
           accessibility = default_accessibility;
-        member_accessibilities.push_back(accessibility);
 
         uint64_t field_bit_offset =
             (member_byte_offset == UINT32_MAX ? 0 : (member_byte_offset * 8));
@@ -2767,10 +2737,9 @@ void DWARFASTParserClang::ParseSingleMember(
 bool DWARFASTParserClang::ParseChildMembers(
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
-    std::vector<int> &member_accessibilities,
     std::vector<DWARFDIE> &member_function_dies,
     DelayedPropertyList &delayed_properties, AccessType &default_accessibility,
-    bool &is_a_class, ClangASTImporter::LayoutInfo &layout_info) {
+    ClangASTImporter::LayoutInfo &layout_info) {
   if (!parent_die)
     return false;
 
@@ -2790,8 +2759,8 @@ bool DWARFASTParserClang::ParseChildMembers(
     case DW_TAG_member:
     case DW_TAG_APPLE_property:
       ParseSingleMember(die, parent_die, class_clang_type,
-                        member_accessibilities, default_accessibility,
-                        delayed_properties, layout_info, last_field_info);
+                        default_accessibility, delayed_properties, layout_info,
+                        last_field_info);
       break;
 
     case DW_TAG_subprogram:
@@ -2800,9 +2769,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       break;
 
     case DW_TAG_inheritance: {
-      is_a_class = true;
-      if (default_accessibility == eAccessNone)
-        default_accessibility = eAccessPrivate;
       // TODO: implement DW_TAG_inheritance type parsing
       DWARFAttributes attributes;
       const size_t num_attributes = die.GetAttributes(attributes);
