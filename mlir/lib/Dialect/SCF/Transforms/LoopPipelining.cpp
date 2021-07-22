@@ -74,7 +74,7 @@ public:
       PatternRewriter &rewriter);
   /// Emits the epilogue, this creates `maxStage - 1` part which will contain
   /// operations from stages [i; maxStage], where i is the part index.
-  void emitEpilogue(PatternRewriter &rewriter);
+  llvm::SmallVector<Value> emitEpilogue(PatternRewriter &rewriter);
 };
 
 bool LoopPipelinerInternal::initializeLoopInfo(
@@ -114,14 +114,25 @@ bool LoopPipelinerInternal::initializeLoopInfo(
           .wasInterrupted())
     return false;
 
-  // TODO: Add support for loop with operands.
-  if (forOp.getNumIterOperands() > 0)
+  // Only support loop carried dependency with a distance of 1. This means the
+  // source of all the scf.yield operands needs to be defined by operations in
+  // the loop.
+  if (llvm::any_of(forOp.getBody()->getTerminator()->getOperands(),
+                   [this](Value operand) {
+                     Operation *def = operand.getDefiningOp();
+                     return !def || stages.find(def) == stages.end();
+                   }))
     return false;
-
   return true;
 }
 
 void LoopPipelinerInternal::emitPrologue(PatternRewriter &rewriter) {
+  // Initialize the iteration argument to the loop initiale values.
+  for (BlockArgument &arg : forOp.getRegionIterArgs()) {
+    OpOperand &operand = forOp.getOpOperandForRegionIterArg(arg);
+    setValueMapping(arg, operand.get(), 0);
+  }
+  auto yield = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
   for (int64_t i = 0; i < maxStage; i++) {
     // special handling for induction variable as the increment is implicit.
     Value iv = rewriter.create<ConstantIndexOp>(forOp.getLoc(), lb + i);
@@ -138,6 +149,14 @@ void LoopPipelinerInternal::emitPrologue(PatternRewriter &rewriter) {
       for (unsigned destId : llvm::seq(unsigned(0), op->getNumResults())) {
         setValueMapping(op->getResult(destId), newOp->getResult(destId),
                         i - stages[op]);
+        // If the value is a loop carried dependency update the loop argument
+        // mapping.
+        for (OpOperand &operand : yield->getOpOperands()) {
+          if (operand.get() != op->getResult(destId))
+            continue;
+          setValueMapping(forOp.getRegionIterArgs()[operand.getOperandNumber()],
+                          newOp->getResult(destId), i - stages[op] + 1);
+        }
       }
     }
   }
@@ -173,7 +192,19 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
   // stages. The initial values come from the prologue created above.
   // Keep track of the kernel argument associated to each version of the
   // values passed to the kernel.
-  auto newLoopArg = llvm::to_vector<8>(forOp.getIterOperands());
+  llvm::SmallVector<Value> newLoopArg;
+  // For existing loop argument initialize them with the right version from the
+  // prologue.
+  for (auto retVal :
+       llvm::enumerate(forOp.getBody()->getTerminator()->getOperands())) {
+    Operation *def = retVal.value().getDefiningOp();
+    assert(def && "Only support loop carried dependencies of distance 1");
+    unsigned defStage = stages[def];
+    Value valueVersion = valueMapping[forOp.getRegionIterArgs()[retVal.index()]]
+                                     [maxStage - defStage];
+    assert(valueVersion);
+    newLoopArg.push_back(valueVersion);
+  }
   for (auto escape : crossStageValues) {
     LiverangeInfo &info = escape.second;
     Value value = escape.first;
@@ -210,6 +241,9 @@ void LoopPipelinerInternal::createKernel(
   rewriter.setInsertionPoint(newForOp.getBody(), newForOp.getBody()->begin());
   BlockAndValueMapping mapping;
   mapping.map(forOp.getInductionVar(), newForOp.getInductionVar());
+  for (auto arg : llvm::enumerate(forOp.getRegionIterArgs())) {
+    mapping.map(arg.value(), newForOp.getRegionIterArgs()[arg.index()]);
+  }
   for (Operation *op : opOrder) {
     int64_t useStage = stages[op];
     auto *newOp = rewriter.clone(*op, mapping);
@@ -224,6 +258,23 @@ void LoopPipelinerInternal::createKernel(
                                            newForOp.getInductionVar(), offset);
         newOp->setOperand(operand.getOperandNumber(), iv);
         rewriter.setInsertionPointAfter(newOp);
+        continue;
+      }
+      auto arg = operand.get().dyn_cast<BlockArgument>();
+      if (arg && arg.getOwner() == forOp.getBody()) {
+        // If the value is a loop carried value coming from stage N + 1 remap,
+        // it will become a direct use.
+        Value ret = forOp.getBody()->getTerminator()->getOperand(
+            arg.getArgNumber() - 1);
+        Operation *dep = ret.getDefiningOp();
+        if (!dep)
+          continue;
+        auto stageDep = stages.find(dep);
+        if (stageDep == stages.end() || stageDep->second == useStage)
+          continue;
+        assert(stageDep->second == useStage + 1);
+        newOp->setOperand(operand.getOperandNumber(),
+                          mapping.lookupOrDefault(ret));
         continue;
       }
       // For operands defined in a previous stage we need to remap it to use
@@ -249,6 +300,9 @@ void LoopPipelinerInternal::createKernel(
   // We create a mapping between original values and the associated loop
   // returned values that will be needed by the epilogue.
   llvm::SmallVector<Value> yieldOperands;
+  for (Value retVal : forOp.getBody()->getTerminator()->getOperands()) {
+    yieldOperands.push_back(mapping.lookupOrDefault(retVal));
+  }
   for (auto &it : crossStageValues) {
     int64_t version = maxStage - it.second.lastUseStage + 1;
     unsigned numVersionReturned = it.second.lastUseStage - it.second.defStage;
@@ -266,10 +320,22 @@ void LoopPipelinerInternal::createKernel(
                     version++);
     yieldOperands.push_back(mapping.lookupOrDefault(it.first));
   }
+  // Map the yield operand to the forOp returned value.
+  for (auto retVal :
+       llvm::enumerate(forOp.getBody()->getTerminator()->getOperands())) {
+    Operation *def = retVal.value().getDefiningOp();
+    assert(def && "Only support loop carried dependencies of distance 1");
+    unsigned defStage = stages[def];
+    setValueMapping(forOp.getRegionIterArgs()[retVal.index()],
+                    newForOp->getResult(retVal.index()),
+                    maxStage - defStage + 1);
+  }
   rewriter.create<scf::YieldOp>(forOp.getLoc(), yieldOperands);
 }
 
-void LoopPipelinerInternal::emitEpilogue(PatternRewriter &rewriter) {
+llvm::SmallVector<Value>
+LoopPipelinerInternal::emitEpilogue(PatternRewriter &rewriter) {
+  llvm::SmallVector<Value> returnValues(forOp->getNumResults());
   // Emit different versions of the induction variable. They will be
   // removed by dead code if not used.
   for (int64_t i = 0; i < maxStage; i++) {
@@ -295,9 +361,27 @@ void LoopPipelinerInternal::emitEpilogue(PatternRewriter &rewriter) {
       for (unsigned destId : llvm::seq(unsigned(0), op->getNumResults())) {
         setValueMapping(op->getResult(destId), newOp->getResult(destId),
                         maxStage - stages[op] + i);
+        // If the value is a loop carried dependency update the loop argument
+        // mapping and keep track of the last version to replace the original
+        // forOp uses.
+        for (OpOperand &operand :
+             forOp.getBody()->getTerminator()->getOpOperands()) {
+          if (operand.get() != op->getResult(destId))
+            continue;
+          unsigned version = maxStage - stages[op] + i + 1;
+          // If the version is greater than maxStage it means it maps to the
+          // original forOp returned value.
+          if (version > maxStage) {
+            returnValues[operand.getOperandNumber()] = newOp->getResult(destId);
+            continue;
+          }
+          setValueMapping(forOp.getRegionIterArgs()[operand.getOperandNumber()],
+                          newOp->getResult(destId), version);
+        }
       }
     }
   }
+  return returnValues;
 }
 
 void LoopPipelinerInternal::setValueMapping(Value key, Value el, int64_t idx) {
@@ -361,12 +445,11 @@ struct ForLoopPipelining : public OpRewritePattern<ForOp> {
 
     // 4. Emit the epilogue after the new forOp.
     rewriter.setInsertionPointAfter(newForOp);
-    pipeliner.emitEpilogue(rewriter);
+    llvm::SmallVector<Value> returnValues = pipeliner.emitEpilogue(rewriter);
 
     // 5. Erase the original loop and replace the uses with the epilogue output.
     if (forOp->getNumResults() > 0)
-      rewriter.replaceOp(
-          forOp, newForOp.getResults().take_front(forOp->getNumResults()));
+      rewriter.replaceOp(forOp, returnValues);
     else
       rewriter.eraseOp(forOp);
 
