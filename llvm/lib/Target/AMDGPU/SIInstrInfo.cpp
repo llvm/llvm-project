@@ -116,7 +116,8 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
     // the RA will not attempt rematerialization if mode is set anywhere
     // in the function, otherwise it is safe since mode is not changed.
     return !MI.hasImplicitDef() &&
-           MI.getNumImplicitOperands() == MI.getDesc().getNumImplicitUses();
+           MI.getNumImplicitOperands() == MI.getDesc().getNumImplicitUses() &&
+           !MI.mayRaiseFPException();
   }
 
   return false;
