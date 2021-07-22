@@ -730,8 +730,6 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     if (!IsNSA) {
       if (AddrSize > 8)
         AddrSize = 16;
-      else if (AddrSize > 5)
-        AddrSize = 8;
     } else {
       if (AddrSize > Info->VAddrDwords) {
         // The NSA encoding does not contain enough operands for the combination
