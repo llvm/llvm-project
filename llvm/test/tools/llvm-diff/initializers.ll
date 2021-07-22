@@ -36,3 +36,12 @@ define internal i32 @qux() {
   call void undef(%struct.mutex* @vmx_l1d_flush_mutex)
   ret i32 undef
 }
+
+; An initializer could use itself as part of the initialization.
+
+@kvm_debugfs_entries = internal global %struct.list_head { %struct.list_head* @kvm_debugfs_entries, %struct.list_head* @kvm_debugfs_entries }, align 8
+
+define i64 @mux() {
+  %1 = load i8*, i8** bitcast (%struct.list_head* @kvm_debugfs_entries to i8**), align 8
+  ret i64 undef
+}
