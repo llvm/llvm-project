@@ -40,6 +40,7 @@ steps:
     command: "libcxx/utils/ci/run-buildbot check-generated-output"
     artifact_paths:
       - "**/generated_output.patch"
+      - "**/generated_output.status"
     agents:
       queue: "libcxx-builders"
       os: "linux"
