@@ -313,14 +313,6 @@ private:
           Addend = *(const little32_t *)FixupContent - 4;
           Kind = x86_64::RequestGOTAndTransformToDelta32;
           break;
-        case MachOPCRel32TLV:
-          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
-            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
-          else
-            return TargetSymbolOrErr.takeError();
-          Addend = *(const little32_t *)FixupContent;
-          Kind = x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadRelaxable;
-          break;
         case MachOPointer32:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
@@ -400,6 +392,9 @@ private:
           assert(TargetSymbol && "No target symbol from parsePairRelocation?");
           break;
         }
+        case MachOPCRel32TLV:
+          return make_error<JITLinkError>(
+              "MachO TLV relocations not yet supported");
         }
 
         LLVM_DEBUG({
