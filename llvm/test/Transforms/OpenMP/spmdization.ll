@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s
 
 ;; void unknown(void);
-;; void spmd_amenable(void) __attribute__((assume("ompx_spmd_amenable")))
+;; void spmd_amenable(void) __attribute__((assume("ompx_spmd_amenable")));
 ;;
 ;; void sequential_loop() {
 ;;   #pragma omp target teams
@@ -13,7 +13,39 @@
 ;;         unknown();
 ;;       }
 ;;     }
-;      spmd_amenable();
+;;     spmd_amenable();
+;;   }
+;; }
+;;
+;; void use(__attribute__((noescape)) int *) __attribute__((assume("ompx_spmd_amenable")));
+;;
+;; void sequential_loop_to_stack_var() {
+;;   #pragma omp target teams
+;;   {
+;;     int x;
+;;     use(&x);
+;;     for (int i = 0; i < 100; ++i) {
+;;       #pragma omp parallel
+;;       {
+;;         unknown();
+;;       }
+;;     }
+;;     spmd_amenable();
+;;   }
+;; }
+;;
+;; void sequential_loop_to_shared_var() {
+;;   #pragma omp target teams
+;;   {
+;;     int x;
+;;     for (int i = 0; i < 100; ++i) {
+;;       #pragma omp parallel
+;;       {
+;;         x++;
+;;         unknown();
+;;       }
+;;     }
+;;     spmd_amenable();
 ;;   }
 ;; }
 
@@ -23,20 +55,22 @@ target triple = "nvptx64"
 
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @0, i32 0, i32 0) }, align 8
-@__omp_offloading_2c_38c77_sequential_loop_l4_exec_mode = weak constant i8 1
-@llvm.compiler.used = appending global [1 x i8*] [i8* @__omp_offloading_2c_38c77_sequential_loop_l4_exec_mode], section "llvm.metadata"
+@__omp_offloading_14_5896c35_sequential_loop_l5_exec_mode = weak constant i8 1
+@__omp_offloading_14_5896c35_sequential_loop_to_stack_var_l20_exec_mode = weak constant i8 1
+@__omp_offloading_14_5896c35_sequential_loop_to_shared_var_l35_exec_mode = weak constant i8 1
+@llvm.compiler.used = appending global [3 x i8*] [i8* @__omp_offloading_14_5896c35_sequential_loop_l5_exec_mode, i8* @__omp_offloading_14_5896c35_sequential_loop_to_stack_var_l20_exec_mode, i8* @__omp_offloading_14_5896c35_sequential_loop_to_shared_var_l35_exec_mode], section "llvm.metadata"
 
-; The second argument of __kmpc_target_init and deinit is is set to true to indicate that we can run in SPMD mode.
-; The last argument is set to false since full runtime support is not needed in SPMDization.
-; We also adjusted the global __omp_offloading_2c_38c77_sequential_loop_l4_exec_mode to have a zero initializer (which indicates SPMD mode to the runtime).
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
-; CHECK: @[[__OMP_OFFLOADING_2C_38C77_SEQUENTIAL_LOOP_L4_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
-; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x i8*] [i8* @__omp_offloading_2c_38c77_sequential_loop_l4_exec_mode], section "llvm.metadata"
+; CHECK: @[[__OMP_OFFLOADING_14_5896C35_SEQUENTIAL_LOOP_L5_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
+; CHECK: @[[__OMP_OFFLOADING_14_5896C35_SEQUENTIAL_LOOP_TO_STACK_VAR_L20_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
+; CHECK: @[[__OMP_OFFLOADING_14_5896C35_SEQUENTIAL_LOOP_TO_SHARED_VAR_L35_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
+; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [3 x i8*] [i8* @__omp_offloading_14_5896c35_sequential_loop_l5_exec_mode, i8* @__omp_offloading_14_5896c35_sequential_loop_to_stack_var_l20_exec_mode, i8* @__omp_offloading_14_5896c35_sequential_loop_to_shared_var_l35_exec_mode], section "llvm.metadata"
+; CHECK: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 32
 ;.
-define weak void @__omp_offloading_2c_38c77_sequential_loop_l4() #0 {
-; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2c_38c77_sequential_loop_l4
+define weak void @__omp_offloading_14_5896c35_sequential_loop_l5() #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_5896c35_sequential_loop_l5
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
@@ -46,9 +80,9 @@ define weak void @__omp_offloading_2c_38c77_sequential_loop_l4() #0 {
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-; CHECK-NEXT:    call void @__omp_outlined__(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noalias nocapture noundef nonnull readnone align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__omp_outlined__(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -65,7 +99,7 @@ entry:
 user_code.entry:                                  ; preds = %entry
   %1 = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
   store i32 %1, i32* %.threadid_temp., align 4
-  call void @__omp_outlined__(i32* %.threadid_temp., i32* %.zero.addr) #2
+  call void @__omp_outlined__(i32* %.threadid_temp., i32* %.zero.addr) #3
   call void @__kmpc_target_deinit(%struct.ident_t* @1, i1 false, i1 true)
   ret void
 
@@ -75,91 +109,116 @@ worker.exit:                                      ; preds = %entry
 
 declare i32 @__kmpc_target_init(%struct.ident_t*, i1, i1, i1)
 
-; Function Attrs: convergent norecurse nounwind
 define internal void @__omp_outlined__(i32* noalias %.global_tid., i32* noalias %.bound_tid.) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__
-; CHECK-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
+; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32 0, i32* [[I]], align 4
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], 100
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP0]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__1 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** noundef [[TMP1]], i64 noundef 0)
-; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP1]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__1 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** noundef [[TMP2]], i64 noundef 0)
+; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[I]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP3]], 1
+; CHECK-NEXT:    store i32 [[INC]], i32* [[I]], align 4
+; CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    call void @spmd_amenable()
+; CHECK-NEXT:    call void @spmd_amenable() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  %i = alloca i32, align 4
   %captured_vars_addrs = alloca [0 x i8*], align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  store i32 0, i32* %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
-  %cmp = icmp slt i32 %i.0, 100
+  %0 = load i32, i32* %i, align 4
+  %cmp = icmp slt i32 %0, 100
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %0 = load i32, i32* %.global_tid., align 4
-  %1 = bitcast [0 x i8*]* %captured_vars_addrs to i8**
-  call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %0, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** %1, i64 0)
+  %1 = load i32*, i32** %.global_tid..addr, align 8
+  %2 = load i32, i32* %1, align 4
+  %3 = bitcast [0 x i8*]* %captured_vars_addrs to i8**
+  call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %2, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** %3, i64 0)
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
-  %inc = add nsw i32 %i.0, 1
-  br label %for.cond, !llvm.loop !6
+  %4 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %4, 1
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond, !llvm.loop !9
 
 for.end:                                          ; preds = %for.cond
-  call void @spmd_amenable()
+  call void @spmd_amenable() #4
   ret void
 }
 
-; Function Attrs: convergent norecurse nounwind
 define internal void @__omp_outlined__1(i32* noalias %.global_tid., i32* noalias %.bound_tid.) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__1
-; CHECK-SAME: (i32* noalias nocapture nofree readnone [[DOTGLOBAL_TID_:%.*]], i32* noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @unknown() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    call void @unknown() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @unknown() #3
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  call void @unknown() #5
   ret void
 }
 
-; Function Attrs: convergent
 declare void @unknown() #1
 
-; Function Attrs: convergent norecurse nounwind
 define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
 ; CHECK-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
 ; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
+; CHECK-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 ; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 ; CHECK-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
-; CHECK-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %.addr = alloca i16, align 2
   %.addr1 = alloca i32, align 4
   %.zero.addr = alloca i32, align 4
   %global_args = alloca i8**, align 8
   store i32 0, i32* %.zero.addr, align 4
+  store i16 %0, i16* %.addr, align 2
   store i32 %1, i32* %.addr1, align 4
   call void @__kmpc_get_shared_variables(i8*** %global_args)
-  call void @__omp_outlined__1(i32* %.addr1, i32* %.zero.addr) #2
+  call void @__omp_outlined__1(i32* %.addr1, i32* %.zero.addr) #3
   ret void
 }
 
@@ -167,49 +226,393 @@ declare void @__kmpc_get_shared_variables(i8***)
 
 declare void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*, i8**, i64)
 
-; Function Attrs: nounwind
-declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #2
+declare void @spmd_amenable() #2
+
+declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #3
 
 declare void @__kmpc_target_deinit(%struct.ident_t*, i1, i1)
 
-declare void @spmd_amenable() #4
+define weak void @__omp_offloading_14_5896c35_sequential_loop_to_stack_var_l20() #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_5896c35_sequential_loop_to_stack_var_l20
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 true, i1 false, i1 false)
+; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
+; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
+; CHECK:       user_code.entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR3]]
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
+; CHECK-NEXT:    call void @__omp_outlined__2(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
+; CHECK-NEXT:    ret void
+; CHECK:       worker.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %.zero.addr = alloca i32, align 4
+  %.threadid_temp. = alloca i32, align 4
+  store i32 0, i32* %.zero.addr, align 4
+  %0 = call i32 @__kmpc_target_init(%struct.ident_t* @1, i1 false, i1 true, i1 true)
+  %exec_user_code = icmp eq i32 %0, -1
+  br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
-attributes #0 = { convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-attributes #1 = { convergent "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-attributes #2 = { nounwind }
-attributes #3 = { convergent }
-attributes #4 = { "llvm.assume"="ompx_spmd_amenable" }
+user_code.entry:                                  ; preds = %entry
+  %1 = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
+  store i32 %1, i32* %.threadid_temp., align 4
+  call void @__omp_outlined__2(i32* %.threadid_temp., i32* %.zero.addr) #3
+  call void @__kmpc_target_deinit(%struct.ident_t* @1, i1 false, i1 true)
+  ret void
 
-!omp_offload.info = !{!0}
-!nvvm.annotations = !{!1}
-!llvm.module.flags = !{!2, !3, !4, !8, !9}
-!llvm.ident = !{!5}
+worker.exit:                                      ; preds = %entry
+  ret void
+}
 
-!0 = !{i32 0, i32 44, i32 232567, !"sequential_loop", i32 4, i32 0}
-!1 = !{void ()* @__omp_offloading_2c_38c77_sequential_loop_l4, !"kernel", i32 1}
-!2 = !{i32 1, !"wchar_size", i32 4}
-!3 = !{i32 7, !"PIC Level", i32 2}
-!4 = !{i32 7, !"frame-pointer", i32 2}
-!5 = !{!"clang version 13.0.0"}
-!6 = distinct !{!6, !7}
-!7 = !{!"llvm.loop.mustprogress"}
-!8 = !{i32 7, !"openmp", i32 50}
-!9 = !{i32 7, !"openmp-device", i32 50}
+define internal void @__omp_outlined__2(i32* noalias %.global_tid., i32* noalias %.bound_tid.) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__2
+; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x i8*], align 8
+; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* [[TMP0]] to i32*
+; CHECK-NEXT:    call void @use(i32* nocapture [[X_ON_STACK]]) #[[ATTR4]]
+; CHECK-NEXT:    store i32 0, i32* [[I]], align 4
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[I]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 100
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP2]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** noundef [[TMP3]], i64 noundef 0)
+; CHECK-NEXT:    br label [[FOR_INC:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[I]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
+; CHECK-NEXT:    store i32 [[INC]], i32* [[I]], align 4
+; CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       for.end:
+; CHECK-NEXT:    call void @spmd_amenable() #[[ATTR4]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  %i = alloca i32, align 4
+  %captured_vars_addrs = alloca [0 x i8*], align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  %x = call i8* @__kmpc_alloc_shared(i64 4)
+  %x_on_stack = bitcast i8* %x to i32*
+  call void @use(i32* nocapture %x_on_stack) #4
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, i32* %i, align 4
+  %cmp = icmp slt i32 %0, 100
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %for.cond
+  %1 = load i32*, i32** %.global_tid..addr, align 8
+  %2 = load i32, i32* %1, align 4
+  %3 = bitcast [0 x i8*]* %captured_vars_addrs to i8**
+  call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %2, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__3 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__3_wrapper to i8*), i8** %3, i64 0)
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body
+  %4 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %4, 1
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond, !llvm.loop !11
+
+for.end:                                          ; preds = %for.cond
+  call void @spmd_amenable() #4
+  call void @__kmpc_free_shared(i8* %x, i64 4)
+  ret void
+}
+
+declare i8* @__kmpc_alloc_shared(i64) #3
+
+declare void @use(i32* nocapture) #2
+
+define internal void @__omp_outlined__3(i32* noalias %.global_tid., i32* noalias %.bound_tid.) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__3
+; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    call void @unknown() #[[ATTR5]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  call void @unknown() #5
+  ret void
+}
+
+define internal void @__omp_outlined__3_wrapper(i16 zeroext %0, i32 %1) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__3_wrapper
+; CHECK-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
+; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
+; CHECK-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+; CHECK-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
+; CHECK-NEXT:    call void @__omp_outlined__3(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR3]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %.addr = alloca i16, align 2
+  %.addr1 = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4
+  %global_args = alloca i8**, align 8
+  store i32 0, i32* %.zero.addr, align 4
+  store i16 %0, i16* %.addr, align 2
+  store i32 %1, i32* %.addr1, align 4
+  call void @__kmpc_get_shared_variables(i8*** %global_args)
+  call void @__omp_outlined__3(i32* %.addr1, i32* %.zero.addr) #3
+  ret void
+}
+
+declare void @__kmpc_free_shared(i8* nocapture, i64) #3
+
+define weak void @__omp_offloading_14_5896c35_sequential_loop_to_shared_var_l35() #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_14_5896c35_sequential_loop_to_shared_var_l35
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i1 true, i1 false, i1 false)
+; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
+; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
+; CHECK:       user_code.entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]]) #[[ATTR3]]
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
+; CHECK-NEXT:    call void @__omp_outlined__4(i32* noundef nonnull align 4 dereferenceable(4) [[DOTTHREADID_TEMP_]], i32* noundef nonnull align 4 dereferenceable(4) [[DOTZERO_ADDR]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i1 true, i1 false)
+; CHECK-NEXT:    ret void
+; CHECK:       worker.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %.zero.addr = alloca i32, align 4
+  %.threadid_temp. = alloca i32, align 4
+  store i32 0, i32* %.zero.addr, align 4
+  %0 = call i32 @__kmpc_target_init(%struct.ident_t* @1, i1 false, i1 true, i1 true)
+  %exec_user_code = icmp eq i32 %0, -1
+  br i1 %exec_user_code, label %user_code.entry, label %worker.exit
+
+user_code.entry:                                  ; preds = %entry
+  %1 = call i32 @__kmpc_global_thread_num(%struct.ident_t* @1)
+  store i32 %1, i32* %.threadid_temp., align 4
+  call void @__omp_outlined__4(i32* %.threadid_temp., i32* %.zero.addr) #3
+  call void @__kmpc_target_deinit(%struct.ident_t* @1, i1 false, i1 true)
+  ret void
+
+worker.exit:                                      ; preds = %entry
+  ret void
+}
+
+define internal void @__omp_outlined__4(i32* noalias %.global_tid., i32* noalias %.bound_tid.) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__4
+; CHECK-SAME: (i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x i8*], align 8
+; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32 0, i32* [[I]], align 4
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], 100
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
+; CHECK-NEXT:    store i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @x, i32 0, i32 0) to i8*), i8** [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+; CHECK-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* noundef @[[GLOB1]], i32 [[TMP2]], i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*, i32*)* @__omp_outlined__5 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__5_wrapper to i8*), i8** noundef [[TMP3]], i64 noundef 1)
+; CHECK-NEXT:    br label [[FOR_INC:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[I]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
+; CHECK-NEXT:    store i32 [[INC]], i32* [[I]], align 4
+; CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       for.end:
+; CHECK-NEXT:    call void @spmd_amenable() #[[ATTR4]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  %i = alloca i32, align 4
+  %captured_vars_addrs = alloca [1 x i8*], align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  %x = call i8* @__kmpc_alloc_shared(i64 4)
+  %x_on_stack = bitcast i8* %x to i32*
+  store i32 0, i32* %i, align 4
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %0 = load i32, i32* %i, align 4
+  %cmp = icmp slt i32 %0, 100
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:                                         ; preds = %for.cond
+  %1 = getelementptr inbounds [1 x i8*], [1 x i8*]* %captured_vars_addrs, i64 0, i64 0
+  %2 = bitcast i32* %x_on_stack to i8*
+  store i8* %2, i8** %1, align 8
+  %3 = load i32*, i32** %.global_tid..addr, align 8
+  %4 = load i32, i32* %3, align 4
+  %5 = bitcast [1 x i8*]* %captured_vars_addrs to i8**
+  call void @__kmpc_parallel_51(%struct.ident_t* @1, i32 %4, i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*)* @__omp_outlined__5 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__5_wrapper to i8*), i8** %5, i64 1)
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body
+  %6 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %6, 1
+  store i32 %inc, i32* %i, align 4
+  br label %for.cond, !llvm.loop !12
+
+for.end:                                          ; preds = %for.cond
+  call void @spmd_amenable() #4
+  call void @__kmpc_free_shared(i8* %x, i64 4)
+  ret void
+}
+
+define internal void @__omp_outlined__5(i32* noalias %.global_tid., i32* noalias %.bound_tid., i32* nonnull align 4 dereferenceable(4) %x) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__5
+; CHECK-SAME: (i32* noalias nofree [[DOTGLOBAL_TID_:%.*]], i32* noalias nofree [[DOTBOUND_TID_:%.*]], i32* nofree nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32*, align 8
+; CHECK-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
+; CHECK-NEXT:    store i32* [[X]], i32** [[X_ADDR]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    store i32 [[INC]], i32* [[X]], align 4
+; CHECK-NEXT:    call void @unknown() #[[ATTR5]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %.global_tid..addr = alloca i32*, align 8
+  %.bound_tid..addr = alloca i32*, align 8
+  %x.addr = alloca i32*, align 8
+  store i32* %.global_tid., i32** %.global_tid..addr, align 8
+  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  store i32* %x, i32** %x.addr, align 8
+  %0 = load i32*, i32** %x.addr, align 8
+  %1 = load i32, i32* %0, align 4
+  %inc = add nsw i32 %1, 1
+  store i32 %inc, i32* %0, align 4
+  call void @unknown() #5
+  ret void
+}
+
+define internal void @__omp_outlined__5_wrapper(i16 zeroext %0, i32 %1) #0 {
+; CHECK-LABEL: define {{[^@]+}}@__omp_outlined__5_wrapper
+; CHECK-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
+; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
+; CHECK-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
+; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
+; CHECK-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32**
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 8
+; CHECK-NEXT:    call void @__omp_outlined__5(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]]) #[[ATTR3]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %.addr = alloca i16, align 2
+  %.addr1 = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4
+  %global_args = alloca i8**, align 8
+  store i32 0, i32* %.zero.addr, align 4
+  store i16 %0, i16* %.addr, align 2
+  store i32 %1, i32* %.addr1, align 4
+  call void @__kmpc_get_shared_variables(i8*** %global_args)
+  %2 = load i8**, i8*** %global_args, align 8
+  %3 = getelementptr inbounds i8*, i8** %2, i64 0
+  %4 = bitcast i8** %3 to i32**
+  %5 = load i32*, i32** %4, align 8
+  call void @__omp_outlined__5(i32* %.addr1, i32* %.zero.addr, i32* %5) #3
+  ret void
+}
+
+attributes #0 = { convergent noinline norecurse nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+attributes #1 = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+attributes #2 = { convergent "frame-pointer"="none" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+attributes #3 = { nounwind }
+attributes #4 = { convergent "llvm.assume"="ompx_spmd_amenable" }
+attributes #5 = { convergent }
+
+!omp_offload.info = !{!0, !1, !2}
+!nvvm.annotations = !{!3, !4, !5}
+!llvm.module.flags = !{!6, !7, !8}
+
+!0 = !{i32 0, i32 20, i32 92892213, !"sequential_loop_to_stack_var", i32 20, i32 1}
+!1 = !{i32 0, i32 20, i32 92892213, !"sequential_loop", i32 5, i32 0}
+!2 = !{i32 0, i32 20, i32 92892213, !"sequential_loop_to_shared_var", i32 35, i32 2}
+!3 = !{void ()* @__omp_offloading_14_5896c35_sequential_loop_l5, !"kernel", i32 1}
+!4 = !{void ()* @__omp_offloading_14_5896c35_sequential_loop_to_stack_var_l20, !"kernel", i32 1}
+!5 = !{void ()* @__omp_offloading_14_5896c35_sequential_loop_to_shared_var_l35, !"kernel", i32 1}
+!6 = !{i32 1, !"wchar_size", i32 4}
+!7 = !{i32 7, !"openmp", i32 50}
+!8 = !{i32 7, !"openmp-device", i32 50}
+!9 = distinct !{!9, !10}
+!10 = !{!"llvm.loop.mustprogress"}
+!11 = distinct !{!11, !10}
+!12 = distinct !{!12, !10}
 ;.
-; CHECK: attributes #[[ATTR0]] = { convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
-; CHECK: attributes #[[ATTR2]] = { nounwind }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { "llvm.assume"="ompx_spmd_amenable" }
-; CHECK: attributes #[[ATTR4]] = { convergent }
+; CHECK: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent "frame-pointer"="none" "llvm.assume"="ompx_spmd_amenable" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+; CHECK: attributes #[[ATTR3]] = { nounwind }
+; CHECK: attributes #[[ATTR4]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
+; CHECK: attributes #[[ATTR5]] = { convergent }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 44, i32 232567, !"sequential_loop", i32 4, i32 0}
-; CHECK: [[META1:![0-9]+]] = !{void ()* @__omp_offloading_2c_38c77_sequential_loop_l4, !"kernel", i32 1}
-; CHECK: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK: [[META3:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
-; CHECK: [[META4:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META7:![0-9]+]] = !{!"clang version 13.0.0"}
-; CHECK: [[LOOP8]] = distinct !{!8, !9}
-; CHECK: [[META9:![0-9]+]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 92892213, !"sequential_loop_to_stack_var", i32 20, i32 1}
+; CHECK: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 92892213, !"sequential_loop", i32 5, i32 0}
+; CHECK: [[META2:![0-9]+]] = !{i32 0, i32 20, i32 92892213, !"sequential_loop_to_shared_var", i32 35, i32 2}
+; CHECK: [[META3:![0-9]+]] = !{void ()* @__omp_offloading_14_5896c35_sequential_loop_l5, !"kernel", i32 1}
+; CHECK: [[META4:![0-9]+]] = !{void ()* @__omp_offloading_14_5896c35_sequential_loop_to_stack_var_l20, !"kernel", i32 1}
+; CHECK: [[META5:![0-9]+]] = !{void ()* @__omp_offloading_14_5896c35_sequential_loop_to_shared_var_l35, !"kernel", i32 1}
+; CHECK: [[META6:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; CHECK: [[META7:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CHECK: [[META8:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CHECK: [[LOOP9]] = distinct !{!9, !10}
+; CHECK: [[META10:![0-9]+]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[LOOP11]] = distinct !{!11, !10}
+; CHECK: [[LOOP12]] = distinct !{!12, !10}
 ;.

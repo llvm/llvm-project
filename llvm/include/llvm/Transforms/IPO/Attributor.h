@@ -3557,6 +3557,10 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
   /// Returns true if HeapToStack conversion is assumed to be possible.
   virtual bool isAssumedHeapToStack(const CallBase &CB) const = 0;
 
+  /// Returns true if HeapToStack conversion is assumed and the CB is a
+  /// callsite to a free operation to be removed.
+  virtual bool isAssumedHeapToStackRemovedFree(CallBase &CB) const = 0;
+
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
 
