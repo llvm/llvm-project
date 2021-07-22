@@ -142,7 +142,7 @@ Section,Description,Dependencies,Assignee,Complete
 `[range.take] <http://wg21.link/range.take>`_,take_view,[range.all],Zoe Carver,In Progress
 `[range.join] <http://wg21.link/range.join>`_,join_view,[range.all],Christopher Di Bella,Not started
 `[range.empty] <http://wg21.link/range.empty>`_,`empty_view <https://reviews.llvm.org/D103208>`_,[view.interface],Zoe Carver,✅
-`[range.single] <http://wg21.link/range.single>`_,single_view,[view.interface],Unassigned,Not started
+`[range.single] <http://wg21.link/range.single>`_,single_view,[view.interface],Zoe Carver,In Progress
 `[range.split] <http://wg21.link/range.split>`_,split_view,[range.all],Unassigned,Not started
 `[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Zoe Carver,Not started
 `[range.common] <http://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,In Progress
