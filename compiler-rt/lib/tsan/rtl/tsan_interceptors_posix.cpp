@@ -434,6 +434,9 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
 
     // Ensure thread-safety.
     BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    // __cxa_atexit calls calloc. If we don't ignore interceptors, we will fail
+    // due to atexit_mu held on exit from the calloc interceptor.
+    ScopedIgnoreInterceptors ignore;
 
     res = REAL(__cxa_atexit)((void (*)(void *a))at_exit_wrapper, 0, 0);
     // Push AtExitCtx on the top of the stack of callback functions
