@@ -296,6 +296,11 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__LONG_DOUBLE_IBM128__");
   }
 
+  if (getTriple().isOSAIX() && Opts.LongDoubleSize == 64) {
+    assert(LongDoubleWidth == 64);
+    Builder.defineMacro("__LONGDOUBLE64");
+  }
+
   // Define this for elfv2 (64-bit only) or 64-bit darwin.
   if (ABI == "elfv2" ||
       (getTriple().getOS() == llvm::Triple::Darwin && PointerWidth == 64))
