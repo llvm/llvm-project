@@ -1,5 +1,5 @@
-#ifndef LLVM_TOOLS_LLVM_DWP_DWP_H
-#define LLVM_TOOLS_LLVM_DWP_DWP_H
+#ifndef LLVM_DWP_DWP_H
+#define LLVM_DWP_DWP_H
 
 #include "DWPStringPool.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -94,4 +94,4 @@ void writeIndex(MCStreamer &Out, MCSection *Section,
                 uint32_t IndexVersion);
 
 } // namespace llvm
-#endif // LLVM_TOOLS_LLVM_DWP_DWP_H
+#endif // LLVM_DWP_DWP_H
