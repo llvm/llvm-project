@@ -4258,6 +4258,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
                                                 llvm::Optional<unsigned> ArgNo,
                                                 CGBuilderTy &Builder,
                                                 const bool UsePointerValue) {
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf)
+    return EmitDef(VD, Storage, ArgNo, Builder, UsePointerValue);
+
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
   if (VD->hasAttr<NoDebugAttr>())
@@ -4616,9 +4619,7 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
                                        CGBuilderTy &Builder,
                                        const bool UsePointerValue) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  return CGM.getCodeGenOpts().HeterogeneousDwarf ?
-      EmitDef(VD, Storage, llvm::None, Builder, UsePointerValue) :
-      EmitDeclare(VD, Storage, llvm::None, Builder, UsePointerValue);
+  return EmitDeclare(VD, Storage, llvm::None, Builder, UsePointerValue);
 }
 
 void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
@@ -4732,9 +4733,7 @@ llvm::DILocalVariable *
 CGDebugInfo::EmitDeclareOfArgVariable(const VarDecl *VD, llvm::Value *AI,
                                       unsigned ArgNo, CGBuilderTy &Builder) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  return CGM.getCodeGenOpts().HeterogeneousDwarf ?
-      EmitDef(VD, AI, ArgNo, Builder) :
-      EmitDeclare(VD, AI, ArgNo, Builder);
+  return EmitDeclare(VD, AI, ArgNo, Builder);
 }
 
 namespace {
@@ -4959,6 +4958,8 @@ llvm::DIGlobalVariable *
 CGDebugInfo::CollectAnonRecordDeclsForHeterogeneousDwarf(
     const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
     StringRef LinkageName, llvm::GlobalVariable *Var, llvm::DIScope *DContext) {
+  assert(CGM.getCodeGenOpts().HeterogeneousDwarf);
+
   llvm::DIGlobalVariable *GV = nullptr;
 
   for (const auto *Field : RD->fields()) {
