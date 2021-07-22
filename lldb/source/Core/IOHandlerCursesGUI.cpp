@@ -1504,6 +1504,29 @@ protected:
   int m_first_visibile_choice;
 };
 
+class ProcessPluginFieldDelegate : public ChoicesFieldDelegate {
+public:
+  ProcessPluginFieldDelegate()
+      : ChoicesFieldDelegate("Process Plugin", 3, GetPossiblePluginNames()) {}
+
+  std::vector<std::string> GetPossiblePluginNames() {
+    std::vector<std::string> names;
+    names.push_back("<default>");
+
+    size_t i = 0;
+    while (auto name = PluginManager::GetProcessPluginNameAtIndex(i++))
+      names.push_back(name);
+    return names;
+  }
+
+  std::string GetPluginName() {
+    std::string plugin_name = GetChoiceContent();
+    if (plugin_name == "<default>")
+      return "";
+    return plugin_name;
+  }
+};
+
 template <class T> class ListFieldDelegate : public FieldDelegate {
 public:
   ListFieldDelegate(const char *label, T default_field)
@@ -1895,6 +1918,12 @@ public:
                                         std::vector<std::string> choices) {
     ChoicesFieldDelegate *delegate =
         new ChoicesFieldDelegate(label, height, choices);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  ProcessPluginFieldDelegate *AddProcessPluginField() {
+    ProcessPluginFieldDelegate *delegate = new ProcessPluginFieldDelegate();
     m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
@@ -2347,8 +2376,7 @@ public:
     m_include_existing_field =
         AddBooleanField("Include existing processes.", false);
     m_show_advanced_field = AddBooleanField("Show advanced settings.", false);
-    m_plugin_field =
-        AddChoicesField("Plugin Name", 3, GetPossiblePluginNames());
+    m_plugin_field = AddProcessPluginField();
 
     AddAction("Attach", [this](Window &window) { Attach(window); });
   }
@@ -2388,16 +2416,6 @@ public:
       return "";
 
     return module_sp->GetFileSpec().GetFilename().AsCString();
-  }
-
-  std::vector<std::string> GetPossiblePluginNames() {
-    std::vector<std::string> names;
-    names.push_back("<default>");
-
-    size_t i = 0;
-    while (auto name = PluginManager::GetProcessPluginNameAtIndex(i++))
-      names.push_back(name);
-    return names;
   }
 
   bool StopRunningProcess() {
@@ -2455,8 +2473,7 @@ public:
     } else {
       attach_info.SetProcessID(m_pid_field->GetInteger());
     }
-    if (m_plugin_field->GetChoiceContent() != "<default>")
-      attach_info.SetProcessPluginName(m_plugin_field->GetChoiceContent());
+    attach_info.SetProcessPluginName(m_plugin_field->GetPluginName());
 
     return attach_info;
   }
@@ -2504,7 +2521,7 @@ protected:
   BooleanFieldDelegate *m_wait_for_field;
   BooleanFieldDelegate *m_include_existing_field;
   BooleanFieldDelegate *m_show_advanced_field;
-  ChoicesFieldDelegate *m_plugin_field;
+  ProcessPluginFieldDelegate *m_plugin_field;
 };
 
 class MenuDelegate {
