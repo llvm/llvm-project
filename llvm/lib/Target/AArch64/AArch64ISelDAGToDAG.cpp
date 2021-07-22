@@ -5034,6 +5034,24 @@ bool AArch64DAGToDAGISel::SelectSVERegRegAddrMode(SDValue N, unsigned Scale,
     return true;
   }
 
+  if (auto C = dyn_cast<ConstantSDNode>(RHS)) {
+    int64_t ImmOff = C->getSExtValue();
+    unsigned Size = 1 << Scale;
+
+    // To use the reg+reg addressing mode, the immediate must be a multiple of
+    // the vector element's byte size.
+    if (ImmOff % Size)
+      return false;
+
+    SDLoc DL(N);
+    Base = LHS;
+    Offset = CurDAG->getTargetConstant(ImmOff >> Scale, DL, MVT::i64);
+    SDValue Ops[] = {Offset};
+    SDNode *MI = CurDAG->getMachineNode(AArch64::MOVi64imm, DL, MVT::i64, Ops);
+    Offset = SDValue(MI, 0);
+    return true;
+  }
+
   // Check if the RHS is a shift node with a constant.
   if (RHS.getOpcode() != ISD::SHL)
     return false;
