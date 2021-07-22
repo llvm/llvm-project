@@ -5131,6 +5131,15 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
   static bool handleLoad(Attributor &A, const AbstractAttribute &AA,
                          LoadInst &L, function_ref<bool(Value &)> Union) {
+    auto UnionWrapper = [&](Value &V, Value &Obj) {
+      if (isa<AllocaInst>(Obj))
+        return Union(V);
+      if (!AA::isDynamicallyUnique(A, AA, V))
+        return false;
+      if (!AA::isValidAtPosition(V, L, A.getInfoCache()))
+        return false;
+      return Union(V);
+    };
 
     Value &Ptr = *L.getPointerOperand();
     SmallVector<Value *, 8> Objects;
@@ -5174,10 +5183,10 @@ struct AAValueSimplifyImpl : AAValueSimplify {
         if (!CastedContent)
           return false;
         if (IsExact)
-          return Union(*CastedContent);
+          return UnionWrapper(*CastedContent, *Obj);
         if (auto *C = dyn_cast<Constant>(CastedContent))
           if (C->isNullValue() || C->isAllOnesValue() || isa<UndefValue>(C))
-            return Union(*CastedContent);
+            return UnionWrapper(*CastedContent, *Obj);
         return false;
       };
 
@@ -5241,32 +5250,23 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
       // valid in the current scope. This avoids refering to simplified values
       // in other functions, e.g., we don't want to say a an argument in a
       // static function is actually an argument in a different function.
-      Value &ArgOp = ACSArgPos.getAssociatedValue();
       bool UsedAssumedInformation = false;
-      Optional<Value *> SimpleArgOp =
-          A.getAssumedSimplified(ACSArgPos, *this, UsedAssumedInformation);
+      Optional<Constant *> SimpleArgOp =
+          A.getAssumedConstant(ACSArgPos, *this, UsedAssumedInformation);
       if (!SimpleArgOp.hasValue())
         return true;
-      Value *SimpleArgOpVal = *SimpleArgOp ? *SimpleArgOp : &ArgOp;
-      if (!AA::isValidInScope(*SimpleArgOpVal, getAnchorScope()))
+      if (!SimpleArgOp.getValue())
         return false;
-
-      // We can only propagate thread independent values through callbacks.
-      // This is different to direct/indirect call sites because for them we
-      // know the thread executing the caller and callee is the same. For
-      // callbacks this is not guaranteed, thus a thread dependent value could
-      // be different for the caller and callee, making it invalid to propagate.
-      if (ACS.isCallbackCall())
-        if (auto *C = dyn_cast<Constant>(SimpleArgOpVal))
-          if (C->isThreadDependent())
-            return false;
-      return checkAndUpdate(A, *this, ACSArgPos);
+      if (!AA::isDynamicallyUnique(A, *this, **SimpleArgOp))
+        return false;
+      return unionAssumed(*SimpleArgOp);
     };
 
     // Generate a answer specific to a call site context.
     bool Success;
     bool AllCallSitesKnown;
-    if (hasCallBaseContext())
+    if (hasCallBaseContext() &&
+        getCallBaseContext()->getCalledFunction() == Arg->getParent())
       Success = PredForCallSite(
           AbstractCallSite(&getCallBaseContext()->getCalledOperandUse()));
     else

@@ -138,6 +138,12 @@ class Function;
 
 /// Abstract Attribute helper functions.
 namespace AA {
+
+/// Return true if \p V is dynamically unique, that is, there are no two
+/// "instances" of \p V at runtime with different values.
+bool isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
+                         const Value &V);
+
 /// Return true if \p V is a valid value in \p Scope, that is a constant or an
 /// instruction/argument of \p Scope.
 bool isValidInScope(const Value &V, const Function *Scope);
@@ -1499,11 +1505,16 @@ struct Attributor {
       ToBeDeletedFunctions.insert(&F);
   }
 
-  /// If \p V is assumed to be a constant, return it, if it is unclear yet,
+  /// If \p IRP is assumed to be a constant, return it, if it is unclear yet,
   /// return None, otherwise return `nullptr`.
-  Optional<Constant *> getAssumedConstant(const Value &V,
+  Optional<Constant *> getAssumedConstant(const IRPosition &IRP,
                                           const AbstractAttribute &AA,
                                           bool &UsedAssumedInformation);
+  Optional<Constant *> getAssumedConstant(const Value &V,
+                                          const AbstractAttribute &AA,
+                                          bool &UsedAssumedInformation) {
+    return getAssumedConstant(IRPosition::value(V), AA, UsedAssumedInformation);
+  }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
   /// return None, otherwise return `nullptr`.
