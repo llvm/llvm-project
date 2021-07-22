@@ -99,21 +99,7 @@ class KernelImpl;
 } // namespace core
 
 struct SignalPoolT {
-  SignalPoolT() {
-    // If no signals are created, and none can be created later,
-    // will ultimately fail at pop()
-
-    unsigned N = 1024; // default max pool size from atmi
-    for (unsigned i = 0; i < N; i++) {
-      hsa_signal_t new_signal;
-      hsa_status_t err = hsa_signal_create(0, 0, NULL, &new_signal);
-      if (err != HSA_STATUS_SUCCESS) {
-        break;
-      }
-      state.push(new_signal);
-    }
-    DEBUG_PRINT("Signal Pool Initial Size: %lu\n", state.size());
-  }
+  SignalPoolT() {}
   SignalPoolT(const SignalPoolT &) = delete;
   SignalPoolT(SignalPoolT &&) = delete;
   ~SignalPoolT() {
