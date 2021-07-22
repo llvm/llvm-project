@@ -32,7 +32,7 @@ target triple = "nvptx64"
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
-; CHECK: @[[__OMP_OFFLOADING_2C_38C77_SEQUENTIAL_LOOP_L4_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[__OMP_OFFLOADING_2C_38C77_SEQUENTIAL_LOOP_L4_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 2
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x i8*] [i8* @__omp_offloading_2c_38c77_sequential_loop_l4_exec_mode], section "llvm.metadata"
 ;.
 define weak void @__omp_offloading_2c_38c77_sequential_loop_l4() #0 {

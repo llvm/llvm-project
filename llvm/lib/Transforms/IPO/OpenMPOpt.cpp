@@ -2886,8 +2886,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
     assert(ExecMode->getInitializer() &&
            ExecMode->getInitializer()->isOneValue() &&
            "Initially non-SPMD kernel has SPMD exec mode!");
-    ExecMode->setInitializer(
-        ConstantInt::get(ExecMode->getInitializer()->getType(), 0));
+
+    // Set the global exec mode flag to indicate SPMD-Generic mode.
+    constexpr int SPMDGeneric = 2;
+    if (!ExecMode->getInitializer()->isZeroValue())
+      ExecMode->setInitializer(
+          ConstantInt::get(ExecMode->getInitializer()->getType(), SPMDGeneric));
 
     // Next rewrite the init and deinit calls to indicate we use SPMD-mode now.
     const int InitIsSPMDArgNo = 1;
