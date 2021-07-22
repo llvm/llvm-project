@@ -56,6 +56,11 @@ static cl::opt<bool> EnableParallelRegionMerging(
     cl::desc("Enable the OpenMP region merging optimization."), cl::Hidden,
     cl::init(false));
 
+static cl::opt<bool>
+    DisableInternalization("openmp-opt-disable-internalization", cl::ZeroOrMore,
+                           cl::desc("Disable function internalization."),
+                           cl::Hidden, cl::init(false));
+
 static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
                                     cl::Hidden);
 static cl::opt<bool> PrintOpenMPKernels("openmp-print-gpu-kernels",
@@ -3824,7 +3829,8 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   DenseSet<const Function *> InternalizedFuncs;
   if (isOpenMPDevice(M))
     for (Function &F : M)
-      if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F)) {
+      if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F) &&
+          !DisableInternalization) {
         if (Attributor::internalizeFunction(F, /* Force */ true)) {
           InternalizedFuncs.insert(&F);
         } else if (!F.hasLocalLinkage() && !F.hasFnAttribute(Attribute::Cold)) {
