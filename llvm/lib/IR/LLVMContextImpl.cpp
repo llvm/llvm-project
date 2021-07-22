@@ -37,7 +37,8 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       X86_FP80Ty(C, Type::X86_FP80TyID), FP128Ty(C, Type::FP128TyID),
       PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_AMXTy(C, Type::X86_AMXTyID),
       Int1Ty(C, 1), Int8Ty(C, 8), Int16Ty(C, 16), Int32Ty(C, 32),
-      Int64Ty(C, 64), Int128Ty(C, 128) {}
+      Int64Ty(C, 64), Int128Ty(C, 128), Byte1Ty(C, 1), Byte8Ty(C, 8),
+      Byte16Ty(C, 16), Byte32Ty(C, 32), Byte64Ty(C, 64), Byte128Ty(C, 128) {}
 
 LLVMContextImpl::~LLVMContextImpl() {
 #ifndef NDEBUG
@@ -119,6 +120,10 @@ LLVMContextImpl::~LLVMContextImpl() {
   IntOneConstants.clear();
   IntConstants.clear();
   IntSplatConstants.clear();
+  ByteZeroConstants.clear();
+  ByteOneConstants.clear();
+  ByteConstants.clear();
+  ByteSplatConstants.clear();
   FPConstants.clear();
   FPSplatConstants.clear();
   CDSConstants.clear();
