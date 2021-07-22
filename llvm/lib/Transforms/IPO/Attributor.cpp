@@ -880,8 +880,7 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
 
 bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
                                  const AbstractAttribute &QueryingAA,
-                                 const Value &V,
-                                 bool CheckBBLivenessOnly,
+                                 const Value &V, bool CheckBBLivenessOnly,
                                  DepClassTy LivenessDepClass) {
 
   // Check the trivial case first as it catches void values.
@@ -2583,8 +2582,9 @@ void AbstractAttribute::printWithDeps(raw_ostream &OS) const {
   OS << '\n';
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const AAPointerInfo::Access &Acc) {
-  OS << " ["<< Acc.getKind() << "] " << *Acc.getRemoteInst();
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              const AAPointerInfo::Access &Acc) {
+  OS << " [" << Acc.getKind() << "] " << *Acc.getRemoteInst();
   if (Acc.getLocalInst() != Acc.getRemoteInst())
     OS << " via " << *Acc.getLocalInst() << "\n";
   return OS;
