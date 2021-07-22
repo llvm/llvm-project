@@ -5430,8 +5430,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         // The pointer operand uses an in-tree scalar so we add the new BitCast
         // to ExternalUses list to make sure that an extract will be generated
         // in the future.
-        if (getTreeEntry(PO))
-          ExternalUses.emplace_back(PO, cast<User>(VecPtr), 0);
+        if (TreeEntry *Entry = getTreeEntry(PO)) {
+          // Find which lane we need to extract.
+          unsigned FoundLane = Entry->findLaneForValue(PO);
+          ExternalUses.emplace_back(PO, cast<User>(VecPtr), FoundLane);
+        }
 
         NewLI = Builder.CreateAlignedLoad(VecTy, VecPtr, LI->getAlign());
       } else {
@@ -5474,8 +5477,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // The pointer operand uses an in-tree scalar, so add the new BitCast to
       // ExternalUses to make sure that an extract will be generated in the
       // future.
-      if (getTreeEntry(ScalarPtr))
-        ExternalUses.push_back(ExternalUser(ScalarPtr, cast<User>(VecPtr), 0));
+      if (TreeEntry *Entry = getTreeEntry(ScalarPtr)) {
+        // Find which lane we need to extract.
+        unsigned FoundLane = Entry->findLaneForValue(ScalarPtr);
+        ExternalUses.push_back(
+            ExternalUser(ScalarPtr, cast<User>(VecPtr), FoundLane));
+      }
 
       Value *V = propagateMetadata(ST, E->Scalars);
 
@@ -5577,8 +5584,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // The scalar argument uses an in-tree scalar so we add the new vectorized
       // call to ExternalUses list to make sure that an extract will be
       // generated in the future.
-      if (ScalarArg && getTreeEntry(ScalarArg))
-        ExternalUses.push_back(ExternalUser(ScalarArg, cast<User>(V), 0));
+      if (ScalarArg) {
+        if (TreeEntry *Entry = getTreeEntry(ScalarArg)) {
+          // Find which lane we need to extract.
+          unsigned FoundLane = Entry->findLaneForValue(ScalarArg);
+          ExternalUses.push_back(
+              ExternalUser(ScalarArg, cast<User>(V), FoundLane));
+        }
+      }
 
       propagateIRFlags(V, E->Scalars, VL0);
       ShuffleBuilder.addMask(E->ReuseShuffleIndices);
