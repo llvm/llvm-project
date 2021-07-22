@@ -195,6 +195,44 @@ func @alias_is_freed(%arg0 : memref<?xf32>) {
 
 // -----
 
+// Verify SimplifyClones skips clones with multiple deallocations.
+// CHECK-LABEL: @clone_multiple_dealloc_of_source
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+func @clone_multiple_dealloc_of_source(%arg0: memref<?xf32>) -> memref<?xf32> {
+  // CHECK-NEXT: %[[RES:.*]] = memref.clone %[[ARG]]
+  // CHECK: memref.dealloc %[[ARG]]
+  // CHECK: memref.dealloc %[[ARG]]
+  // CHECK: return %[[RES]]
+  %0 = memref.clone %arg0 : memref<?xf32> to memref<?xf32>
+  "if_else"() ({
+    memref.dealloc %arg0 : memref<?xf32>
+    }, {
+    memref.dealloc %arg0 : memref<?xf32>
+    }) : () -> ()
+  return %0 : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @clone_multiple_dealloc_of_clone
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+func @clone_multiple_dealloc_of_clone(%arg0: memref<?xf32>) -> memref<?xf32> {
+  // CHECK-NEXT: %[[CLONE:.*]] = memref.clone %[[ARG]]
+  // CHECK: memref.dealloc %[[CLONE]]
+  // CHECK: memref.dealloc %[[CLONE]]
+  // CHECK: return %[[ARG]]
+  %0 = memref.clone %arg0 : memref<?xf32> to memref<?xf32>
+  "use"(%0) : (memref<?xf32>) -> ()
+  "if_else"() ({
+    memref.dealloc %0 : memref<?xf32>
+    }, {
+    memref.dealloc %0 : memref<?xf32>
+    }) : () -> ()
+  return %arg0 : memref<?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @dim_of_sized_view
 //  CHECK-SAME:   %{{[a-z0-9A-Z_]+}}: memref<?xi8>
 //  CHECK-SAME:   %[[SIZE:.[a-z0-9A-Z_]+]]: index
@@ -393,7 +431,7 @@ func @alloc_const_fold_with_symbols2() -> memref<?xi32, #map0> {
 func @allocator(%arg0 : memref<memref<?xi32>>, %arg1 : index)  {
   %0 = memref.alloc(%arg1) : memref<?xi32>
   memref.store %0, %arg0[] : memref<memref<?xi32>>
-  return 
+  return
 }
 
 // -----
