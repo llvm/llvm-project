@@ -790,7 +790,8 @@ struct OpenMPOpt {
       Use &U, OMPInformationCache::RuntimeFunctionInfo *RFI = nullptr) {
     CallInst *CI = dyn_cast<CallInst>(U.getUser());
     if (CI && CI->isCallee(&U) && !CI->hasOperandBundles() &&
-        (!RFI || CI->getCalledFunction() == RFI->Declaration))
+        (!RFI ||
+         (RFI->Declaration && CI->getCalledFunction() == RFI->Declaration)))
       return CI;
     return nullptr;
   }
@@ -801,7 +802,8 @@ struct OpenMPOpt {
       Value &V, OMPInformationCache::RuntimeFunctionInfo *RFI = nullptr) {
     CallInst *CI = dyn_cast<CallInst>(&V);
     if (CI && !CI->hasOperandBundles() &&
-        (!RFI || CI->getCalledFunction() == RFI->Declaration))
+        (!RFI ||
+         (RFI->Declaration && CI->getCalledFunction() == RFI->Declaration)))
       return CI;
     return nullptr;
   }
@@ -2463,7 +2465,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     // Match:  -1 == __kmpc_target_init (for non-SPMD kernels only!)
     if (C->isAllOnesValue()) {
       auto *CB = dyn_cast<CallBase>(Cmp->getOperand(0));
-      if (!CB || CB->getCalledFunction() != RFI.Declaration)
+      CB = CB ? OpenMPOpt::getCallIfRegularCall(*CB, &RFI) : nullptr;
+      if (!CB)
         return false;
       const int InitIsSPMDArgNo = 1;
       auto *IsSPMDModeCI =
