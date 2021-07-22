@@ -22,7 +22,7 @@ namespace mlir {
 
 LogicalResult mlir::detail::inferReturnTensorTypes(
     function_ref<LogicalResult(
-        MLIRContext *, Optional<Location> location, ValueRange operands,
+        MLIRContext *, Optional<Location> location, ValueShapeRange operands,
         DictionaryAttr attributes, RegionRange regions,
         SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,
