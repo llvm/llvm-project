@@ -3084,15 +3084,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   SmallString<256> Identifier = getTypeIdentifier(Ty, CGM, TheCU);
 
-  // Create elements for each enumerator.
+  // Create elements for each enumerator. Use the signed-ness of the enum type,
+  // not the signedness of the enumerator. This matches the DWARF produced by
+  // GCC for C enums with positive enumerators.
   SmallVector<llvm::Metadata *, 16> Enumerators;
   ED = ED->getDefinition();
   bool IsSigned = ED->getIntegerType()->isSignedIntegerType();
   for (const auto *Enum : ED->enumerators()) {
-    const auto &InitVal = Enum->getInitVal();
-    auto Value = IsSigned ? InitVal.getSExtValue() : InitVal.getZExtValue();
+    llvm::APSInt Value = Enum->getInitVal();
+    Value.setIsSigned(IsSigned);
     Enumerators.push_back(
-        DBuilder.createEnumerator(Enum->getName(), Value, !IsSigned));
+        DBuilder.createEnumerator(Enum->getName(), std::move(Value)));
   }
 
   // Return a CompositeType for the enum itself.
