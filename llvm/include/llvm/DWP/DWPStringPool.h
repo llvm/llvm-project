@@ -1,5 +1,5 @@
-#ifndef TOOLS_LLVM_DWP_DWPSTRINGPOOL
-#define TOOLS_LLVM_DWP_DWPSTRINGPOOL
+#ifndef LLVM_DWP_DWPSTRINGPOOL_H
+#define LLVM_DWP_DWPSTRINGPOOL_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSection.h"
@@ -53,4 +53,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_DWP_DWPSTRINGPOOL_H

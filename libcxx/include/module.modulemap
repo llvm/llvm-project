@@ -478,7 +478,10 @@ module std [system] {
 
     module __iterator {
       module access                { private header "__iterator/access.h" }
-      module advance               { private header "__iterator/advance.h" }
+      module advance               {
+        private header "__iterator/advance.h"
+        export __function_like
+      }
       module back_insert_iterator  { private header "__iterator/back_insert_iterator.h" }
       module common_iterator       { private header "__iterator/common_iterator.h" }
       module concepts              { private header "__iterator/concepts.h" }
@@ -497,10 +500,16 @@ module std [system] {
       module iterator              { private header "__iterator/iterator.h" }
       module iterator_traits       { private header "__iterator/iterator_traits.h" }
       module move_iterator         { private header "__iterator/move_iterator.h" }
-      module next                  { private header "__iterator/next.h" }
+      module next                  {
+        private header "__iterator/next.h"
+        export __function_like
+      }
       module ostream_iterator      { private header "__iterator/ostream_iterator.h" }
       module ostreambuf_iterator   { private header "__iterator/ostreambuf_iterator.h" }
-      module prev                  { private header "__iterator/prev.h" }
+      module prev                  {
+        private header "__iterator/prev.h"
+        export __function_like
+      }
       module projected             { private header "__iterator/projected.h" }
       module readable_traits       { private header "__iterator/readable_traits.h" }
       module reverse_access        { private header "__iterator/reverse_access.h" }

@@ -10,8 +10,8 @@
 // package files).
 //
 //===----------------------------------------------------------------------===//
-#include "DWP.h"
-#include "DWPError.h"
+#include "llvm/DWP/DWP.h"
+#include "llvm/DWP/DWPError.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"

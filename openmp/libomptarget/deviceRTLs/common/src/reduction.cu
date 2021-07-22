@@ -199,7 +199,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
       __kmpc_is_spmd_exec_mode() ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
                          : /*Master thread only*/ 1;
   uint32_t TeamId = GetBlockIdInKernel();
-  uint32_t NumTeams = GetNumberOfBlocksInKernel();
+  uint32_t NumTeams = __kmpc_get_hardware_num_blocks();
   static unsigned SHARED(Bound);
   static unsigned SHARED(ChunkTeamCount);
 

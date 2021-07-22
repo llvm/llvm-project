@@ -61,7 +61,7 @@ EXTERN int omp_get_max_threads(void) {
 
 EXTERN int omp_get_thread_limit(void) {
   if (__kmpc_is_spmd_exec_mode())
-    return GetNumberOfThreadsInBlock();
+    return __kmpc_get_hardware_num_threads_in_block();
   int rc = threadLimit;
   PRINT(LD_IO, "call omp_get_thread_limit() return %d\n", rc);
   return rc;
@@ -196,7 +196,7 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
 
 EXTERN int omp_get_team_size(int level) {
   if (__kmpc_is_spmd_exec_mode())
-    return level == 1 ? GetNumberOfThreadsInBlock() : 1;
+    return level == 1 ? __kmpc_get_hardware_num_threads_in_block() : 1;
   int rc = -1;
   unsigned parLevel = parallelLevel[GetWarpId()];
   // If level is 0 or all parallel regions are not active - return 1.

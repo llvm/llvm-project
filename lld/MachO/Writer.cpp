@@ -611,6 +611,7 @@ static bool needsBinding(const Symbol *sym) {
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const Reloc &r) {
+  assert(sym->isLive());
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
