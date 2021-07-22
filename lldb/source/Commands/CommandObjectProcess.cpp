@@ -1043,7 +1043,7 @@ public:
     UnixSignalsSP signals = m_exe_ctx.GetProcessPtr()->GetUnixSignals();
     int signo = signals->GetFirstSignalNumber();
     while (signo != LLDB_INVALID_SIGNAL_NUMBER) {
-      request.AddCompletion(signals->GetSignalAsCString(signo), "");
+      request.TryCompleteCurrentArg(signals->GetSignalAsCString(signo));
       signo = signals->GetNextSignalNumber(signo);
     }
   }
