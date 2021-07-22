@@ -40,6 +40,8 @@ static constexpr uint64_t kHostCopyoutFlag = 0x002;
 static constexpr uint64_t kCopyFlag = kDeviceCopyinFlag | kHostCopyoutFlag;
 static constexpr uint64_t kPresentFlag = 0x1000;
 static constexpr uint64_t kDeleteFlag = 0x008;
+// Runtime extension to implement the OpenACC second reference counter.
+static constexpr uint64_t kHoldFlag = 0x2000;
 
 /// Default value for the device id
 static constexpr int64_t kDefaultDevice = -1;
@@ -307,51 +309,54 @@ static LogicalResult convertDataOp(acc::DataOp &op,
   // TODO handle no_create, deviceptr and attach operands.
 
   if (failed(processOperands(builder, moduleTranslation, op, op.copyOperands(),
-                             totalNbOperand, kCopyFlag, flags, names, index,
-                             mapperAllocas)))
+                             totalNbOperand, kCopyFlag | kHoldFlag, flags,
+                             names, index, mapperAllocas)))
     return failure();
 
   if (failed(processOperands(
           builder, moduleTranslation, op, op.copyinOperands(), totalNbOperand,
-          kDeviceCopyinFlag, flags, names, index, mapperAllocas)))
+          kDeviceCopyinFlag | kHoldFlag, flags, names, index, mapperAllocas)))
     return failure();
 
   // TODO copyin readonly currenlty handled as copyin. Update when extension
   // available.
   if (failed(processOperands(builder, moduleTranslation, op,
                              op.copyinReadonlyOperands(), totalNbOperand,
-                             kDeviceCopyinFlag, flags, names, index,
+                             kDeviceCopyinFlag | kHoldFlag, flags, names, index,
                              mapperAllocas)))
     return failure();
 
   if (failed(processOperands(
           builder, moduleTranslation, op, op.copyoutOperands(), totalNbOperand,
-          kHostCopyoutFlag, flags, names, index, mapperAllocas)))
+          kHostCopyoutFlag | kHoldFlag, flags, names, index, mapperAllocas)))
     return failure();
 
   // TODO copyout zero currenlty handled as copyout. Update when extension
   // available.
   if (failed(processOperands(builder, moduleTranslation, op,
                              op.copyoutZeroOperands(), totalNbOperand,
-                             kHostCopyoutFlag, flags, names, index,
+                             kHostCopyoutFlag | kHoldFlag, flags, names, index,
                              mapperAllocas)))
     return failure();
 
   if (failed(processOperands(builder, moduleTranslation, op,
-                             op.createOperands(), totalNbOperand, kCreateFlag,
-                             flags, names, index, mapperAllocas)))
+                             op.createOperands(), totalNbOperand,
+                             kCreateFlag | kHoldFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   // TODO create zero currenlty handled as create. Update when extension
   // available.
   if (failed(processOperands(builder, moduleTranslation, op,
                              op.createZeroOperands(), totalNbOperand,
-                             kCreateFlag, flags, names, index, mapperAllocas)))
+                             kCreateFlag | kHoldFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   if (failed(processOperands(builder, moduleTranslation, op,
-                             op.presentOperands(), totalNbOperand, kPresentFlag,
-                             flags, names, index, mapperAllocas)))
+                             op.presentOperands(), totalNbOperand,
+                             kPresentFlag | kHoldFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   llvm::GlobalVariable *maptypes =
