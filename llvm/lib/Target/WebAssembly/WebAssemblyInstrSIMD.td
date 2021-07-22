@@ -833,7 +833,7 @@ defm ABS : SIMDUnaryInt<abs, "abs", 96>;
 defm NEG : SIMDUnaryInt<ivneg, "neg", 97>;
 
 // Population count: popcnt
-defm POPCNT : SIMDUnary<I8x16, int_wasm_popcnt, "popcnt", 0x62>;
+defm POPCNT : SIMDUnary<I8x16, ctpop, "popcnt", 0x62>;
 
 // Any lane true: any_true
 defm ANYTRUE : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins), [],
