@@ -8,6 +8,7 @@
 
 #include "TraceIntelPT.h"
 
+#include "../common/ThreadPostMortemTrace.h"
 #include "CommandObjectTraceStartIntelPT.h"
 #include "DecodedThread.h"
 #include "TraceIntelPTConstants.h"
@@ -15,7 +16,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/ThreadPostMortemTrace.h"
 
 using namespace lldb;
 using namespace lldb_private;
