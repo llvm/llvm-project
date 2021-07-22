@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===/
 
-#include "lldb/Target/TraceSessionFileParser.h"
+#include "TraceSessionFileParser.h"
+#include "ThreadPostMortemTrace.h"
 
 #include <sstream>
 
@@ -14,7 +15,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/ThreadPostMortemTrace.h"
 
 using namespace lldb;
 using namespace lldb_private;

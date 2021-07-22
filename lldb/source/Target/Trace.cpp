@@ -17,7 +17,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Target/ThreadPostMortemTrace.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
