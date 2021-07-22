@@ -173,6 +173,18 @@
 # RUN: %lld -lSystem -dead_strip %t/strip-dylib-ref.o %t/dylib.dylib \
 # RUN:     -o %t/strip-dylib-ref -U _ref_undef_fun
 
+## Check that referenced undefs are kept with -undefined dynamic_lookup.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/ref-undef.s -o %t/ref-undef.o
+# RUN: %lld -lSystem -dead_strip %t/ref-undef.o \
+# RUN:     -o %t/ref-undef -undefined dynamic_lookup
+# RUN: llvm-objdump --syms --lazy-bind %t/ref-undef | \
+# RUN:     FileCheck --check-prefix=STRIPDYNLOOKUP %s
+# STRIPDYNLOOKUP: SYMBOL TABLE:
+# STRIPDYNLOOKUP:   *UND* _ref_undef_fun
+# STRIPDYNLOOKUP: Lazy bind table:
+# STRIPDYNLOOKUP:   __DATA   __la_symbol_ptr {{.*}} flat-namespace _ref_undef_fun
+
 ## S_ATTR_LIVE_SUPPORT tests.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/live-support.s -o %t/live-support.o
@@ -811,4 +823,10 @@ _more_data:
   .quad L._foo4
   .quad L._bar4
 
+.subsections_via_symbols
+
+#--- ref-undef.s
+.globl _main
+_main:
+  callq _ref_undef_fun
 .subsections_via_symbols

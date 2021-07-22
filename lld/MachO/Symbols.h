@@ -306,8 +306,10 @@ T *replaceSymbol(Symbol *s, ArgT &&...arg) {
          "Not a Symbol");
 
   bool isUsedInRegularObj = s->isUsedInRegularObj;
+  bool used = s->used;
   T *sym = new (s) T(std::forward<ArgT>(arg)...);
   sym->isUsedInRegularObj |= isUsedInRegularObj;
+  sym->used |= used;
   return sym;
 }
 
