@@ -479,7 +479,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
     LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
 
     Value *V = PN->getIncomingValue(0);
-    if (isa<UndefValue>(V) || isa<ConstantExpr>(V)) {
+    if (isa<UndefValue>(V) || isa<ConstantExpr>(V) || isa<ConstantByte>(V)) {
       DestLOI.NumSignBits = 1;
       DestLOI.Known = KnownBits(BitWidth);
       continue;
