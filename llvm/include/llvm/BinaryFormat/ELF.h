@@ -1653,14 +1653,14 @@ struct Elf64_Chdr {
   Elf64_Xword ch_addralign;
 };
 
-// Node header for ELF32.
+// Note header for ELF32.
 struct Elf32_Nhdr {
   Elf32_Word n_namesz;
   Elf32_Word n_descsz;
   Elf32_Word n_type;
 };
 
-// Node header for ELF64.
+// Note header for ELF64.
 struct Elf64_Nhdr {
   Elf64_Word n_namesz;
   Elf64_Word n_descsz;
