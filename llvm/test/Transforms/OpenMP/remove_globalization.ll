@@ -24,6 +24,7 @@ define void @kernel() {
 ; CHECK-NEXT:    call void @bar() #[[ATTR0]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i1 false, i1 true)
 ; CHECK-NEXT:    ret void
+;
 entry:
   %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i1 false, i1 true, i1 true)
   call void @foo()
@@ -42,7 +43,7 @@ define internal void @foo() {
 entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !12
   call void @use(i8* %0)
-  call void @__kmpc_free_shared(i8* %0)
+  call void @__kmpc_free_shared(i8* %0, i64 4)
   ret void
 }
 
@@ -52,13 +53,13 @@ define internal void @bar() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__kmpc_alloc_shared(i64 noundef 4) #[[ATTR0]], !dbg [[DBG8:![0-9]+]]
 ; CHECK-NEXT:    call void @share(i8* nofree writeonly [[TMP0]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @__kmpc_free_shared(i8* [[TMP0]], i64 noundef 4) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !13
   call void @share(i8* %0)
-  call void @__kmpc_free_shared(i8* %0)
+  call void @__kmpc_free_shared(i8* %0, i64 4)
   ret void
 }
 
@@ -94,15 +95,15 @@ define void @unused() {
 entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !14
   call void @use(i8* %0)
-  call void @__kmpc_free_shared(i8* %0)
+  call void @__kmpc_free_shared(i8* %0, i64 4)
   ret void
 }
 
 ; CHECK: declare i8* @__kmpc_alloc_shared(i64)
 declare i8* @__kmpc_alloc_shared(i64)
 
-; CHECK: declare void @__kmpc_free_shared(i8* nocapture)
-declare void @__kmpc_free_shared(i8*)
+; CHECK: declare void @__kmpc_free_shared(i8* nocapture, i64)
+declare void @__kmpc_free_shared(i8*, i64)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !6, !7}

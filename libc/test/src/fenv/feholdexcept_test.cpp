@@ -8,7 +8,7 @@
 
 #include "src/fenv/feholdexcept.h"
 
-#include "utils/FPUtil/FEnv.h"
+#include "utils/FPUtil/FEnvUtils.h"
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 

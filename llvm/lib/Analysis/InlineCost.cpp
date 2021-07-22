@@ -534,7 +534,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   /// Handle a capped 'int' increment for Cost.
   void addCost(int64_t Inc, int64_t UpperBound = INT_MAX) {
     assert(UpperBound > 0 && UpperBound <= INT_MAX && "invalid upper bound");
-    Cost = (int)std::min(UpperBound, Cost + Inc);
+    Cost = std::min<int>(UpperBound, Cost + Inc);
   }
 
   void onDisableSROA(AllocaInst *Arg) override {
@@ -595,10 +595,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
-      int64_t JTCost = (int64_t)JumpTableSize * InlineConstants::InstrCost +
-                       4 * InlineConstants::InstrCost;
+      int64_t JTCost =
+          static_cast<int64_t>(JumpTableSize) * InlineConstants::InstrCost +
+          4 * InlineConstants::InstrCost;
 
-      addCost(JTCost, (int64_t)CostUpperBound);
+      addCost(JTCost, static_cast<int64_t>(CostUpperBound));
       return;
     }
 
@@ -613,7 +614,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     int64_t SwitchCost =
         ExpectedNumberOfCompare * 2 * InlineConstants::InstrCost;
 
-    addCost(SwitchCost, (int64_t)CostUpperBound);
+    addCost(SwitchCost, static_cast<int64_t>(CostUpperBound));
   }
   void onMissedSimplification() override {
     addCost(InlineConstants::InstrCost);
@@ -938,9 +939,9 @@ public:
   }
 
   virtual ~InlineCostCallAnalyzer() {}
-  int getThreshold() { return Threshold; }
-  int getCost() { return Cost; }
-  bool wasDecidedByCostBenefit() { return DecidedByCostBenefit; }
+  int getThreshold() const { return Threshold; }
+  int getCost() const { return Cost; }
+  bool wasDecidedByCostBenefit() const { return DecidedByCostBenefit; }
 };
 
 class InlineCostFeaturesAnalyzer final : public CallAnalyzer {

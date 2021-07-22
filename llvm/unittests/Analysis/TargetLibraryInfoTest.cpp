@@ -589,7 +589,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
 
       // These functions are OpenMP Offloading allocation / free routines
       "declare i8* @__kmpc_alloc_shared(i64)\n"
-      "declare void @__kmpc_free_shared(i8*)\n"
+      "declare void @__kmpc_free_shared(i8*, i64)\n"
       );
 
   for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {

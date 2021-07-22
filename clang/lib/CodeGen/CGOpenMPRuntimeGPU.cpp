@@ -1437,7 +1437,9 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
                                 CGM.getModule(), OMPRTL___kmpc_alloc_shared),
                             AllocArgs, VD->getName());
 
-    I->getSecond().EscapedVariableLengthDeclsAddrs.emplace_back(VoidPtr);
+    I->getSecond().EscapedVariableLengthDeclsAddrs.emplace_back(
+        std::pair<llvm::Value *, llvm::Value *>(
+            {VoidPtr, CGF.getTypeSize(VD->getType())}));
     LValue Base = CGF.MakeAddrLValue(VoidPtr, VD->getType(),
                                      CGM.getContext().getDeclAlign(VD),
                                      AlignmentSource::Decl);
@@ -1456,19 +1458,22 @@ void CGOpenMPRuntimeGPU::emitGenericVarsEpilog(CodeGenFunction &CGF,
   const auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
   if (I != FunctionGlobalizedDecls.end()) {
     // Deallocate the memory for each globalized VLA object
-    for (llvm::Value *Addr :
+    for (auto AddrSizePair :
          llvm::reverse(I->getSecond().EscapedVariableLengthDeclsAddrs)) {
       CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                               CGM.getModule(), OMPRTL___kmpc_free_shared),
-                          Addr);
+                          {AddrSizePair.first, AddrSizePair.second});
     }
     // Deallocate the memory for each globalized value
     for (auto &Rec : llvm::reverse(I->getSecond().LocalVarData)) {
+      const auto *VD = cast<VarDecl>(Rec.first);
       I->getSecond().MappedParams->restore(CGF);
 
+      llvm::Value *FreeArgs[] = {Rec.second.GlobalizedVal,
+                                 CGF.getTypeSize(VD->getType())};
       CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                               CGM.getModule(), OMPRTL___kmpc_free_shared),
-                          {Rec.second.GlobalizedVal});
+                          FreeArgs);
     }
   }
 }

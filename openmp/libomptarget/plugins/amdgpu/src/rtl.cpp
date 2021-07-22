@@ -127,9 +127,10 @@ struct FuncOrGblEntryTy {
 };
 
 enum ExecutionModeType {
-  SPMD,    // constructors, destructors,
-           // combined constructs (`teams distribute parallel for [simd]`)
-  GENERIC, // everything else
+  SPMD,         // constructors, destructors,
+                // combined constructs (`teams distribute parallel for [simd]`)
+  GENERIC,      // everything else
+  SPMD_GENERIC, // Generic kernel with SPMD execution
   NONE
 };
 
@@ -240,6 +241,7 @@ struct KernelTy {
   // execution mode of kernel
   // 0 - SPMD mode (without master warp)
   // 1 - Generic mode (with master warp)
+  // 2 - SPMD mode execution with Generic mode semantics.
   int8_t ExecutionMode;
   int16_t ConstWGSize;
   int32_t device_id;
@@ -1730,7 +1732,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         DP("After loading global for %s ExecMode = %d\n", ExecModeName,
            ExecModeVal);
 
-        if (ExecModeVal < 0 || ExecModeVal > 1) {
+        if (ExecModeVal < 0 || ExecModeVal > 2) {
           DP("Error wrong exec_mode value specified in HSA code object file: "
              "%d\n",
              ExecModeVal);
@@ -1965,7 +1967,11 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
         if (ExecutionMode == SPMD) {
           // round up to the nearest integer
           num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
-        } else {
+        } else if (ExecutionMode == GENERIC) {
+          num_groups = loop_tripcount;
+        } else if (ExecutionMode == SPMD_GENERIC) {
+          // This is a generic kernel that was transformed to use SPMD-mode
+          // execution but uses Generic-mode semantics for scheduling.
           num_groups = loop_tripcount;
         }
         DP("Using %d teams due to loop trip count %" PRIu64 " and number of "

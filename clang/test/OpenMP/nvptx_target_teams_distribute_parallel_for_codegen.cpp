@@ -18656,7 +18656,7 @@ int bar(int n){
 // CHECK1:       .omp.lastprivate.done:
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[L2]])
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[L2]], i64 4)
 // CHECK1-NEXT:    ret void
 //
 //
@@ -20250,7 +20250,7 @@ int bar(int n){
 // CHECK2:       .omp.lastprivate.done:
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.end:
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[L2]])
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[L2]], i64 4)
 // CHECK2-NEXT:    ret void
 //
 //
@@ -21829,7 +21829,7 @@ int bar(int n){
 // CHECK3:       .omp.lastprivate.done:
 // CHECK3-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3:       omp.precond.end:
-// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[L1]])
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[L1]], i32 4)
 // CHECK3-NEXT:    ret void
 //
 //
@@ -23363,7 +23363,7 @@ int bar(int n){
 // CHECK4:       .omp.lastprivate.done:
 // CHECK4-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK4:       omp.precond.end:
-// CHECK4-NEXT:    call void @__kmpc_free_shared(i8* [[L1]])
+// CHECK4-NEXT:    call void @__kmpc_free_shared(i8* [[L1]], i32 4)
 // CHECK4-NEXT:    ret void
 //
 //
