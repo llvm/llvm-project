@@ -29,6 +29,5 @@ xcrun cmake -G Ninja \
  -DCMAKE_C_COMPILER=$HOST_COMPILER_PATH/clang \
  -DCMAKE_CXX_COMPILER=$HOST_COMPILER_PATH/clang++ \
  -DLLVM_TARGETS_TO_BUILD="X86;ARM;AArch64" \
- -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;compiler-rt;lldb" \
- -DLLDB_INCLUDE_TESTS=OFF \
+ -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;compiler-rt" \
  $SRC_DIR/llvm && $NINJA
