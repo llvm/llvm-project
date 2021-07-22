@@ -441,6 +441,8 @@ __OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_warp_active_thread_mask, false, LanemaskTy,)
 __OMP_RTL(__kmpc_syncwarp, false, Void, LanemaskTy)
 
+__OMP_RTL(__kmpc_is_generic_main_thread_id, false, Int8, Int32)
+
 __OMP_RTL(__last, false, Void, )
 
 #undef __OMP_RTL
