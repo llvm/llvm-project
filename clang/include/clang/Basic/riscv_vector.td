@@ -1002,6 +1002,73 @@ multiclass RVVStridedSegLoad<string op> {
   }
 }
 
+multiclass RVVIndexedSegLoad<string op> {
+  foreach type = TypeList in {
+    foreach eew_info = EEWList in {
+      defvar eew = eew_info[0];
+      defvar eew_type = eew_info[1];
+      foreach nf = NFList in {
+        let Name = op # nf # "ei" # eew # "_v",
+            IRName = op # nf,
+            IRNameMask = op # nf # "_mask",
+            NF = nf,
+            ManualCodegen = [{
+    {
+      // builtin: (val0 address, val1 address, ..., ptr, index, vl)
+      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+                        Ops[NF + 1]->getType(), Ops[NF + 2]->getType()};
+      // intrinsic: (ptr, index, vl)
+      llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1], Ops[NF + 2]};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      clang::CharUnits Align = CharUnits::fromQuantity(
+                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      llvm::Value *V;
+      for (unsigned I = 0; I < NF; ++I) {
+        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
+                                Address(Ops[I], Align));
+      }
+      return V;
+    }
+            }],
+            ManualCodegenMask = [{
+    {
+      // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, index, vl)
+      IntrinsicTypes = {Ops[0]->getType()->getPointerElementType(),
+                        Ops[2 * NF + 2]->getType(), Ops[2 * NF + 3]->getType()};
+      // intrinsic: (maskedoff0, ..., ptr, index, mask, vl)
+      SmallVector<llvm::Value*, 12> Operands;
+      for (unsigned I = 0; I < NF; ++I)
+        Operands.push_back(Ops[NF + I + 1]);
+      Operands.push_back(Ops[2 * NF + 1]);
+      Operands.push_back(Ops[2 * NF + 2]);
+      Operands.push_back(Ops[NF]);
+      Operands.push_back(Ops[2 * NF + 3]);
+      assert(Operands.size() == NF + 4);
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
+      clang::CharUnits Align = CharUnits::fromQuantity(
+                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
+      llvm::Value *V;
+      for (unsigned I = 0; I < NF; ++I) {
+        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
+                                Address(Ops[I], Align));
+      }
+      return V;
+    }
+            }] in {
+          defvar PV = PVString<nf, /*signed=*/true>.S;
+          defvar PUV = PVString<nf, /*signed=*/false>.S;
+          def : RVVBuiltin<"v", "0" # PV # "PCe" # eew_type # "Uv", type>;
+          if !not(IsFloat<type>.val) then {
+            def : RVVBuiltin<"Uv", "0" # PUV # "PCUe" # eew_type # "Uv", type>;
+          }
+        }
+      }
+    }
+  }
+}
+
 multiclass RVVAMOBuiltinSet<bit has_signed = false, bit has_unsigned = false,
                             bit has_fp = false> {
   defvar type_list = !if(has_fp, ["i","l","f","d"], ["i","l"]);
@@ -1322,6 +1389,8 @@ let RequiredExtension = "Zvlsseg" in {
 defm : RVVUnitStridedSegLoad<"vlseg">;
 defm : RVVUnitStridedSegLoadFF<"vlseg">;
 defm : RVVStridedSegLoad<"vlsseg">;
+defm : RVVIndexedSegLoad<"vluxseg">;
+defm : RVVIndexedSegLoad<"vloxseg">;
 }
 
 // 8. Vector AMO Operations
