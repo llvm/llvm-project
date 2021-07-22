@@ -397,6 +397,10 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
 
   RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
   unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
+  if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
+    report_fatal_error("The V extension does not support EEW=64 for index "
+                       "values when XLEN=32");
+  }
   const RISCV::VLXSEGPseudo *P = RISCV::getVLXSEGPseudo(
       NF, IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
       static_cast<unsigned>(IndexLMUL));
@@ -475,6 +479,10 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
 
   RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
   unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
+  if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
+    report_fatal_error("The V extension does not support EEW=64 for index "
+                       "values when XLEN=32");
+  }
   const RISCV::VSXSEGPseudo *P = RISCV::getVSXSEGPseudo(
       NF, IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
       static_cast<unsigned>(IndexLMUL));
@@ -1128,6 +1136,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
       unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
+      if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
+        report_fatal_error("The V extension does not support EEW=64 for index "
+                           "values when XLEN=32");
+      }
       const RISCV::VLX_VSXPseudo *P = RISCV::getVLXPseudo(
           IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
           static_cast<unsigned>(IndexLMUL));
@@ -1318,6 +1330,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       RISCVII::VLMUL IndexLMUL = RISCVTargetLowering::getLMUL(IndexVT);
       unsigned IndexLog2EEW = Log2_32(IndexVT.getScalarSizeInBits());
+      if (IndexLog2EEW == 6 && !Subtarget->is64Bit()) {
+        report_fatal_error("The V extension does not support EEW=64 for index "
+                           "values when XLEN=32");
+      }
       const RISCV::VLX_VSXPseudo *P = RISCV::getVSXPseudo(
           IsMasked, IsOrdered, IndexLog2EEW, static_cast<unsigned>(LMUL),
           static_cast<unsigned>(IndexLMUL));
