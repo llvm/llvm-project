@@ -9163,9 +9163,9 @@ struct AACallEdgesFunction : public AACallEdges {
 
     // Process any value that we might call.
     auto ProcessCalledOperand = [&](Value *V, Instruction *Ctx) {
-      if (!genericValueTraversal<bool>(
-              A, IRPosition::value(*V), *this, HasUnknownCallee, VisitValue,
-              nullptr, false)) {
+      if (!genericValueTraversal<bool>(A, IRPosition::value(*V), *this,
+                                       HasUnknownCallee, VisitValue, nullptr,
+                                       false)) {
         // If we haven't gone through all values, assume that there are unknown
         // callees.
         HasUnknownCallee = true;
