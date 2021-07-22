@@ -259,8 +259,14 @@ body: |
     ; GFX8: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; GFX6-LABEL: name: test_sextload_global_s32_from_2_align1
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), align 1, addrspace 1)
-    ; GFX6: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; GFX6: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 1, addrspace 1)
+    ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX6: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
+    ; GFX6: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX6: $vgpr0 = COPY [[OR]](s32)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), align 1, addrspace 1)
     $vgpr0 = COPY %1
@@ -279,8 +285,14 @@ body: |
     ; GFX8: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; GFX6-LABEL: name: test_sextload_global_s64_from_2_align1
     ; GFX6: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), align 1, addrspace 1)
-    ; GFX6: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
+    ; GFX6: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
+    ; GFX6: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; GFX6: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; GFX6: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[PTR_ADD]](p1) :: (load (s8) from unknown-address + 1, addrspace 1)
+    ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; GFX6: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SEXTLOAD]], [[C1]](s32)
+    ; GFX6: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; GFX6: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[OR]](s32)
     ; GFX6: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_SEXTLOAD %0 :: (load (s16), align 1, addrspace 1)
