@@ -52,7 +52,7 @@ ReleaseModeModelRunner::ReleaseModeModelRunner(LLVMContext &Ctx)
       CompiledModel(std::make_unique<llvm::InlinerSizeModel>()) {
   assert(CompiledModel && "The CompiledModel should be valid");
 
-  FeatureIndices.reserve(NumberOfFeatures);
+  FeatureIndices.resize(NumberOfFeatures);
 
   for (size_t I = 0; I < NumberOfFeatures; ++I) {
     const int Index =
