@@ -22,12 +22,12 @@ ld1q {za7v.d[w12]}, p0/z, [x0]
 // Invalid vector select register (expected: w12-w15)
 
 ld1q {za0h.q[w11]}, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: ld1q {za0h.q[w11]}, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1q {za0h.q[w16]}, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: ld1q {za0h.q[w16]}, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

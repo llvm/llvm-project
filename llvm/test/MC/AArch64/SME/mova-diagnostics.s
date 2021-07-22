@@ -107,22 +107,22 @@ mova za[w12, #0], p0/m, z0.b
 // Invalid vector select register (expected: w12-w15)
 
 mova z0.h, p0/m, za0h.h[w11, #0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: mova z0.h, p0/m, za0h.h[w11, #0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 mova z0.s, p0/m, za0h.s[w16, #0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: mova z0.s, p0/m, za0h.s[w16, #0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 mova za0h.d[w11, #0], p0/m, z0.d
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: mova za0h.d[w11, #0], p0/m, z0.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 mova za0h.q[w16, #0], p0/m, z0.q
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: mova za0h.q[w16, #0], p0/m, z0.q
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
