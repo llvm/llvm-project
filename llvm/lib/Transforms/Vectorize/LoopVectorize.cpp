@@ -6745,9 +6745,11 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
     for (Instruction &I : *BB)
       if (isScalarWithPredication(&I)) {
         ScalarCostsTy ScalarCosts;
+        // Do not apply discount if scalable, because that would lead to
+        // invalid scalarization costs.
         // Do not apply discount logic if hacked cost is needed
         // for emulated masked memrefs.
-        if (!useEmulatedMaskMemRefHack(&I) &&
+        if (!VF.isScalable() && !useEmulatedMaskMemRefHack(&I) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.
@@ -7547,6 +7549,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       ScalarPredicatedBB = true;
 
     if (ScalarPredicatedBB) {
+      // Not possible to scalarize scalable vector with predicated instructions.
+      if (VF.isScalable())
+        return InstructionCost::getInvalid();
       // Return cost for branches around scalarized and predicated blocks.
       auto *Vec_i1Ty =
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);

@@ -47,3 +47,15 @@ Options
    is empty. If a name in the list contains the sequence `::` it is matched
    against the qualified typename (i.e. `namespace::Type`, otherwise it is
    matched against only the type name (i.e. `Type`).
+
+.. option:: ExcludedContainerTypes
+
+   A semicolon-separated list of names of types whose methods are allowed to
+   return the const reference the variable is copied from. When an expensive to
+   copy variable is copy initialized by the return value from a type on this
+   list the check does not trigger. This can be used to exclude types known to
+   be const incorrect or where the lifetime or immutability of returned
+   references is not tied to mutations of the container. An example are view
+   types that don't own the underlying data. Like for `AllowedTypes` above,
+   regular expressions are accepted and the inclusion of `::` determines whether
+   the qualified typename is matched or not.

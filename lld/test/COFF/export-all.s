@@ -61,6 +61,10 @@ __imp__unexported:
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=CHECK2 %s
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK2-DEF %s
 
+# RUN: lld-link -safeseh:no -out:%t.exe %t.obj -lldmingw -export-all-symbols -output-def:%t.def -entry:_DllMainCRTStartup
+# RUN: llvm-readobj --coff-exports %t.exe | FileCheck -check-prefix=CHECK2 %s
+# RUN: cat %t.def | FileCheck -check-prefix=CHECK2-DEF %s
+
 # Note, this will actually export _DllMainCRTStartup as well, since
 # it uses the standard spelling in this object file, not the MinGW one.
 

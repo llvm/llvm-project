@@ -152,6 +152,31 @@ llvm::Optional<RelationKind> indexableRelation(const index::SymbolRelation &R) {
   return None;
 }
 
+// Given a ref contained in enclosing decl `Enclosing`, return
+// the decl that should be used as that ref's Ref::Container. This is
+// usually `Enclosing` itself, but in cases where `Enclosing` is not
+// indexed, we walk further up because Ref::Container should always be
+// an indexed symbol.
+// Note: we don't use DeclContext as the container as in some cases
+// it's useful to use a Decl which is not a DeclContext. For example,
+// for a ref occurring in the initializer of a namespace-scope variable,
+// it's useful to use that variable as the container, as otherwise the
+// next enclosing DeclContext would be a NamespaceDecl or TranslationUnitDecl,
+// which are both not indexed and less granular than we'd like for use cases
+// like call hierarchy.
+const Decl *getRefContainer(const Decl *Enclosing,
+                            const SymbolCollector::Options &Opts) {
+  while (Enclosing) {
+    const auto *ND = dyn_cast<NamedDecl>(Enclosing);
+    if (ND && SymbolCollector::shouldCollectSymbol(*ND, ND->getASTContext(),
+                                                   Opts, true)) {
+      break;
+    }
+    Enclosing = dyn_cast_or_null<Decl>(Enclosing->getDeclContext());
+  }
+  return Enclosing;
+}
+
 } // namespace
 
 // Encapsulates decisions about how to record header paths in the index,
@@ -478,8 +503,8 @@ bool SymbolCollector::handleDeclOccurrence(
       !isa<NamespaceDecl>(ND) &&
       (Opts.RefsInHeaders ||
        SM.getFileID(SM.getFileLoc(Loc)) == SM.getMainFileID()))
-    DeclRefs[ND].push_back(
-        SymbolRef{SM.getFileLoc(Loc), Roles, ASTNode.Parent});
+    DeclRefs[ND].push_back(SymbolRef{SM.getFileLoc(Loc), Roles,
+                                     getRefContainer(ASTNode.Parent, Opts)});
   // Don't continue indexing if this is a mere reference.
   if (IsOnlyRef)
     return true;

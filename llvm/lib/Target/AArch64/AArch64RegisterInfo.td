@@ -1352,7 +1352,9 @@ class MatrixOperand<RegisterClass RC, int EltSize> : RegisterOperand<RC> {
 
 def MatrixOp : MatrixOperand<MPR, 0>;
 
-def MatrixIndexGPR32_12_15 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 12, 15)>;
+def MatrixIndexGPR32_12_15 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 12, 15)> {
+  let DiagnosticType = "InvalidMatrixIndexGPR32_12_15";
+}
 def MatrixIndexGPR32Op12_15 : RegisterOperand<MatrixIndexGPR32_12_15> {
   let EncoderMethod = "encodeMatrixIndexGPR32";
 }

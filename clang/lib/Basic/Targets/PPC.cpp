@@ -124,6 +124,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__stdcx", "__builtin_ppc_stdcx");
   Builder.defineMacro("__stwcx", "__builtin_ppc_stwcx");
   Builder.defineMacro("__sthcx", "__builtin_ppc_sthcx");
+  Builder.defineMacro("__stbcx", "__builtin_ppc_stbcx");
   Builder.defineMacro("__tdw", "__builtin_ppc_tdw");
   Builder.defineMacro("__tw", "__builtin_ppc_tw");
   Builder.defineMacro("__trap", "__builtin_ppc_trap");
@@ -293,6 +294,11 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__LONG_DOUBLE_IEEE128__");
     else
       Builder.defineMacro("__LONG_DOUBLE_IBM128__");
+  }
+
+  if (getTriple().isOSAIX() && Opts.LongDoubleSize == 64) {
+    assert(LongDoubleWidth == 64);
+    Builder.defineMacro("__LONGDOUBLE64");
   }
 
   // Define this for elfv2 (64-bit only) or 64-bit darwin.

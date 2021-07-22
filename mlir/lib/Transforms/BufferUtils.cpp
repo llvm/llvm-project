@@ -77,7 +77,11 @@ void BufferPlacementAllocs::build(Operation *op) {
     // Get allocation result.
     Value allocValue = allocateResultEffects[0].getValue();
     // Find the associated dealloc value and register the allocation entry.
-    allocs.push_back(std::make_tuple(allocValue, findDealloc(allocValue)));
+    llvm::Optional<Operation *> dealloc = findDealloc(allocValue);
+    // If the allocation has > 1 dealloc associated with it, skip handling it.
+    if (!dealloc.hasValue())
+      return;
+    allocs.push_back(std::make_tuple(allocValue, *dealloc));
   });
 }
 

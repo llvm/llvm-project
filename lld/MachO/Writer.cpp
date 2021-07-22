@@ -47,6 +47,7 @@ class Writer {
 public:
   Writer() : buffer(errorHandler().outputBuffer) {}
 
+  void treatSpecialUndefineds();
   void scanRelocations();
   void scanSymbols();
   template <class LP> void createOutputSections();
@@ -549,6 +550,27 @@ public:
 };
 
 } // namespace
+
+void Writer::treatSpecialUndefineds() {
+  if (config->entry)
+    if (auto *undefined = dyn_cast<Undefined>(config->entry))
+      treatUndefinedSymbol(*undefined, "the entry point");
+
+  // FIXME: This prints symbols that are undefined both in input files and
+  // via -u flag twice.
+  for (const Symbol *sym : config->explicitUndefineds) {
+    if (const auto *undefined = dyn_cast<Undefined>(sym))
+      treatUndefinedSymbol(*undefined, "-u");
+  }
+  // Literal exported-symbol names must be defined, but glob
+  // patterns need not match.
+  for (const CachedHashStringRef &cachedName :
+       config->exportedSymbols.literals) {
+    if (const Symbol *sym = symtab->find(cachedName))
+      if (const auto *undefined = dyn_cast<Undefined>(sym))
+        treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
+  }
+}
 
 // Add stubs and bindings where necessary (e.g. if the symbol is a
 // DylibSymbol.)
@@ -1066,6 +1088,7 @@ void Writer::writeOutputFile() {
 }
 
 template <class LP> void Writer::run() {
+  treatSpecialUndefineds();
   if (config->entry && !isa<Undefined>(config->entry))
     prepareBranchTarget(config->entry);
   scanRelocations();

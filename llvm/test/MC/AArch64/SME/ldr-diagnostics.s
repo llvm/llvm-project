@@ -17,12 +17,12 @@ ldr za3.s[w12, #0], [x0]
 // Invalid vector select register (expected: w12-w15)
 
 ldr za[w11, #0], [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: ldr za[w11, #0], [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ldr za[w16, #0], [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be a register in range [w12, w15]
 // CHECK-NEXT: ldr za[w16, #0], [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

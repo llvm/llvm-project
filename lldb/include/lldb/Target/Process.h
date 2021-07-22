@@ -2602,8 +2602,6 @@ protected:
   virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                               Status &error) = 0;
 
-  void SetState(lldb::EventSP &event_sp);
-
   lldb::StateType GetPrivateState();
 
   /// The "private" side of resuming a process.  This doesn't alter the state
@@ -2899,7 +2897,8 @@ protected:
   std::atomic<bool> m_finalizing;
 
   /// Mask for code an data addresses. The default value (0) means no mask is
-  /// set.
+  /// set.  The bits set to 1 indicate bits that are NOT significant for
+  /// addressing.
   /// @{
   lldb::addr_t m_code_address_mask = 0;
   lldb::addr_t m_data_address_mask = 0;

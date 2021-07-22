@@ -37,6 +37,8 @@
 
 using namespace llvm;
 
+static mc::RegisterMCTargetOptionsFlags MOF;
+
 static cl::opt<std::string>
     TripleName("triple", cl::desc("Target triple to assemble for, "
                                   "see -version for available targets"));

@@ -55,15 +55,29 @@ StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
 }
 
 Status ScriptedProcessPythonInterface::Launch() {
-  return LaunchOrResume("launch");
+  return GetStatusFromMethod("launch");
 }
 
 Status ScriptedProcessPythonInterface::Resume() {
-  return LaunchOrResume("resume");
+  return GetStatusFromMethod("resume");
 }
 
-Status
-ScriptedProcessPythonInterface::LaunchOrResume(llvm::StringRef method_name) {
+bool ScriptedProcessPythonInterface::ShouldStop() {
+  llvm::Optional<unsigned long long> should_stop =
+      GetGenericInteger("should_stop");
+
+  if (!should_stop)
+    return false;
+
+  return static_cast<bool>(*should_stop);
+}
+
+Status ScriptedProcessPythonInterface::Stop() {
+  return GetStatusFromMethod("stop");
+}
+
+Status ScriptedProcessPythonInterface::GetStatusFromMethod(
+    llvm::StringRef method_name) {
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                  Locker::FreeLock);
 
@@ -126,21 +140,21 @@ ScriptedProcessPythonInterface::LaunchOrResume(llvm::StringRef method_name) {
   return Status("Returned object is null.");
 }
 
-size_t
+llvm::Optional<unsigned long long>
 ScriptedProcessPythonInterface::GetGenericInteger(llvm::StringRef method_name) {
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                  Locker::FreeLock);
 
   if (!m_object_instance_sp)
-    return LLDB_INVALID_ADDRESS;
+    return llvm::None;
 
   if (!m_object_instance_sp)
-    return LLDB_INVALID_ADDRESS;
+    return llvm::None;
   PythonObject implementor(PyRefType::Borrowed,
                            (PyObject *)m_object_instance_sp->GetValue());
 
   if (!implementor.IsAllocated())
-    return LLDB_INVALID_ADDRESS;
+    return llvm::None;
 
   PythonObject pmeth(
       PyRefType::Owned,
@@ -150,12 +164,12 @@ ScriptedProcessPythonInterface::GetGenericInteger(llvm::StringRef method_name) {
     PyErr_Clear();
 
   if (!pmeth.IsAllocated())
-    return LLDB_INVALID_ADDRESS;
+    return llvm::None;
 
   if (PyCallable_Check(pmeth.get()) == 0) {
     if (PyErr_Occurred())
       PyErr_Clear();
-    return LLDB_INVALID_ADDRESS;
+    return llvm::None;
   }
 
   if (PyErr_Occurred())
@@ -171,11 +185,15 @@ ScriptedProcessPythonInterface::GetGenericInteger(llvm::StringRef method_name) {
     PyErr_Clear();
   }
 
-  if (py_return.get()) {
-    auto size = py_return.AsUnsignedLongLong();
-    return (size) ? *size : LLDB_INVALID_ADDRESS;
-  }
-  return LLDB_INVALID_ADDRESS;
+  if (!py_return.get())
+    return llvm::None;
+
+  llvm::Expected<unsigned long long> size = py_return.AsUnsignedLongLong();
+  // FIXME: Handle error.
+  if (!size)
+    return llvm::None;
+
+  return *size;
 }
 
 lldb::MemoryRegionInfoSP
@@ -272,16 +290,17 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetLoadedImages() {
 }
 
 lldb::pid_t ScriptedProcessPythonInterface::GetProcessID() {
-  size_t pid = GetGenericInteger("get_process_id");
-
-  return (pid >= std::numeric_limits<lldb::pid_t>::max())
-             ? LLDB_INVALID_PROCESS_ID
-             : pid;
+  llvm::Optional<unsigned long long> pid = GetGenericInteger("get_process_id");
+  return (!pid) ? LLDB_INVALID_PROCESS_ID : *pid;
 }
 
 bool ScriptedProcessPythonInterface::IsAlive() {
-  return GetGenericInteger("is_alive");
-  ;
+  llvm::Optional<unsigned long long> is_alive = GetGenericInteger("is_alive");
+
+  if (!is_alive)
+    return false;
+
+  return static_cast<bool>(*is_alive);
 }
 
 #endif

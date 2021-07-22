@@ -1419,25 +1419,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     if (!orderFile.empty())
       parseOrderFile(orderFile);
 
-    if (config->entry)
-      if (auto *undefined = dyn_cast<Undefined>(config->entry))
-        treatUndefinedSymbol(*undefined, "the entry point");
-
-    // FIXME: This prints symbols that are undefined both in input files and
-    // via -u flag twice.
-    for (const Symbol *sym : config->explicitUndefineds) {
-      if (const auto *undefined = dyn_cast<Undefined>(sym))
-        treatUndefinedSymbol(*undefined, "-u");
-    }
-    // Literal exported-symbol names must be defined, but glob
-    // patterns need not match.
-    for (const CachedHashStringRef &cachedName :
-         config->exportedSymbols.literals) {
-      if (const Symbol *sym = symtab->find(cachedName))
-        if (const auto *undefined = dyn_cast<Undefined>(sym))
-          treatUndefinedSymbol(*undefined, "-exported_symbol(s_list)");
-    }
-
     referenceStubBinder();
 
     // FIXME: should terminate the link early based on errors encountered so

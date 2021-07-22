@@ -435,7 +435,7 @@ def CloneOp : MemRef_Op<"clone", [
   let results = (outs Arg<AnyRankedOrUnrankedMemRef, "", []>:$output);
 
   let extraClassDeclaration = [{
-    Value getSource() { return input();}
+    Value getSource() { return input(); }
     Value getTarget() { return output(); }
   }];
 

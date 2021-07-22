@@ -544,29 +544,35 @@ bool InterfaceGenerator::emitInterfaceDocs() {
 //===----------------------------------------------------------------------===//
 
 namespace {
-template <typename GeneratorT> struct InterfaceGenRegistration {
-  InterfaceGenRegistration(StringRef genArg)
+template <typename GeneratorT>
+struct InterfaceGenRegistration {
+  InterfaceGenRegistration(StringRef genArg, StringRef genDesc)
       : genDeclArg(("gen-" + genArg + "-interface-decls").str()),
         genDefArg(("gen-" + genArg + "-interface-defs").str()),
         genDocArg(("gen-" + genArg + "-interface-docs").str()),
-        genDecls(genDeclArg, "Generate interface declarations",
+        genDeclDesc(("Generate " + genDesc + " interface declarations").str()),
+        genDefDesc(("Generate " + genDesc + " interface definitions").str()),
+        genDocDesc(("Generate " + genDesc + " interface documentation").str()),
+        genDecls(genDeclArg, genDeclDesc,
                  [](const llvm::RecordKeeper &records, raw_ostream &os) {
                    return GeneratorT(records, os).emitInterfaceDecls();
                  }),
-        genDefs(genDefArg, "Generate interface definitions",
+        genDefs(genDefArg, genDefDesc,
                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
                   return GeneratorT(records, os).emitInterfaceDefs();
                 }),
-        genDocs(genDocArg, "Generate interface documentation",
+        genDocs(genDocArg, genDocDesc,
                 [](const llvm::RecordKeeper &records, raw_ostream &os) {
                   return GeneratorT(records, os).emitInterfaceDocs();
                 }) {}
 
   std::string genDeclArg, genDefArg, genDocArg;
+  std::string genDeclDesc, genDefDesc, genDocDesc;
   mlir::GenRegistration genDecls, genDefs, genDocs;
 };
 } // end anonymous namespace
 
-static InterfaceGenRegistration<AttrInterfaceGenerator> attrGen("attr");
-static InterfaceGenRegistration<OpInterfaceGenerator> opGen("op");
-static InterfaceGenRegistration<TypeInterfaceGenerator> typeGen("type");
+static InterfaceGenRegistration<AttrInterfaceGenerator> attrGen("attr",
+                                                                "attribute");
+static InterfaceGenRegistration<OpInterfaceGenerator> opGen("op", "op");
+static InterfaceGenRegistration<TypeInterfaceGenerator> typeGen("type", "type");

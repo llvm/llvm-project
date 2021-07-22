@@ -1,8 +1,10 @@
-/*===--------------------------------------------------------------------------
- *              ATMI (Asynchronous Task and Memory Interface)
- *
- * This file is distributed under the MIT License. See LICENSE.txt for details.
- *===------------------------------------------------------------------------*/
+//===--- amdgpu/impl/internal.h ----------------------------------- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #ifndef SRC_RUNTIME_INCLUDE_INTERNAL_H_
 #define SRC_RUNTIME_INCLUDE_INTERNAL_H_
 #include <inttypes.h>
@@ -99,21 +101,7 @@ class KernelImpl;
 } // namespace core
 
 struct SignalPoolT {
-  SignalPoolT() {
-    // If no signals are created, and none can be created later,
-    // will ultimately fail at pop()
-
-    unsigned N = 1024; // default max pool size from atmi
-    for (unsigned i = 0; i < N; i++) {
-      hsa_signal_t new_signal;
-      hsa_status_t err = hsa_signal_create(0, 0, NULL, &new_signal);
-      if (err != HSA_STATUS_SUCCESS) {
-        break;
-      }
-      state.push(new_signal);
-    }
-    DEBUG_PRINT("Signal Pool Initial Size: %lu\n", state.size());
-  }
+  SignalPoolT() {}
   SignalPoolT(const SignalPoolT &) = delete;
   SignalPoolT(SignalPoolT &&) = delete;
   ~SignalPoolT() {

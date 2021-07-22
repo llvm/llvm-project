@@ -363,8 +363,7 @@ void SymbolFileDWARF::GetTypes(const DWARFDIE &die, dw_offset_t min_die_offset,
       }
     }
 
-    for (DWARFDIE child_die = die.GetFirstChild(); child_die.IsValid();
-         child_die = child_die.GetSibling()) {
+    for (DWARFDIE child_die : die.children()) {
       GetTypes(child_die, min_die_offset, max_die_offset, type_mask, type_set);
     }
   }
@@ -987,8 +986,7 @@ bool SymbolFileDWARF::ParseImportedModules(
   if (!die)
     return false;
 
-  for (DWARFDIE child_die = die.GetFirstChild(); child_die;
-       child_die = child_die.GetSibling()) {
+  for (DWARFDIE child_die : die.children()) {
     if (child_die.Tag() != DW_TAG_imported_declaration)
       continue;
 
@@ -1247,8 +1245,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
 
 bool SymbolFileDWARF::ClassOrStructIsVirtual(const DWARFDIE &parent_die) {
   if (parent_die) {
-    for (DWARFDIE die = parent_die.GetFirstChild(); die;
-         die = die.GetSibling()) {
+    for (DWARFDIE die : parent_die.children()) {
       dw_tag_t tag = die.Tag();
       bool check_virtuality = false;
       switch (tag) {
@@ -3421,8 +3418,7 @@ SymbolFileDWARF::FindBlockContainingSpecification(
     // Give the concrete function die specified by "func_die_offset", find the
     // concrete block whose DW_AT_specification or DW_AT_abstract_origin points
     // to "spec_block_die_offset"
-    for (DWARFDIE child_die = die.GetFirstChild(); child_die;
-         child_die = child_die.GetSibling()) {
+    for (DWARFDIE child_die : die.children()) {
       DWARFDIE result_die =
           FindBlockContainingSpecification(child_die, spec_block_die_offset);
       if (result_die)
@@ -3551,8 +3547,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
 static CallSiteParameterArray
 CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
   CallSiteParameterArray parameters;
-  for (DWARFDIE child = call_site_die.GetFirstChild(); child.IsValid();
-       child = child.GetSibling()) {
+  for (DWARFDIE child : call_site_die.children()) {
     if (child.Tag() != DW_TAG_call_site_parameter &&
         child.Tag() != DW_TAG_GNU_call_site_parameter)
       continue;
@@ -3617,8 +3612,7 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // For now, assume that all entries are nested directly under the subprogram
   // (this is the kind of DWARF LLVM produces) and parse them eagerly.
   std::vector<std::unique_ptr<CallEdge>> call_edges;
-  for (DWARFDIE child = function_die.GetFirstChild(); child.IsValid();
-       child = child.GetSibling()) {
+  for (DWARFDIE child : function_die.children()) {
     if (child.Tag() != DW_TAG_call_site && child.Tag() != DW_TAG_GNU_call_site)
       continue;
 

@@ -811,8 +811,7 @@ TEST_F(SymbolCollectorTest, RefContainers) {
   };
   EXPECT_EQ(Container("ref1a"),
             findSymbol(Symbols, "f2").ID); // function body (call)
-  // FIXME: This is wrongly contained by fptr and not f2.
-  EXPECT_NE(Container("ref1b"),
+  EXPECT_EQ(Container("ref1b"),
             findSymbol(Symbols, "f2").ID); // function body (address-of)
   EXPECT_EQ(Container("ref2"),
             findSymbol(Symbols, "v1").ID); // variable initializer
