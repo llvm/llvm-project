@@ -1685,14 +1685,18 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             die.GetOffset(), attrs.name.GetCString());
       }
 
-      if (tag == DW_TAG_structure_type) // this only applies in C
-      {
+      // If the byte size of the record is specified then overwrite the size
+      // that would be computed by Clang. This is only needed as LLDB's
+      // TypeSystemClang is always in C++ mode, but some compilers such as
+      // GCC and Clang give empty structs a size of 0 in C mode (in contrast to
+      // the size of 1 for empty structs that would be computed in C++ mode).
+      if (attrs.byte_size) {
         clang::RecordDecl *record_decl =
             TypeSystemClang::GetAsRecordDecl(clang_type);
-
         if (record_decl) {
-          GetClangASTImporter().SetRecordLayout(
-              record_decl, ClangASTImporter::LayoutInfo());
+          ClangASTImporter::LayoutInfo layout;
+          layout.bit_size = *attrs.byte_size * 8;
+          GetClangASTImporter().SetRecordLayout(record_decl, layout);
         }
       }
     } else if (clang_type_was_created) {
