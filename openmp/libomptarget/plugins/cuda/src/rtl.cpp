@@ -1069,6 +1069,9 @@ public:
           // `teams distribute` region and will create var too few blocks using
           // the regular SPMD-mode method.
           CudaBlocksPerGrid = LoopTripCount;
+        } else {
+          REPORT("Unknown execution mode: %d\n", KernelInfo->ExecutionMode);
+          return OFFLOAD_FAIL;
         }
         DP("Using %d teams due to loop trip count %" PRIu32
            " and number of threads per block %d\n",
