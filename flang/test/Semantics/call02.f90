@@ -4,6 +4,7 @@
 
 subroutine s01(elem, subr)
   interface
+    !ERROR: A dummy procedure may not be ELEMENTAL
     elemental real function elem(x)
       real, intent(in), value :: x
     end function

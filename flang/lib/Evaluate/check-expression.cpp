@@ -301,7 +301,9 @@ bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
   return std::visit(
       common::visitors{
-          [](const semantics::SubprogramDetails &) { return true; },
+          [](const semantics::SubprogramDetails &subp) {
+            return !subp.isDummy();
+          },
           [](const semantics::SubprogramNameDetails &) { return true; },
           [&](const semantics::ProcEntityDetails &proc) {
             return !semantics::IsPointer(ultimate) && !proc.isDummy();
