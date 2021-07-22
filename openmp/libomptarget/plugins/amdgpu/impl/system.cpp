@@ -3,13 +3,9 @@
  *
  * This file is distributed under the MIT License. See LICENSE.txt for details.
  *===------------------------------------------------------------------------*/
-#include <gelf.h>
 #include <libelf.h>
 
 #include <cassert>
-#include <fstream>
-#include <iomanip>
-#include <set>
 #include <sstream>
 #include <string>
 
@@ -465,11 +461,10 @@ find_metadata(void *binary, size_t binSize) {
     return failure;
   }
 
+  Elf64_Phdr *pHdrs = elf64_getphdr(e);
   for (size_t i = 0; i < numpHdrs; ++i) {
-    GElf_Phdr pHdr;
-    if (gelf_getphdr(e, i, &pHdr) != &pHdr) {
-      continue;
-    }
+    Elf64_Phdr pHdr = pHdrs[i];
+
     // Look for the runtime metadata note
     if (pHdr.p_type == PT_NOTE && pHdr.p_align >= sizeof(int)) {
       // Iterate over the notes in this segment
