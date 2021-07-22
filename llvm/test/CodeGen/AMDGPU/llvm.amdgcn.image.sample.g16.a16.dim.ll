@@ -92,7 +92,7 @@ define amdgpu_ps <4 x float> @sample_c_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    v_and_b32_e32 v5, 0xffff, v5
 ; GFX10-NEXT:    v_lshl_or_b32 v5, v6, 16, v5
-; GFX10-NEXT:    image_sample_c_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10-NEXT:    image_sample_c_d v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -100,7 +100,7 @@ define amdgpu_ps <4 x float> @sample_c_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10GISEL:       ; %bb.0: ; %main_body
 ; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX10GISEL-NEXT:    v_and_or_b32 v5, 0xffff, v5, v6
-; GFX10GISEL-NEXT:    image_sample_c_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10GISEL-NEXT:    image_sample_c_d v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -145,7 +145,7 @@ define amdgpu_ps <4 x float> @sample_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10GISEL-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX10GISEL-NEXT:    v_and_or_b32 v4, v4, v7, v5
 ; GFX10GISEL-NEXT:    v_and_or_b32 v5, v6, v7, s12
-; GFX10GISEL-NEXT:    image_sample_d_cl v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10GISEL-NEXT:    image_sample_d_cl v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -190,7 +190,7 @@ define amdgpu_ps <4 x float> @sample_c_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX10GISEL-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX10GISEL-NEXT:    v_and_or_b32 v5, v5, v8, v6
 ; GFX10GISEL-NEXT:    v_and_or_b32 v6, v7, v8, s12
-; GFX10GISEL-NEXT:    image_sample_c_d_cl v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10GISEL-NEXT:    image_sample_c_d_cl v[0:3], v[0:6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -262,7 +262,7 @@ define amdgpu_ps <4 x float> @sample_c_cd_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    v_and_b32_e32 v5, 0xffff, v5
 ; GFX10-NEXT:    v_lshl_or_b32 v5, v6, 16, v5
-; GFX10-NEXT:    image_sample_c_cd v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10-NEXT:    image_sample_c_cd v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
@@ -270,7 +270,7 @@ define amdgpu_ps <4 x float> @sample_c_cd_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10GISEL:       ; %bb.0: ; %main_body
 ; GFX10GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX10GISEL-NEXT:    v_and_or_b32 v5, 0xffff, v5, v6
-; GFX10GISEL-NEXT:    image_sample_c_cd v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10GISEL-NEXT:    image_sample_c_cd v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -315,7 +315,7 @@ define amdgpu_ps <4 x float> @sample_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX10GISEL-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX10GISEL-NEXT:    v_and_or_b32 v4, v4, v7, v5
 ; GFX10GISEL-NEXT:    v_and_or_b32 v5, v6, v7, s12
-; GFX10GISEL-NEXT:    image_sample_cd_cl v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10GISEL-NEXT:    image_sample_cd_cl v[0:3], v[0:5], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -360,7 +360,7 @@ define amdgpu_ps <4 x float> @sample_c_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX10GISEL-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX10GISEL-NEXT:    v_and_or_b32 v5, v5, v8, v6
 ; GFX10GISEL-NEXT:    v_and_or_b32 v6, v7, v8, s12
-; GFX10GISEL-NEXT:    image_sample_c_cd_cl v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10GISEL-NEXT:    image_sample_c_cd_cl v[0:3], v[0:6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
 ; GFX10GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10GISEL-NEXT:    ; return to shader part epilog
 main_body:
