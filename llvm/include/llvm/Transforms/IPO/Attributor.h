@@ -1499,11 +1499,16 @@ struct Attributor {
       ToBeDeletedFunctions.insert(&F);
   }
 
-  /// If \p V is assumed to be a constant, return it, if it is unclear yet,
+  /// If \p IRP is assumed to be a constant, return it, if it is unclear yet,
   /// return None, otherwise return `nullptr`.
-  Optional<Constant *> getAssumedConstant(const Value &V,
+  Optional<Constant *> getAssumedConstant(const IRPosition &IRP,
                                           const AbstractAttribute &AA,
                                           bool &UsedAssumedInformation);
+  Optional<Constant *> getAssumedConstant(const Value &V,
+                                          const AbstractAttribute &AA,
+                                          bool &UsedAssumedInformation) {
+    return getAssumedConstant(IRPosition::value(V), AA, UsedAssumedInformation);
+  }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
   /// return None, otherwise return `nullptr`.
