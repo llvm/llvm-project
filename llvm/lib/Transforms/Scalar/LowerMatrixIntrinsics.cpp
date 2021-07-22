@@ -1141,6 +1141,7 @@ public:
   void finalizeLowering(Instruction *Inst, MatrixTy Matrix,
                         IRBuilder<> &Builder) {
     auto inserted = Inst2ColumnMatrix.insert(std::make_pair(Inst, Matrix));
+    (void)inserted;
     assert(inserted.second && "multiple matrix lowering mapping");
 
     ToRemove.push_back(Inst);
