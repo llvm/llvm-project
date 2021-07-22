@@ -1541,11 +1541,6 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
   if (LHSType == RHSType)
     return LHSType;
 
-  // ExtInt types aren't subject to conversions between them or normal integers,
-  // so this fails.
-  if(LHSType->isExtIntType() || RHSType->isExtIntType())
-    return QualType();
-
   // At this point, we have two different arithmetic types.
 
   // Diagnose attempts to convert between __float128 and long double where
