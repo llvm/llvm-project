@@ -4955,8 +4955,39 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
   return GVE;
 }
 
+llvm::DIGlobalVariable *
+CGDebugInfo::CollectAnonRecordDeclsForHeterogeneousDwarf(
+    const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
+    StringRef LinkageName, llvm::GlobalVariable *Var, llvm::DIScope *DContext) {
+  llvm::DIGlobalVariable *GV = nullptr;
+
+  for (const auto *Field : RD->fields()) {
+    llvm::DIType *FieldTy = getOrCreateType(Field->getType(), Unit);
+    StringRef FieldName = Field->getName();
+
+    // Ignore unnamed fields, but recurse into anonymous records.
+    if (FieldName.empty()) {
+      if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
+        GV = CollectAnonRecordDeclsForHeterogeneousDwarf(
+            RT->getDecl(), Unit, LineNo, LinkageName, Var, DContext);
+      continue;
+    }
+    // Use VarDecl's Tag, Scope and Line number.
+    GV = DBuilder.createGlobalVariable(
+        DContext, FieldName, LinkageName, Unit, LineNo, FieldTy,
+        Var->hasLocalLinkage());
+    Var->addDebugInfo(GV);
+  }
+  return GV;
+}
+
 void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
                                      const VarDecl *D) {
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf) {
+    EmitGlobalVariableForHeterogeneousDwarf(Var, D);
+    return;
+  }
+
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (D->hasAttr<NoDebugAttr>())
     return;
@@ -5023,6 +5054,82 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
     Var->addDebugInfo(GVE);
   }
   DeclCache[D->getCanonicalDecl()].reset(GVE);
+}
+
+void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
+    llvm::GlobalVariable *Var, const VarDecl *D) {
+  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
+  assert(CGM.getCodeGenOpts().HeterogeneousDwarf);
+  if (D->hasAttr<NoDebugAttr>())
+    return;
+
+  llvm::TimeTraceScope TimeScope("DebugGlobalVariable", [&]() {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    D->getNameForDiagnostic(OS, getPrintingPolicy(),
+                            /*Qualified=*/true);
+    return Name;
+  });
+
+  // If we already created a DIGlobalVariable for this declaration, just attach
+  // it to the llvm::GlobalVariable.
+  auto Cached = DeclCache.find(D->getCanonicalDecl());
+  if (Cached != DeclCache.end())
+    return Var->addDebugInfo(
+        cast<llvm::DIGlobalVariable>(Cached->second));
+
+  // Create global variable debug descriptor.
+  llvm::DIFile *Unit = nullptr;
+  llvm::DIScope *DContext = nullptr;
+  unsigned LineNo;
+  StringRef DeclName, LinkageName;
+  QualType T;
+  llvm::MDTuple *TemplateParameters = nullptr;
+  collectVarDeclProps(D, Unit, LineNo, T, DeclName, LinkageName,
+                      TemplateParameters, DContext);
+
+  // Attempt to store one global variable for the declaration - even if we
+  // emit a lot of fields.
+  llvm::DIGlobalVariable *GV = nullptr;
+
+  // If this is an anonymous union then we'll want to emit a global
+  // variable for each member of the anonymous union so that it's possible
+  // to find the name of any field in the union.
+  if (T->isUnionType() && DeclName.empty()) {
+    const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
+    assert(RD->isAnonymousStructOrUnion() &&
+           "unnamed non-anonymous struct or union?");
+    // FIXME(KZHURAVL): No tests for this path.
+    GV = CollectAnonRecordDeclsForHeterogeneousDwarf(
+        RD, Unit, LineNo, LinkageName, Var, DContext);
+  } else {
+    // Create DIExpr.
+    llvm::DIExpr::Builder ExprBuilder(CGM.getLLVMContext());
+    ExprBuilder.append<llvm::DIOp::Arg>(0, Var->getType());
+    ExprBuilder.append<llvm::DIOp::Deref>();
+
+    // Create DIGlobalVariable.
+    GV = DBuilder.createGlobalVariable(
+        DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
+        Var->hasLocalLinkage(), true,
+        getOrCreateStaticDataMemberDeclarationOrNull(D), TemplateParameters,
+        getDeclAlignIfRequired(D, CGM.getContext()));
+
+    // Create DIFragment.
+    llvm::DIFragment *Fragment = DBuilder.createFragment();
+    SmallVector<llvm::Metadata*> LifetimeArgs;
+    LifetimeArgs.push_back(Fragment);
+
+    // Create DILifetime.
+    llvm::DILifetime *Lifetime =
+        DBuilder.createLifetime(GV, ExprBuilder.intoExpr(), LifetimeArgs);
+
+    // Attach metadata to GlobalVariable.
+    Var->addDebugInfo(GV);
+    Var->addDebugInfo(Fragment);
+    Var->addDebugInfo(Lifetime);
+  }
+  DeclCache[D->getCanonicalDecl()].reset(GV);
 }
 
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {

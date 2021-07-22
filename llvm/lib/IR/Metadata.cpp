@@ -1556,3 +1556,39 @@ void GlobalVariable::getDebugInfo(
   for (MDNode *MD : MDs)
     GVs.push_back(cast<DIGlobalVariableExpression>(MD));
 }
+
+void GlobalVariable::addDebugInfo(DIGlobalVariable *GV) {
+  addMetadata(LLVMContext::MD_dbg, *GV);
+}
+
+void GlobalVariable::getDebugInfo(
+    SmallVectorImpl<DIGlobalVariable *> &GVs) const {
+  SmallVector<MDNode *, 1> MDs;
+  getMetadata(LLVMContext::MD_dbg, MDs);
+  for (MDNode *MD : MDs)
+    GVs.push_back(cast<DIGlobalVariable>(MD));
+}
+
+void GlobalVariable::addDebugInfo(DIFragment *F) {
+  addMetadata("dbg.def", *F);
+}
+
+void GlobalVariable::getDebugInfo(SmallVectorImpl<DIFragment *> &Fs) const {
+  SmallVector<MDNode *, 1> MDs;
+  getMetadata("dbg.def", MDs);
+  for (MDNode *MD : MDs)
+    Fs.push_back(cast<DIFragment>(MD));
+}
+
+/// Attach a DILifetime.
+void GlobalVariable::addDebugInfo(DILifetime *LT) {
+  addMetadata(LLVMContext::MD_dbg, *LT);
+}
+
+/// Fill the vector with all debug info attachements.
+void GlobalVariable::getDebugInfo(SmallVectorImpl<DILifetime *> &LTs) const {
+  SmallVector<MDNode *, 1> MDs;
+  getMetadata(LLVMContext::MD_dbg, MDs);
+  for (MDNode *MD : MDs)
+    LTs.push_back(cast<DILifetime>(MD));
+}
