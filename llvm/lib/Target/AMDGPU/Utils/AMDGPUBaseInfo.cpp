@@ -1344,6 +1344,17 @@ unsigned getInitialPSInputAddr(const Function &F) {
   return getIntegerAttribute(F, "InitialPSInputAddr", 0);
 }
 
+bool getHasColorExport(const Function &F) {
+  // As a safe default always respond as if PS has color exports.
+  return getIntegerAttribute(
+             F, "amdgpu-color-export",
+             F.getCallingConv() == CallingConv::AMDGPU_PS ? 1 : 0) != 0;
+}
+
+bool getHasDepthExport(const Function &F) {
+  return getIntegerAttribute(F, "amdgpu-depth-export", 0) != 0;
+}
+
 bool isShader(CallingConv::ID cc) {
   switch(cc) {
     case CallingConv::AMDGPU_VS:
