@@ -220,19 +220,15 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
   case Intrinsic::umin:
-  case Intrinsic::umax: {
-    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
-    // umin(x,y) -> sub(x,usubsat(x,y))
-    // umax(x,y) -> add(x,usubsat(y,x))
-    if (LT.second == MVT::v2i64)
-      return LT.first * 2;
-    LLVM_FALLTHROUGH;
-  }
+  case Intrinsic::umax:
   case Intrinsic::smin:
   case Intrinsic::smax: {
     static const auto ValidMinMaxTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
                                         MVT::v8i16, MVT::v2i32, MVT::v4i32};
     auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    // v2i64 types get converted to cmp+bif hence the cost of 2
+    if (LT.second == MVT::v2i64)
+      return LT.first * 2;
     if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }))
       return LT.first;
     break;
