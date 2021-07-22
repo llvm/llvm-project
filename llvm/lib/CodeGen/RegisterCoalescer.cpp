@@ -3071,8 +3071,10 @@ bool JoinVals::resolveConflicts(JoinVals &Other) {
     MachineBasicBlock::iterator MI = MBB->begin();
     if (!VNI->isPHIDef()) {
       MI = Indexes->getInstructionFromIndex(VNI->def);
-      // No need to check the instruction defining VNI for reads.
-      ++MI;
+      if (!VNI->def.isEarlyClobber()) {
+        // No need to check the instruction defining VNI for reads.
+        ++MI;
+      }
     }
     assert(!SlotIndex::isSameInstr(VNI->def, TaintExtent.front().first) &&
            "Interference ends on VNI->def. Should have been handled earlier");
