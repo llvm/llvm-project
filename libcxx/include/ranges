@@ -103,6 +103,15 @@ namespace std::ranges {
   template<class I, class S, subrange_kind K>
     inline constexpr bool enable_borrowed_range<subrange<I, S, K>> = true;
 
+  // [range.dangling], dangling iterator handling
+  struct dangling;
+
+  template<range R>
+    using borrowed_iterator_t = see below;
+
+  template<range R>
+    using borrowed_subrange_t = see below;
+
   // [range.empty], empty view
   template<class T>
     requires is_object_v<T>
@@ -145,6 +154,7 @@ namespace std::ranges {
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
+#include <__ranges/dangling.h>
 #include <__ranges/data.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/empty.h>
