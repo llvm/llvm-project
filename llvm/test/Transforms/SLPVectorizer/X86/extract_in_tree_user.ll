@@ -108,10 +108,9 @@ define void @externally_used_ptrs() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x i64*> [[TMP2]], <2 x i64> <i64 56, i64 11>
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x i64*> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[TMP0]], i64 12
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
 ; CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[TMP10]], align 8
