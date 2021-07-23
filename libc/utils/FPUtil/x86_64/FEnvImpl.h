@@ -251,41 +251,29 @@ static inline int raiseExcept(int excepts) {
   // ensure that the writes by the exception handler are maintained
   // when raising the next exception.
 
-  if (statusValue & internal::ExceptionFlags::Invalid) {
+  auto raiseHelper = [](uint16_t  singleExceptFlag) {
     internal::X87StateDescriptor state;
     internal::getX87StateDescriptor(state);
-    state.StatusWord |= internal::ExceptionFlags::Invalid;
+    state.StatusWord |= singleExceptFlag;
     internal::writeX87StateDescriptor(state);
     internal::fwait();
+  };
+
+  if (statusValue & internal::ExceptionFlags::Invalid)
+    raiseHelper(internal::ExceptionFlags::Invalid);
+  if (statusValue & internal::ExceptionFlags::DivByZero)
+    raiseHelper(internal::ExceptionFlags::DivByZero);
+  if (statusValue & internal::ExceptionFlags::Overflow)
+    raiseHelper(internal::ExceptionFlags::Overflow);
+  if (statusValue & internal::ExceptionFlags::Underflow)
+    raiseHelper(internal::ExceptionFlags::Underflow);
+  if (statusValue & internal::ExceptionFlags::Inexact)
+    raiseHelper(internal::ExceptionFlags::Inexact);
+#ifdef __FE_DENORM
+  if (statusValue & internal::ExceptionFlags::Denormal) {
+    raiseHelper(internal::ExceptionFlags::Denormal);
   }
-  if (statusValue & internal::ExceptionFlags::DivByZero) {
-    internal::X87StateDescriptor state;
-    internal::getX87StateDescriptor(state);
-    state.StatusWord |= internal::ExceptionFlags::DivByZero;
-    internal::writeX87StateDescriptor(state);
-    internal::fwait();
-  }
-  if (statusValue & internal::ExceptionFlags::Overflow) {
-    internal::X87StateDescriptor state;
-    internal::getX87StateDescriptor(state);
-    state.StatusWord |= internal::ExceptionFlags::Overflow;
-    internal::writeX87StateDescriptor(state);
-    internal::fwait();
-  }
-  if (statusValue & internal::ExceptionFlags::Underflow) {
-    internal::X87StateDescriptor state;
-    internal::getX87StateDescriptor(state);
-    state.StatusWord |= internal::ExceptionFlags::Underflow;
-    internal::writeX87StateDescriptor(state);
-    internal::fwait();
-  }
-  if (statusValue & internal::ExceptionFlags::Inexact) {
-    internal::X87StateDescriptor state;
-    internal::getX87StateDescriptor(state);
-    state.StatusWord |= internal::ExceptionFlags::Inexact;
-    internal::writeX87StateDescriptor(state);
-    internal::fwait();
-  }
+#endif // __FE_DENORM
 
   // There is no special synchronization scheme available to
   // raise SEE exceptions. So, we will ignore that for now.
