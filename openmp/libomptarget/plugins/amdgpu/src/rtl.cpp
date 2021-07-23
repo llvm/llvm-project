@@ -15,10 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <elf.h>
-#include <fstream>
 #include <functional>
-#include <iostream>
 #include <libelf.h>
 #include <list>
 #include <memory>
