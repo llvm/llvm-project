@@ -76,9 +76,6 @@ struct PrintingPolicy {
         SuppressImplicitBase(false), FullyQualifiedName(false),
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true) {}
 
-  PrintingPolicy(const PrintingPolicy&) = delete;
-  PrintingPolicy &operator=(const PrintingPolicy &) = delete;
-
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
   /// construct). This should not be used if a real LangOptions object is
