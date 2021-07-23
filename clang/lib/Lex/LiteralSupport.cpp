@@ -1660,7 +1660,8 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
       constexpr unsigned MaxRawStrDelimLen = 16;
 
       const char *Prefix = ThisTokBuf;
-      while (ThisTokBuf - Prefix < MaxRawStrDelimLen && ThisTokBuf[0] != '(')
+      while (static_cast<unsigned>(ThisTokBuf - Prefix) < MaxRawStrDelimLen &&
+             ThisTokBuf[0] != '(')
         ++ThisTokBuf;
       if (ThisTokBuf[0] != '(')
         return DiagnoseLexingError(StringToks[i].getLocation());
