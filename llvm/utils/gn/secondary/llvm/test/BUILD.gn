@@ -278,6 +278,7 @@ group("test") {
     "//llvm/tools/llvm-sim",
     "//llvm/tools/llvm-size",
     "//llvm/tools/llvm-split",
+    "//llvm/tools/llvm-stress",
     "//llvm/tools/llvm-strings",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/llvm-tapi-diff",
