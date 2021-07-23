@@ -3698,10 +3698,8 @@ private:
       }
     }
 
-    if (KnownSPMDCount && KnownNonSPMDCount)
-      return indicatePessimisticFixpoint();
-
-    if (AssumedSPMDCount && AssumedNonSPMDCount)
+    if ((AssumedSPMDCount + KnownSPMDCount) &&
+        (AssumedNonSPMDCount + KnownNonSPMDCount))
       return indicatePessimisticFixpoint();
 
     auto &Ctx = getAnchorValue().getContext();
