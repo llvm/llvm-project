@@ -48,6 +48,9 @@ TEST(MetaMap, FreeRange) {
 }
 
 TEST(MetaMap, Sync) {
+  // EXPECT can call memset/etc. Disable interceptors to prevent
+  // them from detecting that we exit runtime with mutexes held.
+  ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
   MetaMap *m = &ctx->metamap;
   u64 block[4] = {};  // fake malloc block
@@ -71,6 +74,7 @@ TEST(MetaMap, Sync) {
 }
 
 TEST(MetaMap, MoveMemory) {
+  ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
   MetaMap *m = &ctx->metamap;
   u64 block1[4] = {};  // fake malloc block
@@ -108,6 +112,7 @@ TEST(MetaMap, MoveMemory) {
 }
 
 TEST(MetaMap, ResetSync) {
+  ScopedIgnoreInterceptors ignore;
   ThreadState *thr = cur_thread();
   MetaMap *m = &ctx->metamap;
   u64 block[1] = {};  // fake malloc block
