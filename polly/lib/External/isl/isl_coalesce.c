@@ -1526,6 +1526,9 @@ static isl_bool has_redundant_cuts(struct isl_coalesce_info *info)
  * If "add_valid" is set, then the offending constraints are
  * simply removed.
  *
+ * If the facet turns out to be empty, then no wrapping can be performed.
+ * This is considered a failure, unless "add_valid" is set.
+ *
  * If any of the cut constraints of info->bmap turn out
  * to be redundant with respect to other constraints
  * then these will neither be wrapped nor added directly to the result.
@@ -1550,6 +1553,11 @@ static isl_stat add_selected_wraps_around_facet(struct isl_wraps *wraps,
 		return isl_stat_error;
 	if (isl_tab_detect_redundant(info->tab) < 0)
 		return isl_stat_error;
+	if (info->tab->empty) {
+		if (!add_valid)
+			return wraps_mark_failed(wraps);
+		return isl_stat_ok;
+	}
 	nowrap = has_redundant_cuts(info);
 	if (nowrap < 0)
 		return isl_stat_error;
