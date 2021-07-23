@@ -67,6 +67,9 @@ namespace std::ranges {
     concept view = ...;
 
   // [range.refinements], other range refinements
+  template<class R, class T>
+    concept output_range = see below;
+
   template<class T>
     concept input_range = see below;
 

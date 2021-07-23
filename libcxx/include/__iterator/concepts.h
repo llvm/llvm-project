@@ -124,6 +124,15 @@ concept input_iterator =
   requires { typename _ITER_CONCEPT<_Ip>; } &&
   derived_from<_ITER_CONCEPT<_Ip>, input_iterator_tag>;
 
+// [iterator.concept.output]
+template<class _Ip, class _Tp>
+concept output_iterator =
+  input_or_output_iterator<_Ip> &&
+  indirectly_writable<_Ip, _Tp> &&
+  requires (_Ip __it, _Tp&& __t) {
+    *__it++ = _VSTD::forward<_Tp>(__t); // not required to be equality-preserving
+  };
+
 // [iterator.concept.forward]
 template<class _Ip>
 concept forward_iterator =

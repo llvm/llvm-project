@@ -92,6 +92,9 @@ namespace ranges {
     same_as<sentinel_t<_Range>, iterator_t<const _Range>>;
 
   // [range.refinements], other range refinements
+  template <class _Rp, class _Tp>
+  concept output_range = range<_Rp> && output_iterator<iterator_t<_Rp>, _Tp>;
+
   template <class _Tp>
   concept input_range = range<_Tp> && input_iterator<iterator_t<_Tp>>;
 
