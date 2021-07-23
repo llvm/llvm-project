@@ -1969,7 +1969,7 @@ launchVals getLaunchVals(EnvironmentVariables Env, int ConstWGSize,
           num_groups = ((loop_tripcount - 1) / threadsPerGroup) + 1;
         } else if (ExecutionMode == GENERIC) {
           num_groups = loop_tripcount;
-        } else if (ExecutionMode == SPMD_GENERIC) {
+        } else /* ExecutionMode == SPMD_GENERIC */ {
           // This is a generic kernel that was transformed to use SPMD-mode
           // execution but uses Generic-mode semantics for scheduling.
           num_groups = loop_tripcount;
