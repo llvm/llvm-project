@@ -992,6 +992,7 @@ void Writer::finalizeAddresses() {
     addr = alignTo(addr, pageSize);
     seg->vmSize = addr - seg->addr;
     seg->fileSize = fileOff - seg->fileOff;
+    seg->assignAddressesToStartEndSymbols();
   }
 }
 

@@ -203,6 +203,12 @@ enum class Boundary {
   End,
 };
 
+static Defined *createBoundarySymbol(const Undefined &sym) {
+  return symtab->addSynthetic(
+      sym.getName(), /*isec=*/nullptr, /*value=*/-1, /*isPrivateExtern=*/true,
+      /*includeInSymtab=*/false, /*referencedDynamically=*/false);
+}
+
 static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
                                         Boundary which) {
   StringRef segName, sectName;
@@ -238,19 +244,19 @@ static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
     inputSections.push_back(isec);
   }
 
-  Defined *boundarySym = symtab->addSynthetic(
-      sym.getName(), /*isec=*/nullptr, /*value=*/-1, /*isPrivateExtern=*/true,
-      /*includeInSymtab=*/false, /*referencedDynamically=*/false);
   if (which == Boundary::Start)
-    osec->sectionStartSymbols.push_back(boundarySym);
+    osec->sectionStartSymbols.push_back(createBoundarySymbol(sym));
   else
-    osec->sectionEndSymbols.push_back(boundarySym);
+    osec->sectionEndSymbols.push_back(createBoundarySymbol(sym));
 }
 
 static void handleSegmentBoundarySymbol(const Undefined &sym, StringRef segName,
                                         Boundary which) {
-  // FIXME
-  error("segment$start$ and segment$end$ symbols are not yet implemented");
+  OutputSegment *seg = getOrCreateOutputSegment(segName);
+  if (which == Boundary::Start)
+    seg->segmentStartSymbols.push_back(createBoundarySymbol(sym));
+  else
+    seg->segmentEndSymbols.push_back(createBoundarySymbol(sym));
 }
 
 void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
