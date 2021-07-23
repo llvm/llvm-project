@@ -40,9 +40,10 @@ define i1 @PR32078(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    br i1 [[BRMERGE]], label [[EXIT:%.*]], label [[CMP1_TRUE:%.*]]
 ; CHECK:       cmp1_true:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP2]], i1 [[CMP3]], i1 false
-; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[R:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[CMP1_TRUE]] ]
+; CHECK-NEXT:    ret i1 [[R]]
 ;
 entry:
   %cmp = icmp eq <4 x i32> %a, %b

@@ -11,10 +11,7 @@ define float @test_merge_allof_v4sf(<4 x float> %t) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp olt <4 x float> [[T_FR]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i4 [[TMP1]], -1
-; CHECK-NEXT:    br i1 [[TMP2]], label [[COMMON_RET:%.*]], label [[LOR_LHS_FALSE:%.*]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi float [ [[SPEC_SELECT:%.*]], [[LOR_LHS_FALSE]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret float [[COMMON_RET_OP]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[RETURN:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
 ; CHECK-NEXT:    [[T_FR6:%.*]] = freeze <4 x float> [[T]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[T_FR6]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
@@ -23,8 +20,11 @@ define float @test_merge_allof_v4sf(<4 x float> %t) {
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[T]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[SHIFT]], [[T]]
 ; CHECK-NEXT:    [[ADD:%.*]] = extractelement <4 x float> [[TMP6]], i32 0
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[TMP5]], float 0.000000e+00, float [[ADD]]
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP5]], float 0.000000e+00, float [[ADD]]
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[LOR_LHS_FALSE]] ]
+; CHECK-NEXT:    ret float [[RETVAL_0]]
 ;
 entry:
   %vecext = extractelement <4 x float> %t, i32 0
@@ -180,10 +180,7 @@ define float @test_separate_allof_v4sf(<4 x float> %t) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp olt <4 x float> [[T_FR]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i4 [[TMP1]], -1
-; CHECK-NEXT:    br i1 [[TMP2]], label [[COMMON_RET:%.*]], label [[IF_END:%.*]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi float [ [[SPEC_SELECT:%.*]], [[IF_END]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret float [[COMMON_RET_OP]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[T_FR6:%.*]] = freeze <4 x float> [[T]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ogt <4 x float> [[T_FR6]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
@@ -192,8 +189,11 @@ define float @test_separate_allof_v4sf(<4 x float> %t) {
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[T]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[SHIFT]], [[T]]
 ; CHECK-NEXT:    [[ADD:%.*]] = extractelement <4 x float> [[TMP6]], i32 0
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[TMP5]], float 0.000000e+00, float [[ADD]]
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP5]], float 0.000000e+00, float [[ADD]]
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[IF_END]] ]
+; CHECK-NEXT:    ret float [[RETVAL_0]]
 ;
 entry:
   %vecext = extractelement <4 x float> %t, i32 0
@@ -513,10 +513,7 @@ define i32 @test_separate_allof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[T_FR]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i4 [[TMP1]], -1
-; CHECK-NEXT:    br i1 [[TMP2]], label [[COMMON_RET:%.*]], label [[IF_END:%.*]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[SPEC_SELECT:%.*]], [[IF_END]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[T_FR6:%.*]] = freeze <4 x i32> [[T]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[T_FR6]], <i32 255, i32 255, i32 255, i32 255>
@@ -525,8 +522,11 @@ define i32 @test_separate_allof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[T]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[SHIFT]], [[T]]
 ; CHECK-NEXT:    [[ADD:%.*]] = extractelement <4 x i32> [[TMP6]], i32 0
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[TMP5]], i32 0, i32 [[ADD]]
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP5]], i32 0, i32 [[ADD]]
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[IF_END]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   %vecext = extractelement <4 x i32> %t, i32 0
@@ -592,10 +592,7 @@ define i32 @test_separate_anyof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[T_FR]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i4 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[DOTNOT]], label [[IF_END:%.*]], label [[COMMON_RET:%.*]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[SPEC_SELECT:%.*]], [[IF_END]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[IF_END:%.*]], label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[T_FR6:%.*]] = freeze <4 x i32> [[T]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[T_FR6]], <i32 255, i32 255, i32 255, i32 255>
@@ -604,8 +601,11 @@ define i32 @test_separate_anyof_v4si(<4 x i32> %t) {
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[T]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <4 x i32> [[SHIFT]], [[T]]
 ; CHECK-NEXT:    [[ADD:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[DOTNOT7]], i32 [[ADD]], i32 0
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[DOTNOT7]], i32 [[ADD]], i32 0
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[IF_END]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
   %vecext = extractelement <4 x i32> %t, i32 0
